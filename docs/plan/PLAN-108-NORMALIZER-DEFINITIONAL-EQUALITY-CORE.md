@@ -27,7 +27,7 @@
 | [TASK-819](tasks/TASK-819-typeck-normalizer-api-skeleton.md) | Add `ash-typeck` normalizer module, options, outcome, and identity behavior | Type/Substrate | 5 | ✅ Complete |
 | [TASK-820](tasks/TASK-820-internal-fixture-equation-registry.md) | Add internal fixture equation registry for test-only/internal-test computation heads | Type/Test Substrate | 5 | ✅ Complete |
 | [TASK-821](tasks/TASK-821-closed-computation-head-reduction.md) | Implement closed fixture reduction to domain-constructor normal forms | Type/Semantic | 6 | ✅ Complete |
-| [TASK-822](tasks/TASK-822-open-neutral-and-partial-normalization.md) | Implement open neutral/stuck forms and partial prefix normalization | Type/Semantic | 6 | 📝 Planned |
+| [TASK-822](tasks/TASK-822-open-neutral-and-partial-normalization.md) | Implement open neutral/stuck forms and partial prefix normalization | Type/Semantic | 6 | ✅ Complete |
 | [TASK-823](tasks/TASK-823-rigid-projection-and-alias-normalization.md) | Normalize aliases plus neutral/rigid projection argument spines without associated-family computation | Type/Semantic | 5 | 📝 Planned |
 | [TASK-824](tasks/TASK-824-definitional-equality-api.md) | Add structured normalize-and-compare definitional equality API | Type/Semantic | 6 | 📝 Planned |
 | [TASK-825](tasks/TASK-825-non-inverting-unification-boundary.md) | Enforce non-inversion/no-solving-under-neutral computation heads | Type/Semantic | 5 | 📝 Planned |

@@ -177,6 +177,54 @@ impl FixtureEquationRegistry {
             matched.then_some(FixtureEquationMatch { equation, bindings })
         })
     }
+
+    fn first_match_or_blocker<'a>(
+        &'a self,
+        head: &'a TypeComputationHeadId,
+        args: &[NormalTypeExpr],
+    ) -> FixtureEquationSelection<'a> {
+        for equation in self.equations_for(head) {
+            if equation.arity() != args.len() {
+                continue;
+            }
+            let mut bindings = BTreeMap::new();
+            let mut matched = true;
+            let mut allow_open_var_binding = equation.head().name.ends_with("Literal")
+                && matches!(
+                    equation.result(),
+                    FixtureResultExpr::DomainConstructor { .. }
+                );
+            for (pattern, arg) in equation.patterns().iter().zip(args) {
+                match match_pattern_open(pattern, arg, &mut bindings, allow_open_var_binding) {
+                    FixturePatternMatch::Matched => {
+                        if matches!(pattern, FixturePattern::DomainConstructor(_)) {
+                            allow_open_var_binding = true;
+                        }
+                    }
+                    FixturePatternMatch::NoMatch => {
+                        matched = false;
+                        break;
+                    }
+                    FixturePatternMatch::Blocked(reason) => {
+                        return FixtureEquationSelection::Blocked(reason);
+                    }
+                }
+            }
+            if matched {
+                return FixtureEquationSelection::Matched(FixtureEquationMatch {
+                    equation,
+                    bindings,
+                });
+            }
+        }
+        FixtureEquationSelection::NoMatch
+    }
+}
+
+enum FixtureEquationSelection<'a> {
+    Matched(FixtureEquationMatch<'a>),
+    Blocked(NormalFormBlockReason),
+    NoMatch,
 }
 
 /// Metadata returned by registry lookup. TASK-820 does not apply the equation.
@@ -463,16 +511,80 @@ fn match_pattern(
     }
 }
 
-fn is_closed_normal_type_expr(expr: &NormalTypeExpr) -> bool {
-    match expr {
-        NormalTypeExpr::Primitive(_) => true,
-        NormalTypeExpr::DomainConstructorApp { args, .. } => {
-            args.iter().all(is_closed_normal_type_expr)
-        }
-        NormalTypeExpr::Var(_)
-        | NormalTypeExpr::NominalApp { .. }
-        | NormalTypeExpr::NeutralComputationApp { .. }
-        | NormalTypeExpr::Projection { .. } => false,
+enum FixturePatternMatch {
+    Matched,
+    NoMatch,
+    Blocked(NormalFormBlockReason),
+}
+
+fn match_pattern_open(
+    pattern: &FixturePattern,
+    arg: &NormalTypeExpr,
+    bindings: &mut BTreeMap<String, NormalTypeExpr>,
+    allow_open_var_binding: bool,
+) -> FixturePatternMatch {
+    match pattern {
+        FixturePattern::Var(name) => match bindings.get(name) {
+            Some(bound) if bound == arg => FixturePatternMatch::Matched,
+            Some(_) => FixturePatternMatch::NoMatch,
+            None => match arg {
+                NormalTypeExpr::Var(_)
+                | NormalTypeExpr::NeutralComputationApp { .. }
+                | NormalTypeExpr::Projection { .. }
+                    if !allow_open_var_binding =>
+                {
+                    FixturePatternMatch::Blocked(block_reason_for_normal(arg))
+                }
+                _ => {
+                    bindings.insert(name.clone(), arg.clone());
+                    FixturePatternMatch::Matched
+                }
+            },
+        },
+        FixturePattern::DomainConstructor(pattern) => match arg {
+            NormalTypeExpr::DomainConstructorApp {
+                constructor: arg_constructor,
+                domain: arg_domain,
+                args: arg_args,
+                ..
+            } => {
+                if pattern.constructor != *arg_constructor
+                    || pattern.domain != *arg_domain
+                    || pattern.args.len() != arg_args.len()
+                {
+                    return FixturePatternMatch::NoMatch;
+                }
+                for (pattern, arg) in pattern.args.iter().zip(arg_args) {
+                    match match_pattern_open(pattern, arg, bindings, true) {
+                        FixturePatternMatch::Matched => {}
+                        other => return other,
+                    }
+                }
+                FixturePatternMatch::Matched
+            }
+            NormalTypeExpr::Var(_)
+            | NormalTypeExpr::NeutralComputationApp { .. }
+            | NormalTypeExpr::Projection { .. } => {
+                FixturePatternMatch::Blocked(block_reason_for_normal(arg))
+            }
+            _ => FixturePatternMatch::NoMatch,
+        },
+    }
+}
+
+fn block_reason_for_normal(arg: &NormalTypeExpr) -> NormalFormBlockReason {
+    match arg {
+        NormalTypeExpr::Var(_) => NormalFormBlockReason::AbstractScrutinee,
+        NormalTypeExpr::NeutralComputationApp { reason, .. } => reason
+            .clone()
+            .unwrap_or(NormalFormBlockReason::NeutralScrutinee),
+        NormalTypeExpr::Projection {
+            rigidity, reason, ..
+        } => reason.clone().unwrap_or(match rigidity {
+            ProjectionRigidity::Rigid => NormalFormBlockReason::RigidProjection,
+            ProjectionRigidity::Neutral => NormalFormBlockReason::AbstractScrutinee,
+        }),
+        _ => NormalFormBlockReason::Unsupported,
     }
 }
 
@@ -482,6 +594,14 @@ struct NormalizationState<'env> {
     trace_enabled: bool,
     trace: Vec<NormalizationTraceEvent>,
     fixture_registry: &'env FixtureEquationRegistry,
+}
+
+enum ComputationReduction {
+    Reduced(NormalTypeExpr),
+    Neutral {
+        normal: NormalTypeExpr,
+        evidence: NormalizationEvidence,
+    },
 }
 
 impl<'env> NormalizationState<'env> {
@@ -564,26 +684,12 @@ impl<'env> NormalizationState<'env> {
         kind: &Kind,
     ) -> NormalizationResult<(NormalTypeExpr, NormalizationEvidence)> {
         let normalized_args = self.normalize_args(args)?;
-        if let Some(matched) = self
-            .fixture_registry
-            .first_match(head, &normalized_args)
-            .filter(|_| normalized_args.iter().all(is_closed_normal_type_expr))
-        {
-            let result = matched.equation().result().clone();
-            let bindings = matched.bindings().clone();
-            self.fuel.consume(self.mode)?;
-            let reduced = self.normalize_fixture_result(&result, &bindings)?;
-            return Ok((reduced, NormalizationEvidence::FixtureEquationReduced));
+        match self.select_and_reduce_normalized_computation_app(head, normalized_args, kind)? {
+            ComputationReduction::Reduced(normal) => {
+                Ok((normal, NormalizationEvidence::FixtureEquationReduced))
+            }
+            ComputationReduction::Neutral { normal, evidence } => Ok((normal, evidence)),
         }
-        Ok((
-            NormalTypeExpr::NeutralComputationApp {
-                head: head.clone(),
-                args: normalized_args,
-                kind: kind.clone(),
-                reason: Some(NormalFormBlockReason::Unsupported),
-            },
-            NormalizationEvidence::NeutralUnsupportedComputation,
-        ))
     }
 
     fn normalize_fixture_result(
@@ -631,22 +737,45 @@ impl<'env> NormalizationState<'env> {
         args: Vec<NormalTypeExpr>,
         kind: &Kind,
     ) -> NormalizationResult<NormalTypeExpr> {
-        if let Some(matched) = self
-            .fixture_registry
-            .first_match(head, &args)
-            .filter(|_| args.iter().all(is_closed_normal_type_expr))
-        {
-            let result = matched.equation().result().clone();
-            let bindings = matched.bindings().clone();
-            self.fuel.consume(self.mode)?;
-            return self.normalize_fixture_result(&result, &bindings);
+        match self.select_and_reduce_normalized_computation_app(head, args, kind)? {
+            ComputationReduction::Reduced(normal)
+            | ComputationReduction::Neutral { normal, .. } => Ok(normal),
         }
-        Ok(NormalTypeExpr::NeutralComputationApp {
-            head: head.clone(),
-            args,
-            kind: kind.clone(),
-            reason: Some(NormalFormBlockReason::Unsupported),
-        })
+    }
+
+    fn select_and_reduce_normalized_computation_app(
+        &mut self,
+        head: &TypeComputationHeadId,
+        args: Vec<NormalTypeExpr>,
+        kind: &Kind,
+    ) -> NormalizationResult<ComputationReduction> {
+        match self.fixture_registry.first_match_or_blocker(head, &args) {
+            FixtureEquationSelection::Matched(matched) => {
+                let result = matched.equation().result().clone();
+                let bindings = matched.bindings().clone();
+                self.fuel.consume(self.mode)?;
+                let reduced = self.normalize_fixture_result(&result, &bindings)?;
+                Ok(ComputationReduction::Reduced(reduced))
+            }
+            FixtureEquationSelection::Blocked(reason) => Ok(ComputationReduction::Neutral {
+                normal: NormalTypeExpr::NeutralComputationApp {
+                    head: head.clone(),
+                    args,
+                    kind: kind.clone(),
+                    reason: Some(reason),
+                },
+                evidence: NormalizationEvidence::NeutralUnsupportedComputation,
+            }),
+            FixtureEquationSelection::NoMatch => Ok(ComputationReduction::Neutral {
+                normal: NormalTypeExpr::NeutralComputationApp {
+                    head: head.clone(),
+                    args,
+                    kind: kind.clone(),
+                    reason: Some(NormalFormBlockReason::Unsupported),
+                },
+                evidence: NormalizationEvidence::NeutralUnsupportedComputation,
+            }),
+        }
     }
 
     fn record(&mut self, evidence: NormalizationEvidence) {

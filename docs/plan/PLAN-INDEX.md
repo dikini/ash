@@ -3257,7 +3257,7 @@ Boundary note: Phase 112 is normalizer/equality substrate only. It does not add 
 | [TASK-819](tasks/TASK-819-typeck-normalizer-api-skeleton.md) | Typechecker normalizer API skeleton | 5 | ✅ Complete |
 | [TASK-820](tasks/TASK-820-internal-fixture-equation-registry.md) | Internal fixture equation registry | 5 | ✅ Complete |
 | [TASK-821](tasks/TASK-821-closed-computation-head-reduction.md) | Closed computation-head reduction | 6 | ✅ Complete |
-| [TASK-822](tasks/TASK-822-open-neutral-and-partial-normalization.md) | Open neutral and partial normalization | 6 | 📝 Planned |
+| [TASK-822](tasks/TASK-822-open-neutral-and-partial-normalization.md) | Open neutral and partial normalization | 6 | ✅ Complete |
 | [TASK-823](tasks/TASK-823-rigid-projection-and-alias-normalization.md) | Neutral/rigid projection and alias normalization | 5 | 📝 Planned |
 | [TASK-824](tasks/TASK-824-definitional-equality-api.md) | Definitional equality API | 6 | 📝 Planned |
 | [TASK-825](tasks/TASK-825-non-inverting-unification-boundary.md) | Non-inverting unification boundary | 5 | 📝 Planned |

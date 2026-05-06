@@ -5,6 +5,7 @@
 #![allow(clippy::result_large_err)]
 
 use crate::error::TypeEnvError;
+use crate::normalizer::{DefinitionalEqualityResult, Normalizer};
 use crate::solver::TypeError;
 use crate::types::{Substitution, Type, TypeVar, UnifyError, unify};
 use crate::{Kind, QualifiedName};
@@ -486,6 +487,20 @@ fn canonical_expr_to_type_for_alias(expr: &CanonicalTypeExpr) -> Option<Type> {
     }
 }
 
+fn fallback_canonical_type_decl_id(name: &str) -> TypeDeclId {
+    TypeDeclId::ordinary(
+        ModuleIdentity::new(
+            None,
+            ModuleId(0),
+            vec!["typeenv".to_string(), "defeq_fallback".to_string()],
+            ash_core::semantic_summary::ModuleSourceOrigin::Synthetic {
+                reason: "TASK-826 guarded TypeEnv defeq fallback identity".to_string(),
+            },
+        ),
+        name.to_string(),
+    )
+}
+
 fn stable_alias_type_var_id(name: &str) -> u32 {
     name.bytes().fold(0x8230_0000, |acc, byte| {
         acc.wrapping_mul(16777619).wrapping_add(u32::from(byte))
@@ -510,6 +525,7 @@ fn collect_canonical_alias_var_names(
         CanonicalTypeExpr::Primitive(_) | CanonicalTypeExpr::Var(_) => {}
     }
 }
+
 fn resolve_associated_interface_from_type_var_bounds(
     type_env: &TypeEnv,
     base_ty: &Type,
@@ -2729,14 +2745,34 @@ impl TypeEnv {
             .unwrap_or_else(|| name.clone())
     }
 
+    fn associated_member_identity_for_visible_interface_member(
+        &self,
+        interface_name: &str,
+        member_name: &str,
+    ) -> Option<&AssociatedMemberIdentityId> {
+        if let Some(member) =
+            self.associated_member_identity_for_interface_member(interface_name, member_name)
+        {
+            return Some(member);
+        }
+
+        let interface_id = self.interface_identity_for_name(interface_name)?;
+        self.associated_member_identity_aliases
+            .iter()
+            .find_map(|((_, visible_member), member)| {
+                (visible_member == member_name && &member.interface == interface_id)
+                    .then_some(member)
+            })
+    }
+
     fn canonical_associated_projection_for_equality(
         &self,
         interface_name: &str,
         member_name: &str,
     ) -> Option<(String, String)> {
         let interface_id = self.interface_identity_for_name(interface_name)?;
-        let member_id =
-            self.associated_member_identity_for_interface_member(interface_name, member_name)?;
+        let member_id = self
+            .associated_member_identity_for_visible_interface_member(interface_name, member_name)?;
 
         if &member_id.interface != interface_id {
             return None;
@@ -2774,6 +2810,27 @@ impl TypeEnv {
         let target =
             self.transparent_alias_target(&QualifiedName::root(visible_name), &type_args)?;
         self.type_to_canonical_expr_for_alias(&target, &var_names)
+            .map(|target| self.canonical_expr_with_registered_origin(target))
+    }
+
+    fn canonical_expr_with_registered_origin(&self, expr: CanonicalTypeExpr) -> CanonicalTypeExpr {
+        match expr {
+            CanonicalTypeExpr::NominalApp {
+                visible_name,
+                args,
+                kind,
+                origin,
+            } => CanonicalTypeExpr::NominalApp {
+                origin: self
+                    .type_identity_for_name(&visible_name)
+                    .cloned()
+                    .unwrap_or(origin),
+                visible_name,
+                args,
+                kind,
+            },
+            other => other,
+        }
     }
 
     fn type_to_canonical_expr_for_alias(
@@ -2987,6 +3044,13 @@ impl TypeEnv {
 
     /// Unify types using TypeEnv's canonical imported-summary identity map.
     pub fn unify_types(&self, left: &Type, right: &Type) -> Result<Substitution, UnifyError> {
+        if self
+            .definitionally_equal_types_when_canonicalizable(left, right)
+            .is_some_and(|equal| equal)
+        {
+            return Ok(Substitution::new());
+        }
+
         unify(
             &self.canonicalize_type_for_equality(left),
             &self.canonicalize_type_for_equality(right),
@@ -2995,7 +3059,103 @@ impl TypeEnv {
 
     #[must_use]
     pub fn types_equivalent_for_equality(&self, left: &Type, right: &Type) -> bool {
-        self.unify_types(left, right).is_ok()
+        self.definitionally_equal_types_when_canonicalizable(left, right)
+            .unwrap_or_else(|| self.unify_types(left, right).is_ok())
+    }
+
+    /// TASK-826 guarded TypeEnv forcing-point helper.
+    ///
+    /// This wrapper consumes the TASK-817 matrix only at the central TypeEnv
+    /// equality boundary: if both current `Type` values can be represented in the
+    /// Phase 110 canonical IR, compare their normal forms through the SPEC-060
+    /// normalizer/definitional-equality API. Unsupported legacy shapes and
+    /// inference-meta solving remain owned by the fallback `Type` unifier.
+    #[must_use]
+    fn definitionally_equal_types_when_canonicalizable(
+        &self,
+        left: &Type,
+        right: &Type,
+    ) -> Option<bool> {
+        let left = self.canonicalize_type_for_equality(left);
+        let right = self.canonicalize_type_for_equality(right);
+        let left = self.type_to_canonical_expr_for_equality(&left)?;
+        let right = self.type_to_canonical_expr_for_equality(&right)?;
+        let evidence = Normalizer::new(self)
+            .definitional_equality(&left, &right)
+            .ok()?;
+        Some(matches!(evidence, DefinitionalEqualityResult::Equal))
+    }
+
+    fn type_to_canonical_expr_for_equality(&self, ty: &Type) -> Option<CanonicalTypeExpr> {
+        match ty {
+            Type::Int => Some(CanonicalTypeExpr::Primitive("Int".to_string())),
+            Type::String => Some(CanonicalTypeExpr::Primitive("String".to_string())),
+            Type::Bool => Some(CanonicalTypeExpr::Primitive("Bool".to_string())),
+            Type::Float => Some(CanonicalTypeExpr::Primitive("Float".to_string())),
+            Type::Null => Some(CanonicalTypeExpr::Primitive("Null".to_string())),
+            Type::Time => Some(CanonicalTypeExpr::Primitive("Time".to_string())),
+            Type::Ref => Some(CanonicalTypeExpr::Primitive("Ref".to_string())),
+            Type::Var(_) => None,
+            Type::Constructor { name, args, kind } if name.is_root() => {
+                let args = args
+                    .iter()
+                    .map(|arg| self.type_to_canonical_expr_for_equality(arg))
+                    .collect::<Option<_>>()?;
+                let canonical_name = self.canonical_constructor_name_for_equality(name);
+                Some(CanonicalTypeExpr::NominalApp {
+                    origin: self
+                        .type_identity_for_name(&canonical_name.name)
+                        .cloned()
+                        .unwrap_or_else(|| fallback_canonical_type_decl_id(&canonical_name.name)),
+                    visible_name: canonical_name.name,
+                    args,
+                    kind: kind.clone(),
+                })
+            }
+            Type::Associated {
+                interface,
+                base,
+                name,
+            } => {
+                let base = self.type_to_canonical_expr_for_equality(base)?;
+                let (canonical_interface, canonical_name) = self
+                    .canonical_associated_projection_for_equality(interface, name)
+                    .unwrap_or_else(|| (interface.clone(), name.clone()));
+                self.lower_associated_projection_to_canonical(&base, &canonical_name)
+                    .ok()
+                    .map(|projection| match projection {
+                        CanonicalTypeExpr::Projection {
+                            interface,
+                            member,
+                            args,
+                            kind,
+                            rigidity,
+                        } if interface.name == canonical_interface => {
+                            let canonical_interface_id = self
+                                .interface_identity_for_name(&canonical_interface)
+                                .cloned()
+                                .unwrap_or(interface);
+                            CanonicalTypeExpr::Projection {
+                                interface: canonical_interface_id,
+                                member,
+                                args,
+                                kind,
+                                rigidity,
+                            }
+                        }
+                        other => other,
+                    })
+            }
+            Type::List(_)
+            | Type::Record(_)
+            | Type::Cap { .. }
+            | Type::Fun(_, _, _)
+            | Type::Fn(_, _)
+            | Type::Instance { .. }
+            | Type::InstanceAddr { .. }
+            | Type::ControlLink { .. }
+            | Type::Constructor { .. } => None,
+        }
     }
 
     /// Register an interface declaration.

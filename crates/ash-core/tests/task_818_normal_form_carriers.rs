@@ -126,7 +126,7 @@ fn neutral_computation_apps_are_distinct_from_domain_constructor_heads() {
             NormalTypeExpr::Var("Ys".to_string()),
         ],
         kind: Kind::Type,
-        reason: Some(NormalFormBlockReason::AbstractScrutinee),
+        reason: NormalFormBlockReason::AbstractScrutinee,
     };
 
     assert_ne!(nil, append);
@@ -140,7 +140,7 @@ fn neutral_computation_apps_are_distinct_from_domain_constructor_heads() {
             assert_eq!(head.name, "Append");
             assert_eq!(args.len(), 2);
             assert_eq!(kind, Kind::Type);
-            assert_eq!(reason, Some(NormalFormBlockReason::AbstractScrutinee));
+            assert_eq!(reason, NormalFormBlockReason::AbstractScrutinee);
         }
         other => panic!("expected neutral computation normal form, got {other:?}"),
     }

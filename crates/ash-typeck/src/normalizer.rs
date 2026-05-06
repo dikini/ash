@@ -690,7 +690,7 @@ fn collect_normal_form_diagnostics(
                     NormalizerDiagnosticKind::NeutralStuckNormalizationNote,
                     format!(
                         "neutral/stuck normalization note: computation head is blocked by {:?}",
-                        reason.clone().unwrap_or(NormalFormBlockReason::Unsupported)
+                        reason.clone()
                     ),
                 )
                 .with_normal_slice(normal.clone()),
@@ -1133,9 +1133,7 @@ fn match_pattern_open(
 fn block_reason_for_normal(arg: &NormalTypeExpr) -> NormalFormBlockReason {
     match arg {
         NormalTypeExpr::Var(_) => NormalFormBlockReason::AbstractScrutinee,
-        NormalTypeExpr::NeutralComputationApp { reason, .. } => reason
-            .clone()
-            .unwrap_or(NormalFormBlockReason::NeutralScrutinee),
+        NormalTypeExpr::NeutralComputationApp { reason, .. } => reason.clone(),
         NormalTypeExpr::Projection {
             rigidity, reason, ..
         } => reason.clone().unwrap_or(match rigidity {
@@ -1330,7 +1328,7 @@ impl<'env> NormalizationState<'env> {
                     head: head.clone(),
                     args,
                     kind: kind.clone(),
-                    reason: Some(reason),
+                    reason,
                 },
                 evidence: NormalizationEvidence::NeutralUnsupportedComputation,
             }),
@@ -1339,7 +1337,7 @@ impl<'env> NormalizationState<'env> {
                     head: head.clone(),
                     args,
                     kind: kind.clone(),
-                    reason: Some(NormalFormBlockReason::Unsupported),
+                    reason: NormalFormBlockReason::Unsupported,
                 },
                 evidence: NormalizationEvidence::NeutralUnsupportedComputation,
             }),

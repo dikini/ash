@@ -136,4 +136,4 @@ Every implementation task must include focused tests and exact non-regression co
 
 ## Closeout Verification Evidence
 
-TASK-828 recorded focused Phase 112 tests, workspace check/clippy/doc gates, and `cargo test --workspace` passing with no residual failures. TASK-829 completed independent review remediation by fixing structurally known neutral/projection mismatch classification and adding focused regression coverage; broad verification is recorded in TASK-829.
+TASK-828 recorded focused Phase 112 tests, workspace check/clippy/doc gates, and `cargo test --workspace` passing with no residual failures. TASK-829 completed independent review remediation by fixing structurally known neutral/projection mismatch classification, forcing definitional equality through full normalization, making neutral computation blocker reasons mandatory, replacing the transparent-alias canonical-var hash bridge with a per-alias bijection, and adding focused regression coverage; broad verification is recorded in TASK-829.

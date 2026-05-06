@@ -17,7 +17,7 @@ Implement closed fixture reduction from computation-head applications to domain-
 ## Dependencies
 
 - ✅ [TASK-816](TASK-816-spec-d-spec-plan-packet.md)
-- ✅ [TASK-820](TASK-820-internal-fixture-equation-registry.md) (planned predecessor)
+- ✅ [TASK-820](TASK-820-internal-fixture-equation-registry.md) (completed predecessor)
 
 ## Dispatch
 

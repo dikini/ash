@@ -17,7 +17,7 @@ Normalize transparent aliases plus neutral and rigid projection argument spines 
 ## Dependencies
 
 - ✅ [TASK-816](TASK-816-spec-d-spec-plan-packet.md)
-- ✅ [TASK-822](TASK-822-open-neutral-and-partial-normalization.md) (planned predecessor)
+- ✅ [TASK-822](TASK-822-open-neutral-and-partial-normalization.md) (completed predecessor)
 
 ## Dispatch
 

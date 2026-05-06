@@ -272,7 +272,7 @@ fn task_824_inequality_with_neutral_blockers_reports_non_inverting_evidence() {
                     head: head("Append"),
                     args: vec![NormalTypeExpr::Var("Xs".to_string()), nil_normal()],
                     kind: Kind::Type,
-                    reason: Some(NormalFormBlockReason::AbstractScrutinee),
+                    reason: NormalFormBlockReason::AbstractScrutinee,
                 }
             );
             assert_eq!(rhs_norm, nil_normal());

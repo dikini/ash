@@ -114,10 +114,10 @@ pub enum NormalTypeExpr {
         kind: Kind,
         /// Reason preserved when this neutral computation app is stuck.
         ///
-        /// `None` is reserved for imported or legacy carriers that predate reason
-        /// attribution; the Phase 112 normalizer always fills `Some(...)` for
-        /// carriers it constructs.
-        reason: Option<NormalFormBlockReason>,
+        /// SPEC-060 requires neutral computation applications to carry a blocker
+        /// reason; projections remain optional because legacy/imported projection
+        /// carriers may predate diagnostic attribution.
+        reason: NormalFormBlockReason,
     },
     Projection {
         interface: InterfaceIdentityId,

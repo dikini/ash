@@ -80,7 +80,7 @@ fn computation_heads_remain_neutral_without_fixture_equations() {
             head,
             args: vec![NormalTypeExpr::Var("Xs".to_string())],
             kind: Kind::Type,
-            reason: Some(NormalFormBlockReason::Unsupported),
+            reason: NormalFormBlockReason::Unsupported,
         }
     );
 }

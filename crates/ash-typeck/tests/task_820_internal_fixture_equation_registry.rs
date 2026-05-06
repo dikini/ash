@@ -265,7 +265,7 @@ fn fixture_registry_is_not_serialized_in_module_summaries_and_does_not_change_no
             head: append,
             args: vec![NormalTypeExpr::Var("Xs".to_string())],
             kind: Kind::Type,
-            reason: Some(NormalFormBlockReason::AbstractScrutinee),
+            reason: NormalFormBlockReason::AbstractScrutinee,
         }
     );
 }

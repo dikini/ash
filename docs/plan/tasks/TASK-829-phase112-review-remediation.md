@@ -76,7 +76,7 @@ Task type: Review/Hardening. Estimated effort: 6 hours. Keep the slice compilabl
 
 ## Independent Review Findings
 
-Review inputs checked live against `SPEC-060`, `PLAN-108`, `PLAN-INDEX`, `type_ir.rs`, `normalizer.rs`, `type_env.rs`, and TASK-818 through TASK-827 tests.
+Review inputs checked live against `SPEC-060`, `PLAN-108`, `PLAN-INDEX`, `type_ir.rs`, `normalizer.rs`, `type_env.rs`, TASK-818 through TASK-827 tests, and TASK-828 closeout evidence.
 
 1. **High — Neutral blockers over-classified structurally known mismatches.** `Normalizer::definitional_equality(...)` returned `BlockedByNeutrality` whenever any neutral/projection subterm existed in a mismatch, even when the mismatch was already decided by different computation-head identities, projection identities, nominal data heads, or kind/arity metadata. This drifted from SPEC-060's normalize-and-compare contract: neutral terms block equality only when deciding the comparison would require inversion/solving under the neutral head, not when canonical identities are already unequal.
    - Remediation: added root structural-disjointness classification before blocker collection in `crates/ash-typeck/src/normalizer.rs`.
@@ -88,7 +88,9 @@ Review inputs checked live against `SPEC-060`, `PLAN-108`, `PLAN-INDEX`, `type_i
 
 ## Remediation Evidence
 
-- Code changed: `crates/ash-typeck/src/normalizer.rs` now distinguishes structurally disjoint normal-form mismatches from neutrality-blocked comparisons.
+- Code changed: `crates/ash-typeck/src/normalizer.rs` now distinguishes structurally disjoint normal-form mismatches from neutrality-blocked comparisons and forces definitional equality through full normalization.
+- Code changed: `crates/ash-core/src/type_ir.rs` now requires neutral computation normal forms to carry a blocker reason, matching SPEC-060.
+- Code changed: `crates/ash-typeck/src/type_env.rs` now uses a per-alias canonical-var bridge instead of hashing canonical variable names into synthetic `TypeVar` ids.
 - Tests added: `crates/ash-typeck/tests/task_829_review_remediation.rs`.
 - Focused verification after remediation:
   - `cargo test -p ash-typeck --test task_824_definitional_equality --test task_825_non_inverting_unification_boundary --test task_827_normalizer_diagnostics --test task_829_review_remediation` — passed (25 tests, 0 failures).

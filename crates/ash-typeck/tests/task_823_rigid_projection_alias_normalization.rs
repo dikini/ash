@@ -199,7 +199,7 @@ fn projection_blocker_reason_is_preserved_when_projection_blocks_outer_equation(
                 nil_normal()
             ],
             kind: Kind::Type,
-            reason: Some(NormalFormBlockReason::RigidProjection),
+            reason: NormalFormBlockReason::RigidProjection,
         }
     );
     assert_eq!(
@@ -211,7 +211,7 @@ fn projection_blocker_reason_is_preserved_when_projection_blocks_outer_equation(
                 nil_normal()
             ],
             kind: Kind::Type,
-            reason: Some(NormalFormBlockReason::AbstractScrutinee),
+            reason: NormalFormBlockReason::AbstractScrutinee,
         }
     );
 }

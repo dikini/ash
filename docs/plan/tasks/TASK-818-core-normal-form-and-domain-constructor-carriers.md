@@ -17,7 +17,7 @@ Add the shared normal-form/domain-constructor carrier substrate needed by the ty
 ## Dependencies
 
 - ✅ [TASK-816](TASK-816-spec-d-spec-plan-packet.md)
-- ✅ [TASK-817](TASK-817-normalizer-defeq-audit-gate.md) (planned predecessor)
+- ✅ [TASK-817](TASK-817-normalizer-defeq-audit-gate.md) (completed predecessor)
 
 ## Dispatch
 
@@ -75,7 +75,7 @@ checklist:
 
 - Added `NormalTypeExpr` and `NormalFormBlockReason` in `ash-core::type_ir` as shared structural carriers only; no normalizer logic, fixture equations, definitional equality, or `TypeEnv` adoption landed in this task.
 - `NormalTypeExpr::DomainConstructorApp` carries `DomainConstructorId` plus `SealedDomainId` and remains distinct from `NormalTypeExpr::NominalApp` / ordinary `ConstructorId` identity paths.
-- Neutral computation applications and projection normal forms preserve computation/projection heads, normalized argument spines, `Kind`, `ProjectionRigidity`, and optional stuck/blocking reason metadata for later normalizer/equality diagnostics.
+- Neutral computation applications and projection normal forms preserve computation/projection heads, normalized argument spines, `Kind`, and `ProjectionRigidity`; neutral computation applications carry mandatory stuck/blocking reason metadata while projection reason metadata remains optional for later normalizer/equality diagnostics.
 - Focused TDD evidence: initial `cargo test -p ash-core --test task_818_normal_form_carriers` failed with unresolved `NormalTypeExpr`; after implementation the focused suite passed (5 tests).
 - Verification run: `cargo test -p ash-core --test task_818_normal_form_carriers`; `cargo test -p ash-core type_ir`; `cargo fmt --check`; `git diff --check`.
 

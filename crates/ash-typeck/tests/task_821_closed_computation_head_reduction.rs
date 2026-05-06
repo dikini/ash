@@ -199,7 +199,7 @@ fn no_matching_equation_keeps_neutral_computation_app_with_normalized_args() {
                 nil_normal()
             ],
             kind: Kind::Type,
-            reason: Some(NormalFormBlockReason::Unsupported),
+            reason: NormalFormBlockReason::Unsupported,
         }
     );
 }

@@ -29,7 +29,7 @@ Add the ash-typeck normalizer module, options, outcomes, error types, and identi
 ## Dependencies
 
 - ✅ [TASK-816](TASK-816-spec-d-spec-plan-packet.md)
-- ✅ [TASK-818](TASK-818-core-normal-form-and-domain-constructor-carriers.md) (planned predecessor)
+- ✅ [TASK-818](TASK-818-core-normal-form-and-domain-constructor-carriers.md) (completed predecessor)
 
 ## Dispatch
 

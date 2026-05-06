@@ -121,7 +121,7 @@ fn neutral_append(args: Vec<NormalTypeExpr>, reason: NormalFormBlockReason) -> N
         head: head("Append"),
         args,
         kind: Kind::Type,
-        reason: Some(reason),
+        reason,
     }
 }
 

@@ -163,6 +163,8 @@ Full normalization recursively normalizes every reachable subterm and repeatedly
 
 Demand-driven normalization is a use-site policy that chooses weak-head or full normalization based on the question being asked. Equality must normalize enough to decide comparison or produce a precise neutrality-blocked diagnostic.
 
+Phase 112 MVP note: the public config surface reserves `WeakHead` and `Demand` mode names, but the implemented normalizer uses the recursive full-normalization behavior for current comparisons. `Normalizer::definitional_equality` explicitly forces `Full` mode; future work may make weak-head/demand normalization operationally distinct without changing equality semantics.
+
 ### 8.4 Open terms
 
 If equation selection is blocked by an abstract type variable, unresolved neutral computation head, neutral projection, or rigid projection, normalization returns a canonical neutral/projection form rather than an error.
@@ -287,4 +289,4 @@ Deferred to SPEC-E/F/G/H or later:
 
 ## Implementation Status
 
-Phase 112 implemented the internal SPEC-D normalizer and definitional equality core through TASK-827, with closeout verification recorded in TASK-828. The implementation remains internal-only: public `type fn` syntax, source equation validation, associated-family solving, proof search, recursive user computation, type-function inversion, and fixture equation summary export/import are still deferred.
+Phase 112 implemented the internal SPEC-D normalizer and definitional equality core through TASK-829, with closeout verification recorded in TASK-828 and post-review remediation recorded in TASK-829. The implementation remains internal-only: public `type fn` syntax, source equation validation, associated-family solving, proof search, recursive user computation, type-function inversion, and fixture equation summary export/import are still deferred.

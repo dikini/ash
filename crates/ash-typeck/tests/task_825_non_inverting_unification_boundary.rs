@@ -116,7 +116,7 @@ fn neutral_append_normal(xs: &str, ys: NormalTypeExpr) -> NormalTypeExpr {
         head: head("Append"),
         args: vec![NormalTypeExpr::Var(xs.to_string()), ys],
         kind: Kind::Type,
-        reason: Some(NormalFormBlockReason::AbstractScrutinee),
+        reason: NormalFormBlockReason::AbstractScrutinee,
     }
 }
 
@@ -196,7 +196,7 @@ fn task_825_same_headed_neutral_apps_do_not_unify_by_inverting_arguments() {
                     head: head("F"),
                     args: vec![NormalTypeExpr::Var("X".to_string())],
                     kind: Kind::Type,
-                    reason: Some(NormalFormBlockReason::Unsupported),
+                    reason: NormalFormBlockReason::Unsupported,
                 }
             );
             assert_eq!(
@@ -205,7 +205,7 @@ fn task_825_same_headed_neutral_apps_do_not_unify_by_inverting_arguments() {
                     head: head("F"),
                     args: vec![NormalTypeExpr::Var("Y".to_string())],
                     kind: Kind::Type,
-                    reason: Some(NormalFormBlockReason::Unsupported),
+                    reason: NormalFormBlockReason::Unsupported,
                 }
             );
             assert_eq!(neutral_subterms, vec![lhs_norm, rhs_norm]);

@@ -17,7 +17,7 @@ Implement canonical neutral/stuck normal forms for open applications and partial
 ## Dependencies
 
 - ✅ [TASK-816](TASK-816-spec-d-spec-plan-packet.md)
-- ✅ [TASK-821](TASK-821-closed-computation-head-reduction.md) (planned predecessor)
+- ✅ [TASK-821](TASK-821-closed-computation-head-reduction.md) (completed predecessor)
 
 ## Dispatch
 

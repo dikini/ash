@@ -288,7 +288,7 @@ Update this section as tasks complete:
 | 109 | 13 | 13 | ✅ Complete |
 | 110 | 13 | 0 | 📝 Planned |
 | 111 | 10 | 10 | ✅ Complete |
-| 112 | 14 | 1 | 📝 Planned |
+| 112 | 14 | 2 | 🚧 In Progress |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -397,7 +397,7 @@ This table is retained near the original early-phase section for historical cont
 | 109 | 13 | 13 | ✅ Complete |
 | 110 | 13 | 0 | 📝 Planned |
 | 111 | 10 | 10 | ✅ Complete |
-| 112 | 14 | 1 | 📝 Planned |
+| 112 | 14 | 2 | 🚧 In Progress |
 
 ## Phase 13: Streams and Behaviours (Weeks 20-22)
 
@@ -3253,7 +3253,7 @@ Boundary note: Phase 112 is normalizer/equality substrate only. It does not add 
 |------|-------------|------------|--------|
 | [TASK-816](tasks/TASK-816-spec-d-spec-plan-packet.md) | SPEC-D spec/plan packet | 4 | ✅ Complete |
 | [TASK-817](tasks/TASK-817-normalizer-defeq-audit-gate.md) | Normalizer / definitional equality audit gate | 4 | ✅ Complete |
-| [TASK-818](tasks/TASK-818-core-normal-form-and-domain-constructor-carriers.md) | Core normal-form and domain-constructor carriers | 5 | 📝 Planned |
+| [TASK-818](tasks/TASK-818-core-normal-form-and-domain-constructor-carriers.md) | Core normal-form and domain-constructor carriers | 5 | ✅ Complete |
 | [TASK-819](tasks/TASK-819-typeck-normalizer-api-skeleton.md) | Typechecker normalizer API skeleton | 5 | 📝 Planned |
 | [TASK-820](tasks/TASK-820-internal-fixture-equation-registry.md) | Internal fixture equation registry | 5 | 📝 Planned |
 | [TASK-821](tasks/TASK-821-closed-computation-head-reduction.md) | Closed computation-head reduction | 6 | 📝 Planned |

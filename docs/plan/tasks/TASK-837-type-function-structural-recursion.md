@@ -1,6 +1,6 @@
 # TASK-837: Implement declared decreasing-parameter and structural recursion validation
 
-## Status: 📋 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -66,16 +66,24 @@ commands:
   - cargo fmt --check
   - git diff --check
 checklist:
-  - [ ] Require `decreases` for recursive definitions.
-  - [ ] Require the decreasing parameter to be a sealed-domain parameter with structural subcomponent metadata.
-  - [ ] Consume provisional self-head resolution from TASK-834 without publishing invalid recursive heads.
-  - [ ] Detect recursive calls by recursively walking all canonical RHS children, including nominal apps, domain constructors, projections, and nested computation-head apps.
-  - [ ] Accept direct structural subcomponent recursion.
-  - [ ] Reject same, rebuilt, alias/computed, and mutually recursive arguments.
-  - [ ] focused tests/evidence recorded in this task file
-  - [ ] no SPEC-F/G/H scope creep
+  - [x] Require `decreases` for recursive definitions.
+  - [x] Require the decreasing parameter to be a sealed-domain parameter with structural subcomponent metadata.
+  - [x] Consume provisional self-head resolution from TASK-834 without publishing invalid recursive heads.
+  - [x] Detect recursive calls by recursively walking all canonical RHS children, including nominal apps, domain constructors, projections, and nested computation-head apps.
+  - [x] Accept direct structural subcomponent recursion.
+  - [x] Reject same, rebuilt, alias/computed, and mutually recursive arguments.
+  - [x] focused tests/evidence recorded in this task file
+  - [x] no SPEC-F/G/H scope creep
 ```
 
+## Evidence
+
+- Added focused TDD coverage in `crates/ash-typeck/tests/task_837_type_function_recursion.rs` for missing/invalid `decreases`, non-structural domains, accepted Append-style tail recursion, same/rebuilt/computed recursive argument rejection, nested self-call detection, source-order mutual-recursion rejection, and invalid recursive head non-publication.
+- Verified expected pre-implementation failures with `cargo test -p ash-typeck --test task_837_type_function_recursion -- --nocapture` (9 failed / 2 passed before implementation).
+- Implemented structural recursion validation in `crates/ash-typeck/src/type_env.rs` after TASK-836 pattern coverage, using checked result-expression carriers and existing staged publication to avoid publishing invalid recursive heads.
+- Verification commands run:
+  - `cargo test -p ash-typeck --test task_837_type_function_recursion -- --nocapture` — 11 passed.
+  - `cargo test -p ash-typeck --test task_836_type_function_patterns -- --nocapture` — 10 passed.
 
 ## Notes
 

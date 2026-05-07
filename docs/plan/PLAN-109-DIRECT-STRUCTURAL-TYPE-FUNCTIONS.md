@@ -28,7 +28,7 @@
 | [TASK-834](tasks/TASK-834-type-function-lowering-and-registration.md) | Lower source declarations and register module-local type-function heads | Type/Substrate | 6 | ✅ Complete |
 | [TASK-835](tasks/TASK-835-type-function-signature-kind-domain-validation.md) | Validate signatures, source resolution, domains, result constraints, and public boundary | Type/Semantic | 6 | ✅ Complete |
 | [TASK-836](tasks/TASK-836-type-function-pattern-coverage-overlap.md) | Implement pattern linearity plus finite residual coverage/overlap/default semantics | Type/Semantic | 7 | ✅ Complete |
-| [TASK-837](tasks/TASK-837-type-function-structural-recursion.md) | Implement declared decreasing-parameter and structural recursion validation | Type/Semantic | 6 | 📋 Planned |
+| [TASK-837](tasks/TASK-837-type-function-structural-recursion.md) | Implement declared decreasing-parameter and structural recursion validation | Type/Semantic | 6 | ✅ Complete |
 | [TASK-838](tasks/TASK-838-source-equations-normalizer-integration.md) | Register checked source equations with normalizer reduction/equality | Type/Integration | 7 | 📋 Planned |
 | [TASK-839](tasks/TASK-839-engine-module-boundary-and-non-interference.md) | Enforce module-local boundary and engine/import non-interference | Engine/Integration | 5 | 📋 Planned |
 | [TASK-840](tasks/TASK-840-type-function-diagnostics-and-acceptance-tests.md) | Add diagnostics and acceptance/non-regression test matrix | Diagnostics/Tests | 6 | 📋 Planned |

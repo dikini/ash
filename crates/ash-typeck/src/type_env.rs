@@ -2544,6 +2544,17 @@ impl TypeEnv {
             def.header_span,
         )?;
 
+        self.validate_type_function_structural_recursion(
+            def.name.as_ref(),
+            &head,
+            &params,
+            def.decreases
+                .as_ref()
+                .map(|decreases| decreases.param.as_ref()),
+            &equations,
+            def.header_span,
+        )?;
+
         Ok(TypeFunctionDef {
             visibility: core_visibility_from_surface(&def.visibility),
             head,
@@ -2697,6 +2708,223 @@ impl TypeEnv {
             ));
         }
         Ok(())
+    }
+
+    fn validate_type_function_structural_recursion(
+        &self,
+        name: &str,
+        head: &TypeComputationHeadId,
+        params: &[TypeFunctionParam],
+        decreases: Option<&str>,
+        equations: &[TypeFunctionEquation],
+        span: Span,
+    ) -> Result<(), TypeEnvError> {
+        let recursive = equations
+            .iter()
+            .any(|equation| Self::result_contains_computation_head(&equation.result, head));
+
+        let Some(decreases) = decreases else {
+            if recursive {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!("missing decreases clause for recursive type function '{name}'"),
+                    span,
+                ));
+            }
+            return Ok(());
+        };
+
+        let Some(decreasing_index) = params.iter().position(|param| param.name == decreases) else {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!("unknown decreases parameter '{decreases}' in type function '{name}'"),
+                span,
+            ));
+        };
+
+        let Some(decreasing_domain) = params[decreasing_index].domain_constraint.as_ref() else {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "invalid decreases parameter '{decreases}' in type function '{name}': parameter is not a sealed domain"
+                ),
+                span,
+            ));
+        };
+
+        if !self.domain_has_structural_subcomponent_metadata(decreasing_domain)? {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "invalid decreases parameter '{decreases}' in type function '{name}': sealed domain has no structural subcomponent metadata"
+                ),
+                span,
+            ));
+        }
+
+        for equation in equations {
+            let allowed_subcomponents = equation
+                .patterns
+                .get(decreasing_index)
+                .map(|pattern| self.direct_structural_subcomponent_vars(pattern))
+                .transpose()?
+                .unwrap_or_default();
+            self.validate_recursive_calls_in_result(
+                name,
+                head,
+                decreasing_index,
+                &allowed_subcomponents,
+                &equation.result,
+                span,
+            )?;
+        }
+
+        Ok(())
+    }
+
+    fn domain_has_structural_subcomponent_metadata(
+        &self,
+        domain: &SealedDomainId,
+    ) -> Result<bool, TypeEnvError> {
+        let summary = self.lookup_sealed_domain_by_id(domain).ok_or_else(|| {
+            TypeEnvError::InvalidDefinition(
+                format!(
+                    "unknown sealed domain '{}' in decreases clause",
+                    domain.name
+                ),
+                Span::default(),
+            )
+        })?;
+        Ok(summary.constructors.iter().any(|constructor| {
+            constructor
+                .fields
+                .iter()
+                .any(|field| field.structural_status == StructuralFieldStatus::StructuralSelfDomain)
+        }))
+    }
+
+    fn direct_structural_subcomponent_vars(
+        &self,
+        pattern: &TypeFunctionPattern,
+    ) -> Result<HashSet<String>, TypeEnvError> {
+        let TypeFunctionPattern::DomainConstructor {
+            constructor,
+            domain,
+            fields,
+            ..
+        } = pattern
+        else {
+            return Ok(HashSet::new());
+        };
+        let summary = self.lookup_sealed_domain_by_id(domain).ok_or_else(|| {
+            TypeEnvError::InvalidDefinition(
+                format!(
+                    "unknown sealed domain '{}' in recursion matrix",
+                    domain.name
+                ),
+                Span::default(),
+            )
+        })?;
+        let Some(constructor_summary) = summary
+            .constructors
+            .iter()
+            .find(|candidate| candidate.id == *constructor)
+        else {
+            return Ok(HashSet::new());
+        };
+
+        let mut vars = HashSet::new();
+        for (field_pattern, field) in fields.iter().zip(&constructor_summary.fields) {
+            if field.structural_status != StructuralFieldStatus::StructuralSelfDomain {
+                continue;
+            }
+            if let TypeFunctionPattern::Var { name, .. } = field_pattern {
+                vars.insert(name.clone());
+            }
+        }
+        Ok(vars)
+    }
+
+    fn validate_recursive_calls_in_result(
+        &self,
+        function_name: &str,
+        self_head: &TypeComputationHeadId,
+        decreasing_index: usize,
+        allowed_subcomponents: &HashSet<String>,
+        expr: &TypeFunctionResultExpr,
+        span: Span,
+    ) -> Result<(), TypeEnvError> {
+        match expr {
+            TypeFunctionResultExpr::Primitive { .. } | TypeFunctionResultExpr::Var { .. } => Ok(()),
+            TypeFunctionResultExpr::NominalApp { args, .. }
+            | TypeFunctionResultExpr::DomainConstructorApp { args, .. }
+            | TypeFunctionResultExpr::Projection { args, .. } => {
+                for arg in args {
+                    self.validate_recursive_calls_in_result(
+                        function_name,
+                        self_head,
+                        decreasing_index,
+                        allowed_subcomponents,
+                        arg,
+                        span,
+                    )?;
+                }
+                Ok(())
+            }
+            TypeFunctionResultExpr::ComputationHeadApp { head, args, .. } => {
+                for arg in args {
+                    self.validate_recursive_calls_in_result(
+                        function_name,
+                        self_head,
+                        decreasing_index,
+                        allowed_subcomponents,
+                        arg,
+                        span,
+                    )?;
+                }
+                if head == self_head {
+                    let Some(decreasing_arg) = args.get(decreasing_index) else {
+                        return Err(TypeEnvError::InvalidDefinition(
+                            format!(
+                                "non-decreasing recursive call in type function '{function_name}': missing decreasing argument"
+                            ),
+                            span,
+                        ));
+                    };
+                    match decreasing_arg {
+                        TypeFunctionResultExpr::Var { name, .. }
+                            if allowed_subcomponents.contains(name) =>
+                        {
+                            Ok(())
+                        }
+                        _ => Err(TypeEnvError::InvalidDefinition(
+                            format!(
+                                "non-decreasing recursive call in type function '{function_name}': decreasing argument must be a direct structural subcomponent"
+                            ),
+                            span,
+                        )),
+                    }
+                } else {
+                    Ok(())
+                }
+            }
+        }
+    }
+
+    fn result_contains_computation_head(
+        expr: &TypeFunctionResultExpr,
+        needle: &TypeComputationHeadId,
+    ) -> bool {
+        match expr {
+            TypeFunctionResultExpr::Primitive { .. } | TypeFunctionResultExpr::Var { .. } => false,
+            TypeFunctionResultExpr::NominalApp { args, .. }
+            | TypeFunctionResultExpr::DomainConstructorApp { args, .. }
+            | TypeFunctionResultExpr::Projection { args, .. } => args
+                .iter()
+                .any(|arg| Self::result_contains_computation_head(arg, needle)),
+            TypeFunctionResultExpr::ComputationHeadApp { head, args, .. } => {
+                head == needle
+                    || args
+                        .iter()
+                        .any(|arg| Self::result_contains_computation_head(arg, needle))
+            }
+        }
     }
 
     fn coverage_space_for_domain<'a>(

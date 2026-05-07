@@ -3296,7 +3296,7 @@ Boundary note: Phase 113 is source `type fn` work only. It does not implement pu
 | Task | Description | Est. Hours | Status |
 |------|-------------|------------|--------|
 | [TASK-830](tasks/TASK-830-spec-e-spec-plan-packet.md) | SPEC-E spec/plan packet | 4 | ✅ Complete |
-| [TASK-831](tasks/TASK-831-type-function-audit-gate.md) | Type-function audit gate | 5 | 📋 Planned |
+| [TASK-831](tasks/TASK-831-type-function-audit-gate.md) | Type-function audit gate | 5 | ✅ Complete |
 | [TASK-832](tasks/TASK-832-parser-surface-for-type-functions.md) | Parser surface for type functions | 6 | 📋 Planned |
 | [TASK-833](tasks/TASK-833-core-type-function-equation-carriers.md) | Core type-function/equation/result-expression carriers | 5 | 📋 Planned |
 | [TASK-834](tasks/TASK-834-type-function-lowering-and-registration.md) | Type-function lowering and registration | 6 | 📋 Planned |

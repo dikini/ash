@@ -1,6 +1,6 @@
 # TASK-831: Audit live parser/core/typeck/normalizer/engine seams before implementation begins
 
-## Status: 📋 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -64,16 +64,25 @@ commands:
   - git diff --check
   - test -f docs/plan/audits/TASK-831-type-function-audit.md
 checklist:
-  - [ ] Produce an audit artifact under `docs/plan/audits/`.
-  - [ ] Name exact parser dispatch functions and AST carriers to change.
-  - [ ] Name exact core/type_ir and semantic_summary carriers to extend.
-  - [ ] Name exact TypeEnv and normalizer integration seams.
-  - [ ] Name public/import boundary seams in ash-engine, including public ordinary export leakage before SPEC-F.
-  - [ ] Name source type-expression resolution seams and ambiguity checks.
-  - [ ] No Rust implementation changes.
-  - [ ] focused tests/evidence recorded in this task file
-  - [ ] no SPEC-F/G/H scope creep
+  - [x] Produce an audit artifact under `docs/plan/audits/`.
+  - [x] Name exact parser dispatch functions and AST carriers to change.
+  - [x] Name exact core/type_ir and semantic_summary carriers to extend.
+  - [x] Name exact TypeEnv and normalizer integration seams.
+  - [x] Name public/import boundary seams in ash-engine, including public ordinary export leakage before SPEC-F.
+  - [x] Name source type-expression resolution seams and ambiguity checks.
+  - [x] No Rust implementation changes.
+  - [x] focused tests/evidence recorded in this task file
+  - [x] no SPEC-F/G/H scope creep
 ```
+
+## Evidence
+
+- Audit artifact: [`docs/plan/audits/TASK-831-type-function-audit.md`](../audits/TASK-831-type-function-audit.md).
+- Live code inspected and mapped: `ash-parser` surface/module/type parser seams, `ash-core` canonical/normal/semantic-summary carriers, `ash-typeck` TypeEnv/normalizer/error seams, and `ash-engine` module summary/import/export seams.
+- Verification commands:
+  - `test -f docs/plan/audits/TASK-831-type-function-audit.md`
+  - `git diff --check`
+- Scope evidence: no Rust implementation changes; audit explicitly keeps public type-function summary export/import, associated recursive type-family computation, and SPEC-G/H behavior out of scope.
 
 
 ## Notes

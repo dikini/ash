@@ -129,8 +129,8 @@ pub enum TypeFunctionPatternConstraint {
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum TypeFunctionPattern {
     DomainConstructor {
-        constructor: DomainConstructorId,
-        domain: SealedDomainId,
+        constructor: Box<DomainConstructorId>,
+        domain: Box<SealedDomainId>,
         fields: Vec<TypeFunctionPattern>,
         constraint: TypeFunctionPatternConstraint,
         source_anchor: SourceAnchor,

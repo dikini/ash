@@ -1216,8 +1216,8 @@ fn match_source_pattern_open(
                 args: arg_args,
                 ..
             } => {
-                if constructor != arg_constructor
-                    || domain != arg_domain
+                if constructor.as_ref() != arg_constructor
+                    || domain.as_ref() != arg_domain
                     || fields.len() != arg_args.len()
                 {
                     return FixturePatternMatch::NoMatch;
@@ -1256,7 +1256,7 @@ fn block_reason_for_normal(arg: &NormalTypeExpr) -> NormalFormBlockReason {
 
 enum SourceEquationSelection {
     Matched {
-        result: TypeFunctionResultExpr,
+        result: Box<TypeFunctionResultExpr>,
         bindings: BTreeMap<String, NormalTypeExpr>,
     },
     Blocked(NormalFormBlockReason),
@@ -1455,7 +1455,7 @@ impl<'env> NormalizationState<'env> {
                 match self.source_first_match_or_blocker(head, &args) {
                     SourceEquationSelection::Matched { result, bindings } => {
                         self.fuel.consume(self.mode)?;
-                        let reduced = self.normalize_source_result(&result, &bindings)?;
+                        let reduced = self.normalize_source_result(result.as_ref(), &bindings)?;
                         Ok(ComputationReduction::Reduced(reduced))
                     }
                     SourceEquationSelection::Blocked(reason) => Ok(ComputationReduction::Neutral {
@@ -1515,7 +1515,7 @@ impl<'env> NormalizationState<'env> {
             }
             if matched {
                 return SourceEquationSelection::Matched {
-                    result: equation.result.clone(),
+                    result: Box::new(equation.result.clone()),
                     bindings,
                 };
             }

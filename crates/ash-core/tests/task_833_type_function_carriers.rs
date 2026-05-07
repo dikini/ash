@@ -90,8 +90,8 @@ fn append_def() -> TypeFunctionDef {
                 ordinal: 0,
                 patterns: vec![
                     TypeFunctionPattern::DomainConstructor {
-                        constructor: nil.clone(),
-                        domain: typelist.clone(),
+                        constructor: Box::new(nil.clone()),
+                        domain: Box::new(typelist.clone()),
                         fields: vec![],
                         constraint: TypeFunctionPatternConstraint::Domain(typelist.clone()),
                         source_anchor: anchor("pattern Nil", 83, 86),
@@ -116,8 +116,8 @@ fn append_def() -> TypeFunctionDef {
                 ordinal: 1,
                 patterns: vec![
                     TypeFunctionPattern::DomainConstructor {
-                        constructor: cons.clone(),
-                        domain: typelist.clone(),
+                        constructor: Box::new(cons.clone()),
+                        domain: Box::new(typelist.clone()),
                         fields: vec![
                             TypeFunctionPattern::Var {
                                 name: "h".to_string(),
@@ -236,12 +236,12 @@ fn patterns_and_results_use_sealed_domain_constructor_ids_and_constraints() {
             constraint,
             source_anchor,
         } => {
-            assert_eq!(domain, &typelist);
+            assert_eq!(domain.as_ref(), &typelist);
             assert_eq!(constructor.domain, typelist);
             assert_eq!(constructor.name, "Cons");
             assert_eq!(
                 *constraint,
-                TypeFunctionPatternConstraint::Domain(domain.clone())
+                TypeFunctionPatternConstraint::Domain(domain.as_ref().clone())
             );
             assert_eq!(source_anchor.label, "pattern Cons<h, t>");
             assert_eq!(fields.len(), 2);
@@ -288,7 +288,7 @@ fn result_expr_supports_all_canonical_heads_plus_marker_constructor_apps() {
     );
     let constraint = TypeFunctionResultConstraint::Kind(Kind::Type);
 
-    let expressions = vec![
+    let expressions = [
         TypeFunctionResultExpr::Primitive {
             name: "Type".to_string(),
             kind: Kind::Type,

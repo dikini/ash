@@ -1021,14 +1021,16 @@ pub(crate) fn public_callable_signature_resolution_errors(
     }
 
     let local_type_function_names = collect_module_type_metadata_from_module_file(path, source)
-        .map(|metadata| {
-            metadata
-                .type_function_defs
-                .iter()
-                .map(|type_fn| type_fn.name.to_string())
-                .collect()
-        })
-        .unwrap_or_else(|_| local_type_function_names_from_source(source));
+        .map_or_else(
+            |_| local_type_function_names_from_source(source),
+            |metadata| {
+                metadata
+                    .type_function_defs
+                    .iter()
+                    .map(|type_fn| type_fn.name.to_string())
+                    .collect()
+            },
+        );
     let mut errors = Vec::new();
     for callable in public_callable_signatures(source) {
         append_callable_signature_type_function_leaks(

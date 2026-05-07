@@ -884,6 +884,19 @@ fn constraint_for_param(param: &TypeFunctionParam) -> TypeFunctionPatternConstra
         .unwrap_or_else(|| TypeFunctionPatternConstraint::Kind(param.kind.clone()))
 }
 
+type CurrentTypeFunctionHead<'a> = (
+    &'a str,
+    &'a TypeComputationHeadId,
+    &'a [TypeFunctionParam],
+    &'a TypeFunctionResultConstraint,
+);
+
+struct TypeFunctionResultLoweringContext<'a> {
+    pattern_vars: &'a HashMap<String, TypeFunctionPatternConstraint>,
+    current_head: Option<CurrentTypeFunctionHead<'a>>,
+    later_names: &'a HashSet<String>,
+}
+
 fn result_constraint_from_pattern(
     constraint: &TypeFunctionPatternConstraint,
 ) -> TypeFunctionResultConstraint {
@@ -2524,12 +2537,15 @@ impl TypeEnv {
                     self.lower_type_function_pattern(pattern, &constraint, &mut pattern_vars)
                 })
                 .collect::<Result<Vec<_>, TypeEnvError>>()?;
+            let result_context = TypeFunctionResultLoweringContext {
+                pattern_vars: &pattern_vars,
+                current_head: Some((&def.name, &head, &params, &result_constraint)),
+                later_names,
+            };
             let result = self.lower_type_function_result_expr(
                 &equation.result,
                 result_domain.as_ref(),
-                &pattern_vars,
-                Some((&def.name, &head, &params, &result_constraint)),
-                later_names,
+                &result_context,
                 equation.result_span,
             )?;
             self.validate_type_function_result_constraint(
@@ -2837,7 +2853,7 @@ impl TypeEnv {
         let Some(constructor_summary) = summary
             .constructors
             .iter()
-            .find(|candidate| candidate.id == *constructor)
+            .find(|candidate| candidate.id == **constructor)
         else {
             return Ok(HashSet::new());
         };
@@ -3013,14 +3029,14 @@ impl TypeEnv {
         let Some(constructor_summary) = summary
             .constructors
             .iter()
-            .find(|candidate| candidate.id == *constructor)
+            .find(|candidate| candidate.id == **constructor)
         else {
             return Ok(());
         };
         for (field_index, field_pattern) in fields.iter().enumerate() {
             if matches!(field_pattern, TypeFunctionPattern::DomainConstructor { .. }) {
                 inspected
-                    .entry((constructor.clone(), field_index))
+                    .entry(((**constructor).clone(), field_index))
                     .or_default()
                     .push(field_pattern);
                 let Some(field) = constructor_summary.fields.get(field_index) else {
@@ -3107,7 +3123,7 @@ impl TypeEnv {
                 fields,
                 ..
             } => {
-                constructor == &value.constructor
+                constructor.as_ref() == &value.constructor
                     && fields.iter().enumerate().all(|(index, field_pattern)| {
                         match value.fields.get(index).and_then(Option::as_ref) {
                             Some(nested) => {
@@ -3160,18 +3176,17 @@ impl TypeEnv {
                 source_anchor: span_anchor(*span, "wildcard type pattern"),
             }),
             SurfaceTypePattern::Var { name, span } => {
-                if let TypeFunctionPatternConstraint::Domain(domain_id) = constraint {
-                    if let Some((domain, constructor)) =
+                if let TypeFunctionPatternConstraint::Domain(domain_id) = constraint
+                    && let Some((domain, constructor)) =
                         self.find_domain_constructor(domain_id, name.as_ref())
-                    {
-                        return self.lower_domain_constructor_pattern(
-                            constructor,
-                            domain,
-                            &[],
-                            *span,
-                            pattern_vars,
-                        );
-                    }
+                {
+                    return self.lower_domain_constructor_pattern(
+                        constructor,
+                        domain,
+                        &[],
+                        *span,
+                        pattern_vars,
+                    );
                 }
                 let name = name.to_string();
                 if pattern_vars
@@ -3274,8 +3289,8 @@ impl TypeEnv {
             })
             .collect::<Result<Vec<_>, _>>()?;
         Ok(TypeFunctionPattern::DomainConstructor {
-            constructor: constructor.id.clone(),
-            domain: domain.id.clone(),
+            constructor: Box::new(constructor.id.clone()),
+            domain: Box::new(domain.id.clone()),
             fields,
             constraint: TypeFunctionPatternConstraint::Domain(domain.id.clone()),
             source_anchor: span_anchor(
@@ -3289,14 +3304,7 @@ impl TypeEnv {
         &self,
         ty: &SurfaceType,
         expected_domain: Option<&SealedDomainId>,
-        pattern_vars: &HashMap<String, TypeFunctionPatternConstraint>,
-        current_head: Option<(
-            &str,
-            &TypeComputationHeadId,
-            &[TypeFunctionParam],
-            &TypeFunctionResultConstraint,
-        )>,
-        later_names: &HashSet<String>,
+        context: &TypeFunctionResultLoweringContext<'_>,
         span: Span,
     ) -> Result<TypeFunctionResultExpr, TypeEnvError> {
         match ty {
@@ -3304,18 +3312,14 @@ impl TypeEnv {
                 name.as_ref(),
                 &[],
                 expected_domain,
-                pattern_vars,
-                current_head,
-                later_names,
+                context,
                 span,
             ),
             SurfaceType::Constructor { name, args } => self.lower_type_function_result_head(
                 name.as_ref(),
                 args,
                 expected_domain,
-                pattern_vars,
-                current_head,
-                later_names,
+                context,
                 span,
             ),
             other => self
@@ -3332,18 +3336,14 @@ impl TypeEnv {
         name: &str,
         args: &[SurfaceType],
         expected_domain: Option<&SealedDomainId>,
-        pattern_vars: &HashMap<String, TypeFunctionPatternConstraint>,
-        current_head: Option<(
-            &str,
-            &TypeComputationHeadId,
-            &[TypeFunctionParam],
-            &TypeFunctionResultConstraint,
-        )>,
-        later_names: &HashSet<String>,
+        context: &TypeFunctionResultLoweringContext<'_>,
         span: Span,
     ) -> Result<TypeFunctionResultExpr, TypeEnvError> {
-        if args.is_empty() && pattern_vars.contains_key(name) {
-            let constraint = pattern_vars.get(name).expect("checked contains_key");
+        if args.is_empty() && context.pattern_vars.contains_key(name) {
+            let constraint = context
+                .pattern_vars
+                .get(name)
+                .expect("checked contains_key");
             return Ok(TypeFunctionResultExpr::Var {
                 name: name.to_string(),
                 kind: Kind::Type,
@@ -3353,7 +3353,8 @@ impl TypeEnv {
         }
         if let Some(domain_id) = expected_domain {
             if let Some((domain, constructor)) = self.find_domain_constructor(domain_id, name) {
-                let current_head_has_same_name = current_head
+                let current_head_has_same_name = context
+                    .current_head
                     .as_ref()
                     .is_some_and(|(self_name, _, _, _)| name == *self_name);
                 if self.visible_type_head_exists(name)
@@ -3385,9 +3386,7 @@ impl TypeEnv {
                         self.lower_type_function_result_expr(
                             arg,
                             field.domain_constraint.as_ref(),
-                            pattern_vars,
-                            current_head,
-                            later_names,
+                            context,
                             span,
                         )
                     })
@@ -3411,8 +3410,9 @@ impl TypeEnv {
                 ));
             }
         }
-        if let Some((_, head, params, result_constraint)) =
-            current_head.filter(|(self_name, _, _, _)| name == *self_name)
+        if let Some((_, head, params, result_constraint)) = context
+            .current_head
+            .filter(|(self_name, _, _, _)| name == *self_name)
         {
             if self.visible_type_head_exists(name) {
                 return Err(TypeEnvError::InvalidDefinition(
@@ -3437,9 +3437,7 @@ impl TypeEnv {
                     self.lower_type_function_result_expr(
                         arg,
                         param.domain_constraint.as_ref(),
-                        pattern_vars,
-                        current_head,
-                        later_names,
+                        context,
                         span,
                     )
                 })
@@ -3483,9 +3481,7 @@ impl TypeEnv {
                     self.lower_type_function_result_expr(
                         arg,
                         param.domain_constraint.as_ref(),
-                        pattern_vars,
-                        current_head,
-                        later_names,
+                        context,
                         span,
                     )
                 })
@@ -3504,7 +3500,7 @@ impl TypeEnv {
                 source_anchor: span_anchor(span, format!("type function call {name}")),
             });
         }
-        if later_names.contains(name) {
+        if context.later_names.contains(name) {
             return Err(TypeEnvError::InvalidDefinition(
                 format!(
                     "forward reference to later type function '{name}' is unsupported in SPEC-E"

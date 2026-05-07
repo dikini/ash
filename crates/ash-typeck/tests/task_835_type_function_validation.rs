@@ -327,12 +327,19 @@ fn lowercase_pattern_variables_are_not_lowered_as_nominal_types() {
         builtin: false,
     })
     .expect("lowercase nominal type registers");
-    let defs = type_fns("type fn F(xs: TypeList) -> TypeList { case F<Cons<h, t>> = Cons<h, t>; }");
+    let defs = type_fns(
+        r#"
+        type fn F(xs: TypeList) -> TypeList {
+            case F<Nil> = Nil;
+            case F<Cons<h, t>> = Cons<h, t>;
+        }
+        "#,
+    );
 
     env.register_local_type_functions(&module, &defs)
         .expect("lowercase pattern variable wins over nominal type");
     let def = env.lookup_local_type_function("F").unwrap();
-    match &def.equations[0].result {
+    match &def.equations[1].result {
         TypeFunctionResultExpr::DomainConstructorApp { args, .. } => {
             assert!(matches!(
                 &args[0],

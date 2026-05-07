@@ -14,10 +14,10 @@ use ash_core::ast::{TypeBody, TypeDef, TypeExpr, VariantDef, VariantPayload};
 use ash_core::module_graph::{CrateId, ModuleId};
 use ash_core::semantic_summary::{
     AssociatedMemberIdentityId, AssociatedMemberIdentitySummary, ConstructorPayloadKind,
-    ConstructorSummary, DomainConstructorSummary, InterfaceIdentityId, InterfaceIdentitySummary,
-    ModuleIdentity, ModuleSemanticSummary, RepresentationExposure, SealedDomainId,
-    SealedDomainSummary, SourceAnchor, SourceOrigin, StructuralFieldStatus, SummaryVersion,
-    TypeDeclId, TypeDeclSummary, TypeRepresentationSummary,
+    ConstructorSummary, DomainConstructorId, DomainConstructorSummary, InterfaceIdentityId,
+    InterfaceIdentitySummary, ModuleIdentity, ModuleSemanticSummary, RepresentationExposure,
+    SealedDomainId, SealedDomainSummary, SourceAnchor, SourceOrigin, StructuralFieldStatus,
+    SummaryVersion, TypeDeclId, TypeDeclSummary, TypeRepresentationSummary,
 };
 use ash_core::type_ir::{
     CanonicalTypeExpr, ProjectionRigidity, TypeComputationHeadId, TypeFunctionDef,
@@ -34,6 +34,24 @@ use ash_parser::surface::{
 };
 use ash_parser::token::Span;
 use std::collections::{HashMap, HashSet};
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+struct TypeFunctionCoverageValue {
+    constructor: ash_core::semantic_summary::DomainConstructorId,
+    fields: Vec<Option<TypeFunctionCoverageValue>>,
+}
+
+#[derive(Debug, Clone)]
+struct TypeFunctionCoverageAlt {
+    constructor: ash_core::semantic_summary::DomainConstructorId,
+    fields: Vec<Option<TypeFunctionCoverageSpace>>,
+}
+
+#[derive(Debug, Clone)]
+struct TypeFunctionCoverageSpace {
+    domain: SealedDomainId,
+    alts: Vec<TypeFunctionCoverageAlt>,
+}
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct StoredFnContract {
@@ -2519,6 +2537,13 @@ impl TypeEnv {
             });
         }
 
+        self.validate_type_function_pattern_coverage(
+            def.name.as_ref(),
+            &params,
+            &equations,
+            def.header_span,
+        )?;
+
         Ok(TypeFunctionDef {
             visibility: core_visibility_from_surface(&def.visibility),
             head,
@@ -2573,6 +2598,313 @@ impl TypeEnv {
             ));
         }
         Ok((canonical, None))
+    }
+
+    fn validate_type_function_pattern_coverage(
+        &self,
+        name: &str,
+        params: &[TypeFunctionParam],
+        equations: &[TypeFunctionEquation],
+        span: Span,
+    ) -> Result<(), TypeEnvError> {
+        let sealed_positions = params
+            .iter()
+            .enumerate()
+            .filter_map(|(index, param)| {
+                param
+                    .domain_constraint
+                    .clone()
+                    .map(|domain| (index, domain))
+            })
+            .collect::<Vec<_>>();
+        if sealed_positions.is_empty() {
+            return Ok(());
+        }
+
+        let spaces = sealed_positions
+            .iter()
+            .map(|(param_index, domain)| {
+                self.coverage_space_for_domain(
+                    domain,
+                    equations
+                        .iter()
+                        .filter_map(|equation| equation.patterns.get(*param_index)),
+                )
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        let universe = Self::coverage_tuple_universe(&spaces);
+        let mut covered = HashSet::new();
+        let mut covered_by_default = HashSet::new();
+
+        for equation in equations {
+            let row_patterns = sealed_positions
+                .iter()
+                .map(|(index, _)| &equation.patterns[*index])
+                .collect::<Vec<_>>();
+            let row_space = universe
+                .iter()
+                .filter(|tuple| {
+                    tuple.iter().zip(&row_patterns).all(|(value, pattern)| {
+                        Self::coverage_value_matches_pattern(value, pattern)
+                    })
+                })
+                .cloned()
+                .collect::<HashSet<_>>();
+            let residual = row_space
+                .difference(&covered)
+                .cloned()
+                .collect::<HashSet<_>>();
+            let has_default = row_patterns
+                .iter()
+                .any(|pattern| Self::pattern_has_domain_default(pattern));
+            let is_all_default = row_patterns
+                .iter()
+                .all(|pattern| Self::pattern_is_all_domain_default(pattern));
+            if residual.is_empty() {
+                let message = if has_default && is_all_default {
+                    format!(
+                        "empty residual default in type function '{name}' equation {}",
+                        equation.ordinal
+                    )
+                } else if row_space
+                    .iter()
+                    .any(|value| covered_by_default.contains(value))
+                {
+                    format!(
+                        "unreachable type function equation {} in '{name}' after earlier default",
+                        equation.ordinal
+                    )
+                } else {
+                    format!(
+                        "overlapping type function equation {} in '{name}'",
+                        equation.ordinal
+                    )
+                };
+                return Err(TypeEnvError::InvalidDefinition(message, span));
+            }
+            if has_default {
+                covered_by_default.extend(residual.iter().cloned());
+            }
+            covered.extend(residual);
+        }
+
+        if covered.len() != universe.len() {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "non-exhaustive type function '{name}': uncovered closed constructor tuple(s)"
+                ),
+                span,
+            ));
+        }
+        Ok(())
+    }
+
+    fn coverage_space_for_domain<'a>(
+        &self,
+        domain: &SealedDomainId,
+        patterns: impl Iterator<Item = &'a TypeFunctionPattern>,
+    ) -> Result<TypeFunctionCoverageSpace, TypeEnvError> {
+        let summary = self.lookup_sealed_domain_by_id(domain).ok_or_else(|| {
+            TypeEnvError::InvalidDefinition(
+                format!("unknown sealed domain '{}' in coverage matrix", domain.name),
+                Span::default(),
+            )
+        })?;
+        let mut inspected: HashMap<(DomainConstructorId, usize), Vec<&TypeFunctionPattern>> =
+            HashMap::new();
+        for pattern in patterns {
+            self.collect_coverage_inspections(pattern, &mut inspected)?;
+        }
+        let mut alts = Vec::with_capacity(summary.constructors.len());
+        for constructor in &summary.constructors {
+            let mut fields = Vec::with_capacity(constructor.fields.len());
+            for (field_index, field) in constructor.fields.iter().enumerate() {
+                if let Some(nested_patterns) = inspected.get(&(constructor.id.clone(), field_index))
+                {
+                    let nested_domain = field.domain_constraint.clone().ok_or_else(|| {
+                        TypeEnvError::InvalidDefinition(
+                            format!(
+                                "nested constructor pattern under '{}' field '{}' requires a sealed-domain field",
+                                constructor.exported_name, field.name
+                            ),
+                            Span::default(),
+                        )
+                    })?;
+                    fields.push(Some(self.coverage_space_for_domain(
+                        &nested_domain,
+                        nested_patterns.iter().copied(),
+                    )?));
+                } else {
+                    fields.push(None);
+                }
+            }
+            alts.push(TypeFunctionCoverageAlt {
+                constructor: constructor.id.clone(),
+                fields,
+            });
+        }
+        Ok(TypeFunctionCoverageSpace {
+            domain: domain.clone(),
+            alts,
+        })
+    }
+
+    fn collect_coverage_inspections<'a>(
+        &self,
+        pattern: &'a TypeFunctionPattern,
+        inspected: &mut HashMap<(DomainConstructorId, usize), Vec<&'a TypeFunctionPattern>>,
+    ) -> Result<(), TypeEnvError> {
+        let TypeFunctionPattern::DomainConstructor {
+            constructor,
+            domain,
+            fields,
+            ..
+        } = pattern
+        else {
+            return Ok(());
+        };
+        let summary = self.lookup_sealed_domain_by_id(domain).ok_or_else(|| {
+            TypeEnvError::InvalidDefinition(
+                format!("unknown sealed domain '{}' in coverage matrix", domain.name),
+                Span::default(),
+            )
+        })?;
+        let Some(constructor_summary) = summary
+            .constructors
+            .iter()
+            .find(|candidate| candidate.id == *constructor)
+        else {
+            return Ok(());
+        };
+        for (field_index, field_pattern) in fields.iter().enumerate() {
+            if matches!(field_pattern, TypeFunctionPattern::DomainConstructor { .. }) {
+                inspected
+                    .entry((constructor.clone(), field_index))
+                    .or_default()
+                    .push(field_pattern);
+                let Some(field) = constructor_summary.fields.get(field_index) else {
+                    continue;
+                };
+                if field.domain_constraint.is_none() {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "nested constructor pattern under '{}' field '{}' requires a sealed-domain field",
+                            constructor_summary.exported_name, field.name
+                        ),
+                        Span::default(),
+                    ));
+                }
+                self.collect_coverage_inspections(field_pattern, inspected)?;
+            }
+        }
+        Ok(())
+    }
+
+    fn coverage_tuple_universe(
+        spaces: &[TypeFunctionCoverageSpace],
+    ) -> HashSet<Vec<TypeFunctionCoverageValue>> {
+        let mut tuples = vec![Vec::new()];
+        for values in spaces.iter().map(Self::coverage_values_for_space) {
+            let mut next = Vec::new();
+            for prefix in &tuples {
+                for value in &values {
+                    let mut tuple = prefix.clone();
+                    tuple.push(value.clone());
+                    next.push(tuple);
+                }
+            }
+            tuples = next;
+        }
+        tuples.into_iter().collect()
+    }
+
+    fn coverage_values_for_space(
+        space: &TypeFunctionCoverageSpace,
+    ) -> Vec<TypeFunctionCoverageValue> {
+        let _ = &space.domain;
+        let mut values = Vec::new();
+        for alt in &space.alts {
+            let mut field_values = vec![Vec::new()];
+            for field_space in &alt.fields {
+                if let Some(field_space) = field_space {
+                    let nested_values = Self::coverage_values_for_space(field_space);
+                    let mut next = Vec::new();
+                    for prefix in &field_values {
+                        for nested in &nested_values {
+                            let mut fields = prefix.clone();
+                            fields.push(Some(nested.clone()));
+                            next.push(fields);
+                        }
+                    }
+                    field_values = next;
+                } else {
+                    for prefix in &mut field_values {
+                        prefix.push(None);
+                    }
+                }
+            }
+            values.extend(
+                field_values
+                    .into_iter()
+                    .map(|fields| TypeFunctionCoverageValue {
+                        constructor: alt.constructor.clone(),
+                        fields,
+                    }),
+            );
+        }
+        values
+    }
+
+    fn coverage_value_matches_pattern(
+        value: &TypeFunctionCoverageValue,
+        pattern: &TypeFunctionPattern,
+    ) -> bool {
+        match pattern {
+            TypeFunctionPattern::Wildcard { .. } | TypeFunctionPattern::Var { .. } => true,
+            TypeFunctionPattern::DomainConstructor {
+                constructor,
+                fields,
+                ..
+            } => {
+                constructor == &value.constructor
+                    && fields.iter().enumerate().all(|(index, field_pattern)| {
+                        match value.fields.get(index).and_then(Option::as_ref) {
+                            Some(nested) => {
+                                Self::coverage_value_matches_pattern(nested, field_pattern)
+                            }
+                            None => !matches!(
+                                field_pattern,
+                                TypeFunctionPattern::DomainConstructor { .. }
+                            ),
+                        }
+                    })
+            }
+        }
+    }
+
+    fn pattern_has_domain_default(pattern: &TypeFunctionPattern) -> bool {
+        match pattern {
+            TypeFunctionPattern::Wildcard { constraint, .. }
+            | TypeFunctionPattern::Var { constraint, .. } => {
+                matches!(constraint, TypeFunctionPatternConstraint::Domain(_))
+            }
+            TypeFunctionPattern::DomainConstructor { fields, .. } => {
+                fields.iter().any(Self::pattern_has_domain_default)
+            }
+        }
+    }
+
+    fn pattern_is_all_domain_default(pattern: &TypeFunctionPattern) -> bool {
+        matches!(
+            pattern,
+            TypeFunctionPattern::Wildcard {
+                constraint: TypeFunctionPatternConstraint::Domain(_),
+                ..
+            } | TypeFunctionPattern::Var {
+                constraint: TypeFunctionPatternConstraint::Domain(_),
+                ..
+            }
+        )
     }
 
     fn lower_type_function_pattern(

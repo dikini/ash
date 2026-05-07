@@ -1,6 +1,6 @@
 # TASK-836: Implement pattern linearity plus pattern-matrix coverage, overlap, and residual catch-all semantics
 
-## Status: 📋 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -68,19 +68,27 @@ commands:
   - cargo fmt --check
   - git diff --check
 checklist:
-  - [ ] Reject repeated pattern variables within one equation row while allowing the same variable name in different rows.
-  - [ ] Build finite symbolic pattern spaces over sealed-domain constructor tuples, splitting nested fields only where explicitly inspected.
-  - [ ] Define and implement nested residual coverage for explicitly inspected sealed-domain fields; do not unboundedly expand recursive domains.
-  - [ ] Reject nested constructor patterns inside unconstrained `Type` slots.
-  - [ ] Reject non-exhaustive partial Head-style definitions.
-  - [ ] Reject overlapping explicit rows, unreachable rows after defaults, empty residual defaults, and duplicate defaults over empty residual spaces.
-  - [ ] Verify wildcard/variable catch-all rows cover known residual constructors only and do not reduce abstract scrutinees.
-  - [ ] Add tests for nested-pattern coverage gaps, nested defaults, accepted positive multiple-default residual rows, later explicit rows after defaults, empty/duplicate defaults, and lowercase constructor/variable disambiguation.
-  - [ ] focused tests/evidence recorded in this task file
-  - [ ] no SPEC-F/G/H scope creep
+  - [x] Reject repeated pattern variables within one equation row while allowing the same variable name in different rows.
+  - [x] Build finite symbolic pattern spaces over sealed-domain constructor tuples, splitting nested fields only where explicitly inspected.
+  - [x] Define and implement nested residual coverage for explicitly inspected sealed-domain fields; do not unboundedly expand recursive domains.
+  - [x] Reject nested constructor patterns inside unconstrained `Type` slots.
+  - [x] Reject non-exhaustive partial Head-style definitions.
+  - [x] Reject overlapping explicit rows, unreachable rows after defaults, empty residual defaults, and duplicate defaults over empty residual spaces.
+  - [x] Verify wildcard/variable catch-all rows cover known residual constructors only and do not reduce abstract scrutinees.
+  - [x] Add tests for nested-pattern coverage gaps, nested defaults, accepted positive multiple-default residual rows, later explicit rows after defaults, empty/duplicate defaults, and lowercase constructor/variable disambiguation.
+  - [x] focused tests/evidence recorded in this task file
+  - [x] no SPEC-F/G/H scope creep
 ```
 
 
 ## Notes
 
 Task type: Type/Semantic. Estimated effort: 7 hours. Keep the slice within SPEC-061 / Phase 113 boundaries.
+
+## Completion Evidence
+
+- Added focused ash-typeck coverage in `crates/ash-typeck/tests/task_836_type_function_patterns.rs` for non-exhaustive Head-style rows, overlap, later explicit rows after defaults, empty/duplicate defaults, positive multiple residual defaults, nested coverage gaps/defaults, unconstrained Type-slot nested constructor rejection, repeated variable scoping across rows, and lowercase constructor disambiguation.
+- Implemented bounded TypeEnv registration validation using finite symbolic constructor-tuple spaces. Recursive sealed domains are only split at fields explicitly inspected by source patterns; residual defaults subtract earlier covered spaces and must cover non-empty known constructor residuals.
+- Verification run:
+  - `cargo test -p ash-typeck --test task_836_type_function_patterns -- --nocapture` — 10 passed.
+  - `cargo test -p ash-typeck --test task_835_type_function_validation -- --nocapture` — 19 passed.

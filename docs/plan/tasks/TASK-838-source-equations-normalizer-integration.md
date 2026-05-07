@@ -1,6 +1,6 @@
 # TASK-838: Register checked source equations with the SPEC-060 normalizer and definitional equality API
 
-## Status: 📋 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -65,14 +65,21 @@ commands:
   - cargo fmt --check
   - git diff --check
 checklist:
-  - [ ] Convert validated equations into source-backed normalizer tables.
-  - [ ] Substitute bound pattern variables such as `h`, `t`, and `ys` into RHS/result expressions during reduction.
-  - [ ] Preserve SPEC-060 fixture semantics for known-scrutinee/open/partial reduction.
-  - [ ] Test Append known-scrutinee reduction and abstract neutrality from source declarations.
-  - [ ] Keep fixtures as test/internal setup, not production source representation.
-  - [ ] focused tests/evidence recorded in this task file
-  - [ ] no SPEC-F/G/H scope creep
+  - [x] Convert validated equations into source-backed normalizer tables.
+  - [x] Substitute bound pattern variables such as `h`, `t`, and `ys` into RHS/result expressions during reduction.
+  - [x] Preserve SPEC-060 fixture semantics for known-scrutinee/open/partial reduction.
+  - [x] Test Append known-scrutinee reduction and abstract neutrality from source declarations.
+  - [x] Keep fixtures as test/internal setup, not production source representation.
+  - [x] focused tests/evidence recorded in this task file
+  - [x] no SPEC-F/G/H scope creep
 ```
+
+## Evidence
+
+- TDD failing evidence: `cargo test -p ash-typeck --test task_838_type_function_normalizer -- --nocapture` initially failed because `Normalizer` had no source-backed known-spine reduction or normal-form definitional-equality helpers.
+- Focused verification: `cargo test -p ash-typeck --test task_838_type_function_normalizer -- --nocapture` — 6 passed.
+- TASK-837 non-regression: `cargo test -p ash-typeck --test task_837_type_function_recursion -- --nocapture` — 11 passed.
+- Formatting/checks: `cargo fmt --check` and `git diff --check` passed.
 
 
 ## Notes

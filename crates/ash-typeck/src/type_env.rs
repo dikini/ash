@@ -2395,6 +2395,19 @@ impl TypeEnv {
         self.local_type_functions.get(head)
     }
 
+    /// Look up a published module-local type function by canonical computation head.
+    ///
+    /// This is intentionally crate-local: TASK-838 lets the normalizer consume
+    /// checked source declarations already registered in this `TypeEnv`, without
+    /// adding public export/import or cross-module equation transport.
+    #[must_use]
+    pub(crate) fn lookup_local_type_function_by_head(
+        &self,
+        head: &TypeComputationHeadId,
+    ) -> Option<&TypeFunctionDef> {
+        self.local_type_functions.get(head)
+    }
+
     /// Iterate published module-local type-function names. This intentionally
     /// exposes no public summary/equation transport before SPEC-F.
     pub fn local_type_function_names(&self) -> impl Iterator<Item = &str> {

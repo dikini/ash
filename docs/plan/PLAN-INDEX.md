@@ -3303,7 +3303,7 @@ Boundary note: Phase 113 is source `type fn` work only. It does not implement pu
 | [TASK-835](tasks/TASK-835-type-function-signature-kind-domain-validation.md) | Signature/source/result-domain validation | 6 | ✅ Complete |
 | [TASK-836](tasks/TASK-836-type-function-pattern-coverage-overlap.md) | Residual pattern coverage and overlap | 7 | ✅ Complete |
 | [TASK-837](tasks/TASK-837-type-function-structural-recursion.md) | Structural recursion validation | 6 | ✅ Complete |
-| [TASK-838](tasks/TASK-838-source-equations-normalizer-integration.md) | Source equations normalizer integration | 7 | 📋 Planned |
+| [TASK-838](tasks/TASK-838-source-equations-normalizer-integration.md) | Source equations normalizer integration | 7 | ✅ Complete |
 | [TASK-839](tasks/TASK-839-engine-module-boundary-and-non-interference.md) | Engine module boundary and non-interference | 5 | 📋 Planned |
 | [TASK-840](tasks/TASK-840-type-function-diagnostics-and-acceptance-tests.md) | Type-function diagnostics and acceptance tests | 6 | 📋 Planned |
 | [TASK-841](tasks/TASK-841-spec-e-closeout-docs-and-verification.md) | SPEC-E closeout docs and verification | 4 | 📋 Planned |

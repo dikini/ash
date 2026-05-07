@@ -14,7 +14,7 @@ use ash_core::kind::Kind;
 use ash_core::semantic_summary::{DomainConstructorId, SealedDomainId};
 use ash_core::type_ir::{
     CanonicalTypeExpr, NormalFormBlockReason, NormalTypeExpr, ProjectionRigidity,
-    TypeComputationHeadId,
+    TypeComputationHeadId, TypeFunctionPattern, TypeFunctionResultExpr,
 };
 
 /// First-order fixture equation pattern used by internal normalizer tests.
@@ -512,6 +512,39 @@ impl<'env> Normalizer<'env> {
         })
     }
 
+    /// Normalize an already-known computation application spine.
+    ///
+    /// This TASK-838 helper is useful when callers already hold normal-form
+    /// sealed-domain constructor values. It consults only internal fixtures and
+    /// checked module-local source declarations registered in this `TypeEnv`.
+    pub fn normalize_known_computation_app(
+        &self,
+        head: &TypeComputationHeadId,
+        args: Vec<NormalTypeExpr>,
+        kind: &Kind,
+    ) -> NormalizationResult<NormalTypeExpr> {
+        let mut state = NormalizationState {
+            mode: self.config.mode,
+            fuel: self.config.fuel,
+            trace_enabled: self.config.trace,
+            trace: Vec::new(),
+            fixture_registry: self.fixture_registry,
+            env: self.env,
+        };
+        state.reduce_normalized_computation_app(head, args, kind)
+    }
+
+    /// Compare two already-normal-form expressions structurally using the same
+    /// non-inverting evidence contract as canonical definitional equality.
+    #[must_use]
+    pub fn definitional_equality_normal_forms(
+        &self,
+        lhs_norm: &NormalTypeExpr,
+        rhs_norm: &NormalTypeExpr,
+    ) -> DefinitionalEqualityResult {
+        definitional_equality_for_normal_forms(lhs_norm.clone(), rhs_norm.clone())
+    }
+
     /// Normalize both inputs in full-normalization mode and compare the canonical
     /// normal forms structurally.
     ///
@@ -531,35 +564,7 @@ impl<'env> Normalizer<'env> {
         let lhs_norm = full_normalizer.normalize(lhs)?.normal;
         let rhs_norm = full_normalizer.normalize(rhs)?.normal;
 
-        if normal_forms_definitionally_equal(&lhs_norm, &rhs_norm) {
-            return Ok(DefinitionalEqualityResult::Equal);
-        }
-
-        if normal_forms_are_structurally_disjoint(&lhs_norm, &rhs_norm) {
-            return Ok(DefinitionalEqualityResult::NotEqual {
-                lhs_norm,
-                rhs_norm,
-                mismatch: "root".to_string(),
-            });
-        }
-
-        let neutral_subterms = neutrality_blockers_for_mismatch(&lhs_norm, &rhs_norm);
-        if neutral_subterms.is_empty() {
-            Ok(DefinitionalEqualityResult::NotEqual {
-                lhs_norm,
-                rhs_norm,
-                mismatch: "root".to_string(),
-            })
-        } else {
-            Ok(DefinitionalEqualityResult::BlockedByNeutrality {
-                lhs_norm,
-                rhs_norm,
-                neutral_subterms,
-                no_inversion_note:
-                    "definitional equality normalizes and compares; it does not invert neutral computation heads or projections"
-                        .to_string(),
-            })
-        }
+        Ok(definitional_equality_for_normal_forms(lhs_norm, rhs_norm))
     }
 
     /// Boolean convenience wrapper derived only from structured equality
@@ -739,6 +744,41 @@ fn fuel_or_cycle_guard_diagnostic(error: NormalizationError) -> NormalizerDiagno
             "normalizer implementation fuel/cycle guard failed; this is not semantic stuckness: {error:?}"
         ),
     )
+}
+
+fn definitional_equality_for_normal_forms(
+    lhs_norm: NormalTypeExpr,
+    rhs_norm: NormalTypeExpr,
+) -> DefinitionalEqualityResult {
+    if normal_forms_definitionally_equal(&lhs_norm, &rhs_norm) {
+        return DefinitionalEqualityResult::Equal;
+    }
+
+    if normal_forms_are_structurally_disjoint(&lhs_norm, &rhs_norm) {
+        return DefinitionalEqualityResult::NotEqual {
+            lhs_norm,
+            rhs_norm,
+            mismatch: "root".to_string(),
+        };
+    }
+
+    let neutral_subterms = neutrality_blockers_for_mismatch(&lhs_norm, &rhs_norm);
+    if neutral_subterms.is_empty() {
+        DefinitionalEqualityResult::NotEqual {
+            lhs_norm,
+            rhs_norm,
+            mismatch: "root".to_string(),
+        }
+    } else {
+        DefinitionalEqualityResult::BlockedByNeutrality {
+            lhs_norm,
+            rhs_norm,
+            neutral_subterms,
+            no_inversion_note:
+                "definitional equality normalizes and compares; it does not invert neutral computation heads or projections"
+                    .to_string(),
+        }
+    }
 }
 
 fn normal_forms_definitionally_equal(lhs: &NormalTypeExpr, rhs: &NormalTypeExpr) -> bool {
@@ -1130,6 +1170,76 @@ fn match_pattern_open(
     }
 }
 
+fn match_source_pattern_open(
+    pattern: &TypeFunctionPattern,
+    arg: &NormalTypeExpr,
+    bindings: &mut BTreeMap<String, NormalTypeExpr>,
+    allow_open_var_binding: bool,
+) -> FixturePatternMatch {
+    match pattern {
+        TypeFunctionPattern::Var { name, .. } => match bindings.get(name) {
+            Some(bound) if bound == arg => FixturePatternMatch::Matched,
+            Some(_) => FixturePatternMatch::NoMatch,
+            None => match arg {
+                NormalTypeExpr::Var(_)
+                | NormalTypeExpr::NeutralComputationApp { .. }
+                | NormalTypeExpr::Projection { .. }
+                    if !allow_open_var_binding =>
+                {
+                    FixturePatternMatch::Blocked(block_reason_for_normal(arg))
+                }
+                _ => {
+                    bindings.insert(name.clone(), arg.clone());
+                    FixturePatternMatch::Matched
+                }
+            },
+        },
+        TypeFunctionPattern::Wildcard { .. } => match arg {
+            NormalTypeExpr::Var(_)
+            | NormalTypeExpr::NeutralComputationApp { .. }
+            | NormalTypeExpr::Projection { .. }
+                if !allow_open_var_binding =>
+            {
+                FixturePatternMatch::Blocked(block_reason_for_normal(arg))
+            }
+            _ => FixturePatternMatch::Matched,
+        },
+        TypeFunctionPattern::DomainConstructor {
+            constructor,
+            domain,
+            fields,
+            ..
+        } => match arg {
+            NormalTypeExpr::DomainConstructorApp {
+                constructor: arg_constructor,
+                domain: arg_domain,
+                args: arg_args,
+                ..
+            } => {
+                if constructor != arg_constructor
+                    || domain != arg_domain
+                    || fields.len() != arg_args.len()
+                {
+                    return FixturePatternMatch::NoMatch;
+                }
+                for (pattern, arg) in fields.iter().zip(arg_args) {
+                    match match_source_pattern_open(pattern, arg, bindings, true) {
+                        FixturePatternMatch::Matched => {}
+                        other => return other,
+                    }
+                }
+                FixturePatternMatch::Matched
+            }
+            NormalTypeExpr::Var(_)
+            | NormalTypeExpr::NeutralComputationApp { .. }
+            | NormalTypeExpr::Projection { .. } => {
+                FixturePatternMatch::Blocked(block_reason_for_normal(arg))
+            }
+            _ => FixturePatternMatch::NoMatch,
+        },
+    }
+}
+
 fn block_reason_for_normal(arg: &NormalTypeExpr) -> NormalFormBlockReason {
     match arg {
         NormalTypeExpr::Var(_) => NormalFormBlockReason::AbstractScrutinee,
@@ -1142,6 +1252,15 @@ fn block_reason_for_normal(arg: &NormalTypeExpr) -> NormalFormBlockReason {
         }),
         _ => NormalFormBlockReason::Unsupported,
     }
+}
+
+enum SourceEquationSelection {
+    Matched {
+        result: TypeFunctionResultExpr,
+        bindings: BTreeMap<String, NormalTypeExpr>,
+    },
+    Blocked(NormalFormBlockReason),
+    NoMatch,
 }
 
 struct NormalizationState<'env> {
@@ -1332,16 +1451,151 @@ impl<'env> NormalizationState<'env> {
                 },
                 evidence: NormalizationEvidence::NeutralUnsupportedComputation,
             }),
-            FixtureEquationSelection::NoMatch => Ok(ComputationReduction::Neutral {
-                normal: NormalTypeExpr::NeutralComputationApp {
-                    head: head.clone(),
-                    args,
-                    kind: kind.clone(),
-                    reason: NormalFormBlockReason::Unsupported,
-                },
-                evidence: NormalizationEvidence::NeutralUnsupportedComputation,
-            }),
+            FixtureEquationSelection::NoMatch => {
+                match self.source_first_match_or_blocker(head, &args) {
+                    SourceEquationSelection::Matched { result, bindings } => {
+                        self.fuel.consume(self.mode)?;
+                        let reduced = self.normalize_source_result(&result, &bindings)?;
+                        Ok(ComputationReduction::Reduced(reduced))
+                    }
+                    SourceEquationSelection::Blocked(reason) => Ok(ComputationReduction::Neutral {
+                        normal: NormalTypeExpr::NeutralComputationApp {
+                            head: head.clone(),
+                            args,
+                            kind: kind.clone(),
+                            reason,
+                        },
+                        evidence: NormalizationEvidence::NeutralUnsupportedComputation,
+                    }),
+                    SourceEquationSelection::NoMatch => Ok(ComputationReduction::Neutral {
+                        normal: NormalTypeExpr::NeutralComputationApp {
+                            head: head.clone(),
+                            args,
+                            kind: kind.clone(),
+                            reason: NormalFormBlockReason::Unsupported,
+                        },
+                        evidence: NormalizationEvidence::NeutralUnsupportedComputation,
+                    }),
+                }
+            }
         }
+    }
+
+    fn source_first_match_or_blocker(
+        &self,
+        head: &TypeComputationHeadId,
+        args: &[NormalTypeExpr],
+    ) -> SourceEquationSelection {
+        let Some(def) = self.env.lookup_local_type_function_by_head(head) else {
+            return SourceEquationSelection::NoMatch;
+        };
+        for equation in &def.equations {
+            if equation.patterns.len() != args.len() {
+                continue;
+            }
+            let mut bindings = BTreeMap::new();
+            let mut matched = true;
+            let mut allow_open_var_binding = false;
+            for (pattern, arg) in equation.patterns.iter().zip(args) {
+                match match_source_pattern_open(pattern, arg, &mut bindings, allow_open_var_binding)
+                {
+                    FixturePatternMatch::Matched => {
+                        if matches!(pattern, TypeFunctionPattern::DomainConstructor { .. }) {
+                            allow_open_var_binding = true;
+                        }
+                    }
+                    FixturePatternMatch::NoMatch => {
+                        matched = false;
+                        break;
+                    }
+                    FixturePatternMatch::Blocked(reason) => {
+                        return SourceEquationSelection::Blocked(reason);
+                    }
+                }
+            }
+            if matched {
+                return SourceEquationSelection::Matched {
+                    result: equation.result.clone(),
+                    bindings,
+                };
+            }
+        }
+        SourceEquationSelection::NoMatch
+    }
+
+    fn normalize_source_result(
+        &mut self,
+        result: &TypeFunctionResultExpr,
+        bindings: &BTreeMap<String, NormalTypeExpr>,
+    ) -> NormalizationResult<NormalTypeExpr> {
+        self.fuel.consume(self.mode)?;
+        match result {
+            TypeFunctionResultExpr::Primitive { name, .. } => {
+                Ok(NormalTypeExpr::Primitive(name.clone()))
+            }
+            TypeFunctionResultExpr::Var { name, .. } => Ok(bindings
+                .get(name)
+                .cloned()
+                .expect("type-function result variables are validated during lowering")),
+            TypeFunctionResultExpr::NominalApp {
+                origin,
+                visible_name,
+                args,
+                kind,
+                ..
+            } => Ok(NormalTypeExpr::NominalApp {
+                origin: origin.clone(),
+                visible_name: visible_name.clone(),
+                args: self.normalize_source_result_args(args, bindings)?,
+                kind: kind.clone(),
+            }),
+            TypeFunctionResultExpr::DomainConstructorApp {
+                constructor,
+                domain,
+                args,
+                kind,
+                ..
+            } => Ok(NormalTypeExpr::DomainConstructorApp {
+                constructor: constructor.clone(),
+                domain: domain.clone(),
+                args: self.normalize_source_result_args(args, bindings)?,
+                kind: kind.clone(),
+            }),
+            TypeFunctionResultExpr::Projection {
+                interface,
+                member,
+                args,
+                kind,
+                rigidity,
+                ..
+            } => Ok(NormalTypeExpr::Projection {
+                interface: interface.clone(),
+                member: member.clone(),
+                args: self.normalize_source_result_args(args, bindings)?,
+                kind: kind.clone(),
+                rigidity: *rigidity,
+                reason: Some(match rigidity {
+                    ProjectionRigidity::Rigid => NormalFormBlockReason::RigidProjection,
+                    ProjectionRigidity::Neutral => NormalFormBlockReason::AbstractScrutinee,
+                }),
+            }),
+            TypeFunctionResultExpr::ComputationHeadApp {
+                head, args, kind, ..
+            } => {
+                let args = self.normalize_source_result_args(args, bindings)?;
+                self.reduce_normalized_computation_app(head, args, kind)
+            }
+        }
+    }
+
+    fn normalize_source_result_args(
+        &mut self,
+        args: &[TypeFunctionResultExpr],
+        bindings: &BTreeMap<String, NormalTypeExpr>,
+    ) -> NormalizationResult<Vec<NormalTypeExpr>> {
+        args.iter()
+            .map(|arg| self.normalize_source_result(arg, bindings))
+            .collect()
     }
 
     fn record(&mut self, evidence: NormalizationEvidence) {

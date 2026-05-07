@@ -29,7 +29,7 @@
 | [TASK-835](tasks/TASK-835-type-function-signature-kind-domain-validation.md) | Validate signatures, source resolution, domains, result constraints, and public boundary | Type/Semantic | 6 | ✅ Complete |
 | [TASK-836](tasks/TASK-836-type-function-pattern-coverage-overlap.md) | Implement pattern linearity plus finite residual coverage/overlap/default semantics | Type/Semantic | 7 | ✅ Complete |
 | [TASK-837](tasks/TASK-837-type-function-structural-recursion.md) | Implement declared decreasing-parameter and structural recursion validation | Type/Semantic | 6 | ✅ Complete |
-| [TASK-838](tasks/TASK-838-source-equations-normalizer-integration.md) | Register checked source equations with normalizer reduction/equality | Type/Integration | 7 | 📋 Planned |
+| [TASK-838](tasks/TASK-838-source-equations-normalizer-integration.md) | Register checked source equations with normalizer reduction/equality | Type/Integration | 7 | ✅ Complete |
 | [TASK-839](tasks/TASK-839-engine-module-boundary-and-non-interference.md) | Enforce module-local boundary and engine/import non-interference | Engine/Integration | 5 | 📋 Planned |
 | [TASK-840](tasks/TASK-840-type-function-diagnostics-and-acceptance-tests.md) | Add diagnostics and acceptance/non-regression test matrix | Diagnostics/Tests | 6 | 📋 Planned |
 | [TASK-841](tasks/TASK-841-spec-e-closeout-docs-and-verification.md) | Reconcile docs/status/changelog and record closeout verification evidence | Docs/Planning | 4 | 📋 Planned |
@@ -58,7 +58,7 @@ Estimated total: 73 hours.
 
 ### Track D: Normalizer and Module Integration
 
-- TASK-838 connects checked source equations to the SPEC-060 normalizer.
+- TASK-838 connects checked source equations to the SPEC-060 normalizer. Completed with source-backed Append reductions, open/partial neutrality, bound-variable substitution, and normal-form definitional equality coverage.
 - TASK-839 enforces module-local engine/import boundaries and non-interference.
 
 ### Track E: Diagnostics and Closeout

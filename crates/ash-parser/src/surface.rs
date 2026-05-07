@@ -84,6 +84,8 @@ pub enum Definition {
     ResourceType(ResourceTypeDef),
     /// Ordinary type declaration
     Type(TypeDef),
+    /// Module-level type function declaration
+    TypeFn(TypeFnDef),
     /// Policy definition
     Policy(PolicyDef),
     /// Role definition
@@ -119,6 +121,94 @@ pub struct TypeDef {
     pub span: Span,
     /// Optional filesystem path of the source file/module that produced this declaration.
     pub source: Option<Box<str>>,
+}
+
+/// A module-level type function declaration parsed as raw surface syntax.
+#[derive(Debug, Clone, PartialEq)]
+pub struct TypeFnDef {
+    /// Visibility modifier retained for parser-stage SPEC-F rejection diagnostics.
+    pub visibility: Visibility,
+    /// Name of the type function.
+    pub name: Name,
+    /// Header parameters.
+    pub params: Vec<TypeFnParam>,
+    /// Declared return type.
+    pub return_type: Type,
+    /// Optional decreasing parameter clause.
+    pub decreases: Option<TypeFnDecreases>,
+    /// Ordered case equations.
+    pub equations: Vec<TypeFnEquation>,
+    /// Source span covering the declaration header through the return type.
+    pub header_span: Span,
+    /// Source span covering the entire declaration.
+    pub span: Span,
+}
+
+/// A named type-function parameter with its annotation and source span.
+#[derive(Debug, Clone, PartialEq)]
+pub struct TypeFnParam {
+    /// Parameter name.
+    pub name: Name,
+    /// Parameter type annotation.
+    pub ty: Type,
+    /// Source span covering `name: type`.
+    pub span: Span,
+}
+
+/// A `decreases <param>` clause on a type function.
+#[derive(Debug, Clone, PartialEq)]
+pub struct TypeFnDecreases {
+    /// Declared decreasing parameter name.
+    pub param: Name,
+    /// Source span covering the clause.
+    pub span: Span,
+}
+
+/// A raw type-function case equation.
+#[derive(Debug, Clone, PartialEq)]
+pub struct TypeFnEquation {
+    /// Case head name after `case`.
+    pub head: Name,
+    /// Source span covering the case head name.
+    pub head_span: Span,
+    /// Raw type-level patterns.
+    pub patterns: Vec<TypePattern>,
+    /// Raw RHS type expression.
+    pub result: Type,
+    /// Source span covering the RHS type expression.
+    pub result_span: Span,
+    /// Source span covering the whole equation.
+    pub span: Span,
+}
+
+/// Raw type-level pattern syntax for type-function case equations.
+#[derive(Debug, Clone, PartialEq)]
+pub enum TypePattern {
+    /// Constructor pattern: `Name` or `Name<...>`.
+    Constructor {
+        /// Constructor name spelling.
+        name: Name,
+        /// Nested type-level patterns.
+        args: Vec<TypePattern>,
+        /// Source span covering the pattern.
+        span: Span,
+    },
+    /// Syntactic lowercase bare-name pattern.
+    ///
+    /// This is raw parser syntax, not final semantic resolution. Later type-checking may
+    /// reinterpret this spelling as a lowercase sealed-domain marker constructor when the
+    /// expected sealed-domain constructor namespace resolves it that way.
+    Var {
+        /// Binding-or-lowercase-constructor candidate name.
+        name: Name,
+        /// Source span covering the pattern.
+        span: Span,
+    },
+    /// Wildcard pattern `_`.
+    Wildcard {
+        /// Source span covering the wildcard.
+        span: Span,
+    },
 }
 
 /// Body of an ordinary type declaration.

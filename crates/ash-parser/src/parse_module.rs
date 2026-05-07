@@ -22,8 +22,8 @@ use crate::surface::{
     Constraint, Contract, Definition, DomainConstructor, DomainField, DomainSlot, EffectType, Expr,
     FnDef, ImplDef, ImplMethodDef, InterfaceDef, InterfaceMethodSig, MatchArm, Name, Param,
     Pattern, Predicate, ProxyDef, ResourceField, ResourceTypeDef, RoleDef, SealedDomainDef, Type,
-    TypeBody, TypeDef, TypeField, VariantDef, VariantPayload, Visibility, WhereBound, Workflow,
-    YieldArm,
+    TypeBody, TypeDef, TypeField, TypeFnDecreases, TypeFnDef, TypeFnEquation, TypeFnParam,
+    TypePattern, VariantDef, VariantPayload, Visibility, WhereBound, Workflow, YieldArm,
 };
 use crate::token::Span;
 
@@ -156,12 +156,16 @@ fn parse_definitions(input: &mut ParseInput) -> ModalResult<Vec<Definition>> {
             continue;
         }
 
+        if starts_with_type_fn_definition(input) {
+            return Err(winnow::error::ErrMode::Backtrack(
+                winnow::error::ContextError::new(),
+            ));
+        }
+
         if starts_with_type_definition(input) {
             definitions.push(parse_type_definition(input)?);
             continue;
         }
-
-        // Sealed domains are rejected inside inline modules via the
         // `starts_with_unsupported_inline_definition` check below.
         // We do NOT add `starts_with_sealed_domain` here; it must
         // fall through to the unsupported-inline guard.
@@ -271,6 +275,210 @@ fn parse_resource_field(input: &mut ParseInput) -> ModalResult<ResourceField> {
         ty,
         span: crate::input::span_from(&start_pos, &input.state.pos),
     })
+}
+
+fn parse_type_fn_definition(input: &mut ParseInput) -> ModalResult<Definition> {
+    let start_pos = input.state.pos;
+    let visibility = parse_visibility(input)?;
+    if visibility.is_pub() {
+        return Err(winnow::error::ErrMode::Cut(
+            winnow::error::ContextError::new(),
+        ));
+    }
+    skip_whitespace_and_comments(input);
+
+    let _ = keyword("type").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = keyword("fn").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let (name, _) = identifier_with_span(input)?;
+    skip_whitespace_and_comments(input);
+
+    let _ = literal_str("(").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let mut params = Vec::new();
+    if input.input.starts_with(")") {
+        return Err(winnow::error::ErrMode::Cut(
+            winnow::error::ContextError::new(),
+        ));
+    }
+    loop {
+        params.push(parse_type_fn_param(input)?);
+        skip_whitespace_and_comments(input);
+        if consume_comma_separator(input) {
+            continue;
+        }
+        break;
+    }
+    let _ = literal_str(")").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str("->").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let return_type = parse_surface_type(input)?;
+    let header_span = crate::input::span_from(&start_pos, &input.state.pos);
+    skip_whitespace_and_comments(input);
+
+    let decreases = if starts_with_keyword(input, "decreases") {
+        let decreases_start = input.state.pos;
+        let _ = keyword("decreases").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        let (param, _) = identifier_with_span(input)?;
+        let span = crate::input::span_from(&decreases_start, &input.state.pos);
+        skip_whitespace_and_comments(input);
+        Some(TypeFnDecreases {
+            param: param.into(),
+            span,
+        })
+    } else {
+        None
+    };
+
+    let _ = literal_str("{").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let mut equations = Vec::new();
+    while !input.input.starts_with("}") {
+        equations.push(parse_type_fn_equation(input, name)?);
+        skip_whitespace_and_comments(input);
+    }
+    let _ = literal_str("}").parse_next(input)?;
+
+    Ok(Definition::TypeFn(TypeFnDef {
+        visibility,
+        name: name.into(),
+        params,
+        return_type,
+        decreases,
+        equations,
+        header_span,
+        span: crate::input::span_from(&start_pos, &input.state.pos),
+    }))
+}
+
+fn parse_type_fn_param(input: &mut ParseInput) -> ModalResult<TypeFnParam> {
+    let start = input.state.pos;
+    let (name, _) = identifier_with_span(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str(":").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let ty = parse_surface_type(input)?;
+    Ok(TypeFnParam {
+        name: name.into(),
+        ty,
+        span: crate::input::span_from(&start, &input.state.pos),
+    })
+}
+
+fn parse_type_fn_equation(
+    input: &mut ParseInput,
+    expected_head: &str,
+) -> ModalResult<TypeFnEquation> {
+    let start = input.state.pos;
+    let _ = keyword("case").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let (head, head_span) = identifier_with_span(input)?;
+    if head != expected_head {
+        return Err(winnow::error::ErrMode::Cut(
+            winnow::error::ContextError::new(),
+        ));
+    }
+    skip_whitespace_and_comments(input);
+    let _ = literal_str("<").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let mut patterns = Vec::new();
+    if input.input.starts_with(">") {
+        return Err(winnow::error::ErrMode::Cut(
+            winnow::error::ContextError::new(),
+        ));
+    }
+    loop {
+        patterns.push(parse_type_pattern(input)?);
+        skip_whitespace_and_comments(input);
+        if consume_comma_separator(input) {
+            continue;
+        }
+        break;
+    }
+    let _ = literal_str(">").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str("=").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let result_start = input.state.pos;
+    let result = parse_surface_type(input)?;
+    let mut result_span = crate::input::span_from(&result_start, &input.state.pos);
+    if result_span.end <= result_span.start {
+        result_span.end = result_span.start.saturating_add(1);
+    }
+    skip_whitespace_and_comments(input);
+    let _ = literal_str(";").parse_next(input)?;
+
+    Ok(TypeFnEquation {
+        head: head.into(),
+        head_span,
+        patterns,
+        result,
+        result_span,
+        span: crate::input::span_from(&start, &input.state.pos),
+    })
+}
+
+fn parse_type_pattern(input: &mut ParseInput) -> ModalResult<TypePattern> {
+    skip_whitespace_and_comments(input);
+    let start = input.state.pos;
+    if input.input.starts_with("_") {
+        let _ = literal_str("_").parse_next(input)?;
+        return Ok(TypePattern::Wildcard {
+            span: nonempty_span(&start, &input.state.pos),
+        });
+    }
+
+    let (name, _) = identifier_with_span(input)?;
+    skip_whitespace_and_comments(input);
+    if input.input.starts_with("<") {
+        let _ = literal_str("<").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        let mut args = Vec::new();
+        if input.input.starts_with(">") {
+            return Err(winnow::error::ErrMode::Cut(
+                winnow::error::ContextError::new(),
+            ));
+        }
+        loop {
+            args.push(parse_type_pattern(input)?);
+            skip_whitespace_and_comments(input);
+            if consume_comma_separator(input) {
+                continue;
+            }
+            break;
+        }
+        let _ = literal_str(">").parse_next(input)?;
+        return Ok(TypePattern::Constructor {
+            name: name.into(),
+            args,
+            span: nonempty_span(&start, &input.state.pos),
+        });
+    }
+
+    let is_var = name.chars().next().is_some_and(|c| c.is_ascii_lowercase());
+    if is_var {
+        Ok(TypePattern::Var {
+            name: name.into(),
+            span: nonempty_span(&start, &input.state.pos),
+        })
+    } else {
+        Ok(TypePattern::Constructor {
+            name: name.into(),
+            args: Vec::new(),
+            span: nonempty_span(&start, &input.state.pos),
+        })
+    }
+}
+
+fn nonempty_span(start: &crate::input::Position, end: &crate::input::Position) -> Span {
+    let mut span = crate::input::span_from(start, end);
+    if span.end <= span.start {
+        span.end = span.start.saturating_add(1);
+    }
+    span
 }
 
 fn parse_type_definition(input: &mut ParseInput) -> ModalResult<Definition> {
@@ -1457,7 +1665,25 @@ fn starts_with_visible_keyword(input: &ParseInput, word: &str) -> bool {
     }
 }
 
+fn starts_with_type_fn_definition(input: &ParseInput) -> bool {
+    let mut lookahead = crate::input::new_input(&input.input);
+    match parse_visibility(&mut lookahead) {
+        Ok(_) => {
+            skip_whitespace_and_comments(&mut lookahead);
+            if !starts_with_keyword(&lookahead, "type") {
+                return false;
+            }
+            let rest = skip_ws_in(&lookahead.input["type".len()..]);
+            starts_with_keyword_from(rest, "fn")
+        }
+        Err(_) => false,
+    }
+}
+
 fn starts_with_type_definition(input: &ParseInput) -> bool {
+    if starts_with_type_fn_definition(input) {
+        return false;
+    }
     if starts_with_keyword(input, "type") {
         return true;
     }
@@ -1615,6 +1841,7 @@ fn starts_with_recoverable_definition(input: &ParseInput) -> bool {
         || starts_with_visible_keyword(input, "mod")
         || starts_with_keyword(input, "role")
         || starts_with_visible_resource_type(input)
+        || starts_with_type_fn_definition(input)
         || starts_with_type_definition(input)
         || starts_with_sealed_domain(input)
         || starts_with_visible_capability_interface(input)
@@ -2652,6 +2879,11 @@ pub fn module_file(input: &mut ParseInput) -> ModalResult<crate::surface::Module
 
         if starts_with_visible_resource_type(input) {
             definitions.push(parse_resource_type_definition(input)?);
+            continue;
+        }
+
+        if starts_with_type_fn_definition(input) {
+            definitions.push(parse_type_fn_definition(input)?);
             continue;
         }
 

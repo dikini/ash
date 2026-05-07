@@ -80,6 +80,8 @@ fn definition_name(current_token: Option<&str>, def: &Definition) -> Option<Stri
         Definition::ResourceType(r) => Some(r.name.as_ref().to_string()),
         Definition::Type(t) if Some(t.name.as_ref()) == current_token => None,
         Definition::Type(t) => Some(t.name.as_ref().to_string()),
+        Definition::TypeFn(t) if Some(t.name.as_ref()) == current_token => None,
+        Definition::TypeFn(t) => Some(t.name.as_ref().to_string()),
         Definition::Impl(_) => None, // impl blocks don't have a useful single name
         Definition::BuiltinFn(b) if Some(b.name.as_ref()) == current_token => None,
         Definition::BuiltinFn(b) => Some(b.name.as_ref().to_string()),
@@ -90,7 +92,9 @@ fn definition_name(current_token: Option<&str>, def: &Definition) -> Option<Stri
 
 const fn definition_kind(def: &Definition) -> CompletionItemKind {
     match def {
-        Definition::Function(_) | Definition::BuiltinFn(_) => CompletionItemKind::FUNCTION,
+        Definition::Function(_) | Definition::BuiltinFn(_) | Definition::TypeFn(_) => {
+            CompletionItemKind::FUNCTION
+        }
         Definition::Capability(_) | Definition::Role(_) | Definition::Proxy(_) => {
             CompletionItemKind::CLASS
         }

@@ -1,6 +1,6 @@
 # TASK-832: Add parser raw surface syntax and span-preserving AST for module-level type functions
 
-## Status: 📋 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -68,17 +68,28 @@ commands:
   - cargo fmt --check
   - git diff --check
 checklist:
-  - [ ] Add surface TypeFn definition carriers with spans.
-  - [ ] Add `Definition::TypeFn`.
-  - [ ] Parse type fn headers, rejected visibility prefixes, decreases clauses, case equations, constructor/variable/wildcard patterns, and RHS type expressions.
-  - [ ] Add a `type fn` dispatch check before ordinary `type` parsing so `starts_with_type_definition` does not consume `type fn` as an ordinary type definition.
-  - [ ] Reject malformed case heads, missing semicolons, zero-parameter declarations, and visibility-prefixed `type fn` with focused parser diagnostics or parser-stage handoff errors assigned by TASK-831.
-  - [ ] Preserve accurate spans for header, decreases, case head, patterns, and RHS.
-  - [ ] Keep parser output raw; no semantic constructor/domain resolution in parser.
-  - [ ] State and test that SPEC-E `type fn` is file/module top-level only; inline-module parsing must reject or fence it consistently with sealed-domain/type-summary boundaries.
-  - [ ] Add focused parser acceptance/rejection tests.
-  - [ ] focused tests/evidence recorded in this task file
-  - [ ] no SPEC-F/G/H scope creep
+  - [x] Add surface TypeFn definition carriers with spans.
+  - [x] Add `Definition::TypeFn`.
+  - [x] Parse type fn headers, rejected visibility prefixes, decreases clauses, case equations, constructor/variable/wildcard patterns, and RHS type expressions.
+  - [x] Add a `type fn` dispatch check before ordinary `type` parsing so `starts_with_type_definition` does not consume `type fn` as an ordinary type definition.
+  - [x] Reject malformed case heads, missing semicolons, zero-parameter declarations, and visibility-prefixed `type fn` with focused parser diagnostics or parser-stage handoff errors assigned by TASK-831.
+  - [x] Preserve accurate spans for header, decreases, case head, patterns, and RHS.
+  - [x] Keep parser output raw; no semantic constructor/domain resolution in parser.
+  - [x] State and test that SPEC-E `type fn` is file/module top-level only; inline-module parsing must reject or fence it consistently with sealed-domain/type-summary boundaries.
+  - [x] Add focused parser acceptance/rejection tests.
+  - [x] focused tests/evidence recorded in this task file
+  - [x] no SPEC-F/G/H scope creep
+```
+
+## Verification Evidence
+
+- Added `crates/ash-parser/tests/task_832_type_function_parser.rs` using TDD; initial run failed because `Definition::TypeFn` and `TypePattern` were absent.
+- Verified focused parser suite: `cargo test -p ash-parser --test task_832_type_function_parser -- --nocapture` (6 passed).
+- Verified sealed-domain parser non-regression: `cargo test -p ash-parser --test task_808_sealed_domain_surface -- --nocapture` (13 passed).
+- Verified workspace compile after AST exhaustiveness fixes: `cargo check --workspace`.
+- Verified formatting: `cargo fmt --check`.
+- Verified whitespace: `git diff --check`.
+- Scope note: parser output remains raw `surface::Type`/`TypePattern` syntax only; no lowering, typeck, core carriers, semantic resolution, normalizer integration, or SPEC-F/G/H public/associated/proposition scope was implemented.
 ```
 
 

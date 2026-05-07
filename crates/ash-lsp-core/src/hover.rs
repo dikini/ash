@@ -299,6 +299,10 @@ fn definition_hover(definition: &Definition) -> Hover {
             format!("type {}", def.name),
             Some("Ordinary type declaration".to_string()),
         ),
+        Definition::TypeFn(def) => markdown(
+            format!("type fn {}", def.name),
+            Some(format!("Equations: {}", def.equations.len())),
+        ),
         Definition::Impl(def) => markdown(
             format!("impl {}", def.interface),
             Some(format!("Methods: {}", def.methods.len())),
@@ -372,6 +376,7 @@ fn top_level_hover(token: &str, module: &ModuleFile) -> Option<Hover> {
                             Definition::CapabilityImplementation(def) => def.name.as_ref() == token,
                             Definition::ResourceType(def) => def.name.as_ref() == token,
                             Definition::Type(def) => def.name.as_ref() == token,
+                            Definition::TypeFn(def) => def.name.as_ref() == token,
                             Definition::Policy(def) => def.name.as_ref() == token,
                             Definition::Role(def) => def.name.as_ref() == token,
                             Definition::Proxy(def) => def.name.as_ref() == token,
@@ -411,6 +416,7 @@ fn top_level_hover(token: &str, module: &ModuleFile) -> Option<Hover> {
                     Definition::CapabilityImplementation(def) => def.name.as_ref() == token,
                     Definition::ResourceType(def) => def.name.as_ref() == token,
                     Definition::Type(def) => def.name.as_ref() == token,
+                    Definition::TypeFn(def) => def.name.as_ref() == token,
                     Definition::Policy(def) => def.name.as_ref() == token,
                     Definition::Role(def) => def.name.as_ref() == token,
                     Definition::Proxy(def) => def.name.as_ref() == token,

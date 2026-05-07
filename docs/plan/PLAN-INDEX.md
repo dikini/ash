@@ -286,10 +286,11 @@ Update this section as tasks complete:
 | 107 | 7 | 7 | ✅ Complete |
 | 108 | 12 | 12 | ✅ Complete |
 | 109 | 13 | 13 | ✅ Complete |
-| 110 | 13 | 0 | 📝 Planned |
+| 110 | 13 | 13 | ✅ Complete |
 | 111 | 10 | 10 | ✅ Complete |
 | 112 | 14 | 14 | ✅ Complete |
 | 113 | 13 | 13 | ✅ Complete |
+| 114 | 14 | 1 | 🟢 In Progress |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -396,10 +397,11 @@ This table is retained near the original early-phase section for historical cont
 | 107 | 7 | 7 | ✅ Complete |
 | 108 | 12 | 12 | ✅ Complete |
 | 109 | 13 | 13 | ✅ Complete |
-| 110 | 13 | 0 | 📝 Planned |
+| 110 | 13 | 13 | ✅ Complete |
 | 111 | 10 | 10 | ✅ Complete |
 | 112 | 14 | 14 | ✅ Complete |
 | 113 | 13 | 13 | ✅ Complete |
+| 114 | 14 | 1 | 🟢 In Progress |
 
 ## Phase 13: Streams and Behaviours (Weeks 20-22)
 
@@ -3154,7 +3156,7 @@ Phase 109 implements SPEC-A from DESIGN-034. It unifies ordinary type declaratio
 ## Phase 110: Type-Expression IR, Projection Identities, and Kind/Arity Substrate
 
 **Priority:** High (DESIGN-034 SPEC-B substrate required before sealed domains, normalization, and public `type fn` work)
-**Status:** 📝 Planned
+**Status:** ✅ Complete
 **Spec:** [SPEC-058](../spec/SPEC-058-CANONICAL-TYPE-EXPRESSION-IR-PROJECTION-IDS-KIND-ARITY-SUBSTRATE.md)
 **Design:** [DESIGN-034](../design/DESIGN-034-TOTAL-TYPE-COMPUTATION.md)
 **Plan:** [docs/plan/PLAN-106-TYPE-EXPRESSION-IR-PROJECTION-IDS-KIND-ARITY-SUBSTRATE.md](PLAN-106-TYPE-EXPRESSION-IR-PROJECTION-IDS-KIND-ARITY-SUBSTRATE.md)
@@ -3322,3 +3324,42 @@ Boundary note: Phase 113 is source `type fn` work only. It does not implement pu
 - D4: Catch-all/default rows are ordered residual known-constructor coverage only, including explicitly inspected nested residual spaces, not open-variable reduction.
 - D5: Definitional equality remains normalize-and-compare and does not invert type functions.
 - D6: Structural recursion is direct-subcomponent only; no mutual/lexicographic/size-change termination in this phase.
+
+## Phase 114: Module-Summary Export/Import for Type Computation
+
+**Priority:** High (DESIGN-034 SPEC-F unlocks cross-module public type computation after Phase 113)
+**Status:** 🟢 In Progress
+**Spec:** [SPEC-062](../spec/SPEC-062-MODULE-SUMMARY-EXPORT-IMPORT-FOR-TYPE-COMPUTATION.md)
+**Design:** [DESIGN-034](../design/DESIGN-034-TOTAL-TYPE-COMPUTATION.md)
+**Plan:** [docs/plan/PLAN-110-MODULE-SUMMARY-EXPORT-IMPORT-FOR-TYPE-COMPUTATION.md](PLAN-110-MODULE-SUMMARY-EXPORT-IMPORT-FOR-TYPE-COMPUTATION.md)
+
+Phase 114 implements SPEC-F from DESIGN-034. It defines the public module-summary boundary for type computation: public sealed-domain and public transparent `type fn` summaries are exported/imported through core-owned semantic summaries, private equation dependencies remain opaque, imported public heads normalize deterministically downstream, summary version/cache keys include type-computation facts, and import order/re-export aliases preserve canonical identities.
+
+| Task | Description | Est. Hours | Status |
+|------|-------------|------------|--------|
+| [TASK-843](tasks/TASK-843-spec-f-spec-plan-packet.md) | Promote DESIGN-034 SPEC-F into SPEC-062/PLAN-110 and register Phase 114 | 4 | ✅ Complete |
+| [TASK-844](tasks/TASK-844-type-computation-summary-audit-gate.md) | Audit live public summary/export/import/normalizer seams before implementation | 5 | 📝 Planned |
+| [TASK-845](tasks/TASK-845-core-public-computation-summary-schema.md) | Core public type-computation summary schema and V3 version contract | 8 | 📝 Planned |
+| [TASK-846](tasks/TASK-846-parser-public-type-fn-visibility.md) | Parser public type-function visibility preservation | 4 | 📝 Planned |
+| [TASK-847](tasks/TASK-847-typeck-public-export-closure-validation.md) | Typeck public/private export-closure validation | 8 | 📝 Planned |
+| [TASK-848](tasks/TASK-848-transparent-public-equation-summary-lowering.md) | Transparent public equation summary lowering | 8 | 📝 Planned |
+| [TASK-849](tasks/TASK-849-engine-summary-transport-reconciliation.md) | Engine summary transport and fragmented-carrier reconciliation | 8 | 📝 Planned |
+| [TASK-850](tasks/TASK-850-summary-versioning-cache-invalidation.md) | Summary versioning, dedup, and cache invalidation | 5 | 📝 Planned |
+| [TASK-851](tasks/TASK-851-typeenv-imported-head-registration-normalizer.md) | TypeEnv imported public head registration and normalizer integration | 9 | 📝 Planned |
+| [TASK-852](tasks/TASK-852-private-opacity-unavailable-reduction-diagnostics.md) | Private opacity and unavailable-reduction diagnostics | 5 | 📝 Planned |
+| [TASK-853](tasks/TASK-853-import-order-reexport-determinism.md) | Import-order/re-export determinism and identity preservation | 6 | 📝 Planned |
+| [TASK-854](tasks/TASK-854-spec-f-acceptance-non-interference-matrix.md) | SPEC-F acceptance and non-interference matrix | 6 | 📝 Planned |
+| [TASK-855](tasks/TASK-855-spec-f-closeout-docs-and-verification.md) | SPEC-F closeout docs and verification | 4 | 📝 Planned |
+| [TASK-856](tasks/TASK-856-phase114-review-remediation.md) | Phase 114 review remediation | 6 | 📝 Planned |
+
+**Track A (Spec Gate and Audit):** 9h. Promote DESIGN-034 SPEC-F to SPEC-062/PLAN-110 and audit live summary/export/import/normalizer seams.
+**Track B (Core Summary Schema):** 13h. Add core V3 summary schema, public computation carriers, and version/cache dimensions.
+**Track C (Parser + Typeck Export Closure):** 20h. Preserve public type-function syntax and validate public dependency closure before summary emission.
+**Track D (Engine + TypeEnv Import Consumption):** 28h. Transport computation summaries, reconcile fragmented carriers, batch-register imported heads/equations, and reduce downstream public applications.
+**Track E (Diagnostics + Closeout):** 21h. Add private-opacity diagnostics, import-order/re-export acceptance, closeout verification, and review remediation.
+
+**Decision gates:**
+- D1: Direct checked public equations are the SPEC-062 MVP; opaque normalized fact export is deferred.
+- D2: Type-computation summary semantics live in `ash-core`, not engine-private or parser/capability metadata.
+- D3: Imported public summaries are registered in batch/two-pass order before normalizer use.
+- D4: Private helper equations/domains/constructors make a public type function non-export-closed and therefore rejected.

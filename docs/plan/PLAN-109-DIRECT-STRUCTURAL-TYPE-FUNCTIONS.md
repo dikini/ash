@@ -25,7 +25,7 @@
 | [TASK-831](tasks/TASK-831-type-function-audit-gate.md) | Audit live parser/core/typeck/normalizer seams before implementation | Docs/Substrate | 5 | ✅ Complete |
 | [TASK-832](tasks/TASK-832-parser-surface-for-type-functions.md) | Add parser surface syntax and raw AST carriers for `type fn` | Parser/Substrate | 6 | ✅ Complete |
 | [TASK-833](tasks/TASK-833-core-type-function-equation-carriers.md) | Add core type-function/equation/pattern/result-expression carriers | Core/Substrate | 5 | ✅ Complete |
-| [TASK-834](tasks/TASK-834-type-function-lowering-and-registration.md) | Lower source declarations and register module-local type-function heads | Type/Substrate | 6 | 📋 Planned |
+| [TASK-834](tasks/TASK-834-type-function-lowering-and-registration.md) | Lower source declarations and register module-local type-function heads | Type/Substrate | 6 | ✅ Complete |
 | [TASK-835](tasks/TASK-835-type-function-signature-kind-domain-validation.md) | Validate signatures, source resolution, domains, result constraints, and public boundary | Type/Semantic | 6 | 📋 Planned |
 | [TASK-836](tasks/TASK-836-type-function-pattern-coverage-overlap.md) | Implement pattern linearity plus finite residual coverage/overlap/default semantics | Type/Semantic | 7 | 📋 Planned |
 | [TASK-837](tasks/TASK-837-type-function-structural-recursion.md) | Implement declared decreasing-parameter and structural recursion validation | Type/Semantic | 6 | 📋 Planned |

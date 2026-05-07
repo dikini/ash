@@ -1,6 +1,6 @@
 # TASK-834: Lower source declarations and register module-local type-function heads in TypeEnv
 
-## Status: 📋 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -68,16 +68,25 @@ commands:
   - cargo fmt --check
   - git diff --check
 checklist:
-  - [ ] Lower raw surface type functions into core carriers.
-  - [ ] Predeclare/provisionally allocate the current local `TypeComputationHeadId` so recursive self-reference can resolve while invalid heads remain unpublished.
-  - [ ] Publish validated heads only in source order; reject later same-module forward references in SPEC-E.
-  - [ ] Preserve equation order, RHS pattern-variable substitution metadata, marker-constructor RHS carriers, and source anchors.
-  - [ ] Ensure type-function applications lower to computation-head carriers and marker-constructor RHS applications lower to domain-constructor result carriers rather than nominal constructors.
-  - [ ] Do not export source equations or public summaries before SPEC-F.
-  - [ ] Add registration tests proving self-reference, earlier validated dependencies, duplicate-name rejection, invalid-publication rejection, and later-forward-reference rejection.
-  - [ ] focused tests/evidence recorded in this task file
-  - [ ] no SPEC-F/G/H scope creep
+  - [x] Lower raw surface type functions into core carriers.
+  - [x] Predeclare/provisionally allocate the current local `TypeComputationHeadId` so recursive self-reference can resolve while invalid heads remain unpublished.
+  - [x] Publish validated heads only in source order; reject later same-module forward references in SPEC-E.
+  - [x] Preserve equation order, RHS pattern-variable substitution metadata, marker-constructor RHS carriers, and source anchors.
+  - [x] Ensure type-function applications lower to computation-head carriers and marker-constructor RHS applications lower to domain-constructor result carriers rather than nominal constructors.
+  - [x] Do not export source equations or public summaries before SPEC-F.
+  - [x] Add registration tests proving self-reference, earlier validated dependencies, duplicate-name rejection, invalid-publication rejection, and later-forward-reference rejection.
+  - [x] focused tests/evidence recorded in this task file
+  - [x] no SPEC-F/G/H scope creep
 ```
+
+## Verification Evidence
+
+- Added focused TDD tests in `crates/ash-typeck/tests/task_834_type_function_lowering.rs`; initial focused run failed because `TypeEnv::register_local_type_functions` and lookup APIs were absent.
+- Implemented module-local lowering/registration in `crates/ash-typeck/src/type_env.rs` with staged all-or-nothing batch registration, provisional current self-head resolution, source-order publication, duplicate and later-forward-reference rejection, checked carrier storage, marker-constructor RHS/domain-constructor carriers, computation-head RHS carriers, pattern-variable metadata, and source anchors.
+- Verified focused target:
+- Focused pass after implementation: `cargo test -p ash-typeck --test task_834_type_function_lowering -- --nocapture` — 6 passed, 0 failed.
+- Workspace compile after TypeEnv registration API additions: `cargo check --workspace` — passed.
+- Formatting: `cargo fmt --check` — passed.
 
 
 ## Notes

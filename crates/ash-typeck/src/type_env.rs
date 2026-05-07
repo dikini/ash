@@ -14,17 +14,23 @@ use ash_core::ast::{TypeBody, TypeDef, TypeExpr, VariantDef, VariantPayload};
 use ash_core::module_graph::{CrateId, ModuleId};
 use ash_core::semantic_summary::{
     AssociatedMemberIdentityId, AssociatedMemberIdentitySummary, ConstructorPayloadKind,
-    ConstructorSummary, InterfaceIdentityId, InterfaceIdentitySummary, ModuleIdentity,
-    ModuleSemanticSummary, RepresentationExposure, SealedDomainId, SealedDomainSummary,
-    StructuralFieldStatus, SummaryVersion, TypeDeclId, TypeDeclSummary, TypeRepresentationSummary,
+    ConstructorSummary, DomainConstructorSummary, InterfaceIdentityId, InterfaceIdentitySummary,
+    ModuleIdentity, ModuleSemanticSummary, RepresentationExposure, SealedDomainId,
+    SealedDomainSummary, SourceAnchor, SourceOrigin, StructuralFieldStatus, SummaryVersion,
+    TypeDeclId, TypeDeclSummary, TypeRepresentationSummary,
 };
-use ash_core::type_ir::{CanonicalTypeExpr, ProjectionRigidity};
+use ash_core::type_ir::{
+    CanonicalTypeExpr, ProjectionRigidity, TypeComputationHeadId, TypeFunctionDef,
+    TypeFunctionEquation, TypeFunctionParam, TypeFunctionPattern, TypeFunctionPatternConstraint,
+    TypeFunctionResultConstraint, TypeFunctionResultExpr, TypeFunctionSourceAnchors,
+};
 use ash_core::workflow_contract::{Contract as WorkflowContract, RuntimePostconditionContract};
 use ash_parser::surface::{
     CapabilityImplementationDef, CapabilityImplementationDependency,
     CapabilityImplementationDependencyKind, CapabilityImplementationOperation,
     CapabilityInterfaceDef, CapabilityOperationMode, CapabilityOperationSig, ImplDef, InterfaceDef,
-    InterfaceMethodSig, ResourceTypeDef, Type as SurfaceType,
+    InterfaceMethodSig, ResourceTypeDef, Type as SurfaceType, TypeFnDef as SurfaceTypeFnDef,
+    TypePattern as SurfaceTypePattern, Visibility as SurfaceVisibility,
 };
 use ash_parser::token::Span;
 use std::collections::{HashMap, HashSet};
@@ -827,6 +833,118 @@ fn looks_like_unbound_type_var_name(name: &str) -> bool {
             .all(|ch| ch.is_ascii_uppercase() || ch.is_ascii_digit() || ch == '_')
 }
 
+fn span_anchor(span: Span, label: impl Into<String>) -> SourceAnchor {
+    let core_span = ash_core::ast::Span {
+        start: span.start,
+        end: span.end,
+    };
+    SourceAnchor::new(
+        SourceOrigin::Synthetic {
+            reason: "TASK-834 type-function lowering".to_string(),
+        },
+        Some(core_span),
+        label,
+    )
+}
+
+fn core_visibility_from_surface(visibility: &SurfaceVisibility) -> ash_core::ast::Visibility {
+    match visibility {
+        SurfaceVisibility::Inherited => ash_core::ast::Visibility::Private,
+        SurfaceVisibility::Public => ash_core::ast::Visibility::Public,
+        SurfaceVisibility::Crate => ash_core::ast::Visibility::Crate,
+        SurfaceVisibility::Super { .. }
+        | SurfaceVisibility::Self_
+        | SurfaceVisibility::Restricted { .. } => ash_core::ast::Visibility::Private,
+    }
+}
+
+fn constraint_for_param(param: &TypeFunctionParam) -> TypeFunctionPatternConstraint {
+    param
+        .domain_constraint
+        .clone()
+        .map(TypeFunctionPatternConstraint::Domain)
+        .unwrap_or_else(|| TypeFunctionPatternConstraint::Kind(param.kind.clone()))
+}
+
+fn result_constraint_from_pattern(
+    constraint: &TypeFunctionPatternConstraint,
+) -> TypeFunctionResultConstraint {
+    match constraint {
+        TypeFunctionPatternConstraint::Kind(kind) => {
+            TypeFunctionResultConstraint::Kind(kind.clone())
+        }
+        TypeFunctionPatternConstraint::Domain(domain) => {
+            TypeFunctionResultConstraint::Domain(domain.clone())
+        }
+    }
+}
+
+fn type_function_result_from_canonical(
+    canonical: CanonicalTypeExpr,
+    span: Span,
+) -> TypeFunctionResultExpr {
+    match canonical {
+        CanonicalTypeExpr::Primitive(name) => TypeFunctionResultExpr::Primitive {
+            name: name.clone(),
+            kind: Kind::Type,
+            constraint: TypeFunctionResultConstraint::Kind(Kind::Type),
+            source_anchor: span_anchor(span, format!("primitive type {name}")),
+        },
+        CanonicalTypeExpr::Var(name) => TypeFunctionResultExpr::Var {
+            name: name.clone(),
+            kind: Kind::Type,
+            constraint: TypeFunctionResultConstraint::Kind(Kind::Type),
+            source_anchor: span_anchor(span, format!("type variable {name}")),
+        },
+        CanonicalTypeExpr::NominalApp {
+            origin,
+            visible_name,
+            args,
+            kind,
+        } => TypeFunctionResultExpr::NominalApp {
+            origin,
+            visible_name: visible_name.clone(),
+            args: args
+                .into_iter()
+                .map(|arg| type_function_result_from_canonical(arg, span))
+                .collect(),
+            kind: kind.clone(),
+            constraint: TypeFunctionResultConstraint::Kind(kind),
+            source_anchor: span_anchor(span, format!("nominal type {visible_name}")),
+        },
+        CanonicalTypeExpr::Projection {
+            interface,
+            member,
+            args,
+            kind,
+            rigidity,
+        } => TypeFunctionResultExpr::Projection {
+            interface,
+            member,
+            args: args
+                .into_iter()
+                .map(|arg| type_function_result_from_canonical(arg, span))
+                .collect(),
+            kind: kind.clone(),
+            constraint: TypeFunctionResultConstraint::Kind(kind),
+            rigidity,
+            source_anchor: span_anchor(span, "associated projection"),
+        },
+        CanonicalTypeExpr::ComputationHeadApp { head, args, kind } => {
+            TypeFunctionResultExpr::ComputationHeadApp {
+                head,
+                args: args
+                    .into_iter()
+                    .map(|arg| type_function_result_from_canonical(arg, span))
+                    .collect(),
+                kind: kind.clone(),
+                constraint: TypeFunctionResultConstraint::Kind(kind),
+                source_anchor: span_anchor(span, "type function call"),
+            }
+        }
+    }
+}
+
 #[allow(dead_code)]
 fn resolve_associated_types_for_interface(
     ty: &mut Type,
@@ -1172,6 +1290,10 @@ pub struct TypeEnv {
     sealed_domain_aliases: HashMap<String, SealedDomainId>,
     /// Sealed-domain identity -> domain summary metadata.
     sealed_domain_summaries: HashMap<SealedDomainId, SealedDomainSummary>,
+    /// Module-local type-function names published after minimal TASK-834 lowering succeeds.
+    local_type_function_heads: HashMap<String, TypeComputationHeadId>,
+    /// Published checked source-backed type-function carriers keyed by computation head.
+    local_type_functions: HashMap<TypeComputationHeadId, TypeFunctionDef>,
     /// Workflow effect context for the three-vertex boundary (SPEC-031 §4.8).
     ///
     /// `Some(effect)` means we are type-checking inside a workflow body at the
@@ -1607,6 +1729,8 @@ impl TypeEnv {
             sealed_domain_identities: HashSet::new(),
             sealed_domain_aliases: HashMap::new(),
             sealed_domain_summaries: HashMap::new(),
+            local_type_function_heads: HashMap::new(),
+            local_type_functions: HashMap::new(),
             workflow_effect: None,
             capability_implementation_body: false,
         }
@@ -2225,6 +2349,494 @@ impl TypeEnv {
     pub fn lookup_sealed_domain(&self, name: &str) -> Option<&SealedDomainSummary> {
         let id = self.sealed_domain_aliases.get(name)?;
         self.sealed_domain_summaries.get(id)
+    }
+
+    /// Register a source-ordered batch of module-local type functions.
+    ///
+    /// TASK-834 deliberately performs only minimal honest lowering/registration:
+    /// the current head is provisional during its own lowering, earlier published
+    /// heads are visible, later same-module heads are rejected, and the checked
+    /// carrier is published only after lowering succeeds. Deeper SPEC-E validation
+    /// (coverage, overlap, recursion, and kind/domain proof obligations) remains
+    /// owned by TASK-835/836/837.
+    pub fn register_local_type_functions(
+        &mut self,
+        module: &ModuleIdentity,
+        defs: &[SurfaceTypeFnDef],
+    ) -> Result<(), TypeEnvError> {
+        let mut staged = self.clone();
+        staged.register_local_type_functions_inner(module, defs)?;
+        *self = staged;
+        Ok(())
+    }
+
+    /// Look up a published module-local type function by source name.
+    #[must_use]
+    pub fn lookup_local_type_function(&self, name: &str) -> Option<&TypeFunctionDef> {
+        let head = self.local_type_function_heads.get(name)?;
+        self.local_type_functions.get(head)
+    }
+
+    /// Iterate published module-local type-function names. This intentionally
+    /// exposes no public summary/equation transport before SPEC-F.
+    pub fn local_type_function_names(&self) -> impl Iterator<Item = &str> {
+        self.local_type_function_heads.keys().map(String::as_str)
+    }
+
+    fn register_local_type_functions_inner(
+        &mut self,
+        module: &ModuleIdentity,
+        defs: &[SurfaceTypeFnDef],
+    ) -> Result<(), TypeEnvError> {
+        let mut seen_in_batch = HashSet::new();
+        for def in defs {
+            let name = def.name.to_string();
+            if self.local_type_function_heads.contains_key(&name)
+                || !seen_in_batch.insert(name.clone())
+            {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!("duplicate type function '{name}'"),
+                    def.span,
+                ));
+            }
+        }
+
+        for (index, def) in defs.iter().enumerate() {
+            let later_names: HashSet<String> = defs
+                .iter()
+                .skip(index + 1)
+                .map(|later| later.name.to_string())
+                .collect();
+            let lowered = self.lower_local_type_function(module, def, &later_names)?;
+            self.local_type_function_heads
+                .insert(lowered.name.clone(), lowered.head.clone());
+            self.local_type_functions
+                .insert(lowered.head.clone(), lowered);
+        }
+        Ok(())
+    }
+
+    fn lower_local_type_function(
+        &self,
+        module: &ModuleIdentity,
+        def: &SurfaceTypeFnDef,
+        later_names: &HashSet<String>,
+    ) -> Result<TypeFunctionDef, TypeEnvError> {
+        if def.visibility.is_pub() {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "type function '{}' cannot be public before SPEC-F summaries",
+                    def.name
+                ),
+                def.span,
+            ));
+        }
+        let head = TypeComputationHeadId::new(module.clone(), def.name.to_string());
+        let params = def
+            .params
+            .iter()
+            .map(|param| {
+                let (ty, constraint) = self.lower_type_fn_signature_type(&param.ty)?;
+                Ok(TypeFunctionParam {
+                    name: param.name.to_string(),
+                    ty,
+                    kind: Kind::Type,
+                    domain_constraint: constraint,
+                    source_anchor: span_anchor(param.span, format!("type fn param {}", param.name)),
+                })
+            })
+            .collect::<Result<Vec<_>, TypeEnvError>>()?;
+        let (return_type, result_domain) = self.lower_type_fn_signature_type(&def.return_type)?;
+        let result_constraint = match result_domain.clone() {
+            Some(domain) => TypeFunctionResultConstraint::Domain(domain),
+            None => TypeFunctionResultConstraint::Kind(Kind::Type),
+        };
+
+        let mut equations = Vec::with_capacity(def.equations.len());
+        for (ordinal, equation) in def.equations.iter().enumerate() {
+            if equation.head.as_ref() != def.name.as_ref() {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "case head '{}' does not match type function '{}'",
+                        equation.head, def.name
+                    ),
+                    equation.head_span,
+                ));
+            }
+            if equation.patterns.len() != params.len() {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "type function '{}' equation arity mismatch: expected {}, found {}",
+                        def.name,
+                        params.len(),
+                        equation.patterns.len()
+                    ),
+                    equation.span,
+                ));
+            }
+            let mut pattern_vars = HashMap::new();
+            let patterns = equation
+                .patterns
+                .iter()
+                .zip(&params)
+                .map(|(pattern, param)| {
+                    let constraint = constraint_for_param(param);
+                    self.lower_type_function_pattern(pattern, &constraint, &mut pattern_vars)
+                })
+                .collect::<Result<Vec<_>, TypeEnvError>>()?;
+            let result = self.lower_type_function_result_expr(
+                &equation.result,
+                result_domain.as_ref(),
+                &pattern_vars,
+                Some((&def.name, &head)),
+                later_names,
+                equation.result_span,
+            )?;
+            equations.push(TypeFunctionEquation {
+                head: head.clone(),
+                ordinal,
+                patterns,
+                result,
+                source_anchor: span_anchor(equation.span, format!("type fn equation {ordinal}")),
+                case_head_anchor: span_anchor(
+                    equation.head_span,
+                    format!("case head {}", equation.head),
+                ),
+            });
+        }
+
+        Ok(TypeFunctionDef {
+            visibility: core_visibility_from_surface(&def.visibility),
+            head,
+            name: def.name.to_string(),
+            params,
+            return_type,
+            return_kind: Kind::Type,
+            result_constraint,
+            decreases: def
+                .decreases
+                .as_ref()
+                .map(|decreases| decreases.param.to_string()),
+            source_anchors: TypeFunctionSourceAnchors {
+                definition: span_anchor(def.header_span, format!("type fn {}", def.name)),
+                decreases: def.decreases.as_ref().map(|decreases| {
+                    span_anchor(decreases.span, format!("decreases {}", decreases.param))
+                }),
+            },
+            equations,
+        })
+    }
+
+    fn lower_type_fn_signature_type(
+        &self,
+        ty: &SurfaceType,
+    ) -> Result<(CanonicalTypeExpr, Option<SealedDomainId>), TypeEnvError> {
+        if let SurfaceType::Name(name) = ty {
+            if let Some(domain) = self.lookup_sealed_domain(name.as_ref()) {
+                return Ok((
+                    CanonicalTypeExpr::Var(domain.exported_name.clone()),
+                    Some(domain.id.clone()),
+                ));
+            }
+        }
+        self.lower_surface_type_to_canonical(ty)
+            .map(|canonical| (canonical, None))
+            .map_err(|err| TypeEnvError::InvalidDefinition(format!("{err}"), Span::default()))
+    }
+
+    fn lower_type_function_pattern(
+        &self,
+        pattern: &SurfaceTypePattern,
+        constraint: &TypeFunctionPatternConstraint,
+        pattern_vars: &mut HashMap<String, TypeFunctionPatternConstraint>,
+    ) -> Result<TypeFunctionPattern, TypeEnvError> {
+        match pattern {
+            SurfaceTypePattern::Wildcard { span } => Ok(TypeFunctionPattern::Wildcard {
+                constraint: constraint.clone(),
+                source_anchor: span_anchor(*span, "wildcard type pattern"),
+            }),
+            SurfaceTypePattern::Var { name, span } => {
+                if let TypeFunctionPatternConstraint::Domain(domain_id) = constraint {
+                    if let Some((domain, constructor)) =
+                        self.find_domain_constructor(domain_id, name.as_ref())
+                    {
+                        return self.lower_domain_constructor_pattern(
+                            constructor,
+                            domain,
+                            &[],
+                            *span,
+                            pattern_vars,
+                        );
+                    }
+                }
+                let name = name.to_string();
+                pattern_vars.insert(name.clone(), constraint.clone());
+                Ok(TypeFunctionPattern::Var {
+                    name,
+                    constraint: constraint.clone(),
+                    source_anchor: span_anchor(*span, "type pattern variable"),
+                })
+            }
+            SurfaceTypePattern::Constructor { name, args, span } => {
+                let TypeFunctionPatternConstraint::Domain(domain_id) = constraint else {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "constructor pattern '{}' requires a sealed-domain position",
+                            name
+                        ),
+                        *span,
+                    ));
+                };
+                let Some((domain, constructor)) =
+                    self.find_domain_constructor(domain_id, name.as_ref())
+                else {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "unknown marker constructor '{}' for sealed-domain pattern",
+                            name
+                        ),
+                        *span,
+                    ));
+                };
+                self.lower_domain_constructor_pattern(
+                    constructor,
+                    domain,
+                    args,
+                    *span,
+                    pattern_vars,
+                )
+            }
+        }
+    }
+
+    fn lower_domain_constructor_pattern(
+        &self,
+        constructor: &DomainConstructorSummary,
+        domain: &SealedDomainSummary,
+        args: &[SurfaceTypePattern],
+        span: Span,
+        pattern_vars: &mut HashMap<String, TypeFunctionPatternConstraint>,
+    ) -> Result<TypeFunctionPattern, TypeEnvError> {
+        if constructor.fields.len() != args.len() {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "marker constructor '{}' pattern arity mismatch: expected {}, found {}",
+                    constructor.exported_name,
+                    constructor.fields.len(),
+                    args.len()
+                ),
+                span,
+            ));
+        }
+        let fields = args
+            .iter()
+            .zip(&constructor.fields)
+            .map(|(arg, field)| {
+                let constraint = field
+                    .domain_constraint
+                    .clone()
+                    .map(TypeFunctionPatternConstraint::Domain)
+                    .unwrap_or_else(|| TypeFunctionPatternConstraint::Kind(field.kind.clone()));
+                self.lower_type_function_pattern(arg, &constraint, pattern_vars)
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(TypeFunctionPattern::DomainConstructor {
+            constructor: constructor.id.clone(),
+            domain: domain.id.clone(),
+            fields,
+            constraint: TypeFunctionPatternConstraint::Domain(domain.id.clone()),
+            source_anchor: span_anchor(
+                span,
+                format!("marker constructor pattern {}", constructor.exported_name),
+            ),
+        })
+    }
+
+    fn lower_type_function_result_expr(
+        &self,
+        ty: &SurfaceType,
+        expected_domain: Option<&SealedDomainId>,
+        pattern_vars: &HashMap<String, TypeFunctionPatternConstraint>,
+        current_head: Option<(&str, &TypeComputationHeadId)>,
+        later_names: &HashSet<String>,
+        span: Span,
+    ) -> Result<TypeFunctionResultExpr, TypeEnvError> {
+        match ty {
+            SurfaceType::Name(name) => self.lower_type_function_result_head(
+                name.as_ref(),
+                &[],
+                expected_domain,
+                pattern_vars,
+                current_head,
+                later_names,
+                span,
+            ),
+            SurfaceType::Constructor { name, args } => self.lower_type_function_result_head(
+                name.as_ref(),
+                args,
+                expected_domain,
+                pattern_vars,
+                current_head,
+                later_names,
+                span,
+            ),
+            other => self
+                .lower_surface_type_to_canonical(other)
+                .map(|canonical| type_function_result_from_canonical(canonical, span))
+                .map_err(|err| TypeEnvError::InvalidDefinition(format!("{err}"), span)),
+        }
+    }
+
+    fn lower_type_function_result_head(
+        &self,
+        name: &str,
+        args: &[SurfaceType],
+        expected_domain: Option<&SealedDomainId>,
+        pattern_vars: &HashMap<String, TypeFunctionPatternConstraint>,
+        current_head: Option<(&str, &TypeComputationHeadId)>,
+        later_names: &HashSet<String>,
+        span: Span,
+    ) -> Result<TypeFunctionResultExpr, TypeEnvError> {
+        if args.is_empty() && pattern_vars.contains_key(name) {
+            let constraint = pattern_vars.get(name).expect("checked contains_key");
+            return Ok(TypeFunctionResultExpr::Var {
+                name: name.to_string(),
+                kind: Kind::Type,
+                constraint: result_constraint_from_pattern(constraint),
+                source_anchor: span_anchor(span, format!("type pattern variable {name}")),
+            });
+        }
+        if let Some(domain_id) = expected_domain {
+            if let Some((domain, constructor)) = self.find_domain_constructor(domain_id, name) {
+                if constructor.fields.len() != args.len() {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "marker constructor '{}' result arity mismatch: expected {}, found {}",
+                            constructor.exported_name,
+                            constructor.fields.len(),
+                            args.len()
+                        ),
+                        span,
+                    ));
+                }
+                let lowered_args = args
+                    .iter()
+                    .zip(&constructor.fields)
+                    .map(|(arg, field)| {
+                        self.lower_type_function_result_expr(
+                            arg,
+                            field.domain_constraint.as_ref(),
+                            pattern_vars,
+                            current_head,
+                            later_names,
+                            span,
+                        )
+                    })
+                    .collect::<Result<Vec<_>, _>>()?;
+                return Ok(TypeFunctionResultExpr::DomainConstructorApp {
+                    constructor: constructor.id.clone(),
+                    domain: domain.id.clone(),
+                    args: lowered_args,
+                    kind: Kind::Type,
+                    constraint: TypeFunctionResultConstraint::Domain(domain.id.clone()),
+                    source_anchor: span_anchor(span, format!("marker constructor result {name}")),
+                });
+            }
+        }
+        if let Some((_, head)) = current_head.filter(|(self_name, _)| name == *self_name) {
+            let lowered_args = args
+                .iter()
+                .map(|arg| {
+                    self.lower_type_function_result_expr(
+                        arg,
+                        None,
+                        pattern_vars,
+                        current_head,
+                        later_names,
+                        span,
+                    )
+                })
+                .collect::<Result<Vec<_>, _>>()?;
+            return Ok(TypeFunctionResultExpr::ComputationHeadApp {
+                head: head.clone(),
+                args: lowered_args,
+                kind: Kind::Type,
+                constraint: TypeFunctionResultConstraint::Kind(Kind::Type),
+                source_anchor: span_anchor(span, format!("type function call {name}")),
+            });
+        }
+        if let Some(head) = self.local_type_function_heads.get(name) {
+            let lowered_args = args
+                .iter()
+                .map(|arg| {
+                    self.lower_type_function_result_expr(
+                        arg,
+                        None,
+                        pattern_vars,
+                        current_head,
+                        later_names,
+                        span,
+                    )
+                })
+                .collect::<Result<Vec<_>, _>>()?;
+            return Ok(TypeFunctionResultExpr::ComputationHeadApp {
+                head: head.clone(),
+                args: lowered_args,
+                kind: Kind::Type,
+                constraint: TypeFunctionResultConstraint::Kind(Kind::Type),
+                source_anchor: span_anchor(span, format!("type function call {name}")),
+            });
+        }
+        if later_names.contains(name) {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "forward reference to later type function '{name}' is unsupported in SPEC-E"
+                ),
+                span,
+            ));
+        }
+        if args.is_empty()
+            && matches!(
+                name,
+                "Int" | "String" | "Bool" | "Float" | "Null" | "Time" | "Ref"
+            )
+        {
+            return Ok(TypeFunctionResultExpr::Primitive {
+                name: name.to_string(),
+                kind: Kind::Type,
+                constraint: TypeFunctionResultConstraint::Kind(Kind::Type),
+                source_anchor: span_anchor(span, format!("primitive type {name}")),
+            });
+        }
+        let surface = if args.is_empty() {
+            SurfaceType::Name(Box::from(name))
+        } else {
+            SurfaceType::Constructor {
+                name: Box::from(name),
+                args: args.to_vec(),
+            }
+        };
+        self.lower_surface_type_to_canonical(&surface)
+            .map(|canonical| type_function_result_from_canonical(canonical, span))
+            .map_err(|_| {
+                TypeEnvError::InvalidDefinition(
+                    format!("unresolved type function or type head '{name}'"),
+                    span,
+                )
+            })
+    }
+
+    fn find_domain_constructor(
+        &self,
+        domain_id: &SealedDomainId,
+        constructor_name: &str,
+    ) -> Option<(&SealedDomainSummary, &DomainConstructorSummary)> {
+        let domain = self.lookup_sealed_domain_by_id(domain_id)?;
+        let constructor = domain
+            .constructors
+            .iter()
+            .find(|constructor| constructor.exported_name == constructor_name)?;
+        Some((domain, constructor))
     }
 
     /// Look up a sealed domain by its canonical identity.
@@ -3709,6 +4321,8 @@ impl TypeEnv {
             sealed_domain_identities: self.sealed_domain_identities.clone(),
             sealed_domain_aliases: self.sealed_domain_aliases.clone(),
             sealed_domain_summaries: self.sealed_domain_summaries.clone(),
+            local_type_function_heads: self.local_type_function_heads.clone(),
+            local_type_functions: self.local_type_functions.clone(),
             workflow_effect: None,
             capability_implementation_body: true,
         };
@@ -4610,6 +5224,8 @@ impl TypeEnv {
             sealed_domain_identities: self.sealed_domain_identities.clone(),
             sealed_domain_aliases: self.sealed_domain_aliases.clone(),
             sealed_domain_summaries: self.sealed_domain_summaries.clone(),
+            local_type_function_heads: self.local_type_function_heads.clone(),
+            local_type_functions: self.local_type_functions.clone(),
             workflow_effect: self.workflow_effect,
             capability_implementation_body: self.capability_implementation_body,
         }

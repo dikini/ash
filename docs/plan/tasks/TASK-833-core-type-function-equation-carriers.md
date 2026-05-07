@@ -1,6 +1,6 @@
 # TASK-833: Add core-owned type-function/equation/pattern/result-expression carriers shared by typeck/engine-facing metadata
 
-## Status: 📋 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -66,14 +66,24 @@ commands:
   - cargo fmt --check
   - git diff --check
 checklist:
-  - [ ] Add TypeFunctionDef/Equation/Pattern-style carriers or equivalent.
-  - [ ] Add a `TypeFunctionResultExpr`-style carrier or explicitly extend `CanonicalTypeExpr` so source equation RHSs can represent sealed-domain marker-constructor applications.
-  - [ ] Use `TypeComputationHeadId` and sealed-domain constructor IDs, not ordinary nominal constructor IDs.
-  - [ ] Preserve source anchors, equation order, parameter metadata, result expressions, and decreasing-parameter metadata.
-  - [ ] Encode pattern and result-expression domain/constraint metadata needed for later result-domain and coverage checks.
-  - [ ] Add serde/hash/equality tests where carriers cross crate boundaries.
-  - [ ] focused tests/evidence recorded in this task file
-  - [ ] no SPEC-F/G/H scope creep
+  - [x] Add TypeFunctionDef/Equation/Pattern-style carriers or equivalent.
+  - [x] Add a `TypeFunctionResultExpr`-style carrier or explicitly extend `CanonicalTypeExpr` so source equation RHSs can represent sealed-domain marker-constructor applications.
+  - [x] Use `TypeComputationHeadId` and sealed-domain constructor IDs, not ordinary nominal constructor IDs.
+  - [x] Preserve source anchors, equation order, parameter metadata, result expressions, and decreasing-parameter metadata.
+  - [x] Encode pattern and result-expression domain/constraint metadata needed for later result-domain and coverage checks.
+  - [x] Add serde/hash/equality tests where carriers cross crate boundaries.
+  - [x] focused tests/evidence recorded in this task file
+  - [x] no SPEC-F/G/H scope creep
+```
+
+## Verification Evidence
+
+- TDD red run before implementation: `cargo test -p ash-core --test task_833_type_function_carriers -- --nocapture` failed with unresolved imports for `TypeFunctionDef`, `TypeFunctionEquation`, `TypeFunctionParam`, `TypeFunctionPattern`, `TypeFunctionPatternConstraint`, `TypeFunctionResultConstraint`, `TypeFunctionResultExpr`, and `TypeFunctionSourceAnchors`.
+- Focused pass after implementation: `cargo test -p ash-core --test task_833_type_function_carriers -- --nocapture` — 5 passed, 0 failed.
+- Workspace compile after core carrier additions: `cargo check --workspace` — passed.
+- Formatting: `cargo fmt --check` — passed.
+- Whitespace: `git diff --check` — passed.
+- Scope note: TASK-833 added ash-core carriers/tests only; no parser lowering, TypeEnv validation, normalizer integration, engine export/import, or SPEC-F/G/H behavior was implemented.
 ```
 
 

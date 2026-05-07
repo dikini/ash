@@ -782,7 +782,7 @@ pub enum VariantPayload {
 }
 
 /// Visibility modifier
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Visibility {
     /// Public visibility (accessible from anywhere)
     Public,

@@ -12,10 +12,11 @@
 //! It defines only carriers. Lowering, normalization algorithms, definitional
 //! equality, and diagnostics are owned by later Phase 112 tasks.
 
+use crate::ast::Visibility;
 use crate::kind::Kind;
 use crate::semantic_summary::{
     AssociatedMemberIdentityId, DomainConstructorId, InterfaceIdentityId, ModuleIdentity,
-    SealedDomainId, TypeDeclId,
+    SealedDomainId, SourceAnchor, TypeDeclId,
 };
 use serde::{Deserialize, Serialize};
 
@@ -66,6 +67,142 @@ pub enum CanonicalTypeExpr {
         head: TypeComputationHeadId,
         args: Vec<CanonicalTypeExpr>,
         kind: Kind,
+    },
+}
+
+/// Checked source-backed `type fn` declaration carrier.
+///
+/// The carrier is intentionally semantic-only: it preserves already-resolved
+/// computation-head and sealed-domain identities for later TypeEnv validation and
+/// normalizer registration, but it does not perform lowering, coverage checking,
+/// recursion validation, or cross-module summary transport.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct TypeFunctionDef {
+    pub visibility: Visibility,
+    pub head: TypeComputationHeadId,
+    pub name: String,
+    pub params: Vec<TypeFunctionParam>,
+    pub return_type: CanonicalTypeExpr,
+    pub return_kind: Kind,
+    pub result_constraint: TypeFunctionResultConstraint,
+    pub decreases: Option<String>,
+    pub source_anchors: TypeFunctionSourceAnchors,
+    pub equations: Vec<TypeFunctionEquation>,
+}
+
+/// Diagnostic anchors attached to a checked `type fn` definition.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct TypeFunctionSourceAnchors {
+    pub definition: SourceAnchor,
+    pub decreases: Option<SourceAnchor>,
+}
+
+/// Checked type-function parameter metadata.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct TypeFunctionParam {
+    pub name: String,
+    pub ty: CanonicalTypeExpr,
+    pub kind: Kind,
+    pub domain_constraint: Option<SealedDomainId>,
+    pub source_anchor: SourceAnchor,
+}
+
+/// One checked source equation, preserving source order and case-head anchoring.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct TypeFunctionEquation {
+    pub head: TypeComputationHeadId,
+    pub ordinal: usize,
+    pub patterns: Vec<TypeFunctionPattern>,
+    pub result: TypeFunctionResultExpr,
+    pub source_anchor: SourceAnchor,
+    pub case_head_anchor: SourceAnchor,
+}
+
+/// Kind/domain constraint inherited by a checked type-level pattern position.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum TypeFunctionPatternConstraint {
+    Kind(Kind),
+    Domain(SealedDomainId),
+}
+
+/// Checked source type-level pattern carrier for `type fn` equations.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum TypeFunctionPattern {
+    DomainConstructor {
+        constructor: DomainConstructorId,
+        domain: SealedDomainId,
+        fields: Vec<TypeFunctionPattern>,
+        constraint: TypeFunctionPatternConstraint,
+        source_anchor: SourceAnchor,
+    },
+    Var {
+        name: String,
+        constraint: TypeFunctionPatternConstraint,
+        source_anchor: SourceAnchor,
+    },
+    Wildcard {
+        constraint: TypeFunctionPatternConstraint,
+        source_anchor: SourceAnchor,
+    },
+}
+
+/// Kind/domain constraint for a checked type-function result expression.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum TypeFunctionResultConstraint {
+    Kind(Kind),
+    Domain(SealedDomainId),
+}
+
+/// Checked source-equation result expression carrier.
+///
+/// This deliberately mirrors the canonical type-expression head families while
+/// adding `DomainConstructorApp`, so sealed-domain marker constructors are never
+/// encoded as ordinary nominal constructors before normalization.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum TypeFunctionResultExpr {
+    Primitive {
+        name: String,
+        kind: Kind,
+        constraint: TypeFunctionResultConstraint,
+        source_anchor: SourceAnchor,
+    },
+    Var {
+        name: String,
+        kind: Kind,
+        constraint: TypeFunctionResultConstraint,
+        source_anchor: SourceAnchor,
+    },
+    NominalApp {
+        origin: TypeDeclId,
+        visible_name: String,
+        args: Vec<TypeFunctionResultExpr>,
+        kind: Kind,
+        constraint: TypeFunctionResultConstraint,
+        source_anchor: SourceAnchor,
+    },
+    DomainConstructorApp {
+        constructor: DomainConstructorId,
+        domain: SealedDomainId,
+        args: Vec<TypeFunctionResultExpr>,
+        kind: Kind,
+        constraint: TypeFunctionResultConstraint,
+        source_anchor: SourceAnchor,
+    },
+    Projection {
+        interface: InterfaceIdentityId,
+        member: AssociatedMemberIdentityId,
+        args: Vec<TypeFunctionResultExpr>,
+        kind: Kind,
+        constraint: TypeFunctionResultConstraint,
+        rigidity: ProjectionRigidity,
+        source_anchor: SourceAnchor,
+    },
+    ComputationHeadApp {
+        head: TypeComputationHeadId,
+        args: Vec<TypeFunctionResultExpr>,
+        kind: Kind,
+        constraint: TypeFunctionResultConstraint,
+        source_anchor: SourceAnchor,
     },
 }
 

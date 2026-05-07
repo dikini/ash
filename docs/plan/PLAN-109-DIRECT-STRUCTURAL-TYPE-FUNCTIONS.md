@@ -24,7 +24,7 @@
 | [TASK-830](tasks/TASK-830-spec-e-spec-plan-packet.md) | Promote DESIGN-034 SPEC-E into SPEC-061/PLAN-109 and register Phase 113 | Docs/Planning | 4 | ✅ Complete |
 | [TASK-831](tasks/TASK-831-type-function-audit-gate.md) | Audit live parser/core/typeck/normalizer seams before implementation | Docs/Substrate | 5 | ✅ Complete |
 | [TASK-832](tasks/TASK-832-parser-surface-for-type-functions.md) | Add parser surface syntax and raw AST carriers for `type fn` | Parser/Substrate | 6 | ✅ Complete |
-| [TASK-833](tasks/TASK-833-core-type-function-equation-carriers.md) | Add core type-function/equation/pattern/result-expression carriers | Core/Substrate | 5 | 📋 Planned |
+| [TASK-833](tasks/TASK-833-core-type-function-equation-carriers.md) | Add core type-function/equation/pattern/result-expression carriers | Core/Substrate | 5 | ✅ Complete |
 | [TASK-834](tasks/TASK-834-type-function-lowering-and-registration.md) | Lower source declarations and register module-local type-function heads | Type/Substrate | 6 | 📋 Planned |
 | [TASK-835](tasks/TASK-835-type-function-signature-kind-domain-validation.md) | Validate signatures, source resolution, domains, result constraints, and public boundary | Type/Semantic | 6 | 📋 Planned |
 | [TASK-836](tasks/TASK-836-type-function-pattern-coverage-overlap.md) | Implement pattern linearity plus finite residual coverage/overlap/default semantics | Type/Semantic | 7 | 📋 Planned |
@@ -136,7 +136,7 @@ Every implementation task must include focused tests and exact non-regression co
 - [x] PLAN-109 and TASK-830 through TASK-842 are registered in `docs/plan/PLAN-INDEX.md`.
 - [ ] TASK-831 audit gate names exact live seams and file targets.
 - [ ] `ash-parser` exposes raw `type fn` surface syntax and spans.
-- [ ] `ash-core` exposes shared type-function/equation/pattern/result-expression carriers that preserve sealed-domain marker-constructor RHSs.
+- [x] `ash-core` exposes shared type-function/equation/pattern/result-expression carriers that preserve sealed-domain marker-constructor RHSs.
 - [ ] `ash-typeck` validates signatures, source resolution, RHS variable scope, marker-constructor ambiguity, result domains, patterns, nested residual coverage, overlap, source-order dependencies, and recursion.
 - [ ] Checked source equations substitute pattern variables and reduce through the SPEC-060 normalizer.
 - [ ] Public/cross-module type-function use and public ordinary export leakage are rejected until SPEC-F.

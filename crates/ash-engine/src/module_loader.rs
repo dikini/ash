@@ -38,6 +38,8 @@ use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use winnow::prelude::Parser;
 
+type TypeFunctionNameSet = HashSet<String>;
+
 thread_local! {
     static LEGACY_TYPE_SNIPPET_COMPAT_SCOPE: Cell<usize> = const { Cell::new(0) };
 }
@@ -1018,11 +1020,25 @@ pub(crate) fn public_callable_signature_resolution_errors(
         known_types.extend(pub_use_exports.type_names);
     }
 
+    let local_type_function_names = collect_module_type_metadata_from_module_file(path, source)
+        .map(|metadata| {
+            metadata
+                .type_function_defs
+                .iter()
+                .map(|type_fn| type_fn.name.to_string())
+                .collect()
+        })
+        .unwrap_or_else(|_| local_type_function_names_from_source(source));
     let mut errors = Vec::new();
     for callable in public_callable_signatures(source) {
+        append_callable_signature_type_function_leaks(
+            &callable,
+            &local_type_function_names,
+            &mut errors,
+        );
         let mut missing = callable_signature_type_names(&callable)
             .into_iter()
-            .filter(|name| !known_types.contains(name))
+            .filter(|name| !known_types.contains(name) && !local_type_function_names.contains(name))
             .collect::<Vec<_>>();
         missing.sort_unstable();
         missing.dedup();
@@ -1041,6 +1057,25 @@ pub(crate) fn public_callable_signature_resolution_errors(
         }
     }
     errors
+}
+
+fn append_callable_signature_type_function_leaks(
+    callable: &InlineCallable,
+    local_type_function_names: &TypeFunctionNameSet,
+    errors: &mut Vec<String>,
+) {
+    let mut leaked = callable_signature_type_names(callable)
+        .into_iter()
+        .filter(|name| local_type_function_names.contains(name))
+        .collect::<Vec<_>>();
+    leaked.sort_unstable();
+    leaked.dedup();
+    for name in leaked {
+        errors.push(format!(
+            "public callable '{}' exposes local type function '{}' in its signature before SPEC-F",
+            callable.exported_name, name
+        ));
+    }
 }
 
 fn public_callable_signatures(source: &str) -> Vec<InlineCallable> {
@@ -1101,6 +1136,34 @@ pub(crate) fn public_representation_visibility_errors(type_defs: &[CoreTypeDef])
         for name in leaked {
             errors.push(format!(
                 "public type '{}' exposes private ordinary type '{}' in its representation",
+                type_def.name, name
+            ));
+        }
+    }
+    errors
+}
+
+pub(crate) fn public_representation_type_function_leak_errors(
+    type_defs: &[CoreTypeDef],
+    local_type_function_names: &TypeFunctionNameSet,
+) -> Vec<String> {
+    if local_type_function_names.is_empty() {
+        return Vec::new();
+    }
+
+    let mut errors = Vec::new();
+    for type_def in type_defs
+        .iter()
+        .filter(|type_def| matches!(type_def.visibility, CoreVisibility::Public))
+    {
+        let mut leaked = Vec::new();
+        collect_core_type_body_names(&type_def.body, &mut leaked);
+        leaked.retain(|name| local_type_function_names.contains(name));
+        leaked.sort_unstable();
+        leaked.dedup();
+        for name in leaked {
+            errors.push(format!(
+                "public type '{}' exposes local type function '{}' in its representation before SPEC-F",
                 type_def.name, name
             ));
         }
@@ -1177,7 +1240,26 @@ fn collect_core_type_expr_names(expr: &CoreTypeExpr, names: &mut Vec<String>) {
 fn public_api_visibility_errors(source: &str, type_defs: &[CoreTypeDef]) -> Vec<String> {
     let mut errors = public_callable_signature_visibility_errors(source, type_defs);
     errors.extend(public_representation_visibility_errors(type_defs));
+    errors.extend(public_representation_type_function_leak_errors(
+        type_defs,
+        &local_type_function_names_from_source(source),
+    ));
     errors
+}
+
+fn local_type_function_names_from_source(source: &str) -> TypeFunctionNameSet {
+    ash_parser::parse_surface_file(source)
+        .map(|module| {
+            module
+                .definitions
+                .iter()
+                .filter_map(|definition| match definition {
+                    Definition::TypeFn(type_fn) => Some(type_fn.name.to_string()),
+                    _ => None,
+                })
+                .collect()
+        })
+        .unwrap_or_default()
 }
 
 #[derive(Debug, Default)]

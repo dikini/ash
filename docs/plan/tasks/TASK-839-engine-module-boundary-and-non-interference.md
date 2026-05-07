@@ -1,6 +1,6 @@
 # TASK-839: Enforce module-local engine/import boundary and non-interference with existing semantic summaries
 
-## Status: 📋 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -64,15 +64,36 @@ commands:
   - cargo fmt --check
   - git diff --check
 checklist:
-  - [ ] Verify ModuleFile/engine integration preserves local type-function definitions for same-module checking.
-  - [ ] Reject or fence imported/public type-function normalization before SPEC-F.
-  - [ ] Reject public ordinary aliases/signatures/interface surfaces that leak local computation heads before SPEC-F.
-  - [ ] Prove ordinary type, sealed-domain, workflow, and normalizer fixture summaries remain non-regressed.
-  - [ ] focused tests/evidence recorded in this task file
-  - [ ] no SPEC-F/G/H scope creep
+  - [x] Verify ModuleFile/engine integration preserves local type-function definitions for same-module checking.
+  - [x] Reject or fence imported/public type-function normalization before SPEC-F.
+  - [x] Reject public ordinary aliases/signatures/interface surfaces that leak local computation heads before SPEC-F.
+  - [x] Prove ordinary type, sealed-domain, workflow, and normalizer fixture summaries remain non-regressed.
+  - [x] focused tests/evidence recorded in this task file
+  - [x] no SPEC-F/G/H scope creep
 ```
 
 
 ## Notes
 
 Task type: Engine/Integration. Estimated effort: 5 hours. Keep the slice within SPEC-061 / Phase 113 boundaries.
+
+## Completion Evidence
+
+- Added focused engine integration coverage in `crates/ash-engine/tests/task_839_type_function_module_boundary.rs` for:
+  - ModuleFile metadata preserving local `type fn` definitions for same-module private alias checking.
+  - public ordinary alias rejection when a local computation head leaks into exported representation.
+  - public callable/workflow signature rejection when a local computation head leaks through the public surface.
+  - imported semantic summaries continuing to transport ordinary public types while not serializing local type-function heads/equations.
+- Preserved type-function declarations in `ash_parser::lower::LoweredTypeMetadata` for engine-local boundary checks without adding them to `ModuleSemanticSummary` export/import data.
+- Added engine/module-loader public-boundary diagnostics for local type-function head leakage while keeping cross-module equation normalization unavailable before SPEC-F.
+
+Verified commands:
+
+```text
+cargo test -p ash-engine --test task_839_type_function_module_boundary -- --nocapture
+cargo test -p ash-engine --test task_785_modulefile_summary_exports -- --nocapture
+cargo test -p ash-engine --test task_813_sealed_domain_non_interference -- --nocapture
+cargo test -p ash-typeck --test task_838_type_function_normalizer -- --nocapture
+cargo fmt --all --check
+git diff --check
+```

@@ -1246,6 +1246,7 @@ pub fn lower_surface_type(ty: &Type) -> ash_core::ast::TypeExpr {
 #[derive(Debug, Clone, PartialEq)]
 pub struct LoweredTypeMetadata {
     pub type_defs: Vec<ash_core::ast::TypeDef>,
+    pub type_function_defs: Vec<crate::surface::TypeFnDef>,
     pub summary: ash_core::semantic_summary::ModuleSemanticSummary,
 }
 
@@ -1263,6 +1264,7 @@ pub fn lower_module_type_metadata(
         ash_core::semantic_summary::ModuleSemanticSummary::new(module_identity.clone())
             .with_diagnostic_anchor(module_anchor);
     let mut type_defs = Vec::new();
+    let mut type_function_defs = Vec::new();
 
     let mut has_sealed_domains = false;
 
@@ -1329,6 +1331,9 @@ pub fn lower_module_type_metadata(
                 summary = summary.with_exported_sealed_domain(domain_summary);
                 has_sealed_domains = true;
             }
+            crate::surface::Definition::TypeFn(type_fn) => {
+                type_function_defs.push(type_fn.clone());
+            }
             _ => continue,
         }
     }
@@ -1337,7 +1342,11 @@ pub fn lower_module_type_metadata(
         summary.version = ash_core::semantic_summary::SummaryVersion::SPEC059_SEALED_DOMAIN_V2;
     }
 
-    LoweredTypeMetadata { type_defs, summary }
+    LoweredTypeMetadata {
+        type_defs,
+        type_function_defs,
+        summary,
+    }
 }
 
 #[must_use]

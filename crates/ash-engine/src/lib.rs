@@ -1373,6 +1373,16 @@ impl Engine {
         errors.extend(module_loader::public_representation_visibility_errors(
             &type_metadata.type_defs,
         ));
+        errors.extend(
+            module_loader::public_representation_type_function_leak_errors(
+                &type_metadata.type_defs,
+                &type_metadata
+                    .type_function_defs
+                    .iter()
+                    .map(|type_fn| type_fn.name.to_string())
+                    .collect(),
+            ),
+        );
 
         // Build a TypeEnv and register the public lowered semantic summary so
         // ordinary type identities and exposed representations take the same

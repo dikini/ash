@@ -298,6 +298,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - TASK-677 through TASK-680: Act monad type system integration. `Act` registered as unary type constructor `* -> *`. `Expr::ActBlock` type-checked with monadic bind/pure-bind/return semantics. `invoke(provider, action, args)` recognized as `Act<Value>`. Purity enforcement rejects `act {}` blocks and `invoke(...)` calls in pure `fn` bodies; both allowed when return type is `Act<T>`. (TASK-677, TASK-678, TASK-679, TASK-680)
 
 ### Fixed
+- [TASK-842](docs/plan/tasks/TASK-842-phase113-review-remediation.md): Completed Phase 113 post-closeout review remediation. Independent review found no blocking SPEC-061 semantic/code issues; docs remediation fixed stale Phase 113 progress rows in `PLAN-INDEX.md` and removed an old accidental Markdown-link pattern from the changelog, with scoped link checks and focused acceptance tests rerun afterward.
 - Tightened Phase 112 transparent alias normalization to require registered alias identity matches, moved fallback canonical identities into a non-colliding synthetic space, and corrected stale TASK-820/TASK-822 test-target references.
 - Preserved unregistered canonical nominal origins through Phase 112 transparent alias expansion and corrected stale Phase 112 focused-test evidence counts.
 - Hardened Phase 112 definitional equality mismatch classification so structurally disjoint neutral/projection/data heads report known inequality instead of neutrality-blocked evidence (TASK-829).
@@ -538,7 +539,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   import/typecheck pipeline works for bodyless functions. 11 new tests.
 
 - Parser support for `builtin fn` declarations (TASK-615). The parser now
-  recognizes `[pub] builtin fn <name>[<T>](<params>) -> <Ret>;` as a new
+  recognizes the `builtin fn` declaration form with optional visibility, optional type parameters, value parameters, and a return type as a new
   definition form, producing `Definition::BuiltinFn(BuiltinFnDef)`. Return
   type is mandatory; braces are rejected with a parse error. Dispatch is
   added in both inline-module and file-level definition loops, with correct

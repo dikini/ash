@@ -12,7 +12,7 @@
 
 ## Phase 113: Direct Structural Type Functions
 
-**Status:** ✅ Implementation Complete; Review Remediation Pending
+**Status:** ✅ Complete
 **Spec:** [SPEC-061](../spec/SPEC-061-DIRECT-STRUCTURAL-TYPE-FUNCTIONS.md)
 **Design:** [DESIGN-034](../design/DESIGN-034-TOTAL-TYPE-COMPUTATION.md)
 **Depends on:** [SPEC-057](../spec/SPEC-057-UNIFIED-TYPE-MODULE-PIPELINE-AND-SEMANTIC-SUMMARIES.md), [SPEC-058](../spec/SPEC-058-CANONICAL-TYPE-EXPRESSION-IR-PROJECTION-IDS-KIND-ARITY-SUBSTRATE.md), [SPEC-059](../spec/SPEC-059-SEALED-TYPE-LEVEL-DOMAINS.md), [SPEC-060](../spec/SPEC-060-NORMALIZER-DEFINITIONAL-EQUALITY-CORE.md)
@@ -33,7 +33,7 @@
 | [TASK-839](tasks/TASK-839-engine-module-boundary-and-non-interference.md) | Enforce module-local boundary and engine/import non-interference | Engine/Integration | 5 | ✅ Complete |
 | [TASK-840](tasks/TASK-840-type-function-diagnostics-and-acceptance-tests.md) | Add diagnostics and acceptance/non-regression test matrix | Diagnostics/Tests | 6 | ✅ Complete |
 | [TASK-841](tasks/TASK-841-spec-e-closeout-docs-and-verification.md) | Reconcile docs/status/changelog and record closeout verification evidence | Docs/Planning | 4 | ✅ Complete |
-| [TASK-842](tasks/TASK-842-phase113-review-remediation.md) | Remediate independent post-closeout review findings | Review/Hardening | 6 | 📋 Planned |
+| [TASK-842](tasks/TASK-842-phase113-review-remediation.md) | Remediate independent post-closeout review findings | Review/Hardening | 6 | ✅ Complete |
 
 Estimated total: 73 hours.
 
@@ -65,7 +65,7 @@ Estimated total: 73 hours.
 
 - TASK-840 completes the full SPEC-061 diagnostic/acceptance matrix by aggregating focused assertions across parser/core/typeck/normalizer/engine suites and adding the missing ash-typeck acceptance diagnostics for named SPEC-061 §14 families, RHS variable substitution, residual defaults, recursive negative cases, and SPEC-057/SPEC-059/SPEC-060 non-regression evidence.
 - TASK-841 reconciles status surfaces and broad verification evidence. Completed with scoped link checks, focused Phase 113 tests, workspace fmt/check/clippy/test/doc gates, doc warning audit, and clippy remediation for boxed type-function pattern carriers plus minor typeck/engine lint fixes.
-- TASK-842 closes the post-review remediation slice.
+- TASK-842 closed the post-review remediation slice by fixing PLAN-INDEX progress drift and the stale changelog accidental-link pattern, then re-running scoped link checks and focused acceptance tests.
 
 ## Execution Order
 
@@ -140,4 +140,4 @@ Every implementation task must include focused tests and exact non-regression co
 - [x] `ash-typeck` validates signatures, source resolution, RHS variable scope, marker-constructor ambiguity, result domains, patterns, nested residual coverage, overlap, source-order dependencies, and recursion.
 - [x] Checked source equations substitute pattern variables and reduce through the SPEC-060 normalizer.
 - [x] Public/cross-module type-function use and public ordinary export leakage are rejected until SPEC-F.
-- [x] Acceptance, non-interference, and broad cargo gates are reconciled through TASK-841; TASK-842 remains the independent post-closeout review/remediation gate.
+- [x] Acceptance, non-interference, broad cargo gates, and independent post-closeout review remediation are complete.

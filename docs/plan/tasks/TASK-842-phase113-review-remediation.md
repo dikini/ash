@@ -1,6 +1,6 @@
 # TASK-842: Remediate independent post-closeout review findings for Phase 113
 
-## Status: 📋 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -91,15 +91,43 @@ commands:
   - cargo doc --workspace --no-deps
   - finding-specific focused command(s) named by the independent review report
 checklist:
-  - [ ] Run independent review after closeout.
-  - [ ] Fix blocking findings and reopen any premature completion status.
-  - [ ] Rerun focused and broad verification after the final remediation patch.
-  - [ ] Reconcile docs/status/changelog after remediation.
-  - [ ] focused tests/evidence recorded in this task file
-  - [ ] no SPEC-F/G/H scope creep
+  - [x] Run independent review after closeout.
+  - [x] Fix blocking findings and reopen any premature completion status.
+  - [x] Rerun focused and broad verification after the final remediation patch.
+  - [x] Reconcile docs/status/changelog after remediation.
+  - [x] focused tests/evidence recorded in this task file
+  - [x] no SPEC-F/G/H scope creep
 ```
 
 
 ## Notes
 
 Task type: Review/Hardening. Estimated effort: 6 hours. Keep the slice within SPEC-061 / Phase 113 boundaries.
+
+## Completion Evidence
+
+Independent post-closeout review found two docs/status findings and no blocking semantic/code findings:
+
+1. `PLAN-INDEX.md` Phase 113 summary rows still reported `13 | 1 | Planned` after TASK-841.
+   - Fixed both current and legacy summary rows to `13 | 12 | Implementation Complete; Review Remediation Pending` while TASK-842 was still open.
+2. `CHANGELOG.md` contained an older inline builtin-function signature that the scoped checker interpreted as a Markdown link to `<params>`.
+   - Reworded the old TASK-615 changelog entry to avoid accidental Markdown-link syntax.
+
+Follow-up independent reviews:
+
+- Semantic/code re-review: PASS. No blocking SPEC-061 issues found for public/export/import leakage, cross-module normalization, no-sealed scrutinee, result-domain validation, residual/default semantics, structural recursion, open catch-all neutrality, or clippy-remediation regressions.
+- Docs/status re-review after the first remediation: PLAN-INDEX rows and TASK-842 pending state passed; CHANGELOG link still failed due escaped-bracket parsing. Fixed by rewording the inline signature.
+
+Verification after remediation:
+
+- `git diff --check` — passed.
+- Scoped Markdown link check including `CHANGELOG.md` — passed with `checked_docs=18 missing_links=0` after the final changelog rewording.
+- Focused acceptance regression: `cargo test -p ash-typeck --test task_840_type_function_acceptance -- --nocapture` — 7 passed.
+- TASK-841 broad gate remains the phase-level broad cargo evidence after the clippy remediation commit:
+  - `cargo fmt --check` — passed.
+  - `cargo check --workspace` — passed.
+  - `cargo clippy --workspace --all-targets --all-features -- -D warnings` — passed.
+  - `cargo test --workspace` — passed.
+  - `cargo doc --workspace --no-deps` — passed with no `warning:` lines in `/tmp/ash-phase113-doc.log`.
+
+No SPEC-F/G/H behavior was added during review remediation.

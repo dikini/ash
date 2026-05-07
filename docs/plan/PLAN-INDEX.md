@@ -289,7 +289,7 @@ Update this section as tasks complete:
 | 110 | 13 | 0 | 📝 Planned |
 | 111 | 10 | 10 | ✅ Complete |
 | 112 | 14 | 14 | ✅ Complete |
-| 113 | 13 | 1 | 📝 Planned |
+| 113 | 13 | 13 | ✅ Complete |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -399,7 +399,7 @@ This table is retained near the original early-phase section for historical cont
 | 110 | 13 | 0 | 📝 Planned |
 | 111 | 10 | 10 | ✅ Complete |
 | 112 | 14 | 14 | ✅ Complete |
-| 113 | 13 | 1 | 📝 Planned |
+| 113 | 13 | 13 | ✅ Complete |
 
 ## Phase 13: Streams and Behaviours (Weeks 20-22)
 
@@ -3284,7 +3284,7 @@ Boundary note: Phase 112 is normalizer/equality substrate only. It does not add 
 ## Phase 113: Direct Structural Type Functions
 
 **Priority:** High (DESIGN-034 SPEC-E is the first user-facing type-computation surface after the Phase 112 normalizer/equality substrate)
-**Status:** ✅ Implementation Complete; Review Remediation Pending
+**Status:** ✅ Complete
 **Spec:** [SPEC-061](../spec/SPEC-061-DIRECT-STRUCTURAL-TYPE-FUNCTIONS.md)
 **Design:** [DESIGN-034](../design/DESIGN-034-TOTAL-TYPE-COMPUTATION.md)
 **Plan:** [docs/plan/PLAN-109-DIRECT-STRUCTURAL-TYPE-FUNCTIONS.md](PLAN-109-DIRECT-STRUCTURAL-TYPE-FUNCTIONS.md)
@@ -3307,7 +3307,7 @@ Boundary note: Phase 113 is source `type fn` work only. It does not implement pu
 | [TASK-839](tasks/TASK-839-engine-module-boundary-and-non-interference.md) | Engine module boundary and non-interference | 5 | ✅ Complete |
 | [TASK-840](tasks/TASK-840-type-function-diagnostics-and-acceptance-tests.md) | Type-function diagnostics and acceptance tests | 6 | ✅ Complete |
 | [TASK-841](tasks/TASK-841-spec-e-closeout-docs-and-verification.md) | SPEC-E closeout docs and verification | 4 | ✅ Complete |
-| [TASK-842](tasks/TASK-842-phase113-review-remediation.md) | Phase 113 review remediation | 6 | 📋 Planned |
+| [TASK-842](tasks/TASK-842-phase113-review-remediation.md) | Phase 113 review remediation | 6 | ✅ Complete |
 
 **Track A (Spec Gate and Audit):** 9h. Promote DESIGN-034 SPEC-E to SPEC-061/PLAN-109, then audit live parser/core/typeck/normalizer/engine seams before Rust changes.
 **Track B (Syntax and Shared Carriers):** 11h. Add parser raw syntax/spans and core-owned type-function/equation/result-expression carriers for marker-constructor RHSs.

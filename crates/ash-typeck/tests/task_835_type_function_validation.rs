@@ -207,6 +207,26 @@ fn rejects_result_kind_mismatch_for_unsupported_surface_shape() {
 }
 
 #[test]
+fn rejects_nested_result_constructor_field_domain_mismatch() {
+    assert_rejects(
+        "type fn F(xs: TypeList) -> TypeList { case F<xs> = Cons<Int, Int>; }",
+        "result constructor field 1 domain mismatch",
+    );
+}
+
+#[test]
+fn rejects_nested_result_constructor_field_from_wrong_sealed_domain() {
+    assert_rejects(
+        r#"
+        type fn F(xs: TypeList, ys: OtherList) -> TypeList {
+            case F<xs, ys> = Cons<Int, ys>;
+        }
+        "#,
+        "result constructor field 1 domain mismatch",
+    );
+}
+
+#[test]
 fn rejects_forward_reference_but_accepts_earlier_validated_dependency() {
     assert_rejects(
         r#"

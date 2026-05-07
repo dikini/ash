@@ -3379,18 +3379,31 @@ impl TypeEnv {
                         span,
                     ));
                 }
-                let lowered_args = args
-                    .iter()
-                    .zip(&constructor.fields)
-                    .map(|(arg, field)| {
-                        self.lower_type_function_result_expr(
-                            arg,
-                            field.domain_constraint.as_ref(),
-                            context,
-                            span,
-                        )
-                    })
-                    .collect::<Result<Vec<_>, _>>()?;
+                let mut lowered_args = Vec::with_capacity(args.len());
+                for (index, (arg, field)) in args.iter().zip(&constructor.fields).enumerate() {
+                    let lowered = self.lower_type_function_result_expr(
+                        arg,
+                        field.domain_constraint.as_ref(),
+                        context,
+                        span,
+                    )?;
+                    if let Some(expected_domain) = &field.domain_constraint {
+                        match self.result_expr_constraint(&lowered) {
+                            TypeFunctionResultConstraint::Domain(actual)
+                                if actual == *expected_domain => {}
+                            found => {
+                                return Err(TypeEnvError::InvalidDefinition(
+                                    format!(
+                                        "result constructor field {index} domain mismatch: expected sealed domain '{}', found {:?}",
+                                        expected_domain.name, found
+                                    ),
+                                    span,
+                                ));
+                            }
+                        }
+                    }
+                    lowered_args.push(lowered);
+                }
                 return Ok(TypeFunctionResultExpr::DomainConstructorApp {
                     constructor: constructor.id.clone(),
                     domain: domain.id.clone(),

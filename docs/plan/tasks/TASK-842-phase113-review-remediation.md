@@ -131,3 +131,16 @@ Verification after remediation:
   - `cargo doc --workspace --no-deps` — passed with no `warning:` lines in `/tmp/ash-phase113-doc.log`.
 
 No SPEC-F/G/H behavior was added during review remediation.
+
+### Post-finalization verification remediation
+
+A fresh verification subagent found one semantic blocker after TASK-842 was initially committed: nested sealed-domain constructor result fields were lowered with their expected domain but not validated against that field domain. Added regression coverage that rejects both `Cons<Int, Int>` and `Cons<Int, ys: OtherList>` in `TypeList` result positions, then fixed result-constructor lowering to validate every constrained constructor field.
+
+Fresh remediation verification:
+
+- `cargo test -p ash-typeck --test task_835_type_function_validation rejects_nested_result_constructor_field -- --nocapture` — 2 passed.
+- `cargo test -p ash-typeck --test task_835_type_function_validation -- --nocapture` — 21 passed.
+- `cargo test -p ash-typeck --test task_840_type_function_acceptance -- --nocapture` — 7 passed.
+- `cargo test -p ash-typeck --test task_838_type_function_normalizer -- --nocapture` — 6 passed.
+- `cargo test -p ash-engine --test task_839_type_function_module_boundary -- --nocapture` — 4 passed.
+- `cargo check --workspace` — passed.

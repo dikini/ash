@@ -2357,8 +2357,8 @@ impl TypeEnv {
     /// the current head is provisional during its own lowering, earlier published
     /// heads are visible, later same-module heads are rejected, and the checked
     /// carrier is published only after lowering succeeds. Deeper SPEC-E validation
-    /// (coverage, overlap, recursion, and kind/domain proof obligations) remains
-    /// owned by TASK-835/836/837.
+    /// (coverage, overlap, and recursion proof obligations) remains owned by
+    /// TASK-836/837.
     pub fn register_local_type_functions(
         &mut self,
         module: &ModuleIdentity,
@@ -2446,6 +2446,15 @@ impl TypeEnv {
                 })
             })
             .collect::<Result<Vec<_>, TypeEnvError>>()?;
+        if !params.iter().any(|param| param.domain_constraint.is_some()) {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "type function '{}' has no sealed-domain scrutinee in its parameter list",
+                    def.name
+                ),
+                def.header_span,
+            ));
+        }
         let (return_type, result_domain) = self.lower_type_fn_signature_type(&def.return_type)?;
         let result_constraint = match result_domain.clone() {
             Some(domain) => TypeFunctionResultConstraint::Domain(domain),
@@ -2488,8 +2497,13 @@ impl TypeEnv {
                 &equation.result,
                 result_domain.as_ref(),
                 &pattern_vars,
-                Some((&def.name, &head)),
+                Some((&def.name, &head, &params, &result_constraint)),
                 later_names,
+                equation.result_span,
+            )?;
+            self.validate_type_function_result_constraint(
+                &result,
+                &result_constraint,
                 equation.result_span,
             )?;
             equations.push(TypeFunctionEquation {
@@ -2532,6 +2546,9 @@ impl TypeEnv {
         ty: &SurfaceType,
     ) -> Result<(CanonicalTypeExpr, Option<SealedDomainId>), TypeEnvError> {
         if let SurfaceType::Name(name) = ty {
+            if name.as_ref() == "Type" {
+                return Ok((CanonicalTypeExpr::Var("Type".to_string()), None));
+            }
             if let Some(domain) = self.lookup_sealed_domain(name.as_ref()) {
                 return Ok((
                     CanonicalTypeExpr::Var(domain.exported_name.clone()),
@@ -2539,9 +2556,23 @@ impl TypeEnv {
                 ));
             }
         }
-        self.lower_surface_type_to_canonical(ty)
-            .map(|canonical| (canonical, None))
-            .map_err(|err| TypeEnvError::InvalidDefinition(format!("{err}"), Span::default()))
+        let canonical = self.lower_surface_type_to_canonical(ty).map_err(|err| {
+            let spelling =
+                surface_type_name(ty).unwrap_or_else(|| surface_projection_base_spelling(ty));
+            TypeEnvError::InvalidDefinition(
+                format!("unresolved type in type-function signature '{spelling}': {err}"),
+                Span::default(),
+            )
+        })?;
+        if matches!(canonical, CanonicalTypeExpr::Var(_)) {
+            let spelling =
+                surface_type_name(ty).unwrap_or_else(|| surface_projection_base_spelling(ty));
+            return Err(TypeEnvError::InvalidDefinition(
+                format!("unresolved type in type-function signature '{spelling}'"),
+                Span::default(),
+            ));
+        }
+        Ok((canonical, None))
     }
 
     fn lower_type_function_pattern(
@@ -2570,7 +2601,15 @@ impl TypeEnv {
                     }
                 }
                 let name = name.to_string();
-                pattern_vars.insert(name.clone(), constraint.clone());
+                if pattern_vars
+                    .insert(name.clone(), constraint.clone())
+                    .is_some()
+                {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!("repeated type pattern variable '{name}'"),
+                        *span,
+                    ));
+                }
                 Ok(TypeFunctionPattern::Var {
                     name,
                     constraint: constraint.clone(),
@@ -2590,6 +2629,16 @@ impl TypeEnv {
                 let Some((domain, constructor)) =
                     self.find_domain_constructor(domain_id, name.as_ref())
                 else {
+                    if let Some((other_domain, _)) = self.find_any_domain_constructor(name.as_ref())
+                    {
+                        return Err(TypeEnvError::InvalidDefinition(
+                            format!(
+                                "marker constructor '{}' belongs to sealed domain '{}', not expected sealed domain '{}'",
+                                name, other_domain.exported_name, domain_id.name
+                            ),
+                            *span,
+                        ));
+                    }
                     return Err(TypeEnvError::InvalidDefinition(
                         format!(
                             "unknown marker constructor '{}' for sealed-domain pattern",
@@ -2598,6 +2647,17 @@ impl TypeEnv {
                         *span,
                     ));
                 };
+                if self.visible_type_head_exists(name.as_ref())
+                    || self.local_type_function_heads.contains_key(name.as_ref())
+                {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "ambiguous marker constructor '{}' also resolves as a type-level head",
+                            name
+                        ),
+                        *span,
+                    ));
+                }
                 self.lower_domain_constructor_pattern(
                     constructor,
                     domain,
@@ -2657,7 +2717,12 @@ impl TypeEnv {
         ty: &SurfaceType,
         expected_domain: Option<&SealedDomainId>,
         pattern_vars: &HashMap<String, TypeFunctionPatternConstraint>,
-        current_head: Option<(&str, &TypeComputationHeadId)>,
+        current_head: Option<(
+            &str,
+            &TypeComputationHeadId,
+            &[TypeFunctionParam],
+            &TypeFunctionResultConstraint,
+        )>,
         later_names: &HashSet<String>,
         span: Span,
     ) -> Result<TypeFunctionResultExpr, TypeEnvError> {
@@ -2683,7 +2748,9 @@ impl TypeEnv {
             other => self
                 .lower_surface_type_to_canonical(other)
                 .map(|canonical| type_function_result_from_canonical(canonical, span))
-                .map_err(|err| TypeEnvError::InvalidDefinition(format!("{err}"), span)),
+                .map_err(|err| {
+                    TypeEnvError::InvalidDefinition(format!("result kind mismatch: {err}"), span)
+                }),
         }
     }
 
@@ -2693,7 +2760,12 @@ impl TypeEnv {
         args: &[SurfaceType],
         expected_domain: Option<&SealedDomainId>,
         pattern_vars: &HashMap<String, TypeFunctionPatternConstraint>,
-        current_head: Option<(&str, &TypeComputationHeadId)>,
+        current_head: Option<(
+            &str,
+            &TypeComputationHeadId,
+            &[TypeFunctionParam],
+            &TypeFunctionResultConstraint,
+        )>,
         later_names: &HashSet<String>,
         span: Span,
     ) -> Result<TypeFunctionResultExpr, TypeEnvError> {
@@ -2708,6 +2780,20 @@ impl TypeEnv {
         }
         if let Some(domain_id) = expected_domain {
             if let Some((domain, constructor)) = self.find_domain_constructor(domain_id, name) {
+                let current_head_has_same_name = current_head
+                    .as_ref()
+                    .is_some_and(|(self_name, _, _, _)| name == *self_name);
+                if self.visible_type_head_exists(name)
+                    || self.local_type_function_heads.contains_key(name)
+                    || current_head_has_same_name
+                {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "ambiguous marker constructor '{name}' also resolves as a type-level head"
+                        ),
+                        span,
+                    ));
+                }
                 if constructor.fields.len() != args.len() {
                     return Err(TypeEnvError::InvalidDefinition(
                         format!(
@@ -2742,14 +2828,42 @@ impl TypeEnv {
                     source_anchor: span_anchor(span, format!("marker constructor result {name}")),
                 });
             }
+            if let Some((other_domain, _)) = self.find_any_domain_constructor(name) {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "marker constructor '{name}' belongs to sealed domain '{}', not expected sealed domain '{}'",
+                        other_domain.exported_name, domain_id.name
+                    ),
+                    span,
+                ));
+            }
         }
-        if let Some((_, head)) = current_head.filter(|(self_name, _)| name == *self_name) {
+        if let Some((_, head, params, result_constraint)) =
+            current_head.filter(|(self_name, _, _, _)| name == *self_name)
+        {
+            if self.visible_type_head_exists(name) {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!("ambiguous type-function/type head '{name}'"),
+                    span,
+                ));
+            }
+            if params.len() != args.len() {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "type function '{name}' application arity mismatch: expected {}, found {}",
+                        params.len(),
+                        args.len()
+                    ),
+                    span,
+                ));
+            }
             let lowered_args = args
                 .iter()
-                .map(|arg| {
+                .zip(params)
+                .map(|(arg, param)| {
                     self.lower_type_function_result_expr(
                         arg,
-                        None,
+                        param.domain_constraint.as_ref(),
                         pattern_vars,
                         current_head,
                         later_names,
@@ -2757,21 +2871,45 @@ impl TypeEnv {
                     )
                 })
                 .collect::<Result<Vec<_>, _>>()?;
+            self.validate_type_function_application_args(name, &lowered_args, params, span)?;
             return Ok(TypeFunctionResultExpr::ComputationHeadApp {
                 head: head.clone(),
                 args: lowered_args,
                 kind: Kind::Type,
-                constraint: TypeFunctionResultConstraint::Kind(Kind::Type),
+                constraint: result_constraint.clone(),
                 source_anchor: span_anchor(span, format!("type function call {name}")),
             });
         }
         if let Some(head) = self.local_type_function_heads.get(name) {
+            if self.visible_type_head_exists(name) {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!("ambiguous type-function/type head '{name}'"),
+                    span,
+                ));
+            }
+            let callee = self.local_type_functions.get(head).ok_or_else(|| {
+                TypeEnvError::InvalidDefinition(
+                    format!("unresolved type function or type head '{name}'"),
+                    span,
+                )
+            })?;
+            if callee.params.len() != args.len() {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "type function '{name}' application arity mismatch: expected {}, found {}",
+                        callee.params.len(),
+                        args.len()
+                    ),
+                    span,
+                ));
+            }
             let lowered_args = args
                 .iter()
-                .map(|arg| {
+                .zip(&callee.params)
+                .map(|(arg, param)| {
                     self.lower_type_function_result_expr(
                         arg,
-                        None,
+                        param.domain_constraint.as_ref(),
                         pattern_vars,
                         current_head,
                         later_names,
@@ -2779,11 +2917,17 @@ impl TypeEnv {
                     )
                 })
                 .collect::<Result<Vec<_>, _>>()?;
+            self.validate_type_function_application_args(
+                name,
+                &lowered_args,
+                &callee.params,
+                span,
+            )?;
             return Ok(TypeFunctionResultExpr::ComputationHeadApp {
                 head: head.clone(),
                 args: lowered_args,
                 kind: Kind::Type,
-                constraint: TypeFunctionResultConstraint::Kind(Kind::Type),
+                constraint: callee.result_constraint.clone(),
                 source_anchor: span_anchor(span, format!("type function call {name}")),
             });
         }
@@ -2808,6 +2952,12 @@ impl TypeEnv {
                 source_anchor: span_anchor(span, format!("primitive type {name}")),
             });
         }
+        if args.is_empty() && name.chars().next().is_some_and(char::is_lowercase) {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!("unknown RHS type variable '{name}'"),
+                span,
+            ));
+        }
         let surface = if args.is_empty() {
             SurfaceType::Name(Box::from(name))
         } else {
@@ -2819,11 +2969,86 @@ impl TypeEnv {
         self.lower_surface_type_to_canonical(&surface)
             .map(|canonical| type_function_result_from_canonical(canonical, span))
             .map_err(|_| {
+                let prefix =
+                    if name.chars().next().is_some_and(char::is_uppercase) && args.is_empty() {
+                        "result kind mismatch: "
+                    } else {
+                        ""
+                    };
                 TypeEnvError::InvalidDefinition(
-                    format!("unresolved type function or type head '{name}'"),
+                    format!("{prefix}unresolved type function or type head '{name}'"),
                     span,
                 )
             })
+    }
+
+    fn visible_type_head_exists(&self, name: &str) -> bool {
+        self.ast_types.contains_key(name) || self.type_alias_identities.contains_key(name)
+    }
+
+    fn result_expr_constraint(
+        &self,
+        expr: &TypeFunctionResultExpr,
+    ) -> TypeFunctionResultConstraint {
+        match expr {
+            TypeFunctionResultExpr::Primitive { constraint, .. }
+            | TypeFunctionResultExpr::Var { constraint, .. }
+            | TypeFunctionResultExpr::NominalApp { constraint, .. }
+            | TypeFunctionResultExpr::DomainConstructorApp { constraint, .. }
+            | TypeFunctionResultExpr::Projection { constraint, .. }
+            | TypeFunctionResultExpr::ComputationHeadApp { constraint, .. } => constraint.clone(),
+        }
+    }
+
+    fn validate_type_function_result_constraint(
+        &self,
+        expr: &TypeFunctionResultExpr,
+        expected: &TypeFunctionResultConstraint,
+        span: Span,
+    ) -> Result<(), TypeEnvError> {
+        let actual = self.result_expr_constraint(expr);
+        match (expected, actual) {
+            (
+                TypeFunctionResultConstraint::Domain(expected_domain),
+                TypeFunctionResultConstraint::Domain(actual_domain),
+            ) if expected_domain == &actual_domain => Ok(()),
+            (TypeFunctionResultConstraint::Domain(expected_domain), found) => {
+                Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "result domain mismatch: expected sealed domain '{}', found {:?}",
+                        expected_domain.name, found
+                    ),
+                    span,
+                ))
+            }
+            (TypeFunctionResultConstraint::Kind(_), _) => Ok(()),
+        }
+    }
+
+    fn validate_type_function_application_args(
+        &self,
+        name: &str,
+        args: &[TypeFunctionResultExpr],
+        params: &[TypeFunctionParam],
+        span: Span,
+    ) -> Result<(), TypeEnvError> {
+        for (index, (arg, param)) in args.iter().zip(params).enumerate() {
+            if let Some(expected_domain) = &param.domain_constraint {
+                match self.result_expr_constraint(arg) {
+                    TypeFunctionResultConstraint::Domain(actual) if actual == *expected_domain => {}
+                    found => {
+                        return Err(TypeEnvError::InvalidDefinition(
+                            format!(
+                                "type function '{name}' argument {index} domain mismatch: expected sealed domain '{}', found {:?}",
+                                expected_domain.name, found
+                            ),
+                            span,
+                        ));
+                    }
+                }
+            }
+        }
+        Ok(())
     }
 
     fn find_domain_constructor(
@@ -2837,6 +3062,19 @@ impl TypeEnv {
             .iter()
             .find(|constructor| constructor.exported_name == constructor_name)?;
         Some((domain, constructor))
+    }
+
+    fn find_any_domain_constructor(
+        &self,
+        constructor_name: &str,
+    ) -> Option<(&SealedDomainSummary, &DomainConstructorSummary)> {
+        self.sealed_domain_summaries.values().find_map(|domain| {
+            domain
+                .constructors
+                .iter()
+                .find(|constructor| constructor.exported_name == constructor_name)
+                .map(|constructor| (domain, constructor))
+        })
     }
 
     /// Look up a sealed domain by its canonical identity.

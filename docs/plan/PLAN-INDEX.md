@@ -3300,7 +3300,7 @@ Boundary note: Phase 113 is source `type fn` work only. It does not implement pu
 | [TASK-832](tasks/TASK-832-parser-surface-for-type-functions.md) | Parser surface for type functions | 6 | ✅ Complete |
 | [TASK-833](tasks/TASK-833-core-type-function-equation-carriers.md) | Core type-function/equation/result-expression carriers | 5 | ✅ Complete |
 | [TASK-834](tasks/TASK-834-type-function-lowering-and-registration.md) | Type-function lowering and registration | 6 | ✅ Complete |
-| [TASK-835](tasks/TASK-835-type-function-signature-kind-domain-validation.md) | Signature/source/result-domain validation | 6 | 📋 Planned |
+| [TASK-835](tasks/TASK-835-type-function-signature-kind-domain-validation.md) | Signature/source/result-domain validation | 6 | ✅ Complete |
 | [TASK-836](tasks/TASK-836-type-function-pattern-coverage-overlap.md) | Residual pattern coverage and overlap | 7 | 📋 Planned |
 | [TASK-837](tasks/TASK-837-type-function-structural-recursion.md) | Structural recursion validation | 6 | 📋 Planned |
 | [TASK-838](tasks/TASK-838-source-equations-normalizer-integration.md) | Source equations normalizer integration | 7 | 📋 Planned |

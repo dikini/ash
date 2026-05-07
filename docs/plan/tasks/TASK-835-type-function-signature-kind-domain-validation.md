@@ -1,6 +1,6 @@
 # TASK-835: Validate type-function signatures, kinds, domains, arity, and module-local public boundary
 
-## Status: 📋 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -70,18 +70,29 @@ commands:
   - cargo fmt --check
   - git diff --check
 checklist:
-  - [ ] Validate parameter and return type expressions for kind and domain/constraint conformance.
-  - [ ] Resolve sealed-domain parameter positions and reject definitions with no sealed-domain scrutinee.
-  - [ ] Build RHS pattern-variable environments and reject unknown RHS variables.
-  - [ ] Ensure lowercase pattern variables do not lower as nominal type names.
-  - [ ] Reject wrong arity, unknown heads, unknown constructors, wrong domains, result-kind mismatch, and result-domain mismatch.
-  - [ ] Reject ambiguous nominal/type-function heads and marker-constructor-vs-nominal/type-function heads.
-  - [ ] Enforce source-order same-module dependencies: earlier validated type functions are usable, later forward references are rejected.
-  - [ ] Reject pub/cross-module type-function use before SPEC-F at the typechecker boundary.
-  - [ ] focused tests/evidence recorded in this task file
-  - [ ] no SPEC-F/G/H scope creep
+  - [x] Validate parameter and return type expressions for kind and domain/constraint conformance.
+  - [x] Resolve sealed-domain parameter positions and reject definitions with no sealed-domain scrutinee.
+  - [x] Build RHS pattern-variable environments and reject unknown RHS variables.
+  - [x] Ensure lowercase pattern variables do not lower as nominal type names.
+  - [x] Reject wrong arity, unknown heads, unknown constructors, wrong domains, result-kind mismatch, and result-domain mismatch.
+  - [x] Reject ambiguous nominal/type-function heads and marker-constructor-vs-nominal/type-function heads.
+  - [x] Enforce source-order same-module dependencies: earlier validated type functions are usable, later forward references are rejected.
+  - [x] Reject pub/cross-module type-function use before SPEC-F at the typechecker boundary.
+  - [x] focused tests/evidence recorded in this task file
+  - [x] no SPEC-F/G/H scope creep
 ```
 
+## Completion Evidence
+
+- Added focused TDD tests in `crates/ash-typeck/tests/task_835_type_function_validation.rs`; initial implementation attempt exposed missing validation coverage in `TypeEnv::register_local_type_functions`.
+- Implemented TASK-835 validation in `crates/ash-typeck/src/type_env.rs`: signature type/domain resolution, no-sealed-scrutinee rejection, pattern variable environments, lowercase pattern-variable precedence over nominal types, wrong arity/unknown head/unknown constructor/wrong domain/result-kind/result-domain rejection, ambiguous type-function-vs-nominal and marker-vs-type-head rejection, source-order dependency enforcement, and `pub type fn` rejection before SPEC-F.
+- Focused pass after implementation and targeted review remediation: `cargo test -p ash-typeck --test task_835_type_function_validation -- --nocapture` — 19 passed, 0 failed.
+- TASK-834 non-regression: `cargo test -p ash-typeck --test task_834_type_function_lowering -- --nocapture` — 6 passed, 0 failed.
+- Workspace compile after validation additions: `cargo check --workspace` — passed.
+- Formatting: `cargo fmt --check` — passed.
+- Whitespace: `git diff --check` — passed.
+- Targeted review remediation added regression coverage for marker-constructor ambiguity in pattern position, wrong-domain marker constructors in RHS position, and current provisional type-function head vs marker-constructor ambiguity.
+- Scope note: TASK-835 did not implement residual coverage/overlap, structural recursion, normalizer reduction, engine export/import, or SPEC-F/G/H public/cross-module semantics.
 
 ## Notes
 

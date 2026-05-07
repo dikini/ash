@@ -31,7 +31,7 @@
 | [TASK-837](tasks/TASK-837-type-function-structural-recursion.md) | Implement declared decreasing-parameter and structural recursion validation | Type/Semantic | 6 | ✅ Complete |
 | [TASK-838](tasks/TASK-838-source-equations-normalizer-integration.md) | Register checked source equations with normalizer reduction/equality | Type/Integration | 7 | ✅ Complete |
 | [TASK-839](tasks/TASK-839-engine-module-boundary-and-non-interference.md) | Enforce module-local boundary and engine/import non-interference | Engine/Integration | 5 | ✅ Complete |
-| [TASK-840](tasks/TASK-840-type-function-diagnostics-and-acceptance-tests.md) | Add diagnostics and acceptance/non-regression test matrix | Diagnostics/Tests | 6 | 📋 Planned |
+| [TASK-840](tasks/TASK-840-type-function-diagnostics-and-acceptance-tests.md) | Add diagnostics and acceptance/non-regression test matrix | Diagnostics/Tests | 6 | ✅ Complete |
 | [TASK-841](tasks/TASK-841-spec-e-closeout-docs-and-verification.md) | Reconcile docs/status/changelog and record closeout verification evidence | Docs/Planning | 4 | 📋 Planned |
 | [TASK-842](tasks/TASK-842-phase113-review-remediation.md) | Remediate independent post-closeout review findings | Review/Hardening | 6 | 📋 Planned |
 
@@ -63,7 +63,7 @@ Estimated total: 73 hours.
 
 ### Track E: Diagnostics and Closeout
 
-- TASK-840 adds the full diagnostic/acceptance matrix.
+- TASK-840 completes the full SPEC-061 diagnostic/acceptance matrix by aggregating focused assertions across parser/core/typeck/normalizer/engine suites and adding the missing ash-typeck acceptance diagnostics for named SPEC-061 §14 families, RHS variable substitution, residual defaults, recursive negative cases, and SPEC-057/SPEC-059/SPEC-060 non-regression evidence.
 - TASK-841 reconciles status surfaces and broad verification evidence.
 - TASK-842 closes the post-review remediation slice.
 
@@ -134,10 +134,10 @@ Every implementation task must include focused tests and exact non-regression co
 
 - [x] SPEC-061 is drafted and registered in `docs/spec/README.md`.
 - [x] PLAN-109 and TASK-830 through TASK-842 are registered in `docs/plan/PLAN-INDEX.md`.
-- [ ] TASK-831 audit gate names exact live seams and file targets.
-- [ ] `ash-parser` exposes raw `type fn` surface syntax and spans.
+- [x] TASK-831 audit gate names exact live seams and file targets.
+- [x] `ash-parser` exposes raw `type fn` surface syntax and spans.
 - [x] `ash-core` exposes shared type-function/equation/pattern/result-expression carriers that preserve sealed-domain marker-constructor RHSs.
-- [ ] `ash-typeck` validates signatures, source resolution, RHS variable scope, marker-constructor ambiguity, result domains, patterns, nested residual coverage, overlap, source-order dependencies, and recursion.
-- [ ] Checked source equations substitute pattern variables and reduce through the SPEC-060 normalizer.
-- [ ] Public/cross-module type-function use and public ordinary export leakage are rejected until SPEC-F.
+- [x] `ash-typeck` validates signatures, source resolution, RHS variable scope, marker-constructor ambiguity, result domains, patterns, nested residual coverage, overlap, source-order dependencies, and recursion.
+- [x] Checked source equations substitute pattern variables and reduce through the SPEC-060 normalizer.
+- [x] Public/cross-module type-function use and public ordinary export leakage are rejected until SPEC-F.
 - [ ] Acceptance, non-interference, broad cargo gates, and independent review are reconciled.

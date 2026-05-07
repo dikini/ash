@@ -7,6 +7,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Added
+- [SPEC-061](docs/spec/SPEC-061-DIRECT-STRUCTURAL-TYPE-FUNCTIONS.md), [PLAN-109](docs/plan/PLAN-109-DIRECT-STRUCTURAL-TYPE-FUNCTIONS.md), and [TASK-830](docs/plan/tasks/TASK-830-spec-e-spec-plan-packet.md) through [TASK-842](docs/plan/tasks/TASK-842-phase113-review-remediation.md): planned Phase 113 as DESIGN-034 SPEC-E, defining module-local direct structural `type fn` declarations over sealed domains with checked equations, source-equation result carriers for marker-constructor RHSs, source/result-domain validation, ordered nested residual coverage/overlap, source-order local dependencies, structural recursion validation, normalizer integration, diagnostics, and explicit rejection/deferral of public computation-head leakage, equation export/import, associated recursive families, proposition solving, and type-function inversion.
 - [TASK-829](docs/plan/tasks/TASK-829-phase112-review-remediation.md): Completed the Phase 112 independent review/remediation slice. Added focused regression coverage for structurally known definitional-equality mismatches involving neutral computation heads, associated projections, and closed data heads with neutral arguments, and fixed the normalizer to report those cases as normalized `NotEqual` evidence rather than neutrality-blocked non-inversion evidence.
 
 - Added structured normalizer diagnostics and non-interference coverage for Phase 112 boundaries (TASK-827).

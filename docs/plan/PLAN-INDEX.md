@@ -289,6 +289,7 @@ Update this section as tasks complete:
 | 110 | 13 | 0 | 📝 Planned |
 | 111 | 10 | 10 | ✅ Complete |
 | 112 | 14 | 14 | ✅ Complete |
+| 113 | 13 | 1 | 📝 Planned |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -398,6 +399,7 @@ This table is retained near the original early-phase section for historical cont
 | 110 | 13 | 0 | 📝 Planned |
 | 111 | 10 | 10 | ✅ Complete |
 | 112 | 14 | 14 | ✅ Complete |
+| 113 | 13 | 1 | 📝 Planned |
 
 ## Phase 13: Streams and Behaviours (Weeks 20-22)
 
@@ -3278,3 +3280,45 @@ Boundary note: Phase 112 is normalizer/equality substrate only. It does not add 
 - D3: Definitional equality is normalize-and-compare, not proof search and not type-function inversion.
 - D4: Associated projections preserve their Phase 110 rigidity (`Neutral` or `Rigid`) unless current simple SPEC-035 substitution already selects an associated output; recursive associated-family normalization is deferred.
 - D5: TASK-817 owns the live forcing-point audit plus exact callsite matrix, and TASK-826 is the only task allowed to adopt the new API into live `TypeEnv` forcing points.
+
+## Phase 113: Direct Structural Type Functions
+
+**Priority:** High (DESIGN-034 SPEC-E is the first user-facing type-computation surface after the Phase 112 normalizer/equality substrate)
+**Status:** 📋 Planned
+**Spec:** [SPEC-061](../spec/SPEC-061-DIRECT-STRUCTURAL-TYPE-FUNCTIONS.md)
+**Design:** [DESIGN-034](../design/DESIGN-034-TOTAL-TYPE-COMPUTATION.md)
+**Plan:** [docs/plan/PLAN-109-DIRECT-STRUCTURAL-TYPE-FUNCTIONS.md](PLAN-109-DIRECT-STRUCTURAL-TYPE-FUNCTIONS.md)
+
+Phase 113 implements SPEC-E from DESIGN-034. It exposes module-local direct structural `type fn` declarations over sealed domains, adds source-equation result carriers for sealed-domain marker constructors, validates equations for source-resolution, kind/domain correctness, result-domain conformance, pattern linearity, finite nested residual coverage, overlap/unreachable rows, source-order dependencies, and direct structural recursion, then registers checked source equations with the SPEC-060 normalizer for definitional equality.
+
+Boundary note: Phase 113 is source `type fn` work only. It does not implement public type-function summary export/import, associated recursive type families, proposition solving, mutual recursion, holes, partial constructor application, type lambdas, or type-function inversion. Until SPEC-F lands, `pub type fn`, public ordinary export leakage of local computation heads, and cross-module type-function normalization are rejected.
+
+| Task | Description | Est. Hours | Status |
+|------|-------------|------------|--------|
+| [TASK-830](tasks/TASK-830-spec-e-spec-plan-packet.md) | SPEC-E spec/plan packet | 4 | ✅ Complete |
+| [TASK-831](tasks/TASK-831-type-function-audit-gate.md) | Type-function audit gate | 5 | 📋 Planned |
+| [TASK-832](tasks/TASK-832-parser-surface-for-type-functions.md) | Parser surface for type functions | 6 | 📋 Planned |
+| [TASK-833](tasks/TASK-833-core-type-function-equation-carriers.md) | Core type-function/equation/result-expression carriers | 5 | 📋 Planned |
+| [TASK-834](tasks/TASK-834-type-function-lowering-and-registration.md) | Type-function lowering and registration | 6 | 📋 Planned |
+| [TASK-835](tasks/TASK-835-type-function-signature-kind-domain-validation.md) | Signature/source/result-domain validation | 6 | 📋 Planned |
+| [TASK-836](tasks/TASK-836-type-function-pattern-coverage-overlap.md) | Residual pattern coverage and overlap | 7 | 📋 Planned |
+| [TASK-837](tasks/TASK-837-type-function-structural-recursion.md) | Structural recursion validation | 6 | 📋 Planned |
+| [TASK-838](tasks/TASK-838-source-equations-normalizer-integration.md) | Source equations normalizer integration | 7 | 📋 Planned |
+| [TASK-839](tasks/TASK-839-engine-module-boundary-and-non-interference.md) | Engine module boundary and non-interference | 5 | 📋 Planned |
+| [TASK-840](tasks/TASK-840-type-function-diagnostics-and-acceptance-tests.md) | Type-function diagnostics and acceptance tests | 6 | 📋 Planned |
+| [TASK-841](tasks/TASK-841-spec-e-closeout-docs-and-verification.md) | SPEC-E closeout docs and verification | 4 | 📋 Planned |
+| [TASK-842](tasks/TASK-842-phase113-review-remediation.md) | Phase 113 review remediation | 6 | 📋 Planned |
+
+**Track A (Spec Gate and Audit):** 9h. Promote DESIGN-034 SPEC-E to SPEC-061/PLAN-109, then audit live parser/core/typeck/normalizer/engine seams before Rust changes.
+**Track B (Syntax and Shared Carriers):** 11h. Add parser raw syntax/spans and core-owned type-function/equation/result-expression carriers for marker-constructor RHSs.
+**Track C (Registration and Totality Validation):** 25h. Lower/register module-local heads, validate source-resolution/kind/domain/result/public boundaries, check finite nested residual pattern coverage/overlap/defaults/source-order dependencies, and enforce structural recursion.
+**Track D (Normalizer and Module Integration):** 12h. Connect checked source equations to the normalizer and enforce module-local import/export non-interference.
+**Track E (Diagnostics and Closeout):** 16h. Add diagnostics/acceptance coverage, reconcile docs/status/changelog, and reserve the post-review remediation slice.
+
+**Decision gates:**
+- D1: Phase 113 exposes direct structural `type fn`, not associated recursive families.
+- D2: The first slice is module-local; public/exported type-function semantics and public ordinary computation-head leakage are SPEC-F.
+- D3: Totality is definition-time: partial `Head`-style definitions and no-sealed-scrutinee definitions are rejected before use.
+- D4: Catch-all/default rows are ordered residual known-constructor coverage only, including explicitly inspected nested residual spaces, not open-variable reduction.
+- D5: Definitional equality remains normalize-and-compare and does not invert type functions.
+- D6: Structural recursion is direct-subcomponent only; no mutual/lexicographic/size-change termination in this phase.

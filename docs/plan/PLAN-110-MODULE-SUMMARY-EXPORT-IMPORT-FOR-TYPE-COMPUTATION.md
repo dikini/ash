@@ -26,7 +26,7 @@
 | [TASK-847](tasks/TASK-847-typeck-public-export-closure-validation.md) | Validate public/private export closure for public type functions | Typeck/Semantic | 8 | ✅ Complete |
 | [TASK-848](tasks/TASK-848-transparent-public-equation-summary-lowering.md) | Lower export-closed public equations into transparent public summaries | Typeck/Core | 8 | ✅ Complete |
 | [TASK-849](tasks/TASK-849-engine-summary-transport-reconciliation.md) | Transport/reconcile public computation summaries through engine imports | Engine/Integration | 8 | ✅ Complete |
-| [TASK-850](tasks/TASK-850-summary-versioning-cache-invalidation.md) | Add summary version/cache/dedup invalidation for computation facts | Core/Engine | 5 | 📝 Planned |
+| [TASK-850](tasks/TASK-850-summary-versioning-cache-invalidation.md) | Add summary version/cache/dedup invalidation for computation facts | Core/Engine | 5 | ✅ Complete |
 | [TASK-851](tasks/TASK-851-typeenv-imported-head-registration-normalizer.md) | Batch-register imported public heads/equations and normalize downstream | Typeck/Normalizer | 9 | 📝 Planned |
 | [TASK-852](tasks/TASK-852-private-opacity-unavailable-reduction-diagnostics.md) | Add private-opacity and unavailable-reduction diagnostics | Diagnostics | 5 | 📝 Planned |
 | [TASK-853](tasks/TASK-853-import-order-reexport-determinism.md) | Prove named/glob/pub-use import-order determinism and identity preservation | Engine/Tests | 6 | 📝 Planned |

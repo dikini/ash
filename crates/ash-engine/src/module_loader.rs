@@ -734,6 +734,12 @@ fn imported_summary_type_set_matches(
     if left.module != right.module || left.version != right.version {
         return false;
     }
+    if left.exported_sealed_domains != right.exported_sealed_domains
+        || left.exported_type_functions != right.exported_type_functions
+        || left.imported_summary_refs != right.imported_summary_refs
+    {
+        return false;
+    }
     let mut left_types = left
         .exported_types
         .iter()
@@ -2112,6 +2118,16 @@ pub(crate) fn collect_module_exports(
         &exports.type_defs,
     )?);
     attach_public_type_function_summaries(&mut exports, &type_metadata)?;
+    if let Some(summary) = exports.semantic_summary.as_ref() {
+        summary
+            .validate_summary_version_contract()
+            .map_err(|error| {
+                EngineError::Parse(format!(
+                    "in '{}': invalid module semantic summary version/content contract: {error:?}",
+                    path.display()
+                ))
+            })?;
+    }
 
     for name in extract_public_capability_names(&source) {
         insert_type_export(&mut exports, &capability_type_identity(&name))?;
@@ -3254,45 +3270,7 @@ fn collect_type_expr_dependency_names(expr: &CoreTypeExpr, names: &mut Vec<Strin
 }
 
 fn imported_summary_key(summary: &ModuleSemanticSummary) -> ImportedSummaryKey {
-    let mut key = Vec::new();
-    key.push(format!("version::{:?}", summary.version));
-    key.push(format!("module::{:?}", summary.module));
-    key.extend(summary.exported_types.iter().map(|ty| {
-        format!(
-            "type::{}::{:?}::{:?}::{:?}",
-            ty.exported_name, ty.id, ty.representation_exposure, ty.representation
-        )
-    }));
-    key.extend(summary.exported_constructors.iter().map(|constructor| {
-        format!(
-            "ctor::{}::{:?}::{:?}::{:?}",
-            constructor.exported_name, constructor.id, constructor.parent, constructor.payload_kind
-        )
-    }));
-    key.extend(summary.exported_sealed_domains.iter().map(|domain| {
-        format!(
-            "domain::{}::{:?}::{:?}",
-            domain.exported_name, domain.id, domain.constructors
-        )
-    }));
-    key.extend(summary.exported_type_functions.iter().map(|type_function| {
-        format!(
-            "typefn::{}::{:?}::{:?}::{:?}::{:?}",
-            type_function.exported_name,
-            type_function.head,
-            type_function.export_mode,
-            type_function.equations,
-            type_function.dependency_summary_refs
-        )
-    }));
-    key.extend(
-        summary
-            .imported_summary_refs
-            .iter()
-            .map(|summary_ref| format!("summary_ref::{summary_ref:?}")),
-    );
-    key.sort_unstable();
-    key
+    summary.semantic_cache_key()
 }
 
 fn merge_type_summary_export(

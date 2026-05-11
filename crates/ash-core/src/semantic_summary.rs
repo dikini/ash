@@ -829,6 +829,75 @@ impl ModuleSemanticSummary {
         self
     }
 
+    /// Build the semantic content key used by in-memory import dedup/cache boundaries.
+    ///
+    /// The key is intentionally structural and process-local: it is suitable for
+    /// comparing summaries already decoded into this core version, but it is not a
+    /// stable persistent-cache digest format. A future persistent cache should feed
+    /// at least these inputs into an explicit digest algorithm: summary schema
+    /// version, module identity, ordinary exported type/constructor facts,
+    /// imported summary refs, sealed-domain summaries, public type-function
+    /// signatures/equations, type-function dependency refs/digests, and compiler
+    /// algorithm version metadata.
+    #[must_use]
+    pub fn semantic_cache_key(&self) -> Vec<String> {
+        let mut key = Vec::new();
+        key.push(format!("version::{:?}", self.version));
+        key.push(format!("module::{:?}", self.module));
+        key.extend(self.exported_types.iter().map(|ty| {
+            format!(
+                "type::{}::{:?}::{:?}::{:?}::{:?}::{:?}",
+                ty.exported_name,
+                ty.id,
+                ty.visibility,
+                ty.params,
+                ty.representation_exposure,
+                ty.representation
+            )
+        }));
+        key.extend(self.exported_constructors.iter().map(|constructor| {
+            format!(
+                "ctor::{}::{:?}::{:?}::{:?}::{:?}",
+                constructor.exported_name,
+                constructor.id,
+                constructor.parent,
+                constructor.payload_kind,
+                constructor.visibility
+            )
+        }));
+        key.extend(
+            self.imported_summary_refs
+                .iter()
+                .map(|summary_ref| format!("summary_ref::{summary_ref:?}")),
+        );
+        key.extend(self.exported_sealed_domains.iter().map(|domain| {
+            format!(
+                "domain::{}::{:?}::{:?}::{:?}",
+                domain.exported_name, domain.id, domain.visibility, domain.constructors
+            )
+        }));
+        key.extend(self.exported_type_functions.iter().map(|type_function| {
+            format!(
+                "typefn::{}::{:?}::{:?}::{:?}::{:?}::{:?}::{:?}::{:?}::{:?}::{:?}::{:?}::{:?}::{:?}",
+                type_function.exported_name,
+                type_function.head,
+                type_function.visibility,
+                type_function.params,
+                type_function.return_type,
+                type_function.return_kind,
+                type_function.result_constraint,
+                type_function.export_mode,
+                type_function.source_anchors,
+                type_function.equations,
+                type_function.dependency_summary_refs,
+                type_function.closure_metadata,
+                type_function.revalidation_metadata
+            )
+        }));
+        key.sort_unstable();
+        key
+    }
+
     /// Validate only core summary-version/content compatibility.
     ///
     /// This helper deliberately does not perform TypeEnv import revalidation of

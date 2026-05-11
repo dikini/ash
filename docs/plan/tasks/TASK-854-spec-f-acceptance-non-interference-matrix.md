@@ -20,11 +20,15 @@ Own the final DESIGN-034 §16.6 acceptance matrix and regression/non-interferenc
 
 ### Functional Requirements
 
-1. Add cross-module acceptance tests for public downstream reduction.
-2. Add private-equation opacity and private-helper rejection tests.
-3. Add import-order independence tests or cite TASK-853 focused suite.
-4. Add stable opaque neutral result tests.
-5. Rerun SPEC-057/059/060/061 non-regression suites and record evidence.
+1. Produce a row-by-row acceptance artifact mapping every SPEC-062 §13 item to a focused suite or recorded evidence.
+2. Add cross-module acceptance tests for public downstream reduction.
+3. Add private-equation opacity, private helper, private marker constructor, private sealed-domain, and private ordinary-type rejection tests.
+4. Add named-import tests proving only the selected head is source-visible while dependency-closure helper heads are normalizer-available only.
+5. Add glob-import and pub-use/re-export tests or cite TASK-853 focused suites, including canonical `TypeComputationHeadId` and equation-order preservation.
+6. Add stable opaque/neutral result tests for abstract imported applications.
+7. Add unknown/future version and V1/V2 non-empty computation-field rejection evidence or cite TASK-851/TASK-852 focused suites.
+8. Add malformed imported-summary rejection evidence for arity/domain/kind/coverage/overlap/non-decreasing-recursion categories or cite TASK-851 focused suites.
+9. Rerun SPEC-057/059/060/061 non-regression suites and record evidence.
 
 ### Non-Goals
 
@@ -51,11 +55,12 @@ Own the final DESIGN-034 §16.6 acceptance matrix and regression/non-interferenc
 Run:
 
 ```bash
-  - cargo test -p ash-typeck --test task_854_type_computation_summary_acceptance -- --nocapture
-  - cargo test -p ash-engine --test task_854_type_computation_summary_acceptance -- --nocapture
-  - cargo test -p ash-typeck --test task_840_type_function_acceptance -- --nocapture
-  - cargo fmt --check
-  - cargo check --workspace
+cargo test -p ash-typeck --test task_854_type_computation_summary_acceptance -- --nocapture
+cargo test -p ash-engine --test task_854_type_computation_summary_acceptance -- --nocapture
+cargo test -p ash-typeck --test task_840_type_function_acceptance -- --nocapture
+cargo fmt --check
+git diff --check
+cargo check --workspace
 ```
 
 ### Step 4: Independent Verification
@@ -88,6 +93,7 @@ commands:
   - cargo test -p ash-engine --test task_854_type_computation_summary_acceptance -- --nocapture
   - cargo test -p ash-typeck --test task_840_type_function_acceptance -- --nocapture
   - cargo fmt --check
+  - git diff --check
   - cargo check --workspace
 checklist:
   - [ ] Implementation matches SPEC-062 and PLAN-110 scope

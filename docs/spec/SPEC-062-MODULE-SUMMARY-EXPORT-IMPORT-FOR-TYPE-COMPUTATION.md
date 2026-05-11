@@ -98,7 +98,9 @@ Future specs may add explicit header-only/opaque public type functions or opaque
 - V1 ordinary-type summaries remain accepted for ordinary type metadata only.
 - V2 sealed-domain summaries remain accepted and interpreted as carrying no type-function summaries.
 - V3 summaries may carry public type-computation data.
-- Unknown future versions are rejected with a diagnostic naming the unsupported summary version and module identity.
+- A V1 or V2 summary that contains a non-empty `exported_type_functions` field is malformed and must be rejected before any partial registration. Implementations must not silently ignore those facts and must not consume them under an older version tag.
+- A V3 summary may have an empty `exported_type_functions` field when a module has no public computation exports.
+- Unknown future versions are rejected with a diagnostic naming the unsupported summary version and module identity before any partial registration.
 
 ### 6.2 Public type-function summary
 
@@ -108,7 +110,7 @@ Future specs may add explicit header-only/opaque public type functions or opaque
 pub exported_type_functions: Vec<TypeFunctionSummary>
 ```
 
-`TypeFunctionSummary` is core-owned and must preserve:
+`TypeFunctionSummary` is core-owned and must preserve enough checked metadata for importers either to revalidate the SPEC-061 invariants listed in §8 or to reject the summary before use. It must preserve:
 
 - exported name and canonical `TypeComputationHeadId`;
 - visibility (`Public` only for exported summaries);
@@ -130,7 +132,7 @@ A selected public type-function import must transport the public closure require
 - public ordinary type summaries referenced by canonical nominal applications;
 - public type-function summaries referenced by RHS computation-head applications;
 - public interface/member identities needed by canonical projections;
-- dependency summary refs and version/digest metadata.
+- dependency summary refs and version/digest metadata sufficient for in-memory dedup now and future persistent-cache invalidation.
 
 Private dependencies are not transported. A public definition that requires private dependencies is not export-closed and must fail at export validation.
 
@@ -138,10 +140,11 @@ Private dependencies are not transported. A public definition that requires priv
 
 1. Named imports, glob imports, and `pub use` re-exports preserve canonical origin IDs. Aliases affect visible names only.
 2. Importing a public type function must make its canonical head available to type resolution and normalizer lookup under the selected visible name.
-3. Importing a public type function must not expose sibling public type functions unless required by dependency closure or glob selection.
-4. Re-exported type functions retain their original `TypeComputationHeadId`; re-exporting does not mint a new computation identity.
-5. Re-export summaries must not duplicate facts in a way that changes first-match equation order. Equation order is the defining module's checked source order.
-6. Repeated imports of the same public computation summary are idempotent.
+3. Dependency-closure helper heads required to reduce the selected public function may be registered as **normalizer-available** canonical heads without becoming **source-visible** names. They become source-visible only when explicitly selected, glob-imported, or re-exported.
+4. Importing a public type function must not expose unrelated sibling public type functions, and must not expose dependency helper heads as source-visible names unless the import selection itself makes them visible.
+5. Re-exported type functions retain their original `TypeComputationHeadId`; re-exporting does not mint a new computation identity.
+6. Re-export summaries must not duplicate facts in a way that changes first-match equation order. Equation order is the defining module's checked source order.
+7. Repeated imports of the same public computation summary are idempotent.
 
 ## 8. TypeEnv Consumption
 
@@ -151,8 +154,9 @@ Imported computation summaries are registered through a new batch API, conceptua
 2. declare all ordinary type identities, sealed-domain identities, interface/member identities, and type-computation heads from all summaries before validating any cross-summary references;
 3. validate and register sealed-domain summaries after all referenced public domains are declared;
 4. validate and register public type-function signatures/headers;
-5. validate public equation closure and register transparent public equations with the normalizer table;
-6. expose selected aliases/visible names without changing canonical IDs.
+5. revalidate imported public computation summaries before registration. At minimum, validate signature kind/domain validity, equation arity/head consistency, pattern linearity/domain correctness, coverage/overlap/order validity, SPEC-061 structural-recursion/decreases obligations, result kind/domain conformance, and public dependency closure. A future trusted-summary model may replace revalidation only if it specifies digest/provenance guarantees strong enough to prove these invariants;
+6. register transparent public equations with the normalizer table only after the revalidation above succeeds;
+7. expose selected aliases/visible names without changing canonical IDs, while keeping dependency-closure-only heads normalizer-available but not source-visible.
 
 This process must be import-order independent. A downstream module must observe the same normal forms for a set of imported public summaries regardless of textual import order. Implementations must add regressions where two summaries reference each other through public sealed-domain fields and public type-function equations; those tests must fail if summaries are registered one-at-a-time in source import order.
 
@@ -164,7 +168,7 @@ The normalizer must consult a unified computation-head lookup path covering:
 - imported public transparent type-function summaries;
 - compiler-internal fixture tables retained for tests.
 
-Reduction is permitted only when the matched equation is public/available in the current environment. If a public application reaches a head whose equations are unavailable because the source definition was private or not export-closed, the normalizer returns a neutral computation app or emits the SPEC-062 private-reduction diagnostic at a boundary that requires reduction.
+Reduction is permitted only when the matched equation is public/available in the current environment. In ordinary MVP source code, private or non-export-closed definitions are rejected before export. If an imported/stale/future opaque public application reaches a head whose equations are unavailable at the current boundary, the normalizer returns a neutral computation app or emits the SPEC-062 unavailable-reduction diagnostic at a boundary that requires reduction.
 
 Definitional equality remains normalize-and-compare over normal forms. SPEC-062 does not add inversion or solving under type-function heads.
 
@@ -181,7 +185,7 @@ Implementation must reconcile the current fragmented carriers:
 
 ## 11. Cache and Invalidation Rules
 
-Any cache or dedup key used for public computation summaries must include:
+Any cache or dedup key used for public computation summaries must distinguish old-version summaries from computation-aware V3 summaries. A V1/V2 summary with non-empty computation facts is rejected rather than keyed. Any cache or dedup key used for accepted public computation summaries must include:
 
 - summary schema version;
 - module identity and source/module path metadata;
@@ -197,10 +201,11 @@ The MVP may keep caches in memory, but the summary keys must still be rich enoug
 SPEC-062 introduces these diagnostic families:
 
 - `TypeComputationSummaryUnsupportedVersion` — imported summary version is unsupported.
+- `TypeComputationSummaryMalformed` — imported summary content is incompatible with its version or fails import-side SPEC-061 invariant revalidation.
 - `TypeFunctionExportPrivateDependency` — a public type function depends on a private type, domain, constructor, projection identity, or type-function head.
 - `TypeFunctionExportNotClosed` — public equation closure cannot be proven from public summaries.
 - `TypeFunctionImportOrderConflict` — duplicate/conflicting public summary identities or aliases would make imports non-deterministic.
-- `TypeFunctionPrivateReductionUnavailable` — downstream code requires a reduction whose equation is private/unavailable.
+- `TypeFunctionPrivateReductionUnavailable` — downstream code requires a reduction whose equation is unavailable at the current boundary. In the SPEC-062 MVP, ordinary source definitions with private dependencies are rejected during export validation; this diagnostic is reserved for stale/malformed summaries, pre-SPEC-F leaked heads, future opaque public headers/facts, or diagnostic fallback paths where an unavailable reduction reaches a forcing boundary.
 - `TypeFunctionSummaryOpaqueNeutral` — diagnostic note/hint for a stable neutral public computation app where reduction is intentionally blocked.
 
 Diagnostics must include the public head name, module identity/path, source anchor where available, and the smallest user action: export the dependency publicly, rewrite the public type function to be export-closed, or keep the computation module-local.
@@ -213,12 +218,15 @@ Required acceptance matrix:
 2. Downstream module imports the same summaries in different textual orders; normal forms and diagnostics are identical.
 3. Public type function with RHS depending on a private helper type function is rejected at export validation.
 4. Public type function with RHS constructing a private marker constructor is rejected at export validation.
-5. Named import of one public type function imports only that head plus its public dependency closure; unrelated sibling heads do not leak.
+5. Named import of one public type function imports only that selected head as source-visible; dependency-closure helper heads may be normalizer-available but unrelated sibling heads and helper aliases do not leak as source-visible names.
 6. Glob import imports all public computation heads and their public dependency closures deterministically.
 7. `pub use` re-export preserves canonical `TypeComputationHeadId` and equation order.
 8. Imported public computation over abstract arguments remains a stable neutral `NormalTypeExpr::NeutralComputationApp` keyed by the imported head.
-9. Unknown or future summary versions are rejected before partial registration.
-10. Existing SPEC-057 ordinary type summaries, SPEC-059 sealed-domain summaries, SPEC-060 normalizer fixture tests, and SPEC-061 module-local type functions remain non-regressed.
+9. Unknown or future summary versions are rejected before partial registration, and V1/V2 summaries with non-empty computation fields are rejected rather than consumed or ignored.
+10. Imported public computation summaries cannot bypass SPEC-061 validation invariants: malformed summaries with bad arity, domain/kind mismatch, overlap/coverage failure, or non-decreasing recursion are rejected before normalizer registration.
+11. Existing SPEC-057 ordinary type summaries, SPEC-059 sealed-domain summaries, SPEC-060 normalizer fixture tests, and SPEC-061 module-local type functions remain non-regressed.
+
+TASK-854 must produce a row-by-row acceptance artifact mapping every item above to focused test suites or recorded evidence.
 
 ## 14. Non-Goals and Handoff
 

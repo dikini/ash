@@ -51,10 +51,41 @@ Promote DESIGN-034 §16.6 into SPEC-062/PLAN-110, create Phase 114 task files, r
 Run:
 
 ```bash
-  - git diff --check
-  - cargo fmt --check
-  - scoped markdown link check over new/edited docs
-  - cargo check --workspace
+git diff --check
+cargo fmt --check
+python3 - <<'PY'
+import re, sys
+from pathlib import Path
+files = [
+    Path('CHANGELOG.md'),
+    Path('docs/spec/SPEC-062-MODULE-SUMMARY-EXPORT-IMPORT-FOR-TYPE-COMPUTATION.md'),
+    Path('docs/plan/PLAN-110-MODULE-SUMMARY-EXPORT-IMPORT-FOR-TYPE-COMPUTATION.md'),
+    Path('docs/plan/PLAN-INDEX.md'),
+]
+files += sorted(Path('docs/plan/tasks').glob('TASK-84[3-9]-*.md'))
+files += sorted(Path('docs/plan/tasks').glob('TASK-85[0-6]-*.md'))
+link = re.compile(r'(?<!\!)\[[^\]]+\]\(([^)]+)\)')
+bad = []
+for path in files:
+    text = path.read_text()
+    in_fence = False
+    for line_no, line in enumerate(text.splitlines(), 1):
+        if line.strip().startswith('```'):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
+        for match in link.finditer(line):
+            target = match.group(1).split('#', 1)[0]
+            if not target or re.match(r'^[a-zA-Z][a-zA-Z0-9+.-]*:', target):
+                continue
+            if not (path.parent / target).exists():
+                bad.append(f'{path}:{line_no}: {target}')
+if bad:
+    print('\n'.join(bad))
+    sys.exit(1)
+PY
+cargo check --workspace
 ```
 
 ### Step 4: Independent Verification
@@ -93,7 +124,39 @@ strictness: clean
 commands:
   - git diff --check
   - cargo fmt --check
-  - scoped markdown link check over new/edited docs
+  - |
+    python3 - <<'PY'
+    import re, sys
+    from pathlib import Path
+    files = [
+        Path('CHANGELOG.md'),
+        Path('docs/spec/SPEC-062-MODULE-SUMMARY-EXPORT-IMPORT-FOR-TYPE-COMPUTATION.md'),
+        Path('docs/plan/PLAN-110-MODULE-SUMMARY-EXPORT-IMPORT-FOR-TYPE-COMPUTATION.md'),
+        Path('docs/plan/PLAN-INDEX.md'),
+    ]
+    files += sorted(Path('docs/plan/tasks').glob('TASK-84[3-9]-*.md'))
+    files += sorted(Path('docs/plan/tasks').glob('TASK-85[0-6]-*.md'))
+    link = re.compile(r'(?<!\!)\[[^\]]+\]\(([^)]+)\)')
+    bad = []
+    for path in files:
+        text = path.read_text()
+        in_fence = False
+        for line_no, line in enumerate(text.splitlines(), 1):
+            if line.strip().startswith('```'):
+                in_fence = not in_fence
+                continue
+            if in_fence:
+                continue
+            for match in link.finditer(line):
+                target = match.group(1).split('#', 1)[0]
+                if not target or re.match(r'^[a-zA-Z][a-zA-Z0-9+.-]*:', target):
+                    continue
+                if not (path.parent / target).exists():
+                    bad.append(f'{path}:{line_no}: {target}')
+    if bad:
+        print('\n'.join(bad))
+        sys.exit(1)
+    PY
   - cargo check --workspace
 checklist:
   - [x] Implementation matches SPEC-062 and PLAN-110 scope

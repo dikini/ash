@@ -21,8 +21,8 @@ Add user-facing diagnostics for private reduction boundaries and unsupported pub
 ### Functional Requirements
 
 1. Emit diagnostics for private dependency export failures with source anchors.
-2. Emit unavailable-private-reduction diagnostics at boundaries that require a reduction.
-3. Emit unsupported-version and import-order conflict diagnostics before partial registration.
+2. Emit unavailable-private-reduction diagnostics at boundaries that require a reduction, while documenting that ordinary SPEC-062 MVP source definitions with private dependencies are rejected at export validation before downstream use.
+3. Emit unsupported-version, V1/V2 non-empty computation-field, malformed imported-computation-summary, and import-order conflict diagnostics before partial registration.
 4. Test diagnostic family names/messages/spans without relying on broad string-only assertions where structured diagnostics exist.
 
 ### Non-Goals
@@ -50,10 +50,11 @@ Add user-facing diagnostics for private reduction boundaries and unsupported pub
 Run:
 
 ```bash
-  - cargo test -p ash-typeck --test task_852_type_computation_summary_diagnostics -- --nocapture
-  - cargo test -p ash-engine --test task_852_engine_summary_diagnostics -- --nocapture
-  - cargo fmt --check
-  - cargo check --workspace
+cargo test -p ash-typeck --test task_852_type_computation_summary_diagnostics -- --nocapture
+cargo test -p ash-engine --test task_852_engine_summary_diagnostics -- --nocapture
+cargo fmt --check
+git diff --check
+cargo check --workspace
 ```
 
 ### Step 4: Independent Verification
@@ -85,6 +86,7 @@ commands:
   - cargo test -p ash-typeck --test task_852_type_computation_summary_diagnostics -- --nocapture
   - cargo test -p ash-engine --test task_852_engine_summary_diagnostics -- --nocapture
   - cargo fmt --check
+  - git diff --check
   - cargo check --workspace
 checklist:
   - [ ] Implementation matches SPEC-062 and PLAN-110 scope

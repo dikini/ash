@@ -23,7 +23,7 @@ Prove named/glob/pub-use imports and re-exports preserve canonical identities an
 1. Add import-order permutation tests for summaries that reference each other through public sealed-domain fields and public type-function equations; the test must fail under one-at-a-time source-order summary registration.
 2. Test pub-use re-export preserves original TypeComputationHeadId and equation order.
 3. Test repeated imports are idempotent.
-4. Test named import does not expose unrelated sibling heads except dependency closure.
+4. Test named import does not expose unrelated sibling heads and does not make dependency-closure helper heads source-visible unless selected; helper heads may remain normalizer-available by canonical ID.
 5. Test glob import imports all public heads deterministically.
 
 ### Non-Goals
@@ -51,10 +51,11 @@ Prove named/glob/pub-use imports and re-exports preserve canonical identities an
 Run:
 
 ```bash
-  - cargo test -p ash-engine --test task_853_type_computation_import_order -- --nocapture
-  - cargo test -p ash-typeck --test task_851_imported_type_function_normalizer -- --nocapture
-  - cargo fmt --check
-  - cargo check --workspace
+cargo test -p ash-engine --test task_853_type_computation_import_order -- --nocapture
+cargo test -p ash-typeck --test task_851_imported_type_function_normalizer -- --nocapture
+cargo fmt --check
+git diff --check
+cargo check --workspace
 ```
 
 ### Step 4: Independent Verification
@@ -86,6 +87,7 @@ commands:
   - cargo test -p ash-engine --test task_853_type_computation_import_order -- --nocapture
   - cargo test -p ash-typeck --test task_851_imported_type_function_normalizer -- --nocapture
   - cargo fmt --check
+  - git diff --check
   - cargo check --workspace
 checklist:
   - [ ] Implementation matches SPEC-062 and PLAN-110 scope

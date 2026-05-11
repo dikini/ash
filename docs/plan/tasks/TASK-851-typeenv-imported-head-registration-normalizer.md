@@ -22,9 +22,12 @@ Batch-register imported public computation heads/equations and let the normalize
 
 1. Replace local-only lookup with a unified computation-head lookup covering local, imported public, and fixture sources.
 2. Add or use a batch `TypeEnv::register_module_semantic_summaries(...)`-style API that declares ordinary type identities, sealed-domain identities, interface/member identities, and public computation heads across all imported summaries before validating domains or equations.
-3. Register imported transparent public equations only after batch identity declaration and summary closure validation.
-4. Preserve neutral/stable results for abstract arguments and unsupported unavailable reductions.
-5. Add downstream normalization and definitional equality tests.
+3. Reject unsupported/future versions and V1/V2 summaries with non-empty computation fields before any partial registration.
+4. Revalidate imported public computation summaries before normalizer registration: signature kind/domain validity, equation arity/head consistency, pattern linearity/domain correctness, coverage/overlap/order validity, SPEC-061 structural-recursion/decreases obligations, result kind/domain conformance, and public dependency closure.
+5. Register imported transparent public equations only after batch identity declaration and summary closure/revalidation succeeds.
+6. Preserve neutral/stable results for abstract arguments and unsupported unavailable reductions.
+7. Keep dependency-closure helper heads normalizer-available but not source-visible unless selected/glob-imported/re-exported.
+8. Add downstream normalization and definitional equality tests, including malformed-summary rejection tests.
 
 ### Non-Goals
 
@@ -51,10 +54,12 @@ Batch-register imported public computation heads/equations and let the normalize
 Run:
 
 ```bash
-  - cargo test -p ash-typeck --test task_851_imported_type_function_normalizer -- --nocapture
-  - cargo test -p ash-typeck --test task_838_type_function_normalizer -- --nocapture
-  - cargo fmt --check
-  - cargo clippy -p ash-typeck --all-targets --all-features -- -D warnings
+cargo test -p ash-typeck --test task_851_imported_type_function_normalizer -- --nocapture
+cargo test -p ash-typeck --test task_838_type_function_normalizer -- --nocapture
+cargo fmt --check
+git diff --check
+cargo check --workspace
+cargo clippy -p ash-typeck --all-targets --all-features -- -D warnings
 ```
 
 ### Step 4: Independent Verification
@@ -86,6 +91,8 @@ commands:
   - cargo test -p ash-typeck --test task_851_imported_type_function_normalizer -- --nocapture
   - cargo test -p ash-typeck --test task_838_type_function_normalizer -- --nocapture
   - cargo fmt --check
+  - git diff --check
+  - cargo check --workspace
   - cargo clippy -p ash-typeck --all-targets --all-features -- -D warnings
 checklist:
   - [ ] Implementation matches SPEC-062 and PLAN-110 scope

@@ -22,9 +22,10 @@ Lower export-closed public equations into public computation summaries without l
 
 1. Emit public type-function summaries for transparent public definitions.
 2. Preserve checked source equation order and canonical TypeComputationHeadId.
-3. Include public dependency closure metadata for sealed domains, ordinary types, projections, and public helper heads.
+3. Include public dependency closure metadata for sealed domains, ordinary types, projections, public helper heads, and dependency summary refs/version/digest inputs required by SPEC-062.
 4. Reject or diagnose summary emission when closure is incomplete.
-5. Add core/typeck tests for summary payloads and non-public non-emission.
+5. Preserve helper-head dependency closure as summary metadata for normalizer availability; do not imply source-visible aliases for helpers.
+6. Add core/typeck tests for summary payloads and non-public non-emission.
 
 ### Non-Goals
 
@@ -51,10 +52,11 @@ Lower export-closed public equations into public computation summaries without l
 Run:
 
 ```bash
-  - cargo test -p ash-typeck --test task_848_public_equation_summary_lowering -- --nocapture
-  - cargo test -p ash-core --test task_845_public_computation_summary_schema -- --nocapture
-  - cargo fmt --check
-  - cargo check --workspace
+cargo test -p ash-typeck --test task_848_public_equation_summary_lowering -- --nocapture
+cargo test -p ash-core --test task_845_public_computation_summary_schema -- --nocapture
+cargo fmt --check
+git diff --check
+cargo check --workspace
 ```
 
 ### Step 4: Independent Verification
@@ -86,6 +88,7 @@ commands:
   - cargo test -p ash-typeck --test task_848_public_equation_summary_lowering -- --nocapture
   - cargo test -p ash-core --test task_845_public_computation_summary_schema -- --nocapture
   - cargo fmt --check
+  - git diff --check
   - cargo check --workspace
 checklist:
   - [ ] Implementation matches SPEC-062 and PLAN-110 scope

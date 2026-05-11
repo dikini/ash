@@ -22,7 +22,7 @@ Reconcile SPEC-062/PLAN-110/Phase 114 status and record broad verification evide
 
 1. Promote SPEC-062 status only after implementation and acceptance matrix pass.
 2. Update PLAN-110, PLAN-INDEX, task files, docs/spec/README.md, and CHANGELOG.
-3. Run scoped markdown link check over Phase 114 docs and CHANGELOG.
+3. Run an executable local Markdown-link verification command over Phase 114 docs and CHANGELOG.
 4. Run broad workspace fmt/check/clippy/test/doc gates and doc warning grep.
 5. Do not mark complete if any background verification remains unresolved.
 
@@ -51,12 +51,13 @@ Reconcile SPEC-062/PLAN-110/Phase 114 status and record broad verification evide
 Run:
 
 ```bash
-  - git diff --check
-  - cargo fmt --check
-  - cargo check --workspace
-  - cargo clippy --workspace --all-targets --all-features -- -D warnings
-  - cargo test --workspace
-  - cargo doc --workspace --no-deps
+git diff --check
+cargo fmt --check
+cargo check --workspace
+cargo clippy --workspace --all-targets --all-features -- -D warnings
+cargo test --workspace
+cargo doc --workspace --no-deps 2>&1 | tee /tmp/ash-phase114-doc.log
+! grep -i '^warning:' /tmp/ash-phase114-doc.log
 ```
 
 ### Step 4: Independent Verification
@@ -90,7 +91,8 @@ commands:
   - cargo check --workspace
   - cargo clippy --workspace --all-targets --all-features -- -D warnings
   - cargo test --workspace
-  - cargo doc --workspace --no-deps
+  - cargo doc --workspace --no-deps 2>&1 | tee /tmp/ash-phase114-doc.log
+  - "! grep -i '^warning:' /tmp/ash-phase114-doc.log"
 checklist:
   - [ ] Implementation matches SPEC-062 and PLAN-110 scope
   - [ ] Focused tests for this task pass

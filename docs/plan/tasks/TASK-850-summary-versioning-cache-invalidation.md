@@ -20,10 +20,11 @@ Make computation-summary versioning, dedup, and cache invalidation inputs explic
 
 ### Functional Requirements
 
-1. Reject unsupported summary versions before partial registration.
-2. Include type-function summaries and sealed-domain summaries in imported summary keys.
+1. Harden core/engine version and content keying so V1/V2 summaries with non-empty computation facts are not accepted as computation-aware summaries.
+2. Include summary version, type-function summaries/equations, dependency refs, and sealed-domain summaries in imported summary keys.
 3. Document in-memory cache boundaries and future persistent cache digest inputs.
-4. Add tests proving summaries with different computation facts do not dedup together.
+4. Add tests proving summaries with identical ordinary types but different computation facts do not dedup together.
+5. Leave TypeEnv batch no-partial-registration behavior and structured unsupported-version diagnostics to TASK-851/TASK-852.
 
 ### Non-Goals
 
@@ -50,10 +51,11 @@ Make computation-summary versioning, dedup, and cache invalidation inputs explic
 Run:
 
 ```bash
-  - cargo test -p ash-core --test task_850_summary_versioning_cache -- --nocapture
-  - cargo test -p ash-engine --test task_850_summary_dedup_cache -- --nocapture
-  - cargo fmt --check
-  - cargo check --workspace
+cargo test -p ash-core --test task_850_summary_versioning_cache -- --nocapture
+cargo test -p ash-engine --test task_850_summary_dedup_cache -- --nocapture
+cargo fmt --check
+git diff --check
+cargo check --workspace
 ```
 
 ### Step 4: Independent Verification
@@ -85,6 +87,7 @@ commands:
   - cargo test -p ash-core --test task_850_summary_versioning_cache -- --nocapture
   - cargo test -p ash-engine --test task_850_summary_dedup_cache -- --nocapture
   - cargo fmt --check
+  - git diff --check
   - cargo check --workspace
 checklist:
   - [ ] Implementation matches SPEC-062 and PLAN-110 scope

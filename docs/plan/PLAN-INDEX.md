@@ -3363,3 +3363,6 @@ Phase 114 implements SPEC-F from DESIGN-034. It defines the public module-summar
 - D2: Type-computation summary semantics live in `ash-core`, not engine-private or parser/capability metadata.
 - D3: Imported public summaries are registered in batch/two-pass order before normalizer use.
 - D4: Private helper equations/domains/constructors make a public type function non-export-closed and therefore rejected.
+- D5: Imported public computation summaries are revalidated for SPEC-061 invariants before normalizer registration unless a future trusted-summary/digest model supersedes revalidation.
+- D6: Dependency-closure helper heads may be normalizer-available without becoming source-visible names.
+- D7: V1/V2 summaries carrying non-empty computation facts are rejected; only V3 may transport public computation summaries.

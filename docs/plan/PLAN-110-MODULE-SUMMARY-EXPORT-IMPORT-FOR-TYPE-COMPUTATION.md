@@ -53,7 +53,10 @@
 3. Opaque stable downstream results are represented as neutral computation normal forms with canonical public heads and blocker reasons.
 4. All type-computation summary semantics live in `ash-core`; `ash-engine` is transport/cache/reconciliation only.
 5. Imported summaries are registered through a batch/two-pass API before normalizer use. The batch declares ordinary types, sealed domains, interface/member identities, and computation heads across all imported summaries before validating domains/equations, guaranteeing import-order independence.
-6. Acceptance-matrix ownership is singular: TASK-854 owns the end-to-end DESIGN-034 §16.6 matrix; earlier tasks own focused layer tests.
+6. Imported public computation summaries are revalidated for SPEC-061 kind/domain, equation, coverage/overlap, result-domain, and structural-recursion invariants before normalizer registration unless a future trusted-summary/digest model explicitly replaces revalidation.
+7. Dependency-closure helper heads may be normalizer-available without becoming source-visible names; aliases affect selected visible names only.
+8. V1/V2 summaries with non-empty computation facts are rejected before partial registration; only V3 may carry public computation summaries.
+9. Acceptance-matrix ownership is singular: TASK-854 owns the end-to-end DESIGN-034 §16.6 matrix; earlier tasks own focused layer tests but TASK-854 must cite or execute every SPEC-062 acceptance row.
 
 ## Verification Strategy
 
@@ -70,7 +73,8 @@ Closeout tasks additionally run:
 ```bash
 cargo clippy --workspace --all-targets --all-features -- -D warnings
 cargo test --workspace
-cargo doc --workspace --no-deps
+cargo doc --workspace --no-deps 2>&1 | tee /tmp/ash-phase114-doc.log
+! grep -i '^warning:' /tmp/ash-phase114-doc.log
 ```
 
 Every task uses subagent-driven development and independent verification before completion.
@@ -81,10 +85,10 @@ Every task uses subagent-driven development and independent verification before 
 - [x] PLAN-110 and TASK-843 through TASK-856 registered in `docs/plan/PLAN-INDEX.md`.
 - [x] TASK-843 created and completed as the planning packet.
 - [ ] TASK-844 audit artifact committed before Rust implementation.
-- [ ] Core summary schema/versioning implemented and tested.
+- [ ] Core summary schema/versioning implemented and tested, including V1/V2 non-empty computation-field rejection.
 - [ ] Public `pub type fn` export closure implemented and tested.
-- [ ] Engine transport/reconciliation implemented and tested.
-- [ ] TypeEnv imported public computation-head registration implemented and tested.
-- [ ] Acceptance/non-interference matrix passes.
+- [ ] Engine transport/reconciliation implemented and tested, including normalizer-available dependency closure without source-visible helper leakage.
+- [ ] TypeEnv imported public computation-head registration implemented and tested, including import-side SPEC-061 invariant revalidation before normalizer registration.
+- [ ] Acceptance/non-interference matrix maps every SPEC-062 §13 row to focused tests or recorded evidence and passes.
 - [ ] Broad workspace verification recorded.
 - [ ] Independent review/remediation complete.

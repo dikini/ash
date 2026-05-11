@@ -50,12 +50,12 @@ Run independent post-closeout review and remediate findings without broadening S
 Run:
 
 ```bash
-  - git diff --check
-  - cargo fmt --check
-  - cargo check --workspace
-  - cargo clippy --workspace --all-targets --all-features -- -D warnings
-  - cargo test --workspace
-  - cargo doc --workspace --no-deps
+git diff --check
+cargo fmt --check
+cargo check --workspace
+cargo clippy --workspace --all-targets --all-features -- -D warnings
+cargo test --workspace
+cargo doc --workspace --no-deps
 ```
 
 ### Step 4: Independent Verification

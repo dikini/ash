@@ -50,10 +50,11 @@ Update parser surface so `pub type fn` reaches semantic validation instead of be
 Run:
 
 ```bash
-  - cargo test -p ash-parser --test task_846_public_type_fn_visibility -- --nocapture
-  - cargo fmt --check
-  - cargo clippy -p ash-parser --all-targets --all-features -- -D warnings
-  - cargo check --workspace
+cargo test -p ash-parser --test task_846_public_type_fn_visibility -- --nocapture
+cargo fmt --check
+git diff --check
+cargo clippy -p ash-parser --all-targets --all-features -- -D warnings
+cargo check --workspace
 ```
 
 ### Step 4: Independent Verification
@@ -84,6 +85,7 @@ strictness: clean
 commands:
   - cargo test -p ash-parser --test task_846_public_type_fn_visibility -- --nocapture
   - cargo fmt --check
+  - git diff --check
   - cargo clippy -p ash-parser --all-targets --all-features -- -D warnings
   - cargo check --workspace
 checklist:

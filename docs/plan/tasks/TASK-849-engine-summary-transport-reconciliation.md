@@ -21,10 +21,11 @@ Transport public computation summaries through engine module loading without mak
 ### Functional Requirements
 
 1. Extend ModuleExports transport to carry core summaries with public type-function dimensions.
-2. Update named/glob import selection to include public computation dependency closure.
-3. Update summary merge/dedup keys to include sealed domains and type functions.
-4. Keep parser capability metadata and engine-private ModuleExports non-normative.
-5. Add engine tests for named import, glob import, and no sibling leakage.
+2. Update named/glob import selection to include public computation dependency closure for normalizer availability.
+3. Preserve the distinction between source-visible selected/glob/re-exported heads and dependency-closure-only helper heads that are internal to normalization.
+4. Update summary merge/dedup keys to include summary version, sealed domains, type-function summaries/equations, and computation dependency refs so ordinary-type-identical summaries with different computation facts cannot collapse.
+5. Keep parser capability metadata and engine-private ModuleExports non-normative.
+6. Add engine tests for named import, glob import, no sibling leakage, and no helper source-visibility leakage.
 
 ### Non-Goals
 
@@ -51,10 +52,12 @@ Transport public computation summaries through engine module loading without mak
 Run:
 
 ```bash
-  - cargo test -p ash-engine --test task_849_type_computation_summary_transport -- --nocapture
-  - cargo test -p ash-engine --test task_839_type_function_module_boundary -- --nocapture
-  - cargo fmt --check
-  - cargo clippy -p ash-engine --all-targets --all-features -- -D warnings
+cargo test -p ash-engine --test task_849_type_computation_summary_transport -- --nocapture
+cargo test -p ash-engine --test task_839_type_function_module_boundary -- --nocapture
+cargo fmt --check
+git diff --check
+cargo check --workspace
+cargo clippy -p ash-engine --all-targets --all-features -- -D warnings
 ```
 
 ### Step 4: Independent Verification
@@ -86,6 +89,8 @@ commands:
   - cargo test -p ash-engine --test task_849_type_computation_summary_transport -- --nocapture
   - cargo test -p ash-engine --test task_839_type_function_module_boundary -- --nocapture
   - cargo fmt --check
+  - git diff --check
+  - cargo check --workspace
   - cargo clippy -p ash-engine --all-targets --all-features -- -D warnings
 checklist:
   - [ ] Implementation matches SPEC-062 and PLAN-110 scope

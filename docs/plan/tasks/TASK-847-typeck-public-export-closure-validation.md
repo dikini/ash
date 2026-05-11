@@ -50,10 +50,12 @@ Validate that public type functions are export-closed over public dependencies b
 Run:
 
 ```bash
-  - cargo test -p ash-typeck --test task_847_type_function_export_closure -- --nocapture
-  - cargo test -p ash-typeck --test task_835_type_function_validation -- --nocapture
-  - cargo fmt --check
-  - cargo clippy -p ash-typeck --all-targets --all-features -- -D warnings
+cargo test -p ash-typeck --test task_847_type_function_export_closure -- --nocapture
+cargo test -p ash-typeck --test task_835_type_function_validation -- --nocapture
+cargo fmt --check
+git diff --check
+cargo check --workspace
+cargo clippy -p ash-typeck --all-targets --all-features -- -D warnings
 ```
 
 ### Step 4: Independent Verification
@@ -85,6 +87,8 @@ commands:
   - cargo test -p ash-typeck --test task_847_type_function_export_closure -- --nocapture
   - cargo test -p ash-typeck --test task_835_type_function_validation -- --nocapture
   - cargo fmt --check
+  - git diff --check
+  - cargo check --workspace
   - cargo clippy -p ash-typeck --all-targets --all-features -- -D warnings
 checklist:
   - [ ] Implementation matches SPEC-062 and PLAN-110 scope

@@ -22,9 +22,11 @@ Add core-owned public type-function summary carriers and a SPEC-062 summary vers
 
 1. Extend ash-core semantic summaries with serde-defaulted exported type-function summaries.
 2. Add SummaryVersion V3 for type-computation summaries and unsupported-version tests.
-3. Represent export mode explicitly; SPEC-062 MVP supports transparent public equations only.
-4. Add equality/serde/hash tests for public computation summaries and dependency refs.
-5. Do not add engine-private semantic owners.
+3. Reject or validate as malformed any V1/V2 summary that carries a non-empty `exported_type_functions` field; only V3 may carry public computation summaries.
+4. Represent export mode explicitly; SPEC-062 MVP supports transparent public equations only.
+5. Define `TypeFunctionSummary` fields for exported name, canonical `TypeComputationHeadId`, visibility, parameter names/canonical types/kinds/domain constraints, return type/kind/result-domain constraint, source anchors, checked source-order equations, dependency summary refs/version/digest metadata, and public-closure/revalidation metadata needed by TypeEnv import.
+6. Add equality/serde/hash tests for public computation summaries, V3 versioning, V1/V2 malformed-content rejection, and dependency refs.
+7. Do not add engine-private semantic owners.
 
 ### Non-Goals
 
@@ -51,10 +53,11 @@ Add core-owned public type-function summary carriers and a SPEC-062 summary vers
 Run:
 
 ```bash
-  - cargo test -p ash-core --test task_845_public_computation_summary_schema -- --nocapture
-  - cargo fmt --check
-  - cargo clippy -p ash-core --all-targets --all-features -- -D warnings
-  - cargo check --workspace
+cargo test -p ash-core --test task_845_public_computation_summary_schema -- --nocapture
+cargo fmt --check
+git diff --check
+cargo clippy -p ash-core --all-targets --all-features -- -D warnings
+cargo check --workspace
 ```
 
 ### Step 4: Independent Verification
@@ -85,6 +88,7 @@ strictness: clean
 commands:
   - cargo test -p ash-core --test task_845_public_computation_summary_schema -- --nocapture
   - cargo fmt --check
+  - git diff --check
   - cargo clippy -p ash-core --all-targets --all-features -- -D warnings
   - cargo check --workspace
 checklist:

@@ -51,10 +51,40 @@ Audit live public summary/export/import/normalizer seams before any Rust changes
 Run:
 
 ```bash
-  - git diff --check
-  - cargo fmt --check
-  - scoped markdown link check over TASK-844 audit/task/docs
-  - cargo check --workspace
+git diff --check
+cargo fmt --check
+python3 - <<'PY'
+import re, sys
+from pathlib import Path
+files = [
+    Path('docs/plan/tasks/TASK-844-type-computation-summary-audit-gate.md'),
+    Path('docs/plan/audits/TASK-844-type-computation-summary-audit.md'),
+]
+link = re.compile(r'(?<!\!)\[[^\]]+\]\(([^)]+)\)')
+bad = []
+for path in files:
+    if not path.exists():
+        bad.append(f'missing expected audit/link-check input: {path}')
+        continue
+    text = path.read_text()
+    in_fence = False
+    for line_no, line in enumerate(text.splitlines(), 1):
+        if line.strip().startswith('```'):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
+        for match in link.finditer(line):
+            target = match.group(1).split('#', 1)[0]
+            if not target or re.match(r'^[a-zA-Z][a-zA-Z0-9+.-]*:', target):
+                continue
+            if not (path.parent / target).exists():
+                bad.append(f'{path}:{line_no}: {target}')
+if bad:
+    print('\n'.join(bad))
+    sys.exit(1)
+PY
+cargo check --workspace
 ```
 
 ### Step 4: Independent Verification
@@ -85,7 +115,38 @@ strictness: clean
 commands:
   - git diff --check
   - cargo fmt --check
-  - scoped markdown link check over TASK-844 audit/task/docs
+  - |
+    python3 - <<'PY'
+    import re, sys
+    from pathlib import Path
+    files = [
+        Path('docs/plan/tasks/TASK-844-type-computation-summary-audit-gate.md'),
+        Path('docs/plan/audits/TASK-844-type-computation-summary-audit.md'),
+    ]
+    link = re.compile(r'(?<!\!)\[[^\]]+\]\(([^)]+)\)')
+    bad = []
+    for path in files:
+        if not path.exists():
+            bad.append(f'missing expected audit/link-check input: {path}')
+            continue
+        text = path.read_text()
+        in_fence = False
+        for line_no, line in enumerate(text.splitlines(), 1):
+            if line.strip().startswith('```'):
+                in_fence = not in_fence
+                continue
+            if in_fence:
+                continue
+            for match in link.finditer(line):
+                target = match.group(1).split('#', 1)[0]
+                if not target or re.match(r'^[a-zA-Z][a-zA-Z0-9+.-]*:', target):
+                    continue
+                if not (path.parent / target).exists():
+                    bad.append(f'{path}:{line_no}: {target}')
+    if bad:
+        print('\n'.join(bad))
+        sys.exit(1)
+    PY
   - cargo check --workspace
 checklist:
   - [ ] Implementation matches SPEC-062 and PLAN-110 scope

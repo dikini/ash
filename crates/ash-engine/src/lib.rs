@@ -80,6 +80,10 @@ pub struct Engine {
     imported_semantic_summaries: std::sync::Mutex<
         std::collections::HashMap<u64, Vec<ash_core::semantic_summary::ModuleSemanticSummary>>,
     >,
+    /// Source-visible imported type-function heads keyed by parsed workflow ID.
+    imported_type_function_heads: std::sync::Mutex<
+        std::collections::HashMap<u64, Vec<(String, ash_core::type_ir::TypeComputationHeadId)>>,
+    >,
     /// Parsed program metadata for workflows loaded with local pure-function definitions.
     surface_programs:
         std::sync::Mutex<std::collections::HashMap<u64, ash_parser::surface::Program>>,
@@ -734,6 +738,17 @@ impl Engine {
         }
     }
 
+    /// Store source-visible imported type-function heads for a parsed workflow.
+    fn store_imported_type_function_heads(
+        &self,
+        workflow_id: u64,
+        heads: Vec<(String, ash_core::type_ir::TypeComputationHeadId)>,
+    ) {
+        if let Ok(mut map) = self.imported_type_function_heads.lock() {
+            map.insert(workflow_id, heads);
+        }
+    }
+
     fn store_surface_program(&self, workflow_id: u64, program: ash_parser::surface::Program) {
         if let Ok(mut map) = self.surface_programs.lock() {
             map.insert(workflow_id, program);
@@ -767,6 +782,17 @@ impl Engine {
         id: u64,
     ) -> Vec<ash_core::semantic_summary::ModuleSemanticSummary> {
         self.imported_semantic_summaries.lock().map_or_else(
+            |_| Vec::new(),
+            |map| map.get(&id).cloned().unwrap_or_default(),
+        )
+    }
+
+    /// Retrieve source-visible imported type-function heads by workflow ID.
+    fn get_imported_type_function_heads(
+        &self,
+        id: u64,
+    ) -> Vec<(String, ash_core::type_ir::TypeComputationHeadId)> {
+        self.imported_type_function_heads.lock().map_or_else(
             |_| Vec::new(),
             |map| map.get(&id).cloned().unwrap_or_default(),
         )
@@ -909,7 +935,13 @@ impl Engine {
     /// Returns `EngineError::Parse` if the source contains syntax errors.
     pub fn parse(&self, source: &str) -> Result<Workflow, EngineError> {
         let imported_callables = HashMap::new();
-        self.parse_workflow_source_with_imports(source, Vec::new(), Vec::new(), &imported_callables)
+        self.parse_workflow_source_with_imports(
+            source,
+            Vec::new(),
+            Vec::new(),
+            Vec::new(),
+            &imported_callables,
+        )
     }
 
     /// Parse entry source into a [`Workflow`], tolerating a leading `use` prelude.
@@ -930,6 +962,7 @@ impl Engine {
         })?;
         self.parse_workflow_source_with_imports(
             entry::strip_leading_entry_use_lines(source),
+            Vec::new(),
             Vec::new(),
             Vec::new(),
             &HashMap::new(),
@@ -963,6 +996,7 @@ impl Engine {
             &loaded.workflow_source,
             loaded.imported_type_defs,
             loaded.imported_semantic_summaries,
+            loaded.imported_type_function_heads,
             &loaded.imported_callables,
         )
     }
@@ -1043,6 +1077,7 @@ impl Engine {
         source: &str,
         imported_type_defs: Vec<ash_core::ast::TypeDef>,
         imported_semantic_summaries: Vec<ash_core::semantic_summary::ModuleSemanticSummary>,
+        imported_type_function_heads: Vec<(String, ash_core::type_ir::TypeComputationHeadId)>,
         imported_callables: &HashMap<String, module_loader::InlineCallable>,
     ) -> Result<Workflow, EngineError> {
         use ash_parser::{
@@ -1088,6 +1123,7 @@ impl Engine {
 
                     self.store_surface_program(id, program);
                     self.store_imported_semantic_summaries(id, imported_semantic_summaries);
+                    self.store_imported_type_function_heads(id, imported_type_function_heads);
                     self.store_imported_type_defs(id, imported_type_defs);
                     return Ok(Workflow {
                         core,
@@ -1107,6 +1143,7 @@ impl Engine {
                     .map_err(|e| EngineError::Parse(format!("lowering error: {e}")))?;
                 let id = self.store_surface_workflow_def(def);
                 self.store_imported_semantic_summaries(id, imported_semantic_summaries);
+                self.store_imported_type_function_heads(id, imported_type_function_heads);
                 self.store_imported_type_defs(id, imported_type_defs);
                 Ok(Workflow {
                     core,
@@ -1134,6 +1171,7 @@ impl Engine {
 
                 self.store_surface_program(id, program);
                 self.store_imported_semantic_summaries(id, imported_semantic_summaries);
+                self.store_imported_type_function_heads(id, imported_type_function_heads);
                 self.store_imported_type_defs(id, imported_type_defs);
                 Ok(Workflow {
                     core,
@@ -1192,11 +1230,12 @@ impl Engine {
         if let Some(program) = self.get_surface_program(workflow.id) {
             // Build type environment with imported types and callable signatures.
             let mut type_env = ash_typeck::type_env::TypeEnv::with_builtin_types();
-            for summary in self.get_imported_semantic_summaries(workflow.id) {
-                type_env
-                    .register_module_semantic_summary(&summary)
-                    .map_err(|e| EngineError::Type(format!("imported type summary error: {e}")))?;
-            }
+            let imported_summaries = self.get_imported_semantic_summaries(workflow.id);
+            register_imported_semantic_summaries(&mut type_env, &imported_summaries)?;
+            expose_imported_type_function_heads(
+                &mut type_env,
+                self.get_imported_type_function_heads(workflow.id),
+            )?;
             let mut imported_type_defs = self.get_imported_type_defs(workflow.id);
             imported_type_defs.extend(self.runtime_stdlib_type_defs()?);
             register_imported_type_defs(&mut type_env, imported_type_defs)?;
@@ -1230,11 +1269,12 @@ impl Engine {
 
             // Build type environment with imported callable signatures
             let mut type_env = ash_typeck::type_env::TypeEnv::with_builtin_types();
-            for summary in self.get_imported_semantic_summaries(workflow.id) {
-                type_env
-                    .register_module_semantic_summary(&summary)
-                    .map_err(|e| EngineError::Type(format!("imported type summary error: {e}")))?;
-            }
+            let imported_summaries = self.get_imported_semantic_summaries(workflow.id);
+            register_imported_semantic_summaries(&mut type_env, &imported_summaries)?;
+            expose_imported_type_function_heads(
+                &mut type_env,
+                self.get_imported_type_function_heads(workflow.id),
+            )?;
             let mut imported_type_defs = self.get_imported_type_defs(workflow.id);
             imported_type_defs.extend(self.runtime_stdlib_type_defs()?);
             register_imported_type_defs(&mut type_env, imported_type_defs)?;
@@ -1269,11 +1309,12 @@ impl Engine {
         imported_type_defs.extend(self.runtime_stdlib_type_defs()?);
 
         let mut type_env = ash_typeck::TypeEnv::with_builtin_types();
-        for summary in self.get_imported_semantic_summaries(workflow.id) {
-            type_env
-                .register_module_semantic_summary(&summary)
-                .map_err(|e| EngineError::Type(format!("imported type summary error: {e}")))?;
-        }
+        let imported_summaries = self.get_imported_semantic_summaries(workflow.id);
+        register_imported_semantic_summaries(&mut type_env, &imported_summaries)?;
+        expose_imported_type_function_heads(
+            &mut type_env,
+            self.get_imported_type_function_heads(workflow.id),
+        )?;
         register_imported_type_defs(&mut type_env, imported_type_defs)?;
         // Register imported callable signatures
         bind_imported_callable_types(&mut type_env, workflow)?;
@@ -1774,6 +1815,29 @@ impl Engine {
     }
 }
 
+fn register_imported_semantic_summaries(
+    type_env: &mut ash_typeck::TypeEnv,
+    summaries: &[ash_core::semantic_summary::ModuleSemanticSummary],
+) -> Result<(), EngineError> {
+    type_env
+        .register_module_semantic_summaries(summaries)
+        .map_err(|error| EngineError::Type(format!("imported type summary error: {error}")))
+}
+
+fn expose_imported_type_function_heads(
+    type_env: &mut ash_typeck::TypeEnv,
+    heads: Vec<(String, ash_core::type_ir::TypeComputationHeadId)>,
+) -> Result<(), EngineError> {
+    for (name, head) in heads {
+        type_env
+            .expose_imported_type_function_name(name, head)
+            .map_err(|error| {
+                EngineError::Type(format!("imported type function visibility error: {error}"))
+            })?;
+    }
+    Ok(())
+}
+
 fn register_imported_type_defs(
     type_env: &mut ash_typeck::TypeEnv,
     imported_type_defs: Vec<ash_core::ast::TypeDef>,
@@ -2013,6 +2077,7 @@ impl EngineBuilder {
             surface_workflow_defs: std::sync::Mutex::new(std::collections::HashMap::new()),
             imported_type_defs: std::sync::Mutex::new(std::collections::HashMap::new()),
             imported_semantic_summaries: std::sync::Mutex::new(std::collections::HashMap::new()),
+            imported_type_function_heads: std::sync::Mutex::new(std::collections::HashMap::new()),
             surface_programs: std::sync::Mutex::new(std::collections::HashMap::new()),
             runtime_stdlib_modules: std::sync::Mutex::new(std::collections::HashMap::new()),
             next_id: std::sync::atomic::AtomicU64::new(1),

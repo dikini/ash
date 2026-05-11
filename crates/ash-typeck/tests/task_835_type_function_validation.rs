@@ -97,18 +97,17 @@ fn assert_rejects(source: &str, expected: &str) {
 }
 
 #[test]
-fn rejects_public_type_function_before_spec_f() {
+fn accepts_public_type_function_after_export_closure_validation() {
     let module = module_identity(100);
     let mut env = TypeEnv::new();
     register_domains(&mut env, &module);
     let mut defs = type_fns("type fn F(xs: TypeList) -> TypeList { case F<xs> = xs; }");
     defs[0].visibility = ash_parser::surface::Visibility::Public;
-    let err = env
-        .register_local_type_functions(&module, &defs)
-        .expect_err("public type fn rejects at typechecker boundary");
-    assert!(
-        format!("{err}").contains("cannot be public before SPEC-F summaries"),
-        "unexpected diagnostic: {err}"
+    env.register_local_type_functions(&module, &defs)
+        .expect("export-closed public type fn registers");
+    assert_eq!(
+        env.lookup_local_type_function("F").unwrap().visibility,
+        CoreVisibility::Public
     );
 }
 

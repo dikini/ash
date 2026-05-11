@@ -15,9 +15,12 @@ use ash_core::module_graph::{CrateId, ModuleId};
 use ash_core::semantic_summary::{
     AssociatedMemberIdentityId, AssociatedMemberIdentitySummary, ConstructorPayloadKind,
     ConstructorSummary, DomainConstructorId, DomainConstructorSummary, InterfaceIdentityId,
-    InterfaceIdentitySummary, ModuleIdentity, ModuleSemanticSummary, RepresentationExposure,
-    SealedDomainId, SealedDomainSummary, SourceAnchor, SourceOrigin, StructuralFieldStatus,
-    SummaryVersion, TypeDeclId, TypeDeclSummary, TypeRepresentationSummary,
+    InterfaceIdentitySummary, ModuleIdentity, ModuleSemanticSummary,
+    ModuleSemanticSummaryValidationError, ModuleSummaryRef, RepresentationExposure, SealedDomainId,
+    SealedDomainSummary, SourceAnchor, SourceOrigin, StructuralFieldStatus, SummaryVersion,
+    TypeDeclId, TypeDeclSummary, TypeFunctionClosureMetadata, TypeFunctionDependencySummaryRef,
+    TypeFunctionExportMode, TypeFunctionParamSummary, TypeFunctionRevalidationMetadata,
+    TypeFunctionSummary, TypeRepresentationSummary,
 };
 use ash_core::type_ir::{
     CanonicalTypeExpr, ProjectionRigidity, TypeComputationHeadId, TypeFunctionDef,
@@ -51,6 +54,84 @@ struct TypeFunctionCoverageAlt {
 struct TypeFunctionCoverageSpace {
     domain: SealedDomainId,
     alts: Vec<TypeFunctionCoverageAlt>,
+}
+
+#[derive(Debug, Clone, Default)]
+struct PublicTypeFunctionClosure {
+    ordinary_types: HashSet<TypeDeclId>,
+    sealed_domains: HashSet<SealedDomainId>,
+    type_functions: HashSet<TypeComputationHeadId>,
+    projections: HashSet<(InterfaceIdentityId, AssociatedMemberIdentityId)>,
+}
+
+impl PublicTypeFunctionClosure {
+    fn dependency_summary_refs(&self) -> Vec<TypeFunctionDependencySummaryRef> {
+        let mut refs = Vec::new();
+        for ty in &self.ordinary_types {
+            push_dependency_summary_ref(
+                &mut refs,
+                ty.module.clone(),
+                SummaryVersion::SPEC057_ORDINARY_TYPE_V1,
+            );
+        }
+        for domain in &self.sealed_domains {
+            push_dependency_summary_ref(
+                &mut refs,
+                domain.module.clone(),
+                SummaryVersion::SPEC059_SEALED_DOMAIN_V2,
+            );
+        }
+        for head in &self.type_functions {
+            push_dependency_summary_ref(
+                &mut refs,
+                head.module.clone(),
+                SummaryVersion::SPEC062_TYPE_COMPUTATION_V3,
+            );
+        }
+        for (interface, member) in &self.projections {
+            push_dependency_summary_ref(
+                &mut refs,
+                interface.module.clone(),
+                SummaryVersion::SPEC057_ORDINARY_TYPE_V1,
+            );
+            push_dependency_summary_ref(
+                &mut refs,
+                member.interface.module.clone(),
+                SummaryVersion::SPEC057_ORDINARY_TYPE_V1,
+            );
+        }
+        refs.sort_by(|left, right| {
+            left.summary_ref
+                .module
+                .path
+                .cmp(&right.summary_ref.module.path)
+                .then_with(|| {
+                    left.summary_ref
+                        .module
+                        .module_id
+                        .0
+                        .cmp(&right.summary_ref.module.module_id.0)
+                })
+                .then_with(|| left.summary_ref.version.0.cmp(&right.summary_ref.version.0))
+        });
+        refs
+    }
+}
+
+fn push_dependency_summary_ref(
+    refs: &mut Vec<TypeFunctionDependencySummaryRef>,
+    module: ModuleIdentity,
+    version: SummaryVersion,
+) {
+    let summary_ref = ModuleSummaryRef { module, version };
+    if refs.iter().any(|dep| dep.summary_ref == summary_ref) {
+        return;
+    }
+    refs.push(TypeFunctionDependencySummaryRef {
+        summary_ref,
+        digest: None,
+        compiler_algorithm_version: Some("spec-062-mvp".to_string()),
+    });
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -266,6 +347,8 @@ pub struct InterfaceMethodInfo {
 pub struct InterfaceInfo {
     /// Interface name.
     pub name: String,
+    /// Source/interface visibility used by public export-closure checks.
+    pub visibility: ash_core::ast::Visibility,
     /// Interface-level type parameter names.
     pub type_params: Vec<String>,
     /// Associated types declared by the interface.
@@ -1321,9 +1404,9 @@ pub struct TypeEnv {
     sealed_domain_aliases: HashMap<String, SealedDomainId>,
     /// Sealed-domain identity -> domain summary metadata.
     sealed_domain_summaries: HashMap<SealedDomainId, SealedDomainSummary>,
-    /// Module-local type-function names published after minimal TASK-834 lowering succeeds.
+    /// Source-visible local/imported type-function names keyed to canonical heads.
     local_type_function_heads: HashMap<String, TypeComputationHeadId>,
-    /// Published checked source-backed type-function carriers keyed by computation head.
+    /// Checked local/imported type-function carriers keyed by canonical computation head.
     local_type_functions: HashMap<TypeComputationHeadId, TypeFunctionDef>,
     /// Workflow effect context for the three-vertex boundary (SPEC-031 §4.8).
     ///
@@ -1390,19 +1473,9 @@ fn variant_payload_kind(payload: &VariantPayload) -> ConstructorPayloadKind {
 fn validate_summary_visibility_and_duplicates(
     summary: &ModuleSemanticSummary,
 ) -> Result<(), TypeEnvError> {
-    if summary.version != SummaryVersion::SPEC057_ORDINARY_TYPE_V1
-        && summary.version != SummaryVersion::SPEC059_SEALED_DOMAIN_V2
-    {
-        return Err(TypeEnvError::InvalidDefinition(
-            format!(
-                "unsupported module semantic summary version {}; expected {} or {}",
-                summary.version.0,
-                SummaryVersion::SPEC057_ORDINARY_TYPE_V1.0,
-                SummaryVersion::SPEC059_SEALED_DOMAIN_V2.0
-            ),
-            Span::default(),
-        ));
-    }
+    summary
+        .validate_summary_version_contract()
+        .map_err(summary_version_contract_error)?;
 
     if summary.version == SummaryVersion::SPEC057_ORDINARY_TYPE_V1
         && !summary.exported_sealed_domains.is_empty()
@@ -1683,6 +1756,65 @@ fn validate_summary_visibility_and_duplicates(
     Ok(())
 }
 
+fn summary_version_contract_error(error: ModuleSemanticSummaryValidationError) -> TypeEnvError {
+    match error {
+        ModuleSemanticSummaryValidationError::TypeFunctionsRequireV3 { version } => {
+            TypeEnvError::MalformedImportedComputationSummary {
+                message: format!(
+                    "module semantic summary version {} cannot carry public type-function summaries; expected {}",
+                    version.0,
+                    SummaryVersion::SPEC062_TYPE_COMPUTATION_V3.0
+                ),
+                version,
+                span: Span::default(),
+            }
+        }
+        ModuleSemanticSummaryValidationError::UnsupportedSummaryVersion { version } => {
+            TypeEnvError::UnsupportedSummaryVersion {
+                version,
+                expected: format!(
+                    "{}, {}, or {}",
+                    SummaryVersion::SPEC057_ORDINARY_TYPE_V1.0,
+                    SummaryVersion::SPEC059_SEALED_DOMAIN_V2.0,
+                    SummaryVersion::SPEC062_TYPE_COMPUTATION_V3.0
+                ),
+                span: Span::default(),
+            }
+        }
+    }
+}
+
+fn anchor_span(anchor: &SourceAnchor) -> Span {
+    anchor
+        .span
+        .map_or_else(Span::default, |span| Span::new(span.start, span.end, 0, 0))
+}
+
+fn imported_type_function_def(summary: &TypeFunctionSummary) -> TypeFunctionDef {
+    TypeFunctionDef {
+        visibility: summary.visibility,
+        head: summary.head.clone(),
+        name: summary.head.name.clone(),
+        params: summary
+            .params
+            .iter()
+            .map(|param| TypeFunctionParam {
+                name: param.name.clone(),
+                ty: param.ty.clone(),
+                kind: param.kind.clone(),
+                domain_constraint: param.domain_constraint.clone(),
+                source_anchor: param.source_anchor.clone(),
+            })
+            .collect(),
+        return_type: summary.return_type.clone(),
+        return_kind: summary.return_kind.clone(),
+        result_constraint: summary.result_constraint.clone(),
+        decreases: summary.revalidation_metadata.decreases_param.clone(),
+        source_anchors: summary.source_anchors.clone(),
+        equations: summary.equations.clone(),
+    }
+}
+
 impl TypeEnv {
     fn convert_interface_method(
         &self,
@@ -1895,6 +2027,14 @@ impl TypeEnv {
     /// Register a type definition and its constructors from AST TypeDef
     pub fn register_type(&mut self, def: &TypeDef) -> Result<(), TypeEnvError> {
         self.register_type_identity(def)?;
+        self.type_alias_identities
+            .entry(def.name.clone())
+            .or_insert_with(|| fallback_canonical_type_decl_id(&def.name));
+        if let Some(identity) = self.type_alias_identities.get(&def.name).cloned() {
+            self.canonical_type_names
+                .entry(identity)
+                .or_insert_with(|| def.name.clone());
+        }
         self.expose_type_representation(&def.name)
     }
 
@@ -1947,8 +2087,21 @@ impl TypeEnv {
                 Span::default(),
             ));
         }
+        let fallback_compatible_builtin_identity = self
+            .type_alias_identities
+            .get(&visible_name)
+            .is_some_and(|existing| existing == &fallback_canonical_type_decl_id(&visible_name))
+            && self.ast_types.get(&visible_name).is_some_and(|existing| {
+                (is_builtin_prelude_ordinary_type_compatibility_name(&visible_name)
+                    && !self.existing_summary_contract_conflicts(&visible_name, existing, summary))
+                    || (existing.builtin
+                        && matches!(
+                            summary.representation,
+                            TypeRepresentationSummary::Opaque { .. }
+                        ))
+            });
         match self.type_alias_identities.get(&visible_name) {
-            Some(existing) if existing != &summary.id => {
+            Some(existing) if existing != &summary.id && !fallback_compatible_builtin_identity => {
                 return Err(TypeEnvError::InvalidDefinition(
                     duplicate_summary_identity_diagnostic(&visible_name, existing, summary),
                     Span::default(),
@@ -1959,6 +2112,14 @@ impl TypeEnv {
         if let Some(existing) = self.ast_types.get(&visible_name) {
             let existing_identity = self.type_alias_identities.get(&visible_name);
             if !self.is_placeholder_name(&visible_name) && existing_identity != Some(&summary.id) {
+                if fallback_compatible_builtin_identity {
+                    self.type_alias_identities
+                        .insert(visible_name.clone(), summary.id.clone());
+                    self.canonical_type_names
+                        .entry(summary.id.clone())
+                        .or_insert(visible_name);
+                    return Ok(());
+                }
                 if matches!(
                     (&summary.representation, existing.builtin),
                     (TypeRepresentationSummary::Opaque { builtin: true }, true)
@@ -1970,7 +2131,8 @@ impl TypeEnv {
                         .or_insert(visible_name);
                     return Ok(());
                 }
-                if existing_identity.is_none()
+                if (existing_identity.is_none()
+                    || existing_identity == Some(&fallback_canonical_type_decl_id(&visible_name)))
                     && is_builtin_prelude_ordinary_type_compatibility_name(&visible_name)
                     && !self.existing_summary_contract_conflicts(&visible_name, existing, summary)
                 {
@@ -2137,24 +2299,69 @@ impl TypeEnv {
         Ok(())
     }
 
-    fn register_module_semantic_summary_inner(
+    /// Register all visible ordinary type identities from a module semantic summary first,
+    /// then validate/expose public representations in a second pass.
+    pub fn register_module_semantic_summary(
         &mut self,
         summary: &ModuleSemanticSummary,
     ) -> Result<(), TypeEnvError> {
-        validate_summary_visibility_and_duplicates(summary)?;
+        self.register_module_semantic_summaries(std::slice::from_ref(summary))
+    }
 
-        for ty in &summary.exported_types {
-            self.declare_summary_type_identity(ty)?;
+    /// Batch-register imported semantic summaries.
+    ///
+    /// The batch path declares all imported identities and public computation
+    /// heads before equation revalidation so cross-summary public reductions and
+    /// dependency-closure helper heads are normalizer-available atomically.
+    pub fn register_module_semantic_summaries(
+        &mut self,
+        summaries: &[ModuleSemanticSummary],
+    ) -> Result<(), TypeEnvError> {
+        for summary in summaries {
+            summary
+                .validate_summary_version_contract()
+                .map_err(summary_version_contract_error)?;
         }
 
-        for interface in &summary.interface_identities {
-            self.register_interface_identity_summary_imported(interface)?;
+        let mut staged = self.clone();
+        for summary in summaries {
+            validate_summary_visibility_and_duplicates(summary)?;
         }
-
-        for member in &summary.associated_member_identities {
-            self.register_associated_member_identity_summary_imported(member)?;
+        for summary in summaries {
+            for ty in &summary.exported_types {
+                staged.declare_summary_type_identity(ty)?;
+            }
+            for interface in &summary.interface_identities {
+                staged.register_interface_identity_summary_imported(interface)?;
+            }
+            for member in &summary.associated_member_identities {
+                staged.register_associated_member_identity_summary_imported(member)?;
+            }
+            for domain in &summary.exported_sealed_domains {
+                staged.declare_sealed_domain_identity(domain)?;
+            }
         }
+        for summary in summaries {
+            for type_fn in &summary.exported_type_functions {
+                staged.declare_imported_type_function_summary(type_fn)?;
+            }
+        }
+        for summary in summaries {
+            staged.register_module_semantic_summary_representations_and_domains(summary)?;
+        }
+        for summary in summaries {
+            for type_fn in &summary.exported_type_functions {
+                staged.validate_imported_type_function_summary(type_fn)?;
+            }
+        }
+        *self = staged;
+        Ok(())
+    }
 
+    fn register_module_semantic_summary_representations_and_domains(
+        &mut self,
+        summary: &ModuleSemanticSummary,
+    ) -> Result<(), TypeEnvError> {
         for ty in &summary.exported_types {
             if ty.representation_exposure != RepresentationExposure::Exposed {
                 continue;
@@ -2182,29 +2389,692 @@ impl TypeEnv {
             self.expose_summary_type_representation(ty, &summary.exported_constructors)?;
         }
 
-        // Pass 1: Declare all sealed-domain identities.
-        for domain in &summary.exported_sealed_domains {
-            self.declare_sealed_domain_identity(domain)?;
-        }
-
-        // Pass 2: Validate and store domain metadata.
         for domain in &summary.exported_sealed_domains {
             self.validate_and_register_sealed_domain(domain)?;
         }
-
         Ok(())
     }
 
-    /// Register all visible ordinary type identities from a module semantic summary first,
-    /// then validate/expose public representations in a second pass.
-    pub fn register_module_semantic_summary(
+    fn declare_imported_type_function_summary(
         &mut self,
-        summary: &ModuleSemanticSummary,
+        summary: &TypeFunctionSummary,
     ) -> Result<(), TypeEnvError> {
-        let mut staged = self.clone();
-        staged.register_module_semantic_summary_inner(summary)?;
-        *self = staged;
+        if summary.visibility != ash_core::ast::Visibility::Public {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "non-public type-function summary '{}' is not valid public metadata",
+                    summary.exported_name
+                ),
+                Span::default(),
+            ));
+        }
+        if let Some(existing) = self.local_type_functions.get(&summary.head) {
+            let incoming = imported_type_function_def(summary);
+            if existing != &incoming {
+                return Err(TypeEnvError::ImportOrderConflict {
+                    family: "type-function summary".to_string(),
+                    name: summary.exported_name.clone(),
+                    span: summary.equations.first().map_or_else(
+                        || anchor_span(&summary.source_anchors.definition),
+                        |equation| anchor_span(&equation.source_anchor),
+                    ),
+                });
+            }
+            return Ok(());
+        }
+        self.local_type_functions
+            .insert(summary.head.clone(), imported_type_function_def(summary));
         Ok(())
+    }
+
+    fn validate_imported_type_function_summary(
+        &self,
+        summary: &TypeFunctionSummary,
+    ) -> Result<(), TypeEnvError> {
+        if summary.export_mode != TypeFunctionExportMode::TransparentEquations {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "type-function summary '{}' has unsupported export mode",
+                    summary.exported_name
+                ),
+                Span::default(),
+            ));
+        }
+        if summary.revalidation_metadata.spec_version != SummaryVersion::SPEC062_TYPE_COMPUTATION_V3
+            || !summary.revalidation_metadata.structural_recursion_checked
+            || !summary.revalidation_metadata.kind_and_domain_checked
+            || !summary.revalidation_metadata.coverage_and_overlap_checked
+        {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "type-function summary '{}' lacks required SPEC-062 revalidation metadata",
+                    summary.exported_name
+                ),
+                Span::default(),
+            ));
+        }
+        let def = self
+            .local_type_functions
+            .get(&summary.head)
+            .ok_or_else(|| {
+                TypeEnvError::InvalidDefinition(
+                    format!(
+                        "type-function summary '{}' head was not declared before validation",
+                        summary.exported_name
+                    ),
+                    Span::default(),
+                )
+            })?;
+        for param in &def.params {
+            if param.kind != Kind::Type {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "type-function summary '{}' parameter '{}' has non-Type kind",
+                        def.name, param.name
+                    ),
+                    Span::default(),
+                ));
+            }
+            self.validate_imported_type_function_signature_type(&def.name, &param.ty, "parameter")?;
+            if let Some(domain) = &param.domain_constraint
+                && self.lookup_sealed_domain_by_id(domain).is_none()
+            {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "type-function summary '{}' parameter '{}' references unknown sealed domain '{}'",
+                        def.name, param.name, domain.name
+                    ),
+                    Span::default(),
+                ));
+            }
+        }
+        if def.return_kind != Kind::Type {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "type-function summary '{}' return has non-Type kind",
+                    def.name
+                ),
+                Span::default(),
+            ));
+        }
+        self.validate_imported_type_function_signature_type(&def.name, &def.return_type, "return")?;
+        for equation in &def.equations {
+            if equation.head != def.head || equation.patterns.len() != def.params.len() {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "type-function summary '{}' equation arity or head mismatch",
+                        def.name
+                    ),
+                    Span::default(),
+                ));
+            }
+            let mut vars = HashMap::new();
+            for (pattern, param) in equation.patterns.iter().zip(&def.params) {
+                self.validate_imported_type_function_pattern(
+                    pattern,
+                    &constraint_for_param(param),
+                    &mut vars,
+                )?;
+            }
+            let actual = self.validate_imported_type_function_result(&equation.result, &vars)?;
+            self.validate_imported_result_constraint_value(
+                &actual,
+                &def.result_constraint,
+                Span::default(),
+            )?;
+        }
+        self.validate_type_function_pattern_coverage(
+            &def.name,
+            &def.params,
+            &def.equations,
+            Span::default(),
+        )?;
+        self.validate_type_function_structural_recursion(
+            &def.name,
+            &def.head,
+            &def.params,
+            def.decreases.as_deref(),
+            &def.equations,
+            Span::default(),
+        )?;
+        self.validate_public_type_function_export_closure(def, Span::default())
+    }
+
+    fn validate_imported_type_function_signature_type(
+        &self,
+        owner: &str,
+        ty: &CanonicalTypeExpr,
+        position: &str,
+    ) -> Result<(), TypeEnvError> {
+        match ty {
+            CanonicalTypeExpr::Primitive(_) | CanonicalTypeExpr::Var(_) => Ok(()),
+            CanonicalTypeExpr::NominalApp {
+                origin,
+                visible_name,
+                args,
+                kind,
+            } => {
+                if kind != &Kind::Type {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "type-function summary '{owner}' {position} nominal '{visible_name}' has non-Type kind"
+                        ),
+                        Span::default(),
+                    ));
+                }
+                match self.type_alias_identities.get(visible_name) {
+                    Some(registered) if registered == origin => {}
+                    Some(registered) => {
+                        return Err(TypeEnvError::InvalidDefinition(
+                            format!(
+                                "type-function summary '{owner}' {position} nominal '{visible_name}' has identity mismatch: expected {:?}, found {:?}",
+                                origin, registered
+                            ),
+                            Span::default(),
+                        ));
+                    }
+                    None => {
+                        return Err(TypeEnvError::InvalidDefinition(
+                            format!(
+                                "type-function summary '{owner}' {position} references unknown ordinary type '{visible_name}'"
+                            ),
+                            Span::default(),
+                        ));
+                    }
+                }
+                if !self.canonical_type_names.contains_key(origin) {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "type-function summary '{owner}' {position} references unregistered ordinary type identity {:?}",
+                            origin
+                        ),
+                        Span::default(),
+                    ));
+                }
+                let expected_arity = self
+                    .type_info
+                    .get(visible_name)
+                    .map(TypeInfo::type_arg_count)
+                    .ok_or_else(|| {
+                        TypeEnvError::InvalidDefinition(
+                            format!(
+                                "type-function summary '{owner}' {position} references ordinary type '{visible_name}' without arity metadata"
+                            ),
+                            Span::default(),
+                        )
+                    })?;
+                if expected_arity != args.len() {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "type-function summary '{owner}' {position} nominal '{visible_name}' arity mismatch: expected {}, found {}",
+                            expected_arity,
+                            args.len()
+                        ),
+                        Span::default(),
+                    ));
+                }
+                for arg in args {
+                    self.validate_imported_type_function_signature_type(owner, arg, position)?;
+                }
+                Ok(())
+            }
+            CanonicalTypeExpr::Projection {
+                interface,
+                member,
+                args,
+                kind,
+                ..
+            } => {
+                if kind != &Kind::Type {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "type-function summary '{owner}' {position} projection '{}::{}' has non-Type kind",
+                            interface.name, member.name
+                        ),
+                        Span::default(),
+                    ));
+                }
+                if !self.known_interface_identities.contains(interface) {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "type-function summary '{owner}' {position} references unknown projection interface '{}'",
+                            interface.name
+                        ),
+                        Span::default(),
+                    ));
+                }
+                if !self.known_associated_member_identities.contains(member)
+                    || member.interface != *interface
+                {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "type-function summary '{owner}' {position} references unknown projection member '{}::{}'",
+                            interface.name, member.name
+                        ),
+                        Span::default(),
+                    ));
+                }
+                for arg in args {
+                    self.validate_imported_type_function_signature_type(owner, arg, position)?;
+                }
+                Ok(())
+            }
+            CanonicalTypeExpr::ComputationHeadApp { head, args, kind } => {
+                if kind != &Kind::Type {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "type-function summary '{owner}' {position} computation head '{}' has non-Type kind",
+                            head.name
+                        ),
+                        Span::default(),
+                    ));
+                }
+                let callee = self.local_type_functions.get(head).ok_or_else(|| {
+                    TypeEnvError::InvalidDefinition(
+                        format!(
+                            "type-function summary '{owner}' {position} references unknown type function '{}'",
+                            head.name
+                        ),
+                        Span::default(),
+                    )
+                })?;
+                if callee.params.len() != args.len() {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "type-function summary '{owner}' {position} computation head '{}' arity mismatch: expected {}, found {}",
+                            head.name,
+                            callee.params.len(),
+                            args.len()
+                        ),
+                        Span::default(),
+                    ));
+                }
+                for arg in args {
+                    self.validate_imported_type_function_signature_type(owner, arg, position)?;
+                }
+                Ok(())
+            }
+        }
+    }
+
+    fn validate_imported_type_function_pattern(
+        &self,
+        pattern: &TypeFunctionPattern,
+        expected: &TypeFunctionPatternConstraint,
+        vars: &mut HashMap<String, TypeFunctionResultConstraint>,
+    ) -> Result<(), TypeEnvError> {
+        match pattern {
+            TypeFunctionPattern::Var {
+                name, constraint, ..
+            } => {
+                if constraint != expected {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!("type-function pattern variable '{name}' has invalid constraint"),
+                        Span::default(),
+                    ));
+                }
+                if vars
+                    .insert(name.clone(), result_constraint_from_pattern(constraint))
+                    .is_some()
+                {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!("non-linear type-function pattern variable '{name}'"),
+                        Span::default(),
+                    ));
+                }
+                Ok(())
+            }
+            TypeFunctionPattern::Wildcard { constraint, .. } => {
+                if constraint != expected {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        "type-function wildcard pattern has invalid constraint".to_string(),
+                        Span::default(),
+                    ));
+                }
+                Ok(())
+            }
+            TypeFunctionPattern::DomainConstructor {
+                constructor,
+                domain,
+                fields,
+                constraint,
+                ..
+            } => {
+                if constraint != expected {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "type-function constructor pattern '{}' has invalid constraint",
+                            constructor.name
+                        ),
+                        Span::default(),
+                    ));
+                }
+                let domain_summary = self.lookup_sealed_domain_by_id(domain).ok_or_else(|| {
+                    TypeEnvError::InvalidDefinition(
+                        format!(
+                            "type-function pattern references unknown sealed domain '{}'",
+                            domain.name
+                        ),
+                        Span::default(),
+                    )
+                })?;
+                let constructor_summary = domain_summary
+                    .constructors
+                    .iter()
+                    .find(|candidate| candidate.id == **constructor)
+                    .ok_or_else(|| {
+                        TypeEnvError::InvalidDefinition(
+                            format!(
+                                "type-function pattern references unknown constructor '{}'",
+                                constructor.name
+                            ),
+                            Span::default(),
+                        )
+                    })?;
+                if constructor_summary.fields.len() != fields.len() {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "type-function constructor pattern '{}' field arity mismatch",
+                            constructor.name
+                        ),
+                        Span::default(),
+                    ));
+                }
+                for (field_pattern, field) in fields.iter().zip(&constructor_summary.fields) {
+                    let field_constraint = field.domain_constraint.clone().map_or_else(
+                        || TypeFunctionPatternConstraint::Kind(field.kind.clone()),
+                        TypeFunctionPatternConstraint::Domain,
+                    );
+                    self.validate_imported_type_function_pattern(
+                        field_pattern,
+                        &field_constraint,
+                        vars,
+                    )?;
+                }
+                Ok(())
+            }
+        }
+    }
+
+    fn validate_imported_type_function_result(
+        &self,
+        expr: &TypeFunctionResultExpr,
+        vars: &HashMap<String, TypeFunctionResultConstraint>,
+    ) -> Result<TypeFunctionResultConstraint, TypeEnvError> {
+        match expr {
+            TypeFunctionResultExpr::Primitive { kind, .. } => {
+                if kind == &Kind::Type {
+                    Ok(TypeFunctionResultConstraint::Kind(Kind::Type))
+                } else {
+                    Err(TypeEnvError::InvalidDefinition(
+                        "type-function result expression has non-Type kind".to_string(),
+                        Span::default(),
+                    ))
+                }
+            }
+            TypeFunctionResultExpr::Var { name, kind, .. } => {
+                if kind != &Kind::Type {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!("type-function result variable '{name}' has non-Type kind"),
+                        Span::default(),
+                    ));
+                }
+                vars.get(name).cloned().ok_or_else(|| {
+                    TypeEnvError::InvalidDefinition(
+                        format!("unbound type-function result variable '{name}'"),
+                        Span::default(),
+                    )
+                })
+            }
+            TypeFunctionResultExpr::NominalApp {
+                origin,
+                visible_name,
+                args,
+                kind,
+                ..
+            } => {
+                if kind != &Kind::Type {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        "type-function nominal result expression has non-Type kind".to_string(),
+                        Span::default(),
+                    ));
+                }
+                match self.type_alias_identities.get(visible_name) {
+                    Some(registered) if registered == origin => {}
+                    Some(registered) => {
+                        return Err(TypeEnvError::InvalidDefinition(
+                            format!(
+                                "type-function result nominal '{}' has identity mismatch: expected {:?}, found {:?}",
+                                visible_name, origin, registered
+                            ),
+                            Span::default(),
+                        ));
+                    }
+                    None => {
+                        return Err(TypeEnvError::InvalidDefinition(
+                            format!(
+                                "type-function result references unknown ordinary type '{}'",
+                                visible_name
+                            ),
+                            Span::default(),
+                        ));
+                    }
+                }
+                if !self.canonical_type_names.contains_key(origin) {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "type-function result references unregistered ordinary type identity {:?}",
+                            origin
+                        ),
+                        Span::default(),
+                    ));
+                }
+                let expected_arity = self
+                    .type_info
+                    .get(visible_name)
+                    .map(TypeInfo::type_arg_count)
+                    .ok_or_else(|| {
+                        TypeEnvError::InvalidDefinition(
+                            format!(
+                                "type-function result references ordinary type '{}' without arity metadata",
+                                visible_name
+                            ),
+                            Span::default(),
+                        )
+                    })?;
+                if expected_arity != args.len() {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "type-function result nominal '{}' arity mismatch: expected {}, found {}",
+                            visible_name,
+                            expected_arity,
+                            args.len()
+                        ),
+                        Span::default(),
+                    ));
+                }
+                for arg in args {
+                    self.validate_imported_type_function_result(arg, vars)?;
+                }
+                Ok(TypeFunctionResultConstraint::Kind(Kind::Type))
+            }
+            TypeFunctionResultExpr::Projection {
+                interface,
+                member,
+                args,
+                kind,
+                constraint,
+                ..
+            } => {
+                if kind != &Kind::Type {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        "type-function projection result expression has non-Type kind".to_string(),
+                        Span::default(),
+                    ));
+                }
+                if !self.known_interface_identities.contains(interface) {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "type-function projection result references unknown interface identity {:?}",
+                            interface
+                        ),
+                        Span::default(),
+                    ));
+                }
+                if !self.known_associated_member_identities.contains(member) {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "type-function projection result references unknown associated member identity {:?}",
+                            member
+                        ),
+                        Span::default(),
+                    ));
+                }
+                if member.interface != *interface {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "type-function projection result member {:?} does not belong to interface {:?}",
+                            member, interface
+                        ),
+                        Span::default(),
+                    ));
+                }
+                if !matches!(constraint, TypeFunctionResultConstraint::Kind(Kind::Type)) {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        "type-function projection result cannot forge a sealed-domain constraint"
+                            .to_string(),
+                        Span::default(),
+                    ));
+                }
+                for arg in args {
+                    self.validate_imported_type_function_result(arg, vars)?;
+                }
+                Ok(TypeFunctionResultConstraint::Kind(Kind::Type))
+            }
+            TypeFunctionResultExpr::DomainConstructorApp {
+                constructor,
+                domain,
+                args,
+                kind,
+                ..
+            } => {
+                if kind != &Kind::Type {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        "type-function domain-constructor result has non-Type kind".to_string(),
+                        Span::default(),
+                    ));
+                }
+                let domain_summary = self.lookup_sealed_domain_by_id(domain).ok_or_else(|| {
+                    TypeEnvError::InvalidDefinition(
+                        format!(
+                            "type-function result references unknown sealed domain '{}'",
+                            domain.name
+                        ),
+                        Span::default(),
+                    )
+                })?;
+                let constructor_summary = domain_summary
+                    .constructors
+                    .iter()
+                    .find(|candidate| candidate.id == *constructor)
+                    .ok_or_else(|| {
+                        TypeEnvError::InvalidDefinition(
+                            format!(
+                                "type-function result references unknown constructor '{}'",
+                                constructor.name
+                            ),
+                            Span::default(),
+                        )
+                    })?;
+                if constructor_summary.fields.len() != args.len() {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "type-function result constructor '{}' field arity mismatch",
+                            constructor.name
+                        ),
+                        Span::default(),
+                    ));
+                }
+                for (arg, field) in args.iter().zip(&constructor_summary.fields) {
+                    let actual = self.validate_imported_type_function_result(arg, vars)?;
+                    let expected = field.domain_constraint.clone().map_or_else(
+                        || TypeFunctionResultConstraint::Kind(field.kind.clone()),
+                        TypeFunctionResultConstraint::Domain,
+                    );
+                    self.validate_imported_result_constraint_value(
+                        &actual,
+                        &expected,
+                        Span::default(),
+                    )?;
+                }
+                Ok(TypeFunctionResultConstraint::Domain(domain.clone()))
+            }
+            TypeFunctionResultExpr::ComputationHeadApp {
+                head, args, kind, ..
+            } => {
+                if kind != &Kind::Type {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        "type-function computation result has non-Type kind".to_string(),
+                        Span::default(),
+                    ));
+                }
+                let callee = self.local_type_functions.get(head).ok_or_else(|| {
+                    TypeEnvError::InvalidDefinition(
+                        format!(
+                            "type-function result references unknown computation head '{}'",
+                            head.name
+                        ),
+                        Span::default(),
+                    )
+                })?;
+                if callee.params.len() != args.len() {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "type-function result computation '{}' arity mismatch",
+                            head.name
+                        ),
+                        Span::default(),
+                    ));
+                }
+                for (arg, param) in args.iter().zip(&callee.params) {
+                    let actual = self.validate_imported_type_function_result(arg, vars)?;
+                    let expected = param.domain_constraint.clone().map_or_else(
+                        || TypeFunctionResultConstraint::Kind(param.kind.clone()),
+                        TypeFunctionResultConstraint::Domain,
+                    );
+                    self.validate_imported_result_constraint_value(
+                        &actual,
+                        &expected,
+                        Span::default(),
+                    )?;
+                }
+                Ok(callee.result_constraint.clone())
+            }
+        }
+    }
+
+    fn validate_imported_result_constraint_value(
+        &self,
+        actual: &TypeFunctionResultConstraint,
+        expected: &TypeFunctionResultConstraint,
+        span: Span,
+    ) -> Result<(), TypeEnvError> {
+        match (expected, actual) {
+            (
+                TypeFunctionResultConstraint::Domain(expected_domain),
+                TypeFunctionResultConstraint::Domain(actual_domain),
+            ) if expected_domain == actual_domain => Ok(()),
+            (TypeFunctionResultConstraint::Domain(expected_domain), found) => {
+                Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "result domain mismatch: expected sealed domain '{}', found {:?}",
+                        expected_domain.name, found
+                    ),
+                    span,
+                ))
+            }
+            (TypeFunctionResultConstraint::Kind(_), _) => Ok(()),
+        }
     }
 
     // ------------------------------------------------------------------
@@ -2401,30 +3271,342 @@ impl TypeEnv {
         Ok(())
     }
 
-    /// Look up a published module-local type function by source name.
+    /// Register a local sealed-domain summary for source declarations in the current module.
+    ///
+    /// Unlike `register_module_semantic_summary`, this does not require public visibility because
+    /// it models same-module domains before export filtering. Public export validation rejects any
+    /// `pub type fn` whose checked equations depend on private domains or marker constructors.
+    pub fn register_local_sealed_domain_summary(
+        &mut self,
+        domain: &SealedDomainSummary,
+    ) -> Result<(), TypeEnvError> {
+        let mut staged = self.clone();
+        staged.declare_sealed_domain_identity(domain)?;
+        staged.validate_and_register_sealed_domain(domain)?;
+        *self = staged;
+        Ok(())
+    }
+
+    /// Look up a source-visible type function by local or imported name.
     #[must_use]
     pub fn lookup_local_type_function(&self, name: &str) -> Option<&TypeFunctionDef> {
         let head = self.local_type_function_heads.get(name)?;
         self.local_type_functions.get(head)
     }
 
-    /// Look up a published module-local type function by canonical computation head.
+    /// Make an imported public type-function summary source-visible under `name`.
     ///
-    /// This is intentionally crate-local: TASK-838 lets the normalizer consume
-    /// checked source declarations already registered in this `TypeEnv`, without
-    /// adding public export/import or cross-module equation transport.
+    /// Import loaders call this only for explicitly selected or glob-imported
+    /// public heads. Dependency-closure helper heads remain normalizer-available
+    /// by canonical identity but are not inserted here.
+    pub fn expose_imported_type_function_name(
+        &mut self,
+        name: impl Into<String>,
+        head: TypeComputationHeadId,
+    ) -> Result<(), TypeEnvError> {
+        let name = name.into();
+        if !self.local_type_functions.contains_key(&head) {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "cannot expose imported type function '{}' before registering summary head '{}::{}'",
+                    name,
+                    head.module.path.join("::"),
+                    head.name
+                ),
+                Span::default(),
+            ));
+        }
+        if let Some(existing) = self.local_type_function_heads.get(&name) {
+            if existing == &head {
+                return Ok(());
+            }
+            return Err(TypeEnvError::ImportOrderConflict {
+                family: "type-function visible name".to_string(),
+                name,
+                span: Span::default(),
+            });
+        }
+        self.local_type_function_heads.insert(name, head);
+        Ok(())
+    }
+
+    /// Look up a published computation head by canonical identity.
+    ///
+    /// This unified normalizer lookup covers checked local declarations,
+    /// atomically imported public summaries, and any future TypeEnv-owned
+    /// computation-head sources. Imported heads are deliberately not inserted into
+    /// `local_type_function_heads`, so they remain unavailable to local-name
+    /// source lookup unless a later import/re-export path makes them visible.
     #[must_use]
-    pub(crate) fn lookup_local_type_function_by_head(
+    pub(crate) fn lookup_type_function_by_head(
         &self,
         head: &TypeComputationHeadId,
     ) -> Option<&TypeFunctionDef> {
         self.local_type_functions.get(head)
     }
 
-    /// Iterate published module-local type-function names. This intentionally
-    /// exposes no public summary/equation transport before SPEC-F.
+    /// Iterate source-visible local and imported type-function names.
+    ///
+    /// Imported dependency-closure helper heads are intentionally omitted unless
+    /// the import loader explicitly exposes them through selected/glob syntax.
     pub fn local_type_function_names(&self) -> impl Iterator<Item = &str> {
         self.local_type_function_heads.keys().map(String::as_str)
+    }
+
+    /// Lower checked, transparent, export-closed public local type functions into
+    /// SPEC-062 public computation summaries.
+    ///
+    /// This only exports already-validated public source definitions for the
+    /// requested defining module. It deliberately does not register imported
+    /// normalizer facts or expose private/local-only type functions.
+    pub fn export_public_type_function_summaries(
+        &self,
+        module: &ModuleIdentity,
+    ) -> Result<Vec<TypeFunctionSummary>, TypeEnvError> {
+        let mut defs = self
+            .local_type_functions
+            .values()
+            .filter(|def| {
+                def.visibility == ash_core::ast::Visibility::Public && def.head.module == *module
+            })
+            .collect::<Vec<_>>();
+        defs.sort_by(|left, right| {
+            let left_start = left
+                .source_anchors
+                .definition
+                .span
+                .map_or(usize::MAX, |s| s.start);
+            let right_start = right
+                .source_anchors
+                .definition
+                .span
+                .map_or(usize::MAX, |s| s.start);
+            left_start
+                .cmp(&right_start)
+                .then_with(|| left.name.cmp(&right.name))
+        });
+
+        defs.into_iter()
+            .map(|def| self.lower_public_type_function_summary(def))
+            .collect()
+    }
+
+    fn lower_public_type_function_summary(
+        &self,
+        def: &TypeFunctionDef,
+    ) -> Result<TypeFunctionSummary, TypeEnvError> {
+        self.validate_public_type_function_export_closure(def, Span::default())?;
+
+        let mut closure = PublicTypeFunctionClosure::default();
+        self.collect_public_type_function_def_closure(def, &mut closure);
+
+        Ok(TypeFunctionSummary {
+            exported_name: def.name.clone(),
+            head: def.head.clone(),
+            visibility: def.visibility,
+            params: def
+                .params
+                .iter()
+                .map(|param| TypeFunctionParamSummary {
+                    name: param.name.clone(),
+                    ty: param.ty.clone(),
+                    kind: param.kind.clone(),
+                    domain_constraint: param.domain_constraint.clone(),
+                    source_anchor: param.source_anchor.clone(),
+                })
+                .collect(),
+            return_type: def.return_type.clone(),
+            return_kind: def.return_kind.clone(),
+            result_constraint: def.result_constraint.clone(),
+            export_mode: TypeFunctionExportMode::TransparentEquations,
+            source_anchors: def.source_anchors.clone(),
+            equations: def.equations.clone(),
+            dependency_summary_refs: closure.dependency_summary_refs(),
+            closure_metadata: TypeFunctionClosureMetadata {
+                public_closure_checked: true,
+                public_ordinary_type_count: closure.ordinary_types.len(),
+                public_sealed_domain_count: closure.sealed_domains.len(),
+                public_type_function_count: closure.type_functions.len(),
+                public_projection_count: closure.projections.len(),
+            },
+            revalidation_metadata: TypeFunctionRevalidationMetadata {
+                spec_version: SummaryVersion::SPEC062_TYPE_COMPUTATION_V3,
+                structural_recursion_checked: true,
+                kind_and_domain_checked: true,
+                coverage_and_overlap_checked: true,
+                decreases_param: def.decreases.clone(),
+            },
+        })
+    }
+
+    fn collect_public_type_function_def_closure(
+        &self,
+        def: &TypeFunctionDef,
+        closure: &mut PublicTypeFunctionClosure,
+    ) {
+        if !closure.type_functions.insert(def.head.clone()) {
+            return;
+        }
+        for param in &def.params {
+            if let Some(domain) = &param.domain_constraint {
+                closure.sealed_domains.insert(domain.clone());
+            }
+            self.collect_public_canonical_type_closure(&param.ty, closure);
+        }
+        if let TypeFunctionResultConstraint::Domain(domain) = &def.result_constraint {
+            closure.sealed_domains.insert(domain.clone());
+        }
+        self.collect_public_canonical_type_closure(&def.return_type, closure);
+        for equation in &def.equations {
+            for pattern in &equation.patterns {
+                self.collect_public_pattern_closure(pattern, closure);
+            }
+            self.collect_public_result_closure(&equation.result, closure);
+        }
+    }
+
+    fn collect_public_type_function_head_closure(
+        &self,
+        head: &TypeComputationHeadId,
+        closure: &mut PublicTypeFunctionClosure,
+    ) {
+        match self.local_type_functions.get(head) {
+            Some(def) if def.visibility == ash_core::ast::Visibility::Public => {
+                self.collect_public_type_function_def_closure(def, closure);
+            }
+            _ => {
+                closure.type_functions.insert(head.clone());
+            }
+        }
+    }
+
+    fn collect_public_canonical_type_closure(
+        &self,
+        ty: &CanonicalTypeExpr,
+        closure: &mut PublicTypeFunctionClosure,
+    ) {
+        match ty {
+            CanonicalTypeExpr::Primitive(_) | CanonicalTypeExpr::Var(_) => {}
+            CanonicalTypeExpr::NominalApp { origin, args, .. } => {
+                closure.ordinary_types.insert(origin.clone());
+                for arg in args {
+                    self.collect_public_canonical_type_closure(arg, closure);
+                }
+            }
+            CanonicalTypeExpr::Projection {
+                interface,
+                member,
+                args,
+                ..
+            } => {
+                closure
+                    .projections
+                    .insert((interface.clone(), member.clone()));
+                for arg in args {
+                    self.collect_public_canonical_type_closure(arg, closure);
+                }
+            }
+            CanonicalTypeExpr::ComputationHeadApp { head, args, .. } => {
+                self.collect_public_type_function_head_closure(head, closure);
+                for arg in args {
+                    self.collect_public_canonical_type_closure(arg, closure);
+                }
+            }
+        }
+    }
+
+    fn collect_public_pattern_closure(
+        &self,
+        pattern: &TypeFunctionPattern,
+        closure: &mut PublicTypeFunctionClosure,
+    ) {
+        match pattern {
+            TypeFunctionPattern::DomainConstructor { domain, fields, .. } => {
+                closure.sealed_domains.insert((**domain).clone());
+                for field in fields {
+                    self.collect_public_pattern_closure(field, closure);
+                }
+            }
+            TypeFunctionPattern::Var { constraint, .. }
+            | TypeFunctionPattern::Wildcard { constraint, .. } => {
+                if let TypeFunctionPatternConstraint::Domain(domain) = constraint {
+                    closure.sealed_domains.insert(domain.clone());
+                }
+            }
+        }
+    }
+
+    fn collect_public_result_closure(
+        &self,
+        expr: &TypeFunctionResultExpr,
+        closure: &mut PublicTypeFunctionClosure,
+    ) {
+        match expr {
+            TypeFunctionResultExpr::Primitive { constraint, .. }
+            | TypeFunctionResultExpr::Var { constraint, .. } => {
+                Self::collect_result_constraint_closure(constraint, closure);
+            }
+            TypeFunctionResultExpr::NominalApp {
+                origin,
+                args,
+                constraint,
+                ..
+            } => {
+                closure.ordinary_types.insert(origin.clone());
+                Self::collect_result_constraint_closure(constraint, closure);
+                for arg in args {
+                    self.collect_public_result_closure(arg, closure);
+                }
+            }
+            TypeFunctionResultExpr::DomainConstructorApp {
+                domain,
+                args,
+                constraint,
+                ..
+            } => {
+                closure.sealed_domains.insert(domain.clone());
+                Self::collect_result_constraint_closure(constraint, closure);
+                for arg in args {
+                    self.collect_public_result_closure(arg, closure);
+                }
+            }
+            TypeFunctionResultExpr::Projection {
+                interface,
+                member,
+                args,
+                constraint,
+                ..
+            } => {
+                closure
+                    .projections
+                    .insert((interface.clone(), member.clone()));
+                Self::collect_result_constraint_closure(constraint, closure);
+                for arg in args {
+                    self.collect_public_result_closure(arg, closure);
+                }
+            }
+            TypeFunctionResultExpr::ComputationHeadApp {
+                head,
+                args,
+                constraint,
+                ..
+            } => {
+                self.collect_public_type_function_head_closure(head, closure);
+                Self::collect_result_constraint_closure(constraint, closure);
+                for arg in args {
+                    self.collect_public_result_closure(arg, closure);
+                }
+            }
+        }
+    }
+
+    fn collect_result_constraint_closure(
+        constraint: &TypeFunctionResultConstraint,
+        closure: &mut PublicTypeFunctionClosure,
+    ) {
+        if let TypeFunctionResultConstraint::Domain(domain) = constraint {
+            closure.sealed_domains.insert(domain.clone());
+        }
     }
 
     fn register_local_type_functions_inner(
@@ -2466,15 +3648,6 @@ impl TypeEnv {
         def: &SurfaceTypeFnDef,
         later_names: &HashSet<String>,
     ) -> Result<TypeFunctionDef, TypeEnvError> {
-        if def.visibility.is_pub() {
-            return Err(TypeEnvError::InvalidDefinition(
-                format!(
-                    "type function '{}' cannot be public before SPEC-F summaries",
-                    def.name
-                ),
-                def.span,
-            ));
-        }
         let head = TypeComputationHeadId::new(module.clone(), def.name.to_string());
         let params = def
             .params
@@ -2584,7 +3757,7 @@ impl TypeEnv {
             def.header_span,
         )?;
 
-        Ok(TypeFunctionDef {
+        let lowered = TypeFunctionDef {
             visibility: core_visibility_from_surface(&def.visibility),
             head,
             name: def.name.to_string(),
@@ -2603,7 +3776,297 @@ impl TypeEnv {
                 }),
             },
             equations,
-        })
+        };
+        if lowered.visibility == ash_core::ast::Visibility::Public {
+            self.validate_public_type_function_export_closure(&lowered, def.span)?;
+        }
+        Ok(lowered)
+    }
+
+    fn validate_public_type_function_export_closure(
+        &self,
+        def: &TypeFunctionDef,
+        span: Span,
+    ) -> Result<(), TypeEnvError> {
+        for equation in &def.equations {
+            for pattern in &equation.patterns {
+                self.validate_public_type_function_pattern_export_closure(def, pattern, span)?;
+            }
+            self.validate_public_type_function_result_export_closure(def, &equation.result, span)?;
+        }
+        for param in &def.params {
+            if let Some(domain) = &param.domain_constraint {
+                self.ensure_public_type_function_domain_dependency(def, domain, span)?;
+            }
+            self.validate_public_canonical_type_dependency(def, &param.ty, span)?;
+        }
+        if let TypeFunctionResultConstraint::Domain(domain) = &def.result_constraint {
+            self.ensure_public_type_function_domain_dependency(def, domain, span)?;
+        }
+        self.validate_public_canonical_type_dependency(def, &def.return_type, span)
+    }
+
+    fn validate_public_type_function_pattern_export_closure(
+        &self,
+        def: &TypeFunctionDef,
+        pattern: &TypeFunctionPattern,
+        span: Span,
+    ) -> Result<(), TypeEnvError> {
+        match pattern {
+            TypeFunctionPattern::DomainConstructor {
+                constructor,
+                domain,
+                fields,
+                ..
+            } => {
+                self.ensure_public_type_function_constructor_dependency(def, constructor, span)?;
+                self.ensure_public_type_function_domain_dependency(def, domain, span)?;
+                for field in fields {
+                    self.validate_public_type_function_pattern_export_closure(def, field, span)?;
+                }
+                Ok(())
+            }
+            TypeFunctionPattern::Var { constraint, .. }
+            | TypeFunctionPattern::Wildcard { constraint, .. } => {
+                if let TypeFunctionPatternConstraint::Domain(domain) = constraint {
+                    self.ensure_public_type_function_domain_dependency(def, domain, span)?;
+                }
+                Ok(())
+            }
+        }
+    }
+
+    fn validate_public_type_function_result_export_closure(
+        &self,
+        def: &TypeFunctionDef,
+        expr: &TypeFunctionResultExpr,
+        span: Span,
+    ) -> Result<(), TypeEnvError> {
+        match expr {
+            TypeFunctionResultExpr::Primitive { .. } => Ok(()),
+            TypeFunctionResultExpr::Var { constraint, .. } => {
+                if let TypeFunctionResultConstraint::Domain(domain) = constraint {
+                    self.ensure_public_type_function_domain_dependency(def, domain, span)?;
+                }
+                Ok(())
+            }
+            TypeFunctionResultExpr::NominalApp {
+                visible_name, args, ..
+            } => {
+                self.ensure_public_type_function_ordinary_type_dependency(def, visible_name, span)?;
+                for arg in args {
+                    self.validate_public_type_function_result_export_closure(def, arg, span)?;
+                }
+                Ok(())
+            }
+            TypeFunctionResultExpr::DomainConstructorApp {
+                constructor,
+                domain,
+                args,
+                ..
+            } => {
+                self.ensure_public_type_function_constructor_dependency(def, constructor, span)?;
+                self.ensure_public_type_function_domain_dependency(def, domain, span)?;
+                for arg in args {
+                    self.validate_public_type_function_result_export_closure(def, arg, span)?;
+                }
+                Ok(())
+            }
+            TypeFunctionResultExpr::Projection {
+                interface,
+                member,
+                args,
+                ..
+            } => {
+                self.ensure_public_type_function_projection_dependency(
+                    def, interface, member, span,
+                )?;
+                for arg in args {
+                    self.validate_public_type_function_result_export_closure(def, arg, span)?;
+                }
+                Ok(())
+            }
+            TypeFunctionResultExpr::ComputationHeadApp { head, args, .. } => {
+                if head != &def.head {
+                    let Some(callee) = self.local_type_functions.get(head) else {
+                        return Err(TypeEnvError::InvalidDefinition(
+                            format!(
+                                "public type function '{}' export closure cannot resolve type function dependency '{}'",
+                                def.name, head.name
+                            ),
+                            span,
+                        ));
+                    };
+                    if callee.visibility != ash_core::ast::Visibility::Public {
+                        return Err(TypeEnvError::PrivateDependencyExportFailure {
+                            public_item: def.name.clone(),
+                            dependency: callee.name.clone(),
+                            dependency_kind: "type function".to_string(),
+                            span,
+                        });
+                    }
+                }
+                for arg in args {
+                    self.validate_public_type_function_result_export_closure(def, arg, span)?;
+                }
+                Ok(())
+            }
+        }
+    }
+
+    fn validate_public_canonical_type_dependency(
+        &self,
+        def: &TypeFunctionDef,
+        ty: &CanonicalTypeExpr,
+        span: Span,
+    ) -> Result<(), TypeEnvError> {
+        match ty {
+            CanonicalTypeExpr::Primitive(_) | CanonicalTypeExpr::Var(_) => Ok(()),
+            CanonicalTypeExpr::NominalApp {
+                visible_name, args, ..
+            } => {
+                self.ensure_public_type_function_ordinary_type_dependency(def, visible_name, span)?;
+                for arg in args {
+                    self.validate_public_canonical_type_dependency(def, arg, span)?;
+                }
+                Ok(())
+            }
+            CanonicalTypeExpr::Projection {
+                interface,
+                member,
+                args,
+                ..
+            } => {
+                self.ensure_public_type_function_projection_dependency(
+                    def, interface, member, span,
+                )?;
+                for arg in args {
+                    self.validate_public_canonical_type_dependency(def, arg, span)?;
+                }
+                Ok(())
+            }
+            CanonicalTypeExpr::ComputationHeadApp { args, .. } => {
+                for arg in args {
+                    self.validate_public_canonical_type_dependency(def, arg, span)?;
+                }
+                Ok(())
+            }
+        }
+    }
+
+    fn ensure_public_type_function_domain_dependency(
+        &self,
+        def: &TypeFunctionDef,
+        domain: &SealedDomainId,
+        span: Span,
+    ) -> Result<(), TypeEnvError> {
+        let Some(summary) = self.lookup_sealed_domain_by_id(domain) else {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "public type function '{}' export closure cannot resolve sealed domain '{}'",
+                    def.name, domain.name
+                ),
+                span,
+            ));
+        };
+        if summary.visibility != ash_core::ast::Visibility::Public {
+            return Err(TypeEnvError::PrivateDependencyExportFailure {
+                public_item: def.name.clone(),
+                dependency: summary.exported_name.clone(),
+                dependency_kind: "sealed domain".to_string(),
+                span: if anchor_span(&summary.anchor) == Span::default() {
+                    span
+                } else {
+                    anchor_span(&summary.anchor)
+                },
+            });
+        }
+        Ok(())
+    }
+
+    fn ensure_public_type_function_constructor_dependency(
+        &self,
+        def: &TypeFunctionDef,
+        constructor: &DomainConstructorId,
+        span: Span,
+    ) -> Result<(), TypeEnvError> {
+        let Some(domain) = self.lookup_sealed_domain_by_id(&constructor.domain) else {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "public type function '{}' export closure cannot resolve marker constructor '{}'",
+                    def.name, constructor.name
+                ),
+                span,
+            ));
+        };
+        if domain.visibility != ash_core::ast::Visibility::Public {
+            return Err(TypeEnvError::PrivateDependencyExportFailure {
+                public_item: def.name.clone(),
+                dependency: constructor.name.clone(),
+                dependency_kind: "marker constructor".to_string(),
+                span,
+            });
+        }
+        Ok(())
+    }
+
+    fn ensure_public_type_function_projection_dependency(
+        &self,
+        def: &TypeFunctionDef,
+        interface: &InterfaceIdentityId,
+        member: &AssociatedMemberIdentityId,
+        span: Span,
+    ) -> Result<(), TypeEnvError> {
+        if !self.known_interface_identities.contains(interface) {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "public type function '{}' export closure cannot resolve projection interface '{}'",
+                    def.name, interface.name
+                ),
+                span,
+            ));
+        }
+        if !self.known_associated_member_identities.contains(member)
+            || member.interface != *interface
+        {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "public type function '{}' export closure cannot resolve projection member '{}::{}'",
+                    def.name, interface.name, member.name
+                ),
+                span,
+            ));
+        }
+        if let Some(info) = self.interfaces.get(interface.name.as_str())
+            && info.visibility != ash_core::ast::Visibility::Public
+        {
+            return Err(TypeEnvError::PrivateDependencyExportFailure {
+                public_item: def.name.clone(),
+                dependency: format!("{}::{}", interface.name, member.name),
+                dependency_kind: "projection".to_string(),
+                span,
+            });
+        }
+        Ok(())
+    }
+
+    fn ensure_public_type_function_ordinary_type_dependency(
+        &self,
+        def: &TypeFunctionDef,
+        visible_name: &str,
+        span: Span,
+    ) -> Result<(), TypeEnvError> {
+        if let Some(type_def) = self.ast_types.get(visible_name)
+            && type_def.visibility != ash_core::ast::Visibility::Public
+        {
+            return Err(TypeEnvError::PrivateDependencyExportFailure {
+                public_item: def.name.clone(),
+                dependency: visible_name.to_string(),
+                dependency_kind: "ordinary type".to_string(),
+                span,
+            });
+        }
+        Ok(())
     }
 
     fn lower_type_fn_signature_type(
@@ -4577,6 +6040,7 @@ impl TypeEnv {
             interface_name.clone(),
             InterfaceInfo {
                 name: interface_name.clone(),
+                visibility: core_visibility_from_surface(&def.visibility),
                 type_params: interface_type_params.clone(),
                 associated_types: associated_types.clone(),
                 methods: HashMap::new(),
@@ -4607,6 +6071,7 @@ impl TypeEnv {
             interface_name.clone(),
             InterfaceInfo {
                 name: interface_name.clone(),
+                visibility: core_visibility_from_surface(&def.visibility),
                 type_params: interface_type_params.clone(),
                 associated_types: associated_types.clone(),
                 methods: methods.clone(),

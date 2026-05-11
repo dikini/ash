@@ -50,10 +50,28 @@ cleanup_cargo_fuzz_dir() {
 }
 trap cleanup_cargo_fuzz_dir RETURN
 
+run_with_cargo_fuzz=true
 if ! targets_output="$(cargo fuzz list 2>&1)"; then
-  echo "check-fuzz: cargo-fuzz harness detected but no runnable target list could be produced" >&2
-  echo "$targets_output" >&2
-  exit 1
+  # `crates/ash-fuzz` is a standalone fuzz crate, not the default
+  # `fuzz/Cargo.toml` layout that `cargo fuzz list` expects. Fall back to the
+  # explicit bin targets declared in the crate manifest so the pre-commit smoke
+  # gate still exercises a real libFuzzer target instead of failing before it
+  # can discover one.
+  if grep -q '^\[\[bin\]\]' Cargo.toml; then
+    run_with_cargo_fuzz=false
+    targets_output="$(awk '
+      /^\[\[bin\]\]/ { in_bin = 1; next }
+      in_bin && /^name = / {
+        gsub(/"/, "", $3);
+        print $3;
+        exit;
+      }
+    ' Cargo.toml)"
+  else
+    echo "check-fuzz: cargo-fuzz harness detected but no runnable target list could be produced" >&2
+    echo "$targets_output" >&2
+    exit 1
+  fi
 fi
 
 target="$(printf '%s\n' "$targets_output" | sed '/^$/d' | head -n 1 | awk '{print $1}')"
@@ -65,9 +83,19 @@ fi
 echo "fuzz: backend cargo-fuzz (ash-fuzz crate)"
 echo "fuzz: selected target $target"
 if [[ "$mode" == "smoke" ]]; then
-  echo "fuzz: running cargo fuzz run $target -- -max_total_time=1"
-  cargo fuzz run "$target" -- -max_total_time=1
+  if [[ "$run_with_cargo_fuzz" == true ]]; then
+    echo "fuzz: running cargo fuzz run $target -- -max_total_time=1"
+    cargo fuzz run "$target" -- -max_total_time=1
+  else
+    echo "fuzz: running cargo run --target-dir $ROOT/target/ash-fuzz-smoke --bin $target -- -runs=1"
+    cargo run --target-dir "$ROOT/target/ash-fuzz-smoke" --bin "$target" -- -runs=1
+  fi
 else
-  echo "fuzz: running cargo fuzz run $target -max_total_time=60"
-  cargo fuzz run "$target" -- -max_total_time=60
+  if [[ "$run_with_cargo_fuzz" == true ]]; then
+    echo "fuzz: running cargo fuzz run $target -max_total_time=60"
+    cargo fuzz run "$target" -- -max_total_time=60
+  else
+    echo "fuzz: running cargo run --target-dir $ROOT/target/ash-fuzz-smoke --bin $target -- -max_total_time=60"
+    cargo run --target-dir "$ROOT/target/ash-fuzz-smoke" --bin "$target" -- -max_total_time=60
+  fi
 fi

@@ -1,6 +1,6 @@
 # TASK-853: Import-order and re-export determinism
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -64,11 +64,26 @@ Dispatch a review/verification subagent with this task file, SPEC-062, and chang
 
 ## Completion Checklist
 
-- [ ] Requirements above are satisfied.
-- [ ] Focused tests exist and pass, or docs-only verification is recorded.
-- [ ] Negative leakage/private-opacity behavior is tested where applicable.
-- [ ] Status docs and CHANGELOG.md are updated if this task changes behavior or status.
-- [ ] Independent verification completed.
+- [x] Requirements above are satisfied.
+- [x] Focused tests exist and pass, or docs-only verification is recorded.
+- [x] Negative leakage/private-opacity behavior is tested where applicable.
+- [x] Status docs and CHANGELOG.md are updated if this task changes behavior or status.
+- [x] Independent verification completed.
+
+## Verification Evidence
+
+Completed focused verification for TASK-853:
+
+```bash
+cargo test -p ash-engine --test task_853_type_computation_import_order -- --nocapture
+cargo test -p ash-typeck --test task_851_imported_type_function_normalizer -- --nocapture
+cargo fmt --check
+git diff --check
+cargo check --workspace
+cargo clippy --workspace --all-targets --all-features -- -D warnings
+```
+
+Initial independent review found engine batch-registration, selected-summary compatibility, and named-import visibility/leakage proof gaps. Remediation batch-registers imported summaries in engine type-check paths, refuses to merge selected summary subsets with conflicting overlapping identity facts, extends named-import leakage coverage, and passed independent re-review with no remaining blockers.
 
 ## Dispatch
 
@@ -90,10 +105,10 @@ commands:
   - git diff --check
   - cargo check --workspace
 checklist:
-  - [ ] Implementation matches SPEC-062 and PLAN-110 scope
-  - [ ] Focused tests for this task pass
-  - [ ] Formatting and diff checks pass
-  - [ ] CHANGELOG.md updated if task changes code/docs policy/status
+  - [x] Implementation matches SPEC-062 and PLAN-110 scope
+  - [x] Focused tests for this task pass
+  - [x] Formatting and diff checks pass
+  - [x] CHANGELOG.md updated if task changes code/docs policy/status
 ```
 
 ## Dependencies for Next Task

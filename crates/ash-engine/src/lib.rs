@@ -1192,11 +1192,8 @@ impl Engine {
         if let Some(program) = self.get_surface_program(workflow.id) {
             // Build type environment with imported types and callable signatures.
             let mut type_env = ash_typeck::type_env::TypeEnv::with_builtin_types();
-            for summary in self.get_imported_semantic_summaries(workflow.id) {
-                type_env
-                    .register_module_semantic_summary(&summary)
-                    .map_err(|e| EngineError::Type(format!("imported type summary error: {e}")))?;
-            }
+            let imported_summaries = self.get_imported_semantic_summaries(workflow.id);
+            register_imported_semantic_summaries(&mut type_env, &imported_summaries)?;
             let mut imported_type_defs = self.get_imported_type_defs(workflow.id);
             imported_type_defs.extend(self.runtime_stdlib_type_defs()?);
             register_imported_type_defs(&mut type_env, imported_type_defs)?;
@@ -1230,11 +1227,8 @@ impl Engine {
 
             // Build type environment with imported callable signatures
             let mut type_env = ash_typeck::type_env::TypeEnv::with_builtin_types();
-            for summary in self.get_imported_semantic_summaries(workflow.id) {
-                type_env
-                    .register_module_semantic_summary(&summary)
-                    .map_err(|e| EngineError::Type(format!("imported type summary error: {e}")))?;
-            }
+            let imported_summaries = self.get_imported_semantic_summaries(workflow.id);
+            register_imported_semantic_summaries(&mut type_env, &imported_summaries)?;
             let mut imported_type_defs = self.get_imported_type_defs(workflow.id);
             imported_type_defs.extend(self.runtime_stdlib_type_defs()?);
             register_imported_type_defs(&mut type_env, imported_type_defs)?;
@@ -1269,11 +1263,8 @@ impl Engine {
         imported_type_defs.extend(self.runtime_stdlib_type_defs()?);
 
         let mut type_env = ash_typeck::TypeEnv::with_builtin_types();
-        for summary in self.get_imported_semantic_summaries(workflow.id) {
-            type_env
-                .register_module_semantic_summary(&summary)
-                .map_err(|e| EngineError::Type(format!("imported type summary error: {e}")))?;
-        }
+        let imported_summaries = self.get_imported_semantic_summaries(workflow.id);
+        register_imported_semantic_summaries(&mut type_env, &imported_summaries)?;
         register_imported_type_defs(&mut type_env, imported_type_defs)?;
         // Register imported callable signatures
         bind_imported_callable_types(&mut type_env, workflow)?;
@@ -1772,6 +1763,15 @@ impl Engine {
         let source = std::fs::read_to_string(path).map_err(EngineError::Io)?;
         self.bootstrap_entry_source(&source).await
     }
+}
+
+fn register_imported_semantic_summaries(
+    type_env: &mut ash_typeck::TypeEnv,
+    summaries: &[ash_core::semantic_summary::ModuleSemanticSummary],
+) -> Result<(), EngineError> {
+    type_env
+        .register_module_semantic_summaries(summaries)
+        .map_err(|error| EngineError::Type(format!("imported type summary error: {error}")))
 }
 
 fn register_imported_type_defs(

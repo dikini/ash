@@ -758,10 +758,13 @@ fn imported_summary_type_set_matches(
     if left.module != right.module || left.version != right.version {
         return false;
     }
-    if left.exported_sealed_domains != right.exported_sealed_domains
-        || left.exported_type_functions != right.exported_type_functions
-        || left.imported_summary_refs != right.imported_summary_refs
-    {
+    if left.imported_summary_refs != right.imported_summary_refs {
+        return false;
+    }
+    if !left.exported_type_functions.is_empty() || !right.exported_type_functions.is_empty() {
+        return selected_summary_identity_facts_are_compatible(left, right);
+    }
+    if left.exported_sealed_domains != right.exported_sealed_domains {
         return false;
     }
     let mut left_types = left
@@ -777,6 +780,56 @@ fn imported_summary_type_set_matches(
     left_types.sort_unstable_by_key(|item| format!("{item:?}"));
     right_types.sort_unstable_by_key(|item| format!("{item:?}"));
     left_types == right_types
+}
+
+fn selected_summary_identity_facts_are_compatible(
+    left: &ModuleSemanticSummary,
+    right: &ModuleSemanticSummary,
+) -> bool {
+    left.exported_type_functions
+        .iter()
+        .all(|left_type_function| {
+            right
+                .exported_type_functions
+                .iter()
+                .find(|right_type_function| right_type_function.head == left_type_function.head)
+                .is_none_or(|right_type_function| right_type_function == left_type_function)
+        })
+        && left.exported_sealed_domains.iter().all(|left_domain| {
+            right
+                .exported_sealed_domains
+                .iter()
+                .find(|right_domain| right_domain.id == left_domain.id)
+                .is_none_or(|right_domain| right_domain == left_domain)
+        })
+        && left.exported_types.iter().all(|left_type| {
+            right
+                .exported_types
+                .iter()
+                .find(|right_type| right_type.id == left_type.id)
+                .is_none_or(|right_type| right_type == left_type)
+        })
+        && left.exported_constructors.iter().all(|left_constructor| {
+            right
+                .exported_constructors
+                .iter()
+                .find(|right_constructor| right_constructor.id == left_constructor.id)
+                .is_none_or(|right_constructor| right_constructor == left_constructor)
+        })
+        && left.interface_identities.iter().all(|left_interface| {
+            right
+                .interface_identities
+                .iter()
+                .find(|right_interface| right_interface.id == left_interface.id)
+                .is_none_or(|right_interface| right_interface == left_interface)
+        })
+        && left.associated_member_identities.iter().all(|left_member| {
+            right
+                .associated_member_identities
+                .iter()
+                .find(|right_member| right_member.id == left_member.id)
+                .is_none_or(|right_member| right_member == left_member)
+        })
 }
 
 fn push_selected_constructor_semantic_summary(

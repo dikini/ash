@@ -3347,7 +3347,7 @@ Phase 114 implements SPEC-F from DESIGN-034. It defines the public module-summar
 | [TASK-850](tasks/TASK-850-summary-versioning-cache-invalidation.md) | Summary versioning, dedup, and cache invalidation | 5 | ✅ Complete |
 | [TASK-851](tasks/TASK-851-typeenv-imported-head-registration-normalizer.md) | TypeEnv imported public head registration and normalizer integration | 9 | ✅ Complete |
 | [TASK-852](tasks/TASK-852-private-opacity-unavailable-reduction-diagnostics.md) | Private opacity and unavailable-reduction diagnostics | 5 | ✅ Complete |
-| [TASK-853](tasks/TASK-853-import-order-reexport-determinism.md) | Import-order/re-export determinism and identity preservation | 6 | 📝 Planned |
+| [TASK-853](tasks/TASK-853-import-order-reexport-determinism.md) | Import-order/re-export determinism and identity preservation | 6 | ✅ Complete |
 | [TASK-854](tasks/TASK-854-spec-f-acceptance-non-interference-matrix.md) | SPEC-F acceptance and non-interference matrix | 6 | 📝 Planned |
 | [TASK-855](tasks/TASK-855-spec-f-closeout-docs-and-verification.md) | SPEC-F closeout docs and verification | 4 | 📝 Planned |
 | [TASK-856](tasks/TASK-856-phase114-review-remediation.md) | Phase 114 review remediation | 6 | 📝 Planned |

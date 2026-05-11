@@ -29,7 +29,7 @@
 | [TASK-850](tasks/TASK-850-summary-versioning-cache-invalidation.md) | Add summary version/cache/dedup invalidation for computation facts | Core/Engine | 5 | ✅ Complete |
 | [TASK-851](tasks/TASK-851-typeenv-imported-head-registration-normalizer.md) | Batch-register imported public heads/equations and normalize downstream | Typeck/Normalizer | 9 | ✅ Complete |
 | [TASK-852](tasks/TASK-852-private-opacity-unavailable-reduction-diagnostics.md) | Add private-opacity and unavailable-reduction diagnostics | Diagnostics | 5 | ✅ Complete |
-| [TASK-853](tasks/TASK-853-import-order-reexport-determinism.md) | Prove named/glob/pub-use import-order determinism and identity preservation | Engine/Tests | 6 | 📝 Planned |
+| [TASK-853](tasks/TASK-853-import-order-reexport-determinism.md) | Prove named/glob/pub-use import-order determinism and identity preservation | Engine/Tests | 6 | ✅ Complete |
 | [TASK-854](tasks/TASK-854-spec-f-acceptance-non-interference-matrix.md) | Own the DESIGN-034 §16.6 acceptance/non-interference matrix | Tests | 6 | 📝 Planned |
 | [TASK-855](tasks/TASK-855-spec-f-closeout-docs-and-verification.md) | Reconcile docs/status/changelog and record closeout verification | Docs/Planning | 4 | 📝 Planned |
 | [TASK-856](tasks/TASK-856-phase114-review-remediation.md) | Remediate independent post-closeout review findings | Review/Hardening | 6 | 📝 Planned |

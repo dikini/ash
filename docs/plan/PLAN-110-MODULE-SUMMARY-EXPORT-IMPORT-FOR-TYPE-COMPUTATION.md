@@ -25,7 +25,7 @@
 | [TASK-846](tasks/TASK-846-parser-public-type-fn-visibility.md) | Preserve `pub type fn` parser surface for SPEC-F validation | Parser | 4 | ✅ Complete |
 | [TASK-847](tasks/TASK-847-typeck-public-export-closure-validation.md) | Validate public/private export closure for public type functions | Typeck/Semantic | 8 | ✅ Complete |
 | [TASK-848](tasks/TASK-848-transparent-public-equation-summary-lowering.md) | Lower export-closed public equations into transparent public summaries | Typeck/Core | 8 | ✅ Complete |
-| [TASK-849](tasks/TASK-849-engine-summary-transport-reconciliation.md) | Transport/reconcile public computation summaries through engine imports | Engine/Integration | 8 | 📝 Planned |
+| [TASK-849](tasks/TASK-849-engine-summary-transport-reconciliation.md) | Transport/reconcile public computation summaries through engine imports | Engine/Integration | 8 | ✅ Complete |
 | [TASK-850](tasks/TASK-850-summary-versioning-cache-invalidation.md) | Add summary version/cache/dedup invalidation for computation facts | Core/Engine | 5 | 📝 Planned |
 | [TASK-851](tasks/TASK-851-typeenv-imported-head-registration-normalizer.md) | Batch-register imported public heads/equations and normalize downstream | Typeck/Normalizer | 9 | 📝 Planned |
 | [TASK-852](tasks/TASK-852-private-opacity-unavailable-reduction-diagnostics.md) | Add private-opacity and unavailable-reduction diagnostics | Diagnostics | 5 | 📝 Planned |
@@ -87,7 +87,7 @@ Every task uses subagent-driven development and independent verification before 
 - [x] TASK-844 audit artifact created before Rust implementation.
 - [x] Core summary schema/versioning implemented and tested, including V1/V2 non-empty computation-field rejection.
 - [x] Public `pub type fn` export closure implemented and tested.
-- [ ] Engine transport/reconciliation implemented and tested, including normalizer-available dependency closure without source-visible helper leakage.
+- [x] Engine transport/reconciliation implemented and tested, including normalizer-available dependency closure without source-visible helper leakage.
 - [ ] TypeEnv imported public computation-head registration implemented and tested, including import-side SPEC-061 invariant revalidation before normalizer registration.
 - [ ] Acceptance/non-interference matrix maps every SPEC-062 §13 row to focused tests or recorded evidence and passes.
 - [ ] Broad workspace verification recorded.

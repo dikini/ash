@@ -1,6 +1,6 @@
 # TASK-849: Engine summary transport reconciliation
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -66,11 +66,31 @@ Dispatch a review/verification subagent with this task file, SPEC-062, and chang
 
 ## Completion Checklist
 
-- [ ] Requirements above are satisfied.
-- [ ] Focused tests exist and pass, or docs-only verification is recorded.
-- [ ] Negative leakage/private-opacity behavior is tested where applicable.
-- [ ] Status docs and CHANGELOG.md are updated if this task changes behavior or status.
-- [ ] Independent verification completed.
+- [x] Requirements above are satisfied.
+- [x] Focused tests exist and pass, or docs-only verification is recorded.
+- [x] Negative leakage/private-opacity behavior is tested where applicable.
+- [x] Status docs and CHANGELOG.md are updated if this task changes behavior or status.
+- [x] Independent verification completed.
+
+## Completion Notes
+
+- Extended `ash-engine::module_loader::ModuleExports` with an engine-private public type-function summary selection index while keeping semantic ownership in `ash_core::semantic_summary::ModuleSemanticSummary`.
+- Direct named imports, glob imports, and `pub use` re-exports now transport selected public computation summaries plus dependency-closure helper heads, sealed-domain/type/projection metadata, dependency refs, and V3 summary versioning without making dependency-only helper heads ordinary source-visible imports.
+- Summary merge/dedup keys now include summary version, sealed domains, exported type-function summaries/equations, and computation dependency refs; duplicate public type-function re-exports are rejected rather than silently overwritten.
+- Imported TypeEnv registration and downstream normalizer lookup remain TASK-851 scope.
+
+## Verification Evidence
+
+```text
+cargo test -p ash-engine --test task_849_type_computation_summary_transport -- --nocapture
+cargo test -p ash-engine --test task_839_type_function_module_boundary -- --nocapture
+cargo fmt --check
+git diff --check
+cargo check --workspace
+cargo clippy -p ash-engine --all-targets --all-features -- -D warnings
+```
+
+All commands passed locally (`task_849_type_computation_summary_transport`: 6 passed; `task_839_type_function_module_boundary`: 4 passed). Independent verification was run in multiple remediation rounds; the final focused blocking-only review reported no blocking findings.
 
 ## Dispatch
 
@@ -93,10 +113,10 @@ commands:
   - cargo check --workspace
   - cargo clippy -p ash-engine --all-targets --all-features -- -D warnings
 checklist:
-  - [ ] Implementation matches SPEC-062 and PLAN-110 scope
-  - [ ] Focused tests for this task pass
-  - [ ] Formatting and diff checks pass
-  - [ ] CHANGELOG.md updated if task changes code/docs policy/status
+  - [x] Implementation matches SPEC-062 and PLAN-110 scope
+  - [x] Focused tests for this task pass
+  - [x] Formatting and diff checks pass
+  - [x] CHANGELOG.md updated if task changes code/docs policy/status
 ```
 
 ## Dependencies for Next Task

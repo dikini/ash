@@ -57,6 +57,8 @@ Research and design explorations for OTP-like supervision, fault tolerance, and 
 |----|-------|--------|--------------|-------|
 | OTP-001 | [Erlang/OTP Architecture Analysis](otp/OTP-001-erlang-otp-analysis.md) | `drafting` | 2026-03-31 | Comprehensive analysis of gen_server and supervisor behaviors |
 | OTP-002 | [Ash OTP Design Considerations](otp/OTP-002-ash-otp-design.md) | `drafting` | 2026-03-31 | Design options for OTP-like functionality in Ash |
+| OTP-003 | [GenServer-like Design Patterns for Ash](otp/OTP-003-genserver-design-patterns.md) | `drafting` | 2026-05-11 | Compares reducer, callback dictionary, capability-backed, Proc, Workflow, resource, protocol, codegen, and supervisor-first GenServer-like patterns with examples and gap inventory |
+| OTP-004 | [Harnessed Worker / Bisimulation-like Control Patterns for Ash](otp/OTP-004-harnessed-worker-bisimulation-patterns.md) | `drafting` | 2026-05-11 | Compares product-state reference, lockstep controller/worker, shadow-model, evidence-carrying, capability-membrane, event-log, workflow-governed, typed-protocol, supervisor, and N-version harness patterns for pure-Ash LLM workflow control examples |
 
 ### Future / Deferred
 

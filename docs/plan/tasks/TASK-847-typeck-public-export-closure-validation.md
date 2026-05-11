@@ -1,6 +1,6 @@
 # TASK-847: Typeck public export-closure validation
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -64,11 +64,35 @@ Dispatch a review/verification subagent with this task file, SPEC-062, and chang
 
 ## Completion Checklist
 
-- [ ] Requirements above are satisfied.
-- [ ] Focused tests exist and pass, or docs-only verification is recorded.
-- [ ] Negative leakage/private-opacity behavior is tested where applicable.
-- [ ] Status docs and CHANGELOG.md are updated if this task changes behavior or status.
-- [ ] Independent verification completed.
+- [x] Requirements above are satisfied.
+- [x] Focused tests exist and pass, or docs-only verification is recorded.
+- [x] Negative leakage/private-opacity behavior is tested where applicable.
+- [x] Status docs and CHANGELOG.md are updated if this task changes behavior or status.
+- [x] Independent verification completed.
+
+## Completion Notes
+
+- Added focused TDD coverage in `crates/ash-typeck/tests/task_847_type_function_export_closure.rs` for export-closed `pub type fn` acceptance, public helper acceptance, and rejection of private helper type functions, private local sealed domains/marker constructors, and private ordinary type identities in public type-function closure.
+- Removed the typechecker blanket rejection of `pub type fn` and added `TypeEnv` export-closure validation over checked local type-function definitions before publication.
+- Kept TASK-848 scope out: no public `TypeFunctionSummary` emission or import/normalizer changes were added.
+- Updated the SPEC-061 task_835 suite to preserve prior validation while reflecting that export-closed public declarations now register.
+- Independent verification note: a separate review subagent inspected the live diff after implementation and reported no blocking findings; stale evidence counts were corrected from the review feedback.
+
+## Verification Evidence
+
+```text
+RED:
+- cargo test -p ash-typeck --test task_847_type_function_export_closure -- --nocapture
+  failed before implementation because TypeEnv lacked local private-domain test support and still blanket-rejected `pub type fn` before SPEC-F summaries.
+
+GREEN:
+- cargo test -p ash-typeck --test task_847_type_function_export_closure -- --nocapture: 8 passed
+- cargo test -p ash-typeck --test task_835_type_function_validation -- --nocapture: 21 passed
+- cargo fmt --check: passed
+- git diff --check: passed
+- cargo check --workspace: passed
+- cargo clippy -p ash-typeck --all-targets --all-features -- -D warnings: passed
+```
 
 ## Dispatch
 
@@ -91,10 +115,10 @@ commands:
   - cargo check --workspace
   - cargo clippy -p ash-typeck --all-targets --all-features -- -D warnings
 checklist:
-  - [ ] Implementation matches SPEC-062 and PLAN-110 scope
-  - [ ] Focused tests for this task pass
-  - [ ] Formatting and diff checks pass
-  - [ ] CHANGELOG.md updated if task changes code/docs policy/status
+  - [x] Implementation matches SPEC-062 and PLAN-110 scope
+  - [x] Focused tests for this task pass
+  - [x] Formatting and diff checks pass
+  - [x] CHANGELOG.md updated if task changes code/docs policy/status
 ```
 
 ## Dependencies for Next Task

@@ -266,6 +266,8 @@ pub struct InterfaceMethodInfo {
 pub struct InterfaceInfo {
     /// Interface name.
     pub name: String,
+    /// Source/interface visibility used by public export-closure checks.
+    pub visibility: ash_core::ast::Visibility,
     /// Interface-level type parameter names.
     pub type_params: Vec<String>,
     /// Associated types declared by the interface.
@@ -1848,6 +1850,14 @@ impl TypeEnv {
         self.type_info.insert(type_name, type_info);
         self.type_declaration_states
             .insert(def.name.clone(), TypeDeclarationState::Full);
+        self.type_alias_identities
+            .entry(def.name.clone())
+            .or_insert_with(|| fallback_canonical_type_decl_id(&def.name));
+        if let Some(identity) = self.type_alias_identities.get(&def.name).cloned() {
+            self.canonical_type_names
+                .entry(identity)
+                .or_insert_with(|| def.name.clone());
+        }
         Ok(())
     }
 
@@ -2401,6 +2411,22 @@ impl TypeEnv {
         Ok(())
     }
 
+    /// Register a local sealed-domain summary for source declarations in the current module.
+    ///
+    /// Unlike `register_module_semantic_summary`, this does not require public visibility because
+    /// it models same-module domains before export filtering. Public export validation rejects any
+    /// `pub type fn` whose checked equations depend on private domains or marker constructors.
+    pub fn register_local_sealed_domain_summary(
+        &mut self,
+        domain: &SealedDomainSummary,
+    ) -> Result<(), TypeEnvError> {
+        let mut staged = self.clone();
+        staged.declare_sealed_domain_identity(domain)?;
+        staged.validate_and_register_sealed_domain(domain)?;
+        *self = staged;
+        Ok(())
+    }
+
     /// Look up a published module-local type function by source name.
     #[must_use]
     pub fn lookup_local_type_function(&self, name: &str) -> Option<&TypeFunctionDef> {
@@ -2466,15 +2492,6 @@ impl TypeEnv {
         def: &SurfaceTypeFnDef,
         later_names: &HashSet<String>,
     ) -> Result<TypeFunctionDef, TypeEnvError> {
-        if def.visibility.is_pub() {
-            return Err(TypeEnvError::InvalidDefinition(
-                format!(
-                    "type function '{}' cannot be public before SPEC-F summaries",
-                    def.name
-                ),
-                def.span,
-            ));
-        }
         let head = TypeComputationHeadId::new(module.clone(), def.name.to_string());
         let params = def
             .params
@@ -2584,7 +2601,7 @@ impl TypeEnv {
             def.header_span,
         )?;
 
-        Ok(TypeFunctionDef {
+        let lowered = TypeFunctionDef {
             visibility: core_visibility_from_surface(&def.visibility),
             head,
             name: def.name.to_string(),
@@ -2603,7 +2620,298 @@ impl TypeEnv {
                 }),
             },
             equations,
-        })
+        };
+        if lowered.visibility == ash_core::ast::Visibility::Public {
+            self.validate_public_type_function_export_closure(&lowered, def.span)?;
+        }
+        Ok(lowered)
+    }
+
+    fn validate_public_type_function_export_closure(
+        &self,
+        def: &TypeFunctionDef,
+        span: Span,
+    ) -> Result<(), TypeEnvError> {
+        for equation in &def.equations {
+            for pattern in &equation.patterns {
+                self.validate_public_type_function_pattern_export_closure(def, pattern, span)?;
+            }
+            self.validate_public_type_function_result_export_closure(def, &equation.result, span)?;
+        }
+        for param in &def.params {
+            if let Some(domain) = &param.domain_constraint {
+                self.ensure_public_type_function_domain_dependency(def, domain, span)?;
+            }
+            self.validate_public_canonical_type_dependency(def, &param.ty, span)?;
+        }
+        if let TypeFunctionResultConstraint::Domain(domain) = &def.result_constraint {
+            self.ensure_public_type_function_domain_dependency(def, domain, span)?;
+        }
+        self.validate_public_canonical_type_dependency(def, &def.return_type, span)
+    }
+
+    fn validate_public_type_function_pattern_export_closure(
+        &self,
+        def: &TypeFunctionDef,
+        pattern: &TypeFunctionPattern,
+        span: Span,
+    ) -> Result<(), TypeEnvError> {
+        match pattern {
+            TypeFunctionPattern::DomainConstructor {
+                constructor,
+                domain,
+                fields,
+                ..
+            } => {
+                self.ensure_public_type_function_constructor_dependency(def, constructor, span)?;
+                self.ensure_public_type_function_domain_dependency(def, domain, span)?;
+                for field in fields {
+                    self.validate_public_type_function_pattern_export_closure(def, field, span)?;
+                }
+                Ok(())
+            }
+            TypeFunctionPattern::Var { constraint, .. }
+            | TypeFunctionPattern::Wildcard { constraint, .. } => {
+                if let TypeFunctionPatternConstraint::Domain(domain) = constraint {
+                    self.ensure_public_type_function_domain_dependency(def, domain, span)?;
+                }
+                Ok(())
+            }
+        }
+    }
+
+    fn validate_public_type_function_result_export_closure(
+        &self,
+        def: &TypeFunctionDef,
+        expr: &TypeFunctionResultExpr,
+        span: Span,
+    ) -> Result<(), TypeEnvError> {
+        match expr {
+            TypeFunctionResultExpr::Primitive { .. } => Ok(()),
+            TypeFunctionResultExpr::Var { constraint, .. } => {
+                if let TypeFunctionResultConstraint::Domain(domain) = constraint {
+                    self.ensure_public_type_function_domain_dependency(def, domain, span)?;
+                }
+                Ok(())
+            }
+            TypeFunctionResultExpr::NominalApp {
+                visible_name, args, ..
+            } => {
+                self.ensure_public_type_function_ordinary_type_dependency(def, visible_name, span)?;
+                for arg in args {
+                    self.validate_public_type_function_result_export_closure(def, arg, span)?;
+                }
+                Ok(())
+            }
+            TypeFunctionResultExpr::DomainConstructorApp {
+                constructor,
+                domain,
+                args,
+                ..
+            } => {
+                self.ensure_public_type_function_constructor_dependency(def, constructor, span)?;
+                self.ensure_public_type_function_domain_dependency(def, domain, span)?;
+                for arg in args {
+                    self.validate_public_type_function_result_export_closure(def, arg, span)?;
+                }
+                Ok(())
+            }
+            TypeFunctionResultExpr::Projection {
+                interface,
+                member,
+                args,
+                ..
+            } => {
+                self.ensure_public_type_function_projection_dependency(
+                    def, interface, member, span,
+                )?;
+                for arg in args {
+                    self.validate_public_type_function_result_export_closure(def, arg, span)?;
+                }
+                Ok(())
+            }
+            TypeFunctionResultExpr::ComputationHeadApp { head, args, .. } => {
+                if head != &def.head {
+                    let Some(callee) = self.local_type_functions.get(head) else {
+                        return Err(TypeEnvError::InvalidDefinition(
+                            format!(
+                                "public type function '{}' export closure cannot resolve type function dependency '{}'",
+                                def.name, head.name
+                            ),
+                            span,
+                        ));
+                    };
+                    if callee.visibility != ash_core::ast::Visibility::Public {
+                        return Err(TypeEnvError::InvalidDefinition(
+                            format!(
+                                "public type function '{}' depends on private type function '{}'",
+                                def.name, callee.name
+                            ),
+                            span,
+                        ));
+                    }
+                }
+                for arg in args {
+                    self.validate_public_type_function_result_export_closure(def, arg, span)?;
+                }
+                Ok(())
+            }
+        }
+    }
+
+    fn validate_public_canonical_type_dependency(
+        &self,
+        def: &TypeFunctionDef,
+        ty: &CanonicalTypeExpr,
+        span: Span,
+    ) -> Result<(), TypeEnvError> {
+        match ty {
+            CanonicalTypeExpr::Primitive(_) | CanonicalTypeExpr::Var(_) => Ok(()),
+            CanonicalTypeExpr::NominalApp {
+                visible_name, args, ..
+            } => {
+                self.ensure_public_type_function_ordinary_type_dependency(def, visible_name, span)?;
+                for arg in args {
+                    self.validate_public_canonical_type_dependency(def, arg, span)?;
+                }
+                Ok(())
+            }
+            CanonicalTypeExpr::Projection {
+                interface,
+                member,
+                args,
+                ..
+            } => {
+                self.ensure_public_type_function_projection_dependency(
+                    def, interface, member, span,
+                )?;
+                for arg in args {
+                    self.validate_public_canonical_type_dependency(def, arg, span)?;
+                }
+                Ok(())
+            }
+            CanonicalTypeExpr::ComputationHeadApp { args, .. } => {
+                for arg in args {
+                    self.validate_public_canonical_type_dependency(def, arg, span)?;
+                }
+                Ok(())
+            }
+        }
+    }
+
+    fn ensure_public_type_function_domain_dependency(
+        &self,
+        def: &TypeFunctionDef,
+        domain: &SealedDomainId,
+        span: Span,
+    ) -> Result<(), TypeEnvError> {
+        let Some(summary) = self.lookup_sealed_domain_by_id(domain) else {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "public type function '{}' export closure cannot resolve sealed domain '{}'",
+                    def.name, domain.name
+                ),
+                span,
+            ));
+        };
+        if summary.visibility != ash_core::ast::Visibility::Public {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "public type function '{}' depends on private sealed domain '{}'",
+                    def.name, summary.exported_name
+                ),
+                span,
+            ));
+        }
+        Ok(())
+    }
+
+    fn ensure_public_type_function_constructor_dependency(
+        &self,
+        def: &TypeFunctionDef,
+        constructor: &DomainConstructorId,
+        span: Span,
+    ) -> Result<(), TypeEnvError> {
+        let Some(domain) = self.lookup_sealed_domain_by_id(&constructor.domain) else {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "public type function '{}' export closure cannot resolve marker constructor '{}'",
+                    def.name, constructor.name
+                ),
+                span,
+            ));
+        };
+        if domain.visibility != ash_core::ast::Visibility::Public {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "public type function '{}' depends on private marker constructor '{}'",
+                    def.name, constructor.name
+                ),
+                span,
+            ));
+        }
+        Ok(())
+    }
+
+    fn ensure_public_type_function_projection_dependency(
+        &self,
+        def: &TypeFunctionDef,
+        interface: &InterfaceIdentityId,
+        member: &AssociatedMemberIdentityId,
+        span: Span,
+    ) -> Result<(), TypeEnvError> {
+        if !self.known_interface_identities.contains(interface) {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "public type function '{}' export closure cannot resolve projection interface '{}'",
+                    def.name, interface.name
+                ),
+                span,
+            ));
+        }
+        if !self.known_associated_member_identities.contains(member)
+            || member.interface != *interface
+        {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "public type function '{}' export closure cannot resolve projection member '{}::{}'",
+                    def.name, interface.name, member.name
+                ),
+                span,
+            ));
+        }
+        if let Some(info) = self.interfaces.get(interface.name.as_str())
+            && info.visibility != ash_core::ast::Visibility::Public
+        {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "public type function '{}' depends on private projection '{}::{}'",
+                    def.name, interface.name, member.name
+                ),
+                span,
+            ));
+        }
+        Ok(())
+    }
+
+    fn ensure_public_type_function_ordinary_type_dependency(
+        &self,
+        def: &TypeFunctionDef,
+        visible_name: &str,
+        span: Span,
+    ) -> Result<(), TypeEnvError> {
+        if let Some(type_def) = self.ast_types.get(visible_name)
+            && type_def.visibility != ash_core::ast::Visibility::Public
+        {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "public type function '{}' depends on private ordinary type '{}'",
+                    def.name, visible_name
+                ),
+                span,
+            ));
+        }
+        Ok(())
     }
 
     fn lower_type_fn_signature_type(
@@ -4577,6 +4885,7 @@ impl TypeEnv {
             interface_name.clone(),
             InterfaceInfo {
                 name: interface_name.clone(),
+                visibility: core_visibility_from_surface(&def.visibility),
                 type_params: interface_type_params.clone(),
                 associated_types: associated_types.clone(),
                 methods: HashMap::new(),
@@ -4607,6 +4916,7 @@ impl TypeEnv {
             interface_name.clone(),
             InterfaceInfo {
                 name: interface_name.clone(),
+                visibility: core_visibility_from_surface(&def.visibility),
                 type_params: interface_type_params.clone(),
                 associated_types: associated_types.clone(),
                 methods: methods.clone(),

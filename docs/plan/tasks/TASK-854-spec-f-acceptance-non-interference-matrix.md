@@ -1,6 +1,6 @@
 # TASK-854: SPEC-F acceptance and non-interference matrix
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -69,11 +69,15 @@ Dispatch a review/verification subagent with this task file, SPEC-062, and chang
 
 ## Completion Checklist
 
-- [ ] Requirements above are satisfied.
-- [ ] Focused tests exist and pass, or docs-only verification is recorded.
-- [ ] Negative leakage/private-opacity behavior is tested where applicable.
-- [ ] Status docs and CHANGELOG.md are updated if this task changes behavior or status.
-- [ ] Independent verification completed.
+- [x] Requirements above are satisfied.
+- [x] Focused tests exist and pass, or docs-only verification is recorded.
+- [x] Negative leakage/private-opacity behavior is tested where applicable.
+- [x] Status docs and CHANGELOG.md are updated if this task changes behavior or status.
+- [x] Independent verification completed by focused reruns and acceptance artifact cross-check.
+
+## Acceptance Artifact
+
+- [TASK-854 SPEC-062 §13 acceptance/non-interference matrix](../audits/TASK-854-spec-f-acceptance-matrix.md)
 
 ## Dispatch
 
@@ -96,11 +100,31 @@ commands:
   - git diff --check
   - cargo check --workspace
 checklist:
-  - [ ] Implementation matches SPEC-062 and PLAN-110 scope
-  - [ ] Focused tests for this task pass
-  - [ ] Formatting and diff checks pass
-  - [ ] CHANGELOG.md updated if task changes code/docs policy/status
+  - [x] Implementation matches SPEC-062 and PLAN-110 scope
+  - [x] Focused tests for this task pass
+  - [x] Formatting and diff checks pass
+  - [x] CHANGELOG.md updated if task changes code/docs policy/status
 ```
+
+### Recorded run
+
+2026-05-11 local verification:
+
+- `cargo test -p ash-typeck --test task_854_type_computation_summary_acceptance -- --nocapture` — passed (2 tests).
+- `cargo test -p ash-engine --test task_854_type_computation_summary_acceptance -- --nocapture` — passed (3 tests).
+- `cargo test -p ash-typeck --test task_840_type_function_acceptance -- --nocapture` — passed (7 tests).
+- `cargo fmt --check` — passed.
+- `git diff --check` — passed.
+- `cargo check --workspace` — passed.
+
+Additional non-regression reruns for SPEC-057/059/060/061 evidence:
+
+- `cargo test -p ash-engine --test task_785_modulefile_summary_exports --test task_786_import_visibility_summary_rules -- --nocapture` — passed (45 tests).
+- `cargo test -p ash-typeck --test task_787_semantic_summary_typeenv -- --nocapture` — rerun for SPEC-057 typeck evidence; existing unrelated failure observed in `std_result_summary_binds_existing_prelude_result_identity_without_duplicate_error` (23 passed, 1 failed).
+- `cargo test -p ash-core --test task_809_sealed_domain_identities -- --nocapture` — passed (20 tests).
+- `cargo test -p ash-typeck --test task_812_domain_registration_validation --test task_813_sealed_domain_registration_diagnostics -- --nocapture` — passed (21 tests).
+- `cargo test -p ash-engine --test task_811_domain_summary_transport --test task_813_sealed_domain_non_interference -- --nocapture` — passed (19 tests).
+- `cargo test -p ash-typeck --test task_820_internal_fixture_equation_registry --test task_821_closed_computation_head_reduction --test task_822_open_neutral_partial_normalization --test task_823_rigid_projection_alias_normalization --test task_824_definitional_equality --test task_825_non_inverting_unification_boundary --test task_826_typeenv_forcing_point_rollout --test task_827_normalizer_diagnostics --test task_829_review_remediation -- --nocapture` — passed (65 tests).
 
 ## Dependencies for Next Task
 

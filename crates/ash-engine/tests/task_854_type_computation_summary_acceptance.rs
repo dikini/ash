@@ -72,9 +72,21 @@ fn named_import_keeps_only_selected_head_source_visible_while_dependency_closure
     // Current source syntax does not yet support applying an imported type-function
     // name from a downstream local type-fn RHS. The honest acceptance evidence here
     // is therefore loader/import visibility plus dependency-closure transport:
-    // UseHelper is selected/source-visible, Helper is transported for the
-    // normalizer, and Sibling/unrelated domains do not leak.
-    assert_eq!(type_function_names(&loaded), vec!["Helper", "UseHelper"]);
+    // UseHelper is selected/source-visible, Helper is transported under an
+    // internal dependency metadata name for the normalizer, and Sibling/unrelated
+    // domains do not leak.
+    assert_eq!(
+        type_function_names(&loaded),
+        vec!["$ash_dependency$Helper", "UseHelper"]
+    );
+    assert_eq!(
+        loaded
+            .imported_type_function_heads
+            .iter()
+            .map(|(name, _)| name.as_str())
+            .collect::<Vec<_>>(),
+        vec!["UseHelper"]
+    );
     assert!(
         loaded
             .imported_type_defs

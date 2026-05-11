@@ -869,6 +869,30 @@ impl ModuleSemanticSummary {
             )
         }));
         key.extend(
+            self.re_exports
+                .iter()
+                .map(|re_export| format!("re_export::{re_export:?}")),
+        );
+        key.extend(
+            self.interface_identities
+                .iter()
+                .map(|identity| format!("interface::{identity:?}")),
+        );
+        key.extend(
+            self.associated_member_identities
+                .iter()
+                .map(|identity| format!("associated_member::{identity:?}")),
+        );
+        key.push(format!(
+            "reserved_identity_slots::{:?}",
+            self.reserved_identity_slots
+        ));
+        key.extend(
+            self.diagnostic_anchors
+                .iter()
+                .map(|anchor| format!("diagnostic_anchor::{anchor:?}")),
+        );
+        key.extend(
             self.imported_summary_refs
                 .iter()
                 .map(|summary_ref| format!("summary_ref::{summary_ref:?}")),

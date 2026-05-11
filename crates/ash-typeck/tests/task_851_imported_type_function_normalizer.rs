@@ -10,8 +10,8 @@ use ash_core::semantic_summary::{
     TypeRepresentationSummary,
 };
 use ash_core::type_ir::{
-    NormalFormBlockReason, NormalTypeExpr, TypeComputationHeadId, TypeFunctionResultConstraint,
-    TypeFunctionResultExpr,
+    CanonicalTypeExpr, NormalFormBlockReason, NormalTypeExpr, TypeComputationHeadId,
+    TypeFunctionResultConstraint, TypeFunctionResultExpr,
 };
 use ash_parser::surface::Definition;
 use ash_typeck::TypeEnv;
@@ -280,6 +280,74 @@ fn imported_dependency_helper_head_reduces_for_public_head_but_is_not_source_vis
 }
 
 #[test]
+fn selected_imported_type_function_visible_name_lowers_source_rhs_without_helper_leakage() {
+    let full = exported_summary();
+    let mut selected = full.clone();
+    selected.exported_type_functions = full
+        .exported_type_functions
+        .iter()
+        .filter(|summary| matches!(summary.exported_name.as_str(), "Id" | "UseId"))
+        .cloned()
+        .map(|mut summary| {
+            if summary.exported_name == "UseId" {
+                summary.exported_name = "AliasUseId".to_string();
+            } else {
+                summary.exported_name = "$ash_dependency$Id".to_string();
+            }
+            summary
+        })
+        .collect();
+
+    let mut env = TypeEnv::new();
+    env.register_module_semantic_summaries(std::slice::from_ref(&selected))
+        .expect("selected summary registers");
+    env.expose_imported_type_function_name("AliasUseId", summary_head(&full, "UseId"))
+        .expect("selected imported head becomes source visible");
+
+    assert!(env.lookup_local_type_function("AliasUseId").is_some());
+    assert!(env.lookup_local_type_function("Id").is_none());
+
+    let local_module = ModuleIdentity::new(
+        Some(CrateId(851)),
+        ModuleId(2),
+        vec!["task851".to_string(), "consumer".to_string()],
+        ModuleSourceOrigin::Synthetic {
+            reason: "task-851 imported visible alias consumer".to_string(),
+        },
+    );
+    let parsed = ash_parser::parse_surface_file(
+        r#"
+        pub type fn Downstream(xs: TypeList) -> TypeList {
+            case Downstream<xs> = AliasUseId<xs>;
+        }
+        "#,
+    )
+    .expect("consumer source parses");
+    let downstream_defs = parsed
+        .definitions
+        .into_iter()
+        .filter_map(|def| match def {
+            Definition::TypeFn(type_fn) => Some(type_fn),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    env.register_local_type_functions(&local_module, &downstream_defs)
+        .expect("downstream RHS resolves imported visible type function");
+
+    let downstream_head = env
+        .lookup_local_type_function("Downstream")
+        .expect("downstream source head is visible")
+        .head
+        .clone();
+    let value = cons(prim("A"), nil());
+    let reduced = Normalizer::new(&env)
+        .normalize_known_computation_app(&downstream_head, vec![value.clone()], &Kind::Type)
+        .expect("downstream normalization succeeds through imported alias");
+
+    assert_eq!(reduced, value);
+}
+
+#[test]
 fn malformed_v3_unbound_result_variable_is_rejected() {
     let mut malformed = exported_summary();
     let id = malformed
@@ -323,6 +391,65 @@ fn malformed_v3_unknown_nominal_dependency_is_rejected() {
     assert!(
         env.register_module_semantic_summaries(std::slice::from_ref(&malformed))
             .is_err()
+    );
+}
+
+#[test]
+fn malformed_v3_unknown_nominal_signature_return_is_rejected() {
+    let mut malformed = exported_summary();
+    let missing_id = TypeDeclId::ordinary(module(), "Missing");
+    let id = malformed
+        .exported_type_functions
+        .iter_mut()
+        .find(|type_fn| type_fn.exported_name == "Id")
+        .expect("Id summary exists");
+    id.return_type = CanonicalTypeExpr::NominalApp {
+        origin: missing_id,
+        visible_name: "Missing".to_string(),
+        args: vec![],
+        kind: Kind::Type,
+    };
+
+    let mut env = TypeEnv::new();
+    assert!(
+        env.register_module_semantic_summaries(std::slice::from_ref(&malformed))
+            .is_err(),
+        "imported summary with unknown nominal return signature must reject before normalizer use"
+    );
+}
+
+#[test]
+fn malformed_v3_nominal_signature_param_arity_is_rejected() {
+    let mut malformed = exported_summary();
+    let box_id = TypeDeclId::ordinary(module(), "Box");
+    malformed = malformed.with_exported_type(
+        TypeDeclSummary::new(
+            box_id.clone(),
+            "Box",
+            CoreVisibility::Public,
+            RepresentationExposure::Opaque,
+            TypeRepresentationSummary::opaque(false),
+            anchor("Box"),
+        )
+        .with_params(vec!["T".to_string()]),
+    );
+    let id = malformed
+        .exported_type_functions
+        .iter_mut()
+        .find(|type_fn| type_fn.exported_name == "Id")
+        .expect("Id summary exists");
+    id.params[0].ty = CanonicalTypeExpr::NominalApp {
+        origin: box_id,
+        visible_name: "Box".to_string(),
+        args: vec![],
+        kind: Kind::Type,
+    };
+
+    let mut env = TypeEnv::new();
+    assert!(
+        env.register_module_semantic_summaries(std::slice::from_ref(&malformed))
+            .is_err(),
+        "imported summary with malformed nominal parameter signature must reject before normalizer use"
     );
 }
 

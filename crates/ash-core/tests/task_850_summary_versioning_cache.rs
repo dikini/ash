@@ -4,12 +4,14 @@ use ash_core::ast::{Span, Visibility};
 use ash_core::kind::Kind;
 use ash_core::module_graph::{CrateId, ModuleId};
 use ash_core::semantic_summary::{
-    DomainConstructorId, DomainConstructorSummary, ModuleIdentity, ModuleSemanticSummary,
-    ModuleSemanticSummaryValidationError, ModuleSourceOrigin, ModuleSummaryRef,
-    RepresentationExposure, SealedDomainId, SealedDomainSummary, SourceAnchor, SourceOrigin,
-    SummaryVersion, TypeDeclId, TypeDeclSummary, TypeFunctionClosureMetadata,
-    TypeFunctionDependencySummaryRef, TypeFunctionExportMode, TypeFunctionRevalidationMetadata,
-    TypeFunctionSummary, TypeRepresentationSummary,
+    AssociatedMemberIdentityId, AssociatedMemberIdentitySummary, DomainConstructorId,
+    DomainConstructorSummary, InterfaceIdentityId, InterfaceIdentitySummary, ModuleIdentity,
+    ModuleSemanticSummary, ModuleSemanticSummaryValidationError, ModuleSourceOrigin,
+    ModuleSummaryRef, ReExportSummary, RepresentationExposure, ReservedSemanticIdentitySlots,
+    SealedDomainId, SealedDomainSummary, SourceAnchor, SourceOrigin, SummaryVersion, TypeDeclId,
+    TypeDeclSummary, TypeFunctionClosureMetadata, TypeFunctionDependencySummaryRef,
+    TypeFunctionExportMode, TypeFunctionRevalidationMetadata, TypeFunctionSummary,
+    TypeRepresentationSummary,
 };
 use ash_core::type_ir::{
     CanonicalTypeExpr, TypeComputationHeadId, TypeFunctionEquation, TypeFunctionPattern,
@@ -232,6 +234,71 @@ fn cache_key_changes_for_ordinary_type_params_import_refs_and_closure_metadata()
         changed_closure_metadata.semantic_cache_key(),
         "type-function closure metadata must invalidate summary cache keys"
     );
+}
+
+#[test]
+fn cache_key_changes_for_all_current_summary_surfaces() {
+    let module = module_identity(5, "all-surfaces");
+    let base = ModuleSemanticSummary::new(module.clone())
+        .with_version(SummaryVersion::SPEC062_TYPE_COMPUTATION_V3)
+        .with_exported_type(ordinary_type(&module));
+    let origin = TypeDeclId::ordinary(module.clone(), "Token");
+
+    let with_re_export = base
+        .clone()
+        .with_re_export(ReExportSummary::new(vec!["Alias".to_string()], origin));
+
+    let interface = InterfaceIdentityId::new(module.clone(), "Iterable");
+    let with_interface = ModuleSemanticSummary {
+        interface_identities: vec![InterfaceIdentitySummary::new(
+            interface.clone(),
+            "Iterable",
+            vec!["Iterable".to_string()],
+            anchor("interface"),
+        )],
+        ..base.clone()
+    };
+
+    let member = AssociatedMemberIdentityId::associated_type(
+        interface,
+        "Item",
+        vec!["Iterable".to_string(), "Item".to_string()],
+    );
+    let with_associated_member = ModuleSemanticSummary {
+        associated_member_identities: vec![AssociatedMemberIdentitySummary::new(
+            member,
+            "Item",
+            anchor("associated member"),
+        )],
+        ..base.clone()
+    };
+
+    let with_reserved_slots = ModuleSemanticSummary {
+        reserved_identity_slots: ReservedSemanticIdentitySlots {
+            future_type_functions: vec!["FutureNormalize".to_string()],
+            ..ReservedSemanticIdentitySlots::default()
+        },
+        ..base.clone()
+    };
+
+    let with_diagnostic_anchor = ModuleSemanticSummary {
+        diagnostic_anchors: vec![anchor("diagnostic")],
+        ..base.clone()
+    };
+
+    for changed in [
+        with_re_export,
+        with_interface,
+        with_associated_member,
+        with_reserved_slots,
+        with_diagnostic_anchor,
+    ] {
+        assert_ne!(
+            base.semantic_cache_key(),
+            changed.semantic_cache_key(),
+            "every current semantic-summary surface must invalidate the structural cache key"
+        );
+    }
 }
 
 #[test]

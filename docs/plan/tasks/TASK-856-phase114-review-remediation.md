@@ -1,6 +1,6 @@
 # TASK-856: Phase 114 review remediation
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -64,11 +64,29 @@ Dispatch a review/verification subagent with this task file, SPEC-062, and chang
 
 ## Completion Checklist
 
-- [ ] Requirements above are satisfied.
-- [ ] Focused tests exist and pass, or docs-only verification is recorded.
-- [ ] Negative leakage/private-opacity behavior is tested where applicable.
-- [ ] Status docs and CHANGELOG.md are updated if this task changes behavior or status.
-- [ ] Independent verification completed.
+- [x] Requirements above are satisfied.
+- [x] Focused tests exist and pass, or docs-only verification is recorded.
+- [x] Negative leakage/private-opacity behavior is tested where applicable.
+- [x] Status docs and CHANGELOG.md are updated if this task changes behavior or status.
+- [x] Independent verification completed.
+
+## Completion Evidence
+
+- Remediated independent review findings by separating source-visible imported type-function heads from semantic-summary dependency helper payloads.
+- Added import-side canonical signature validation for imported type-function parameter/return types before normalizer registration, including unknown nominal identity and arity regressions.
+- Hid ordinary type dependency source names from selected type-function imports while preserving dependency metadata under internal names, and rewrote transported summary references to those internal names.
+- Refreshed summary dedup/cache integrity by updating merged-summary keys after mutation, preserving same-head type-function aliases as distinct selected summary exports, and including all current semantic-summary surfaces in `semantic_cache_key`.
+- Added/updated focused engine and typeck coverage for selected aliases, same-head aliased re-exports, re-export chains, deterministic glob visible-head ordering, repeated selected imports, ordinary dependency hiding, malformed imported signatures, and negative helper-name leakage.
+- Independent final review reported no blocking code findings after remediation; status/changelog/comment updates were reconciled here.
+- Verification run after remediation:
+  - `cargo test -p ash-engine --test task_849_type_computation_summary_transport -- --nocapture` — 10 passed.
+  - `cargo test -p ash-engine --test task_850_summary_dedup_cache -- --nocapture` — 2 passed.
+  - `cargo test -p ash-engine --test task_853_type_computation_import_order -- --nocapture` — 5 passed.
+  - `cargo test -p ash-engine --test task_854_type_computation_summary_acceptance -- --nocapture` — 3 passed.
+  - `cargo test -p ash-typeck --test task_851_imported_type_function_normalizer -- --nocapture` — 12 passed.
+  - `cargo test -p ash-core --test task_850_summary_versioning_cache -- --nocapture` — 5 passed.
+  - `cargo test --workspace` — passed.
+  - `git diff --check && cargo fmt --check && cargo check --workspace && cargo clippy --workspace --all-targets --all-features -- -D warnings && cargo doc --workspace --no-deps` — passed.
 
 ## Dispatch
 

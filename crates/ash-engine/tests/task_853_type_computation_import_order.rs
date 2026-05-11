@@ -387,13 +387,12 @@ workflow main { ret 0 }
 
     let loaded = load_ordinary_file(&caller).expect("repeated imports load");
     let names = type_function_names(&loaded);
-    assert_eq!(names, vec!["Helper", "UseHelper"]);
+    assert_eq!(names, vec!["$ash_dependency$Helper", "UseHelper"]);
     assert_eq!(
         loaded
-            .imported_semantic_summaries
+            .imported_type_function_heads
             .iter()
-            .flat_map(|summary| summary.exported_type_functions.iter())
-            .filter(|type_function| type_function.exported_name == "Helper")
+            .filter(|(name, _)| name == "Helper")
             .count(),
         1
     );
@@ -423,7 +422,10 @@ fn named_import_does_not_source_expose_siblings_or_dependency_helpers() {
     );
 
     let loaded = load_ordinary_file(&caller).expect("selected re-export import loads");
-    assert_eq!(type_function_names(&loaded), vec!["Helper", "UseHelper"]);
+    assert_eq!(
+        type_function_names(&loaded),
+        vec!["$ash_dependency$Helper", "UseHelper"]
+    );
     assert!(
         loaded
             .imported_semantic_summaries

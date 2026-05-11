@@ -87,7 +87,14 @@ workflow main { ret 0 }
 
     assert_eq!(
         computation_head_sets,
-        vec![vec!["Id"], vec!["Id", "UseId"]],
+        vec![vec!["$ash_dependency$Id", "UseId"], vec!["Id"]],
         "selected computation summaries must remain separated when their computation facts differ"
     );
+    let mut visible_heads = loaded
+        .imported_type_function_heads
+        .iter()
+        .map(|(name, _)| name.as_str())
+        .collect::<Vec<_>>();
+    visible_heads.sort_unstable();
+    assert_eq!(visible_heads, vec!["Id", "UseId"]);
 }

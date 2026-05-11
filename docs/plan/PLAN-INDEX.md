@@ -3328,7 +3328,7 @@ Boundary note: Phase 113 is source `type fn` work only. It does not implement pu
 ## Phase 114: Module-Summary Export/Import for Type Computation
 
 **Priority:** High (DESIGN-034 SPEC-F unlocks cross-module public type computation after Phase 113)
-**Status:** ✅ Complete (implementation and closeout verification complete; TASK-856 remains available for independent post-closeout review remediation)
+**Status:** ✅ Complete (implementation, closeout verification, and TASK-856 independent post-closeout remediation complete)
 **Spec:** [SPEC-062](../spec/SPEC-062-MODULE-SUMMARY-EXPORT-IMPORT-FOR-TYPE-COMPUTATION.md)
 **Design:** [DESIGN-034](../design/DESIGN-034-TOTAL-TYPE-COMPUTATION.md)
 **Plan:** [docs/plan/PLAN-110-MODULE-SUMMARY-EXPORT-IMPORT-FOR-TYPE-COMPUTATION.md](PLAN-110-MODULE-SUMMARY-EXPORT-IMPORT-FOR-TYPE-COMPUTATION.md)
@@ -3350,7 +3350,7 @@ Phase 114 implements SPEC-F from DESIGN-034. It defines the public module-summar
 | [TASK-853](tasks/TASK-853-import-order-reexport-determinism.md) | Import-order/re-export determinism and identity preservation | 6 | ✅ Complete |
 | [TASK-854](tasks/TASK-854-spec-f-acceptance-non-interference-matrix.md) | SPEC-F acceptance and non-interference matrix | 6 | ✅ Complete |
 | [TASK-855](tasks/TASK-855-spec-f-closeout-docs-and-verification.md) | SPEC-F closeout docs and verification | 4 | ✅ Complete |
-| [TASK-856](tasks/TASK-856-phase114-review-remediation.md) | Phase 114 review remediation | 6 | 📝 Planned |
+| [TASK-856](tasks/TASK-856-phase114-review-remediation.md) | Phase 114 review remediation | 6 | ✅ Complete |
 
 **Track A (Spec Gate and Audit):** 9h. Promote DESIGN-034 SPEC-F to SPEC-062/PLAN-110 and audit live summary/export/import/normalizer seams.
 **Track B (Core Summary Schema):** 13h. Add core V3 summary schema, public computation carriers, and version/cache dimensions.

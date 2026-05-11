@@ -104,6 +104,11 @@ pub struct LoadedOrdinaryFile {
     pub imported_type_defs: Vec<CoreTypeDef>,
     /// Imported semantic summaries collected from resolved modules.
     pub imported_semantic_summaries: Vec<ModuleSemanticSummary>,
+    /// Source-visible imported type-function names keyed to canonical heads.
+    ///
+    /// Selected/glob imports populate this list; dependency-closure helper heads
+    /// are transported in `imported_semantic_summaries` but deliberately omitted.
+    pub imported_type_function_heads: Vec<(String, TypeComputationHeadId)>,
     /// Imported callable bodies keyed by the imported name.
     pub imported_callables: HashMap<String, InlineCallable>,
 }
@@ -376,6 +381,7 @@ pub fn load_ordinary_file(path: &Path) -> Result<LoadedOrdinaryFile, EngineError
     let mut imported_type_names = HashSet::new();
     let mut imported_semantic_summaries = Vec::new();
     let mut imported_summary_keys = HashSet::new();
+    let mut imported_type_function_heads = Vec::new();
     let mut imported_callables = HashMap::new();
 
     let crate_root = discover_crate_root(entry_root);
@@ -410,6 +416,17 @@ pub fn load_ordinary_file(path: &Path) -> Result<LoadedOrdinaryFile, EngineError
                         if imported_summary_keys.insert(key) {
                             imported_semantic_summaries.push(summary);
                         }
+                    }
+                    let mut type_function_exports =
+                        exports.type_function_summaries.iter().collect::<Vec<_>>();
+                    type_function_exports
+                        .sort_by(|(left_name, _), (right_name, _)| left_name.cmp(right_name));
+                    for (name, summary) in type_function_exports {
+                        push_imported_type_function_head(
+                            &mut imported_type_function_heads,
+                            name,
+                            &summary.head,
+                        );
                     }
                     for (k, mut v) in exports.callables.clone() {
                         if let CallableKind::Builtin { ref mut module } = v.kind
@@ -473,12 +490,18 @@ pub fn load_ordinary_file(path: &Path) -> Result<LoadedOrdinaryFile, EngineError
                             *module = module_segments.join("::");
                         }
                         imported_callables.insert(exported_name, callable);
-                    } else if exports.type_function_summaries.contains_key(&name) {
+                    } else if let Some(summary) = exports.type_function_summaries.get(&name) {
                         push_selected_type_function_semantic_summary(
                             &mut imported_semantic_summaries,
                             &mut imported_summary_keys,
                             exports.semantic_summary.as_ref(),
                             &name,
+                            &exported_name,
+                        );
+                        push_imported_type_function_head(
+                            &mut imported_type_function_heads,
+                            &exported_name,
+                            &summary.head,
                         );
                     } else {
                         return Err(EngineError::Parse(format!(
@@ -495,8 +518,21 @@ pub fn load_ordinary_file(path: &Path) -> Result<LoadedOrdinaryFile, EngineError
         workflow_source: kept_lines.join("\n"),
         imported_type_defs,
         imported_semantic_summaries,
+        imported_type_function_heads,
         imported_callables,
     })
+}
+
+fn push_imported_type_function_head(
+    heads: &mut Vec<(String, TypeComputationHeadId)>,
+    visible_name: &str,
+    head: &TypeComputationHeadId,
+) {
+    if !heads.iter().any(|(existing_name, existing_head)| {
+        existing_name == visible_name && existing_head == head
+    }) {
+        heads.push((visible_name.to_string(), head.clone()));
+    }
 }
 
 type ImportedSummaryKey = Vec<String>;
@@ -552,7 +588,16 @@ fn representation_dependency_metadata_aliases(
 }
 
 fn dependency_metadata_name(visible_name: &str) -> String {
-    format!("$ash_dependency${visible_name}")
+    const DEPENDENCY_METADATA_PREFIX: &str = "$ash_dependency$";
+    if visible_name.starts_with(DEPENDENCY_METADATA_PREFIX) {
+        visible_name.to_string()
+    } else {
+        format!("{DEPENDENCY_METADATA_PREFIX}{visible_name}")
+    }
+}
+
+fn is_dependency_metadata_name(visible_name: &str) -> bool {
+    visible_name.starts_with("$ash_dependency$")
 }
 
 fn transitive_representation_dependency_summaries<'a>(
@@ -716,10 +761,12 @@ fn merge_or_push_imported_semantic_summary(
             }
         }
         for type_function in selected.exported_type_functions {
-            let exists = existing
-                .exported_type_functions
-                .iter()
-                .any(|existing| existing.head == type_function.head);
+            let exists = existing.exported_type_functions.iter().any(|existing| {
+                existing.head == type_function.head
+                    && (existing.exported_name == type_function.exported_name
+                        || is_dependency_metadata_name(&existing.exported_name)
+                        || is_dependency_metadata_name(&type_function.exported_name))
+            });
             if !exists {
                 existing.exported_type_functions.push(type_function);
             }
@@ -742,16 +789,19 @@ fn merge_or_push_imported_semantic_summary(
                 existing.associated_member_identities.push(identity);
             }
         }
+        imported_summary_keys.insert(imported_summary_key(existing));
         return;
     }
 
     if !selected.exported_type_functions.is_empty()
         && selected.exported_type_functions.iter().all(|selected| {
             imported_semantic_summaries.iter().any(|summary| {
-                summary
-                    .exported_type_functions
-                    .iter()
-                    .any(|existing| existing.head == selected.head)
+                summary.exported_type_functions.iter().any(|existing| {
+                    existing.head == selected.head
+                        && (existing.exported_name == selected.exported_name
+                            || is_dependency_metadata_name(&existing.exported_name)
+                            || is_dependency_metadata_name(&selected.exported_name))
+                })
             })
         })
     {
@@ -872,11 +922,13 @@ fn push_selected_type_function_semantic_summary(
     imported_summary_keys: &mut HashSet<ImportedSummaryKey>,
     summary: Option<&ModuleSemanticSummary>,
     type_function_name: &str,
+    imported_name: &str,
 ) {
     let Some(summary) = summary else {
         return;
     };
-    let Some(selected) = selected_type_function_semantic_summary(summary, type_function_name)
+    let Some(selected) =
+        selected_type_function_semantic_summary(summary, type_function_name, imported_name)
     else {
         return;
     };
@@ -2449,6 +2501,7 @@ fn merge_use_exports(
                     if let Some(selected_summary) = selected_type_function_semantic_summary(
                         summary,
                         &type_function.exported_name,
+                        &type_function.exported_name,
                     ) {
                         merge_selected_summary_export(exports, summary, selected_summary)?;
                     }
@@ -2498,20 +2551,17 @@ fn merge_use_exports(
                 stamp_callable_export_module(&mut callable, exports.semantic_summary.as_ref());
                 insert_callable_export(exports, &exported_name, callable)?;
             } else if let Some(type_function) = target_exports.type_function_summaries.get(&name) {
-                if has_alias {
-                    return Err(EngineError::Parse(format!(
-                        "type function alias for '{name}' is not supported; import or re-export the type function by its original name"
-                    )));
-                }
                 if let Some((summary, selected_summary)) =
                     target_semantic_summary.as_ref().and_then(|summary| {
-                        selected_type_function_semantic_summary(summary, &name)
+                        selected_type_function_semantic_summary(summary, &name, &exported_name)
                             .map(|selected| (summary, selected))
                     })
                 {
                     merge_selected_summary_export(exports, summary, selected_summary)?;
                 }
-                insert_type_function_export(exports, &exported_name, type_function.clone())?;
+                let mut type_function = type_function.clone();
+                type_function.exported_name.clone_from(&exported_name);
+                insert_type_function_export(exports, &exported_name, type_function)?;
             } else {
                 return Err(missing_pub_use_target_error(&name));
             }
@@ -2605,21 +2655,21 @@ fn merge_use_exports(
                     .type_function_summaries
                     .get(item.name.as_ref())
                 {
-                    if item.alias.is_some() {
-                        return Err(EngineError::Parse(format!(
-                            "type function alias for '{}' is not supported; import or re-export the type function by its original name",
-                            item.name.as_ref()
-                        )));
-                    }
                     if let Some((summary, selected_summary)) =
                         target_semantic_summary.as_ref().and_then(|summary| {
-                            selected_type_function_semantic_summary(summary, item.name.as_ref())
-                                .map(|selected| (summary, selected))
+                            selected_type_function_semantic_summary(
+                                summary,
+                                item.name.as_ref(),
+                                &exported_name,
+                            )
+                            .map(|selected| (summary, selected))
                         })
                     {
                         merge_selected_summary_export(exports, summary, selected_summary)?;
                     }
-                    insert_type_function_export(exports, &exported_name, type_function.clone())?;
+                    let mut type_function = type_function.clone();
+                    type_function.exported_name.clone_from(&exported_name);
+                    insert_type_function_export(exports, &exported_name, type_function)?;
                 }
             }
         }
@@ -2914,9 +2964,74 @@ fn selected_constructor_semantic_summary_with_dependency_visibility(
     Some(selected_summary)
 }
 
+fn rewrite_type_function_summary_visible_type_names(
+    type_function: &mut TypeFunctionSummary,
+    alias_map: &HashMap<String, String>,
+) {
+    rewrite_canonical_type_expr_visible_type_names(&mut type_function.return_type, alias_map);
+    for param in &mut type_function.params {
+        rewrite_canonical_type_expr_visible_type_names(&mut param.ty, alias_map);
+    }
+    for equation in &mut type_function.equations {
+        rewrite_type_function_result_visible_type_names(&mut equation.result, alias_map);
+    }
+}
+
+fn rewrite_canonical_type_expr_visible_type_names(
+    expr: &mut CanonicalTypeExpr,
+    alias_map: &HashMap<String, String>,
+) {
+    match expr {
+        CanonicalTypeExpr::Primitive(_) | CanonicalTypeExpr::Var(_) => {}
+        CanonicalTypeExpr::NominalApp {
+            visible_name, args, ..
+        } => {
+            if let Some(alias) = alias_map.get(visible_name) {
+                *visible_name = alias.clone();
+            }
+            for arg in args {
+                rewrite_canonical_type_expr_visible_type_names(arg, alias_map);
+            }
+        }
+        CanonicalTypeExpr::Projection { args, .. }
+        | CanonicalTypeExpr::ComputationHeadApp { args, .. } => {
+            for arg in args {
+                rewrite_canonical_type_expr_visible_type_names(arg, alias_map);
+            }
+        }
+    }
+}
+
+fn rewrite_type_function_result_visible_type_names(
+    expr: &mut TypeFunctionResultExpr,
+    alias_map: &HashMap<String, String>,
+) {
+    match expr {
+        TypeFunctionResultExpr::Primitive { .. } | TypeFunctionResultExpr::Var { .. } => {}
+        TypeFunctionResultExpr::NominalApp {
+            visible_name, args, ..
+        } => {
+            if let Some(alias) = alias_map.get(visible_name) {
+                *visible_name = alias.clone();
+            }
+            for arg in args {
+                rewrite_type_function_result_visible_type_names(arg, alias_map);
+            }
+        }
+        TypeFunctionResultExpr::DomainConstructorApp { args, .. }
+        | TypeFunctionResultExpr::Projection { args, .. }
+        | TypeFunctionResultExpr::ComputationHeadApp { args, .. } => {
+            for arg in args {
+                rewrite_type_function_result_visible_type_names(arg, alias_map);
+            }
+        }
+    }
+}
+
 fn selected_type_function_semantic_summary(
     summary: &ModuleSemanticSummary,
     type_function_name: &str,
+    imported_name: &str,
 ) -> Option<ModuleSemanticSummary> {
     let selected = summary
         .exported_type_functions
@@ -2932,11 +3047,18 @@ fn selected_type_function_semantic_summary(
         .filter(|domain| dependencies.sealed_domains.contains(&domain.id))
         .cloned()
         .collect();
+    let mut dependency_type_aliases = HashMap::new();
     selected_summary.exported_types = summary
         .exported_types
         .iter()
         .filter(|ty| dependencies.types.contains(&ty.id))
         .cloned()
+        .map(|mut ty| {
+            let metadata_name = dependency_metadata_name(&ty.exported_name);
+            dependency_type_aliases.insert(ty.exported_name.clone(), metadata_name.clone());
+            ty.exported_name = metadata_name;
+            ty
+        })
         .collect();
     selected_summary.exported_constructors = summary
         .exported_constructors
@@ -2944,7 +3066,23 @@ fn selected_type_function_semantic_summary(
         .filter(|constructor| dependencies.types.contains(&constructor.parent))
         .cloned()
         .collect();
-    selected_summary.exported_type_functions = closure.into_iter().cloned().collect();
+    selected_summary.exported_type_functions = closure
+        .into_iter()
+        .map(|type_function| {
+            let mut type_function = type_function.clone();
+            rewrite_type_function_summary_visible_type_names(
+                &mut type_function,
+                &dependency_type_aliases,
+            );
+            if type_function.head == selected.head {
+                type_function.exported_name = imported_name.to_string();
+            } else {
+                type_function.exported_name =
+                    dependency_metadata_name(&type_function.exported_name);
+            }
+            type_function
+        })
+        .collect();
     copy_type_function_summary_side_metadata(summary, &mut selected_summary, &dependencies);
     Some(selected_summary)
 }
@@ -3511,11 +3649,12 @@ fn merge_selected_summary_export(
         }
     }
     for type_function in selected_summary.exported_type_functions {
-        if !summary
-            .exported_type_functions
-            .iter()
-            .any(|existing| existing.head == type_function.head)
-        {
+        if !summary.exported_type_functions.iter().any(|existing| {
+            existing.head == type_function.head
+                && (existing.exported_name == type_function.exported_name
+                    || is_dependency_metadata_name(&existing.exported_name)
+                    || is_dependency_metadata_name(&type_function.exported_name))
+        }) {
             summary.exported_type_functions.push(type_function);
         }
     }

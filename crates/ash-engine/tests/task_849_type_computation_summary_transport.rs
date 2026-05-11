@@ -1,6 +1,7 @@
 //! TASK-849: engine transport/reconciliation for public type-computation summaries.
 
 use ash_core::semantic_summary::SummaryVersion;
+use ash_engine::Engine;
 use ash_engine::module_loader::load_ordinary_file;
 
 fn write_file(path: &std::path::Path, source: &str) {
@@ -16,6 +17,88 @@ pub type fn Helper(xs: TypeList) -> TypeList { case Helper<xs> = xs; }
 pub type fn UseHelper(xs: TypeList) -> TypeList { case UseHelper<xs> = Helper<xs>; }
 pub type fn Sibling(xs: TypeList) -> TypeList { case Sibling<xs> = xs; }
 "
+}
+
+const fn public_list_module_with_ordinary_type_dependency() -> &'static str {
+    r"
+pub type Token = Int;
+pub sealed type domain TypeList { Nil; }
+
+pub type fn TokenResult(xs: TypeList) -> Type { case TokenResult<Nil> = Token; }
+"
+}
+
+#[test]
+fn selected_type_function_import_hides_ordinary_dependency_source_name() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let provider = dir.path().join("provider.ash");
+    let caller = dir.path().join("caller.ash");
+    write_file(
+        &provider,
+        public_list_module_with_ordinary_type_dependency(),
+    );
+    write_file(
+        &caller,
+        r"use provider::{TokenResult}
+workflow main { ret 0 }
+",
+    );
+
+    let loaded = load_ordinary_file(&caller).expect("selected type fn import loads");
+    let type_names = loaded
+        .imported_type_defs
+        .iter()
+        .map(|ty| ty.name.as_str())
+        .collect::<Vec<_>>();
+    assert!(
+        !type_names.contains(&"Token"),
+        "ordinary dependency type name must not become source-visible from selected type-function import: {type_names:?}"
+    );
+    let summary_type_names = loaded
+        .imported_semantic_summaries
+        .iter()
+        .flat_map(|summary| summary.exported_types.iter())
+        .map(|ty| ty.exported_name.as_str())
+        .collect::<Vec<_>>();
+    assert!(summary_type_names.contains(&"$ash_dependency$Token"));
+    assert!(!summary_type_names.contains(&"Token"));
+}
+
+#[test]
+fn aliased_reexport_retains_summary_when_original_name_is_reexported_too() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let provider = dir.path().join("provider.ash");
+    let facade = dir.path().join("facade.ash");
+    let caller = dir.path().join("caller.ash");
+    write_file(&provider, public_list_module_with_helpers());
+    write_file(
+        &facade,
+        "pub use provider::{UseHelper};\npub use provider::{UseHelper as AliasUseHelper};\n",
+    );
+    write_file(
+        &caller,
+        r"use facade::{AliasUseHelper}
+workflow main { ret 0 }
+",
+    );
+
+    let loaded = load_ordinary_file(&caller).expect("aliased re-export import loads");
+    let names = loaded
+        .imported_semantic_summaries
+        .iter()
+        .flat_map(|summary| summary.exported_type_functions.iter())
+        .map(|type_function| type_function.exported_name.as_str())
+        .collect::<Vec<_>>();
+    assert!(
+        names.contains(&"AliasUseHelper"),
+        "aliased re-export selected import must transport a matching semantic summary: {names:?}"
+    );
+
+    let engine = Engine::new().build().expect("engine builds");
+    let mut workflow = engine.parse_file(&caller).expect("caller parses");
+    engine
+        .check(&mut workflow)
+        .expect("aliased re-export imported head is backed by transported summary");
 }
 
 #[test]
@@ -49,7 +132,7 @@ workflow main { ret 0 }
         "selected head missing: {names:?}"
     );
     assert!(
-        names.contains(&"Helper"),
+        names.contains(&"$ash_dependency$Helper"),
         "helper closure head missing: {names:?}"
     );
     assert!(
@@ -72,6 +155,15 @@ workflow main { ret 0 }
             .iter()
             .all(|ty| ty.name != "Helper"),
         "helper type-function head must not become an ordinary source-visible type"
+    );
+    assert_eq!(
+        loaded
+            .imported_type_function_heads
+            .iter()
+            .map(|(name, _)| name.as_str())
+            .collect::<Vec<_>>(),
+        vec!["UseHelper"],
+        "only the selected type function should become source-visible"
     );
 }
 
@@ -99,6 +191,13 @@ workflow main { ret 0 }
     names.dedup();
 
     assert_eq!(names, vec!["Helper", "Sibling", "UseHelper"]);
+    let mut visible = loaded
+        .imported_type_function_heads
+        .iter()
+        .map(|(name, _)| name.as_str())
+        .collect::<Vec<_>>();
+    visible.sort_unstable();
+    assert_eq!(visible, vec!["Helper", "Sibling", "UseHelper"]);
 }
 
 #[test]
@@ -130,7 +229,7 @@ workflow main { ret 0 }
         "selected re-export missing: {names:?}"
     );
     assert!(
-        names.contains(&"Helper"),
+        names.contains(&"$ash_dependency$Helper"),
         "helper closure missing through re-export: {names:?}"
     );
     assert!(
@@ -150,6 +249,14 @@ workflow main { ret 0 }
     assert!(
         !domains.contains(&"Unused"),
         "unrelated sealed-domain dependency must not leak through re-exported named import: {domains:?}"
+    );
+    assert_eq!(
+        loaded
+            .imported_type_function_heads
+            .iter()
+            .map(|(name, _)| name.as_str())
+            .collect::<Vec<_>>(),
+        vec!["UseHelper"]
     );
 }
 
@@ -214,8 +321,16 @@ workflow main { ret 0 }
         .collect::<Vec<_>>();
 
     assert!(names.contains(&"UseHelper"));
-    assert!(names.contains(&"Helper"));
+    assert!(names.contains(&"$ash_dependency$Helper"));
     assert!(names.contains(&"Sibling"));
+
+    let mut visible = loaded
+        .imported_type_function_heads
+        .iter()
+        .map(|(name, _)| name.as_str())
+        .collect::<Vec<_>>();
+    visible.sort_unstable();
+    assert_eq!(visible, vec!["Sibling", "UseHelper"]);
 }
 
 #[test]
@@ -239,5 +354,71 @@ workflow main { ret 0 }
             .iter()
             .all(|ty| ty.name != "Helper"),
         "dependency helper should be transported only in computation summaries, not source-visible ordinary imports"
+    );
+}
+
+#[test]
+fn aliased_type_function_import_exposes_alias_without_helper_leakage() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let provider = dir.path().join("provider.ash");
+    let caller = dir.path().join("caller.ash");
+    write_file(&provider, public_list_module_with_helpers());
+    write_file(
+        &caller,
+        r"use provider::{UseHelper as AliasUseHelper}
+workflow main { ret 0 }
+",
+    );
+
+    let loaded = load_ordinary_file(&caller).expect("aliased public type fn import loads");
+    assert_eq!(
+        loaded
+            .imported_type_function_heads
+            .iter()
+            .map(|(name, _)| name.as_str())
+            .collect::<Vec<_>>(),
+        vec!["AliasUseHelper"]
+    );
+    let names = loaded
+        .imported_semantic_summaries
+        .iter()
+        .flat_map(|summary| summary.exported_type_functions.iter())
+        .map(|tf| tf.exported_name.as_str())
+        .collect::<Vec<_>>();
+    assert!(names.contains(&"AliasUseHelper"));
+    assert!(names.contains(&"$ash_dependency$Helper"));
+    assert!(!names.contains(&"UseHelper"));
+    assert!(!names.contains(&"Helper"));
+}
+
+#[test]
+fn selected_reexport_chain_keeps_dependency_helper_metadata_name_stable() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let provider = dir.path().join("provider.ash");
+    let facade = dir.path().join("facade.ash");
+    let facade2 = dir.path().join("facade2.ash");
+    let caller = dir.path().join("caller.ash");
+    write_file(&provider, public_list_module_with_helpers());
+    write_file(&facade, "pub use provider::{UseHelper};\n");
+    write_file(&facade2, "pub use facade::{UseHelper};\n");
+    write_file(
+        &caller,
+        r"use facade2::{UseHelper}
+workflow main { ret 0 }
+",
+    );
+
+    let loaded = load_ordinary_file(&caller).expect("chained selected re-export loads");
+    let names = loaded
+        .imported_semantic_summaries
+        .iter()
+        .flat_map(|summary| summary.exported_type_functions.iter())
+        .map(|tf| tf.exported_name.as_str())
+        .collect::<Vec<_>>();
+    assert!(names.contains(&"UseHelper"));
+    assert!(names.contains(&"$ash_dependency$Helper"));
+    assert!(
+        !names.contains(&"$ash_dependency$$ash_dependency$Helper"),
+        "dependency helper metadata prefix must not accumulate across re-export chains: {names:?}"
     );
 }

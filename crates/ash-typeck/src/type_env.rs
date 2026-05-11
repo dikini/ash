@@ -1404,9 +1404,9 @@ pub struct TypeEnv {
     sealed_domain_aliases: HashMap<String, SealedDomainId>,
     /// Sealed-domain identity -> domain summary metadata.
     sealed_domain_summaries: HashMap<SealedDomainId, SealedDomainSummary>,
-    /// Module-local type-function names published after minimal TASK-834 lowering succeeds.
+    /// Source-visible local/imported type-function names keyed to canonical heads.
     local_type_function_heads: HashMap<String, TypeComputationHeadId>,
-    /// Published checked source-backed type-function carriers keyed by computation head.
+    /// Checked local/imported type-function carriers keyed by canonical computation head.
     local_type_functions: HashMap<TypeComputationHeadId, TypeFunctionDef>,
     /// Workflow effect context for the three-vertex boundary (SPEC-031 §4.8).
     ///
@@ -1794,7 +1794,7 @@ fn imported_type_function_def(summary: &TypeFunctionSummary) -> TypeFunctionDef 
     TypeFunctionDef {
         visibility: summary.visibility,
         head: summary.head.clone(),
-        name: summary.exported_name.clone(),
+        name: summary.head.name.clone(),
         params: summary
             .params
             .iter()
@@ -2408,15 +2408,6 @@ impl TypeEnv {
                 Span::default(),
             ));
         }
-        if summary.head.name != summary.exported_name {
-            return Err(TypeEnvError::InvalidDefinition(
-                format!(
-                    "type-function summary '{}' head name '{}' does not match exported name",
-                    summary.exported_name, summary.head.name
-                ),
-                Span::default(),
-            ));
-        }
         if let Some(existing) = self.local_type_functions.get(&summary.head) {
             let incoming = imported_type_function_def(summary);
             if existing != &incoming {
@@ -2484,6 +2475,7 @@ impl TypeEnv {
                     Span::default(),
                 ));
             }
+            self.validate_imported_type_function_signature_type(&def.name, &param.ty, "parameter")?;
             if let Some(domain) = &param.domain_constraint
                 && self.lookup_sealed_domain_by_id(domain).is_none()
             {
@@ -2505,6 +2497,7 @@ impl TypeEnv {
                 Span::default(),
             ));
         }
+        self.validate_imported_type_function_signature_type(&def.name, &def.return_type, "return")?;
         for equation in &def.equations {
             if equation.head != def.head || equation.patterns.len() != def.params.len() {
                 return Err(TypeEnvError::InvalidDefinition(
@@ -2545,6 +2538,163 @@ impl TypeEnv {
             Span::default(),
         )?;
         self.validate_public_type_function_export_closure(def, Span::default())
+    }
+
+    fn validate_imported_type_function_signature_type(
+        &self,
+        owner: &str,
+        ty: &CanonicalTypeExpr,
+        position: &str,
+    ) -> Result<(), TypeEnvError> {
+        match ty {
+            CanonicalTypeExpr::Primitive(_) | CanonicalTypeExpr::Var(_) => Ok(()),
+            CanonicalTypeExpr::NominalApp {
+                origin,
+                visible_name,
+                args,
+                kind,
+            } => {
+                if kind != &Kind::Type {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "type-function summary '{owner}' {position} nominal '{visible_name}' has non-Type kind"
+                        ),
+                        Span::default(),
+                    ));
+                }
+                match self.type_alias_identities.get(visible_name) {
+                    Some(registered) if registered == origin => {}
+                    Some(registered) => {
+                        return Err(TypeEnvError::InvalidDefinition(
+                            format!(
+                                "type-function summary '{owner}' {position} nominal '{visible_name}' has identity mismatch: expected {:?}, found {:?}",
+                                origin, registered
+                            ),
+                            Span::default(),
+                        ));
+                    }
+                    None => {
+                        return Err(TypeEnvError::InvalidDefinition(
+                            format!(
+                                "type-function summary '{owner}' {position} references unknown ordinary type '{visible_name}'"
+                            ),
+                            Span::default(),
+                        ));
+                    }
+                }
+                if !self.canonical_type_names.contains_key(origin) {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "type-function summary '{owner}' {position} references unregistered ordinary type identity {:?}",
+                            origin
+                        ),
+                        Span::default(),
+                    ));
+                }
+                let expected_arity = self
+                    .type_info
+                    .get(visible_name)
+                    .map(TypeInfo::type_arg_count)
+                    .ok_or_else(|| {
+                        TypeEnvError::InvalidDefinition(
+                            format!(
+                                "type-function summary '{owner}' {position} references ordinary type '{visible_name}' without arity metadata"
+                            ),
+                            Span::default(),
+                        )
+                    })?;
+                if expected_arity != args.len() {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "type-function summary '{owner}' {position} nominal '{visible_name}' arity mismatch: expected {}, found {}",
+                            expected_arity,
+                            args.len()
+                        ),
+                        Span::default(),
+                    ));
+                }
+                for arg in args {
+                    self.validate_imported_type_function_signature_type(owner, arg, position)?;
+                }
+                Ok(())
+            }
+            CanonicalTypeExpr::Projection {
+                interface,
+                member,
+                args,
+                kind,
+                ..
+            } => {
+                if kind != &Kind::Type {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "type-function summary '{owner}' {position} projection '{}::{}' has non-Type kind",
+                            interface.name, member.name
+                        ),
+                        Span::default(),
+                    ));
+                }
+                if !self.known_interface_identities.contains(interface) {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "type-function summary '{owner}' {position} references unknown projection interface '{}'",
+                            interface.name
+                        ),
+                        Span::default(),
+                    ));
+                }
+                if !self.known_associated_member_identities.contains(member)
+                    || member.interface != *interface
+                {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "type-function summary '{owner}' {position} references unknown projection member '{}::{}'",
+                            interface.name, member.name
+                        ),
+                        Span::default(),
+                    ));
+                }
+                for arg in args {
+                    self.validate_imported_type_function_signature_type(owner, arg, position)?;
+                }
+                Ok(())
+            }
+            CanonicalTypeExpr::ComputationHeadApp { head, args, kind } => {
+                if kind != &Kind::Type {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "type-function summary '{owner}' {position} computation head '{}' has non-Type kind",
+                            head.name
+                        ),
+                        Span::default(),
+                    ));
+                }
+                let callee = self.local_type_functions.get(head).ok_or_else(|| {
+                    TypeEnvError::InvalidDefinition(
+                        format!(
+                            "type-function summary '{owner}' {position} references unknown type function '{}'",
+                            head.name
+                        ),
+                        Span::default(),
+                    )
+                })?;
+                if callee.params.len() != args.len() {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "type-function summary '{owner}' {position} computation head '{}' arity mismatch: expected {}, found {}",
+                            head.name,
+                            callee.params.len(),
+                            args.len()
+                        ),
+                        Span::default(),
+                    ));
+                }
+                for arg in args {
+                    self.validate_imported_type_function_signature_type(owner, arg, position)?;
+                }
+                Ok(())
+            }
+        }
     }
 
     fn validate_imported_type_function_pattern(
@@ -3137,11 +3287,47 @@ impl TypeEnv {
         Ok(())
     }
 
-    /// Look up a published module-local type function by source name.
+    /// Look up a source-visible type function by local or imported name.
     #[must_use]
     pub fn lookup_local_type_function(&self, name: &str) -> Option<&TypeFunctionDef> {
         let head = self.local_type_function_heads.get(name)?;
         self.local_type_functions.get(head)
+    }
+
+    /// Make an imported public type-function summary source-visible under `name`.
+    ///
+    /// Import loaders call this only for explicitly selected or glob-imported
+    /// public heads. Dependency-closure helper heads remain normalizer-available
+    /// by canonical identity but are not inserted here.
+    pub fn expose_imported_type_function_name(
+        &mut self,
+        name: impl Into<String>,
+        head: TypeComputationHeadId,
+    ) -> Result<(), TypeEnvError> {
+        let name = name.into();
+        if !self.local_type_functions.contains_key(&head) {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "cannot expose imported type function '{}' before registering summary head '{}::{}'",
+                    name,
+                    head.module.path.join("::"),
+                    head.name
+                ),
+                Span::default(),
+            ));
+        }
+        if let Some(existing) = self.local_type_function_heads.get(&name) {
+            if existing == &head {
+                return Ok(());
+            }
+            return Err(TypeEnvError::ImportOrderConflict {
+                family: "type-function visible name".to_string(),
+                name,
+                span: Span::default(),
+            });
+        }
+        self.local_type_function_heads.insert(name, head);
+        Ok(())
     }
 
     /// Look up a published computation head by canonical identity.
@@ -3159,8 +3345,10 @@ impl TypeEnv {
         self.local_type_functions.get(head)
     }
 
-    /// Iterate published module-local type-function names. This intentionally
-    /// exposes no public summary/equation transport before SPEC-F.
+    /// Iterate source-visible local and imported type-function names.
+    ///
+    /// Imported dependency-closure helper heads are intentionally omitted unless
+    /// the import loader explicitly exposes them through selected/glob syntax.
     pub fn local_type_function_names(&self) -> impl Iterator<Item = &str> {
         self.local_type_function_heads.keys().map(String::as_str)
     }

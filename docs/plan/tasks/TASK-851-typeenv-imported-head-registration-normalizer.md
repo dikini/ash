@@ -1,6 +1,6 @@
 # TASK-851: TypeEnv imported head registration and normalizer integration
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -68,11 +68,11 @@ Dispatch a review/verification subagent with this task file, SPEC-062, and chang
 
 ## Completion Checklist
 
-- [ ] Requirements above are satisfied.
-- [ ] Focused tests exist and pass, or docs-only verification is recorded.
-- [ ] Negative leakage/private-opacity behavior is tested where applicable.
-- [ ] Status docs and CHANGELOG.md are updated if this task changes behavior or status.
-- [ ] Independent verification completed.
+- [x] Requirements above are satisfied.
+- [x] Focused tests exist and pass, or docs-only verification is recorded.
+- [x] Negative leakage/private-opacity behavior is tested where applicable.
+- [x] Status docs and CHANGELOG.md are updated if this task changes behavior or status.
+- [x] Independent verification completed.
 
 ## Dispatch
 
@@ -95,10 +95,10 @@ commands:
   - cargo check --workspace
   - cargo clippy -p ash-typeck --all-targets --all-features -- -D warnings
 checklist:
-  - [ ] Implementation matches SPEC-062 and PLAN-110 scope
-  - [ ] Focused tests for this task pass
-  - [ ] Formatting and diff checks pass
-  - [ ] CHANGELOG.md updated if task changes code/docs policy/status
+  - [x] Implementation matches SPEC-062 and PLAN-110 scope
+  - [x] Focused tests for this task pass
+  - [x] Formatting and diff checks pass
+  - [x] CHANGELOG.md updated if task changes code/docs policy/status
 ```
 
 ## Dependencies for Next Task

@@ -614,6 +614,9 @@ pub struct TypeFunctionRevalidationMetadata {
     pub structural_recursion_checked: bool,
     pub kind_and_domain_checked: bool,
     pub coverage_and_overlap_checked: bool,
+    /// Name of the checked decreasing parameter when structural recursion is present.
+    #[serde(default)]
+    pub decreases_param: Option<String>,
 }
 
 /// Core-owned public type-function summary carrier for SPEC-062.

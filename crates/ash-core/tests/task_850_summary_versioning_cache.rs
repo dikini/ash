@@ -131,6 +131,7 @@ fn type_function(
             structural_recursion_checked: true,
             kind_and_domain_checked: true,
             coverage_and_overlap_checked: true,
+            decreases_param: None,
         },
     }
 }

@@ -1486,7 +1486,7 @@ impl<'env> NormalizationState<'env> {
         head: &TypeComputationHeadId,
         args: &[NormalTypeExpr],
     ) -> SourceEquationSelection {
-        let Some(def) = self.env.lookup_local_type_function_by_head(head) else {
+        let Some(def) = self.env.lookup_type_function_by_head(head) else {
             return SourceEquationSelection::NoMatch;
         };
         for equation in &def.equations {

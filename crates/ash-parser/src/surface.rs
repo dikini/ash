@@ -126,7 +126,7 @@ pub struct TypeDef {
 /// A module-level type function declaration parsed as raw surface syntax.
 #[derive(Debug, Clone, PartialEq)]
 pub struct TypeFnDef {
-    /// Visibility modifier retained for parser-stage SPEC-F rejection diagnostics.
+    /// Visibility modifier retained for downstream SPEC-F semantic validation.
     pub visibility: Visibility,
     /// Name of the type function.
     pub name: Name,

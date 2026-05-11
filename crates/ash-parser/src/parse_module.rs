@@ -280,11 +280,6 @@ fn parse_resource_field(input: &mut ParseInput) -> ModalResult<ResourceField> {
 fn parse_type_fn_definition(input: &mut ParseInput) -> ModalResult<Definition> {
     let start_pos = input.state.pos;
     let visibility = parse_visibility(input)?;
-    if visibility.is_pub() {
-        return Err(winnow::error::ErrMode::Cut(
-            winnow::error::ContextError::new(),
-        ));
-    }
     skip_whitespace_and_comments(input);
 
     let _ = keyword("type").parse_next(input)?;

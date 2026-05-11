@@ -119,9 +119,18 @@ fn dispatches_type_fn_before_ordinary_type_parser() {
 }
 
 #[test]
-fn rejects_visibility_prefixed_type_fn_until_spec_f() {
-    parse_err("pub type fn Id(x: Type) -> Type { case Id<x> = x; }");
-    parse_err("pub(crate) type fn Id(x: Type) -> Type { case Id<x> = x; }");
+fn preserves_visibility_prefixed_type_fn_for_downstream_spec_f_validation() {
+    let public = parse("pub type fn Id(x: Type) -> Type { case Id<x> = x; }");
+    let Definition::TypeFn(public) = &public.definitions[0] else {
+        panic!("pub type fn should parse as a type function definition");
+    };
+    assert_eq!(public.visibility, Visibility::Public);
+
+    let crate_visible = parse("pub(crate) type fn Id(x: Type) -> Type { case Id<x> = x; }");
+    let Definition::TypeFn(crate_visible) = &crate_visible.definitions[0] else {
+        panic!("pub(crate) type fn should parse as a type function definition");
+    };
+    assert_eq!(crate_visible.visibility, Visibility::Crate);
 }
 
 #[test]

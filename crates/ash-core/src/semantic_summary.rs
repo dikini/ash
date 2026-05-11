@@ -12,6 +12,10 @@
 use crate::ast::{Name, Span, TypeBody, TypeVar, Visibility};
 use crate::kind::Kind;
 use crate::module_graph::{CrateId, ModuleId};
+use crate::type_ir::{
+    CanonicalTypeExpr, TypeComputationHeadId, TypeFunctionEquation, TypeFunctionResultConstraint,
+    TypeFunctionSourceAnchors,
+};
 use serde::{Deserialize, Serialize};
 
 /// Canonical identity plus diagnostic metadata for a resolved Ash module.
@@ -548,6 +552,91 @@ pub struct SummaryVersion(pub u16);
 impl SummaryVersion {
     pub const SPEC057_ORDINARY_TYPE_V1: Self = Self(1);
     pub const SPEC059_SEALED_DOMAIN_V2: Self = Self(2);
+    pub const SPEC062_TYPE_COMPUTATION_V3: Self = Self(3);
+}
+
+/// Core schema-level validation failures for semantic-summary version contracts.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum ModuleSemanticSummaryValidationError {
+    /// Public type-computation facts are only valid in SPEC-062/V3 summaries.
+    TypeFunctionsRequireV3 { version: SummaryVersion },
+    /// The summary version is newer than this core crate knows how to interpret.
+    UnsupportedSummaryVersion { version: SummaryVersion },
+}
+
+/// Explicit public export/transparency mode for type-function summaries.
+///
+/// SPEC-062 MVP supports only direct transparent equation export. The enum keeps
+/// this decision explicit so future opaque/header-only modes cannot be confused
+/// with missing equation data.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum TypeFunctionExportMode {
+    TransparentEquations,
+}
+
+/// Checked public type-function parameter metadata transported in summaries.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct TypeFunctionParamSummary {
+    pub name: String,
+    pub ty: CanonicalTypeExpr,
+    pub kind: Kind,
+    pub domain_constraint: Option<SealedDomainId>,
+    pub source_anchor: SourceAnchor,
+}
+
+/// Summary dependency reference plus cache/dedup invalidation metadata.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct TypeFunctionDependencySummaryRef {
+    pub summary_ref: ModuleSummaryRef,
+    /// Optional content digest for in-memory dedup now and persistent cache keys later.
+    pub digest: Option<String>,
+    /// Optional algorithm/version dimension for future type-computation cache invalidation.
+    pub compiler_algorithm_version: Option<String>,
+}
+
+/// Public-closure evidence produced by export validation.
+///
+/// Import-side revalidation must not trust this blindly, but preserving it gives
+/// future TypeEnv import and cache code the dimensions required by SPEC-062 §6/§11.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct TypeFunctionClosureMetadata {
+    pub public_closure_checked: bool,
+    pub public_ordinary_type_count: usize,
+    pub public_sealed_domain_count: usize,
+    pub public_type_function_count: usize,
+    pub public_projection_count: usize,
+}
+
+/// Revalidation metadata sufficient for future TypeEnv import diagnostics/cache keys.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct TypeFunctionRevalidationMetadata {
+    pub spec_version: SummaryVersion,
+    pub structural_recursion_checked: bool,
+    pub kind_and_domain_checked: bool,
+    pub coverage_and_overlap_checked: bool,
+}
+
+/// Core-owned public type-function summary carrier for SPEC-062.
+///
+/// This is intentionally distinct from engine-private export structures. It
+/// preserves the checked public signature, transparent source-order equations,
+/// dependency refs/digests, and closure/revalidation metadata needed for a
+/// future TypeEnv import path without implementing that import path here.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct TypeFunctionSummary {
+    pub exported_name: Name,
+    pub head: TypeComputationHeadId,
+    pub visibility: Visibility,
+    pub params: Vec<TypeFunctionParamSummary>,
+    pub return_type: CanonicalTypeExpr,
+    pub return_kind: Kind,
+    pub result_constraint: TypeFunctionResultConstraint,
+    pub export_mode: TypeFunctionExportMode,
+    pub source_anchors: TypeFunctionSourceAnchors,
+    pub equations: Vec<TypeFunctionEquation>,
+    pub dependency_summary_refs: Vec<TypeFunctionDependencySummaryRef>,
+    pub closure_metadata: TypeFunctionClosureMetadata,
+    pub revalidation_metadata: TypeFunctionRevalidationMetadata,
 }
 
 /// Reserved future identity namespaces. SPEC-057 leaves these uninterpreted.
@@ -648,6 +737,12 @@ pub struct ModuleSemanticSummary {
     /// that predate sealed-domain support.
     #[serde(default)]
     pub exported_sealed_domains: Vec<SealedDomainSummary>,
+    /// Public type-function summaries exported from this module (SPEC-062 §6).
+    ///
+    /// `#[serde(default)]` preserves V1/V2 wire compatibility. Non-empty values
+    /// are valid only when `version` is SPEC-062/V3.
+    #[serde(default)]
+    pub exported_type_functions: Vec<TypeFunctionSummary>,
 }
 
 impl ModuleSemanticSummary {
@@ -665,7 +760,14 @@ impl ModuleSemanticSummary {
             reserved_identity_slots: ReservedSemanticIdentitySlots::default(),
             diagnostic_anchors: Vec::new(),
             exported_sealed_domains: Vec::new(),
+            exported_type_functions: Vec::new(),
         }
+    }
+
+    #[must_use]
+    pub fn with_version(mut self, version: SummaryVersion) -> Self {
+        self.version = version;
+        self
     }
 
     #[must_use]
@@ -718,6 +820,42 @@ impl ModuleSemanticSummary {
     pub fn with_exported_sealed_domain(mut self, domain: SealedDomainSummary) -> Self {
         self.exported_sealed_domains.push(domain);
         self
+    }
+
+    /// Add a public type-function summary to this module summary.
+    #[must_use]
+    pub fn with_exported_type_function(mut self, type_function: TypeFunctionSummary) -> Self {
+        self.exported_type_functions.push(type_function);
+        self
+    }
+
+    /// Validate only core summary-version/content compatibility.
+    ///
+    /// This helper deliberately does not perform TypeEnv import revalidation of
+    /// type-function signatures/equations. It enforces the SPEC-062 schema rule
+    /// that V1/V2 summaries must not carry public computation facts and rejects
+    /// unknown future summary versions before any consumer partially registers
+    /// their contents.
+    pub fn validate_summary_version_contract(
+        &self,
+    ) -> Result<(), ModuleSemanticSummaryValidationError> {
+        match self.version {
+            SummaryVersion::SPEC057_ORDINARY_TYPE_V1 | SummaryVersion::SPEC059_SEALED_DOMAIN_V2 => {
+                if self.exported_type_functions.is_empty() {
+                    Ok(())
+                } else {
+                    Err(
+                        ModuleSemanticSummaryValidationError::TypeFunctionsRequireV3 {
+                            version: self.version,
+                        },
+                    )
+                }
+            }
+            SummaryVersion::SPEC062_TYPE_COMPUTATION_V3 => Ok(()),
+            version => {
+                Err(ModuleSemanticSummaryValidationError::UnsupportedSummaryVersion { version })
+            }
+        }
     }
 }
 

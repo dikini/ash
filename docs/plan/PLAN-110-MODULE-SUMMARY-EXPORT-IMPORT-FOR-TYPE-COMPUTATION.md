@@ -21,7 +21,7 @@
 |------|-------------|------|------------|--------|
 | [TASK-843](tasks/TASK-843-spec-f-spec-plan-packet.md) | Promote DESIGN-034 SPEC-F into SPEC-062/PLAN-110 and register Phase 114 | Docs/Planning | 4 | ✅ Complete |
 | [TASK-844](tasks/TASK-844-type-computation-summary-audit-gate.md) | Audit live public summary/export/import/normalizer seams before implementation | Docs/Substrate | 5 | ✅ Complete |
-| [TASK-845](tasks/TASK-845-core-public-computation-summary-schema.md) | Add core public type-computation summary schema and V3 version contract | Core/Substrate | 8 | 📝 Planned |
+| [TASK-845](tasks/TASK-845-core-public-computation-summary-schema.md) | Add core public type-computation summary schema and V3 version contract | Core/Substrate | 8 | ✅ Complete |
 | [TASK-846](tasks/TASK-846-parser-public-type-fn-visibility.md) | Preserve `pub type fn` parser surface for SPEC-F validation | Parser | 4 | 📝 Planned |
 | [TASK-847](tasks/TASK-847-typeck-public-export-closure-validation.md) | Validate public/private export closure for public type functions | Typeck/Semantic | 8 | 📝 Planned |
 | [TASK-848](tasks/TASK-848-transparent-public-equation-summary-lowering.md) | Lower export-closed public equations into transparent public summaries | Typeck/Core | 8 | 📝 Planned |
@@ -85,7 +85,7 @@ Every task uses subagent-driven development and independent verification before 
 - [x] PLAN-110 and TASK-843 through TASK-856 registered in `docs/plan/PLAN-INDEX.md`.
 - [x] TASK-843 created and completed as the planning packet.
 - [x] TASK-844 audit artifact created before Rust implementation.
-- [ ] Core summary schema/versioning implemented and tested, including V1/V2 non-empty computation-field rejection.
+- [x] Core summary schema/versioning implemented and tested, including V1/V2 non-empty computation-field rejection.
 - [ ] Public `pub type fn` export closure implemented and tested.
 - [ ] Engine transport/reconciliation implemented and tested, including normalizer-available dependency closure without source-visible helper leakage.
 - [ ] TypeEnv imported public computation-head registration implemented and tested, including import-side SPEC-061 invariant revalidation before normalizer registration.

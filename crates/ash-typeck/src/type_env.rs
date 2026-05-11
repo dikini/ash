@@ -1980,14 +1980,6 @@ impl TypeEnv {
         self.type_info.insert(type_name, type_info);
         self.type_declaration_states
             .insert(def.name.clone(), TypeDeclarationState::Full);
-        self.type_alias_identities
-            .entry(def.name.clone())
-            .or_insert_with(|| fallback_canonical_type_decl_id(&def.name));
-        if let Some(identity) = self.type_alias_identities.get(&def.name).cloned() {
-            self.canonical_type_names
-                .entry(identity)
-                .or_insert_with(|| def.name.clone());
-        }
         Ok(())
     }
 
@@ -2035,6 +2027,14 @@ impl TypeEnv {
     /// Register a type definition and its constructors from AST TypeDef
     pub fn register_type(&mut self, def: &TypeDef) -> Result<(), TypeEnvError> {
         self.register_type_identity(def)?;
+        self.type_alias_identities
+            .entry(def.name.clone())
+            .or_insert_with(|| fallback_canonical_type_decl_id(&def.name));
+        if let Some(identity) = self.type_alias_identities.get(&def.name).cloned() {
+            self.canonical_type_names
+                .entry(identity)
+                .or_insert_with(|| def.name.clone());
+        }
         self.expose_type_representation(&def.name)
     }
 
@@ -2087,8 +2087,21 @@ impl TypeEnv {
                 Span::default(),
             ));
         }
+        let fallback_compatible_builtin_identity = self
+            .type_alias_identities
+            .get(&visible_name)
+            .is_some_and(|existing| existing == &fallback_canonical_type_decl_id(&visible_name))
+            && self.ast_types.get(&visible_name).is_some_and(|existing| {
+                (is_builtin_prelude_ordinary_type_compatibility_name(&visible_name)
+                    && !self.existing_summary_contract_conflicts(&visible_name, existing, summary))
+                    || (existing.builtin
+                        && matches!(
+                            summary.representation,
+                            TypeRepresentationSummary::Opaque { .. }
+                        ))
+            });
         match self.type_alias_identities.get(&visible_name) {
-            Some(existing) if existing != &summary.id => {
+            Some(existing) if existing != &summary.id && !fallback_compatible_builtin_identity => {
                 return Err(TypeEnvError::InvalidDefinition(
                     duplicate_summary_identity_diagnostic(&visible_name, existing, summary),
                     Span::default(),
@@ -2099,6 +2112,14 @@ impl TypeEnv {
         if let Some(existing) = self.ast_types.get(&visible_name) {
             let existing_identity = self.type_alias_identities.get(&visible_name);
             if !self.is_placeholder_name(&visible_name) && existing_identity != Some(&summary.id) {
+                if fallback_compatible_builtin_identity {
+                    self.type_alias_identities
+                        .insert(visible_name.clone(), summary.id.clone());
+                    self.canonical_type_names
+                        .entry(summary.id.clone())
+                        .or_insert(visible_name);
+                    return Ok(());
+                }
                 if matches!(
                     (&summary.representation, existing.builtin),
                     (TypeRepresentationSummary::Opaque { builtin: true }, true)
@@ -2110,7 +2131,8 @@ impl TypeEnv {
                         .or_insert(visible_name);
                     return Ok(());
                 }
-                if existing_identity.is_none()
+                if (existing_identity.is_none()
+                    || existing_identity == Some(&fallback_canonical_type_decl_id(&visible_name)))
                     && is_builtin_prelude_ordinary_type_compatibility_name(&visible_name)
                     && !self.existing_summary_contract_conflicts(&visible_name, existing, summary)
                 {

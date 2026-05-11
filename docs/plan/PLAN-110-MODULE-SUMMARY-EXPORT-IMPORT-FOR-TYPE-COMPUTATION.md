@@ -10,7 +10,7 @@
 
 ---
 
-**Status:** 🟢 In Progress (planning packet complete; implementation tasks planned)
+**Status:** ✅ Complete (implementation and closeout verification complete; TASK-856 remains available for independent post-closeout review remediation)
 **Spec:** [SPEC-062](../spec/SPEC-062-MODULE-SUMMARY-EXPORT-IMPORT-FOR-TYPE-COMPUTATION.md)
 **Design:** [DESIGN-034 §16.6](../design/DESIGN-034-TOTAL-TYPE-COMPUTATION.md#166-spec-f-module-summary-exportimport-for-type-computation)
 **Depends on:** [SPEC-057](../spec/SPEC-057-UNIFIED-TYPE-MODULE-PIPELINE-AND-SEMANTIC-SUMMARIES.md), [SPEC-058](../spec/SPEC-058-CANONICAL-TYPE-EXPRESSION-IR-PROJECTION-IDS-KIND-ARITY-SUBSTRATE.md), [SPEC-059](../spec/SPEC-059-SEALED-TYPE-LEVEL-DOMAINS.md), [SPEC-060](../spec/SPEC-060-NORMALIZER-DEFINITIONAL-EQUALITY-CORE.md), [SPEC-061](../spec/SPEC-061-DIRECT-STRUCTURAL-TYPE-FUNCTIONS.md)
@@ -31,7 +31,7 @@
 | [TASK-852](tasks/TASK-852-private-opacity-unavailable-reduction-diagnostics.md) | Add private-opacity and unavailable-reduction diagnostics | Diagnostics | 5 | ✅ Complete |
 | [TASK-853](tasks/TASK-853-import-order-reexport-determinism.md) | Prove named/glob/pub-use import-order determinism and identity preservation | Engine/Tests | 6 | ✅ Complete |
 | [TASK-854](tasks/TASK-854-spec-f-acceptance-non-interference-matrix.md) | Own the DESIGN-034 §16.6 acceptance/non-interference matrix | Tests | 6 | ✅ Complete |
-| [TASK-855](tasks/TASK-855-spec-f-closeout-docs-and-verification.md) | Reconcile docs/status/changelog and record closeout verification | Docs/Planning | 4 | 📝 Planned |
+| [TASK-855](tasks/TASK-855-spec-f-closeout-docs-and-verification.md) | Reconcile docs/status/changelog and record closeout verification | Docs/Planning | 4 | ✅ Complete |
 | [TASK-856](tasks/TASK-856-phase114-review-remediation.md) | Remediate independent post-closeout review findings | Review/Hardening | 6 | 📝 Planned |
 
 ## Execution Tracks
@@ -81,7 +81,7 @@ Every task uses subagent-driven development and independent verification before 
 
 ## Completion Checklist
 
-- [x] SPEC-062 registered in `docs/spec/README.md` as Draft.
+- [x] SPEC-062 promoted in `docs/spec/README.md` as Implemented MVP.
 - [x] PLAN-110 and TASK-843 through TASK-856 registered in `docs/plan/PLAN-INDEX.md`.
 - [x] TASK-843 created and completed as the planning packet.
 - [x] TASK-844 audit artifact created before Rust implementation.
@@ -90,5 +90,5 @@ Every task uses subagent-driven development and independent verification before 
 - [x] Engine transport/reconciliation implemented and tested, including normalizer-available dependency closure without source-visible helper leakage.
 - [x] TypeEnv imported public computation-head registration implemented and tested, including import-side SPEC-061 invariant revalidation before normalizer registration.
 - [x] Acceptance/non-interference matrix maps every SPEC-062 §13 row to focused tests or recorded evidence and passes.
-- [ ] Broad workspace verification recorded.
+- [x] Broad workspace verification recorded.
 - [ ] Independent review/remediation complete.

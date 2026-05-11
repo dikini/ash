@@ -745,6 +745,19 @@ fn merge_or_push_imported_semantic_summary(
         return;
     }
 
+    if !selected.exported_type_functions.is_empty()
+        && selected.exported_type_functions.iter().all(|selected| {
+            imported_semantic_summaries.iter().any(|summary| {
+                summary
+                    .exported_type_functions
+                    .iter()
+                    .any(|existing| existing.head == selected.head)
+            })
+        })
+    {
+        return;
+    }
+
     let key = imported_summary_key(&selected);
     if imported_summary_keys.insert(key) {
         imported_semantic_summaries.push(selected);
@@ -786,15 +799,17 @@ fn selected_summary_identity_facts_are_compatible(
     left: &ModuleSemanticSummary,
     right: &ModuleSemanticSummary,
 ) -> bool {
-    left.exported_type_functions
-        .iter()
-        .all(|left_type_function| {
-            right
-                .exported_type_functions
-                .iter()
-                .find(|right_type_function| right_type_function.head == left_type_function.head)
-                .is_none_or(|right_type_function| right_type_function == left_type_function)
-        })
+    left.exported_type_functions.len() == right.exported_type_functions.len()
+        && left
+            .exported_type_functions
+            .iter()
+            .all(|left_type_function| {
+                right
+                    .exported_type_functions
+                    .iter()
+                    .find(|right_type_function| right_type_function.head == left_type_function.head)
+                    .is_some_and(|right_type_function| right_type_function == left_type_function)
+            })
         && left.exported_sealed_domains.iter().all(|left_domain| {
             right
                 .exported_sealed_domains

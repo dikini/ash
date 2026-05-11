@@ -1,6 +1,6 @@
 # TASK-855: SPEC-F closeout docs and verification
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -66,11 +66,11 @@ Dispatch a review/verification subagent with this task file, SPEC-062, and chang
 
 ## Completion Checklist
 
-- [ ] Requirements above are satisfied.
-- [ ] Focused tests exist and pass, or docs-only verification is recorded.
-- [ ] Negative leakage/private-opacity behavior is tested where applicable.
-- [ ] Status docs and CHANGELOG.md are updated if this task changes behavior or status.
-- [ ] Independent verification completed.
+- [x] Requirements above are satisfied.
+- [x] Focused tests exist and pass, or docs-only verification is recorded.
+- [x] Negative leakage/private-opacity behavior is tested where applicable.
+- [x] Status docs and CHANGELOG.md are updated if this task changes behavior or status.
+- [x] Independent verification completed.
 
 ## Dispatch
 
@@ -94,11 +94,32 @@ commands:
   - cargo doc --workspace --no-deps 2>&1 | tee /tmp/ash-phase114-doc.log
   - "! grep -i '^warning:' /tmp/ash-phase114-doc.log"
 checklist:
-  - [ ] Implementation matches SPEC-062 and PLAN-110 scope
-  - [ ] Focused tests for this task pass
-  - [ ] Formatting and diff checks pass
-  - [ ] CHANGELOG.md updated if task changes code/docs policy/status
+  - [x] Implementation matches SPEC-062 and PLAN-110 scope
+  - [x] Focused tests for this task pass
+  - [x] Formatting and diff checks pass
+  - [x] CHANGELOG.md updated if task changes code/docs policy/status
 ```
+
+### Recorded closeout run
+
+2026-05-11 local verification:
+
+- `python - <<'PY' ... PY` scoped Markdown-link check over `SPEC-062`, `PLAN-110`, `PLAN-INDEX`, Phase 114 task files, Phase 114 audit artifacts, `docs/spec/README.md`, and `CHANGELOG.md` — passed.
+- `git diff --check` — passed.
+- `cargo fmt --check` — passed.
+- `cargo check --workspace` — passed.
+- `cargo clippy --workspace --all-targets --all-features -- -D warnings` — passed.
+- `cargo test --workspace` — passed.
+- `cargo doc --workspace --no-deps 2>&1 | tee /tmp/ash-phase114-doc.log` — passed.
+- `! grep -i '^warning:' /tmp/ash-phase114-doc.log` — passed.
+
+Status reconciliation completed:
+
+- Promoted `SPEC-062` from Draft to Implemented MVP.
+- Updated `docs/spec/README.md` to mark SPEC-062 Implemented MVP.
+- Updated `PLAN-110` and `PLAN-INDEX` to mark TASK-855 complete and Phase 114 implementation/closeout complete, with TASK-856 retained for independent post-closeout review remediation.
+- Updated `CHANGELOG.md` with TASK-855 closeout evidence.
+- Independent verification reviewed the status/doc evidence and reran closeout checks with no blocking findings.
 
 ## Dependencies for Next Task
 

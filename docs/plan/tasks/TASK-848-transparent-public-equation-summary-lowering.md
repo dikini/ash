@@ -1,6 +1,6 @@
 # TASK-848: Transparent public equation summary lowering
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -65,11 +65,29 @@ Dispatch a review/verification subagent with this task file, SPEC-062, and chang
 
 ## Completion Checklist
 
-- [ ] Requirements above are satisfied.
-- [ ] Focused tests exist and pass, or docs-only verification is recorded.
-- [ ] Negative leakage/private-opacity behavior is tested where applicable.
-- [ ] Status docs and CHANGELOG.md are updated if this task changes behavior or status.
-- [ ] Independent verification completed.
+- [x] Requirements above are satisfied.
+- [x] Focused tests exist and pass, or docs-only verification is recorded.
+- [x] Negative leakage/private-opacity behavior is tested where applicable.
+- [x] Status docs and CHANGELOG.md are updated if this task changes behavior or status.
+- [x] Independent verification completed.
+
+## Completion Notes
+
+- Added `TypeEnv::export_public_type_function_summaries`, lowering already-validated public local type functions into `ash_core::semantic_summary::TypeFunctionSummary` values with `TransparentEquations` mode.
+- Preserves canonical `TypeComputationHeadId`, checked equation vector/ordinals, source anchors, parameter/return metadata, transitive public helper-head closure counts, revalidation metadata, and dependency summary ref placeholders with live module/version metadata.
+- Private/non-public local type functions are filtered out; imported summary registration, engine transport, and downstream normalizer lookup remain TASK-849/TASK-851 scope.
+
+## Verification Evidence
+
+```text
+cargo test -p ash-typeck --test task_848_public_equation_summary_lowering -- --nocapture
+cargo test -p ash-core --test task_845_public_computation_summary_schema -- --nocapture
+cargo fmt --check
+git diff --check
+cargo check --workspace
+```
+
+All commands passed locally for this task implementation after the transitive helper-closure remediation (`task_848_public_equation_summary_lowering`: 3 passed; `task_845_public_computation_summary_schema`: 6 passed). Independent remediation review reported no blocking or nonblocking findings.
 
 ## Dispatch
 
@@ -91,10 +109,10 @@ commands:
   - git diff --check
   - cargo check --workspace
 checklist:
-  - [ ] Implementation matches SPEC-062 and PLAN-110 scope
-  - [ ] Focused tests for this task pass
-  - [ ] Formatting and diff checks pass
-  - [ ] CHANGELOG.md updated if task changes code/docs policy/status
+  - [x] Implementation matches SPEC-062 and PLAN-110 scope
+  - [x] Focused tests for this task pass
+  - [x] Formatting and diff checks pass
+  - [x] CHANGELOG.md updated if task changes code/docs policy/status
 ```
 
 ## Dependencies for Next Task

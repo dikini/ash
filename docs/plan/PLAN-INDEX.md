@@ -3342,7 +3342,7 @@ Phase 114 implements SPEC-F from DESIGN-034. It defines the public module-summar
 | [TASK-845](tasks/TASK-845-core-public-computation-summary-schema.md) | Core public type-computation summary schema and V3 version contract | 8 | ✅ Complete |
 | [TASK-846](tasks/TASK-846-parser-public-type-fn-visibility.md) | Parser public type-function visibility preservation | 4 | ✅ Complete |
 | [TASK-847](tasks/TASK-847-typeck-public-export-closure-validation.md) | Typeck public/private export-closure validation | 8 | ✅ Complete |
-| [TASK-848](tasks/TASK-848-transparent-public-equation-summary-lowering.md) | Transparent public equation summary lowering | 8 | 📝 Planned |
+| [TASK-848](tasks/TASK-848-transparent-public-equation-summary-lowering.md) | Transparent public equation summary lowering | 8 | ✅ Complete |
 | [TASK-849](tasks/TASK-849-engine-summary-transport-reconciliation.md) | Engine summary transport and fragmented-carrier reconciliation | 8 | 📝 Planned |
 | [TASK-850](tasks/TASK-850-summary-versioning-cache-invalidation.md) | Summary versioning, dedup, and cache invalidation | 5 | 📝 Planned |
 | [TASK-851](tasks/TASK-851-typeenv-imported-head-registration-normalizer.md) | TypeEnv imported public head registration and normalizer integration | 9 | 📝 Planned |

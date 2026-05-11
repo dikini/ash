@@ -15,9 +15,12 @@ use ash_core::module_graph::{CrateId, ModuleId};
 use ash_core::semantic_summary::{
     AssociatedMemberIdentityId, AssociatedMemberIdentitySummary, ConstructorPayloadKind,
     ConstructorSummary, DomainConstructorId, DomainConstructorSummary, InterfaceIdentityId,
-    InterfaceIdentitySummary, ModuleIdentity, ModuleSemanticSummary, RepresentationExposure,
-    SealedDomainId, SealedDomainSummary, SourceAnchor, SourceOrigin, StructuralFieldStatus,
-    SummaryVersion, TypeDeclId, TypeDeclSummary, TypeRepresentationSummary,
+    InterfaceIdentitySummary, ModuleIdentity, ModuleSemanticSummary, ModuleSummaryRef,
+    RepresentationExposure, SealedDomainId, SealedDomainSummary, SourceAnchor, SourceOrigin,
+    StructuralFieldStatus, SummaryVersion, TypeDeclId, TypeDeclSummary,
+    TypeFunctionClosureMetadata, TypeFunctionDependencySummaryRef, TypeFunctionExportMode,
+    TypeFunctionParamSummary, TypeFunctionRevalidationMetadata, TypeFunctionSummary,
+    TypeRepresentationSummary,
 };
 use ash_core::type_ir::{
     CanonicalTypeExpr, ProjectionRigidity, TypeComputationHeadId, TypeFunctionDef,
@@ -51,6 +54,84 @@ struct TypeFunctionCoverageAlt {
 struct TypeFunctionCoverageSpace {
     domain: SealedDomainId,
     alts: Vec<TypeFunctionCoverageAlt>,
+}
+
+#[derive(Debug, Clone, Default)]
+struct PublicTypeFunctionClosure {
+    ordinary_types: HashSet<TypeDeclId>,
+    sealed_domains: HashSet<SealedDomainId>,
+    type_functions: HashSet<TypeComputationHeadId>,
+    projections: HashSet<(InterfaceIdentityId, AssociatedMemberIdentityId)>,
+}
+
+impl PublicTypeFunctionClosure {
+    fn dependency_summary_refs(&self) -> Vec<TypeFunctionDependencySummaryRef> {
+        let mut refs = Vec::new();
+        for ty in &self.ordinary_types {
+            push_dependency_summary_ref(
+                &mut refs,
+                ty.module.clone(),
+                SummaryVersion::SPEC057_ORDINARY_TYPE_V1,
+            );
+        }
+        for domain in &self.sealed_domains {
+            push_dependency_summary_ref(
+                &mut refs,
+                domain.module.clone(),
+                SummaryVersion::SPEC059_SEALED_DOMAIN_V2,
+            );
+        }
+        for head in &self.type_functions {
+            push_dependency_summary_ref(
+                &mut refs,
+                head.module.clone(),
+                SummaryVersion::SPEC062_TYPE_COMPUTATION_V3,
+            );
+        }
+        for (interface, member) in &self.projections {
+            push_dependency_summary_ref(
+                &mut refs,
+                interface.module.clone(),
+                SummaryVersion::SPEC057_ORDINARY_TYPE_V1,
+            );
+            push_dependency_summary_ref(
+                &mut refs,
+                member.interface.module.clone(),
+                SummaryVersion::SPEC057_ORDINARY_TYPE_V1,
+            );
+        }
+        refs.sort_by(|left, right| {
+            left.summary_ref
+                .module
+                .path
+                .cmp(&right.summary_ref.module.path)
+                .then_with(|| {
+                    left.summary_ref
+                        .module
+                        .module_id
+                        .0
+                        .cmp(&right.summary_ref.module.module_id.0)
+                })
+                .then_with(|| left.summary_ref.version.0.cmp(&right.summary_ref.version.0))
+        });
+        refs
+    }
+}
+
+fn push_dependency_summary_ref(
+    refs: &mut Vec<TypeFunctionDependencySummaryRef>,
+    module: ModuleIdentity,
+    version: SummaryVersion,
+) {
+    let summary_ref = ModuleSummaryRef { module, version };
+    if refs.iter().any(|dep| dep.summary_ref == summary_ref) {
+        return;
+    }
+    refs.push(TypeFunctionDependencySummaryRef {
+        summary_ref,
+        digest: None,
+        compiler_algorithm_version: Some("spec-062-mvp".to_string()),
+    });
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -2451,6 +2532,261 @@ impl TypeEnv {
     /// exposes no public summary/equation transport before SPEC-F.
     pub fn local_type_function_names(&self) -> impl Iterator<Item = &str> {
         self.local_type_function_heads.keys().map(String::as_str)
+    }
+
+    /// Lower checked, transparent, export-closed public local type functions into
+    /// SPEC-062 public computation summaries.
+    ///
+    /// This only exports already-validated public source definitions for the
+    /// requested defining module. It deliberately does not register imported
+    /// normalizer facts or expose private/local-only type functions.
+    pub fn export_public_type_function_summaries(
+        &self,
+        module: &ModuleIdentity,
+    ) -> Result<Vec<TypeFunctionSummary>, TypeEnvError> {
+        let mut defs = self
+            .local_type_functions
+            .values()
+            .filter(|def| {
+                def.visibility == ash_core::ast::Visibility::Public && def.head.module == *module
+            })
+            .collect::<Vec<_>>();
+        defs.sort_by(|left, right| {
+            let left_start = left
+                .source_anchors
+                .definition
+                .span
+                .map_or(usize::MAX, |s| s.start);
+            let right_start = right
+                .source_anchors
+                .definition
+                .span
+                .map_or(usize::MAX, |s| s.start);
+            left_start
+                .cmp(&right_start)
+                .then_with(|| left.name.cmp(&right.name))
+        });
+
+        defs.into_iter()
+            .map(|def| self.lower_public_type_function_summary(def))
+            .collect()
+    }
+
+    fn lower_public_type_function_summary(
+        &self,
+        def: &TypeFunctionDef,
+    ) -> Result<TypeFunctionSummary, TypeEnvError> {
+        self.validate_public_type_function_export_closure(def, Span::default())?;
+
+        let mut closure = PublicTypeFunctionClosure::default();
+        self.collect_public_type_function_def_closure(def, &mut closure);
+
+        Ok(TypeFunctionSummary {
+            exported_name: def.name.clone(),
+            head: def.head.clone(),
+            visibility: def.visibility,
+            params: def
+                .params
+                .iter()
+                .map(|param| TypeFunctionParamSummary {
+                    name: param.name.clone(),
+                    ty: param.ty.clone(),
+                    kind: param.kind.clone(),
+                    domain_constraint: param.domain_constraint.clone(),
+                    source_anchor: param.source_anchor.clone(),
+                })
+                .collect(),
+            return_type: def.return_type.clone(),
+            return_kind: def.return_kind.clone(),
+            result_constraint: def.result_constraint.clone(),
+            export_mode: TypeFunctionExportMode::TransparentEquations,
+            source_anchors: def.source_anchors.clone(),
+            equations: def.equations.clone(),
+            dependency_summary_refs: closure.dependency_summary_refs(),
+            closure_metadata: TypeFunctionClosureMetadata {
+                public_closure_checked: true,
+                public_ordinary_type_count: closure.ordinary_types.len(),
+                public_sealed_domain_count: closure.sealed_domains.len(),
+                public_type_function_count: closure.type_functions.len(),
+                public_projection_count: closure.projections.len(),
+            },
+            revalidation_metadata: TypeFunctionRevalidationMetadata {
+                spec_version: SummaryVersion::SPEC062_TYPE_COMPUTATION_V3,
+                structural_recursion_checked: true,
+                kind_and_domain_checked: true,
+                coverage_and_overlap_checked: true,
+            },
+        })
+    }
+
+    fn collect_public_type_function_def_closure(
+        &self,
+        def: &TypeFunctionDef,
+        closure: &mut PublicTypeFunctionClosure,
+    ) {
+        if !closure.type_functions.insert(def.head.clone()) {
+            return;
+        }
+        for param in &def.params {
+            if let Some(domain) = &param.domain_constraint {
+                closure.sealed_domains.insert(domain.clone());
+            }
+            self.collect_public_canonical_type_closure(&param.ty, closure);
+        }
+        if let TypeFunctionResultConstraint::Domain(domain) = &def.result_constraint {
+            closure.sealed_domains.insert(domain.clone());
+        }
+        self.collect_public_canonical_type_closure(&def.return_type, closure);
+        for equation in &def.equations {
+            for pattern in &equation.patterns {
+                self.collect_public_pattern_closure(pattern, closure);
+            }
+            self.collect_public_result_closure(&equation.result, closure);
+        }
+    }
+
+    fn collect_public_type_function_head_closure(
+        &self,
+        head: &TypeComputationHeadId,
+        closure: &mut PublicTypeFunctionClosure,
+    ) {
+        match self.local_type_functions.get(head) {
+            Some(def) if def.visibility == ash_core::ast::Visibility::Public => {
+                self.collect_public_type_function_def_closure(def, closure);
+            }
+            _ => {
+                closure.type_functions.insert(head.clone());
+            }
+        }
+    }
+
+    fn collect_public_canonical_type_closure(
+        &self,
+        ty: &CanonicalTypeExpr,
+        closure: &mut PublicTypeFunctionClosure,
+    ) {
+        match ty {
+            CanonicalTypeExpr::Primitive(_) | CanonicalTypeExpr::Var(_) => {}
+            CanonicalTypeExpr::NominalApp { origin, args, .. } => {
+                closure.ordinary_types.insert(origin.clone());
+                for arg in args {
+                    self.collect_public_canonical_type_closure(arg, closure);
+                }
+            }
+            CanonicalTypeExpr::Projection {
+                interface,
+                member,
+                args,
+                ..
+            } => {
+                closure
+                    .projections
+                    .insert((interface.clone(), member.clone()));
+                for arg in args {
+                    self.collect_public_canonical_type_closure(arg, closure);
+                }
+            }
+            CanonicalTypeExpr::ComputationHeadApp { head, args, .. } => {
+                self.collect_public_type_function_head_closure(head, closure);
+                for arg in args {
+                    self.collect_public_canonical_type_closure(arg, closure);
+                }
+            }
+        }
+    }
+
+    fn collect_public_pattern_closure(
+        &self,
+        pattern: &TypeFunctionPattern,
+        closure: &mut PublicTypeFunctionClosure,
+    ) {
+        match pattern {
+            TypeFunctionPattern::DomainConstructor { domain, fields, .. } => {
+                closure.sealed_domains.insert((**domain).clone());
+                for field in fields {
+                    self.collect_public_pattern_closure(field, closure);
+                }
+            }
+            TypeFunctionPattern::Var { constraint, .. }
+            | TypeFunctionPattern::Wildcard { constraint, .. } => {
+                if let TypeFunctionPatternConstraint::Domain(domain) = constraint {
+                    closure.sealed_domains.insert(domain.clone());
+                }
+            }
+        }
+    }
+
+    fn collect_public_result_closure(
+        &self,
+        expr: &TypeFunctionResultExpr,
+        closure: &mut PublicTypeFunctionClosure,
+    ) {
+        match expr {
+            TypeFunctionResultExpr::Primitive { constraint, .. }
+            | TypeFunctionResultExpr::Var { constraint, .. } => {
+                Self::collect_result_constraint_closure(constraint, closure);
+            }
+            TypeFunctionResultExpr::NominalApp {
+                origin,
+                args,
+                constraint,
+                ..
+            } => {
+                closure.ordinary_types.insert(origin.clone());
+                Self::collect_result_constraint_closure(constraint, closure);
+                for arg in args {
+                    self.collect_public_result_closure(arg, closure);
+                }
+            }
+            TypeFunctionResultExpr::DomainConstructorApp {
+                domain,
+                args,
+                constraint,
+                ..
+            } => {
+                closure.sealed_domains.insert(domain.clone());
+                Self::collect_result_constraint_closure(constraint, closure);
+                for arg in args {
+                    self.collect_public_result_closure(arg, closure);
+                }
+            }
+            TypeFunctionResultExpr::Projection {
+                interface,
+                member,
+                args,
+                constraint,
+                ..
+            } => {
+                closure
+                    .projections
+                    .insert((interface.clone(), member.clone()));
+                Self::collect_result_constraint_closure(constraint, closure);
+                for arg in args {
+                    self.collect_public_result_closure(arg, closure);
+                }
+            }
+            TypeFunctionResultExpr::ComputationHeadApp {
+                head,
+                args,
+                constraint,
+                ..
+            } => {
+                self.collect_public_type_function_head_closure(head, closure);
+                Self::collect_result_constraint_closure(constraint, closure);
+                for arg in args {
+                    self.collect_public_result_closure(arg, closure);
+                }
+            }
+        }
+    }
+
+    fn collect_result_constraint_closure(
+        constraint: &TypeFunctionResultConstraint,
+        closure: &mut PublicTypeFunctionClosure,
+    ) {
+        if let TypeFunctionResultConstraint::Domain(domain) = constraint {
+            closure.sealed_domains.insert(domain.clone());
+        }
     }
 
     fn register_local_type_functions_inner(

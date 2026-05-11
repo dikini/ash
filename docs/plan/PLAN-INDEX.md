@@ -3338,7 +3338,7 @@ Phase 114 implements SPEC-F from DESIGN-034. It defines the public module-summar
 | Task | Description | Est. Hours | Status |
 |------|-------------|------------|--------|
 | [TASK-843](tasks/TASK-843-spec-f-spec-plan-packet.md) | Promote DESIGN-034 SPEC-F into SPEC-062/PLAN-110 and register Phase 114 | 4 | ✅ Complete |
-| [TASK-844](tasks/TASK-844-type-computation-summary-audit-gate.md) | Audit live public summary/export/import/normalizer seams before implementation | 5 | 📝 Planned |
+| [TASK-844](tasks/TASK-844-type-computation-summary-audit-gate.md) | Audit live public summary/export/import/normalizer seams before implementation | 5 | ✅ Complete |
 | [TASK-845](tasks/TASK-845-core-public-computation-summary-schema.md) | Core public type-computation summary schema and V3 version contract | 8 | 📝 Planned |
 | [TASK-846](tasks/TASK-846-parser-public-type-fn-visibility.md) | Parser public type-function visibility preservation | 4 | 📝 Planned |
 | [TASK-847](tasks/TASK-847-typeck-public-export-closure-validation.md) | Typeck public/private export-closure validation | 8 | 📝 Planned |

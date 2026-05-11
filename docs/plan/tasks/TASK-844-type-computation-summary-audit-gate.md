@@ -1,6 +1,6 @@
 # TASK-844: Type-computation summary audit gate
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -93,11 +93,11 @@ Dispatch a review/verification subagent with this task file, SPEC-062, and chang
 
 ## Completion Checklist
 
-- [ ] Requirements above are satisfied.
-- [ ] Focused tests exist and pass, or docs-only verification is recorded.
-- [ ] Negative leakage/private-opacity behavior is tested where applicable.
-- [ ] Status docs and CHANGELOG.md are updated if this task changes behavior or status.
-- [ ] Independent verification completed.
+- [x] Requirements above are satisfied.
+- [x] Focused tests exist and pass, or docs-only verification is recorded.
+- [x] Negative leakage/private-opacity behavior is tested where applicable.
+- [x] Status docs and CHANGELOG.md are updated if this task changes behavior or status.
+- [x] Independent verification completed by parent-required TASK-844 audit review gate after artifact creation.
 
 ## Dispatch
 
@@ -109,6 +109,15 @@ toolsets: [terminal, file]
 ```
 
 ## Verification
+
+TASK-844 docs-only verification was run after creating `docs/plan/audits/TASK-844-type-computation-summary-audit.md` and reconciling status docs.
+
+Results recorded 2026-05-11:
+
+- `git diff --check` — passed.
+- `cargo fmt --check` — passed.
+- TASK-844 markdown link-check Python snippet — passed.
+- `cargo check --workspace` — passed.
 
 ```yaml
 strictness: clean

@@ -3,6 +3,7 @@
 //! Defines errors that can occur during type checking of expressions,
 //! including constructor checking errors.
 
+use ash_core::semantic_summary::SummaryVersion;
 use ash_parser::token::Span;
 use thiserror::Error;
 
@@ -181,6 +182,57 @@ pub enum TypeEnvError {
     /// Invalid type definition
     #[error("Invalid type definition: {0}")]
     InvalidDefinition(String, Span),
+
+    /// Unsupported imported module semantic summary version.
+    #[error(
+        "unsupported-version: unsupported module semantic summary version {}; expected {}",
+        version.0, expected
+    )]
+    UnsupportedSummaryVersion {
+        /// Unsupported version found in the imported summary.
+        version: SummaryVersion,
+        /// Human-readable expected version set.
+        expected: String,
+        /// Source span.
+        span: Span,
+    },
+
+    /// Imported public computation data is malformed for the summary version/content contract.
+    #[error("malformed imported-computation-summary: {message}")]
+    MalformedImportedComputationSummary {
+        /// Human-readable reason.
+        message: String,
+        /// Summary version that carried malformed computation fields.
+        version: SummaryVersion,
+        /// Source span.
+        span: Span,
+    },
+
+    /// A public export would leak a private dependency.
+    #[error(
+        "private-dependency-export-failure: public type function '{public_item}' depends on private {dependency_kind} '{dependency}'"
+    )]
+    PrivateDependencyExportFailure {
+        /// Public item being exported.
+        public_item: String,
+        /// Private dependency name.
+        dependency: String,
+        /// Private dependency family.
+        dependency_kind: String,
+        /// Source span.
+        span: Span,
+    },
+
+    /// Imported summaries conflict in a way that would make registration order observable.
+    #[error("import-order-conflict: {family} '{name}' has conflicting metadata")]
+    ImportOrderConflict {
+        /// Summary family that conflicted.
+        family: String,
+        /// Exported name.
+        name: String,
+        /// Source span.
+        span: Span,
+    },
 
     /// Interface already defined
     #[error("Interface '{0}' is already defined")]

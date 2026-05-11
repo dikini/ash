@@ -1757,21 +1757,37 @@ fn validate_summary_visibility_and_duplicates(
 }
 
 fn summary_version_contract_error(error: ModuleSemanticSummaryValidationError) -> TypeEnvError {
-    let message = match error {
-        ModuleSemanticSummaryValidationError::TypeFunctionsRequireV3 { version } => format!(
-            "module semantic summary version {} cannot carry public type-function summaries; expected {}",
-            version.0,
-            SummaryVersion::SPEC062_TYPE_COMPUTATION_V3.0
-        ),
-        ModuleSemanticSummaryValidationError::UnsupportedSummaryVersion { version } => format!(
-            "unsupported module semantic summary version {}; expected {}, {}, or {}",
-            version.0,
-            SummaryVersion::SPEC057_ORDINARY_TYPE_V1.0,
-            SummaryVersion::SPEC059_SEALED_DOMAIN_V2.0,
-            SummaryVersion::SPEC062_TYPE_COMPUTATION_V3.0
-        ),
-    };
-    TypeEnvError::InvalidDefinition(message, Span::default())
+    match error {
+        ModuleSemanticSummaryValidationError::TypeFunctionsRequireV3 { version } => {
+            TypeEnvError::MalformedImportedComputationSummary {
+                message: format!(
+                    "module semantic summary version {} cannot carry public type-function summaries; expected {}",
+                    version.0,
+                    SummaryVersion::SPEC062_TYPE_COMPUTATION_V3.0
+                ),
+                version,
+                span: Span::default(),
+            }
+        }
+        ModuleSemanticSummaryValidationError::UnsupportedSummaryVersion { version } => {
+            TypeEnvError::UnsupportedSummaryVersion {
+                version,
+                expected: format!(
+                    "{}, {}, or {}",
+                    SummaryVersion::SPEC057_ORDINARY_TYPE_V1.0,
+                    SummaryVersion::SPEC059_SEALED_DOMAIN_V2.0,
+                    SummaryVersion::SPEC062_TYPE_COMPUTATION_V3.0
+                ),
+                span: Span::default(),
+            }
+        }
+    }
+}
+
+fn anchor_span(anchor: &SourceAnchor) -> Span {
+    anchor
+        .span
+        .map_or_else(Span::default, |span| Span::new(span.start, span.end, 0, 0))
 }
 
 fn imported_type_function_def(summary: &TypeFunctionSummary) -> TypeFunctionDef {
@@ -2382,13 +2398,14 @@ impl TypeEnv {
         if let Some(existing) = self.local_type_functions.get(&summary.head) {
             let incoming = imported_type_function_def(summary);
             if existing != &incoming {
-                return Err(TypeEnvError::InvalidDefinition(
-                    format!(
-                        "duplicate type-function summary '{}' has conflicting metadata",
-                        summary.exported_name
+                return Err(TypeEnvError::ImportOrderConflict {
+                    family: "type-function summary".to_string(),
+                    name: summary.exported_name.clone(),
+                    span: summary.equations.first().map_or_else(
+                        || anchor_span(&summary.source_anchors.definition),
+                        |equation| anchor_span(&equation.source_anchor),
                     ),
-                    Span::default(),
-                ));
+                });
             }
             return Ok(());
         }
@@ -3671,13 +3688,12 @@ impl TypeEnv {
                         ));
                     };
                     if callee.visibility != ash_core::ast::Visibility::Public {
-                        return Err(TypeEnvError::InvalidDefinition(
-                            format!(
-                                "public type function '{}' depends on private type function '{}'",
-                                def.name, callee.name
-                            ),
+                        return Err(TypeEnvError::PrivateDependencyExportFailure {
+                            public_item: def.name.clone(),
+                            dependency: callee.name.clone(),
+                            dependency_kind: "type function".to_string(),
                             span,
-                        ));
+                        });
                     }
                 }
                 for arg in args {
@@ -3744,13 +3760,16 @@ impl TypeEnv {
             ));
         };
         if summary.visibility != ash_core::ast::Visibility::Public {
-            return Err(TypeEnvError::InvalidDefinition(
-                format!(
-                    "public type function '{}' depends on private sealed domain '{}'",
-                    def.name, summary.exported_name
-                ),
-                span,
-            ));
+            return Err(TypeEnvError::PrivateDependencyExportFailure {
+                public_item: def.name.clone(),
+                dependency: summary.exported_name.clone(),
+                dependency_kind: "sealed domain".to_string(),
+                span: if anchor_span(&summary.anchor) == Span::default() {
+                    span
+                } else {
+                    anchor_span(&summary.anchor)
+                },
+            });
         }
         Ok(())
     }
@@ -3771,13 +3790,12 @@ impl TypeEnv {
             ));
         };
         if domain.visibility != ash_core::ast::Visibility::Public {
-            return Err(TypeEnvError::InvalidDefinition(
-                format!(
-                    "public type function '{}' depends on private marker constructor '{}'",
-                    def.name, constructor.name
-                ),
+            return Err(TypeEnvError::PrivateDependencyExportFailure {
+                public_item: def.name.clone(),
+                dependency: constructor.name.clone(),
+                dependency_kind: "marker constructor".to_string(),
                 span,
-            ));
+            });
         }
         Ok(())
     }
@@ -3812,13 +3830,12 @@ impl TypeEnv {
         if let Some(info) = self.interfaces.get(interface.name.as_str())
             && info.visibility != ash_core::ast::Visibility::Public
         {
-            return Err(TypeEnvError::InvalidDefinition(
-                format!(
-                    "public type function '{}' depends on private projection '{}::{}'",
-                    def.name, interface.name, member.name
-                ),
+            return Err(TypeEnvError::PrivateDependencyExportFailure {
+                public_item: def.name.clone(),
+                dependency: format!("{}::{}", interface.name, member.name),
+                dependency_kind: "projection".to_string(),
                 span,
-            ));
+            });
         }
         Ok(())
     }
@@ -3832,13 +3849,12 @@ impl TypeEnv {
         if let Some(type_def) = self.ast_types.get(visible_name)
             && type_def.visibility != ash_core::ast::Visibility::Public
         {
-            return Err(TypeEnvError::InvalidDefinition(
-                format!(
-                    "public type function '{}' depends on private ordinary type '{}'",
-                    def.name, visible_name
-                ),
+            return Err(TypeEnvError::PrivateDependencyExportFailure {
+                public_item: def.name.clone(),
+                dependency: visible_name.to_string(),
+                dependency_kind: "ordinary type".to_string(),
                 span,
-            ));
+            });
         }
         Ok(())
     }

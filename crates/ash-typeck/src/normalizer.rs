@@ -380,6 +380,7 @@ pub enum NormalizerDiagnosticKind {
     NormalizedMismatch,
     FuelOrCycleGuard,
     LegacyFallback,
+    UnavailablePrivateReduction,
 }
 
 /// One structured normalizer diagnostic/evidence item.
@@ -590,13 +591,28 @@ impl<'env> Normalizer<'env> {
                 normal @ (NormalTypeExpr::Primitive(_)
                 | NormalTypeExpr::NominalApp { .. }
                 | NormalTypeExpr::DomainConstructorApp { .. }) => Ok(normal),
+                normal @ NormalTypeExpr::NeutralComputationApp { .. }
+                    if matches!(
+                        &normal,
+                        NormalTypeExpr::NeutralComputationApp { reason, .. }
+                            if reason == &NormalFormBlockReason::Unsupported
+                    ) =>
+                {
+                    Err(Box::new(NormalizerDiagnostic::new(
+                        NormalizerDiagnosticKind::UnavailablePrivateReduction,
+                        "unavailable-private-reduction: a boundary required a concrete reduction, but the computation equations are unavailable across the public/private summary boundary; ordinary SPEC-062 MVP source definitions with private dependencies are rejected before downstream use",
+                    )
+                    .with_normal_slice(normal)))
+                }
                 normal @ (NormalTypeExpr::Var(_)
                 | NormalTypeExpr::NeutralComputationApp { .. }
-                | NormalTypeExpr::Projection { .. }) => Err(Box::new(NormalizerDiagnostic::new(
-                    NormalizerDiagnosticKind::ConcreteNormalFormRequired,
-                    "concrete normal form required; normalization produced a neutral/stuck normal form and equality will not invert it",
-                )
-                .with_normal_slice(normal))),
+                | NormalTypeExpr::Projection { .. }) => {
+                    Err(Box::new(NormalizerDiagnostic::new(
+                        NormalizerDiagnosticKind::ConcreteNormalFormRequired,
+                        "concrete normal form required; normalization produced a neutral/stuck normal form and equality will not invert it",
+                    )
+                    .with_normal_slice(normal)))
+                }
             },
             Err(error) => Err(Box::new(NormalizerDiagnostic::new(
                 NormalizerDiagnosticKind::FuelOrCycleGuard,

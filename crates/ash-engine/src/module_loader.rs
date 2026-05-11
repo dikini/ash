@@ -49,6 +49,30 @@ thread_local! {
     static LEGACY_TYPE_SNIPPET_COMPAT_SCOPE: Cell<usize> = const { Cell::new(0) };
 }
 
+const fn type_env_error_span(error: &ash_typeck::error::TypeEnvError) -> ash_parser::token::Span {
+    use ash_typeck::error::TypeEnvError;
+
+    match error {
+        TypeEnvError::DuplicateType(_, span)
+        | TypeEnvError::TypeNotFound(_, span)
+        | TypeEnvError::InvalidDefinition(_, span)
+        | TypeEnvError::DuplicateInterface(_, span)
+        | TypeEnvError::MissingInterface(_, span)
+        | TypeEnvError::UnsupportedSummaryVersion { span, .. }
+        | TypeEnvError::MalformedImportedComputationSummary { span, .. }
+        | TypeEnvError::PrivateDependencyExportFailure { span, .. }
+        | TypeEnvError::ImportOrderConflict { span, .. }
+        | TypeEnvError::DuplicateImpl { span, .. }
+        | TypeEnvError::MissingImpl { span, .. }
+        | TypeEnvError::MissingInterfaceMethod { span, .. }
+        | TypeEnvError::OverlappingImpls { span, .. }
+        | TypeEnvError::RecursiveBound { span, .. }
+        | TypeEnvError::MissingAssociatedType { span, .. }
+        | TypeEnvError::MismatchedProjectionInterface { span, .. }
+        | TypeEnvError::AmbiguousAssociatedType { span, .. } => *span,
+    }
+}
+
 /// Executes `f` with the legacy ordinary-type snippet compatibility APIs enabled.
 ///
 /// This is an explicit TASK-789 quarantine fence. Normal module checking,
@@ -2117,7 +2141,7 @@ pub(crate) fn collect_module_exports(
         &type_metadata.summary,
         &exports.type_defs,
     )?);
-    attach_public_type_function_summaries(&mut exports, &type_metadata)?;
+    attach_public_type_function_summaries(&mut exports, &type_metadata, &path)?;
     if let Some(summary) = exports.semantic_summary.as_ref() {
         summary
             .validate_summary_version_contract()
@@ -2632,14 +2656,13 @@ fn exportable_module_semantic_summary(
 fn attach_public_type_function_summaries(
     exports: &mut ModuleExports,
     type_metadata: &ash_parser::lower::LoweredTypeMetadata,
+    path: &Path,
 ) -> Result<(), EngineError> {
-    let public_type_function_defs = type_metadata
+    let has_public_type_function = type_metadata
         .type_function_defs
         .iter()
-        .filter(|def| matches!(def.visibility, ash_parser::surface::Visibility::Public))
-        .cloned()
-        .collect::<Vec<_>>();
-    if public_type_function_defs.is_empty() {
+        .any(|def| matches!(def.visibility, ash_parser::surface::Visibility::Public));
+    if !has_public_type_function {
         return Ok(());
     }
     let Some(summary) = exports.semantic_summary.as_mut() else {
@@ -2654,11 +2677,33 @@ fn attach_public_type_function_summaries(
                 "public type-function summary substrate registration failed: {error}"
             ))
         })?;
+    for type_def in &type_metadata.type_defs {
+        if !matches!(type_def.visibility, CoreVisibility::Public) {
+            type_env.register_type(type_def).map_err(|error| {
+                EngineError::Parse(format!(
+                    "public type-function private-type substrate registration failed: {error}"
+                ))
+            })?;
+        }
+    }
+    for domain in &type_metadata.summary.exported_sealed_domains {
+        if !matches!(domain.visibility, CoreVisibility::Public) {
+            type_env
+                .register_local_sealed_domain_summary(domain)
+                .map_err(|error| {
+                    EngineError::Parse(format!(
+                        "public type-function private-domain substrate registration failed: {error}"
+                    ))
+                })?;
+        }
+    }
     type_env
-        .register_local_type_functions(&summary.module, &public_type_function_defs)
+        .register_local_type_functions(&summary.module, &type_metadata.type_function_defs)
         .map_err(|error| {
             EngineError::Parse(format!(
-                "public type-function export validation failed: {error}"
+                "in '{}': public type-function export validation failed before downstream use/reduction: {error}; span {:?}",
+                path.display(),
+                type_env_error_span(&error)
             ))
         })?;
     let type_function_summaries = type_env

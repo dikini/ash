@@ -291,7 +291,7 @@ Update this section as tasks complete:
 | 112 | 14 | 14 | ✅ Complete |
 | 113 | 13 | 13 | ✅ Complete |
 | 114 | 14 | 14 | ✅ Complete |
-| 115 | 14 | 1 | 🟡 Ready |
+| 115 | 14 | 2 | 🟡 Ready |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -403,7 +403,7 @@ This table is retained near the original early-phase section for historical cont
 | 112 | 14 | 14 | ✅ Complete |
 | 113 | 13 | 13 | ✅ Complete |
 | 114 | 14 | 14 | ✅ Complete |
-| 115 | 14 | 1 | 🟡 Ready |
+| 115 | 14 | 2 | 🟡 Ready |
 
 ## Phase 13: Streams and Behaviours (Weeks 20-22)
 
@@ -3372,7 +3372,7 @@ Phase 114 implements SPEC-F from DESIGN-034. It defines the public module-summar
 ## Phase 115: Associated Type-Family Computation
 
 **Priority:** High (DESIGN-034 SPEC-G integrates associated types with the total type-computation substrate after Phase 114)
-**Status:** 🟡 Ready for implementation (TASK-857 complete; TASK-858 through TASK-870 ready)
+**Status:** 🟡 Ready for implementation (TASK-857 and TASK-858 complete; TASK-859 through TASK-870 ready)
 **Spec:** [SPEC-063](../spec/SPEC-063-ASSOCIATED-TYPE-FAMILY-COMPUTATION.md)
 **Design:** [DESIGN-034](../design/DESIGN-034-TOTAL-TYPE-COMPUTATION.md)
 **Plan:** [docs/plan/PLAN-111-ASSOCIATED-TYPE-FAMILY-COMPUTATION.md](PLAN-111-ASSOCIATED-TYPE-FAMILY-COMPUTATION.md)
@@ -3382,7 +3382,7 @@ Phase 115 implements SPEC-G from DESIGN-034. It integrates associated types with
 | Task | Description | Est. Hours | Status |
 |------|-------------|------------|--------|
 | [TASK-857](tasks/TASK-857-spec-g-spec-plan-packet.md) | Promote DESIGN-034 SPEC-G into SPEC-063/PLAN-111 and register Phase 115 | 4 | ✅ Complete |
-| [TASK-858](tasks/TASK-858-associated-family-audit-gate.md) | Audit live associated projection, impl, normalizer, and summary seams, then bind downstream tasks to exact files/tests/callsites before implementation | 5 | 🟡 Ready |
+| [TASK-858](tasks/TASK-858-associated-family-audit-gate.md) | Audit live associated projection, impl, normalizer, and summary seams, then bind downstream tasks to exact files/tests/callsites before implementation | 5 | ✅ Complete |
 | [TASK-859](tasks/TASK-859-associated-family-surface-and-compat-parser.md) | Associated family projection/declaration surface syntax and SPEC-035 compatibility parser | 6 | 🟡 Ready |
 | [TASK-860](tasks/TASK-860-core-associated-family-identity-carriers.md) | Core associated-family identity/projection/summary carriers and V4 version contract | 7 | 🟡 Ready |
 | [TASK-861](tasks/TASK-861-typeck-family-declaration-registration-coherence.md) | TypeEnv family declaration registration, sealing, and coherence | 8 | 🟡 Ready |

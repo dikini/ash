@@ -10,7 +10,7 @@
 
 ---
 
-**Status:** 🟡 Ready for implementation (TASK-857 complete; TASK-858 through TASK-870 ready)
+**Status:** 🟡 Ready for implementation (TASK-857 and TASK-858 complete; TASK-859 through TASK-870 ready)
 **Spec:** [SPEC-063](../spec/SPEC-063-ASSOCIATED-TYPE-FAMILY-COMPUTATION.md)
 **Design:** [DESIGN-034 §16.7](../design/DESIGN-034-TOTAL-TYPE-COMPUTATION.md#167-spec-g-associated-type-family-computation)
 **Depends on:** [SPEC-057](../spec/SPEC-057-UNIFIED-TYPE-MODULE-PIPELINE-AND-SEMANTIC-SUMMARIES.md), [SPEC-058](../spec/SPEC-058-CANONICAL-TYPE-EXPRESSION-IR-PROJECTION-IDS-KIND-ARITY-SUBSTRATE.md), [SPEC-059](../spec/SPEC-059-SEALED-TYPE-LEVEL-DOMAINS.md), [SPEC-060](../spec/SPEC-060-NORMALIZER-DEFINITIONAL-EQUALITY-CORE.md), [SPEC-061](../spec/SPEC-061-DIRECT-STRUCTURAL-TYPE-FUNCTIONS.md), [SPEC-062](../spec/SPEC-062-MODULE-SUMMARY-EXPORT-IMPORT-FOR-TYPE-COMPUTATION.md)
@@ -20,7 +20,7 @@
 | Task | Description | Type | Est. Hours | Status |
 |------|-------------|------|------------|--------|
 | [TASK-857](tasks/TASK-857-spec-g-spec-plan-packet.md) | Promote DESIGN-034 SPEC-G into SPEC-063/PLAN-111 and register Phase 115 | Docs/Planning | 4 | ✅ Complete |
-| [TASK-858](tasks/TASK-858-associated-family-audit-gate.md) | Audit live associated projection, impl, normalizer, and summary seams, then bind downstream tasks to exact files/tests/callsites before implementation | Docs/Substrate | 5 | 🟡 Ready |
+| [TASK-858](tasks/TASK-858-associated-family-audit-gate.md) | Audit live associated projection, impl, normalizer, and summary seams, then bind downstream tasks to exact files/tests/callsites before implementation | Docs/Substrate | 5 | ✅ Complete |
 | [TASK-859](tasks/TASK-859-associated-family-surface-and-compat-parser.md) | Add explicit family projection/declaration surface and preserve SPEC-035 compatibility parsing | Parser | 6 | 🟡 Ready |
 | [TASK-860](tasks/TASK-860-core-associated-family-identity-carriers.md) | Add core associated-family identity/projection/summary carriers and V4 version contract | Core/Substrate | 7 | 🟡 Ready |
 | [TASK-861](tasks/TASK-861-typeck-family-declaration-registration-coherence.md) | Register sealed family declarations and validate impl-family coherence | Typeck/Semantic | 8 | 🟡 Ready |
@@ -85,7 +85,7 @@ Every task uses subagent-driven development and independent verification before 
 - [x] SPEC-063 promoted in `docs/spec/README.md` as Draft / ready for implementation.
 - [x] PLAN-111 and TASK-857 through TASK-870 registered in `docs/plan/PLAN-INDEX.md`.
 - [x] TASK-857 created and completed as the planning packet.
-- [ ] TASK-858 audit artifact created before Rust implementation and downstream TASK-859 through TASK-868 file/test/callsite bindings patched or explicitly confirmed.
+- [x] TASK-858 audit artifact created before Rust implementation and downstream TASK-859 through TASK-868 file/test/callsite bindings patched or explicitly confirmed.
 - [ ] Parser surface and compatibility syntax implemented and tested.
 - [ ] Core associated-family identity/projection/summary carriers implemented and tested.
 - [ ] TypeEnv sealed family registration/coherence implemented and tested.

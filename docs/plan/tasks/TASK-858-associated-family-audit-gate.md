@@ -1,6 +1,6 @@
 # TASK-858: Associated family audit gate
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -68,15 +68,17 @@ Dispatch an independent review/verification subagent with this task file, SPEC-0
 
 ## Completion Checklist
 
-- [ ] Requirements above are satisfied.
-- [ ] Focused tests/evidence exist and pass, or docs-only verification is recorded.
-- [ ] Negative leakage/non-interference behavior is covered for this task's surface.
-- [ ] Status docs and CHANGELOG.md are updated if this task changes release-facing docs.
-- [ ] Independent verification completed or scheduled by the closeout task.
+- [x] Requirements above are satisfied.
+- [x] Focused tests/evidence exist and pass, or docs-only verification is recorded.
+- [x] Negative leakage/non-interference behavior is covered for this task's surface.
+- [x] Status docs and CHANGELOG.md are updated if this task changes release-facing docs.
+- [x] Independent verification completed or scheduled by the closeout task.
 
 ## Completion Evidence
 
-- Completion evidence must be recorded by the implementing agent before marking this task complete.
+- Created `docs/plan/audits/TASK-858-associated-family-computation-audit.md` with live parser/core/typeck/normalizer/engine seam inventory, forcing matrix, non-interference risks, and the required downstream binding table for TASK-859 through TASK-868.
+- Verification evidence (2026-05-12): `cargo fmt --check`, `git diff --check`, `cargo check --workspace`, scoped Markdown link/trailing-whitespace check from this task file, and downstream binding-table structural check all passed after the audit/status docs were updated.
+- The implementation did not modify Rust source code; TASK-859+ Rust work remains gated on this completed audit artifact.
 
 ## Dispatch
 

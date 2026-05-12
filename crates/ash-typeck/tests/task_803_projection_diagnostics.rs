@@ -93,6 +93,7 @@ fn register_pair_projection_metadata(env: &mut TypeEnv, module: &ModuleIdentity)
         type_params: vec!["A".into(), "B".into()],
         associated_types: vec![AssociatedTypeDecl {
             name: "Item".into(),
+            kind: ash_parser::surface::AssociatedTypeKind::Ordinary,
             span: span(),
         }],
         methods: vec![],
@@ -132,6 +133,7 @@ fn register_serializer_projection_metadata(env: &mut TypeEnv, module: &ModuleIde
         type_params: vec!["T".into()],
         associated_types: vec![AssociatedTypeDecl {
             name: "Ok".into(),
+            kind: ash_parser::surface::AssociatedTypeKind::Ordinary,
             span: span(),
         }],
         methods: vec![],

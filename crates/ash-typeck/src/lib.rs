@@ -231,6 +231,12 @@ fn workflow_surface_type_to_type(
                 name: name.to_string(),
             })
         }
+        ash_parser::surface::Type::AssociatedFamilyProjection { .. } => Err(
+            TypeCheckError::TypeError(
+                "associated-family projection type checking is not supported before Phase 115 semantic registration"
+                    .to_string(),
+            ),
+        ),
     }
 }
 

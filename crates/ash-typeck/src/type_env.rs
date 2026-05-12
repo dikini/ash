@@ -29,7 +29,7 @@ use ash_core::type_ir::{
 };
 use ash_core::workflow_contract::{Contract as WorkflowContract, RuntimePostconditionContract};
 use ash_parser::surface::{
-    CapabilityImplementationDef, CapabilityImplementationDependency,
+    AssociatedTypeKind, CapabilityImplementationDef, CapabilityImplementationDependency,
     CapabilityImplementationDependencyKind, CapabilityImplementationOperation,
     CapabilityInterfaceDef, CapabilityOperationMode, CapabilityOperationSig, ImplDef, InterfaceDef,
     InterfaceMethodSig, ResourceTypeDef, Type as SurfaceType, TypeFnDef as SurfaceTypeFnDef,
@@ -765,6 +765,13 @@ fn surface_type_to_type(
                 name: name.to_string(),
             })
         }
+        SurfaceType::AssociatedFamilyProjection { span, .. } => Err(
+            TypeEnvError::InvalidDefinition(
+                "associated-family projection type checking is not supported before Phase 115 semantic registration"
+                    .to_string(),
+                *span,
+            ),
+        ),
     }
 }
 
@@ -826,6 +833,20 @@ fn surface_projection_base_spelling(base: &SurfaceType) -> String {
         SurfaceType::Associated { base, name } => {
             format!("{}::{}", surface_projection_base_spelling(base), name)
         }
+        SurfaceType::AssociatedFamilyProjection {
+            interface,
+            args,
+            member,
+            ..
+        } => format!(
+            "<{}<{}>>::{}",
+            interface,
+            args.iter()
+                .map(surface_projection_base_spelling)
+                .collect::<Vec<_>>()
+                .join(", "),
+            member
+        ),
     }
 }
 
@@ -5549,6 +5570,15 @@ impl TypeEnv {
                 found: "Fn".to_string(),
                 span: Span::default(),
             }),
+            SurfaceType::AssociatedFamilyProjection { span, .. } => Err(
+                TypeError::ConstructorNameMismatch {
+                    expected:
+                        "associated-family projection lowering after Phase 115 semantic registration"
+                            .to_string(),
+                    found: "associated-family projection surface syntax".to_string(),
+                    span: *span,
+                },
+            ),
         }
     }
 
@@ -6010,6 +6040,30 @@ impl TypeEnv {
             return Err(TypeEnvError::DuplicateInterface(
                 interface_name,
                 Span::default(),
+            ));
+        }
+
+        if let Some(param) = def.type_params.iter().find(|param| param.domain.is_some()) {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "associated-family domain annotation on interface parameter '{}' is parsed but not supported before Phase 115 registration",
+                    param.name
+                ),
+                param.span,
+            ));
+        }
+
+        if let Some(associated) = def
+            .associated_types
+            .iter()
+            .find(|associated| matches!(associated.kind, AssociatedTypeKind::SealedFamily { .. }))
+        {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "sealed associated family '{}' is parsed but not supported before Phase 115 registration",
+                    associated.name
+                ),
+                associated.span,
             ));
         }
 
@@ -6639,6 +6693,16 @@ impl TypeEnv {
                     def.type_args.len()
                 ),
                 Span::default(),
+            ));
+        }
+
+        if let Some(param) = def.type_params.iter().find(|param| param.domain.is_some()) {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "associated-family domain annotation on impl parameter '{}' is parsed but not supported before Phase 115 registration",
+                    param.name
+                ),
+                param.span,
             ));
         }
 

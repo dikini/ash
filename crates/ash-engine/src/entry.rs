@@ -408,6 +408,15 @@ fn format_type(ty: &Type) -> String {
         Type::Associated { base, name } => {
             format!("{}::{name}", format_type(base))
         }
+        Type::AssociatedFamilyProjection {
+            interface,
+            args,
+            member,
+            ..
+        } => {
+            let args = args.iter().map(format_type).collect::<Vec<_>>().join(", ");
+            format!("<{interface}<{args}>>::{member}")
+        }
     }
 }
 

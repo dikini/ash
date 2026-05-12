@@ -122,6 +122,7 @@ fn register_projection_metadata(
         type_params: vec!["A".into(), "B".into()],
         associated_types: vec![AssociatedTypeDecl {
             name: "Item".into(),
+            kind: ash_parser::surface::AssociatedTypeKind::Ordinary,
             span: ash_parser::token::Span::default(),
         }],
         methods: vec![],

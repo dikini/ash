@@ -15,15 +15,16 @@ use crate::parse_utils::skip_whitespace_and_comments;
 use crate::parse_visibility;
 use crate::parse_workflow::{parse_capabilities_clause, workflow_def};
 use crate::surface::{
-    AssociatedTypeBinding, AssociatedTypeDecl, BlockStmt, BuiltinFnDef, CapabilityDef,
-    CapabilityImplementationDef, CapabilityImplementationDependency,
-    CapabilityImplementationDependencyKind, CapabilityImplementationOperation,
-    CapabilityInterfaceDef, CapabilityOperationMode, CapabilityOperationSig, CapabilityRef,
-    Constraint, Contract, Definition, DomainConstructor, DomainField, DomainSlot, EffectType, Expr,
-    FnDef, ImplDef, ImplMethodDef, InterfaceDef, InterfaceMethodSig, MatchArm, Name, Param,
-    Pattern, Predicate, ProxyDef, ResourceField, ResourceTypeDef, RoleDef, SealedDomainDef, Type,
-    TypeBody, TypeDef, TypeField, TypeFnDecreases, TypeFnDef, TypeFnEquation, TypeFnParam,
-    TypePattern, VariantDef, VariantPayload, Visibility, WhereBound, Workflow, YieldArm,
+    AssociatedFamilyDecreases, AssociatedTypeBinding, AssociatedTypeDecl, AssociatedTypeKind,
+    BlockStmt, BuiltinFnDef, CapabilityDef, CapabilityImplementationDef,
+    CapabilityImplementationDependency, CapabilityImplementationDependencyKind,
+    CapabilityImplementationOperation, CapabilityInterfaceDef, CapabilityOperationMode,
+    CapabilityOperationSig, CapabilityRef, Constraint, Contract, Definition, DomainConstructor,
+    DomainField, DomainSlot, EffectType, Expr, FnDef, ImplDef, ImplMethodDef, InterfaceDef,
+    InterfaceMethodSig, InterfaceTypeParam, MatchArm, Name, Param, Pattern, Predicate, ProxyDef,
+    ResourceField, ResourceTypeDef, RoleDef, SealedDomainDef, Type, TypeBody, TypeDef, TypeField,
+    TypeFnDecreases, TypeFnDef, TypeFnEquation, TypeFnParam, TypePattern, VariantDef,
+    VariantPayload, Visibility, WhereBound, Workflow, YieldArm,
 };
 use crate::token::Span;
 
@@ -593,6 +594,21 @@ fn convert_type_expr(ty: crate::parse_type_def::TypeExpr) -> Type {
             name: name.into_boxed_str(),
             args: args.into_iter().map(convert_type_expr).collect(),
         },
+        crate::parse_type_def::TypeExpr::AssociatedFamilyProjection {
+            interface,
+            args,
+            member,
+            span,
+        } => Type::AssociatedFamilyProjection {
+            interface: interface.into_boxed_str(),
+            args: args.into_iter().map(convert_type_expr).collect(),
+            member: member.into_boxed_str(),
+            span,
+        },
+        crate::parse_type_def::TypeExpr::Associated { base, name } => Type::Associated {
+            base: Box::new(convert_type_expr(*base)),
+            name: name.into_boxed_str(),
+        },
         crate::parse_type_def::TypeExpr::Tuple(items) => {
             Type::Tuple(items.into_iter().map(convert_type_expr).collect())
         }
@@ -1076,7 +1092,7 @@ fn parse_interface_definition(input: &mut ParseInput) -> ModalResult<Definition>
     skip_whitespace(input);
     let name = identifier(input)?;
     skip_whitespace_and_comments(input);
-    let type_params = parse_optional_type_parameter_names(input)?;
+    let type_params = parse_optional_interface_type_params(input)?;
     skip_whitespace_and_comments(input);
     let _ = literal_str("{").parse_next(input)?;
     skip_whitespace_and_comments(input);
@@ -1084,7 +1100,7 @@ fn parse_interface_definition(input: &mut ParseInput) -> ModalResult<Definition>
     let mut associated_types = Vec::new();
     let mut methods = Vec::new();
     while !input.input.starts_with("}") {
-        if starts_with_keyword(input, "type") {
+        if starts_with_keyword(input, "sealed") || starts_with_keyword(input, "type") {
             associated_types.push(parse_associated_type_decl(input)?);
         } else {
             methods.push(parse_interface_method_signature(input)?);
@@ -1107,6 +1123,10 @@ fn parse_interface_definition(input: &mut ParseInput) -> ModalResult<Definition>
 }
 
 fn parse_associated_type_decl(input: &mut ParseInput) -> ModalResult<AssociatedTypeDecl> {
+    if starts_with_keyword(input, "sealed") {
+        return parse_sealed_associated_family_decl(input);
+    }
+
     let start = input.state.pos;
     let _ = keyword("type").parse_next(input)?;
     skip_whitespace_and_comments(input);
@@ -1115,7 +1135,47 @@ fn parse_associated_type_decl(input: &mut ParseInput) -> ModalResult<AssociatedT
     let _ = literal_str(";").parse_next(input)?;
     Ok(AssociatedTypeDecl {
         name: name.into(),
+        kind: AssociatedTypeKind::Ordinary,
         span: crate::input::span_from(&start, &input.state.pos),
+    })
+}
+
+fn parse_sealed_associated_family_decl(input: &mut ParseInput) -> ModalResult<AssociatedTypeDecl> {
+    let start = input.state.pos;
+    let _ = keyword("sealed").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = keyword("type").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = keyword("family").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let name = identifier(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str(":").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let result_domain = parse_surface_type(input)?;
+    skip_whitespace_and_comments(input);
+    let decreases = if starts_with_keyword(input, "decreases") {
+        let decreases_start = input.state.pos;
+        let _ = keyword("decreases").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        let param = identifier(input)?;
+        Some(AssociatedFamilyDecreases {
+            param: param.into(),
+            span: crate::input::span_from(&decreases_start, &input.state.pos),
+        })
+    } else {
+        None
+    };
+    let span = crate::input::span_from(&start, &input.state.pos);
+
+    Ok(AssociatedTypeDecl {
+        name: name.into(),
+        kind: AssociatedTypeKind::SealedFamily {
+            result_domain,
+            decreases,
+            span,
+        },
+        span,
     })
 }
 
@@ -1157,7 +1217,7 @@ fn parse_impl_definition(input: &mut ParseInput) -> ModalResult<Definition> {
     skip_whitespace(input);
     let _ = keyword("impl").parse_next(input)?;
     skip_whitespace(input);
-    let type_params = parse_optional_type_parameter_names(input)?;
+    let type_params = parse_optional_interface_type_params(input)?;
     skip_whitespace_and_comments(input);
     let interface = identifier(input)?;
     skip_whitespace_and_comments(input);
@@ -1273,6 +1333,48 @@ fn parse_impl_method_definition(input: &mut ParseInput) -> ModalResult<ImplMetho
         body,
         span: crate::input::span_from(&start, &input.state.pos),
     })
+}
+
+fn parse_optional_interface_type_params(
+    input: &mut ParseInput,
+) -> ModalResult<Vec<InterfaceTypeParam>> {
+    if !input.input.starts_with("<") {
+        return Ok(Vec::new());
+    }
+
+    let _ = literal_str("<").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let mut params = Vec::new();
+
+    loop {
+        let start = input.state.pos;
+        let name = identifier(input)?;
+        skip_whitespace_and_comments(input);
+        let domain = if literal_str(":").parse_next(input).is_ok() {
+            skip_whitespace_and_comments(input);
+            Some(parse_surface_type(input)?)
+        } else {
+            None
+        };
+        params.push(InterfaceTypeParam {
+            name: name.into(),
+            domain,
+            span: crate::input::span_from(&start, &input.state.pos),
+        });
+        skip_whitespace_and_comments(input);
+
+        if input.input.starts_with(",") {
+            let _ = input.input.next_slice(1);
+            input.state.advance(',');
+            skip_whitespace_and_comments(input);
+            continue;
+        }
+
+        let _ = literal_str(">").parse_next(input)?;
+        break;
+    }
+
+    Ok(params)
 }
 
 fn parse_optional_type_parameter_names(input: &mut ParseInput) -> ModalResult<Vec<Box<str>>> {
@@ -1470,6 +1572,10 @@ fn parse_optional_return_type(input: &mut ParseInput) -> ModalResult<Option<Type
 fn parse_surface_type(input: &mut ParseInput) -> ModalResult<Type> {
     skip_whitespace_and_comments(input);
 
+    if input.input.starts_with("<") {
+        return parse_associated_family_projection_type(input);
+    }
+
     // Parse explicit Fn(T1, T2) -> T3 type syntax
     if starts_with_keyword(input, "Fn") {
         let _ = keyword("Fn").parse_next(input)?;
@@ -1503,6 +1609,28 @@ fn parse_surface_type(input: &mut ParseInput) -> ModalResult<Type> {
     } else {
         Ok(lhs)
     }
+}
+
+fn parse_associated_family_projection_type(input: &mut ParseInput) -> ModalResult<Type> {
+    let start = input.state.pos;
+    let _ = literal_str("<").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let interface = identifier(input)?;
+    skip_whitespace_and_comments(input);
+    let args = parse_required_type_arguments(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str(">").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str("::").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let member = identifier(input)?;
+
+    Ok(Type::AssociatedFamilyProjection {
+        interface: interface.into(),
+        args,
+        member: member.into(),
+        span: crate::input::span_from(&start, &input.state.pos),
+    })
 }
 
 fn parse_surface_type_atom(input: &mut ParseInput) -> ModalResult<Type> {

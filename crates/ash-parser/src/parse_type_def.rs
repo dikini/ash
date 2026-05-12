@@ -80,6 +80,19 @@ pub enum TypeExpr {
     Named(String),
     /// Type constructor application (e.g., `Option<Int>`)
     Constructor { name: String, args: Vec<TypeExpr> },
+    /// Explicit associated-family projection (e.g., `<Iterator<List<A>>>::Item`).
+    AssociatedFamilyProjection {
+        /// Source-visible unqualified interface name.
+        interface: String,
+        /// Raw interface argument spine.
+        args: Vec<TypeExpr>,
+        /// Associated member name.
+        member: String,
+        /// Source span.
+        span: crate::token::Span,
+    },
+    /// Compatibility associated type projection (e.g., `T::Item`).
+    Associated { base: Box<TypeExpr>, name: String },
     /// Tuple type (e.g., (Int, String))
     Tuple(Vec<TypeExpr>),
     /// Record type (e.g., { x: Int, y: String })
@@ -479,7 +492,8 @@ fn parse_alias_body(input: &mut ParseInput) -> ModalResult<TypeBody> {
 fn parse_type_expr(input: &mut ParseInput) -> ModalResult<TypeExpr> {
     skip_whitespace_and_comments(input);
 
-    let lhs = alt((
+    let mut lhs = alt((
+        parse_associated_family_projection_type,
         parse_fn_type,
         parse_tuple_type,
         parse_record_type,
@@ -487,6 +501,16 @@ fn parse_type_expr(input: &mut ParseInput) -> ModalResult<TypeExpr> {
         parse_named_type,
     ))
     .parse_next(input)?;
+
+    while literal_str("::").parse_next(input).is_ok() {
+        skip_whitespace_and_comments(input);
+        let name = parse_type_name(input)?;
+        lhs = TypeExpr::Associated {
+            base: Box::new(lhs),
+            name: name.to_string(),
+        };
+        skip_whitespace_and_comments(input);
+    }
 
     skip_whitespace_and_comments(input);
     if literal_str("->").parse_next(input).is_ok() {
@@ -535,6 +559,33 @@ fn parse_fn_type(input: &mut ParseInput) -> ModalResult<TypeExpr> {
     Ok(TypeExpr::Constructor {
         name: "Fn".to_string(),
         args,
+    })
+}
+
+/// Parse an explicit associated-family projection: `<Interface<Args...>>::Member`.
+fn parse_associated_family_projection_type(input: &mut ParseInput) -> ModalResult<TypeExpr> {
+    let start = input.state.pos;
+    literal_str("<").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let interface = parse_type_name(input)?;
+    skip_whitespace_and_comments(input);
+    literal_str("<").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let args = separated(1.., parse_type_expr, parse_type_arg_separator).parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    literal_str(">").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    literal_str(">").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    literal_str("::").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let member = parse_type_name(input)?;
+
+    Ok(TypeExpr::AssociatedFamilyProjection {
+        interface: interface.to_string(),
+        args,
+        member: member.to_string(),
+        span: crate::input::span_from(&start, &input.state.pos),
     })
 }
 

@@ -237,6 +237,17 @@ fn type_summary(ty: &Type) -> String {
             args.iter().map(type_summary).collect::<Vec<_>>().join(", ")
         ),
         Type::Associated { base, name } => format!("{}::{}", type_summary(base), name),
+        Type::AssociatedFamilyProjection {
+            interface,
+            args,
+            member,
+            ..
+        } => format!(
+            "<{}<{}>>::{}",
+            interface,
+            args.iter().map(type_summary).collect::<Vec<_>>().join(", "),
+            member
+        ),
         Type::Fn(args, ret) => format!(
             "Fn({}) -> {}",
             args.iter().map(type_summary).collect::<Vec<_>>().join(", "),

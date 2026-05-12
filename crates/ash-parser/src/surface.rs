@@ -4,6 +4,8 @@
 //! Surface AST is more flexible and syntactic than Core IR, preserving
 //! all source-level constructs with full span information.
 
+use std::fmt;
+
 use crate::token::Span;
 
 /// A name/identifier in the source code.
@@ -603,7 +605,34 @@ pub struct ProxyDef {
 pub struct AssociatedTypeDecl {
     /// Associated type name
     pub name: Name,
+    /// Ordinary associated type vs sealed associated family metadata.
+    pub kind: AssociatedTypeKind,
     /// Source span
+    pub span: Span,
+}
+
+/// Parsed associated member declaration kind.
+#[derive(Debug, Clone, PartialEq)]
+pub enum AssociatedTypeKind {
+    /// Ordinary SPEC-035 associated type declaration.
+    Ordinary,
+    /// Sealed associated family declaration with raw parser-owned metadata.
+    SealedFamily {
+        /// Mandatory result-domain annotation after `:`.
+        result_domain: Type,
+        /// Optional raw decreases clause.
+        decreases: Option<AssociatedFamilyDecreases>,
+        /// Source span covering the sealed family declaration.
+        span: Span,
+    },
+}
+
+/// Raw `decreases Param` clause for a sealed associated family.
+#[derive(Debug, Clone, PartialEq)]
+pub struct AssociatedFamilyDecreases {
+    /// Parameter named by the decreases clause.
+    pub param: Name,
+    /// Source span covering the decreases clause.
     pub span: Span,
 }
 
@@ -637,13 +666,56 @@ pub struct InterfaceDef {
     /// Interface name
     pub name: Name,
     /// Interface type parameters
-    pub type_params: Vec<Name>,
+    pub type_params: Vec<InterfaceTypeParam>,
     /// Associated type declarations
     pub associated_types: Vec<AssociatedTypeDecl>,
     /// Declared method signatures
     pub methods: Vec<InterfaceMethodSig>,
     /// Source span
     pub span: Span,
+}
+
+/// Raw interface/impl type parameter with an optional domain annotation.
+#[derive(Debug, Clone, PartialEq)]
+pub struct InterfaceTypeParam {
+    /// Parameter name.
+    pub name: Name,
+    /// Optional raw domain annotation after `:`.
+    pub domain: Option<Type>,
+    /// Source span.
+    pub span: Span,
+}
+
+impl AsRef<str> for InterfaceTypeParam {
+    fn as_ref(&self) -> &str {
+        self.name.as_ref()
+    }
+}
+
+impl From<&str> for InterfaceTypeParam {
+    fn from(value: &str) -> Self {
+        Self {
+            name: value.into(),
+            domain: None,
+            span: Span::default(),
+        }
+    }
+}
+
+impl From<String> for InterfaceTypeParam {
+    fn from(value: String) -> Self {
+        Self {
+            name: value.into(),
+            domain: None,
+            span: Span::default(),
+        }
+    }
+}
+
+impl fmt::Display for InterfaceTypeParam {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.name.as_ref())
+    }
 }
 
 /// A method signature declared inside an interface.
@@ -667,7 +739,7 @@ pub struct ImplDef {
     /// Implemented interface name
     pub interface: Name,
     /// Generic type parameters (e.g., `<T>`)
-    pub type_params: Vec<Name>,
+    pub type_params: Vec<InterfaceTypeParam>,
     /// Concrete type arguments for the interface head
     pub type_args: Vec<Type>,
     /// Where bounds
@@ -1850,6 +1922,17 @@ pub enum Type {
     Constructor { name: Name, args: Vec<Type> },
     /// Associated type projection: `S::Ok`, `Map<K,V>::Entry`
     Associated { base: Box<Type>, name: Name },
+    /// Explicit associated-family projection: `<Interface<Args...>>::Assoc`
+    AssociatedFamilyProjection {
+        /// Source-visible unqualified interface name.
+        interface: Name,
+        /// Raw interface argument spine.
+        args: Vec<Type>,
+        /// Associated member name.
+        member: Name,
+        /// Source span.
+        span: Span,
+    },
     /// Function type: Fn(T, U) -> V
     Fn(Vec<Type>, Box<Type>),
 }

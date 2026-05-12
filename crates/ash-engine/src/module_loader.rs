@@ -1016,6 +1016,14 @@ fn collect_surface_type_names(ty: &Type, names: &mut Vec<String>) {
                 collect_surface_type_names(arg, names);
             }
         }
+        Type::AssociatedFamilyProjection {
+            interface, args, ..
+        } => {
+            names.push(interface.to_string());
+            for arg in args {
+                collect_surface_type_names(arg, names);
+            }
+        }
         Type::Fn(params, ret) => {
             for param in params {
                 collect_surface_type_names(param, names);
@@ -1140,6 +1148,16 @@ fn rewrite_surface_type_aliases(ty: &mut Type, aliases: &HashMap<String, String>
         Type::Constructor { name, args } => {
             if let Some(alias) = aliases.get(name.as_ref()) {
                 *name = alias.as_str().into();
+            }
+            for arg in args {
+                rewrite_surface_type_aliases(arg, aliases);
+            }
+        }
+        Type::AssociatedFamilyProjection {
+            interface, args, ..
+        } => {
+            if let Some(alias) = aliases.get(interface.as_ref()) {
+                *interface = alias.as_str().into();
             }
             for arg in args {
                 rewrite_surface_type_aliases(arg, aliases);
@@ -3777,7 +3795,7 @@ fn parse_type_def_snippet(snippet: &str) -> Result<CoreTypeDef, EngineError> {
     let parsed = parse_type_def
         .parse_next(&mut input)
         .map_err(|error| EngineError::Parse(format!("{error}")))?;
-    Ok(convert_type_def(&parsed))
+    convert_type_def(&parsed)
 }
 
 fn parse_simple_type_alias_snippet(snippet: &str) -> Option<CoreTypeDef> {
@@ -4748,43 +4766,35 @@ fn builtin_stdlib_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../../std/src")
 }
 
-fn convert_type_def(parsed: &ParsedTypeDef) -> CoreTypeDef {
-    CoreTypeDef {
+fn convert_type_def(parsed: &ParsedTypeDef) -> Result<CoreTypeDef, EngineError> {
+    Ok(CoreTypeDef {
         name: parsed.name.clone(),
         params: parsed.params.clone(),
         body: match &parsed.body {
-            ParsedTypeBody::Struct(fields) => CoreTypeBody::Struct(
-                fields
-                    .iter()
-                    .map(|(name, ty)| (name.clone(), convert_type_expr(ty)))
-                    .collect(),
-            ),
+            ParsedTypeBody::Struct(fields) => {
+                CoreTypeBody::Struct(convert_type_expr_fields(fields)?)
+            }
             ParsedTypeBody::Enum(variants) => CoreTypeBody::Enum(
                 variants
                     .iter()
-                    .map(|variant| CoreVariantDef {
-                        name: variant.name.clone(),
-                        fields: variant
-                            .fields
-                            .iter()
-                            .map(|(name, ty)| (name.clone(), convert_type_expr(ty)))
-                            .collect(),
-                        payload: match &variant.payload {
-                            ParsedVariantPayload::Unit => CoreVariantPayload::Unit,
-                            ParsedVariantPayload::Record(fields) => CoreVariantPayload::Record(
-                                fields
-                                    .iter()
-                                    .map(|(name, ty)| (name.clone(), convert_type_expr(ty)))
-                                    .collect(),
-                            ),
-                            ParsedVariantPayload::Tuple(items) => CoreVariantPayload::Tuple(
-                                items.iter().map(convert_type_expr).collect(),
-                            ),
-                        },
+                    .map(|variant| {
+                        Ok(CoreVariantDef {
+                            name: variant.name.clone(),
+                            fields: convert_type_expr_fields(&variant.fields)?,
+                            payload: match &variant.payload {
+                                ParsedVariantPayload::Unit => CoreVariantPayload::Unit,
+                                ParsedVariantPayload::Record(fields) => {
+                                    CoreVariantPayload::Record(convert_type_expr_fields(fields)?)
+                                }
+                                ParsedVariantPayload::Tuple(items) => {
+                                    CoreVariantPayload::Tuple(convert_type_expr_items(items)?)
+                                }
+                            },
+                        })
                     })
-                    .collect(),
+                    .collect::<Result<Vec<_>, EngineError>>()?,
             ),
-            ParsedTypeBody::Alias(target) => CoreTypeBody::Alias(convert_type_expr(target)),
+            ParsedTypeBody::Alias(target) => CoreTypeBody::Alias(convert_type_expr(target)?),
         },
         visibility: match parsed.visibility {
             ParsedVisibility::Public => CoreVisibility::Public,
@@ -4792,25 +4802,43 @@ fn convert_type_def(parsed: &ParsedTypeDef) -> CoreTypeDef {
             ParsedVisibility::Private => CoreVisibility::Private,
         },
         builtin: parsed.builtin,
-    }
+    })
 }
 
-fn convert_type_expr(parsed: &ParsedTypeExpr) -> CoreTypeExpr {
+fn convert_type_expr_fields(
+    fields: &[(String, ParsedTypeExpr)],
+) -> Result<Vec<(String, CoreTypeExpr)>, EngineError> {
+    fields
+        .iter()
+        .map(|(name, ty)| Ok((name.clone(), convert_type_expr(ty)?)))
+        .collect()
+}
+
+fn convert_type_expr_items(items: &[ParsedTypeExpr]) -> Result<Vec<CoreTypeExpr>, EngineError> {
+    items.iter().map(convert_type_expr).collect()
+}
+
+fn convert_type_expr(parsed: &ParsedTypeExpr) -> Result<CoreTypeExpr, EngineError> {
     match parsed {
-        ParsedTypeExpr::Named(name) => CoreTypeExpr::Named(name.clone()),
-        ParsedTypeExpr::Constructor { name, args } => CoreTypeExpr::Constructor {
+        ParsedTypeExpr::Named(name) => Ok(CoreTypeExpr::Named(name.clone())),
+        ParsedTypeExpr::Constructor { name, args } => Ok(CoreTypeExpr::Constructor {
             name: name.clone(),
-            args: args.iter().map(convert_type_expr).collect(),
-        },
-        ParsedTypeExpr::Tuple(items) => {
-            CoreTypeExpr::Tuple(items.iter().map(convert_type_expr).collect())
+            args: convert_type_expr_items(args)?,
+        }),
+        ParsedTypeExpr::Tuple(items) => Ok(CoreTypeExpr::Tuple(convert_type_expr_items(items)?)),
+        ParsedTypeExpr::Record(fields) => {
+            Ok(CoreTypeExpr::Record(convert_type_expr_fields(fields)?))
         }
-        ParsedTypeExpr::Record(fields) => CoreTypeExpr::Record(
-            fields
-                .iter()
-                .map(|(name, ty)| (name.clone(), convert_type_expr(ty)))
-                .collect(),
-        ),
+        ParsedTypeExpr::Associated { base, name } => Ok(CoreTypeExpr::Associated {
+            base: Box::new(convert_type_expr(base)?),
+            name: name.clone(),
+        }),
+        ParsedTypeExpr::AssociatedFamilyProjection { span, .. } => {
+            Err(EngineError::Parse(format!(
+                "associated family projections are parsed but cannot be lowered through the legacy module loader before Phase 115 semantic carriers (at byte offset {})",
+                span.start
+            )))
+        }
     }
 }
 

@@ -81,6 +81,7 @@ fn pair_interface_def() -> SurfaceInterfaceDef {
         type_params: vec!["A".into(), "B".into()],
         associated_types: vec![AssociatedTypeDecl {
             name: "Item".into(),
+            kind: ash_parser::surface::AssociatedTypeKind::Ordinary,
             span: ash_parser::token::Span::default(),
         }],
         methods: vec![],
@@ -125,6 +126,7 @@ fn serializer_interface_def() -> SurfaceInterfaceDef {
         type_params: vec!["S".into()],
         associated_types: vec![AssociatedTypeDecl {
             name: "Ok".into(),
+            kind: ash_parser::surface::AssociatedTypeKind::Ordinary,
             span: span(),
         }],
         methods: vec![],
@@ -139,6 +141,7 @@ fn formatter_interface_def() -> SurfaceInterfaceDef {
         type_params: vec!["S".into()],
         associated_types: vec![AssociatedTypeDecl {
             name: "Ok".into(),
+            kind: ash_parser::surface::AssociatedTypeKind::Ordinary,
             span: span(),
         }],
         methods: vec![],
@@ -324,6 +327,7 @@ fn serializer_interface_with_projection_method() -> SurfaceInterfaceDef {
         type_params: vec!["S".into()],
         associated_types: vec![AssociatedTypeDecl {
             name: "Ok".into(),
+            kind: ash_parser::surface::AssociatedTypeKind::Ordinary,
             span: span(),
         }],
         methods: vec![InterfaceMethodSig {
@@ -346,6 +350,7 @@ fn serializer_interface_with_unknown_projection_method() -> SurfaceInterfaceDef 
         type_params: vec!["S".into()],
         associated_types: vec![AssociatedTypeDecl {
             name: "Ok".into(),
+            kind: ash_parser::surface::AssociatedTypeKind::Ordinary,
             span: span(),
         }],
         methods: vec![InterfaceMethodSig {

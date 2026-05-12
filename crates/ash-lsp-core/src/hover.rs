@@ -59,6 +59,19 @@ fn type_to_string(ty: &Type) -> String {
             }
         }
         Type::Associated { base, name } => format!("{}::{}", type_to_string(base), name),
+        Type::AssociatedFamilyProjection {
+            interface,
+            args,
+            member,
+            ..
+        } => {
+            let args = args
+                .iter()
+                .map(type_to_string)
+                .collect::<Vec<_>>()
+                .join(", ");
+            format!("<{interface}<{args}>>::{member}")
+        }
         Type::Fn(params, ret) => {
             let params = params
                 .iter()

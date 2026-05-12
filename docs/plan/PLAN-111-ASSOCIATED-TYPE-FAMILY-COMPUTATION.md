@@ -10,7 +10,7 @@
 
 ---
 
-**Status:** 🟡 Ready for implementation (TASK-857 and TASK-858 complete; TASK-859 through TASK-870 ready)
+**Status:** 🟡 In progress (TASK-857 through TASK-859 complete; TASK-860 through TASK-870 ready)
 **Spec:** [SPEC-063](../spec/SPEC-063-ASSOCIATED-TYPE-FAMILY-COMPUTATION.md)
 **Design:** [DESIGN-034 §16.7](../design/DESIGN-034-TOTAL-TYPE-COMPUTATION.md#167-spec-g-associated-type-family-computation)
 **Depends on:** [SPEC-057](../spec/SPEC-057-UNIFIED-TYPE-MODULE-PIPELINE-AND-SEMANTIC-SUMMARIES.md), [SPEC-058](../spec/SPEC-058-CANONICAL-TYPE-EXPRESSION-IR-PROJECTION-IDS-KIND-ARITY-SUBSTRATE.md), [SPEC-059](../spec/SPEC-059-SEALED-TYPE-LEVEL-DOMAINS.md), [SPEC-060](../spec/SPEC-060-NORMALIZER-DEFINITIONAL-EQUALITY-CORE.md), [SPEC-061](../spec/SPEC-061-DIRECT-STRUCTURAL-TYPE-FUNCTIONS.md), [SPEC-062](../spec/SPEC-062-MODULE-SUMMARY-EXPORT-IMPORT-FOR-TYPE-COMPUTATION.md)
@@ -21,7 +21,7 @@
 |------|-------------|------|------------|--------|
 | [TASK-857](tasks/TASK-857-spec-g-spec-plan-packet.md) | Promote DESIGN-034 SPEC-G into SPEC-063/PLAN-111 and register Phase 115 | Docs/Planning | 4 | ✅ Complete |
 | [TASK-858](tasks/TASK-858-associated-family-audit-gate.md) | Audit live associated projection, impl, normalizer, and summary seams, then bind downstream tasks to exact files/tests/callsites before implementation | Docs/Substrate | 5 | ✅ Complete |
-| [TASK-859](tasks/TASK-859-associated-family-surface-and-compat-parser.md) | Add explicit family projection/declaration surface and preserve SPEC-035 compatibility parsing | Parser | 6 | 🟡 Ready |
+| [TASK-859](tasks/TASK-859-associated-family-surface-and-compat-parser.md) | Add explicit family projection/declaration surface and preserve SPEC-035 compatibility parsing | Parser | 6 | ✅ Complete |
 | [TASK-860](tasks/TASK-860-core-associated-family-identity-carriers.md) | Add core associated-family identity/projection/summary carriers and V4 version contract | Core/Substrate | 7 | 🟡 Ready |
 | [TASK-861](tasks/TASK-861-typeck-family-declaration-registration-coherence.md) | Register sealed family declarations and validate impl-family coherence | Typeck/Semantic | 8 | 🟡 Ready |
 | [TASK-862](tasks/TASK-862-spec035-substitution-compatibility-bridge.md) | Preserve SPEC-035 selected-impl substitution while bridging family declarations | Typeck/Compatibility | 5 | 🟡 Ready |

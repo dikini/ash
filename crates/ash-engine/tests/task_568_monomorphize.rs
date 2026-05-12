@@ -19,6 +19,7 @@ fn serializer_interface_def() -> InterfaceDef {
         type_params: vec!["S".into()],
         associated_types: vec![AssociatedTypeDecl {
             name: "Ok".into(),
+            kind: ash_parser::surface::AssociatedTypeKind::Ordinary,
             span: test_span(),
         }],
         methods: vec![InterfaceMethodSig {

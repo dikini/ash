@@ -1937,6 +1937,10 @@ fn surface_type_to_typeck(ty: &SurfaceType) -> Result<ash_typeck::Type, String> 
         SurfaceType::Associated { .. } => {
             Err("associated types not yet supported in engine type conversion".to_string())
         }
+        SurfaceType::AssociatedFamilyProjection { .. } => Err(
+            "associated family projections are not yet supported in engine type conversion"
+                .to_string(),
+        ),
     }
 }
 impl Default for Engine {

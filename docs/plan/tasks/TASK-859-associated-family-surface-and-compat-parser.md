@@ -1,6 +1,6 @@
 # TASK-859: Associated family surface and compatibility parser
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -24,6 +24,8 @@ Add explicit computation-grade associated family projection syntax while preserv
 - Modify: `crates/ash-parser/src/lower.rs`
 - Modify: `crates/ash-parser/src/error.rs` or parser diagnostic helpers if unsupported-shape diagnostics require new variants
 - Create/modify tests: `crates/ash-parser/tests/task_859_associated_family_surface.rs`
+- Modify fail-closed downstream boundaries as needed: `crates/ash-typeck/src/type_env.rs`, `crates/ash-typeck/src/lib.rs`, `crates/ash-engine/src/module_loader.rs`, `crates/ash-engine/src/entry.rs`, `crates/ash-engine/src/legacy_workflow_adapter.rs`, `crates/ash-engine/src/lib.rs`, and `crates/ash-lsp-core/src/hover.rs`
+- Create/modify fail-closed tests: `crates/ash-typeck/tests/task_859_associated_family_fail_closed.rs`
 
 ## Requirements
 
@@ -64,15 +66,26 @@ Dispatch an independent review/verification subagent with this task file, SPEC-0
 
 ## Completion Checklist
 
-- [ ] Requirements above are satisfied.
-- [ ] Focused tests/evidence exist and pass, or docs-only verification is recorded.
-- [ ] Negative leakage/non-interference behavior is covered for this task's surface.
-- [ ] Status docs and CHANGELOG.md are updated if this task changes release-facing docs.
-- [ ] Independent verification completed or scheduled by the closeout task.
+- [x] Requirements above are satisfied.
+- [x] Focused tests/evidence exist and pass, or docs-only verification is recorded.
+- [x] Negative leakage/non-interference behavior is covered for this task's surface.
+- [x] Status docs and CHANGELOG.md are updated if this task changes release-facing docs.
+- [x] Independent verification completed or scheduled by the closeout task.
 
 ## Completion Evidence
 
-- Completion evidence must be recorded by the implementing agent before marking this task complete.
+- Added parser/surface carriers for explicit associated-family projections, typed interface/impl parameters, and raw sealed family declarations while preserving SPEC-035 `Base::Assoc` compatibility parsing.
+- Added focused parser coverage in `crates/ash-parser/tests/task_859_associated_family_surface.rs` for explicit projections, nested projections, typed params, sealed family declarations, malformed declarations/projections, unsupported qualified projection heads, and SPEC-035 compatibility.
+- Added fail-closed downstream handling so pre-TASK-860/TASK-861 semantic consumers reject or preserve boundaries instead of silently degrading associated-family projections or sealed family metadata into ordinary associated-type semantics.
+- Added `crates/ash-typeck/tests/task_859_associated_family_fail_closed.rs` covering fail-closed TypeEnv rejection for domain-annotated interface params, sealed associated families, and domain-annotated impl params before semantic registration.
+- Independent review completed in two remediation passes; final review reported no findings.
+- Fresh verification:
+  - `cargo fmt --check` — passed.
+  - `git diff --check` — passed.
+  - `cargo check --workspace` — passed.
+  - `cargo test -p ash-parser --test task_859_associated_family_surface -- --nocapture` — 10 tests passed.
+  - `cargo test -p ash-parser` — passed, including 630 unit tests, parser integration suites, and 21 doctests.
+  - `cargo test -p ash-typeck --test task_859_associated_family_fail_closed -- --nocapture` — 3 tests passed.
 
 ## Dispatch
 
@@ -95,13 +108,15 @@ commands:
     cargo test -p ash-parser --test task_859_associated_family_surface -- --list | tee /tmp/task_859_associated_family_surface-list.txt
     grep -Eq 'associated_family|sealed_type_family|task_859' /tmp/task_859_associated_family_surface-list.txt
   - cargo test -p ash-parser --test task_859_associated_family_surface -- --nocapture
+  - cargo test -p ash-typeck --test task_859_associated_family_fail_closed -- --nocapture
 checklist:
-  - "[ ] Implementation matches SPEC-063 and PLAN-111 scope"
-  - "[ ] Focused tests/evidence for this task pass with non-zero test counts"
-  - "[ ] No SPEC-H/proof-search/type-function-inversion behavior added"
+  - "[x] Implementation matches SPEC-063 and PLAN-111 scope"
+  - "[x] Focused tests/evidence for this task pass with non-zero test counts"
+  - "[x] No SPEC-H/proof-search/type-function-inversion behavior added"
 ```
 
 ## Dependencies for Next Task
 
 This task outputs:
 - Raw surface syntax and parser tests for explicit family projections plus sealed family declarations.
+- Fail-closed pre-semantic boundaries for associated-family syntax in TypeEnv, engine/module-loader, LSP hover formatting, and legacy lowering seams.

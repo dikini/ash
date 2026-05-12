@@ -1200,6 +1200,9 @@ fn lower_type_to_type_expr(ty: &Type) -> ash_core::workflow_contract::TypeExpr {
             name: name.to_string(),
             args: vec![lower_type_to_type_expr(base)],
         },
+        Type::AssociatedFamilyProjection { .. } => panic!(
+            "associated family projections require Phase 115 semantic lowering before workflow-contract lowering"
+        ),
     }
 }
 
@@ -1231,6 +1234,9 @@ pub fn lower_surface_type(ty: &Type) -> ash_core::ast::TypeExpr {
             base: Box::new(lower_surface_type(base)),
             name: name.to_string(),
         },
+        Type::AssociatedFamilyProjection { .. } => panic!(
+            "associated family projections require Phase 115 semantic lowering before core AST lowering"
+        ),
         Type::Fn(params, ret) => {
             let mut args: Vec<_> = params.iter().map(lower_surface_type).collect();
             args.push(lower_surface_type(ret));

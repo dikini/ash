@@ -370,6 +370,7 @@ fn task_826_fp7_impl_method_return_check_uses_defeq_for_declared_return() {
         type_params: vec!["T".into()],
         associated_types: vec![AssociatedTypeDecl {
             name: "Item".into(),
+            kind: ash_parser::surface::AssociatedTypeKind::Ordinary,
             span: Span::default(),
         }],
         methods: vec![InterfaceMethodSig {

@@ -771,6 +771,15 @@ fn merge_or_push_imported_semantic_summary(
                 existing.exported_type_functions.push(type_function);
             }
         }
+        for family in selected.exported_associated_families {
+            let exists = existing
+                .exported_associated_families
+                .iter()
+                .any(|existing| existing.head == family.head);
+            if !exists {
+                existing.exported_associated_families.push(family);
+            }
+        }
         for identity in selected.interface_identities {
             let exists = existing
                 .interface_identities
@@ -807,6 +816,21 @@ fn merge_or_push_imported_semantic_summary(
     {
         return;
     }
+    if !selected.exported_associated_families.is_empty()
+        && selected
+            .exported_associated_families
+            .iter()
+            .all(|selected| {
+                imported_semantic_summaries.iter().any(|summary| {
+                    summary
+                        .exported_associated_families
+                        .iter()
+                        .any(|existing| existing.head == selected.head && existing == selected)
+                })
+            })
+    {
+        return;
+    }
 
     let key = imported_summary_key(&selected);
     if imported_summary_keys.insert(key) {
@@ -824,7 +848,11 @@ fn imported_summary_type_set_matches(
     if left.imported_summary_refs != right.imported_summary_refs {
         return false;
     }
-    if !left.exported_type_functions.is_empty() || !right.exported_type_functions.is_empty() {
+    if !left.exported_type_functions.is_empty()
+        || !right.exported_type_functions.is_empty()
+        || !left.exported_associated_families.is_empty()
+        || !right.exported_associated_families.is_empty()
+    {
         return selected_summary_identity_facts_are_compatible(left, right);
     }
     if left.exported_sealed_domains != right.exported_sealed_domains {
@@ -850,6 +878,7 @@ fn selected_summary_identity_facts_are_compatible(
     right: &ModuleSemanticSummary,
 ) -> bool {
     left.exported_type_functions.len() == right.exported_type_functions.len()
+        && left.exported_associated_families.len() == right.exported_associated_families.len()
         && left
             .exported_type_functions
             .iter()
@@ -860,6 +889,13 @@ fn selected_summary_identity_facts_are_compatible(
                     .find(|right_type_function| right_type_function.head == left_type_function.head)
                     .is_some_and(|right_type_function| right_type_function == left_type_function)
             })
+        && left.exported_associated_families.iter().all(|left_family| {
+            right
+                .exported_associated_families
+                .iter()
+                .find(|right_family| right_family.head == left_family.head)
+                .is_some_and(|right_family| right_family == left_family)
+        })
         && left.exported_sealed_domains.iter().all(|left_domain| {
             right
                 .exported_sealed_domains
@@ -5306,5 +5342,161 @@ pub type Flag = On | Off;",
             msg.contains("Secret") && msg.contains("not found"),
             "private ordinary import diagnostic should mention Secret not found: {msg}"
         );
+    }
+
+    fn task_860_test_module_identity(
+        module_id: usize,
+        name: &str,
+    ) -> ash_core::semantic_summary::ModuleIdentity {
+        ash_core::semantic_summary::ModuleIdentity::new(
+            Some(ash_core::module_graph::CrateId(860)),
+            ash_core::module_graph::ModuleId(module_id),
+            vec!["task860".to_string(), name.to_string()],
+            ash_core::semantic_summary::ModuleSourceOrigin::Synthetic {
+                reason: format!("task-860 {name}"),
+            },
+        )
+    }
+
+    fn task_860_anchor(label: &str) -> ash_core::semantic_summary::SourceAnchor {
+        ash_core::semantic_summary::SourceAnchor::new(
+            ash_core::semantic_summary::SourceOrigin::Synthetic {
+                reason: "task-860 engine associated family summary merge".to_string(),
+            },
+            None,
+            label,
+        )
+    }
+
+    fn task_860_family_summary(
+        result: &str,
+    ) -> ash_core::semantic_summary::AssociatedFamilySummary {
+        let module = task_860_test_module_identity(1, "families");
+        let interface = ash_core::semantic_summary::InterfaceIdentityId::new(module, "Append");
+        let member = ash_core::semantic_summary::AssociatedMemberIdentityId::associated_type(
+            interface.clone(),
+            "Out",
+            vec!["Append".to_string(), "Out".to_string()],
+        );
+        let head = ash_core::type_ir::AssociatedFamilyHeadId {
+            interface: interface.clone(),
+            member: member.clone(),
+        };
+        let domain = ash_core::semantic_summary::SealedDomainId::new(
+            task_860_test_module_identity(2, "domain"),
+            "TypeList",
+        );
+        let projection = ash_core::type_ir::AssociatedFamilyProjection {
+            head: head.clone(),
+            interface_args: vec![ash_core::type_ir::CanonicalTypeExpr::Var("Xs".to_string())],
+            kind: ash_core::kind::Kind::Type,
+            rigidity: ash_core::type_ir::ProjectionRigidity::Neutral,
+            mode: ash_core::type_ir::AssociatedFamilyProjectionMode::NeutralBlockedOrUnavailable,
+        };
+        ash_core::semantic_summary::AssociatedFamilySummary {
+            head: head.clone(),
+            interface_identity: interface,
+            member_identity: member,
+            visible_name: "Append::Out".to_string(),
+            result_domain: ash_core::type_ir::CanonicalTypeExpr::Primitive("TypeList".to_string()),
+            result_kind: ash_core::kind::Kind::Type,
+            export_mode:
+                ash_core::semantic_summary::AssociatedFamilyExportMode::TransparentEquations,
+            schemes: vec![ash_core::type_ir::AssociatedFamilyScheme {
+                head: head.clone(),
+                params: Vec::new(),
+                result_domain: ash_core::type_ir::CanonicalTypeExpr::Primitive(
+                    "TypeList".to_string(),
+                ),
+                result_kind: ash_core::kind::Kind::Type,
+                equations: vec![ash_core::type_ir::AssociatedFamilyEquation {
+                    head,
+                    ordinal: 0,
+                    interface_arg_patterns: Vec::new(),
+                    result: ash_core::type_ir::AssociatedFamilyResultExpr::Var {
+                        name: result.to_string(),
+                        kind: ash_core::kind::Kind::Type,
+                        constraint: ash_core::type_ir::AssociatedFamilyResultConstraint::Domain(
+                            domain.clone(),
+                        ),
+                        source_anchor: task_860_anchor("family result"),
+                    },
+                    decreases: None,
+                    source_anchor: task_860_anchor("family equation"),
+                    case_head_anchor: task_860_anchor("family case head"),
+                }],
+                source_anchor: task_860_anchor("family scheme"),
+            }],
+            dependency_closure: ash_core::semantic_summary::AssociatedFamilyDependencyClosure {
+                ordinary_types: Vec::new(),
+                sealed_domains: vec![domain],
+                domain_constructors: Vec::new(),
+                type_functions: Vec::new(),
+                associated_projections: vec![projection],
+                associated_families: Vec::new(),
+                type_function_summaries: Vec::new(),
+                closure_metadata: ash_core::semantic_summary::AssociatedFamilyClosureMetadata {
+                    public_closure_checked: true,
+                    public_ordinary_type_count: 0,
+                    public_sealed_domain_count: 1,
+                    public_domain_constructor_count: 0,
+                    public_type_function_count: 0,
+                    public_associated_family_count: 1,
+                    public_projection_count: 1,
+                    helper_family_count: 0,
+                },
+            },
+            source_anchor: task_860_anchor("family summary"),
+            revalidation_metadata:
+                ash_core::semantic_summary::AssociatedFamilyRevalidationMetadata {
+                    spec_version:
+                        ash_core::semantic_summary::SummaryVersion::SPEC063_ASSOCIATED_FAMILY_V4,
+                    kind_and_domain_checked: true,
+                    coverage_and_overlap_checked: true,
+                    coherence_checked: true,
+                    recursion_checked: false,
+                    decreases: Vec::new(),
+                },
+        }
+    }
+
+    #[test]
+    fn task_860_imported_summary_merge_preserves_associated_family_payloads() {
+        let module = task_860_test_module_identity(3, "summary");
+        let family = task_860_family_summary("Ys");
+        let same_family = task_860_family_summary("Ys");
+        let different_family_payload = task_860_family_summary("DifferentYs");
+
+        let left = ash_core::semantic_summary::ModuleSemanticSummary::new(module.clone())
+            .with_version(ash_core::semantic_summary::SummaryVersion::SPEC063_ASSOCIATED_FAMILY_V4)
+            .with_exported_associated_family(family.clone());
+        let same = ash_core::semantic_summary::ModuleSemanticSummary::new(module.clone())
+            .with_version(ash_core::semantic_summary::SummaryVersion::SPEC063_ASSOCIATED_FAMILY_V4)
+            .with_exported_associated_family(same_family);
+        let different = ash_core::semantic_summary::ModuleSemanticSummary::new(module)
+            .with_version(ash_core::semantic_summary::SummaryVersion::SPEC063_ASSOCIATED_FAMILY_V4)
+            .with_exported_associated_family(different_family_payload);
+
+        assert!(imported_summary_type_set_matches(&left, &same));
+        assert!(!imported_summary_type_set_matches(&left, &different));
+
+        let mut summaries = vec![left];
+        let mut keys = summaries
+            .iter()
+            .map(imported_summary_key)
+            .collect::<HashSet<_>>();
+        merge_or_push_imported_semantic_summary(&mut summaries, &mut keys, same);
+        assert_eq!(
+            summaries.len(),
+            1,
+            "identical family facts should deduplicate"
+        );
+        merge_or_push_imported_semantic_summary(&mut summaries, &mut keys, different);
+        assert_eq!(
+            summaries.len(),
+            2,
+            "different associated-family payloads must not be dropped as compatible"
+        );
+        assert_eq!(summaries[0].exported_associated_families, vec![family]);
     }
 }

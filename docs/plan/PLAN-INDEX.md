@@ -3372,7 +3372,7 @@ Phase 114 implements SPEC-F from DESIGN-034. It defines the public module-summar
 ## Phase 115: Associated Type-Family Computation
 
 **Priority:** High (DESIGN-034 SPEC-G integrates associated types with the total type-computation substrate after Phase 114)
-**Status:** 🟡 In progress (TASK-857 through TASK-859 complete; TASK-860 through TASK-870 ready)
+**Status:** 🟡 In progress (TASK-857 through TASK-860 complete; TASK-861 through TASK-870 ready)
 **Spec:** [SPEC-063](../spec/SPEC-063-ASSOCIATED-TYPE-FAMILY-COMPUTATION.md)
 **Design:** [DESIGN-034](../design/DESIGN-034-TOTAL-TYPE-COMPUTATION.md)
 **Plan:** [docs/plan/PLAN-111-ASSOCIATED-TYPE-FAMILY-COMPUTATION.md](PLAN-111-ASSOCIATED-TYPE-FAMILY-COMPUTATION.md)
@@ -3384,7 +3384,7 @@ Phase 115 implements SPEC-G from DESIGN-034. It integrates associated types with
 | [TASK-857](tasks/TASK-857-spec-g-spec-plan-packet.md) | Promote DESIGN-034 SPEC-G into SPEC-063/PLAN-111 and register Phase 115 | 4 | ✅ Complete |
 | [TASK-858](tasks/TASK-858-associated-family-audit-gate.md) | Audit live associated projection, impl, normalizer, and summary seams, then bind downstream tasks to exact files/tests/callsites before implementation | 5 | ✅ Complete |
 | [TASK-859](tasks/TASK-859-associated-family-surface-and-compat-parser.md) | Associated family projection/declaration surface syntax and SPEC-035 compatibility parser | 6 | ✅ Complete |
-| [TASK-860](tasks/TASK-860-core-associated-family-identity-carriers.md) | Core associated-family identity/projection/summary carriers and V4 version contract | 7 | 🟡 Ready |
+| [TASK-860](tasks/TASK-860-core-associated-family-identity-carriers.md) | Core associated-family identity/projection/summary carriers and V4 version contract | 7 | ✅ Complete |
 | [TASK-861](tasks/TASK-861-typeck-family-declaration-registration-coherence.md) | TypeEnv family declaration registration, sealing, and coherence | 8 | 🟡 Ready |
 | [TASK-862](tasks/TASK-862-spec035-substitution-compatibility-bridge.md) | SPEC-035 selected-impl substitution compatibility bridge | 5 | 🟡 Ready |
 | [TASK-863](tasks/TASK-863-unique-generic-impl-family-selection.md) | Unique generic impl-family selection over concrete and abstract arguments | 7 | 🟡 Ready |

@@ -13,7 +13,8 @@ use crate::ast::{Name, Span, TypeBody, TypeVar, Visibility};
 use crate::kind::Kind;
 use crate::module_graph::{CrateId, ModuleId};
 use crate::type_ir::{
-    CanonicalTypeExpr, TypeComputationHeadId, TypeFunctionEquation, TypeFunctionResultConstraint,
+    AssociatedFamilyHeadId, AssociatedFamilyProjection, AssociatedFamilyScheme, CanonicalTypeExpr,
+    TypeComputationHeadId, TypeFunctionEquation, TypeFunctionResultConstraint,
     TypeFunctionSourceAnchors,
 };
 use serde::{Deserialize, Serialize};
@@ -553,13 +554,16 @@ impl SummaryVersion {
     pub const SPEC057_ORDINARY_TYPE_V1: Self = Self(1);
     pub const SPEC059_SEALED_DOMAIN_V2: Self = Self(2);
     pub const SPEC062_TYPE_COMPUTATION_V3: Self = Self(3);
+    pub const SPEC063_ASSOCIATED_FAMILY_V4: Self = Self(4);
 }
 
 /// Core schema-level validation failures for semantic-summary version contracts.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ModuleSemanticSummaryValidationError {
-    /// Public type-computation facts are only valid in SPEC-062/V3 summaries.
+    /// Public type-computation facts are only valid in SPEC-062/V3 or newer summaries.
     TypeFunctionsRequireV3 { version: SummaryVersion },
+    /// Public associated-family facts are only valid in SPEC-063/V4 summaries.
+    AssociatedFamiliesRequireV4 { version: SummaryVersion },
     /// The summary version is newer than this core crate knows how to interpret.
     UnsupportedSummaryVersion { version: SummaryVersion },
 }
@@ -640,6 +644,98 @@ pub struct TypeFunctionSummary {
     pub dependency_summary_refs: Vec<TypeFunctionDependencySummaryRef>,
     pub closure_metadata: TypeFunctionClosureMetadata,
     pub revalidation_metadata: TypeFunctionRevalidationMetadata,
+}
+
+/// Explicit public export/transparency mode for associated-family summaries.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum AssociatedFamilyExportMode {
+    TransparentEquations,
+}
+
+/// Validated structural-decreases metadata for recursive associated families.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct ValidatedDecreasesSummary {
+    pub parameter: String,
+    pub parameter_index: usize,
+    pub domain: SealedDomainId,
+    pub structural_recursion_checked: bool,
+    pub source_anchor: SourceAnchor,
+}
+
+/// Summary dependency reference plus cache/dedup invalidation metadata for an
+/// imported associated-family summary.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct AssociatedFamilyDependencySummaryRef {
+    pub summary_ref: ModuleSummaryRef,
+    pub family: AssociatedFamilyHeadId,
+    /// Optional content digest for in-memory dedup now and persistent cache keys later.
+    pub digest: Option<String>,
+    /// Optional algorithm/version dimension for future family cache invalidation.
+    pub compiler_algorithm_version: Option<String>,
+    /// Whether this dependency is source-name visible to importers.
+    pub source_visible: bool,
+    /// Whether validated equations are available to the normalizer through the summary.
+    pub normalizer_available: bool,
+}
+
+/// Public-closure evidence produced by associated-family export validation.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct AssociatedFamilyClosureMetadata {
+    pub public_closure_checked: bool,
+    pub public_ordinary_type_count: usize,
+    pub public_sealed_domain_count: usize,
+    pub public_domain_constructor_count: usize,
+    pub public_type_function_count: usize,
+    pub public_associated_family_count: usize,
+    pub public_projection_count: usize,
+    pub helper_family_count: usize,
+}
+
+/// Public dependency closure required to revalidate/import an associated family.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct AssociatedFamilyDependencyClosure {
+    pub ordinary_types: Vec<TypeDeclId>,
+    pub sealed_domains: Vec<SealedDomainId>,
+    pub domain_constructors: Vec<DomainConstructorId>,
+    pub type_functions: Vec<TypeComputationHeadId>,
+    pub associated_projections: Vec<AssociatedFamilyProjection>,
+    pub associated_families: Vec<AssociatedFamilyDependencySummaryRef>,
+    #[serde(default)]
+    pub type_function_summaries: Vec<TypeFunctionDependencySummaryRef>,
+    pub closure_metadata: AssociatedFamilyClosureMetadata,
+}
+
+/// Revalidation metadata sufficient for future associated-family import checks
+/// and cache keys.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct AssociatedFamilyRevalidationMetadata {
+    pub spec_version: SummaryVersion,
+    pub kind_and_domain_checked: bool,
+    pub coverage_and_overlap_checked: bool,
+    pub coherence_checked: bool,
+    pub recursion_checked: bool,
+    pub decreases: Vec<ValidatedDecreasesSummary>,
+}
+
+/// Core-owned public associated-family summary carrier for SPEC-063/V4.
+///
+/// It preserves typed interface/member/family identities, visible names, result
+/// kind/domain, transparent checked schemes, dependency closure, source anchors,
+/// and revalidation metadata. It does not perform TypeEnv import, normalizer
+/// registration, impl selection, or proof/search.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct AssociatedFamilySummary {
+    pub head: AssociatedFamilyHeadId,
+    pub interface_identity: InterfaceIdentityId,
+    pub member_identity: AssociatedMemberIdentityId,
+    pub visible_name: String,
+    pub result_domain: CanonicalTypeExpr,
+    pub result_kind: Kind,
+    pub export_mode: AssociatedFamilyExportMode,
+    pub schemes: Vec<AssociatedFamilyScheme>,
+    pub dependency_closure: AssociatedFamilyDependencyClosure,
+    pub source_anchor: SourceAnchor,
+    pub revalidation_metadata: AssociatedFamilyRevalidationMetadata,
 }
 
 /// Reserved future identity namespaces. SPEC-057 leaves these uninterpreted.
@@ -743,9 +839,15 @@ pub struct ModuleSemanticSummary {
     /// Public type-function summaries exported from this module (SPEC-062 §6).
     ///
     /// `#[serde(default)]` preserves V1/V2 wire compatibility. Non-empty values
-    /// are valid only when `version` is SPEC-062/V3.
+    /// are valid only when `version` is SPEC-062/V3 or newer.
     #[serde(default)]
     pub exported_type_functions: Vec<TypeFunctionSummary>,
+    /// Public associated-family summaries exported from this module (SPEC-063 §11).
+    ///
+    /// `#[serde(default)]` preserves V1/V2/V3 wire compatibility. Non-empty
+    /// values are valid only when `version` is SPEC-063/V4.
+    #[serde(default)]
+    pub exported_associated_families: Vec<AssociatedFamilySummary>,
 }
 
 impl ModuleSemanticSummary {
@@ -764,6 +866,7 @@ impl ModuleSemanticSummary {
             diagnostic_anchors: Vec::new(),
             exported_sealed_domains: Vec::new(),
             exported_type_functions: Vec::new(),
+            exported_associated_families: Vec::new(),
         }
     }
 
@@ -829,6 +932,13 @@ impl ModuleSemanticSummary {
     #[must_use]
     pub fn with_exported_type_function(mut self, type_function: TypeFunctionSummary) -> Self {
         self.exported_type_functions.push(type_function);
+        self
+    }
+
+    /// Add a public associated-family summary to this module summary.
+    #[must_use]
+    pub fn with_exported_associated_family(mut self, family: AssociatedFamilySummary) -> Self {
+        self.exported_associated_families.push(family);
         self
     }
 
@@ -921,6 +1031,22 @@ impl ModuleSemanticSummary {
                 type_function.revalidation_metadata
             )
         }));
+        key.extend(self.exported_associated_families.iter().map(|family| {
+            format!(
+                "assoc_family::{:?}::{:?}::{:?}::{}::{:?}::{:?}::{:?}::{:?}::{:?}::{:?}::{:?}",
+                family.head,
+                family.interface_identity,
+                family.member_identity,
+                family.visible_name,
+                family.result_domain,
+                family.result_kind,
+                family.export_mode,
+                family.schemes,
+                family.dependency_closure,
+                family.source_anchor,
+                family.revalidation_metadata
+            )
+        }));
         key.sort_unstable();
         key
     }
@@ -937,7 +1063,13 @@ impl ModuleSemanticSummary {
     ) -> Result<(), ModuleSemanticSummaryValidationError> {
         match self.version {
             SummaryVersion::SPEC057_ORDINARY_TYPE_V1 | SummaryVersion::SPEC059_SEALED_DOMAIN_V2 => {
-                if self.exported_type_functions.is_empty() {
+                if !self.exported_associated_families.is_empty() {
+                    Err(
+                        ModuleSemanticSummaryValidationError::AssociatedFamiliesRequireV4 {
+                            version: self.version,
+                        },
+                    )
+                } else if self.exported_type_functions.is_empty() {
                     Ok(())
                 } else {
                     Err(
@@ -947,7 +1079,18 @@ impl ModuleSemanticSummary {
                     )
                 }
             }
-            SummaryVersion::SPEC062_TYPE_COMPUTATION_V3 => Ok(()),
+            SummaryVersion::SPEC062_TYPE_COMPUTATION_V3 => {
+                if self.exported_associated_families.is_empty() {
+                    Ok(())
+                } else {
+                    Err(
+                        ModuleSemanticSummaryValidationError::AssociatedFamiliesRequireV4 {
+                            version: self.version,
+                        },
+                    )
+                }
+            }
+            SummaryVersion::SPEC063_ASSOCIATED_FAMILY_V4 => Ok(()),
             version => {
                 Err(ModuleSemanticSummaryValidationError::UnsupportedSummaryVersion { version })
             }

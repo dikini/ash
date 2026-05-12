@@ -1,6 +1,6 @@
 # TASK-860: Core associated-family identity carriers
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -64,15 +64,22 @@ Dispatch an independent review/verification subagent with this task file, SPEC-0
 
 ## Completion Checklist
 
-- [ ] Requirements above are satisfied.
-- [ ] Focused tests/evidence exist and pass, or docs-only verification is recorded.
-- [ ] Negative leakage/non-interference behavior is covered for this task's surface.
-- [ ] Status docs and CHANGELOG.md are updated if this task changes release-facing docs.
-- [ ] Independent verification completed or scheduled by the closeout task.
+- [x] Requirements above are satisfied.
+- [x] Focused tests/evidence exist and pass, or docs-only verification is recorded.
+- [x] Negative leakage/non-interference behavior is covered for this task's surface.
+- [x] Status docs and CHANGELOG.md are updated if this task changes release-facing docs.
+- [x] Independent verification completed or scheduled by the closeout task.
 
 ## Completion Evidence
 
-- Completion evidence must be recorded by the implementing agent before marking this task complete.
+- Implemented core-owned associated-family head/projection carriers, helper classification APIs, scheme/result/validated-decreases/dependency-closure carriers, and V4 semantic-summary payload/version validation in `ash-core`.
+- Updated `ash-typeck::TypeEnv` validation diagnostic mapping for V4 associated-family summaries and `ash-engine` imported-summary merge compatibility so identical family payloads deduplicate while divergent same-head payloads are preserved rather than silently dropped.
+- Focused verification recorded after final remediation:
+  - `cargo test -p ash-engine module_loader::tests::task_860_imported_summary_merge_preserves_associated_family_payloads -- --nocapture` — passed, 1 test.
+  - `cargo test -p ash-core --test task_860_associated_family_carriers -- --nocapture` — passed, 6 tests.
+  - `cargo check --workspace` — passed.
+  - Independent final re-review reported no remaining blocking or non-blocking findings after remediation.
+- Final closeout verification after status/changelog reconciliation is recorded by the implementing controller in the session/commit evidence.
 
 ## Dispatch
 
@@ -95,10 +102,11 @@ commands:
     cargo test -p ash-core --test task_860_associated_family_carriers -- --list | tee /tmp/task_860_associated_family_carriers-list.txt
     grep -Eq 'associated_family|task_860' /tmp/task_860_associated_family_carriers-list.txt
   - cargo test -p ash-core --test task_860_associated_family_carriers -- --nocapture
+  - cargo test -p ash-engine module_loader::tests::task_860_imported_summary_merge_preserves_associated_family_payloads -- --nocapture
 checklist:
-  - "[ ] Implementation matches SPEC-063 and PLAN-111 scope"
-  - "[ ] Focused tests/evidence for this task pass with non-zero test counts"
-  - "[ ] No SPEC-H/proof-search/type-function-inversion behavior added"
+  - "[x] Implementation matches SPEC-063 and PLAN-111 scope"
+  - "[x] Focused tests/evidence for this task pass with non-zero test counts"
+  - "[x] No SPEC-H/proof-search/type-function-inversion behavior added"
 ```
 
 ## Dependencies for Next Task

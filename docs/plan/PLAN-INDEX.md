@@ -290,7 +290,8 @@ Update this section as tasks complete:
 | 111 | 10 | 10 | ✅ Complete |
 | 112 | 14 | 14 | ✅ Complete |
 | 113 | 13 | 13 | ✅ Complete |
-| 114 | 14 | 4 | 🟢 In Progress |
+| 114 | 14 | 14 | ✅ Complete |
+| 115 | 14 | 1 | 🟡 Ready |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -401,7 +402,8 @@ This table is retained near the original early-phase section for historical cont
 | 111 | 10 | 10 | ✅ Complete |
 | 112 | 14 | 14 | ✅ Complete |
 | 113 | 13 | 13 | ✅ Complete |
-| 114 | 14 | 4 | 🟢 In Progress |
+| 114 | 14 | 14 | ✅ Complete |
+| 115 | 14 | 1 | 🟡 Ready |
 
 ## Phase 13: Streams and Behaviours (Weeks 20-22)
 
@@ -3366,3 +3368,45 @@ Phase 114 implements SPEC-F from DESIGN-034. It defines the public module-summar
 - D5: Imported public computation summaries are revalidated for SPEC-061 invariants before normalizer registration unless a future trusted-summary/digest model supersedes revalidation.
 - D6: Dependency-closure helper heads may be normalizer-available without becoming source-visible names.
 - D7: V1/V2 summaries carrying non-empty computation facts are rejected; only V3 may transport public computation summaries.
+
+## Phase 115: Associated Type-Family Computation
+
+**Priority:** High (DESIGN-034 SPEC-G integrates associated types with the total type-computation substrate after Phase 114)
+**Status:** 🟡 Ready for implementation (TASK-857 complete; TASK-858 through TASK-870 ready)
+**Spec:** [SPEC-063](../spec/SPEC-063-ASSOCIATED-TYPE-FAMILY-COMPUTATION.md)
+**Design:** [DESIGN-034](../design/DESIGN-034-TOTAL-TYPE-COMPUTATION.md)
+**Plan:** [docs/plan/PLAN-111-ASSOCIATED-TYPE-FAMILY-COMPUTATION.md](PLAN-111-ASSOCIATED-TYPE-FAMILY-COMPUTATION.md)
+
+Phase 115 implements SPEC-G from DESIGN-034. It integrates associated types with the total type-computation substrate by adding typed interface/impl parameter carriers, explicit associated-family projection syntax, sealed family declaration carriers, core-owned family identities/scheme-result carriers and concrete V4 public summaries, TypeEnv family sealing/module-ownership/coherence/one-way selection validation, unique generic impl-family reduction over abstract arguments, rigid projection behavior for generic where-bound evidence, recursive family totality/decreasingness, local normalizer projection-family reduction, public/private summary export/import with imported-family normalizer availability, diagnostics, and acceptance/non-interference evidence. The phase preserves SPEC-035 simple associated type substitution for non-family associated types and does not implement proposition solving, type-function inversion, proof search, HKT, holes, or partial type-constructor application.
+
+| Task | Description | Est. Hours | Status |
+|------|-------------|------------|--------|
+| [TASK-857](tasks/TASK-857-spec-g-spec-plan-packet.md) | Promote DESIGN-034 SPEC-G into SPEC-063/PLAN-111 and register Phase 115 | 4 | ✅ Complete |
+| [TASK-858](tasks/TASK-858-associated-family-audit-gate.md) | Audit live associated projection, impl, normalizer, and summary seams, then bind downstream tasks to exact files/tests/callsites before implementation | 5 | 🟡 Ready |
+| [TASK-859](tasks/TASK-859-associated-family-surface-and-compat-parser.md) | Associated family projection/declaration surface syntax and SPEC-035 compatibility parser | 6 | 🟡 Ready |
+| [TASK-860](tasks/TASK-860-core-associated-family-identity-carriers.md) | Core associated-family identity/projection/summary carriers and V4 version contract | 7 | 🟡 Ready |
+| [TASK-861](tasks/TASK-861-typeck-family-declaration-registration-coherence.md) | TypeEnv family declaration registration, sealing, and coherence | 8 | 🟡 Ready |
+| [TASK-862](tasks/TASK-862-spec035-substitution-compatibility-bridge.md) | SPEC-035 selected-impl substitution compatibility bridge | 5 | 🟡 Ready |
+| [TASK-863](tasks/TASK-863-unique-generic-impl-family-selection.md) | Unique generic impl-family selection over concrete and abstract arguments | 7 | 🟡 Ready |
+| [TASK-864](tasks/TASK-864-rigid-where-bound-projection-boundary.md) | Rigid where-bound projection boundary and non-inversion | 5 | 🟡 Ready |
+| [TASK-865](tasks/TASK-865-recursive-associated-family-totality.md) | Recursive associated-family coverage, overlap, and decreasingness | 8 | 🟡 Ready |
+| [TASK-866](tasks/TASK-866-normalizer-projection-family-integration.md) | Normalizer and definitional equality integration for projection families | 7 | 🟡 Ready |
+| [TASK-867](tasks/TASK-867-associated-family-summary-export-import.md) | Public/private associated-family summary export/import through V4 summaries | 8 | 🟡 Ready |
+| [TASK-868](tasks/TASK-868-associated-family-diagnostics-acceptance-matrix.md) | Associated-family diagnostics and acceptance/non-interference matrix | 6 | 🟡 Ready |
+| [TASK-869](tasks/TASK-869-spec-g-closeout-docs-and-verification.md) | SPEC-G closeout docs and verification | 4 | 🟡 Ready |
+| [TASK-870](tasks/TASK-870-phase115-review-remediation.md) | Phase 115 review remediation | 6 | 🟡 Ready |
+
+**Track A (Spec Gate and Audit):** 9h. Promote DESIGN-034 SPEC-G to SPEC-063/PLAN-111, then audit live projection, impl, normalizer, and summary seams.
+**Track B (Surface + Core Carriers):** 13h. Add typed interface/impl parameter carriers, explicit family projection syntax, sealed family declaration carriers, core family identities/projection helpers, checked family scheme/result carriers, blocker support, and V4 summary carriers.
+**Track C (Typeck Family Semantics):** 25h. Register sealed family declarations, validate coherence, preserve simple substitution, implement unique selection, and enforce rigid where-bound behavior.
+**Track D (Recursion + Normalizer + Summaries):** 23h. Validate recursive totality/decreasingness, integrate projection-family reduction into normalization/equality, and transport public family summaries.
+**Track E (Diagnostics + Closeout):** 16h. Add diagnostics, acceptance matrix, closeout verification, and review remediation.
+
+**Decision gates:**
+- D1: Reducible associated families require explicit `sealed type family`; ordinary `type Name` associated types keep SPEC-035 simple substitution only.
+- D2: Explicit family projection syntax is `<Interface<Args...>>::Assoc` over source-visible unqualified interface names in the MVP; existing `Base::Assoc` remains compatibility syntax and must not imply hidden search.
+- D3: Where-bound evidence and family equation selection are separate; a bound produces rigid projection evidence unless a unique sealed family scheme is selected by a concrete family head/argument spine.
+- D4: Family reduction is non-inverting normalize-and-compare work only; scheme selection is one-way and binds only scheme-owned variables; no proof search, proposition solving, or type-function inversion lands in Phase 115.
+- D5: Recursive families require sealed domains, exhaustive/coherent residual coverage, and direct structural decreasingness.
+- D6: Public associated-family summaries require concrete V4 semantic summaries; older summaries with family facts are malformed and rejected before partial registration, and V4 exports are reducible only when the full closed equation/dependency set is public-summary-visible.
+- D7: TASK-858 is a hard pre-implementation gate requiring downstream TASK-859 through TASK-868 exact file/test/callsite bindings and zero-test-safe focused commands.

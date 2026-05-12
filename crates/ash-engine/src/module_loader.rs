@@ -50,27 +50,7 @@ thread_local! {
 }
 
 const fn type_env_error_span(error: &ash_typeck::error::TypeEnvError) -> ash_parser::token::Span {
-    use ash_typeck::error::TypeEnvError;
-
-    match error {
-        TypeEnvError::DuplicateType(_, span)
-        | TypeEnvError::TypeNotFound(_, span)
-        | TypeEnvError::InvalidDefinition(_, span)
-        | TypeEnvError::DuplicateInterface(_, span)
-        | TypeEnvError::MissingInterface(_, span)
-        | TypeEnvError::UnsupportedSummaryVersion { span, .. }
-        | TypeEnvError::MalformedImportedComputationSummary { span, .. }
-        | TypeEnvError::PrivateDependencyExportFailure { span, .. }
-        | TypeEnvError::ImportOrderConflict { span, .. }
-        | TypeEnvError::DuplicateImpl { span, .. }
-        | TypeEnvError::MissingImpl { span, .. }
-        | TypeEnvError::MissingInterfaceMethod { span, .. }
-        | TypeEnvError::OverlappingImpls { span, .. }
-        | TypeEnvError::RecursiveBound { span, .. }
-        | TypeEnvError::MissingAssociatedType { span, .. }
-        | TypeEnvError::MismatchedProjectionInterface { span, .. }
-        | TypeEnvError::AmbiguousAssociatedType { span, .. } => *span,
-    }
+    error.span()
 }
 
 /// Executes `f` with the legacy ordinary-type snippet compatibility APIs enabled.
@@ -2024,7 +2004,7 @@ fn format_parse_errors(errors: &[ash_parser::error::ParseError]) -> String {
         .join(", ")
 }
 
-fn module_identity_for_path(path: &Path) -> ModuleIdentity {
+pub(crate) fn module_identity_for_path(path: &Path) -> ModuleIdentity {
     let canonical = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
     let path_text = canonical.to_string_lossy().into_owned();
     ModuleIdentity::new(

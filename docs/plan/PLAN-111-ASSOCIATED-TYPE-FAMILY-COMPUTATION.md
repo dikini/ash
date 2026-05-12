@@ -10,7 +10,7 @@
 
 ---
 
-**Status:** 🟡 In progress (TASK-857 through TASK-860 complete; TASK-861 through TASK-870 ready)
+**Status:** 🟡 In progress (TASK-857 through TASK-861 complete; TASK-862 through TASK-870 ready)
 **Spec:** [SPEC-063](../spec/SPEC-063-ASSOCIATED-TYPE-FAMILY-COMPUTATION.md)
 **Design:** [DESIGN-034 §16.7](../design/DESIGN-034-TOTAL-TYPE-COMPUTATION.md#167-spec-g-associated-type-family-computation)
 **Depends on:** [SPEC-057](../spec/SPEC-057-UNIFIED-TYPE-MODULE-PIPELINE-AND-SEMANTIC-SUMMARIES.md), [SPEC-058](../spec/SPEC-058-CANONICAL-TYPE-EXPRESSION-IR-PROJECTION-IDS-KIND-ARITY-SUBSTRATE.md), [SPEC-059](../spec/SPEC-059-SEALED-TYPE-LEVEL-DOMAINS.md), [SPEC-060](../spec/SPEC-060-NORMALIZER-DEFINITIONAL-EQUALITY-CORE.md), [SPEC-061](../spec/SPEC-061-DIRECT-STRUCTURAL-TYPE-FUNCTIONS.md), [SPEC-062](../spec/SPEC-062-MODULE-SUMMARY-EXPORT-IMPORT-FOR-TYPE-COMPUTATION.md)
@@ -23,7 +23,7 @@
 | [TASK-858](tasks/TASK-858-associated-family-audit-gate.md) | Audit live associated projection, impl, normalizer, and summary seams, then bind downstream tasks to exact files/tests/callsites before implementation | Docs/Substrate | 5 | ✅ Complete |
 | [TASK-859](tasks/TASK-859-associated-family-surface-and-compat-parser.md) | Add explicit family projection/declaration surface and preserve SPEC-035 compatibility parsing | Parser | 6 | ✅ Complete |
 | [TASK-860](tasks/TASK-860-core-associated-family-identity-carriers.md) | Add core associated-family identity/projection/summary carriers and V4 version contract | Core/Substrate | 7 | ✅ Complete |
-| [TASK-861](tasks/TASK-861-typeck-family-declaration-registration-coherence.md) | Register sealed family declarations and validate impl-family coherence | Typeck/Semantic | 8 | 🟡 Ready |
+| [TASK-861](tasks/TASK-861-typeck-family-declaration-registration-coherence.md) | Register sealed family declarations and validate impl-family coherence | Typeck/Semantic | 8 | ✅ Complete |
 | [TASK-862](tasks/TASK-862-spec035-substitution-compatibility-bridge.md) | Preserve SPEC-035 selected-impl substitution while bridging family declarations | Typeck/Compatibility | 5 | 🟡 Ready |
 | [TASK-863](tasks/TASK-863-unique-generic-impl-family-selection.md) | Reduce unique generic impl-family schemes over concrete and abstract arguments | Typeck/Normalizer | 7 | 🟡 Ready |
 | [TASK-864](tasks/TASK-864-rigid-where-bound-projection-boundary.md) | Enforce rigid projection behavior for generic where-bound evidence | Typeck/Equality | 5 | 🟡 Ready |

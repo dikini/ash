@@ -73,6 +73,14 @@ impl AshLspError for crate::error::TypeEnvError {
                 Self::MissingAssociatedType { span, .. } => span,
                 Self::MismatchedProjectionInterface { span, .. } => span,
                 Self::AmbiguousAssociatedType { span, .. } => span,
+                Self::MissingAssociatedFamilyBinding { span, .. }
+                | Self::ExtraAssociatedFamilyBinding { span, .. }
+                | Self::DuplicateAssociatedFamilyHead { span, .. }
+                | Self::UnauthorizedAssociatedFamilyExtension { span, .. }
+                | Self::AssociatedFamilyModuleOwnerViolation { span, .. }
+                | Self::OverlappingAssociatedFamilyScheme { span, .. }
+                | Self::WrongAssociatedFamilyResultKind { span, .. }
+                | Self::WrongAssociatedFamilyResultDomain { span, .. } => span,
             }
             .into(),
         )
@@ -102,6 +110,14 @@ impl AshLspError for crate::error::TypeEnvError {
                 Self::MissingAssociatedType { .. } => "E130",
                 Self::MismatchedProjectionInterface { .. } => "E131",
                 Self::AmbiguousAssociatedType { .. } => "E132",
+                Self::MissingAssociatedFamilyBinding { .. } => "E137",
+                Self::ExtraAssociatedFamilyBinding { .. } => "E138",
+                Self::DuplicateAssociatedFamilyHead { .. } => "E139",
+                Self::UnauthorizedAssociatedFamilyExtension { .. } => "E161",
+                Self::AssociatedFamilyModuleOwnerViolation { .. } => "E162",
+                Self::OverlappingAssociatedFamilyScheme { .. } => "E163",
+                Self::WrongAssociatedFamilyResultKind { .. } => "E164",
+                Self::WrongAssociatedFamilyResultDomain { .. } => "E165",
             }
             .into(),
         ))
@@ -133,7 +149,7 @@ impl AshLspError for crate::solver::TypeError {
             Self::UnknownCapability { span, .. } => Some((*span).into()),
             Self::InvalidConstraintField { span, .. } => Some((*span).into()),
             Self::ConstraintTypeMismatch { span, .. } => Some((*span).into()),
-            Self::TypeEnv(err) => err.span(),
+            Self::TypeEnv(err) => Some(err.span().into()),
         }
     }
 
@@ -272,7 +288,7 @@ mod tests {
             "Foo".to_string(),
             ash_parser::token::Span::default(),
         );
-        assert!(err.span().is_some());
+        assert!(ash_diagnostic::AshLspError::span(&err).is_some());
         assert_eq!(err.severity(), Severity::Error);
         assert_eq!(err.code(), Some(DiagnosticCode("E100".into())));
     }
@@ -283,7 +299,7 @@ mod tests {
             "Option".to_string(),
             ash_parser::token::Span::default(),
         );
-        assert!(err.span().is_some());
+        assert!(ash_diagnostic::AshLspError::span(&err).is_some());
         assert_eq!(err.severity(), Severity::Error);
         assert_eq!(err.code(), Some(DiagnosticCode("E120".into())));
     }
@@ -292,7 +308,7 @@ mod tests {
     fn test_type_error_diagnostic() {
         use crate::solver::TypeError;
         let err = TypeError::UnboundVariable("x".to_string(), ash_parser::token::Span::default());
-        assert!(err.span().is_some());
+        assert!(ash_diagnostic::AshLspError::span(&err).is_some());
         assert_eq!(err.severity(), Severity::Error);
         assert_eq!(err.code(), Some(DiagnosticCode("E144".into())));
     }
@@ -313,7 +329,7 @@ mod tests {
             name: "foo".to_string(),
             span: ash_parser::token::Span::default(),
         };
-        assert!(err.span().is_some());
+        assert!(ash_diagnostic::AshLspError::span(&err).is_some());
         assert_eq!(err.severity(), Severity::Error);
         assert_eq!(err.code(), Some(DiagnosticCode("E200".into())));
     }
@@ -324,7 +340,7 @@ mod tests {
             "x".to_string(),
             ash_parser::token::Span::default(),
         );
-        assert!(err.span().is_some());
+        assert!(ash_diagnostic::AshLspError::span(&err).is_some());
         assert_eq!(err.severity(), Severity::Error);
         assert_eq!(err.code(), Some(DiagnosticCode("E210".into())));
     }
@@ -335,7 +351,7 @@ mod tests {
             kind: crate::purity::PurityViolation::PolicyExpression,
             span: ash_parser::token::Span::default(),
         };
-        assert!(err.span().is_some());
+        assert!(ash_diagnostic::AshLspError::span(&err).is_some());
         assert_eq!(err.severity(), Severity::Error);
         assert_eq!(err.code(), Some(DiagnosticCode("E300".into())));
     }

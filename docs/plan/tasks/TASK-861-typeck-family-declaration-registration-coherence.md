@@ -1,6 +1,6 @@
 # TASK-861: Typeck family declaration registration and coherence
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -63,15 +63,20 @@ Dispatch an independent review/verification subagent with this task file, SPEC-0
 
 ## Completion Checklist
 
-- [ ] Requirements above are satisfied.
-- [ ] Focused tests/evidence exist and pass, or docs-only verification is recorded.
-- [ ] Negative leakage/non-interference behavior is covered for this task's surface.
-- [ ] Status docs and CHANGELOG.md are updated if this task changes release-facing docs.
-- [ ] Independent verification completed or scheduled by the closeout task.
+- [x] Requirements above are satisfied.
+- [x] Focused tests/evidence exist and pass, or docs-only verification is recorded.
+- [x] Negative leakage/non-interference behavior is covered for this task's surface.
+- [x] Status docs and CHANGELOG.md are updated if this task changes release-facing docs.
+- [x] Independent verification completed or scheduled by the closeout task.
 
 ## Completion Evidence
 
-- Completion evidence must be recorded by the implementing agent before marking this task complete.
+- Implemented TypeEnv sealed associated-family declaration metadata, result-kind/domain constraint handling, module-owner validation, dedicated impl-family scheme registration, overlap/coherence validation, and precise TypeEnv diagnostics/spans.
+- Preserved ordinary SPEC-035 associated-type behavior while routing sealed associated-family bindings through staged family scheme publication. Rejected impls do not publish family schemes; multi-family impl publication rolls back if a later family scheme fails.
+- Added module-aware program typechecking through `type_check_program_in_env_for_module` and engine file-program module identity caching so file/module callers do not publish associated-family facts under the standalone synthetic identity.
+- Focused verification passed: `cargo test -p ash-typeck --test task_861_associated_family_registration -- --nocapture` (8 tests), `cargo test -p ash-typeck --test task_859_associated_family_fail_closed -- --nocapture` (3 tests), and `cargo check -p ash-engine`.
+- Compatibility verification passed during implementation: `cargo test -p ash-typeck --test closed_world_interfaces_task_422 -- --nocapture` (24 tests), `cargo test -p ash-typeck --test task_800_associated_projection_canonicalization_red -- --nocapture` (18 tests), plus focused `cargo check -p ash-typeck`.
+- Independent TASK-861 review after remediation reported PASS with no blocking, important, or non-blocking findings.
 
 ## Dispatch
 

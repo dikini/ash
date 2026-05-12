@@ -87,6 +87,10 @@ pub struct Engine {
     /// Parsed program metadata for workflows loaded with local pure-function definitions.
     surface_programs:
         std::sync::Mutex<std::collections::HashMap<u64, ash_parser::surface::Program>>,
+    /// Current source module identity for parsed programs, when the workflow came from a file.
+    surface_program_module_identities: std::sync::Mutex<
+        std::collections::HashMap<u64, ash_core::semantic_summary::ModuleIdentity>,
+    >,
     /// Narrow engine-owned registry of runtime stdlib module sources keyed by
     /// canonical module path.
     runtime_stdlib_modules: std::sync::Mutex<std::collections::HashMap<String, String>>,
@@ -755,6 +759,16 @@ impl Engine {
         }
     }
 
+    fn store_surface_program_module_identity(
+        &self,
+        workflow_id: u64,
+        module_identity: ash_core::semantic_summary::ModuleIdentity,
+    ) {
+        if let Ok(mut map) = self.surface_program_module_identities.lock() {
+            map.insert(workflow_id, module_identity);
+        }
+    }
+
     /// Retrieve a surface workflow definition by its ID
     fn get_surface_workflow_def(&self, id: u64) -> Option<ash_parser::surface::WorkflowDef> {
         self.surface_workflow_defs
@@ -764,6 +778,15 @@ impl Engine {
 
     fn get_surface_program(&self, id: u64) -> Option<ash_parser::surface::Program> {
         self.surface_programs
+            .lock()
+            .map_or(None, |map| map.get(&id).cloned())
+    }
+
+    fn get_surface_program_module_identity(
+        &self,
+        id: u64,
+    ) -> Option<ash_core::semantic_summary::ModuleIdentity> {
+        self.surface_program_module_identities
             .lock()
             .map_or(None, |map| map.get(&id).cloned())
     }
@@ -941,6 +964,7 @@ impl Engine {
             Vec::new(),
             Vec::new(),
             &imported_callables,
+            None,
         )
     }
 
@@ -966,6 +990,7 @@ impl Engine {
             Vec::new(),
             Vec::new(),
             &HashMap::new(),
+            None,
         )
     }
 
@@ -991,13 +1016,16 @@ impl Engine {
     /// Returns `EngineError::Io` if the file cannot be read.
     /// Returns `EngineError::Parse` if the file contains syntax errors.
     pub fn parse_file(&self, path: impl AsRef<std::path::Path>) -> Result<Workflow, EngineError> {
-        let loaded = module_loader::load_ordinary_file(path.as_ref())?;
+        let path = path.as_ref();
+        let module_identity = module_loader::module_identity_for_path(path);
+        let loaded = module_loader::load_ordinary_file(path)?;
         self.parse_workflow_source_with_imports(
             &loaded.workflow_source,
             loaded.imported_type_defs,
             loaded.imported_semantic_summaries,
             loaded.imported_type_function_heads,
             &loaded.imported_callables,
+            Some(&module_identity),
         )
     }
     /// Extract local function definitions as closures and register helper workflows.
@@ -1079,6 +1107,7 @@ impl Engine {
         imported_semantic_summaries: Vec<ash_core::semantic_summary::ModuleSemanticSummary>,
         imported_type_function_heads: Vec<(String, ash_core::type_ir::TypeComputationHeadId)>,
         imported_callables: &HashMap<String, module_loader::InlineCallable>,
+        module_identity: Option<&ash_core::semantic_summary::ModuleIdentity>,
     ) -> Result<Workflow, EngineError> {
         use ash_parser::{
             lower_workflow, new_input, parse_utils::skip_whitespace_and_comments, workflow_def,
@@ -1122,6 +1151,9 @@ impl Engine {
                         )?;
 
                     self.store_surface_program(id, program);
+                    if let Some(identity) = module_identity {
+                        self.store_surface_program_module_identity(id, identity.clone());
+                    }
                     self.store_imported_semantic_summaries(id, imported_semantic_summaries);
                     self.store_imported_type_function_heads(id, imported_type_function_heads);
                     self.store_imported_type_defs(id, imported_type_defs);
@@ -1170,6 +1202,9 @@ impl Engine {
                 )?;
 
                 self.store_surface_program(id, program);
+                if let Some(identity) = module_identity {
+                    self.store_surface_program_module_identity(id, identity.clone());
+                }
                 self.store_imported_semantic_summaries(id, imported_semantic_summaries);
                 self.store_imported_type_function_heads(id, imported_type_function_heads);
                 self.store_imported_type_defs(id, imported_type_defs);
@@ -1241,7 +1276,20 @@ impl Engine {
             register_imported_type_defs(&mut type_env, imported_type_defs)?;
             bind_imported_callable_types(&mut type_env, workflow)?;
 
-            match ash_typeck::type_check_program_in_env(&type_env, &program) {
+            let type_check_result = self
+                .get_surface_program_module_identity(workflow.id)
+                .map_or_else(
+                    || ash_typeck::type_check_program_in_env(&type_env, &program),
+                    |module_identity| {
+                        ash_typeck::type_check_program_in_env_for_module(
+                            &type_env,
+                            &program,
+                            module_identity,
+                        )
+                    },
+                );
+
+            match type_check_result {
                 Ok(result) => {
                     if result.is_ok() {
                         monomorphize::monomorphize_workflow(&mut workflow.core, &type_env)
@@ -2083,6 +2131,9 @@ impl EngineBuilder {
             imported_semantic_summaries: std::sync::Mutex::new(std::collections::HashMap::new()),
             imported_type_function_heads: std::sync::Mutex::new(std::collections::HashMap::new()),
             surface_programs: std::sync::Mutex::new(std::collections::HashMap::new()),
+            surface_program_module_identities: std::sync::Mutex::new(
+                std::collections::HashMap::new(),
+            ),
             runtime_stdlib_modules: std::sync::Mutex::new(std::collections::HashMap::new()),
             next_id: std::sync::atomic::AtomicU64::new(1),
             runtime_state,

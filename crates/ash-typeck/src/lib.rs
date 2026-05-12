@@ -88,6 +88,17 @@ pub use visibility::{ModulePath, VisibilityChecker, VisibilityError, VisibilityE
 
 use std::collections::HashSet;
 
+fn synthetic_program_module_identity() -> ash_core::semantic_summary::ModuleIdentity {
+    ash_core::semantic_summary::ModuleIdentity::new(
+        None,
+        ash_core::module_graph::ModuleId(0),
+        vec!["<program>".to_string()],
+        ash_core::semantic_summary::ModuleSourceOrigin::Synthetic {
+            reason: "type_check_program default module context".to_string(),
+        },
+    )
+}
+
 fn resolve_public_surface_associated_interface(
     env: &TypeEnv,
     base_ty: &Type,
@@ -2413,26 +2424,40 @@ pub fn type_check_program_in_env(
     initial_env: &TypeEnv,
     program: &ash_parser::surface::Program,
 ) -> Result<TypeCheckResult, TypeCheckError> {
+    type_check_program_in_env_for_module(initial_env, program, synthetic_program_module_identity())
+}
+
+/// Type check a program with an explicit current-module identity for local declarations.
+///
+/// Module-aware callers should use this entry point so sealed associated-family
+/// declarations and impl-family schemes record the real defining module instead
+/// of the standalone synthetic program identity.
+pub fn type_check_program_in_env_for_module(
+    initial_env: &TypeEnv,
+    program: &ash_parser::surface::Program,
+    module_identity: ash_core::semantic_summary::ModuleIdentity,
+) -> Result<TypeCheckResult, TypeCheckError> {
     let mut env = initial_env.clone();
+    env.set_current_module_identity(module_identity);
 
     for definition in &program.definitions {
         if let ash_parser::surface::Definition::Interface(interface) = definition {
             env.register_interface(interface)
-                .map_err(|error| TypeCheckError::TypeError(error.to_string()))?;
+                .map_err(TypeCheckError::from)?;
         }
     }
 
     for definition in &program.definitions {
         if let ash_parser::surface::Definition::CapabilityInterface(interface) = definition {
             env.register_capability_interface(interface)
-                .map_err(|error| TypeCheckError::TypeError(error.to_string()))?;
+                .map_err(TypeCheckError::from)?;
         }
     }
 
     for definition in &program.definitions {
         if let ash_parser::surface::Definition::ResourceType(resource_type) = definition {
             env.register_resource_type(resource_type)
-                .map_err(|error| TypeCheckError::TypeError(error.to_string()))?;
+                .map_err(TypeCheckError::from)?;
         }
     }
 
@@ -2441,14 +2466,14 @@ pub fn type_check_program_in_env(
             definition
         {
             env.register_capability_implementation(implementation)
-                .map_err(|error| TypeCheckError::TypeError(error.to_string()))?;
+                .map_err(TypeCheckError::from)?;
         }
     }
 
     for definition in &program.definitions {
         if let ash_parser::surface::Definition::Impl(implementation) = definition {
             env.register_impl(implementation)
-                .map_err(|error| TypeCheckError::TypeError(error.to_string()))?;
+                .map_err(TypeCheckError::from)?;
         }
     }
 
@@ -2596,6 +2621,21 @@ pub enum TypeCheckError {
     /// Obligation not satisfied
     #[error("Obligation error: {0}")]
     ObligationError(String),
+    /// Type-environment registration error.
+    #[error("Type environment error: {0}")]
+    TypeEnv(Box<crate::error::TypeEnvError>),
+}
+
+impl From<crate::error::TypeEnvError> for TypeCheckError {
+    fn from(err: crate::error::TypeEnvError) -> Self {
+        Self::TypeEnv(Box::new(err))
+    }
+}
+
+impl From<Box<crate::error::TypeEnvError>> for TypeCheckError {
+    fn from(err: Box<crate::error::TypeEnvError>) -> Self {
+        Self::TypeEnv(err)
+    }
 }
 
 /// Extended type check result with effect and obligation info

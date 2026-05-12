@@ -3,7 +3,7 @@
 //! Defines errors that can occur during type checking of expressions,
 //! including constructor checking errors.
 
-use ash_core::semantic_summary::SummaryVersion;
+use ash_core::semantic_summary::{ModuleIdentity, SummaryVersion};
 use ash_parser::token::Span;
 use thiserror::Error;
 
@@ -323,6 +323,134 @@ pub enum TypeEnvError {
         /// Source span
         span: Span,
     },
+
+    /// Missing sealed associated-family binding in an impl.
+    #[error("missing associated family '{family}' in impl for interface '{interface}'")]
+    MissingAssociatedFamilyBinding {
+        /// Interface name.
+        interface: String,
+        /// Family member name.
+        family: String,
+        /// Source span.
+        span: Span,
+    },
+
+    /// Extra associated-family binding in an impl.
+    #[error("extra associated family binding '{family}' in impl for interface '{interface}'")]
+    ExtraAssociatedFamilyBinding {
+        /// Interface name.
+        interface: String,
+        /// Family member name.
+        family: String,
+        /// Source span.
+        span: Span,
+    },
+
+    /// Duplicate sealed associated-family head declaration.
+    #[error("duplicate associated family head '{family}' in interface '{interface}'")]
+    DuplicateAssociatedFamilyHead {
+        /// Interface name.
+        interface: String,
+        /// Family member name.
+        family: String,
+        /// Source span.
+        span: Span,
+    },
+
+    /// Sealed associated-family equations were supplied outside the owner module.
+    #[error(
+        "unauthorized extension of sealed associated family '{family}' from module '{attempted_module:?}'; owner is '{owner_module:?}'"
+    )]
+    UnauthorizedAssociatedFamilyExtension {
+        /// Family member name.
+        family: String,
+        /// Module that owns the sealed equation set.
+        owner_module: ModuleIdentity,
+        /// Module that attempted to add an equation.
+        attempted_module: ModuleIdentity,
+        /// Source span.
+        span: Span,
+    },
+
+    /// Associated-family declaration/scheme lacked or violated module-owner context.
+    #[error("associated family '{family}' requires defining module owner context: {reason}")]
+    AssociatedFamilyModuleOwnerViolation {
+        /// Family member name.
+        family: String,
+        /// Human-readable reason.
+        reason: String,
+        /// Source span.
+        span: Span,
+    },
+
+    /// Overlapping associated-family schemes for the same head/patterns.
+    #[error("overlapping associated family scheme for '{family}'")]
+    OverlappingAssociatedFamilyScheme {
+        /// Family member name.
+        family: String,
+        /// Source span.
+        span: Span,
+    },
+
+    /// Associated-family declaration/scheme has the wrong result kind.
+    #[error(
+        "wrong result kind for associated family '{family}': expected {expected}, found {found}"
+    )]
+    WrongAssociatedFamilyResultKind {
+        /// Family member name.
+        family: String,
+        /// Expected kind.
+        expected: String,
+        /// Found kind.
+        found: String,
+        /// Source span.
+        span: Span,
+    },
+
+    /// Associated-family declaration/scheme has the wrong result domain.
+    #[error("wrong result domain for associated family '{family}': {reason}")]
+    WrongAssociatedFamilyResultDomain {
+        /// Family member name.
+        family: String,
+        /// Human-readable reason.
+        reason: String,
+        /// Source span.
+        span: Span,
+    },
+}
+
+impl TypeEnvError {
+    /// Return the best source span associated with this type-environment diagnostic.
+    #[must_use]
+    pub const fn span(&self) -> Span {
+        match self {
+            Self::DuplicateType(_, span)
+            | Self::TypeNotFound(_, span)
+            | Self::InvalidDefinition(_, span)
+            | Self::UnsupportedSummaryVersion { span, .. }
+            | Self::MalformedImportedComputationSummary { span, .. }
+            | Self::PrivateDependencyExportFailure { span, .. }
+            | Self::ImportOrderConflict { span, .. }
+            | Self::DuplicateInterface(_, span)
+            | Self::MissingInterface(_, span)
+            | Self::DuplicateImpl { span, .. }
+            | Self::MissingImpl { span, .. }
+            | Self::MissingInterfaceMethod { span, .. }
+            | Self::OverlappingImpls { span, .. }
+            | Self::RecursiveBound { span, .. }
+            | Self::MissingAssociatedType { span, .. }
+            | Self::MismatchedProjectionInterface { span, .. }
+            | Self::AmbiguousAssociatedType { span, .. }
+            | Self::MissingAssociatedFamilyBinding { span, .. }
+            | Self::ExtraAssociatedFamilyBinding { span, .. }
+            | Self::DuplicateAssociatedFamilyHead { span, .. }
+            | Self::UnauthorizedAssociatedFamilyExtension { span, .. }
+            | Self::AssociatedFamilyModuleOwnerViolation { span, .. }
+            | Self::OverlappingAssociatedFamilyScheme { span, .. }
+            | Self::WrongAssociatedFamilyResultKind { span, .. }
+            | Self::WrongAssociatedFamilyResultDomain { span, .. } => *span,
+        }
+    }
 }
 
 /// Error type for exhaustiveness checking

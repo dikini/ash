@@ -125,7 +125,19 @@ pub enum TypeError {
     },
     /// Type environment error propagated through type conversion/checking
     #[error("{0}")]
-    TypeEnv(#[from] crate::error::TypeEnvError),
+    TypeEnv(Box<crate::error::TypeEnvError>),
+}
+
+impl From<crate::error::TypeEnvError> for TypeError {
+    fn from(err: crate::error::TypeEnvError) -> Self {
+        Self::TypeEnv(Box::new(err))
+    }
+}
+
+impl From<Box<crate::error::TypeEnvError>> for TypeError {
+    fn from(err: Box<crate::error::TypeEnvError>) -> Self {
+        Self::TypeEnv(err)
+    }
 }
 
 impl From<UnifyError> for TypeError {

@@ -242,12 +242,44 @@ fn workflow_surface_type_to_type(
                 name: name.to_string(),
             })
         }
-        ash_parser::surface::Type::AssociatedFamilyProjection { .. } => Err(
-            TypeCheckError::TypeError(
-                "associated-family projection type checking is not supported before Phase 115 semantic registration"
-                    .to_string(),
-            ),
-        ),
+        ash_parser::surface::Type::AssociatedFamilyProjection {
+            interface,
+            args,
+            member,
+            span,
+        } => {
+            let declaration = env
+                .lookup_associated_family_declaration(interface.as_ref(), member.as_ref())
+                .ok_or_else(|| {
+                    TypeCheckError::TypeError(format!(
+                        "unknown sealed associated-family projection '<{}<...>>::{}'",
+                        interface, member
+                    ))
+                })?;
+            if declaration.interface_params.len() != args.len() {
+                return Err(TypeCheckError::TypeError(format!(
+                    "associated-family projection '{}::{}' at {:?} expects {} interface arguments, found {}",
+                    interface,
+                    member,
+                    span,
+                    declaration.interface_params.len(),
+                    args.len()
+                )));
+            }
+            let args = args
+                .iter()
+                .map(|arg| workflow_surface_type_to_type(env, arg, type_params))
+                .collect::<Result<Vec<_>, _>>()?;
+            Ok(Type::Associated {
+                interface: interface.to_string(),
+                base: Box::new(Type::Constructor {
+                    name: QualifiedName::root(interface.as_ref()),
+                    args,
+                    kind: Kind::Type,
+                }),
+                name: member.to_string(),
+            })
+        }
     }
 }
 

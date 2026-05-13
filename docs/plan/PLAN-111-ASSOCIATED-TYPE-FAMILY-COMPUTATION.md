@@ -10,7 +10,7 @@
 
 ---
 
-**Status:** 🟡 In progress (TASK-857 through TASK-861 complete; TASK-862 through TASK-870 ready)
+**Status:** ✅ Complete (TASK-857 through TASK-870 complete; post-closeout remediation verified)
 **Spec:** [SPEC-063](../spec/SPEC-063-ASSOCIATED-TYPE-FAMILY-COMPUTATION.md)
 **Design:** [DESIGN-034 §16.7](../design/DESIGN-034-TOTAL-TYPE-COMPUTATION.md#167-spec-g-associated-type-family-computation)
 **Depends on:** [SPEC-057](../spec/SPEC-057-UNIFIED-TYPE-MODULE-PIPELINE-AND-SEMANTIC-SUMMARIES.md), [SPEC-058](../spec/SPEC-058-CANONICAL-TYPE-EXPRESSION-IR-PROJECTION-IDS-KIND-ARITY-SUBSTRATE.md), [SPEC-059](../spec/SPEC-059-SEALED-TYPE-LEVEL-DOMAINS.md), [SPEC-060](../spec/SPEC-060-NORMALIZER-DEFINITIONAL-EQUALITY-CORE.md), [SPEC-061](../spec/SPEC-061-DIRECT-STRUCTURAL-TYPE-FUNCTIONS.md), [SPEC-062](../spec/SPEC-062-MODULE-SUMMARY-EXPORT-IMPORT-FOR-TYPE-COMPUTATION.md)
@@ -24,15 +24,15 @@
 | [TASK-859](tasks/TASK-859-associated-family-surface-and-compat-parser.md) | Add explicit family projection/declaration surface and preserve SPEC-035 compatibility parsing | Parser | 6 | ✅ Complete |
 | [TASK-860](tasks/TASK-860-core-associated-family-identity-carriers.md) | Add core associated-family identity/projection/summary carriers and V4 version contract | Core/Substrate | 7 | ✅ Complete |
 | [TASK-861](tasks/TASK-861-typeck-family-declaration-registration-coherence.md) | Register sealed family declarations and validate impl-family coherence | Typeck/Semantic | 8 | ✅ Complete |
-| [TASK-862](tasks/TASK-862-spec035-substitution-compatibility-bridge.md) | Preserve SPEC-035 selected-impl substitution while bridging family declarations | Typeck/Compatibility | 5 | 🟡 Ready |
-| [TASK-863](tasks/TASK-863-unique-generic-impl-family-selection.md) | Reduce unique generic impl-family schemes over concrete and abstract arguments | Typeck/Normalizer | 7 | 🟡 Ready |
-| [TASK-864](tasks/TASK-864-rigid-where-bound-projection-boundary.md) | Enforce rigid projection behavior for generic where-bound evidence | Typeck/Equality | 5 | 🟡 Ready |
-| [TASK-865](tasks/TASK-865-recursive-associated-family-totality.md) | Validate recursive associated-family coverage, overlap, and decreasingness | Typeck/Semantic | 8 | 🟡 Ready |
-| [TASK-866](tasks/TASK-866-normalizer-projection-family-integration.md) | Integrate associated-family reduction into normalizer and definitional equality | Normalizer | 7 | 🟡 Ready |
-| [TASK-867](tasks/TASK-867-associated-family-summary-export-import.md) | Export/import public associated-family summaries through V4 semantic summaries | Core/Engine/Typeck | 8 | 🟡 Ready |
-| [TASK-868](tasks/TASK-868-associated-family-diagnostics-acceptance-matrix.md) | Add diagnostics and row-by-row acceptance/non-interference matrix | Tests/Diagnostics | 6 | 🟡 Ready |
-| [TASK-869](tasks/TASK-869-spec-g-closeout-docs-and-verification.md) | Reconcile docs/status/changelog and record closeout verification | Docs/Planning | 4 | 🟡 Ready |
-| [TASK-870](tasks/TASK-870-phase115-review-remediation.md) | Remediate independent post-closeout review findings | Review/Hardening | 6 | 🟡 Ready |
+| [TASK-862](tasks/TASK-862-spec035-substitution-compatibility-bridge.md) | Preserve SPEC-035 selected-impl substitution while bridging family declarations | Typeck/Compatibility | 5 | ✅ Complete |
+| [TASK-863](tasks/TASK-863-unique-generic-impl-family-selection.md) | Reduce unique generic impl-family schemes over concrete and abstract arguments | Typeck/Normalizer | 7 | ✅ Complete |
+| [TASK-864](tasks/TASK-864-rigid-where-bound-projection-boundary.md) | Enforce rigid projection behavior for generic where-bound evidence | Typeck/Equality | 5 | ✅ Complete |
+| [TASK-865](tasks/TASK-865-recursive-associated-family-totality.md) | Validate recursive associated-family coverage, overlap, and decreasingness | Typeck/Semantic | 8 | ✅ Complete |
+| [TASK-866](tasks/TASK-866-normalizer-projection-family-integration.md) | Integrate associated-family reduction into normalizer and definitional equality | Normalizer | 7 | ✅ Complete |
+| [TASK-867](tasks/TASK-867-associated-family-summary-export-import.md) | Export/import public associated-family summaries through V4 semantic summaries | Core/Engine/Typeck | 8 | ✅ Complete |
+| [TASK-868](tasks/TASK-868-associated-family-diagnostics-acceptance-matrix.md) | Add diagnostics and row-by-row acceptance/non-interference matrix | Tests/Diagnostics | 6 | ✅ Complete |
+| [TASK-869](tasks/TASK-869-spec-g-closeout-docs-and-verification.md) | Reconcile docs/status/changelog and record closeout verification | Docs/Planning | 4 | ✅ Complete |
+| [TASK-870](tasks/TASK-870-phase115-review-remediation.md) | Remediate independent post-closeout review findings | Review/Hardening | 6 | ✅ Complete |
 
 ## Execution Tracks
 
@@ -88,12 +88,12 @@ Every task uses subagent-driven development and independent verification before 
 - [x] TASK-858 audit artifact created before Rust implementation and downstream TASK-859 through TASK-868 file/test/callsite bindings patched or explicitly confirmed.
 - [x] Parser surface and compatibility syntax implemented and tested.
 - [x] Core associated-family identity/projection/summary carriers implemented and tested.
-- [ ] TypeEnv sealed family registration/coherence implemented and tested.
-- [ ] SPEC-035 simple associated substitution preserved.
-- [ ] Unique generic impl-family reduction and rigid where-bound behavior implemented and tested.
-- [ ] Recursive family totality/decreasingness implemented and tested.
-- [ ] Normalizer/equality projection-family integration implemented and tested.
-- [ ] Public V4 family summary export/import implemented and tested.
-- [ ] Acceptance/non-interference matrix maps every SPEC-063 §13 row to focused tests or recorded evidence and passes.
-- [ ] Broad workspace verification recorded.
-- [ ] Independent review/remediation complete.
+- [x] TypeEnv sealed family registration/coherence implemented and tested.
+- [x] SPEC-035 simple associated substitution preserved.
+- [x] Unique generic impl-family reduction and rigid where-bound behavior implemented and tested.
+- [x] Recursive family totality/decreasingness implemented and tested.
+- [x] Normalizer/equality projection-family integration implemented and tested.
+- [x] Public V4 family summary export/import implemented and tested.
+- [x] Acceptance/non-interference matrix maps every SPEC-063 §13 row to focused tests or recorded evidence and passes.
+- [x] Broad workspace verification recorded.
+- [x] Independent review/remediation complete.

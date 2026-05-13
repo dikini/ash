@@ -357,7 +357,9 @@ fn task_861_validates_decreases_parameter_and_malformed_direct_scheme_shapes() {
     let err = env
         .register_associated_family_scheme(empty, owner.clone())
         .expect_err("empty direct family scheme must be rejected");
-    assert!(err.to_string().contains("exactly one equation"));
+    let message = err.to_string();
+    assert!(message.contains("must contain at least one equation"));
+    assert!(!message.contains("exactly one equation"));
 
     let mut wrong_arity = generic_scheme(&env, &type_list, nil_result(&type_list));
     wrong_arity.equations[0].interface_arg_patterns.pop();

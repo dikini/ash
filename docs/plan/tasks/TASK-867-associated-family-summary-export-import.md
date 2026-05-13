@@ -1,6 +1,6 @@
 # TASK-867: Associated family summary export/import
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -66,15 +66,26 @@ Dispatch an independent review/verification subagent with this task file, SPEC-0
 
 ## Completion Checklist
 
-- [ ] Requirements above are satisfied.
-- [ ] Focused tests/evidence exist and pass, or docs-only verification is recorded.
-- [ ] Negative leakage/non-interference behavior is covered for this task's surface.
-- [ ] Status docs and CHANGELOG.md are updated if this task changes release-facing docs.
-- [ ] Independent verification completed or scheduled by the closeout task.
+- [x] Requirements above are satisfied.
+- [x] Focused tests/evidence exist and pass, or docs-only verification is recorded.
+- [x] Negative leakage/non-interference behavior is covered for this task's surface.
+- [x] Status docs and CHANGELOG.md are updated if this task changes release-facing docs.
+- [x] Independent verification completed or scheduled by the closeout task.
 
 ## Completion Evidence
 
-- Completion evidence must be recorded by the implementing agent before marking this task complete.
+- Implemented V4 associated-family summary export/import across core schema, TypeEnv import/export, normalizer availability, and engine summary transport/reconciliation.
+- Focused verification after review remediation:
+  - `cargo test -p ash-core --test task_867_associated_family_summary -- --nocapture` — 3 passed.
+  - `cargo test -p ash-typeck --test task_867_associated_family_import -- --nocapture` — 5 passed.
+  - `cargo test -p ash-engine --test task_867_associated_family_summary_transport -- --nocapture` — 4 passed.
+  - `cargo test -p ash-typeck --test task_866_associated_family_normalizer -- --nocapture` — 8 passed.
+  - `cargo test -p ash-typeck --test task_861_associated_family_registration -- --nocapture` — 8 passed.
+  - `cargo test -p ash-typeck --test task_865_recursive_associated_family -- --nocapture` — 6 passed.
+  - `cargo clippy -p ash-typeck --all-targets --all-features -- -D warnings` — passed.
+  - `cargo clippy -p ash-engine --all-targets --all-features -- -D warnings` — passed.
+- Independent review initially found missing dependency-closure/helper selected-summary coverage; remediation added omitted-closure rejection, real hidden-helper export, named-import transitive hidden-helper payload tests, metadata-count validation, and updated stale imported-family comments.
+- Final independent re-review verdict: PASS with no blocking findings.
 
 ## Dispatch
 

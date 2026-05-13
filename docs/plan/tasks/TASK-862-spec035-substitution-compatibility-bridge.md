@@ -1,6 +1,6 @@
 # TASK-862: SPEC-035 substitution compatibility bridge
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -60,15 +60,17 @@ Dispatch an independent review/verification subagent with this task file, SPEC-0
 
 ## Completion Checklist
 
-- [ ] Requirements above are satisfied.
-- [ ] Focused tests/evidence exist and pass, or docs-only verification is recorded.
-- [ ] Negative leakage/non-interference behavior is covered for this task's surface.
-- [ ] Status docs and CHANGELOG.md are updated if this task changes release-facing docs.
-- [ ] Independent verification completed or scheduled by the closeout task.
+- [x] Requirements above are satisfied.
+- [x] Focused tests/evidence exist and pass, or docs-only verification is recorded.
+- [x] Negative leakage/non-interference behavior is covered for this task's surface.
+- [x] Status docs and CHANGELOG.md are updated if this task changes release-facing docs.
+- [x] Independent verification completed or scheduled by the closeout task.
 
 ## Completion Evidence
 
-- Completion evidence must be recorded by the implementing agent before marking this task complete.
+- Added `crates/ash-typeck/tests/task_862_spec035_associated_compat.rs` with eight focused compatibility/negative-leakage tests covering SPEC-035 selected concrete impl substitution, explicit family projection lowering, family RHS projection publication, ambiguous `T::Assoc` stability, mixed ordinary/family interface non-leakage, explicit family syntax rejection for ordinary associated members, concrete `String` argument preservation in Type-kind family projections, and neutral ordinary `S::Ok` lowering.
+- Implemented the bridge in `crates/ash-typeck/src/type_env.rs` by lowering explicit `<Interface<Args>>::Assoc` family syntax to canonical family projection identities, lowering family RHS projections to associated-family result expressions, registering local interface/member identities for ordinary interfaces when module identity is available without declaring ordinary members as family heads, and preserving concrete Type-kind projection arguments unless they are scheme-owned variables.
+- Verification passed: `cargo fmt --all`; `cargo test -p ash-typeck --test task_862_spec035_associated_compat -- --nocapture` (8 passed); `cargo test -p ash-typeck --test task_861_associated_family_registration -- --nocapture` (8 passed); `cargo clippy -p ash-typeck --all-targets --all-features -- -D warnings`; independent final re-review also ran `cargo fmt --all --check`, `git diff --check`, `cargo check --workspace`, focused TASK-862/TASK-861 tests, and clippy with no blocking, important, or non-blocking findings.
 
 ## Dispatch
 

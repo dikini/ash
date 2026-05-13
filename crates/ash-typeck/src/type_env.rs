@@ -13,6 +13,8 @@ use ash_core::adt::{VariantPayloadShape, tuple_field_name};
 use ash_core::ast::{TypeBody, TypeDef, TypeExpr, VariantDef, VariantPayload};
 use ash_core::module_graph::{CrateId, ModuleId};
 use ash_core::semantic_summary::{
+    AssociatedFamilyClosureMetadata, AssociatedFamilyDependencySummaryRef,
+    AssociatedFamilyExportMode, AssociatedFamilyRevalidationMetadata, AssociatedFamilySummary,
     AssociatedMemberIdentityId, AssociatedMemberIdentitySummary, ConstructorPayloadKind,
     ConstructorSummary, DomainConstructorId, DomainConstructorSummary, InterfaceIdentityId,
     InterfaceIdentitySummary, ModuleIdentity, ModuleSemanticSummary,
@@ -20,15 +22,16 @@ use ash_core::semantic_summary::{
     SealedDomainSummary, SourceAnchor, SourceOrigin, StructuralFieldStatus, SummaryVersion,
     TypeDeclId, TypeDeclSummary, TypeFunctionClosureMetadata, TypeFunctionDependencySummaryRef,
     TypeFunctionExportMode, TypeFunctionParamSummary, TypeFunctionRevalidationMetadata,
-    TypeFunctionSummary, TypeRepresentationSummary,
+    TypeFunctionSummary, TypeRepresentationSummary, ValidatedDecreasesSummary,
 };
 use ash_core::type_ir::{
     AssociatedFamilyEquation, AssociatedFamilyHeadId, AssociatedFamilyPattern,
-    AssociatedFamilyResultConstraint, AssociatedFamilyResultExpr, AssociatedFamilyScheme,
-    AssociatedFamilySchemeParam, CanonicalTypeExpr, ProjectionRigidity, TypeComputationHeadId,
-    TypeFunctionDef, TypeFunctionEquation, TypeFunctionParam, TypeFunctionPattern,
-    TypeFunctionPatternConstraint, TypeFunctionResultConstraint, TypeFunctionResultExpr,
-    TypeFunctionSourceAnchors,
+    AssociatedFamilyProjection, AssociatedFamilyProjectionMode, AssociatedFamilyResultConstraint,
+    AssociatedFamilyResultExpr, AssociatedFamilyScheme, AssociatedFamilySchemeParam,
+    CanonicalTypeExpr, NormalFormBlockReason, NormalTypeExpr, ProjectionRigidity,
+    TypeComputationHeadId, TypeFunctionDef, TypeFunctionEquation, TypeFunctionParam,
+    TypeFunctionPattern, TypeFunctionPatternConstraint, TypeFunctionResultConstraint,
+    TypeFunctionResultExpr, TypeFunctionSourceAnchors,
 };
 use ash_core::workflow_contract::{Contract as WorkflowContract, RuntimePostconditionContract};
 use ash_parser::surface::{
@@ -39,7 +42,7 @@ use ash_parser::surface::{
     TypePattern as SurfaceTypePattern, Visibility as SurfaceVisibility,
 };
 use ash_parser::token::Span;
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 struct TypeFunctionCoverageValue {
@@ -65,6 +68,78 @@ struct PublicTypeFunctionClosure {
     sealed_domains: HashSet<SealedDomainId>,
     type_functions: HashSet<TypeComputationHeadId>,
     projections: HashSet<(InterfaceIdentityId, AssociatedMemberIdentityId)>,
+}
+
+#[derive(Debug, Clone, Default)]
+struct PublicAssociatedFamilyClosure {
+    ordinary_types: HashSet<TypeDeclId>,
+    sealed_domains: HashSet<SealedDomainId>,
+    domain_constructors: HashSet<DomainConstructorId>,
+    type_functions: HashSet<TypeComputationHeadId>,
+    projections: HashSet<AssociatedFamilyProjection>,
+    associated_families: HashSet<AssociatedFamilyHeadId>,
+}
+
+impl PublicAssociatedFamilyClosure {
+    fn associated_family_summary_refs(
+        &self,
+        current_head: &AssociatedFamilyHeadId,
+        module: &ModuleIdentity,
+        env: &TypeEnv,
+    ) -> Vec<AssociatedFamilyDependencySummaryRef> {
+        let mut refs = self
+            .associated_families
+            .iter()
+            .filter(|head| *head != current_head)
+            .map(|head| {
+                let source_visible = env
+                    .associated_family_declarations
+                    .get(head)
+                    .map(|declaration| {
+                        env.interfaces
+                            .get(declaration.head.interface.name.as_str())
+                            .is_some_and(|info| {
+                                matches!(info.visibility, ash_core::ast::Visibility::Public)
+                            })
+                    })
+                    .unwrap_or(false);
+                AssociatedFamilyDependencySummaryRef {
+                    summary_ref: ModuleSummaryRef {
+                        module: head.interface.module.clone(),
+                        version: SummaryVersion::SPEC063_ASSOCIATED_FAMILY_V4,
+                    },
+                    family: (*head).clone(),
+                    digest: None,
+                    compiler_algorithm_version: Some("spec-063-mvp".to_string()),
+                    source_visible,
+                    normalizer_available: true,
+                }
+            })
+            .collect::<Vec<_>>();
+        refs.sort_by(|left, right| {
+            left.family
+                .interface
+                .module
+                .path
+                .cmp(&right.family.interface.module.path)
+                .then_with(|| left.family.interface.name.cmp(&right.family.interface.name))
+                .then_with(|| left.family.member.name.cmp(&right.family.member.name))
+        });
+        refs.dedup_by(|left, right| {
+            left.family == right.family && left.summary_ref == right.summary_ref
+        });
+        if self.associated_families.contains(current_head) {
+            // Self recursion is represented by the exported scheme/decreases metadata, not by
+            // an extra dependency summary ref.
+        }
+        if refs
+            .iter()
+            .all(|reference| reference.summary_ref.module != *module)
+        {
+            return refs;
+        }
+        refs
+    }
 }
 
 impl PublicTypeFunctionClosure {
@@ -261,6 +336,22 @@ pub fn type_expr_to_type(
             Ok(Type::Record(field_types?))
         }
         TypeExpr::Associated { base, name } => {
+            if let TypeExpr::Constructor {
+                name: interface,
+                args,
+            } = base.as_ref()
+                && type_env
+                    .lookup_associated_family_declaration(interface, name)
+                    .is_some()
+            {
+                return lower_core_explicit_associated_family_projection_to_type(
+                    type_env,
+                    interface,
+                    args,
+                    name,
+                    param_mapping,
+                );
+            }
             let base_ty = match base.as_ref() {
                 TypeExpr::Named(base_name) if !param_mapping.contains_key(base_name) => {
                     match type_env.resolve_type(base_name) {
@@ -588,6 +679,83 @@ pub struct RegisteredAssociatedFamilyScheme {
     pub scheme: AssociatedFamilyScheme,
 }
 
+/// Structured blocker for one-way associated-family scheme selection.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AssociatedFamilySelectionBlocker {
+    NoApplicableScheme,
+    AbstractScrutinee,
+    NeutralScrutinee,
+    RigidProjection,
+    Ambiguous,
+}
+
+/// Evidence for a uniquely selected associated-family scheme.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SelectedAssociatedFamilyScheme<'env> {
+    pub family_head: AssociatedFamilyHeadId,
+    pub registered: &'env RegisteredAssociatedFamilyScheme,
+    pub equation: &'env AssociatedFamilyEquation,
+    pub scheme_param_bindings: BTreeMap<String, CanonicalTypeExpr>,
+}
+
+/// Result of one-way associated-family scheme selection.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum AssociatedFamilySelection<'env> {
+    Selected(SelectedAssociatedFamilyScheme<'env>),
+    Blocked {
+        family: AssociatedFamilyHeadId,
+        reason: AssociatedFamilySelectionBlocker,
+    },
+    Ambiguous {
+        family: AssociatedFamilyHeadId,
+        candidate_count: usize,
+    },
+    NoMatch {
+        family: AssociatedFamilyHeadId,
+    },
+}
+
+/// One-step associated-family reduction evidence.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AssociatedFamilyReduction<'env> {
+    pub selected: SelectedAssociatedFamilyScheme<'env>,
+    pub result: AssociatedFamilyResultExpr,
+}
+
+/// Evidence for a uniquely selected associated-family scheme over already-normalized
+/// normalizer arguments.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SelectedNormalizedAssociatedFamilyScheme<'env> {
+    pub family_head: AssociatedFamilyHeadId,
+    pub registered: &'env RegisteredAssociatedFamilyScheme,
+    pub equation: &'env AssociatedFamilyEquation,
+    pub scheme_param_bindings: BTreeMap<String, NormalTypeExpr>,
+}
+
+/// One-step local associated-family reduction over normalizer arguments.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LocalAssociatedFamilyReduction<'env> {
+    pub selected: SelectedNormalizedAssociatedFamilyScheme<'env>,
+    pub result: AssociatedFamilyResultExpr,
+}
+
+/// Result of consulting the local associated-family table from the normalizer.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum LocalAssociatedFamilyProjectionLookup<'env> {
+    Reduced(Box<LocalAssociatedFamilyReduction<'env>>),
+    Blocked {
+        family: Box<AssociatedFamilyHeadId>,
+        reason: NormalFormBlockReason,
+    },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum AssociatedFamilyMatchFailure {
+    NoMatch,
+    Blocked(AssociatedFamilySelectionBlocker),
+}
+
+#[derive(Debug, Clone)]
 pub struct SelectedScheme {
     pub substitution: Substitution,
 }
@@ -676,6 +844,91 @@ fn resolve_associated_interface_from_type_var_bounds(
             Span::default(),
         ))
     }
+}
+
+fn lower_explicit_associated_family_projection_to_type(
+    type_env: &TypeEnv,
+    interface: &str,
+    args: &[SurfaceType],
+    member: &str,
+    param_mapping: &HashMap<String, TypeVar>,
+    span: Span,
+) -> Result<Type, TypeEnvError> {
+    let declaration = type_env
+        .lookup_associated_family_declaration(interface, member)
+        .ok_or_else(|| {
+            TypeEnvError::InvalidDefinition(
+                format!(
+                    "unknown sealed associated-family projection '<{interface}<...>>::{member}'"
+                ),
+                span,
+            )
+        })?;
+    if declaration.interface_params.len() != args.len() {
+        return Err(TypeEnvError::InvalidDefinition(
+            format!(
+                "associated-family projection '{}::{}' expects {} interface arguments, found {}",
+                interface,
+                member,
+                declaration.interface_params.len(),
+                args.len()
+            ),
+            span,
+        ));
+    }
+    let args = args
+        .iter()
+        .map(|arg| surface_type_to_type(arg, param_mapping, type_env))
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(Type::Associated {
+        interface: interface.to_string(),
+        base: Box::new(Type::Constructor {
+            name: QualifiedName::root(interface),
+            args,
+            kind: Kind::Type,
+        }),
+        name: member.to_string(),
+    })
+}
+
+fn lower_core_explicit_associated_family_projection_to_type(
+    type_env: &TypeEnv,
+    interface: &str,
+    args: &[TypeExpr],
+    member: &str,
+    param_mapping: &HashMap<String, TypeVar>,
+) -> Result<Type, TypeError> {
+    let declaration = type_env
+        .lookup_associated_family_declaration(interface, member)
+        .ok_or_else(|| {
+            TypeError::TypeEnv(Box::new(TypeEnvError::InvalidDefinition(
+                format!(
+                    "unknown sealed associated-family projection '<{interface}<...>>::{member}'"
+                ),
+                Span::default(),
+            )))
+        })?;
+    if declaration.interface_params.len() != args.len() {
+        return Err(TypeError::ConstructorArityMismatch {
+            name: format!("{}::{}", interface, member),
+            expected_arity: declaration.interface_params.len(),
+            found_arity: args.len(),
+            span: Span::default(),
+        });
+    }
+    let args = args
+        .iter()
+        .map(|arg| type_expr_to_type(arg, param_mapping, type_env))
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(Type::Associated {
+        interface: interface.to_string(),
+        base: Box::new(Type::Constructor {
+            name: QualifiedName::root(interface),
+            args,
+            kind: Kind::Type,
+        }),
+        name: member.to_string(),
+    })
 }
 
 fn surface_type_to_type(
@@ -794,12 +1047,18 @@ fn surface_type_to_type(
                 name: name.to_string(),
             })
         }
-        SurfaceType::AssociatedFamilyProjection { span, .. } => Err(
-            TypeEnvError::InvalidDefinition(
-                "associated-family projection type checking is not supported before Phase 115 semantic registration"
-                    .to_string(),
-                *span,
-            ),
+        SurfaceType::AssociatedFamilyProjection {
+            interface,
+            args,
+            member,
+            span,
+        } => lower_explicit_associated_family_projection_to_type(
+            type_env,
+            interface,
+            args,
+            member,
+            param_mapping,
+            *span,
         ),
     }
 }
@@ -876,6 +1135,53 @@ fn surface_projection_base_spelling(base: &SurfaceType) -> String {
                 .join(", "),
             member
         ),
+    }
+}
+
+fn canonical_expr_contains_var(expr: &CanonicalTypeExpr) -> bool {
+    match expr {
+        CanonicalTypeExpr::Var(_) => true,
+        CanonicalTypeExpr::NominalApp { args, .. }
+        | CanonicalTypeExpr::Projection { args, .. }
+        | CanonicalTypeExpr::ComputationHeadApp { args, .. } => {
+            args.iter().any(canonical_expr_contains_var)
+        }
+        CanonicalTypeExpr::Primitive(_) => false,
+    }
+}
+
+fn projection_rigidity_for_canonical_args(args: &[CanonicalTypeExpr]) -> ProjectionRigidity {
+    if args.iter().any(canonical_expr_contains_var) {
+        ProjectionRigidity::Neutral
+    } else {
+        ProjectionRigidity::Rigid
+    }
+}
+
+fn associated_family_result_contains_var(expr: &AssociatedFamilyResultExpr) -> bool {
+    match expr {
+        AssociatedFamilyResultExpr::Var { .. } => true,
+        AssociatedFamilyResultExpr::NominalApp { args, .. }
+        | AssociatedFamilyResultExpr::DomainConstructorApp { args, .. }
+        | AssociatedFamilyResultExpr::AssociatedFamilyProjection {
+            interface_args: args,
+            ..
+        }
+        | AssociatedFamilyResultExpr::Projection { args, .. }
+        | AssociatedFamilyResultExpr::ComputationHeadApp { args, .. } => {
+            args.iter().any(associated_family_result_contains_var)
+        }
+        AssociatedFamilyResultExpr::Primitive { .. } => false,
+    }
+}
+
+fn projection_rigidity_for_associated_family_args(
+    args: &[AssociatedFamilyResultExpr],
+) -> ProjectionRigidity {
+    if args.iter().any(associated_family_result_contains_var) {
+        ProjectionRigidity::Neutral
+    } else {
+        ProjectionRigidity::Rigid
     }
 }
 
@@ -1015,6 +1321,19 @@ fn constraint_for_param(param: &TypeFunctionParam) -> TypeFunctionPatternConstra
         .clone()
         .map(TypeFunctionPatternConstraint::Domain)
         .unwrap_or_else(|| TypeFunctionPatternConstraint::Kind(param.kind.clone()))
+}
+
+fn associated_family_constraint_to_type_function_pattern(
+    constraint: &AssociatedFamilyResultConstraint,
+) -> TypeFunctionPatternConstraint {
+    match constraint {
+        AssociatedFamilyResultConstraint::Kind(kind) => {
+            TypeFunctionPatternConstraint::Kind(kind.clone())
+        }
+        AssociatedFamilyResultConstraint::Domain(domain) => {
+            TypeFunctionPatternConstraint::Domain(domain.clone())
+        }
+    }
 }
 
 type CurrentTypeFunctionHead<'a> = (
@@ -1175,6 +1494,109 @@ fn associated_family_result_from_canonical(
     }
 }
 
+fn associated_family_result_from_normal(
+    normal: NormalTypeExpr,
+    source_anchor: SourceAnchor,
+) -> AssociatedFamilyResultExpr {
+    match normal {
+        NormalTypeExpr::Primitive(name) => AssociatedFamilyResultExpr::Primitive {
+            name,
+            kind: Kind::Type,
+            constraint: AssociatedFamilyResultConstraint::Kind(Kind::Type),
+            source_anchor,
+        },
+        NormalTypeExpr::Var(name) => AssociatedFamilyResultExpr::Var {
+            name,
+            kind: Kind::Type,
+            constraint: AssociatedFamilyResultConstraint::Kind(Kind::Type),
+            source_anchor,
+        },
+        NormalTypeExpr::NominalApp {
+            origin,
+            visible_name,
+            args,
+            kind,
+        } => AssociatedFamilyResultExpr::NominalApp {
+            origin,
+            visible_name,
+            args: args
+                .into_iter()
+                .map(|arg| associated_family_result_from_normal(arg, source_anchor.clone()))
+                .collect(),
+            kind: kind.clone(),
+            constraint: AssociatedFamilyResultConstraint::Kind(kind),
+            source_anchor,
+        },
+        NormalTypeExpr::DomainConstructorApp {
+            constructor,
+            domain,
+            args,
+            kind,
+        } => AssociatedFamilyResultExpr::DomainConstructorApp {
+            constructor,
+            domain: domain.clone(),
+            args: args
+                .into_iter()
+                .map(|arg| associated_family_result_from_normal(arg, source_anchor.clone()))
+                .collect(),
+            kind,
+            constraint: AssociatedFamilyResultConstraint::Domain(domain),
+            source_anchor,
+        },
+        NormalTypeExpr::NeutralComputationApp {
+            head, args, kind, ..
+        } => AssociatedFamilyResultExpr::ComputationHeadApp {
+            head,
+            args: args
+                .into_iter()
+                .map(|arg| associated_family_result_from_normal(arg, source_anchor.clone()))
+                .collect(),
+            kind: kind.clone(),
+            constraint: AssociatedFamilyResultConstraint::Kind(kind),
+            source_anchor,
+        },
+        NormalTypeExpr::Projection {
+            interface,
+            member,
+            args,
+            kind,
+            rigidity,
+            ..
+        } => AssociatedFamilyResultExpr::Projection {
+            interface,
+            member,
+            args: args
+                .into_iter()
+                .map(|arg| associated_family_result_from_normal(arg, source_anchor.clone()))
+                .collect(),
+            kind: kind.clone(),
+            constraint: AssociatedFamilyResultConstraint::Kind(kind),
+            rigidity,
+            source_anchor,
+        },
+    }
+}
+
+fn associated_family_selection_blocker_to_normal_reason(
+    blocker: AssociatedFamilySelectionBlocker,
+) -> NormalFormBlockReason {
+    match blocker {
+        AssociatedFamilySelectionBlocker::NoApplicableScheme => {
+            NormalFormBlockReason::MissingAssociatedEvidence
+        }
+        AssociatedFamilySelectionBlocker::AbstractScrutinee => {
+            NormalFormBlockReason::AbstractScrutinee
+        }
+        AssociatedFamilySelectionBlocker::NeutralScrutinee => {
+            NormalFormBlockReason::NeutralScrutinee
+        }
+        AssociatedFamilySelectionBlocker::RigidProjection => NormalFormBlockReason::RigidProjection,
+        AssociatedFamilySelectionBlocker::Ambiguous => {
+            NormalFormBlockReason::AmbiguousAssociatedFamilySelection
+        }
+    }
+}
+
 fn matches_associated_family_result_constraint(
     canonical: &CanonicalTypeExpr,
     constraint: &AssociatedFamilyResultConstraint,
@@ -1203,6 +1625,121 @@ fn canonical_expr_for_associated_family_constraint(
         AssociatedFamilyResultConstraint::Domain(domain) => {
             CanonicalTypeExpr::Var(domain.name.clone())
         }
+    }
+}
+
+fn associated_family_result_expr_to_canonical(
+    expr: &AssociatedFamilyResultExpr,
+) -> Result<CanonicalTypeExpr, TypeEnvError> {
+    match expr {
+        AssociatedFamilyResultExpr::Primitive { name, .. } => {
+            Ok(CanonicalTypeExpr::Primitive(name.clone()))
+        }
+        AssociatedFamilyResultExpr::Var { name, .. } => Ok(CanonicalTypeExpr::Var(name.clone())),
+        AssociatedFamilyResultExpr::NominalApp {
+            origin,
+            visible_name,
+            args,
+            kind,
+            ..
+        } => Ok(CanonicalTypeExpr::NominalApp {
+            origin: origin.clone(),
+            visible_name: visible_name.clone(),
+            args: args
+                .iter()
+                .map(associated_family_result_expr_to_canonical)
+                .collect::<Result<Vec<_>, _>>()?,
+            kind: kind.clone(),
+        }),
+        AssociatedFamilyResultExpr::Projection {
+            interface,
+            member,
+            args,
+            kind,
+            rigidity,
+            ..
+        } => Ok(CanonicalTypeExpr::Projection {
+            interface: interface.clone(),
+            member: member.clone(),
+            args: args
+                .iter()
+                .map(associated_family_result_expr_to_canonical)
+                .collect::<Result<Vec<_>, _>>()?,
+            kind: kind.clone(),
+            rigidity: *rigidity,
+        }),
+        AssociatedFamilyResultExpr::ComputationHeadApp {
+            head, args, kind, ..
+        } => Ok(CanonicalTypeExpr::ComputationHeadApp {
+            head: head.clone(),
+            args: args
+                .iter()
+                .map(associated_family_result_expr_to_canonical)
+                .collect::<Result<Vec<_>, _>>()?,
+            kind: kind.clone(),
+        }),
+        AssociatedFamilyResultExpr::AssociatedFamilyProjection {
+            head,
+            source_anchor,
+            ..
+        } => Err(TypeEnvError::InvalidDefinition(
+            format!(
+                "associated-family summary dependency closure cannot losslessly represent nested associated-family projection argument '{}::{}'",
+                head.interface.name, head.member.name
+            ),
+            anchor_span(source_anchor),
+        )),
+        AssociatedFamilyResultExpr::DomainConstructorApp {
+            constructor,
+            source_anchor,
+            ..
+        } => Err(TypeEnvError::InvalidDefinition(
+            format!(
+                "associated-family summary dependency closure cannot losslessly represent nested domain-constructor argument '{}'",
+                constructor.name
+            ),
+            anchor_span(source_anchor),
+        )),
+    }
+}
+
+fn hidden_imported_associated_family_heads(
+    summaries: &[ModuleSemanticSummary],
+) -> HashSet<AssociatedFamilyHeadId> {
+    let mut hidden = HashSet::new();
+    let visible_heads = summaries
+        .iter()
+        .flat_map(|summary| summary.exported_associated_families.iter())
+        .filter(|family| !is_dependency_metadata_name(&family.visible_name))
+        .map(|family| family.head.clone())
+        .collect::<HashSet<_>>();
+    for summary in summaries {
+        for family in &summary.exported_associated_families {
+            if is_dependency_metadata_name(&family.visible_name)
+                && !visible_heads.contains(&family.head)
+            {
+                hidden.insert(family.head.clone());
+            }
+            for dependency in &family.dependency_closure.associated_families {
+                if !dependency.source_visible && !visible_heads.contains(&dependency.family) {
+                    hidden.insert(dependency.family.clone());
+                }
+            }
+        }
+    }
+    hidden
+}
+
+fn is_dependency_metadata_name(visible_name: &str) -> bool {
+    visible_name.starts_with("$ash_dependency$")
+}
+
+fn dependency_metadata_name(visible_name: &str) -> String {
+    const DEPENDENCY_METADATA_PREFIX: &str = "$ash_dependency$";
+    if visible_name.starts_with(DEPENDENCY_METADATA_PREFIX) {
+        visible_name.to_string()
+    } else {
+        format!("{DEPENDENCY_METADATA_PREFIX}{visible_name}")
     }
 }
 
@@ -2235,6 +2772,740 @@ impl TypeEnv {
         self.associated_family_schemes.get(head)
     }
 
+    /// Look up sealed associated-family declaration metadata by canonical head.
+    #[must_use]
+    pub fn lookup_associated_family_declaration_by_head(
+        &self,
+        head: &AssociatedFamilyHeadId,
+    ) -> Option<&AssociatedFamilyDeclarationInfo> {
+        self.associated_family_declarations.get(head)
+    }
+
+    /// Reduce one local associated-family projection from already-normalized
+    /// normalizer arguments.
+    ///
+    /// This TASK-866/TASK-867 API consults validated local or imported family
+    /// declarations and schemes that are normalizer-available in this `TypeEnv`.
+    #[must_use]
+    pub fn reduce_local_associated_family_projection_from_normal_args(
+        &self,
+        head: &AssociatedFamilyHeadId,
+        interface_args: &[NormalTypeExpr],
+    ) -> LocalAssociatedFamilyProjectionLookup<'_> {
+        let Some(_declaration) = self.lookup_associated_family_declaration_by_head(head) else {
+            let reason = if self.associated_member_identity_known(&head.member) {
+                NormalFormBlockReason::AssociatedFamilyNotSealed
+            } else {
+                NormalFormBlockReason::MissingAssociatedEvidence
+            };
+            return LocalAssociatedFamilyProjectionLookup::Blocked {
+                family: Box::new(head.clone()),
+                reason,
+            };
+        };
+
+        let Some(schemes) = self.associated_family_schemes.get(head) else {
+            return LocalAssociatedFamilyProjectionLookup::Blocked {
+                family: Box::new(head.clone()),
+                reason: NormalFormBlockReason::AssociatedFamilyLocalUnavailable,
+            };
+        };
+
+        let mut selected = Vec::new();
+        let mut blocker = None;
+        for registered in schemes {
+            for equation in &registered.scheme.equations {
+                if equation.interface_arg_patterns.len() != interface_args.len() {
+                    continue;
+                }
+                let mut bindings = BTreeMap::new();
+                match Self::match_associated_family_normal_pattern_spine(
+                    &equation.interface_arg_patterns,
+                    interface_args,
+                    &mut bindings,
+                ) {
+                    Ok(()) => selected.push(SelectedNormalizedAssociatedFamilyScheme {
+                        family_head: head.clone(),
+                        registered,
+                        equation,
+                        scheme_param_bindings: bindings,
+                    }),
+                    Err(AssociatedFamilyMatchFailure::Blocked(reason)) => blocker = Some(reason),
+                    Err(AssociatedFamilyMatchFailure::NoMatch) => {}
+                }
+            }
+        }
+
+        match selected.len() {
+            1 => {
+                let selected = selected.remove(0);
+                let result = Self::substitute_associated_family_result_expr_from_normal_bindings(
+                    &selected.equation.result,
+                    &selected.scheme_param_bindings,
+                );
+                LocalAssociatedFamilyProjectionLookup::Reduced(Box::new(
+                    LocalAssociatedFamilyReduction { selected, result },
+                ))
+            }
+            n if n > 1 => LocalAssociatedFamilyProjectionLookup::Blocked {
+                family: Box::new(head.clone()),
+                reason: NormalFormBlockReason::AmbiguousAssociatedFamilySelection,
+            },
+            _ => LocalAssociatedFamilyProjectionLookup::Blocked {
+                family: Box::new(head.clone()),
+                reason: blocker.map_or(
+                    NormalFormBlockReason::MissingAssociatedEvidence,
+                    associated_family_selection_blocker_to_normal_reason,
+                ),
+            },
+        }
+    }
+
+    /// Select a unique associated-family scheme by one-way structural matching.
+    #[must_use]
+    pub fn select_associated_family_scheme(
+        &self,
+        head: &AssociatedFamilyHeadId,
+        interface_args: &[CanonicalTypeExpr],
+    ) -> AssociatedFamilySelection<'_> {
+        let Some(schemes) = self.associated_family_schemes.get(head) else {
+            return AssociatedFamilySelection::NoMatch {
+                family: head.clone(),
+            };
+        };
+        let mut selected = Vec::new();
+        let mut blocker = None;
+        for registered in schemes {
+            for equation in &registered.scheme.equations {
+                if equation.interface_arg_patterns.len() != interface_args.len() {
+                    continue;
+                }
+                let mut bindings = BTreeMap::new();
+                match Self::match_associated_family_pattern_spine(
+                    &equation.interface_arg_patterns,
+                    interface_args,
+                    &mut bindings,
+                ) {
+                    Ok(()) => selected.push(SelectedAssociatedFamilyScheme {
+                        family_head: head.clone(),
+                        registered,
+                        equation,
+                        scheme_param_bindings: bindings,
+                    }),
+                    Err(AssociatedFamilyMatchFailure::Blocked(reason)) => blocker = Some(reason),
+                    Err(AssociatedFamilyMatchFailure::NoMatch) => {}
+                }
+            }
+        }
+        match selected.len() {
+            1 => AssociatedFamilySelection::Selected(selected.remove(0)),
+            n if n > 1 => AssociatedFamilySelection::Ambiguous {
+                family: head.clone(),
+                candidate_count: n,
+            },
+            _ => blocker.map_or_else(
+                || AssociatedFamilySelection::NoMatch {
+                    family: head.clone(),
+                },
+                |reason| AssociatedFamilySelection::Blocked {
+                    family: head.clone(),
+                    reason,
+                },
+            ),
+        }
+    }
+
+    /// Reduce a projection once when a unique associated-family scheme applies.
+    pub fn reduce_associated_family_projection_once(
+        &self,
+        head: &AssociatedFamilyHeadId,
+        interface_args: &[CanonicalTypeExpr],
+    ) -> Result<AssociatedFamilyReduction<'_>, TypeEnvError> {
+        match self.select_associated_family_scheme(head, interface_args) {
+            AssociatedFamilySelection::Selected(selected) => {
+                let result = Self::substitute_associated_family_result_expr(
+                    &selected.equation.result,
+                    &selected.scheme_param_bindings,
+                );
+                Ok(AssociatedFamilyReduction { selected, result })
+            }
+            AssociatedFamilySelection::Ambiguous {
+                candidate_count, ..
+            } => Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "ambiguous associated-family selection for '{}::{}' with {candidate_count} candidates",
+                    head.interface.name, head.member.name
+                ),
+                Span::default(),
+            )),
+            AssociatedFamilySelection::Blocked { reason, .. } => {
+                Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "associated-family selection for '{}::{}' is blocked by {reason:?}",
+                        head.interface.name, head.member.name
+                    ),
+                    Span::default(),
+                ))
+            }
+            AssociatedFamilySelection::NoMatch { .. } => Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "no associated-family scheme matches '{}::{}'",
+                    head.interface.name, head.member.name
+                ),
+                Span::default(),
+            )),
+        }
+    }
+
+    fn match_associated_family_pattern_spine(
+        patterns: &[AssociatedFamilyPattern],
+        args: &[CanonicalTypeExpr],
+        bindings: &mut BTreeMap<String, CanonicalTypeExpr>,
+    ) -> Result<(), AssociatedFamilyMatchFailure> {
+        for (pattern, arg) in patterns.iter().zip(args.iter()) {
+            Self::match_associated_family_pattern(pattern, arg, bindings)?;
+        }
+        Ok(())
+    }
+
+    fn match_associated_family_pattern(
+        pattern: &AssociatedFamilyPattern,
+        arg: &CanonicalTypeExpr,
+        bindings: &mut BTreeMap<String, CanonicalTypeExpr>,
+    ) -> Result<(), AssociatedFamilyMatchFailure> {
+        match pattern {
+            AssociatedFamilyPattern::Var { name, .. } => {
+                Self::ensure_associated_family_arg_is_capturable(arg)?;
+                match bindings.get(name) {
+                    Some(existing) if existing == arg => Ok(()),
+                    Some(_) => Err(AssociatedFamilyMatchFailure::NoMatch),
+                    None => {
+                        bindings.insert(name.clone(), arg.clone());
+                        Ok(())
+                    }
+                }
+            }
+            AssociatedFamilyPattern::Wildcard { .. } => {
+                Self::ensure_associated_family_arg_is_capturable(arg)
+            }
+            AssociatedFamilyPattern::Primitive { name, .. } => match arg {
+                CanonicalTypeExpr::Primitive(arg_name) if name == arg_name => Ok(()),
+                CanonicalTypeExpr::Var(_) => Err(AssociatedFamilyMatchFailure::Blocked(
+                    AssociatedFamilySelectionBlocker::AbstractScrutinee,
+                )),
+                CanonicalTypeExpr::ComputationHeadApp { .. } => {
+                    Err(AssociatedFamilyMatchFailure::Blocked(
+                        AssociatedFamilySelectionBlocker::NeutralScrutinee,
+                    ))
+                }
+                CanonicalTypeExpr::Projection { rigidity, .. } => {
+                    Err(AssociatedFamilyMatchFailure::Blocked(match rigidity {
+                        ProjectionRigidity::Rigid => {
+                            AssociatedFamilySelectionBlocker::RigidProjection
+                        }
+                        ProjectionRigidity::Neutral => {
+                            AssociatedFamilySelectionBlocker::NeutralScrutinee
+                        }
+                    }))
+                }
+                _ => Err(AssociatedFamilyMatchFailure::NoMatch),
+            },
+            AssociatedFamilyPattern::NominalApp {
+                origin,
+                visible_name,
+                args: pattern_args,
+                ..
+            } => match arg {
+                CanonicalTypeExpr::NominalApp {
+                    origin: arg_origin,
+                    visible_name: arg_name,
+                    args: arg_args,
+                    ..
+                } if origin == arg_origin
+                    && visible_name == arg_name
+                    && pattern_args.len() == arg_args.len() =>
+                {
+                    Self::match_associated_family_pattern_spine(pattern_args, arg_args, bindings)
+                }
+                CanonicalTypeExpr::Var(_) => Err(AssociatedFamilyMatchFailure::Blocked(
+                    AssociatedFamilySelectionBlocker::AbstractScrutinee,
+                )),
+                CanonicalTypeExpr::ComputationHeadApp { .. } => {
+                    Err(AssociatedFamilyMatchFailure::Blocked(
+                        AssociatedFamilySelectionBlocker::NeutralScrutinee,
+                    ))
+                }
+                CanonicalTypeExpr::Projection { rigidity, .. } => {
+                    Err(AssociatedFamilyMatchFailure::Blocked(match rigidity {
+                        ProjectionRigidity::Rigid => {
+                            AssociatedFamilySelectionBlocker::RigidProjection
+                        }
+                        ProjectionRigidity::Neutral => {
+                            AssociatedFamilySelectionBlocker::NeutralScrutinee
+                        }
+                    }))
+                }
+                _ => Err(AssociatedFamilyMatchFailure::NoMatch),
+            },
+            AssociatedFamilyPattern::DomainConstructor { .. } => match arg {
+                CanonicalTypeExpr::Var(_) => Err(AssociatedFamilyMatchFailure::Blocked(
+                    AssociatedFamilySelectionBlocker::AbstractScrutinee,
+                )),
+                CanonicalTypeExpr::ComputationHeadApp { .. } => {
+                    Err(AssociatedFamilyMatchFailure::Blocked(
+                        AssociatedFamilySelectionBlocker::NeutralScrutinee,
+                    ))
+                }
+                CanonicalTypeExpr::Projection { rigidity, .. } => {
+                    Err(AssociatedFamilyMatchFailure::Blocked(match rigidity {
+                        ProjectionRigidity::Rigid => {
+                            AssociatedFamilySelectionBlocker::RigidProjection
+                        }
+                        ProjectionRigidity::Neutral => {
+                            AssociatedFamilySelectionBlocker::NeutralScrutinee
+                        }
+                    }))
+                }
+                _ => Err(AssociatedFamilyMatchFailure::NoMatch),
+            },
+        }
+    }
+
+    fn ensure_associated_family_arg_is_capturable(
+        arg: &CanonicalTypeExpr,
+    ) -> Result<(), AssociatedFamilyMatchFailure> {
+        match arg {
+            CanonicalTypeExpr::ComputationHeadApp { .. } => {
+                Err(AssociatedFamilyMatchFailure::Blocked(
+                    AssociatedFamilySelectionBlocker::NeutralScrutinee,
+                ))
+            }
+            CanonicalTypeExpr::Projection { rigidity, .. } => {
+                Err(AssociatedFamilyMatchFailure::Blocked(match rigidity {
+                    ProjectionRigidity::Rigid => AssociatedFamilySelectionBlocker::RigidProjection,
+                    ProjectionRigidity::Neutral => {
+                        AssociatedFamilySelectionBlocker::NeutralScrutinee
+                    }
+                }))
+            }
+            _ => Ok(()),
+        }
+    }
+
+    fn match_associated_family_normal_pattern_spine(
+        patterns: &[AssociatedFamilyPattern],
+        args: &[NormalTypeExpr],
+        bindings: &mut BTreeMap<String, NormalTypeExpr>,
+    ) -> Result<(), AssociatedFamilyMatchFailure> {
+        for (pattern, arg) in patterns.iter().zip(args.iter()) {
+            Self::match_associated_family_normal_pattern(pattern, arg, bindings)?;
+        }
+        Ok(())
+    }
+
+    fn match_associated_family_normal_pattern(
+        pattern: &AssociatedFamilyPattern,
+        arg: &NormalTypeExpr,
+        bindings: &mut BTreeMap<String, NormalTypeExpr>,
+    ) -> Result<(), AssociatedFamilyMatchFailure> {
+        match pattern {
+            AssociatedFamilyPattern::Var { name, .. } => {
+                Self::ensure_associated_family_normal_arg_is_capturable(arg)?;
+                match bindings.get(name) {
+                    Some(existing) if existing == arg => Ok(()),
+                    Some(_) => Err(AssociatedFamilyMatchFailure::NoMatch),
+                    None => {
+                        bindings.insert(name.clone(), arg.clone());
+                        Ok(())
+                    }
+                }
+            }
+            AssociatedFamilyPattern::Wildcard { .. } => {
+                Self::ensure_associated_family_normal_arg_is_capturable(arg)
+            }
+            AssociatedFamilyPattern::Primitive { name, .. } => match arg {
+                NormalTypeExpr::Primitive(arg_name) if name == arg_name => Ok(()),
+                NormalTypeExpr::Var(_) => Err(AssociatedFamilyMatchFailure::Blocked(
+                    AssociatedFamilySelectionBlocker::AbstractScrutinee,
+                )),
+                NormalTypeExpr::NeutralComputationApp { .. } => {
+                    Err(AssociatedFamilyMatchFailure::Blocked(
+                        AssociatedFamilySelectionBlocker::NeutralScrutinee,
+                    ))
+                }
+                NormalTypeExpr::Projection { rigidity, .. } => {
+                    Err(AssociatedFamilyMatchFailure::Blocked(match rigidity {
+                        ProjectionRigidity::Rigid => {
+                            AssociatedFamilySelectionBlocker::RigidProjection
+                        }
+                        ProjectionRigidity::Neutral => {
+                            AssociatedFamilySelectionBlocker::NeutralScrutinee
+                        }
+                    }))
+                }
+                _ => Err(AssociatedFamilyMatchFailure::NoMatch),
+            },
+            AssociatedFamilyPattern::NominalApp {
+                origin,
+                visible_name,
+                args: pattern_args,
+                ..
+            } => match arg {
+                NormalTypeExpr::NominalApp {
+                    origin: arg_origin,
+                    visible_name: arg_name,
+                    args: arg_args,
+                    ..
+                } if origin == arg_origin
+                    && visible_name == arg_name
+                    && pattern_args.len() == arg_args.len() =>
+                {
+                    Self::match_associated_family_normal_pattern_spine(
+                        pattern_args,
+                        arg_args,
+                        bindings,
+                    )
+                }
+                NormalTypeExpr::Var(_) => Err(AssociatedFamilyMatchFailure::Blocked(
+                    AssociatedFamilySelectionBlocker::AbstractScrutinee,
+                )),
+                NormalTypeExpr::NeutralComputationApp { .. } => {
+                    Err(AssociatedFamilyMatchFailure::Blocked(
+                        AssociatedFamilySelectionBlocker::NeutralScrutinee,
+                    ))
+                }
+                NormalTypeExpr::Projection { rigidity, .. } => {
+                    Err(AssociatedFamilyMatchFailure::Blocked(match rigidity {
+                        ProjectionRigidity::Rigid => {
+                            AssociatedFamilySelectionBlocker::RigidProjection
+                        }
+                        ProjectionRigidity::Neutral => {
+                            AssociatedFamilySelectionBlocker::NeutralScrutinee
+                        }
+                    }))
+                }
+                _ => Err(AssociatedFamilyMatchFailure::NoMatch),
+            },
+            AssociatedFamilyPattern::DomainConstructor {
+                constructor,
+                domain,
+                fields,
+                ..
+            } => match arg {
+                NormalTypeExpr::DomainConstructorApp {
+                    constructor: arg_constructor,
+                    domain: arg_domain,
+                    args: arg_args,
+                    ..
+                } if constructor.as_ref() == arg_constructor
+                    && domain.as_ref() == arg_domain
+                    && fields.len() == arg_args.len() =>
+                {
+                    Self::match_associated_family_normal_pattern_spine(fields, arg_args, bindings)
+                }
+                NormalTypeExpr::Var(_) => Err(AssociatedFamilyMatchFailure::Blocked(
+                    AssociatedFamilySelectionBlocker::AbstractScrutinee,
+                )),
+                NormalTypeExpr::NeutralComputationApp { .. } => {
+                    Err(AssociatedFamilyMatchFailure::Blocked(
+                        AssociatedFamilySelectionBlocker::NeutralScrutinee,
+                    ))
+                }
+                NormalTypeExpr::Projection { rigidity, .. } => {
+                    Err(AssociatedFamilyMatchFailure::Blocked(match rigidity {
+                        ProjectionRigidity::Rigid => {
+                            AssociatedFamilySelectionBlocker::RigidProjection
+                        }
+                        ProjectionRigidity::Neutral => {
+                            AssociatedFamilySelectionBlocker::NeutralScrutinee
+                        }
+                    }))
+                }
+                _ => Err(AssociatedFamilyMatchFailure::NoMatch),
+            },
+        }
+    }
+
+    fn ensure_associated_family_normal_arg_is_capturable(
+        arg: &NormalTypeExpr,
+    ) -> Result<(), AssociatedFamilyMatchFailure> {
+        match arg {
+            NormalTypeExpr::NeutralComputationApp { .. } => {
+                Err(AssociatedFamilyMatchFailure::Blocked(
+                    AssociatedFamilySelectionBlocker::NeutralScrutinee,
+                ))
+            }
+            NormalTypeExpr::Projection { rigidity, .. } => {
+                Err(AssociatedFamilyMatchFailure::Blocked(match rigidity {
+                    ProjectionRigidity::Rigid => AssociatedFamilySelectionBlocker::RigidProjection,
+                    ProjectionRigidity::Neutral => {
+                        AssociatedFamilySelectionBlocker::NeutralScrutinee
+                    }
+                }))
+            }
+            _ => Ok(()),
+        }
+    }
+
+    fn substitute_associated_family_result_expr_from_normal_bindings(
+        result: &AssociatedFamilyResultExpr,
+        bindings: &BTreeMap<String, NormalTypeExpr>,
+    ) -> AssociatedFamilyResultExpr {
+        match result {
+            AssociatedFamilyResultExpr::Var {
+                name,
+                source_anchor,
+                ..
+            } => bindings
+                .get(name)
+                .cloned()
+                .map(|normal| associated_family_result_from_normal(normal, source_anchor.clone()))
+                .unwrap_or_else(|| result.clone()),
+            AssociatedFamilyResultExpr::Primitive { .. } => result.clone(),
+            AssociatedFamilyResultExpr::NominalApp {
+                origin,
+                visible_name,
+                args,
+                kind,
+                constraint,
+                source_anchor,
+            } => AssociatedFamilyResultExpr::NominalApp {
+                origin: origin.clone(),
+                visible_name: visible_name.clone(),
+                args: args
+                    .iter()
+                    .map(|arg| {
+                        Self::substitute_associated_family_result_expr_from_normal_bindings(
+                            arg, bindings,
+                        )
+                    })
+                    .collect(),
+                kind: kind.clone(),
+                constraint: constraint.clone(),
+                source_anchor: source_anchor.clone(),
+            },
+            AssociatedFamilyResultExpr::DomainConstructorApp {
+                constructor,
+                domain,
+                args,
+                kind,
+                constraint,
+                source_anchor,
+            } => AssociatedFamilyResultExpr::DomainConstructorApp {
+                constructor: constructor.clone(),
+                domain: domain.clone(),
+                args: args
+                    .iter()
+                    .map(|arg| {
+                        Self::substitute_associated_family_result_expr_from_normal_bindings(
+                            arg, bindings,
+                        )
+                    })
+                    .collect(),
+                kind: kind.clone(),
+                constraint: constraint.clone(),
+                source_anchor: source_anchor.clone(),
+            },
+            AssociatedFamilyResultExpr::AssociatedFamilyProjection {
+                head,
+                interface_args,
+                kind,
+                constraint,
+                source_anchor,
+                ..
+            } => {
+                let interface_args = interface_args
+                    .iter()
+                    .map(|arg| {
+                        Self::substitute_associated_family_result_expr_from_normal_bindings(
+                            arg, bindings,
+                        )
+                    })
+                    .collect::<Vec<_>>();
+                let rigidity = projection_rigidity_for_associated_family_args(&interface_args);
+                AssociatedFamilyResultExpr::AssociatedFamilyProjection {
+                    head: head.clone(),
+                    interface_args,
+                    kind: kind.clone(),
+                    constraint: constraint.clone(),
+                    rigidity,
+                    source_anchor: source_anchor.clone(),
+                }
+            }
+            AssociatedFamilyResultExpr::Projection {
+                interface,
+                member,
+                args,
+                kind,
+                constraint,
+                source_anchor,
+                ..
+            } => {
+                let args = args
+                    .iter()
+                    .map(|arg| {
+                        Self::substitute_associated_family_result_expr_from_normal_bindings(
+                            arg, bindings,
+                        )
+                    })
+                    .collect::<Vec<_>>();
+                let rigidity = projection_rigidity_for_associated_family_args(&args);
+                AssociatedFamilyResultExpr::Projection {
+                    interface: interface.clone(),
+                    member: member.clone(),
+                    args,
+                    kind: kind.clone(),
+                    constraint: constraint.clone(),
+                    rigidity,
+                    source_anchor: source_anchor.clone(),
+                }
+            }
+            AssociatedFamilyResultExpr::ComputationHeadApp {
+                head,
+                args,
+                kind,
+                constraint,
+                source_anchor,
+            } => AssociatedFamilyResultExpr::ComputationHeadApp {
+                head: head.clone(),
+                args: args
+                    .iter()
+                    .map(|arg| {
+                        Self::substitute_associated_family_result_expr_from_normal_bindings(
+                            arg, bindings,
+                        )
+                    })
+                    .collect(),
+                kind: kind.clone(),
+                constraint: constraint.clone(),
+                source_anchor: source_anchor.clone(),
+            },
+        }
+    }
+
+    fn substitute_associated_family_result_expr(
+        result: &AssociatedFamilyResultExpr,
+        bindings: &BTreeMap<String, CanonicalTypeExpr>,
+    ) -> AssociatedFamilyResultExpr {
+        match result {
+            AssociatedFamilyResultExpr::Var {
+                name,
+                source_anchor,
+                ..
+            } => bindings
+                .get(name)
+                .cloned()
+                .map(|canonical| {
+                    associated_family_result_from_canonical(canonical, Span::default())
+                })
+                .unwrap_or_else(|| AssociatedFamilyResultExpr::Var {
+                    name: name.clone(),
+                    kind: Kind::Type,
+                    constraint: AssociatedFamilyResultConstraint::Kind(Kind::Type),
+                    source_anchor: source_anchor.clone(),
+                }),
+            AssociatedFamilyResultExpr::Primitive { .. } => result.clone(),
+            AssociatedFamilyResultExpr::NominalApp {
+                origin,
+                visible_name,
+                args,
+                kind,
+                constraint,
+                source_anchor,
+            } => AssociatedFamilyResultExpr::NominalApp {
+                origin: origin.clone(),
+                visible_name: visible_name.clone(),
+                args: args
+                    .iter()
+                    .map(|arg| Self::substitute_associated_family_result_expr(arg, bindings))
+                    .collect(),
+                kind: kind.clone(),
+                constraint: constraint.clone(),
+                source_anchor: source_anchor.clone(),
+            },
+            AssociatedFamilyResultExpr::DomainConstructorApp {
+                constructor,
+                domain,
+                args,
+                kind,
+                constraint,
+                source_anchor,
+            } => AssociatedFamilyResultExpr::DomainConstructorApp {
+                constructor: constructor.clone(),
+                domain: domain.clone(),
+                args: args
+                    .iter()
+                    .map(|arg| Self::substitute_associated_family_result_expr(arg, bindings))
+                    .collect(),
+                kind: kind.clone(),
+                constraint: constraint.clone(),
+                source_anchor: source_anchor.clone(),
+            },
+            AssociatedFamilyResultExpr::AssociatedFamilyProjection {
+                head,
+                interface_args,
+                kind,
+                constraint,
+                rigidity: _,
+                source_anchor,
+            } => {
+                let interface_args = interface_args
+                    .iter()
+                    .map(|arg| Self::substitute_associated_family_result_expr(arg, bindings))
+                    .collect::<Vec<_>>();
+                let rigidity = projection_rigidity_for_associated_family_args(&interface_args);
+                AssociatedFamilyResultExpr::AssociatedFamilyProjection {
+                    head: head.clone(),
+                    interface_args,
+                    kind: kind.clone(),
+                    constraint: constraint.clone(),
+                    rigidity,
+                    source_anchor: source_anchor.clone(),
+                }
+            }
+            AssociatedFamilyResultExpr::Projection {
+                interface,
+                member,
+                args,
+                kind,
+                constraint,
+                rigidity: _,
+                source_anchor,
+            } => {
+                let args = args
+                    .iter()
+                    .map(|arg| Self::substitute_associated_family_result_expr(arg, bindings))
+                    .collect::<Vec<_>>();
+                let rigidity = projection_rigidity_for_associated_family_args(&args);
+                AssociatedFamilyResultExpr::Projection {
+                    interface: interface.clone(),
+                    member: member.clone(),
+                    args,
+                    kind: kind.clone(),
+                    constraint: constraint.clone(),
+                    rigidity,
+                    source_anchor: source_anchor.clone(),
+                }
+            }
+            AssociatedFamilyResultExpr::ComputationHeadApp {
+                head,
+                args,
+                kind,
+                constraint,
+                source_anchor,
+            } => AssociatedFamilyResultExpr::ComputationHeadApp {
+                head: head.clone(),
+                args: args
+                    .iter()
+                    .map(|arg| Self::substitute_associated_family_result_expr(arg, bindings))
+                    .collect(),
+                kind: kind.clone(),
+                constraint: constraint.clone(),
+                source_anchor: source_anchor.clone(),
+            },
+        }
+    }
+
     fn associated_family_result_expr_constraint(
         expr: &AssociatedFamilyResultExpr,
     ) -> &AssociatedFamilyResultConstraint {
@@ -2296,6 +3567,19 @@ impl TypeEnv {
             );
         };
         match ty {
+            SurfaceType::AssociatedFamilyProjection {
+                interface,
+                args,
+                member,
+                span: projection_span,
+            } => self.lower_associated_family_projection_result_expr(
+                interface,
+                args,
+                member,
+                expected_constraint,
+                var_constraints,
+                *projection_span,
+            ),
             SurfaceType::Name(name) => {
                 if let Some((domain, constructor)) =
                     self.find_domain_constructor_cloned(expected_domain, name.as_ref())
@@ -2431,15 +3715,36 @@ impl TypeEnv {
         span: Span,
     ) -> Result<AssociatedFamilyResultExpr, TypeEnvError> {
         match ty {
-            SurfaceType::Name(name) => Ok(AssociatedFamilyResultExpr::Var {
-                name: name.to_string(),
-                kind: Kind::Type,
-                constraint: var_constraints
-                    .get(name.as_ref())
-                    .cloned()
-                    .unwrap_or(AssociatedFamilyResultConstraint::Kind(Kind::Type)),
-                source_anchor: span_anchor(span, format!("associated family result {name}")),
-            }),
+            SurfaceType::AssociatedFamilyProjection {
+                interface,
+                args,
+                member,
+                span: projection_span,
+            } => self.lower_associated_family_projection_result_expr(
+                interface,
+                args,
+                member,
+                &AssociatedFamilyResultConstraint::Kind(Kind::Type),
+                var_constraints,
+                *projection_span,
+            ),
+            SurfaceType::Name(name) => {
+                if let Some(constraint) = var_constraints.get(name.as_ref()) {
+                    Ok(AssociatedFamilyResultExpr::Var {
+                        name: name.to_string(),
+                        kind: Kind::Type,
+                        constraint: constraint.clone(),
+                        source_anchor: span_anchor(
+                            span,
+                            format!("associated family result {name}"),
+                        ),
+                    })
+                } else {
+                    self.lower_surface_type_to_canonical(ty)
+                        .map(|canonical| associated_family_result_from_canonical(canonical, span))
+                        .map_err(|err| TypeEnvError::InvalidDefinition(format!("{err}"), span))
+                }
+            }
             _ => self
                 .lower_surface_type_to_canonical(ty)
                 .map(|canonical| associated_family_result_from_canonical(canonical, span))
@@ -2489,45 +3794,80 @@ impl TypeEnv {
                         });
                     }
                 }
-                Ok(AssociatedFamilyPattern::Var {
-                    name: name.to_string(),
-                    constraint: var_constraints
-                        .get(name.as_ref())
-                        .cloned()
-                        .unwrap_or(constraint),
-                    source_anchor: span_anchor(span, format!("associated family pattern {name}")),
-                })
+                if let Some(var_constraint) = var_constraints.get(name.as_ref()) {
+                    return Ok(AssociatedFamilyPattern::Var {
+                        name: name.to_string(),
+                        constraint: var_constraint.clone(),
+                        source_anchor: span_anchor(
+                            span,
+                            format!("associated family pattern {name}"),
+                        ),
+                    });
+                }
+                let canonical = self
+                    .lower_surface_type_to_canonical(ty)
+                    .map_err(|err| TypeEnvError::InvalidDefinition(format!("{err}"), span))?;
+                Ok(Self::associated_family_pattern_from_canonical(
+                    canonical,
+                    &constraint,
+                    var_constraints,
+                    span,
+                ))
             }
             SurfaceType::Constructor { name, args } => {
-                let Some(domain_id) = expected_domain else {
+                if let Some(domain_id) = expected_domain {
+                    if let Some((domain, constructor)) =
+                        self.find_domain_constructor_cloned(domain_id, name.as_ref())
+                    {
+                        return self.lower_associated_family_domain_constructor_pattern(
+                            &domain,
+                            &constructor,
+                            args,
+                            var_constraints,
+                            span,
+                        );
+                    }
                     return Err(TypeEnvError::WrongAssociatedFamilyResultDomain {
                         family: "<impl head>".to_string(),
                         reason: format!(
-                            "marker constructor pattern '{}' requires a sealed-domain-constrained interface parameter",
-                            name
+                            "unknown marker constructor '{}' for sealed domain '{}'",
+                            name, domain_id.name
                         ),
                         span,
                     });
-                };
-                if let Some((domain, constructor)) =
-                    self.find_domain_constructor_cloned(domain_id, name.as_ref())
-                {
-                    return self.lower_associated_family_domain_constructor_pattern(
-                        &domain,
-                        &constructor,
-                        args,
-                        var_constraints,
-                        span,
-                    );
                 }
-                Err(TypeEnvError::WrongAssociatedFamilyResultDomain {
-                    family: "<impl head>".to_string(),
-                    reason: format!(
-                        "unknown marker constructor '{}' for sealed domain '{}'",
-                        name, domain_id.name
-                    ),
+                let canonical = self
+                    .lower_surface_type_to_canonical(ty)
+                    .map_err(|err| TypeEnvError::InvalidDefinition(format!("{err}"), span))?;
+                Ok(Self::associated_family_pattern_from_canonical(
+                    canonical,
+                    &constraint,
+                    var_constraints,
                     span,
-                })
+                ))
+            }
+            SurfaceType::List(item) => {
+                if expected_domain.is_some() {
+                    return Err(TypeEnvError::WrongAssociatedFamilyResultDomain {
+                        family: "<impl head>".to_string(),
+                        reason: "list pattern requires an unconstrained Type interface parameter"
+                            .to_string(),
+                        span,
+                    });
+                }
+                let list_ty = SurfaceType::Constructor {
+                    name: "List".into(),
+                    args: vec![item.as_ref().clone()],
+                };
+                let canonical = self
+                    .lower_surface_type_to_canonical(&list_ty)
+                    .map_err(|err| TypeEnvError::InvalidDefinition(format!("{err}"), span))?;
+                Ok(Self::associated_family_pattern_from_canonical(
+                    canonical,
+                    &constraint,
+                    var_constraints,
+                    span,
+                ))
             }
             _ => Err(TypeEnvError::WrongAssociatedFamilyResultDomain {
                 family: "<impl head>".to_string(),
@@ -2537,6 +3877,63 @@ impl TypeEnv {
                 ),
                 span,
             }),
+        }
+    }
+
+    fn associated_family_pattern_from_canonical(
+        canonical: CanonicalTypeExpr,
+        constraint: &AssociatedFamilyResultConstraint,
+        var_constraints: &HashMap<String, AssociatedFamilyResultConstraint>,
+        span: Span,
+    ) -> AssociatedFamilyPattern {
+        match canonical {
+            CanonicalTypeExpr::Primitive(name) => AssociatedFamilyPattern::Primitive {
+                name: name.clone(),
+                constraint: constraint.clone(),
+                source_anchor: span_anchor(
+                    span,
+                    format!("associated family primitive pattern {name}"),
+                ),
+            },
+            CanonicalTypeExpr::Var(name) => AssociatedFamilyPattern::Var {
+                name: name.clone(),
+                constraint: var_constraints
+                    .get(name.as_str())
+                    .cloned()
+                    .unwrap_or_else(|| constraint.clone()),
+                source_anchor: span_anchor(span, format!("associated family pattern {name}")),
+            },
+            CanonicalTypeExpr::NominalApp {
+                origin,
+                visible_name,
+                args,
+                kind: _,
+            } => AssociatedFamilyPattern::NominalApp {
+                origin,
+                visible_name: visible_name.clone(),
+                args: args
+                    .into_iter()
+                    .map(|arg| {
+                        Self::associated_family_pattern_from_canonical(
+                            arg,
+                            constraint,
+                            var_constraints,
+                            span,
+                        )
+                    })
+                    .collect(),
+                constraint: constraint.clone(),
+                source_anchor: span_anchor(
+                    span,
+                    format!("associated family pattern {visible_name}"),
+                ),
+            },
+            CanonicalTypeExpr::Projection { .. } | CanonicalTypeExpr::ComputationHeadApp { .. } => {
+                AssociatedFamilyPattern::Wildcard {
+                    constraint: constraint.clone(),
+                    source_anchor: span_anchor(span, "associated family unsupported pattern"),
+                }
+            }
         }
     }
 
@@ -2620,6 +4017,52 @@ impl TypeEnv {
                     && Self::associated_family_pattern_spines_overlap(left_fields, right_fields)
             }
             (
+                AssociatedFamilyPattern::NominalApp {
+                    origin: left_origin,
+                    visible_name: left_name,
+                    args: left_args,
+                    ..
+                },
+                AssociatedFamilyPattern::NominalApp {
+                    origin: right_origin,
+                    visible_name: right_name,
+                    args: right_args,
+                    ..
+                },
+            ) => {
+                left_origin == right_origin
+                    && left_name == right_name
+                    && Self::associated_family_pattern_spines_overlap(left_args, right_args)
+            }
+            (
+                AssociatedFamilyPattern::Primitive {
+                    name: left_name, ..
+                },
+                AssociatedFamilyPattern::Primitive {
+                    name: right_name, ..
+                },
+            ) => left_name == right_name,
+            (AssociatedFamilyPattern::Primitive { .. }, AssociatedFamilyPattern::Var { .. })
+            | (AssociatedFamilyPattern::Var { .. }, AssociatedFamilyPattern::Primitive { .. })
+            | (
+                AssociatedFamilyPattern::Primitive { .. },
+                AssociatedFamilyPattern::Wildcard { .. },
+            )
+            | (
+                AssociatedFamilyPattern::Wildcard { .. },
+                AssociatedFamilyPattern::Primitive { .. },
+            ) => true,
+            (AssociatedFamilyPattern::Primitive { .. }, _)
+            | (_, AssociatedFamilyPattern::Primitive { .. }) => false,
+            (
+                AssociatedFamilyPattern::DomainConstructor { .. },
+                AssociatedFamilyPattern::NominalApp { .. },
+            )
+            | (
+                AssociatedFamilyPattern::NominalApp { .. },
+                AssociatedFamilyPattern::DomainConstructor { .. },
+            ) => false,
+            (
                 AssociatedFamilyPattern::DomainConstructor { .. },
                 AssociatedFamilyPattern::Var { .. },
             )
@@ -2638,6 +4081,16 @@ impl TypeEnv {
             | (AssociatedFamilyPattern::Var { .. }, AssociatedFamilyPattern::Var { .. })
             | (AssociatedFamilyPattern::Var { .. }, AssociatedFamilyPattern::Wildcard { .. })
             | (AssociatedFamilyPattern::Wildcard { .. }, AssociatedFamilyPattern::Var { .. })
+            | (AssociatedFamilyPattern::NominalApp { .. }, AssociatedFamilyPattern::Var { .. })
+            | (AssociatedFamilyPattern::Var { .. }, AssociatedFamilyPattern::NominalApp { .. })
+            | (
+                AssociatedFamilyPattern::NominalApp { .. },
+                AssociatedFamilyPattern::Wildcard { .. },
+            )
+            | (
+                AssociatedFamilyPattern::Wildcard { .. },
+                AssociatedFamilyPattern::NominalApp { .. },
+            )
             | (
                 AssociatedFamilyPattern::Wildcard { .. },
                 AssociatedFamilyPattern::Wildcard { .. },
@@ -3083,12 +4536,26 @@ impl TypeEnv {
                 staged.declare_imported_type_function_summary(type_fn)?;
             }
         }
+        let hidden_associated_family_heads = hidden_imported_associated_family_heads(summaries);
+        for summary in summaries {
+            for family in &summary.exported_associated_families {
+                staged.declare_imported_associated_family_summary(
+                    family,
+                    !hidden_associated_family_heads.contains(&family.head),
+                )?;
+            }
+        }
         for summary in summaries {
             staged.register_module_semantic_summary_representations_and_domains(summary)?;
         }
         for summary in summaries {
             for type_fn in &summary.exported_type_functions {
                 staged.validate_imported_type_function_summary(type_fn)?;
+            }
+        }
+        for summary in summaries {
+            for family in &summary.exported_associated_families {
+                staged.validate_and_register_imported_associated_family_summary(family)?;
             }
         }
         *self = staged;
@@ -3275,6 +4742,935 @@ impl TypeEnv {
             Span::default(),
         )?;
         self.validate_public_type_function_export_closure(def, Span::default())
+    }
+
+    fn associated_family_result_constraint_from_summary(
+        &self,
+        family: &AssociatedFamilySummary,
+    ) -> Result<AssociatedFamilyResultConstraint, TypeEnvError> {
+        match &family.result_domain {
+            CanonicalTypeExpr::Primitive(name) if name == "Type" => {
+                Ok(AssociatedFamilyResultConstraint::Kind(Kind::Type))
+            }
+            CanonicalTypeExpr::Var(name) => self
+                .sealed_domain_summaries
+                .values()
+                .find(|domain| domain.id.name == *name || domain.exported_name == *name)
+                .map(|domain| AssociatedFamilyResultConstraint::Domain(domain.id.clone()))
+                .ok_or_else(|| TypeEnvError::WrongAssociatedFamilyResultDomain {
+                    family: family.visible_name.clone(),
+                    reason: format!("unknown associated-family result domain '{name}'"),
+                    span: anchor_span(&family.source_anchor),
+                }),
+            other => Err(TypeEnvError::WrongAssociatedFamilyResultDomain {
+                family: family.visible_name.clone(),
+                reason: format!("unsupported associated-family result domain {other:?}"),
+                span: anchor_span(&family.source_anchor),
+            }),
+        }
+    }
+
+    fn declare_imported_associated_family_summary(
+        &mut self,
+        family: &AssociatedFamilySummary,
+        source_visible: bool,
+    ) -> Result<(), TypeEnvError> {
+        if family.head.interface != family.interface_identity
+            || family.head.member != family.member_identity
+            || family.member_identity.interface != family.interface_identity
+        {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "associated-family summary '{}' has inconsistent interface/member identities",
+                    family.visible_name
+                ),
+                anchor_span(&family.source_anchor),
+            ));
+        }
+        let first_scheme = family.schemes.first().ok_or_else(|| {
+            TypeEnvError::InvalidDefinition(
+                format!(
+                    "associated-family summary '{}' must contain at least one scheme",
+                    family.visible_name
+                ),
+                anchor_span(&family.source_anchor),
+            )
+        })?;
+        let result_domain = self.associated_family_result_constraint_from_summary(family)?;
+        let interface_params = first_scheme
+            .params
+            .iter()
+            .map(|param| AssociatedFamilyInterfaceParamInfo {
+                name: param.name.clone(),
+                domain_constraint: param.domain_constraint.clone(),
+            })
+            .collect::<Vec<_>>();
+
+        self.known_interface_identities
+            .insert(family.interface_identity.clone());
+        self.canonical_interface_names.insert(
+            family.interface_identity.clone(),
+            family.interface_identity.name.to_string(),
+        );
+        self.local_interface_arities
+            .entry(family.interface_identity.clone())
+            .or_insert(interface_params.len());
+        self.known_associated_member_identities
+            .insert(family.member_identity.clone());
+
+        let declaration = AssociatedFamilyDeclarationInfo {
+            defining_module: family.interface_identity.module.clone(),
+            result_domain,
+            decreases: family
+                .revalidation_metadata
+                .decreases
+                .first()
+                .map(|decreases| decreases.parameter.clone()),
+            interface_params,
+            head: family.head.clone(),
+        };
+        if let Some(existing) = self.associated_family_declarations.get(&family.head) {
+            if existing != &declaration {
+                return Err(TypeEnvError::ImportOrderConflict {
+                    family: "associated-family summary".to_string(),
+                    name: family.visible_name.clone(),
+                    span: anchor_span(&family.source_anchor),
+                });
+            }
+        } else {
+            self.associated_family_declarations
+                .insert(family.head.clone(), declaration);
+        }
+
+        if source_visible {
+            self.interface_identity_aliases.insert(
+                family.interface_identity.name.to_string(),
+                family.interface_identity.clone(),
+            );
+            self.interface_identity_alias_is_imported
+                .insert(family.interface_identity.name.to_string(), true);
+            self.associated_member_identity_aliases.insert(
+                (
+                    family.interface_identity.name.to_string(),
+                    family.visible_name.clone(),
+                ),
+                family.member_identity.clone(),
+            );
+            self.associated_member_identity_alias_is_imported.insert(
+                (
+                    family.interface_identity.name.to_string(),
+                    family.visible_name.clone(),
+                ),
+                true,
+            );
+            self.associated_family_name_index.insert(
+                (
+                    family.interface_identity.name.to_string(),
+                    family.visible_name.clone(),
+                ),
+                family.head.clone(),
+            );
+        }
+        Ok(())
+    }
+
+    fn validate_and_register_imported_associated_family_summary(
+        &mut self,
+        family: &AssociatedFamilySummary,
+    ) -> Result<(), TypeEnvError> {
+        if family.export_mode != AssociatedFamilyExportMode::TransparentEquations
+            || family.revalidation_metadata.spec_version
+                != SummaryVersion::SPEC063_ASSOCIATED_FAMILY_V4
+            || !family.revalidation_metadata.kind_and_domain_checked
+            || !family.revalidation_metadata.coverage_and_overlap_checked
+            || !family.revalidation_metadata.coherence_checked
+            || !family.revalidation_metadata.recursion_checked
+        {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "associated-family summary '{}' lacks required SPEC-063 revalidation metadata",
+                    family.visible_name
+                ),
+                anchor_span(&family.source_anchor),
+            ));
+        }
+        if family.result_kind != Kind::Type {
+            return Err(TypeEnvError::WrongAssociatedFamilyResultKind {
+                family: family.visible_name.clone(),
+                expected: format!("{:?}", Kind::Type),
+                found: format!("{:?}", family.result_kind),
+                span: anchor_span(&family.source_anchor),
+            });
+        }
+        if !family
+            .dependency_closure
+            .closure_metadata
+            .public_closure_checked
+        {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "associated-family summary '{}' has unchecked dependency closure",
+                    family.visible_name
+                ),
+                anchor_span(&family.source_anchor),
+            ));
+        }
+        let metadata = &family.dependency_closure.closure_metadata;
+        if metadata.public_ordinary_type_count != family.dependency_closure.ordinary_types.len()
+            || metadata.public_sealed_domain_count != family.dependency_closure.sealed_domains.len()
+            || metadata.public_domain_constructor_count
+                != family.dependency_closure.domain_constructors.len()
+            || metadata.public_type_function_count != family.dependency_closure.type_functions.len()
+            || metadata.public_projection_count
+                != family.dependency_closure.associated_projections.len()
+            || metadata.public_associated_family_count
+                != family.dependency_closure.associated_families.len() + 1
+            || metadata.helper_family_count
+                != family
+                    .dependency_closure
+                    .associated_families
+                    .iter()
+                    .filter(|dependency| !dependency.source_visible)
+                    .count()
+        {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "associated-family summary '{}' has inconsistent dependency closure metadata counts",
+                    family.visible_name
+                ),
+                anchor_span(&family.source_anchor),
+            ));
+        }
+        if !family
+            .revalidation_metadata
+            .decreases
+            .iter()
+            .all(|decreases| {
+                decreases.structural_recursion_checked
+                    && family.schemes.first().is_some_and(|scheme| {
+                        scheme
+                            .params
+                            .get(decreases.parameter_index)
+                            .is_some_and(|param| {
+                                param.name == decreases.parameter
+                                    && param.domain_constraint.as_ref() == Some(&decreases.domain)
+                            })
+                    })
+            })
+        {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "associated-family summary '{}' has malformed decreases revalidation metadata",
+                    family.visible_name
+                ),
+                anchor_span(&family.source_anchor),
+            ));
+        }
+        self.validate_imported_associated_family_dependency_closure(family)?;
+        self.validate_imported_associated_family_dependency_closure_complete(family)?;
+        let declaration = self
+            .associated_family_declarations
+            .get(&family.head)
+            .cloned()
+            .ok_or_else(|| {
+                TypeEnvError::InvalidDefinition(
+                    format!(
+                        "associated-family summary '{}' was not declared before validation",
+                        family.visible_name
+                    ),
+                    anchor_span(&family.source_anchor),
+                )
+            })?;
+        if !matches_associated_family_result_constraint(
+            &family.result_domain,
+            &declaration.result_domain,
+        ) {
+            return Err(TypeEnvError::WrongAssociatedFamilyResultDomain {
+                family: family.visible_name.clone(),
+                reason: "summary result-domain annotation does not match the declaration"
+                    .to_string(),
+                span: anchor_span(&family.source_anchor),
+            });
+        }
+        if family.schemes.is_empty() {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "associated-family summary '{}' must contain at least one scheme",
+                    family.visible_name
+                ),
+                anchor_span(&family.source_anchor),
+            ));
+        }
+        for scheme in &family.schemes {
+            self.validate_and_insert_imported_associated_family_scheme(
+                family,
+                &declaration,
+                scheme.clone(),
+            )?;
+        }
+        Ok(())
+    }
+
+    fn validate_imported_associated_family_dependency_closure(
+        &self,
+        family: &AssociatedFamilySummary,
+    ) -> Result<(), TypeEnvError> {
+        for ty in &family.dependency_closure.ordinary_types {
+            if !self.canonical_type_names.contains_key(ty) {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "associated-family summary '{}' references unknown ordinary type dependency '{}'",
+                        family.visible_name, ty.name
+                    ),
+                    anchor_span(&family.source_anchor),
+                ));
+            }
+        }
+        for domain in &family.dependency_closure.sealed_domains {
+            if self.lookup_sealed_domain_by_id(domain).is_none() {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "associated-family summary '{}' references unknown sealed-domain dependency '{}'",
+                        family.visible_name, domain.name
+                    ),
+                    anchor_span(&family.source_anchor),
+                ));
+            }
+        }
+        for constructor in &family.dependency_closure.domain_constructors {
+            let domain = self.lookup_sealed_domain_by_id(&constructor.domain).ok_or_else(|| {
+                TypeEnvError::InvalidDefinition(
+                    format!(
+                        "associated-family summary '{}' references unknown constructor domain '{}'",
+                        family.visible_name, constructor.domain.name
+                    ),
+                    anchor_span(&family.source_anchor),
+                )
+            })?;
+            if !domain
+                .constructors
+                .iter()
+                .any(|candidate| candidate.id == *constructor)
+            {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "associated-family summary '{}' references unknown domain constructor '{}'",
+                        family.visible_name, constructor.name
+                    ),
+                    anchor_span(&family.source_anchor),
+                ));
+            }
+        }
+        for head in &family.dependency_closure.type_functions {
+            if !self.local_type_functions.contains_key(head) {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "associated-family summary '{}' references unknown type-function dependency '{}'",
+                        family.visible_name, head.name
+                    ),
+                    anchor_span(&family.source_anchor),
+                ));
+            }
+        }
+        for projection in &family.dependency_closure.associated_projections {
+            if !self
+                .known_interface_identities
+                .contains(&projection.head.interface)
+                || !self
+                    .known_associated_member_identities
+                    .contains(&projection.head.member)
+            {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "associated-family summary '{}' references unknown associated projection dependency '{}::{}'",
+                        family.visible_name,
+                        projection.head.interface.name,
+                        projection.head.member.name
+                    ),
+                    anchor_span(&family.source_anchor),
+                ));
+            }
+            if let Some(declaration) = self.associated_family_declarations.get(&projection.head) {
+                let expected = declaration.interface_params.len();
+                let found = projection.interface_args.len();
+                if found != expected {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "associated-family summary '{}' associated projection dependency '{}::{}' has {} interface argument(s), expected {}",
+                            family.visible_name,
+                            projection.head.interface.name,
+                            projection.head.member.name,
+                            found,
+                            expected
+                        ),
+                        anchor_span(&family.source_anchor),
+                    ));
+                }
+            }
+        }
+        for dependency in &family.dependency_closure.associated_families {
+            if !self
+                .associated_family_declarations
+                .contains_key(&dependency.family)
+            {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "associated-family summary '{}' references unknown associated-family dependency '{}::{}'",
+                        family.visible_name,
+                        dependency.family.interface.name,
+                        dependency.family.member.name
+                    ),
+                    anchor_span(&family.source_anchor),
+                ));
+            }
+            if dependency.normalizer_available
+                && !self
+                    .associated_family_declarations
+                    .contains_key(&dependency.family)
+            {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "associated-family summary '{}' lacks normalizer-available dependency '{}::{}'",
+                        family.visible_name,
+                        dependency.family.interface.name,
+                        dependency.family.member.name
+                    ),
+                    anchor_span(&family.source_anchor),
+                ));
+            }
+        }
+        Ok(())
+    }
+
+    fn validate_imported_associated_family_dependency_closure_complete(
+        &self,
+        family: &AssociatedFamilySummary,
+    ) -> Result<(), TypeEnvError> {
+        let mut required = PublicAssociatedFamilyClosure::default();
+        self.collect_public_canonical_type_closure_for_associated_family(
+            &family.result_domain,
+            &mut required,
+        );
+        for scheme in &family.schemes {
+            self.collect_public_associated_family_scheme_closure(scheme, &mut required)?;
+        }
+        for projection in &family.dependency_closure.associated_projections {
+            for arg in &projection.interface_args {
+                self.collect_public_canonical_type_closure_for_associated_family(
+                    arg,
+                    &mut required,
+                );
+            }
+        }
+        required.associated_families.remove(&family.head);
+
+        let ordinary_types = family
+            .dependency_closure
+            .ordinary_types
+            .iter()
+            .cloned()
+            .collect::<HashSet<_>>();
+        for ty in required.ordinary_types {
+            if !ordinary_types.contains(&ty) {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "associated-family summary '{}' dependency closure omits ordinary type '{}'",
+                        family.visible_name, ty.name
+                    ),
+                    anchor_span(&family.source_anchor),
+                ));
+            }
+        }
+
+        let sealed_domains = family
+            .dependency_closure
+            .sealed_domains
+            .iter()
+            .cloned()
+            .collect::<HashSet<_>>();
+        for domain in required.sealed_domains {
+            if !sealed_domains.contains(&domain) {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "associated-family summary '{}' dependency closure omits sealed domain '{}'",
+                        family.visible_name, domain.name
+                    ),
+                    anchor_span(&family.source_anchor),
+                ));
+            }
+        }
+
+        let domain_constructors = family
+            .dependency_closure
+            .domain_constructors
+            .iter()
+            .cloned()
+            .collect::<HashSet<_>>();
+        for constructor in required.domain_constructors {
+            if !domain_constructors.contains(&constructor) {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "associated-family summary '{}' dependency closure omits domain constructor '{}'",
+                        family.visible_name, constructor.name
+                    ),
+                    anchor_span(&family.source_anchor),
+                ));
+            }
+        }
+
+        let type_functions = family
+            .dependency_closure
+            .type_functions
+            .iter()
+            .cloned()
+            .collect::<HashSet<_>>();
+        for head in required.type_functions {
+            if !type_functions.contains(&head) {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "associated-family summary '{}' dependency closure omits type function '{}'",
+                        family.visible_name, head.name
+                    ),
+                    anchor_span(&family.source_anchor),
+                ));
+            }
+        }
+
+        let associated_projections = family
+            .dependency_closure
+            .associated_projections
+            .iter()
+            .cloned()
+            .collect::<HashSet<_>>();
+        for projection in required.projections {
+            if !associated_projections.contains(&projection) {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "associated-family summary '{}' dependency closure omits associated projection '{}::{}' with complete argument spine",
+                        family.visible_name,
+                        projection.head.interface.name,
+                        projection.head.member.name
+                    ),
+                    anchor_span(&family.source_anchor),
+                ));
+            }
+        }
+
+        let associated_families = family
+            .dependency_closure
+            .associated_families
+            .iter()
+            .map(|dependency| dependency.family.clone())
+            .collect::<HashSet<_>>();
+        for head in required.associated_families {
+            if !associated_families.contains(&head) {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "associated-family summary '{}' dependency closure omits associated family '{}::{}'",
+                        family.visible_name, head.interface.name, head.member.name
+                    ),
+                    anchor_span(&family.source_anchor),
+                ));
+            }
+        }
+
+        Ok(())
+    }
+
+    fn validate_and_insert_imported_associated_family_scheme(
+        &mut self,
+        family: &AssociatedFamilySummary,
+        declaration: &AssociatedFamilyDeclarationInfo,
+        scheme: AssociatedFamilyScheme,
+    ) -> Result<(), TypeEnvError> {
+        if scheme.head != family.head {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "associated-family summary '{}' scheme head does not match summary head",
+                    family.visible_name
+                ),
+                anchor_span(&scheme.source_anchor),
+            ));
+        }
+        if scheme.result_kind != Kind::Type {
+            return Err(TypeEnvError::WrongAssociatedFamilyResultKind {
+                family: family.visible_name.clone(),
+                expected: format!("{:?}", Kind::Type),
+                found: format!("{:?}", scheme.result_kind),
+                span: anchor_span(&scheme.source_anchor),
+            });
+        }
+        if !matches_associated_family_result_constraint(
+            &scheme.result_domain,
+            &declaration.result_domain,
+        ) {
+            return Err(TypeEnvError::WrongAssociatedFamilyResultDomain {
+                family: family.visible_name.clone(),
+                reason: "scheme result-domain annotation does not match the associated family declaration"
+                    .to_string(),
+                span: anchor_span(&scheme.source_anchor),
+            });
+        }
+        if scheme.params.len() != declaration.interface_params.len() {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "associated-family summary '{}' scheme arity mismatch: expected {}, found {}",
+                    family.visible_name,
+                    declaration.interface_params.len(),
+                    scheme.params.len()
+                ),
+                anchor_span(&scheme.source_anchor),
+            ));
+        }
+        for (param, expected) in scheme.params.iter().zip(&declaration.interface_params) {
+            if param.kind != Kind::Type
+                || param.name != expected.name
+                || param.domain_constraint != expected.domain_constraint
+            {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "associated-family summary '{}' scheme parameter '{}' does not match declaration",
+                        family.visible_name, param.name
+                    ),
+                    anchor_span(&param.source_anchor),
+                ));
+            }
+        }
+        if scheme.equations.is_empty() {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "associated-family summary '{}' scheme must contain at least one equation",
+                    family.visible_name
+                ),
+                anchor_span(&scheme.source_anchor),
+            ));
+        }
+        for equation in &scheme.equations {
+            if equation.head != scheme.head
+                || equation.interface_arg_patterns.len() != declaration.interface_params.len()
+            {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "associated-family summary '{}' equation head or arity mismatch",
+                        family.visible_name
+                    ),
+                    anchor_span(&equation.source_anchor),
+                ));
+            }
+            let mut vars = HashMap::new();
+            for (pattern, param) in equation
+                .interface_arg_patterns
+                .iter()
+                .zip(&declaration.interface_params)
+            {
+                self.validate_imported_associated_family_pattern(
+                    family,
+                    pattern,
+                    &param.domain_constraint,
+                    &mut vars,
+                )?;
+            }
+            self.validate_imported_associated_family_result_expr(family, &equation.result, &vars)?;
+            if !Self::associated_family_expr_conforms_to_constraint(
+                &equation.result,
+                &declaration.result_domain,
+            ) {
+                return Err(TypeEnvError::WrongAssociatedFamilyResultDomain {
+                    family: family.visible_name.clone(),
+                    reason: format!(
+                        "RHS does not conform to associated family result constraint {}",
+                        associated_family_result_constraint_label(&declaration.result_domain)
+                    ),
+                    span: anchor_span(&equation.source_anchor),
+                });
+            }
+        }
+        for (index, left) in scheme.equations.iter().enumerate() {
+            for right in scheme.equations.iter().skip(index + 1) {
+                if Self::associated_family_pattern_spines_overlap(
+                    &left.interface_arg_patterns,
+                    &right.interface_arg_patterns,
+                ) {
+                    return Err(TypeEnvError::OverlappingAssociatedFamilyScheme {
+                        family: family.visible_name.clone(),
+                        span: anchor_span(&right.source_anchor),
+                    });
+                }
+            }
+        }
+        if let Some(existing_schemes) = self.associated_family_schemes.get(&scheme.head) {
+            if existing_schemes
+                .iter()
+                .any(|existing| existing.scheme == scheme)
+            {
+                return Ok(());
+            }
+            for existing in existing_schemes {
+                for existing_equation in &existing.scheme.equations {
+                    for new_equation in &scheme.equations {
+                        if Self::associated_family_pattern_spines_overlap(
+                            &existing_equation.interface_arg_patterns,
+                            &new_equation.interface_arg_patterns,
+                        ) {
+                            return Err(TypeEnvError::OverlappingAssociatedFamilyScheme {
+                                family: family.visible_name.clone(),
+                                span: anchor_span(&new_equation.source_anchor),
+                            });
+                        }
+                    }
+                }
+            }
+        }
+        self.associated_family_schemes
+            .entry(scheme.head.clone())
+            .or_default()
+            .push(RegisteredAssociatedFamilyScheme {
+                defining_module: declaration.defining_module.clone(),
+                scheme,
+            });
+        Ok(())
+    }
+
+    fn validate_imported_associated_family_pattern(
+        &self,
+        family: &AssociatedFamilySummary,
+        pattern: &AssociatedFamilyPattern,
+        expected_domain: &Option<SealedDomainId>,
+        vars: &mut HashMap<String, AssociatedFamilyResultConstraint>,
+    ) -> Result<(), TypeEnvError> {
+        match pattern {
+            AssociatedFamilyPattern::Var {
+                name, constraint, ..
+            } => {
+                let expected = expected_domain.clone().map_or(
+                    AssociatedFamilyResultConstraint::Kind(Kind::Type),
+                    AssociatedFamilyResultConstraint::Domain,
+                );
+                if constraint != &expected {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "associated-family summary '{}' pattern variable '{}' has invalid constraint",
+                            family.visible_name, name
+                        ),
+                        anchor_span(&family.source_anchor),
+                    ));
+                }
+                if vars.insert(name.clone(), expected).is_some() {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "associated-family summary '{}' has non-linear pattern variable '{}'",
+                            family.visible_name, name
+                        ),
+                        anchor_span(&family.source_anchor),
+                    ));
+                }
+                Ok(())
+            }
+            AssociatedFamilyPattern::Wildcard { constraint, .. } => {
+                let expected = expected_domain.clone().map_or(
+                    AssociatedFamilyResultConstraint::Kind(Kind::Type),
+                    AssociatedFamilyResultConstraint::Domain,
+                );
+                if constraint == &expected {
+                    Ok(())
+                } else {
+                    Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "associated-family summary '{}' wildcard pattern has invalid constraint",
+                            family.visible_name
+                        ),
+                        anchor_span(&family.source_anchor),
+                    ))
+                }
+            }
+            AssociatedFamilyPattern::Primitive { .. }
+            | AssociatedFamilyPattern::NominalApp { .. } => Ok(()),
+            AssociatedFamilyPattern::DomainConstructor {
+                constructor,
+                domain,
+                fields,
+                ..
+            } => {
+                let domain_summary = self.lookup_sealed_domain_by_id(domain).ok_or_else(|| {
+                    TypeEnvError::InvalidDefinition(
+                        format!(
+                            "associated-family summary '{}' pattern references unknown sealed domain '{}'",
+                            family.visible_name, domain.name
+                        ),
+                        anchor_span(&family.source_anchor),
+                    )
+                })?;
+                if !domain_summary
+                    .constructors
+                    .iter()
+                    .any(|candidate| candidate.id == **constructor)
+                {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "associated-family summary '{}' pattern references unknown constructor '{}'",
+                            family.visible_name, constructor.name
+                        ),
+                        anchor_span(&family.source_anchor),
+                    ));
+                }
+                for field in fields {
+                    self.validate_imported_associated_family_pattern(family, field, &None, vars)?;
+                }
+                Ok(())
+            }
+        }
+    }
+
+    fn validate_imported_associated_family_result_expr(
+        &self,
+        family: &AssociatedFamilySummary,
+        expr: &AssociatedFamilyResultExpr,
+        vars: &HashMap<String, AssociatedFamilyResultConstraint>,
+    ) -> Result<(), TypeEnvError> {
+        match expr {
+            AssociatedFamilyResultExpr::Primitive { kind, .. }
+            | AssociatedFamilyResultExpr::Var { kind, .. }
+            | AssociatedFamilyResultExpr::NominalApp { kind, .. }
+            | AssociatedFamilyResultExpr::DomainConstructorApp { kind, .. }
+            | AssociatedFamilyResultExpr::AssociatedFamilyProjection { kind, .. }
+            | AssociatedFamilyResultExpr::Projection { kind, .. }
+            | AssociatedFamilyResultExpr::ComputationHeadApp { kind, .. } => {
+                if kind != &Kind::Type {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "associated-family summary '{}' result expression has non-Type kind",
+                            family.visible_name
+                        ),
+                        anchor_span(&family.source_anchor),
+                    ));
+                }
+            }
+        }
+        match expr {
+            AssociatedFamilyResultExpr::Var { name, .. } => {
+                if vars.contains_key(name) || name == "Type" {
+                    Ok(())
+                } else {
+                    Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "associated-family summary '{}' result references unbound variable '{}'",
+                            family.visible_name, name
+                        ),
+                        anchor_span(&family.source_anchor),
+                    ))
+                }
+            }
+            AssociatedFamilyResultExpr::Primitive { .. } => Ok(()),
+            AssociatedFamilyResultExpr::NominalApp {
+                origin,
+                visible_name,
+                args,
+                ..
+            } => {
+                if !self.canonical_type_names.contains_key(origin) {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "associated-family summary '{}' result references unknown ordinary type '{}'",
+                            family.visible_name, visible_name
+                        ),
+                        anchor_span(&family.source_anchor),
+                    ));
+                }
+                for arg in args {
+                    self.validate_imported_associated_family_result_expr(family, arg, vars)?;
+                }
+                Ok(())
+            }
+            AssociatedFamilyResultExpr::DomainConstructorApp {
+                constructor,
+                domain,
+                args,
+                ..
+            } => {
+                let domain_summary = self.lookup_sealed_domain_by_id(domain).ok_or_else(|| {
+                    TypeEnvError::InvalidDefinition(
+                        format!(
+                            "associated-family summary '{}' result references unknown sealed domain '{}'",
+                            family.visible_name, domain.name
+                        ),
+                        anchor_span(&family.source_anchor),
+                    )
+                })?;
+                if !domain_summary
+                    .constructors
+                    .iter()
+                    .any(|candidate| candidate.id == *constructor)
+                {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "associated-family summary '{}' result references unknown constructor '{}'",
+                            family.visible_name, constructor.name
+                        ),
+                        anchor_span(&family.source_anchor),
+                    ));
+                }
+                for arg in args {
+                    self.validate_imported_associated_family_result_expr(family, arg, vars)?;
+                }
+                Ok(())
+            }
+            AssociatedFamilyResultExpr::AssociatedFamilyProjection {
+                head,
+                interface_args,
+                ..
+            } => {
+                if !self.associated_family_declarations.contains_key(head) {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "associated-family summary '{}' result references unknown associated family '{}::{}'",
+                            family.visible_name, head.interface.name, head.member.name
+                        ),
+                        anchor_span(&family.source_anchor),
+                    ));
+                }
+                for arg in interface_args {
+                    self.validate_imported_associated_family_result_expr(family, arg, vars)?;
+                }
+                Ok(())
+            }
+            AssociatedFamilyResultExpr::Projection {
+                interface,
+                member,
+                args,
+                ..
+            } => {
+                if !self.known_interface_identities.contains(interface)
+                    || !self.known_associated_member_identities.contains(member)
+                {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "associated-family summary '{}' result references unknown projection '{}::{}'",
+                            family.visible_name, interface.name, member.name
+                        ),
+                        anchor_span(&family.source_anchor),
+                    ));
+                }
+                for arg in args {
+                    self.validate_imported_associated_family_result_expr(family, arg, vars)?;
+                }
+                Ok(())
+            }
+            AssociatedFamilyResultExpr::ComputationHeadApp { head, args, .. } => {
+                if !self.local_type_functions.contains_key(head) {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "associated-family summary '{}' result references unknown type function '{}'",
+                            family.visible_name, head.name
+                        ),
+                        anchor_span(&family.source_anchor),
+                    ));
+                }
+                for arg in args {
+                    self.validate_imported_associated_family_result_expr(family, arg, vars)?;
+                }
+                Ok(())
+            }
+        }
     }
 
     fn validate_imported_type_function_signature_type(
@@ -4126,6 +6522,459 @@ impl TypeEnv {
         defs.into_iter()
             .map(|def| self.lower_public_type_function_summary(def))
             .collect()
+    }
+
+    /// Lower checked public associated-family schemes for the requested module into
+    /// SPEC-063 public associated-family summaries.
+    pub fn export_public_associated_family_summaries(
+        &self,
+        module: &ModuleIdentity,
+    ) -> Result<Vec<AssociatedFamilySummary>, TypeEnvError> {
+        let mut declarations = self
+            .associated_family_declarations
+            .values()
+            .filter(|declaration| declaration.defining_module == *module)
+            .collect::<Vec<_>>();
+        declarations.sort_by(|left, right| {
+            left.head
+                .interface
+                .name
+                .cmp(&right.head.interface.name)
+                .then_with(|| left.head.member.name.cmp(&right.head.member.name))
+        });
+
+        let mut exportable_heads = HashMap::new();
+        for declaration in &declarations {
+            let interface_name = declaration.head.interface.name.to_string();
+            let is_public_interface = self
+                .interfaces
+                .get(&interface_name)
+                .is_some_and(|info| matches!(info.visibility, ash_core::ast::Visibility::Public));
+            if !is_public_interface {
+                continue;
+            }
+            let schemes = self
+                .associated_family_schemes
+                .get(&declaration.head)
+                .cloned()
+                .unwrap_or_default()
+                .into_iter()
+                .filter(|registered| registered.defining_module == *module)
+                .map(|registered| registered.scheme)
+                .collect::<Vec<_>>();
+            if schemes.is_empty() {
+                continue;
+            }
+            exportable_heads.insert(declaration.head.clone(), true);
+
+            let mut closure = PublicAssociatedFamilyClosure::default();
+            self.collect_public_associated_family_constraint_closure(
+                &declaration.result_domain,
+                &mut closure,
+            );
+            for scheme in &schemes {
+                self.collect_public_associated_family_scheme_closure(scheme, &mut closure)?;
+            }
+            for dependency in closure.associated_families {
+                if dependency == declaration.head {
+                    continue;
+                }
+                if self
+                    .associated_family_declarations
+                    .get(&dependency)
+                    .is_some_and(|dependency_declaration| {
+                        dependency_declaration.defining_module == *module
+                            && !self
+                                .interfaces
+                                .get(dependency.interface.name.as_str())
+                                .is_some_and(|info| {
+                                    matches!(info.visibility, ash_core::ast::Visibility::Public)
+                                })
+                    })
+                {
+                    exportable_heads.entry(dependency).or_insert(false);
+                }
+            }
+        }
+
+        let mut summaries = Vec::new();
+        for declaration in declarations {
+            let Some(source_visible) = exportable_heads.get(&declaration.head).copied() else {
+                continue;
+            };
+            let schemes = self
+                .associated_family_schemes
+                .get(&declaration.head)
+                .cloned()
+                .unwrap_or_default()
+                .into_iter()
+                .filter(|registered| registered.defining_module == *module)
+                .map(|registered| registered.scheme)
+                .collect::<Vec<_>>();
+            if schemes.is_empty() {
+                continue;
+            }
+            let mut closure = PublicAssociatedFamilyClosure::default();
+            self.collect_public_associated_family_constraint_closure(
+                &declaration.result_domain,
+                &mut closure,
+            );
+            for scheme in &schemes {
+                self.collect_public_associated_family_scheme_closure(scheme, &mut closure)?;
+            }
+            self.validate_public_associated_family_export_closure(&closure, &declaration.head)?;
+            let associated_family_refs =
+                closure.associated_family_summary_refs(&declaration.head, module, self);
+            let helper_family_count = associated_family_refs
+                .iter()
+                .filter(|reference| !reference.source_visible)
+                .count();
+            let public_associated_family_count = associated_family_refs.len() + 1;
+            let decreases = declaration
+                .decreases
+                .as_ref()
+                .and_then(|param| {
+                    declaration
+                        .interface_params
+                        .iter()
+                        .position(|candidate| candidate.name == *param)
+                        .map(|index| (param, index))
+                })
+                .and_then(|(param, index)| {
+                    declaration
+                        .interface_params
+                        .get(index)
+                        .and_then(|param_info| param_info.domain_constraint.clone())
+                        .map(|domain| ValidatedDecreasesSummary {
+                            parameter: param.clone(),
+                            parameter_index: index,
+                            domain,
+                            structural_recursion_checked: true,
+                            source_anchor: SourceAnchor::new(
+                                SourceOrigin::Synthetic {
+                                    reason: "associated family decreases export".to_string(),
+                                },
+                                None,
+                                format!("associated family decreases {param}"),
+                            ),
+                        })
+                })
+                .into_iter()
+                .collect::<Vec<_>>();
+            summaries.push(AssociatedFamilySummary {
+                head: declaration.head.clone(),
+                interface_identity: declaration.head.interface.clone(),
+                member_identity: declaration.head.member.clone(),
+                visible_name: if source_visible {
+                    declaration.head.member.name.to_string()
+                } else {
+                    dependency_metadata_name(&declaration.head.member.name)
+                },
+                result_domain: canonical_expr_for_associated_family_constraint(
+                    &declaration.result_domain,
+                ),
+                result_kind: Kind::Type,
+                export_mode: AssociatedFamilyExportMode::TransparentEquations,
+                schemes,
+                dependency_closure: ash_core::semantic_summary::AssociatedFamilyDependencyClosure {
+                    ordinary_types: closure.ordinary_types.iter().cloned().collect(),
+                    sealed_domains: closure.sealed_domains.iter().cloned().collect(),
+                    domain_constructors: closure.domain_constructors.iter().cloned().collect(),
+                    type_functions: closure.type_functions.iter().cloned().collect(),
+                    associated_projections: closure.projections.iter().cloned().collect(),
+                    associated_families: associated_family_refs,
+                    type_function_summaries: Vec::new(),
+                    closure_metadata: AssociatedFamilyClosureMetadata {
+                        public_closure_checked: true,
+                        public_ordinary_type_count: closure.ordinary_types.len(),
+                        public_sealed_domain_count: closure.sealed_domains.len(),
+                        public_domain_constructor_count: closure.domain_constructors.len(),
+                        public_type_function_count: closure.type_functions.len(),
+                        public_associated_family_count,
+                        public_projection_count: closure.projections.len(),
+                        helper_family_count,
+                    },
+                },
+                source_anchor: SourceAnchor::new(
+                    SourceOrigin::Synthetic {
+                        reason: "associated family summary export".to_string(),
+                    },
+                    None,
+                    format!("associated family summary {}", declaration.head.member.name),
+                ),
+                revalidation_metadata: AssociatedFamilyRevalidationMetadata {
+                    spec_version: SummaryVersion::SPEC063_ASSOCIATED_FAMILY_V4,
+                    kind_and_domain_checked: true,
+                    coverage_and_overlap_checked: true,
+                    coherence_checked: true,
+                    recursion_checked: true,
+                    decreases,
+                },
+            });
+        }
+        Ok(summaries)
+    }
+
+    fn validate_public_associated_family_export_closure(
+        &self,
+        closure: &PublicAssociatedFamilyClosure,
+        head: &AssociatedFamilyHeadId,
+    ) -> Result<(), TypeEnvError> {
+        for ty in &closure.ordinary_types {
+            if ty.module == head.interface.module
+                && self
+                    .ast_types
+                    .get(ty.name.as_str())
+                    .is_some_and(|def| !matches!(def.visibility, ash_core::ast::Visibility::Public))
+            {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "public associated family '{}::{}' references private ordinary type '{}'",
+                        head.interface.name, head.member.name, ty.name
+                    ),
+                    Span::default(),
+                ));
+            }
+        }
+        for domain in &closure.sealed_domains {
+            if domain.module == head.interface.module
+                && self
+                    .sealed_domain_summaries
+                    .get(domain)
+                    .is_some_and(|summary| {
+                        !matches!(summary.visibility, ash_core::ast::Visibility::Public)
+                    })
+            {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "public associated family '{}::{}' references private sealed domain '{}'",
+                        head.interface.name, head.member.name, domain.name
+                    ),
+                    Span::default(),
+                ));
+            }
+        }
+        Ok(())
+    }
+
+    fn collect_public_associated_family_constraint_closure(
+        &self,
+        constraint: &AssociatedFamilyResultConstraint,
+        closure: &mut PublicAssociatedFamilyClosure,
+    ) {
+        match constraint {
+            AssociatedFamilyResultConstraint::Kind(_) => {}
+            AssociatedFamilyResultConstraint::Domain(domain) => {
+                closure.sealed_domains.insert(domain.clone());
+            }
+        }
+    }
+
+    fn collect_public_canonical_type_closure_for_associated_family(
+        &self,
+        ty: &CanonicalTypeExpr,
+        closure: &mut PublicAssociatedFamilyClosure,
+    ) {
+        match ty {
+            CanonicalTypeExpr::Primitive(_) | CanonicalTypeExpr::Var(_) => {}
+            CanonicalTypeExpr::NominalApp { origin, args, .. } => {
+                closure.ordinary_types.insert(origin.clone());
+                for arg in args {
+                    self.collect_public_canonical_type_closure_for_associated_family(arg, closure);
+                }
+            }
+            CanonicalTypeExpr::Projection {
+                interface,
+                member,
+                args,
+                kind,
+                rigidity,
+            } => {
+                closure.projections.insert(AssociatedFamilyProjection {
+                    head: AssociatedFamilyHeadId {
+                        interface: interface.clone(),
+                        member: member.clone(),
+                    },
+                    interface_args: args.clone(),
+                    kind: kind.clone(),
+                    rigidity: *rigidity,
+                    mode: AssociatedFamilyProjectionMode::NeutralBlockedOrUnavailable,
+                });
+                for arg in args {
+                    self.collect_public_canonical_type_closure_for_associated_family(arg, closure);
+                }
+            }
+            CanonicalTypeExpr::ComputationHeadApp { head, args, .. } => {
+                closure.type_functions.insert(head.clone());
+                for arg in args {
+                    self.collect_public_canonical_type_closure_for_associated_family(arg, closure);
+                }
+            }
+        }
+    }
+
+    fn collect_public_associated_family_scheme_closure(
+        &self,
+        scheme: &AssociatedFamilyScheme,
+        closure: &mut PublicAssociatedFamilyClosure,
+    ) -> Result<(), TypeEnvError> {
+        self.collect_public_canonical_type_closure_for_associated_family(
+            &scheme.result_domain,
+            closure,
+        );
+        for param in &scheme.params {
+            self.collect_public_canonical_type_closure_for_associated_family(&param.ty, closure);
+            if let Some(domain) = &param.domain_constraint {
+                closure.sealed_domains.insert(domain.clone());
+            }
+        }
+        for equation in &scheme.equations {
+            for pattern in &equation.interface_arg_patterns {
+                self.collect_public_associated_family_pattern_closure(pattern, closure);
+            }
+            self.collect_public_associated_family_result_closure(&equation.result, closure)?;
+        }
+        Ok(())
+    }
+
+    fn collect_public_associated_family_pattern_closure(
+        &self,
+        pattern: &AssociatedFamilyPattern,
+        closure: &mut PublicAssociatedFamilyClosure,
+    ) {
+        match pattern {
+            AssociatedFamilyPattern::Var { constraint, .. }
+            | AssociatedFamilyPattern::Wildcard { constraint, .. } => {
+                self.collect_public_associated_family_constraint_closure(constraint, closure);
+            }
+            AssociatedFamilyPattern::Primitive { constraint, .. } => {
+                self.collect_public_associated_family_constraint_closure(constraint, closure);
+            }
+            AssociatedFamilyPattern::NominalApp {
+                origin,
+                args,
+                constraint,
+                ..
+            } => {
+                closure.ordinary_types.insert(origin.clone());
+                self.collect_public_associated_family_constraint_closure(constraint, closure);
+                for arg in args {
+                    self.collect_public_associated_family_pattern_closure(arg, closure);
+                }
+            }
+            AssociatedFamilyPattern::DomainConstructor {
+                domain,
+                constructor,
+                fields,
+                constraint,
+                ..
+            } => {
+                closure.sealed_domains.insert((**domain).clone());
+                closure.domain_constructors.insert((**constructor).clone());
+                self.collect_public_associated_family_constraint_closure(constraint, closure);
+                for field in fields {
+                    self.collect_public_associated_family_pattern_closure(field, closure);
+                }
+            }
+        }
+    }
+
+    fn collect_public_associated_family_head_closure(
+        &self,
+        head: &AssociatedFamilyHeadId,
+        closure: &mut PublicAssociatedFamilyClosure,
+    ) -> Result<(), TypeEnvError> {
+        if !closure.associated_families.insert(head.clone()) {
+            return Ok(());
+        }
+        let schemes = self
+            .associated_family_schemes
+            .get(head)
+            .cloned()
+            .unwrap_or_default();
+        for registered in schemes {
+            self.collect_public_associated_family_scheme_closure(&registered.scheme, closure)?;
+        }
+        Ok(())
+    }
+
+    fn collect_public_associated_family_result_closure(
+        &self,
+        expr: &AssociatedFamilyResultExpr,
+        closure: &mut PublicAssociatedFamilyClosure,
+    ) -> Result<(), TypeEnvError> {
+        match expr {
+            AssociatedFamilyResultExpr::Primitive { constraint, .. }
+            | AssociatedFamilyResultExpr::Var { constraint, .. } => {
+                self.collect_public_associated_family_constraint_closure(constraint, closure);
+            }
+            AssociatedFamilyResultExpr::NominalApp {
+                origin,
+                args,
+                constraint,
+                ..
+            } => {
+                closure.ordinary_types.insert(origin.clone());
+                self.collect_public_associated_family_constraint_closure(constraint, closure);
+                for arg in args {
+                    self.collect_public_associated_family_result_closure(arg, closure)?;
+                }
+            }
+            AssociatedFamilyResultExpr::DomainConstructorApp {
+                domain,
+                constructor,
+                args,
+                constraint,
+                ..
+            } => {
+                closure.sealed_domains.insert(domain.clone());
+                closure.domain_constructors.insert(constructor.clone());
+                self.collect_public_associated_family_constraint_closure(constraint, closure);
+                for arg in args {
+                    self.collect_public_associated_family_result_closure(arg, closure)?;
+                }
+            }
+            AssociatedFamilyResultExpr::Projection {
+                args, constraint, ..
+            }
+            | AssociatedFamilyResultExpr::ComputationHeadApp {
+                args, constraint, ..
+            } => {
+                self.collect_public_associated_family_constraint_closure(constraint, closure);
+                if let AssociatedFamilyResultExpr::ComputationHeadApp { head, .. } = expr {
+                    closure.type_functions.insert(head.clone());
+                }
+                for arg in args {
+                    self.collect_public_associated_family_result_closure(arg, closure)?;
+                }
+            }
+            AssociatedFamilyResultExpr::AssociatedFamilyProjection {
+                head,
+                interface_args,
+                kind,
+                rigidity,
+                constraint,
+                ..
+            } => {
+                self.collect_public_associated_family_head_closure(head, closure)?;
+                self.collect_public_associated_family_constraint_closure(constraint, closure);
+                let canonical_args = interface_args
+                    .iter()
+                    .map(associated_family_result_expr_to_canonical)
+                    .collect::<Result<Vec<_>, _>>()?;
+                closure.projections.insert(AssociatedFamilyProjection {
+                    head: head.clone(),
+                    interface_args: canonical_args,
+                    kind: kind.clone(),
+                    rigidity: *rigidity,
+                    mode: AssociatedFamilyProjectionMode::ReducibleSealedFamilyHead,
+                });
+                for arg in interface_args {
+                    self.collect_public_associated_family_result_closure(arg, closure)?;
+                }
+            }
+        }
+        Ok(())
     }
 
     fn lower_public_type_function_summary(
@@ -6000,7 +8849,7 @@ impl TypeEnv {
             } => (
                 visible_name.clone(),
                 args.clone(),
-                ProjectionRigidity::Rigid,
+                projection_rigidity_for_canonical_args(args),
             ),
             CanonicalTypeExpr::Projection { .. } => {
                 return Err(TypeError::ConstructorNameMismatch {
@@ -6071,6 +8920,17 @@ impl TypeEnv {
             });
         }
 
+        let rigidity = if self
+            .lookup_associated_family_declaration(&interface.name, member_name)
+            .is_some()
+        {
+            rigidity
+        } else if matches!(base, CanonicalTypeExpr::NominalApp { .. }) {
+            ProjectionRigidity::Rigid
+        } else {
+            rigidity
+        };
+
         Ok(CanonicalTypeExpr::Projection {
             interface,
             member,
@@ -6078,6 +8938,132 @@ impl TypeEnv {
             kind: Kind::Type,
             rigidity,
         })
+    }
+
+    fn lower_explicit_associated_family_projection_to_canonical(
+        &self,
+        interface_name: &str,
+        args: &[SurfaceType],
+        member_name: &str,
+        span: Span,
+    ) -> Result<CanonicalTypeExpr, TypeError> {
+        let declaration = self
+            .lookup_associated_family_declaration(interface_name, member_name)
+            .ok_or_else(|| TypeError::ConstructorNameMismatch {
+                expected: "registered sealed associated-family projection".to_string(),
+                found: format!("<{interface_name}<...>>::{member_name}"),
+                span,
+            })?;
+
+        if declaration.interface_params.len() != args.len() {
+            return Err(TypeError::ConstructorArityMismatch {
+                name: format!("{}::{}", interface_name, member_name),
+                expected_arity: declaration.interface_params.len(),
+                found_arity: args.len(),
+                span,
+            });
+        }
+
+        let lowered_args = args
+            .iter()
+            .map(|arg| self.lower_surface_type_to_canonical(arg))
+            .collect::<Result<Vec<_>, _>>()?;
+        let rigidity = projection_rigidity_for_canonical_args(&lowered_args);
+
+        Ok(CanonicalTypeExpr::Projection {
+            interface: declaration.head.interface.clone(),
+            member: declaration.head.member.clone(),
+            args: lowered_args,
+            kind: Kind::Type,
+            rigidity,
+        })
+    }
+
+    fn lower_associated_family_projection_result_expr(
+        &self,
+        interface_name: &str,
+        args: &[SurfaceType],
+        member_name: &str,
+        expected_constraint: &AssociatedFamilyResultConstraint,
+        var_constraints: &HashMap<String, AssociatedFamilyResultConstraint>,
+        span: Span,
+    ) -> Result<AssociatedFamilyResultExpr, TypeEnvError> {
+        let declaration = self
+            .lookup_associated_family_declaration(interface_name, member_name)
+            .cloned()
+            .ok_or_else(|| {
+                TypeEnvError::InvalidDefinition(
+                    format!("unknown sealed associated-family projection '<{interface_name}<...>>::{member_name}'"),
+                    span,
+                )
+            })?;
+
+        if declaration.interface_params.len() != args.len() {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "associated-family projection '{}::{}' expects {} interface arguments, found {}",
+                    interface_name,
+                    member_name,
+                    declaration.interface_params.len(),
+                    args.len()
+                ),
+                span,
+            ));
+        }
+
+        let interface_args = args
+            .iter()
+            .zip(declaration.interface_params.iter())
+            .map(|(arg, param)| {
+                let constraint =
+                    Self::associated_family_constraint_for_domain(param.domain_constraint.as_ref());
+                self.lower_associated_family_result_expr(arg, &constraint, var_constraints, span)
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        let result = AssociatedFamilyResultExpr::AssociatedFamilyProjection {
+            head: declaration.head.clone(),
+            interface_args,
+            kind: Kind::Type,
+            constraint: declaration.result_domain.clone(),
+            rigidity: projection_rigidity_for_associated_family_args(&[]),
+            source_anchor: span_anchor(
+                span,
+                format!("associated family projection {interface_name}::{member_name}"),
+            ),
+        };
+        let result = match result {
+            AssociatedFamilyResultExpr::AssociatedFamilyProjection {
+                head,
+                interface_args,
+                kind,
+                constraint,
+                source_anchor,
+                ..
+            } => {
+                let rigidity = projection_rigidity_for_associated_family_args(&interface_args);
+                AssociatedFamilyResultExpr::AssociatedFamilyProjection {
+                    head,
+                    interface_args,
+                    kind,
+                    constraint,
+                    rigidity,
+                    source_anchor,
+                }
+            }
+            _ => unreachable!("constructed as associated family projection"),
+        };
+        if !Self::associated_family_expr_conforms_to_constraint(&result, expected_constraint) {
+            return Err(TypeEnvError::WrongAssociatedFamilyResultDomain {
+                family: format!("{}::{}", interface_name, member_name),
+                reason: format!(
+                    "projection result constraint '{}' does not conform to expected '{}'",
+                    associated_family_result_constraint_label(&declaration.result_domain),
+                    associated_family_result_constraint_label(expected_constraint)
+                ),
+                span,
+            });
+        }
+        Ok(result)
     }
 
     fn canonical_type_identity_for_visible_name(
@@ -6216,6 +9202,21 @@ impl TypeEnv {
                 })
             }
             SurfaceType::Associated { base, name } => {
+                if let SurfaceType::Constructor {
+                    name: interface,
+                    args,
+                } = base.as_ref()
+                    && self
+                        .lookup_associated_family_declaration(interface, name)
+                        .is_some()
+                {
+                    return self.lower_explicit_associated_family_projection_to_canonical(
+                        interface,
+                        args,
+                        name,
+                        Span::default(),
+                    );
+                }
                 if matches!(base.as_ref(), SurfaceType::Associated { .. }) {
                     return Err(TypeError::ConstructorNameMismatch {
                         expected: "supported associated projection base (nested projection bases are unsupported)"
@@ -6286,14 +9287,13 @@ impl TypeEnv {
                 found: "Fn".to_string(),
                 span: Span::default(),
             }),
-            SurfaceType::AssociatedFamilyProjection { span, .. } => Err(
-                TypeError::ConstructorNameMismatch {
-                    expected:
-                        "associated-family projection lowering after Phase 115 semantic registration"
-                            .to_string(),
-                    found: "associated-family projection surface syntax".to_string(),
-                    span: *span,
-                },
+            SurfaceType::AssociatedFamilyProjection {
+                interface,
+                args,
+                member,
+                span,
+            } => self.lower_explicit_associated_family_projection_to_canonical(
+                interface, args, member, *span,
             ),
         }
     }
@@ -6677,6 +9677,12 @@ impl TypeEnv {
         Some(matches!(evidence, DefinitionalEqualityResult::Equal))
     }
 
+    #[must_use]
+    pub fn lower_type_to_canonical_for_equality(&self, ty: &Type) -> Option<CanonicalTypeExpr> {
+        let ty = self.canonicalize_type_for_equality(ty);
+        self.type_to_canonical_expr_for_equality(&ty)
+    }
+
     fn type_to_canonical_expr_for_equality(&self, ty: &Type) -> Option<CanonicalTypeExpr> {
         match ty {
             Type::Int => Some(CanonicalTypeExpr::Primitive("Int".to_string())),
@@ -6708,10 +9714,31 @@ impl TypeEnv {
                 base,
                 name,
             } => {
-                let base = self.type_to_canonical_expr_for_equality(base)?;
                 let (canonical_interface, canonical_name) = self
                     .canonical_associated_projection_for_equality(interface, name)
                     .unwrap_or_else(|| (interface.clone(), name.clone()));
+                if let Type::Var(var) = base.as_ref() {
+                    if canonical_interface.is_empty() {
+                        return None;
+                    }
+                    let interface_id = self
+                        .interface_identity_for_name(&canonical_interface)?
+                        .clone();
+                    let member = self
+                        .associated_member_identity_for_interface_member(
+                            &canonical_interface,
+                            &canonical_name,
+                        )?
+                        .clone();
+                    return Some(CanonicalTypeExpr::Projection {
+                        interface: interface_id,
+                        member,
+                        args: vec![CanonicalTypeExpr::Var(format!("_t{}", var.0))],
+                        kind: Kind::Type,
+                        rigidity: ProjectionRigidity::Rigid,
+                    });
+                }
+                let base = self.type_to_canonical_expr_for_equality(base)?;
                 self.lower_associated_projection_to_canonical(&base, &canonical_name)
                     .ok()
                     .map(|projection| match projection {
@@ -6933,6 +9960,19 @@ impl TypeEnv {
                 methods: methods.clone(),
             },
         );
+        if let Some(current_module) = self.current_module_identity.clone() {
+            let interface_id =
+                self.ensure_local_interface_identity(&interface_name, &current_module);
+            self.local_interface_arities
+                .insert(interface_id.clone(), def.type_params.len());
+            for associated in &def.associated_types {
+                self.ensure_local_associated_member_identity(
+                    &interface_name,
+                    &interface_id,
+                    associated.name.as_ref(),
+                );
+            }
+        }
         if let Some(owner_module) = owner_module {
             let interface_id = self.ensure_local_interface_identity(&interface_name, &owner_module);
             self.local_interface_arities
@@ -7032,11 +10072,400 @@ impl TypeEnv {
         Ok(())
     }
 
+    fn validate_associated_family_scheme_totality(
+        &self,
+        family: &str,
+        declaration: &AssociatedFamilyDeclarationInfo,
+        scheme: &AssociatedFamilyScheme,
+        require_coverage: bool,
+    ) -> Result<(), TypeEnvError> {
+        let scheme_param_names = scheme
+            .params
+            .iter()
+            .map(|param| param.name.as_str())
+            .collect::<HashSet<_>>();
+        let recursive = scheme.equations.iter().any(|equation| {
+            Self::associated_family_result_contains_head_with_scheme_param_arg(
+                &equation.result,
+                &scheme.head,
+                &scheme_param_names,
+            )
+        });
+        if !recursive {
+            if require_coverage && declaration.decreases.is_some() {
+                self.validate_associated_family_pattern_coverage(family, scheme)?;
+            }
+            return Ok(());
+        }
+
+        if scheme.equations.iter().any(|equation| {
+            Self::associated_family_result_contains_other_family(&equation.result, &scheme.head)
+        }) {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!("mutual recursion in associated family '{family}' is unsupported"),
+                anchor_span(&scheme.source_anchor),
+            ));
+        }
+
+        let Some(decreases) = declaration.decreases.as_deref() else {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!("missing decreases clause for recursive associated family '{family}'"),
+                anchor_span(&scheme.source_anchor),
+            ));
+        };
+
+        let Some(decreasing_index) = scheme
+            .params
+            .iter()
+            .position(|param| param.name == decreases)
+        else {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "unknown decreases parameter '{decreases}' in associated family '{family}'"
+                ),
+                anchor_span(&scheme.source_anchor),
+            ));
+        };
+        let Some(decreasing_domain) = scheme.params[decreasing_index].domain_constraint.as_ref()
+        else {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "invalid decreases parameter '{decreases}' in associated family '{family}': parameter is not a sealed domain"
+                ),
+                anchor_span(&scheme.source_anchor),
+            ));
+        };
+        if !self.domain_has_structural_subcomponent_metadata(decreasing_domain)? {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "invalid decreases parameter '{decreases}' in associated family '{family}': sealed domain has no structural subcomponent metadata"
+                ),
+                anchor_span(&scheme.source_anchor),
+            ));
+        }
+
+        if require_coverage {
+            self.validate_associated_family_pattern_coverage(family, scheme)?;
+        }
+
+        for equation in &scheme.equations {
+            let allowed = equation
+                .interface_arg_patterns
+                .get(decreasing_index)
+                .map(|pattern| self.direct_associated_family_structural_subcomponent_vars(pattern))
+                .transpose()?
+                .unwrap_or_default();
+            self.validate_recursive_associated_family_calls(
+                family,
+                &scheme.head,
+                decreasing_index,
+                &allowed,
+                &equation.result,
+                anchor_span(&equation.source_anchor),
+            )?;
+        }
+        Ok(())
+    }
+
+    fn validate_associated_family_pattern_coverage(
+        &self,
+        family: &str,
+        scheme: &AssociatedFamilyScheme,
+    ) -> Result<(), TypeEnvError> {
+        let params = scheme
+            .params
+            .iter()
+            .map(|param| TypeFunctionParam {
+                name: param.name.clone(),
+                ty: param.ty.clone(),
+                kind: param.kind.clone(),
+                domain_constraint: param.domain_constraint.clone(),
+                source_anchor: param.source_anchor.clone(),
+            })
+            .collect::<Vec<_>>();
+        let pseudo_head = TypeComputationHeadId::new(scheme.head.interface.module.clone(), family);
+        let equations = scheme
+            .equations
+            .iter()
+            .map(|equation| {
+                let patterns = equation
+                    .interface_arg_patterns
+                    .iter()
+                    .map(Self::associated_family_pattern_to_type_function_pattern)
+                    .collect::<Result<Vec<_>, _>>()?;
+                Ok(TypeFunctionEquation {
+                    head: pseudo_head.clone(),
+                    ordinal: equation.ordinal,
+                    patterns,
+                    result: TypeFunctionResultExpr::Var {
+                        name: "__task865_result".to_string(),
+                        kind: Kind::Type,
+                        constraint: TypeFunctionResultConstraint::Kind(Kind::Type),
+                        source_anchor: equation.source_anchor.clone(),
+                    },
+                    source_anchor: equation.source_anchor.clone(),
+                    case_head_anchor: equation.case_head_anchor.clone(),
+                })
+            })
+            .collect::<Result<Vec<_>, TypeEnvError>>()?;
+        self.validate_type_function_pattern_coverage(
+            family,
+            &params,
+            &equations,
+            anchor_span(&scheme.source_anchor),
+        )
+    }
+
+    fn associated_family_pattern_to_type_function_pattern(
+        pattern: &AssociatedFamilyPattern,
+    ) -> Result<TypeFunctionPattern, TypeEnvError> {
+        match pattern {
+            AssociatedFamilyPattern::DomainConstructor {
+                constructor,
+                domain,
+                fields,
+                constraint,
+                source_anchor,
+            } => {
+                let fields = fields
+                    .iter()
+                    .map(Self::associated_family_pattern_to_type_function_pattern)
+                    .collect::<Result<Vec<_>, _>>()?;
+                Ok(TypeFunctionPattern::DomainConstructor {
+                    constructor: constructor.clone(),
+                    domain: domain.clone(),
+                    fields,
+                    constraint: associated_family_constraint_to_type_function_pattern(constraint),
+                    source_anchor: source_anchor.clone(),
+                })
+            }
+            AssociatedFamilyPattern::Var {
+                name,
+                constraint,
+                source_anchor,
+            } => Ok(TypeFunctionPattern::Var {
+                name: name.clone(),
+                constraint: associated_family_constraint_to_type_function_pattern(constraint),
+                source_anchor: source_anchor.clone(),
+            }),
+            AssociatedFamilyPattern::Wildcard {
+                constraint,
+                source_anchor,
+            } => Ok(TypeFunctionPattern::Wildcard {
+                constraint: associated_family_constraint_to_type_function_pattern(constraint),
+                source_anchor: source_anchor.clone(),
+            }),
+            AssociatedFamilyPattern::NominalApp {
+                visible_name,
+                source_anchor,
+                ..
+            }
+            | AssociatedFamilyPattern::Primitive {
+                name: visible_name,
+                source_anchor,
+                ..
+            } => Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "associated family coverage pattern '{visible_name}' is not a sealed-domain pattern"
+                ),
+                anchor_span(source_anchor),
+            )),
+        }
+    }
+
+    fn direct_associated_family_structural_subcomponent_vars(
+        &self,
+        pattern: &AssociatedFamilyPattern,
+    ) -> Result<HashSet<String>, TypeEnvError> {
+        let AssociatedFamilyPattern::DomainConstructor {
+            constructor,
+            domain,
+            fields,
+            ..
+        } = pattern
+        else {
+            return Ok(HashSet::new());
+        };
+        let summary = self.lookup_sealed_domain_by_id(domain).ok_or_else(|| {
+            TypeEnvError::InvalidDefinition(
+                format!(
+                    "unknown sealed domain '{}' in associated-family recursion matrix",
+                    domain.name
+                ),
+                Span::default(),
+            )
+        })?;
+        let Some(constructor_summary) = summary
+            .constructors
+            .iter()
+            .find(|candidate| candidate.id == **constructor)
+        else {
+            return Ok(HashSet::new());
+        };
+        let mut vars = HashSet::new();
+        for (field_pattern, field) in fields.iter().zip(&constructor_summary.fields) {
+            if field.structural_status != StructuralFieldStatus::StructuralSelfDomain {
+                continue;
+            }
+            if let AssociatedFamilyPattern::Var { name, .. } = field_pattern {
+                vars.insert(name.clone());
+            }
+        }
+        Ok(vars)
+    }
+
+    fn validate_recursive_associated_family_calls(
+        &self,
+        family: &str,
+        self_head: &AssociatedFamilyHeadId,
+        decreasing_index: usize,
+        allowed_subcomponents: &HashSet<String>,
+        expr: &AssociatedFamilyResultExpr,
+        span: Span,
+    ) -> Result<(), TypeEnvError> {
+        match expr {
+            AssociatedFamilyResultExpr::Primitive { .. }
+            | AssociatedFamilyResultExpr::Var { .. } => Ok(()),
+            AssociatedFamilyResultExpr::NominalApp { args, .. }
+            | AssociatedFamilyResultExpr::DomainConstructorApp { args, .. }
+            | AssociatedFamilyResultExpr::Projection { args, .. }
+            | AssociatedFamilyResultExpr::ComputationHeadApp { args, .. } => {
+                for arg in args {
+                    self.validate_recursive_associated_family_calls(
+                        family,
+                        self_head,
+                        decreasing_index,
+                        allowed_subcomponents,
+                        arg,
+                        span,
+                    )?;
+                }
+                Ok(())
+            }
+            AssociatedFamilyResultExpr::AssociatedFamilyProjection {
+                head,
+                interface_args,
+                ..
+            } => {
+                for arg in interface_args {
+                    self.validate_recursive_associated_family_calls(
+                        family,
+                        self_head,
+                        decreasing_index,
+                        allowed_subcomponents,
+                        arg,
+                        span,
+                    )?;
+                }
+                if head == self_head {
+                    let Some(decreasing_arg) = interface_args.get(decreasing_index) else {
+                        return Err(TypeEnvError::InvalidDefinition(
+                            format!(
+                                "non-decreasing recursive call in associated family '{family}': missing decreasing argument"
+                            ),
+                            span,
+                        ));
+                    };
+                    match decreasing_arg {
+                        AssociatedFamilyResultExpr::Var { name, .. }
+                            if allowed_subcomponents.contains(name) =>
+                        {
+                            Ok(())
+                        }
+                        _ => Err(TypeEnvError::InvalidDefinition(
+                            format!(
+                                "non-decreasing recursive call in associated family '{family}': decreasing argument must be a direct structural subcomponent"
+                            ),
+                            span,
+                        )),
+                    }
+                } else {
+                    Err(TypeEnvError::InvalidDefinition(
+                        format!("mutual recursion in associated family '{family}' is unsupported"),
+                        span,
+                    ))
+                }
+            }
+        }
+    }
+
+    fn associated_family_result_contains_head_with_scheme_param_arg(
+        expr: &AssociatedFamilyResultExpr,
+        needle: &AssociatedFamilyHeadId,
+        scheme_param_names: &HashSet<&str>,
+    ) -> bool {
+        match expr {
+            AssociatedFamilyResultExpr::Primitive { .. } | AssociatedFamilyResultExpr::Var { .. } => false,
+            AssociatedFamilyResultExpr::NominalApp { args, .. }
+            | AssociatedFamilyResultExpr::DomainConstructorApp { args, .. }
+            | AssociatedFamilyResultExpr::Projection { args, .. }
+            | AssociatedFamilyResultExpr::ComputationHeadApp { args, .. } => args.iter().any(|arg| {
+                Self::associated_family_result_contains_head_with_scheme_param_arg(
+                    arg,
+                    needle,
+                    scheme_param_names,
+                )
+            }),
+            AssociatedFamilyResultExpr::AssociatedFamilyProjection {
+                head,
+                interface_args,
+                ..
+            } => {
+                (head == needle
+                    && interface_args.iter().any(|arg| {
+                        matches!(arg, AssociatedFamilyResultExpr::Var { name, .. } if scheme_param_names.contains(name.as_str()))
+                    }))
+                    || interface_args.iter().any(|arg| {
+                        Self::associated_family_result_contains_head_with_scheme_param_arg(
+                            arg,
+                            needle,
+                            scheme_param_names,
+                        )
+                    })
+            }
+        }
+    }
+
+    fn associated_family_result_contains_other_family(
+        expr: &AssociatedFamilyResultExpr,
+        self_head: &AssociatedFamilyHeadId,
+    ) -> bool {
+        match expr {
+            AssociatedFamilyResultExpr::Primitive { .. }
+            | AssociatedFamilyResultExpr::Var { .. } => false,
+            AssociatedFamilyResultExpr::NominalApp { args, .. }
+            | AssociatedFamilyResultExpr::DomainConstructorApp { args, .. }
+            | AssociatedFamilyResultExpr::Projection { args, .. }
+            | AssociatedFamilyResultExpr::ComputationHeadApp { args, .. } => args
+                .iter()
+                .any(|arg| Self::associated_family_result_contains_other_family(arg, self_head)),
+            AssociatedFamilyResultExpr::AssociatedFamilyProjection {
+                head,
+                interface_args,
+                ..
+            } => {
+                head != self_head
+                    || interface_args.iter().any(|arg| {
+                        Self::associated_family_result_contains_other_family(arg, self_head)
+                    })
+            }
+        }
+    }
+
     /// Register a coherence-checked associated-family scheme for a sealed family head.
     pub fn register_associated_family_scheme(
         &mut self,
         scheme: AssociatedFamilyScheme,
         defining_module: ModuleIdentity,
+    ) -> Result<(), TypeEnvError> {
+        self.register_associated_family_scheme_with_totality(scheme, defining_module, true)
+    }
+
+    fn register_associated_family_scheme_with_totality(
+        &mut self,
+        scheme: AssociatedFamilyScheme,
+        defining_module: ModuleIdentity,
+        require_totality: bool,
     ) -> Result<(), TypeEnvError> {
         let declaration = self
             .associated_family_declarations
@@ -7069,11 +10498,10 @@ impl TypeEnv {
             });
         }
 
-        if scheme.equations.len() != 1 {
+        if scheme.equations.is_empty() {
             return Err(TypeEnvError::InvalidDefinition(
                 format!(
-                    "associated family scheme for '{family}' must contain exactly one equation, found {}",
-                    scheme.equations.len()
+                    "associated family scheme for '{family}' must contain at least one equation"
                 ),
                 anchor_span(&scheme.source_anchor),
             ));
@@ -7108,6 +10536,16 @@ impl TypeEnv {
                     anchor_span(&equation.source_anchor),
                 ));
             }
+        }
+
+        self.validate_associated_family_scheme_totality(
+            &family,
+            &declaration,
+            &scheme,
+            require_totality,
+        )?;
+
+        for equation in &scheme.equations {
             if !Self::associated_family_expr_conforms_to_constraint(
                 &equation.result,
                 &declaration.result_domain,
@@ -8112,7 +11550,9 @@ impl TypeEnv {
 
         let previous_family_schemes = self.associated_family_schemes.clone();
         for (scheme, defining_module) in staged_family_schemes {
-            if let Err(error) = self.register_associated_family_scheme(scheme, defining_module) {
+            if let Err(error) =
+                self.register_associated_family_scheme_with_totality(scheme, defining_module, false)
+            {
                 self.associated_family_schemes = previous_family_schemes;
                 return Err(error);
             }
@@ -8272,10 +11712,8 @@ impl TypeEnv {
             builtin: true,
         };
 
-        self.register_type_identity(&list_type)
+        self.register_type(&list_type)
             .expect("Failed to register List type");
-        self.expose_type_representation("List")
-            .expect("Failed to expose List representation");
     }
 
     /// Add the Record type

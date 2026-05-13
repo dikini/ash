@@ -15,9 +15,9 @@ use ash_core::ast::{
 };
 use ash_core::module_graph::ModuleId;
 use ash_core::semantic_summary::{
-    AssociatedMemberIdentityId, InterfaceIdentityId, ModuleIdentity, ModuleSemanticSummary,
-    ModuleSourceOrigin, SealedDomainId, SummaryVersion, TypeDeclId, TypeDeclSummary,
-    TypeFunctionSummary, TypeRepresentationSummary,
+    AssociatedFamilySummary, AssociatedMemberIdentityId, InterfaceIdentityId, ModuleIdentity,
+    ModuleSemanticSummary, ModuleSourceOrigin, SealedDomainId, SummaryVersion, TypeDeclId,
+    TypeDeclSummary, TypeFunctionSummary, TypeRepresentationSummary,
 };
 use ash_core::type_ir::{
     CanonicalTypeExpr, TypeComputationHeadId, TypeFunctionPattern, TypeFunctionPatternConstraint,
@@ -114,6 +114,7 @@ pub fn check_importable_module_file(path: &Path) -> Result<(), EngineError> {
         && exports.constructor_defs.is_empty()
         && exports.callables.is_empty()
         && exports.type_function_summaries.is_empty()
+        && exports.associated_family_summaries.is_empty()
         && exports.child_modules.is_empty()
     {
         return Err(EngineError::Parse(format!(
@@ -224,6 +225,12 @@ pub(crate) struct ModuleExports {
     /// `semantic_summary.exported_type_functions` and are not inserted here
     /// unless the source module exported the head publicly.
     pub(crate) type_function_summaries: HashMap<String, TypeFunctionSummary>,
+    /// Source-visible public associated-family summary heads keyed by exported member name.
+    ///
+    /// Dependency helper families remain transported in
+    /// `semantic_summary.exported_associated_families` and are not inserted here
+    /// unless the provider publicly exports the family head.
+    pub(crate) associated_family_summaries: HashMap<String, AssociatedFamilySummary>,
     /// Child module exports loaded via `pub mod <name>;` declarations.
     ///
     /// Populated by TASK-540 but not yet consumed by `merge_use_exports` --
@@ -482,6 +489,14 @@ pub fn load_ordinary_file(path: &Path) -> Result<LoadedOrdinaryFile, EngineError
                             &mut imported_type_function_heads,
                             &exported_name,
                             &summary.head,
+                        );
+                    } else if exports.associated_family_summaries.contains_key(&name) {
+                        push_selected_associated_family_semantic_summary(
+                            &mut imported_semantic_summaries,
+                            &mut imported_summary_keys,
+                            exports.semantic_summary.as_ref(),
+                            &name,
+                            &exported_name,
                         );
                     } else {
                         return Err(EngineError::Parse(format!(
@@ -945,6 +960,28 @@ fn push_selected_type_function_semantic_summary(
     };
     let Some(selected) =
         selected_type_function_semantic_summary(summary, type_function_name, imported_name)
+    else {
+        return;
+    };
+    merge_or_push_imported_semantic_summary(
+        imported_semantic_summaries,
+        imported_summary_keys,
+        selected,
+    );
+}
+
+fn push_selected_associated_family_semantic_summary(
+    imported_semantic_summaries: &mut Vec<ModuleSemanticSummary>,
+    imported_summary_keys: &mut HashSet<ImportedSummaryKey>,
+    summary: Option<&ModuleSemanticSummary>,
+    family_name: &str,
+    imported_name: &str,
+) {
+    let Some(summary) = summary else {
+        return;
+    };
+    let Some(selected) =
+        selected_associated_family_semantic_summary(summary, family_name, imported_name)
     else {
         return;
     };
@@ -2296,6 +2333,7 @@ pub(crate) fn collect_module_exports(
         &exports.type_defs,
     )?);
     attach_public_type_function_summaries(&mut exports, &type_metadata, &path)?;
+    attach_public_associated_family_summaries(&mut exports, &type_metadata, &path, &source)?;
     if let Some(summary) = exports.semantic_summary.as_ref() {
         summary
             .validate_summary_version_contract()
@@ -2530,12 +2568,24 @@ fn merge_use_exports(
             for (name, type_function) in target_exports.type_function_summaries {
                 insert_type_function_export(exports, &name, type_function)?;
             }
+            for (name, family) in target_exports.associated_family_summaries {
+                insert_associated_family_export(exports, &name, family)?;
+            }
             if let Some(summary) = target_semantic_summary.as_ref() {
                 for type_function in &summary.exported_type_functions {
                     if let Some(selected_summary) = selected_type_function_semantic_summary(
                         summary,
                         &type_function.exported_name,
                         &type_function.exported_name,
+                    ) {
+                        merge_selected_summary_export(exports, summary, selected_summary)?;
+                    }
+                }
+                for family in &summary.exported_associated_families {
+                    if let Some(selected_summary) = selected_associated_family_semantic_summary(
+                        summary,
+                        &family.visible_name,
+                        &family.visible_name,
                     ) {
                         merge_selected_summary_export(exports, summary, selected_summary)?;
                     }
@@ -2596,6 +2646,18 @@ fn merge_use_exports(
                 let mut type_function = type_function.clone();
                 type_function.exported_name.clone_from(&exported_name);
                 insert_type_function_export(exports, &exported_name, type_function)?;
+            } else if let Some(family) = target_exports.associated_family_summaries.get(&name) {
+                if let Some((summary, selected_summary)) =
+                    target_semantic_summary.as_ref().and_then(|summary| {
+                        selected_associated_family_semantic_summary(summary, &name, &exported_name)
+                            .map(|selected| (summary, selected))
+                    })
+                {
+                    merge_selected_summary_export(exports, summary, selected_summary)?;
+                }
+                let mut family = family.clone();
+                family.visible_name.clone_from(&exported_name);
+                insert_associated_family_export(exports, &exported_name, family)?;
             } else {
                 return Err(missing_pub_use_target_error(&name));
             }
@@ -2652,6 +2714,9 @@ fn merge_use_exports(
                     && !target_exports
                         .type_function_summaries
                         .contains_key(item.name.as_ref())
+                    && !target_exports
+                        .associated_family_summaries
+                        .contains_key(item.name.as_ref())
                 {
                     return Err(missing_pub_use_target_error(item.name.as_ref()));
                 }
@@ -2704,6 +2769,25 @@ fn merge_use_exports(
                     let mut type_function = type_function.clone();
                     type_function.exported_name.clone_from(&exported_name);
                     insert_type_function_export(exports, &exported_name, type_function)?;
+                } else if let Some(family) = target_exports
+                    .associated_family_summaries
+                    .get(item.name.as_ref())
+                {
+                    if let Some((summary, selected_summary)) =
+                        target_semantic_summary.as_ref().and_then(|summary| {
+                            selected_associated_family_semantic_summary(
+                                summary,
+                                item.name.as_ref(),
+                                &exported_name,
+                            )
+                            .map(|selected| (summary, selected))
+                        })
+                    {
+                        merge_selected_summary_export(exports, summary, selected_summary)?;
+                    }
+                    let mut family = family.clone();
+                    family.visible_name.clone_from(&exported_name);
+                    insert_associated_family_export(exports, &exported_name, family)?;
                 }
             }
         }
@@ -2877,6 +2961,110 @@ fn attach_public_type_function_summaries(
     exports.type_function_summaries = type_function_summaries
         .into_iter()
         .map(|type_function| (type_function.exported_name.clone(), type_function))
+        .collect();
+    Ok(())
+}
+
+fn attach_public_associated_family_summaries(
+    exports: &mut ModuleExports,
+    type_metadata: &ash_parser::lower::LoweredTypeMetadata,
+    path: &Path,
+    source: &str,
+) -> Result<(), EngineError> {
+    let module = parse_module_file_for_type_metadata(path, source)?;
+    let has_public_associated_family = module.definitions.iter().any(|definition| {
+        let Definition::Interface(interface) = definition else {
+            return false;
+        };
+        matches!(
+            interface.visibility,
+            ash_parser::surface::Visibility::Public
+        ) && interface.associated_types.iter().any(|associated| {
+            matches!(
+                associated.kind,
+                ash_parser::surface::AssociatedTypeKind::SealedFamily { .. }
+            )
+        })
+    });
+    if !has_public_associated_family {
+        return Ok(());
+    }
+    let Some(summary) = exports.semantic_summary.as_mut() else {
+        return Ok(());
+    };
+
+    let mut type_env = ash_typeck::TypeEnv::with_builtin_types();
+    type_env.set_current_module_identity(summary.module.clone());
+    for definition in &module.definitions {
+        if let Definition::Interface(interface) = definition {
+            type_env.register_interface(interface).map_err(|error| {
+                EngineError::Parse(format!(
+                    "in '{}': public associated-family interface registration failed: {error}; span {:?}",
+                    path.display(),
+                    type_env_error_span(&error)
+                ))
+            })?;
+        }
+    }
+    type_env
+        .register_module_semantic_summary(summary)
+        .map_err(|error| {
+            EngineError::Parse(format!(
+                "public associated-family summary substrate registration failed: {error}"
+            ))
+        })?;
+    for type_def in &type_metadata.type_defs {
+        if !matches!(type_def.visibility, CoreVisibility::Public) {
+            type_env.register_type(type_def).map_err(|error| {
+                EngineError::Parse(format!(
+                    "public associated-family private-type substrate registration failed: {error}"
+                ))
+            })?;
+        }
+    }
+    for domain in &type_metadata.summary.exported_sealed_domains {
+        if !matches!(domain.visibility, CoreVisibility::Public) {
+            type_env
+                .register_local_sealed_domain_summary(domain)
+                .map_err(|error| {
+                    EngineError::Parse(format!(
+                        "public associated-family private-domain substrate registration failed: {error}"
+                    ))
+                })?;
+        }
+    }
+
+    for definition in &module.definitions {
+        if let Definition::Impl(impl_def) = definition {
+            type_env.register_impl(impl_def).map_err(|error| {
+                EngineError::Parse(format!(
+                    "in '{}': public associated-family impl export validation failed: {error}; span {:?}",
+                    path.display(),
+                    type_env_error_span(&error)
+                ))
+            })?;
+        }
+    }
+
+    let associated_family_summaries = type_env
+        .export_public_associated_family_summaries(&summary.module)
+        .map_err(|error| {
+            EngineError::Parse(format!(
+                "public associated-family summary export failed: {error}"
+            ))
+        })?;
+    if associated_family_summaries.is_empty() {
+        return Ok(());
+    }
+
+    summary.version = SummaryVersion::SPEC063_ASSOCIATED_FAMILY_V4;
+    summary
+        .exported_associated_families
+        .clone_from(&associated_family_summaries);
+    exports.associated_family_summaries = associated_family_summaries
+        .into_iter()
+        .filter(|family| !is_dependency_metadata_name(&family.visible_name))
+        .map(|family| (family.visible_name.clone(), family))
         .collect();
     Ok(())
 }
@@ -3119,6 +3307,114 @@ fn selected_type_function_semantic_summary(
         .collect();
     copy_type_function_summary_side_metadata(summary, &mut selected_summary, &dependencies);
     Some(selected_summary)
+}
+
+fn selected_associated_family_semantic_summary(
+    summary: &ModuleSemanticSummary,
+    family_name: &str,
+    imported_name: &str,
+) -> Option<ModuleSemanticSummary> {
+    let selected = summary
+        .exported_associated_families
+        .iter()
+        .find(|family| family.visible_name == family_name)?;
+    let associated_family_closure =
+        transitive_associated_family_dependency_summaries(summary, selected);
+    let mut ordinary_types = HashSet::new();
+    let mut sealed_domains = HashSet::new();
+    let mut type_functions = HashSet::new();
+    let mut associated_family_heads = HashSet::new();
+    for family in &associated_family_closure {
+        ordinary_types.extend(family.dependency_closure.ordinary_types.iter().cloned());
+        sealed_domains.extend(family.dependency_closure.sealed_domains.iter().cloned());
+        type_functions.extend(family.dependency_closure.type_functions.iter().cloned());
+        associated_family_heads.insert(family.head.clone());
+    }
+
+    let mut selected_summary = ModuleSemanticSummary::new(summary.module.clone());
+    selected_summary.version = SummaryVersion::SPEC063_ASSOCIATED_FAMILY_V4;
+    selected_summary.exported_types = summary
+        .exported_types
+        .iter()
+        .filter(|ty| ordinary_types.contains(&ty.id))
+        .cloned()
+        .collect();
+    selected_summary.exported_constructors = summary
+        .exported_constructors
+        .iter()
+        .filter(|constructor| ordinary_types.contains(&constructor.parent))
+        .cloned()
+        .collect();
+    selected_summary.exported_sealed_domains = summary
+        .exported_sealed_domains
+        .iter()
+        .filter(|domain| sealed_domains.contains(&domain.id))
+        .cloned()
+        .collect();
+    selected_summary.exported_type_functions = summary
+        .exported_type_functions
+        .iter()
+        .filter(|type_function| type_functions.contains(&type_function.head))
+        .cloned()
+        .collect();
+    selected_summary.exported_associated_families = associated_family_closure
+        .into_iter()
+        .cloned()
+        .map(|mut family| {
+            if family.head == selected.head {
+                family.visible_name = imported_name.to_string();
+            } else {
+                family.visible_name = dependency_metadata_name(&family.visible_name);
+            }
+            family
+        })
+        .collect();
+    copy_summary_side_metadata(summary, &mut selected_summary);
+    selected_summary.interface_identities.retain(|identity| {
+        associated_family_heads
+            .iter()
+            .any(|head| head.interface == identity.id)
+    });
+    selected_summary
+        .associated_member_identities
+        .retain(|identity| {
+            associated_family_heads
+                .iter()
+                .any(|head| head.member == identity.id)
+        });
+    Some(selected_summary)
+}
+
+fn transitive_associated_family_dependency_summaries<'a>(
+    summary: &'a ModuleSemanticSummary,
+    selected: &AssociatedFamilySummary,
+) -> Vec<&'a AssociatedFamilySummary> {
+    let mut selected_summaries = Vec::new();
+    let mut included_heads = HashSet::new();
+    let mut pending = vec![selected.head.clone()];
+
+    while let Some(head) = pending.pop() {
+        if !included_heads.insert(head.clone()) {
+            continue;
+        }
+        let Some(family) = summary
+            .exported_associated_families
+            .iter()
+            .find(|candidate| candidate.head == head)
+        else {
+            continue;
+        };
+        pending.extend(
+            family
+                .dependency_closure
+                .associated_families
+                .iter()
+                .map(|dependency| dependency.family.clone()),
+        );
+        selected_summaries.push(family);
+    }
+
+    selected_summaries
 }
 
 #[derive(Default)]
@@ -3692,7 +3988,18 @@ fn merge_selected_summary_export(
             summary.exported_type_functions.push(type_function);
         }
     }
-    if !summary.exported_type_functions.is_empty() {
+    for family in selected_summary.exported_associated_families {
+        if !summary
+            .exported_associated_families
+            .iter()
+            .any(|existing| existing.head == family.head)
+        {
+            summary.exported_associated_families.push(family);
+        }
+    }
+    if !summary.exported_associated_families.is_empty() {
+        summary.version = SummaryVersion::SPEC063_ASSOCIATED_FAMILY_V4;
+    } else if !summary.exported_type_functions.is_empty() {
         summary.version = SummaryVersion::SPEC062_TYPE_COMPUTATION_V3;
     }
     Ok(())
@@ -3757,6 +4064,25 @@ fn insert_type_function_export(
     exports
         .type_function_summaries
         .insert(name.to_string(), type_function);
+    Ok(())
+}
+
+fn insert_associated_family_export(
+    exports: &mut ModuleExports,
+    name: &str,
+    family: AssociatedFamilySummary,
+) -> Result<(), EngineError> {
+    if let Some(existing) = exports.associated_family_summaries.get(name) {
+        if existing.head == family.head {
+            return Ok(());
+        }
+        return Err(EngineError::Configuration(format!(
+            "duplicate exported associated family '{name}'"
+        )));
+    }
+    exports
+        .associated_family_summaries
+        .insert(name.to_string(), family);
     Ok(())
 }
 

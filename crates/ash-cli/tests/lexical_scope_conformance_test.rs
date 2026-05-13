@@ -16,8 +16,7 @@ use tempfile::TempDir;
 
 /// Helper to run a command and return (exit_code, stdout, stderr)
 fn run_ash_command(args: &[&str], file_path: &std::path::Path) -> (Option<i32>, String, String) {
-    let output = Command::new("cargo")
-        .args(["run", "--bin", "ash", "--"])
+    let output = Command::new(env!("CARGO_BIN_EXE_ash"))
         .args(args)
         .arg(file_path)
         .output()

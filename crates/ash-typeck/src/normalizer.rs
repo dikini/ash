@@ -3,18 +3,20 @@
 //! The module lowers canonical type expressions into total normal-form carriers,
 //! applies compiler-internal fixture equations for closed computation heads, and
 //! compares canonical normal forms for definitional equality. It deliberately does
-//! not expose public `type fn` syntax, source-level equation validation,
-//! associated-family solving, proposition solving, recursive computation, or
-//! type-function inversion.
+//! not expose public `type fn` syntax, proposition solving, output-driven
+//! associated-family solving, recursive proof search, or type-function inversion.
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use crate::type_env::TypeEnv;
+use crate::type_env::{LocalAssociatedFamilyProjectionLookup, TypeEnv};
 use ash_core::kind::Kind;
-use ash_core::semantic_summary::{DomainConstructorId, SealedDomainId};
+use ash_core::semantic_summary::{
+    AssociatedMemberIdentityId, DomainConstructorId, InterfaceIdentityId, SealedDomainId,
+};
 use ash_core::type_ir::{
-    CanonicalTypeExpr, NormalFormBlockReason, NormalTypeExpr, ProjectionRigidity,
-    TypeComputationHeadId, TypeFunctionPattern, TypeFunctionResultExpr,
+    AssociatedFamilyHeadId, AssociatedFamilyResultExpr, CanonicalTypeExpr, NormalFormBlockReason,
+    NormalTypeExpr, ProjectionRigidity, TypeComputationHeadId, TypeFunctionPattern,
+    TypeFunctionResultExpr,
 };
 
 /// First-order fixture equation pattern used by internal normalizer tests.
@@ -336,6 +338,8 @@ pub enum NormalizationEvidence {
     NeutralUnsupportedComputation,
     /// A fixture equation reduced a closed computation-head application.
     FixtureEquationReduced,
+    /// A validated local associated-family projection reduced.
+    AssociatedFamilyProjectionReduced,
     /// A projection was preserved without associated-family computation.
     ProjectionPreserved { rigidity: ProjectionRigidity },
 }
@@ -550,9 +554,10 @@ impl<'env> Normalizer<'env> {
     /// normal forms structurally.
     ///
     /// This method deliberately does not perform proof search, type-function
-    /// inversion, associated-family computation, or any `TypeEnv` forcing-point
-    /// adoption. Normalization failures such as fuel exhaustion propagate as
-    /// robustness errors rather than becoming semantic stuckness evidence.
+    /// inversion, output-driven associated-family solving, or any `TypeEnv`
+    /// forcing-point adoption. Normalization failures such as fuel exhaustion
+    /// propagate as robustness errors rather than becoming semantic stuckness
+    /// evidence.
     pub fn definitional_equality(
         &self,
         lhs: &CanonicalTypeExpr,
@@ -609,7 +614,7 @@ impl<'env> Normalizer<'env> {
                 | NormalTypeExpr::Projection { .. }) => {
                     Err(Box::new(NormalizerDiagnostic::new(
                         NormalizerDiagnosticKind::ConcreteNormalFormRequired,
-                        "concrete normal form required; normalization produced a neutral/stuck normal form and equality will not invert it",
+                        "concrete family reduction required; normalization produced a neutral/stuck normal form and equality will not invert it",
                     )
                     .with_normal_slice(normal)))
                 }
@@ -1270,6 +1275,17 @@ fn block_reason_for_normal(arg: &NormalTypeExpr) -> NormalFormBlockReason {
     }
 }
 
+fn normal_contains_var(normal: &NormalTypeExpr) -> bool {
+    match normal {
+        NormalTypeExpr::Var(_) => true,
+        NormalTypeExpr::NominalApp { args, .. }
+        | NormalTypeExpr::DomainConstructorApp { args, .. }
+        | NormalTypeExpr::NeutralComputationApp { args, .. }
+        | NormalTypeExpr::Projection { args, .. } => args.iter().any(normal_contains_var),
+        NormalTypeExpr::Primitive(_) => false,
+    }
+}
+
 enum SourceEquationSelection {
     Matched {
         result: Box<TypeFunctionResultExpr>,
@@ -1341,25 +1357,7 @@ impl<'env> NormalizationState<'env> {
                 args,
                 kind,
                 rigidity,
-            } => {
-                let reason = match rigidity {
-                    ProjectionRigidity::Rigid => Some(NormalFormBlockReason::RigidProjection),
-                    ProjectionRigidity::Neutral => Some(NormalFormBlockReason::AbstractScrutinee),
-                };
-                (
-                    NormalTypeExpr::Projection {
-                        interface: interface.clone(),
-                        member: member.clone(),
-                        args: self.normalize_args(args)?,
-                        kind: kind.clone(),
-                        rigidity: *rigidity,
-                        reason,
-                    },
-                    NormalizationEvidence::ProjectionPreserved {
-                        rigidity: *rigidity,
-                    },
-                )
-            }
+            } => self.normalize_projection(interface, member, args, kind, *rigidity)?,
             CanonicalTypeExpr::ComputationHeadApp { head, args, kind } => {
                 self.normalize_computation_app(head, args, kind)?
             }
@@ -1376,6 +1374,108 @@ impl<'env> NormalizationState<'env> {
         args.iter()
             .map(|arg| self.normalize_expr(arg).map(|(normal, _)| normal))
             .collect()
+    }
+
+    fn normalize_projection(
+        &mut self,
+        interface: &InterfaceIdentityId,
+        member: &AssociatedMemberIdentityId,
+        args: &[CanonicalTypeExpr],
+        kind: &Kind,
+        rigidity: ProjectionRigidity,
+    ) -> NormalizationResult<(NormalTypeExpr, NormalizationEvidence)> {
+        let normalized_args = self.normalize_args(args)?;
+        let head = AssociatedFamilyHeadId {
+            interface: interface.clone(),
+            member: member.clone(),
+        };
+        if !self.env.associated_member_identity_known(member)
+            && self
+                .env
+                .lookup_associated_family_declaration_by_head(&head)
+                .is_none()
+        {
+            return Ok((
+                NormalTypeExpr::Projection {
+                    interface: interface.clone(),
+                    member: member.clone(),
+                    args: normalized_args,
+                    kind: kind.clone(),
+                    rigidity,
+                    reason: Some(match rigidity {
+                        ProjectionRigidity::Rigid => NormalFormBlockReason::RigidProjection,
+                        ProjectionRigidity::Neutral => NormalFormBlockReason::AbstractScrutinee,
+                    }),
+                },
+                NormalizationEvidence::ProjectionPreserved { rigidity },
+            ));
+        }
+        if rigidity == ProjectionRigidity::Rigid && normalized_args.iter().any(normal_contains_var)
+        {
+            return Ok((
+                NormalTypeExpr::Projection {
+                    interface: interface.clone(),
+                    member: member.clone(),
+                    args: normalized_args,
+                    kind: kind.clone(),
+                    rigidity,
+                    reason: Some(NormalFormBlockReason::RigidProjection),
+                },
+                NormalizationEvidence::ProjectionPreserved { rigidity },
+            ));
+        }
+        match self
+            .env
+            .reduce_local_associated_family_projection_from_normal_args(&head, &normalized_args)
+        {
+            LocalAssociatedFamilyProjectionLookup::Reduced(reduction) => {
+                self.fuel.consume(self.mode)?;
+                let reduced = self.normalize_associated_family_result(&reduction.result)?;
+                Ok((
+                    reduced,
+                    NormalizationEvidence::AssociatedFamilyProjectionReduced,
+                ))
+            }
+            LocalAssociatedFamilyProjectionLookup::Blocked { reason, .. } => Ok((
+                NormalTypeExpr::Projection {
+                    interface: interface.clone(),
+                    member: member.clone(),
+                    args: normalized_args,
+                    kind: kind.clone(),
+                    rigidity,
+                    reason: Some(reason),
+                },
+                NormalizationEvidence::ProjectionPreserved { rigidity },
+            )),
+        }
+    }
+
+    fn reduce_normalized_associated_family_projection(
+        &mut self,
+        head: &AssociatedFamilyHeadId,
+        args: Vec<NormalTypeExpr>,
+        kind: &Kind,
+        rigidity: ProjectionRigidity,
+    ) -> NormalizationResult<NormalTypeExpr> {
+        match self
+            .env
+            .reduce_local_associated_family_projection_from_normal_args(head, &args)
+        {
+            LocalAssociatedFamilyProjectionLookup::Reduced(reduction) => {
+                self.fuel.consume(self.mode)?;
+                self.normalize_associated_family_result(&reduction.result)
+            }
+            LocalAssociatedFamilyProjectionLookup::Blocked { reason, .. } => {
+                Ok(NormalTypeExpr::Projection {
+                    interface: head.interface.clone(),
+                    member: head.member.clone(),
+                    args,
+                    kind: kind.clone(),
+                    rigidity,
+                    reason: Some(reason),
+                })
+            }
+        }
     }
 
     fn normalize_computation_app(
@@ -1537,6 +1637,86 @@ impl<'env> NormalizationState<'env> {
             }
         }
         SourceEquationSelection::NoMatch
+    }
+
+    fn normalize_associated_family_result(
+        &mut self,
+        result: &AssociatedFamilyResultExpr,
+    ) -> NormalizationResult<NormalTypeExpr> {
+        self.fuel.consume(self.mode)?;
+        match result {
+            AssociatedFamilyResultExpr::Primitive { name, .. } => {
+                Ok(NormalTypeExpr::Primitive(name.clone()))
+            }
+            AssociatedFamilyResultExpr::Var { name, .. } => Ok(NormalTypeExpr::Var(name.clone())),
+            AssociatedFamilyResultExpr::NominalApp {
+                origin,
+                visible_name,
+                args,
+                kind,
+                ..
+            } => Ok(NormalTypeExpr::NominalApp {
+                origin: origin.clone(),
+                visible_name: visible_name.clone(),
+                args: self.normalize_associated_family_result_args(args)?,
+                kind: kind.clone(),
+            }),
+            AssociatedFamilyResultExpr::DomainConstructorApp {
+                constructor,
+                domain,
+                args,
+                kind,
+                ..
+            } => Ok(NormalTypeExpr::DomainConstructorApp {
+                constructor: constructor.clone(),
+                domain: domain.clone(),
+                args: self.normalize_associated_family_result_args(args)?,
+                kind: kind.clone(),
+            }),
+            AssociatedFamilyResultExpr::AssociatedFamilyProjection {
+                head,
+                interface_args,
+                kind,
+                rigidity,
+                ..
+            } => {
+                let args = self.normalize_associated_family_result_args(interface_args)?;
+                self.reduce_normalized_associated_family_projection(head, args, kind, *rigidity)
+            }
+            AssociatedFamilyResultExpr::Projection {
+                interface,
+                member,
+                args,
+                kind,
+                rigidity,
+                ..
+            } => Ok(NormalTypeExpr::Projection {
+                interface: interface.clone(),
+                member: member.clone(),
+                args: self.normalize_associated_family_result_args(args)?,
+                kind: kind.clone(),
+                rigidity: *rigidity,
+                reason: Some(match rigidity {
+                    ProjectionRigidity::Rigid => NormalFormBlockReason::RigidProjection,
+                    ProjectionRigidity::Neutral => NormalFormBlockReason::AbstractScrutinee,
+                }),
+            }),
+            AssociatedFamilyResultExpr::ComputationHeadApp {
+                head, args, kind, ..
+            } => {
+                let args = self.normalize_associated_family_result_args(args)?;
+                self.reduce_normalized_computation_app(head, args, kind)
+            }
+        }
+    }
+
+    fn normalize_associated_family_result_args(
+        &mut self,
+        args: &[AssociatedFamilyResultExpr],
+    ) -> NormalizationResult<Vec<NormalTypeExpr>> {
+        args.iter()
+            .map(|arg| self.normalize_associated_family_result(arg))
+            .collect()
     }
 
     fn normalize_source_result(

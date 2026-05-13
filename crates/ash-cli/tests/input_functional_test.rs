@@ -105,8 +105,8 @@ fn test_run_simple_workflow() {
     fs::write(&workflow_path, workflow).unwrap();
 
     // Run the workflow
-    let output = Command::new("cargo")
-        .args(["run", "--bin", "ash", "--", "run"])
+    let output = Command::new(env!("CARGO_BIN_EXE_ash"))
+        .args(["run"])
         .arg(&workflow_path)
         .output()
         .expect("Failed to execute");

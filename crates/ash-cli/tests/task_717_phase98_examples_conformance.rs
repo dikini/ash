@@ -8,9 +8,8 @@ fn repo_root() -> PathBuf {
 }
 
 fn run_ash_command(args: &[&str], file_path: &Path) -> (Option<i32>, String, String) {
-    let output = Command::new("cargo")
+    let output = Command::new(env!("CARGO_BIN_EXE_ash"))
         .current_dir(repo_root())
-        .args(["run", "--bin", "ash", "--"])
         .args(args)
         .arg(file_path)
         .output()

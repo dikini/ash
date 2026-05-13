@@ -1234,9 +1234,18 @@ pub fn lower_surface_type(ty: &Type) -> ash_core::ast::TypeExpr {
             base: Box::new(lower_surface_type(base)),
             name: name.to_string(),
         },
-        Type::AssociatedFamilyProjection { .. } => panic!(
-            "associated family projections require Phase 115 semantic lowering before core AST lowering"
-        ),
+        Type::AssociatedFamilyProjection {
+            interface,
+            args,
+            member,
+            ..
+        } => TypeExpr::Associated {
+            base: Box::new(TypeExpr::Constructor {
+                name: interface.to_string(),
+                args: args.iter().map(lower_surface_type).collect(),
+            }),
+            name: member.to_string(),
+        },
         Type::Fn(params, ret) => {
             let mut args: Vec<_> = params.iter().map(lower_surface_type).collect();
             args.push(lower_surface_type(ret));

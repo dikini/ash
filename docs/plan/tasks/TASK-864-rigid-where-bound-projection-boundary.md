@@ -1,6 +1,6 @@
 # TASK-864: Rigid where-bound projection boundary
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -61,15 +61,19 @@ Dispatch an independent review/verification subagent with this task file, SPEC-0
 
 ## Completion Checklist
 
-- [ ] Requirements above are satisfied.
-- [ ] Focused tests/evidence exist and pass, or docs-only verification is recorded.
-- [ ] Negative leakage/non-interference behavior is covered for this task's surface.
-- [ ] Status docs and CHANGELOG.md are updated if this task changes release-facing docs.
-- [ ] Independent verification completed or scheduled by the closeout task.
+- [x] Requirements above are satisfied.
+- [x] Focused tests/evidence exist and pass, or docs-only verification is recorded.
+- [x] Negative leakage/non-interference behavior is covered for this task's surface.
+- [x] Status docs and CHANGELOG.md are updated if this task changes release-facing docs.
+- [x] Independent verification completed or scheduled by the closeout task.
 
 ## Completion Evidence
 
-- Completion evidence must be recorded by the implementing agent before marking this task complete.
+- Added `crates/ash-typeck/tests/task_864_rigid_where_bound_projection.rs` with 8 focused tests covering real `T: Iterator` / `T::Item` lowering to rigid canonical projection, rigid projection normalization, non-selection from where-bound evidence, structural-only rigid projection equality, non-collapse to concrete types, explicit concrete family reduction, forcing-point diagnostics, and normalization notes.
+- Updated `TypeEnv::lower_type_to_canonical_for_equality` / equality-boundary canonicalization so in-bounds `Type::Associated { base: Type::Var(..), .. }` lowers to a `ProjectionRigidity::Rigid` canonical projection while legacy unbounded TASK-798 lowering remains neutral.
+- Updated `Normalizer::require_concrete_normal_form` forcing-point diagnostics to name the concrete family-reduction/non-inversion boundary.
+- Verification passed: `cargo fmt --all --check`; `git diff --check`; `cargo check --workspace`; `cargo test -p ash-typeck --test task_864_rigid_where_bound_projection -- --list` (8 tests); `cargo test -p ash-typeck --test task_864_rigid_where_bound_projection -- --nocapture` (8 passed); TASK-798, TASK-824, TASK-825, TASK-829, and TASK-863 focused regressions; `cargo clippy -p ash-typeck --all-targets --all-features -- -D warnings`.
+- Independent review PASS after remediation; no remaining blocking, important, or non-blocking findings.
 
 ## Dispatch
 

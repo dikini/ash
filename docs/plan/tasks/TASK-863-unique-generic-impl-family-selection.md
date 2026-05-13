@@ -1,6 +1,6 @@
 # TASK-863: Unique generic impl-family selection
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -61,15 +61,19 @@ Dispatch an independent review/verification subagent with this task file, SPEC-0
 
 ## Completion Checklist
 
-- [ ] Requirements above are satisfied.
-- [ ] Focused tests/evidence exist and pass, or docs-only verification is recorded.
-- [ ] Negative leakage/non-interference behavior is covered for this task's surface.
-- [ ] Status docs and CHANGELOG.md are updated if this task changes release-facing docs.
-- [ ] Independent verification completed or scheduled by the closeout task.
+- [x] Requirements above are satisfied.
+- [x] Focused tests/evidence exist and pass, or docs-only verification is recorded.
+- [x] Negative leakage/non-interference behavior is covered for this task's surface.
+- [x] Status docs and CHANGELOG.md are updated if this task changes release-facing docs.
+- [x] Independent verification completed or scheduled by the closeout task.
 
 ## Completion Evidence
 
-- Completion evidence must be recorded by the implementing agent before marking this task complete.
+- Added `crates/ash-typeck/tests/task_863_associated_family_selection.rs` with 10 focused tests covering unique `Iterator<List<A>>::Item -> A` and `Iterator<List<X>>::Item -> X` reduction, selected-scheme evidence, missing-scheme `NoMatch`, open-query non-inversion, expected-output non-inversion, neutral computation blockers, rigid projection blockers, source list-syntax impl heads, and concrete primitive pattern non-capture.
+- Added `AssociatedFamilyPattern::NominalApp` and `AssociatedFamilyPattern::Primitive` carriers plus TypeEnv one-way `select_associated_family_scheme` / `reduce_associated_family_projection_once` APIs. Selection binds only scheme-owned variables, does not mutate or solve caller variables, blocks neutral/rigid query heads, and substitutes selected RHS variables without consulting expected output shapes.
+- Preserved TASK-798 canonical lowering boundaries by keeping public `SurfaceType::List` lowering rejected while allowing list syntax only inside associated-family impl-head pattern lowering; builtin `List` now has a canonical identity through normal builtin type registration.
+- Verification run by implementing agent: `cargo fmt --all --check`; `cargo test -p ash-typeck --test task_863_associated_family_selection -- --list` (10 tests); `cargo test -p ash-typeck --test task_863_associated_family_selection -- --nocapture` (10 passed); `cargo test -p ash-typeck --test task_798_canonical_lowering_typeenv_registry_red -- --nocapture` (8 passed); `cargo clippy -p ash-typeck --all-targets --all-features -- -D warnings`; `git diff --check`.
+- Independent review completed twice. Initial review findings were addressed: broad fallback identity regression, concrete primitive over-capture, source list-syntax impl-head support, and stale projection rigidity after substitution. Final re-review found no remaining TASK-863 findings.
 
 ## Dispatch
 

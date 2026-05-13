@@ -1,6 +1,6 @@
 # TASK-870: Phase 115 review remediation
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -56,15 +56,36 @@ Dispatch an independent review/verification subagent with this task file, SPEC-0
 
 ## Completion Checklist
 
-- [ ] Requirements above are satisfied.
-- [ ] Focused tests/evidence exist and pass, or docs-only verification is recorded.
-- [ ] Negative leakage/non-interference behavior is covered for this task's surface.
-- [ ] Status docs and CHANGELOG.md are updated if this task changes release-facing docs.
-- [ ] Independent verification completed or scheduled by the closeout task.
+- [x] Requirements above are satisfied.
+- [x] Focused tests/evidence exist and pass, or docs-only verification is recorded.
+- [x] Negative leakage/non-interference behavior is covered for this task's surface.
+- [x] Status docs and CHANGELOG.md are updated if this task changes release-facing docs.
+- [x] Independent verification completed or scheduled by the closeout task.
 
 ## Completion Evidence
 
-- Completion evidence must be recorded by the implementing agent before marking this task complete.
+- Independent TASK-870 review found six remediations; all were addressed in this slice:
+  - Finding 1: public/source typechecking paths now accept explicit associated-family projections in public type positions. Regression coverage: `crates/ash-typeck/tests/task_870_associated_family_public_lowering.rs::task_870_explicit_family_projection_is_accepted_in_public_fn_signature_positions` and `crates/ash-engine/tests/task_870_associated_family_public_lowering.rs::task_870_module_loader_accepts_explicit_family_projection_in_public_type_alias`.
+  - Finding 2: SPEC-035 compatibility spelling and explicit `<Interface<Args>>::Assoc` spelling now canonicalize equivalently for abstract `List<X>` arguments and reduce without output inversion. Regression coverage: `task_870_compat_and_explicit_iterator_list_x_item_are_canonical_equivalent_and_reduce`.
+  - Finding 3: associated-family summary dependency-closure conversion now fails closed instead of silently shortening unrepresentable projection argument spines. Regression coverage: `task_867_import_rejects_lossy_associated_projection_argument_spine`, `task_867_import_rejects_lossy_domain_constructor_argument_spine`, `task_867_export_rejects_unrepresentable_nested_projection_argument`, and `task_867_export_preserves_representable_projection_argument_spine`.
+  - Finding 4: TASK-868 acceptance matrix row 5 now cites the TASK-870 compatibility-vs-explicit equivalence test for abstract arguments.
+  - Finding 5: TASK-869 records retained broad-gate evidence for `cargo fmt --check`, `git diff --check`, workspace check/clippy/test/doc, and the scoped Markdown check, including exit status and available counts/summaries without overclaiming an unavailable full test aggregate.
+  - Finding 6: the empty associated-family scheme diagnostic now only reports the actual empty-equation condition, and the focused TASK-861 regression asserts that the confusing `exactly one equation` clause is absent.
+- Focused remediation verification passed:
+  - `cargo test -p ash-typeck --test task_861_associated_family_registration -- --nocapture`: exit 0; 8 passed, 0 failed.
+  - `cargo test -p ash-typeck --test task_867_associated_family_import -- --nocapture`: exit 0; 9 passed, 0 failed.
+  - `cargo test -p ash-typeck --test task_870_associated_family_public_lowering -- --nocapture`: exit 0; 3 passed, 0 failed.
+  - `cargo test -p ash-engine --test task_870_associated_family_public_lowering -- --nocapture`: exit 0; 1 passed, 0 failed.
+  - `cargo test -p ash-cli --test cli_input_workflow_test -- --nocapture`: exit 0; 1 passed, 1 ignored, 0 failed.
+  - `cargo clippy -p ash-typeck --all-targets --all-features -- -D warnings`: exit 0.
+- Broad verification after the final remediation patch passed:
+  - `cargo fmt --check`: exit 0; no formatting diffs reported.
+  - `git diff --check`: exit 0; no whitespace errors reported.
+  - `cargo check --workspace`: exit 0; workspace check completed successfully.
+  - `cargo clippy --workspace --all-targets --all-features -- -D warnings`: exit 0; no warnings emitted under `-D warnings`.
+  - `cargo doc --workspace --no-deps` plus warning grep: exit 0; workspace API docs generated and no `warning:` lines were present.
+  - `cargo test --workspace`: exit 0; workspace tests completed successfully after the final remediation patch.
+  - Scoped Markdown trailing-whitespace and relative-link check: exit 0 over the Phase 115 documentation packet including the TASK-868 acceptance audit artifact.
 
 ## Dispatch
 
@@ -93,7 +114,7 @@ commands:
     python3 - <<'PY'
     import re, sys
     from pathlib import Path
-    files=[Path('docs/spec/SPEC-063-ASSOCIATED-TYPE-FAMILY-COMPUTATION.md'),Path('docs/plan/PLAN-111-ASSOCIATED-TYPE-FAMILY-COMPUTATION.md'),Path('docs/plan/PLAN-INDEX.md'),Path('docs/spec/README.md'),Path('CHANGELOG.md')]
+    files=[Path('docs/spec/SPEC-063-ASSOCIATED-TYPE-FAMILY-COMPUTATION.md'),Path('docs/plan/PLAN-111-ASSOCIATED-TYPE-FAMILY-COMPUTATION.md'),Path('docs/plan/PLAN-INDEX.md'),Path('docs/spec/README.md'),Path('CHANGELOG.md'),Path('docs/plan/audits/TASK-868-associated-family-acceptance-matrix.md')]
     files += sorted(Path('docs/plan/tasks').glob('TASK-85[7-9]-*.md'))
     files += sorted(Path('docs/plan/tasks').glob('TASK-86[0-9]-*.md'))
     files += sorted(Path('docs/plan/tasks').glob('TASK-870-*.md'))

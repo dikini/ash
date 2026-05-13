@@ -3372,7 +3372,7 @@ Phase 114 implements SPEC-F from DESIGN-034. It defines the public module-summar
 ## Phase 115: Associated Type-Family Computation
 
 **Priority:** High (DESIGN-034 SPEC-G integrates associated types with the total type-computation substrate after Phase 114)
-**Status:** 🟡 In progress (TASK-857 through TASK-861 complete; TASK-862 through TASK-870 ready)
+**Status:** ✅ Complete (TASK-857 through TASK-870 complete; post-closeout remediation verified)
 **Spec:** [SPEC-063](../spec/SPEC-063-ASSOCIATED-TYPE-FAMILY-COMPUTATION.md)
 **Design:** [DESIGN-034](../design/DESIGN-034-TOTAL-TYPE-COMPUTATION.md)
 **Plan:** [docs/plan/PLAN-111-ASSOCIATED-TYPE-FAMILY-COMPUTATION.md](PLAN-111-ASSOCIATED-TYPE-FAMILY-COMPUTATION.md)
@@ -3386,15 +3386,15 @@ Phase 115 implements SPEC-G from DESIGN-034. It integrates associated types with
 | [TASK-859](tasks/TASK-859-associated-family-surface-and-compat-parser.md) | Associated family projection/declaration surface syntax and SPEC-035 compatibility parser | 6 | ✅ Complete |
 | [TASK-860](tasks/TASK-860-core-associated-family-identity-carriers.md) | Core associated-family identity/projection/summary carriers and V4 version contract | 7 | ✅ Complete |
 | [TASK-861](tasks/TASK-861-typeck-family-declaration-registration-coherence.md) | TypeEnv family declaration registration, sealing, and coherence | 8 | ✅ Complete |
-| [TASK-862](tasks/TASK-862-spec035-substitution-compatibility-bridge.md) | SPEC-035 selected-impl substitution compatibility bridge | 5 | 🟡 Ready |
-| [TASK-863](tasks/TASK-863-unique-generic-impl-family-selection.md) | Unique generic impl-family selection over concrete and abstract arguments | 7 | 🟡 Ready |
-| [TASK-864](tasks/TASK-864-rigid-where-bound-projection-boundary.md) | Rigid where-bound projection boundary and non-inversion | 5 | 🟡 Ready |
-| [TASK-865](tasks/TASK-865-recursive-associated-family-totality.md) | Recursive associated-family coverage, overlap, and decreasingness | 8 | 🟡 Ready |
-| [TASK-866](tasks/TASK-866-normalizer-projection-family-integration.md) | Normalizer and definitional equality integration for projection families | 7 | 🟡 Ready |
-| [TASK-867](tasks/TASK-867-associated-family-summary-export-import.md) | Public/private associated-family summary export/import through V4 summaries | 8 | 🟡 Ready |
-| [TASK-868](tasks/TASK-868-associated-family-diagnostics-acceptance-matrix.md) | Associated-family diagnostics and acceptance/non-interference matrix | 6 | 🟡 Ready |
-| [TASK-869](tasks/TASK-869-spec-g-closeout-docs-and-verification.md) | SPEC-G closeout docs and verification | 4 | 🟡 Ready |
-| [TASK-870](tasks/TASK-870-phase115-review-remediation.md) | Phase 115 review remediation | 6 | 🟡 Ready |
+| [TASK-862](tasks/TASK-862-spec035-substitution-compatibility-bridge.md) | SPEC-035 selected-impl substitution compatibility bridge | 5 | ✅ Complete |
+| [TASK-863](tasks/TASK-863-unique-generic-impl-family-selection.md) | Unique generic impl-family selection over concrete and abstract arguments | 7 | ✅ Complete |
+| [TASK-864](tasks/TASK-864-rigid-where-bound-projection-boundary.md) | Rigid where-bound projection boundary and non-inversion | 5 | ✅ Complete |
+| [TASK-865](tasks/TASK-865-recursive-associated-family-totality.md) | Recursive associated-family coverage, overlap, and decreasingness | 8 | ✅ Complete |
+| [TASK-866](tasks/TASK-866-normalizer-projection-family-integration.md) | Normalizer and definitional equality integration for projection families | 7 | ✅ Complete |
+| [TASK-867](tasks/TASK-867-associated-family-summary-export-import.md) | Public/private associated-family summary export/import through V4 summaries | 8 | ✅ Complete |
+| [TASK-868](tasks/TASK-868-associated-family-diagnostics-acceptance-matrix.md) | Associated-family diagnostics and acceptance/non-interference matrix | 6 | ✅ Complete |
+| [TASK-869](tasks/TASK-869-spec-g-closeout-docs-and-verification.md) | SPEC-G closeout docs and verification | 4 | ✅ Complete |
+| [TASK-870](tasks/TASK-870-phase115-review-remediation.md) | Phase 115 review remediation | 6 | ✅ Complete |
 
 **Track A (Spec Gate and Audit):** 9h. Promote DESIGN-034 SPEC-G to SPEC-063/PLAN-111, then audit live projection, impl, normalizer, and summary seams.
 **Track B (Surface + Core Carriers):** 13h. Add typed interface/impl parameter carriers, explicit family projection syntax, sealed family declaration carriers, core family identities/projection helpers, checked family scheme/result carriers, blocker support, and V4 summary carriers.

@@ -1,6 +1,6 @@
 # TASK-869: SPEC-G closeout docs and verification
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -61,15 +61,28 @@ Dispatch an independent review/verification subagent with this task file, SPEC-0
 
 ## Completion Checklist
 
-- [ ] Requirements above are satisfied.
-- [ ] Focused tests/evidence exist and pass, or docs-only verification is recorded.
-- [ ] Negative leakage/non-interference behavior is covered for this task's surface.
-- [ ] Status docs and CHANGELOG.md are updated if this task changes release-facing docs.
-- [ ] Independent verification completed or scheduled by the closeout task.
+- [x] Requirements above are satisfied.
+- [x] Focused tests/evidence exist and pass, or docs-only verification is recorded.
+- [x] Negative leakage/non-interference behavior is covered for this task's surface.
+- [x] Status docs and CHANGELOG.md are updated if this task changes release-facing docs.
+- [x] Independent verification completed or scheduled by the closeout task.
 
 ## Completion Evidence
 
-- Completion evidence must be recorded by the implementing agent before marking this task complete.
+- Reconciled closeout status for `SPEC-063`, `docs/spec/README.md`, `PLAN-111`, `PLAN-INDEX`, and this task file after TASK-857 through TASK-868 were implemented and independently reviewed.
+- Recorded that Phase 115 implements the SPEC-G MVP while preserving the explicit deferrals: SPEC-H proposition solving, type-function inversion, proof search, HKT, holes, and partial type-constructor application remain out of scope.
+- Closeout verification found and fixed two broad-gate regressions before accepting the phase:
+  - `crates/ash-typeck/src/normalizer.rs` now preserves legacy `RigidProjection` / `AbstractScrutinee` blocker reasons for unknown ordinary projections while retaining associated-family-aware blocker routing for known associated-family heads. Regression coverage passed in `task_819_normalizer_api_skeleton`, `task_823_rigid_projection_alias_normalization`, `task_866_associated_family_normalizer`, and `task_868_associated_family_diagnostics`.
+  - `ash-cli` integration tests that previously nested `cargo run --bin ash` now use Cargo's `CARGO_BIN_EXE_ash` test binary path, removing broad `cargo test --workspace` stalls without changing CLI behavior. Targeted suites passed for `cli_input_workflow_test`, `cli_spec_compliance_test`, `task_742_capability_examples_conformance`, `input_functional_test`, `lexical_scope_conformance_test`, and `task_717_phase98_examples_conformance`.
+- Focused and broad verification passed after remediation with the following retained broad-gate evidence:
+  - `cargo fmt --check`: exit 0; no formatting diffs reported.
+  - `git diff --check`: exit 0; no whitespace errors reported.
+  - `cargo check --workspace`: exit 0; workspace check completed successfully.
+  - `cargo clippy --workspace --all-targets --all-features -- -D warnings`: exit 0; no warnings emitted under `-D warnings`.
+  - `cargo test --workspace`: exit 0; workspace unit/integration/doc targets completed successfully. Retained final doctest summaries included `ash-typeck` doctests: 38 passed, 1 ignored, and the `spec_processor` doctest ignored. The retained log did not include a reliable full aggregate test count, so this evidence intentionally does not claim one.
+  - `cargo doc --workspace --no-deps`: exit 0; workspace API docs generated successfully without dependency docs.
+  - scoped Markdown trailing-whitespace and relative-link check: exit 0 over 20 files (`SPEC-063`, `PLAN-111`, `PLAN-INDEX`, `docs/spec/README.md`, `CHANGELOG.md`, TASK-857 through TASK-870, and the TASK-868 acceptance audit artifact).
+- Independent TASK-869 review passed the live Rust/doc/Markdown gates and found documentation-coherence issues. All findings were addressed here before completion: TASK-869 evidence/checklists are recorded, PLAN-111 checklist/status is reconciled, PLAN-INDEX marks TASK-869 complete, CHANGELOG records TASK-869 closeout/remediation, TASK-868 acceptance row 10 is softened to match its actual blocker-route evidence, and TASK-866 now clarifies its imported-family blocker evidence as pre-TASK-867 local-only scope.
 
 ## Dispatch
 
@@ -98,7 +111,7 @@ commands:
     python3 - <<'PY'
     import re, sys
     from pathlib import Path
-    files=[Path('docs/spec/SPEC-063-ASSOCIATED-TYPE-FAMILY-COMPUTATION.md'),Path('docs/plan/PLAN-111-ASSOCIATED-TYPE-FAMILY-COMPUTATION.md'),Path('docs/plan/PLAN-INDEX.md'),Path('docs/spec/README.md'),Path('CHANGELOG.md')]
+    files=[Path('docs/spec/SPEC-063-ASSOCIATED-TYPE-FAMILY-COMPUTATION.md'),Path('docs/plan/PLAN-111-ASSOCIATED-TYPE-FAMILY-COMPUTATION.md'),Path('docs/plan/PLAN-INDEX.md'),Path('docs/spec/README.md'),Path('CHANGELOG.md'),Path('docs/plan/audits/TASK-868-associated-family-acceptance-matrix.md')]
     files += sorted(Path('docs/plan/tasks').glob('TASK-85[7-9]-*.md'))
     files += sorted(Path('docs/plan/tasks').glob('TASK-86[0-9]-*.md'))
     files += sorted(Path('docs/plan/tasks').glob('TASK-870-*.md'))

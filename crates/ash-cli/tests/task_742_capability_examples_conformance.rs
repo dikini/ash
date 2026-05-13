@@ -8,9 +8,9 @@ fn repo_root() -> PathBuf {
 }
 
 fn run_ash_check(file_path: &Path) -> (Option<i32>, String, String) {
-    let output = Command::new("cargo")
+    let output = Command::new(env!("CARGO_BIN_EXE_ash"))
         .current_dir(repo_root())
-        .args(["run", "--bin", "ash", "--", "check"])
+        .args(["check"])
         .arg(file_path)
         .output()
         .expect("ash CLI should launch");

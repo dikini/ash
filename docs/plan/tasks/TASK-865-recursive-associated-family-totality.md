@@ -1,6 +1,6 @@
 # TASK-865: Recursive associated family totality
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -63,15 +63,18 @@ Dispatch an independent review/verification subagent with this task file, SPEC-0
 
 ## Completion Checklist
 
-- [ ] Requirements above are satisfied.
-- [ ] Focused tests/evidence exist and pass, or docs-only verification is recorded.
-- [ ] Negative leakage/non-interference behavior is covered for this task's surface.
-- [ ] Status docs and CHANGELOG.md are updated if this task changes release-facing docs.
-- [ ] Independent verification completed or scheduled by the closeout task.
+- [x] Requirements above are satisfied.
+- [x] Focused tests/evidence exist and pass, or docs-only verification is recorded.
+- [x] Negative leakage/non-interference behavior is covered for this task's surface.
+- [x] Status docs and CHANGELOG.md are updated if this task changes release-facing docs.
+- [x] Independent verification completed or scheduled by the closeout task.
 
 ## Completion Evidence
 
-- Completion evidence must be recorded by the implementing agent before marking this task complete.
+- Added `crates/ash-typeck/tests/task_865_recursive_associated_family.rs` with 6 focused tests covering direct closed-table associated-family totality and structural recursion: Append-style Nil/Cons acceptance, missing decreases, non-sealed/non-structural decreases, non-exhaustive/unreachable rows, same/rebuilt/computed recursive arguments, cross-family recursion rejection, and result-domain mismatch.
+- Implemented TypeEnv associated-family totality/decreasingness validation by adapting SPEC-061 residual coverage to direct closed family tables while preserving the production `register_impl` one-row publication boundary through an internal non-closed-totality registration path.
+- Fresh verification passed: `cargo fmt --all`; `cargo test -p ash-typeck --test task_865_recursive_associated_family -- --nocapture` (6 passed); `cargo test -p ash-typeck --test task_861_associated_family_registration -- --nocapture` (8 passed); `cargo test -p ash-typeck --test task_837_type_function_recursion -- --nocapture` (11 passed); `cargo clippy -p ash-typeck --all-targets --all-features -- -D warnings`.
+- Independent TASK-865 re-review after remediation reported PASS with no blocking, important, or non-blocking findings.
 
 ## Dispatch
 

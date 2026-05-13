@@ -1,6 +1,6 @@
 # TASK-866: Normalizer projection-family integration
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -64,15 +64,18 @@ Dispatch an independent review/verification subagent with this task file, SPEC-0
 
 ## Completion Checklist
 
-- [ ] Requirements above are satisfied.
-- [ ] Focused tests/evidence exist and pass, or docs-only verification is recorded.
-- [ ] Negative leakage/non-interference behavior is covered for this task's surface.
-- [ ] Status docs and CHANGELOG.md are updated if this task changes release-facing docs.
-- [ ] Independent verification completed or scheduled by the closeout task.
+- [x] Requirements above are satisfied.
+- [x] Focused tests/evidence exist and pass, or docs-only verification is recorded.
+- [x] Negative leakage/non-interference behavior is covered for this task's surface.
+- [x] Status docs and CHANGELOG.md are updated if this task changes release-facing docs.
+- [x] Independent verification completed or scheduled by the closeout task.
 
 ## Completion Evidence
 
-- Completion evidence must be recorded by the implementing agent before marking this task complete.
+- Added `crates/ash-typeck/tests/task_866_associated_family_normalizer.rs` with 8 focused tests covering local `Iterator<List<T>>::Item` reduction, projection-argument normalization before lookup, recursive Append-family reduction, fuel exhaustion, open-input non-inversion, rigid generic preservation, ordinary associated-type not-sealed blockers, and pre-TASK-867 local-only imported-family unsupported blockers.
+- Implemented local-only normalizer projection-family reduction through `TypeEnv::reduce_local_associated_family_projection_from_normal_args`, normal-form associated-family pattern matching, associated-family result normalization, and typed normal-form blocker reasons without widening direct `type fn` computation or adding proof search/output inversion.
+- Fresh verification passed: `cargo fmt --all`; `cargo test -p ash-typeck --test task_866_associated_family_normalizer -- --nocapture` (8 passed); `cargo test -p ash-typeck --test task_863_associated_family_selection -- --nocapture` (10 passed); prerequisite suites TASK-864 (8), TASK-865 (6), TASK-861 (8), TASK-837 (11); `cargo clippy -p ash-typeck --all-targets --all-features -- -D warnings`.
+- Independent TASK-866 review reported PASS with no blocking, important, or non-blocking findings.
 
 ## Dispatch
 

@@ -23,9 +23,11 @@ fn test_workflow_without_parameters() {
     let workflow_path = temp.path().join("greet.ash");
     fs::write(&workflow_path, workflow).unwrap();
 
-    // Run without --input
-    let output = Command::new("cargo")
-        .args(["run", "--bin", "ash", "--", "run"])
+    // Run without --input. Use Cargo's test-provided binary path rather than
+    // nesting `cargo run` inside `cargo test --workspace`; nested Cargo builds
+    // can stall the broad closeout gate under workspace-level test runs.
+    let output = Command::new(env!("CARGO_BIN_EXE_ash"))
+        .arg("run")
         .arg(&workflow_path)
         .output()
         .expect("Failed to execute");
@@ -65,8 +67,8 @@ fn test_workflow_with_parameters_ignored() {
     fs::write(&workflow_path, workflow).unwrap();
 
     // Run without --input (CLI input binding removed)
-    let output = Command::new("cargo")
-        .args(["run", "--bin", "ash", "--", "run"])
+    let output = Command::new(env!("CARGO_BIN_EXE_ash"))
+        .arg("run")
         .arg(&workflow_path)
         .output()
         .expect("Failed to execute");

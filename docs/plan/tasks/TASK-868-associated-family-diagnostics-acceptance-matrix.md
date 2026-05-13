@@ -1,6 +1,6 @@
 # TASK-868: Associated family diagnostics and acceptance matrix
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -63,15 +63,22 @@ Dispatch an independent review/verification subagent with this task file, SPEC-0
 
 ## Completion Checklist
 
-- [ ] Requirements above are satisfied.
-- [ ] Focused tests/evidence exist and pass, or docs-only verification is recorded.
-- [ ] Negative leakage/non-interference behavior is covered for this task's surface.
-- [ ] Status docs and CHANGELOG.md are updated if this task changes release-facing docs.
-- [ ] Independent verification completed or scheduled by the closeout task.
+- [x] Requirements above are satisfied.
+- [x] Focused tests/evidence exist and pass, or docs-only verification is recorded.
+- [x] Negative leakage/non-interference behavior is covered for this task's surface.
+- [x] Status docs and CHANGELOG.md are updated if this task changes release-facing docs.
+- [x] Independent verification completed or scheduled by the closeout task.
 
 ## Completion Evidence
 
-- Completion evidence must be recorded by the implementing agent before marking this task complete.
+- Added `docs/plan/audits/TASK-868-associated-family-acceptance-matrix.md` mapping every SPEC-063 §13 row to exact focused evidence and non-zero target counts.
+- Added `crates/ash-typeck/tests/task_868_associated_family_diagnostics.rs` with 7 focused tests for SPEC-063 §12 diagnostic route inventory, structured codes/spans/severity/message tokens, blocker reasons, associated-family non-inversion, and behavioral non-interference for SPEC-035, SPEC-058, SPEC-060, SPEC-061, and SPEC-062.
+- Verification:
+  - `cargo fmt --check` — passed.
+  - `cargo test -p ash-typeck --test task_868_associated_family_diagnostics -- --list` — 7 tests, 0 benchmarks.
+  - `cargo test -p ash-typeck --test task_868_associated_family_diagnostics -- --nocapture` — 7 passed.
+  - `cargo clippy -p ash-typeck --test task_868_associated_family_diagnostics --all-features -- -D warnings` — passed.
+- Independent review initially found the negative leakage row too synthetic; remediation made it behavioral for the predecessor-spec boundaries and updated the audit limitations. Final re-review verdict: PASS with no important findings.
 
 ## Dispatch
 

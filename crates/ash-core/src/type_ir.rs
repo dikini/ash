@@ -343,6 +343,18 @@ pub enum AssociatedFamilyPattern {
         constraint: AssociatedFamilyResultConstraint,
         source_anchor: SourceAnchor,
     },
+    NominalApp {
+        origin: TypeDeclId,
+        visible_name: String,
+        args: Vec<AssociatedFamilyPattern>,
+        constraint: AssociatedFamilyResultConstraint,
+        source_anchor: SourceAnchor,
+    },
+    Primitive {
+        name: String,
+        constraint: AssociatedFamilyResultConstraint,
+        source_anchor: SourceAnchor,
+    },
     Var {
         name: String,
         constraint: AssociatedFamilyResultConstraint,
@@ -427,6 +439,10 @@ pub enum NormalFormBlockReason {
     NeutralScrutinee,
     RigidProjection,
     MissingAssociatedEvidence,
+    AssociatedFamilyNotSealed,
+    AmbiguousAssociatedFamilySelection,
+    AssociatedFamilyLocalUnavailable,
+    ImportedAssociatedFamilyUnsupported,
     Unsupported,
 }
 

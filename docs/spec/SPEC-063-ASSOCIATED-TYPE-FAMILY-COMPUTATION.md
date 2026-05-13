@@ -1,6 +1,6 @@
 # SPEC-063: Associated Type-Family Computation
 
-**Status:** Draft (ready for implementation)
+**Status:** Implemented MVP
 **Date:** 2026-05-12
 **Promotes:** [DESIGN-034 §16.7](../design/DESIGN-034-TOTAL-TYPE-COMPUTATION.md#167-spec-g-associated-type-family-computation)
 **Builds on:** [SPEC-057](SPEC-057-UNIFIED-TYPE-MODULE-PIPELINE-AND-SEMANTIC-SUMMARIES.md), [SPEC-058](SPEC-058-CANONICAL-TYPE-EXPRESSION-IR-PROJECTION-IDS-KIND-ARITY-SUBSTRATE.md), [SPEC-059](SPEC-059-SEALED-TYPE-LEVEL-DOMAINS.md), [SPEC-060](SPEC-060-NORMALIZER-DEFINITIONAL-EQUALITY-CORE.md), [SPEC-061](SPEC-061-DIRECT-STRUCTURAL-TYPE-FUNCTIONS.md), [SPEC-062](SPEC-062-MODULE-SUMMARY-EXPORT-IMPORT-FOR-TYPE-COMPUTATION.md)
@@ -376,6 +376,12 @@ TASK-868 must produce a row-by-row acceptance/non-interference artifact mapping 
 - [TASK-869](../plan/tasks/TASK-869-spec-g-closeout-docs-and-verification.md): closeout docs and verification.
 - [TASK-870](../plan/tasks/TASK-870-phase115-review-remediation.md): independent review remediation.
 
-## 15. Non-Goals and Handoff
+## 15. Implementation Status
+
+Phase 115 implemented the SPEC-G MVP through TASK-870, including TASK-869 closeout verification and TASK-870 independent post-closeout review remediation. The implemented slice includes parser surface support for explicit associated-family projections and sealed family declarations, core associated-family identities and V4 summaries, TypeEnv family declaration/coherence/selection/recursive-totality validation, normalizer integration for local and imported reducible families, public summary export/import with helper-family opacity, public/source type-position lowering for explicit associated-family projections, diagnostics, and acceptance/non-interference evidence.
+
+The MVP remains intentionally bounded: SPEC-035 ordinary associated-type substitution is preserved for non-family members; where-bound-only projections remain rigid; definitional equality remains normalize-and-compare and non-inverting; and SPEC-H proposition solving, proof search, type-function inversion, HKT, holes, and open-world/orphan family extension are still deferred.
+
+## 16. Non-Goals and Handoff
 
 SPEC-063 completes associated type-family computation over the total type-computation substrate. SPEC-H owns propositions, constraint solving, disequality reasoning, and proof/search predicates over normalized types. Later HKT/Monad work may add constructor-kinded abstractions and holes; this spec deliberately does not depend on them.

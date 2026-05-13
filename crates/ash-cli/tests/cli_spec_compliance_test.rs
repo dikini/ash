@@ -7,6 +7,10 @@ use std::fs;
 use std::process::Command;
 use tempfile::TempDir;
 
+fn ash_command() -> Command {
+    Command::new(env!("CARGO_BIN_EXE_ash"))
+}
+
 /// Test that parse errors return exit code 2
 #[test]
 fn test_exit_code_parse_error() {
@@ -14,8 +18,8 @@ fn test_exit_code_parse_error() {
     let bad_syntax = temp.path().join("bad.ash");
     fs::write(&bad_syntax, "workflow { bad syntax }").unwrap();
 
-    let output = Command::new("cargo")
-        .args(["run", "--bin", "ash", "--", "check"])
+    let output = ash_command()
+        .args(["check"])
         .arg(&bad_syntax)
         .output()
         .unwrap();
@@ -47,8 +51,8 @@ fn test_exit_code_type_error() {
     )
     .unwrap();
 
-    let output = Command::new("cargo")
-        .args(["run", "--bin", "ash", "--", "check"])
+    let output = ash_command()
+        .args(["check"])
         .arg(&bad_types)
         .output()
         .unwrap();
@@ -69,10 +73,7 @@ fn test_exit_code_type_error() {
 /// Test that --quiet flag suppresses output
 #[test]
 fn test_quiet_flag_suppresses_output() {
-    let output = Command::new("cargo")
-        .args(["run", "--bin", "ash", "--", "--quiet", "--help"])
-        .output()
-        .unwrap();
+    let output = ash_command().args(["--quiet", "--help"]).output().unwrap();
 
     // --help should still work even with --quiet
     assert!(output.status.success());
@@ -86,10 +87,7 @@ fn test_quiet_flag_suppresses_output() {
 fn test_verbose_flag_levels() {
     // Test that -v, -vv, -vvv are accepted (with --help so it exits quickly)
     for flag in ["-v", "-vv", "-vvv"] {
-        let output = Command::new("cargo")
-            .args(["run", "--bin", "ash", "--", flag, "--help"])
-            .output()
-            .unwrap();
+        let output = ash_command().args([flag, "--help"]).output().unwrap();
 
         assert!(output.status.success(), "Flag {} failed", flag);
     }
@@ -99,24 +97,24 @@ fn test_verbose_flag_levels() {
 #[test]
 fn test_color_flag() {
     // Test --color never works
-    let output = Command::new("cargo")
-        .args(["run", "--bin", "ash", "--", "--color", "never", "--help"])
+    let output = ash_command()
+        .args(["--color", "never", "--help"])
         .output()
         .unwrap();
 
     assert!(output.status.success());
 
     // Test --color always works
-    let output = Command::new("cargo")
-        .args(["run", "--bin", "ash", "--", "--color", "always", "--help"])
+    let output = ash_command()
+        .args(["--color", "always", "--help"])
         .output()
         .unwrap();
 
     assert!(output.status.success());
 
     // Test --color auto works
-    let output = Command::new("cargo")
-        .args(["run", "--bin", "ash", "--", "--color", "auto", "--help"])
+    let output = ash_command()
+        .args(["--color", "auto", "--help"])
         .output()
         .unwrap();
 
@@ -130,8 +128,8 @@ fn test_check_policy_check_flag() {
     let workflow = temp.path().join("test.ash");
     fs::write(&workflow, "workflow test() { decide 42 }").unwrap();
 
-    let output = Command::new("cargo")
-        .args(["run", "--bin", "ash", "--", "check", "--policy-check"])
+    let output = ash_command()
+        .args(["check", "--policy-check"])
         .arg(&workflow)
         .output()
         .unwrap();
@@ -152,8 +150,8 @@ fn test_check_strict_short_flag() {
     let workflow = temp.path().join("test.ash");
     fs::write(&workflow, "workflow test() { decide 42 }").unwrap();
 
-    let output = Command::new("cargo")
-        .args(["run", "--bin", "ash", "--", "check", "-s"])
+    let output = ash_command()
+        .args(["check", "-s"])
         .arg(&workflow)
         .output()
         .unwrap();
@@ -168,10 +166,7 @@ fn test_check_strict_short_flag() {
 /// Test check command with -f short flag for --format
 #[test]
 fn test_check_format_short_flag() {
-    let output = Command::new("cargo")
-        .args(["run", "--bin", "ash", "--", "check", "--help"])
-        .output()
-        .unwrap();
+    let output = ash_command().args(["check", "--help"]).output().unwrap();
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     // Check that -f is listed as a short option for --format
@@ -192,8 +187,8 @@ fn test_run_format_flag() {
     )
     .unwrap();
 
-    let output = Command::new("cargo")
-        .args(["run", "--bin", "ash", "--", "run", "--format", "json"])
+    let output = ash_command()
+        .args(["run", "--format", "json"])
         .arg(&workflow)
         .output()
         .unwrap();
@@ -212,8 +207,8 @@ fn test_run_dry_run_flag() {
     let workflow = temp.path().join("test.ash");
     fs::write(&workflow, "workflow test() { decide 42 }").unwrap();
 
-    let output = Command::new("cargo")
-        .args(["run", "--bin", "ash", "--", "run", "--dry-run"])
+    let output = ash_command()
+        .args(["run", "--dry-run"])
         .arg(&workflow)
         .output()
         .unwrap();
@@ -232,8 +227,8 @@ fn test_run_timeout_flag() {
     let workflow = temp.path().join("test.ash");
     fs::write(&workflow, "workflow test() { decide 42 }").unwrap();
 
-    let output = Command::new("cargo")
-        .args(["run", "--bin", "ash", "--", "run", "--timeout", "30"])
+    let output = ash_command()
+        .args(["run", "--timeout", "30"])
         .arg(&workflow)
         .output()
         .unwrap();
@@ -252,8 +247,8 @@ fn test_run_capability_flag_removed() {
     let workflow = temp.path().join("test.ash");
     fs::write(&workflow, "workflow test { ret 42 }").unwrap();
 
-    let output = Command::new("cargo")
-        .args(["run", "--bin", "ash", "--", "run", "--capability", "fs"])
+    let output = ash_command()
+        .args(["run", "--capability", "fs"])
         .arg(&workflow)
         .output()
         .unwrap();
@@ -272,8 +267,8 @@ fn test_trace_sign_flag() {
     let workflow = temp.path().join("test.ash");
     fs::write(&workflow, "workflow test() { decide 42 }").unwrap();
 
-    let output = Command::new("cargo")
-        .args(["run", "--bin", "ash", "--", "trace", "--sign"])
+    let output = ash_command()
+        .args(["trace", "--sign"])
         .arg(&workflow)
         .output()
         .unwrap();
@@ -292,8 +287,8 @@ fn test_trace_export_flag() {
     let workflow = temp.path().join("test.ash");
     fs::write(&workflow, "workflow test() { decide 42 }").unwrap();
 
-    let output = Command::new("cargo")
-        .args(["run", "--bin", "ash", "--", "trace", "--export", "json"])
+    let output = ash_command()
+        .args(["trace", "--export", "json"])
         .arg(&workflow)
         .output()
         .unwrap();
@@ -312,8 +307,8 @@ fn test_trace_provn_flag() {
     let workflow = temp.path().join("test.ash");
     fs::write(&workflow, "workflow test() { decide 42 }").unwrap();
 
-    let output = Command::new("cargo")
-        .args(["run", "--bin", "ash", "--", "trace", "--provn"])
+    let output = ash_command()
+        .args(["trace", "--provn"])
         .arg(&workflow)
         .output()
         .unwrap();
@@ -332,8 +327,8 @@ fn test_trace_cypher_flag() {
     let workflow = temp.path().join("test.ash");
     fs::write(&workflow, "workflow test() { decide 42 }").unwrap();
 
-    let output = Command::new("cargo")
-        .args(["run", "--bin", "ash", "--", "trace", "--cypher"])
+    let output = ash_command()
+        .args(["trace", "--cypher"])
         .arg(&workflow)
         .output()
         .unwrap();
@@ -352,8 +347,8 @@ fn test_repl_init_flag() {
     let init_file = temp.path().join("init.ash");
     fs::write(&init_file, "let x = 42;").unwrap();
 
-    let output = Command::new("cargo")
-        .args(["run", "--bin", "ash", "--", "repl", "--init"])
+    let output = ash_command()
+        .args(["repl", "--init"])
         .arg(&init_file)
         .output()
         .unwrap();
@@ -372,8 +367,8 @@ fn test_repl_config_flag() {
     let config_file = temp.path().join("config.toml");
     fs::write(&config_file, "[repl]").unwrap();
 
-    let output = Command::new("cargo")
-        .args(["run", "--bin", "ash", "--", "repl", "--config"])
+    let output = ash_command()
+        .args(["repl", "--config"])
         .arg(&config_file)
         .output()
         .unwrap();
@@ -388,8 +383,8 @@ fn test_repl_config_flag() {
 /// Test repl command no longer accepts --capability flag (removed in TASK-323)
 #[test]
 fn test_repl_capability_flag_removed() {
-    let output = Command::new("cargo")
-        .args(["run", "--bin", "ash", "--", "repl", "--capability", "fs"])
+    let output = ash_command()
+        .args(["repl", "--capability", "fs"])
         .output()
         .unwrap();
 
@@ -407,8 +402,8 @@ fn test_global_flags_with_subcommands() {
 
     for cmd in &subcommands {
         // Test with --quiet
-        let output = Command::new("cargo")
-            .args(["run", "--bin", "ash", "--", "--quiet", cmd, "--help"])
+        let output = ash_command()
+            .args(["--quiet", cmd, "--help"])
             .output()
             .unwrap();
 
@@ -419,10 +414,7 @@ fn test_global_flags_with_subcommands() {
         );
 
         // Test with -v
-        let output = Command::new("cargo")
-            .args(["run", "--bin", "ash", "--", "-v", cmd, "--help"])
-            .output()
-            .unwrap();
+        let output = ash_command().args(["-v", cmd, "--help"]).output().unwrap();
 
         assert!(
             output.status.success(),
@@ -431,10 +423,8 @@ fn test_global_flags_with_subcommands() {
         );
 
         // Test with --color never
-        let output = Command::new("cargo")
-            .args([
-                "run", "--bin", "ash", "--", "--color", "never", cmd, "--help",
-            ])
+        let output = ash_command()
+            .args(["--color", "never", cmd, "--help"])
             .output()
             .unwrap();
 
@@ -449,15 +439,8 @@ fn test_global_flags_with_subcommands() {
 /// Test that I/O errors (file not found) return exit code 3
 #[test]
 fn test_exit_code_io_error() {
-    let output = Command::new("cargo")
-        .args([
-            "run",
-            "--bin",
-            "ash",
-            "--",
-            "check",
-            "/nonexistent/path/file.ash",
-        ])
+    let output = ash_command()
+        .args(["check", "/nonexistent/path/file.ash"])
         .output()
         .unwrap();
 
@@ -476,10 +459,7 @@ fn test_exit_code_io_error() {
 /// Test that exit code 0 is returned on success
 #[test]
 fn test_exit_code_success() {
-    let output = Command::new("cargo")
-        .args(["run", "--bin", "ash", "--", "--help"])
-        .output()
-        .unwrap();
+    let output = ash_command().args(["--help"]).output().unwrap();
 
     assert!(output.status.success());
     assert_eq!(output.status.code(), Some(0));
@@ -488,10 +468,7 @@ fn test_exit_code_success() {
 /// Test that unknown commands return exit code 127
 #[test]
 fn test_exit_code_unknown_command() {
-    let output = Command::new("cargo")
-        .args(["run", "--bin", "ash", "--", "unknowncommand"])
-        .output()
-        .unwrap();
+    let output = ash_command().args(["unknowncommand"]).output().unwrap();
 
     // clap handles unknown subcommands and exits with error
     assert!(!output.status.success());

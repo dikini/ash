@@ -18,10 +18,20 @@ Register named proposition predicates and route unsupported predicate solving to
 
 ## Files / Ownership
 
-- Modify: parser/typeck files bound by TASK-872 for predicate declarations
+- Modify: `crates/ash-parser/src/surface.rs`
+- Modify: `crates/ash-parser/src/parse_module.rs`
+- Modify: `crates/ash-parser/src/parse_type_def.rs`
 - Modify: `crates/ash-typeck/src/type_env.rs`
 - Modify: `crates/ash-typeck/src/error.rs`, `diagnostic.rs`
-- Test: exact parser/typeck targets bound by TASK-872
+- Test: `crates/ash-parser/tests/task_878_named_predicate_surface.rs`
+- Test: `crates/ash-typeck/tests/task_878_named_predicate_registration.rs`
+- Audit rows: H-AUD-PARSE-01, H-AUD-PARSE-03, H-AUD-PARSE-04, H-AUD-TYPECK-06, H-FORCE-06
+
+## TASK-872 Binding Notes
+
+- Parser owns raw `prop` declarations and named-predicate proposition uses; TypeEnv owns predicate identities, visibility, parameter domains, source anchors, and deferred solving outcomes.
+- Only explicitly registered compiler-known builtin predicates may be satisfied in this task.
+- Unknown predicates and unsupported known predicates must be distinct typed outcomes/diagnostics; do not add arbitrary proof search.
 
 ## Requirements
 
@@ -85,10 +95,12 @@ commands:
   - cargo fmt --check
   - git diff --check
   - cargo check --workspace
-  - |
-    python3 - <<'PY'
-    raise SystemExit('TASK-872 must replace this intentional verification guard with exact non-zero focused test commands before implementation can be verified')
-    PY
+  - test -f crates/ash-parser/tests/task_878_named_predicate_surface.rs
+  - cargo test -p ash-parser --test task_878_named_predicate_surface -- --list | grep -q task_878_
+  - cargo test -p ash-parser --test task_878_named_predicate_surface
+  - test -f crates/ash-typeck/tests/task_878_named_predicate_registration.rs
+  - cargo test -p ash-typeck --test task_878_named_predicate_registration -- --list | grep -q task_878_
+  - cargo test -p ash-typeck --test task_878_named_predicate_registration
 checklist:
   - "[ ] Task requirements are satisfied"
   - "[ ] Focused verification is recorded"

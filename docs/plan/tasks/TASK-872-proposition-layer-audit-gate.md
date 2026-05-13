@@ -1,6 +1,6 @@
 # TASK-872: Proposition layer audit gate
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -67,9 +67,18 @@ Dispatch an independent review/verification subagent with this task file, SPEC-0
 
 ## Completion Checklist
 
-- [ ] Audit artifact exists and has required tables.
-- [ ] Every TASK-873 through TASK-882 has a non-empty binding row.
-- [ ] No Rust source changes are made by the audit task.
+- [x] Audit artifact exists and has required tables.
+- [x] Every TASK-873 through TASK-882 has a non-empty binding row.
+- [x] No Rust source changes are made by the audit task.
+
+## Completion Notes
+
+- Created `docs/plan/audits/TASK-872-proposition-layer-audit.md` with live call graph, owner mapping, current carrier/gap tables, forcing matrix, diagnostics/non-interference risks, and downstream binding table.
+- Patched TASK-873 through TASK-882 with exact source file ownership, future test targets, audit row IDs, and non-zero focused verification commands guarded by `test -f` and `cargo test -- --list | grep -q task_<id>_`.
+- Replaced all TASK-873 through TASK-882 intentional failing verification guards before any TASK-873+ Rust implementation starts.
+- Confirmed this task made no Rust source edits.
+- Reconciled PLAN-112 and PLAN-INDEX status rows after independent review found stale TASK-872 status.
+- Verification: `cargo fmt --check && git diff --check && cargo check --workspace` exited 0 in the Phase 116 worktree after the status/binding remediation.
 
 ## Dispatch
 
@@ -89,9 +98,9 @@ commands:
   - git diff --check
   - cargo check --workspace
 checklist:
-  - "[ ] Task requirements are satisfied"
-  - "[ ] Focused verification is recorded"
-  - "[ ] Status docs and CHANGELOG.md are updated if release-facing docs changed"
+  - "[x] Task requirements are satisfied"
+  - "[x] Focused verification is recorded"
+  - "[x] Status docs and CHANGELOG.md are updated if release-facing docs changed"
 ```
 
 ## Dependencies for Next Task

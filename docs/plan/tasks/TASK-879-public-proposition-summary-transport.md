@@ -20,8 +20,18 @@ Export/import public proposition requirements and optional evidence through V5 s
 
 - Modify: `crates/ash-core/src/semantic_summary.rs`
 - Modify: `crates/ash-typeck/src/type_env.rs`
-- Modify: `crates/ash-engine/src/lib.rs` and/or `module_loader.rs` per TASK-872
-- Test: exact ash-core/ash-typeck/ash-engine targets bound by TASK-872
+- Modify: `crates/ash-engine/src/lib.rs`
+- Modify: `crates/ash-engine/src/module_loader.rs`
+- Test: `crates/ash-core/tests/task_879_proposition_summary_schema.rs`
+- Test: `crates/ash-typeck/tests/task_879_proposition_summary_import.rs`
+- Test: `crates/ash-engine/tests/task_879_proposition_summary_transport.rs`
+- Audit rows: H-AUD-CORE-03, H-AUD-TYPECK-07, H-AUD-ENGINE-01, H-AUD-ENGINE-02, H-SUM-01, H-SUM-02, H-SUM-03, H-SUM-04, H-FORCE-07, H-RISK-04, H-RISK-05
+
+## TASK-872 Binding Notes
+
+- Core owns V5 schema/version validation; TypeEnv owns export/import revalidation and private-leak checks; engine only transports `ModuleSemanticSummary` payloads.
+- Proposition payloads in V4-or-older summaries must be rejected before partial registration.
+- Public summaries may transport requirements even if proof evidence export is deferred, but must not expose private helper type functions/domains/families/predicates.
 
 ## Requirements
 
@@ -85,10 +95,15 @@ commands:
   - cargo fmt --check
   - git diff --check
   - cargo check --workspace
-  - |
-    python3 - <<'PY'
-    raise SystemExit('TASK-872 must replace this intentional verification guard with exact non-zero focused test commands before implementation can be verified')
-    PY
+  - test -f crates/ash-core/tests/task_879_proposition_summary_schema.rs
+  - cargo test -p ash-core --test task_879_proposition_summary_schema -- --list | grep -q task_879_
+  - cargo test -p ash-core --test task_879_proposition_summary_schema
+  - test -f crates/ash-typeck/tests/task_879_proposition_summary_import.rs
+  - cargo test -p ash-typeck --test task_879_proposition_summary_import -- --list | grep -q task_879_
+  - cargo test -p ash-typeck --test task_879_proposition_summary_import
+  - test -f crates/ash-engine/tests/task_879_proposition_summary_transport.rs
+  - cargo test -p ash-engine --test task_879_proposition_summary_transport -- --list | grep -q task_879_
+  - cargo test -p ash-engine --test task_879_proposition_summary_transport
 checklist:
   - "[ ] Task requirements are satisfied"
   - "[ ] Focused verification is recorded"

@@ -20,7 +20,14 @@ Add TypeEnv proposition environment, canonical lowering, source/generator proven
 
 - Modify: `crates/ash-typeck/src/type_env.rs`
 - Modify: `crates/ash-typeck/src/error.rs` and `diagnostic.rs` if new environment errors are needed
-- Test: exact ash-typeck test target bound by TASK-872
+- Test: `crates/ash-typeck/tests/task_875_proposition_environment.rs`
+- Audit rows: H-AUD-TYPECK-01, H-AUD-TYPECK-02, H-AUD-TYPECK-03, H-FORCE-03
+
+## TASK-872 Binding Notes
+
+- TypeEnv owns canonical proposition lowering, generated obligation storage, source/generator provenance, and assumed-vs-required fact separation.
+- Existing `WhereBound`, `ImplScheme.where_bounds`, and `type_var_interface_bounds` are inputs to proposition assumptions/evidence, not a generalized solver in this task.
+- Do not discharge equality, disequality, or interface-bound propositions here except typed classification/registration needed for later solvers.
 
 ## Requirements
 
@@ -85,10 +92,9 @@ commands:
   - cargo fmt --check
   - git diff --check
   - cargo check --workspace
-  - |
-    python3 - <<'PY'
-    raise SystemExit('TASK-872 must replace this intentional verification guard with exact non-zero focused test commands before implementation can be verified')
-    PY
+  - test -f crates/ash-typeck/tests/task_875_proposition_environment.rs
+  - cargo test -p ash-typeck --test task_875_proposition_environment -- --list | grep -q task_875_
+  - cargo test -p ash-typeck --test task_875_proposition_environment
 checklist:
   - "[ ] Task requirements are satisfied"
   - "[ ] Focused verification is recorded"

@@ -18,9 +18,19 @@ Integrate proposition generation/discharge at audited checking points without ac
 
 ## Files / Ownership
 
-- Modify: `crates/ash-typeck/src/type_env.rs` and checking modules bound by TASK-872
-- Modify: engine callsites only if public-summary import requires it
-- Test: exact ash-typeck/ash-engine targets bound by TASK-872
+- Modify: `crates/ash-typeck/src/type_env.rs`
+- Inspect: `crates/ash-typeck/src/normalizer.rs`; consume existing public helper APIs from `type_env.rs` only, and do not add new reduction behavior here
+- Modify: `crates/ash-typeck/src/error.rs`, `diagnostic.rs` as needed for required-discharge failures
+- Modify: `crates/ash-engine/src/lib.rs` for imported V5 summary handoff into TypeEnv; the engine remains transport-only and must not solve propositions
+- Test: `crates/ash-typeck/tests/task_880_proposition_checking_points.rs`
+- Test: `crates/ash-engine/tests/task_880_proposition_public_integration.rs`
+- Audit rows: H-FORCE-08, H-RISK-01, H-RISK-02, H-RISK-03, H-RISK-04, H-RISK-05, H-AUD-TYPECK-01, H-AUD-TYPECK-04, H-AUD-TYPECK-07, H-AUD-ENGINE-01
+
+## TASK-872 Binding Notes
+
+- Generate and discharge obligations only at audited public signature/type-function/impl/fn/builtin/imported-summary checking points.
+- Required-discharge sites must reject refuted or deferred propositions with diagnostics; assumption sites must be explicit.
+- No proposition path may mutate substitutions for open type-function/associated-family outputs or move semantics into parser/engine.
 
 ## Requirements
 
@@ -84,10 +94,12 @@ commands:
   - cargo fmt --check
   - git diff --check
   - cargo check --workspace
-  - |
-    python3 - <<'PY'
-    raise SystemExit('TASK-872 must replace this intentional verification guard with exact non-zero focused test commands before implementation can be verified')
-    PY
+  - test -f crates/ash-typeck/tests/task_880_proposition_checking_points.rs
+  - cargo test -p ash-typeck --test task_880_proposition_checking_points -- --list | grep -q task_880_
+  - cargo test -p ash-typeck --test task_880_proposition_checking_points
+  - test -f crates/ash-engine/tests/task_880_proposition_public_integration.rs
+  - cargo test -p ash-engine --test task_880_proposition_public_integration -- --list | grep -q task_880_
+  - cargo test -p ash-engine --test task_880_proposition_public_integration
 checklist:
   - "[ ] Task requirements are satisfied"
   - "[ ] Focused verification is recorded"

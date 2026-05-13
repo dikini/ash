@@ -20,7 +20,15 @@ Solve interface-bound propositions from existing TypeEnv evidence without broade
 
 - Modify: `crates/ash-typeck/src/type_env.rs`
 - Modify: `crates/ash-typeck/src/error.rs`, `diagnostic.rs` as needed
-- Test: exact ash-typeck test target bound by TASK-872
+- Test: `crates/ash-typeck/tests/task_877_interface_bound_propositions.rs`
+- Regression: `crates/ash-typeck/tests/task_864_rigid_where_bound_projection.rs`
+- Audit rows: H-AUD-TYPECK-01, H-AUD-TYPECK-02, H-AUD-TYPECK-03, H-FORCE-05, H-RISK-02
+
+## TASK-872 Binding Notes
+
+- Solve interface-bound propositions only from exact in-scope generic where-bound evidence or already-selected concrete impl evidence.
+- Keep associated-family equation selection and rigid where-bound projection behavior separate from proposition-bound solving.
+- Missing evidence must reject/defer without broad arbitrary impl search.
 
 ## Requirements
 
@@ -84,10 +92,10 @@ commands:
   - cargo fmt --check
   - git diff --check
   - cargo check --workspace
-  - |
-    python3 - <<'PY'
-    raise SystemExit('TASK-872 must replace this intentional verification guard with exact non-zero focused test commands before implementation can be verified')
-    PY
+  - test -f crates/ash-typeck/tests/task_877_interface_bound_propositions.rs
+  - cargo test -p ash-typeck --test task_877_interface_bound_propositions -- --list | grep -q task_877_
+  - cargo test -p ash-typeck --test task_877_interface_bound_propositions
+  - cargo test -p ash-typeck --test task_864_rigid_where_bound_projection
 checklist:
   - "[ ] Task requirements are satisfied"
   - "[ ] Focused verification is recorded"

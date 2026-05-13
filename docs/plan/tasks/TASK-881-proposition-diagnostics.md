@@ -20,8 +20,16 @@ Add structured diagnostics for unsupported propositions, neutral/rigid blockers,
 
 - Modify: `crates/ash-typeck/src/error.rs`
 - Modify: `crates/ash-typeck/src/diagnostic.rs`
-- Modify parser diagnostics if TASK-872 assigns unsupported-surface errors there
-- Test: exact diagnostic targets bound by TASK-872
+- Modify: `crates/ash-parser/src/parse_module.rs` and `crates/ash-parser/src/parse_type_def.rs` only for parser-owned unsupported-surface/malformed proposition diagnostics
+- Test: `crates/ash-typeck/tests/task_881_proposition_diagnostics.rs`
+- Test: `crates/ash-parser/tests/task_881_proposition_parse_diagnostics.rs`
+- Audit rows: H-AUD-TYPECK-06, H-AUD-PARSE-03, H-AUD-PARSE-04, H-FORCE-09, H-RISK-04
+
+## TASK-872 Binding Notes
+
+- Typeck diagnostics must distinguish unsupported propositions, unknown predicates, deferred predicates, neutral/rigid blockers, no-inversion boundaries, malformed V5 summaries, and private leaks.
+- Parser diagnostics are limited to syntax/unsupported-surface errors; semantic proposition errors remain in TypeEnv diagnostics.
+- No diagnostic may imply Ash performed type-function inversion, arbitrary proof search, or associated-family output solving.
 
 ## Requirements
 
@@ -80,10 +88,12 @@ commands:
   - cargo fmt --check
   - git diff --check
   - cargo check --workspace
-  - |
-    python3 - <<'PY'
-    raise SystemExit('TASK-872 must replace this intentional verification guard with exact non-zero focused test commands before implementation can be verified')
-    PY
+  - test -f crates/ash-typeck/tests/task_881_proposition_diagnostics.rs
+  - cargo test -p ash-typeck --test task_881_proposition_diagnostics -- --list | grep -q task_881_
+  - cargo test -p ash-typeck --test task_881_proposition_diagnostics
+  - test -f crates/ash-parser/tests/task_881_proposition_parse_diagnostics.rs
+  - cargo test -p ash-parser --test task_881_proposition_parse_diagnostics -- --list | grep -q task_881_
+  - cargo test -p ash-parser --test task_881_proposition_parse_diagnostics
 checklist:
   - "[ ] Task requirements are satisfied"
   - "[ ] Focused verification is recorded"

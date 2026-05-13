@@ -19,8 +19,18 @@ Create the Phase 116 acceptance/non-interference matrix and focused aggregator e
 ## Files / Ownership
 
 - Create: `docs/plan/audits/TASK-882-proposition-acceptance-matrix.md`
-- Modify/add focused aggregator tests bound by TASK-872
+- Modify/add: `crates/ash-core/tests/task_882_spec_h_summary_non_interference.rs`
+- Modify/add: `crates/ash-parser/tests/task_882_spec_h_surface_non_interference.rs`
+- Modify/add: `crates/ash-typeck/tests/task_882_spec_h_acceptance_matrix.rs`
+- Modify/add: `crates/ash-engine/tests/task_882_spec_h_transport_non_interference.rs`
 - Modify: task/status docs if evidence changes
+- Audit rows: H-FORCE-10, H-RISK-01, H-RISK-02, H-RISK-03, H-RISK-04, H-RISK-05, H-RISK-06, H-AUD-NONINT-01
+
+## TASK-872 Binding Notes
+
+- Acceptance matrix must map SPEC-064 §12 H1-H12 to exact focused test evidence, including deferred/diagnostic rows.
+- Non-interference suites to cite or run include existing SPEC-035/SPEC-063 associated-family, SPEC-060 normalizer/equality, SPEC-057/058/059/061/062 type-pipeline/summary, and engine transport regressions named in `docs/plan/audits/TASK-872-proposition-layer-audit.md`.
+- No zero-test pass is acceptable; every aggregator must list non-zero `task_882_` tests before running.
 
 ## Requirements
 
@@ -83,10 +93,19 @@ commands:
   - cargo fmt --check
   - git diff --check
   - cargo check --workspace
-  - |
-    python3 - <<'PY'
-    raise SystemExit('TASK-872 must replace this intentional verification guard with exact non-zero focused test commands before implementation can be verified')
-    PY
+  - test -f docs/plan/audits/TASK-882-proposition-acceptance-matrix.md
+  - test -f crates/ash-core/tests/task_882_spec_h_summary_non_interference.rs
+  - cargo test -p ash-core --test task_882_spec_h_summary_non_interference -- --list | grep -q task_882_
+  - cargo test -p ash-core --test task_882_spec_h_summary_non_interference
+  - test -f crates/ash-parser/tests/task_882_spec_h_surface_non_interference.rs
+  - cargo test -p ash-parser --test task_882_spec_h_surface_non_interference -- --list | grep -q task_882_
+  - cargo test -p ash-parser --test task_882_spec_h_surface_non_interference
+  - test -f crates/ash-typeck/tests/task_882_spec_h_acceptance_matrix.rs
+  - cargo test -p ash-typeck --test task_882_spec_h_acceptance_matrix -- --list | grep -q task_882_
+  - cargo test -p ash-typeck --test task_882_spec_h_acceptance_matrix
+  - test -f crates/ash-engine/tests/task_882_spec_h_transport_non_interference.rs
+  - cargo test -p ash-engine --test task_882_spec_h_transport_non_interference -- --list | grep -q task_882_
+  - cargo test -p ash-engine --test task_882_spec_h_transport_non_interference
 checklist:
   - "[ ] Task requirements are satisfied"
   - "[ ] Focused verification is recorded"

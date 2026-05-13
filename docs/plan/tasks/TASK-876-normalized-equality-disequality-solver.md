@@ -19,9 +19,16 @@ Implement conservative proposition solving for normalized equality and construct
 ## Files / Ownership
 
 - Modify: `crates/ash-typeck/src/type_env.rs`
-- Modify: `crates/ash-typeck/src/normalizer.rs` only if TASK-872 identifies missing public helpers
+- Modify: `crates/ash-typeck/src/normalizer.rs` only for missing public helpers over existing `DefinitionalEqualityResult`/`NormalTypeExpr` evidence
 - Modify: `crates/ash-typeck/src/error.rs`, `diagnostic.rs` as needed
-- Test: exact ash-typeck test target bound by TASK-872
+- Test: `crates/ash-typeck/tests/task_876_proposition_solver.rs`
+- Audit rows: H-AUD-CORE-01, H-AUD-CORE-02, H-AUD-TYPECK-04, H-AUD-TYPECK-05, H-FORCE-04, H-RISK-01
+
+## TASK-872 Binding Notes
+
+- Equality propositions must use `Normalizer::definitional_equality`: satisfy only `Equal`, refute only closed `NotEqual`, and defer `BlockedByNeutrality`.
+- Disequality may satisfy only closed sealed-domain constructor-head disjointness over `NormalTypeExpr::DomainConstructorApp`, including open arguments under disjoint heads.
+- No legacy unification fallback, type-function inversion, associated-family output solving, or substitution/meta mutation is allowed.
 
 ## Requirements
 
@@ -86,10 +93,9 @@ commands:
   - cargo fmt --check
   - git diff --check
   - cargo check --workspace
-  - |
-    python3 - <<'PY'
-    raise SystemExit('TASK-872 must replace this intentional verification guard with exact non-zero focused test commands before implementation can be verified')
-    PY
+  - test -f crates/ash-typeck/tests/task_876_proposition_solver.rs
+  - cargo test -p ash-typeck --test task_876_proposition_solver -- --list | grep -q task_876_
+  - cargo test -p ash-typeck --test task_876_proposition_solver
 checklist:
   - "[ ] Task requirements are satisfied"
   - "[ ] Focused verification is recorded"

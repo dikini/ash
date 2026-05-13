@@ -18,10 +18,17 @@ Add core canonical proposition, boundary evidence/refutation/deferred-reason, pr
 
 ## Files / Ownership
 
-- Modify: `crates/ash-core/src/type_ir.rs` or a new core module chosen by TASK-872
+- Modify: `crates/ash-core/src/type_ir.rs`
 - Modify: `crates/ash-core/src/semantic_summary.rs`
-- Modify: `crates/ash-core/src/lib.rs` if exports are added
-- Test: exact ash-core test target bound by TASK-872
+- Modify: `crates/ash-core/src/lib.rs` for public core proposition exports
+- Test: `crates/ash-core/tests/task_873_proposition_carriers.rs`
+- Audit rows: H-AUD-CORE-01, H-AUD-CORE-02, H-AUD-CORE-03, H-AUD-CORE-04, H-AUD-CORE-05, H-SUM-01, H-SUM-02, H-FORCE-01
+
+## TASK-872 Binding Notes
+
+- Core owns stable proposition carriers and V5 summary schema only; do not add solving logic.
+- `CanonicalTypeExpr` currently cannot carry sealed-domain constructor applications, while `NormalTypeExpr`/type-function result carriers can; add an honest proposition-term carrier rather than encoding marker constructors as nominal/string facts.
+- Boundary evidence/refutation/deferred carriers are core-owned only if they cross crate/module/cache/summary/stable diagnostic boundaries.
 
 ## Requirements
 
@@ -87,10 +94,9 @@ commands:
   - cargo fmt --check
   - git diff --check
   - cargo check --workspace
-  - |
-    python3 - <<'PY'
-    raise SystemExit('TASK-872 must replace this intentional verification guard with exact non-zero focused test commands before implementation can be verified')
-    PY
+  - test -f crates/ash-core/tests/task_873_proposition_carriers.rs
+  - cargo test -p ash-core --test task_873_proposition_carriers -- --list | grep -q task_873_
+  - cargo test -p ash-core --test task_873_proposition_carriers
 checklist:
   - "[ ] Task requirements are satisfied"
   - "[ ] Focused verification is recorded"

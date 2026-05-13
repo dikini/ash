@@ -19,9 +19,18 @@ Add raw parser carriers for audited proposition clauses and explicit named predi
 ## Files / Ownership
 
 - Modify: `crates/ash-parser/src/surface.rs`
-- Modify: parser files bound by TASK-872, expected candidates include `parse_module.rs` and `parse_type_def.rs`
-- Modify: `crates/ash-parser/src/lower.rs` only for raw pass-through where audited
-- Test: exact ash-parser test target bound by TASK-872
+- Modify: `crates/ash-parser/src/parse_module.rs`
+- Modify: `crates/ash-parser/src/parse_type_def.rs`
+- Modify: `crates/ash-parser/src/parse_expr.rs` only for shared expression/type-token helpers or unsupported-surface diagnostics
+- Modify: `crates/ash-parser/src/lower.rs` only for raw pass-through; do not lower type-level propositions into workflow/runtime contracts
+- Test: `crates/ash-parser/tests/task_874_proposition_surface.rs`
+- Audit rows: H-AUD-PARSE-01, H-AUD-PARSE-02, H-AUD-PARSE-03, H-AUD-PARSE-04, H-AUD-PARSE-05, H-FORCE-02, H-RISK-03
+
+## TASK-872 Binding Notes
+
+- Parser owns raw proposition syntax and spans only: equality, disequality, interface-bound, named-predicate clauses, and `visibility? prop Name<params>;` declarations.
+- Preserve legacy impl/interface `where T: Interface` carriers; do not reinterpret capability `where` constraints or fn runtime contracts as type-level propositions.
+- Semantic identities, predicate registration, and proposition lowering belong to `ash-typeck::TypeEnv` in later tasks.
 
 ## Requirements
 
@@ -86,10 +95,9 @@ commands:
   - cargo fmt --check
   - git diff --check
   - cargo check --workspace
-  - |
-    python3 - <<'PY'
-    raise SystemExit('TASK-872 must replace this intentional verification guard with exact non-zero focused test commands before implementation can be verified')
-    PY
+  - test -f crates/ash-parser/tests/task_874_proposition_surface.rs
+  - cargo test -p ash-parser --test task_874_proposition_surface -- --list | grep -q task_874_
+  - cargo test -p ash-parser --test task_874_proposition_surface
 checklist:
   - "[ ] Task requirements are satisfied"
   - "[ ] Focused verification is recorded"

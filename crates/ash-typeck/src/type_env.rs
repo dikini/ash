@@ -9524,12 +9524,9 @@ impl TypeEnv {
             TypeProposition::Disequality(disequality) => {
                 self.solve_disequality_proposition(proposition, disequality, source_anchor)
             }
-            TypeProposition::InterfaceBound(_) => Ok(proposition_deferral(
-                proposition,
-                PropositionDeferredKind::MissingInterfaceEvidence,
-                source_anchor,
-                true,
-            )),
+            TypeProposition::InterfaceBound(bound) => {
+                Ok(self.solve_interface_bound_proposition(proposition, bound, source_anchor))
+            }
             TypeProposition::NamedPredicate(_) => Ok(proposition_deferral(
                 proposition,
                 PropositionDeferredKind::UnsupportedNamedPredicate,
@@ -9537,6 +9534,55 @@ impl TypeEnv {
                 true,
             )),
         }
+    }
+
+    fn solve_interface_bound_proposition(
+        &self,
+        proposition: &TypeProposition,
+        bound: &InterfaceBoundProposition,
+        source_anchor: Option<SourceAnchor>,
+    ) -> PropositionOutcome {
+        let exact_evidence = self.proposition_assumptions.iter().find_map(|record| {
+            if !matches!(
+                record.role,
+                PropositionFactRole::Assumption | PropositionFactRole::Evidence
+            ) {
+                return None;
+            }
+            if !matches!(
+                &record.proposition,
+                TypeProposition::InterfaceBound(assumed) if assumed == bound
+            ) {
+                return None;
+            }
+            match record.owner_site.kind {
+                PropositionCheckingSiteKind::ConcreteImpl => {
+                    Some((record, PropositionEvidenceRule::ConcreteImplEvidence))
+                }
+                PropositionCheckingSiteKind::TypeVariableInterfaceBound
+                | PropositionCheckingSiteKind::ImplWhereBound => {
+                    Some((record, PropositionEvidenceRule::InScopeInterfaceBound))
+                }
+                PropositionCheckingSiteKind::ExplicitRequirement
+                | PropositionCheckingSiteKind::Synthetic => None,
+            }
+        });
+
+        let Some((record, rule)) = exact_evidence else {
+            return proposition_deferral(
+                proposition,
+                PropositionDeferredKind::MissingInterfaceEvidence,
+                source_anchor,
+                true,
+            );
+        };
+
+        proposition_satisfaction(
+            proposition,
+            None,
+            rule,
+            source_anchor.or_else(|| Some(record.source_anchor.clone())),
+        )
     }
 
     /// Solve all stored proposition obligations, updating each fact record with its outcome.

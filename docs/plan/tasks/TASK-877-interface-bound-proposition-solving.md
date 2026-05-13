@@ -1,6 +1,6 @@
 # TASK-877: Interface-bound proposition solving
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -71,9 +71,18 @@ Dispatch an independent review/verification subagent with this task file, SPEC-0
 
 ## Completion Checklist
 
-- [ ] Focused interface-bound tests pass.
-- [ ] No associated-family equation is selected solely because a bound exists.
-- [ ] Existing impl lookup behavior remains unchanged.
+- [x] Focused interface-bound tests pass.
+- [x] No associated-family equation is selected solely because a bound exists.
+- [x] Existing impl lookup behavior remains unchanged.
+
+## Completion Notes
+
+- Implemented `TypeEnv::solve_interface_bound_proposition` for conservative interface-bound outcomes.
+- Interface-bound propositions now satisfy only from exact existing TypeEnv proposition evidence produced by selected concrete impls, type-variable interface bounds, or impl where-bounds.
+- Missing, merely nearby, generic-searchable, or unexpected-owner evidence defers with `PropositionDeferredKind::MissingInterfaceEvidence` and `no_inversion_boundary=true`.
+- Focused tests in `crates/ash-typeck/tests/task_877_interface_bound_propositions.rs` cover concrete impl evidence, type-variable bound evidence, impl where-bound evidence, missing evidence, exact subject/interface-argument matching, and the no generic-impl/family-equation-search boundary.
+- Verification passed: `cargo fmt --check`, `git diff --check`, non-zero `cargo test -p ash-typeck --test task_877_interface_bound_propositions -- --list`, `cargo test -p ash-typeck --test task_877_interface_bound_propositions` (6 tests), `cargo test -p ash-typeck --test task_864_rigid_where_bound_projection` (8 tests), and `cargo check --workspace`.
+- Independent review found no blocking issues. A non-blocking future-proofing note about unexpected evidence owner-site kinds was addressed by allowing only concrete impl, type-variable interface-bound, and impl where-bound owner sites to satisfy interface-bound propositions.
 
 ## Dispatch
 

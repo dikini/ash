@@ -1,6 +1,6 @@
 # TASK-873: Core proposition carriers
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -73,9 +73,18 @@ Dispatch an independent review/verification subagent with this task file, SPEC-0
 
 ## Completion Checklist
 
-- [ ] ash-core focused tests pass.
-- [ ] Carriers derive Debug, Clone, PartialEq/Eq/Hash/Serialize/Deserialize as appropriate.
-- [ ] Summary cache/version tests cover proposition facts.
+- [x] ash-core focused tests pass.
+- [x] Carriers derive Debug, Clone, PartialEq/Eq/Hash/Serialize/Deserialize as appropriate.
+- [x] Summary cache/version tests cover proposition facts.
+
+## Completion Notes
+
+- Added typed core proposition carriers for equality, disequality, interface-bound, and named-predicate propositions in `ash-core::type_ir`.
+- Added `TypePropositionTerm::DomainConstructorApp` so proposition operands can represent sealed-domain constructor applications without encoding them as nominal/string facts.
+- Added boundary evidence/refutation/deferred outcome carriers and predicate identity/source-anchor summary carriers for stable cross-crate/module/diagnostic boundaries only; no solver logic was added to `ash-core`.
+- Added V5 proposition summary payloads and version validation in `ash-core::semantic_summary`; V1 through V4 summaries carrying proposition facts reject before registration.
+- Added focused non-zero `ash-core` tests in `crates/ash-core/tests/task_873_proposition_carriers.rs` and narrow `ash-typeck` diagnostic fallout for the new validation variant.
+- Verification: `cargo test -p ash-core --test task_873_proposition_carriers -- --list | grep -q task_873_`, `cargo test -p ash-core --test task_873_proposition_carriers`, `cargo check --workspace`, `cargo fmt --check`, and `git diff --check` exited 0 after review remediation.
 
 ## Dispatch
 
@@ -98,9 +107,9 @@ commands:
   - cargo test -p ash-core --test task_873_proposition_carriers -- --list | grep -q task_873_
   - cargo test -p ash-core --test task_873_proposition_carriers
 checklist:
-  - "[ ] Task requirements are satisfied"
-  - "[ ] Focused verification is recorded"
-  - "[ ] Status docs and CHANGELOG.md are updated if release-facing docs changed"
+  - "[x] Task requirements are satisfied"
+  - "[x] Focused verification is recorded"
+  - "[x] Status docs and CHANGELOG.md are updated if release-facing docs changed"
 ```
 
 ## Dependencies for Next Task

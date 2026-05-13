@@ -14,8 +14,8 @@ use crate::kind::Kind;
 use crate::module_graph::{CrateId, ModuleId};
 use crate::type_ir::{
     AssociatedFamilyHeadId, AssociatedFamilyProjection, AssociatedFamilyScheme, CanonicalTypeExpr,
-    TypeComputationHeadId, TypeFunctionEquation, TypeFunctionResultConstraint,
-    TypeFunctionSourceAnchors,
+    PropositionOutcome, TypeComputationHeadId, TypeFunctionEquation, TypeFunctionResultConstraint,
+    TypeFunctionSourceAnchors, TypeProposition,
 };
 use serde::{Deserialize, Serialize};
 
@@ -264,6 +264,46 @@ impl DomainConstructorId {
             name: name.into(),
         }
     }
+}
+
+/// Canonical identity for an explicit type-level proposition predicate.
+///
+/// This identity is distinct from runtime workflow/capability predicates and from
+/// ordinary function/type names. It is a typed summary/diagnostic handle, not a
+/// solver rule.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct PropositionPredicateId {
+    pub module: ModuleIdentity,
+    pub name: Name,
+}
+
+impl PropositionPredicateId {
+    #[must_use]
+    pub fn new(module: ModuleIdentity, name: impl Into<Name>) -> Self {
+        Self {
+            module,
+            name: name.into(),
+        }
+    }
+}
+
+/// Parameter metadata for an exported proposition predicate identity.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct PropositionPredicateParamSummary {
+    pub name: Name,
+    pub ty: CanonicalTypeExpr,
+    pub kind: Kind,
+    pub source_anchor: SourceAnchor,
+}
+
+/// Source-anchored summary for an exported proposition predicate identity.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct PropositionPredicateSummary {
+    pub id: PropositionPredicateId,
+    pub exported_name: Name,
+    pub visibility: Visibility,
+    pub params: Vec<PropositionPredicateParamSummary>,
+    pub source_anchor: SourceAnchor,
 }
 
 /// Structural classification of a domain field relative to its enclosing domain.
@@ -555,6 +595,8 @@ impl SummaryVersion {
     pub const SPEC059_SEALED_DOMAIN_V2: Self = Self(2);
     pub const SPEC062_TYPE_COMPUTATION_V3: Self = Self(3);
     pub const SPEC063_ASSOCIATED_FAMILY_V4: Self = Self(4);
+    pub const SPEC064_PROPOSITIONS_V5: Self = Self(5);
+    pub const SPEC064_PROPOSITION_V5: Self = Self(5);
 }
 
 /// Core schema-level validation failures for semantic-summary version contracts.
@@ -564,6 +606,8 @@ pub enum ModuleSemanticSummaryValidationError {
     TypeFunctionsRequireV3 { version: SummaryVersion },
     /// Public associated-family facts are only valid in SPEC-063/V4 summaries.
     AssociatedFamiliesRequireV4 { version: SummaryVersion },
+    /// Public proposition facts are only valid in SPEC-064/V5 summaries.
+    PropositionFactsRequireV5 { version: SummaryVersion },
     /// The summary version is newer than this core crate knows how to interpret.
     UnsupportedSummaryVersion { version: SummaryVersion },
 }
@@ -738,6 +782,39 @@ pub struct AssociatedFamilySummary {
     pub revalidation_metadata: AssociatedFamilyRevalidationMetadata,
 }
 
+/// Summary dependency reference plus cache/dedup invalidation metadata for a
+/// transported proposition fact.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct PropositionDependencySummaryRef {
+    pub summary_ref: ModuleSummaryRef,
+    pub digest: Option<String>,
+    pub compiler_algorithm_version: Option<String>,
+    pub source_visible: bool,
+}
+
+/// Role of a proposition fact exported through a semantic summary.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum PropositionFactRole {
+    Requirement,
+    Assumption,
+    Evidence,
+}
+
+/// Public proposition fact transported by SPEC-064/V5 summaries.
+///
+/// The fact is intentionally typed: propositions, predicate dependencies, and
+/// optional boundary outcomes are structural carriers, not strings or debug
+/// fragments. Consumers still must revalidate imported facts locally.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct PropositionFactSummary {
+    pub proposition: TypeProposition,
+    pub role: PropositionFactRole,
+    pub source_anchor: SourceAnchor,
+    pub predicate_dependencies: Vec<PropositionPredicateId>,
+    pub dependency_summary_refs: Vec<PropositionDependencySummaryRef>,
+    pub outcome: Option<PropositionOutcome>,
+}
+
 /// Reserved future identity namespaces. SPEC-057 leaves these uninterpreted.
 ///
 /// Note: `sealed_domains` is a placeholder string list. As of SPEC-059, typed
@@ -848,6 +925,12 @@ pub struct ModuleSemanticSummary {
     /// values are valid only when `version` is SPEC-063/V4.
     #[serde(default)]
     pub exported_associated_families: Vec<AssociatedFamilySummary>,
+    /// Public proposition facts exported from this module (SPEC-064 §10).
+    ///
+    /// `#[serde(default)]` preserves V1-V4 wire compatibility. Non-empty values
+    /// are valid only when `version` is SPEC-064/V5.
+    #[serde(default)]
+    pub exported_proposition_facts: Vec<PropositionFactSummary>,
 }
 
 impl ModuleSemanticSummary {
@@ -867,6 +950,7 @@ impl ModuleSemanticSummary {
             exported_sealed_domains: Vec::new(),
             exported_type_functions: Vec::new(),
             exported_associated_families: Vec::new(),
+            exported_proposition_facts: Vec::new(),
         }
     }
 
@@ -939,6 +1023,13 @@ impl ModuleSemanticSummary {
     #[must_use]
     pub fn with_exported_associated_family(mut self, family: AssociatedFamilySummary) -> Self {
         self.exported_associated_families.push(family);
+        self
+    }
+
+    /// Add a public proposition fact to this module summary.
+    #[must_use]
+    pub fn with_exported_proposition_fact(mut self, fact: PropositionFactSummary) -> Self {
+        self.exported_proposition_facts.push(fact);
         self
     }
 
@@ -1047,6 +1138,11 @@ impl ModuleSemanticSummary {
                 family.revalidation_metadata
             )
         }));
+        key.extend(
+            self.exported_proposition_facts
+                .iter()
+                .map(|fact| format!("proposition_fact::{fact:?}")),
+        );
         key.sort_unstable();
         key
     }
@@ -1063,7 +1159,13 @@ impl ModuleSemanticSummary {
     ) -> Result<(), ModuleSemanticSummaryValidationError> {
         match self.version {
             SummaryVersion::SPEC057_ORDINARY_TYPE_V1 | SummaryVersion::SPEC059_SEALED_DOMAIN_V2 => {
-                if !self.exported_associated_families.is_empty() {
+                if !self.exported_proposition_facts.is_empty() {
+                    Err(
+                        ModuleSemanticSummaryValidationError::PropositionFactsRequireV5 {
+                            version: self.version,
+                        },
+                    )
+                } else if !self.exported_associated_families.is_empty() {
                     Err(
                         ModuleSemanticSummaryValidationError::AssociatedFamiliesRequireV4 {
                             version: self.version,
@@ -1080,7 +1182,13 @@ impl ModuleSemanticSummary {
                 }
             }
             SummaryVersion::SPEC062_TYPE_COMPUTATION_V3 => {
-                if self.exported_associated_families.is_empty() {
+                if !self.exported_proposition_facts.is_empty() {
+                    Err(
+                        ModuleSemanticSummaryValidationError::PropositionFactsRequireV5 {
+                            version: self.version,
+                        },
+                    )
+                } else if self.exported_associated_families.is_empty() {
                     Ok(())
                 } else {
                     Err(
@@ -1090,7 +1198,18 @@ impl ModuleSemanticSummary {
                     )
                 }
             }
-            SummaryVersion::SPEC063_ASSOCIATED_FAMILY_V4 => Ok(()),
+            SummaryVersion::SPEC063_ASSOCIATED_FAMILY_V4 => {
+                if self.exported_proposition_facts.is_empty() {
+                    Ok(())
+                } else {
+                    Err(
+                        ModuleSemanticSummaryValidationError::PropositionFactsRequireV5 {
+                            version: self.version,
+                        },
+                    )
+                }
+            }
+            SummaryVersion::SPEC064_PROPOSITIONS_V5 => Ok(()),
             version => {
                 Err(ModuleSemanticSummaryValidationError::UnsupportedSummaryVersion { version })
             }

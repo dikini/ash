@@ -16,7 +16,8 @@ use crate::ast::Visibility;
 use crate::kind::Kind;
 use crate::semantic_summary::{
     AssociatedMemberIdentityId, DomainConstructorId, InterfaceIdentityId, ModuleIdentity,
-    SealedDomainId, SourceAnchor, TypeDeclId, ValidatedDecreasesSummary,
+    ModuleSummaryRef, PropositionPredicateId, SealedDomainId, SourceAnchor, TypeDeclId,
+    ValidatedDecreasesSummary,
 };
 use serde::{Deserialize, Serialize};
 
@@ -151,6 +152,155 @@ pub enum CanonicalTypeExpr {
         args: Vec<CanonicalTypeExpr>,
         kind: Kind,
     },
+}
+
+/// Canonical type-level proposition crossing crate/module/cache/summary or stable
+/// diagnostic boundaries.
+///
+/// This is a structural carrier only. It records the four proposition families
+/// accepted by SPEC-064 without performing lowering, normalization, impl search,
+/// or proof search in `ash-core`.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum TypeProposition {
+    Equality(TypeEqualityProposition),
+    Disequality(TypeDisequalityProposition),
+    InterfaceBound(InterfaceBoundProposition),
+    NamedPredicate(NamedPredicateProposition),
+}
+
+/// Operand for canonical propositions.
+///
+/// `CanonicalTypeExpr` intentionally remains limited to nominal/projection/
+/// computation-head applications. Sealed-domain marker constructors such as
+/// `Cons<A, T>` are represented honestly by `DomainConstructorApp` instead of
+/// being encoded as ordinary nominal types or debug strings.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum TypePropositionTerm {
+    Canonical(CanonicalTypeExpr),
+    DomainConstructorApp {
+        constructor: DomainConstructorId,
+        domain: SealedDomainId,
+        args: Vec<TypePropositionTerm>,
+        kind: Kind,
+    },
+}
+
+/// Type-level equality proposition.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct TypeEqualityProposition {
+    pub lhs: TypePropositionTerm,
+    pub rhs: TypePropositionTerm,
+}
+
+/// Type-level disequality proposition.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct TypeDisequalityProposition {
+    pub lhs: TypePropositionTerm,
+    pub rhs: TypePropositionTerm,
+}
+
+/// Type-level interface-bound proposition.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct InterfaceBoundProposition {
+    pub subject: TypePropositionTerm,
+    pub interface: InterfaceIdentityId,
+    pub interface_args: Vec<TypePropositionTerm>,
+}
+
+/// Explicit named predicate proposition.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct NamedPredicateProposition {
+    pub predicate: PropositionPredicateId,
+    pub args: Vec<TypePropositionTerm>,
+}
+
+/// Boundary provenance for proposition outcomes.
+///
+/// Solver-private traces that never leave `ash-typeck` do not need this carrier;
+/// it exists for facts crossing stable boundaries.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum PropositionBoundary {
+    Local,
+    ImportedSummary(ModuleSummaryRef),
+}
+
+/// Normalized term pair used by boundary evidence/refutation for equality and
+/// disequality propositions.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct PropositionTypeComparisonEvidence {
+    pub lhs: NormalTypeExpr,
+    pub rhs: NormalTypeExpr,
+}
+
+/// Shared boundary evidence rule names.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum PropositionEvidenceRule {
+    DefinitionalEquality,
+    SealedDomainConstructorDisjointness,
+    NominalHeadDisjointness,
+    InScopeInterfaceBound,
+    ConcreteImplEvidence,
+    NamedPredicateAssumption,
+    ImportedSummaryFact,
+}
+
+/// Shared boundary refutation reasons.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum PropositionRefutationReason {
+    DefinitionalEquality,
+    ClosedHeadMismatch,
+    InterfaceEvidenceNotFound,
+    NamedPredicateRefuted,
+    ImportedSummaryRefutation,
+}
+
+/// Shared boundary deferred reasons.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum PropositionDeferredKind {
+    BlockedByNeutrality { blocker: NormalFormBlockReason },
+    RigidAssociatedProjection,
+    RequiresTypeFunctionInversion,
+    RequiresAssociatedFamilyInversion,
+    UnsupportedNamedPredicate,
+    MissingInterfaceEvidence,
+    UnsupportedProofSearch,
+}
+
+/// Boundary evidence for a satisfied proposition.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct PropositionEvidence {
+    pub proposition: TypeProposition,
+    pub normalized_terms: Option<PropositionTypeComparisonEvidence>,
+    pub rule: PropositionEvidenceRule,
+    pub source_anchor: Option<SourceAnchor>,
+    pub boundary: PropositionBoundary,
+}
+
+/// Boundary refutation for a proposition.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct PropositionRefutation {
+    pub proposition: TypeProposition,
+    pub normalized_terms: Option<PropositionTypeComparisonEvidence>,
+    pub reason: PropositionRefutationReason,
+    pub source_anchor: Option<SourceAnchor>,
+    pub boundary: PropositionBoundary,
+}
+
+/// Boundary deferred reason for a proposition.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct PropositionDeferredReason {
+    pub proposition: TypeProposition,
+    pub kind: PropositionDeferredKind,
+    pub source_anchor: Option<SourceAnchor>,
+    pub no_inversion_boundary: bool,
+}
+
+/// Conservative proposition outcome crossing a stable boundary.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum PropositionOutcome {
+    Satisfied(PropositionEvidence),
+    Refuted(PropositionRefutation),
+    Deferred(PropositionDeferredReason),
 }
 
 /// Checked source-backed `type fn` declaration carrier.

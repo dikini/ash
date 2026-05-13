@@ -2466,10 +2466,11 @@ fn summary_version_contract_error(error: ModuleSemanticSummaryValidationError) -
         ModuleSemanticSummaryValidationError::TypeFunctionsRequireV3 { version } => {
             TypeEnvError::MalformedImportedComputationSummary {
                 message: format!(
-                    "module semantic summary version {} cannot carry public type-function summaries; expected {} or {}",
+                    "module semantic summary version {} cannot carry public type-function summaries; expected {}, {}, or {}",
                     version.0,
                     SummaryVersion::SPEC062_TYPE_COMPUTATION_V3.0,
-                    SummaryVersion::SPEC063_ASSOCIATED_FAMILY_V4.0
+                    SummaryVersion::SPEC063_ASSOCIATED_FAMILY_V4.0,
+                    SummaryVersion::SPEC064_PROPOSITIONS_V5.0
                 ),
                 version,
                 span: Span::default(),
@@ -2478,9 +2479,21 @@ fn summary_version_contract_error(error: ModuleSemanticSummaryValidationError) -
         ModuleSemanticSummaryValidationError::AssociatedFamiliesRequireV4 { version } => {
             TypeEnvError::MalformedImportedComputationSummary {
                 message: format!(
-                    "module semantic summary version {} cannot carry public associated-family summaries; expected {}",
+                    "module semantic summary version {} cannot carry public associated-family summaries; expected {} or {}",
                     version.0,
-                    SummaryVersion::SPEC063_ASSOCIATED_FAMILY_V4.0
+                    SummaryVersion::SPEC063_ASSOCIATED_FAMILY_V4.0,
+                    SummaryVersion::SPEC064_PROPOSITIONS_V5.0
+                ),
+                version,
+                span: Span::default(),
+            }
+        }
+        ModuleSemanticSummaryValidationError::PropositionFactsRequireV5 { version } => {
+            TypeEnvError::MalformedImportedComputationSummary {
+                message: format!(
+                    "module semantic summary version {} cannot carry public proposition facts; expected {}",
+                    version.0,
+                    SummaryVersion::SPEC064_PROPOSITIONS_V5.0
                 ),
                 version,
                 span: Span::default(),
@@ -2490,11 +2503,12 @@ fn summary_version_contract_error(error: ModuleSemanticSummaryValidationError) -
             TypeEnvError::UnsupportedSummaryVersion {
                 version,
                 expected: format!(
-                    "{}, {}, {}, or {}",
+                    "{}, {}, {}, {}, or {}",
                     SummaryVersion::SPEC057_ORDINARY_TYPE_V1.0,
                     SummaryVersion::SPEC059_SEALED_DOMAIN_V2.0,
                     SummaryVersion::SPEC062_TYPE_COMPUTATION_V3.0,
-                    SummaryVersion::SPEC063_ASSOCIATED_FAMILY_V4.0
+                    SummaryVersion::SPEC063_ASSOCIATED_FAMILY_V4.0,
+                    SummaryVersion::SPEC064_PROPOSITIONS_V5.0
                 ),
                 span: Span::default(),
             }

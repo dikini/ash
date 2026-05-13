@@ -292,7 +292,7 @@ Update this section as tasks complete:
 | 113 | 13 | 13 | ✅ Complete |
 | 114 | 14 | 14 | ✅ Complete |
 | 115 | 14 | 14 | ✅ Complete |
-| 116 | 14 | 2 | 🟡 Ready |
+| 116 | 14 | 3 | 🟡 Ready |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -405,7 +405,7 @@ This table is retained near the original early-phase section for historical cont
 | 113 | 13 | 13 | ✅ Complete |
 | 114 | 14 | 14 | ✅ Complete |
 | 115 | 14 | 14 | ✅ Complete |
-| 116 | 14 | 2 | 🟡 Ready |
+| 116 | 14 | 3 | 🟡 Ready |
 
 ## Phase 13: Streams and Behaviours (Weeks 20-22)
 
@@ -3416,7 +3416,7 @@ Phase 115 implements SPEC-G from DESIGN-034. It integrates associated types with
 ## Phase 116: Constraint and Proposition Layer
 
 **Priority:** High (DESIGN-034 SPEC-H adds conservative proposition checking after the total type-computation substrate from Phase 115)
-**Status:** 🟡 Ready (TASK-871 and TASK-872 complete; TASK-873 through TASK-884 ready/planned)
+**Status:** 🟡 Ready (TASK-871 through TASK-873 complete; TASK-874 through TASK-884 ready/planned)
 **Spec:** [SPEC-064](../spec/SPEC-064-CONSTRAINT-PROPOSITION-LAYER.md)
 **Design:** [DESIGN-034](../design/DESIGN-034-TOTAL-TYPE-COMPUTATION.md)
 **Plan:** [docs/plan/PLAN-112-CONSTRAINT-PROPOSITION-LAYER.md](PLAN-112-CONSTRAINT-PROPOSITION-LAYER.md)
@@ -3427,7 +3427,7 @@ Phase 116 implements SPEC-H from DESIGN-034. It adds a conservative type-level p
 |------|-------------|------------|--------|
 | [TASK-871](tasks/TASK-871-spec-h-spec-plan-packet.md) | Promote DESIGN-034 SPEC-H into SPEC-064/PLAN-112 and register Phase 116 | 4 | ✅ Complete |
 | [TASK-872](tasks/TASK-872-proposition-layer-audit-gate.md) | Audit live parser/core/typeck/normalizer/engine proposition seams and bind downstream tasks before Rust changes | 5 | ✅ Complete |
-| [TASK-873](tasks/TASK-873-core-proposition-carriers.md) | Core canonical proposition/evidence/refutation/deferred carriers and V5 summary version contract | 7 | 🟡 Ready |
+| [TASK-873](tasks/TASK-873-core-proposition-carriers.md) | Core canonical proposition/evidence/refutation/deferred carriers and V5 summary version contract | 7 | ✅ Complete |
 | [TASK-874](tasks/TASK-874-parser-proposition-surface.md) | Raw parser surface for proposition clauses and named predicate declarations | 7 | 🟡 Ready |
 | [TASK-875](tasks/TASK-875-typeenv-proposition-environment.md) | TypeEnv proposition environment, obligation generation, and canonical lowering | 7 | 🟡 Ready |
 | [TASK-876](tasks/TASK-876-normalized-equality-disequality-solver.md) | Normalized equality and conservative constructor-head disequality solver | 8 | 🟡 Ready |

@@ -10,7 +10,7 @@
 
 ---
 
-**Status:** 🟡 Ready (TASK-871 and TASK-872 complete; TASK-873 through TASK-884 ready/planned)
+**Status:** 🟡 Ready (TASK-871 through TASK-873 complete; TASK-874 through TASK-884 ready/planned)
 **Spec:** [SPEC-064](../spec/SPEC-064-CONSTRAINT-PROPOSITION-LAYER.md)
 **Design:** [DESIGN-034 §16.8](../design/DESIGN-034-TOTAL-TYPE-COMPUTATION.md#168-spec-h-constraintproposition-layer)
 **Depends on:** [SPEC-057](../spec/SPEC-057-UNIFIED-TYPE-MODULE-PIPELINE-AND-SEMANTIC-SUMMARIES.md), [SPEC-058](../spec/SPEC-058-CANONICAL-TYPE-EXPRESSION-IR-PROJECTION-IDS-KIND-ARITY-SUBSTRATE.md), [SPEC-059](../spec/SPEC-059-SEALED-TYPE-LEVEL-DOMAINS.md), [SPEC-060](../spec/SPEC-060-NORMALIZER-DEFINITIONAL-EQUALITY-CORE.md), [SPEC-061](../spec/SPEC-061-DIRECT-STRUCTURAL-TYPE-FUNCTIONS.md), [SPEC-062](../spec/SPEC-062-MODULE-SUMMARY-EXPORT-IMPORT-FOR-TYPE-COMPUTATION.md), [SPEC-063](../spec/SPEC-063-ASSOCIATED-TYPE-FAMILY-COMPUTATION.md)
@@ -21,7 +21,7 @@
 |------|-------------|------|------------|--------|
 | [TASK-871](tasks/TASK-871-spec-h-spec-plan-packet.md) | Promote DESIGN-034 SPEC-H into SPEC-064/PLAN-112 and register Phase 116 | Docs/Planning | 4 | ✅ Complete |
 | [TASK-872](tasks/TASK-872-proposition-layer-audit-gate.md) | Audit live parser/core/typeck/normalizer/engine proposition seams and bind downstream tasks before Rust changes | Docs/Substrate | 5 | ✅ Complete |
-| [TASK-873](tasks/TASK-873-core-proposition-carriers.md) | Add core canonical proposition/evidence/refutation/deferred carriers and V5 summary version contract | Core/Substrate | 7 | 🟡 Ready |
+| [TASK-873](tasks/TASK-873-core-proposition-carriers.md) | Add core canonical proposition/evidence/refutation/deferred carriers and V5 summary version contract | Core/Substrate | 7 | ✅ Complete |
 | [TASK-874](tasks/TASK-874-parser-proposition-surface.md) | Add raw parser surface for audited proposition clauses and explicit named predicate declarations | Parser | 7 | 🟡 Ready |
 | [TASK-875](tasks/TASK-875-typeenv-proposition-environment.md) | Add TypeEnv proposition environment, obligation generation, and canonical lowering | Typeck/Substrate | 7 | 🟡 Ready |
 | [TASK-876](tasks/TASK-876-normalized-equality-disequality-solver.md) | Implement normalized equality and conservative constructor-head disequality solving | Typeck/Semantic | 8 | 🟡 Ready |
@@ -84,7 +84,7 @@ Focused test commands must either target exact integration-test files created by
 - [x] PLAN-112 and TASK-871 through TASK-884 registered in `docs/plan/PLAN-INDEX.md`.
 - [x] TASK-871 created and completed as the planning packet.
 - [x] TASK-872 audit artifact created before Rust implementation and downstream TASK-873 through TASK-882 file/test/callsite bindings patched or explicitly confirmed.
-- [ ] Core proposition/evidence carriers and V5 summary version contract implemented and tested.
+- [x] Core proposition/evidence carriers and V5 summary version contract implemented and tested.
 - [ ] Parser proposition clause and named predicate surface implemented and tested at audited sites.
 - [ ] TypeEnv proposition environment and canonical lowering implemented and tested.
 - [ ] Normalized equality and conservative disequality solver implemented and tested.

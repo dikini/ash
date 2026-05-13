@@ -49,6 +49,7 @@ fn builtin_add() -> BuiltinFnDef {
             },
         ],
         return_type: SurfaceType::Name("Int".into()),
+        proposition_tail: None,
         span: span(),
     }
 }
@@ -175,6 +176,7 @@ fn builtin_fn_with_generic_type_params() {
             ty: SurfaceType::Name("T".into()),
         }],
         return_type: SurfaceType::Name("T".into()),
+        proposition_tail: None,
         span: span(),
     };
 
@@ -215,6 +217,7 @@ fn builtin_fn_coexists_with_regular_fn() {
             ty: SurfaceType::Name("Int".into()),
         }],
         return_type: Some(SurfaceType::Name("Int".into())),
+        proposition_tail: None,
         contract: None,
         body: Expr::Call {
             func: "add".into(),

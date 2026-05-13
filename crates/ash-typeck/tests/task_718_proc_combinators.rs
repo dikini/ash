@@ -30,6 +30,7 @@ fn builtin(name: &str, params: Vec<SurfaceType>, ret: SurfaceType) -> BuiltinFnD
             })
             .collect(),
         return_type: ret,
+        proposition_tail: None,
         span: Span::default(),
     }
 }

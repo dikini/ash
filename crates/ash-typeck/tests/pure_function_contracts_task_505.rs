@@ -39,6 +39,7 @@ fn arithmetic_fn_with_contract(contract: ash_parser::surface::Contract, body: Ex
             ty: SurfaceType::Name("Int".into()),
         }],
         return_type: Some(SurfaceType::Name("Int".into())),
+        proposition_tail: None,
         contract: Some(contract),
         body,
         span: span(),

@@ -30,6 +30,7 @@ fn builtin_len() -> BuiltinFnDef {
             },
         }],
         return_type: SurfaceType::Name("Int".into()),
+        proposition_tail: None,
         span: span(),
     }
 }
@@ -48,6 +49,7 @@ fn builtin_head() -> BuiltinFnDef {
             },
         }],
         return_type: SurfaceType::Name("a".into()),
+        proposition_tail: None,
         span: span(),
     }
 }
@@ -69,6 +71,7 @@ fn builtin_tail() -> BuiltinFnDef {
             name: "List".into(),
             args: vec![SurfaceType::Name("a".into())],
         },
+        proposition_tail: None,
         span: span(),
     }
 }

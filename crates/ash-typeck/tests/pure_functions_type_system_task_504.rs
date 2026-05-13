@@ -21,6 +21,7 @@ fn generic_identity_fn() -> FnDef {
             ty: SurfaceType::Name("T".into()),
         }],
         return_type: Some(SurfaceType::Name("T".into())),
+        proposition_tail: None,
         contract: None,
         body: Expr::Variable {
             name: "x".into(),
@@ -200,6 +201,7 @@ fn fn_body_call_must_target_pure_function_type() {
             ty: SurfaceType::Name("Int".into()),
         }],
         return_type: Some(SurfaceType::Name("Int".into())),
+        proposition_tail: None,
         contract: None,
         body: Expr::Call {
             func: "not_fn".into(),
@@ -242,6 +244,7 @@ fn interface_method_call_is_allowed_in_pure_fn_when_impl_exists() {
             ty: SurfaceType::Name("String".into()),
         }],
         return_type: Some(SurfaceType::Name("String".into())),
+        proposition_tail: None,
         contract: None,
         body: Expr::Call {
             func: "explain".into(),
@@ -292,6 +295,7 @@ fn if_let_pattern_binding_is_in_scope_for_interface_call_validation() {
             ty: SurfaceType::Name("String".into()),
         }],
         return_type: Some(SurfaceType::Name("String".into())),
+        proposition_tail: None,
         contract: None,
         body: Expr::IfLet {
             pattern: Pattern::Variable {
@@ -350,6 +354,7 @@ fn block_let_binding_is_in_scope_for_later_interface_call_validation() {
         type_params: vec![],
         params: vec![],
         return_type: Some(SurfaceType::Name("String".into())),
+        proposition_tail: None,
         contract: None,
         body: Expr::Block {
             statements: vec![BlockStmt::Let {
@@ -487,6 +492,7 @@ fn interface_method_resolution_unifies_nested_generic_argument_types() {
             },
         }],
         return_type: Some(SurfaceType::Name("String".into())),
+        proposition_tail: None,
         contract: None,
         body: Expr::Call {
             func: "explain".into(),
@@ -547,6 +553,7 @@ fn qualified_pure_fn_call_accepts_exact_qualified_binding() {
             ty: SurfaceType::Name("Int".into()),
         }],
         return_type: Some(SurfaceType::Name("Int".into())),
+        proposition_tail: None,
         contract: None,
         body: Expr::Variable {
             name: "x".into(),
@@ -564,6 +571,7 @@ fn qualified_pure_fn_call_accepts_exact_qualified_binding() {
             ty: SurfaceType::Name("Int".into()),
         }],
         return_type: Some(SurfaceType::Name("Int".into())),
+        proposition_tail: None,
         contract: None,
         body: Expr::Call {
             func: "passthrough".into(),
@@ -612,6 +620,7 @@ fn qualified_pure_fn_call_requires_exact_qualified_binding() {
             ty: SurfaceType::Name("Int".into()),
         }],
         return_type: Some(SurfaceType::Name("Int".into())),
+        proposition_tail: None,
         contract: None,
         body: Expr::Variable {
             name: "x".into(),
@@ -629,6 +638,7 @@ fn qualified_pure_fn_call_requires_exact_qualified_binding() {
             ty: SurfaceType::Name("Int".into()),
         }],
         return_type: Some(SurfaceType::Name("Int".into())),
+        proposition_tail: None,
         contract: None,
         body: Expr::Call {
             func: "passthrough".into(),
@@ -679,6 +689,7 @@ fn omitted_return_type_is_rechecked_before_downstream_callers_are_accepted() {
         type_params: vec![],
         params: vec![],
         return_type: None,
+        proposition_tail: None,
         contract: None,
         body: Expr::Literal(Literal::Int(1)),
         span: span(),
@@ -690,6 +701,7 @@ fn omitted_return_type_is_rechecked_before_downstream_callers_are_accepted() {
         type_params: vec![],
         params: vec![],
         return_type: Some(SurfaceType::Name("String".into())),
+        proposition_tail: None,
         contract: None,
         body: Expr::Call {
             func: "returns_int".into(),

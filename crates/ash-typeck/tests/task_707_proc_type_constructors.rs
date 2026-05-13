@@ -23,6 +23,7 @@ fn builtin_with_param_and_return(
             ty: param_ty,
         }],
         return_type: return_ty,
+        proposition_tail: None,
         span: Span::default(),
     }
 }

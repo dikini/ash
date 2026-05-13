@@ -3172,6 +3172,7 @@ mod tests {
                     type_params: vec![],
                     params: vec![],
                     return_type: None,
+                    proposition_tail: None,
                     contract: None,
                     body: effectful_act_block_body("read"),
                     span,

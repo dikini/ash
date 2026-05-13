@@ -126,6 +126,7 @@ fn task_870_explicit_family_projection_is_accepted_in_public_fn_signature_positi
             ty: projected.clone(),
         }],
         return_type: Some(projected),
+        proposition_tail: None,
         contract: None,
         body: Expr::Literal(Literal::String("ok".into())),
         span: span(),

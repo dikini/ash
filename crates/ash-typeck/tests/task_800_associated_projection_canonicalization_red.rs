@@ -159,6 +159,7 @@ fn projection_fn(return_type: SurfaceType) -> FnDef {
             ty: SurfaceType::Name("T".into()),
         }],
         return_type: Some(return_type),
+        proposition_tail: None,
         contract: None,
         body: Expr::Variable {
             name: "value".into(),
@@ -178,6 +179,7 @@ fn projection_builtin(return_type: SurfaceType) -> BuiltinFnDef {
             ty: SurfaceType::Name("T".into()),
         }],
         return_type,
+        proposition_tail: None,
         span: span(),
     }
 }
@@ -192,6 +194,7 @@ fn projection_fn_without_bounds(return_type: SurfaceType) -> FnDef {
             ty: SurfaceType::Name("T".into()),
         }],
         return_type: Some(return_type),
+        proposition_tail: None,
         contract: None,
         body: Expr::Variable {
             name: "value".into(),

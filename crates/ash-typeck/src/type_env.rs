@@ -30,11 +30,13 @@ use ash_core::type_ir::{
     AssociatedFamilyProjection, AssociatedFamilyProjectionMode, AssociatedFamilyResultConstraint,
     AssociatedFamilyResultExpr, AssociatedFamilyScheme, AssociatedFamilySchemeParam,
     CanonicalTypeExpr, InterfaceBoundProposition, NamedPredicateProposition, NormalFormBlockReason,
-    NormalTypeExpr, ProjectionRigidity, PropositionDeferredKind, PropositionDeferredReason,
-    PropositionOutcome, TypeComputationHeadId, TypeDisequalityProposition, TypeEqualityProposition,
-    TypeFunctionDef, TypeFunctionEquation, TypeFunctionParam, TypeFunctionPattern,
-    TypeFunctionPatternConstraint, TypeFunctionResultConstraint, TypeFunctionResultExpr,
-    TypeFunctionSourceAnchors, TypeProposition, TypePropositionTerm,
+    NormalTypeExpr, ProjectionRigidity, PropositionBoundary, PropositionDeferredKind,
+    PropositionDeferredReason, PropositionEvidence, PropositionEvidenceRule, PropositionOutcome,
+    PropositionRefutation, PropositionRefutationReason, PropositionTypeComparisonEvidence,
+    TypeComputationHeadId, TypeDisequalityProposition, TypeEqualityProposition, TypeFunctionDef,
+    TypeFunctionEquation, TypeFunctionParam, TypeFunctionPattern, TypeFunctionPatternConstraint,
+    TypeFunctionResultConstraint, TypeFunctionResultExpr, TypeFunctionSourceAnchors,
+    TypeProposition, TypePropositionTerm,
 };
 use ash_core::workflow_contract::{Contract as WorkflowContract, RuntimePostconditionContract};
 use ash_parser::surface::{
@@ -1218,6 +1220,160 @@ fn type_var_proposition_term(var: TypeVar) -> TypePropositionTerm {
 
 fn proposition_term_from_canonical(expr: CanonicalTypeExpr) -> TypePropositionTerm {
     TypePropositionTerm::Canonical(expr)
+}
+
+fn proposition_normalization_error(error: crate::normalizer::NormalizationError) -> TypeError {
+    TypeEnvError::InvalidDefinition(
+        format!("proposition normalization failed: {error:?}"),
+        Span::default(),
+    )
+    .into()
+}
+
+fn proposition_comparison_terms(
+    lhs: NormalTypeExpr,
+    rhs: NormalTypeExpr,
+) -> PropositionTypeComparisonEvidence {
+    PropositionTypeComparisonEvidence { lhs, rhs }
+}
+
+fn proposition_satisfaction(
+    proposition: &TypeProposition,
+    normalized_terms: Option<PropositionTypeComparisonEvidence>,
+    rule: PropositionEvidenceRule,
+    source_anchor: Option<SourceAnchor>,
+) -> PropositionOutcome {
+    PropositionOutcome::Satisfied(PropositionEvidence {
+        proposition: proposition.clone(),
+        normalized_terms,
+        rule,
+        source_anchor,
+        boundary: PropositionBoundary::Local,
+    })
+}
+
+fn proposition_refutation(
+    proposition: &TypeProposition,
+    normalized_terms: Option<PropositionTypeComparisonEvidence>,
+    reason: PropositionRefutationReason,
+    source_anchor: Option<SourceAnchor>,
+) -> PropositionOutcome {
+    PropositionOutcome::Refuted(PropositionRefutation {
+        proposition: proposition.clone(),
+        normalized_terms,
+        reason,
+        source_anchor,
+        boundary: PropositionBoundary::Local,
+    })
+}
+
+fn proposition_deferral(
+    proposition: &TypeProposition,
+    kind: PropositionDeferredKind,
+    source_anchor: Option<SourceAnchor>,
+    no_inversion_boundary: bool,
+) -> PropositionOutcome {
+    PropositionOutcome::Deferred(PropositionDeferredReason {
+        proposition: proposition.clone(),
+        kind,
+        source_anchor,
+        no_inversion_boundary,
+    })
+}
+
+fn proposition_deferred_kind_from_blocked_normals(
+    lhs_norm: &NormalTypeExpr,
+    rhs_norm: &NormalTypeExpr,
+) -> PropositionDeferredKind {
+    let mut blockers = Vec::new();
+    collect_proposition_blockers(lhs_norm, &mut blockers);
+    collect_proposition_blockers(rhs_norm, &mut blockers);
+    proposition_deferred_kind_from_blockers(&blockers)
+}
+
+fn proposition_deferred_kind_from_blockers(blockers: &[NormalTypeExpr]) -> PropositionDeferredKind {
+    if blockers.iter().any(|blocker| {
+        matches!(
+            blocker,
+            NormalTypeExpr::Projection {
+                rigidity: ProjectionRigidity::Rigid,
+                ..
+            } | NormalTypeExpr::Projection {
+                reason: Some(NormalFormBlockReason::RigidProjection),
+                ..
+            }
+        )
+    }) {
+        return PropositionDeferredKind::RigidAssociatedProjection;
+    }
+
+    if let Some(blocker) = blockers.iter().find_map(normal_form_block_reason) {
+        return PropositionDeferredKind::BlockedByNeutrality { blocker };
+    }
+
+    PropositionDeferredKind::UnsupportedProofSearch
+}
+
+fn normal_form_block_reason(normal: &NormalTypeExpr) -> Option<NormalFormBlockReason> {
+    match normal {
+        NormalTypeExpr::NeutralComputationApp { reason, .. } => Some(reason.clone()),
+        NormalTypeExpr::Projection { reason, .. } => {
+            Some(reason.clone().unwrap_or(NormalFormBlockReason::Unsupported))
+        }
+        NormalTypeExpr::Primitive(_)
+        | NormalTypeExpr::Var(_)
+        | NormalTypeExpr::NominalApp { .. }
+        | NormalTypeExpr::DomainConstructorApp { .. } => None,
+    }
+}
+
+fn collect_proposition_blockers(normal: &NormalTypeExpr, blockers: &mut Vec<NormalTypeExpr>) {
+    match normal {
+        NormalTypeExpr::NeutralComputationApp { .. } | NormalTypeExpr::Projection { .. } => {
+            blockers.push(normal.clone());
+        }
+        NormalTypeExpr::NominalApp { args, .. }
+        | NormalTypeExpr::DomainConstructorApp { args, .. } => {
+            for arg in args {
+                collect_proposition_blockers(arg, blockers);
+            }
+        }
+        NormalTypeExpr::Primitive(_) | NormalTypeExpr::Var(_) => {}
+    }
+}
+
+fn proposition_normal_form_is_open_or_blocked(normal: &NormalTypeExpr) -> bool {
+    match normal {
+        NormalTypeExpr::Var(_)
+        | NormalTypeExpr::NeutralComputationApp { .. }
+        | NormalTypeExpr::Projection { .. } => true,
+        NormalTypeExpr::NominalApp { args, .. }
+        | NormalTypeExpr::DomainConstructorApp { args, .. } => {
+            args.iter().any(proposition_normal_form_is_open_or_blocked)
+        }
+        NormalTypeExpr::Primitive(_) => false,
+    }
+}
+
+fn sealed_domain_constructor_heads_are_disjoint(
+    lhs_norm: &NormalTypeExpr,
+    rhs_norm: &NormalTypeExpr,
+) -> bool {
+    matches!(
+        (lhs_norm, rhs_norm),
+        (
+            NormalTypeExpr::DomainConstructorApp {
+                constructor: lhs_constructor,
+                domain: lhs_domain,
+                ..
+            },
+            NormalTypeExpr::DomainConstructorApp {
+                constructor: rhs_constructor,
+                domain: rhs_domain,
+                ..
+            }
+        ) if lhs_domain == rhs_domain && lhs_constructor != rhs_constructor
+    )
 }
 
 fn synthetic_proposition_module_identity() -> ModuleIdentity {
@@ -9337,6 +9493,241 @@ impl TypeEnv {
     #[must_use]
     pub fn proposition_obligations(&self) -> &[PropositionFactRecord] {
         &self.proposition_obligations
+    }
+
+    /// Add one required proposition obligation that has already been lowered to core carriers.
+    pub fn add_proposition_obligation(
+        &mut self,
+        proposition: TypeProposition,
+        source_anchor: SourceAnchor,
+        owner_site: PropositionCheckingSite,
+    ) {
+        self.push_proposition_fact(
+            PropositionFactRole::Requirement,
+            proposition,
+            source_anchor,
+            owner_site,
+            None,
+        );
+    }
+
+    /// Solve one proposition using the conservative SPEC-064 equality/disequality layer.
+    pub fn solve_proposition(
+        &self,
+        proposition: &TypeProposition,
+        source_anchor: Option<SourceAnchor>,
+    ) -> Result<PropositionOutcome, TypeError> {
+        match proposition {
+            TypeProposition::Equality(equality) => {
+                self.solve_equality_proposition(proposition, equality, source_anchor)
+            }
+            TypeProposition::Disequality(disequality) => {
+                self.solve_disequality_proposition(proposition, disequality, source_anchor)
+            }
+            TypeProposition::InterfaceBound(_) => Ok(proposition_deferral(
+                proposition,
+                PropositionDeferredKind::MissingInterfaceEvidence,
+                source_anchor,
+                true,
+            )),
+            TypeProposition::NamedPredicate(_) => Ok(proposition_deferral(
+                proposition,
+                PropositionDeferredKind::UnsupportedNamedPredicate,
+                source_anchor,
+                true,
+            )),
+        }
+    }
+
+    /// Solve all stored proposition obligations, updating each fact record with its outcome.
+    pub fn solve_proposition_obligations(&mut self) -> Result<Vec<PropositionOutcome>, TypeError> {
+        let pending = self
+            .proposition_obligations
+            .iter()
+            .enumerate()
+            .map(|(index, record)| {
+                (
+                    index,
+                    record.proposition.clone(),
+                    record.source_anchor.clone(),
+                )
+            })
+            .collect::<Vec<_>>();
+
+        let mut outcomes = Vec::with_capacity(pending.len());
+        for (index, proposition, source_anchor) in pending {
+            let outcome = self.solve_proposition(&proposition, Some(source_anchor))?;
+            if let Some(record) = self.proposition_obligations.get_mut(index) {
+                record.outcome = Some(outcome.clone());
+            }
+            outcomes.push(outcome);
+        }
+        Ok(outcomes)
+    }
+
+    fn solve_equality_proposition(
+        &self,
+        proposition: &TypeProposition,
+        equality: &TypeEqualityProposition,
+        source_anchor: Option<SourceAnchor>,
+    ) -> Result<PropositionOutcome, TypeError> {
+        let (result, lhs_norm, rhs_norm) =
+            self.compare_proposition_terms(&equality.lhs, &equality.rhs)?;
+        let normalized_terms = Some(proposition_comparison_terms(
+            lhs_norm.clone(),
+            rhs_norm.clone(),
+        ));
+
+        Ok(match result {
+            DefinitionalEqualityResult::Equal => proposition_satisfaction(
+                proposition,
+                normalized_terms,
+                PropositionEvidenceRule::DefinitionalEquality,
+                source_anchor,
+            ),
+            DefinitionalEqualityResult::NotEqual { .. } => proposition_refutation(
+                proposition,
+                normalized_terms,
+                PropositionRefutationReason::DefinitionalEquality,
+                source_anchor,
+            ),
+            DefinitionalEqualityResult::BlockedByNeutrality {
+                neutral_subterms, ..
+            } => {
+                let kind = if neutral_subterms.is_empty() {
+                    proposition_deferred_kind_from_blocked_normals(&lhs_norm, &rhs_norm)
+                } else {
+                    proposition_deferred_kind_from_blockers(&neutral_subterms)
+                };
+                proposition_deferral(proposition, kind, source_anchor, true)
+            }
+        })
+    }
+
+    fn solve_disequality_proposition(
+        &self,
+        proposition: &TypeProposition,
+        disequality: &TypeDisequalityProposition,
+        source_anchor: Option<SourceAnchor>,
+    ) -> Result<PropositionOutcome, TypeError> {
+        let normalizer = Normalizer::new(self);
+        let lhs_norm = self.normalize_proposition_term(&normalizer, &disequality.lhs)?;
+        let rhs_norm = self.normalize_proposition_term(&normalizer, &disequality.rhs)?;
+        let comparison = normalizer.definitional_equality_normal_forms(&lhs_norm, &rhs_norm);
+        let normalized_terms = Some(proposition_comparison_terms(
+            lhs_norm.clone(),
+            rhs_norm.clone(),
+        ));
+
+        if matches!(comparison, DefinitionalEqualityResult::Equal) {
+            return Ok(proposition_refutation(
+                proposition,
+                normalized_terms,
+                PropositionRefutationReason::DefinitionalEquality,
+                source_anchor,
+            ));
+        }
+
+        if sealed_domain_constructor_heads_are_disjoint(&lhs_norm, &rhs_norm) {
+            return Ok(proposition_satisfaction(
+                proposition,
+                normalized_terms,
+                PropositionEvidenceRule::SealedDomainConstructorDisjointness,
+                source_anchor,
+            ));
+        }
+
+        let kind = match comparison {
+            DefinitionalEqualityResult::BlockedByNeutrality {
+                neutral_subterms, ..
+            } if !neutral_subterms.is_empty() => {
+                proposition_deferred_kind_from_blockers(&neutral_subterms)
+            }
+            _ if proposition_normal_form_is_open_or_blocked(&lhs_norm)
+                || proposition_normal_form_is_open_or_blocked(&rhs_norm) =>
+            {
+                proposition_deferred_kind_from_blocked_normals(&lhs_norm, &rhs_norm)
+            }
+            _ => PropositionDeferredKind::UnsupportedProofSearch,
+        };
+
+        Ok(proposition_deferral(proposition, kind, source_anchor, true))
+    }
+
+    fn compare_proposition_terms(
+        &self,
+        lhs: &TypePropositionTerm,
+        rhs: &TypePropositionTerm,
+    ) -> Result<(DefinitionalEqualityResult, NormalTypeExpr, NormalTypeExpr), TypeError> {
+        let normalizer = Normalizer::new(self);
+        match (lhs, rhs) {
+            (TypePropositionTerm::Canonical(lhs), TypePropositionTerm::Canonical(rhs)) => {
+                let result = normalizer
+                    .definitional_equality(lhs, rhs)
+                    .map_err(proposition_normalization_error)?;
+                let lhs_norm = match &result {
+                    DefinitionalEqualityResult::Equal => {
+                        normalizer
+                            .normalize(lhs)
+                            .map_err(proposition_normalization_error)?
+                            .normal
+                    }
+                    DefinitionalEqualityResult::NotEqual { lhs_norm, .. }
+                    | DefinitionalEqualityResult::BlockedByNeutrality { lhs_norm, .. } => {
+                        lhs_norm.clone()
+                    }
+                };
+                let rhs_norm = match &result {
+                    DefinitionalEqualityResult::Equal => {
+                        normalizer
+                            .normalize(rhs)
+                            .map_err(proposition_normalization_error)?
+                            .normal
+                    }
+                    DefinitionalEqualityResult::NotEqual { rhs_norm, .. }
+                    | DefinitionalEqualityResult::BlockedByNeutrality { rhs_norm, .. } => {
+                        rhs_norm.clone()
+                    }
+                };
+                Ok((result, lhs_norm, rhs_norm))
+            }
+            _ => {
+                let lhs_norm = self.normalize_proposition_term(&normalizer, lhs)?;
+                let rhs_norm = self.normalize_proposition_term(&normalizer, rhs)?;
+                let result = normalizer.definitional_equality_normal_forms(&lhs_norm, &rhs_norm);
+                Ok((result, lhs_norm, rhs_norm))
+            }
+        }
+    }
+
+    fn normalize_proposition_term(
+        &self,
+        normalizer: &Normalizer<'_>,
+        term: &TypePropositionTerm,
+    ) -> Result<NormalTypeExpr, TypeError> {
+        match term {
+            TypePropositionTerm::Canonical(expr) => normalizer
+                .normalize(expr)
+                .map(|outcome| outcome.normal)
+                .map_err(proposition_normalization_error),
+            TypePropositionTerm::DomainConstructorApp {
+                constructor,
+                domain,
+                args,
+                kind,
+            } => {
+                let args = args
+                    .iter()
+                    .map(|arg| self.normalize_proposition_term(normalizer, arg))
+                    .collect::<Result<Vec<_>, _>>()?;
+                Ok(NormalTypeExpr::DomainConstructorApp {
+                    constructor: constructor.clone(),
+                    domain: domain.clone(),
+                    args,
+                    kind: kind.clone(),
+                })
+            }
+        }
     }
 
     fn lower_proposition_clause(

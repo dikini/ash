@@ -3416,7 +3416,7 @@ Phase 115 implements SPEC-G from DESIGN-034. It integrates associated types with
 ## Phase 116: Constraint and Proposition Layer
 
 **Priority:** High (DESIGN-034 SPEC-H adds conservative proposition checking after the total type-computation substrate from Phase 115)
-**Status:** 🟡 Ready (TASK-871 through TASK-875 complete; TASK-876 through TASK-884 ready/planned)
+**Status:** 🟡 Ready (TASK-871 through TASK-876 complete; TASK-877 through TASK-884 ready/planned)
 **Spec:** [SPEC-064](../spec/SPEC-064-CONSTRAINT-PROPOSITION-LAYER.md)
 **Design:** [DESIGN-034](../design/DESIGN-034-TOTAL-TYPE-COMPUTATION.md)
 **Plan:** [docs/plan/PLAN-112-CONSTRAINT-PROPOSITION-LAYER.md](PLAN-112-CONSTRAINT-PROPOSITION-LAYER.md)
@@ -3430,7 +3430,7 @@ Phase 116 implements SPEC-H from DESIGN-034. It adds a conservative type-level p
 | [TASK-873](tasks/TASK-873-core-proposition-carriers.md) | Core canonical proposition/evidence/refutation/deferred carriers and V5 summary version contract | 7 | ✅ Complete |
 | [TASK-874](tasks/TASK-874-parser-proposition-surface.md) | Raw parser surface for proposition clauses and named predicate declarations | 7 | ✅ Complete |
 | [TASK-875](tasks/TASK-875-typeenv-proposition-environment.md) | TypeEnv proposition environment, obligation generation, and canonical lowering | 7 | ✅ Complete |
-| [TASK-876](tasks/TASK-876-normalized-equality-disequality-solver.md) | Normalized equality and conservative constructor-head disequality solver | 8 | 🟡 Ready |
+| [TASK-876](tasks/TASK-876-normalized-equality-disequality-solver.md) | Normalized equality and conservative constructor-head disequality solver | 8 | ✅ Complete |
 | [TASK-877](tasks/TASK-877-interface-bound-proposition-solving.md) | Interface-bound proposition solving without broadening impl search | 5 | 🟡 Ready |
 | [TASK-878](tasks/TASK-878-named-predicate-registration-deferred-solving.md) | Named predicate registration and deferred unsupported-solving outcomes | 5 | 🟡 Ready |
 | [TASK-879](tasks/TASK-879-public-proposition-summary-transport.md) | Public proposition summary export/import through V5 semantic summaries | 8 | 🟡 Ready |

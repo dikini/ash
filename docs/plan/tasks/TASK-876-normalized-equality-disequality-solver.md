@@ -1,6 +1,6 @@
 # TASK-876: Normalized equality and disequality solver
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -72,9 +72,18 @@ Dispatch an independent review/verification subagent with this task file, SPEC-0
 
 ## Completion Checklist
 
-- [ ] Focused solver tests pass.
-- [ ] No legacy unification fallback is used for canonical proposition inversion.
-- [ ] Neutral/rigid blockers preserve no-inversion notes.
+- [x] Focused solver tests pass.
+- [x] No legacy unification fallback is used for canonical proposition inversion.
+- [x] Neutral/rigid blockers preserve no-inversion notes.
+
+## Completion Notes
+
+- Implemented `TypeEnv::solve_proposition`, `solve_proposition_obligations`, and `add_proposition_obligation` for the Phase 116 proposition environment.
+- Equality propositions now wrap SPEC-060 normalizer/definitional-equality evidence: `Equal` satisfies, closed `NotEqual` refutes, and neutral/rigid blockers defer with `no_inversion_boundary=true`.
+- Disequality propositions now refute definitionally equal normal forms, satisfy same-domain sealed-constructor head disjointness such as `Cons<A, T> != Nil` even with open arguments, and defer open/neutral/rigid/unrecognized proof-search cases.
+- Focused coverage in `crates/ash-typeck/tests/task_876_proposition_solver.rs` verifies H1/H2/H5/H6 behavior directly, no-substitution/no-meta-solving behavior, obligation outcome recording, and non-zero task-owned solver tests. H4 direct type-function equality remains exercised through the existing normalizer substrate; the current core `TypePropositionTerm` carrier cannot faithfully encode sealed-domain constructor proposition terms as `CanonicalTypeExpr::ComputationHeadApp` arguments without a future carrier extension, and the TASK-876 solver delegates any representable canonical type-function equality to `Normalizer::definitional_equality`.
+- Verification passed: `cargo fmt --check`, `git diff --check`, non-zero `cargo test -p ash-typeck --test task_876_proposition_solver -- --list`, `cargo test -p ash-typeck --test task_876_proposition_solver` (9 tests), `cargo test -p ash-typeck --test task_875_proposition_environment` (6 tests), and `cargo check --workspace`.
+- Independent review and targeted re-review approved the implementation; reviewers found no legacy unification fallback, proof search, type-function inversion, associated-family output solving, or substitution/meta mutation in proposition solver paths.
 
 ## Dispatch
 

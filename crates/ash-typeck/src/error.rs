@@ -234,6 +234,30 @@ pub enum TypeEnvError {
         span: Span,
     },
 
+    /// Named proposition predicate was referenced without a registered identity.
+    #[error("unknown named proposition predicate '{name}'")]
+    UnknownPropositionPredicate {
+        /// Source predicate name.
+        name: String,
+        /// Source span covering the predicate name.
+        span: Span,
+    },
+
+    /// Named proposition predicate was applied to the wrong number of arguments.
+    #[error(
+        "named proposition predicate '{name}' arity mismatch: expected {expected}, got {actual}"
+    )]
+    PropositionPredicateArityMismatch {
+        /// Source predicate name.
+        name: String,
+        /// Expected parameter count.
+        expected: usize,
+        /// Actual argument count.
+        actual: usize,
+        /// Source span covering the predicate use.
+        span: Span,
+    },
+
     /// Interface already defined
     #[error("Interface '{0}' is already defined")]
     DuplicateInterface(String, Span),
@@ -431,6 +455,8 @@ impl TypeEnvError {
             | Self::MalformedImportedComputationSummary { span, .. }
             | Self::PrivateDependencyExportFailure { span, .. }
             | Self::ImportOrderConflict { span, .. }
+            | Self::UnknownPropositionPredicate { span, .. }
+            | Self::PropositionPredicateArityMismatch { span, .. }
             | Self::DuplicateInterface(_, span)
             | Self::MissingInterface(_, span)
             | Self::DuplicateImpl { span, .. }

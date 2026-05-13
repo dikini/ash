@@ -2165,7 +2165,7 @@ fn starts_with_unsupported_proposition_surface(input: &ParseInput) -> bool {
                 return true;
             }
 
-            if ch == ':' && !source[index..].starts_with("::") {
+            if ch == ':' && !source[index..].starts_with("::") && !source[..index].ends_with(':') {
                 return true;
             }
         }

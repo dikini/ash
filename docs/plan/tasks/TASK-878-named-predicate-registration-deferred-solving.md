@@ -1,6 +1,6 @@
 # TASK-878: Named predicate registration and deferred solving
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -74,9 +74,17 @@ Dispatch an independent review/verification subagent with this task file, SPEC-0
 
 ## Completion Checklist
 
-- [ ] Focused parser/typeck tests pass.
-- [ ] Unknown vs unsupported-known predicate diagnostics are distinct.
-- [ ] No arbitrary named predicate proof search is attempted.
+- [x] Focused parser/typeck tests pass.
+- [x] Unknown vs unsupported-known predicate diagnostics are distinct.
+- [x] No arbitrary named predicate proof search is attempted.
+
+## Completion Notes
+
+- Added parser and TypeEnv coverage for explicit `prop` declarations, named-predicate proposition uses, predicate identity registration, parameter-domain/visibility/source-anchor preservation, canonical `NamedPredicate` lowering, and non-interference with `pub use path::item` re-export syntax.
+- TypeEnv now distinguishes unknown predicate uses from known-but-unsupported predicates: unknown source/core predicate IDs produce structured `UnknownPropositionPredicate` diagnostics, while registered opaque predicates defer as `UnsupportedNamedPredicate` with no-inversion provenance.
+- Compiler-known builtin named predicates are satisfied only when explicitly registered through TypeEnv and when the application arity matches the registered predicate summary; malformed builtin applications fail closed instead of being satisfied.
+- Independent review initially found direct/core unknown-ID and builtin-wrong-arity gaps; both were fixed and re-reviewed as PASS.
+- Focused verification recorded: `cargo test -p ash-parser --test task_878_named_predicate_surface` (3 passed), `cargo test -p ash-typeck --test task_878_named_predicate_registration` (7 passed), `cargo test -p ash-cli commands::run::tests::test_` (10 passed), `cargo fmt --check`, `git diff --check`, and `cargo check --workspace` all passed.
 
 ## Dispatch
 

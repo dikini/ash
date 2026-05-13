@@ -10,8 +10,8 @@ use ash_core::type_ir::{
     TypePropositionTerm,
 };
 use ash_parser::surface::{
-    ImplDef, InterfaceDef, PropositionClause, PropositionClauseKind, PropositionTail, Type,
-    Visibility, WhereBound,
+    ImplDef, InterfaceDef, PropositionClause, PropositionClauseKind, PropositionPredicateDecl,
+    PropositionPredicateParam, PropositionTail, Type, Visibility, WhereBound,
 };
 use ash_parser::token::Span;
 use ash_typeck::type_env::{
@@ -98,6 +98,18 @@ fn canonical_primitive(term: &TypePropositionTerm) -> &str {
 #[test]
 fn task_875_lowers_all_surface_proposition_clause_families_to_typed_core_carriers() {
     let mut env = TypeEnv::with_builtin_types();
+    env.set_current_module_identity(module_identity(8750, &["pkg", "predicates"]));
+    env.register_proposition_predicate_decl(&PropositionPredicateDecl {
+        visibility: Visibility::Inherited,
+        name: "Normalized".into(),
+        params: vec![PropositionPredicateParam {
+            name: "T".into(),
+            domain: Type::Name("Int".into()),
+            span: span(57, 67),
+        }],
+        span: span(57, 79),
+    })
+    .expect("named predicate must be registered before proposition lowering");
     let interface_id = register_interface(&mut env, "Serializable");
 
     let tail = PropositionTail {

@@ -19,11 +19,12 @@ use ash_core::semantic_summary::{
     ConstructorSummary, DomainConstructorId, DomainConstructorSummary, InterfaceIdentityId,
     InterfaceIdentitySummary, ModuleIdentity, ModuleSemanticSummary,
     ModuleSemanticSummaryValidationError, ModuleSummaryRef, PropositionPredicateId,
-    RepresentationExposure, SealedDomainId, SealedDomainSummary, SourceAnchor, SourceOrigin,
-    StructuralFieldStatus, SummaryVersion, TypeDeclId, TypeDeclSummary,
-    TypeFunctionClosureMetadata, TypeFunctionDependencySummaryRef, TypeFunctionExportMode,
-    TypeFunctionParamSummary, TypeFunctionRevalidationMetadata, TypeFunctionSummary,
-    TypeRepresentationSummary, ValidatedDecreasesSummary,
+    PropositionPredicateParamSummary, PropositionPredicateSummary, RepresentationExposure,
+    SealedDomainId, SealedDomainSummary, SourceAnchor, SourceOrigin, StructuralFieldStatus,
+    SummaryVersion, TypeDeclId, TypeDeclSummary, TypeFunctionClosureMetadata,
+    TypeFunctionDependencySummaryRef, TypeFunctionExportMode, TypeFunctionParamSummary,
+    TypeFunctionRevalidationMetadata, TypeFunctionSummary, TypeRepresentationSummary,
+    ValidatedDecreasesSummary,
 };
 use ash_core::type_ir::{
     AssociatedFamilyEquation, AssociatedFamilyHeadId, AssociatedFamilyPattern,
@@ -43,9 +44,9 @@ use ash_parser::surface::{
     AssociatedTypeKind, CapabilityImplementationDef, CapabilityImplementationDependency,
     CapabilityImplementationDependencyKind, CapabilityImplementationOperation,
     CapabilityInterfaceDef, CapabilityOperationMode, CapabilityOperationSig, ImplDef, InterfaceDef,
-    InterfaceMethodSig, PropositionClause, PropositionClauseKind, PropositionTail, ResourceTypeDef,
-    Type as SurfaceType, TypeFnDef as SurfaceTypeFnDef, TypePattern as SurfaceTypePattern,
-    Visibility as SurfaceVisibility,
+    InterfaceMethodSig, PropositionClause, PropositionClauseKind, PropositionPredicateDecl,
+    PropositionTail, ResourceTypeDef, Type as SurfaceType, TypeFnDef as SurfaceTypeFnDef,
+    TypePattern as SurfaceTypePattern, Visibility as SurfaceVisibility,
 };
 use ash_parser::token::Span;
 use std::collections::{BTreeMap, HashMap, HashSet};
@@ -706,6 +707,32 @@ pub struct PropositionFactRecord {
     pub outcome: Option<PropositionOutcome>,
 }
 
+/// Solver treatment for a registered named proposition predicate.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum PropositionPredicateSolverKind {
+    /// Ordinary source/imported predicates are opaque in TASK-878 and must defer.
+    DeferredUnsupported,
+    /// Compiler-owned builtin predicate explicitly registered in this TypeEnv.
+    CompilerBuiltinSatisfied,
+}
+
+/// TypeEnv-owned named proposition predicate metadata.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PropositionPredicateInfo {
+    pub summary: PropositionPredicateSummary,
+    solver_kind: PropositionPredicateSolverKind,
+}
+
+impl PropositionPredicateInfo {
+    #[must_use]
+    pub fn is_compiler_builtin(&self) -> bool {
+        matches!(
+            self.solver_kind,
+            PropositionPredicateSolverKind::CompilerBuiltinSatisfied
+        )
+    }
+}
+
 /// Domain metadata preserved for an interface parameter of a sealed associated family.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AssociatedFamilyInterfaceParamInfo {
@@ -1202,6 +1229,25 @@ fn proposition_source_anchor(
     label: impl Into<String>,
 ) -> SourceAnchor {
     SourceAnchor::new(origin, Some(source_span_from_parser_span(span)), label)
+}
+
+fn proposition_module_source_origin(module: &ModuleIdentity) -> SourceOrigin {
+    match &module.source {
+        ash_core::semantic_summary::ModuleSourceOrigin::File(path) => {
+            SourceOrigin::File(path.clone())
+        }
+        ash_core::semantic_summary::ModuleSourceOrigin::Inline { parent, offset } => {
+            SourceOrigin::InlineModule {
+                module: *parent,
+                offset: *offset,
+            }
+        }
+        ash_core::semantic_summary::ModuleSourceOrigin::Synthetic { reason } => {
+            SourceOrigin::Synthetic {
+                reason: reason.clone(),
+            }
+        }
+    }
 }
 
 fn synthetic_proposition_source_anchor(label: impl Into<String>) -> SourceAnchor {
@@ -2330,6 +2376,10 @@ pub struct TypeEnv {
     proposition_assumptions: Vec<PropositionFactRecord>,
     /// Required proposition obligations that later task-owned solvers must discharge.
     proposition_obligations: Vec<PropositionFactRecord>,
+    /// Source-visible named proposition predicate aliases.
+    proposition_predicate_aliases: HashMap<String, PropositionPredicateId>,
+    /// Registered named proposition predicates keyed by canonical identity.
+    proposition_predicates: HashMap<PropositionPredicateId, PropositionPredicateInfo>,
     /// Interface bounds attached to workflow type variables.
     pub(crate) type_var_interface_bounds: HashMap<TypeVar, HashSet<String>>,
     /// Variable bindings: variable name -> type
@@ -2868,6 +2918,8 @@ impl TypeEnv {
             impls: Vec::new(),
             proposition_assumptions: Vec::new(),
             proposition_obligations: Vec::new(),
+            proposition_predicate_aliases: HashMap::with_capacity(4),
+            proposition_predicates: HashMap::with_capacity(4),
             type_var_interface_bounds: HashMap::with_capacity(4),
             variables: HashMap::with_capacity(10),
             workflow_intrinsics: HashMap::with_capacity(2),
@@ -9432,6 +9484,123 @@ impl TypeEnv {
     }
 
     /// Lower a surface proposition tail into canonical proposition carriers without solving.
+    pub fn register_proposition_predicate_decl(
+        &mut self,
+        decl: &PropositionPredicateDecl,
+    ) -> Result<PropositionPredicateId, TypeError> {
+        let module = self
+            .current_module_identity
+            .clone()
+            .unwrap_or_else(synthetic_proposition_module_identity);
+        let origin = proposition_module_source_origin(&module);
+        let id = PropositionPredicateId::new(module, decl.name.to_string());
+        let params = decl
+            .params
+            .iter()
+            .map(|param| {
+                let ty = self.lower_surface_type_to_canonical(&param.domain)?;
+                Ok(PropositionPredicateParamSummary {
+                    name: param.name.to_string(),
+                    ty,
+                    kind: Kind::Type,
+                    source_anchor: proposition_source_anchor(
+                        origin.clone(),
+                        param.span,
+                        format!("proposition predicate parameter {}", param.name),
+                    ),
+                })
+            })
+            .collect::<Result<Vec<_>, TypeError>>()?;
+        let summary = PropositionPredicateSummary {
+            id: id.clone(),
+            exported_name: decl.name.to_string(),
+            visibility: core_visibility_from_surface(&decl.visibility),
+            params,
+            source_anchor: proposition_source_anchor(
+                origin,
+                decl.span,
+                format!("proposition predicate {}", decl.name),
+            ),
+        };
+        self.register_proposition_predicate_summary_with_solver_kind(
+            &summary,
+            PropositionPredicateSolverKind::DeferredUnsupported,
+        )?;
+        Ok(id)
+    }
+
+    pub fn register_proposition_predicate_summary(
+        &mut self,
+        summary: &PropositionPredicateSummary,
+    ) -> Result<(), TypeEnvError> {
+        self.register_proposition_predicate_summary_with_solver_kind(
+            summary,
+            PropositionPredicateSolverKind::DeferredUnsupported,
+        )
+    }
+
+    pub fn register_builtin_proposition_predicate_summary(
+        &mut self,
+        summary: &PropositionPredicateSummary,
+    ) -> Result<(), TypeEnvError> {
+        self.register_proposition_predicate_summary_with_solver_kind(
+            summary,
+            PropositionPredicateSolverKind::CompilerBuiltinSatisfied,
+        )
+    }
+
+    fn register_proposition_predicate_summary_with_solver_kind(
+        &mut self,
+        summary: &PropositionPredicateSummary,
+        solver_kind: PropositionPredicateSolverKind,
+    ) -> Result<(), TypeEnvError> {
+        let visible_name = summary.exported_name.to_string();
+        if let Some(existing) = self.proposition_predicate_aliases.get(&visible_name)
+            && existing != &summary.id
+        {
+            return Err(TypeEnvError::ImportOrderConflict {
+                family: "proposition predicate visible name".to_string(),
+                name: visible_name,
+                span: anchor_span(&summary.source_anchor),
+            });
+        }
+        if let Some(existing) = self.proposition_predicates.get(&summary.id) {
+            if existing.summary != *summary || existing.solver_kind != solver_kind {
+                return Err(TypeEnvError::ImportOrderConflict {
+                    family: "proposition predicate summary".to_string(),
+                    name: summary.exported_name.to_string(),
+                    span: anchor_span(&summary.source_anchor),
+                });
+            }
+            return Ok(());
+        }
+        self.proposition_predicate_aliases
+            .insert(visible_name, summary.id.clone());
+        self.proposition_predicates.insert(
+            summary.id.clone(),
+            PropositionPredicateInfo {
+                summary: summary.clone(),
+                solver_kind,
+            },
+        );
+        Ok(())
+    }
+
+    #[must_use]
+    pub fn lookup_proposition_predicate(&self, name: &str) -> Option<&PropositionPredicateInfo> {
+        let id = self.proposition_predicate_aliases.get(name)?;
+        self.proposition_predicates.get(id)
+    }
+
+    #[must_use]
+    pub fn proposition_predicate_by_id(
+        &self,
+        id: &PropositionPredicateId,
+    ) -> Option<&PropositionPredicateInfo> {
+        self.proposition_predicates.get(id)
+    }
+
+    /// Lower a surface proposition tail into canonical proposition carriers without solving.
     pub fn lower_proposition_tail(
         &self,
         tail: &PropositionTail,
@@ -9527,12 +9696,9 @@ impl TypeEnv {
             TypeProposition::InterfaceBound(bound) => {
                 Ok(self.solve_interface_bound_proposition(proposition, bound, source_anchor))
             }
-            TypeProposition::NamedPredicate(_) => Ok(proposition_deferral(
-                proposition,
-                PropositionDeferredKind::UnsupportedNamedPredicate,
-                source_anchor,
-                true,
-            )),
+            TypeProposition::NamedPredicate(named) => {
+                self.solve_named_predicate_proposition(proposition, named, source_anchor)
+            }
         }
     }
 
@@ -9583,6 +9749,52 @@ impl TypeEnv {
             rule,
             source_anchor.or_else(|| Some(record.source_anchor.clone())),
         )
+    }
+
+    fn solve_named_predicate_proposition(
+        &self,
+        proposition: &TypeProposition,
+        named: &NamedPredicateProposition,
+        source_anchor: Option<SourceAnchor>,
+    ) -> Result<PropositionOutcome, TypeError> {
+        let Some(info) = self.proposition_predicate_by_id(&named.predicate) else {
+            return Err(TypeEnvError::UnknownPropositionPredicate {
+                name: named.predicate.name.to_string(),
+                span: source_anchor
+                    .as_ref()
+                    .map_or_else(Span::default, anchor_span),
+            }
+            .into());
+        };
+
+        if info.summary.params.len() != named.args.len() {
+            return Err(TypeEnvError::PropositionPredicateArityMismatch {
+                name: info.summary.exported_name.to_string(),
+                expected: info.summary.params.len(),
+                actual: named.args.len(),
+                span: source_anchor
+                    .as_ref()
+                    .map_or_else(Span::default, anchor_span),
+            }
+            .into());
+        }
+
+        match info.solver_kind {
+            PropositionPredicateSolverKind::CompilerBuiltinSatisfied => {
+                Ok(proposition_satisfaction(
+                    proposition,
+                    None,
+                    PropositionEvidenceRule::NamedPredicateAssumption,
+                    source_anchor,
+                ))
+            }
+            PropositionPredicateSolverKind::DeferredUnsupported => Ok(proposition_deferral(
+                proposition,
+                PropositionDeferredKind::UnsupportedNamedPredicate,
+                source_anchor,
+                true,
+            )),
+        }
     }
 
     /// Solve all stored proposition obligations, updating each fact record with its outcome.
@@ -9825,26 +10037,48 @@ impl TypeEnv {
                     None,
                 )
             }
-            PropositionClauseKind::NamedPredicate { name, args, .. } => {
+            PropositionClauseKind::NamedPredicate {
+                name,
+                name_span,
+                args,
+            } => {
+                let predicate_info = self
+                    .lookup_proposition_predicate(name.as_ref())
+                    .ok_or_else(|| {
+                        TypeError::from(TypeEnvError::UnknownPropositionPredicate {
+                            name: name.to_string(),
+                            span: *name_span,
+                        })
+                    })?;
+                if predicate_info.summary.params.len() != args.len() {
+                    return Err(TypeEnvError::PropositionPredicateArityMismatch {
+                        name: name.to_string(),
+                        expected: predicate_info.summary.params.len(),
+                        actual: args.len(),
+                        span: clause.span,
+                    }
+                    .into());
+                }
                 let args = args
                     .iter()
                     .map(|arg| self.lower_surface_type_term(arg))
                     .collect::<Result<Vec<_>, _>>()?;
-                let predicate = PropositionPredicateId::new(
-                    self.current_module_identity
-                        .clone()
-                        .unwrap_or_else(synthetic_proposition_module_identity),
-                    name.to_string(),
-                );
-                let proposition =
-                    TypeProposition::NamedPredicate(NamedPredicateProposition { predicate, args });
-                let outcome = PropositionOutcome::Deferred(PropositionDeferredReason {
-                    proposition: proposition.clone(),
-                    kind: PropositionDeferredKind::UnsupportedNamedPredicate,
-                    source_anchor: Some(source_anchor.clone()),
-                    no_inversion_boundary: true,
+                let proposition = TypeProposition::NamedPredicate(NamedPredicateProposition {
+                    predicate: predicate_info.summary.id.clone(),
+                    args,
                 });
-                (proposition, Some(outcome))
+                let outcome = match predicate_info.solver_kind {
+                    PropositionPredicateSolverKind::CompilerBuiltinSatisfied => None,
+                    PropositionPredicateSolverKind::DeferredUnsupported => {
+                        Some(proposition_deferral(
+                            &proposition,
+                            PropositionDeferredKind::UnsupportedNamedPredicate,
+                            Some(source_anchor.clone()),
+                            true,
+                        ))
+                    }
+                };
+                (proposition, outcome)
             }
         };
         Ok(LoweredPropositionClause {
@@ -11961,6 +12195,8 @@ impl TypeEnv {
             impls: self.impls.clone(),
             proposition_assumptions: self.proposition_assumptions.clone(),
             proposition_obligations: self.proposition_obligations.clone(),
+            proposition_predicate_aliases: self.proposition_predicate_aliases.clone(),
+            proposition_predicates: self.proposition_predicates.clone(),
             type_var_interface_bounds: self.type_var_interface_bounds.clone(),
             variables: HashMap::with_capacity(10),
             workflow_intrinsics: self.workflow_intrinsics.clone(),
@@ -13096,6 +13332,8 @@ impl TypeEnv {
             impls: self.impls.clone(),
             proposition_assumptions: self.proposition_assumptions.clone(),
             proposition_obligations: self.proposition_obligations.clone(),
+            proposition_predicate_aliases: self.proposition_predicate_aliases.clone(),
+            proposition_predicates: self.proposition_predicates.clone(),
             type_var_interface_bounds: self.type_var_interface_bounds.clone(),
             variables: HashMap::with_capacity(10),
             workflow_intrinsics: self.workflow_intrinsics.clone(),

@@ -18,31 +18,37 @@ use ash_core::semantic_summary::{
     AssociatedMemberIdentityId, AssociatedMemberIdentitySummary, ConstructorPayloadKind,
     ConstructorSummary, DomainConstructorId, DomainConstructorSummary, InterfaceIdentityId,
     InterfaceIdentitySummary, ModuleIdentity, ModuleSemanticSummary,
-    ModuleSemanticSummaryValidationError, ModuleSummaryRef, RepresentationExposure, SealedDomainId,
-    SealedDomainSummary, SourceAnchor, SourceOrigin, StructuralFieldStatus, SummaryVersion,
-    TypeDeclId, TypeDeclSummary, TypeFunctionClosureMetadata, TypeFunctionDependencySummaryRef,
-    TypeFunctionExportMode, TypeFunctionParamSummary, TypeFunctionRevalidationMetadata,
-    TypeFunctionSummary, TypeRepresentationSummary, ValidatedDecreasesSummary,
+    ModuleSemanticSummaryValidationError, ModuleSummaryRef, PropositionPredicateId,
+    RepresentationExposure, SealedDomainId, SealedDomainSummary, SourceAnchor, SourceOrigin,
+    StructuralFieldStatus, SummaryVersion, TypeDeclId, TypeDeclSummary,
+    TypeFunctionClosureMetadata, TypeFunctionDependencySummaryRef, TypeFunctionExportMode,
+    TypeFunctionParamSummary, TypeFunctionRevalidationMetadata, TypeFunctionSummary,
+    TypeRepresentationSummary, ValidatedDecreasesSummary,
 };
 use ash_core::type_ir::{
     AssociatedFamilyEquation, AssociatedFamilyHeadId, AssociatedFamilyPattern,
     AssociatedFamilyProjection, AssociatedFamilyProjectionMode, AssociatedFamilyResultConstraint,
     AssociatedFamilyResultExpr, AssociatedFamilyScheme, AssociatedFamilySchemeParam,
-    CanonicalTypeExpr, NormalFormBlockReason, NormalTypeExpr, ProjectionRigidity,
-    TypeComputationHeadId, TypeFunctionDef, TypeFunctionEquation, TypeFunctionParam,
-    TypeFunctionPattern, TypeFunctionPatternConstraint, TypeFunctionResultConstraint,
-    TypeFunctionResultExpr, TypeFunctionSourceAnchors,
+    CanonicalTypeExpr, InterfaceBoundProposition, NamedPredicateProposition, NormalFormBlockReason,
+    NormalTypeExpr, ProjectionRigidity, PropositionDeferredKind, PropositionDeferredReason,
+    PropositionOutcome, TypeComputationHeadId, TypeDisequalityProposition, TypeEqualityProposition,
+    TypeFunctionDef, TypeFunctionEquation, TypeFunctionParam, TypeFunctionPattern,
+    TypeFunctionPatternConstraint, TypeFunctionResultConstraint, TypeFunctionResultExpr,
+    TypeFunctionSourceAnchors, TypeProposition, TypePropositionTerm,
 };
 use ash_core::workflow_contract::{Contract as WorkflowContract, RuntimePostconditionContract};
 use ash_parser::surface::{
     AssociatedTypeKind, CapabilityImplementationDef, CapabilityImplementationDependency,
     CapabilityImplementationDependencyKind, CapabilityImplementationOperation,
     CapabilityInterfaceDef, CapabilityOperationMode, CapabilityOperationSig, ImplDef, InterfaceDef,
-    InterfaceMethodSig, ResourceTypeDef, Type as SurfaceType, TypeFnDef as SurfaceTypeFnDef,
-    TypePattern as SurfaceTypePattern, Visibility as SurfaceVisibility,
+    InterfaceMethodSig, PropositionClause, PropositionClauseKind, PropositionTail, ResourceTypeDef,
+    Type as SurfaceType, TypeFnDef as SurfaceTypeFnDef, TypePattern as SurfaceTypePattern,
+    Visibility as SurfaceVisibility,
 };
 use ash_parser::token::Span;
 use std::collections::{BTreeMap, HashMap, HashSet};
+
+pub use ash_core::semantic_summary::PropositionFactRole;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 struct TypeFunctionCoverageValue {
@@ -655,6 +661,49 @@ pub struct ImplScheme {
     pub methods: Vec<ImplMethodInfo>,
 }
 
+/// Typed owner category for propositions generated or assumed during type checking.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum PropositionCheckingSiteKind {
+    ExplicitRequirement,
+    TypeVariableInterfaceBound,
+    ImplWhereBound,
+    ConcreteImpl,
+    Synthetic,
+}
+
+/// Typed owner/provenance for a proposition fact.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct PropositionCheckingSite {
+    pub id: u64,
+    pub kind: PropositionCheckingSiteKind,
+    pub label: Option<String>,
+}
+
+impl PropositionCheckingSite {
+    #[must_use]
+    pub const fn new(id: u64, kind: PropositionCheckingSiteKind, label: Option<String>) -> Self {
+        Self { id, kind, label }
+    }
+}
+
+/// Canonical proposition clause plus source-local classification outcome.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LoweredPropositionClause {
+    pub proposition: TypeProposition,
+    pub source_anchor: SourceAnchor,
+    pub outcome: Option<PropositionOutcome>,
+}
+
+/// TypeEnv-owned proposition fact record.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PropositionFactRecord {
+    pub proposition: TypeProposition,
+    pub source_anchor: SourceAnchor,
+    pub owner_site: PropositionCheckingSite,
+    pub role: PropositionFactRole,
+    pub outcome: Option<PropositionOutcome>,
+}
+
 /// Domain metadata preserved for an interface parameter of a sealed associated family.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AssociatedFamilyInterfaceParamInfo {
@@ -1136,6 +1185,50 @@ fn surface_projection_base_spelling(base: &SurfaceType) -> String {
             member
         ),
     }
+}
+
+fn source_span_from_parser_span(span: Span) -> ash_core::ast::Span {
+    ash_core::ast::Span {
+        start: span.start,
+        end: span.end,
+    }
+}
+
+fn proposition_source_anchor(
+    origin: SourceOrigin,
+    span: Span,
+    label: impl Into<String>,
+) -> SourceAnchor {
+    SourceAnchor::new(origin, Some(source_span_from_parser_span(span)), label)
+}
+
+fn synthetic_proposition_source_anchor(label: impl Into<String>) -> SourceAnchor {
+    SourceAnchor::new(
+        SourceOrigin::Synthetic {
+            reason: "typeenv proposition environment".to_string(),
+        },
+        None,
+        label,
+    )
+}
+
+fn type_var_proposition_term(var: TypeVar) -> TypePropositionTerm {
+    TypePropositionTerm::Canonical(CanonicalTypeExpr::Var(format!("type_var_{}", var.0)))
+}
+
+fn proposition_term_from_canonical(expr: CanonicalTypeExpr) -> TypePropositionTerm {
+    TypePropositionTerm::Canonical(expr)
+}
+
+fn synthetic_proposition_module_identity() -> ModuleIdentity {
+    ModuleIdentity::new(
+        Some(CrateId(usize::MAX)),
+        ModuleId(usize::MAX - 875),
+        vec!["typeenv".to_string(), "propositions".to_string()],
+        ash_core::semantic_summary::ModuleSourceOrigin::Synthetic {
+            reason: "TASK-875 proposition predicate fallback identity".to_string(),
+        },
+    )
 }
 
 fn canonical_expr_contains_var(expr: &CanonicalTypeExpr) -> bool {
@@ -2077,6 +2170,10 @@ pub struct TypeEnv {
     capability_bindings: HashMap<String, CapabilityBindingInfo>,
     /// Registered closed-world impls.
     impls: Vec<ImplScheme>,
+    /// Assumed proposition facts available as inputs to later proposition solvers.
+    proposition_assumptions: Vec<PropositionFactRecord>,
+    /// Required proposition obligations that later task-owned solvers must discharge.
+    proposition_obligations: Vec<PropositionFactRecord>,
     /// Interface bounds attached to workflow type variables.
     pub(crate) type_var_interface_bounds: HashMap<TypeVar, HashSet<String>>,
     /// Variable bindings: variable name -> type
@@ -2613,6 +2710,8 @@ impl TypeEnv {
             capability_implementations: HashMap::with_capacity(4),
             capability_bindings: HashMap::with_capacity(4),
             impls: Vec::new(),
+            proposition_assumptions: Vec::new(),
+            proposition_obligations: Vec::new(),
             type_var_interface_bounds: HashMap::with_capacity(4),
             variables: HashMap::with_capacity(10),
             workflow_intrinsics: HashMap::with_capacity(2),
@@ -9176,6 +9275,322 @@ impl TypeEnv {
         }
     }
 
+    /// Lower a surface proposition tail into canonical proposition carriers without solving.
+    pub fn lower_proposition_tail(
+        &self,
+        tail: &PropositionTail,
+        source_origin: SourceOrigin,
+    ) -> Result<Vec<LoweredPropositionClause>, TypeError> {
+        tail.clauses
+            .iter()
+            .map(|clause| self.lower_proposition_clause(clause, source_origin.clone()))
+            .collect()
+    }
+
+    /// Add required proposition obligations generated by a specific checking site.
+    pub fn add_proposition_obligations_from_tail(
+        &mut self,
+        tail: &PropositionTail,
+        source_origin: SourceOrigin,
+        owner_site: PropositionCheckingSite,
+    ) -> Result<(), TypeError> {
+        let lowered = self.lower_proposition_tail(tail, source_origin)?;
+        for clause in lowered {
+            self.push_proposition_fact(
+                PropositionFactRole::Requirement,
+                clause.proposition,
+                clause.source_anchor,
+                owner_site.clone(),
+                clause.outcome,
+            );
+        }
+        Ok(())
+    }
+
+    /// Add assumed proposition facts generated by a specific checking site.
+    pub fn add_proposition_assumptions_from_tail(
+        &mut self,
+        tail: &PropositionTail,
+        source_origin: SourceOrigin,
+        owner_site: PropositionCheckingSite,
+    ) -> Result<(), TypeError> {
+        let lowered = self.lower_proposition_tail(tail, source_origin)?;
+        for clause in lowered {
+            self.push_proposition_fact(
+                PropositionFactRole::Assumption,
+                clause.proposition,
+                clause.source_anchor,
+                owner_site.clone(),
+                clause.outcome,
+            );
+        }
+        Ok(())
+    }
+
+    /// Proposition assumptions available as inputs to later solvers.
+    #[must_use]
+    pub fn proposition_assumptions(&self) -> &[PropositionFactRecord] {
+        &self.proposition_assumptions
+    }
+
+    /// Required proposition obligations that later task-owned solvers must discharge.
+    #[must_use]
+    pub fn proposition_obligations(&self) -> &[PropositionFactRecord] {
+        &self.proposition_obligations
+    }
+
+    fn lower_proposition_clause(
+        &self,
+        clause: &PropositionClause,
+        source_origin: SourceOrigin,
+    ) -> Result<LoweredPropositionClause, TypeError> {
+        let source_anchor =
+            proposition_source_anchor(source_origin, clause.span, "source proposition clause");
+        let (proposition, outcome) = match &clause.kind {
+            PropositionClauseKind::Equality { lhs, rhs, .. } => {
+                let lhs = self.lower_surface_type_term(lhs)?;
+                let rhs = self.lower_surface_type_term(rhs)?;
+                (
+                    TypeProposition::Equality(TypeEqualityProposition { lhs, rhs }),
+                    None,
+                )
+            }
+            PropositionClauseKind::Disequality { lhs, rhs, .. } => {
+                let lhs = self.lower_surface_type_term(lhs)?;
+                let rhs = self.lower_surface_type_term(rhs)?;
+                (
+                    TypeProposition::Disequality(TypeDisequalityProposition { lhs, rhs }),
+                    None,
+                )
+            }
+            PropositionClauseKind::InterfaceBound {
+                subject, interface, ..
+            } => {
+                let subject = self.lower_surface_type_term(subject)?;
+                let (interface_name, interface_args) =
+                    self.interface_clause_name_and_args(interface)?;
+                let interface_id = self
+                    .interface_identity_for_name(&interface_name)
+                    .cloned()
+                    .ok_or_else(|| {
+                        TypeEnvError::MissingInterface(interface_name.clone(), clause.span)
+                    })?;
+                let interface_args = interface_args
+                    .iter()
+                    .map(|arg| self.lower_surface_type_term(arg))
+                    .collect::<Result<Vec<_>, _>>()?;
+                (
+                    TypeProposition::InterfaceBound(InterfaceBoundProposition {
+                        subject,
+                        interface: interface_id,
+                        interface_args,
+                    }),
+                    None,
+                )
+            }
+            PropositionClauseKind::NamedPredicate { name, args, .. } => {
+                let args = args
+                    .iter()
+                    .map(|arg| self.lower_surface_type_term(arg))
+                    .collect::<Result<Vec<_>, _>>()?;
+                let predicate = PropositionPredicateId::new(
+                    self.current_module_identity
+                        .clone()
+                        .unwrap_or_else(synthetic_proposition_module_identity),
+                    name.to_string(),
+                );
+                let proposition =
+                    TypeProposition::NamedPredicate(NamedPredicateProposition { predicate, args });
+                let outcome = PropositionOutcome::Deferred(PropositionDeferredReason {
+                    proposition: proposition.clone(),
+                    kind: PropositionDeferredKind::UnsupportedNamedPredicate,
+                    source_anchor: Some(source_anchor.clone()),
+                    no_inversion_boundary: true,
+                });
+                (proposition, Some(outcome))
+            }
+        };
+        Ok(LoweredPropositionClause {
+            proposition,
+            source_anchor,
+            outcome,
+        })
+    }
+
+    fn lower_surface_type_term(&self, ty: &SurfaceType) -> Result<TypePropositionTerm, TypeError> {
+        match ty {
+            SurfaceType::Name(name) => {
+                if let Some((domain, constructor)) = self.find_any_domain_constructor(name.as_ref())
+                {
+                    if !constructor.fields.is_empty() {
+                        return Err(TypeError::ConstructorNameMismatch {
+                            expected: format!(
+                                "{} type arguments for sealed-domain constructor {}",
+                                constructor.fields.len(),
+                                constructor.exported_name
+                            ),
+                            found: "0".to_string(),
+                            span: Span::default(),
+                        });
+                    }
+                    return Ok(TypePropositionTerm::DomainConstructorApp {
+                        constructor: constructor.id.clone(),
+                        domain: domain.id.clone(),
+                        args: Vec::new(),
+                        kind: Kind::Type,
+                    });
+                }
+                self.lower_surface_type_to_canonical(ty)
+                    .map(proposition_term_from_canonical)
+            }
+            SurfaceType::Constructor { name, args } => {
+                if let Some((domain, constructor)) = self.find_any_domain_constructor(name.as_ref())
+                {
+                    let domain = domain.clone();
+                    let constructor = constructor.clone();
+                    if constructor.fields.len() != args.len() {
+                        return Err(TypeError::ConstructorNameMismatch {
+                            expected: format!(
+                                "{} type arguments for sealed-domain constructor {}",
+                                constructor.fields.len(),
+                                constructor.exported_name
+                            ),
+                            found: args.len().to_string(),
+                            span: Span::default(),
+                        });
+                    }
+                    let args = args
+                        .iter()
+                        .map(|arg| self.lower_surface_type_term(arg))
+                        .collect::<Result<Vec<_>, _>>()?;
+                    Ok(TypePropositionTerm::DomainConstructorApp {
+                        constructor: constructor.id,
+                        domain: domain.id,
+                        args,
+                        kind: Kind::Type,
+                    })
+                } else {
+                    self.lower_surface_type_to_canonical(ty)
+                        .map(proposition_term_from_canonical)
+                }
+            }
+            _ => self
+                .lower_surface_type_to_canonical(ty)
+                .map(proposition_term_from_canonical),
+        }
+    }
+
+    fn interface_clause_name_and_args<'a>(
+        &self,
+        interface: &'a SurfaceType,
+    ) -> Result<(String, &'a [SurfaceType]), TypeError> {
+        match interface {
+            SurfaceType::Name(name) => Ok((name.to_string(), &[])),
+            SurfaceType::Constructor { name, args } => Ok((name.to_string(), args.as_slice())),
+            other => Err(TypeError::ConstructorNameMismatch {
+                expected: "interface name or interface type application".to_string(),
+                found: surface_projection_base_spelling(other),
+                span: Span::default(),
+            }),
+        }
+    }
+
+    fn push_proposition_fact(
+        &mut self,
+        role: PropositionFactRole,
+        proposition: TypeProposition,
+        source_anchor: SourceAnchor,
+        owner_site: PropositionCheckingSite,
+        outcome: Option<PropositionOutcome>,
+    ) {
+        let record = PropositionFactRecord {
+            proposition,
+            source_anchor,
+            owner_site,
+            role,
+            outcome,
+        };
+        let facts = match role {
+            PropositionFactRole::Requirement => &mut self.proposition_obligations,
+            PropositionFactRole::Assumption | PropositionFactRole::Evidence => {
+                &mut self.proposition_assumptions
+            }
+        };
+        if !facts.iter().any(|existing| existing == &record) {
+            facts.push(record);
+        }
+    }
+
+    fn record_type_var_interface_bound_assumption(
+        &mut self,
+        var: TypeVar,
+        interface: &str,
+        source_anchor: SourceAnchor,
+        owner_site: PropositionCheckingSite,
+    ) {
+        let Some(interface_id) = self.interface_identity_for_name(interface).cloned() else {
+            return;
+        };
+        let proposition = TypeProposition::InterfaceBound(InterfaceBoundProposition {
+            subject: type_var_proposition_term(var),
+            interface: interface_id,
+            interface_args: Vec::new(),
+        });
+        self.push_proposition_fact(
+            PropositionFactRole::Assumption,
+            proposition,
+            source_anchor,
+            owner_site,
+            None,
+        );
+    }
+
+    fn record_concrete_impl_interface_assumption(
+        &mut self,
+        interface: &str,
+        lowered_type_args: &[Type],
+        source_anchor: SourceAnchor,
+    ) {
+        let Some(interface_id) = self.interface_identity_for_name(interface).cloned() else {
+            return;
+        };
+        let Some((subject, interface_args)) = lowered_type_args.split_first() else {
+            return;
+        };
+        let Some(subject) = self
+            .lower_type_to_canonical_for_equality(subject)
+            .map(proposition_term_from_canonical)
+        else {
+            return;
+        };
+        let Some(interface_args) = interface_args
+            .iter()
+            .map(|arg| {
+                self.lower_type_to_canonical_for_equality(arg)
+                    .map(proposition_term_from_canonical)
+            })
+            .collect::<Option<Vec<_>>>()
+        else {
+            return;
+        };
+        let proposition = TypeProposition::InterfaceBound(InterfaceBoundProposition {
+            subject,
+            interface: interface_id,
+            interface_args,
+        });
+        self.push_proposition_fact(
+            PropositionFactRole::Assumption,
+            proposition,
+            source_anchor,
+            PropositionCheckingSite::new(
+                0x8753_0000u64 + self.impls.len() as u64,
+                PropositionCheckingSiteKind::ConcreteImpl,
+                Some(format!("concrete impl for interface {interface}")),
+            ),
+            None,
+        );
+    }
+
     /// Lower a surface `Type` into the Phase 110 canonical type-expression substrate.
     pub fn lower_surface_type_to_canonical(
         &self,
@@ -11107,6 +11522,8 @@ impl TypeEnv {
             capability_implementations: self.capability_implementations.clone(),
             capability_bindings: HashMap::new(),
             impls: self.impls.clone(),
+            proposition_assumptions: self.proposition_assumptions.clone(),
+            proposition_obligations: self.proposition_obligations.clone(),
             type_var_interface_bounds: self.type_var_interface_bounds.clone(),
             variables: HashMap::with_capacity(10),
             workflow_intrinsics: self.workflow_intrinsics.clone(),
@@ -11570,6 +11987,45 @@ impl TypeEnv {
                 self.associated_family_schemes = previous_family_schemes;
                 return Err(error);
             }
+        }
+
+        for (bound, source_bound) in where_bounds.iter().zip(def.where_bounds.iter()) {
+            self.record_type_var_interface_bound_assumption(
+                bound.type_var,
+                &bound.interface,
+                proposition_source_anchor(
+                    SourceOrigin::Synthetic {
+                        reason: "impl where-bound proposition assumption".to_string(),
+                    },
+                    source_bound.span,
+                    format!(
+                        "impl where-bound type variable {} satisfies interface {}",
+                        bound.type_var.0, bound.interface
+                    ),
+                ),
+                PropositionCheckingSite::new(
+                    0x8752_0000u64 + u64::from(bound.type_var.0),
+                    PropositionCheckingSiteKind::ImplWhereBound,
+                    Some(format!(
+                        "impl where type_var_{}: {}",
+                        bound.type_var.0, bound.interface
+                    )),
+                ),
+            );
+        }
+
+        if def.type_params.is_empty() {
+            self.record_concrete_impl_interface_assumption(
+                &interface.name,
+                &lowered_type_args,
+                proposition_source_anchor(
+                    SourceOrigin::Synthetic {
+                        reason: "concrete impl proposition assumption".to_string(),
+                    },
+                    def.span,
+                    format!("concrete impl evidence for interface {}", interface.name),
+                ),
+            );
         }
 
         self.impls.push(ImplScheme {
@@ -12087,10 +12543,26 @@ impl TypeEnv {
 
     /// Record that a workflow type variable satisfies an interface bound.
     pub fn bind_type_var_interface_bound(&mut self, var: TypeVar, interface: &str) {
-        self.type_var_interface_bounds
+        let inserted = self
+            .type_var_interface_bounds
             .entry(var)
             .or_default()
             .insert(interface.to_string());
+        if inserted {
+            self.record_type_var_interface_bound_assumption(
+                var,
+                interface,
+                synthetic_proposition_source_anchor(format!(
+                    "type variable {} satisfies interface {interface}",
+                    var.0
+                )),
+                PropositionCheckingSite::new(
+                    0x8751_0000u64 + u64::from(var.0),
+                    PropositionCheckingSiteKind::TypeVariableInterfaceBound,
+                    Some(format!("type_var_{}: {interface}", var.0)),
+                ),
+            );
+        }
     }
 
     /// Look up a variable's type in this environment
@@ -12185,6 +12657,8 @@ impl TypeEnv {
             capability_implementations: self.capability_implementations.clone(),
             capability_bindings: self.capability_bindings.clone(),
             impls: self.impls.clone(),
+            proposition_assumptions: self.proposition_assumptions.clone(),
+            proposition_obligations: self.proposition_obligations.clone(),
             type_var_interface_bounds: self.type_var_interface_bounds.clone(),
             variables: HashMap::with_capacity(10),
             workflow_intrinsics: self.workflow_intrinsics.clone(),

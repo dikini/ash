@@ -1,6 +1,6 @@
 # TASK-875: TypeEnv proposition environment
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -71,9 +71,18 @@ Dispatch an independent review/verification subagent with this task file, SPEC-0
 
 ## Completion Checklist
 
-- [ ] Focused ash-typeck tests pass.
-- [ ] Every proposition has source/generator provenance.
-- [ ] Unknown predicate handling returns typed deferred/error information.
+- [x] Focused ash-typeck tests pass.
+- [x] Every proposition has source/generator provenance.
+- [x] Unknown predicate handling returns typed deferred/error information.
+
+## Completion Notes
+
+- Implemented `TypeEnv` proposition fact storage with separate assumption and required-obligation collections, typed `PropositionCheckingSite` owner metadata, and source anchors.
+- Added raw proposition-tail lowering from parser surface clauses into core `TypeProposition` carriers for equality, disequality, interface bounds, named predicates, and sealed-domain constructor proposition terms.
+- Preserved existing type-variable bounds, impl where-bounds, and concrete impl evidence as interface-bound proposition assumptions without adding broad impl search or interface-bound solving.
+- Named predicates are represented by typed `PropositionPredicateId` values and deferred with `PropositionDeferredKind::UnsupportedNamedPredicate`; equality and disequality remain stored only for TASK-876.
+- Verification passed: `cargo fmt --check`, `git diff --check`, non-zero `cargo test -p ash-typeck --test task_875_proposition_environment -- --list`, `cargo test -p ash-typeck --test task_875_proposition_environment` (6 tests), and `cargo check --workspace`.
+- Independent review initially found missing concrete impl evidence, missing where-bound spans, and sealed-domain constructor-term lowering; all were fixed and re-review approved.
 
 ## Dispatch
 

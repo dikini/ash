@@ -23,7 +23,7 @@
 | [TASK-872](tasks/TASK-872-proposition-layer-audit-gate.md) | Audit live parser/core/typeck/normalizer/engine proposition seams and bind downstream tasks before Rust changes | Docs/Substrate | 5 | ✅ Complete |
 | [TASK-873](tasks/TASK-873-core-proposition-carriers.md) | Add core canonical proposition/evidence/refutation/deferred carriers and V5 summary version contract | Core/Substrate | 7 | ✅ Complete |
 | [TASK-874](tasks/TASK-874-parser-proposition-surface.md) | Add raw parser surface for audited proposition clauses and explicit named predicate declarations | Parser | 7 | ✅ Complete |
-| [TASK-875](tasks/TASK-875-typeenv-proposition-environment.md) | Add TypeEnv proposition environment, obligation generation, and canonical lowering | Typeck/Substrate | 7 | 🟡 Ready |
+| [TASK-875](tasks/TASK-875-typeenv-proposition-environment.md) | Add TypeEnv proposition environment, obligation generation, and canonical lowering | Typeck/Substrate | 7 | ✅ Complete |
 | [TASK-876](tasks/TASK-876-normalized-equality-disequality-solver.md) | Implement normalized equality and conservative constructor-head disequality solving | Typeck/Semantic | 8 | 🟡 Ready |
 | [TASK-877](tasks/TASK-877-interface-bound-proposition-solving.md) | Treat interface bounds as proposition evidence without broadening impl search | Typeck/Semantic | 5 | 🟡 Ready |
 | [TASK-878](tasks/TASK-878-named-predicate-registration-deferred-solving.md) | Register named predicates and emit deferred unsupported-solving outcomes | Typeck/Diagnostics | 5 | 🟡 Ready |
@@ -85,8 +85,8 @@ Focused test commands must either target exact integration-test files created by
 - [x] TASK-871 created and completed as the planning packet.
 - [x] TASK-872 audit artifact created before Rust implementation and downstream TASK-873 through TASK-882 file/test/callsite bindings patched or explicitly confirmed.
 - [x] Core proposition/evidence carriers and V5 summary version contract implemented and tested.
-- [ ] Parser proposition clause and named predicate surface implemented and tested at audited sites.
-- [ ] TypeEnv proposition environment and canonical lowering implemented and tested.
+- [x] Parser proposition clause and named predicate surface implemented and tested at audited sites.
+- [x] TypeEnv proposition environment and canonical lowering implemented and tested.
 - [ ] Normalized equality and conservative disequality solver implemented and tested.
 - [ ] Interface-bound proposition evidence implemented without broadening impl search.
 - [ ] Named predicates produce registered/deferred outcomes with diagnostics.

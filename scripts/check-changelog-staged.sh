@@ -31,8 +31,13 @@ if [[ ! -f CHANGELOG.md ]]; then
   exit 0
 fi
 
-# Get list of staged files (excluding CHANGELOG.md itself and docs)
-staged_files=$(git diff --cached --name-only | grep -v '^CHANGELOG\.md$' | grep -v '^docs/' | grep -v '^\.github/' | cat)
+# Get list of staged files (excluding CHANGELOG.md itself and docs).
+# Use awk instead of grep -v pipelines: under `set -euo pipefail`, a grep
+# pipeline with no remaining rows exits non-zero and can make docs-only commits
+# fail before the empty-list check below runs.
+staged_files=$(git diff --cached --name-only | awk '
+  $0 != "CHANGELOG.md" && $0 !~ /^docs\// && $0 !~ /^\.github\// { print }
+')
 
 if [[ -z "$staged_files" ]]; then
   echo "changelog-check: no relevant staged files, skipping"

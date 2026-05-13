@@ -41,6 +41,9 @@ bash scripts/check-rust-format.sh
 # Changelog check - ensure staged changes have corresponding changelog entry
 bash scripts/check-changelog-staged.sh
 
+# Regression tests for the staged changelog policy script.
+bash scripts/check-changelog-staged-tests.sh
+
 # Fast checks
 echo "pre-commit-gate: running cargo check"
 cargo check --workspace

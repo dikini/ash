@@ -1,0 +1,102 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(git rev-parse --show-toplevel)"
+SCRIPT_UNDER_TEST="$ROOT/scripts/check-changelog-staged.sh"
+
+if [[ ! -x "$SCRIPT_UNDER_TEST" && ! -f "$SCRIPT_UNDER_TEST" ]]; then
+  echo "test setup failed: $SCRIPT_UNDER_TEST not found" >&2
+  exit 2
+fi
+
+tmp="$(mktemp -d)"
+cleanup() {
+  rm -rf "$tmp"
+}
+trap cleanup EXIT
+
+make_repo() {
+  local repo
+  repo="$(mktemp -d "$tmp/repo.XXXXXX")"
+  mkdir -p "$repo/scripts" "$repo/docs" "$repo/.github" "$repo/src"
+  cp "$SCRIPT_UNDER_TEST" "$repo/scripts/check-changelog-staged.sh"
+  chmod +x "$repo/scripts/check-changelog-staged.sh"
+  printf '# Changelog\n\n## [Unreleased]\n' >"$repo/CHANGELOG.md"
+  touch "$repo/docs/.keep" "$repo/.github/.keep" "$repo/src/.keep"
+  git -C "$repo" init -q
+  git -C "$repo" config user.email "ash-tests@example.invalid"
+  git -C "$repo" config user.name "Ash Test"
+  git -C "$repo" add .
+  git -C "$repo" commit -q -m "initial"
+  printf '%s\n' "$repo"
+}
+
+run_check() {
+  local repo="$1"
+  local out="$2"
+  set +e
+  (cd "$repo" && bash scripts/check-changelog-staged.sh) >"$out" 2>&1
+  local status=$?
+  set -e
+  return "$status"
+}
+
+assert_success() {
+  local label="$1"
+  local repo="$2"
+  local out="$tmp/$label.out"
+  if ! run_check "$repo" "$out"; then
+    echo "FAIL: expected success for $label" >&2
+    cat "$out" >&2
+    exit 1
+  fi
+}
+
+assert_failure() {
+  local label="$1"
+  local repo="$2"
+  local out="$tmp/$label.out"
+  if run_check "$repo" "$out"; then
+    echo "FAIL: expected failure for $label" >&2
+    cat "$out" >&2
+    exit 1
+  fi
+}
+
+assert_output_contains() {
+  local label="$1"
+  local expected="$2"
+  local out="$tmp/$label.out"
+  if ! grep -Fq "$expected" "$out"; then
+    echo "FAIL: expected $label output to contain: $expected" >&2
+    cat "$out" >&2
+    exit 1
+  fi
+}
+
+repo="$(make_repo)"
+printf 'docs-only staged change\n' >"$repo/docs/docs-only.md"
+git -C "$repo" add docs/docs-only.md
+assert_success "docs-only" "$repo"
+assert_output_contains "docs-only" "changelog-check: no relevant staged files, skipping"
+
+repo="$(make_repo)"
+printf 'workflow-only staged change\n' >"$repo/.github/workflow.yml"
+git -C "$repo" add .github/workflow.yml
+assert_success "github-only" "$repo"
+assert_output_contains "github-only" "changelog-check: no relevant staged files, skipping"
+
+repo="$(make_repo)"
+printf 'fn main() {}\n' >"$repo/src/main.rs"
+git -C "$repo" add src/main.rs
+assert_failure "source-without-changelog" "$repo"
+assert_output_contains "source-without-changelog" "changelog-check: FAILED"
+
+repo="$(make_repo)"
+printf 'fn main() {}\n' >"$repo/src/main.rs"
+printf '\n- Test changelog entry.\n' >>"$repo/CHANGELOG.md"
+git -C "$repo" add src/main.rs CHANGELOG.md
+assert_success "source-with-changelog" "$repo"
+assert_output_contains "source-with-changelog" "changelog-check: CHANGELOG.md is staged"
+
+echo "check-changelog-staged-tests: OK"

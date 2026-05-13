@@ -291,7 +291,8 @@ Update this section as tasks complete:
 | 112 | 14 | 14 | ✅ Complete |
 | 113 | 13 | 13 | ✅ Complete |
 | 114 | 14 | 14 | ✅ Complete |
-| 115 | 14 | 2 | 🟡 Ready |
+| 115 | 14 | 14 | ✅ Complete |
+| 116 | 14 | 1 | 🟡 Ready |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -403,7 +404,8 @@ This table is retained near the original early-phase section for historical cont
 | 112 | 14 | 14 | ✅ Complete |
 | 113 | 13 | 13 | ✅ Complete |
 | 114 | 14 | 14 | ✅ Complete |
-| 115 | 14 | 2 | 🟡 Ready |
+| 115 | 14 | 14 | ✅ Complete |
+| 116 | 14 | 1 | 🟡 Ready |
 
 ## Phase 13: Streams and Behaviours (Weeks 20-22)
 
@@ -3410,3 +3412,45 @@ Phase 115 implements SPEC-G from DESIGN-034. It integrates associated types with
 - D5: Recursive families require sealed domains, exhaustive/coherent residual coverage, and direct structural decreasingness.
 - D6: Public associated-family summaries require concrete V4 semantic summaries; older summaries with family facts are malformed and rejected before partial registration, and V4 exports are reducible only when the full closed equation/dependency set is public-summary-visible.
 - D7: TASK-858 is a hard pre-implementation gate requiring downstream TASK-859 through TASK-868 exact file/test/callsite bindings and zero-test-safe focused commands.
+
+## Phase 116: Constraint and Proposition Layer
+
+**Priority:** High (DESIGN-034 SPEC-H adds conservative proposition checking after the total type-computation substrate from Phase 115)
+**Status:** 🟡 Ready (TASK-871 complete; TASK-872 through TASK-884 ready/planned)
+**Spec:** [SPEC-064](../spec/SPEC-064-CONSTRAINT-PROPOSITION-LAYER.md)
+**Design:** [DESIGN-034](../design/DESIGN-034-TOTAL-TYPE-COMPUTATION.md)
+**Plan:** [docs/plan/PLAN-112-CONSTRAINT-PROPOSITION-LAYER.md](PLAN-112-CONSTRAINT-PROPOSITION-LAYER.md)
+
+Phase 116 implements SPEC-H from DESIGN-034. It adds a conservative type-level proposition layer around normalized types: canonical equality, disequality, interface-bound, and named-predicate proposition carriers; TypeEnv proposition environments and generated obligations; normalizer-backed equality and constructor-head disequality solving; interface-bound evidence without broadening impl search; named predicates with explicit deferred solving; V5 public proposition summary transport; checking-point integration; diagnostics; and acceptance/non-interference evidence. The phase intentionally does not implement type-function inversion, unrestricted SMT/proof search, HKT, holes, partial type-constructor application, runtime workflow predicates, or capability-policy solving.
+
+| Task | Description | Est. Hours | Status |
+|------|-------------|------------|--------|
+| [TASK-871](tasks/TASK-871-spec-h-spec-plan-packet.md) | Promote DESIGN-034 SPEC-H into SPEC-064/PLAN-112 and register Phase 116 | 4 | ✅ Complete |
+| [TASK-872](tasks/TASK-872-proposition-layer-audit-gate.md) | Audit live parser/core/typeck/normalizer/engine proposition seams and bind downstream tasks before Rust changes | 5 | 🟡 Ready |
+| [TASK-873](tasks/TASK-873-core-proposition-carriers.md) | Core canonical proposition/evidence/refutation/deferred carriers and V5 summary version contract | 7 | 🟡 Ready |
+| [TASK-874](tasks/TASK-874-parser-proposition-surface.md) | Raw parser surface for proposition clauses and named predicate declarations | 7 | 🟡 Ready |
+| [TASK-875](tasks/TASK-875-typeenv-proposition-environment.md) | TypeEnv proposition environment, obligation generation, and canonical lowering | 7 | 🟡 Ready |
+| [TASK-876](tasks/TASK-876-normalized-equality-disequality-solver.md) | Normalized equality and conservative constructor-head disequality solver | 8 | 🟡 Ready |
+| [TASK-877](tasks/TASK-877-interface-bound-proposition-solving.md) | Interface-bound proposition solving without broadening impl search | 5 | 🟡 Ready |
+| [TASK-878](tasks/TASK-878-named-predicate-registration-deferred-solving.md) | Named predicate registration and deferred unsupported-solving outcomes | 5 | 🟡 Ready |
+| [TASK-879](tasks/TASK-879-public-proposition-summary-transport.md) | Public proposition summary export/import through V5 semantic summaries | 8 | 🟡 Ready |
+| [TASK-880](tasks/TASK-880-checking-point-integration.md) | Audited checking-point integration without meta/inversion leakage | 7 | 🟡 Ready |
+| [TASK-881](tasks/TASK-881-proposition-diagnostics.md) | Structured proposition diagnostics | 6 | 🟡 Ready |
+| [TASK-882](tasks/TASK-882-spec-h-acceptance-non-interference-matrix.md) | SPEC-H acceptance/non-interference matrix | 6 | 🟡 Ready |
+| [TASK-883](tasks/TASK-883-spec-h-closeout-docs-and-verification.md) | SPEC-H closeout docs and verification | 4 | 🟡 Ready |
+| [TASK-884](tasks/TASK-884-phase116-review-remediation.md) | Phase 116 review remediation | 6 | 🟡 Ready |
+
+**Track A (Spec Gate and Audit):** 9h. Promote DESIGN-034 SPEC-H to SPEC-064/PLAN-112, then audit live proposition/constraint/equality/summary seams.
+**Track B (Carriers + Surface):** 14h. Add core proposition/evidence/refutation/deferred carriers, V5 summary gates, parser raw proposition clauses, and named predicate declarations at audited sites.
+**Track C (TypeEnv Solver Semantics):** 25h. Build the proposition environment, lower source clauses, solve normalized equality/disequality, solve interface bounds from existing evidence, and keep named predicates conservative/deferred.
+**Track D (Summaries + Integration):** 15h. Transport public proposition requirements/evidence through V5 summaries and integrate discharge at audited checking points without type-function inversion or meta-solving leaks.
+**Track E (Diagnostics + Closeout):** 22h. Add diagnostics, acceptance matrix, closeout verification, and independent review remediation.
+
+**Decision gates:**
+- D1: Proposition solving is conservative and total over outcomes: `Satisfied`, `Refuted`, or `Deferred`; string/debug-event placeholders are not acceptable.
+- D2: Equality uses SPEC-060 normalize-and-compare evidence and must not solve under canonical computation heads, associated-family projections, or current inference metas.
+- D3: Disequality succeeds only for normalized constructor-head disjointness such as sealed-domain constructor disjointness, even with open constructor arguments; head-open or neutral disequality defers.
+- D4: Interface-bound propositions consume existing TypeEnv impl/where-bound evidence only; they do not broaden impl search or select associated-family equations by expected output.
+- D5: Named predicates are explicit and registry-backed, but arbitrary predicate proof search is deferred unless a compiler-known builtin predicate is registered.
+- D6: Public proposition transport requires V5 semantic summaries; V4-or-older summaries carrying proposition facts are malformed and rejected before partial registration.
+- D7: TASK-872 is a hard pre-implementation gate requiring downstream TASK-873 through TASK-882 exact file/test/callsite bindings and zero-test-safe focused commands.

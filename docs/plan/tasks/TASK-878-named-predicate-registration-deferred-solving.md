@@ -1,0 +1,101 @@
+# TASK-878: Named predicate registration and deferred solving
+
+## Status: 🟡 Ready
+
+## Description
+
+Register named proposition predicates and route unsupported predicate solving to explicit deferred outcomes and diagnostics.
+
+## Specification Reference
+
+- [SPEC-064: Constraint and Proposition Layer](../../spec/SPEC-064-CONSTRAINT-PROPOSITION-LAYER.md)
+- [PLAN-112: Constraint and Proposition Layer](../PLAN-112-CONSTRAINT-PROPOSITION-LAYER.md)
+- [DESIGN-034 §16.8](../../design/DESIGN-034-TOTAL-TYPE-COMPUTATION.md#168-spec-h-constraintproposition-layer)
+
+## Dependencies
+
+- Depends on TASK-877 completion
+
+## Files / Ownership
+
+- Modify: parser/typeck files bound by TASK-872 for predicate declarations
+- Modify: `crates/ash-typeck/src/type_env.rs`
+- Modify: `crates/ash-typeck/src/error.rs`, `diagnostic.rs`
+- Test: exact parser/typeck targets bound by TASK-872
+
+## Requirements
+
+### Functional Requirements
+
+1. Register predicate identities, parameter domains, visibility, and source anchors.
+2. Lower named predicate uses to canonical `NamedPredicate` propositions.
+3. Satisfy only compiler-known builtin predicates explicitly registered by TypeEnv.
+4. Defer arbitrary named predicates with stable deferred-feature diagnostics.
+5. Reject unknown predicates with source-span diagnostics.
+
+### Non-Goals
+
+- Do not implement type-function inversion, injectivity, unrestricted SMT/proof search, HKT, holes, or partial type-constructor application.
+- Do not merge type-level propositions with runtime workflow/capability/provider constraints.
+- Do not move semantic proposition ownership into `ash-parser` or `ash-engine`.
+- Preserve SPEC-035/SPEC-063 associated-type behavior unless the task explicitly assigns compatibility coverage.
+
+## TDD / Execution Steps
+
+### Step 1
+
+- Write parser/typeck tests for predicate declaration and use lowering.
+
+### Step 2
+
+- Write tests for unknown predicate and unsupported predicate solving.
+
+### Step 3
+
+- Implement registry and deferred outcome.
+
+### Step 4
+
+- Verify public/private visibility data is available for TASK-879.
+
+### Independent Verification
+
+Dispatch an independent review/verification subagent with this task file, SPEC-064, PLAN-112, changed files, and any task-owned audit/test evidence. Do not mark this task complete until findings are fixed and verification passes.
+
+## Completion Checklist
+
+- [ ] Focused parser/typeck tests pass.
+- [ ] Unknown vs unsupported-known predicate diagnostics are distinct.
+- [ ] No arbitrary named predicate proof search is attempted.
+
+## Dispatch
+
+```yaml
+agent: hermes
+reasoning: medium
+max_turns: 15
+toolsets: [terminal, file]
+```
+
+## Verification
+
+```yaml
+strictness: clean
+commands:
+  - cargo fmt --check
+  - git diff --check
+  - cargo check --workspace
+  - |
+    python3 - <<'PY'
+    raise SystemExit('TASK-872 must replace this intentional verification guard with exact non-zero focused test commands before implementation can be verified')
+    PY
+checklist:
+  - "[ ] Task requirements are satisfied"
+  - "[ ] Focused verification is recorded"
+  - "[ ] Status docs and CHANGELOG.md are updated if release-facing docs changed"
+```
+
+## Dependencies for Next Task
+
+This task outputs:
+- Phase 116 artifact/surface owned by TASK-878 for downstream tasks.

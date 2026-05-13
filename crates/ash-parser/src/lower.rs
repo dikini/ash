@@ -3266,6 +3266,7 @@ mod tests {
                 ty: Type::Name("Int".into()),
             }],
             return_type: Type::Name("Int".into()),
+            proposition_tail: None,
             span: dummy_span(),
         };
 
@@ -3299,6 +3300,7 @@ mod tests {
                 ty: Type::Name("T".into()),
             }],
             return_type: Type::Name("T".into()),
+            proposition_tail: None,
             span: dummy_span(),
         };
 
@@ -3330,6 +3332,7 @@ mod tests {
                 },
             ],
             return_type: Type::Name("Int".into()),
+            proposition_tail: None,
             span: dummy_span(),
         };
 
@@ -3358,6 +3361,7 @@ mod tests {
                 name: "List".into(),
                 args: vec![Type::Name("T".into())],
             },
+            proposition_tail: None,
             span: dummy_span(),
         };
 
@@ -3384,6 +3388,7 @@ mod tests {
             type_params: vec![],
             params: vec![],
             return_type: Type::Name("Int".into()),
+            proposition_tail: None,
             span: dummy_span(),
         };
 

@@ -127,6 +127,9 @@ fn definition_symbol(definition: &Definition) -> DocumentSymbol {
         Definition::TypeFn(def) => {
             symbol(def.name.to_string(), SymbolKind::FUNCTION, &def.span, None)
         }
+        Definition::PropositionPredicate(def) => {
+            symbol(def.name.to_string(), SymbolKind::FUNCTION, &def.span, None)
+        }
         Definition::Impl(def) => impl_symbol(def),
         Definition::Function(def) => fn_symbol(def),
         Definition::BuiltinFn(def) => {
@@ -178,6 +181,7 @@ pub fn document_symbols(module: &ModuleFile) -> Vec<DocumentSymbol> {
             Definition::ResourceType(def) => def.span.start,
             Definition::Type(def) => def.span.start,
             Definition::TypeFn(def) => def.span.start,
+            Definition::PropositionPredicate(def) => def.span.start,
             Definition::Impl(def) => def.span.start,
             Definition::Function(def) => def.span.start,
             Definition::BuiltinFn(def) => def.span.start,

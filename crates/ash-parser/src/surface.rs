@@ -88,6 +88,8 @@ pub enum Definition {
     Type(TypeDef),
     /// Module-level type function declaration
     TypeFn(TypeFnDef),
+    /// Explicit named type-level proposition predicate declaration
+    PropositionPredicate(PropositionPredicateDecl),
     /// Policy definition
     Policy(PolicyDef),
     /// Role definition
@@ -138,11 +140,98 @@ pub struct TypeFnDef {
     pub return_type: Type,
     /// Optional decreasing parameter clause.
     pub decreases: Option<TypeFnDecreases>,
+    /// Optional raw type-level proposition requirements after `where`.
+    pub proposition_tail: Option<PropositionTail>,
     /// Ordered case equations.
     pub equations: Vec<TypeFnEquation>,
     /// Source span covering the declaration header through the return type.
     pub header_span: Span,
     /// Source span covering the entire declaration.
+    pub span: Span,
+}
+
+/// A raw proposition tail introduced by `where` on enabled declaration surfaces.
+#[derive(Debug, Clone, PartialEq)]
+pub struct PropositionTail {
+    /// Ordered source clauses in the proposition list.
+    pub clauses: Vec<PropositionClause>,
+    /// Source span covering the `where` keyword.
+    pub where_span: Span,
+    /// Source span covering the complete tail.
+    pub span: Span,
+}
+
+/// A raw source proposition clause with its complete source span.
+#[derive(Debug, Clone, PartialEq)]
+pub struct PropositionClause {
+    /// Clause payload preserved without semantic resolution.
+    pub kind: PropositionClauseKind,
+    /// Source span covering the complete clause.
+    pub span: Span,
+}
+
+/// Raw proposition clause variants parsed by ash-parser.
+#[derive(Debug, Clone, PartialEq)]
+pub enum PropositionClauseKind {
+    /// Type-level equality: `lhs == rhs`.
+    Equality {
+        /// Raw left operand.
+        lhs: Type,
+        /// Raw right operand.
+        rhs: Type,
+        /// Source span covering `==`.
+        op_span: Span,
+    },
+    /// Type-level disequality: `lhs != rhs`.
+    Disequality {
+        /// Raw left operand.
+        lhs: Type,
+        /// Raw right operand.
+        rhs: Type,
+        /// Source span covering `!=`.
+        op_span: Span,
+    },
+    /// Interface-bound proposition: `subject: Interface<...>`.
+    InterfaceBound {
+        /// Raw subject type expression.
+        subject: Type,
+        /// Raw interface type application; parser does not resolve the name.
+        interface: Type,
+        /// Source span covering `:`.
+        colon_span: Span,
+    },
+    /// Named predicate proposition: `Predicate<args...>` or `Predicate`.
+    NamedPredicate {
+        /// Source-visible predicate name.
+        name: Name,
+        /// Source span covering the predicate name.
+        name_span: Span,
+        /// Raw type argument list.
+        args: Vec<Type>,
+    },
+}
+
+/// Explicit named proposition predicate declaration.
+#[derive(Debug, Clone, PartialEq)]
+pub struct PropositionPredicateDecl {
+    /// Visibility modifier.
+    pub visibility: Visibility,
+    /// Predicate name.
+    pub name: Name,
+    /// Explicitly annotated predicate parameters.
+    pub params: Vec<PropositionPredicateParam>,
+    /// Source span covering the declaration.
+    pub span: Span,
+}
+
+/// Parameter in a named proposition predicate declaration.
+#[derive(Debug, Clone, PartialEq)]
+pub struct PropositionPredicateParam {
+    /// Parameter name.
+    pub name: Name,
+    /// Raw parser-owned domain/type annotation.
+    pub domain: Type,
+    /// Source span covering `name: domain`.
     pub span: Span,
 }
 
@@ -455,6 +544,8 @@ pub struct FnDef {
     pub params: Vec<Param>,
     /// Optional return type annotation
     pub return_type: Option<Type>,
+    /// Optional raw type-level proposition requirements after `where`.
+    pub proposition_tail: Option<PropositionTail>,
     /// Optional contract (requires/ensures)
     pub contract: Option<Contract>,
     /// Function body (a block expression)
@@ -478,6 +569,8 @@ pub struct BuiltinFnDef {
     pub params: Vec<Param>,
     /// Required return type annotation
     pub return_type: Type,
+    /// Optional raw type-level proposition requirements after `where`.
+    pub proposition_tail: Option<PropositionTail>,
     /// Source span
     pub span: Span,
 }
@@ -2359,6 +2452,7 @@ mod tests {
                 name: "Option".into(),
                 args: vec![Type::Name("T".into())],
             },
+            proposition_tail: None,
             span: Span::new(0, 60, 1, 1),
         };
 
@@ -2389,6 +2483,7 @@ mod tests {
                 ty: Type::Name("String".into()),
             }],
             return_type: Type::Name("String".into()),
+            proposition_tail: None,
             span: Span::new(0, 30, 1, 1),
         };
 

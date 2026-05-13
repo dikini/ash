@@ -316,6 +316,10 @@ fn definition_hover(definition: &Definition) -> Hover {
             format!("type fn {}", def.name),
             Some(format!("Equations: {}", def.equations.len())),
         ),
+        Definition::PropositionPredicate(def) => markdown(
+            format!("prop {}", def.name),
+            Some(format!("Parameters: {}", def.params.len())),
+        ),
         Definition::Impl(def) => markdown(
             format!("impl {}", def.interface),
             Some(format!("Methods: {}", def.methods.len())),
@@ -390,6 +394,7 @@ fn top_level_hover(token: &str, module: &ModuleFile) -> Option<Hover> {
                             Definition::ResourceType(def) => def.name.as_ref() == token,
                             Definition::Type(def) => def.name.as_ref() == token,
                             Definition::TypeFn(def) => def.name.as_ref() == token,
+                            Definition::PropositionPredicate(def) => def.name.as_ref() == token,
                             Definition::Policy(def) => def.name.as_ref() == token,
                             Definition::Role(def) => def.name.as_ref() == token,
                             Definition::Proxy(def) => def.name.as_ref() == token,
@@ -430,6 +435,7 @@ fn top_level_hover(token: &str, module: &ModuleFile) -> Option<Hover> {
                     Definition::ResourceType(def) => def.name.as_ref() == token,
                     Definition::Type(def) => def.name.as_ref() == token,
                     Definition::TypeFn(def) => def.name.as_ref() == token,
+                    Definition::PropositionPredicate(def) => def.name.as_ref() == token,
                     Definition::Policy(def) => def.name.as_ref() == token,
                     Definition::Role(def) => def.name.as_ref() == token,
                     Definition::Proxy(def) => def.name.as_ref() == token,

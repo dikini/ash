@@ -1,6 +1,6 @@
 # TASK-874: Parser proposition surface
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -74,9 +74,17 @@ Dispatch an independent review/verification subagent with this task file, SPEC-0
 
 ## Completion Checklist
 
-- [ ] ash-parser focused tests pass and list non-zero matching tests.
-- [ ] Surface spans cover operators and predicate names.
-- [ ] No semantic identities are introduced in parser structs.
+- [x] ash-parser focused tests pass and list non-zero matching tests.
+- [x] Surface spans cover operators and predicate names.
+- [x] No semantic identities are introduced in parser structs.
+
+## Completion Notes
+
+- Added raw proposition-tail parser surface for `type fn`, `fn`, and `builtin fn` signatures, including equality, disequality, interface-bound, and named-predicate clauses.
+- Added explicit `visibility? prop Name<params>;` proposition-predicate declarations without semantic name resolution.
+- Preserved legacy `impl`/`interface` `where T: Interface` behavior and kept propositions out of runtime contracts/lowering.
+- Added explicit rejection coverage for unsupported top-level and inline-module proposition clauses, including stray `where`, equality/disequality, interface-bound, and standalone named-predicate-shaped clauses.
+- Verification: `cargo fmt --check`, `git diff --check`, non-zero focused test listing, `cargo test -p ash-parser --test task_874_proposition_surface` (6/6 passed), `cargo check --workspace`, and independent review approval.
 
 ## Dispatch
 

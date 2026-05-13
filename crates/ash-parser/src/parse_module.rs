@@ -21,10 +21,11 @@ use crate::surface::{
     CapabilityImplementationOperation, CapabilityInterfaceDef, CapabilityOperationMode,
     CapabilityOperationSig, CapabilityRef, Constraint, Contract, Definition, DomainConstructor,
     DomainField, DomainSlot, EffectType, Expr, FnDef, ImplDef, ImplMethodDef, InterfaceDef,
-    InterfaceMethodSig, InterfaceTypeParam, MatchArm, Name, Param, Pattern, Predicate, ProxyDef,
-    ResourceField, ResourceTypeDef, RoleDef, SealedDomainDef, Type, TypeBody, TypeDef, TypeField,
-    TypeFnDecreases, TypeFnDef, TypeFnEquation, TypeFnParam, TypePattern, VariantDef,
-    VariantPayload, Visibility, WhereBound, Workflow, YieldArm,
+    InterfaceMethodSig, InterfaceTypeParam, MatchArm, Name, Param, Pattern, Predicate,
+    PropositionClause, PropositionClauseKind, PropositionPredicateDecl, PropositionPredicateParam,
+    PropositionTail, ProxyDef, ResourceField, ResourceTypeDef, RoleDef, SealedDomainDef, Type,
+    TypeBody, TypeDef, TypeField, TypeFnDecreases, TypeFnDef, TypeFnEquation, TypeFnParam,
+    TypePattern, VariantDef, VariantPayload, Visibility, WhereBound, Workflow, YieldArm,
 };
 use crate::token::Span;
 
@@ -163,6 +164,11 @@ fn parse_definitions(input: &mut ParseInput) -> ModalResult<Vec<Definition>> {
             ));
         }
 
+        if starts_with_visible_keyword(input, "prop") {
+            definitions.push(parse_proposition_predicate_decl(input)?);
+            continue;
+        }
+
         if starts_with_type_definition(input) {
             definitions.push(parse_type_definition(input)?);
             continue;
@@ -212,6 +218,12 @@ fn parse_definitions(input: &mut ParseInput) -> ModalResult<Vec<Definition>> {
         }
 
         if starts_with_unsupported_inline_definition(input) {
+            return Err(winnow::error::ErrMode::Backtrack(
+                winnow::error::ContextError::new(),
+            ));
+        }
+
+        if starts_with_unsupported_proposition_surface(input) {
             return Err(winnow::error::ErrMode::Backtrack(
                 winnow::error::ContextError::new(),
             ));
@@ -329,6 +341,13 @@ fn parse_type_fn_definition(input: &mut ParseInput) -> ModalResult<Definition> {
         None
     };
 
+    let proposition_tail = if starts_with_keyword(input, "where") {
+        Some(parse_proposition_tail(input)?)
+    } else {
+        None
+    };
+    skip_whitespace_and_comments(input);
+
     let _ = literal_str("{").parse_next(input)?;
     skip_whitespace_and_comments(input);
     let mut equations = Vec::new();
@@ -344,10 +363,162 @@ fn parse_type_fn_definition(input: &mut ParseInput) -> ModalResult<Definition> {
         params,
         return_type,
         decreases,
+        proposition_tail,
         equations,
         header_span,
         span: crate::input::span_from(&start_pos, &input.state.pos),
     }))
+}
+
+fn parse_proposition_tail(input: &mut ParseInput) -> ModalResult<PropositionTail> {
+    let tail_start = input.state.pos;
+    let where_start = input.state.pos;
+    let _ = keyword("where").parse_next(input)?;
+    let where_span = crate::input::span_from(&where_start, &input.state.pos);
+    skip_whitespace_and_comments(input);
+
+    let mut clauses = Vec::new();
+    clauses.push(parse_proposition_clause(input)?);
+    skip_whitespace_and_comments(input);
+    while consume_comma_separator(input) {
+        clauses.push(parse_proposition_clause(input)?);
+        skip_whitespace_and_comments(input);
+    }
+
+    Ok(PropositionTail {
+        clauses,
+        where_span,
+        span: crate::input::span_from(&tail_start, &input.state.pos),
+    })
+}
+
+fn parse_proposition_clause(input: &mut ParseInput) -> ModalResult<PropositionClause> {
+    let clause_start = input.state.pos;
+    let lhs = parse_surface_type(input)?;
+    skip_whitespace_and_comments(input);
+
+    if input.input.starts_with("==") {
+        let op_start = input.state.pos;
+        let _ = literal_str("==").parse_next(input)?;
+        let op_span = crate::input::span_from(&op_start, &input.state.pos);
+        skip_whitespace_and_comments(input);
+        let rhs = parse_surface_type(input)?;
+        return Ok(PropositionClause {
+            kind: PropositionClauseKind::Equality { lhs, rhs, op_span },
+            span: crate::input::span_from(&clause_start, &input.state.pos),
+        });
+    }
+
+    if input.input.starts_with("!=") {
+        let op_start = input.state.pos;
+        let _ = literal_str("!=").parse_next(input)?;
+        let op_span = crate::input::span_from(&op_start, &input.state.pos);
+        skip_whitespace_and_comments(input);
+        let rhs = parse_surface_type(input)?;
+        return Ok(PropositionClause {
+            kind: PropositionClauseKind::Disequality { lhs, rhs, op_span },
+            span: crate::input::span_from(&clause_start, &input.state.pos),
+        });
+    }
+
+    if input.input.starts_with(":") {
+        let colon_start = input.state.pos;
+        let _ = literal_str(":").parse_next(input)?;
+        let colon_span = crate::input::span_from(&colon_start, &input.state.pos);
+        skip_whitespace_and_comments(input);
+        let interface = parse_surface_type(input)?;
+        return Ok(PropositionClause {
+            kind: PropositionClauseKind::InterfaceBound {
+                subject: lhs,
+                interface,
+                colon_span,
+            },
+            span: crate::input::span_from(&clause_start, &input.state.pos),
+        });
+    }
+
+    let Some((name, args)) = type_as_named_predicate(lhs) else {
+        return Err(winnow::error::ErrMode::Cut(
+            winnow::error::ContextError::new(),
+        ));
+    };
+    let name_span = Span::new(
+        clause_start.offset,
+        clause_start.offset.saturating_add(name.len()),
+        clause_start.line,
+        clause_start.column,
+    );
+    Ok(PropositionClause {
+        kind: PropositionClauseKind::NamedPredicate {
+            name,
+            name_span,
+            args,
+        },
+        span: crate::input::span_from(&clause_start, &input.state.pos),
+    })
+}
+
+fn type_as_named_predicate(ty: Type) -> Option<(Name, Vec<Type>)> {
+    match ty {
+        Type::Name(name) => Some((name, Vec::new())),
+        Type::Constructor { name, args } => Some((name, args)),
+        _ => None,
+    }
+}
+
+fn parse_proposition_predicate_decl(input: &mut ParseInput) -> ModalResult<Definition> {
+    let start = input.state.pos;
+    let visibility = parse_visibility(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = keyword("prop").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let (name, _) = identifier_with_span(input)?;
+    skip_whitespace_and_comments(input);
+
+    let mut params = Vec::new();
+    if input.input.starts_with("<") {
+        let _ = literal_str("<").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        if input.input.starts_with(">") {
+            return Err(winnow::error::ErrMode::Cut(
+                winnow::error::ContextError::new(),
+            ));
+        }
+        loop {
+            params.push(parse_proposition_predicate_param(input)?);
+            skip_whitespace_and_comments(input);
+            if consume_comma_separator(input) {
+                continue;
+            }
+            break;
+        }
+        let _ = literal_str(">").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+    }
+
+    let _ = literal_str(";").parse_next(input)?;
+    Ok(Definition::PropositionPredicate(PropositionPredicateDecl {
+        visibility,
+        name: name.into(),
+        params,
+        span: crate::input::span_from(&start, &input.state.pos),
+    }))
+}
+
+fn parse_proposition_predicate_param(
+    input: &mut ParseInput,
+) -> ModalResult<PropositionPredicateParam> {
+    let start = input.state.pos;
+    let (name, _) = identifier_with_span(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str(":").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let domain = parse_surface_type(input)?;
+    Ok(PropositionPredicateParam {
+        name: name.into(),
+        domain,
+        span: crate::input::span_from(&start, &input.state.pos),
+    })
 }
 
 fn parse_type_fn_param(input: &mut ParseInput) -> ModalResult<TypeFnParam> {
@@ -1959,6 +2130,106 @@ fn starts_with_unsupported_inline_definition(input: &ParseInput) -> bool {
     .any(|keyword| starts_with_keyword(input, keyword))
 }
 
+fn starts_with_unsupported_proposition_surface(input: &ParseInput) -> bool {
+    let mut lookahead = input.clone();
+    skip_whitespace_and_comments(&mut lookahead);
+
+    if starts_with_keyword(&lookahead, "where") {
+        return true;
+    }
+
+    let source = lookahead.input.as_ref();
+    if !source
+        .chars()
+        .next()
+        .is_some_and(|ch| ch.is_ascii_alphabetic() || ch == '_' || ch == '<' || ch == '(')
+    {
+        return false;
+    }
+
+    let mut angle_depth = 0usize;
+    let mut paren_depth = 0usize;
+    let mut bracket_depth = 0usize;
+
+    for (index, ch) in source.char_indices() {
+        if angle_depth == 0 && paren_depth == 0 && bracket_depth == 0 {
+            if ch == ';' {
+                return looks_like_named_predicate_clause(&source[..index]);
+            }
+
+            if matches!(ch, '{' | '}') {
+                return false;
+            }
+
+            if source[index..].starts_with("==") || source[index..].starts_with("!=") {
+                return true;
+            }
+
+            if ch == ':' && !source[index..].starts_with("::") {
+                return true;
+            }
+        }
+
+        match ch {
+            '<' => angle_depth += 1,
+            '>' => angle_depth = angle_depth.saturating_sub(1),
+            '(' => paren_depth += 1,
+            ')' => paren_depth = paren_depth.saturating_sub(1),
+            '[' => bracket_depth += 1,
+            ']' => bracket_depth = bracket_depth.saturating_sub(1),
+            _ => {}
+        }
+    }
+
+    looks_like_named_predicate_clause(source)
+}
+
+fn looks_like_named_predicate_clause(source: &str) -> bool {
+    let source = source.trim();
+    let Some(first) = source.chars().next() else {
+        return false;
+    };
+    if !(first.is_ascii_alphabetic() || first == '_') {
+        return false;
+    }
+
+    let name_end = source
+        .char_indices()
+        .find_map(|(index, ch)| {
+            if ch.is_ascii_alphanumeric() || ch == '_' || ch == '-' {
+                None
+            } else {
+                Some(index)
+            }
+        })
+        .unwrap_or(source.len());
+
+    let rest = source[name_end..].trim_start();
+    if rest.is_empty() {
+        return true;
+    }
+
+    if !rest.starts_with('<') {
+        return false;
+    }
+
+    let mut depth = 0usize;
+    for (index, ch) in rest.char_indices() {
+        match ch {
+            '<' => depth += 1,
+            '>' => {
+                depth = depth.saturating_sub(1);
+                if depth == 0 {
+                    return rest[index + ch.len_utf8()..].trim().is_empty();
+                }
+            }
+            _ => {}
+        }
+    }
+
+    false
+}
+
 fn starts_with_recoverable_definition(input: &ParseInput) -> bool {
     starts_with_visible_keyword(input, "workflow")
         || starts_with_visible_keyword(input, "mod")
@@ -2347,6 +2618,13 @@ pub fn parse_fn_definition(input: &mut ParseInput) -> ModalResult<Definition> {
     };
     skip_whitespace_and_comments(input);
 
+    let proposition_tail = if starts_with_keyword(input, "where") {
+        Some(parse_proposition_tail(input)?)
+    } else {
+        None
+    };
+    skip_whitespace_and_comments(input);
+
     // Optionally parse contract clauses: requires: ..., ensures: ...
     let contract = parse_fn_contract(input)?;
     skip_whitespace_and_comments(input);
@@ -2362,6 +2640,7 @@ pub fn parse_fn_definition(input: &mut ParseInput) -> ModalResult<Definition> {
         type_params,
         params,
         return_type,
+        proposition_tail,
         contract,
         body,
         span,
@@ -2421,6 +2700,13 @@ pub fn parse_builtin_fn_definition(input: &mut ParseInput) -> ModalResult<Defini
     let return_type = parse_surface_type(input)?;
     skip_whitespace_and_comments(input);
 
+    let proposition_tail = if starts_with_keyword(input, "where") {
+        Some(parse_proposition_tail(input)?)
+    } else {
+        None
+    };
+    skip_whitespace_and_comments(input);
+
     // Reject braces after return type -- builtin fn must not have a body
     if input.input.starts_with("{") {
         return Err(winnow::error::ErrMode::Cut(
@@ -2439,6 +2725,7 @@ pub fn parse_builtin_fn_definition(input: &mut ParseInput) -> ModalResult<Defini
         type_params,
         params,
         return_type,
+        proposition_tail,
         span,
     }))
 }
@@ -3010,6 +3297,11 @@ pub fn module_file(input: &mut ParseInput) -> ModalResult<crate::surface::Module
             continue;
         }
 
+        if starts_with_visible_keyword(input, "prop") {
+            definitions.push(parse_proposition_predicate_decl(input)?);
+            continue;
+        }
+
         if starts_with_type_definition(input) {
             definitions.push(parse_type_definition(input)?);
             continue;
@@ -3058,6 +3350,12 @@ pub fn module_file(input: &mut ParseInput) -> ModalResult<crate::surface::Module
         if starts_with_visible_keyword(input, "fn") {
             definitions.push(parse_fn_definition(input)?);
             continue;
+        }
+
+        if starts_with_unsupported_proposition_surface(input) {
+            return Err(winnow::error::ErrMode::Backtrack(
+                winnow::error::ContextError::new(),
+            ));
         }
 
         // Unknown item: try to skip past it to avoid infinite loop

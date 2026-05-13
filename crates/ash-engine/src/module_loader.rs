@@ -4232,6 +4232,7 @@ fn parse_workflow_signature_callable(snippet: &str) -> Option<ImportedCallableEx
         params,
         return_type: Some(return_type),
         contract: None,
+        proposition_tail: None,
         body: body.clone(),
         span: ash_parser::token::Span::default(),
     };
@@ -4733,6 +4734,7 @@ fn workflow_signature_from_parts(
             .collect(),
         return_type,
         contract: None,
+        proposition_tail: None,
         body: workflow_signature_expr_for_body(body),
         span,
     }

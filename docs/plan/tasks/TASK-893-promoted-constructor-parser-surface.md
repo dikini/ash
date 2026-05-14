@@ -26,7 +26,9 @@ Add chosen opt-in promoted-constructor/named-kind source surface and explicit un
 
 ## File Targets
 
-- Exact files must be confirmed by the audit gate before implementation.
+- Modify: `crates/ash-parser/src/surface.rs`
+- Modify: `crates/ash-parser/src/lib.rs` / module-definition dispatch for `data kind`
+- Add: `crates/ash-parser/tests/task_893_promoted_constructor_parser_surface.rs`
 
 ## TDD / Execution Steps
 
@@ -50,7 +52,10 @@ toolsets: [terminal, file]
 ```yaml
 strictness: clean
 commands:
-  - false # TASK-893 must replace this guard with exact focused commands after its audit gate
+  - cargo test -p ash-parser --test task_893_promoted_constructor_parser_surface
+  - cargo fmt --check
+  - git diff --check
+  - cargo check --workspace
 checklist:
   - [ ] Focused tests are non-zero and pass
   - [ ] cargo fmt --check passes

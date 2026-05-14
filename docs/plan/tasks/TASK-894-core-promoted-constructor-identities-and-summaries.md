@@ -27,7 +27,10 @@ Add core promoted data-kind/constructor identities, type-level app carriers, and
 
 ## File Targets
 
-- Exact files must be confirmed by the audit gate before implementation.
+- Modify: `crates/ash-core/src/type_ir.rs`
+- Modify: `crates/ash-core/src/semantic_summary.rs`
+- Modify: `crates/ash-core/src/lib.rs`
+- Add: `crates/ash-core/tests/task_894_promoted_constructor_identities.rs`
 
 ## TDD / Execution Steps
 
@@ -51,7 +54,10 @@ toolsets: [terminal, file]
 ```yaml
 strictness: clean
 commands:
-  - false # TASK-894 must replace this guard with exact focused commands after its audit gate
+  - cargo test -p ash-core --test task_894_promoted_constructor_identities
+  - cargo fmt --check
+  - git diff --check
+  - cargo check --workspace
 checklist:
   - [ ] Focused tests are non-zero and pass
   - [ ] cargo fmt --check passes

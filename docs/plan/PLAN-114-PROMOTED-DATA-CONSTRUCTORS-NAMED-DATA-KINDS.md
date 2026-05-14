@@ -20,7 +20,7 @@
 
 | Task | Description | Type | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-892](tasks/TASK-892-promoted-constructor-audit-gate.md) | Audit live ADT, sealed-domain, type-function, normalizer, summary, and pattern seams before implementation | Docs/Substrate | 5 | 📝 Planned |
+| [TASK-892](tasks/TASK-892-promoted-constructor-audit-gate.md) | Audit live ADT, sealed-domain, type-function, normalizer, summary, and pattern seams before implementation | Docs/Substrate | 5 | ✅ Complete |
 | [TASK-893](tasks/TASK-893-promoted-constructor-parser-surface.md) | Add chosen opt-in promoted-constructor/named-kind source surface and explicit unsupported-form diagnostics | Parser | 6 | 📝 Planned |
 | [TASK-894](tasks/TASK-894-core-promoted-constructor-identities-and-summaries.md) | Add core promoted data-kind/constructor identities, type-level app carriers, and summary version contract | Core/Substrate | 8 | 📝 Planned |
 | [TASK-895](tasks/TASK-895-typeenv-promoted-constructor-registration-and-kinding.md) | Register promoted identities in TypeEnv and validate kind/domain/source-ADT constraints | Typeck | 8 | 📝 Planned |
@@ -67,7 +67,7 @@ cargo doc --workspace --no-deps 2>&1 | tee /tmp/ash-plan-114-doc.log
 
 ## Completion Checklist
 
-- [ ] Audit gate artifact exists and downstream guards are patched.
+- [x] Audit gate artifact exists and downstream guards are patched.
 - [ ] Parser/core/typeck/engine ownership matches [SPEC-065](../spec/SPEC-065-PROMOTED-DATA-CONSTRUCTORS-NAMED-DATA-KINDS.md).
 - [ ] Acceptance/non-interference matrix maps every SPEC row to focused evidence.
 - [ ] Broad workspace gates pass after the final code/doc change.

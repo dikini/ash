@@ -27,7 +27,10 @@ Integrate promoted apps with type functions/propositions and prove runtime ADT/s
 
 ## File Targets
 
-- Exact files must be confirmed by the audit gate before implementation.
+- Modify: `crates/ash-typeck/src/normalizer.rs`
+- Modify: `crates/ash-typeck/src/solver.rs` / `crates/ash-typeck/src/constraint_checking.rs` as needed for proposition operands
+- Add: `crates/ash-typeck/tests/task_896_promoted_constructor_integration.rs`
+- Add: `crates/ash-engine/tests/task_896_promoted_constructor_non_interference.rs`
 
 ## TDD / Execution Steps
 
@@ -51,7 +54,11 @@ toolsets: [terminal, file]
 ```yaml
 strictness: clean
 commands:
-  - false # TASK-896 must replace this guard with exact focused commands after its audit gate
+  - cargo test -p ash-typeck --test task_896_promoted_constructor_integration
+  - cargo test -p ash-engine --test task_896_promoted_constructor_non_interference
+  - cargo fmt --check
+  - git diff --check
+  - cargo check --workspace
 checklist:
   - [ ] Focused tests are non-zero and pass
   - [ ] cargo fmt --check passes

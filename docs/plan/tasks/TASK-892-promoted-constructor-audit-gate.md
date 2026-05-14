@@ -1,6 +1,6 @@
 # TASK-892: Audit live ADT, sealed-domain, type-function, normalizer, summary, and pattern seams before implementation
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -55,11 +55,11 @@ commands:
   - test -f docs/plan/audits/TASK-892-promoted-constructor-audit-gate.md
   - git diff --check
 checklist:
-  - [ ] Audit artifact exists and names exact live callsites
-  - [ ] Downstream fail-closed guards are replaced with focused non-zero commands
-  - [ ] cargo fmt --check passes
-  - [ ] git diff --check passes
-  - [ ] Status surfaces and CHANGELOG are reconciled if this task completes
+  - [x] Audit artifact exists and names exact live callsites
+  - [x] Downstream fail-closed guards are replaced with focused non-zero commands
+  - [x] cargo fmt --check passes
+  - [x] git diff --check passes
+  - [x] Status surfaces and CHANGELOG are reconciled if this task completes
 ```
 
 ## Dependencies for Next Task
@@ -69,3 +69,7 @@ This task produces its verified slice for later tasks in [PLAN-114](../PLAN-114-
 ## Notes
 
 Promoted constructors are opt-in and distinct from sealed-domain markers and runtime constructors.
+
+## Completion Notes
+
+Completed audit gate in `docs/plan/audits/TASK-892-promoted-constructor-audit-gate.md`, chose explicit `data kind <Name> from type <Adt>;` syntax, and replaced TASK-893 through TASK-896 fail-closed verification guards with focused non-zero commands. Baseline `cargo check --workspace` passed before implementation.

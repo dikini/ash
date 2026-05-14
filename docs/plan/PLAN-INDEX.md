@@ -3507,7 +3507,7 @@ Phase 118 implements the opt-in promoted-constructor layer from SPEC-065. It sta
 
 | Task | Description | Est. Hours | Status |
 |------|-------------|------------|--------|
-| [TASK-892](tasks/TASK-892-promoted-constructor-audit-gate.md) | Promoted-constructor audit gate | 5 | 📝 Planned |
+| [TASK-892](tasks/TASK-892-promoted-constructor-audit-gate.md) | Promoted-constructor audit gate | 5 | ✅ Complete |
 | [TASK-893](tasks/TASK-893-promoted-constructor-parser-surface.md) | Promoted-constructor parser surface | 6 | 📝 Planned |
 | [TASK-894](tasks/TASK-894-core-promoted-constructor-identities-and-summaries.md) | Core promoted identities and summaries | 8 | 📝 Planned |
 | [TASK-895](tasks/TASK-895-typeenv-promoted-constructor-registration-and-kinding.md) | TypeEnv registration and kinding | 8 | 📝 Planned |

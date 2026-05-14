@@ -27,7 +27,9 @@ Register promoted identities in TypeEnv and validate kind/domain/source-ADT cons
 
 ## File Targets
 
-- Exact files must be confirmed by the audit gate before implementation.
+- Modify: `crates/ash-typeck/src/type_env.rs`
+- Modify: `crates/ash-typeck/src/lib.rs` only if public registration entrypoints need wiring
+- Add: `crates/ash-typeck/tests/task_895_promoted_constructor_registration.rs`
 
 ## TDD / Execution Steps
 
@@ -51,7 +53,10 @@ toolsets: [terminal, file]
 ```yaml
 strictness: clean
 commands:
-  - false # TASK-895 must replace this guard with exact focused commands after its audit gate
+  - cargo test -p ash-typeck --test task_895_promoted_constructor_registration
+  - cargo fmt --check
+  - git diff --check
+  - cargo check --workspace
 checklist:
   - [ ] Focused tests are non-zero and pass
   - [ ] cargo fmt --check passes

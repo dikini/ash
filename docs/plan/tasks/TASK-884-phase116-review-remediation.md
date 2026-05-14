@@ -1,6 +1,6 @@
 # TASK-884: Phase 116 review remediation
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -61,10 +61,20 @@ Dispatch an independent review/verification subagent with this task file, SPEC-0
 
 ## Completion Checklist
 
-- [ ] Independent review findings are addressed.
-- [ ] Focused remediation tests pass.
-- [ ] Broad workspace verification passes after final patch.
-- [ ] Phase 116 status surfaces are complete.
+- [x] Independent review findings are addressed.
+- [x] Focused remediation tests pass.
+- [x] Broad workspace verification passes after final patch.
+- [x] Phase 116 status surfaces are complete.
+
+
+## Completion Evidence
+
+- Independent TASK-884 review axis B found docs/status blockers; remediation updated PLAN-INDEX Phase 116 summary counts from 3/14 to 13/14 before final TASK-884 closeout, checked verification checklist strings in completed TASK-874 through TASK-883 files, and expanded TASK-883 scoped-doc evidence from the narrow 7-file set to the full 21-file Phase 116 review set.
+- Independent docs/status re-review passed after remediation: PLAN-INDEX summary rows were corrected, TASK-871 through TASK-883 completed-task verification checklists had no unchecked items, TASK-883 recorded the 21-file scoped-doc evidence, and TASK-884 remained Ready until final status reconciliation.
+- Independent semantic/acceptance review passed: no blocking semantic overclaim, no type-function inversion or proof-search overclaim, no parser/runtime constraint conflation, and TASK-882 H1-H12 evidence remained non-zero and honest.
+- Scoped Markdown/status check passed over 21 Phase 116 files: 0 trailing-whitespace findings, 0 missing relative links, and 0 completed-task unchecked verification checklist findings.
+- Focused remediation verification passed: `git diff --check`, `cargo fmt --check`, `cargo test -p ash-engine --test task_879_proposition_summary_transport`, `cargo check --workspace`, and `cargo clippy --workspace --all-targets --all-features -- -D warnings`.
+- Broad final verification passed after the final TASK-884 status patch: `cargo fmt --check`, `git diff --check`, `cargo check --workspace`, `cargo clippy --workspace --all-targets --all-features -- -D warnings`, `cargo test --workspace`, `cargo doc --workspace --no-deps 2>&1 | tee /tmp/ash-phase116-doc.log`, and `! grep -i '^warning:' /tmp/ash-phase116-doc.log`.
 
 ## Dispatch
 
@@ -88,9 +98,9 @@ commands:
   - cargo doc --workspace --no-deps 2>&1 | tee /tmp/ash-phase116-doc.log
   - ! grep -i '^warning:' /tmp/ash-phase116-doc.log
 checklist:
-  - "[ ] Task requirements are satisfied"
-  - "[ ] Focused verification is recorded"
-  - "[ ] Status docs and CHANGELOG.md are updated if release-facing docs changed"
+  - "[x] Task requirements are satisfied"
+  - "[x] Focused verification is recorded"
+  - "[x] Status docs and CHANGELOG.md are updated if release-facing docs changed"
 ```
 
 ## Dependencies for Next Task

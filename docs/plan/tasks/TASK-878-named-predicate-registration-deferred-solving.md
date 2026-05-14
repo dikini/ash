@@ -110,9 +110,9 @@ commands:
   - cargo test -p ash-typeck --test task_878_named_predicate_registration -- --list | grep -q task_878_
   - cargo test -p ash-typeck --test task_878_named_predicate_registration
 checklist:
-  - "[ ] Task requirements are satisfied"
-  - "[ ] Focused verification is recorded"
-  - "[ ] Status docs and CHANGELOG.md are updated if release-facing docs changed"
+  - "[x] Task requirements are satisfied"
+  - "[x] Focused verification is recorded"
+  - "[x] Status docs and CHANGELOG.md are updated if release-facing docs changed"
 ```
 
 ## Dependencies for Next Task

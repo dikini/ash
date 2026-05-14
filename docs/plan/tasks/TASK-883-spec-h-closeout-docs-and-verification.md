@@ -84,7 +84,7 @@ Dispatch an independent review/verification subagent with this task file, SPEC-0
   - `cargo test --workspace`
   - `cargo doc --workspace --no-deps 2>&1 | tee /tmp/ash-phase116-doc.log`
   - `! grep -i '^warning:' /tmp/ash-phase116-doc.log`
-- Scoped docs check passed over SPEC-064, spec index, PLAN-112, PLAN-INDEX, TASK-883, TASK-884, and the TASK-882 acceptance matrix: 7 files checked, 0 trailing-whitespace findings, 0 missing relative links.
+- Scoped docs check passed over the Phase 116 review set, including SPEC-064, the spec index, PLAN-112, PLAN-INDEX, TASK-871 through TASK-884, and TASK-872/TASK-882 audit artifacts: 21 files checked, 0 trailing-whitespace findings, 0 missing relative links.
 
 ## Dispatch
 
@@ -108,9 +108,9 @@ commands:
   - cargo doc --workspace --no-deps 2>&1 | tee /tmp/ash-phase116-doc.log
   - ! grep -i '^warning:' /tmp/ash-phase116-doc.log
 checklist:
-  - "[ ] Task requirements are satisfied"
-  - "[ ] Focused verification is recorded"
-  - "[ ] Status docs and CHANGELOG.md are updated if release-facing docs changed"
+  - "[x] Task requirements are satisfied"
+  - "[x] Focused verification is recorded"
+  - "[x] Status docs and CHANGELOG.md are updated if release-facing docs changed"
 ```
 
 ## Dependencies for Next Task

@@ -105,9 +105,9 @@ commands:
   - cargo test -p ash-parser --test task_881_proposition_parse_diagnostics -- --list | grep -q task_881_
   - cargo test -p ash-parser --test task_881_proposition_parse_diagnostics
 checklist:
-  - "[ ] Task requirements are satisfied"
-  - "[ ] Focused verification is recorded"
-  - "[ ] Status docs and CHANGELOG.md are updated if release-facing docs changed"
+  - "[x] Task requirements are satisfied"
+  - "[x] Focused verification is recorded"
+  - "[x] Status docs and CHANGELOG.md are updated if release-facing docs changed"
 ```
 
 ## Dependencies for Next Task

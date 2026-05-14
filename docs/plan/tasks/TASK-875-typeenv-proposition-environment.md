@@ -105,9 +105,9 @@ commands:
   - cargo test -p ash-typeck --test task_875_proposition_environment -- --list | grep -q task_875_
   - cargo test -p ash-typeck --test task_875_proposition_environment
 checklist:
-  - "[ ] Task requirements are satisfied"
-  - "[ ] Focused verification is recorded"
-  - "[ ] Status docs and CHANGELOG.md are updated if release-facing docs changed"
+  - "[x] Task requirements are satisfied"
+  - "[x] Focused verification is recorded"
+  - "[x] Status docs and CHANGELOG.md are updated if release-facing docs changed"
 ```
 
 ## Dependencies for Next Task

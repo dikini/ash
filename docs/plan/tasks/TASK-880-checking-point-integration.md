@@ -117,9 +117,9 @@ commands:
   - cargo test -p ash-engine --test task_880_proposition_public_integration -- --list | grep -q task_880_
   - cargo test -p ash-engine --test task_880_proposition_public_integration
 checklist:
-  - "[ ] Task requirements are satisfied"
-  - "[ ] Focused verification is recorded"
-  - "[ ] Status docs and CHANGELOG.md are updated if release-facing docs changed"
+  - "[x] Task requirements are satisfied"
+  - "[x] Focused verification is recorded"
+  - "[x] Status docs and CHANGELOG.md are updated if release-facing docs changed"
 ```
 
 ## Dependencies for Next Task

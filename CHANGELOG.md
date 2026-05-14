@@ -7,6 +7,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Changed
+- [TASK-884](docs/plan/tasks/TASK-884-phase116-review-remediation.md): Completed Phase 116 independent review remediation. The final review reconciled PLAN-INDEX Phase 116 summary counts, checked completed-task verification checklist evidence across TASK-874 through TASK-883, expanded TASK-883 scoped-doc evidence to the full Phase 116 review set, and confirmed the SPEC-064/TASK-882 acceptance matrix does not overclaim inversion, proof search, parser scope, or runtime-constraint ownership.
 - [TASK-883](docs/plan/tasks/TASK-883-spec-h-closeout-docs-and-verification.md): Closed out Phase 116 SPEC-H documentation and verification. SPEC-064 and the spec index now mark the constraint/proposition layer as Implemented MVP; PLAN-112 and PLAN-INDEX mark TASK-871 through TASK-883 complete with TASK-884 reserved for independent review remediation; closeout evidence records focused TASK-882 acceptance tests, broad workspace fmt/diff/check/clippy/test/doc gates, and scoped Markdown link/trailing-whitespace checks.
 - [TASK-882](docs/plan/tasks/TASK-882-spec-h-acceptance-non-interference-matrix.md): Added the SPEC-064 §12 H1-H12 acceptance/non-interference matrix artifact and focused `ash-core`, `ash-parser`, `ash-typeck`, and `ash-engine` aggregator tests. The new evidence maps constructor-head disequality, no-inversion equality deferral, named-predicate deferral diagnostics, direct type-function and associated-family equality, rigid projection deferral, interface-bound success/missing-evidence behavior, V5/V4 proposition-summary boundaries, private predicate leakage rejection, and SPEC-035/SPEC-057-through-SPEC-063 non-interference without adding solver features or broadening parser surfaces.
 - [TASK-881](docs/plan/tasks/TASK-881-proposition-diagnostics.md): Added structured proposition diagnostics across `ash-parser` and `ash-typeck`. Proposition failures now carry stable SPEC-064 diagnostic families for unknown/deferred predicates, neutral/rigid equality blockers, open/neutral/refuted disequality, missing interface evidence, malformed proposition summaries, and private proposition leaks; parser E168 is limited to disabled type-alias proposition tails without masking ordinary workflow or legacy impl parse errors; and required-discharge messages include shape/rule/help text without leaking internal no-inversion/debug fields.
@@ -124,6 +125,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - [SPEC-058](docs/spec/SPEC-058-CANONICAL-TYPE-EXPRESSION-IR-PROJECTION-IDS-KIND-ARITY-SUBSTRATE.md), [PLAN-106](docs/plan/PLAN-106-TYPE-EXPRESSION-IR-PROJECTION-IDS-KIND-ARITY-SUBSTRATE.md), and [TASK-793](docs/plan/tasks/TASK-793-spec-b-spec-plan-packet.md) through [TASK-805](docs/plan/tasks/TASK-805-phase110-review-remediation.md): planned and review-hardened Phase 110 as DESIGN-034 SPEC-B, defining the internal canonical type-expression IR, shared core-owned `Kind`, promoted computation-grade identity carriers, canonical projection elaboration, rigid/neutral carriers, transparent-alias canonicalization policy, and explicit kind/arity validation substrate on top of Phase 109 while explicitly deferring sealed domains, public `type fn`, normalization, recursive associated type-family computation, computation-summary export/import, holes, partial type-constructor application, and new public projection syntax. The review hardening names the exact TypeEnv equality boundaries, widens parser parity to `parse_module.rs`, inserts source/import interface-member identity plumbing before projection canonicalization, and tightens unsupported-shape, multi-parameter-projection, neutral-head, and verification-evidence requirements.
 
 ### Changed
+- [TASK-884](docs/plan/tasks/TASK-884-phase116-review-remediation.md): Completed Phase 116 independent review remediation. The final review reconciled PLAN-INDEX Phase 116 summary counts, checked completed-task verification checklist evidence across TASK-874 through TASK-883, expanded TASK-883 scoped-doc evidence to the full Phase 116 review set, and confirmed the SPEC-064/TASK-882 acceptance matrix does not overclaim inversion, proof search, parser scope, or runtime-constraint ownership.
 - [SPEC-062](docs/spec/SPEC-062-MODULE-SUMMARY-EXPORT-IMPORT-FOR-TYPE-COMPUTATION.md), [PLAN-110](docs/plan/PLAN-110-MODULE-SUMMARY-EXPORT-IMPORT-FOR-TYPE-COMPUTATION.md), and Phase 114 task files: hardened the planned module-summary export/import packet after review by requiring strict V3 computation-summary content gating, V1/V2 malformed computation-field rejection, import-side SPEC-061 invariant revalidation before normalizer registration, normalizer-available dependency heads without source-visible helper leakage, complete acceptance-matrix ownership, version/cache/dedup key coverage for computation facts, and aligned verification/doc-warning gates before Rust implementation starts.
 - Reconciled Phase 112 post-review cleanup: SPEC-060 now records TASK-829 completion, neutral computation normal forms require blocker reasons, transparent-alias canonical variable bridging uses a per-alias bijection instead of name hashing, and weak-head/demand mode names are documented as reserved MVP policy surfaces while definitional equality forces full normalization.
 - Tightened Phase 112 normalizer review remediation after post-closeout review: definitional equality now always uses full-normalization semantics, known structural mismatches inside neutral/projection argument spines report `NotEqual` rather than neutrality blockers, and task/spec status evidence was reconciled for TASK-819/TASK-821/TASK-823/TASK-825/TASK-829.
@@ -410,6 +412,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - PLAN-098: Proc, process runtime, failure, and workflow boundary implementation plan. Adds substrate-first tasks TASK-705 through TASK-718 for runtime identities, operational `fail`/`with_error`, `Proc`/`P` type registration, `Proc` core combinators, process handles, `yield`, `par`/`scatter`, `await`/`join`/`gather`, workflow boundary reports, and cross-layer validation.
 
 ### Changed
+- [TASK-884](docs/plan/tasks/TASK-884-phase116-review-remediation.md): Completed Phase 116 independent review remediation. The final review reconciled PLAN-INDEX Phase 116 summary counts, checked completed-task verification checklist evidence across TASK-874 through TASK-883, expanded TASK-883 scoped-doc evidence to the full Phase 116 review set, and confirmed the SPEC-064/TASK-882 acceptance matrix does not overclaim inversion, proof search, parser scope, or runtime-constraint ownership.
 
 - Completed TASK-705 semantic tower runtime preflight for Phase 98 after merging current `main`; baseline fmt/test/clippy gates are green, TASK-706 may proceed as carrier-only work, and Act-dependent Proc slices remain deferred until their specific Act prerequisites are needed (TASK-705).
 
@@ -778,6 +781,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   `lower_expr()` public API in `ash-parser`.
 
 ### Changed
+- [TASK-884](docs/plan/tasks/TASK-884-phase116-review-remediation.md): Completed Phase 116 independent review remediation. The final review reconciled PLAN-INDEX Phase 116 summary counts, checked completed-task verification checklist evidence across TASK-874 through TASK-883, expanded TASK-883 scoped-doc evidence to the full Phase 116 review set, and confirmed the SPEC-064/TASK-882 acceptance matrix does not overclaim inversion, proof search, parser scope, or runtime-constraint ownership.
 
 - Lifting pass no longer panics on effectful expressions in unsupported
   workflow positions; preserves original expression for downstream
@@ -892,6 +896,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   `TypeError::Obligation` returns `None` from `span()` (no single location).
 
 ### Changed
+- [TASK-884](docs/plan/tasks/TASK-884-phase116-review-remediation.md): Completed Phase 116 independent review remediation. The final review reconciled PLAN-INDEX Phase 116 summary counts, checked completed-task verification checklist evidence across TASK-874 through TASK-883, expanded TASK-883 scoped-doc evidence to the full Phase 116 review set, and confirmed the SPEC-064/TASK-882 acceptance matrix does not overclaim inversion, proof search, parser scope, or runtime-constraint ownership.
 
 - `ash_error_to_diagnostic` no longer takes a `_source` parameter; the function
   derives the range from the span's line/column fields directly.
@@ -1240,6 +1245,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Planned Phase 71 as the follow-on resolver integration phase for module-owned symbolic capability resolution. Added [DESIGN-017](docs/design/DESIGN-017-MODULE-OWNED-CAPABILITY-RESOLUTION.md), [PLAN-017](docs/plan/PLAN-017-MODULE-OWNED-CAPABILITY-RESOLUTION.md), dated planning/design handoff docs in `docs/plans/`, and authored [TASK-471](docs/plan/tasks/TASK-471-spec-module-owned-capability-resolution.md) through [TASK-479](docs/plan/tasks/TASK-479-module-owned-capability-resolution-verification.md) to replace the Phase 70 bridge resolver with module/import-owned capability metadata.
 
 ### Changed
+- [TASK-884](docs/plan/tasks/TASK-884-phase116-review-remediation.md): Completed Phase 116 independent review remediation. The final review reconciled PLAN-INDEX Phase 116 summary counts, checked completed-task verification checklist evidence across TASK-874 through TASK-883, expanded TASK-883 scoped-doc evidence to the full Phase 116 review set, and confirmed the SPEC-064/TASK-882 acceptance matrix does not overclaim inversion, proof search, parser scope, or runtime-constraint ownership.
 
 - Reframed Phase 70 as an in-progress bridge implementation rather than a completed final resolver architecture. Active docs now distinguish the landed split-dispatch/runtime surface work from the still-open module-system integration needed for symbolic capability resolution.
 
@@ -1444,6 +1450,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   slice (TASK-368a).
 
 ### Changed
+- [TASK-884](docs/plan/tasks/TASK-884-phase116-review-remediation.md): Completed Phase 116 independent review remediation. The final review reconciled PLAN-INDEX Phase 116 summary counts, checked completed-task verification checklist evidence across TASK-874 through TASK-883, expanded TASK-883 scoped-doc evidence to the full Phase 116 review set, and confirmed the SPEC-064/TASK-882 acceptance matrix does not overclaim inversion, proof search, parser scope, or runtime-constraint ownership.
 
 - Removed `Par` from the active Ash language contract. The canonical sequential workflow contract now specifies that a single workflow in Ash is sequential, with concurrency and parallelism modeled at the system level through multiple communicating workflows. All normative `Par` contract references in [SPEC-001](docs/spec/SPEC-001-IR.md), [SPEC-002](docs/spec/SPEC-002-SURFACE.md), [SPEC-003](docs/spec/SPEC-003-TYPE-SYSTEM.md), [SPEC-004](docs/spec/SPEC-004-SEMANTICS.md), [SPEC-022](docs/spec/SPEC-022-WORKFLOW-TYPING.md), [SPEC-025](docs/spec/SPEC-025-SMALL-STEP-OPERATIONAL-SEMANTICS.md), and [SPEC-026](docs/spec/SPEC-026-IMPLEMENTATION-CONFORMANCE.md) have been amended to mark historical sections with \"(Historical)\" markers and remove normative language that would imply `Par` is part of the current active contract.
 
@@ -1873,6 +1880,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Property-based tests for unification soundness, reflexivity, and symmetry.
 
 ### Changed
+- [TASK-884](docs/plan/tasks/TASK-884-phase116-review-remediation.md): Completed Phase 116 independent review remediation. The final review reconciled PLAN-INDEX Phase 116 summary counts, checked completed-task verification checklist evidence across TASK-874 through TASK-883, expanded TASK-883 scoped-doc evidence to the full Phase 116 review set, and confirmed the SPEC-064/TASK-882 acceptance matrix does not overclaim inversion, proof search, parser scope, or runtime-constraint ownership.
 
 - `type_expr_to_type` now properly converts `TypeExpr::Constructor` to `Type::Constructor` instead of losing constructor information.
 - `build_constructor_type` now returns the constructor type (e.g., `Option<T>`) instead of just the type parameter.
@@ -1920,6 +1928,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Follow-up blocker-remediation planning for the remaining role-convergence gaps after TASK-220. `docs/plans/2026-03-23-role-convergence-blocker-remediation-design.md` now records the narrowed design for replacing placeholder role-obligation lowering and reconciling touched docs/examples with the canonical surface, while `docs/plans/2026-03-23-role-convergence-blocker-remediation-plan.md`, `docs/plan/PLAN-INDEX.md`, and TASK-221 through TASK-224 break that work into focused self-contained implementation tasks.
 
 ### Changed
+- [TASK-884](docs/plan/tasks/TASK-884-phase116-review-remediation.md): Completed Phase 116 independent review remediation. The final review reconciled PLAN-INDEX Phase 116 summary counts, checked completed-task verification checklist evidence across TASK-874 through TASK-883, expanded TASK-883 scoped-doc evidence to the full Phase 116 review set, and confirmed the SPEC-064/TASK-882 acceptance matrix does not overclaim inversion, proof search, parser scope, or runtime-constraint ownership.
 
 - Inline-module parser honesty follow-up now rejects unsupported canonical inline items such as `workflow`, `policy`, `datatype`, and visibility-qualified entries explicitly even after recovery from earlier unknown items instead of skipping them silently, while the module role-lowering helper surface is narrowed to the maintained test-only crate-internal path (TASK-225).
 - Review-driven role-convergence wording cleanup now removes stale placeholder-lowering wording from TASK-218 and makes the closeout audit explicit that module role lowering remains a maintained test-only helper surface rather than a general parser-facing lowering API (TASK-218, TASK-225).
@@ -2045,6 +2054,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Restored `ash-cli` compatibility with boxed `Value::List` and `Value::Record` constructors, and moved binary command tests into an integration harness so `cargo test -p ash-cli` passes again on the workflow-contracts branch.
 
 ### Changed
+- [TASK-884](docs/plan/tasks/TASK-884-phase116-review-remediation.md): Completed Phase 116 independent review remediation. The final review reconciled PLAN-INDEX Phase 116 summary counts, checked completed-task verification checklist evidence across TASK-874 through TASK-883, expanded TASK-883 scoped-doc evidence to the full Phase 116 review set, and confirmed the SPEC-064/TASK-882 acceptance matrix does not overclaim inversion, proof search, parser scope, or runtime-constraint ownership.
 
 - Canonicalized the spec contracts for `check`, `decide`, and `receive` across SPEC-001, SPEC-002, SPEC-003, SPEC-004, SPEC-017, and SPEC-018 (TASK-156). `check` is now obligation-only, `decide` always names an explicit policy, and `receive` is documented as an epistemic mailbox-input form with one authoritative surface grammar.
 

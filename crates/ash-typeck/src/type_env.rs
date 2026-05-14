@@ -18,13 +18,13 @@ use ash_core::semantic_summary::{
     AssociatedMemberIdentityId, AssociatedMemberIdentitySummary, ConstructorPayloadKind,
     ConstructorSummary, DomainConstructorId, DomainConstructorSummary, InterfaceIdentityId,
     InterfaceIdentitySummary, ModuleIdentity, ModuleSemanticSummary,
-    ModuleSemanticSummaryValidationError, ModuleSummaryRef, PropositionPredicateId,
-    PropositionPredicateParamSummary, PropositionPredicateSummary, RepresentationExposure,
-    SealedDomainId, SealedDomainSummary, SourceAnchor, SourceOrigin, StructuralFieldStatus,
-    SummaryVersion, TypeDeclId, TypeDeclSummary, TypeFunctionClosureMetadata,
-    TypeFunctionDependencySummaryRef, TypeFunctionExportMode, TypeFunctionParamSummary,
-    TypeFunctionRevalidationMetadata, TypeFunctionSummary, TypeRepresentationSummary,
-    ValidatedDecreasesSummary,
+    ModuleSemanticSummaryValidationError, ModuleSummaryRef, PropositionFactSummary,
+    PropositionPredicateId, PropositionPredicateParamSummary, PropositionPredicateSummary,
+    RepresentationExposure, SealedDomainId, SealedDomainSummary, SourceAnchor, SourceOrigin,
+    StructuralFieldStatus, SummaryVersion, TypeDeclId, TypeDeclSummary,
+    TypeFunctionClosureMetadata, TypeFunctionDependencySummaryRef, TypeFunctionExportMode,
+    TypeFunctionParamSummary, TypeFunctionRevalidationMetadata, TypeFunctionSummary,
+    TypeRepresentationSummary, ValidatedDecreasesSummary,
 };
 use ash_core::type_ir::{
     AssociatedFamilyEquation, AssociatedFamilyHeadId, AssociatedFamilyPattern,
@@ -1274,6 +1274,30 @@ fn proposition_normalization_error(error: crate::normalizer::NormalizationError)
         Span::default(),
     )
     .into()
+}
+
+fn proposition_revalidation_error(error: TypeError) -> TypeEnvError {
+    match error {
+        TypeError::TypeEnv(error) => *error,
+        other => TypeEnvError::InvalidDefinition(
+            format!("proposition fact revalidation failed: {other}"),
+            Span::default(),
+        ),
+    }
+}
+
+fn private_proposition_dependency_error(
+    public_item: &str,
+    dependency_kind: &str,
+    dependency: &str,
+    span: Span,
+) -> TypeEnvError {
+    TypeEnvError::InvalidDefinition(
+        format!(
+            "private proposition-summary dependency: public {public_item} depends on private {dependency_kind} '{dependency}'"
+        ),
+        span,
+    )
 }
 
 fn proposition_comparison_terms(
@@ -2756,6 +2780,51 @@ fn validate_summary_visibility_and_duplicates(
                         constructor.exported_name, domain.exported_name
                     ),
                     Span::default(),
+                ));
+            }
+        }
+    }
+
+    for (index, predicate) in summary.exported_proposition_predicates.iter().enumerate() {
+        if predicate.visibility != ash_core::ast::Visibility::Public {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "private proposition predicate '{}' is not valid public proposition summary metadata",
+                    predicate.exported_name
+                ),
+                anchor_span(&predicate.source_anchor),
+            ));
+        }
+        if predicate.id.name != predicate.exported_name {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "proposition predicate summary '{}' identity does not match exported name '{}'",
+                    predicate.id.name, predicate.exported_name
+                ),
+                anchor_span(&predicate.source_anchor),
+            ));
+        }
+        for duplicate in summary
+            .exported_proposition_predicates
+            .iter()
+            .skip(index + 1)
+        {
+            if predicate.exported_name == duplicate.exported_name && predicate.id != duplicate.id {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "duplicate proposition predicate exported name '{}' has conflicting identities",
+                        predicate.exported_name
+                    ),
+                    anchor_span(&duplicate.source_anchor),
+                ));
+            }
+            if predicate.id == duplicate.id && predicate != duplicate {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "duplicate proposition predicate identity '{}' has conflicting metadata",
+                        predicate.exported_name
+                    ),
+                    anchor_span(&duplicate.source_anchor),
                 ));
             }
         }
@@ -4865,6 +4934,9 @@ impl TypeEnv {
                     !hidden_associated_family_heads.contains(&family.head),
                 )?;
             }
+            for predicate in &summary.exported_proposition_predicates {
+                staged.register_proposition_predicate_summary(predicate)?;
+            }
         }
         for summary in summaries {
             staged.register_module_semantic_summary_representations_and_domains(summary)?;
@@ -4878,8 +4950,71 @@ impl TypeEnv {
             for family in &summary.exported_associated_families {
                 staged.validate_and_register_imported_associated_family_summary(family)?;
             }
+            for fact in &summary.exported_proposition_facts {
+                staged.validate_and_register_imported_proposition_fact(summary, fact)?;
+            }
         }
         *self = staged;
+        Ok(())
+    }
+
+    fn validate_and_register_imported_proposition_fact(
+        &mut self,
+        summary: &ModuleSemanticSummary,
+        fact: &PropositionFactSummary,
+    ) -> Result<(), TypeEnvError> {
+        let predicate_dependencies = self.validate_public_proposition_dependencies(
+            "imported proposition summary fact",
+            &fact.proposition,
+            anchor_span(&fact.source_anchor),
+        )?;
+        for dependency in &fact.predicate_dependencies {
+            let Some(info) = self.proposition_predicate_by_id(dependency) else {
+                return Err(TypeEnvError::UnknownPropositionPredicate {
+                    name: dependency.name.to_string(),
+                    span: anchor_span(&fact.source_anchor),
+                });
+            };
+            if info.summary.visibility != ash_core::ast::Visibility::Public {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "private proposition predicate '{}' leaked through imported proposition summary fact",
+                        info.summary.exported_name
+                    ),
+                    anchor_span(&fact.source_anchor),
+                ));
+            }
+        }
+        for dependency in &predicate_dependencies {
+            if !fact.predicate_dependencies.contains(dependency) {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "imported proposition summary fact omits predicate dependency '{}' from dependency metadata",
+                        dependency.name
+                    ),
+                    anchor_span(&fact.source_anchor),
+                ));
+            }
+        }
+
+        let outcome = Some(
+            self.solve_proposition(&fact.proposition, Some(fact.source_anchor.clone()))
+                .map_err(proposition_revalidation_error)?,
+        );
+        self.push_proposition_fact(
+            fact.role,
+            fact.proposition.clone(),
+            fact.source_anchor.clone(),
+            PropositionCheckingSite::new(
+                0x8790_0000u64 + self.proposition_obligations.len() as u64,
+                PropositionCheckingSiteKind::Synthetic,
+                Some(format!(
+                    "imported proposition fact from {}",
+                    summary.module.path.join("::")
+                )),
+            ),
+            outcome,
+        );
         Ok(())
     }
 
@@ -9554,6 +9689,7 @@ impl TypeEnv {
         summary: &PropositionPredicateSummary,
         solver_kind: PropositionPredicateSolverKind,
     ) -> Result<(), TypeEnvError> {
+        self.validate_public_proposition_predicate_summary_dependencies(summary)?;
         let visible_name = summary.exported_name.to_string();
         if let Some(existing) = self.proposition_predicate_aliases.get(&visible_name)
             && existing != &summary.id
@@ -9662,6 +9798,313 @@ impl TypeEnv {
     #[must_use]
     pub fn proposition_obligations(&self) -> &[PropositionFactRecord] {
         &self.proposition_obligations
+    }
+
+    /// Export public proposition requirements through the SPEC-064/V5 summary carrier.
+    pub fn export_public_proposition_fact_summaries(
+        &self,
+        module: &ModuleIdentity,
+    ) -> Result<Vec<PropositionFactSummary>, TypeEnvError> {
+        let public_item = format!(
+            "module '{}' public proposition requirement",
+            module.path.join("::")
+        );
+        let mut facts = Vec::new();
+        for record in &self.proposition_obligations {
+            let predicate_dependencies = self.validate_public_proposition_dependencies(
+                &public_item,
+                &record.proposition,
+                anchor_span(&record.source_anchor),
+            )?;
+            let outcome = match &record.outcome {
+                Some(outcome) => Some(outcome.clone()),
+                None => Some(
+                    self.solve_proposition(&record.proposition, Some(record.source_anchor.clone()))
+                        .map_err(proposition_revalidation_error)?,
+                ),
+            };
+            facts.push(PropositionFactSummary {
+                proposition: record.proposition.clone(),
+                role: record.role,
+                source_anchor: record.source_anchor.clone(),
+                predicate_dependencies,
+                dependency_summary_refs: Vec::new(),
+                outcome,
+            });
+        }
+        Ok(facts)
+    }
+
+    fn validate_public_proposition_dependencies(
+        &self,
+        public_item: &str,
+        proposition: &TypeProposition,
+        span: Span,
+    ) -> Result<Vec<PropositionPredicateId>, TypeEnvError> {
+        let mut predicate_dependencies = Vec::new();
+        match proposition {
+            TypeProposition::Equality(equality) => {
+                self.validate_public_proposition_term_dependencies(
+                    public_item,
+                    &equality.lhs,
+                    span,
+                )?;
+                self.validate_public_proposition_term_dependencies(
+                    public_item,
+                    &equality.rhs,
+                    span,
+                )?;
+            }
+            TypeProposition::Disequality(disequality) => {
+                self.validate_public_proposition_term_dependencies(
+                    public_item,
+                    &disequality.lhs,
+                    span,
+                )?;
+                self.validate_public_proposition_term_dependencies(
+                    public_item,
+                    &disequality.rhs,
+                    span,
+                )?;
+            }
+            TypeProposition::InterfaceBound(bound) => {
+                if !self.public_interface_dependency_known(&bound.interface) {
+                    return Err(private_proposition_dependency_error(
+                        public_item,
+                        "interface",
+                        &bound.interface.name,
+                        span,
+                    ));
+                }
+                self.validate_public_proposition_term_dependencies(
+                    public_item,
+                    &bound.subject,
+                    span,
+                )?;
+                for arg in &bound.interface_args {
+                    self.validate_public_proposition_term_dependencies(public_item, arg, span)?;
+                }
+            }
+            TypeProposition::NamedPredicate(named) => {
+                let Some(info) = self.proposition_predicate_by_id(&named.predicate) else {
+                    return Err(TypeEnvError::UnknownPropositionPredicate {
+                        name: named.predicate.name.to_string(),
+                        span,
+                    });
+                };
+                if info.summary.visibility != ash_core::ast::Visibility::Public {
+                    return Err(private_proposition_dependency_error(
+                        public_item,
+                        "proposition predicate",
+                        &info.summary.exported_name,
+                        span,
+                    ));
+                }
+                if info.summary.params.len() != named.args.len() {
+                    return Err(TypeEnvError::PropositionPredicateArityMismatch {
+                        name: info.summary.exported_name.to_string(),
+                        expected: info.summary.params.len(),
+                        actual: named.args.len(),
+                        span,
+                    });
+                }
+                predicate_dependencies.push(named.predicate.clone());
+                for arg in &named.args {
+                    self.validate_public_proposition_term_dependencies(public_item, arg, span)?;
+                }
+            }
+        }
+        predicate_dependencies.sort_by(|left, right| {
+            left.module
+                .path
+                .cmp(&right.module.path)
+                .then_with(|| left.name.cmp(&right.name))
+        });
+        predicate_dependencies.dedup();
+        Ok(predicate_dependencies)
+    }
+
+    fn validate_public_proposition_predicate_summary_dependencies(
+        &self,
+        summary: &PropositionPredicateSummary,
+    ) -> Result<(), TypeEnvError> {
+        if summary.visibility != ash_core::ast::Visibility::Public {
+            return Ok(());
+        }
+        let public_item = format!("public proposition predicate '{}'", summary.exported_name);
+        for param in &summary.params {
+            self.validate_public_canonical_proposition_dependencies(
+                &public_item,
+                &param.ty,
+                anchor_span(&param.source_anchor),
+            )?;
+        }
+        Ok(())
+    }
+
+    fn validate_public_proposition_term_dependencies(
+        &self,
+        public_item: &str,
+        term: &TypePropositionTerm,
+        span: Span,
+    ) -> Result<(), TypeEnvError> {
+        match term {
+            TypePropositionTerm::Canonical(expr) => {
+                self.validate_public_canonical_proposition_dependencies(public_item, expr, span)
+            }
+            TypePropositionTerm::DomainConstructorApp {
+                constructor,
+                domain,
+                args,
+                ..
+            } => {
+                let Some(summary) = self.lookup_sealed_domain_by_id(domain) else {
+                    return Err(private_proposition_dependency_error(
+                        public_item,
+                        "sealed domain",
+                        &domain.name,
+                        span,
+                    ));
+                };
+                if summary.visibility != ash_core::ast::Visibility::Public {
+                    return Err(private_proposition_dependency_error(
+                        public_item,
+                        "sealed domain",
+                        &summary.exported_name,
+                        span,
+                    ));
+                }
+                if !summary
+                    .constructors
+                    .iter()
+                    .any(|candidate| candidate.id == *constructor)
+                {
+                    return Err(private_proposition_dependency_error(
+                        public_item,
+                        "domain constructor",
+                        &constructor.name,
+                        span,
+                    ));
+                }
+                for arg in args {
+                    self.validate_public_proposition_term_dependencies(public_item, arg, span)?;
+                }
+                Ok(())
+            }
+        }
+    }
+
+    fn public_interface_dependency_known(&self, interface: &InterfaceIdentityId) -> bool {
+        if !self.known_interface_identities.contains(interface) {
+            return false;
+        }
+        self.interfaces
+            .get(interface.name.as_str())
+            .is_none_or(|info| info.visibility == ash_core::ast::Visibility::Public)
+    }
+
+    fn public_associated_member_dependency_known(
+        &self,
+        member: &AssociatedMemberIdentityId,
+    ) -> bool {
+        self.known_associated_member_identities.contains(member)
+            && self.public_interface_dependency_known(&member.interface)
+    }
+
+    fn validate_public_canonical_proposition_dependencies(
+        &self,
+        public_item: &str,
+        expr: &CanonicalTypeExpr,
+        span: Span,
+    ) -> Result<(), TypeEnvError> {
+        match expr {
+            CanonicalTypeExpr::Primitive(_) | CanonicalTypeExpr::Var(_) => Ok(()),
+            CanonicalTypeExpr::NominalApp { origin, args, .. } => {
+                let Some(visible_name) = self.canonical_type_names.get(origin) else {
+                    return Err(private_proposition_dependency_error(
+                        public_item,
+                        "ordinary type",
+                        &origin.name,
+                        span,
+                    ));
+                };
+                if !self.ast_types.get(visible_name).is_some_and(|ty| {
+                    ty.visibility == ash_core::ast::Visibility::Public || ty.builtin
+                }) {
+                    return Err(private_proposition_dependency_error(
+                        public_item,
+                        "ordinary type",
+                        visible_name,
+                        span,
+                    ));
+                }
+                for arg in args {
+                    self.validate_public_canonical_proposition_dependencies(
+                        public_item,
+                        arg,
+                        span,
+                    )?;
+                }
+                Ok(())
+            }
+            CanonicalTypeExpr::Projection {
+                interface,
+                member,
+                args,
+                ..
+            } => {
+                if !self.public_interface_dependency_known(interface) {
+                    return Err(private_proposition_dependency_error(
+                        public_item,
+                        "interface",
+                        &interface.name,
+                        span,
+                    ));
+                }
+                if !self.public_associated_member_dependency_known(member) {
+                    return Err(private_proposition_dependency_error(
+                        public_item,
+                        "associated member",
+                        &member.name,
+                        span,
+                    ));
+                }
+                for arg in args {
+                    self.validate_public_canonical_proposition_dependencies(
+                        public_item,
+                        arg,
+                        span,
+                    )?;
+                }
+                Ok(())
+            }
+            CanonicalTypeExpr::ComputationHeadApp { head, args, .. } => {
+                let Some(def) = self.local_type_functions.get(head) else {
+                    return Err(private_proposition_dependency_error(
+                        public_item,
+                        "type function",
+                        &head.name,
+                        span,
+                    ));
+                };
+                if def.visibility != ash_core::ast::Visibility::Public {
+                    return Err(private_proposition_dependency_error(
+                        public_item,
+                        "type function",
+                        &head.name,
+                        span,
+                    ));
+                }
+                for arg in args {
+                    self.validate_public_canonical_proposition_dependencies(
+                        public_item,
+                        arg,
+                        span,
+                    )?;
+                }
+                Ok(())
+            }
+        }
     }
 
     /// Add one required proposition obligation that has already been lowered to core carriers.

@@ -1,6 +1,6 @@
 # TASK-879: Public proposition summary transport
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -74,9 +74,33 @@ Dispatch an independent review/verification subagent with this task file, SPEC-0
 
 ## Completion Checklist
 
-- [ ] Focused core/typeck/engine tests pass.
-- [ ] V4-with-proposition facts is rejected before partial registration.
-- [ ] Private dependency leakage is fail-closed.
+- [x] Focused core/typeck/engine tests pass.
+- [x] V4-with-proposition facts is rejected before partial registration.
+- [x] Private dependency leakage is fail-closed.
+
+## Completion Notes
+
+- Implemented SPEC-064/V5 proposition summary payload transport across core schema, TypeEnv import/export, and engine selected-summary paths.
+- TypeEnv import revalidates proposition facts locally instead of trusting imported outcomes, preserving conservative deferred named/interface-bound evidence without solver authority leakage.
+- Public proposition summaries fail closed for private ordinary types, sealed domains/constructors, type functions, interfaces/projections, and predicate parameter dependencies.
+- Engine transport preserves V5 proposition payloads through named imports, glob imports, and `pub use`, including supporting public ordinary-type and interface metadata needed to revalidate proposition-tail-only dependencies.
+- Independent review found and verified remediation for forged imported outcomes, private dependency leakage, proposition supporting-summary transport, and public interface-bound metadata transport.
+
+## Verification Evidence
+
+- RED: `cargo test -p ash-engine --test task_879_proposition_summary_transport task_879_glob_import_and_pub_use_preserve_proposition_fact_payload_once -- --exact --nocapture` initially failed before pub-use/glob proposition payload merge remediation.
+- RED: `cargo test -p ash-typeck --test task_879_proposition_summary_import task_879_export_rejects_private_interface_bound_dependencies_fail_closed -- --exact --nocapture` initially failed before InterfaceBound public-visibility enforcement.
+- RED: `cargo test -p ash-engine --test task_879_proposition_summary_transport task_879_named_import_transports_public_interface_bound_identity -- --exact --nocapture` initially failed before public interface identity metadata transport.
+- PASS: `cargo fmt --check`
+- PASS: `git diff --check`
+- PASS: `cargo check --workspace`
+- PASS: `cargo test -p ash-core --test task_879_proposition_summary_schema -- --list | grep -q task_879_`
+- PASS: `cargo test -p ash-core --test task_879_proposition_summary_schema` (2 tests)
+- PASS: `cargo test -p ash-typeck --test task_879_proposition_summary_import -- --list | grep -q task_879_`
+- PASS: `cargo test -p ash-typeck --test task_879_proposition_summary_import` (11 tests)
+- PASS: `cargo test -p ash-engine --test task_879_proposition_summary_transport -- --list | grep -q task_879_`
+- PASS: `cargo test -p ash-engine --test task_879_proposition_summary_transport` (4 tests)
+- PASS: independent final review subagent returned no blocking or important TASK-879 findings.
 
 ## Dispatch
 
@@ -105,9 +129,9 @@ commands:
   - cargo test -p ash-engine --test task_879_proposition_summary_transport -- --list | grep -q task_879_
   - cargo test -p ash-engine --test task_879_proposition_summary_transport
 checklist:
-  - "[ ] Task requirements are satisfied"
-  - "[ ] Focused verification is recorded"
-  - "[ ] Status docs and CHANGELOG.md are updated if release-facing docs changed"
+  - "[x] Task requirements are satisfied"
+  - "[x] Focused verification is recorded"
+  - "[x] Status docs and CHANGELOG.md are updated if release-facing docs changed"
 ```
 
 ## Dependencies for Next Task

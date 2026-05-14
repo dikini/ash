@@ -15,9 +15,10 @@ use ash_core::ast::{
 };
 use ash_core::module_graph::ModuleId;
 use ash_core::semantic_summary::{
-    AssociatedFamilySummary, AssociatedMemberIdentityId, InterfaceIdentityId, ModuleIdentity,
-    ModuleSemanticSummary, ModuleSourceOrigin, SealedDomainId, SummaryVersion, TypeDeclId,
-    TypeDeclSummary, TypeFunctionSummary, TypeRepresentationSummary,
+    AssociatedFamilySummary, AssociatedMemberIdentityId, ConstructorSummary, InterfaceIdentityId,
+    InterfaceIdentitySummary, ModuleIdentity, ModuleSemanticSummary, ModuleSourceOrigin,
+    SealedDomainId, SummaryVersion, TypeDeclId, TypeDeclSummary, TypeFunctionSummary,
+    TypeRepresentationSummary,
 };
 use ash_core::type_ir::{
     CanonicalTypeExpr, TypeComputationHeadId, TypeFunctionPattern, TypeFunctionPatternConstraint,
@@ -739,79 +740,124 @@ fn merge_or_push_imported_semantic_summary(
         .iter_mut()
         .find(|existing| imported_summary_type_set_matches(existing, &selected))
     {
-        for constructor in selected.exported_constructors {
-            let exists = existing.exported_constructors.iter().any(|existing| {
-                existing.id == constructor.id && existing.exported_name == constructor.exported_name
-            });
-            if !exists {
-                existing.exported_constructors.push(constructor);
-            }
-        }
-        for domain in selected.exported_sealed_domains {
-            let exists = existing.exported_sealed_domains.iter().any(|existing| {
-                existing.id == domain.id && existing.exported_name == domain.exported_name
-            });
-            if !exists {
-                existing.exported_sealed_domains.push(domain);
-            }
-        }
-        for type_function in selected.exported_type_functions {
-            let exists = existing.exported_type_functions.iter().any(|existing| {
-                existing.head == type_function.head
-                    && (existing.exported_name == type_function.exported_name
-                        || is_dependency_metadata_name(&existing.exported_name)
-                        || is_dependency_metadata_name(&type_function.exported_name))
-            });
-            if !exists {
-                existing.exported_type_functions.push(type_function);
-            }
-        }
-        for family in selected.exported_associated_families {
-            let exists = existing
-                .exported_associated_families
-                .iter()
-                .any(|existing| existing.head == family.head);
-            if !exists {
-                existing.exported_associated_families.push(family);
-            }
-        }
-        for identity in selected.interface_identities {
-            let exists = existing
-                .interface_identities
-                .iter()
-                .any(|existing| existing.id == identity.id);
-            if !exists {
-                existing.interface_identities.push(identity);
-            }
-        }
-        for identity in selected.associated_member_identities {
-            let exists = existing
-                .associated_member_identities
-                .iter()
-                .any(|existing| existing.id == identity.id);
-            if !exists {
-                existing.associated_member_identities.push(identity);
-            }
-        }
+        merge_imported_summary_payloads(existing, selected);
         imported_summary_keys.insert(imported_summary_key(existing));
         return;
     }
 
-    if !selected.exported_type_functions.is_empty()
-        && selected.exported_type_functions.iter().all(|selected| {
-            imported_semantic_summaries.iter().any(|summary| {
-                summary.exported_type_functions.iter().any(|existing| {
-                    existing.head == selected.head
-                        && (existing.exported_name == selected.exported_name
-                            || is_dependency_metadata_name(&existing.exported_name)
-                            || is_dependency_metadata_name(&selected.exported_name))
-                })
-            })
-        })
+    if imported_type_functions_already_present(imported_semantic_summaries, &selected)
+        || imported_associated_families_already_present(imported_semantic_summaries, &selected)
     {
         return;
     }
-    if !selected.exported_associated_families.is_empty()
+
+    let key = imported_summary_key(&selected);
+    if imported_summary_keys.insert(key) {
+        imported_semantic_summaries.push(selected);
+    }
+}
+
+fn merge_imported_summary_payloads(
+    existing: &mut ModuleSemanticSummary,
+    selected: ModuleSemanticSummary,
+) {
+    for constructor in selected.exported_constructors {
+        let exists = existing.exported_constructors.iter().any(|existing| {
+            existing.id == constructor.id && existing.exported_name == constructor.exported_name
+        });
+        if !exists {
+            existing.exported_constructors.push(constructor);
+        }
+    }
+    for domain in selected.exported_sealed_domains {
+        let exists = existing.exported_sealed_domains.iter().any(|existing| {
+            existing.id == domain.id && existing.exported_name == domain.exported_name
+        });
+        if !exists {
+            existing.exported_sealed_domains.push(domain);
+        }
+    }
+    for type_function in selected.exported_type_functions {
+        if !existing_has_type_function_summary(existing, &type_function) {
+            existing.exported_type_functions.push(type_function);
+        }
+    }
+    for family in selected.exported_associated_families {
+        if !existing
+            .exported_associated_families
+            .iter()
+            .any(|existing| existing.head == family.head)
+        {
+            existing.exported_associated_families.push(family);
+        }
+    }
+    for predicate in selected.exported_proposition_predicates {
+        if !existing
+            .exported_proposition_predicates
+            .iter()
+            .any(|existing| existing.id == predicate.id)
+        {
+            existing.exported_proposition_predicates.push(predicate);
+        }
+    }
+    for fact in selected.exported_proposition_facts {
+        if !existing
+            .exported_proposition_facts
+            .iter()
+            .any(|existing| existing == &fact)
+        {
+            existing.exported_proposition_facts.push(fact);
+        }
+    }
+    for identity in selected.interface_identities {
+        if !existing
+            .interface_identities
+            .iter()
+            .any(|existing| existing.id == identity.id)
+        {
+            existing.interface_identities.push(identity);
+        }
+    }
+    for identity in selected.associated_member_identities {
+        if !existing
+            .associated_member_identities
+            .iter()
+            .any(|existing| existing.id == identity.id)
+        {
+            existing.associated_member_identities.push(identity);
+        }
+    }
+}
+
+fn existing_has_type_function_summary(
+    summary: &ModuleSemanticSummary,
+    selected: &TypeFunctionSummary,
+) -> bool {
+    summary.exported_type_functions.iter().any(|existing| {
+        existing.head == selected.head
+            && (existing.exported_name == selected.exported_name
+                || is_dependency_metadata_name(&existing.exported_name)
+                || is_dependency_metadata_name(&selected.exported_name))
+    })
+}
+
+fn imported_type_functions_already_present(
+    imported_semantic_summaries: &[ModuleSemanticSummary],
+    selected: &ModuleSemanticSummary,
+) -> bool {
+    !selected.exported_type_functions.is_empty()
+        && selected.exported_type_functions.iter().all(|selected| {
+            imported_semantic_summaries
+                .iter()
+                .any(|summary| existing_has_type_function_summary(summary, selected))
+        })
+}
+
+fn imported_associated_families_already_present(
+    imported_semantic_summaries: &[ModuleSemanticSummary],
+    selected: &ModuleSemanticSummary,
+) -> bool {
+    !selected.exported_associated_families.is_empty()
         && selected
             .exported_associated_families
             .iter()
@@ -823,14 +869,6 @@ fn merge_or_push_imported_semantic_summary(
                         .any(|existing| existing.head == selected.head && existing == selected)
                 })
             })
-    {
-        return;
-    }
-
-    let key = imported_summary_key(&selected);
-    if imported_summary_keys.insert(key) {
-        imported_semantic_summaries.push(selected);
-    }
 }
 
 fn imported_summary_type_set_matches(
@@ -847,6 +885,10 @@ fn imported_summary_type_set_matches(
         || !right.exported_type_functions.is_empty()
         || !left.exported_associated_families.is_empty()
         || !right.exported_associated_families.is_empty()
+        || !left.exported_proposition_predicates.is_empty()
+        || !right.exported_proposition_predicates.is_empty()
+        || !left.exported_proposition_facts.is_empty()
+        || !right.exported_proposition_facts.is_empty()
     {
         return selected_summary_identity_facts_are_compatible(left, right);
     }
@@ -874,6 +916,22 @@ fn selected_summary_identity_facts_are_compatible(
 ) -> bool {
     left.exported_type_functions.len() == right.exported_type_functions.len()
         && left.exported_associated_families.len() == right.exported_associated_families.len()
+        && left
+            .exported_proposition_predicates
+            .iter()
+            .all(|left_predicate| {
+                right
+                    .exported_proposition_predicates
+                    .iter()
+                    .find(|right_predicate| right_predicate.id == left_predicate.id)
+                    .is_none_or(|right_predicate| right_predicate == left_predicate)
+            })
+        && left.exported_proposition_facts.iter().all(|left_fact| {
+            right
+                .exported_proposition_facts
+                .iter()
+                .any(|right_fact| right_fact == left_fact)
+        })
         && left
             .exported_type_functions
             .iter()
@@ -998,6 +1056,15 @@ fn push_signature_semantic_summaries(
     summary: Option<&ModuleSemanticSummary>,
     callable: &InlineCallable,
 ) {
+    if callable_signature_has_proposition_requirements(callable)
+        && let Some(summary) = selected_proposition_semantic_summary(summary)
+    {
+        merge_or_push_imported_semantic_summary(
+            imported_semantic_summaries,
+            imported_summary_keys,
+            summary,
+        );
+    }
     let mut names = callable_signature_type_names(callable);
     names.sort_unstable();
     names.dedup();
@@ -1010,6 +1077,53 @@ fn push_signature_semantic_summaries(
             &name,
         );
     }
+}
+
+const fn callable_signature_has_proposition_requirements(callable: &InlineCallable) -> bool {
+    match callable.signature.as_ref() {
+        Some(CallableSignature::Function(function)) => function.proposition_tail.is_some(),
+        Some(CallableSignature::Builtin(builtin)) => builtin.proposition_tail.is_some(),
+        None => false,
+    }
+}
+
+fn selected_proposition_semantic_summary(
+    summary: Option<&ModuleSemanticSummary>,
+) -> Option<ModuleSemanticSummary> {
+    let summary = summary?;
+    if summary.exported_proposition_predicates.is_empty()
+        && summary.exported_proposition_facts.is_empty()
+    {
+        return None;
+    }
+    let mut selected = ModuleSemanticSummary::new(summary.module.clone());
+    selected.version = SummaryVersion::SPEC064_PROPOSITIONS_V5;
+    selected.exported_types.clone_from(&summary.exported_types);
+    selected
+        .exported_constructors
+        .clone_from(&summary.exported_constructors);
+    selected
+        .exported_sealed_domains
+        .clone_from(&summary.exported_sealed_domains);
+    selected
+        .interface_identities
+        .clone_from(&summary.interface_identities);
+    selected
+        .associated_member_identities
+        .clone_from(&summary.associated_member_identities);
+    selected
+        .exported_type_functions
+        .clone_from(&summary.exported_type_functions);
+    selected
+        .exported_associated_families
+        .clone_from(&summary.exported_associated_families);
+    selected
+        .exported_proposition_predicates
+        .clone_from(&summary.exported_proposition_predicates);
+    selected
+        .exported_proposition_facts
+        .clone_from(&summary.exported_proposition_facts);
+    Some(selected)
 }
 
 fn callable_signature_type_names(callable: &InlineCallable) -> Vec<String> {
@@ -2334,6 +2448,7 @@ pub(crate) fn collect_module_exports(
     )?);
     attach_public_type_function_summaries(&mut exports, &type_metadata, &path)?;
     attach_public_associated_family_summaries(&mut exports, &type_metadata, &path, &source)?;
+    attach_public_proposition_summaries(&mut exports, &type_metadata, &path, &source)?;
     if let Some(summary) = exports.semantic_summary.as_ref() {
         summary
             .validate_summary_version_contract()
@@ -2572,6 +2687,10 @@ fn merge_use_exports(
                 insert_associated_family_export(exports, &name, family)?;
             }
             if let Some(summary) = target_semantic_summary.as_ref() {
+                if let Some(selected_summary) = selected_proposition_semantic_summary(Some(summary))
+                {
+                    merge_selected_summary_export(exports, summary, selected_summary)?;
+                }
                 for type_function in &summary.exported_type_functions {
                     if let Some(selected_summary) = selected_type_function_semantic_summary(
                         summary,
@@ -3067,6 +3186,310 @@ fn attach_public_associated_family_summaries(
         .map(|family| (family.visible_name.clone(), family))
         .collect();
     Ok(())
+}
+
+fn attach_public_proposition_summaries(
+    exports: &mut ModuleExports,
+    type_metadata: &ash_parser::lower::LoweredTypeMetadata,
+    path: &Path,
+    source: &str,
+) -> Result<(), EngineError> {
+    let module = parse_module_file_for_type_metadata(path, source)?;
+    if !module_has_public_proposition_surface(&module) {
+        return Ok(());
+    }
+
+    let Some(summary) = exports.semantic_summary.as_mut() else {
+        return Ok(());
+    };
+    let source_origin = ash_core::semantic_summary::SourceOrigin::File(path.display().to_string());
+    let mut type_env = ash_typeck::TypeEnv::with_builtin_types();
+    seed_public_proposition_type_env(&mut type_env, type_metadata, summary, &module, path)?;
+
+    let public_predicates =
+        collect_public_proposition_predicate_summaries(&mut type_env, &module, path)?;
+    add_public_proposition_obligations(&mut type_env, &module, &source_origin, path)?;
+    let public_interface_identities =
+        collect_public_interface_identity_summaries(&type_env, &module, &source_origin);
+    let proposition_facts = type_env
+        .export_public_proposition_fact_summaries(&summary.module)
+        .map_err(|error| {
+            EngineError::Parse(format!("public proposition summary export failed: {error}"))
+        })?;
+    if public_predicates.is_empty() && proposition_facts.is_empty() {
+        return Ok(());
+    }
+
+    attach_exported_proposition_payload(
+        summary,
+        public_interface_identities,
+        public_predicates,
+        proposition_facts,
+    );
+    Ok(())
+}
+
+fn module_has_public_proposition_surface(module: &ash_parser::surface::ModuleFile) -> bool {
+    module
+        .definitions
+        .iter()
+        .any(|definition| match definition {
+            Definition::PropositionPredicate(predicate) => {
+                matches!(
+                    predicate.visibility,
+                    ash_parser::surface::Visibility::Public
+                )
+            }
+            Definition::Function(function) => {
+                matches!(function.visibility, ash_parser::surface::Visibility::Public)
+                    && function.proposition_tail.is_some()
+            }
+            Definition::BuiltinFn(function) => {
+                matches!(function.visibility, ash_parser::surface::Visibility::Public)
+                    && function.proposition_tail.is_some()
+            }
+            Definition::TypeFn(type_fn) => {
+                matches!(type_fn.visibility, ash_parser::surface::Visibility::Public)
+                    && type_fn.proposition_tail.is_some()
+            }
+            _ => false,
+        })
+}
+
+fn seed_public_proposition_type_env(
+    type_env: &mut ash_typeck::TypeEnv,
+    type_metadata: &ash_parser::lower::LoweredTypeMetadata,
+    summary: &ModuleSemanticSummary,
+    module: &ash_parser::surface::ModuleFile,
+    path: &Path,
+) -> Result<(), EngineError> {
+    type_env.set_current_module_identity(summary.module.clone());
+    type_env
+        .register_module_semantic_summary(summary)
+        .map_err(|error| {
+            EngineError::Parse(format!(
+                "public proposition summary substrate registration failed: {error}"
+            ))
+        })?;
+    register_private_type_metadata_for_propositions(type_env, type_metadata)?;
+    for definition in &module.definitions {
+        if let Definition::Interface(interface) = definition {
+            type_env.register_interface(interface).map_err(|error| {
+                EngineError::Parse(format!(
+                    "in '{}': public proposition interface substrate registration failed: {error}; span {:?}",
+                    path.display(),
+                    type_env_error_span(&error)
+                ))
+            })?;
+        }
+    }
+    Ok(())
+}
+
+fn register_private_type_metadata_for_propositions(
+    type_env: &mut ash_typeck::TypeEnv,
+    type_metadata: &ash_parser::lower::LoweredTypeMetadata,
+) -> Result<(), EngineError> {
+    for type_def in &type_metadata.type_defs {
+        if !matches!(type_def.visibility, CoreVisibility::Public) {
+            type_env.register_type(type_def).map_err(|error| {
+                EngineError::Parse(format!(
+                    "public proposition private-type substrate registration failed: {error}"
+                ))
+            })?;
+        }
+    }
+    for domain in &type_metadata.summary.exported_sealed_domains {
+        if !matches!(domain.visibility, CoreVisibility::Public) {
+            type_env
+                .register_local_sealed_domain_summary(domain)
+                .map_err(|error| {
+                    EngineError::Parse(format!(
+                        "public proposition private-domain substrate registration failed: {error}"
+                    ))
+                })?;
+        }
+    }
+    Ok(())
+}
+
+fn collect_public_proposition_predicate_summaries(
+    type_env: &mut ash_typeck::TypeEnv,
+    module: &ash_parser::surface::ModuleFile,
+    path: &Path,
+) -> Result<Vec<ash_core::semantic_summary::PropositionPredicateSummary>, EngineError> {
+    let mut public_predicates = Vec::new();
+    for definition in &module.definitions {
+        let Definition::PropositionPredicate(predicate) = definition else {
+            continue;
+        };
+        let id = type_env
+            .register_proposition_predicate_decl(predicate)
+            .map_err(|error| {
+                EngineError::Parse(format!(
+                    "in '{}': public proposition predicate registration failed: {error}",
+                    path.display()
+                ))
+            })?;
+        if matches!(
+            predicate.visibility,
+            ash_parser::surface::Visibility::Public
+        ) && let Some(info) = type_env.proposition_predicate_by_id(&id)
+        {
+            public_predicates.push(info.summary.clone());
+        }
+    }
+    Ok(public_predicates)
+}
+
+fn add_public_proposition_obligations(
+    type_env: &mut ash_typeck::TypeEnv,
+    module: &ash_parser::surface::ModuleFile,
+    source_origin: &ash_core::semantic_summary::SourceOrigin,
+    path: &Path,
+) -> Result<(), EngineError> {
+    for (index, definition) in module.definitions.iter().enumerate() {
+        add_public_proposition_obligation(
+            type_env,
+            definition,
+            source_origin.clone(),
+            index,
+            path,
+        )?;
+    }
+    Ok(())
+}
+
+fn add_public_proposition_obligation(
+    type_env: &mut ash_typeck::TypeEnv,
+    definition: &Definition,
+    source_origin: ash_core::semantic_summary::SourceOrigin,
+    index: usize,
+    path: &Path,
+) -> Result<(), EngineError> {
+    let Some((tail, site_tag, label)) = public_definition_proposition_tail(definition) else {
+        return Ok(());
+    };
+    type_env
+        .add_proposition_obligations_from_tail(
+            tail,
+            source_origin,
+            ash_typeck::type_env::PropositionCheckingSite::new(
+                site_tag + index as u64,
+                ash_typeck::type_env::PropositionCheckingSiteKind::ExplicitRequirement,
+                Some(label),
+            ),
+        )
+        .map_err(|error| {
+            EngineError::Parse(format!(
+                "in '{}': public proposition export failed: {error}",
+                path.display()
+            ))
+        })
+}
+
+fn public_definition_proposition_tail(
+    definition: &Definition,
+) -> Option<(&ash_parser::surface::PropositionTail, u64, String)> {
+    match definition {
+        Definition::Function(function)
+            if matches!(function.visibility, ash_parser::surface::Visibility::Public) =>
+        {
+            function.proposition_tail.as_ref().map(|tail| {
+                (
+                    tail,
+                    0x8791_0000u64,
+                    format!("public function {}", function.name),
+                )
+            })
+        }
+        Definition::BuiltinFn(function)
+            if matches!(function.visibility, ash_parser::surface::Visibility::Public) =>
+        {
+            function.proposition_tail.as_ref().map(|tail| {
+                (
+                    tail,
+                    0x8792_0000u64,
+                    format!("public builtin function {}", function.name),
+                )
+            })
+        }
+        Definition::TypeFn(type_fn)
+            if matches!(type_fn.visibility, ash_parser::surface::Visibility::Public) =>
+        {
+            type_fn.proposition_tail.as_ref().map(|tail| {
+                (
+                    tail,
+                    0x8793_0000u64,
+                    format!("public type function {}", type_fn.name),
+                )
+            })
+        }
+        _ => None,
+    }
+}
+
+fn collect_public_interface_identity_summaries(
+    type_env: &ash_typeck::TypeEnv,
+    module: &ash_parser::surface::ModuleFile,
+    source_origin: &ash_core::semantic_summary::SourceOrigin,
+) -> Vec<InterfaceIdentitySummary> {
+    module
+        .definitions
+        .iter()
+        .filter_map(|definition| {
+            public_interface_identity_summary(type_env, definition, source_origin.clone())
+        })
+        .collect()
+}
+
+fn public_interface_identity_summary(
+    type_env: &ash_typeck::TypeEnv,
+    definition: &Definition,
+    source_origin: ash_core::semantic_summary::SourceOrigin,
+) -> Option<InterfaceIdentitySummary> {
+    let Definition::Interface(interface) = definition else {
+        return None;
+    };
+    if !matches!(
+        interface.visibility,
+        ash_parser::surface::Visibility::Public
+    ) {
+        return None;
+    }
+    let id = type_env
+        .interface_identity_for_name(interface.name.as_ref())
+        .cloned()?;
+    Some(InterfaceIdentitySummary::new(
+        id,
+        interface.name.to_string(),
+        vec![interface.name.to_string()],
+        ash_core::semantic_summary::SourceAnchor::new(
+            source_origin,
+            None,
+            format!("interface {}", interface.name),
+        ),
+    ))
+}
+
+fn attach_exported_proposition_payload(
+    summary: &mut ModuleSemanticSummary,
+    public_interface_identities: Vec<InterfaceIdentitySummary>,
+    public_predicates: Vec<ash_core::semantic_summary::PropositionPredicateSummary>,
+    proposition_facts: Vec<ash_core::semantic_summary::PropositionFactSummary>,
+) {
+    summary.version = SummaryVersion::SPEC064_PROPOSITIONS_V5;
+    for interface in public_interface_identities {
+        if !summary
+            .interface_identities
+            .iter()
+            .any(|existing| existing.id == interface.id)
+        {
+            summary.interface_identities.push(interface);
+        }
+    }
+    summary.exported_proposition_predicates = public_predicates;
+    summary.exported_proposition_facts = proposition_facts;
 }
 
 fn exportable_type_summary(
@@ -3714,6 +4137,11 @@ fn merge_callable_signature_summaries(
     let Some(summary) = target_summary else {
         return Ok(());
     };
+    if callable_signature_has_proposition_requirements(callable)
+        && let Some(selected_summary) = selected_proposition_semantic_summary(Some(summary))
+    {
+        merge_selected_summary_export(exports, summary, selected_summary)?;
+    }
     let mut names = callable_signature_type_names(callable);
     names.sort_unstable();
     names.dedup();
@@ -3905,14 +4333,26 @@ fn merge_type_summary_export_with_aliases(
 fn merge_selected_summary_export(
     exports: &mut ModuleExports,
     target_summary: &ModuleSemanticSummary,
-    selected_summary: ModuleSemanticSummary,
+    mut selected_summary: ModuleSemanticSummary,
 ) -> Result<(), EngineError> {
-    let selected_constructors = selected_summary.exported_constructors.clone();
+    let selected_types = std::mem::take(&mut selected_summary.exported_types);
+    let selected_constructors = std::mem::take(&mut selected_summary.exported_constructors);
     let summary = exports
         .semantic_summary
         .get_or_insert_with(|| ModuleSemanticSummary::new(target_summary.module.clone()));
 
-    for ty in selected_summary.exported_types {
+    merge_selected_type_exports(summary, selected_types, selected_constructors)?;
+    merge_selected_summary_payloads(summary, selected_summary);
+    update_summary_version_for_selected_payloads(summary);
+    Ok(())
+}
+
+fn merge_selected_type_exports(
+    summary: &mut ModuleSemanticSummary,
+    exported_types: Vec<TypeDeclSummary>,
+    selected_constructors: Vec<ConstructorSummary>,
+) -> Result<(), EngineError> {
+    for ty in exported_types {
         if let Some(existing_index) = summary
             .exported_types
             .iter()
@@ -3951,6 +4391,13 @@ fn merge_selected_summary_export(
             summary.exported_constructors.push(constructor);
         }
     }
+    Ok(())
+}
+
+fn merge_selected_summary_payloads(
+    summary: &mut ModuleSemanticSummary,
+    selected_summary: ModuleSemanticSummary,
+) {
     for domain in selected_summary.exported_sealed_domains {
         if !summary
             .exported_sealed_domains
@@ -3979,12 +4426,7 @@ fn merge_selected_summary_export(
         }
     }
     for type_function in selected_summary.exported_type_functions {
-        if !summary.exported_type_functions.iter().any(|existing| {
-            existing.head == type_function.head
-                && (existing.exported_name == type_function.exported_name
-                    || is_dependency_metadata_name(&existing.exported_name)
-                    || is_dependency_metadata_name(&type_function.exported_name))
-        }) {
+        if !existing_has_type_function_summary(summary, &type_function) {
             summary.exported_type_functions.push(type_function);
         }
     }
@@ -3997,12 +4439,36 @@ fn merge_selected_summary_export(
             summary.exported_associated_families.push(family);
         }
     }
-    if !summary.exported_associated_families.is_empty() {
+    for predicate in selected_summary.exported_proposition_predicates {
+        if !summary
+            .exported_proposition_predicates
+            .iter()
+            .any(|existing| existing.id == predicate.id)
+        {
+            summary.exported_proposition_predicates.push(predicate);
+        }
+    }
+    for fact in selected_summary.exported_proposition_facts {
+        if !summary
+            .exported_proposition_facts
+            .iter()
+            .any(|existing| existing == &fact)
+        {
+            summary.exported_proposition_facts.push(fact);
+        }
+    }
+}
+
+const fn update_summary_version_for_selected_payloads(summary: &mut ModuleSemanticSummary) {
+    if !summary.exported_proposition_predicates.is_empty()
+        || !summary.exported_proposition_facts.is_empty()
+    {
+        summary.version = SummaryVersion::SPEC064_PROPOSITIONS_V5;
+    } else if !summary.exported_associated_families.is_empty() {
         summary.version = SummaryVersion::SPEC063_ASSOCIATED_FAMILY_V4;
     } else if !summary.exported_type_functions.is_empty() {
         summary.version = SummaryVersion::SPEC062_TYPE_COMPUTATION_V3;
     }
-    Ok(())
 }
 
 fn is_existing_opaque_compatibility_exception(type_def: &CoreTypeDef) -> bool {

@@ -925,6 +925,12 @@ pub struct ModuleSemanticSummary {
     /// values are valid only when `version` is SPEC-063/V4.
     #[serde(default)]
     pub exported_associated_families: Vec<AssociatedFamilySummary>,
+    /// Public proposition predicate identities exported from this module (SPEC-064 §10).
+    ///
+    /// `#[serde(default)]` preserves V1-V4 wire compatibility. Non-empty values
+    /// are valid only when `version` is SPEC-064/V5.
+    #[serde(default)]
+    pub exported_proposition_predicates: Vec<PropositionPredicateSummary>,
     /// Public proposition facts exported from this module (SPEC-064 §10).
     ///
     /// `#[serde(default)]` preserves V1-V4 wire compatibility. Non-empty values
@@ -950,6 +956,7 @@ impl ModuleSemanticSummary {
             exported_sealed_domains: Vec::new(),
             exported_type_functions: Vec::new(),
             exported_associated_families: Vec::new(),
+            exported_proposition_predicates: Vec::new(),
             exported_proposition_facts: Vec::new(),
         }
     }
@@ -1023,6 +1030,16 @@ impl ModuleSemanticSummary {
     #[must_use]
     pub fn with_exported_associated_family(mut self, family: AssociatedFamilySummary) -> Self {
         self.exported_associated_families.push(family);
+        self
+    }
+
+    /// Add a public proposition predicate identity to this module summary.
+    #[must_use]
+    pub fn with_exported_proposition_predicate(
+        mut self,
+        predicate: PropositionPredicateSummary,
+    ) -> Self {
+        self.exported_proposition_predicates.push(predicate);
         self
     }
 
@@ -1139,6 +1156,11 @@ impl ModuleSemanticSummary {
             )
         }));
         key.extend(
+            self.exported_proposition_predicates
+                .iter()
+                .map(|predicate| format!("proposition_predicate::{predicate:?}")),
+        );
+        key.extend(
             self.exported_proposition_facts
                 .iter()
                 .map(|fact| format!("proposition_fact::{fact:?}")),
@@ -1159,7 +1181,9 @@ impl ModuleSemanticSummary {
     ) -> Result<(), ModuleSemanticSummaryValidationError> {
         match self.version {
             SummaryVersion::SPEC057_ORDINARY_TYPE_V1 | SummaryVersion::SPEC059_SEALED_DOMAIN_V2 => {
-                if !self.exported_proposition_facts.is_empty() {
+                if !self.exported_proposition_facts.is_empty()
+                    || !self.exported_proposition_predicates.is_empty()
+                {
                     Err(
                         ModuleSemanticSummaryValidationError::PropositionFactsRequireV5 {
                             version: self.version,
@@ -1182,7 +1206,9 @@ impl ModuleSemanticSummary {
                 }
             }
             SummaryVersion::SPEC062_TYPE_COMPUTATION_V3 => {
-                if !self.exported_proposition_facts.is_empty() {
+                if !self.exported_proposition_facts.is_empty()
+                    || !self.exported_proposition_predicates.is_empty()
+                {
                     Err(
                         ModuleSemanticSummaryValidationError::PropositionFactsRequireV5 {
                             version: self.version,
@@ -1199,7 +1225,9 @@ impl ModuleSemanticSummary {
                 }
             }
             SummaryVersion::SPEC063_ASSOCIATED_FAMILY_V4 => {
-                if self.exported_proposition_facts.is_empty() {
+                if self.exported_proposition_facts.is_empty()
+                    && self.exported_proposition_predicates.is_empty()
+                {
                     Ok(())
                 } else {
                     Err(

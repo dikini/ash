@@ -1,7 +1,7 @@
 //! TASK-879: engine preserves public proposition facts through module-summary transport.
 
 use ash_core::semantic_summary::SummaryVersion;
-use ash_core::type_ir::{PropositionDeferredKind, PropositionOutcome, TypeProposition};
+use ash_core::type_ir::{PropositionEvidenceRule, PropositionOutcome, TypeProposition};
 use ash_engine::module_loader::load_ordinary_file;
 
 fn write_file(path: &std::path::Path, source: &str) {
@@ -10,8 +10,7 @@ fn write_file(path: &std::path::Path, source: &str) {
 
 const fn provider_with_public_fn_requirement() -> &'static str {
     r"
-pub prop PublicReq<T: Int>;
-pub fn needs(x: Int) -> Int where PublicReq<Int> { x }
+pub fn needs(x: Int) -> Int where Int == Int { x }
 "
 }
 
@@ -49,17 +48,17 @@ workflow main { ret 0 }
     );
     assert!(matches!(
         &facts[0].proposition,
-        TypeProposition::NamedPredicate(named) if named.predicate.name.as_str() == "PublicReq"
+        TypeProposition::Equality(eq) if eq.lhs == eq.rhs
     ));
     assert!(matches!(
         &facts[0].outcome,
-        Some(PropositionOutcome::Deferred(reason))
-            if reason.kind == PropositionDeferredKind::UnsupportedNamedPredicate
+        Some(PropositionOutcome::Satisfied(evidence))
+            if evidence.rule == PropositionEvidenceRule::DefinitionalEquality
     ));
 }
 
 #[test]
-fn task_879_named_import_transports_public_interface_bound_identity() {
+fn task_879_named_import_rejects_public_interface_bound_without_evidence_before_transport() {
     let dir = tempfile::tempdir().expect("tempdir");
     let provider = dir.path().join("provider.ash");
     let caller = dir.path().join("caller.ash");
@@ -77,21 +76,12 @@ workflow main { ret 0 }
 ",
     );
 
-    let loaded = load_ordinary_file(&caller)
-        .expect("named import should load public interface-bound summary");
-    let proposition_summary = loaded
-        .imported_semantic_summaries
-        .iter()
-        .find(|summary| !summary.exported_proposition_facts.is_empty())
-        .expect("proposition summary should be imported");
-
-    assert!(
-        proposition_summary
-            .interface_identities
-            .iter()
-            .any(|identity| identity.name.as_str() == "PublicIface"),
-        "public interface-bound proposition transport must include interface identity metadata: {proposition_summary:?}"
+    let err = load_ordinary_file(&caller).expect_err(
+        "public interface-bound requirements without evidence are rejected before transport",
     );
+    let msg = err.to_string();
+    assert!(msg.contains("interface bound not found"), "got {msg}");
+    assert!(msg.contains("PublicIface"), "got {msg}");
 }
 
 #[test]
@@ -102,9 +92,8 @@ fn task_879_named_import_transports_proposition_term_supporting_type_summary() {
     write_file(
         &provider,
         r"
-pub type Extra = Extra;
-pub prop PublicReq<T: Type>;
-pub fn needs(x: Int) -> Int where PublicReq<Extra> { x }
+pub type Extra = Int;
+pub fn needs(x: Int) -> Int where Extra == Extra { x }
 ",
     );
     write_file(
@@ -160,6 +149,6 @@ workflow main { ret 0 }
     );
     assert!(matches!(
         &facts[0].proposition,
-        TypeProposition::NamedPredicate(named) if named.predicate.name.as_str() == "PublicReq"
+        TypeProposition::Equality(eq) if eq.lhs == eq.rhs
     ));
 }

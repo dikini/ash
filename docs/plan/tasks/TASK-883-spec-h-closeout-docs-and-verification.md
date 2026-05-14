@@ -1,6 +1,6 @@
 # TASK-883: SPEC-H closeout docs and verification
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -66,9 +66,25 @@ Dispatch an independent review/verification subagent with this task file, SPEC-0
 
 ## Completion Checklist
 
-- [ ] Docs/status/changelog are coherent.
-- [ ] Broad gates pass and evidence is recorded.
-- [ ] TASK-884 remains ready until independent review is complete.
+- [x] Docs/status/changelog are coherent.
+- [x] Broad gates pass and evidence is recorded.
+- [x] TASK-884 remains ready until independent review is complete.
+
+## Completion Evidence
+
+- Promoted `docs/spec/SPEC-064-CONSTRAINT-PROPOSITION-LAYER.md` and `docs/spec/README.md` from Draft to Implemented MVP after TASK-882 acceptance evidence and broad gates were available.
+- Reconciled `docs/plan/PLAN-112-CONSTRAINT-PROPOSITION-LAYER.md` and `docs/plan/PLAN-INDEX.md`: TASK-871 through TASK-883 are complete; TASK-884 remains ready for independent review/remediation.
+- Fixed the stale TASK-879 engine transport regression fixture exposed by broad `cargo test --workspace`: public exported proposition requirements now use satisfied equality evidence, while unevidenced interface-bound requirements are expected to fail before transport.
+- Focused regression after the fixture repair: `cargo test -p ash-engine --test task_879_proposition_summary_transport` passed with 4 tests.
+- Broad verification passed after TASK-883 changes:
+  - `cargo fmt --check`
+  - `git diff --check`
+  - `cargo check --workspace`
+  - `cargo clippy --workspace --all-targets --all-features -- -D warnings`
+  - `cargo test --workspace`
+  - `cargo doc --workspace --no-deps 2>&1 | tee /tmp/ash-phase116-doc.log`
+  - `! grep -i '^warning:' /tmp/ash-phase116-doc.log`
+- Scoped docs check passed over SPEC-064, spec index, PLAN-112, PLAN-INDEX, TASK-883, TASK-884, and the TASK-882 acceptance matrix: 7 files checked, 0 trailing-whitespace findings, 0 missing relative links.
 
 ## Dispatch
 

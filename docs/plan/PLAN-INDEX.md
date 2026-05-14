@@ -3416,7 +3416,7 @@ Phase 115 implements SPEC-G from DESIGN-034. It integrates associated types with
 ## Phase 116: Constraint and Proposition Layer
 
 **Priority:** High (DESIGN-034 SPEC-H adds conservative proposition checking after the total type-computation substrate from Phase 115)
-**Status:** 🟡 Ready (TASK-871 through TASK-882 complete; TASK-883 through TASK-884 ready/planned)
+**Status:** 🟡 Ready (TASK-871 through TASK-883 complete; TASK-884 ready for independent review/remediation)
 **Spec:** [SPEC-064](../spec/SPEC-064-CONSTRAINT-PROPOSITION-LAYER.md)
 **Design:** [DESIGN-034](../design/DESIGN-034-TOTAL-TYPE-COMPUTATION.md)
 **Plan:** [docs/plan/PLAN-112-CONSTRAINT-PROPOSITION-LAYER.md](PLAN-112-CONSTRAINT-PROPOSITION-LAYER.md)
@@ -3437,7 +3437,7 @@ Phase 116 implements SPEC-H from DESIGN-034. It adds a conservative type-level p
 | [TASK-880](tasks/TASK-880-checking-point-integration.md) | Audited checking-point integration without meta/inversion leakage | 7 | ✅ Complete |
 | [TASK-881](tasks/TASK-881-proposition-diagnostics.md) | Structured proposition diagnostics | 6 | ✅ Complete |
 | [TASK-882](tasks/TASK-882-spec-h-acceptance-non-interference-matrix.md) | SPEC-H acceptance/non-interference matrix | 6 | ✅ Complete |
-| [TASK-883](tasks/TASK-883-spec-h-closeout-docs-and-verification.md) | SPEC-H closeout docs and verification | 4 | 🟡 Ready |
+| [TASK-883](tasks/TASK-883-spec-h-closeout-docs-and-verification.md) | SPEC-H closeout docs and verification | 4 | ✅ Complete |
 | [TASK-884](tasks/TASK-884-phase116-review-remediation.md) | Phase 116 review remediation | 6 | 🟡 Ready |
 
 **Track A (Spec Gate and Audit):** 9h. Promote DESIGN-034 SPEC-H to SPEC-064/PLAN-112, then audit live proposition/constraint/equality/summary seams.

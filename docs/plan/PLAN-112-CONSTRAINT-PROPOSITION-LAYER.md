@@ -10,7 +10,7 @@
 
 ---
 
-**Status:** 🟡 Ready (TASK-871 through TASK-882 complete; TASK-883 through TASK-884 ready/planned)
+**Status:** 🟡 Ready (TASK-871 through TASK-883 complete; TASK-884 ready for independent review/remediation)
 **Spec:** [SPEC-064](../spec/SPEC-064-CONSTRAINT-PROPOSITION-LAYER.md)
 **Design:** [DESIGN-034 §16.8](../design/DESIGN-034-TOTAL-TYPE-COMPUTATION.md#168-spec-h-constraintproposition-layer)
 **Depends on:** [SPEC-057](../spec/SPEC-057-UNIFIED-TYPE-MODULE-PIPELINE-AND-SEMANTIC-SUMMARIES.md), [SPEC-058](../spec/SPEC-058-CANONICAL-TYPE-EXPRESSION-IR-PROJECTION-IDS-KIND-ARITY-SUBSTRATE.md), [SPEC-059](../spec/SPEC-059-SEALED-TYPE-LEVEL-DOMAINS.md), [SPEC-060](../spec/SPEC-060-NORMALIZER-DEFINITIONAL-EQUALITY-CORE.md), [SPEC-061](../spec/SPEC-061-DIRECT-STRUCTURAL-TYPE-FUNCTIONS.md), [SPEC-062](../spec/SPEC-062-MODULE-SUMMARY-EXPORT-IMPORT-FOR-TYPE-COMPUTATION.md), [SPEC-063](../spec/SPEC-063-ASSOCIATED-TYPE-FAMILY-COMPUTATION.md)
@@ -31,7 +31,7 @@
 | [TASK-880](tasks/TASK-880-checking-point-integration.md) | Integrate proposition discharge at audited checking points without meta/inversion leakage | Typeck/Integration | 7 | ✅ Complete |
 | [TASK-881](tasks/TASK-881-proposition-diagnostics.md) | Add structured diagnostics for unsupported, neutral-blocked, no-inversion, and summary-leakage cases | Diagnostics | 6 | ✅ Complete |
 | [TASK-882](tasks/TASK-882-spec-h-acceptance-non-interference-matrix.md) | Add row-by-row SPEC-H acceptance/non-interference matrix and focused evidence | Tests/Diagnostics | 6 | ✅ Complete |
-| [TASK-883](tasks/TASK-883-spec-h-closeout-docs-and-verification.md) | Reconcile docs/status/changelog and record closeout verification | Docs/Planning | 4 | 🟡 Ready |
+| [TASK-883](tasks/TASK-883-spec-h-closeout-docs-and-verification.md) | Reconcile docs/status/changelog and record closeout verification | Docs/Planning | 4 | ✅ Complete |
 | [TASK-884](tasks/TASK-884-phase116-review-remediation.md) | Remediate independent post-closeout review findings | Review/Hardening | 6 | 🟡 Ready |
 
 ## Execution Tracks
@@ -80,7 +80,7 @@ Focused test commands must either target exact integration-test files created by
 
 ## Completion Checklist
 
-- [x] SPEC-064 promoted in `docs/spec/README.md` as Draft / ready for implementation.
+- [x] SPEC-064 promoted in `docs/spec/README.md` as Implemented MVP after TASK-882 acceptance evidence and TASK-883 broad closeout verification.
 - [x] PLAN-112 and TASK-871 through TASK-884 registered in `docs/plan/PLAN-INDEX.md`.
 - [x] TASK-871 created and completed as the planning packet.
 - [x] TASK-872 audit artifact created before Rust implementation and downstream TASK-873 through TASK-882 file/test/callsite bindings patched or explicitly confirmed.
@@ -93,5 +93,5 @@ Focused test commands must either target exact integration-test files created by
 - [x] Public proposition summary export/import implemented or explicitly scoped to requirement-only transport with diagnostics.
 - [x] Audited checking points discharge propositions without meta/inversion leakage.
 - [x] Acceptance/non-interference matrix maps every SPEC-064 §12 row to focused tests and all pass.
-- [ ] Broad workspace verification recorded.
+- [x] Broad workspace verification recorded.
 - [ ] Independent review/remediation complete.

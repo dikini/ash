@@ -3465,3 +3465,27 @@ This maintenance slice keeps repository tooling conservative when broad all-targ
 | Task | Description | Est. Hours | Status |
 |------|-------------|------------|--------|
 | [TASK-885](tasks/TASK-885-remove-alternate-test-runner-gate.md) | Remove alternate Rust test runner from local gates and use serial cargo test defaults | 1 | ✅ Complete |
+
+## Phase 117: DESIGN-034 Deferred Type-Computation Gap Ownership
+
+**Priority:** Medium (make remaining DESIGN-034 §16.9 future substrate explicit after SPEC-A through SPEC-H)
+**Status:** 📝 Planned / backlog established (TASK-886 and TASK-891 complete; TASK-887 through TASK-890 deferred)
+**Design:** [DESIGN-034 §16.9](../design/DESIGN-034-TOTAL-TYPE-COMPUTATION.md#169-cross-packet-implementation-gaps-to-plan-explicitly)
+**Plan:** [docs/plan/PLAN-113-DESIGN-034-DEFERRED-TYPE-COMPUTATION-GAPS.md](PLAN-113-DESIGN-034-DEFERRED-TYPE-COMPUTATION-GAPS.md)
+
+Phase 117 is a gap-ownership/backlog slice, not a broad implementation phase. It records which DESIGN-034 §16.9 items were closed by SPEC-057 through SPEC-064, fixes stale Phase 110 status drift, adds explicit future owners for remaining deferred language features, and hardens existing SPEC-H proposition evidence for multi-argument interface-bound tails. It intentionally does not implement promoted data constructors, type holes, partial type-constructor application, constructor-kinded/HKT binders, user-defined Monad, or pattern/exhaustiveness canonicalization rollout.
+
+| Task | Description | Est. Hours | Status |
+|------|-------------|------------|--------|
+| [TASK-886](tasks/TASK-886-design034-gap-ownership-and-plan106-reconciliation.md) | Reconcile DESIGN-034 §16.9 gap ownership and repair PLAN-106 status drift | 4 | ✅ Complete |
+| [TASK-887](tasks/TASK-887-promoted-data-constructors-and-named-data-kinds-packet.md) | Future promoted data constructors and named data kinds packet | TBD | ⏸️ Deferred |
+| [TASK-888](tasks/TASK-888-type-holes-and-partial-type-constructor-application-packet.md) | Future type holes/wildcards and partial type-constructor application packet | TBD | ⏸️ Deferred |
+| [TASK-889](tasks/TASK-889-constructor-kinded-parameters-and-hkt-packet.md) | Future constructor-kinded parameters, HKT, and user-defined unary computation abstractions packet | TBD | ⏸️ Deferred |
+| [TASK-890](tasks/TASK-890-pattern-exhaustiveness-alias-canonicalization-packet.md) | Future pattern/exhaustiveness alias canonicalization audit/spec packet | TBD | ⏸️ Deferred |
+| [TASK-891](tasks/TASK-891-multi-arg-interface-bound-proposition-regression.md) | Multi-argument interface-bound proposition regression evidence | 2 | ✅ Complete |
+
+**Decision gates:**
+- D1: Promoted data constructors/DataKinds must be specified separately from sealed-domain marker constructors.
+- D2: Type holes/partial constructor application and HKT/kinded binders are separate future packets; do-target inference or `do:Result<_, E>` must not smuggle either into existing MVPs.
+- D3: Pattern/exhaustiveness alias canonicalization requires a live callsite audit before any rollout.
+- D4: Future deferred tasks must replace their failing verification guards with exact spec/plan/test commands before implementation begins.

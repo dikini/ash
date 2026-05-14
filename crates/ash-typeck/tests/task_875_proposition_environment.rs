@@ -45,12 +45,20 @@ fn anchor(label: &str) -> SourceAnchor {
 }
 
 fn register_interface(env: &mut TypeEnv, name: &str) -> InterfaceIdentityId {
+    register_interface_with_params(env, name, vec![name.into()])
+}
+
+fn register_interface_with_params(
+    env: &mut TypeEnv,
+    name: &str,
+    params: Vec<String>,
+) -> InterfaceIdentityId {
     let module = module_identity(8751, &["pkg", "constraints"]);
     let id = InterfaceIdentityId::new(module, name);
     env.register_interface_identity_summary(&InterfaceIdentitySummary::new(
         id.clone(),
         name,
-        vec![name.into()],
+        params,
         anchor(&format!("interface {name}")),
     ))
     .expect("interface identity should register for proposition lowering");
@@ -204,6 +212,49 @@ fn task_875_lowers_all_surface_proposition_clause_families_to_typed_core_carrier
         other => panic!(
             "expected named predicate to lower with a typed unsupported-predicate deferral, got {other:?}"
         ),
+    }
+}
+
+#[test]
+fn task_875_lowers_multi_argument_interface_bound_proposition_terms() {
+    let mut env = TypeEnv::with_builtin_types();
+    let interface_id = register_interface_with_params(
+        &mut env,
+        "Serializable",
+        vec!["Value".into(), "Format".into(), "Encoding".into()],
+    );
+
+    let tail = PropositionTail {
+        where_span: span(0, 5),
+        span: span(0, 45),
+        clauses: vec![PropositionClause {
+            span: span(6, 45),
+            kind: PropositionClauseKind::InterfaceBound {
+                subject: Type::Name("T".into()),
+                interface: Type::Constructor {
+                    name: "Serializable".into(),
+                    args: vec![Type::Name("Json".into()), Type::Name("Utf8".into())],
+                },
+                colon_span: span(7, 8),
+            },
+        }],
+    };
+
+    let lowered = env
+        .lower_proposition_tail(&tail, origin())
+        .expect("multi-argument interface-bound proposition should lower");
+
+    assert_eq!(lowered.len(), 1);
+    match &lowered[0].proposition {
+        TypeProposition::InterfaceBound(bound) => {
+            assert_eq!(canonical_var(&bound.subject), "T");
+            assert_eq!(bound.interface, interface_id);
+            assert_eq!(bound.interface_args.len(), 2);
+            assert_eq!(canonical_var(&bound.interface_args[0]), "Json");
+            assert_eq!(canonical_var(&bound.interface_args[1]), "Utf8");
+            assert!(lowered[0].outcome.is_none());
+        }
+        other => panic!("expected interface-bound proposition, got {other:?}"),
     }
 }
 

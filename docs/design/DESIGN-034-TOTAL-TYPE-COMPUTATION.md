@@ -1447,6 +1447,38 @@ A future implementation MUST NOT encode type-function applications as ordinary
 That shortcut would make the design unsound or at least impossible to diagnose
 cleanly.
 
+#### 16.9.1 Status after SPEC-A through SPEC-H implementation
+
+This section is historical design guidance plus a current ownership index. Phases
+109 through 116 closed most of the original substrate gaps by promoting
+DESIGN-034 SPEC-A through SPEC-H into SPEC-057 through SPEC-064. The remaining
+items are not hidden TODOs inside those implemented specs; they are explicit
+future packets owned by PLAN-113.
+
+| §16.9 item | Current status | Owner |
+|---|---|---|
+| Ordinary `type` declarations in ModuleFile/lowering/export | Closed by SPEC-057 / PLAN-105 | None |
+| Top-level `type fn` parser and carriers | Closed by SPEC-061 / PLAN-109 | None |
+| Sealed type-level domains and constructor-set metadata | Closed by SPEC-059 / PLAN-107 | None |
+| Promoted data constructors or named data kinds | Still deferred; marker constructors are not promoted ADT/runtime constructors | PLAN-113 / TASK-887 |
+| Type-function apps, neutral/stuck forms, associated-family projections | Closed by SPEC-058, SPEC-060, SPEC-063 | None |
+| Type holes/wildcards in all type-expression positions | Still deferred outside type-function pattern wildcards | PLAN-113 / TASK-888 |
+| Constructor-kinded interface parameters such as `M : * -> *` | Still deferred; core `Kind` exists but source binders do not | PLAN-113 / TASK-889 |
+| Complete source kinding including partial applications | Partial: nominal/projection/computation arity exists; holes/partial apps/HKT remain deferred | PLAN-113 / TASK-888 and TASK-889 |
+| Generalized interface-application constraints | Closed for SPEC-H MVP; multi-argument interface-bound proposition regression added | PLAN-113 / TASK-891 |
+| Canonical associated projection syntax for multi-argument families | Closed by SPEC-063 / PLAN-111 | None |
+| Stringly associated projection replacement | Closed at canonical lowering/equality boundaries; pattern/exhaustiveness rollout remains deferred | PLAN-113 / TASK-890 |
+| Recursive associated-family normalizer | Closed by SPEC-063 / TASK-866 | None |
+| Environment-aware definitional equality forcing points | Closed by SPEC-060 / TASK-826 | None |
+| Recursive associated-family termination checking | Closed by SPEC-063 / TASK-865 | None |
+| Module-summary export/import of computation facts | Closed by SPEC-059, SPEC-062, SPEC-063, SPEC-064 | None |
+| Alias canonicalization for normalization and pattern matching | Closed for normalization/equality; pattern/exhaustiveness remains deferred | PLAN-113 / TASK-890 |
+| Neutral/stuck/rigid/non-exhaustive/non-decreasing diagnostics | Closed across SPEC-060, SPEC-061, SPEC-063, SPEC-064 | None |
+| Separate computation-head/neutral marker, not `Type::Constructor` | Closed by canonical computation-head and neutral-computation carriers | None |
+
+See [PLAN-113](../plan/PLAN-113-DESIGN-034-DEFERRED-TYPE-COMPUTATION-GAPS.md)
+for the active backlog and future packet gates.
+
 ### 16.10 Recommended implementation sequence
 
 The first implementable specification set should be sliced in this order:

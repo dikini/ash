@@ -94,6 +94,37 @@ fn task_874_parses_type_fn_proposition_tail_with_all_clause_kinds_and_spans() {
 }
 
 #[test]
+fn task_874_parses_multi_argument_interface_bound_proposition_tail() {
+    let module = parse(r#"fn checked<T>(x: T) -> T where T: Serializable<Json, Utf8> { x }"#);
+
+    let Definition::Function(function) = &module.definitions[0] else {
+        panic!("expected fn definition");
+    };
+    let tail = function
+        .proposition_tail
+        .as_ref()
+        .expect("fn proposition tail should be preserved");
+    assert_eq!(tail.clauses.len(), 1);
+    let PropositionClauseKind::InterfaceBound {
+        subject,
+        interface,
+        colon_span,
+    } = &tail.clauses[0].kind
+    else {
+        panic!("expected interface-bound proposition");
+    };
+    assert_type_name(subject, "T");
+    assert!(colon_span.end > colon_span.start);
+    let Type::Constructor { name, args } = interface else {
+        panic!("expected multi-argument interface application, got {interface:?}");
+    };
+    assert_eq!(name.as_ref(), "Serializable");
+    assert_eq!(args.len(), 2);
+    assert_type_name(&args[0], "Json");
+    assert_type_name(&args[1], "Utf8");
+}
+
+#[test]
 fn task_874_parses_fn_proposition_tail_before_runtime_contracts() {
     let module =
         parse(r#"fn checked_id<T>(x: T) -> T where T: Debug, Same<T, T> requires: x != 0 { x }"#);

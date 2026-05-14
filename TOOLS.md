@@ -49,9 +49,6 @@ export SCCACHE_CACHE_SIZE=10G
 ```bash
 # Install cargo-insta for snapshot testing
 cargo install cargo-insta
-
-# Install cargo-nextest for better test output (optional)
-cargo install cargo-nextest
 ```
 
 ## System Tools (Requires Sudo)
@@ -122,7 +119,7 @@ sudo pacman -S z3
 ### Quick Setup (No Sudo Required)
 ```bash
 # All Rust tools install without sudo
-cargo install cargo-insta cargo-nextest cargo-tarpaulin sccache
+cargo install cargo-insta cargo-tarpaulin sccache
 
 # Configure sccache (optional but recommended)
 echo '[build]\nrustc-wrapper = "sccache"' >> ~/.cargo/config.toml
@@ -138,7 +135,7 @@ sudo apt-get update
 sudo apt-get install -y libz3-dev  # Only if using smt feature
 
 # These don't need sudo:
-cargo install cargo-fuzz cargo-tarpaulin cargo-insta cargo-nextest sccache
+cargo install cargo-fuzz cargo-tarpaulin cargo-insta sccache
 rustup install nightly
 rustup component add rust-src --toolchain nightly
 
@@ -161,6 +158,18 @@ cargo insta test --accept
 
 # Review pending snapshots
 cargo insta review
+```
+
+### Serial gate test runner
+```bash
+# Project hooks call this wrapper instead of the removed alternate test runner.
+# It defaults to one Cargo build job and one Rust test thread to reduce
+# transient memory pressure and concurrency-sensitive failures.
+scripts/check-rust-tests.sh --workspace --lib
+scripts/check-rust-tests.sh --workspace --all-targets
+
+# Override build jobs only when intentionally widening local concurrency.
+CARGO_BUILD_JOBS=2 scripts/check-rust-tests.sh --workspace --lib
 ```
 
 ### Benchmarking

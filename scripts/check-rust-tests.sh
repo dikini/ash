@@ -29,14 +29,9 @@ fi
 ROOT="$(git rev-parse --show-toplevel)"
 cd "$ROOT"
 
-if cargo nextest --version >/dev/null 2>&1; then
-  echo "check-rust-tests: repo root $ROOT"
-  echo "check-rust-tests: using cargo nextest"
-  echo "check-rust-tests: running cargo nextest run ${args[*]}"
-  cargo nextest run "${args[@]}"
-else
-  echo "check-rust-tests: repo root $ROOT"
-  echo "check-rust-tests: cargo nextest not found, falling back to cargo test"
-  echo "check-rust-tests: running cargo test ${args[*]}"
-  cargo test "${args[@]}"
-fi
+jobs="${CARGO_BUILD_JOBS:-1}"
+
+echo "check-rust-tests: repo root $ROOT"
+echo "check-rust-tests: using cargo test (serial build/test execution)"
+echo "check-rust-tests: running CARGO_BUILD_JOBS=$jobs cargo test ${args[*]} -- --test-threads=1"
+CARGO_BUILD_JOBS="$jobs" cargo test "${args[@]}" -- --test-threads=1

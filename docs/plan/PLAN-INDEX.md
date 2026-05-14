@@ -3454,3 +3454,14 @@ Phase 116 implements SPEC-H from DESIGN-034. It adds a conservative type-level p
 - D5: Named predicates are explicit and registry-backed, but arbitrary predicate proof search is deferred unless a compiler-known builtin predicate is registered.
 - D6: Public proposition transport requires V5 semantic summaries; V4-or-older summaries carrying proposition facts are malformed and rejected before partial registration.
 - D7: TASK-872 is a hard pre-implementation gate requiring downstream TASK-873 through TASK-882 exact file/test/callsite bindings and zero-test-safe focused commands.
+
+## Maintenance: Local Gate Resource Hygiene
+
+**Priority:** High (local pre-push gates must be predictable on the development host)
+**Status:** ✅ Complete (TASK-885 complete)
+
+This maintenance slice keeps repository tooling conservative when broad all-target verification creates avoidable memory or concurrency pressure.
+
+| Task | Description | Est. Hours | Status |
+|------|-------------|------------|--------|
+| [TASK-885](tasks/TASK-885-remove-alternate-test-runner-gate.md) | Remove alternate Rust test runner from local gates and use serial cargo test defaults | 1 | ✅ Complete |

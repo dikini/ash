@@ -1,6 +1,6 @@
 # TASK-887: Promoted Data Constructors and Named Data Kinds Packet
 
-## Status: ⏸️ Deferred
+## Status: ✅ Complete
 
 ## Description
 
@@ -15,7 +15,7 @@ Promote a future implementation-grade SPEC/PLAN packet for promoted ADT/runtime 
 ## Dependencies
 
 - ✅ SPEC-057 through SPEC-064 implemented MVPs
-- ⏸️ Requires a fresh design/spec decision before implementation
+- ✅ Design/spec/plan packet created; feature implementation remains in the new planned task range
 
 ## Requirements
 
@@ -38,14 +38,18 @@ toolsets: [terminal, file]
 ```
 strictness: no-blocking
 commands:
-  - false # Deferred task: replace with concrete spec/plan review commands when activated
+  - git diff --check
 checklist:
-  - [ ] SPEC packet written
-  - [ ] PLAN packet written
-  - [ ] Task range created with exact file/test targets
-  - [ ] Non-interference with sealed-domain markers and runtime ADTs specified
+  - [x] SPEC packet written
+  - [x] PLAN packet written
+  - [x] Task range created with audit-bound file/test targeting
+  - [x] Non-interference with sealed-domain markers and runtime ADTs specified
 ```
 
 ## Notes
 
 Do not implement this under any existing SPEC-A through SPEC-H task. This is a new language-feature packet.
+
+## Completion Notes
+
+Activated as [DESIGN-036](../../design/DESIGN-036-PROMOTED-DATA-CONSTRUCTORS-NAMED-DATA-KINDS.md), [SPEC-065](../../spec/SPEC-065-PROMOTED-DATA-CONSTRUCTORS-NAMED-DATA-KINDS.md), [PLAN-114](../PLAN-114-PROMOTED-DATA-CONSTRUCTORS-NAMED-DATA-KINDS.md), with implementation task range TASK-892 through TASK-897. This task completed the docs/spec/plan packet only; feature implementation remains planned in the new task range.

@@ -1,6 +1,6 @@
 # TASK-889: Constructor-Kinded Parameters and HKT Packet
 
-## Status: ⏸️ Deferred
+## Status: ✅ Complete
 
 ## Description
 
@@ -16,8 +16,8 @@ Promote a future implementation-grade SPEC/PLAN packet for constructor-kinded ty
 ## Dependencies
 
 - ✅ Core `Kind::{Type, Arrow}` substrate
-- ⏸️ TASK-888 may be required first for partial application / holes depending on the selected MVP
-- ⏸️ Requires a fresh design/spec decision before implementation
+- ✅ SPEC-066 / PLAN-115 owns partial application and holes; SPEC-067 / PLAN-116 records that dependency for higher-arity do targets
+- ✅ Design/spec/plan packet created; feature implementation remains in the new planned task range
 
 ## Requirements
 
@@ -41,14 +41,18 @@ toolsets: [terminal, file]
 ```
 strictness: no-blocking
 commands:
-  - false # Deferred task: replace with concrete spec/plan review commands when activated
+  - git diff --check
 checklist:
-  - [ ] Syntax and carriers specified
-  - [ ] Typechecker kinded-variable representation specified
-  - [ ] Interface/impl coherence rules specified
-  - [ ] do-notation interaction specified
+  - [x] Syntax and carriers specified
+  - [x] Typechecker kinded-variable representation specified
+  - [x] Interface/impl coherence rules specified
+  - [x] do-notation interaction specified
 ```
 
 ## Notes
 
 Do not implement constructor-kinded parameters as a local tweak to `do` notation. This is a cross-cutting type-system feature.
+
+## Completion Notes
+
+Activated as [DESIGN-038](../../design/DESIGN-038-CONSTRUCTOR-KINDED-PARAMETERS-AND-HKT.md), [SPEC-067](../../spec/SPEC-067-CONSTRUCTOR-KINDED-PARAMETERS-AND-HKT.md), [PLAN-116](../PLAN-116-CONSTRUCTOR-KINDED-PARAMETERS-AND-HKT.md), with implementation task range TASK-904 through TASK-911. This task completed the docs/spec/plan packet only; feature implementation remains planned in the new task range.

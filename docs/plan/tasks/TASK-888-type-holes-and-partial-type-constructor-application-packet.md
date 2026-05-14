@@ -1,6 +1,6 @@
 # TASK-888: Type Holes and Partial Type-Constructor Application Packet
 
-## Status: ⏸️ Deferred
+## Status: ✅ Complete
 
 ## Description
 
@@ -16,7 +16,7 @@ Promote a future implementation-grade SPEC/PLAN packet for type holes/wildcards 
 ## Dependencies
 
 - ✅ Core `Kind` and canonical type-expression substrate
-- ⏸️ Requires a fresh design/spec decision before implementation
+- ✅ Design/spec/plan packet created; feature implementation remains in the new planned task range
 
 ## Requirements
 
@@ -40,14 +40,18 @@ toolsets: [terminal, file]
 ```
 strictness: no-blocking
 commands:
-  - false # Deferred task: replace with concrete spec/plan review commands when activated
+  - git diff --check
 checklist:
-  - [ ] Surface grammar and parser carriers specified
-  - [ ] Canonical/hole representation specified
-  - [ ] Kind/arity and ambiguity behavior specified
-  - [ ] Focused parser/typeck diagnostics planned
+  - [x] Surface grammar and parser carriers specified
+  - [x] Canonical/hole representation specified
+  - [x] Kind/arity and ambiguity behavior specified
+  - [x] Focused parser/typeck diagnostics planned
 ```
 
 ## Notes
 
 This task is a prerequisite candidate for `do:Result<_, E>` and other partially applied computation constructors, but it does not by itself add user-defined `Monad<M>`.
+
+## Completion Notes
+
+Activated as [DESIGN-037](../../design/DESIGN-037-TYPE-HOLES-PARTIAL-TYPE-CONSTRUCTOR-APPLICATION.md), [SPEC-066](../../spec/SPEC-066-TYPE-HOLES-PARTIAL-CONSTRUCTOR-APPLICATION.md), [PLAN-115](../PLAN-115-TYPE-HOLES-PARTIAL-CONSTRUCTOR-APPLICATION.md), with implementation task range TASK-898 through TASK-903. This task completed the docs/spec/plan packet only; feature implementation remains planned in the new task range.

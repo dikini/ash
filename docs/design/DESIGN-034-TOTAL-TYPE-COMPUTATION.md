@@ -1460,19 +1460,19 @@ future packets owned by PLAN-113.
 | Ordinary `type` declarations in ModuleFile/lowering/export | Closed by SPEC-057 / PLAN-105 | None |
 | Top-level `type fn` parser and carriers | Closed by SPEC-061 / PLAN-109 | None |
 | Sealed type-level domains and constructor-set metadata | Closed by SPEC-059 / PLAN-107 | None |
-| Promoted data constructors or named data kinds | Still deferred; marker constructors are not promoted ADT/runtime constructors | PLAN-113 / TASK-887 |
+| Promoted data constructors or named data kinds | Spec/plan packet created; marker constructors remain distinct until implementation | SPEC-065 / PLAN-114 |
 | Type-function apps, neutral/stuck forms, associated-family projections | Closed by SPEC-058, SPEC-060, SPEC-063 | None |
-| Type holes/wildcards in all type-expression positions | Still deferred outside type-function pattern wildcards | PLAN-113 / TASK-888 |
-| Constructor-kinded interface parameters such as `M : * -> *` | Still deferred; core `Kind` exists but source binders do not | PLAN-113 / TASK-889 |
-| Complete source kinding including partial applications | Partial: nominal/projection/computation arity exists; holes/partial apps/HKT remain deferred | PLAN-113 / TASK-888 and TASK-889 |
+| Type holes/wildcards in all type-expression positions | Spec/plan packet created outside type-function pattern wildcards | SPEC-066 / PLAN-115 |
+| Constructor-kinded interface parameters such as `M : * -> *` | Spec/plan packet created; core `Kind` exists but source binders remain unimplemented | SPEC-067 / PLAN-116 |
+| Complete source kinding including partial applications | Partial: nominal/projection/computation arity exists; holes/partial apps/HKT now have planned SPEC packets | SPEC-066 / SPEC-067 |
 | Generalized interface-application constraints | Closed for SPEC-H MVP; multi-argument interface-bound proposition regression added | PLAN-113 / TASK-891 |
 | Canonical associated projection syntax for multi-argument families | Closed by SPEC-063 / PLAN-111 | None |
-| Stringly associated projection replacement | Closed at canonical lowering/equality boundaries; pattern/exhaustiveness rollout remains deferred | PLAN-113 / TASK-890 |
+| Stringly associated projection replacement | Closed at canonical lowering/equality boundaries; pattern/exhaustiveness rollout now has planned SPEC packet | SPEC-068 / PLAN-117 |
 | Recursive associated-family normalizer | Closed by SPEC-063 / TASK-866 | None |
 | Environment-aware definitional equality forcing points | Closed by SPEC-060 / TASK-826 | None |
 | Recursive associated-family termination checking | Closed by SPEC-063 / TASK-865 | None |
 | Module-summary export/import of computation facts | Closed by SPEC-059, SPEC-062, SPEC-063, SPEC-064 | None |
-| Alias canonicalization for normalization and pattern matching | Closed for normalization/equality; pattern/exhaustiveness remains deferred | PLAN-113 / TASK-890 |
+| Alias canonicalization for normalization and pattern matching | Closed for normalization/equality; pattern/exhaustiveness rollout now has planned SPEC packet | SPEC-068 / PLAN-117 |
 | Neutral/stuck/rigid/non-exhaustive/non-decreasing diagnostics | Closed across SPEC-060, SPEC-061, SPEC-063, SPEC-064 | None |
 | Separate computation-head/neutral marker, not `Type::Constructor` | Closed by canonical computation-head and neutral-computation carriers | None |
 

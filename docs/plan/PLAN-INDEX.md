@@ -293,6 +293,11 @@ Update this section as tasks complete:
 | 114 | 14 | 14 | ✅ Complete |
 | 115 | 14 | 14 | ✅ Complete |
 | 116 | 14 | 14 | ✅ Complete |
+| 117 | 6 | 6 | ✅ Complete |
+| 118 | 6 | 0 | 📝 Planned |
+| 119 | 6 | 0 | 📝 Planned |
+| 120 | 8 | 0 | 📝 Planned |
+| 121 | 6 | 0 | 📝 Planned |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -3469,23 +3474,101 @@ This maintenance slice keeps repository tooling conservative when broad all-targ
 ## Phase 117: DESIGN-034 Deferred Type-Computation Gap Ownership
 
 **Priority:** Medium (make remaining DESIGN-034 §16.9 future substrate explicit after SPEC-A through SPEC-H)
-**Status:** 📝 Planned / backlog established (TASK-886 and TASK-891 complete; TASK-887 through TASK-890 deferred)
+**Status:** ✅ Complete / backlog promoted (TASK-886 through TASK-891 complete; implementation phases 118 through 121 planned)
 **Design:** [DESIGN-034 §16.9](../design/DESIGN-034-TOTAL-TYPE-COMPUTATION.md#169-cross-packet-implementation-gaps-to-plan-explicitly)
 **Plan:** [docs/plan/PLAN-113-DESIGN-034-DEFERRED-TYPE-COMPUTATION-GAPS.md](PLAN-113-DESIGN-034-DEFERRED-TYPE-COMPUTATION-GAPS.md)
 
-Phase 117 is a gap-ownership/backlog slice, not a broad implementation phase. It records which DESIGN-034 §16.9 items were closed by SPEC-057 through SPEC-064, fixes stale Phase 110 status drift, adds explicit future owners for remaining deferred language features, and hardens existing SPEC-H proposition evidence for multi-argument interface-bound tails. It intentionally does not implement promoted data constructors, type holes, partial type-constructor application, constructor-kinded/HKT binders, user-defined Monad, or pattern/exhaustiveness canonicalization rollout.
+Phase 117 is a gap-ownership/backlog-promotion slice, not a broad Rust implementation phase. It records which DESIGN-034 §16.9 items were closed by SPEC-057 through SPEC-064, fixes stale Phase 110 status drift, promotes the remaining deferred language-feature owners into concrete DESIGN/SPEC/PLAN/TASK packets, and hardens existing SPEC-H proposition evidence for multi-argument interface-bound tails. It intentionally does not implement promoted data constructors, type holes, partial type-constructor application, constructor-kinded/HKT binders, user-defined Monad, or pattern/exhaustiveness canonicalization rollout.
 
 | Task | Description | Est. Hours | Status |
 |------|-------------|------------|--------|
 | [TASK-886](tasks/TASK-886-design034-gap-ownership-and-plan106-reconciliation.md) | Reconcile DESIGN-034 §16.9 gap ownership and repair PLAN-106 status drift | 4 | ✅ Complete |
-| [TASK-887](tasks/TASK-887-promoted-data-constructors-and-named-data-kinds-packet.md) | Future promoted data constructors and named data kinds packet | TBD | ⏸️ Deferred |
-| [TASK-888](tasks/TASK-888-type-holes-and-partial-type-constructor-application-packet.md) | Future type holes/wildcards and partial type-constructor application packet | TBD | ⏸️ Deferred |
-| [TASK-889](tasks/TASK-889-constructor-kinded-parameters-and-hkt-packet.md) | Future constructor-kinded parameters, HKT, and user-defined unary computation abstractions packet | TBD | ⏸️ Deferred |
-| [TASK-890](tasks/TASK-890-pattern-exhaustiveness-alias-canonicalization-packet.md) | Future pattern/exhaustiveness alias canonicalization audit/spec packet | TBD | ⏸️ Deferred |
+| [TASK-887](tasks/TASK-887-promoted-data-constructors-and-named-data-kinds-packet.md) | Promote SPEC-065/PLAN-114 for promoted data constructors and named data kinds | 4 | ✅ Complete |
+| [TASK-888](tasks/TASK-888-type-holes-and-partial-type-constructor-application-packet.md) | Promote SPEC-066/PLAN-115 for type holes/wildcards and partial type-constructor application | 4 | ✅ Complete |
+| [TASK-889](tasks/TASK-889-constructor-kinded-parameters-and-hkt-packet.md) | Promote SPEC-067/PLAN-116 for constructor-kinded parameters, HKT, and user-defined unary computation abstractions | 4 | ✅ Complete |
+| [TASK-890](tasks/TASK-890-pattern-exhaustiveness-alias-canonicalization-packet.md) | Promote SPEC-068/PLAN-117 for pattern/exhaustiveness alias canonicalization | 4 | ✅ Complete |
 | [TASK-891](tasks/TASK-891-multi-arg-interface-bound-proposition-regression.md) | Multi-argument interface-bound proposition regression evidence | 2 | ✅ Complete |
 
 **Decision gates:**
 - D1: Promoted data constructors/DataKinds must be specified separately from sealed-domain marker constructors.
 - D2: Type holes/partial constructor application and HKT/kinded binders are separate future packets; do-target inference or `do:Result<_, E>` must not smuggle either into existing MVPs.
 - D3: Pattern/exhaustiveness alias canonicalization requires a live callsite audit before any rollout.
-- D4: Future deferred tasks must replace their failing verification guards with exact spec/plan/test commands before implementation begins.
+- D4: Implementation phases 118 through 121 start with audit gates that replace downstream failing verification guards with exact focused commands before Rust changes.
+
+## Phase 118: Promoted Data Constructors and Named Data Kinds
+
+**Priority:** Medium (DataKinds-style promotion is useful for richer type-level programming but must not confuse sealed-domain markers with runtime ADTs)
+**Status:** 📝 Planned
+**Spec:** [SPEC-065](../spec/SPEC-065-PROMOTED-DATA-CONSTRUCTORS-NAMED-DATA-KINDS.md)
+**Design:** [DESIGN-036](../design/DESIGN-036-PROMOTED-DATA-CONSTRUCTORS-NAMED-DATA-KINDS.md)
+**Plan:** [docs/plan/PLAN-114-PROMOTED-DATA-CONSTRUCTORS-NAMED-DATA-KINDS.md](PLAN-114-PROMOTED-DATA-CONSTRUCTORS-NAMED-DATA-KINDS.md)
+
+Phase 118 implements the opt-in promoted-constructor layer from SPEC-065. It starts with a live audit, then adds parser surface, core identities/summaries, TypeEnv registration/kinding, type-function/proposition integration, and non-interference evidence for runtime ADTs and sealed-domain markers.
+
+| Task | Description | Est. Hours | Status |
+|------|-------------|------------|--------|
+| [TASK-892](tasks/TASK-892-promoted-constructor-audit-gate.md) | Promoted-constructor audit gate | 5 | 📝 Planned |
+| [TASK-893](tasks/TASK-893-promoted-constructor-parser-surface.md) | Promoted-constructor parser surface | 6 | 📝 Planned |
+| [TASK-894](tasks/TASK-894-core-promoted-constructor-identities-and-summaries.md) | Core promoted identities and summaries | 8 | 📝 Planned |
+| [TASK-895](tasks/TASK-895-typeenv-promoted-constructor-registration-and-kinding.md) | TypeEnv registration and kinding | 8 | 📝 Planned |
+| [TASK-896](tasks/TASK-896-promoted-constructor-normalizer-proposition-and-non-interference.md) | Normalizer/proposition integration and non-interference | 8 | 📝 Planned |
+| [TASK-897](tasks/TASK-897-promoted-constructor-closeout.md) | SPEC-065 closeout | 5 | 📝 Planned |
+
+## Phase 119: Type Holes and Partial Type-Constructor Application
+
+**Priority:** High (required for `do:Result<_, E>` target shape before HKT/Monad evidence can consume higher-arity constructors)
+**Status:** 📝 Planned
+**Spec:** [SPEC-066](../spec/SPEC-066-TYPE-HOLES-PARTIAL-CONSTRUCTOR-APPLICATION.md)
+**Design:** [DESIGN-037](../design/DESIGN-037-TYPE-HOLES-PARTIAL-TYPE-CONSTRUCTOR-APPLICATION.md)
+**Plan:** [docs/plan/PLAN-115-TYPE-HOLES-PARTIAL-CONSTRUCTOR-APPLICATION.md](PLAN-115-TYPE-HOLES-PARTIAL-CONSTRUCTOR-APPLICATION.md)
+
+Phase 119 implements explicit source holes and partial type-constructor application. It keeps holes separate from type-function pattern wildcards and rejects implicit currying or inversion.
+
+| Task | Description | Est. Hours | Status |
+|------|-------------|------------|--------|
+| [TASK-898](tasks/TASK-898-type-hole-audit-gate.md) | Type-hole audit gate | 5 | 📝 Planned |
+| [TASK-899](tasks/TASK-899-core-type-hole-and-partial-application-carriers.md) | Core hole and partial-application carriers | 7 | 📝 Planned |
+| [TASK-900](tasks/TASK-900-parser-type-hole-surface.md) | Parser type-hole surface | 6 | 📝 Planned |
+| [TASK-901](tasks/TASK-901-typeenv-partial-constructor-kinding.md) | TypeEnv partial-constructor kinding | 8 | 📝 Planned |
+| [TASK-902](tasks/TASK-902-do-target-partial-application-integration.md) | Do-target partial-application integration | 6 | 📝 Planned |
+| [TASK-903](tasks/TASK-903-type-hole-closeout.md) | SPEC-066 closeout | 5 | 📝 Planned |
+
+## Phase 120: Constructor-Kinded Parameters and HKT
+
+**Priority:** High (required for user-defined `Functor`, `Applicative`, `Monad`, and generalized do-target evidence)
+**Status:** 📝 Planned
+**Spec:** [SPEC-067](../spec/SPEC-067-CONSTRUCTOR-KINDED-PARAMETERS-AND-HKT.md)
+**Design:** [DESIGN-038](../design/DESIGN-038-CONSTRUCTOR-KINDED-PARAMETERS-AND-HKT.md)
+**Plan:** [docs/plan/PLAN-116-CONSTRUCTOR-KINDED-PARAMETERS-AND-HKT.md](PLAN-116-CONSTRUCTOR-KINDED-PARAMETERS-AND-HKT.md)
+
+Phase 120 implements constructor-kinded binders and higher-kinded interface evidence. It is a cross-cutting type-system phase, not a do-only tweak.
+
+| Task | Description | Est. Hours | Status |
+|------|-------------|------------|--------|
+| [TASK-904](tasks/TASK-904-hkt-audit-gate.md) | HKT audit gate | 6 | 📝 Planned |
+| [TASK-905](tasks/TASK-905-core-kinded-binder-and-constructor-var-carriers.md) | Core kinded binders and constructor variables | 8 | 📝 Planned |
+| [TASK-906](tasks/TASK-906-parser-kinded-binder-surface.md) | Parser kinded-binder surface | 7 | 📝 Planned |
+| [TASK-907](tasks/TASK-907-typeenv-constructor-variable-kinding-and-unification.md) | TypeEnv constructor-variable kinding and unification | 10 | 📝 Planned |
+| [TASK-908](tasks/TASK-908-higher-kinded-interface-and-impl-coherence.md) | Higher-kinded interface/impl coherence | 10 | 📝 Planned |
+| [TASK-909](tasks/TASK-909-monad-dictionary-do-target-resolution.md) | Monad dictionary do-target resolution | 8 | 📝 Planned |
+| [TASK-910](tasks/TASK-910-hkt-diagnostics-and-acceptance-matrix.md) | HKT diagnostics and acceptance matrix | 7 | 📝 Planned |
+| [TASK-911](tasks/TASK-911-hkt-closeout.md) | SPEC-067 closeout | 5 | 📝 Planned |
+
+## Phase 121: Pattern and Exhaustiveness Canonicalization
+
+**Priority:** Medium (extends canonicalization from equality boundaries into pattern/exhaustiveness only after a live audit)
+**Status:** 📝 Planned
+**Spec:** [SPEC-068](../spec/SPEC-068-PATTERN-EXHAUSTIVENESS-CANONICALIZATION.md)
+**Design:** [DESIGN-039](../design/DESIGN-039-PATTERN-EXHAUSTIVENESS-CANONICALIZATION.md)
+**Plan:** [docs/plan/PLAN-117-PATTERN-EXHAUSTIVENESS-CANONICALIZATION.md](PLAN-117-PATTERN-EXHAUSTIVENESS-CANONICALIZATION.md)
+
+Phase 121 implements audit-first pattern/exhaustiveness canonicalization for transparent aliases and selected reducible projections while preserving neutral/stuck non-inversion boundaries and constructor identity hygiene.
+
+| Task | Description | Est. Hours | Status |
+|------|-------------|------------|--------|
+| [TASK-912](tasks/TASK-912-pattern-canonicalization-audit-gate.md) | Pattern canonicalization audit gate | 5 | 📝 Planned |
+| [TASK-913](tasks/TASK-913-pattern-canonicalization-api.md) | Pattern canonicalization API | 6 | 📝 Planned |
+| [TASK-914](tasks/TASK-914-alias-aware-constructor-resolution.md) | Alias-aware constructor resolution | 7 | 📝 Planned |
+| [TASK-915](tasks/TASK-915-exhaustiveness-canonical-constructor-universe.md) | Exhaustiveness over canonical constructor universe | 7 | 📝 Planned |
+| [TASK-916](tasks/TASK-916-pattern-canonicalization-diagnostics-and-negative-leakage.md) | Diagnostics and negative leakage tests | 6 | 📝 Planned |
+| [TASK-917](tasks/TASK-917-pattern-canonicalization-closeout.md) | SPEC-068 closeout | 5 | 📝 Planned |

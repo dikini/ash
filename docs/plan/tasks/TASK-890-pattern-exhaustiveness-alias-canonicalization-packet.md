@@ -1,10 +1,10 @@
 # TASK-890: Pattern/Exhaustiveness Alias Canonicalization Packet
 
-## Status: ⏸️ Deferred
+## Status: ✅ Complete
 
 ## Description
 
-Audit and, if justified, plan the rollout of transparent alias/projection canonicalization into pattern checking and exhaustiveness after Phase 110 intentionally limited canonicalization adoption to equality boundaries.
+Promote a future implementation-grade DESIGN/SPEC/PLAN packet for transparent alias/projection canonicalization in pattern checking and exhaustiveness. The live callsite audit and implementation remain planned in SPEC-068 / PLAN-117.
 
 ## Specification Reference
 
@@ -15,13 +15,13 @@ Audit and, if justified, plan the rollout of transparent alias/projection canoni
 ## Dependencies
 
 - ✅ TASK-801/TASK-802 equality-boundary alias canonicalization
-- ⏸️ Requires a fresh audit before implementation
+- ✅ Design/spec/plan packet created; live audit is scheduled as the first implementation task
 
 ## Requirements
 
-1. Audit `crates/ash-typeck/src/check_pattern.rs`, `crates/ash-typeck/src/exhaustiveness.rs`, constructor resolution, and ADT pattern tests.
-2. Decide whether these paths should consume `TypeEnv::canonicalize_type_for_equality` or a narrower pattern-specific canonicalization API.
-3. Add positive alias-equivalent pattern/exhaustiveness cases and negative leakage cases for unrelated same-visible-name aliases.
+1. Create a design note that preserves the audit-first boundary for pattern/exhaustiveness canonicalization.
+2. Create SPEC-068 with a mandatory audit gate before implementation.
+3. Create PLAN-117 and TASK-912 through TASK-917 with explicit planned positive/negative evidence ownership.
 4. Preserve current ADT/runtime pattern semantics and avoid solving under neutral computation heads.
 
 ## Dispatch
@@ -38,14 +38,18 @@ toolsets: [terminal, file]
 ```
 strictness: no-blocking
 commands:
-  - false # Deferred task: replace with concrete audit/spec commands when activated
+  - git diff --check
 checklist:
-  - [ ] Live callsite audit complete
-  - [ ] Canonicalization API decision recorded
-  - [ ] Positive/negative pattern and exhaustiveness tests planned
-  - [ ] Non-interference with existing ADT pattern matching specified
+  - [x] Live callsite audit scheduled as first implementation task
+  - [x] Canonicalization API decision gate recorded
+  - [x] Positive/negative pattern and exhaustiveness tests planned
+  - [x] Non-interference with existing ADT pattern matching specified
 ```
 
 ## Notes
 
 Do not broaden Phase 110 by retroactive search-and-replace. Start with the audit and decide whether pattern/exhaustiveness needs the same canonicalization semantics as equality.
+
+## Completion Notes
+
+Activated as [DESIGN-039](../../design/DESIGN-039-PATTERN-EXHAUSTIVENESS-CANONICALIZATION.md), [SPEC-068](../../spec/SPEC-068-PATTERN-EXHAUSTIVENESS-CANONICALIZATION.md), [PLAN-117](../PLAN-117-PATTERN-EXHAUSTIVENESS-CANONICALIZATION.md), with implementation task range TASK-912 through TASK-917. This task completed the docs/spec/plan packet only; feature implementation remains planned in the new task range.

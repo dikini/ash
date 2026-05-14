@@ -1,6 +1,6 @@
 # TASK-882: SPEC-H acceptance/non-interference matrix
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -72,9 +72,19 @@ Dispatch an independent review/verification subagent with this task file, SPEC-0
 
 ## Completion Checklist
 
-- [ ] Matrix artifact exists and covers H1-H12.
-- [ ] All required focused evidence passes.
-- [ ] No zero-test pass is accepted.
+- [x] Matrix artifact exists and covers H1-H12.
+- [x] All required focused evidence passes.
+- [x] No zero-test pass is accepted.
+
+## Completion Evidence
+
+- Created `docs/plan/audits/TASK-882-proposition-acceptance-matrix.md` mapping SPEC-064 §12 H1-H12 to focused evidence, expected/actual result, command, test count, and owning earlier task evidence.
+- Added four non-zero TASK-882 aggregator suites: `ash-core` summary versioning, `ash-parser` raw-surface/non-interference, `ash-typeck` H1-H8/H11 solver acceptance, and `ash-engine` V5 transport/non-interference.
+- Ran TASK-882 non-zero guards: core 2, parser 3, typeck 5, engine 2 `task_882_` tests.
+- Verification: `cargo test -p ash-core --test task_882_spec_h_summary_non_interference`; `cargo test -p ash-parser --test task_882_spec_h_surface_non_interference`; `cargo test -p ash-typeck --test task_882_spec_h_acceptance_matrix`; `cargo test -p ash-engine --test task_882_spec_h_transport_non_interference`.
+- Non-interference verification: TASK-872 typeck SPEC-035/SPEC-057-through-SPEC-063 suites passed with 101 tests; engine SPEC-062/SPEC-063 transport suites passed with 8 tests.
+- Clean gates: `cargo fmt --check`; `git diff --check`; `cargo check --workspace`; `cargo clippy -p ash-core -p ash-parser -p ash-typeck -p ash-engine --all-targets --all-features -- -D warnings`.
+- Independent review verdict: PASS.
 
 ## Dispatch
 

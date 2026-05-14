@@ -36,7 +36,7 @@ make_repo() {
   clean_git_env git -C "$repo" config user.email "ash-tests@example.invalid"
   clean_git_env git -C "$repo" config user.name "Ash Test"
   clean_git_env git -C "$repo" add .
-  clean_git_env git -C "$repo" commit -q -m "initial"
+  clean_git_env git -C "$repo" -c commit.gpgsign=false commit -q -m "initial"
   printf '%s\n' "$repo"
 }
 

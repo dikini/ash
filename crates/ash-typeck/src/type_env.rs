@@ -1286,6 +1286,34 @@ fn proposition_revalidation_error(error: TypeError) -> TypeEnvError {
     }
 }
 
+fn required_proposition_discharge_error(
+    owner_site: &PropositionCheckingSite,
+    source_anchor: &SourceAnchor,
+    outcome: &PropositionOutcome,
+) -> TypeEnvError {
+    let status = match outcome {
+        PropositionOutcome::Satisfied(_) => "satisfied",
+        PropositionOutcome::Refuted(_) => "refuted",
+        PropositionOutcome::Deferred(_) => "deferred",
+    };
+    let no_inversion_note = match outcome {
+        PropositionOutcome::Deferred(reason) if reason.no_inversion_boundary => {
+            "; no-inversion boundary: Ash normalized both sides but did not solve under type functions or associated families"
+        }
+        _ => "",
+    };
+    TypeEnvError::InvalidDefinition(
+        format!(
+            "required proposition at checking point '{}' was {status}{no_inversion_note}: {outcome:?}",
+            owner_site
+                .label
+                .as_deref()
+                .unwrap_or("unlabelled proposition checking point")
+        ),
+        anchor_span(source_anchor),
+    )
+}
+
 fn private_proposition_dependency_error(
     public_item: &str,
     dependency_kind: &str,
@@ -4958,6 +4986,19 @@ impl TypeEnv {
         Ok(())
     }
 
+    /// Batch-register imported semantic summaries and atomically discharge all
+    /// required proposition facts they introduce.
+    pub fn register_module_semantic_summaries_and_discharge_required_propositions(
+        &mut self,
+        summaries: &[ModuleSemanticSummary],
+    ) -> Result<Vec<PropositionOutcome>, TypeEnvError> {
+        let mut staged = self.clone();
+        staged.register_module_semantic_summaries(summaries)?;
+        let outcomes = staged.discharge_required_proposition_obligations()?;
+        *self = staged;
+        Ok(outcomes)
+    }
+
     fn validate_and_register_imported_proposition_fact(
         &mut self,
         summary: &ModuleSemanticSummary,
@@ -7676,10 +7717,30 @@ impl TypeEnv {
                 .map(|later| later.name.to_string())
                 .collect();
             let lowered = self.lower_local_type_function(module, def, &later_names)?;
+            let obligation_start = self.proposition_obligations.len();
             self.local_type_function_heads
                 .insert(lowered.name.clone(), lowered.head.clone());
             self.local_type_functions
                 .insert(lowered.head.clone(), lowered);
+            if let Some(tail) = &def.proposition_tail {
+                self.add_proposition_obligations_from_tail(
+                    tail,
+                    SourceOrigin::Synthetic {
+                        reason: format!(
+                            "type function proposition checking point {}::{}",
+                            module.path.join("::"),
+                            def.name
+                        ),
+                    },
+                    PropositionCheckingSite::new(
+                        0x8800_0000u64 + index as u64,
+                        PropositionCheckingSiteKind::ExplicitRequirement,
+                        Some(format!("type fn {} proposition tail", def.name)),
+                    ),
+                )
+                .map_err(proposition_revalidation_error)?;
+                self.discharge_required_proposition_obligations_from(obligation_start)?;
+            }
         }
         Ok(())
     }
@@ -10266,6 +10327,70 @@ impl TypeEnv {
         Ok(outcomes)
     }
 
+    /// Solve and require discharge of every stored proposition obligation.
+    ///
+    /// Plain solving may conservatively return deferred outcomes. Checking points
+    /// that require proofs call this stricter path so refuted or deferred
+    /// propositions become ordinary type-environment errors without invoking
+    /// inversion or meta-solving.
+    pub fn discharge_required_proposition_obligations(
+        &mut self,
+    ) -> Result<Vec<PropositionOutcome>, TypeEnvError> {
+        self.discharge_required_proposition_obligations_from(0)
+    }
+
+    pub(crate) fn discharge_required_proposition_obligations_since(
+        &mut self,
+        start_index: usize,
+    ) -> Result<Vec<PropositionOutcome>, TypeEnvError> {
+        self.discharge_required_proposition_obligations_from(start_index)
+    }
+
+    fn discharge_required_proposition_obligations_from(
+        &mut self,
+        start_index: usize,
+    ) -> Result<Vec<PropositionOutcome>, TypeEnvError> {
+        let pending = self
+            .proposition_obligations
+            .iter()
+            .enumerate()
+            .skip(start_index)
+            .map(|(index, record)| {
+                (
+                    index,
+                    record.proposition.clone(),
+                    record.source_anchor.clone(),
+                    record.owner_site.clone(),
+                )
+            })
+            .collect::<Vec<_>>();
+
+        let mut checked = Vec::with_capacity(pending.len());
+        for (index, proposition, source_anchor, owner_site) in pending {
+            let outcome = self
+                .solve_proposition(&proposition, Some(source_anchor.clone()))
+                .map_err(proposition_revalidation_error)?;
+            match &outcome {
+                PropositionOutcome::Satisfied(_) => checked.push((index, outcome)),
+                PropositionOutcome::Refuted(_) | PropositionOutcome::Deferred(_) => {
+                    return Err(required_proposition_discharge_error(
+                        &owner_site,
+                        &source_anchor,
+                        &outcome,
+                    ));
+                }
+            }
+        }
+        let mut outcomes = Vec::with_capacity(checked.len());
+        for (index, outcome) in checked {
+            if let Some(record) = self.proposition_obligations.get_mut(index) {
+                record.outcome = Some(outcome.clone());
+            }
+            outcomes.push(outcome);
+        }
+        Ok(outcomes)
+    }
+
     fn solve_equality_proposition(
         &self,
         proposition: &TypeProposition,
@@ -10583,6 +10708,18 @@ impl TypeEnv {
                         args,
                         kind: Kind::Type,
                     })
+                } else if let Some(head) = self.local_type_function_heads.get(name.as_ref()) {
+                    let args = args
+                        .iter()
+                        .map(|arg| self.lower_surface_type_to_canonical(arg))
+                        .collect::<Result<Vec<_>, _>>()?;
+                    Ok(TypePropositionTerm::Canonical(
+                        CanonicalTypeExpr::ComputationHeadApp {
+                            head: head.clone(),
+                            args,
+                            kind: Kind::Type,
+                        },
+                    ))
                 } else {
                     self.lower_surface_type_to_canonical(ty)
                         .map(proposition_term_from_canonical)

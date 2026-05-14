@@ -1402,19 +1402,80 @@ pub fn builtin_fn_signature_type(
     Ok(Type::Fn(params, Box::new(ret)))
 }
 
+fn register_public_function_proposition_tail(
+    env: &mut TypeEnv,
+    tail: &ash_parser::surface::PropositionTail,
+    item_name: &str,
+    item_kind: &str,
+    site_id: u64,
+) -> Result<(), TypeCheckError> {
+    let obligation_start = env.proposition_obligations().len();
+    env.add_proposition_obligations_from_tail(
+        tail,
+        ash_core::semantic_summary::SourceOrigin::Synthetic {
+            reason: format!("{item_kind} proposition checking point {item_name}"),
+        },
+        crate::type_env::PropositionCheckingSite::new(
+            site_id,
+            crate::type_env::PropositionCheckingSiteKind::ExplicitRequirement,
+            Some(format!("{item_kind} {item_name} proposition tail")),
+        ),
+    )
+    .map_err(|error| {
+        TypeCheckError::TypeError(format!("proposition tail lowering failed: {error}"))
+    })?;
+    env.discharge_required_proposition_obligations_since(obligation_start)
+        .map_err(TypeCheckError::from)?;
+    Ok(())
+}
+
 fn register_function_signatures(
     env: &mut TypeEnv,
     definitions: &[ash_parser::surface::Definition],
 ) -> Result<(), TypeCheckError> {
-    for definition in definitions {
+    let mut staged = env.clone();
+    register_function_signatures_inner(&mut staged, definitions)?;
+    *env = staged;
+    Ok(())
+}
+
+fn register_function_signatures_inner(
+    env: &mut TypeEnv,
+    definitions: &[ash_parser::surface::Definition],
+) -> Result<(), TypeCheckError> {
+    for (index, definition) in definitions.iter().enumerate() {
         match definition {
             ash_parser::surface::Definition::Function(function) => {
                 let signature = fn_signature_type(env, function)?;
                 env.bind_variable(function.name.as_ref(), signature);
+                if matches!(function.visibility, ash_parser::surface::Visibility::Public)
+                    && let Some(tail) = &function.proposition_tail
+                {
+                    register_public_function_proposition_tail(
+                        env,
+                        tail,
+                        function.name.as_ref(),
+                        "function",
+                        0x8801_0000u64 + index as u64,
+                    )?;
+                }
             }
             ash_parser::surface::Definition::BuiltinFn(builtin_fn) => {
                 let signature = builtin_fn_signature_type(env, builtin_fn)?;
                 env.bind_variable(builtin_fn.name.as_ref(), signature);
+                if matches!(
+                    builtin_fn.visibility,
+                    ash_parser::surface::Visibility::Public
+                ) && let Some(tail) = &builtin_fn.proposition_tail
+                {
+                    register_public_function_proposition_tail(
+                        env,
+                        tail,
+                        builtin_fn.name.as_ref(),
+                        "builtin function",
+                        0x8802_0000u64 + index as u64,
+                    )?;
+                }
             }
             ash_parser::surface::Definition::Capability(capability) => {
                 env.register_capability_symbol(capability.name.as_ref());

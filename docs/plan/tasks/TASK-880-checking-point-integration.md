@@ -1,6 +1,6 @@
 # TASK-880: Checking-point integration
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -73,9 +73,25 @@ Dispatch an independent review/verification subagent with this task file, SPEC-0
 
 ## Completion Checklist
 
-- [ ] Focused integration tests pass.
-- [ ] Deferred propositions surface user-facing diagnostics at required-discharge sites.
-- [ ] No proposition path mutates substitutions for open type-function arguments.
+- [x] Focused integration tests pass.
+- [x] Deferred propositions surface user-facing diagnostics at required-discharge sites.
+- [x] No proposition path mutates substitutions for open type-function arguments.
+
+## Completion Notes
+
+Completed in the Phase 116 worktree after review remediation. TypeEnv now provides required proposition discharge at audited checking points without adding proof search or meta-solving. Public `type fn` proposition tails are discharged inside the existing staged local type-function registration path; public `fn` and `builtin fn` proposition tails are discharged during source program signature registration through a staged environment; imported V5 proposition summaries are registered and discharged through a transactional TypeEnv helper. Engine callsites remain transport-only and delegate summary registration/discharge to TypeEnv.
+
+Focused evidence recorded for TASK-880:
+
+- `cargo test -p ash-typeck --test task_880_proposition_checking_points -- --list | grep -q task_880_` — passed, non-zero task-owned tests discovered.
+- `cargo test -p ash-typeck --test task_880_proposition_checking_points` — passed, 8 tests.
+- `cargo test -p ash-engine --test task_880_proposition_public_integration -- --list | grep -q task_880_` — passed, non-zero task-owned tests discovered.
+- `cargo test -p ash-engine --test task_880_proposition_public_integration` — passed, 2 tests.
+- `cargo fmt --check` — passed.
+- `git diff --check` — passed.
+- `cargo check --workspace` — passed.
+
+Independent review after remediation found no blocking TASK-880 issues. Remaining structured diagnostic polish is owned by TASK-881.
 
 ## Dispatch
 

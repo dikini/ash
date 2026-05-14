@@ -3209,6 +3209,14 @@ fn attach_public_proposition_summaries(
     let public_predicates =
         collect_public_proposition_predicate_summaries(&mut type_env, &module, path)?;
     add_public_proposition_obligations(&mut type_env, &module, &source_origin, path)?;
+    type_env
+        .discharge_required_proposition_obligations()
+        .map_err(|error| {
+            EngineError::Parse(format!(
+                "in '{}': public proposition checking point failed: {error}",
+                path.display()
+            ))
+        })?;
     let public_interface_identities =
         collect_public_interface_identity_summaries(&type_env, &module, &source_origin);
     let proposition_facts = type_env

@@ -1868,8 +1868,12 @@ fn register_imported_semantic_summaries(
     summaries: &[ash_core::semantic_summary::ModuleSemanticSummary],
 ) -> Result<(), EngineError> {
     type_env
-        .register_module_semantic_summaries(summaries)
-        .map_err(|error| EngineError::Type(format!("imported type summary error: {error}")))
+        .register_module_semantic_summaries_and_discharge_required_propositions(summaries)
+        .map(|_| ())
+        .map_err(|error| {
+            EngineError::Type(format!("imported proposition summary error: {error}"))
+        })?;
+    Ok(())
 }
 
 fn expose_imported_type_function_heads(

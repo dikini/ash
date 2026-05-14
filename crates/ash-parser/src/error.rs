@@ -18,6 +18,8 @@ pub struct ParseError {
     pub message: String,
     /// A list of what was expected at this position.
     pub expected: Vec<String>,
+    /// Optional stable diagnostic code overriding the default parser code.
+    pub diagnostic_code: Option<String>,
 }
 
 impl ParseError {
@@ -38,6 +40,7 @@ impl ParseError {
             span,
             message: message.into(),
             expected: Vec::new(),
+            diagnostic_code: None,
         }
     }
 
@@ -81,6 +84,24 @@ impl ParseError {
         }
         self
     }
+
+    /// Creates a structured parser diagnostic for proposition syntax at a disabled surface.
+    pub fn unsupported_proposition_surface(
+        span: Span,
+        surface: impl AsRef<str>,
+        help: impl AsRef<str>,
+    ) -> Self {
+        Self {
+            span,
+            message: format!(
+                "unsupported proposition syntax at {}: expected enabled proposition tail site; next step: {}",
+                surface.as_ref(),
+                help.as_ref()
+            ),
+            expected: vec!["enabled proposition tail site".into()],
+            diagnostic_code: Some("E168".into()),
+        }
+    }
 }
 
 impl fmt::Display for ParseError {
@@ -108,7 +129,9 @@ impl ash_diagnostic::AshLspError for ParseError {
         ash_diagnostic::Severity::Error
     }
     fn code(&self) -> Option<ash_diagnostic::DiagnosticCode> {
-        Some(ash_diagnostic::DiagnosticCode("E001".into()))
+        Some(ash_diagnostic::DiagnosticCode(
+            self.diagnostic_code.as_deref().unwrap_or("E001").into(),
+        ))
     }
     fn message(&self) -> String {
         self.message.clone()

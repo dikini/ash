@@ -5,6 +5,7 @@
 
 use ash_core::semantic_summary::{ModuleIdentity, SummaryVersion};
 use ash_parser::token::Span;
+use std::fmt;
 use thiserror::Error;
 
 /// Error type for constructor checking
@@ -168,6 +169,86 @@ pub enum ConstructorError {
     },
 }
 
+/// Structured proposition diagnostic families from SPEC-064 §11.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum PropositionDiagnosticKind {
+    /// Unsupported proposition syntax at a surface not enabled by this phase.
+    UnsupportedSurfaceSyntax,
+    /// Unknown named predicate.
+    UnknownNamedPredicate,
+    /// Named predicate exists, but this solver slice cannot prove it.
+    UnsupportedNamedPredicateSolving,
+    /// Equality blocked by a neutral computation head.
+    EqualityBlockedByNeutralHead,
+    /// Equality blocked by a rigid associated projection.
+    EqualityBlockedByRigidProjection,
+    /// Disequality unsupported because one side is open or neutral.
+    DisequalityOpenOrNeutral,
+    /// Disequality refuted because both sides are equal.
+    DisequalityRefutedByEquality,
+    /// Required interface-bound evidence was not found.
+    InterfaceBoundNotFound,
+    /// Public proposition summary was malformed or used an unsupported version.
+    MalformedPropositionSummary,
+    /// Public proposition summary would leak a private proposition dependency.
+    PrivatePropositionDependencyLeak,
+    /// Proposition would require solving inputs from outputs.
+    NoInversionBoundary,
+}
+
+impl PropositionDiagnosticKind {
+    /// Return the stable diagnostic code for this proposition diagnostic family.
+    #[must_use]
+    pub const fn code(self) -> &'static str {
+        match self {
+            Self::UnsupportedSurfaceSyntax => "E168",
+            Self::UnknownNamedPredicate => "E166",
+            Self::UnsupportedNamedPredicateSolving => "E169",
+            Self::EqualityBlockedByNeutralHead => "E170",
+            Self::EqualityBlockedByRigidProjection => "E171",
+            Self::DisequalityOpenOrNeutral => "E172",
+            Self::DisequalityRefutedByEquality => "E173",
+            Self::InterfaceBoundNotFound => "E174",
+            Self::MalformedPropositionSummary => "E175",
+            Self::PrivatePropositionDependencyLeak => "E176",
+            Self::NoInversionBoundary => "E177",
+        }
+    }
+}
+
+impl fmt::Display for PropositionDiagnosticKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::UnsupportedSurfaceSyntax => write!(f, "unsupported proposition syntax"),
+            Self::UnknownNamedPredicate => write!(f, "unknown named proposition predicate"),
+            Self::UnsupportedNamedPredicateSolving => {
+                write!(f, "unsupported named predicate solving")
+            }
+            Self::EqualityBlockedByNeutralHead => {
+                write!(f, "equality blocked by neutral computation head")
+            }
+            Self::EqualityBlockedByRigidProjection => {
+                write!(f, "equality blocked by rigid associated projection")
+            }
+            Self::DisequalityOpenOrNeutral => {
+                write!(f, "disequality blocked by open or neutral side")
+            }
+            Self::DisequalityRefutedByEquality => {
+                write!(f, "disequality refuted because both sides are equal")
+            }
+            Self::InterfaceBoundNotFound => write!(f, "interface bound not found"),
+            Self::MalformedPropositionSummary => write!(f, "malformed proposition summary"),
+            Self::PrivatePropositionDependencyLeak => {
+                write!(f, "private proposition dependency leak")
+            }
+            Self::NoInversionBoundary => write!(
+                f,
+                "no-inversion boundary: Ash normalized both sides but did not solve under type functions or associated families"
+            ),
+        }
+    }
+}
+
 /// Error type for type environment operations
 #[derive(Debug, Clone, PartialEq, Error)]
 pub enum TypeEnvError {
@@ -235,7 +316,9 @@ pub enum TypeEnvError {
     },
 
     /// Named proposition predicate was referenced without a registered identity.
-    #[error("unknown named proposition predicate '{name}'")]
+    #[error(
+        "proposition diagnostic (unknown named proposition predicate): proposition shape `{name}<...>`; expected shape: registered named predicate identity; found shape: unregistered predicate `{name}`; solver rule: proposition predicate registry lookup; next step: declare or import proposition predicate `{name}` before use"
+    )]
     UnknownPropositionPredicate {
         /// Source predicate name.
         name: String,
@@ -255,6 +338,27 @@ pub enum TypeEnvError {
         /// Actual argument count.
         actual: usize,
         /// Source span covering the predicate use.
+        span: Span,
+    },
+
+    /// Structured proposition diagnostic with stable SPEC-064 diagnostic family.
+    #[error(
+        "proposition diagnostic ({kind}): proposition shape `{proposition}`; expected shape: {expected}; found shape: {found}; solver rule: {solver_rule}; next step: {help}"
+    )]
+    PropositionDiagnostic {
+        /// Diagnostic family.
+        kind: PropositionDiagnosticKind,
+        /// Source-facing proposition shape.
+        proposition: String,
+        /// Expected proposition shape.
+        expected: String,
+        /// Found proposition shape.
+        found: String,
+        /// Solver rule or conservative deferred reason.
+        solver_rule: String,
+        /// Likely next step/help text.
+        help: String,
+        /// Source span covering the proposition.
         span: Span,
     },
 
@@ -457,6 +561,7 @@ impl TypeEnvError {
             | Self::ImportOrderConflict { span, .. }
             | Self::UnknownPropositionPredicate { span, .. }
             | Self::PropositionPredicateArityMismatch { span, .. }
+            | Self::PropositionDiagnostic { span, .. }
             | Self::DuplicateInterface(_, span)
             | Self::MissingInterface(_, span)
             | Self::DuplicateImpl { span, .. }

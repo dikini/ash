@@ -14,6 +14,7 @@ use ash_core::type_ir::{
     TypePropositionTerm,
 };
 use ash_core::{TypeBody, TypeDef};
+use ash_diagnostic::AshLspError;
 use ash_parser::surface::{InterfaceDef, Visibility};
 use ash_typeck::error::TypeEnvError;
 use ash_typeck::type_env::{PropositionCheckingSite, PropositionCheckingSiteKind};
@@ -457,10 +458,8 @@ fn task_879_v4_summary_with_proposition_fact_rejects_before_registering_predicat
             .is_none()
     );
     assert!(env.proposition_obligations().is_empty());
-    match err {
-        TypeEnvError::MalformedImportedComputationSummary { version, .. } => {
-            assert_eq!(version, SummaryVersion::SPEC063_ASSOCIATED_FAMILY_V4);
-        }
-        other => panic!("expected malformed summary version diagnostic, got {other:?}"),
-    }
+    assert_eq!(
+        err.code().expect("stable proposition summary code").0,
+        "E175"
+    );
 }

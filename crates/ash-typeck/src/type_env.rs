@@ -4,7 +4,7 @@
 
 #![allow(clippy::result_large_err)]
 
-use crate::error::TypeEnvError;
+use crate::error::{PropositionDiagnosticKind, TypeEnvError};
 use crate::normalizer::{DefinitionalEqualityResult, Normalizer};
 use crate::solver::TypeError;
 use crate::types::{Substitution, Type, TypeVar, UnifyError, unify};
@@ -1291,27 +1291,160 @@ fn required_proposition_discharge_error(
     source_anchor: &SourceAnchor,
     outcome: &PropositionOutcome,
 ) -> TypeEnvError {
-    let status = match outcome {
-        PropositionOutcome::Satisfied(_) => "satisfied",
-        PropositionOutcome::Refuted(_) => "refuted",
-        PropositionOutcome::Deferred(_) => "deferred",
-    };
-    let no_inversion_note = match outcome {
-        PropositionOutcome::Deferred(reason) if reason.no_inversion_boundary => {
-            "; no-inversion boundary: Ash normalized both sides but did not solve under type functions or associated families"
+    let site = owner_site
+        .label
+        .as_deref()
+        .unwrap_or("unlabelled proposition checking point");
+    TypeEnvError::PropositionDiagnostic {
+        kind: proposition_diagnostic_kind_from_outcome(outcome),
+        proposition: proposition_shape_from_outcome(outcome),
+        expected: format!("a proposition discharged at checking point '{site}'"),
+        found: proposition_found_shape_from_outcome(outcome),
+        solver_rule: proposition_solver_rule_from_outcome(outcome).into(),
+        help: proposition_help_from_outcome(outcome),
+        span: anchor_span(source_anchor),
+    }
+}
+
+fn proposition_help_from_outcome(outcome: &PropositionOutcome) -> String {
+    let mut help = "add explicit evidence, use a closed proposition, or move unsupported proof search behind an assumption/imported evidence boundary".to_string();
+    if matches!(
+        outcome,
+        PropositionOutcome::Deferred(reason)
+            if !matches!(reason.proposition, TypeProposition::Disequality(_))
+                && reason.no_inversion_boundary
+                && matches!(
+                    reason.kind,
+                    PropositionDeferredKind::BlockedByNeutrality { .. }
+                        | PropositionDeferredKind::RigidAssociatedProjection
+                        | PropositionDeferredKind::RequiresTypeFunctionInversion
+                        | PropositionDeferredKind::RequiresAssociatedFamilyInversion
+                )
+    ) {
+        help.push_str("; Ash normalized both sides but did not solve under type functions or associated families");
+    }
+    help
+}
+
+fn proposition_shape_from_outcome(outcome: &PropositionOutcome) -> String {
+    match outcome {
+        PropositionOutcome::Satisfied(evidence) => format!("{:?}", evidence.proposition),
+        PropositionOutcome::Refuted(refutation) => format!("{:?}", refutation.proposition),
+        PropositionOutcome::Deferred(reason) => format!("{:?}", reason.proposition),
+    }
+}
+
+fn proposition_found_shape_from_outcome(outcome: &PropositionOutcome) -> String {
+    match outcome {
+        PropositionOutcome::Satisfied(_) => {
+            format!(
+                "satisfied by {}",
+                proposition_solver_rule_from_outcome(outcome)
+            )
         }
-        _ => "",
-    };
-    TypeEnvError::InvalidDefinition(
-        format!(
-            "required proposition at checking point '{}' was {status}{no_inversion_note}: {outcome:?}",
-            owner_site
-                .label
-                .as_deref()
-                .unwrap_or("unlabelled proposition checking point")
-        ),
-        anchor_span(source_anchor),
-    )
+        PropositionOutcome::Refuted(refutation) => {
+            format!("refuted by {:?}", refutation.reason)
+        }
+        PropositionOutcome::Deferred(reason) => {
+            format!("deferred by {:?}", reason.kind)
+        }
+    }
+}
+
+fn proposition_solver_rule_from_outcome(outcome: &PropositionOutcome) -> &'static str {
+    match outcome {
+        PropositionOutcome::Satisfied(evidence) => match evidence.rule {
+            PropositionEvidenceRule::DefinitionalEquality => "normalize-and-compare equality",
+            PropositionEvidenceRule::SealedDomainConstructorDisjointness => {
+                "sealed-domain constructor disjointness"
+            }
+            PropositionEvidenceRule::NominalHeadDisjointness => "nominal-head disjointness",
+            PropositionEvidenceRule::InScopeInterfaceBound => "in-scope interface-bound evidence",
+            PropositionEvidenceRule::ConcreteImplEvidence => "concrete impl evidence",
+            PropositionEvidenceRule::NamedPredicateAssumption => "named-predicate assumption",
+            PropositionEvidenceRule::ImportedSummaryFact => "imported proposition summary fact",
+        },
+        PropositionOutcome::Refuted(refutation) => match refutation.reason {
+            PropositionRefutationReason::DefinitionalEquality => {
+                "normalize-and-compare disequality refutation"
+            }
+            PropositionRefutationReason::ClosedHeadMismatch => "closed-head mismatch",
+            PropositionRefutationReason::InterfaceEvidenceNotFound => "interface evidence lookup",
+            PropositionRefutationReason::NamedPredicateRefuted => "named-predicate refutation",
+            PropositionRefutationReason::ImportedSummaryRefutation => "imported summary refutation",
+        },
+        PropositionOutcome::Deferred(reason) => match reason.kind {
+            PropositionDeferredKind::BlockedByNeutrality { .. } => {
+                "normalize-and-compare deferred on neutral head"
+            }
+            PropositionDeferredKind::RigidAssociatedProjection => {
+                "normalize-and-compare deferred on rigid associated projection"
+            }
+            PropositionDeferredKind::RequiresTypeFunctionInversion => {
+                "normalize-and-compare without type-function inversion"
+            }
+            PropositionDeferredKind::RequiresAssociatedFamilyInversion => {
+                "normalize-and-compare without associated-family inversion"
+            }
+            PropositionDeferredKind::UnsupportedNamedPredicate => {
+                "defer unsupported named predicate solving"
+            }
+            PropositionDeferredKind::MissingInterfaceEvidence => "interface evidence lookup",
+            PropositionDeferredKind::UnsupportedProofSearch => "unsupported proof search boundary",
+        },
+    }
+}
+
+fn proposition_diagnostic_kind_from_outcome(
+    outcome: &PropositionOutcome,
+) -> PropositionDiagnosticKind {
+    match outcome {
+        PropositionOutcome::Satisfied(_) => {
+            unreachable!("satisfied proposition outcome cannot produce required-discharge error")
+        }
+        PropositionOutcome::Refuted(refutation) => match refutation.reason {
+            PropositionRefutationReason::DefinitionalEquality => {
+                PropositionDiagnosticKind::DisequalityRefutedByEquality
+            }
+            PropositionRefutationReason::InterfaceEvidenceNotFound => {
+                PropositionDiagnosticKind::InterfaceBoundNotFound
+            }
+            PropositionRefutationReason::ClosedHeadMismatch
+            | PropositionRefutationReason::NamedPredicateRefuted
+            | PropositionRefutationReason::ImportedSummaryRefutation => {
+                PropositionDiagnosticKind::DisequalityOpenOrNeutral
+            }
+        },
+        PropositionOutcome::Deferred(reason) => match reason.kind {
+            PropositionDeferredKind::BlockedByNeutrality { .. } => {
+                if matches!(reason.proposition, TypeProposition::Disequality(_)) {
+                    PropositionDiagnosticKind::DisequalityOpenOrNeutral
+                } else {
+                    PropositionDiagnosticKind::EqualityBlockedByNeutralHead
+                }
+            }
+            PropositionDeferredKind::RigidAssociatedProjection => {
+                if matches!(reason.proposition, TypeProposition::Disequality(_)) {
+                    PropositionDiagnosticKind::DisequalityOpenOrNeutral
+                } else {
+                    PropositionDiagnosticKind::EqualityBlockedByRigidProjection
+                }
+            }
+            PropositionDeferredKind::RequiresTypeFunctionInversion
+            | PropositionDeferredKind::RequiresAssociatedFamilyInversion => {
+                PropositionDiagnosticKind::NoInversionBoundary
+            }
+            PropositionDeferredKind::UnsupportedNamedPredicate => {
+                PropositionDiagnosticKind::UnsupportedNamedPredicateSolving
+            }
+            PropositionDeferredKind::MissingInterfaceEvidence => {
+                PropositionDiagnosticKind::InterfaceBoundNotFound
+            }
+            PropositionDeferredKind::UnsupportedProofSearch => {
+                PropositionDiagnosticKind::DisequalityOpenOrNeutral
+            }
+        },
+    }
 }
 
 fn private_proposition_dependency_error(
@@ -1320,12 +1453,15 @@ fn private_proposition_dependency_error(
     dependency: &str,
     span: Span,
 ) -> TypeEnvError {
-    TypeEnvError::InvalidDefinition(
-        format!(
-            "private proposition-summary dependency: public {public_item} depends on private {dependency_kind} '{dependency}'"
-        ),
+    TypeEnvError::PropositionDiagnostic {
+        kind: PropositionDiagnosticKind::PrivatePropositionDependencyLeak,
+        proposition: format!("public {public_item} proposition summary"),
+        expected: "a public proposition summary containing only public dependencies".into(),
+        found: format!("private {dependency_kind} '{dependency}'"),
+        solver_rule: "fail-closed proposition summary export validation".into(),
+        help: "make the dependency public, remove it from the public proposition, or keep the proposition private".into(),
         span,
-    )
+    }
 }
 
 fn proposition_comparison_terms(
@@ -2815,11 +2951,10 @@ fn validate_summary_visibility_and_duplicates(
 
     for (index, predicate) in summary.exported_proposition_predicates.iter().enumerate() {
         if predicate.visibility != ash_core::ast::Visibility::Public {
-            return Err(TypeEnvError::InvalidDefinition(
-                format!(
-                    "private proposition predicate '{}' is not valid public proposition summary metadata",
-                    predicate.exported_name
-                ),
+            return Err(private_proposition_dependency_error(
+                "public proposition metadata",
+                "proposition predicate",
+                predicate.exported_name.as_ref(),
                 anchor_span(&predicate.source_anchor),
             ));
         }
@@ -2889,13 +3024,16 @@ fn summary_version_contract_error(error: ModuleSemanticSummaryValidationError) -
             }
         }
         ModuleSemanticSummaryValidationError::PropositionFactsRequireV5 { version } => {
-            TypeEnvError::MalformedImportedComputationSummary {
-                message: format!(
-                    "module semantic summary version {} cannot carry public proposition facts; expected {}",
-                    version.0,
+            TypeEnvError::PropositionDiagnostic {
+                kind: PropositionDiagnosticKind::MalformedPropositionSummary,
+                proposition: "public proposition summary payload".into(),
+                expected: format!(
+                    "summary version {} for public proposition facts",
                     SummaryVersion::SPEC064_PROPOSITIONS_V5.0
                 ),
-                version,
+                found: format!("summary version {}", version.0),
+                solver_rule: "fail-closed semantic-summary version validation".into(),
+                help: "emit proposition facts only from V5/SPEC-064 summaries or drop the proposition payload".into(),
                 span: Span::default(),
             }
         }
@@ -5017,11 +5155,10 @@ impl TypeEnv {
                 });
             };
             if info.summary.visibility != ash_core::ast::Visibility::Public {
-                return Err(TypeEnvError::InvalidDefinition(
-                    format!(
-                        "private proposition predicate '{}' leaked through imported proposition summary fact",
-                        info.summary.exported_name
-                    ),
+                return Err(private_proposition_dependency_error(
+                    "imported proposition summary fact",
+                    "proposition predicate",
+                    info.summary.exported_name.as_ref(),
                     anchor_span(&fact.source_anchor),
                 ));
             }

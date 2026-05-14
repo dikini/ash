@@ -1,6 +1,6 @@
 # TASK-881: Proposition diagnostics
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -67,9 +67,19 @@ Dispatch an independent review/verification subagent with this task file, SPEC-0
 
 ## Completion Checklist
 
-- [ ] Focused diagnostic tests pass.
-- [ ] Every SPEC-064 §11 diagnostic family has coverage.
-- [ ] Messages avoid claiming unsupported proof search succeeded.
+- [x] Focused diagnostic tests pass.
+- [x] Every SPEC-064 §11 diagnostic family has coverage.
+- [x] Messages avoid claiming unsupported proof search succeeded.
+
+## Completion Evidence
+
+- Added stable proposition diagnostic routing for SPEC-064 §11 families E166 and E168 through E177.
+- Added parser-owned E168 coverage through `parse_surface_file(...)` for disabled type-alias proposition tails while preserving generic E001 for malformed workflow equality, workflow-body `where`, and legacy impl `where` parse failures.
+- Added live TypeEnv required-discharge diagnostics for E169 through E174, including neutral equality E170, rigid projection equality E171, open/neutral disequality E172, equality-refuted disequality E173, and missing interface evidence E174.
+- Added fail-closed summary diagnostics E175/E176 for malformed pre-V5 proposition payloads and private predicate leaks.
+- Kept E177 as a stable reserved no-inversion family while avoiding spurious E177 masking for precise live solver causes.
+- Verification: `cargo test -p ash-parser --test task_881_proposition_parse_diagnostics`; `cargo test -p ash-typeck --test task_881_proposition_diagnostics`; `cargo test -p ash-typeck --test task_878_named_predicate_registration`; `cargo test -p ash-typeck --test task_879_proposition_summary_import`; `cargo fmt --check`; `git diff --check`; `cargo check --workspace`; `cargo clippy -p ash-parser -p ash-typeck --all-targets --all-features -- -D warnings`.
+- Independent review verdict: PASS after remediation.
 
 ## Dispatch
 

@@ -10,7 +10,7 @@
 
 ---
 
-**Status:** 🟡 Ready (TASK-871 through TASK-880 complete; TASK-881 through TASK-884 ready/planned)
+**Status:** 🟡 Ready (TASK-871 through TASK-881 complete; TASK-882 through TASK-884 ready/planned)
 **Spec:** [SPEC-064](../spec/SPEC-064-CONSTRAINT-PROPOSITION-LAYER.md)
 **Design:** [DESIGN-034 §16.8](../design/DESIGN-034-TOTAL-TYPE-COMPUTATION.md#168-spec-h-constraintproposition-layer)
 **Depends on:** [SPEC-057](../spec/SPEC-057-UNIFIED-TYPE-MODULE-PIPELINE-AND-SEMANTIC-SUMMARIES.md), [SPEC-058](../spec/SPEC-058-CANONICAL-TYPE-EXPRESSION-IR-PROJECTION-IDS-KIND-ARITY-SUBSTRATE.md), [SPEC-059](../spec/SPEC-059-SEALED-TYPE-LEVEL-DOMAINS.md), [SPEC-060](../spec/SPEC-060-NORMALIZER-DEFINITIONAL-EQUALITY-CORE.md), [SPEC-061](../spec/SPEC-061-DIRECT-STRUCTURAL-TYPE-FUNCTIONS.md), [SPEC-062](../spec/SPEC-062-MODULE-SUMMARY-EXPORT-IMPORT-FOR-TYPE-COMPUTATION.md), [SPEC-063](../spec/SPEC-063-ASSOCIATED-TYPE-FAMILY-COMPUTATION.md)
@@ -29,7 +29,7 @@
 | [TASK-878](tasks/TASK-878-named-predicate-registration-deferred-solving.md) | Register named predicates and emit deferred unsupported-solving outcomes | Typeck/Diagnostics | 5 | ✅ Complete |
 | [TASK-879](tasks/TASK-879-public-proposition-summary-transport.md) | Export/import public proposition requirements/evidence through V5 semantic summaries | Core/Engine/Typeck | 8 | ✅ Complete |
 | [TASK-880](tasks/TASK-880-checking-point-integration.md) | Integrate proposition discharge at audited checking points without meta/inversion leakage | Typeck/Integration | 7 | ✅ Complete |
-| [TASK-881](tasks/TASK-881-proposition-diagnostics.md) | Add structured diagnostics for unsupported, neutral-blocked, no-inversion, and summary-leakage cases | Diagnostics | 6 | 🟡 Ready |
+| [TASK-881](tasks/TASK-881-proposition-diagnostics.md) | Add structured diagnostics for unsupported, neutral-blocked, no-inversion, and summary-leakage cases | Diagnostics | 6 | ✅ Complete |
 | [TASK-882](tasks/TASK-882-spec-h-acceptance-non-interference-matrix.md) | Add row-by-row SPEC-H acceptance/non-interference matrix and focused evidence | Tests/Diagnostics | 6 | 🟡 Ready |
 | [TASK-883](tasks/TASK-883-spec-h-closeout-docs-and-verification.md) | Reconcile docs/status/changelog and record closeout verification | Docs/Planning | 4 | 🟡 Ready |
 | [TASK-884](tasks/TASK-884-phase116-review-remediation.md) | Remediate independent post-closeout review findings | Review/Hardening | 6 | 🟡 Ready |

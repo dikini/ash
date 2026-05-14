@@ -97,12 +97,37 @@ pub fn parse_surface_file_with_path(
         }
         Err(e) => {
             let span = input::current_span(&input);
+            if let Some((surface, help)) = unsupported_proposition_surface_at_span(source, span) {
+                return Err(vec![error::ParseError::unsupported_proposition_surface(
+                    span, surface, help,
+                )]);
+            }
             Err(vec![error::ParseError::new(
                 span,
                 format!("parse error: {e}"),
             )])
         }
     }
+}
+
+fn unsupported_proposition_surface_at_span(
+    source: &str,
+    span: token::Span,
+) -> Option<(&'static str, &'static str)> {
+    let line_index = span.line.saturating_sub(1);
+    let line = source.lines().nth(line_index)?;
+    let proposition_line = line.split("//").next().unwrap_or(line).trim_start();
+    if proposition_line.starts_with("type ")
+        && !proposition_line.starts_with("type fn ")
+        && proposition_line.contains(" where ")
+    {
+        return Some((
+            "type alias",
+            "move the proposition tail to an enabled type fn, fn, or builtin fn declaration",
+        ));
+    }
+
+    None
 }
 
 fn attach_type_definition_source(definitions: &mut [surface::Definition], source: &str) {

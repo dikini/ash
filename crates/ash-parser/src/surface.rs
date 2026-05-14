@@ -86,6 +86,8 @@ pub enum Definition {
     ResourceType(ResourceTypeDef),
     /// Ordinary type declaration
     Type(TypeDef),
+    /// Explicit named data-kind promotion declaration
+    DataKind(DataKindDef),
     /// Module-level type function declaration
     TypeFn(TypeFnDef),
     /// Explicit named type-level proposition predicate declaration
@@ -106,6 +108,21 @@ pub enum Definition {
     BuiltinFn(BuiltinFnDef),
     /// Sealed type-level domain declaration
     SealedDomain(SealedDomainDef),
+}
+
+/// Explicit named data-kind promotion declaration parsed as surface syntax.
+///
+/// Syntax: `[pub] data kind <KindName> from type <SourceAdt>;`
+#[derive(Debug, Clone, PartialEq)]
+pub struct DataKindDef {
+    /// Visibility modifier retained for downstream validation.
+    pub visibility: Visibility,
+    /// Source-visible promoted kind name.
+    pub name: Name,
+    /// Source ADT name whose constructors are promoted by this declaration.
+    pub source_adt: Name,
+    /// Source span covering the complete declaration.
+    pub span: Span,
 }
 
 /// An ordinary type declaration parsed as a file/module surface definition.

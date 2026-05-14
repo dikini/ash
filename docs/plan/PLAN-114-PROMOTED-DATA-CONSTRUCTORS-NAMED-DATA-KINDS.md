@@ -21,7 +21,7 @@
 | Task | Description | Type | Est. Hours | Status |
 |------|-------------|------|------------|--------|
 | [TASK-892](tasks/TASK-892-promoted-constructor-audit-gate.md) | Audit live ADT, sealed-domain, type-function, normalizer, summary, and pattern seams before implementation | Docs/Substrate | 5 | ✅ Complete |
-| [TASK-893](tasks/TASK-893-promoted-constructor-parser-surface.md) | Add chosen opt-in promoted-constructor/named-kind source surface and explicit unsupported-form diagnostics | Parser | 6 | 📝 Planned |
+| [TASK-893](tasks/TASK-893-promoted-constructor-parser-surface.md) | Add chosen opt-in promoted-constructor/named-kind source surface and explicit unsupported-form diagnostics | Parser | 6 | ✅ Complete |
 | [TASK-894](tasks/TASK-894-core-promoted-constructor-identities-and-summaries.md) | Add core promoted data-kind/constructor identities, type-level app carriers, and summary version contract | Core/Substrate | 8 | 📝 Planned |
 | [TASK-895](tasks/TASK-895-typeenv-promoted-constructor-registration-and-kinding.md) | Register promoted identities in TypeEnv and validate kind/domain/source-ADT constraints | Typeck | 8 | 📝 Planned |
 | [TASK-896](tasks/TASK-896-promoted-constructor-normalizer-proposition-and-non-interference.md) | Integrate promoted apps with type functions/propositions and prove runtime ADT/sealed-domain non-interference | Integration/Tests | 8 | 📝 Planned |

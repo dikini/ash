@@ -81,6 +81,8 @@ fn definition_name(current_token: Option<&str>, def: &Definition) -> Option<Stri
         Definition::ResourceType(r) => Some(r.name.as_ref().to_string()),
         Definition::Type(t) if Some(t.name.as_ref()) == current_token => None,
         Definition::Type(t) => Some(t.name.as_ref().to_string()),
+        Definition::DataKind(d) if Some(d.name.as_ref()) == current_token => None,
+        Definition::DataKind(d) => Some(d.name.as_ref().to_string()),
         Definition::TypeFn(t) if Some(t.name.as_ref()) == current_token => None,
         Definition::TypeFn(t) => Some(t.name.as_ref().to_string()),
         Definition::PropositionPredicate(p) if Some(p.name.as_ref()) == current_token => None,
@@ -109,7 +111,7 @@ const fn definition_kind(def: &Definition) -> CompletionItemKind {
             CompletionItemKind::INTERFACE
         }
         Definition::CapabilityImplementation(_) | Definition::Impl(_) => CompletionItemKind::CLASS,
-        Definition::SealedDomain(_) => CompletionItemKind::ENUM,
+        Definition::SealedDomain(_) | Definition::DataKind(_) => CompletionItemKind::ENUM,
     }
 }
 

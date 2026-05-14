@@ -19,13 +19,14 @@ use crate::surface::{
     BlockStmt, BuiltinFnDef, CapabilityDef, CapabilityImplementationDef,
     CapabilityImplementationDependency, CapabilityImplementationDependencyKind,
     CapabilityImplementationOperation, CapabilityInterfaceDef, CapabilityOperationMode,
-    CapabilityOperationSig, CapabilityRef, Constraint, Contract, Definition, DomainConstructor,
-    DomainField, DomainSlot, EffectType, Expr, FnDef, ImplDef, ImplMethodDef, InterfaceDef,
-    InterfaceMethodSig, InterfaceTypeParam, MatchArm, Name, Param, Pattern, Predicate,
-    PropositionClause, PropositionClauseKind, PropositionPredicateDecl, PropositionPredicateParam,
-    PropositionTail, ProxyDef, ResourceField, ResourceTypeDef, RoleDef, SealedDomainDef, Type,
-    TypeBody, TypeDef, TypeField, TypeFnDecreases, TypeFnDef, TypeFnEquation, TypeFnParam,
-    TypePattern, VariantDef, VariantPayload, Visibility, WhereBound, Workflow, YieldArm,
+    CapabilityOperationSig, CapabilityRef, Constraint, Contract, DataKindDef, Definition,
+    DomainConstructor, DomainField, DomainSlot, EffectType, Expr, FnDef, ImplDef, ImplMethodDef,
+    InterfaceDef, InterfaceMethodSig, InterfaceTypeParam, MatchArm, Name, Param, Pattern,
+    Predicate, PropositionClause, PropositionClauseKind, PropositionPredicateDecl,
+    PropositionPredicateParam, PropositionTail, ProxyDef, ResourceField, ResourceTypeDef, RoleDef,
+    SealedDomainDef, Type, TypeBody, TypeDef, TypeField, TypeFnDecreases, TypeFnDef,
+    TypeFnEquation, TypeFnParam, TypePattern, VariantDef, VariantPayload, Visibility, WhereBound,
+    Workflow, YieldArm,
 };
 use crate::token::Span;
 
@@ -169,6 +170,11 @@ fn parse_definitions(input: &mut ParseInput) -> ModalResult<Vec<Definition>> {
             continue;
         }
 
+        if starts_with_data_kind(input) {
+            definitions.push(parse_data_kind_definition(input)?);
+            continue;
+        }
+
         if starts_with_type_definition(input) {
             definitions.push(parse_type_definition(input)?);
             continue;
@@ -218,6 +224,12 @@ fn parse_definitions(input: &mut ParseInput) -> ModalResult<Vec<Definition>> {
         }
 
         if starts_with_unsupported_inline_definition(input) {
+            return Err(winnow::error::ErrMode::Backtrack(
+                winnow::error::ContextError::new(),
+            ));
+        }
+
+        if starts_with_unsupported_promotion_surface(input) {
             return Err(winnow::error::ErrMode::Backtrack(
                 winnow::error::ContextError::new(),
             ));
@@ -519,6 +531,40 @@ fn parse_proposition_predicate_param(
         domain,
         span: crate::input::span_from(&start, &input.state.pos),
     })
+}
+
+fn parse_data_kind_definition(input: &mut ParseInput) -> ModalResult<Definition> {
+    let start_pos = input.state.pos;
+    let visibility = parse_visibility(input)?;
+    skip_whitespace_and_comments(input);
+
+    let _ = keyword("data").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = keyword("kind").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    let (name, _) = identifier_with_span(input)?;
+    for ch in name.chars() {
+        input.state.advance(ch);
+    }
+    skip_whitespace_and_comments(input);
+    let _ = keyword("from").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = keyword("type").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let (source_adt, _) = identifier_with_span(input)?;
+    for ch in source_adt.chars() {
+        input.state.advance(ch);
+    }
+    skip_whitespace_and_comments(input);
+    let _ = literal_str(";").parse_next(input)?;
+
+    Ok(Definition::DataKind(DataKindDef {
+        visibility,
+        name: name.into(),
+        source_adt: source_adt.into(),
+        span: crate::input::span_from(&start_pos, &input.state.pos),
+    }))
 }
 
 fn parse_type_fn_param(input: &mut ParseInput) -> ModalResult<TypeFnParam> {
@@ -1997,6 +2043,26 @@ fn starts_with_type_definition(input: &ParseInput) -> bool {
     }
 }
 
+fn starts_with_data_kind(input: &ParseInput) -> bool {
+    if starts_with_keyword(input, "data") {
+        let rest = skip_ws_in(&input.input["data".len()..]);
+        return starts_with_keyword_from(rest, "kind");
+    }
+
+    let mut lookahead = crate::input::new_input(&input.input);
+    match parse_visibility(&mut lookahead) {
+        Ok(Visibility::Inherited) | Err(_) => false,
+        Ok(_) => {
+            skip_whitespace_and_comments(&mut lookahead);
+            if !starts_with_keyword(&lookahead, "data") {
+                return false;
+            }
+            let rest = skip_ws_in(&lookahead.input["data".len()..]);
+            starts_with_keyword_from(rest, "kind")
+        }
+    }
+}
+
 fn starts_with_visible_resource_type(input: &ParseInput) -> bool {
     let mut lookahead = crate::input::new_input(&input.input);
     match parse_visibility(&mut lookahead) {
@@ -2130,6 +2196,12 @@ fn starts_with_unsupported_inline_definition(input: &ParseInput) -> bool {
     .any(|keyword| starts_with_keyword(input, keyword))
 }
 
+fn starts_with_unsupported_promotion_surface(input: &ParseInput) -> bool {
+    let mut lookahead = input.clone();
+    skip_whitespace_and_comments(&mut lookahead);
+    lookahead.input.starts_with("@promote")
+}
+
 fn starts_with_unsupported_proposition_surface(input: &ParseInput) -> bool {
     let mut lookahead = input.clone();
     skip_whitespace_and_comments(&mut lookahead);
@@ -2236,6 +2308,7 @@ fn starts_with_recoverable_definition(input: &ParseInput) -> bool {
         || starts_with_keyword(input, "role")
         || starts_with_visible_resource_type(input)
         || starts_with_type_fn_definition(input)
+        || starts_with_data_kind(input)
         || starts_with_type_definition(input)
         || starts_with_sealed_domain(input)
         || starts_with_visible_capability_interface(input)
@@ -3302,6 +3375,11 @@ pub fn module_file(input: &mut ParseInput) -> ModalResult<crate::surface::Module
             continue;
         }
 
+        if starts_with_data_kind(input) {
+            definitions.push(parse_data_kind_definition(input)?);
+            continue;
+        }
+
         if starts_with_type_definition(input) {
             definitions.push(parse_type_definition(input)?);
             continue;
@@ -3353,6 +3431,12 @@ pub fn module_file(input: &mut ParseInput) -> ModalResult<crate::surface::Module
         }
 
         if starts_with_unsupported_proposition_surface(input) {
+            return Err(winnow::error::ErrMode::Backtrack(
+                winnow::error::ContextError::new(),
+            ));
+        }
+
+        if starts_with_unsupported_promotion_surface(input) {
             return Err(winnow::error::ErrMode::Backtrack(
                 winnow::error::ContextError::new(),
             ));

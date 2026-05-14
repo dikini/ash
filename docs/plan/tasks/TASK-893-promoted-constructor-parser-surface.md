@@ -1,6 +1,6 @@
 # TASK-893: Add chosen opt-in promoted-constructor/named-kind source surface and explicit unsupported-form diagnostics
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -57,10 +57,10 @@ commands:
   - git diff --check
   - cargo check --workspace
 checklist:
-  - [ ] Focused tests are non-zero and pass
-  - [ ] cargo fmt --check passes
-  - [ ] git diff --check passes
-  - [ ] Status surfaces and CHANGELOG are reconciled if this task completes
+  - [x] Focused tests are non-zero and pass
+  - [x] cargo fmt --check passes
+  - [x] git diff --check passes
+  - [x] Status surfaces and CHANGELOG are reconciled if this task completes
 ```
 
 ## Dependencies for Next Task
@@ -70,3 +70,7 @@ This task produces its verified slice for later tasks in [PLAN-114](../PLAN-114-
 ## Notes
 
 Promoted constructors are opt-in and distinct from sealed-domain markers and runtime constructors.
+
+## Completion Notes
+
+Implemented explicit parser-only `data kind <KindName> from type <SourceAdt>;` and `pub data kind ...` surface support via `Definition::DataKind`. Added focused parser coverage for private/public declarations, multi-definition module parsing, shorthand rejection, and `@promote` rejection. Downstream TypeEnv/core/normalizer semantics remain owned by TASK-894 through TASK-896.

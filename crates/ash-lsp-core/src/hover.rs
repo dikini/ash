@@ -312,6 +312,10 @@ fn definition_hover(definition: &Definition) -> Hover {
             format!("type {}", def.name),
             Some("Ordinary type declaration".to_string()),
         ),
+        Definition::DataKind(def) => markdown(
+            format!("data kind {} from type {}", def.name, def.source_adt),
+            Some("Promoted data-kind declaration".to_string()),
+        ),
         Definition::TypeFn(def) => markdown(
             format!("type fn {}", def.name),
             Some(format!("Equations: {}", def.equations.len())),
@@ -393,6 +397,7 @@ fn top_level_hover(token: &str, module: &ModuleFile) -> Option<Hover> {
                             Definition::CapabilityImplementation(def) => def.name.as_ref() == token,
                             Definition::ResourceType(def) => def.name.as_ref() == token,
                             Definition::Type(def) => def.name.as_ref() == token,
+                            Definition::DataKind(def) => def.name.as_ref() == token,
                             Definition::TypeFn(def) => def.name.as_ref() == token,
                             Definition::PropositionPredicate(def) => def.name.as_ref() == token,
                             Definition::Policy(def) => def.name.as_ref() == token,
@@ -434,6 +439,7 @@ fn top_level_hover(token: &str, module: &ModuleFile) -> Option<Hover> {
                     Definition::CapabilityImplementation(def) => def.name.as_ref() == token,
                     Definition::ResourceType(def) => def.name.as_ref() == token,
                     Definition::Type(def) => def.name.as_ref() == token,
+                    Definition::DataKind(def) => def.name.as_ref() == token,
                     Definition::TypeFn(def) => def.name.as_ref() == token,
                     Definition::PropositionPredicate(def) => def.name.as_ref() == token,
                     Definition::Policy(def) => def.name.as_ref() == token,

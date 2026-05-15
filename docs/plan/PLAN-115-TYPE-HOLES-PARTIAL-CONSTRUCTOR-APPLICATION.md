@@ -20,7 +20,7 @@
 
 | Task | Description | Type | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-898](tasks/TASK-898-type-hole-audit-gate.md) | Audit parser/core/typeck/do-target/type-function wildcard seams and freeze enabled hole positions | Docs/Substrate | 5 | 📝 Planned |
+| [TASK-898](tasks/TASK-898-type-hole-audit-gate.md) | Audit parser/core/typeck/do-target/type-function wildcard seams and freeze enabled hole positions | Docs/Substrate | 5 | ✅ Complete |
 | [TASK-899](tasks/TASK-899-core-type-hole-and-partial-application-carriers.md) | Add core hole identity, partial-argument, and partial-constructor carriers without nominal saturation | Core/Substrate | 7 | 📝 Planned |
 | [TASK-900](tasks/TASK-900-parser-type-hole-surface.md) | Parse `_` holes at audited type-expression positions and preserve spans distinctly from type-function pattern wildcards | Parser | 6 | 📝 Planned |
 | [TASK-901](tasks/TASK-901-typeenv-partial-constructor-kinding.md) | Elaborate holes and partial applications with kind/arity/ambiguity validation | Typeck | 8 | 📝 Planned |
@@ -67,7 +67,7 @@ cargo doc --workspace --no-deps 2>&1 | tee /tmp/ash-plan-115-doc.log
 
 ## Completion Checklist
 
-- [ ] Audit gate artifact exists and downstream guards are patched.
+- [x] Audit gate artifact exists and downstream guards are patched.
 - [ ] Parser/core/typeck/engine ownership matches [SPEC-066](../spec/SPEC-066-TYPE-HOLES-PARTIAL-CONSTRUCTOR-APPLICATION.md).
 - [ ] Acceptance/non-interference matrix maps every SPEC row to focused evidence.
 - [ ] Broad workspace gates pass after the final code/doc change.

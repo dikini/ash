@@ -27,7 +27,9 @@ Elaborate holes and partial applications with kind/arity/ambiguity validation
 
 ## File Targets
 
-- Exact files must be confirmed by the audit gate before implementation.
+- Audited files: `crates/ash-typeck/src/types.rs`, `crates/ash-typeck/src/lib.rs`, `crates/ash-typeck/src/type_env.rs`, `crates/ash-typeck/src/normalizer.rs`, `crates/ash-core/src/type_ir.rs`
+- Focused tests: `crates/ash-typeck/tests/task_901_partial_constructor_kinding.rs`
+- Audit evidence: `docs/plan/audits/TASK-898-type-hole-audit-gate.md` rows A4, A5, and A7
 
 ## TDD / Execution Steps
 
@@ -51,7 +53,10 @@ toolsets: [terminal, file]
 ```yaml
 strictness: clean
 commands:
-  - false # TASK-901 must replace this guard with exact focused commands after its audit gate
+  - cargo test -p ash-typeck --test task_901_partial_constructor_kinding
+  - cargo fmt --check
+  - git diff --check
+  - cargo check --workspace
 checklist:
   - [ ] Focused tests are non-zero and pass
   - [ ] cargo fmt --check passes

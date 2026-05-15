@@ -26,7 +26,9 @@ Add core hole identity, partial-argument, and partial-constructor carriers witho
 
 ## File Targets
 
-- Exact files must be confirmed by the audit gate before implementation.
+- Audited files: `crates/ash-core/src/type_ir.rs`, `crates/ash-core/src/kind.rs`, `crates/ash-core/src/lib.rs`
+- Focused tests: `crates/ash-core/tests/task_899_type_hole_partial_application_carriers.rs`
+- Audit evidence: `docs/plan/audits/TASK-898-type-hole-audit-gate.md` rows A4 and A5
 
 ## TDD / Execution Steps
 
@@ -50,7 +52,10 @@ toolsets: [terminal, file]
 ```yaml
 strictness: clean
 commands:
-  - false # TASK-899 must replace this guard with exact focused commands after its audit gate
+  - cargo test -p ash-core --test task_899_type_hole_partial_application_carriers
+  - cargo fmt --check
+  - git diff --check
+  - cargo check --workspace
 checklist:
   - [ ] Focused tests are non-zero and pass
   - [ ] cargo fmt --check passes

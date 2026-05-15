@@ -1,6 +1,6 @@
 # TASK-898: Audit parser/core/typeck/do-target/type-function wildcard seams and freeze enabled hole positions
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -55,11 +55,11 @@ commands:
   - test -f docs/plan/audits/TASK-898-type-hole-audit-gate.md
   - git diff --check
 checklist:
-  - [ ] Audit artifact exists and names exact live callsites
-  - [ ] Downstream fail-closed guards are replaced with focused non-zero commands
-  - [ ] cargo fmt --check passes
-  - [ ] git diff --check passes
-  - [ ] Status surfaces and CHANGELOG are reconciled if this task completes
+  - [x] Audit artifact exists and names exact live callsites
+  - [x] Downstream fail-closed guards are replaced with focused non-zero commands
+  - [x] cargo fmt --check passes
+  - [x] git diff --check passes
+  - [x] Status surfaces and CHANGELOG are reconciled if this task completes
 ```
 
 ## Dependencies for Next Task

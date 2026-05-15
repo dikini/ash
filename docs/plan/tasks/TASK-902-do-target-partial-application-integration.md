@@ -27,7 +27,9 @@ Allow do-target shape elaboration for unary partial targets such as `Result<_, E
 
 ## File Targets
 
-- Exact files must be confirmed by the audit gate before implementation.
+- Audited files: `crates/ash-typeck/src/do_target.rs`, `crates/ash-typeck/src/lib.rs`, `crates/ash-parser/src/parse_expr.rs`, `crates/ash-parser/src/surface.rs`, `crates/ash-engine/src/module_loader.rs`
+- Focused tests: `crates/ash-typeck/tests/task_902_do_target_partial_application.rs`
+- Audit evidence: `docs/plan/audits/TASK-898-type-hole-audit-gate.md` rows A1, A6, A7, and A8
 
 ## TDD / Execution Steps
 
@@ -51,7 +53,10 @@ toolsets: [terminal, file]
 ```yaml
 strictness: clean
 commands:
-  - false # TASK-902 must replace this guard with exact focused commands after its audit gate
+  - cargo test -p ash-typeck --test task_902_do_target_partial_application
+  - cargo fmt --check
+  - git diff --check
+  - cargo check --workspace
 checklist:
   - [ ] Focused tests are non-zero and pass
   - [ ] cargo fmt --check passes

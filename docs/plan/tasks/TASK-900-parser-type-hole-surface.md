@@ -27,7 +27,9 @@ Parse `_` holes at audited type-expression positions and preserve spans distinct
 
 ## File Targets
 
-- Exact files must be confirmed by the audit gate before implementation.
+- Audited files: `crates/ash-parser/src/surface.rs`, `crates/ash-parser/src/parse_expr.rs`, `crates/ash-parser/src/parse_workflow.rs`, `crates/ash-parser/src/parse_type_def.rs`
+- Focused tests: `crates/ash-parser/tests/task_900_type_hole_surface.rs`
+- Audit evidence: `docs/plan/audits/TASK-898-type-hole-audit-gate.md` rows A1, A2, and A3
 
 ## TDD / Execution Steps
 
@@ -51,7 +53,10 @@ toolsets: [terminal, file]
 ```yaml
 strictness: clean
 commands:
-  - false # TASK-900 must replace this guard with exact focused commands after its audit gate
+  - cargo test -p ash-parser --test task_900_type_hole_surface
+  - cargo fmt --check
+  - git diff --check
+  - cargo check --workspace
 checklist:
   - [ ] Focused tests are non-zero and pass
   - [ ] cargo fmt --check passes

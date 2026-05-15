@@ -1196,9 +1196,8 @@ fn callable_signature_type_names(callable: &InlineCallable) -> Vec<String> {
 
 fn collect_surface_type_names(ty: &Type, names: &mut Vec<String>) {
     match ty {
-        Type::Hole { .. } => {}
         Type::Name(name) => names.push(name.to_string()),
-        Type::Capability(_) => {}
+        Type::Hole { .. } | Type::Capability(_) => {}
         Type::List(inner) | Type::Associated { base: inner, .. } => {
             collect_surface_type_names(inner, names);
         }

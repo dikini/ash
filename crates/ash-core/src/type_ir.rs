@@ -145,7 +145,7 @@ impl TypeConstructorHeadId {
 #[non_exhaustive]
 pub enum PartialTypeArg {
     /// A concrete canonical type expression supplied at this argument position.
-    Applied(CanonicalTypeExpr),
+    Applied(Box<CanonicalTypeExpr>),
     /// An explicit source hole occupying this argument position.
     Hole(TypeHoleId),
 }

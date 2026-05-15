@@ -65,7 +65,7 @@ fn partial_constructor_application_preserves_hole_arguments_without_fake_nominal
         result_head.clone(),
         vec![
             PartialTypeArg::Hole(value_hole),
-            PartialTypeArg::Applied(error_arg.clone()),
+            PartialTypeArg::Applied(Box::new(error_arg.clone())),
         ],
         Kind::n_ary(1),
         vec![hole_metadata.clone()],
@@ -79,7 +79,9 @@ fn partial_constructor_application_preserves_hole_arguments_without_fake_nominal
         "Result<_, E>"
     );
     assert!(matches!(partial.args[0], PartialTypeArg::Hole(id) if id == value_hole));
-    assert!(matches!(&partial.args[1], PartialTypeArg::Applied(expr) if expr == &error_arg));
+    assert!(
+        matches!(&partial.args[1], PartialTypeArg::Applied(expr) if expr.as_ref() == &error_arg)
+    );
     assert_eq!(partial.metadata_for_hole(value_hole), Some(&hole_metadata));
     assert_eq!(
         partial
@@ -125,7 +127,7 @@ fn constructor_expr_distinguishes_proper_types_constructor_heads_and_partial_app
         TypeConstructorHeadId::nominal(nominal_type_decl("Result"), "Result"),
         vec![
             PartialTypeArg::Hole(TypeHoleId::new(1)),
-            PartialTypeArg::Applied(CanonicalTypeExpr::Primitive("String".to_string())),
+            PartialTypeArg::Applied(Box::new(CanonicalTypeExpr::Primitive("String".to_string()))),
         ],
         Kind::n_ary(1),
         None,

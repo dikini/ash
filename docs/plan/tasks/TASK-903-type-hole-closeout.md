@@ -1,6 +1,6 @@
 # TASK-903: Reconcile SPEC-066/PLAN-115 docs, diagnostics, acceptance matrix, broad gates, and review remediation
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -59,15 +59,22 @@ commands:
   - git diff --check
   - cargo check --workspace
   - cargo clippy --workspace --all-targets --all-features -- -D warnings
-  - cargo test --workspace
+  - scripts/check-rust-tests.sh --workspace
   - cargo doc --workspace --no-deps
 checklist:
-  - [ ] Acceptance matrix evidence is recorded
-  - [ ] Broad closeout gates pass
-  - [ ] cargo fmt --check passes
-  - [ ] git diff --check passes
-  - [ ] Status surfaces and CHANGELOG are reconciled if this task completes
+  - [x] Acceptance matrix evidence is recorded
+  - [x] Broad closeout gates pass
+  - [x] cargo fmt --check passes
+  - [x] git diff --check passes
+  - [x] Status surfaces and CHANGELOG are reconciled if this task completes
 ```
+
+## Completion Notes
+
+- Reconciled SPEC-066 as Implemented MVP in `docs/spec/SPEC-066-TYPE-HOLES-PARTIAL-CONSTRUCTOR-APPLICATION.md` and `docs/spec/README.md`, preserving explicit deferrals for HKT binders, arbitrary type lambdas, Monad evidence, do-target inference, and output-driven inversion.
+- Added `docs/plan/audits/TASK-903-type-hole-acceptance-matrix.md`, mapping every SPEC-066 §8 row H-1 through H-6 to focused non-zero TASK-899 through TASK-902 evidence.
+- Remediated independent TASK-902 review blockers by updating stale in-module do-target tests and adding direct no-inversion do-target evidence for associated-family hole contexts.
+- Verification evidence: focused TASK-899 through TASK-902 count commands are recorded in the acceptance matrix. Broad closeout gates after the final code/doc change are `cargo fmt --check`, `git diff --check`, `cargo check --workspace`, `cargo clippy --workspace --all-targets --all-features -- -D warnings`, `scripts/check-rust-tests.sh --workspace`, `cargo doc --workspace --no-deps 2>&1 | tee /tmp/ash-phase119-doc.log`, and `! grep -i '^warning:' /tmp/ash-phase119-doc.log`.
 
 ## Dependencies for Next Task
 

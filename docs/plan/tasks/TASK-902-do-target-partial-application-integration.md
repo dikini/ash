@@ -1,6 +1,6 @@
 # TASK-902: Allow do-target shape elaboration for unary partial targets such as `Result<_, E>` while preserving missing-Monad evidence boundaries
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -58,11 +58,18 @@ commands:
   - git diff --check
   - cargo check --workspace
 checklist:
-  - [ ] Focused tests are non-zero and pass
-  - [ ] cargo fmt --check passes
-  - [ ] git diff --check passes
-  - [ ] Status surfaces and CHANGELOG are reconciled if this task completes
+  - [x] Focused tests are non-zero and pass
+  - [x] cargo fmt --check passes
+  - [x] git diff --check passes
+  - [x] Status surfaces and CHANGELOG are reconciled if this task completes
 ```
+
+## Completion Evidence
+
+- RED: `cargo test -p ash-typeck --test task_902_do_target_partial_application` initially failed because `resolve_do_target_for_test` and do-target partial shape elaboration did not exist.
+- GREEN: `cargo test -p ash-typeck --test task_902_do_target_partial_application` passed with 6 focused tests after adding missing-Monad, wrong-shape, multiple-hole, nested/no-inversion, and Act/Proc/Workflow non-regression coverage.
+- Review remediation: `cargo test -p ash-typeck --lib do_target -- --test-threads=1` passed with 9 focused in-module do-target tests after stale explicit-args assertions were reconciled with TASK-902 behavior.
+- Gates: `cargo fmt --check`, `git diff --check`, and closeout workspace gates are recorded under TASK-903.
 
 ## Dependencies for Next Task
 

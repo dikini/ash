@@ -7,8 +7,8 @@
 #![allow(clippy::result_large_err)]
 
 use crate::error::ConstructorError;
-use crate::{Kind, QualifiedName, TypeEnv};
-use ash_parser::surface::DoTarget;
+use crate::{Kind, PartialConstructorElaborationError, QualifiedName, TypeEnv};
+use ash_parser::surface::{DoTarget, Type as SurfaceType};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum DoTowerLevel {
@@ -45,9 +45,17 @@ pub(crate) fn resolve_do_target(
     let target_name = target.name.as_ref();
 
     if !target.args.is_empty() {
+        let surface_target = SurfaceType::Constructor {
+            name: target.name.to_string().into(),
+            args: target.args.clone(),
+        };
+        env.elaborate_do_target_constructor_expr(&surface_target)
+            .map_err(|err| do_target_shape_error(err, target.span))?;
+
         return Err(ConstructorError::UnsupportedExpression {
             kind: format!(
-                "do target {target_name} with explicit type arguments is not supported in the MVP; future Monad<K> target holes such as Result<_, E> are deferred"
+                "missing Monad evidence for do target {}; target shape elaborated successfully, but SPEC-067 Monad<K> dictionary resolution is not implemented",
+                render_surface_type(&surface_target)
             ),
             span: target.span,
         });
@@ -63,8 +71,12 @@ pub(crate) fn resolve_do_target(
             })?;
 
     if qualified.name == "Result" {
+        let surface_target = SurfaceType::Name(target.name.to_string().into());
+        if let Err(err) = env.elaborate_do_target_constructor_expr(&surface_target) {
+            return Err(do_target_shape_error(err, target.span));
+        }
         return Err(ConstructorError::UnsupportedExpression {
-            kind: "do target Result is deferred in the MVP; Result<_, E> hole targets require future Monad<K> dictionary resolution".to_string(),
+            kind: "missing Monad evidence for do target Result; target shape elaborated successfully, but SPEC-067 Monad<K> dictionary resolution is not implemented".to_string(),
             span: target.span,
         });
     }
@@ -130,6 +142,140 @@ pub(crate) fn resolve_do_target(
             ),
             span: target.span,
         }),
+    }
+}
+
+fn do_target_shape_error(
+    err: PartialConstructorElaborationError,
+    fallback_span: ash_parser::token::Span,
+) -> ConstructorError {
+    let (kind, span) = match err {
+        PartialConstructorElaborationError::BareHigherArityConstructor {
+            constructor,
+            arity,
+            hint,
+            span,
+        } => (
+            format!(
+                "wrong target shape for do target {constructor}: bare constructor has arity {arity}; write {hint} with an explicit `_` hole"
+            ),
+            span,
+        ),
+        PartialConstructorElaborationError::MultipleHoles {
+            constructor,
+            count,
+            span,
+        } => (
+            format!(
+                "multiple type holes in do target {constructor}: found {count}; the MVP accepts exactly one value-position hole"
+            ),
+            span,
+        ),
+        PartialConstructorElaborationError::UnsupportedHolePosition { reason, span } => {
+            (format!("unsupported do target shape: {reason}"), span)
+        }
+        PartialConstructorElaborationError::NoInversionBoundary { context, span } => (
+            format!(
+                "unsupported non-inverting do target shape: cannot elaborate type hole by inverting {context}"
+            ),
+            span,
+        ),
+        PartialConstructorElaborationError::MissingHole { constructor, span } => (
+            format!(
+                "wrong target shape for do target {constructor}: expected exactly one explicit `_` hole"
+            ),
+            span,
+        ),
+        PartialConstructorElaborationError::WrongArity {
+            constructor,
+            expected_arity,
+            found_arity,
+            span,
+        } => (
+            format!(
+                "wrong target shape for do target {constructor}: expected {expected_arity} type arguments, found {found_arity}"
+            ),
+            span,
+        ),
+        PartialConstructorElaborationError::UnknownConstructor { constructor, span } => {
+            (format!("unknown do target '{constructor}'"), span)
+        }
+        PartialConstructorElaborationError::ArgumentLoweringFailed {
+            constructor,
+            reason,
+            span,
+        } => (
+            format!("unsupported do target shape for {constructor}: {reason}"),
+            span,
+        ),
+    };
+
+    ConstructorError::UnsupportedExpression {
+        kind,
+        span: if span == ash_parser::token::Span::default() {
+            fallback_span
+        } else {
+            span
+        },
+    }
+}
+
+fn render_surface_type(ty: &SurfaceType) -> String {
+    match ty {
+        SurfaceType::Name(name) => name.to_string(),
+        SurfaceType::Hole { .. } => "_".to_string(),
+        SurfaceType::List(item) => format!("[{}]", render_surface_type(item)),
+        SurfaceType::Tuple(items) => format!(
+            "({})",
+            items
+                .iter()
+                .map(render_surface_type)
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
+        SurfaceType::Record(fields) => format!(
+            "{{{}}}",
+            fields
+                .iter()
+                .map(|(name, ty)| format!("{name}: {}", render_surface_type(ty)))
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
+        SurfaceType::Capability(name) => format!("capability {name}"),
+        SurfaceType::Constructor { name, args } => format!(
+            "{}<{}>",
+            name,
+            args.iter()
+                .map(render_surface_type)
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
+        SurfaceType::Associated { base, name } => {
+            format!("{}::{name}", render_surface_type(base))
+        }
+        SurfaceType::AssociatedFamilyProjection {
+            interface,
+            args,
+            member,
+            ..
+        } => format!(
+            "<{}<{}>>::{}",
+            interface,
+            args.iter()
+                .map(render_surface_type)
+                .collect::<Vec<_>>()
+                .join(", "),
+            member
+        ),
+        SurfaceType::Fn(params, ret) => format!(
+            "Fn({}) -> {}",
+            params
+                .iter()
+                .map(render_surface_type)
+                .collect::<Vec<_>>()
+                .join(", "),
+            render_surface_type(ret)
+        ),
     }
 }
 
@@ -205,13 +351,13 @@ mod tests {
     }
 
     #[test]
-    fn do_target_result_is_deferred_without_dictionary() {
+    fn do_target_bare_result_reports_wrong_shape_with_hole_hint() {
         let message = error_text(resolve("Result").expect_err("Result is not an MVP dictionary"));
 
         assert!(message.contains("Result"), "{message}");
-        assert!(message.contains("deferred"), "{message}");
         assert!(message.contains("Result<_, E>"), "{message}");
-        assert!(message.contains("Monad<K>"), "{message}");
+        assert!(message.contains("wrong target shape"), "{message}");
+        assert!(!message.contains("missing Monad evidence"), "{message}");
     }
 
     #[test]
@@ -226,7 +372,50 @@ mod tests {
     }
 
     #[test]
-    fn do_target_with_explicit_args_is_deferred() {
+    fn do_target_with_partial_explicit_args_reaches_missing_monad_evidence() {
+        let mut env = TypeEnv::new();
+        for type_def in [
+            TypeDef {
+                name: CoreName::from("Result"),
+                params: vec!["T".into(), "E".into()],
+                body: TypeBody::Struct(vec![]),
+                visibility: Visibility::Public,
+                builtin: false,
+            },
+            TypeDef {
+                name: CoreName::from("E"),
+                params: vec![],
+                body: TypeBody::Struct(vec![]),
+                visibility: Visibility::Public,
+                builtin: false,
+            },
+        ] {
+            env.register_type(&type_def)
+                .expect("register do-target fixture type");
+        }
+        let result_target = DoTarget {
+            name: Name::from("Result"),
+            args: vec![
+                Type::Hole {
+                    span: Span::default(),
+                },
+                Type::Name(Name::from("E")),
+            ],
+            span: Span::default(),
+        };
+
+        let message = error_text(
+            resolve_do_target(&env, &result_target)
+                .expect_err("Result<_, E> has shape but no Monad evidence"),
+        );
+
+        assert!(message.contains("Result<_, E>"), "{message}");
+        assert!(message.contains("missing Monad evidence"), "{message}");
+        assert!(!message.contains("wrong target shape"), "{message}");
+    }
+
+    #[test]
+    fn do_target_with_wrong_explicit_arg_count_reports_shape_error() {
         let env = TypeEnv::with_builtin_types();
         let result_target = DoTarget {
             name: Name::from("Result"),
@@ -236,12 +425,12 @@ mod tests {
 
         let message = error_text(
             resolve_do_target(&env, &result_target)
-                .expect_err("explicit target args are not in the MVP"),
+                .expect_err("Result<Int> is the wrong do-target shape"),
         );
 
-        assert!(message.contains("explicit type arguments"), "{message}");
-        assert!(message.contains("Result<_, E>"), "{message}");
-        assert!(message.contains("deferred"), "{message}");
+        assert!(message.contains("wrong target shape"), "{message}");
+        assert!(message.contains("expected 2 type arguments"), "{message}");
+        assert!(!message.contains("missing Monad evidence"), "{message}");
     }
 
     #[test]

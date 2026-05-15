@@ -295,7 +295,7 @@ Update this section as tasks complete:
 | 116 | 14 | 14 | ✅ Complete |
 | 117 | 6 | 6 | ✅ Complete |
 | 118 | 6 | 6 | ✅ Complete |
-| 119 | 6 | 1 | 📝 Planned |
+| 119 | 6 | 6 | ✅ Complete |
 | 120 | 8 | 0 | 📝 Planned |
 | 121 | 6 | 0 | 📝 Planned |
 
@@ -3517,7 +3517,7 @@ Phase 118 implements the opt-in promoted-constructor layer from SPEC-065. It sta
 ## Phase 119: Type Holes and Partial Type-Constructor Application
 
 **Priority:** High (required for `do:Result<_, E>` target shape before HKT/Monad evidence can consume higher-arity constructors)
-**Status:** 📝 Planned
+**Status:** ✅ Complete
 **Spec:** [SPEC-066](../spec/SPEC-066-TYPE-HOLES-PARTIAL-CONSTRUCTOR-APPLICATION.md)
 **Design:** [DESIGN-037](../design/DESIGN-037-TYPE-HOLES-PARTIAL-TYPE-CONSTRUCTOR-APPLICATION.md)
 **Plan:** [docs/plan/PLAN-115-TYPE-HOLES-PARTIAL-CONSTRUCTOR-APPLICATION.md](PLAN-115-TYPE-HOLES-PARTIAL-CONSTRUCTOR-APPLICATION.md)
@@ -3530,8 +3530,8 @@ Phase 119 implements explicit source holes and partial type-constructor applicat
 | [TASK-899](tasks/TASK-899-core-type-hole-and-partial-application-carriers.md) | Core hole and partial-application carriers | 7 | ✅ Complete |
 | [TASK-900](tasks/TASK-900-parser-type-hole-surface.md) | Parser type-hole surface | 6 | ✅ Complete |
 | [TASK-901](tasks/TASK-901-typeenv-partial-constructor-kinding.md) | TypeEnv partial-constructor kinding | 8 | ✅ Complete |
-| [TASK-902](tasks/TASK-902-do-target-partial-application-integration.md) | Do-target partial-application integration | 6 | 📝 Planned |
-| [TASK-903](tasks/TASK-903-type-hole-closeout.md) | SPEC-066 closeout | 5 | 📝 Planned |
+| [TASK-902](tasks/TASK-902-do-target-partial-application-integration.md) | Do-target partial-application integration | 6 | ✅ Complete |
+| [TASK-903](tasks/TASK-903-type-hole-closeout.md) | SPEC-066 closeout | 5 | ✅ Complete |
 
 ## Phase 120: Constructor-Kinded Parameters and HKT
 

@@ -1097,7 +1097,7 @@ fn surface_type_to_type(
 ) -> Result<Type, TypeEnvError> {
     match ty {
         SurfaceType::Hole { span } => Err(TypeEnvError::InvalidDefinition(
-            "type holes are only parser-surface carriers in TASK-900; semantic lowering is not implemented"
+            "type holes are only accepted in audited SPEC-066 do-target positions; this semantic lowering path does not accept source holes"
                 .to_string(),
             *span,
         )),
@@ -12632,7 +12632,7 @@ impl TypeEnv {
                             span: *span,
                         });
                     }
-                    partial_args.push(PartialTypeArg::Applied(
+                    partial_args.push(PartialTypeArg::Applied(Box::new(
                         self.lower_surface_type_to_canonical(arg).map_err(|err| {
                             PartialConstructorElaborationError::ArgumentLoweringFailed {
                                 constructor: constructor.to_string(),
@@ -12640,7 +12640,7 @@ impl TypeEnv {
                                 span: *span,
                             }
                         })?,
-                    ));
+                    )));
                 }
                 SurfaceType::Associated { .. } if surface_type_contains_hole(arg) => {
                     return Err(PartialConstructorElaborationError::NoInversionBoundary {
@@ -12657,7 +12657,7 @@ impl TypeEnv {
                         },
                     );
                 }
-                other => partial_args.push(PartialTypeArg::Applied(
+                other => partial_args.push(PartialTypeArg::Applied(Box::new(
                     self.lower_surface_type_to_canonical(other).map_err(|err| {
                         PartialConstructorElaborationError::ArgumentLoweringFailed {
                             constructor: constructor.to_string(),
@@ -12665,7 +12665,7 @@ impl TypeEnv {
                             span,
                         }
                     })?,
-                )),
+                ))),
             }
         }
 
@@ -15141,10 +15141,8 @@ impl TypeEnv {
             builtin: false,
         };
 
-        self.register_type_identity(&result_type)
+        self.register_type(&result_type)
             .expect("Failed to register Result type");
-        self.expose_type_representation("Result")
-            .expect("Failed to expose Result constructors");
     }
 
     /// Add the List<T> type

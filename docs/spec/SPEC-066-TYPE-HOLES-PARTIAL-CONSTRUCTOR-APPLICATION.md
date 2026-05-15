@@ -1,6 +1,6 @@
 # SPEC-066: Type Holes and Partial Type-Constructor Application
 
-**Status:** Draft
+**Status:** Implemented MVP
 **Date:** 2026-05-14
 **Promotes:** [DESIGN-037](../design/DESIGN-037-TYPE-HOLES-PARTIAL-TYPE-CONSTRUCTOR-APPLICATION.md)
 **Origin:** [TASK-888](../plan/tasks/TASK-888-type-holes-and-partial-type-constructor-application-packet.md)

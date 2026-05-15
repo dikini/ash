@@ -87,6 +87,17 @@ pub use type_env::{
 pub use types::*;
 pub use visibility::{ModulePath, VisibilityChecker, VisibilityError, VisibilityExt};
 
+/// Test-support facade for do-target resolution without exposing the internal
+/// hidden dictionary representation.
+#[doc(hidden)]
+#[allow(clippy::result_large_err)]
+pub fn resolve_do_target_for_test(
+    env: &TypeEnv,
+    target: &ash_parser::surface::DoTarget,
+) -> Result<(), error::ConstructorError> {
+    do_target::resolve_do_target(env, target).map(|_| ())
+}
+
 use std::collections::HashSet;
 
 fn synthetic_program_module_identity() -> ash_core::semantic_summary::ModuleIdentity {
@@ -147,7 +158,7 @@ fn workflow_surface_type_to_type(
 ) -> Result<Type, TypeCheckError> {
     match ty {
         ash_parser::surface::Type::Hole { span } => Err(TypeCheckError::TypeError(format!(
-            "type holes are only parser-surface carriers in TASK-900; semantic lowering is not implemented at {span:?}"
+            "type holes are only accepted in audited SPEC-066 do-target positions; this semantic lowering path does not accept source holes at {span:?}"
         ))),
         ash_parser::surface::Type::Name(name) => {
             if let Some(ty) = type_params.get(name.as_ref()) {

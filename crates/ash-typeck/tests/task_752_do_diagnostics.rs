@@ -22,10 +22,13 @@ fn target(name: &str) -> DoTarget {
     }
 }
 
-fn target_with_args(name: &str) -> DoTarget {
+fn result_target_with_value_hole() -> DoTarget {
     DoTarget {
-        name: Name::from(name),
-        args: vec![SurfaceType::Name(Name::from("Int"))],
+        name: Name::from("Result"),
+        args: vec![
+            SurfaceType::Hole { span: span() },
+            SurfaceType::Name(Name::from("Int")),
+        ],
         span: span(),
     }
 }
@@ -184,11 +187,11 @@ fn unsupported_target_mentions_missing_dictionary_and_deferred_monad() {
 
 #[test]
 fn explicit_target_args_report_deferred_hole_target() {
-    let expr = do_block_with_target(target_with_args("Result"), vec![ret(int_lit(1))]);
+    let expr = do_block_with_target(result_target_with_value_hole(), vec![ret(int_lit(1))]);
     let text = first_error_text(&expr);
-    assert!(text.contains("explicit type arguments"), "{text}");
-    assert!(text.contains("Result<_, E>"), "{text}");
-    assert!(text.contains("deferred"), "{text}");
+    assert!(text.contains("missing Monad evidence"), "{text}");
+    assert!(text.contains("Result<_, Int>"), "{text}");
+    assert!(text.contains("SPEC-067 Monad<K>"), "{text}");
 }
 
 #[test]

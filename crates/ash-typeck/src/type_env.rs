@@ -32,13 +32,15 @@ use ash_core::type_ir::{
     AssociatedFamilyProjection, AssociatedFamilyProjectionMode, AssociatedFamilyResultConstraint,
     AssociatedFamilyResultExpr, AssociatedFamilyScheme, AssociatedFamilySchemeParam,
     CanonicalTypeExpr, InterfaceBoundProposition, NamedPredicateProposition, NormalFormBlockReason,
-    NormalTypeExpr, ProjectionRigidity, PropositionBoundary, PropositionDeferredKind,
-    PropositionDeferredReason, PropositionEvidence, PropositionEvidenceRule, PropositionOutcome,
-    PropositionRefutation, PropositionRefutationReason, PropositionTypeComparisonEvidence,
-    TypeComputationHeadId, TypeDisequalityProposition, TypeEqualityProposition, TypeFunctionDef,
-    TypeFunctionEquation, TypeFunctionParam, TypeFunctionPattern, TypeFunctionPatternConstraint,
-    TypeFunctionResultConstraint, TypeFunctionResultExpr, TypeFunctionSourceAnchors,
-    TypeProposition, TypePropositionTerm,
+    NormalTypeExpr, PartialTypeArg, PartialTypeConstructorApp, ProjectionRigidity,
+    PropositionBoundary, PropositionDeferredKind, PropositionDeferredReason, PropositionEvidence,
+    PropositionEvidenceRule, PropositionOutcome, PropositionRefutation,
+    PropositionRefutationReason, PropositionTypeComparisonEvidence, TypeComputationHeadId,
+    TypeConstructorExpr, TypeConstructorHeadId, TypeDisequalityProposition,
+    TypeEqualityProposition, TypeFunctionDef, TypeFunctionEquation, TypeFunctionParam,
+    TypeFunctionPattern, TypeFunctionPatternConstraint, TypeFunctionResultConstraint,
+    TypeFunctionResultExpr, TypeFunctionSourceAnchors, TypeHoleAmbiguity, TypeHoleId,
+    TypeHoleMetadata, TypeProposition, TypePropositionTerm,
 };
 use ash_core::workflow_contract::{Contract as WorkflowContract, RuntimePostconditionContract};
 use ash_parser::surface::{
@@ -451,6 +453,60 @@ impl TypeInfo {
             Self::Enum { params, .. } | Self::Struct { params, .. } => params.len(),
         }
     }
+}
+
+/// Errors reported while elaborating explicit type holes and partial
+/// type-constructor applications into the core constructor-expression carrier.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+pub enum PartialConstructorElaborationError {
+    /// A partial target context requires exactly one explicit `_` hole.
+    #[error("partial constructor target for `{constructor}` requires exactly one type hole `_`")]
+    MissingHole { constructor: String, span: Span },
+    /// The MVP accepts only one value-position hole in a partial target.
+    #[error(
+        "partial constructor target for `{constructor}` has {count} type holes; the MVP accepts exactly one"
+    )]
+    MultipleHoles {
+        constructor: String,
+        count: usize,
+        span: Span,
+    },
+    /// Bare higher-arity constructors are not implicitly curried.
+    #[error(
+        "bare higher-arity constructor `{constructor}` has arity {arity}; write `{hint}` with an explicit `_` hole"
+    )]
+    BareHigherArityConstructor {
+        constructor: String,
+        arity: usize,
+        hint: String,
+        span: Span,
+    },
+    /// The supplied argument count does not match the constructor arity.
+    #[error(
+        "wrong constructor arity for `{constructor}` after hole elaboration: expected {expected_arity}, found {found_arity}"
+    )]
+    WrongArity {
+        constructor: String,
+        expected_arity: usize,
+        found_arity: usize,
+        span: Span,
+    },
+    /// A named type constructor could not be resolved.
+    #[error("unknown type constructor `{constructor}`")]
+    UnknownConstructor { constructor: String, span: Span },
+    /// A hole appeared somewhere the MVP does not enable.
+    #[error("unsupported type-hole position: {reason}")]
+    UnsupportedHolePosition { reason: String, span: Span },
+    /// A hole would require type-function or associated-family output inversion.
+    #[error("cannot elaborate type hole by inverting {context}; this boundary is non-inverting")]
+    NoInversionBoundary { context: String, span: Span },
+    /// Lowering a non-hole argument failed.
+    #[error("failed to elaborate type argument for `{constructor}`: {reason}")]
+    ArgumentLoweringFailed {
+        constructor: String,
+        reason: String,
+        span: Span,
+    },
 }
 
 /// Internal representation of an interface method signature.
@@ -1832,11 +1888,54 @@ fn span_anchor(span: Span, label: impl Into<String>) -> SourceAnchor {
     };
     SourceAnchor::new(
         SourceOrigin::Synthetic {
-            reason: "TASK-834 type-function lowering".to_string(),
+            reason: "type expression lowering".to_string(),
         },
         Some(core_span),
         label,
     )
+}
+
+fn surface_type_contains_hole(ty: &SurfaceType) -> bool {
+    surface_type_hole_count(ty) > 0
+}
+
+fn surface_type_hole_count(ty: &SurfaceType) -> usize {
+    match ty {
+        SurfaceType::Hole { .. } => 1,
+        SurfaceType::Name(_) | SurfaceType::Capability(_) => 0,
+        SurfaceType::List(item) => surface_type_hole_count(item),
+        SurfaceType::Tuple(items) | SurfaceType::Fn(items, _) => {
+            items.iter().map(surface_type_hole_count).sum::<usize>()
+                + match ty {
+                    SurfaceType::Fn(_, ret) => surface_type_hole_count(ret),
+                    _ => 0,
+                }
+        }
+        SurfaceType::Record(fields) => fields
+            .iter()
+            .map(|(_, field_ty)| surface_type_hole_count(field_ty))
+            .sum(),
+        SurfaceType::Constructor { args, .. }
+        | SurfaceType::AssociatedFamilyProjection { args, .. } => {
+            args.iter().map(surface_type_hole_count).sum()
+        }
+        SurfaceType::Associated { base, .. } => surface_type_hole_count(base),
+    }
+}
+
+fn bare_constructor_hole_hint(constructor: &str, arity: usize) -> String {
+    match (constructor, arity) {
+        ("Result", 2) => "Result<_, E>".to_string(),
+        (_, 0) => constructor.to_string(),
+        (_, 1) => format!("{constructor}<_>"),
+        _ => {
+            let args = std::iter::once("_".to_string())
+                .chain((1..arity).map(|index| format!("T{index}")))
+                .collect::<Vec<_>>()
+                .join(", ");
+            format!("{constructor}<{args}>")
+        }
+    }
 }
 
 fn core_visibility_from_surface(visibility: &SurfaceVisibility) -> ash_core::ast::Visibility {
@@ -12285,6 +12384,315 @@ impl TypeEnv {
             } => self.lower_explicit_associated_family_projection_to_canonical(
                 interface, args, member, *span,
             ),
+        }
+    }
+
+    /// Elaborate an audited explicit do-target type into a core constructor
+    /// expression, preserving exactly one source hole as a partial application.
+    ///
+    /// This is the TASK-901 semantic substrate only: it validates kind/arity and
+    /// hole placement for MVP partial target shapes without selecting Monad
+    /// evidence or integrating with do-target resolution.
+    pub fn elaborate_do_target_constructor_expr(
+        &self,
+        ty: &SurfaceType,
+    ) -> Result<TypeConstructorExpr, PartialConstructorElaborationError> {
+        self.elaborate_partial_type_constructor(ty, true)
+    }
+
+    /// Elaborate a surface type/constructor expression into the core
+    /// `TypeConstructorExpr` carrier used by partial-constructor consumers.
+    pub fn elaborate_partial_type_constructor(
+        &self,
+        ty: &SurfaceType,
+        require_partial_target: bool,
+    ) -> Result<TypeConstructorExpr, PartialConstructorElaborationError> {
+        match ty {
+            SurfaceType::Name(name) => {
+                let constructor = name.to_string();
+                let arity = self
+                    .type_constructor_arity_for_visible_name(name.as_ref())
+                    .ok_or_else(|| PartialConstructorElaborationError::UnknownConstructor {
+                        constructor: constructor.clone(),
+                        span: Span::default(),
+                    })?;
+                if require_partial_target {
+                    if arity > 1 {
+                        return Err(
+                            PartialConstructorElaborationError::BareHigherArityConstructor {
+                                constructor: constructor.clone(),
+                                arity,
+                                hint: bare_constructor_hole_hint(&constructor, arity),
+                                span: Span::default(),
+                            },
+                        );
+                    }
+                    return Err(PartialConstructorElaborationError::MissingHole {
+                        constructor,
+                        span: Span::default(),
+                    });
+                }
+                if arity == 0 {
+                    return self
+                        .lower_surface_type_to_canonical(ty)
+                        .map(TypeConstructorExpr::ProperType)
+                        .map_err(|err| {
+                            PartialConstructorElaborationError::ArgumentLoweringFailed {
+                                constructor,
+                                reason: err.to_string(),
+                                span: Span::default(),
+                            }
+                        });
+                }
+                let origin = self
+                    .canonical_type_identity_for_visible_name(name.as_ref())
+                    .map_err(
+                        |err| PartialConstructorElaborationError::ArgumentLoweringFailed {
+                            constructor: constructor.clone(),
+                            reason: err.to_string(),
+                            span: Span::default(),
+                        },
+                    )?;
+                Ok(TypeConstructorExpr::ConstructorHead(
+                    TypeConstructorHeadId::nominal(origin, constructor),
+                ))
+            }
+            SurfaceType::Constructor { name, args } => self.elaborate_constructor_application(
+                name.as_ref(),
+                args,
+                require_partial_target,
+                Span::default(),
+            ),
+            SurfaceType::AssociatedFamilyProjection { span, .. } => {
+                if surface_type_contains_hole(ty) {
+                    return Err(PartialConstructorElaborationError::NoInversionBoundary {
+                        context: "associated-family projection output".to_string(),
+                        span: *span,
+                    });
+                }
+                if require_partial_target {
+                    return Err(PartialConstructorElaborationError::MissingHole {
+                        constructor: "associated-family projection".to_string(),
+                        span: *span,
+                    });
+                }
+                self.lower_surface_type_to_canonical(ty)
+                    .map(TypeConstructorExpr::ProperType)
+                    .map_err(
+                        |err| PartialConstructorElaborationError::ArgumentLoweringFailed {
+                            constructor: "associated-family projection".to_string(),
+                            reason: err.to_string(),
+                            span: *span,
+                        },
+                    )
+            }
+            SurfaceType::Associated { base, name } => {
+                if surface_type_contains_hole(base) {
+                    return Err(PartialConstructorElaborationError::NoInversionBoundary {
+                        context: format!("associated projection `{name}`"),
+                        span: Span::default(),
+                    });
+                }
+                if require_partial_target {
+                    return Err(PartialConstructorElaborationError::MissingHole {
+                        constructor: format!("associated projection `{name}`"),
+                        span: Span::default(),
+                    });
+                }
+                self.lower_surface_type_to_canonical(ty)
+                    .map(TypeConstructorExpr::ProperType)
+                    .map_err(
+                        |err| PartialConstructorElaborationError::ArgumentLoweringFailed {
+                            constructor: name.to_string(),
+                            reason: err.to_string(),
+                            span: Span::default(),
+                        },
+                    )
+            }
+            SurfaceType::Hole { span } => Err(
+                PartialConstructorElaborationError::UnsupportedHolePosition {
+                    reason: "bare `_` has no constructor head or expected value slot".to_string(),
+                    span: *span,
+                },
+            ),
+            SurfaceType::List(_)
+            | SurfaceType::Tuple(_)
+            | SurfaceType::Record(_)
+            | SurfaceType::Capability(_)
+            | SurfaceType::Fn(_, _) => {
+                if surface_type_contains_hole(ty) {
+                    return Err(
+                        PartialConstructorElaborationError::UnsupportedHolePosition {
+                            reason:
+                                "holes are enabled only in explicit constructor argument spines"
+                                    .to_string(),
+                            span: Span::default(),
+                        },
+                    );
+                }
+                if require_partial_target {
+                    return Err(PartialConstructorElaborationError::MissingHole {
+                        constructor: "proper type expression".to_string(),
+                        span: Span::default(),
+                    });
+                }
+                self.lower_surface_type_to_canonical(ty)
+                    .map(TypeConstructorExpr::ProperType)
+                    .map_err(
+                        |err| PartialConstructorElaborationError::ArgumentLoweringFailed {
+                            constructor: "proper type expression".to_string(),
+                            reason: err.to_string(),
+                            span: Span::default(),
+                        },
+                    )
+            }
+        }
+    }
+
+    fn elaborate_constructor_application(
+        &self,
+        constructor: &str,
+        args: &[SurfaceType],
+        require_partial_target: bool,
+        span: Span,
+    ) -> Result<TypeConstructorExpr, PartialConstructorElaborationError> {
+        let Some(expected_arity) = self.type_constructor_arity_for_visible_name(constructor) else {
+            return Err(PartialConstructorElaborationError::UnknownConstructor {
+                constructor: constructor.to_string(),
+                span,
+            });
+        };
+        if args.len() != expected_arity {
+            return Err(PartialConstructorElaborationError::WrongArity {
+                constructor: constructor.to_string(),
+                expected_arity,
+                found_arity: args.len(),
+                span,
+            });
+        }
+
+        let hole_count = args.iter().map(surface_type_hole_count).sum::<usize>();
+        if require_partial_target && hole_count == 0 {
+            return Err(PartialConstructorElaborationError::MissingHole {
+                constructor: constructor.to_string(),
+                span,
+            });
+        }
+        if hole_count > 1 {
+            return Err(PartialConstructorElaborationError::MultipleHoles {
+                constructor: constructor.to_string(),
+                count: hole_count,
+                span,
+            });
+        }
+
+        let origin = self
+            .canonical_type_identity_for_visible_name(constructor)
+            .map_err(
+                |err| PartialConstructorElaborationError::ArgumentLoweringFailed {
+                    constructor: constructor.to_string(),
+                    reason: err.to_string(),
+                    span,
+                },
+            )?;
+        if hole_count == 0 {
+            return self
+                .lower_surface_type_to_canonical(&SurfaceType::Constructor {
+                    name: constructor.into(),
+                    args: args.to_vec(),
+                })
+                .map(TypeConstructorExpr::ProperType)
+                .map_err(
+                    |err| PartialConstructorElaborationError::ArgumentLoweringFailed {
+                        constructor: constructor.to_string(),
+                        reason: err.to_string(),
+                        span,
+                    },
+                );
+        }
+
+        let mut partial_args = Vec::with_capacity(args.len());
+        let mut hole_metadata = Vec::with_capacity(1);
+        for arg in args {
+            match arg {
+                SurfaceType::Hole { span: hole_span } => {
+                    let id = TypeHoleId::new(hole_metadata.len() as u64);
+                    partial_args.push(PartialTypeArg::Hole(id));
+                    hole_metadata.push(TypeHoleMetadata::new(
+                        id,
+                        span_anchor(*hole_span, "type hole"),
+                        Some(Kind::Type),
+                        TypeHoleAmbiguity::ExpectedValueSlot,
+                    ));
+                }
+                SurfaceType::AssociatedFamilyProjection { span, .. } => {
+                    if surface_type_contains_hole(arg) {
+                        return Err(PartialConstructorElaborationError::NoInversionBoundary {
+                            context: "associated-family projection output".to_string(),
+                            span: *span,
+                        });
+                    }
+                    partial_args.push(PartialTypeArg::Applied(
+                        self.lower_surface_type_to_canonical(arg).map_err(|err| {
+                            PartialConstructorElaborationError::ArgumentLoweringFailed {
+                                constructor: constructor.to_string(),
+                                reason: err.to_string(),
+                                span: *span,
+                            }
+                        })?,
+                    ));
+                }
+                SurfaceType::Associated { .. } if surface_type_contains_hole(arg) => {
+                    return Err(PartialConstructorElaborationError::NoInversionBoundary {
+                        context: "associated projection".to_string(),
+                        span,
+                    });
+                }
+                other if surface_type_contains_hole(other) => {
+                    return Err(
+                        PartialConstructorElaborationError::UnsupportedHolePosition {
+                            reason: "nested holes are not enabled for MVP partial targets"
+                                .to_string(),
+                            span,
+                        },
+                    );
+                }
+                other => partial_args.push(PartialTypeArg::Applied(
+                    self.lower_surface_type_to_canonical(other).map_err(|err| {
+                        PartialConstructorElaborationError::ArgumentLoweringFailed {
+                            constructor: constructor.to_string(),
+                            reason: err.to_string(),
+                            span,
+                        }
+                    })?,
+                )),
+            }
+        }
+
+        Ok(TypeConstructorExpr::PartialApplication(
+            PartialTypeConstructorApp::new_with_hole_metadata(
+                TypeConstructorHeadId::nominal(origin, constructor.to_string()),
+                partial_args,
+                Kind::n_ary(hole_count),
+                hole_metadata,
+                Some(span_anchor(
+                    span,
+                    format!("partial application {constructor}"),
+                )),
+            ),
+        ))
+    }
+
+    fn type_constructor_arity_for_visible_name(&self, name: &str) -> Option<usize> {
+        match name {
+            "Int" | "String" | "Bool" | "Float" | "Null" | "Unit" | "Time" | "Ref" | "()" => {
+                Some(0)
+            }
+            _ => self
+                .type_info
+                .get(name)
+                .map(TypeInfo::type_arg_count)
+                .or_else(|| self.ast_types.get(name).map(|def| def.params.len())),
         }
     }
 

@@ -1,6 +1,6 @@
 # TASK-901: Elaborate holes and partial applications with kind/arity/ambiguity validation
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -58,11 +58,17 @@ commands:
   - git diff --check
   - cargo check --workspace
 checklist:
-  - [ ] Focused tests are non-zero and pass
-  - [ ] cargo fmt --check passes
-  - [ ] git diff --check passes
-  - [ ] Status surfaces and CHANGELOG are reconciled if this task completes
+  - [x] Focused tests are non-zero and pass
+  - [x] cargo fmt --check passes
+  - [x] git diff --check passes
+  - [x] Status surfaces and CHANGELOG are reconciled if this task completes
 ```
+
+## Completion Evidence
+
+- RED: `cargo test -p ash-typeck --test task_901_partial_constructor_kinding` initially failed because `PartialConstructorElaborationError` and `TypeEnv::elaborate_do_target_constructor_expr` did not exist.
+- GREEN: `cargo test -p ash-typeck --test task_901_partial_constructor_kinding` passed with 5 focused tests.
+- Gates: `cargo fmt --check`, `git diff --check`, and `cargo check --workspace` passed on 2026-05-15.
 
 ## Dependencies for Next Task
 

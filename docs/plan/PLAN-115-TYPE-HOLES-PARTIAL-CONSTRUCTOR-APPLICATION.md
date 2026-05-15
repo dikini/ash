@@ -23,7 +23,7 @@
 | [TASK-898](tasks/TASK-898-type-hole-audit-gate.md) | Audit parser/core/typeck/do-target/type-function wildcard seams and freeze enabled hole positions | Docs/Substrate | 5 | ✅ Complete |
 | [TASK-899](tasks/TASK-899-core-type-hole-and-partial-application-carriers.md) | Add core hole identity, partial-argument, and partial-constructor carriers without nominal saturation | Core/Substrate | 7 | ✅ Complete |
 | [TASK-900](tasks/TASK-900-parser-type-hole-surface.md) | Parse `_` holes at audited type-expression positions and preserve spans distinctly from type-function pattern wildcards | Parser | 6 | ✅ Complete |
-| [TASK-901](tasks/TASK-901-typeenv-partial-constructor-kinding.md) | Elaborate holes and partial applications with kind/arity/ambiguity validation | Typeck | 8 | 📝 Planned |
+| [TASK-901](tasks/TASK-901-typeenv-partial-constructor-kinding.md) | Elaborate holes and partial applications with kind/arity/ambiguity validation | Typeck | 8 | ✅ Complete |
 | [TASK-902](tasks/TASK-902-do-target-partial-application-integration.md) | Allow do-target shape elaboration for unary partial targets such as `Result<_, E>` while preserving missing-Monad evidence boundaries | Typeck/Do | 6 | 📝 Planned |
 | [TASK-903](tasks/TASK-903-type-hole-closeout.md) | Reconcile SPEC-066/PLAN-115 docs, diagnostics, acceptance matrix, broad gates, and review remediation | Docs/Closeout | 5 | 📝 Planned |
 

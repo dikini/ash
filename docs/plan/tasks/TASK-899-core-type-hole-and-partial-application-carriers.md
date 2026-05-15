@@ -1,6 +1,6 @@
 # TASK-899: Add core hole identity, partial-argument, and partial-constructor carriers without nominal saturation
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -57,11 +57,17 @@ commands:
   - git diff --check
   - cargo check --workspace
 checklist:
-  - [ ] Focused tests are non-zero and pass
-  - [ ] cargo fmt --check passes
-  - [ ] git diff --check passes
-  - [ ] Status surfaces and CHANGELOG are reconciled if this task completes
+  - [x] Focused tests are non-zero and pass
+  - [x] cargo fmt --check passes
+  - [x] git diff --check passes
+  - [x] Status surfaces and CHANGELOG are reconciled if this task completes
 ```
+
+## Completion Evidence
+
+- RED: `cargo test -p ash-core --test task_899_type_hole_partial_application_carriers` failed with unresolved imports for `TypeHoleId`, `TypeHoleMetadata`, `PartialTypeArg`, `PartialTypeConstructorApp`, `TypeConstructorExpr`, `TypeConstructorHeadId`, and `TypeHoleAmbiguity` before implementation.
+- GREEN: focused test passes with 3 tests covering stable hole identity/metadata, partial argument preservation without fake nominal saturation, and constructor-expression carrier separation.
+- Gates: `cargo fmt --check`, `git diff --check`, and `cargo check --workspace` passed after code/doc updates.
 
 ## Dependencies for Next Task
 

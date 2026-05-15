@@ -38,6 +38,194 @@ impl TypeComputationHeadId {
     }
 }
 
+/// Stable identity allocated for one explicit source type hole.
+///
+/// The numeric value is assigned by the lowering/type-checking owner and is kept
+/// separate from source spans so diagnostics can move without changing the hole's
+/// semantic identity.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub struct TypeHoleId(u64);
+
+impl TypeHoleId {
+    /// Creates a stable type-hole identity from an already allocated number.
+    #[must_use]
+    pub const fn new(id: u64) -> Self {
+        Self(id)
+    }
+
+    /// Returns the stable numeric identity for this hole.
+    #[must_use]
+    pub const fn as_u64(self) -> u64 {
+        self.0
+    }
+}
+
+/// Ambiguity classification preserved for an explicit source type hole.
+///
+/// Later type-checking tasks may refine these states into diagnostics; this core
+/// carrier only records the distinction without deciding acceptance.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[non_exhaustive]
+pub enum TypeHoleAmbiguity {
+    /// The hole is attached to a known value-position type argument.
+    ExpectedValueSlot,
+    /// The hole has not yet been associated with a unique expected slot.
+    Ambiguous,
+    /// The hole is known to appear in an unsupported position for the current MVP.
+    UnsupportedPosition,
+}
+
+/// Source and kind metadata attached to an explicit source type hole.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct TypeHoleMetadata {
+    /// Stable hole identity.
+    pub id: TypeHoleId,
+    /// Source anchor for diagnostics; never participates in identity allocation.
+    pub source_anchor: SourceAnchor,
+    /// Expected kind if the owner has one at carrier construction time.
+    pub expected_kind: Option<Kind>,
+    /// Ambiguity state preserved for later validation/diagnostics.
+    pub ambiguity: TypeHoleAmbiguity,
+}
+
+impl TypeHoleMetadata {
+    /// Creates metadata for an explicit source type hole.
+    #[must_use]
+    pub fn new(
+        id: TypeHoleId,
+        source_anchor: SourceAnchor,
+        expected_kind: Option<Kind>,
+        ambiguity: TypeHoleAmbiguity,
+    ) -> Self {
+        Self {
+            id,
+            source_anchor,
+            expected_kind,
+            ambiguity,
+        }
+    }
+}
+
+/// Typed identity for a type-constructor head used by partial applications.
+///
+/// This prevents partial constructor terms from being encoded as saturated
+/// `CanonicalTypeExpr::NominalApp` values with fake arguments. The visible name
+/// is diagnostic/display metadata; the stable identity is the typed variant data.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[non_exhaustive]
+pub enum TypeConstructorHeadId {
+    /// Ordinary nominal type declaration used as a constructor head.
+    Nominal {
+        origin: TypeDeclId,
+        visible_name: String,
+    },
+    /// Computation-grade type head used as a constructor head.
+    Computation(TypeComputationHeadId),
+}
+
+impl TypeConstructorHeadId {
+    /// Creates a nominal type-constructor head identity.
+    #[must_use]
+    pub fn nominal(origin: TypeDeclId, visible_name: impl Into<String>) -> Self {
+        Self::Nominal {
+            origin,
+            visible_name: visible_name.into(),
+        }
+    }
+
+    /// Creates a computation type-constructor head identity.
+    #[must_use]
+    pub const fn computation(head: TypeComputationHeadId) -> Self {
+        Self::Computation(head)
+    }
+}
+
+/// One argument in a partial type-constructor application.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[non_exhaustive]
+pub enum PartialTypeArg {
+    /// A concrete canonical type expression supplied at this argument position.
+    Applied(CanonicalTypeExpr),
+    /// An explicit source hole occupying this argument position.
+    Hole(TypeHoleId),
+}
+
+/// Carrier for an explicitly partial type-constructor application.
+///
+/// The `args` spine may mix applied arguments and explicit holes. `result_kind`
+/// records the effective kind after applying supplied arguments and abstracting
+/// holes; this module does not validate that kind.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct PartialTypeConstructorApp {
+    /// Stable identity for the constructor head.
+    pub head: TypeConstructorHeadId,
+    /// Argument spine preserving explicit holes rather than fabricating values.
+    pub args: Vec<PartialTypeArg>,
+    /// Effective result kind owned by the checker/lowering producer.
+    pub result_kind: Kind,
+    /// Metadata for every explicit source hole referenced by `args`.
+    ///
+    /// This keeps source anchors, expected kinds, and ambiguity state attached to
+    /// the carrier instead of requiring consumers to reconstruct hole facts from
+    /// a parallel debug/string channel.
+    pub hole_metadata: Vec<TypeHoleMetadata>,
+    /// Optional source anchor for the application as a whole.
+    pub source_anchor: Option<SourceAnchor>,
+}
+
+impl PartialTypeConstructorApp {
+    /// Creates a carrier for a partial type-constructor application.
+    #[must_use]
+    pub fn new(
+        head: TypeConstructorHeadId,
+        args: Vec<PartialTypeArg>,
+        result_kind: Kind,
+        source_anchor: Option<SourceAnchor>,
+    ) -> Self {
+        Self::new_with_hole_metadata(head, args, result_kind, Vec::new(), source_anchor)
+    }
+
+    /// Creates a carrier for a partial type-constructor application with
+    /// explicit metadata for each hole in the argument spine.
+    #[must_use]
+    pub fn new_with_hole_metadata(
+        head: TypeConstructorHeadId,
+        args: Vec<PartialTypeArg>,
+        result_kind: Kind,
+        hole_metadata: Vec<TypeHoleMetadata>,
+        source_anchor: Option<SourceAnchor>,
+    ) -> Self {
+        Self {
+            head,
+            args,
+            result_kind,
+            hole_metadata,
+            source_anchor,
+        }
+    }
+
+    /// Returns metadata for the requested hole identity if it is carried by this
+    /// partial application.
+    #[must_use]
+    pub fn metadata_for_hole(&self, hole: TypeHoleId) -> Option<&TypeHoleMetadata> {
+        self.hole_metadata
+            .iter()
+            .find(|metadata| metadata.id == hole)
+    }
+}
+
+/// Canonical carrier for expressions that may denote proper types or constructors.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[non_exhaustive]
+pub enum TypeConstructorExpr {
+    /// A fully proper type expression of kind `*`.
+    ProperType(CanonicalTypeExpr),
+    /// A constructor head without partial arguments.
+    ConstructorHead(TypeConstructorHeadId),
+    /// An explicitly partial application that preserves holes structurally.
+    PartialApplication(PartialTypeConstructorApp),
+}
+
 /// Canonical identity for a reducible associated-family head.
 ///
 /// The identity is the typed pair of the declaring interface and associated

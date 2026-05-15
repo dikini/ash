@@ -50,11 +50,12 @@ pub use stream::{
 };
 pub use type_ir::{
     CanonicalTypeExpr, DomainConstructorApp, InterfaceBoundProposition, NamedPredicateProposition,
-    NormalTypeExpr, PromotedConstructorApp, PropositionBoundary, PropositionDeferredKind,
-    PropositionDeferredReason, PropositionEvidence, PropositionEvidenceRule, PropositionOutcome,
-    PropositionRefutation, PropositionRefutationReason, PropositionTypeComparisonEvidence,
-    TypeDisequalityProposition, TypeEqualityProposition, TypeLevelConstructorApp, TypeProposition,
-    TypePropositionTerm,
+    NormalTypeExpr, PartialTypeArg, PartialTypeConstructorApp, PromotedConstructorApp,
+    PropositionBoundary, PropositionDeferredKind, PropositionDeferredReason, PropositionEvidence,
+    PropositionEvidenceRule, PropositionOutcome, PropositionRefutation,
+    PropositionRefutationReason, PropositionTypeComparisonEvidence, TypeConstructorExpr,
+    TypeConstructorHeadId, TypeDisequalityProposition, TypeEqualityProposition, TypeHoleAmbiguity,
+    TypeHoleId, TypeHoleMetadata, TypeLevelConstructorApp, TypeProposition, TypePropositionTerm,
 };
 pub use value::*;
 pub use visualize::*;

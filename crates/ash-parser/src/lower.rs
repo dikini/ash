@@ -1172,6 +1172,11 @@ fn lower_type_to_type_expr(ty: &Type) -> ash_core::workflow_contract::TypeExpr {
     use ash_core::workflow_contract::TypeExpr;
     match ty {
         Type::Name(name) => TypeExpr::Named(name.to_string()),
+        Type::Hole { .. } => {
+            panic!(
+                "type holes require SPEC-066 semantic lowering before workflow-contract lowering"
+            )
+        }
         Type::List(inner) => TypeExpr::Constructor {
             name: "List".to_string(),
             args: vec![lower_type_to_type_expr(inner)],
@@ -1211,6 +1216,9 @@ pub fn lower_surface_type(ty: &Type) -> ash_core::ast::TypeExpr {
     use ash_core::ast::TypeExpr;
     match ty {
         Type::Name(name) => TypeExpr::Named(name.to_string()),
+        Type::Hole { .. } => {
+            panic!("type holes require SPEC-066 semantic lowering before core AST lowering")
+        }
         Type::List(inner) => TypeExpr::Constructor {
             name: "List".to_string(),
             args: vec![lower_surface_type(inner)],

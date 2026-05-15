@@ -2020,6 +2020,11 @@ pub struct Param {
 pub enum Type {
     /// Named type
     Name(Name),
+    /// Explicit source type hole `_` in an audited type-expression position.
+    Hole {
+        /// Source span covering the `_` token.
+        span: Span,
+    },
     /// List type: \[T\]
     List(Box<Type>),
     /// Tuple type: `(T, U, ...)`

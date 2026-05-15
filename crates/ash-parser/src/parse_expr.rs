@@ -110,6 +110,24 @@ fn parse_do_target_args(input: &mut ParseInput) -> ModalResult<Vec<Type>> {
 }
 
 fn parse_do_type(input: &mut ParseInput) -> ModalResult<Type> {
+    if input.input.starts_with('_') {
+        let start = input
+            .state
+            .source
+            .len()
+            .saturating_sub(input.input.as_ref().len());
+        let line = input.state.pos.line;
+        let column = input.state.pos.column;
+        let _ = literal_str("_").parse_next(input)?;
+        let span = Span {
+            start,
+            end: start + 1,
+            line,
+            column,
+        };
+        return Ok(Type::Hole { span });
+    }
+
     let name: Name = identifier(input)?.into();
     skip_whitespace_and_comments(input);
     if input.input.starts_with('<') {

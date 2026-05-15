@@ -145,6 +145,9 @@ fn workflow_surface_type_to_type(
     type_params: &std::collections::HashMap<String, Type>,
 ) -> Result<Type, TypeCheckError> {
     match ty {
+        ash_parser::surface::Type::Hole { span } => Err(TypeCheckError::TypeError(format!(
+            "type holes are only parser-surface carriers in TASK-900; semantic lowering is not implemented at {span:?}"
+        ))),
         ash_parser::surface::Type::Name(name) => {
             if let Some(ty) = type_params.get(name.as_ref()) {
                 return Ok(ty.clone());

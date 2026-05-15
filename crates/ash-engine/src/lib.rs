@@ -1922,6 +1922,9 @@ fn register_imported_type_defs(
 
 fn surface_type_to_typeck(ty: &SurfaceType) -> Result<ash_typeck::Type, String> {
     match ty {
+        SurfaceType::Hole { span } => Err(format!(
+            "type holes are only parser-surface carriers in TASK-900; engine type conversion is not implemented at {span:?}"
+        )),
         SurfaceType::Name(name) => match name.as_ref() {
             "Int" => Ok(ash_typeck::Type::Int),
             "String" => Ok(ash_typeck::Type::String),

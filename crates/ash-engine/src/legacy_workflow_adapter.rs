@@ -213,6 +213,7 @@ fn used_binding_summary(binding: &WorkflowUsedBinding) -> WorkflowUsedBindingSum
 
 fn type_summary(ty: &Type) -> String {
     match ty {
+        Type::Hole { .. } => "_".to_string(),
         Type::Name(name) | Type::Capability(name) => name.to_string(),
         Type::List(inner) => format!("[{}]", type_summary(inner)),
         Type::Tuple(items) => format!(

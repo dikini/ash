@@ -1040,6 +1040,11 @@ fn surface_type_to_type(
     type_env: &TypeEnv,
 ) -> Result<Type, TypeEnvError> {
     match ty {
+        SurfaceType::Hole { span } => Err(TypeEnvError::InvalidDefinition(
+            "type holes are only parser-surface carriers in TASK-900; semantic lowering is not implemented"
+                .to_string(),
+            *span,
+        )),
         SurfaceType::Name(name) => {
             if let Some(var) = param_mapping.get(name.as_ref()) {
                 return Ok(Type::Var(*var));
@@ -1201,6 +1206,7 @@ fn core_projection_base_spelling(base: &TypeExpr) -> String {
 
 fn surface_projection_base_spelling(base: &SurfaceType) -> String {
     match base {
+        SurfaceType::Hole { .. } => "_".to_string(),
         SurfaceType::Name(name) => name.to_string(),
         SurfaceType::Constructor { name, args } => {
             if args.is_empty() {
@@ -12142,6 +12148,12 @@ impl TypeEnv {
         ty: &SurfaceType,
     ) -> Result<CanonicalTypeExpr, TypeError> {
         match ty {
+            SurfaceType::Hole { span } => Err(TypeError::ConstructorNameMismatch {
+                expected: "nominal or associated type expression supported by TASK-798 lowering"
+                    .to_string(),
+                found: "type hole _".to_string(),
+                span: *span,
+            }),
             SurfaceType::Name(name) => match name.as_ref() {
                 "Int" | "String" | "Bool" | "Float" | "Null" | "Time" | "Ref" => {
                     Ok(CanonicalTypeExpr::Primitive(name.to_string()))
@@ -12201,7 +12213,8 @@ impl TypeEnv {
                 }
                 if matches!(
                     base.as_ref(),
-                    SurfaceType::Tuple(_)
+                    SurfaceType::Hole { .. }
+                        | SurfaceType::Tuple(_)
                         | SurfaceType::Record(_)
                         | SurfaceType::List(_)
                         | SurfaceType::Capability(_)
@@ -12219,6 +12232,9 @@ impl TypeEnv {
                             format!("unsupported projection base Capability({name})")
                         }
                         SurfaceType::Fn(_, _) => "unsupported projection base Fn".to_string(),
+                        SurfaceType::Hole { .. } => {
+                            "unsupported projection base type hole _".to_string()
+                        }
                         _ => unreachable!("guarded by matches!"),
                     };
                     return Err(TypeError::ConstructorNameMismatch {

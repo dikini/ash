@@ -3528,7 +3528,7 @@ Phase 119 implements explicit source holes and partial type-constructor applicat
 |------|-------------|------------|--------|
 | [TASK-898](tasks/TASK-898-type-hole-audit-gate.md) | Type-hole audit gate | 5 | ✅ Complete |
 | [TASK-899](tasks/TASK-899-core-type-hole-and-partial-application-carriers.md) | Core hole and partial-application carriers | 7 | ✅ Complete |
-| [TASK-900](tasks/TASK-900-parser-type-hole-surface.md) | Parser type-hole surface | 6 | 📝 Planned |
+| [TASK-900](tasks/TASK-900-parser-type-hole-surface.md) | Parser type-hole surface | 6 | ✅ Complete |
 | [TASK-901](tasks/TASK-901-typeenv-partial-constructor-kinding.md) | TypeEnv partial-constructor kinding | 8 | 📝 Planned |
 | [TASK-902](tasks/TASK-902-do-target-partial-application-integration.md) | Do-target partial-application integration | 6 | 📝 Planned |
 | [TASK-903](tasks/TASK-903-type-hole-closeout.md) | SPEC-066 closeout | 5 | 📝 Planned |

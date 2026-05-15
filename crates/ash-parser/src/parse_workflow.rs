@@ -740,6 +740,11 @@ fn parse_type(input: &mut ParseInput) -> ModalResult<Type> {
     }
 
     let type_name = identifier(input)?;
+    if type_name == "_" {
+        return Err(winnow::error::ErrMode::Backtrack(
+            winnow::error::ContextError::new(),
+        ));
+    }
     let name = Name::from(type_name);
 
     skip_whitespace_and_comments(input);

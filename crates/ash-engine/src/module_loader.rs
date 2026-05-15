@@ -1196,6 +1196,7 @@ fn callable_signature_type_names(callable: &InlineCallable) -> Vec<String> {
 
 fn collect_surface_type_names(ty: &Type, names: &mut Vec<String>) {
     match ty {
+        Type::Hole { .. } => {}
         Type::Name(name) => names.push(name.to_string()),
         Type::Capability(_) => {}
         Type::List(inner) | Type::Associated { base: inner, .. } => {
@@ -1328,6 +1329,7 @@ fn stamp_builtin_callable_modules(exports: &mut ModuleExports, module_name: &str
 
 fn rewrite_surface_type_aliases(ty: &mut Type, aliases: &HashMap<String, String>) {
     match ty {
+        Type::Hole { .. } => {}
         Type::Name(name) | Type::Capability(name) => {
             if let Some(alias) = aliases.get(name.as_ref()) {
                 *name = alias.as_str().into();

@@ -1,6 +1,6 @@
 # TASK-900: Parse `_` holes at audited type-expression positions and preserve spans distinctly from type-function pattern wildcards
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -58,11 +58,17 @@ commands:
   - git diff --check
   - cargo check --workspace
 checklist:
-  - [ ] Focused tests are non-zero and pass
-  - [ ] cargo fmt --check passes
-  - [ ] git diff --check passes
-  - [ ] Status surfaces and CHANGELOG are reconciled if this task completes
+  - [x] Focused tests are non-zero and pass
+  - [x] cargo fmt --check passes
+  - [x] git diff --check passes
+  - [x] Status surfaces and CHANGELOG are reconciled if this task completes
 ```
+
+## Completion Evidence
+
+- RED: `cargo test -p ash-parser --test task_900_type_hole_surface` initially failed because `ash_parser::Type` had no `Hole` variant.
+- GREEN: `cargo test -p ash-parser --test task_900_type_hole_surface` passes with 4 focused tests.
+- Required gates: `cargo fmt --check`, `git diff --check`, and `cargo check --workspace` pass.
 
 ## Dependencies for Next Task
 

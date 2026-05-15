@@ -28,6 +28,7 @@ use crate::position::{offset_from_line_col, token_at_offset};
 fn type_to_string(ty: &Type) -> String {
     match ty {
         Type::Name(name) => name.to_string(),
+        Type::Hole { .. } => "_".to_string(),
         Type::List(inner) => format!("List<{}>", type_to_string(inner)),
         Type::Tuple(items) => {
             let inner = items

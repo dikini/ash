@@ -38,20 +38,23 @@ pub use runtime::*;
 pub use semantic_summary::{
     DomainConstructorId, InterfaceIdentityId, ModuleIdentity, ModuleSemanticSummary,
     ModuleSemanticSummaryValidationError, ModuleSourceOrigin, ModuleSummaryRef,
-    PropositionDependencySummaryRef, PropositionFactRole, PropositionFactSummary,
-    PropositionPredicateId, PropositionPredicateParamSummary, PropositionPredicateSummary,
-    SealedDomainId, SourceAnchor, SourceOrigin, SummaryVersion,
+    PromotedConstructorFieldSummary, PromotedConstructorId, PromotedConstructorSummary,
+    PromotedDataKindId, PromotedDataKindSummary, PropositionDependencySummaryRef,
+    PropositionFactRole, PropositionFactSummary, PropositionPredicateId,
+    PropositionPredicateParamSummary, PropositionPredicateSummary, SealedDomainId, SourceAnchor,
+    SourceOrigin, SummaryVersion,
 };
 pub use stream::{
     Mailbox, MailboxEntry, MailboxOverflowError, OverflowStrategy, Receive as StreamReceive,
     ReceiveArm as StreamReceiveArm, ReceiveMode as StreamReceiveMode, StreamRef,
 };
 pub use type_ir::{
-    CanonicalTypeExpr, InterfaceBoundProposition, NamedPredicateProposition, NormalTypeExpr,
-    PropositionBoundary, PropositionDeferredKind, PropositionDeferredReason, PropositionEvidence,
-    PropositionEvidenceRule, PropositionOutcome, PropositionRefutation,
-    PropositionRefutationReason, PropositionTypeComparisonEvidence, TypeDisequalityProposition,
-    TypeEqualityProposition, TypeProposition, TypePropositionTerm,
+    CanonicalTypeExpr, DomainConstructorApp, InterfaceBoundProposition, NamedPredicateProposition,
+    NormalTypeExpr, PromotedConstructorApp, PropositionBoundary, PropositionDeferredKind,
+    PropositionDeferredReason, PropositionEvidence, PropositionEvidenceRule, PropositionOutcome,
+    PropositionRefutation, PropositionRefutationReason, PropositionTypeComparisonEvidence,
+    TypeDisequalityProposition, TypeEqualityProposition, TypeLevelConstructorApp, TypeProposition,
+    TypePropositionTerm,
 };
 pub use value::*;
 pub use visualize::*;

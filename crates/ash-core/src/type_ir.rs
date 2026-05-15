@@ -16,8 +16,8 @@ use crate::ast::Visibility;
 use crate::kind::Kind;
 use crate::semantic_summary::{
     AssociatedMemberIdentityId, DomainConstructorId, InterfaceIdentityId, ModuleIdentity,
-    ModuleSummaryRef, PropositionPredicateId, SealedDomainId, SourceAnchor, TypeDeclId,
-    ValidatedDecreasesSummary,
+    ModuleSummaryRef, PromotedConstructorId, PromotedDataKindId, PropositionPredicateId,
+    SealedDomainId, SourceAnchor, TypeDeclId, ValidatedDecreasesSummary,
 };
 use serde::{Deserialize, Serialize};
 
@@ -129,6 +129,40 @@ pub enum ProjectionRigidity {
     Neutral,
 }
 
+/// Canonical sealed-domain constructor application.
+///
+/// This names SPEC-059 marker constructors only. It must not carry runtime ADT
+/// constructor identities or promoted data-constructor identities.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct DomainConstructorApp {
+    pub constructor: DomainConstructorId,
+    pub domain: SealedDomainId,
+    pub args: Vec<CanonicalTypeExpr>,
+    pub kind: Kind,
+}
+
+/// Canonical promoted data-constructor application.
+///
+/// This is distinct from ordinary nominal type applications and sealed-domain
+/// marker-constructor applications.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct PromotedConstructorApp {
+    pub constructor: PromotedConstructorId,
+    pub data_kind: PromotedDataKindId,
+    pub args: Vec<CanonicalTypeExpr>,
+    pub kind: Kind,
+}
+
+/// Closed type-level constructor application families.
+///
+/// This carrier prevents consumers from collapsing sealed-domain marker
+/// constructors and promoted runtime ADT constructors into one namespace.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum TypeLevelConstructorApp {
+    SealedDomainConstructor(Box<DomainConstructorApp>),
+    PromotedDataConstructor(Box<PromotedConstructorApp>),
+}
+
 /// Canonical internal type-expression substrate.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum CanonicalTypeExpr {
@@ -140,6 +174,7 @@ pub enum CanonicalTypeExpr {
         args: Vec<CanonicalTypeExpr>,
         kind: Kind,
     },
+    PromotedDataConstructorApp(Box<PromotedConstructorApp>),
     Projection {
         interface: InterfaceIdentityId,
         member: AssociatedMemberIdentityId,
@@ -170,10 +205,11 @@ pub enum TypeProposition {
 
 /// Operand for canonical propositions.
 ///
-/// `CanonicalTypeExpr` intentionally remains limited to nominal/projection/
-/// computation-head applications. Sealed-domain marker constructors such as
-/// `Cons<A, T>` are represented honestly by `DomainConstructorApp` instead of
-/// being encoded as ordinary nominal types or debug strings.
+/// `CanonicalTypeExpr` intentionally carries only canonical type expressions,
+/// including nominal/projection/computation-head applications and promoted
+/// data-constructor applications. Sealed-domain marker constructors
+/// such as `Cons<A, T>` are represented honestly by `DomainConstructorApp`
+/// instead of being encoded as ordinary nominal types or debug strings.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum TypePropositionTerm {
     Canonical(CanonicalTypeExpr),
@@ -421,6 +457,14 @@ pub enum TypeFunctionResultExpr {
         constraint: TypeFunctionResultConstraint,
         source_anchor: SourceAnchor,
     },
+    PromotedDataConstructorApp {
+        constructor: Box<PromotedConstructorId>,
+        data_kind: Box<PromotedDataKindId>,
+        args: Vec<TypeFunctionResultExpr>,
+        kind: Kind,
+        constraint: TypeFunctionResultConstraint,
+        source_anchor: SourceAnchor,
+    },
     Projection {
         interface: InterfaceIdentityId,
         member: AssociatedMemberIdentityId,
@@ -617,6 +661,12 @@ pub enum NormalTypeExpr {
     DomainConstructorApp {
         constructor: DomainConstructorId,
         domain: SealedDomainId,
+        args: Vec<NormalTypeExpr>,
+        kind: Kind,
+    },
+    PromotedDataConstructorApp {
+        constructor: Box<PromotedConstructorId>,
+        data_kind: Box<PromotedDataKindId>,
         args: Vec<NormalTypeExpr>,
         kind: Kind,
     },

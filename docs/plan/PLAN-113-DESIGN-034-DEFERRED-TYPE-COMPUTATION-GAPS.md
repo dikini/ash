@@ -33,7 +33,7 @@
 | Integrated ordinary `type` declarations in ModuleFile/lowering/export | Implemented by SPEC-057 / PLAN-105 | No follow-up required | ✅ Closed |
 | Top-level `type fn` parser/surface/core carriers | Implemented by SPEC-061 / PLAN-109 | No follow-up required | ✅ Closed |
 | Sealed type-level domains and exported constructor-set metadata | Implemented by SPEC-059 / PLAN-107 | No follow-up required | ✅ Closed |
-| Promoted data constructors or named data kinds | Explicitly deferred by SPEC-057/SPEC-059/SPEC-061; marker constructors are not promoted runtime/ADT constructors | SPEC-065 / PLAN-114 created; implementation planned | 📝 Planned implementation |
+| Promoted data constructors or named data kinds | Explicitly deferred by SPEC-057/SPEC-059/SPEC-061; marker constructors are not promoted runtime/ADT constructors | SPEC-065 / PLAN-114 implemented MVP in Phase 118 | ✅ Closed |
 | Internal `TypeFnApp`, neutral/stuck forms, generalized associated-family projections | Implemented as canonical computation-head apps, neutral computation apps, and associated-family projection carriers by SPEC-058/SPEC-060/SPEC-063 | No follow-up required | ✅ Closed |
 | Type holes/wildcards in all type-expression positions | Only type-function pattern wildcards exist; no general source `Type::Hole`/wildcard carrier | SPEC-066 / PLAN-115 created; implementation planned | 📝 Planned implementation |
 | Constructor-kinded interface params such as `M : * -> *` | Core `Kind` can represent arrows, but parser/interface/impl binders do not support kind binders | SPEC-067 / PLAN-116 created; implementation planned | 📝 Planned implementation |

@@ -1460,7 +1460,7 @@ future packets owned by PLAN-113.
 | Ordinary `type` declarations in ModuleFile/lowering/export | Closed by SPEC-057 / PLAN-105 | None |
 | Top-level `type fn` parser and carriers | Closed by SPEC-061 / PLAN-109 | None |
 | Sealed type-level domains and constructor-set metadata | Closed by SPEC-059 / PLAN-107 | None |
-| Promoted data constructors or named data kinds | Spec/plan packet created; marker constructors remain distinct until implementation | SPEC-065 / PLAN-114 |
+| Promoted data constructors or named data kinds | Closed by SPEC-065 / PLAN-114 implemented MVP | Source `data kind` declarations currently parse, while source-to-summary lowering/export remains a scoped follow-up inside the promoted-data-kind line rather than a blocker for downstream gap ownership. |
 | Type-function apps, neutral/stuck forms, associated-family projections | Closed by SPEC-058, SPEC-060, SPEC-063 | None |
 | Type holes/wildcards in all type-expression positions | Spec/plan packet created outside type-function pattern wildcards | SPEC-066 / PLAN-115 |
 | Constructor-kinded interface parameters such as `M : * -> *` | Spec/plan packet created; core `Kind` exists but source binders remain unimplemented | SPEC-067 / PLAN-116 |

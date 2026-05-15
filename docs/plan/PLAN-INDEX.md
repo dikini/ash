@@ -3498,7 +3498,7 @@ Phase 117 is a gap-ownership/backlog-promotion slice, not a broad Rust implement
 ## Phase 118: Promoted Data Constructors and Named Data Kinds
 
 **Priority:** Medium (DataKinds-style promotion is useful for richer type-level programming but must not confuse sealed-domain markers with runtime ADTs)
-**Status:** 📝 Planned
+**Status:** ✅ Complete
 **Spec:** [SPEC-065](../spec/SPEC-065-PROMOTED-DATA-CONSTRUCTORS-NAMED-DATA-KINDS.md)
 **Design:** [DESIGN-036](../design/DESIGN-036-PROMOTED-DATA-CONSTRUCTORS-NAMED-DATA-KINDS.md)
 **Plan:** [docs/plan/PLAN-114-PROMOTED-DATA-CONSTRUCTORS-NAMED-DATA-KINDS.md](PLAN-114-PROMOTED-DATA-CONSTRUCTORS-NAMED-DATA-KINDS.md)
@@ -3509,10 +3509,10 @@ Phase 118 implements the opt-in promoted-constructor layer from SPEC-065. It sta
 |------|-------------|------------|--------|
 | [TASK-892](tasks/TASK-892-promoted-constructor-audit-gate.md) | Promoted-constructor audit gate | 5 | ✅ Complete |
 | [TASK-893](tasks/TASK-893-promoted-constructor-parser-surface.md) | Promoted-constructor parser surface | 6 | ✅ Complete |
-| [TASK-894](tasks/TASK-894-core-promoted-constructor-identities-and-summaries.md) | Core promoted identities and summaries | 8 | 📝 Planned |
-| [TASK-895](tasks/TASK-895-typeenv-promoted-constructor-registration-and-kinding.md) | TypeEnv registration and kinding | 8 | 📝 Planned |
-| [TASK-896](tasks/TASK-896-promoted-constructor-normalizer-proposition-and-non-interference.md) | Normalizer/proposition integration and non-interference | 8 | 📝 Planned |
-| [TASK-897](tasks/TASK-897-promoted-constructor-closeout.md) | SPEC-065 closeout | 5 | 📝 Planned |
+| [TASK-894](tasks/TASK-894-core-promoted-constructor-identities-and-summaries.md) | Core promoted identities and summaries | 8 | ✅ Complete |
+| [TASK-895](tasks/TASK-895-typeenv-promoted-constructor-registration-and-kinding.md) | TypeEnv registration and kinding | 8 | ✅ Complete |
+| [TASK-896](tasks/TASK-896-promoted-constructor-normalizer-proposition-and-non-interference.md) | Normalizer/proposition integration and non-interference | 8 | ✅ Complete |
+| [TASK-897](tasks/TASK-897-promoted-constructor-closeout.md) | SPEC-065 closeout | 5 | ✅ Complete |
 
 ## Phase 119: Type Holes and Partial Type-Constructor Application
 

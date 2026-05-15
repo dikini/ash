@@ -595,7 +595,8 @@ impl<'env> Normalizer<'env> {
             Ok(outcome) => match outcome.normal {
                 normal @ (NormalTypeExpr::Primitive(_)
                 | NormalTypeExpr::NominalApp { .. }
-                | NormalTypeExpr::DomainConstructorApp { .. }) => Ok(normal),
+                | NormalTypeExpr::DomainConstructorApp { .. }
+                | NormalTypeExpr::PromotedDataConstructorApp { .. }) => Ok(normal),
                 normal @ NormalTypeExpr::NeutralComputationApp { .. }
                     if matches!(
                         &normal,
@@ -749,7 +750,8 @@ fn collect_normal_form_diagnostics(
             }
         }
         NormalTypeExpr::NominalApp { args, .. }
-        | NormalTypeExpr::DomainConstructorApp { args, .. } => {
+        | NormalTypeExpr::DomainConstructorApp { args, .. }
+        | NormalTypeExpr::PromotedDataConstructorApp { args, .. } => {
             for arg in args {
                 collect_normal_form_diagnostics(arg, diagnostics);
             }
@@ -840,6 +842,25 @@ fn normal_forms_definitionally_equal(lhs: &NormalTypeExpr, rhs: &NormalTypeExpr)
         ) => {
             lhs_constructor == rhs_constructor
                 && lhs_domain == rhs_domain
+                && lhs_kind == rhs_kind
+                && normal_arg_spines_definitionally_equal(lhs_args, rhs_args)
+        }
+        (
+            NormalTypeExpr::PromotedDataConstructorApp {
+                constructor: lhs_constructor,
+                data_kind: lhs_data_kind,
+                args: lhs_args,
+                kind: lhs_kind,
+            },
+            NormalTypeExpr::PromotedDataConstructorApp {
+                constructor: rhs_constructor,
+                data_kind: rhs_data_kind,
+                args: rhs_args,
+                kind: rhs_kind,
+            },
+        ) => {
+            lhs_constructor == rhs_constructor
+                && lhs_data_kind == rhs_data_kind
                 && lhs_kind == rhs_kind
                 && normal_arg_spines_definitionally_equal(lhs_args, rhs_args)
         }
@@ -944,6 +965,25 @@ fn normal_forms_are_structurally_disjoint(lhs: &NormalTypeExpr, rhs: &NormalType
                 || normal_arg_spines_structurally_disjoint(lhs_args, rhs_args)
         }
         (
+            NormalTypeExpr::PromotedDataConstructorApp {
+                constructor: lhs_constructor,
+                data_kind: lhs_data_kind,
+                args: lhs_args,
+                kind: lhs_kind,
+            },
+            NormalTypeExpr::PromotedDataConstructorApp {
+                constructor: rhs_constructor,
+                data_kind: rhs_data_kind,
+                args: rhs_args,
+                kind: rhs_kind,
+            },
+        ) => {
+            lhs_constructor != rhs_constructor
+                || lhs_data_kind != rhs_data_kind
+                || lhs_kind != rhs_kind
+                || normal_arg_spines_structurally_disjoint(lhs_args, rhs_args)
+        }
+        (
             NormalTypeExpr::NeutralComputationApp {
                 head: lhs_head,
                 args: lhs_args,
@@ -991,11 +1031,13 @@ fn normal_forms_are_structurally_disjoint(lhs: &NormalTypeExpr, rhs: &NormalType
             NormalTypeExpr::Primitive(_)
             | NormalTypeExpr::Var(_)
             | NormalTypeExpr::NominalApp { .. }
-            | NormalTypeExpr::DomainConstructorApp { .. },
+            | NormalTypeExpr::DomainConstructorApp { .. }
+            | NormalTypeExpr::PromotedDataConstructorApp { .. },
             NormalTypeExpr::Primitive(_)
             | NormalTypeExpr::Var(_)
             | NormalTypeExpr::NominalApp { .. }
-            | NormalTypeExpr::DomainConstructorApp { .. },
+            | NormalTypeExpr::DomainConstructorApp { .. }
+            | NormalTypeExpr::PromotedDataConstructorApp { .. },
         ) => true,
         _ => false,
     }
@@ -1025,7 +1067,8 @@ fn normal_form_is_concrete(expr: &NormalTypeExpr) -> bool {
     match expr {
         NormalTypeExpr::Primitive(_) => true,
         NormalTypeExpr::NominalApp { args, .. }
-        | NormalTypeExpr::DomainConstructorApp { args, .. } => {
+        | NormalTypeExpr::DomainConstructorApp { args, .. }
+        | NormalTypeExpr::PromotedDataConstructorApp { args, .. } => {
             args.iter().all(normal_form_is_concrete)
         }
         NormalTypeExpr::Var(_)
@@ -1050,7 +1093,8 @@ fn collect_neutrality_blockers(expr: &NormalTypeExpr, blockers: &mut Vec<NormalT
             blockers.push(expr.clone());
         }
         NormalTypeExpr::NominalApp { args, .. }
-        | NormalTypeExpr::DomainConstructorApp { args, .. } => {
+        | NormalTypeExpr::DomainConstructorApp { args, .. }
+        | NormalTypeExpr::PromotedDataConstructorApp { args, .. } => {
             for arg in args {
                 collect_neutrality_blockers(arg, blockers);
             }
@@ -1280,6 +1324,7 @@ fn normal_contains_var(normal: &NormalTypeExpr) -> bool {
         NormalTypeExpr::Var(_) => true,
         NormalTypeExpr::NominalApp { args, .. }
         | NormalTypeExpr::DomainConstructorApp { args, .. }
+        | NormalTypeExpr::PromotedDataConstructorApp { args, .. }
         | NormalTypeExpr::NeutralComputationApp { args, .. }
         | NormalTypeExpr::Projection { args, .. } => args.iter().any(normal_contains_var),
         NormalTypeExpr::Primitive(_) => false,
@@ -1351,6 +1396,15 @@ impl<'env> NormalizationState<'env> {
                     )
                 }
             }
+            CanonicalTypeExpr::PromotedDataConstructorApp(app) => (
+                NormalTypeExpr::PromotedDataConstructorApp {
+                    constructor: Box::new(app.constructor.clone()),
+                    data_kind: Box::new(app.data_kind.clone()),
+                    args: self.normalize_args(&app.args)?,
+                    kind: app.kind.clone(),
+                },
+                NormalizationEvidence::StructuralIdentity,
+            ),
             CanonicalTypeExpr::Projection {
                 interface,
                 member,
@@ -1754,6 +1808,18 @@ impl<'env> NormalizationState<'env> {
             } => Ok(NormalTypeExpr::DomainConstructorApp {
                 constructor: constructor.clone(),
                 domain: domain.clone(),
+                args: self.normalize_source_result_args(args, bindings)?,
+                kind: kind.clone(),
+            }),
+            TypeFunctionResultExpr::PromotedDataConstructorApp {
+                constructor,
+                data_kind,
+                args,
+                kind,
+                ..
+            } => Ok(NormalTypeExpr::PromotedDataConstructorApp {
+                constructor: constructor.clone(),
+                data_kind: data_kind.clone(),
                 args: self.normalize_source_result_args(args, bindings)?,
                 kind: kind.clone(),
             }),

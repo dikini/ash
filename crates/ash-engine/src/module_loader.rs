@@ -17,12 +17,12 @@ use ash_core::module_graph::ModuleId;
 use ash_core::semantic_summary::{
     AssociatedFamilySummary, AssociatedMemberIdentityId, ConstructorSummary, InterfaceIdentityId,
     InterfaceIdentitySummary, ModuleIdentity, ModuleSemanticSummary, ModuleSourceOrigin,
-    SealedDomainId, SummaryVersion, TypeDeclId, TypeDeclSummary, TypeFunctionSummary,
-    TypeRepresentationSummary,
+    PromotedConstructorId, PromotedDataKindId, SealedDomainId, SummaryVersion, TypeDeclId,
+    TypeDeclSummary, TypeFunctionSummary, TypeRepresentationSummary,
 };
 use ash_core::type_ir::{
     CanonicalTypeExpr, TypeComputationHeadId, TypeFunctionPattern, TypeFunctionPatternConstraint,
-    TypeFunctionResultConstraint, TypeFunctionResultExpr,
+    TypeFunctionResultConstraint, TypeFunctionResultExpr, TypeProposition, TypePropositionTerm,
 };
 use ash_core::workflow_carrier::{
     CoverageEvidence, OpenPostcondition, ProcContractSummary, ProcFailureSummary, ProcLowerSummary,
@@ -673,6 +673,15 @@ fn rewrite_variant_payload_aliases(
     }
 }
 
+fn rewrite_type_representation_aliases(
+    representation: &mut TypeRepresentationSummary,
+    alias_map: &HashMap<String, String>,
+) {
+    if let TypeRepresentationSummary::Exposed(body) = representation {
+        rewrite_core_type_body_aliases(body, alias_map);
+    }
+}
+
 fn rewrite_core_type_expr_aliases(expr: &mut CoreTypeExpr, alias_map: &HashMap<String, String>) {
     match expr {
         CoreTypeExpr::Named(name) => {
@@ -1097,7 +1106,7 @@ fn selected_proposition_semantic_summary(
         return None;
     }
     let mut selected = ModuleSemanticSummary::new(summary.module.clone());
-    selected.version = SummaryVersion::SPEC064_PROPOSITIONS_V5;
+    selected.version = summary.version;
     selected.exported_types.clone_from(&summary.exported_types);
     selected
         .exported_constructors
@@ -1105,6 +1114,10 @@ fn selected_proposition_semantic_summary(
     selected
         .exported_sealed_domains
         .clone_from(&summary.exported_sealed_domains);
+    let mut dependencies = proposition_summary_dependencies(summary);
+    expand_promoted_data_kind_dependency_closure(summary, &mut dependencies);
+    selected.exported_promoted_data_kinds =
+        hidden_promoted_data_kind_dependencies(summary, &dependencies.promoted_data_kinds);
     selected
         .interface_identities
         .clone_from(&summary.interface_identities);
@@ -3652,6 +3665,11 @@ fn rewrite_canonical_type_expr_visible_type_names(
                 rewrite_canonical_type_expr_visible_type_names(arg, alias_map);
             }
         }
+        CanonicalTypeExpr::PromotedDataConstructorApp(app) => {
+            for arg in &mut app.args {
+                rewrite_canonical_type_expr_visible_type_names(arg, alias_map);
+            }
+        }
     }
 }
 
@@ -3672,6 +3690,7 @@ fn rewrite_type_function_result_visible_type_names(
             }
         }
         TypeFunctionResultExpr::DomainConstructorApp { args, .. }
+        | TypeFunctionResultExpr::PromotedDataConstructorApp { args, .. }
         | TypeFunctionResultExpr::Projection { args, .. }
         | TypeFunctionResultExpr::ComputationHeadApp { args, .. } => {
             for arg in args {
@@ -3691,7 +3710,8 @@ fn selected_type_function_semantic_summary(
         .iter()
         .find(|type_function| type_function.exported_name == type_function_name)?;
     let closure = transitive_type_function_dependency_summaries(summary, selected);
-    let dependencies = type_function_summary_dependencies(&closure);
+    let mut dependencies = type_function_summary_dependencies(&closure);
+    expand_promoted_data_kind_dependency_closure(summary, &mut dependencies);
     let mut selected_summary = ModuleSemanticSummary::new(summary.module.clone());
     selected_summary.version = summary.version;
     selected_summary.exported_sealed_domains = summary
@@ -3700,16 +3720,28 @@ fn selected_type_function_semantic_summary(
         .filter(|domain| dependencies.sealed_domains.contains(&domain.id))
         .cloned()
         .collect();
-    let mut dependency_type_aliases = HashMap::new();
-    selected_summary.exported_types = summary
+    let selected_exported_types = summary
         .exported_types
         .iter()
         .filter(|ty| dependencies.types.contains(&ty.id))
         .cloned()
+        .collect::<Vec<_>>();
+    let dependency_type_aliases = selected_exported_types
+        .iter()
+        .map(|ty| {
+            (
+                ty.exported_name.clone(),
+                dependency_metadata_name(&ty.exported_name),
+            )
+        })
+        .collect::<HashMap<_, _>>();
+    selected_summary.exported_types = selected_exported_types
+        .into_iter()
         .map(|mut ty| {
-            let metadata_name = dependency_metadata_name(&ty.exported_name);
-            dependency_type_aliases.insert(ty.exported_name.clone(), metadata_name.clone());
-            ty.exported_name = metadata_name;
+            if let Some(metadata_name) = dependency_type_aliases.get(&ty.exported_name) {
+                ty.exported_name = metadata_name.clone();
+            }
+            rewrite_type_representation_aliases(&mut ty.representation, &dependency_type_aliases);
             ty
         })
         .collect();
@@ -3719,6 +3751,8 @@ fn selected_type_function_semantic_summary(
         .filter(|constructor| dependencies.types.contains(&constructor.parent))
         .cloned()
         .collect();
+    selected_summary.exported_promoted_data_kinds =
+        hidden_promoted_data_kind_dependencies(summary, &dependencies.promoted_data_kinds);
     selected_summary.exported_type_functions = closure
         .into_iter()
         .map(|type_function| {
@@ -3852,6 +3886,8 @@ fn transitive_associated_family_dependency_summaries<'a>(
 struct TypeFunctionDependencyIds {
     types: HashSet<TypeDeclId>,
     sealed_domains: HashSet<SealedDomainId>,
+    promoted_data_kinds: HashSet<PromotedDataKindId>,
+    promoted_constructors: HashSet<PromotedConstructorId>,
     interfaces: HashSet<InterfaceIdentityId>,
     associated_members: HashSet<AssociatedMemberIdentityId>,
 }
@@ -3877,6 +3913,135 @@ fn type_function_summary_dependencies(
         }
     }
     dependencies
+}
+
+fn proposition_summary_dependencies(summary: &ModuleSemanticSummary) -> TypeFunctionDependencyIds {
+    let mut dependencies = TypeFunctionDependencyIds::default();
+    for predicate in &summary.exported_proposition_predicates {
+        for param in &predicate.params {
+            collect_canonical_type_dependencies(&param.ty, &mut dependencies);
+        }
+    }
+    for fact in &summary.exported_proposition_facts {
+        collect_type_proposition_dependencies(&fact.proposition, &mut dependencies);
+    }
+    dependencies
+}
+
+fn expand_promoted_data_kind_dependency_closure(
+    summary: &ModuleSemanticSummary,
+    dependencies: &mut TypeFunctionDependencyIds,
+) {
+    let promoted_summaries = summary
+        .exported_promoted_data_kinds
+        .iter()
+        .map(|data_kind| (data_kind.id.clone(), data_kind.clone()))
+        .collect::<HashMap<_, _>>();
+    expand_promoted_data_kind_dependencies_from_map(&promoted_summaries, dependencies);
+}
+
+fn expand_promoted_data_kind_dependencies_from_map(
+    promoted_summaries: &HashMap<
+        PromotedDataKindId,
+        ash_core::semantic_summary::PromotedDataKindSummary,
+    >,
+    dependencies: &mut TypeFunctionDependencyIds,
+) {
+    let mut changed = true;
+    while changed {
+        changed = false;
+        let data_kind_ids = dependencies
+            .promoted_data_kinds
+            .iter()
+            .cloned()
+            .collect::<Vec<_>>();
+        for data_kind_id in data_kind_ids {
+            let Some(data_kind) = promoted_summaries.get(&data_kind_id) else {
+                continue;
+            };
+            dependencies.types.insert(data_kind.source_type.clone());
+            for constructor in &data_kind.constructors {
+                dependencies
+                    .promoted_constructors
+                    .insert(constructor.id.clone());
+                dependencies
+                    .types
+                    .insert(constructor.source_constructor.parent.clone());
+                for field in &constructor.fields {
+                    if let Some(field_data_kind) = &field.data_kind_constraint
+                        && dependencies
+                            .promoted_data_kinds
+                            .insert(field_data_kind.clone())
+                    {
+                        changed = true;
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn hidden_promoted_data_kind_dependencies(
+    summary: &ModuleSemanticSummary,
+    promoted_data_kinds: &HashSet<PromotedDataKindId>,
+) -> Vec<ash_core::semantic_summary::PromotedDataKindSummary> {
+    summary
+        .exported_promoted_data_kinds
+        .iter()
+        .filter(|data_kind| promoted_data_kinds.contains(&data_kind.id))
+        .cloned()
+        .map(|mut data_kind| {
+            data_kind.exported_name = dependency_metadata_name(&data_kind.exported_name);
+            data_kind
+        })
+        .collect()
+}
+
+fn collect_type_proposition_dependencies(
+    proposition: &TypeProposition,
+    dependencies: &mut TypeFunctionDependencyIds,
+) {
+    match proposition {
+        TypeProposition::Equality(proposition) => {
+            collect_type_proposition_term_dependencies(&proposition.lhs, dependencies);
+            collect_type_proposition_term_dependencies(&proposition.rhs, dependencies);
+        }
+        TypeProposition::Disequality(proposition) => {
+            collect_type_proposition_term_dependencies(&proposition.lhs, dependencies);
+            collect_type_proposition_term_dependencies(&proposition.rhs, dependencies);
+        }
+        TypeProposition::InterfaceBound(proposition) => {
+            dependencies
+                .interfaces
+                .insert(proposition.interface.clone());
+            collect_type_proposition_term_dependencies(&proposition.subject, dependencies);
+            for arg in &proposition.interface_args {
+                collect_type_proposition_term_dependencies(arg, dependencies);
+            }
+        }
+        TypeProposition::NamedPredicate(proposition) => {
+            for arg in &proposition.args {
+                collect_type_proposition_term_dependencies(arg, dependencies);
+            }
+        }
+    }
+}
+
+fn collect_type_proposition_term_dependencies(
+    term: &TypePropositionTerm,
+    dependencies: &mut TypeFunctionDependencyIds,
+) {
+    match term {
+        TypePropositionTerm::Canonical(expr) => {
+            collect_canonical_type_dependencies(expr, dependencies);
+        }
+        TypePropositionTerm::DomainConstructorApp { domain, args, .. } => {
+            dependencies.sealed_domains.insert(domain.clone());
+            for arg in args {
+                collect_type_proposition_term_dependencies(arg, dependencies);
+            }
+        }
+    }
 }
 
 fn collect_canonical_type_dependencies(
@@ -3905,6 +4070,21 @@ fn collect_canonical_type_dependencies(
         }
         CanonicalTypeExpr::ComputationHeadApp { args, .. } => {
             for arg in args {
+                collect_canonical_type_dependencies(arg, dependencies);
+            }
+        }
+        CanonicalTypeExpr::PromotedDataConstructorApp(app) => {
+            dependencies
+                .promoted_data_kinds
+                .insert(app.data_kind.clone());
+            dependencies
+                .promoted_constructors
+                .insert(app.constructor.clone());
+            dependencies.types.insert(app.data_kind.source_type.clone());
+            dependencies
+                .types
+                .insert(app.constructor.source_constructor.parent.clone());
+            for arg in &app.args {
                 collect_canonical_type_dependencies(arg, dependencies);
             }
         }
@@ -3989,6 +4169,28 @@ fn collect_result_expr_dependencies(
             ..
         } => {
             dependencies.sealed_domains.insert(domain.clone());
+            collect_result_constraint_dependencies(constraint, dependencies);
+            for arg in args {
+                collect_result_expr_dependencies(arg, dependencies);
+            }
+        }
+        TypeFunctionResultExpr::PromotedDataConstructorApp {
+            constructor,
+            data_kind,
+            args,
+            constraint,
+            ..
+        } => {
+            dependencies
+                .promoted_data_kinds
+                .insert((**data_kind).clone());
+            dependencies
+                .promoted_constructors
+                .insert((**constructor).clone());
+            dependencies.types.insert(data_kind.source_type.clone());
+            dependencies
+                .types
+                .insert(constructor.source_constructor.parent.clone());
             collect_result_constraint_dependencies(constraint, dependencies);
             for arg in args {
                 collect_result_expr_dependencies(arg, dependencies);
@@ -4095,6 +4297,11 @@ fn collect_canonical_type_function_heads(
                 collect_canonical_type_function_heads(arg, heads);
             }
         }
+        CanonicalTypeExpr::PromotedDataConstructorApp(app) => {
+            for arg in &app.args {
+                collect_canonical_type_function_heads(arg, heads);
+            }
+        }
     }
 }
 
@@ -4106,6 +4313,7 @@ fn collect_result_type_function_heads(
         TypeFunctionResultExpr::Primitive { .. } | TypeFunctionResultExpr::Var { .. } => {}
         TypeFunctionResultExpr::NominalApp { args, .. }
         | TypeFunctionResultExpr::DomainConstructorApp { args, .. }
+        | TypeFunctionResultExpr::PromotedDataConstructorApp { args, .. }
         | TypeFunctionResultExpr::Projection { args, .. } => {
             for arg in args {
                 collect_result_type_function_heads(arg, heads);
@@ -5663,6 +5871,579 @@ fn convert_type_expr(parsed: &ParsedTypeExpr) -> Result<CoreTypeExpr, EngineErro
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ash_core::ast::{TypeBody, VariantDef, VariantPayload, Visibility};
+    use ash_core::kind::Kind;
+    use ash_core::module_graph::CrateId;
+    use ash_core::semantic_summary::{
+        ConstructorId, ConstructorPayloadKind, ConstructorSummary, PromotedConstructorFieldSummary,
+        PromotedConstructorSummary, PromotedDataKindSummary, PropositionFactRole,
+        PropositionFactSummary, RepresentationExposure, SourceAnchor as SummarySourceAnchor,
+        SourceOrigin as SummarySourceOrigin, TypeFunctionClosureMetadata, TypeFunctionExportMode,
+        TypeFunctionRevalidationMetadata,
+    };
+    use ash_core::type_ir::{
+        PromotedConstructorApp, TypeEqualityProposition, TypeFunctionEquation,
+        TypeFunctionSourceAnchors, TypeProposition, TypePropositionTerm,
+    };
+
+    fn task896_module(id: usize) -> ModuleIdentity {
+        ModuleIdentity::new(
+            Some(CrateId(8961)),
+            ModuleId(id),
+            vec!["task896_loader".to_string(), format!("m{id}")],
+            ModuleSourceOrigin::Synthetic {
+                reason: format!("task-896-loader-{id}"),
+            },
+        )
+    }
+
+    fn task896_anchor(label: &str) -> SummarySourceAnchor {
+        SummarySourceAnchor::new(
+            SummarySourceOrigin::Synthetic {
+                reason: "task-896-loader-selected-summary".into(),
+            },
+            None,
+            label,
+        )
+    }
+
+    fn task896_source_type(module: &ModuleIdentity) -> TypeDeclSummary {
+        TypeDeclSummary::new(
+            TypeDeclId::ordinary(module.clone(), "Nat"),
+            "Nat",
+            Visibility::Public,
+            RepresentationExposure::Exposed,
+            TypeRepresentationSummary::Exposed(TypeBody::Enum(vec![VariantDef {
+                name: "Z".into(),
+                fields: vec![],
+                payload: VariantPayload::Unit,
+            }])),
+            task896_anchor("Nat"),
+        )
+    }
+
+    fn task896_source_constructor(module: &ModuleIdentity) -> ConstructorSummary {
+        let nat = TypeDeclId::ordinary(module.clone(), "Nat");
+        ConstructorSummary::new(
+            ConstructorId::variant(nat.clone(), "Z", ConstructorPayloadKind::Unit),
+            nat,
+            "Z",
+            ConstructorPayloadKind::Unit,
+            Visibility::Public,
+            task896_anchor("Z"),
+        )
+    }
+
+    fn task896_promoted_ids(
+        module: &ModuleIdentity,
+    ) -> (PromotedDataKindId, PromotedConstructorId) {
+        let kind = PromotedDataKindId::new(
+            module.clone(),
+            TypeDeclId::ordinary(module.clone(), "Nat"),
+            "NatKind",
+        );
+        let source_ctor = ConstructorId::variant(
+            TypeDeclId::ordinary(module.clone(), "Nat"),
+            "Z",
+            ConstructorPayloadKind::Unit,
+        );
+        let ctor = PromotedConstructorId::new(kind.clone(), source_ctor, "Z");
+        (kind, ctor)
+    }
+
+    fn task896_promoted_kind_summary(
+        module: &ModuleIdentity,
+        kind: &PromotedDataKindId,
+        ctor: &PromotedConstructorId,
+    ) -> PromotedDataKindSummary {
+        let source_ctor = ConstructorId::variant(
+            TypeDeclId::ordinary(module.clone(), "Nat"),
+            "Z",
+            ConstructorPayloadKind::Unit,
+        );
+        PromotedDataKindSummary::new(
+            kind.clone(),
+            "NatKind",
+            Visibility::Public,
+            TypeDeclId::ordinary(module.clone(), "Nat"),
+            task896_anchor("NatKind"),
+        )
+        .with_constructor(PromotedConstructorSummary::new(
+            ctor.clone(),
+            "Z",
+            source_ctor,
+            vec![],
+            Visibility::Public,
+            task896_anchor("promoted Z"),
+        ))
+    }
+
+    fn task896_promoted_app(
+        kind: &PromotedDataKindId,
+        ctor: &PromotedConstructorId,
+    ) -> PromotedConstructorApp {
+        PromotedConstructorApp {
+            constructor: ctor.clone(),
+            data_kind: kind.clone(),
+            args: vec![],
+            kind: Kind::Type,
+        }
+    }
+
+    fn task896_promoted_type_function(
+        module: &ModuleIdentity,
+        kind: &PromotedDataKindId,
+        ctor: &PromotedConstructorId,
+    ) -> TypeFunctionSummary {
+        let head = TypeComputationHeadId::new(module.clone(), "PromotedZero");
+        TypeFunctionSummary {
+            exported_name: "PromotedZero".into(),
+            head: head.clone(),
+            visibility: Visibility::Public,
+            params: vec![],
+            return_type: CanonicalTypeExpr::Primitive("Type".into()),
+            return_kind: Kind::Type,
+            result_constraint: TypeFunctionResultConstraint::Kind(Kind::Type),
+            export_mode: TypeFunctionExportMode::TransparentEquations,
+            source_anchors: TypeFunctionSourceAnchors {
+                definition: task896_anchor("type fn PromotedZero"),
+                decreases: None,
+            },
+            equations: vec![TypeFunctionEquation {
+                head,
+                ordinal: 0,
+                patterns: vec![],
+                result: TypeFunctionResultExpr::PromotedDataConstructorApp {
+                    constructor: Box::new(ctor.clone()),
+                    data_kind: Box::new(kind.clone()),
+                    args: vec![],
+                    kind: Kind::Type,
+                    constraint: TypeFunctionResultConstraint::Kind(Kind::Type),
+                    source_anchor: task896_anchor("PromotedZero rhs"),
+                },
+                source_anchor: task896_anchor("case PromotedZero = Z"),
+                case_head_anchor: task896_anchor("PromotedZero case head"),
+            }],
+            dependency_summary_refs: vec![],
+            closure_metadata: TypeFunctionClosureMetadata {
+                public_closure_checked: true,
+                public_ordinary_type_count: 1,
+                public_sealed_domain_count: 0,
+                public_type_function_count: 1,
+                public_projection_count: 0,
+            },
+            revalidation_metadata: TypeFunctionRevalidationMetadata {
+                spec_version: SummaryVersion::SPEC062_TYPE_COMPUTATION_V3,
+                structural_recursion_checked: true,
+                kind_and_domain_checked: true,
+                coverage_and_overlap_checked: true,
+                decreases_param: None,
+            },
+        }
+    }
+
+    fn task896_promoted_summary() -> ModuleSemanticSummary {
+        let module = task896_module(1);
+        let (kind, ctor) = task896_promoted_ids(&module);
+        ModuleSemanticSummary::new(module.clone())
+            .with_version(SummaryVersion::SPEC065_PROMOTED_DATA_KIND_V6)
+            .with_exported_type(task896_source_type(&module))
+            .with_exported_constructor(task896_source_constructor(&module))
+            .with_exported_promoted_data_kind(task896_promoted_kind_summary(&module, &kind, &ctor))
+            .with_exported_type_function(task896_promoted_type_function(&module, &kind, &ctor))
+    }
+
+    fn task896_promoted_summary_named(
+        module_id: usize,
+        source_type_name: &str,
+        source_constructor_name: &str,
+        data_kind_name: &str,
+    ) -> ModuleSemanticSummary {
+        let module = task896_module(module_id);
+        let source_type = TypeDeclId::ordinary(module.clone(), source_type_name);
+        let source_constructor = ConstructorId::variant(
+            source_type.clone(),
+            source_constructor_name,
+            ConstructorPayloadKind::Unit,
+        );
+        let kind = PromotedDataKindId::new(module.clone(), source_type.clone(), data_kind_name);
+        let ctor = PromotedConstructorId::new(
+            kind.clone(),
+            source_constructor.clone(),
+            source_constructor_name,
+        );
+        ModuleSemanticSummary::new(module.clone())
+            .with_version(SummaryVersion::SPEC065_PROMOTED_DATA_KIND_V6)
+            .with_exported_type(TypeDeclSummary::new(
+                source_type.clone(),
+                source_type_name,
+                Visibility::Public,
+                RepresentationExposure::Exposed,
+                TypeRepresentationSummary::Exposed(TypeBody::Enum(vec![VariantDef {
+                    name: source_constructor_name.into(),
+                    fields: vec![],
+                    payload: VariantPayload::Unit,
+                }])),
+                task896_anchor(source_type_name),
+            ))
+            .with_exported_constructor(ConstructorSummary::new(
+                source_constructor.clone(),
+                source_type.clone(),
+                source_constructor_name,
+                ConstructorPayloadKind::Unit,
+                Visibility::Public,
+                task896_anchor(source_constructor_name),
+            ))
+            .with_exported_promoted_data_kind(
+                PromotedDataKindSummary::new(
+                    kind.clone(),
+                    data_kind_name,
+                    Visibility::Public,
+                    source_type,
+                    task896_anchor(data_kind_name),
+                )
+                .with_constructor(PromotedConstructorSummary::new(
+                    ctor.clone(),
+                    source_constructor_name,
+                    source_constructor,
+                    vec![],
+                    Visibility::Public,
+                    task896_anchor(source_constructor_name),
+                )),
+            )
+            .with_exported_type_function(task896_promoted_type_function(&module, &kind, &ctor))
+    }
+
+    #[allow(clippy::too_many_lines)]
+    fn task896_promoted_summary_with_field_constraint() -> ModuleSemanticSummary {
+        let module = task896_module(21);
+        let elem_type = TypeDeclId::ordinary(module.clone(), "Elem");
+        let elem_constructor =
+            ConstructorId::variant(elem_type.clone(), "E", ConstructorPayloadKind::Unit);
+        let elem_kind = PromotedDataKindId::new(module.clone(), elem_type.clone(), "ElemKind");
+        let elem_promoted_constructor =
+            PromotedConstructorId::new(elem_kind.clone(), elem_constructor.clone(), "E");
+
+        let maybe_type = TypeDeclId::ordinary(module.clone(), "MaybeElem");
+        let none_constructor =
+            ConstructorId::variant(maybe_type.clone(), "None", ConstructorPayloadKind::Unit);
+        let some_constructor =
+            ConstructorId::variant(maybe_type.clone(), "Some", ConstructorPayloadKind::Tuple);
+        let maybe_kind =
+            PromotedDataKindId::new(module.clone(), maybe_type.clone(), "MaybeElemKind");
+        let none_promoted_constructor =
+            PromotedConstructorId::new(maybe_kind.clone(), none_constructor.clone(), "None");
+        let some_promoted_constructor =
+            PromotedConstructorId::new(maybe_kind.clone(), some_constructor.clone(), "Some");
+
+        ModuleSemanticSummary::new(module.clone())
+            .with_version(SummaryVersion::SPEC065_PROMOTED_DATA_KIND_V6)
+            .with_exported_type(TypeDeclSummary::new(
+                elem_type.clone(),
+                "Elem",
+                Visibility::Public,
+                RepresentationExposure::Exposed,
+                TypeRepresentationSummary::Exposed(TypeBody::Enum(vec![VariantDef {
+                    name: "E".into(),
+                    fields: vec![],
+                    payload: VariantPayload::Unit,
+                }])),
+                task896_anchor("Elem"),
+            ))
+            .with_exported_constructor(ConstructorSummary::new(
+                elem_constructor.clone(),
+                elem_type.clone(),
+                "E",
+                ConstructorPayloadKind::Unit,
+                Visibility::Public,
+                task896_anchor("E"),
+            ))
+            .with_exported_type(TypeDeclSummary::new(
+                maybe_type.clone(),
+                "MaybeElem",
+                Visibility::Public,
+                RepresentationExposure::Exposed,
+                TypeRepresentationSummary::Exposed(TypeBody::Enum(vec![
+                    VariantDef {
+                        name: "None".into(),
+                        fields: vec![],
+                        payload: VariantPayload::Unit,
+                    },
+                    VariantDef {
+                        name: "Some".into(),
+                        fields: vec![("0".into(), CoreTypeExpr::Named("Elem".into()))],
+                        payload: VariantPayload::Tuple(vec![CoreTypeExpr::Named("Elem".into())]),
+                    },
+                ])),
+                task896_anchor("MaybeElem"),
+            ))
+            .with_exported_constructor(ConstructorSummary::new(
+                none_constructor.clone(),
+                maybe_type.clone(),
+                "None",
+                ConstructorPayloadKind::Unit,
+                Visibility::Public,
+                task896_anchor("None"),
+            ))
+            .with_exported_constructor(ConstructorSummary::new(
+                some_constructor.clone(),
+                maybe_type.clone(),
+                "Some",
+                ConstructorPayloadKind::Tuple,
+                Visibility::Public,
+                task896_anchor("Some"),
+            ))
+            .with_exported_promoted_data_kind(
+                PromotedDataKindSummary::new(
+                    elem_kind.clone(),
+                    "ElemKind",
+                    Visibility::Public,
+                    elem_type,
+                    task896_anchor("ElemKind"),
+                )
+                .with_constructor(PromotedConstructorSummary::new(
+                    elem_promoted_constructor,
+                    "E",
+                    elem_constructor,
+                    vec![],
+                    Visibility::Public,
+                    task896_anchor("promoted E"),
+                )),
+            )
+            .with_exported_promoted_data_kind(
+                PromotedDataKindSummary::new(
+                    maybe_kind.clone(),
+                    "MaybeElemKind",
+                    Visibility::Public,
+                    maybe_type,
+                    task896_anchor("MaybeElemKind"),
+                )
+                .with_constructor(PromotedConstructorSummary::new(
+                    none_promoted_constructor.clone(),
+                    "None",
+                    none_constructor,
+                    vec![],
+                    Visibility::Public,
+                    task896_anchor("promoted None"),
+                ))
+                .with_constructor(PromotedConstructorSummary::new(
+                    some_promoted_constructor,
+                    "Some",
+                    some_constructor,
+                    vec![PromotedConstructorFieldSummary::new(
+                        "0",
+                        Kind::Type,
+                        Some(elem_kind),
+                        task896_anchor("promoted Some field"),
+                    )],
+                    Visibility::Public,
+                    task896_anchor("promoted Some"),
+                )),
+            )
+            .with_exported_type_function(task896_promoted_type_function(
+                &module,
+                &maybe_kind,
+                &none_promoted_constructor,
+            ))
+    }
+
+    fn task896_promoted_proposition_summary_named(
+        module_id: usize,
+        source_type_name: &str,
+        source_constructor_name: &str,
+        data_kind_name: &str,
+    ) -> ModuleSemanticSummary {
+        let mut summary = task896_promoted_summary_named(
+            module_id,
+            source_type_name,
+            source_constructor_name,
+            data_kind_name,
+        );
+        let kind = summary.exported_promoted_data_kinds[0].id.clone();
+        let ctor = summary.exported_promoted_data_kinds[0].constructors[0]
+            .id
+            .clone();
+        let app = CanonicalTypeExpr::PromotedDataConstructorApp(Box::new(task896_promoted_app(
+            &kind, &ctor,
+        )));
+        summary
+            .exported_proposition_facts
+            .push(PropositionFactSummary {
+                proposition: TypeProposition::Equality(TypeEqualityProposition {
+                    lhs: TypePropositionTerm::Canonical(app.clone()),
+                    rhs: TypePropositionTerm::Canonical(app),
+                }),
+                role: PropositionFactRole::Requirement,
+                source_anchor: task896_anchor("promoted proposition fact"),
+                predicate_dependencies: vec![],
+                dependency_summary_refs: vec![],
+                outcome: None,
+            });
+        summary
+    }
+
+    #[test]
+    fn task896_selected_type_function_summary_retains_promoted_dependencies() {
+        let source = task896_promoted_summary();
+        let selected = selected_type_function_semantic_summary(
+            &source,
+            "PromotedZero",
+            "ImportedPromotedZero",
+        )
+        .expect("selected type-function summary");
+
+        assert_eq!(
+            selected.version,
+            SummaryVersion::SPEC065_PROMOTED_DATA_KIND_V6
+        );
+        assert_eq!(selected.exported_promoted_data_kinds.len(), 1);
+        assert_eq!(selected.exported_types.len(), 1);
+        assert_eq!(selected.exported_constructors.len(), 1);
+        assert_eq!(selected.exported_type_functions.len(), 1);
+        assert_eq!(
+            selected.exported_type_functions[0].exported_name,
+            "ImportedPromotedZero"
+        );
+
+        let mut env = ash_typeck::TypeEnv::new();
+        env.register_module_semantic_summary(&selected)
+            .expect("selected promoted type-function summary remains revalidatable");
+    }
+
+    #[test]
+    fn task896_selected_type_function_summary_retains_promoted_field_constraint_dependencies() {
+        let source = task896_promoted_summary_with_field_constraint();
+        let selected = selected_type_function_semantic_summary(
+            &source,
+            "PromotedZero",
+            "ImportedPromotedZero",
+        )
+        .expect("selected type-function summary");
+
+        assert_eq!(selected.exported_promoted_data_kinds.len(), 2);
+        assert!(
+            selected
+                .exported_promoted_data_kinds
+                .iter()
+                .all(|data_kind| is_dependency_metadata_name(&data_kind.exported_name))
+        );
+        assert_eq!(selected.exported_types.len(), 2);
+        assert_eq!(selected.exported_constructors.len(), 3);
+
+        let mut env = ash_typeck::TypeEnv::new();
+        env.register_module_semantic_summary(&selected)
+            .expect("selected type-function summary retains transitive promoted field constraints");
+        assert!(env.lookup_promoted_data_kind("MaybeElemKind").is_none());
+        assert!(env.lookup_promoted_data_kind("ElemKind").is_none());
+    }
+
+    #[test]
+    fn task896_selected_type_function_hidden_promoted_data_kind_dependencies_do_not_alias_collide()
+    {
+        let left_source = task896_promoted_summary_named(11, "LeftNat", "LeftZ", "NatKind");
+        let right_source = task896_promoted_summary_named(12, "RightNat", "RightZ", "NatKind");
+        let left = selected_type_function_semantic_summary(
+            &left_source,
+            "PromotedZero",
+            "ImportedLeftPromotedZero",
+        )
+        .expect("left selected type-function summary");
+        let right = selected_type_function_semantic_summary(
+            &right_source,
+            "PromotedZero",
+            "ImportedRightPromotedZero",
+        )
+        .expect("right selected type-function summary");
+        let left_kind = left.exported_promoted_data_kinds[0].id.clone();
+        let right_kind = right.exported_promoted_data_kinds[0].id.clone();
+
+        let mut env = ash_typeck::TypeEnv::new();
+        env.register_module_semantic_summaries(&[left, right])
+            .expect("hidden promoted data-kind dependencies with the same source name register by identity");
+
+        assert!(
+            env.lookup_promoted_data_kind("NatKind").is_none(),
+            "hidden promoted data-kind dependency metadata must not create a source-visible alias"
+        );
+        assert!(env.lookup_promoted_data_kind_by_id(&left_kind).is_some());
+        assert!(env.lookup_promoted_data_kind_by_id(&right_kind).is_some());
+    }
+
+    #[test]
+    fn task896_selected_proposition_summary_retains_promoted_dependencies() {
+        let source = {
+            let module = task896_module(2);
+            let (kind, ctor) = task896_promoted_ids(&module);
+            let app = CanonicalTypeExpr::PromotedDataConstructorApp(Box::new(
+                task896_promoted_app(&kind, &ctor),
+            ));
+            let proposition = TypeProposition::Equality(TypeEqualityProposition {
+                lhs: TypePropositionTerm::Canonical(app.clone()),
+                rhs: TypePropositionTerm::Canonical(app),
+            });
+            ModuleSemanticSummary::new(module.clone())
+                .with_version(SummaryVersion::SPEC065_PROMOTED_DATA_KIND_V6)
+                .with_exported_type(task896_source_type(&module))
+                .with_exported_constructor(task896_source_constructor(&module))
+                .with_exported_promoted_data_kind(task896_promoted_kind_summary(
+                    &module, &kind, &ctor,
+                ))
+                .with_exported_proposition_fact(PropositionFactSummary {
+                    proposition,
+                    role: PropositionFactRole::Requirement,
+                    source_anchor: task896_anchor("Z == Z"),
+                    predicate_dependencies: vec![],
+                    dependency_summary_refs: vec![],
+                    outcome: None,
+                })
+        };
+        let selected = selected_proposition_semantic_summary(Some(&source))
+            .expect("selected proposition summary");
+
+        assert_eq!(
+            selected.version,
+            SummaryVersion::SPEC065_PROMOTED_DATA_KIND_V6
+        );
+        assert_eq!(selected.exported_promoted_data_kinds.len(), 1);
+        assert_eq!(selected.exported_proposition_facts.len(), 1);
+
+        let mut env = ash_typeck::TypeEnv::new();
+        env.register_module_semantic_summary(&selected)
+            .expect("selected promoted proposition summary remains revalidatable");
+        assert!(
+            env.lookup_promoted_data_kind("NatKind").is_none(),
+            "selected proposition promoted dependencies must remain hidden metadata"
+        );
+        assert!(
+            env.lookup_promoted_data_kind_by_id(&selected.exported_promoted_data_kinds[0].id)
+                .is_some()
+        );
+    }
+
+    #[test]
+    fn task896_selected_proposition_hidden_promoted_data_kind_dependencies_do_not_alias_collide() {
+        let left_source =
+            task896_promoted_proposition_summary_named(31, "LeftNat", "LeftZ", "NatKind");
+        let right_source =
+            task896_promoted_proposition_summary_named(32, "RightNat", "RightZ", "NatKind");
+        let left = selected_proposition_semantic_summary(Some(&left_source))
+            .expect("left selected proposition summary");
+        let right = selected_proposition_semantic_summary(Some(&right_source))
+            .expect("right selected proposition summary");
+        let left_kind = left.exported_promoted_data_kinds[0].id.clone();
+        let right_kind = right.exported_promoted_data_kinds[0].id.clone();
+
+        let mut env = ash_typeck::TypeEnv::new();
+        env.register_module_semantic_summaries(&[left, right])
+            .expect("hidden proposition promoted data-kind dependencies with the same source name register by identity");
+
+        assert!(
+            env.lookup_promoted_data_kind("NatKind").is_none(),
+            "selected proposition promoted dependencies must not create a source-visible alias"
+        );
+        assert!(env.lookup_promoted_data_kind_by_id(&left_kind).is_some());
+        assert!(env.lookup_promoted_data_kind_by_id(&right_kind).is_some());
+    }
 
     /// Test 1: `pub mod child;` loads the child module's exports and stores
     /// them in `child_modules` under the child name.

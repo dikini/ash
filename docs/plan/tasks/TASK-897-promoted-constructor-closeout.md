@@ -1,6 +1,6 @@
 # TASK-897: Reconcile SPEC-065/PLAN-114 docs, acceptance matrix, broad gates, and review remediation
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -62,11 +62,11 @@ commands:
   - cargo test --workspace
   - cargo doc --workspace --no-deps
 checklist:
-  - [ ] Acceptance matrix evidence is recorded
-  - [ ] Broad closeout gates pass
-  - [ ] cargo fmt --check passes
-  - [ ] git diff --check passes
-  - [ ] Status surfaces and CHANGELOG are reconciled if this task completes
+  - [x] Acceptance matrix evidence is recorded
+  - [x] Broad closeout gates pass
+  - [x] cargo fmt --check passes
+  - [x] git diff --check passes
+  - [x] Status surfaces and CHANGELOG are reconciled if this task completes
 ```
 
 ## Dependencies for Next Task
@@ -76,3 +76,10 @@ This task produces its verified slice for later tasks in [PLAN-114](../PLAN-114-
 ## Notes
 
 Promoted constructors are opt-in and distinct from sealed-domain markers and runtime constructors.
+
+## Completion Notes
+
+- Reconciled SPEC-065 as Implemented MVP in `docs/spec/SPEC-065-PROMOTED-DATA-CONSTRUCTORS-NAMED-DATA-KINDS.md` and `docs/spec/README.md`, with explicit scope that parser `data kind` declarations exist but source-to-summary lowering/export is not claimed by this MVP.
+- Mapped every SPEC-065 acceptance row PDC-1 through PDC-6 to focused TASK-894/TASK-895/TASK-896 evidence plus the broad workspace gate.
+- Remediated independent review blockers by retaining transitive promoted field-domain dependencies in selected type-function summaries and by hiding selected proposition promoted data-kind dependency metadata to avoid source-visible alias leakage.
+- Verification evidence: focused TASK-894/TASK-895/TASK-896 tests plus `cargo test -p ash-engine --lib task896_selected` pass after review remediation. Broad closeout gates are `cargo fmt --check`, `git diff --check`, `cargo check --workspace`, `cargo clippy --workspace --all-targets --all-features -- -D warnings`, `cargo test --workspace`, and `cargo doc --workspace --no-deps` after the final code/doc change.

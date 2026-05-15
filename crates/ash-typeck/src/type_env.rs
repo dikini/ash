@@ -18,10 +18,11 @@ use ash_core::semantic_summary::{
     AssociatedMemberIdentityId, AssociatedMemberIdentitySummary, ConstructorPayloadKind,
     ConstructorSummary, DomainConstructorId, DomainConstructorSummary, InterfaceIdentityId,
     InterfaceIdentitySummary, ModuleIdentity, ModuleSemanticSummary,
-    ModuleSemanticSummaryValidationError, ModuleSummaryRef, PropositionFactSummary,
-    PropositionPredicateId, PropositionPredicateParamSummary, PropositionPredicateSummary,
-    RepresentationExposure, SealedDomainId, SealedDomainSummary, SourceAnchor, SourceOrigin,
-    StructuralFieldStatus, SummaryVersion, TypeDeclId, TypeDeclSummary,
+    ModuleSemanticSummaryValidationError, ModuleSummaryRef, PromotedConstructorId,
+    PromotedConstructorSummary, PromotedDataKindId, PromotedDataKindSummary,
+    PropositionFactSummary, PropositionPredicateId, PropositionPredicateParamSummary,
+    PropositionPredicateSummary, RepresentationExposure, SealedDomainId, SealedDomainSummary,
+    SourceAnchor, SourceOrigin, StructuralFieldStatus, SummaryVersion, TypeDeclId, TypeDeclSummary,
     TypeFunctionClosureMetadata, TypeFunctionDependencySummaryRef, TypeFunctionExportMode,
     TypeFunctionParamSummary, TypeFunctionRevalidationMetadata, TypeFunctionSummary,
     TypeRepresentationSummary, ValidatedDecreasesSummary,
@@ -731,6 +732,14 @@ impl PropositionPredicateInfo {
             PropositionPredicateSolverKind::CompilerBuiltinSatisfied
         )
     }
+}
+
+/// TypeEnv-owned kinding/domain metadata for a promoted data constructor.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PromotedConstructorKindInfo {
+    pub kind: Kind,
+    pub result_data_kind: PromotedDataKindId,
+    pub field_data_kind_constraints: Vec<Option<PromotedDataKindId>>,
 }
 
 /// Domain metadata preserved for an interface parameter of a sealed associated family.
@@ -1557,7 +1566,8 @@ fn normal_form_block_reason(normal: &NormalTypeExpr) -> Option<NormalFormBlockRe
         NormalTypeExpr::Primitive(_)
         | NormalTypeExpr::Var(_)
         | NormalTypeExpr::NominalApp { .. }
-        | NormalTypeExpr::DomainConstructorApp { .. } => None,
+        | NormalTypeExpr::DomainConstructorApp { .. }
+        | NormalTypeExpr::PromotedDataConstructorApp { .. } => None,
     }
 }
 
@@ -1567,7 +1577,8 @@ fn collect_proposition_blockers(normal: &NormalTypeExpr, blockers: &mut Vec<Norm
             blockers.push(normal.clone());
         }
         NormalTypeExpr::NominalApp { args, .. }
-        | NormalTypeExpr::DomainConstructorApp { args, .. } => {
+        | NormalTypeExpr::DomainConstructorApp { args, .. }
+        | NormalTypeExpr::PromotedDataConstructorApp { args, .. } => {
             for arg in args {
                 collect_proposition_blockers(arg, blockers);
             }
@@ -1582,7 +1593,8 @@ fn proposition_normal_form_is_open_or_blocked(normal: &NormalTypeExpr) -> bool {
         | NormalTypeExpr::NeutralComputationApp { .. }
         | NormalTypeExpr::Projection { .. } => true,
         NormalTypeExpr::NominalApp { args, .. }
-        | NormalTypeExpr::DomainConstructorApp { args, .. } => {
+        | NormalTypeExpr::DomainConstructorApp { args, .. }
+        | NormalTypeExpr::PromotedDataConstructorApp { args, .. } => {
             args.iter().any(proposition_normal_form_is_open_or_blocked)
         }
         NormalTypeExpr::Primitive(_) => false,
@@ -1628,6 +1640,9 @@ fn canonical_expr_contains_var(expr: &CanonicalTypeExpr) -> bool {
         | CanonicalTypeExpr::Projection { args, .. }
         | CanonicalTypeExpr::ComputationHeadApp { args, .. } => {
             args.iter().any(canonical_expr_contains_var)
+        }
+        CanonicalTypeExpr::PromotedDataConstructorApp(app) => {
+            app.args.iter().any(canonical_expr_contains_var)
         }
         CanonicalTypeExpr::Primitive(_) => false,
     }
@@ -1715,6 +1730,21 @@ fn canonical_projection_base_spelling(base: &CanonicalTypeExpr) -> String {
                     "{}<{}>",
                     head.name,
                     args.iter()
+                        .map(canonical_projection_base_spelling)
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                )
+            }
+        }
+        CanonicalTypeExpr::PromotedDataConstructorApp(app) => {
+            if app.args.is_empty() {
+                app.constructor.name.clone()
+            } else {
+                format!(
+                    "{}<{}>",
+                    app.constructor.name,
+                    app.args
+                        .iter()
                         .map(canonical_projection_base_spelling)
                         .collect::<Vec<_>>()
                         .join(", ")
@@ -1908,6 +1938,61 @@ fn type_function_result_from_canonical(
                 source_anchor: span_anchor(span, "type function call"),
             }
         }
+        CanonicalTypeExpr::PromotedDataConstructorApp(app) => {
+            TypeFunctionResultExpr::PromotedDataConstructorApp {
+                constructor: Box::new(app.constructor),
+                data_kind: Box::new(app.data_kind),
+                args: app
+                    .args
+                    .into_iter()
+                    .map(|arg| type_function_result_from_canonical(arg, span))
+                    .collect(),
+                kind: app.kind.clone(),
+                constraint: TypeFunctionResultConstraint::Kind(app.kind),
+                source_anchor: span_anchor(span, "promoted data constructor"),
+            }
+        }
+    }
+}
+
+fn canonical_type_expr_head_name(expr: &CanonicalTypeExpr) -> String {
+    match expr {
+        CanonicalTypeExpr::Primitive(name) => format!("primitive '{name}'"),
+        CanonicalTypeExpr::Var(name) => format!("type variable '{name}'"),
+        CanonicalTypeExpr::NominalApp { visible_name, .. } => {
+            format!("ordinary type '{visible_name}'")
+        }
+        CanonicalTypeExpr::Projection { member, .. } => {
+            format!("associated projection '{}'", member.name)
+        }
+        CanonicalTypeExpr::ComputationHeadApp { head, .. } => {
+            format!("type function '{}'", head.name)
+        }
+        CanonicalTypeExpr::PromotedDataConstructorApp(app) => {
+            format!("promoted data constructor '{}'", app.constructor.name)
+        }
+    }
+}
+
+fn type_function_result_expr_head_name(expr: &TypeFunctionResultExpr) -> String {
+    match expr {
+        TypeFunctionResultExpr::Primitive { name, .. } => format!("primitive '{name}'"),
+        TypeFunctionResultExpr::Var { name, .. } => format!("type variable '{name}'"),
+        TypeFunctionResultExpr::NominalApp { visible_name, .. } => {
+            format!("ordinary type '{visible_name}'")
+        }
+        TypeFunctionResultExpr::DomainConstructorApp { constructor, .. } => {
+            format!("sealed-domain constructor '{}'", constructor.name)
+        }
+        TypeFunctionResultExpr::PromotedDataConstructorApp { constructor, .. } => {
+            format!("promoted data constructor '{}'", constructor.name)
+        }
+        TypeFunctionResultExpr::Projection { member, .. } => {
+            format!("associated projection '{}'", member.name)
+        }
+        TypeFunctionResultExpr::ComputationHeadApp { head, .. } => {
+            format!("type function '{}'", head.name)
+        }
     }
 }
 
@@ -1974,6 +2059,10 @@ fn associated_family_result_from_canonical(
                 source_anchor: span_anchor(span, "type function call"),
             }
         }
+        CanonicalTypeExpr::PromotedDataConstructorApp(app) => panic!(
+            "promoted data constructor '{}' is not representable as an associated-family result",
+            app.constructor.name
+        ),
     }
 }
 
@@ -2057,6 +2146,10 @@ fn associated_family_result_from_normal(
             rigidity,
             source_anchor,
         },
+        NormalTypeExpr::PromotedDataConstructorApp { constructor, .. } => panic!(
+            "promoted data constructor '{}' is not representable as an associated-family result",
+            constructor.name
+        ),
     }
 }
 
@@ -2590,6 +2683,16 @@ pub struct TypeEnv {
     sealed_domain_aliases: HashMap<String, SealedDomainId>,
     /// Sealed-domain identity -> domain summary metadata.
     sealed_domain_summaries: HashMap<SealedDomainId, SealedDomainSummary>,
+    /// Promoted data-kind identities registered in this environment.
+    promoted_data_kind_identities: HashSet<PromotedDataKindId>,
+    /// Visible promoted data-kind alias -> canonical promoted data-kind identity.
+    promoted_data_kind_aliases: HashMap<String, PromotedDataKindId>,
+    /// Promoted data-kind identity -> validated summary metadata.
+    promoted_data_kind_summaries: HashMap<PromotedDataKindId, PromotedDataKindSummary>,
+    /// Promoted constructor identity -> validated summary metadata.
+    promoted_constructor_summaries: HashMap<PromotedConstructorId, PromotedConstructorSummary>,
+    /// Promoted constructor identity -> TypeEnv-owned kinding/domain metadata.
+    promoted_constructor_kinds: HashMap<PromotedConstructorId, PromotedConstructorKindInfo>,
     /// Source-visible local/imported type-function names keyed to canonical heads.
     local_type_function_heads: HashMap<String, TypeComputationHeadId>,
     /// Checked local/imported type-function carriers keyed by canonical computation head.
@@ -2949,6 +3052,135 @@ fn validate_summary_visibility_and_duplicates(
         }
     }
 
+    for (index, data_kind) in summary.exported_promoted_data_kinds.iter().enumerate() {
+        if data_kind.visibility != ash_core::ast::Visibility::Public {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "non-public promoted data-kind summary '{}' is not valid public metadata",
+                    data_kind.exported_name
+                ),
+                anchor_span(&data_kind.source_anchor),
+            ));
+        }
+        if data_kind.id.module != summary.module {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "promoted data-kind summary '{}' identity module does not match enclosing summary module",
+                    data_kind.exported_name
+                ),
+                anchor_span(&data_kind.source_anchor),
+            ));
+        }
+        if data_kind.id.name != data_kind.exported_name
+            && !is_dependency_metadata_name(&data_kind.exported_name)
+        {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "promoted data-kind summary '{}' identity name does not match exported name",
+                    data_kind.exported_name
+                ),
+                anchor_span(&data_kind.source_anchor),
+            ));
+        }
+        if data_kind.id.source_type != data_kind.source_type {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "promoted data-kind summary '{}' source type does not match its identity",
+                    data_kind.exported_name
+                ),
+                anchor_span(&data_kind.source_anchor),
+            ));
+        }
+        for duplicate in summary.exported_promoted_data_kinds.iter().skip(index + 1) {
+            if data_kind.exported_name == duplicate.exported_name && data_kind.id != duplicate.id {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "duplicate promoted data-kind exported name '{}' has conflicting identities",
+                        data_kind.exported_name
+                    ),
+                    anchor_span(&duplicate.source_anchor),
+                ));
+            }
+            if data_kind.id == duplicate.id && data_kind != duplicate {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "duplicate promoted data-kind identity '{}' has conflicting metadata",
+                        data_kind.exported_name
+                    ),
+                    anchor_span(&duplicate.source_anchor),
+                ));
+            }
+        }
+
+        let mut constructor_names = HashSet::new();
+        let mut constructor_ids = HashSet::new();
+        for constructor in &data_kind.constructors {
+            if constructor.visibility != ash_core::ast::Visibility::Public {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "non-public promoted constructor summary '{}' is not valid public metadata",
+                        constructor.exported_name
+                    ),
+                    anchor_span(&constructor.source_anchor),
+                ));
+            }
+            if constructor.id.kind != data_kind.id {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "promoted constructor '{}' belongs to a different promoted data kind",
+                        constructor.exported_name
+                    ),
+                    anchor_span(&constructor.source_anchor),
+                ));
+            }
+            if constructor.id.name != constructor.exported_name {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "promoted constructor summary '{}' identity name does not match exported name",
+                        constructor.exported_name
+                    ),
+                    anchor_span(&constructor.source_anchor),
+                ));
+            }
+            if constructor.id.source_constructor != constructor.source_constructor {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "promoted constructor summary '{}' source constructor does not match its identity",
+                        constructor.exported_name
+                    ),
+                    anchor_span(&constructor.source_anchor),
+                ));
+            }
+            if constructor.source_constructor.parent != data_kind.source_type {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "source constructor for promoted constructor '{}' does not belong to source ADT '{}'",
+                        constructor.exported_name, data_kind.source_type.name
+                    ),
+                    anchor_span(&constructor.source_anchor),
+                ));
+            }
+            if !constructor_names.insert(constructor.exported_name.as_str()) {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "duplicate promoted constructor '{}' in data kind '{}'",
+                        constructor.exported_name, data_kind.exported_name
+                    ),
+                    anchor_span(&constructor.source_anchor),
+                ));
+            }
+            if !constructor_ids.insert(&constructor.id) {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "duplicate promoted constructor identity '{}' in data kind '{}'",
+                        constructor.exported_name, data_kind.exported_name
+                    ),
+                    anchor_span(&constructor.source_anchor),
+                ));
+            }
+        }
+    }
+
     for (index, predicate) in summary.exported_proposition_predicates.iter().enumerate() {
         if predicate.visibility != ash_core::ast::Visibility::Public {
             return Err(private_proposition_dependency_error(
@@ -3034,6 +3266,17 @@ fn summary_version_contract_error(error: ModuleSemanticSummaryValidationError) -
                 found: format!("summary version {}", version.0),
                 solver_rule: "fail-closed semantic-summary version validation".into(),
                 help: "emit proposition facts only from V5/SPEC-064 summaries or drop the proposition payload".into(),
+                span: Span::default(),
+            }
+        }
+        ModuleSemanticSummaryValidationError::PromotedDataKindsRequireV6 { version } => {
+            TypeEnvError::MalformedImportedComputationSummary {
+                message: format!(
+                    "module semantic summary version {} cannot carry public promoted data-kind summaries; expected {}",
+                    version.0,
+                    SummaryVersion::SPEC065_PROMOTED_DATA_KIND_V6.0
+                ),
+                version,
                 span: Span::default(),
             }
         }
@@ -3166,6 +3409,11 @@ impl TypeEnv {
             sealed_domain_identities: HashSet::new(),
             sealed_domain_aliases: HashMap::new(),
             sealed_domain_summaries: HashMap::new(),
+            promoted_data_kind_identities: HashSet::new(),
+            promoted_data_kind_aliases: HashMap::new(),
+            promoted_data_kind_summaries: HashMap::new(),
+            promoted_constructor_summaries: HashMap::new(),
+            promoted_constructor_kinds: HashMap::new(),
             local_type_function_heads: HashMap::new(),
             local_type_functions: HashMap::new(),
             current_module_identity: None,
@@ -3644,6 +3892,9 @@ impl TypeEnv {
                     }
                 }))
             }
+            CanonicalTypeExpr::PromotedDataConstructorApp { .. } => Err(
+                AssociatedFamilyMatchFailure::Blocked(AssociatedFamilySelectionBlocker::Ambiguous),
+            ),
             _ => Ok(()),
         }
     }
@@ -3799,6 +4050,9 @@ impl TypeEnv {
                     }
                 }))
             }
+            NormalTypeExpr::PromotedDataConstructorApp { .. } => Err(
+                AssociatedFamilyMatchFailure::Blocked(AssociatedFamilySelectionBlocker::Ambiguous),
+            ),
             _ => Ok(()),
         }
     }
@@ -4484,7 +4738,9 @@ impl TypeEnv {
                     format!("associated family pattern {visible_name}"),
                 ),
             },
-            CanonicalTypeExpr::Projection { .. } | CanonicalTypeExpr::ComputationHeadApp { .. } => {
+            CanonicalTypeExpr::Projection { .. }
+            | CanonicalTypeExpr::ComputationHeadApp { .. }
+            | CanonicalTypeExpr::PromotedDataConstructorApp(_) => {
                 AssociatedFamilyPattern::Wildcard {
                     constraint: constraint.clone(),
                     source_anchor: span_anchor(span, "associated family unsupported pattern"),
@@ -5086,6 +5342,9 @@ impl TypeEnv {
             for domain in &summary.exported_sealed_domains {
                 staged.declare_sealed_domain_identity(domain)?;
             }
+            for data_kind in &summary.exported_promoted_data_kinds {
+                staged.declare_promoted_data_kind_identity(data_kind)?;
+            }
         }
         for summary in summaries {
             for type_fn in &summary.exported_type_functions {
@@ -5106,6 +5365,11 @@ impl TypeEnv {
         }
         for summary in summaries {
             staged.register_module_semantic_summary_representations_and_domains(summary)?;
+        }
+        for summary in summaries {
+            for data_kind in &summary.exported_promoted_data_kinds {
+                staged.validate_and_register_promoted_data_kind(data_kind)?;
+            }
         }
         for summary in summaries {
             for type_fn in &summary.exported_type_functions {
@@ -6426,6 +6690,30 @@ impl TypeEnv {
                 }
                 Ok(())
             }
+            CanonicalTypeExpr::PromotedDataConstructorApp(app) => {
+                self.validate_registered_promoted_constructor_app(
+                    &app.constructor,
+                    &app.data_kind,
+                    app.args.len(),
+                    &app.kind,
+                    Span::default(),
+                )?;
+                for (index, arg) in app.args.iter().enumerate() {
+                    self.validate_imported_type_function_signature_type(owner, arg, position)?;
+                    if let Some(expected_kind) = self
+                        .promoted_constructor_kind(&app.constructor)
+                        .and_then(|kinding| kinding.field_data_kind_constraints.get(index))
+                        .and_then(|constraint| constraint.as_ref())
+                    {
+                        self.validate_canonical_promoted_data_kind(
+                            arg,
+                            expected_kind,
+                            Span::default(),
+                        )?;
+                    }
+                }
+                Ok(())
+            }
             CanonicalTypeExpr::ComputationHeadApp { head, args, kind } => {
                 if kind != &Kind::Type {
                     return Err(TypeEnvError::InvalidDefinition(
@@ -6776,6 +7064,54 @@ impl TypeEnv {
                 }
                 Ok(TypeFunctionResultConstraint::Domain(domain.clone()))
             }
+            TypeFunctionResultExpr::PromotedDataConstructorApp {
+                constructor,
+                data_kind,
+                args,
+                kind,
+                constraint,
+                ..
+            } => {
+                self.validate_registered_promoted_constructor_app(
+                    constructor,
+                    data_kind,
+                    args.len(),
+                    kind,
+                    Span::default(),
+                )?;
+                if !matches!(constraint, TypeFunctionResultConstraint::Kind(Kind::Type)) {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        "type-function promoted constructor result cannot forge a sealed-domain constraint"
+                            .to_string(),
+                        Span::default(),
+                    ));
+                }
+                let kinding = self.promoted_constructor_kind(constructor).ok_or_else(|| {
+                    TypeEnvError::InvalidDefinition(
+                        format!(
+                            "type-function result references unknown promoted data constructor '{}'",
+                            constructor.name
+                        ),
+                        Span::default(),
+                    )
+                })?;
+                for (index, arg) in args.iter().enumerate() {
+                    let actual = self.validate_imported_type_function_result(arg, vars)?;
+                    self.validate_imported_result_constraint_value(
+                        &actual,
+                        &TypeFunctionResultConstraint::Kind(Kind::Type),
+                        Span::default(),
+                    )?;
+                    if let Some(expected_kind) = kinding
+                        .field_data_kind_constraints
+                        .get(index)
+                        .and_then(|constraint| constraint.as_ref())
+                    {
+                        self.validate_promoted_result_arg_data_kind(arg, expected_kind)?;
+                    }
+                }
+                Ok(TypeFunctionResultConstraint::Kind(Kind::Type))
+            }
             TypeFunctionResultExpr::ComputationHeadApp {
                 head, args, kind, ..
             } => {
@@ -6841,6 +7177,194 @@ impl TypeEnv {
                 ))
             }
             (TypeFunctionResultConstraint::Kind(_), _) => Ok(()),
+        }
+    }
+
+    fn validate_registered_promoted_constructor_app(
+        &self,
+        constructor: &PromotedConstructorId,
+        data_kind: &PromotedDataKindId,
+        arg_count: usize,
+        kind: &Kind,
+        span: Span,
+    ) -> Result<(), TypeEnvError> {
+        if kind != &Kind::Type {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "promoted data constructor '{}' has non-Type kind",
+                    constructor.name
+                ),
+                span,
+            ));
+        }
+        let Some(kind_summary) = self.lookup_promoted_data_kind_by_id(data_kind) else {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "promoted data constructor '{}' references unknown promoted data kind '{}'",
+                    constructor.name, data_kind.name
+                ),
+                span,
+            ));
+        };
+        if !kind_summary
+            .constructors
+            .iter()
+            .any(|candidate| candidate.id == *constructor)
+        {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "promoted data constructor '{}' is not registered in promoted data kind '{}'",
+                    constructor.name, data_kind.name
+                ),
+                span,
+            ));
+        }
+        let Some(kinding) = self.promoted_constructor_kind(constructor) else {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "promoted data constructor '{}' has no validated kinding metadata",
+                    constructor.name
+                ),
+                span,
+            ));
+        };
+        if &kinding.result_data_kind != data_kind {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "promoted data constructor '{}' result data kind mismatch: expected '{}', found '{}'",
+                    constructor.name, kinding.result_data_kind.name, data_kind.name
+                ),
+                span,
+            ));
+        }
+        if kinding.field_data_kind_constraints.len() != arg_count {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "promoted data constructor '{}' arity mismatch: expected {}, found {}",
+                    constructor.name,
+                    kinding.field_data_kind_constraints.len(),
+                    arg_count
+                ),
+                span,
+            ));
+        }
+        Ok(())
+    }
+
+    fn validate_canonical_promoted_data_kind(
+        &self,
+        expr: &CanonicalTypeExpr,
+        expected_kind: &PromotedDataKindId,
+        span: Span,
+    ) -> Result<(), TypeEnvError> {
+        match expr {
+            CanonicalTypeExpr::PromotedDataConstructorApp(app) => {
+                if &app.data_kind != expected_kind {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "promoted data constructor '{}' has data kind '{}', expected '{}'",
+                            app.constructor.name, app.data_kind.name, expected_kind.name
+                        ),
+                        span,
+                    ));
+                }
+                self.validate_registered_promoted_constructor_app(
+                    &app.constructor,
+                    &app.data_kind,
+                    app.args.len(),
+                    &app.kind,
+                    span,
+                )?;
+                let kinding = self
+                    .promoted_constructor_kind(&app.constructor)
+                    .ok_or_else(|| {
+                        TypeEnvError::InvalidDefinition(
+                            format!(
+                                "promoted data constructor '{}' has no validated kinding metadata",
+                                app.constructor.name
+                            ),
+                            span,
+                        )
+                    })?;
+                for (index, arg) in app.args.iter().enumerate() {
+                    if let Some(field_kind) = kinding
+                        .field_data_kind_constraints
+                        .get(index)
+                        .and_then(|constraint| constraint.as_ref())
+                    {
+                        self.validate_canonical_promoted_data_kind(arg, field_kind, span)?;
+                    }
+                }
+                Ok(())
+            }
+            other => Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "promoted data-kind constrained field expected value of promoted data kind '{}', found {}",
+                    expected_kind.name,
+                    canonical_type_expr_head_name(other)
+                ),
+                span,
+            )),
+        }
+    }
+
+    fn validate_promoted_result_arg_data_kind(
+        &self,
+        expr: &TypeFunctionResultExpr,
+        expected_kind: &PromotedDataKindId,
+    ) -> Result<(), TypeEnvError> {
+        match expr {
+            TypeFunctionResultExpr::PromotedDataConstructorApp {
+                constructor,
+                data_kind,
+                args,
+                kind,
+                ..
+            } => {
+                if data_kind.as_ref() != expected_kind {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "promoted data constructor '{}' has data kind '{}', expected '{}'",
+                            constructor.name, data_kind.name, expected_kind.name
+                        ),
+                        Span::default(),
+                    ));
+                }
+                self.validate_registered_promoted_constructor_app(
+                    constructor,
+                    data_kind,
+                    args.len(),
+                    kind,
+                    Span::default(),
+                )?;
+                let kinding = self.promoted_constructor_kind(constructor).ok_or_else(|| {
+                    TypeEnvError::InvalidDefinition(
+                        format!(
+                            "promoted data constructor '{}' has no validated kinding metadata",
+                            constructor.name
+                        ),
+                        Span::default(),
+                    )
+                })?;
+                for (index, arg) in args.iter().enumerate() {
+                    if let Some(field_kind) = kinding
+                        .field_data_kind_constraints
+                        .get(index)
+                        .and_then(|constraint| constraint.as_ref())
+                    {
+                        self.validate_promoted_result_arg_data_kind(arg, field_kind)?;
+                    }
+                }
+                Ok(())
+            }
+            other => Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "promoted data-kind constrained field expected value of promoted data kind '{}', found {}",
+                    expected_kind.name,
+                    type_function_result_expr_head_name(other)
+                ),
+                Span::default(),
+            )),
         }
     }
 
@@ -7017,6 +7541,287 @@ impl TypeEnv {
     pub fn lookup_sealed_domain(&self, name: &str) -> Option<&SealedDomainSummary> {
         let id = self.sealed_domain_aliases.get(name)?;
         self.sealed_domain_summaries.get(id)
+    }
+
+    /// First pass: declare a promoted data-kind identity and visible alias.
+    fn declare_promoted_data_kind_identity(
+        &mut self,
+        data_kind: &PromotedDataKindSummary,
+    ) -> Result<(), TypeEnvError> {
+        let visible_name = data_kind.exported_name.as_str();
+        let hidden_dependency_metadata = is_dependency_metadata_name(visible_name);
+        if !hidden_dependency_metadata
+            && let Some(existing) = self.promoted_data_kind_aliases.get(visible_name)
+            && existing != &data_kind.id
+        {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "duplicate promoted data-kind alias '{}': existing {:?}, new {:?}",
+                    visible_name, existing, data_kind.id
+                ),
+                anchor_span(&data_kind.source_anchor),
+            ));
+        }
+        if !hidden_dependency_metadata
+            && self.promoted_data_kind_identities.contains(&data_kind.id)
+            && let Some(alias) = self
+                .promoted_data_kind_aliases
+                .iter()
+                .find_map(|(alias, id)| {
+                    if id == &data_kind.id {
+                        Some(alias.as_str())
+                    } else {
+                        None
+                    }
+                })
+            && alias != visible_name
+        {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "promoted data-kind identity already registered under alias '{}'",
+                    alias
+                ),
+                anchor_span(&data_kind.source_anchor),
+            ));
+        }
+
+        self.promoted_data_kind_identities
+            .insert(data_kind.id.clone());
+        if !hidden_dependency_metadata {
+            self.promoted_data_kind_aliases
+                .insert(visible_name.to_string(), data_kind.id.clone());
+        }
+        Ok(())
+    }
+
+    /// Second pass: validate source-ADT, source-constructor, field-domain, and kinding metadata.
+    fn validate_and_register_promoted_data_kind(
+        &mut self,
+        data_kind: &PromotedDataKindSummary,
+    ) -> Result<(), TypeEnvError> {
+        let source_visible_name = self
+            .canonical_type_names
+            .get(&data_kind.source_type)
+            .cloned()
+            .ok_or_else(|| {
+                TypeEnvError::InvalidDefinition(
+                    format!(
+                        "promoted data-kind '{}' references unknown source ADT '{}'",
+                        data_kind.exported_name, data_kind.source_type.name
+                    ),
+                    anchor_span(&data_kind.source_anchor),
+                )
+            })?;
+        let source_variants = match self.type_info.get(&source_visible_name).cloned() {
+            Some(TypeInfo::Enum { variants, .. }) => variants,
+            _ => {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "promoted data-kind '{}' source ADT '{}' is not an exposed enum",
+                        data_kind.exported_name, data_kind.source_type.name
+                    ),
+                    anchor_span(&data_kind.source_anchor),
+                ));
+            }
+        };
+
+        if data_kind.constructors.len() != source_variants.len() {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "promoted data-kind '{}' has {} constructor(s) but source ADT '{}' has {}",
+                    data_kind.exported_name,
+                    data_kind.constructors.len(),
+                    data_kind.source_type.name,
+                    source_variants.len()
+                ),
+                anchor_span(&data_kind.source_anchor),
+            ));
+        }
+
+        for (index, constructor) in data_kind.constructors.iter().enumerate() {
+            if constructor.source_constructor.parent != data_kind.source_type {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "source constructor for promoted constructor '{}' does not belong to source ADT '{}'",
+                        constructor.exported_name, data_kind.source_type.name
+                    ),
+                    anchor_span(&constructor.source_anchor),
+                ));
+            }
+
+            let source_variant = &source_variants[index];
+            if constructor.source_constructor.name != source_variant.name {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "promoted constructor '{}' at index {} does not match source constructor '{}'",
+                        constructor.exported_name, index, source_variant.name
+                    ),
+                    anchor_span(&constructor.source_anchor),
+                ));
+            }
+            let actual_payload_kind = match &source_variant.payload_shape {
+                VariantPayloadShape::Unit => ConstructorPayloadKind::Unit,
+                VariantPayloadShape::Record => ConstructorPayloadKind::Record,
+                VariantPayloadShape::Tuple => ConstructorPayloadKind::Tuple,
+            };
+            if actual_payload_kind != constructor.source_constructor.payload_kind {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "promoted constructor '{}' source payload kind {:?} conflicts with exposed source ADT payload kind {:?}",
+                        constructor.exported_name,
+                        constructor.source_constructor.payload_kind,
+                        actual_payload_kind
+                    ),
+                    anchor_span(&constructor.source_anchor),
+                ));
+            }
+            if constructor.fields.len() != source_variant.fields.len() {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "promoted constructor '{}' has {} promoted field(s) but source constructor '{}' has {} field(s)",
+                        constructor.exported_name,
+                        constructor.fields.len(),
+                        constructor.source_constructor.name,
+                        source_variant.fields.len()
+                    ),
+                    anchor_span(&constructor.source_anchor),
+                ));
+            }
+
+            let mut field_constraints = Vec::with_capacity(constructor.fields.len());
+            for (index, field) in constructor.fields.iter().enumerate() {
+                let (source_field_name, source_field_ty) = &source_variant.fields[index];
+                if source_variant.payload_shape == VariantPayloadShape::Record
+                    && field.name.as_str() != source_field_name.as_str()
+                {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "field '{}' in promoted constructor '{}' does not match source field '{}'",
+                            field.name, constructor.exported_name, source_field_name
+                        ),
+                        anchor_span(&field.source_anchor),
+                    ));
+                }
+                if field.kind != Kind::Type {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "field '{}' in promoted constructor '{}' has non-Type kind",
+                            field.name, constructor.exported_name
+                        ),
+                        anchor_span(&field.source_anchor),
+                    ));
+                }
+                let Some(field_data_kind) = field.data_kind_constraint.clone() else {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "field '{}' in promoted constructor '{}' lacks promoted data-kind constraint",
+                            field.name, constructor.exported_name
+                        ),
+                        anchor_span(&field.source_anchor),
+                    ));
+                };
+                if !self
+                    .promoted_data_kind_identities
+                    .contains(&field_data_kind)
+                {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "field '{}' in promoted constructor '{}' references unknown promoted data kind '{}'",
+                            field.name, constructor.exported_name, field_data_kind.name
+                        ),
+                        anchor_span(&field.source_anchor),
+                    ));
+                }
+                let expected_source_name = self
+                    .canonical_type_names
+                    .get(&field_data_kind.source_type)
+                    .ok_or_else(|| {
+                        TypeEnvError::InvalidDefinition(
+                            format!(
+                                "field '{}' in promoted constructor '{}' references promoted data kind '{}' with unknown source ADT '{}'",
+                                field.name,
+                                constructor.exported_name,
+                                field_data_kind.name,
+                                field_data_kind.source_type.name
+                            ),
+                            anchor_span(&field.source_anchor),
+                        )
+                    })?;
+                let source_field_matches_promoted_kind = matches!(
+                    source_field_ty,
+                    Type::Constructor { name, args, kind }
+                        if args.is_empty() && kind.is_type() && name.name == *expected_source_name
+                );
+                if !source_field_matches_promoted_kind {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "field '{}' in promoted constructor '{}' expects source field type for promoted data kind '{}'",
+                            field.name, constructor.exported_name, field_data_kind.name
+                        ),
+                        anchor_span(&field.source_anchor),
+                    ));
+                }
+                field_constraints.push(Some(field_data_kind));
+            }
+
+            self.promoted_constructor_kinds.insert(
+                constructor.id.clone(),
+                PromotedConstructorKindInfo {
+                    kind: Kind::n_ary(constructor.fields.len()),
+                    result_data_kind: data_kind.id.clone(),
+                    field_data_kind_constraints: field_constraints,
+                },
+            );
+            self.promoted_constructor_summaries
+                .insert(constructor.id.clone(), constructor.clone());
+        }
+
+        let should_store_data_kind = self
+            .promoted_data_kind_summaries
+            .get(&data_kind.id)
+            .is_none_or(|existing| {
+                is_dependency_metadata_name(&existing.exported_name)
+                    || !is_dependency_metadata_name(&data_kind.exported_name)
+            });
+        if should_store_data_kind {
+            self.promoted_data_kind_summaries
+                .insert(data_kind.id.clone(), data_kind.clone());
+        }
+        Ok(())
+    }
+
+    /// Look up a promoted data kind by its visible exported name.
+    #[must_use]
+    pub fn lookup_promoted_data_kind(&self, name: &str) -> Option<&PromotedDataKindSummary> {
+        let id = self.promoted_data_kind_aliases.get(name)?;
+        self.promoted_data_kind_summaries.get(id)
+    }
+
+    /// Look up a promoted data kind by canonical identity.
+    #[must_use]
+    pub fn lookup_promoted_data_kind_by_id(
+        &self,
+        id: &PromotedDataKindId,
+    ) -> Option<&PromotedDataKindSummary> {
+        self.promoted_data_kind_summaries.get(id)
+    }
+
+    /// Look up a promoted data constructor by canonical identity.
+    #[must_use]
+    pub fn lookup_promoted_constructor_by_id(
+        &self,
+        id: &PromotedConstructorId,
+    ) -> Option<&PromotedConstructorSummary> {
+        self.promoted_constructor_summaries.get(id)
+    }
+
+    /// Return checked kind/domain metadata for a promoted data constructor.
+    #[must_use]
+    pub fn promoted_constructor_kind(
+        &self,
+        id: &PromotedConstructorId,
+    ) -> Option<&PromotedConstructorKindInfo> {
+        self.promoted_constructor_kinds.get(id)
     }
 
     /// Register a source-ordered batch of module-local type functions.
@@ -7444,6 +8249,11 @@ impl TypeEnv {
                     self.collect_public_canonical_type_closure_for_associated_family(arg, closure);
                 }
             }
+            CanonicalTypeExpr::PromotedDataConstructorApp(app) => {
+                for arg in &app.args {
+                    self.collect_public_canonical_type_closure_for_associated_family(arg, closure);
+                }
+            }
         }
     }
 
@@ -7732,6 +8542,11 @@ impl TypeEnv {
                     self.collect_public_canonical_type_closure(arg, closure);
                 }
             }
+            CanonicalTypeExpr::PromotedDataConstructorApp(app) => {
+                for arg in &app.args {
+                    self.collect_public_canonical_type_closure(arg, closure);
+                }
+            }
         }
     }
 
@@ -7785,6 +8600,14 @@ impl TypeEnv {
                 ..
             } => {
                 closure.sealed_domains.insert(domain.clone());
+                Self::collect_result_constraint_closure(constraint, closure);
+                for arg in args {
+                    self.collect_public_result_closure(arg, closure);
+                }
+            }
+            TypeFunctionResultExpr::PromotedDataConstructorApp {
+                args, constraint, ..
+            } => {
                 Self::collect_result_constraint_closure(constraint, closure);
                 for arg in args {
                     self.collect_public_result_closure(arg, closure);
@@ -8112,6 +8935,25 @@ impl TypeEnv {
                 }
                 Ok(())
             }
+            TypeFunctionResultExpr::PromotedDataConstructorApp {
+                constructor,
+                data_kind,
+                args,
+                kind,
+                ..
+            } => {
+                self.validate_registered_promoted_constructor_app(
+                    constructor,
+                    data_kind,
+                    args.len(),
+                    kind,
+                    span,
+                )?;
+                for arg in args {
+                    self.validate_public_type_function_result_export_closure(def, arg, span)?;
+                }
+                Ok(())
+            }
             TypeFunctionResultExpr::Projection {
                 interface,
                 member,
@@ -8187,6 +9029,19 @@ impl TypeEnv {
             }
             CanonicalTypeExpr::ComputationHeadApp { args, .. } => {
                 for arg in args {
+                    self.validate_public_canonical_type_dependency(def, arg, span)?;
+                }
+                Ok(())
+            }
+            CanonicalTypeExpr::PromotedDataConstructorApp(app) => {
+                self.validate_registered_promoted_constructor_app(
+                    &app.constructor,
+                    &app.data_kind,
+                    app.args.len(),
+                    &app.kind,
+                    span,
+                )?;
+                for arg in &app.args {
                     self.validate_public_canonical_type_dependency(def, arg, span)?;
                 }
                 Ok(())
@@ -8586,6 +9441,7 @@ impl TypeEnv {
             TypeFunctionResultExpr::Primitive { .. } | TypeFunctionResultExpr::Var { .. } => Ok(()),
             TypeFunctionResultExpr::NominalApp { args, .. }
             | TypeFunctionResultExpr::DomainConstructorApp { args, .. }
+            | TypeFunctionResultExpr::PromotedDataConstructorApp { args, .. }
             | TypeFunctionResultExpr::Projection { args, .. } => {
                 for arg in args {
                     self.validate_recursive_calls_in_result(
@@ -8647,6 +9503,7 @@ impl TypeEnv {
             TypeFunctionResultExpr::Primitive { .. } | TypeFunctionResultExpr::Var { .. } => false,
             TypeFunctionResultExpr::NominalApp { args, .. }
             | TypeFunctionResultExpr::DomainConstructorApp { args, .. }
+            | TypeFunctionResultExpr::PromotedDataConstructorApp { args, .. }
             | TypeFunctionResultExpr::Projection { args, .. } => args
                 .iter()
                 .any(|arg| Self::result_contains_computation_head(arg, needle)),
@@ -9280,6 +10137,7 @@ impl TypeEnv {
             | TypeFunctionResultExpr::Var { constraint, .. }
             | TypeFunctionResultExpr::NominalApp { constraint, .. }
             | TypeFunctionResultExpr::DomainConstructorApp { constraint, .. }
+            | TypeFunctionResultExpr::PromotedDataConstructorApp { constraint, .. }
             | TypeFunctionResultExpr::Projection { constraint, .. }
             | TypeFunctionResultExpr::ComputationHeadApp { constraint, .. } => constraint.clone(),
         }
@@ -10302,6 +11160,98 @@ impl TypeEnv {
                 }
                 Ok(())
             }
+            CanonicalTypeExpr::PromotedDataConstructorApp(app) => {
+                let Some(kind_summary) = self.lookup_promoted_data_kind_by_id(&app.data_kind)
+                else {
+                    return Err(private_proposition_dependency_error(
+                        public_item,
+                        "promoted data kind",
+                        &app.data_kind.name,
+                        span,
+                    ));
+                };
+                if kind_summary.visibility != ash_core::ast::Visibility::Public {
+                    return Err(private_proposition_dependency_error(
+                        public_item,
+                        "promoted data kind",
+                        &kind_summary.exported_name,
+                        span,
+                    ));
+                }
+                let Some(source_visible_name) =
+                    self.canonical_type_names.get(&kind_summary.source_type)
+                else {
+                    return Err(private_proposition_dependency_error(
+                        public_item,
+                        "promoted source ADT",
+                        &kind_summary.source_type.name,
+                        span,
+                    ));
+                };
+                if !self.ast_types.get(source_visible_name).is_some_and(|ty| {
+                    ty.visibility == ash_core::ast::Visibility::Public || ty.builtin
+                }) {
+                    return Err(private_proposition_dependency_error(
+                        public_item,
+                        "promoted source ADT",
+                        source_visible_name,
+                        span,
+                    ));
+                }
+                let Some(constructor_summary) =
+                    self.lookup_promoted_constructor_by_id(&app.constructor)
+                else {
+                    return Err(private_proposition_dependency_error(
+                        public_item,
+                        "promoted data constructor",
+                        &app.constructor.name,
+                        span,
+                    ));
+                };
+                if constructor_summary.visibility != ash_core::ast::Visibility::Public
+                    || constructor_summary.id.kind != kind_summary.id
+                {
+                    return Err(private_proposition_dependency_error(
+                        public_item,
+                        "promoted data constructor",
+                        &constructor_summary.exported_name,
+                        span,
+                    ));
+                }
+                self.validate_registered_promoted_constructor_app(
+                    &app.constructor,
+                    &app.data_kind,
+                    app.args.len(),
+                    &app.kind,
+                    span,
+                )?;
+                let kinding = self
+                    .promoted_constructor_kind(&app.constructor)
+                    .ok_or_else(|| {
+                        TypeEnvError::InvalidDefinition(
+                            format!(
+                                "promoted data constructor '{}' has no validated kinding metadata",
+                                app.constructor.name
+                            ),
+                            span,
+                        )
+                    })?;
+                for (index, arg) in app.args.iter().enumerate() {
+                    self.validate_public_canonical_proposition_dependencies(
+                        public_item,
+                        arg,
+                        span,
+                    )?;
+                    if let Some(expected_kind) = kinding
+                        .field_data_kind_constraints
+                        .get(index)
+                        .and_then(|constraint| constraint.as_ref())
+                    {
+                        self.validate_canonical_promoted_data_kind(arg, expected_kind, span)?;
+                    }
+                }
+                Ok(())
+            }
         }
     }
 
@@ -10534,6 +11484,9 @@ impl TypeEnv {
         equality: &TypeEqualityProposition,
         source_anchor: Option<SourceAnchor>,
     ) -> Result<PropositionOutcome, TypeError> {
+        let span = source_anchor.as_ref().map(anchor_span).unwrap_or_default();
+        self.validate_proposition_term_promoted_operands(&equality.lhs, span)?;
+        self.validate_proposition_term_promoted_operands(&equality.rhs, span)?;
         let (result, lhs_norm, rhs_norm) =
             self.compare_proposition_terms(&equality.lhs, &equality.rhs)?;
         let normalized_terms = Some(proposition_comparison_terms(
@@ -10573,6 +11526,9 @@ impl TypeEnv {
         disequality: &TypeDisequalityProposition,
         source_anchor: Option<SourceAnchor>,
     ) -> Result<PropositionOutcome, TypeError> {
+        let span = source_anchor.as_ref().map(anchor_span).unwrap_or_default();
+        self.validate_proposition_term_promoted_operands(&disequality.lhs, span)?;
+        self.validate_proposition_term_promoted_operands(&disequality.rhs, span)?;
         let normalizer = Normalizer::new(self);
         let lhs_norm = self.normalize_proposition_term(&normalizer, &disequality.lhs)?;
         let rhs_norm = self.normalize_proposition_term(&normalizer, &disequality.rhs)?;
@@ -10615,6 +11571,74 @@ impl TypeEnv {
         };
 
         Ok(proposition_deferral(proposition, kind, source_anchor, true))
+    }
+
+    fn validate_proposition_term_promoted_operands(
+        &self,
+        term: &TypePropositionTerm,
+        span: Span,
+    ) -> Result<(), TypeError> {
+        match term {
+            TypePropositionTerm::Canonical(expr) => {
+                self.validate_canonical_proposition_promoted_operands(expr, span)
+            }
+            TypePropositionTerm::DomainConstructorApp { args, .. } => {
+                for arg in args {
+                    self.validate_proposition_term_promoted_operands(arg, span)?;
+                }
+                Ok(())
+            }
+        }
+    }
+
+    fn validate_canonical_proposition_promoted_operands(
+        &self,
+        expr: &CanonicalTypeExpr,
+        span: Span,
+    ) -> Result<(), TypeError> {
+        match expr {
+            CanonicalTypeExpr::Primitive(_) | CanonicalTypeExpr::Var(_) => Ok(()),
+            CanonicalTypeExpr::NominalApp { args, .. }
+            | CanonicalTypeExpr::Projection { args, .. }
+            | CanonicalTypeExpr::ComputationHeadApp { args, .. } => {
+                for arg in args {
+                    self.validate_canonical_proposition_promoted_operands(arg, span)?;
+                }
+                Ok(())
+            }
+            CanonicalTypeExpr::PromotedDataConstructorApp(app) => {
+                self.validate_registered_promoted_constructor_app(
+                    &app.constructor,
+                    &app.data_kind,
+                    app.args.len(),
+                    &app.kind,
+                    span,
+                )?;
+                let field_data_kind_constraints = self
+                    .promoted_constructor_kind(&app.constructor)
+                    .ok_or_else(|| {
+                        TypeEnvError::InvalidDefinition(
+                            format!(
+                                "promoted data constructor '{}' has no validated kinding metadata",
+                                app.constructor.name
+                            ),
+                            span,
+                        )
+                    })?
+                    .field_data_kind_constraints
+                    .clone();
+                for (index, arg) in app.args.iter().enumerate() {
+                    self.validate_canonical_proposition_promoted_operands(arg, span)?;
+                    if let Some(expected_kind) = field_data_kind_constraints
+                        .get(index)
+                        .and_then(|constraint| constraint.as_ref())
+                    {
+                        self.validate_canonical_promoted_data_kind(arg, expected_kind, span)?;
+                    }
+                }
+                Ok(())
+            }
+        }
     }
 
     fn compare_proposition_terms(
@@ -12925,6 +13949,11 @@ impl TypeEnv {
             sealed_domain_identities: self.sealed_domain_identities.clone(),
             sealed_domain_aliases: self.sealed_domain_aliases.clone(),
             sealed_domain_summaries: self.sealed_domain_summaries.clone(),
+            promoted_data_kind_identities: self.promoted_data_kind_identities.clone(),
+            promoted_data_kind_aliases: self.promoted_data_kind_aliases.clone(),
+            promoted_data_kind_summaries: self.promoted_data_kind_summaries.clone(),
+            promoted_constructor_summaries: self.promoted_constructor_summaries.clone(),
+            promoted_constructor_kinds: self.promoted_constructor_kinds.clone(),
             local_type_function_heads: self.local_type_function_heads.clone(),
             local_type_functions: self.local_type_functions.clone(),
             current_module_identity: self.current_module_identity.clone(),
@@ -14062,6 +15091,11 @@ impl TypeEnv {
             sealed_domain_identities: self.sealed_domain_identities.clone(),
             sealed_domain_aliases: self.sealed_domain_aliases.clone(),
             sealed_domain_summaries: self.sealed_domain_summaries.clone(),
+            promoted_data_kind_identities: self.promoted_data_kind_identities.clone(),
+            promoted_data_kind_aliases: self.promoted_data_kind_aliases.clone(),
+            promoted_data_kind_summaries: self.promoted_data_kind_summaries.clone(),
+            promoted_constructor_summaries: self.promoted_constructor_summaries.clone(),
+            promoted_constructor_kinds: self.promoted_constructor_kinds.clone(),
             local_type_function_heads: self.local_type_function_heads.clone(),
             local_type_functions: self.local_type_functions.clone(),
             current_module_identity: self.current_module_identity.clone(),

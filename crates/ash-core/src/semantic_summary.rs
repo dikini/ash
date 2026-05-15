@@ -172,6 +172,55 @@ impl ConstructorId {
     }
 }
 
+/// Canonical promoted data-kind identity derived from an explicit promotion declaration.
+///
+/// This is distinct from `TypeDeclId`: `source_type` remains the ordinary runtime ADT,
+/// while this identity names the opt-in type-level data kind exported from a module.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct PromotedDataKindId {
+    pub module: ModuleIdentity,
+    pub source_type: TypeDeclId,
+    pub name: Name,
+}
+
+impl PromotedDataKindId {
+    #[must_use]
+    pub fn new(module: ModuleIdentity, source_type: TypeDeclId, name: impl Into<Name>) -> Self {
+        Self {
+            module,
+            source_type,
+            name: name.into(),
+        }
+    }
+}
+
+/// Canonical promoted data-constructor identity.
+///
+/// `source_constructor` is runtime ADT provenance only. Promoted constructors are
+/// type-level identities and must not be collapsed into runtime `ConstructorId`s
+/// or sealed-domain marker constructors.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct PromotedConstructorId {
+    pub kind: PromotedDataKindId,
+    pub source_constructor: ConstructorId,
+    pub name: Name,
+}
+
+impl PromotedConstructorId {
+    #[must_use]
+    pub fn new(
+        kind: PromotedDataKindId,
+        source_constructor: ConstructorId,
+        name: impl Into<Name>,
+    ) -> Self {
+        Self {
+            kind,
+            source_constructor,
+            name: name.into(),
+        }
+    }
+}
+
 /// Opaque identity for an interface declaration in the current metadata model.
 ///
 /// This is a reserved identity carrier only: it is not a projection IR handle and
@@ -579,6 +628,104 @@ impl ConstructorSummary {
     }
 }
 
+/// Field metadata for a promoted data constructor.
+///
+/// `data_kind_constraint` records that this field must inhabit a promoted data kind.
+/// It is intentionally not a sealed-domain constraint.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct PromotedConstructorFieldSummary {
+    pub name: Name,
+    pub kind: Kind,
+    pub data_kind_constraint: Option<PromotedDataKindId>,
+    pub source_anchor: SourceAnchor,
+}
+
+impl PromotedConstructorFieldSummary {
+    #[must_use]
+    pub fn new(
+        name: impl Into<Name>,
+        kind: Kind,
+        data_kind_constraint: Option<PromotedDataKindId>,
+        source_anchor: SourceAnchor,
+    ) -> Self {
+        Self {
+            name: name.into(),
+            kind,
+            data_kind_constraint,
+            source_anchor,
+        }
+    }
+}
+
+/// Summary for one promoted constructor within a promoted data kind.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct PromotedConstructorSummary {
+    pub id: PromotedConstructorId,
+    pub exported_name: Name,
+    pub source_constructor: ConstructorId,
+    pub fields: Vec<PromotedConstructorFieldSummary>,
+    pub visibility: Visibility,
+    pub source_anchor: SourceAnchor,
+}
+
+impl PromotedConstructorSummary {
+    #[must_use]
+    pub fn new(
+        id: PromotedConstructorId,
+        exported_name: impl Into<Name>,
+        source_constructor: ConstructorId,
+        fields: Vec<PromotedConstructorFieldSummary>,
+        visibility: Visibility,
+        source_anchor: SourceAnchor,
+    ) -> Self {
+        Self {
+            id,
+            exported_name: exported_name.into(),
+            source_constructor,
+            fields,
+            visibility,
+            source_anchor,
+        }
+    }
+}
+
+/// Summary for one promoted data kind exported from a module.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct PromotedDataKindSummary {
+    pub id: PromotedDataKindId,
+    pub exported_name: Name,
+    pub visibility: Visibility,
+    pub source_type: TypeDeclId,
+    pub constructors: Vec<PromotedConstructorSummary>,
+    pub source_anchor: SourceAnchor,
+}
+
+impl PromotedDataKindSummary {
+    #[must_use]
+    pub fn new(
+        id: PromotedDataKindId,
+        exported_name: impl Into<Name>,
+        visibility: Visibility,
+        source_type: TypeDeclId,
+        source_anchor: SourceAnchor,
+    ) -> Self {
+        Self {
+            id,
+            exported_name: exported_name.into(),
+            visibility,
+            source_type,
+            constructors: Vec::new(),
+            source_anchor,
+        }
+    }
+
+    #[must_use]
+    pub fn with_constructor(mut self, constructor: PromotedConstructorSummary) -> Self {
+        self.constructors.push(constructor);
+        self
+    }
+}
+
 /// Reference to a transported summary for import/cache accounting.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct ModuleSummaryRef {
@@ -597,6 +744,8 @@ impl SummaryVersion {
     pub const SPEC063_ASSOCIATED_FAMILY_V4: Self = Self(4);
     pub const SPEC064_PROPOSITIONS_V5: Self = Self(5);
     pub const SPEC064_PROPOSITION_V5: Self = Self(5);
+    pub const SPEC065_PROMOTED_DATA_KIND_V6: Self = Self(6);
+    pub const SPEC065_PROMOTED_DATA_KINDS_V6: Self = Self(6);
 }
 
 /// Core schema-level validation failures for semantic-summary version contracts.
@@ -608,6 +757,8 @@ pub enum ModuleSemanticSummaryValidationError {
     AssociatedFamiliesRequireV4 { version: SummaryVersion },
     /// Public proposition facts are only valid in SPEC-064/V5 summaries.
     PropositionFactsRequireV5 { version: SummaryVersion },
+    /// Public promoted data-kind facts are only valid in SPEC-065/V6 summaries.
+    PromotedDataKindsRequireV6 { version: SummaryVersion },
     /// The summary version is newer than this core crate knows how to interpret.
     UnsupportedSummaryVersion { version: SummaryVersion },
 }
@@ -913,6 +1064,12 @@ pub struct ModuleSemanticSummary {
     /// that predate sealed-domain support.
     #[serde(default)]
     pub exported_sealed_domains: Vec<SealedDomainSummary>,
+    /// Public promoted data-kind summaries exported from this module (SPEC-065 §7).
+    ///
+    /// `#[serde(default)]` preserves V1-V5 wire compatibility. Non-empty values
+    /// are valid only when `version` is SPEC-065/V6 or newer.
+    #[serde(default)]
+    pub exported_promoted_data_kinds: Vec<PromotedDataKindSummary>,
     /// Public type-function summaries exported from this module (SPEC-062 §6).
     ///
     /// `#[serde(default)]` preserves V1/V2 wire compatibility. Non-empty values
@@ -954,6 +1111,7 @@ impl ModuleSemanticSummary {
             reserved_identity_slots: ReservedSemanticIdentitySlots::default(),
             diagnostic_anchors: Vec::new(),
             exported_sealed_domains: Vec::new(),
+            exported_promoted_data_kinds: Vec::new(),
             exported_type_functions: Vec::new(),
             exported_associated_families: Vec::new(),
             exported_proposition_predicates: Vec::new(),
@@ -1019,6 +1177,13 @@ impl ModuleSemanticSummary {
         self
     }
 
+    /// Add a public promoted data-kind summary to this module summary.
+    #[must_use]
+    pub fn with_exported_promoted_data_kind(mut self, data_kind: PromotedDataKindSummary) -> Self {
+        self.exported_promoted_data_kinds.push(data_kind);
+        self
+    }
+
     /// Add a public type-function summary to this module summary.
     #[must_use]
     pub fn with_exported_type_function(mut self, type_function: TypeFunctionSummary) -> Self {
@@ -1057,9 +1222,9 @@ impl ModuleSemanticSummary {
     /// stable persistent-cache digest format. A future persistent cache should feed
     /// at least these inputs into an explicit digest algorithm: summary schema
     /// version, module identity, ordinary exported type/constructor facts,
-    /// imported summary refs, sealed-domain summaries, public type-function
-    /// signatures/equations, type-function dependency refs/digests, and compiler
-    /// algorithm version metadata.
+    /// imported summary refs, sealed-domain summaries, promoted data-kind summaries,
+    /// public type-function signatures/equations, type-function dependency refs/digests,
+    /// and compiler algorithm version metadata.
     #[must_use]
     pub fn semantic_cache_key(&self) -> Vec<String> {
         let mut key = Vec::new();
@@ -1121,6 +1286,16 @@ impl ModuleSemanticSummary {
                 domain.exported_name, domain.id, domain.visibility, domain.constructors
             )
         }));
+        key.extend(self.exported_promoted_data_kinds.iter().map(|data_kind| {
+            format!(
+                "promoted_data_kind::{}::{:?}::{:?}::{:?}::{:?}",
+                data_kind.exported_name,
+                data_kind.id,
+                data_kind.visibility,
+                data_kind.source_type,
+                data_kind.constructors
+            )
+        }));
         key.extend(self.exported_type_functions.iter().map(|type_function| {
             format!(
                 "typefn::{}::{:?}::{:?}::{:?}::{:?}::{:?}::{:?}::{:?}::{:?}::{:?}::{:?}::{:?}::{:?}",
@@ -1179,6 +1354,16 @@ impl ModuleSemanticSummary {
     pub fn validate_summary_version_contract(
         &self,
     ) -> Result<(), ModuleSemanticSummaryValidationError> {
+        if self.version != SummaryVersion::SPEC065_PROMOTED_DATA_KIND_V6
+            && !self.exported_promoted_data_kinds.is_empty()
+        {
+            return Err(
+                ModuleSemanticSummaryValidationError::PromotedDataKindsRequireV6 {
+                    version: self.version,
+                },
+            );
+        }
+
         match self.version {
             SummaryVersion::SPEC057_ORDINARY_TYPE_V1 | SummaryVersion::SPEC059_SEALED_DOMAIN_V2 => {
                 if !self.exported_proposition_facts.is_empty()
@@ -1237,7 +1422,8 @@ impl ModuleSemanticSummary {
                     )
                 }
             }
-            SummaryVersion::SPEC064_PROPOSITIONS_V5 => Ok(()),
+            SummaryVersion::SPEC064_PROPOSITIONS_V5
+            | SummaryVersion::SPEC065_PROMOTED_DATA_KIND_V6 => Ok(()),
             version => {
                 Err(ModuleSemanticSummaryValidationError::UnsupportedSummaryVersion { version })
             }

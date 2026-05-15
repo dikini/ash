@@ -1,6 +1,6 @@
 # TASK-894: Add core promoted data-kind/constructor identities, type-level app carriers, and summary version contract
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -59,10 +59,10 @@ commands:
   - git diff --check
   - cargo check --workspace
 checklist:
-  - [ ] Focused tests are non-zero and pass
-  - [ ] cargo fmt --check passes
-  - [ ] git diff --check passes
-  - [ ] Status surfaces and CHANGELOG are reconciled if this task completes
+  - [x] Focused tests are non-zero and pass
+  - [x] cargo fmt --check passes
+  - [x] git diff --check passes
+  - [x] Status surfaces and CHANGELOG are reconciled if this task completes
 ```
 
 ## Dependencies for Next Task
@@ -72,3 +72,10 @@ This task produces its verified slice for later tasks in [PLAN-114](../PLAN-114-
 ## Notes
 
 Promoted constructors are opt-in and distinct from sealed-domain markers and runtime constructors.
+
+## Completion Notes
+
+- Added core promoted data-kind and promoted constructor identity carriers distinct from runtime ADT constructor identities and sealed-domain marker identities.
+- Added promoted-constructor application carriers in canonical and normal type IR, plus conservative downstream exhaustive-match handling that preserves structure or fails closed without TypeEnv registration/kinding semantics.
+- Added V6 semantic-summary promoted data-kind/constructor/field carriers, summary cache-key participation, and version-contract rejection for pre-V6 summaries carrying promoted data-kind facts.
+- Verification evidence: `cargo test -p ash-core --test task_894_promoted_constructor_identities` ran 4 focused tests; `cargo fmt --check`, `git diff --check`, and `cargo check --workspace` all passed after the final TASK-894 changes.

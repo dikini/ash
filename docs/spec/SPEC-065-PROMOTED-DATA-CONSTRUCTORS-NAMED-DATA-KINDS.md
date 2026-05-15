@@ -1,6 +1,6 @@
 # SPEC-065: Promoted Data Constructors and Named Data Kinds
 
-**Status:** Draft
+**Status:** Implemented MVP
 **Date:** 2026-05-14
 **Promotes:** [DESIGN-036](../design/DESIGN-036-PROMOTED-DATA-CONSTRUCTORS-NAMED-DATA-KINDS.md)
 **Origin:** [TASK-887](../plan/tasks/TASK-887-promoted-data-constructors-and-named-data-kinds-packet.md)
@@ -128,14 +128,14 @@ Required diagnostics:
 
 ## 9. Acceptance Matrix
 
-| ID | Case | Expected result |
-|----|------|-----------------|
-| PDC-1 | promoted zero-argument constructor in a type-function RHS | accepted and normalized as promoted constructor |
-| PDC-2 | promoted recursive constructor with explicit supported recursive field | accepted only if audit enables recursive promotion |
-| PDC-3 | ordinary runtime constructor in type position without promotion | rejected with promotion-required diagnostic |
-| PDC-4 | sealed-domain marker treated as runtime ADT constructor | rejected |
-| PDC-5 | public type function leaks private promoted constructor | rejected before summary export |
-| PDC-6 | existing runtime ADT construction/pattern tests | unchanged |
+| ID | Case | Expected result | Phase 118 evidence |
+|----|------|-----------------|--------------------|
+| PDC-1 | promoted zero-argument constructor in a type-function RHS | accepted and normalized as promoted constructor | `crates/ash-typeck/tests/task_896_promoted_constructor_integration.rs::zero_arg_promoted_constructor_in_imported_type_function_rhs_normalizes` proves the core/summary/TypeEnv boundary. Source `data kind` declarations parse under TASK-893; source-to-summary lowering is not claimed by this MVP. |
+| PDC-2 | promoted recursive constructor with explicit supported recursive field | accepted only if audit enables recursive promotion | TASK-895/TASK-896 semantic-summary tests validate promoted field-domain metadata for recursive/self fields and reject missing or mismatched constraints. The audit enabled recursive promotion only through explicit promoted field domains. |
+| PDC-3 | ordinary runtime constructor in type position without promotion | rejected with promotion-required diagnostic | `ordinary_adt_summaries_do_not_trigger_automatic_datakinds_promotion`, unregistered promoted operand rejection tests, and TASK-893 parser rejection coverage keep ordinary ADT constructors out of promoted type-level positions unless metadata is explicit. |
+| PDC-4 | sealed-domain marker treated as runtime ADT constructor | rejected | `task_894_promoted_identities_are_distinct_from_runtime_and_sealed_domain_ids`, `promoted_constructor_summary_import_does_not_register_runtime_constructor_or_sealed_domain`, and TypeEnv namespace tests prove promoted, sealed-domain, and runtime identities remain disjoint. |
+| PDC-5 | public type function leaks private promoted constructor | rejected before summary export | TASK-895 validation rejects malformed/incomplete promoted summaries; TASK-896 selected-summary tests keep promoted data-kind dependencies hidden (`$ash_dependency$...`) and revalidatable by identity without source-visible alias leakage. |
+| PDC-6 | existing runtime ADT construction/pattern tests | unchanged | `cargo test --workspace` closeout evidence covers the existing ADT/runtime suites; TASK-896 engine non-interference also proves promoted summary import does not register runtime constructors or sealed-domain markers. |
 
 ## 10. Implementation Tasks
 

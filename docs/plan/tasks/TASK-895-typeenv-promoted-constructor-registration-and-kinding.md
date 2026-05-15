@@ -1,6 +1,6 @@
 # TASK-895: Register promoted identities in TypeEnv and validate kind/domain/source-ADT constraints
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -58,10 +58,10 @@ commands:
   - git diff --check
   - cargo check --workspace
 checklist:
-  - [ ] Focused tests are non-zero and pass
-  - [ ] cargo fmt --check passes
-  - [ ] git diff --check passes
-  - [ ] Status surfaces and CHANGELOG are reconciled if this task completes
+  - [x] Focused tests are non-zero and pass
+  - [x] cargo fmt --check passes
+  - [x] git diff --check passes
+  - [x] Status surfaces and CHANGELOG are reconciled if this task completes
 ```
 
 ## Dependencies for Next Task
@@ -71,3 +71,10 @@ This task produces its verified slice for later tasks in [PLAN-114](../PLAN-114-
 ## Notes
 
 Promoted constructors are opt-in and distinct from sealed-domain markers and runtime constructors.
+
+## Completion Notes
+
+- Added TypeEnv registration tables and lookup APIs for promoted data-kind summaries, promoted constructor summaries, and checked promoted-constructor kind/domain metadata.
+- Registration is transactional through staged semantic-summary registration and validates public V6 promoted data-kind summaries against exposed source ADTs.
+- Validation now rejects wrong source-ADT parents, omitted or out-of-source-order constructors, payload-kind/field-count mismatches, non-Type fields, missing or unknown promoted field domains, source field type/domain mismatches, and record field-name drift.
+- Verification evidence: `cargo test -p ash-typeck --test task_895_promoted_constructor_registration` ran 9 focused tests; `cargo fmt --check`, `git diff --check`, and `cargo check --workspace` all passed after the final TASK-895 changes.

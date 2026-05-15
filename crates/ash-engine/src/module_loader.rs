@@ -786,6 +786,15 @@ fn merge_imported_summary_payloads(
             existing.exported_sealed_domains.push(domain);
         }
     }
+    for data_kind in selected.exported_promoted_data_kinds {
+        if !existing
+            .exported_promoted_data_kinds
+            .iter()
+            .any(|existing| existing.id == data_kind.id)
+        {
+            existing.exported_promoted_data_kinds.push(data_kind);
+        }
+    }
     for type_function in selected.exported_type_functions {
         if !existing_has_type_function_summary(existing, &type_function) {
             existing.exported_type_functions.push(type_function);
@@ -898,6 +907,8 @@ fn imported_summary_type_set_matches(
         || !right.exported_proposition_predicates.is_empty()
         || !left.exported_proposition_facts.is_empty()
         || !right.exported_proposition_facts.is_empty()
+        || !left.exported_promoted_data_kinds.is_empty()
+        || !right.exported_promoted_data_kinds.is_empty()
     {
         return selected_summary_identity_facts_are_compatible(left, right);
     }
@@ -965,6 +976,16 @@ fn selected_summary_identity_facts_are_compatible(
                 .find(|right_domain| right_domain.id == left_domain.id)
                 .is_none_or(|right_domain| right_domain == left_domain)
         })
+        && left
+            .exported_promoted_data_kinds
+            .iter()
+            .all(|left_data_kind| {
+                right
+                    .exported_promoted_data_kinds
+                    .iter()
+                    .find(|right_data_kind| right_data_kind.id == left_data_kind.id)
+                    .is_none_or(|right_data_kind| right_data_kind == left_data_kind)
+            })
         && left.exported_types.iter().all(|left_type| {
             right
                 .exported_types
@@ -4623,6 +4644,15 @@ fn merge_selected_summary_payloads(
             summary.exported_sealed_domains.push(domain);
         }
     }
+    for data_kind in selected_summary.exported_promoted_data_kinds {
+        if !summary
+            .exported_promoted_data_kinds
+            .iter()
+            .any(|existing| existing.id == data_kind.id)
+        {
+            summary.exported_promoted_data_kinds.push(data_kind);
+        }
+    }
     for identity in selected_summary.interface_identities {
         if !summary
             .interface_identities
@@ -4676,7 +4706,9 @@ fn merge_selected_summary_payloads(
 }
 
 const fn update_summary_version_for_selected_payloads(summary: &mut ModuleSemanticSummary) {
-    if !summary.exported_proposition_predicates.is_empty()
+    if !summary.exported_promoted_data_kinds.is_empty() {
+        summary.version = SummaryVersion::SPEC065_PROMOTED_DATA_KIND_V6;
+    } else if !summary.exported_proposition_predicates.is_empty()
         || !summary.exported_proposition_facts.is_empty()
     {
         summary.version = SummaryVersion::SPEC064_PROPOSITIONS_V5;
@@ -6443,6 +6475,90 @@ mod tests {
         );
         assert!(env.lookup_promoted_data_kind_by_id(&left_kind).is_some());
         assert!(env.lookup_promoted_data_kind_by_id(&right_kind).is_some());
+    }
+
+    #[test]
+    fn task896_merge_imported_summary_payloads_retains_hidden_promoted_data_kind_dependencies() {
+        let source = task896_promoted_summary();
+        let selected = selected_type_function_semantic_summary(
+            &source,
+            "PromotedZero",
+            "ImportedPromotedZero",
+        )
+        .expect("selected type-function summary");
+        let kind = selected.exported_promoted_data_kinds[0].id.clone();
+        let mut existing = selected.clone();
+        existing.exported_promoted_data_kinds.clear();
+        existing.exported_type_functions.clear();
+
+        merge_imported_summary_payloads(&mut existing, selected);
+
+        assert_eq!(existing.exported_promoted_data_kinds.len(), 1);
+        assert!(is_dependency_metadata_name(
+            &existing.exported_promoted_data_kinds[0].exported_name
+        ));
+        assert_eq!(existing.exported_promoted_data_kinds[0].id, kind);
+        let mut env = ash_typeck::TypeEnv::new();
+        env.register_module_semantic_summary(&existing)
+            .expect("merged selected import retains revalidatable hidden promoted dependencies");
+        assert!(env.lookup_promoted_data_kind("NatKind").is_none());
+        assert!(env.lookup_promoted_data_kind_by_id(&kind).is_some());
+    }
+
+    #[test]
+    fn task896_selected_summary_identity_facts_reject_conflicting_hidden_promoted_data_kind_payloads()
+     {
+        let source = task896_promoted_summary();
+        let left = selected_type_function_semantic_summary(
+            &source,
+            "PromotedZero",
+            "ImportedPromotedZero",
+        )
+        .expect("selected type-function summary");
+        let mut right = left.clone();
+        right.exported_promoted_data_kinds[0].exported_name = "$ash_dependency$conflict".into();
+
+        assert!(!selected_summary_identity_facts_are_compatible(
+            &left, &right
+        ));
+    }
+
+    #[test]
+    fn task896_merge_selected_summary_export_retains_hidden_promoted_data_kind_dependencies_and_v6()
+    {
+        let source = task896_promoted_summary();
+        let selected = selected_type_function_semantic_summary(
+            &source,
+            "PromotedZero",
+            "ImportedPromotedZero",
+        )
+        .expect("selected type-function summary");
+        let kind = selected.exported_promoted_data_kinds[0].id.clone();
+        let mut exports = ModuleExports::default();
+
+        merge_selected_summary_export(&mut exports, &source, selected)
+            .expect("selected summary merges into re-export summary");
+
+        let summary = exports
+            .semantic_summary
+            .expect("selected merge creates semantic summary");
+        assert_eq!(
+            summary.version,
+            SummaryVersion::SPEC065_PROMOTED_DATA_KIND_V6
+        );
+        assert_eq!(summary.exported_promoted_data_kinds.len(), 1);
+        assert!(is_dependency_metadata_name(
+            &summary.exported_promoted_data_kinds[0].exported_name
+        ));
+        summary
+            .validate_summary_version_contract()
+            .expect("merged summary version matches promoted data-kind payload");
+
+        let mut env = ash_typeck::TypeEnv::new();
+        env.register_module_semantic_summary(&summary)
+            .expect("re-export merge keeps hidden promoted dependency metadata revalidatable");
+        assert!(env.lookup_promoted_data_kind("NatKind").is_none());
+        assert!(env.lookup_promoted_data_kind_by_id(&kind).is_some());
     }
 
     /// Test 1: `pub mod child;` loads the child module's exports and stores

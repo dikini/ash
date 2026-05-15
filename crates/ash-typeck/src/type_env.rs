@@ -76,6 +76,8 @@ struct TypeFunctionCoverageSpace {
 struct PublicTypeFunctionClosure {
     ordinary_types: HashSet<TypeDeclId>,
     sealed_domains: HashSet<SealedDomainId>,
+    promoted_data_kinds: HashSet<PromotedDataKindId>,
+    promoted_constructors: HashSet<PromotedConstructorId>,
     type_functions: HashSet<TypeComputationHeadId>,
     projections: HashSet<(InterfaceIdentityId, AssociatedMemberIdentityId)>,
 }
@@ -167,6 +169,20 @@ impl PublicTypeFunctionClosure {
                 &mut refs,
                 domain.module.clone(),
                 SummaryVersion::SPEC059_SEALED_DOMAIN_V2,
+            );
+        }
+        for data_kind in &self.promoted_data_kinds {
+            push_dependency_summary_ref(
+                &mut refs,
+                data_kind.module.clone(),
+                SummaryVersion::SPEC065_PROMOTED_DATA_KIND_V6,
+            );
+        }
+        for constructor in &self.promoted_constructors {
+            push_dependency_summary_ref(
+                &mut refs,
+                constructor.kind.module.clone(),
+                SummaryVersion::SPEC065_PROMOTED_DATA_KIND_V6,
             );
         }
         for head in &self.type_functions {
@@ -1999,134 +2015,138 @@ fn type_function_result_expr_head_name(expr: &TypeFunctionResultExpr) -> String 
 fn associated_family_result_from_canonical(
     canonical: CanonicalTypeExpr,
     span: Span,
-) -> AssociatedFamilyResultExpr {
+) -> Result<AssociatedFamilyResultExpr, TypeEnvError> {
     match canonical {
-        CanonicalTypeExpr::Primitive(name) => AssociatedFamilyResultExpr::Primitive {
+        CanonicalTypeExpr::Primitive(name) => Ok(AssociatedFamilyResultExpr::Primitive {
             name: name.clone(),
             kind: Kind::Type,
             constraint: AssociatedFamilyResultConstraint::Kind(Kind::Type),
             source_anchor: span_anchor(span, format!("primitive type {name}")),
-        },
-        CanonicalTypeExpr::Var(name) => AssociatedFamilyResultExpr::Var {
+        }),
+        CanonicalTypeExpr::Var(name) => Ok(AssociatedFamilyResultExpr::Var {
             name: name.clone(),
             kind: Kind::Type,
             constraint: AssociatedFamilyResultConstraint::Kind(Kind::Type),
             source_anchor: span_anchor(span, format!("type variable {name}")),
-        },
+        }),
         CanonicalTypeExpr::NominalApp {
             origin,
             visible_name,
             args,
             kind,
-        } => AssociatedFamilyResultExpr::NominalApp {
+        } => Ok(AssociatedFamilyResultExpr::NominalApp {
             origin,
             visible_name: visible_name.clone(),
             args: args
                 .into_iter()
                 .map(|arg| associated_family_result_from_canonical(arg, span))
-                .collect(),
+                .collect::<Result<Vec<_>, _>>()?,
             kind: kind.clone(),
             constraint: AssociatedFamilyResultConstraint::Kind(kind),
             source_anchor: span_anchor(span, format!("nominal type {visible_name}")),
-        },
+        }),
         CanonicalTypeExpr::Projection {
             interface,
             member,
             args,
             kind,
             rigidity,
-        } => AssociatedFamilyResultExpr::Projection {
+        } => Ok(AssociatedFamilyResultExpr::Projection {
             interface,
             member,
             args: args
                 .into_iter()
                 .map(|arg| associated_family_result_from_canonical(arg, span))
-                .collect(),
+                .collect::<Result<Vec<_>, _>>()?,
             kind: kind.clone(),
             constraint: AssociatedFamilyResultConstraint::Kind(kind),
             rigidity,
             source_anchor: span_anchor(span, "associated projection"),
-        },
+        }),
         CanonicalTypeExpr::ComputationHeadApp { head, args, kind } => {
-            AssociatedFamilyResultExpr::ComputationHeadApp {
+            Ok(AssociatedFamilyResultExpr::ComputationHeadApp {
                 head,
                 args: args
                     .into_iter()
                     .map(|arg| associated_family_result_from_canonical(arg, span))
-                    .collect(),
+                    .collect::<Result<Vec<_>, _>>()?,
                 kind: kind.clone(),
                 constraint: AssociatedFamilyResultConstraint::Kind(kind),
                 source_anchor: span_anchor(span, "type function call"),
-            }
+            })
         }
-        CanonicalTypeExpr::PromotedDataConstructorApp(app) => panic!(
-            "promoted data constructor '{}' is not representable as an associated-family result",
-            app.constructor.name
-        ),
+        CanonicalTypeExpr::PromotedDataConstructorApp(app) => Err(TypeEnvError::InvalidDefinition(
+            format!(
+                "promoted data constructor '{}' cannot be used as an associated-family result; promoted data constructors are not representable in associated-family result expressions",
+                app.constructor.name
+            ),
+            span,
+        )),
     }
 }
 
 fn associated_family_result_from_normal(
     normal: NormalTypeExpr,
     source_anchor: SourceAnchor,
-) -> AssociatedFamilyResultExpr {
+) -> Result<AssociatedFamilyResultExpr, TypeEnvError> {
+    let span = anchor_span(&source_anchor);
     match normal {
-        NormalTypeExpr::Primitive(name) => AssociatedFamilyResultExpr::Primitive {
+        NormalTypeExpr::Primitive(name) => Ok(AssociatedFamilyResultExpr::Primitive {
             name,
             kind: Kind::Type,
             constraint: AssociatedFamilyResultConstraint::Kind(Kind::Type),
             source_anchor,
-        },
-        NormalTypeExpr::Var(name) => AssociatedFamilyResultExpr::Var {
+        }),
+        NormalTypeExpr::Var(name) => Ok(AssociatedFamilyResultExpr::Var {
             name,
             kind: Kind::Type,
             constraint: AssociatedFamilyResultConstraint::Kind(Kind::Type),
             source_anchor,
-        },
+        }),
         NormalTypeExpr::NominalApp {
             origin,
             visible_name,
             args,
             kind,
-        } => AssociatedFamilyResultExpr::NominalApp {
+        } => Ok(AssociatedFamilyResultExpr::NominalApp {
             origin,
             visible_name,
             args: args
                 .into_iter()
                 .map(|arg| associated_family_result_from_normal(arg, source_anchor.clone()))
-                .collect(),
+                .collect::<Result<Vec<_>, _>>()?,
             kind: kind.clone(),
             constraint: AssociatedFamilyResultConstraint::Kind(kind),
             source_anchor,
-        },
+        }),
         NormalTypeExpr::DomainConstructorApp {
             constructor,
             domain,
             args,
             kind,
-        } => AssociatedFamilyResultExpr::DomainConstructorApp {
+        } => Ok(AssociatedFamilyResultExpr::DomainConstructorApp {
             constructor,
             domain: domain.clone(),
             args: args
                 .into_iter()
                 .map(|arg| associated_family_result_from_normal(arg, source_anchor.clone()))
-                .collect(),
+                .collect::<Result<Vec<_>, _>>()?,
             kind,
             constraint: AssociatedFamilyResultConstraint::Domain(domain),
             source_anchor,
-        },
+        }),
         NormalTypeExpr::NeutralComputationApp {
             head, args, kind, ..
-        } => AssociatedFamilyResultExpr::ComputationHeadApp {
+        } => Ok(AssociatedFamilyResultExpr::ComputationHeadApp {
             head,
             args: args
                 .into_iter()
                 .map(|arg| associated_family_result_from_normal(arg, source_anchor.clone()))
-                .collect(),
+                .collect::<Result<Vec<_>, _>>()?,
             kind: kind.clone(),
             constraint: AssociatedFamilyResultConstraint::Kind(kind),
             source_anchor,
-        },
+        }),
         NormalTypeExpr::Projection {
             interface,
             member,
@@ -2134,22 +2154,27 @@ fn associated_family_result_from_normal(
             kind,
             rigidity,
             ..
-        } => AssociatedFamilyResultExpr::Projection {
+        } => Ok(AssociatedFamilyResultExpr::Projection {
             interface,
             member,
             args: args
                 .into_iter()
                 .map(|arg| associated_family_result_from_normal(arg, source_anchor.clone()))
-                .collect(),
+                .collect::<Result<Vec<_>, _>>()?,
             kind: kind.clone(),
             constraint: AssociatedFamilyResultConstraint::Kind(kind),
             rigidity,
             source_anchor,
-        },
-        NormalTypeExpr::PromotedDataConstructorApp { constructor, .. } => panic!(
-            "promoted data constructor '{}' is not representable as an associated-family result",
-            constructor.name
-        ),
+        }),
+        NormalTypeExpr::PromotedDataConstructorApp { constructor, .. } => {
+            Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "promoted data constructor '{}' cannot be used as an associated-family result; promoted data constructors are not representable in associated-family result expressions",
+                    constructor.name
+                ),
+                span,
+            ))
+        }
     }
 }
 
@@ -4069,7 +4094,9 @@ impl TypeEnv {
             } => bindings
                 .get(name)
                 .cloned()
-                .map(|normal| associated_family_result_from_normal(normal, source_anchor.clone()))
+                .and_then(|normal| {
+                    associated_family_result_from_normal(normal, source_anchor.clone()).ok()
+                })
                 .unwrap_or_else(|| result.clone()),
             AssociatedFamilyResultExpr::Primitive { .. } => result.clone(),
             AssociatedFamilyResultExpr::NominalApp {
@@ -4205,8 +4232,8 @@ impl TypeEnv {
             } => bindings
                 .get(name)
                 .cloned()
-                .map(|canonical| {
-                    associated_family_result_from_canonical(canonical, Span::default())
+                .and_then(|canonical| {
+                    associated_family_result_from_canonical(canonical, Span::default()).ok()
                 })
                 .unwrap_or_else(|| AssociatedFamilyResultExpr::Var {
                     name: name.clone(),
@@ -4445,13 +4472,13 @@ impl TypeEnv {
                     });
                 }
                 self.lower_surface_type_to_canonical(ty)
-                    .map(|canonical| associated_family_result_from_canonical(canonical, span))
                     .map_err(|err| TypeEnvError::InvalidDefinition(format!("{err}"), span))
+                    .and_then(|canonical| associated_family_result_from_canonical(canonical, span))
             }
             _ => self
                 .lower_surface_type_to_canonical(ty)
-                .map(|canonical| associated_family_result_from_canonical(canonical, span))
-                .map_err(|err| TypeEnvError::InvalidDefinition(format!("{err}"), span)),
+                .map_err(|err| TypeEnvError::InvalidDefinition(format!("{err}"), span))
+                .and_then(|canonical| associated_family_result_from_canonical(canonical, span)),
         }
     }
 
@@ -4551,14 +4578,16 @@ impl TypeEnv {
                     })
                 } else {
                     self.lower_surface_type_to_canonical(ty)
-                        .map(|canonical| associated_family_result_from_canonical(canonical, span))
                         .map_err(|err| TypeEnvError::InvalidDefinition(format!("{err}"), span))
+                        .and_then(|canonical| {
+                            associated_family_result_from_canonical(canonical, span)
+                        })
                 }
             }
             _ => self
                 .lower_surface_type_to_canonical(ty)
-                .map(|canonical| associated_family_result_from_canonical(canonical, span))
-                .map_err(|err| TypeEnvError::InvalidDefinition(format!("{err}"), span)),
+                .map_err(|err| TypeEnvError::InvalidDefinition(format!("{err}"), span))
+                .and_then(|canonical| associated_family_result_from_canonical(canonical, span)),
         }
     }
 
@@ -8543,6 +8572,13 @@ impl TypeEnv {
                 }
             }
             CanonicalTypeExpr::PromotedDataConstructorApp(app) => {
+                closure.promoted_data_kinds.insert(app.data_kind.clone());
+                closure
+                    .promoted_constructors
+                    .insert(app.constructor.clone());
+                closure
+                    .ordinary_types
+                    .insert(app.data_kind.source_type.clone());
                 for arg in &app.args {
                     self.collect_public_canonical_type_closure(arg, closure);
                 }
@@ -8606,8 +8642,17 @@ impl TypeEnv {
                 }
             }
             TypeFunctionResultExpr::PromotedDataConstructorApp {
-                args, constraint, ..
+                constructor,
+                data_kind,
+                args,
+                constraint,
+                ..
             } => {
+                closure.promoted_data_kinds.insert((**data_kind).clone());
+                closure
+                    .promoted_constructors
+                    .insert((**constructor).clone());
+                closure.ordinary_types.insert(data_kind.source_type.clone());
                 Self::collect_result_constraint_closure(constraint, closure);
                 for arg in args {
                     self.collect_public_result_closure(arg, closure);
@@ -8949,6 +8994,12 @@ impl TypeEnv {
                     kind,
                     span,
                 )?;
+                self.ensure_public_type_function_promoted_constructor_dependency(
+                    def,
+                    constructor,
+                    data_kind,
+                    span,
+                )?;
                 for arg in args {
                     self.validate_public_type_function_result_export_closure(def, arg, span)?;
                 }
@@ -9041,6 +9092,12 @@ impl TypeEnv {
                     &app.kind,
                     span,
                 )?;
+                self.ensure_public_type_function_promoted_constructor_dependency(
+                    def,
+                    &app.constructor,
+                    &app.data_kind,
+                    span,
+                )?;
                 for arg in &app.args {
                     self.validate_public_canonical_type_dependency(def, arg, span)?;
                 }
@@ -9100,6 +9157,82 @@ impl TypeEnv {
                 dependency: constructor.name.clone(),
                 dependency_kind: "marker constructor".to_string(),
                 span,
+            });
+        }
+        Ok(())
+    }
+
+    fn ensure_public_type_function_promoted_data_kind_dependency(
+        &self,
+        def: &TypeFunctionDef,
+        data_kind: &PromotedDataKindId,
+        span: Span,
+    ) -> Result<(), TypeEnvError> {
+        let Some(summary) = self.lookup_promoted_data_kind_by_id(data_kind) else {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "public type function '{}' export closure cannot resolve promoted data kind '{}'",
+                    def.name, data_kind.name
+                ),
+                span,
+            ));
+        };
+        if summary.visibility != ash_core::ast::Visibility::Public {
+            return Err(TypeEnvError::PrivateDependencyExportFailure {
+                public_item: def.name.clone(),
+                dependency: summary.exported_name.clone(),
+                dependency_kind: "promoted data kind".to_string(),
+                span: if anchor_span(&summary.source_anchor) == Span::default() {
+                    span
+                } else {
+                    anchor_span(&summary.source_anchor)
+                },
+            });
+        }
+        self.ensure_public_type_function_ordinary_type_dependency(
+            def,
+            &data_kind.source_type.name,
+            span,
+        )?;
+        Ok(())
+    }
+
+    fn ensure_public_type_function_promoted_constructor_dependency(
+        &self,
+        def: &TypeFunctionDef,
+        constructor: &PromotedConstructorId,
+        data_kind: &PromotedDataKindId,
+        span: Span,
+    ) -> Result<(), TypeEnvError> {
+        self.ensure_public_type_function_promoted_data_kind_dependency(def, data_kind, span)?;
+        let Some(summary) = self.promoted_constructor_summaries.get(constructor) else {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "public type function '{}' export closure cannot resolve promoted data constructor '{}'",
+                    def.name, constructor.name
+                ),
+                span,
+            ));
+        };
+        if constructor.kind != *data_kind {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "public type function '{}' export closure references promoted constructor '{}' from promoted data kind '{}', not '{}'",
+                    def.name, constructor.name, constructor.kind.name, data_kind.name
+                ),
+                span,
+            ));
+        }
+        if summary.visibility != ash_core::ast::Visibility::Public {
+            return Err(TypeEnvError::PrivateDependencyExportFailure {
+                public_item: def.name.clone(),
+                dependency: summary.exported_name.clone(),
+                dependency_kind: "promoted data constructor".to_string(),
+                span: if anchor_span(&summary.source_anchor) == Span::default() {
+                    span
+                } else {
+                    anchor_span(&summary.source_anchor)
+                },
             });
         }
         Ok(())
@@ -15630,6 +15763,8 @@ pub enum UnfoldedBody {
 mod tests {
     use super::*;
     use ash_core::ast::{TypeBody, TypeDef, TypeExpr, VariantDef, Visibility};
+    use ash_core::semantic_summary::ConstructorId;
+    use ash_core::type_ir::PromotedConstructorApp;
 
     // ============================================================
     // TypeInfo Tests
@@ -16011,6 +16146,215 @@ mod tests {
             }
             other => panic!("expected Type::Fn, got {other:?}"),
         }
+    }
+
+    fn task896_module_identity() -> ModuleIdentity {
+        ModuleIdentity::new(
+            Some(CrateId(896)),
+            ModuleId(118),
+            vec!["typeenv".into(), "task896".into()],
+            ash_core::semantic_summary::ModuleSourceOrigin::Synthetic {
+                reason: "task-896-type-function-promoted-closure".into(),
+            },
+        )
+    }
+
+    fn task896_source_anchor(label: &str) -> SourceAnchor {
+        SourceAnchor::new(
+            SourceOrigin::Synthetic {
+                reason: "task-896-type-function-promoted-closure".into(),
+            },
+            None,
+            label,
+        )
+    }
+
+    fn task896_promoted_nat_summary_for_typeenv(
+        visibility: Visibility,
+    ) -> (
+        ModuleSemanticSummary,
+        PromotedDataKindId,
+        PromotedConstructorId,
+    ) {
+        let module = task896_module_identity();
+        let source_type = TypeDeclId::ordinary(module.clone(), "Nat");
+        let source_constructor =
+            ConstructorId::variant(source_type.clone(), "Z", ConstructorPayloadKind::Unit);
+        let kind = PromotedDataKindId::new(module.clone(), source_type.clone(), "NatKind");
+        let constructor = PromotedConstructorId::new(kind.clone(), source_constructor.clone(), "Z");
+        let summary = ModuleSemanticSummary::new(module.clone())
+            .with_version(SummaryVersion::SPEC065_PROMOTED_DATA_KIND_V6)
+            .with_exported_type(TypeDeclSummary::new(
+                source_type.clone(),
+                "Nat",
+                Visibility::Public,
+                RepresentationExposure::Exposed,
+                TypeRepresentationSummary::Exposed(TypeBody::Enum(vec![VariantDef {
+                    name: "Z".into(),
+                    fields: vec![],
+                    payload: VariantPayload::Unit,
+                }])),
+                task896_source_anchor("Nat"),
+            ))
+            .with_exported_constructor(ConstructorSummary::new(
+                source_constructor.clone(),
+                source_type.clone(),
+                "Z",
+                ConstructorPayloadKind::Unit,
+                Visibility::Public,
+                task896_source_anchor("Z"),
+            ))
+            .with_exported_promoted_data_kind(
+                PromotedDataKindSummary::new(
+                    kind.clone(),
+                    "NatKind",
+                    visibility,
+                    source_type,
+                    task896_source_anchor("NatKind"),
+                )
+                .with_constructor(PromotedConstructorSummary::new(
+                    constructor.clone(),
+                    "Z",
+                    source_constructor,
+                    vec![],
+                    visibility,
+                    task896_source_anchor("promoted Z"),
+                )),
+            );
+        (summary, kind, constructor)
+    }
+
+    fn task896_type_function_def_returning_promoted_z(
+        module: &ModuleIdentity,
+        kind: &PromotedDataKindId,
+        constructor: &PromotedConstructorId,
+    ) -> TypeFunctionDef {
+        let head = TypeComputationHeadId::new(module.clone(), "ZeroNat");
+        TypeFunctionDef {
+            visibility: Visibility::Public,
+            head: head.clone(),
+            name: "ZeroNat".into(),
+            params: vec![],
+            return_type: CanonicalTypeExpr::Primitive("Type".into()),
+            return_kind: Kind::Type,
+            result_constraint: TypeFunctionResultConstraint::Kind(Kind::Type),
+            decreases: None,
+            source_anchors: TypeFunctionSourceAnchors {
+                definition: task896_source_anchor("type fn ZeroNat"),
+                decreases: None,
+            },
+            equations: vec![TypeFunctionEquation {
+                head,
+                ordinal: 0,
+                patterns: vec![],
+                result: TypeFunctionResultExpr::PromotedDataConstructorApp {
+                    constructor: Box::new(constructor.clone()),
+                    data_kind: Box::new(kind.clone()),
+                    args: vec![],
+                    kind: Kind::Type,
+                    constraint: TypeFunctionResultConstraint::Kind(Kind::Type),
+                    source_anchor: task896_source_anchor("ZeroNat rhs"),
+                },
+                source_anchor: task896_source_anchor("case ZeroNat = Z"),
+                case_head_anchor: task896_source_anchor("ZeroNat case head"),
+            }],
+        }
+    }
+
+    #[test]
+    fn task896_public_type_function_summary_records_promoted_data_kind_dependency() {
+        let (summary, kind, constructor) =
+            task896_promoted_nat_summary_for_typeenv(Visibility::Public);
+        let mut env = TypeEnv::new();
+        env.register_module_semantic_summary(&summary)
+            .expect("public promoted kind imports");
+        let def =
+            task896_type_function_def_returning_promoted_z(&summary.module, &kind, &constructor);
+
+        let exported = env
+            .lower_public_type_function_summary(&def)
+            .expect("public promoted constructor dependency is export-closed");
+
+        assert!(exported.dependency_summary_refs.iter().any(|dependency| {
+            dependency.summary_ref.module == summary.module
+                && dependency.summary_ref.version == SummaryVersion::SPEC065_PROMOTED_DATA_KIND_V6
+        }));
+    }
+
+    #[test]
+    fn task896_public_type_function_export_rejects_private_promoted_data_kind_dependency() {
+        let (summary, kind, constructor) =
+            task896_promoted_nat_summary_for_typeenv(Visibility::Public);
+        let mut env = TypeEnv::new();
+        env.register_module_semantic_summary(&summary)
+            .expect("public promoted kind imports before privacy mutation");
+        env.promoted_data_kind_summaries
+            .get_mut(&kind)
+            .expect("registered kind")
+            .visibility = Visibility::Private;
+        let def =
+            task896_type_function_def_returning_promoted_z(&summary.module, &kind, &constructor);
+
+        let err = env
+            .lower_public_type_function_summary(&def)
+            .expect_err("public type function must not leak private promoted data kind");
+        let msg = err.to_string();
+        assert!(
+            msg.contains("private")
+                && msg.contains("promoted data kind")
+                && msg.contains("NatKind"),
+            "unexpected diagnostic: {msg}"
+        );
+    }
+
+    #[test]
+    fn task896_public_type_function_export_rejects_private_promoted_constructor_dependency() {
+        let (summary, kind, constructor) =
+            task896_promoted_nat_summary_for_typeenv(Visibility::Public);
+        let mut env = TypeEnv::new();
+        env.register_module_semantic_summary(&summary)
+            .expect("public promoted kind imports before constructor privacy mutation");
+        env.promoted_constructor_summaries
+            .get_mut(&constructor)
+            .expect("registered promoted constructor")
+            .visibility = Visibility::Private;
+        let def =
+            task896_type_function_def_returning_promoted_z(&summary.module, &kind, &constructor);
+
+        let err = env
+            .lower_public_type_function_summary(&def)
+            .expect_err("public type function must not leak private promoted constructor");
+        let msg = err.to_string();
+        assert!(
+            msg.contains("private")
+                && msg.contains("promoted data constructor")
+                && msg.contains("Z"),
+            "unexpected diagnostic: {msg}"
+        );
+    }
+
+    #[test]
+    fn task896_associated_family_result_conversion_rejects_promoted_constructor_without_panic() {
+        let (summary, kind, constructor) =
+            task896_promoted_nat_summary_for_typeenv(Visibility::Public);
+        let promoted =
+            CanonicalTypeExpr::PromotedDataConstructorApp(Box::new(PromotedConstructorApp {
+                constructor,
+                data_kind: kind,
+                args: vec![],
+                kind: Kind::Type,
+            }));
+
+        let err = associated_family_result_from_canonical(promoted, Span::new(118, 119, 1, 1))
+            .expect_err("promoted constructors are not associated-family result carriers");
+        let msg = err.to_string();
+        assert!(
+            msg.contains("promoted data constructor")
+                && msg.contains("associated-family result")
+                && msg.contains("Z"),
+            "unexpected diagnostic for {:?}: {msg}",
+            summary.module
+        );
     }
 
     #[test]

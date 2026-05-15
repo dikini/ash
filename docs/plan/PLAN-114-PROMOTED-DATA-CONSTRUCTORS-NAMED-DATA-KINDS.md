@@ -71,4 +71,4 @@ cargo doc --workspace --no-deps 2>&1 | tee /tmp/ash-plan-114-doc.log
 - [x] Parser/core/typeck/engine ownership matches [SPEC-065](../spec/SPEC-065-PROMOTED-DATA-CONSTRUCTORS-NAMED-DATA-KINDS.md) for the implemented MVP; source `data kind` lowering/export remains explicitly outside this closeout claim.
 - [x] Acceptance/non-interference matrix maps every SPEC row to focused evidence.
 - [x] Broad workspace gates pass after the final code/doc change.
-- [x] Independent review remediation complete.
+- [x] Independent review remediation complete: promoted carriers no longer panic in associated-family result conversion, public type-function export closure records/enforces promoted data-kind/constructor dependencies, selected-summary merge/pub-use paths retain hidden promoted metadata and V6 versioning, and PLAN-INDEX status is reconciled.

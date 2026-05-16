@@ -206,8 +206,10 @@ fn missing_dictionary_does_not_overclaim_future_dictionaries() {
     let text = error_text(&env, &expr);
     assert!(text.contains("comprehension"), "{text}");
     assert!(text.contains("do target Option"), "{text}");
-    assert!(text.contains("no MVP dictionary"), "{text}");
-    assert!(text.contains("deferred"), "{text}");
+    assert!(text.contains("missing Monad evidence"), "{text}");
+    assert!(text.contains("SPEC-067 Monad<K> evidence"), "{text}");
+    assert!(text.contains("Monad<Option>"), "{text}");
+    assert!(!text.contains("no MVP dictionary"), "{text}");
     assert!(!text.contains("inferred target"), "{text}");
 }
 

@@ -1,6 +1,6 @@
 # SPEC-067: Constructor-Kinded Parameters and HKT
 
-**Status:** Draft
+**Status:** Implemented MVP
 **Date:** 2026-05-14
 **Promotes:** [DESIGN-038](../design/DESIGN-038-CONSTRUCTOR-KINDED-PARAMETERS-AND-HKT.md)
 **Origin:** [TASK-889](../plan/tasks/TASK-889-constructor-kinded-parameters-and-hkt-packet.md)
@@ -15,15 +15,15 @@ SPEC-067 adds constructor-kinded binders and higher-kinded interface support. It
 
 This spec is not a local do-notation patch. It extends source binders, core/typechecker representation, interface/impl coherence, and TypeEnv evidence resolution. Generalized `do` then consumes the resulting `Monad<K>` evidence.
 
-## 2. Baseline
+## 2. Pre-Phase-120 Baseline
 
-Live substrate:
+TASK-904 audited the live substrate before Phase 120 implementation:
 
 - `ash-core::Kind` can represent arrow kinds such as `* -> *`;
-- current source type parameters and interface parameters are effectively proper-type parameters;
-- current do targets use compiler-known hidden dictionaries for `Act`, `Proc`, and `Workflow`;
-- `do:Result<_, E>` is explicitly deferred pending partial application and Monad evidence;
-- higher-kinded interface declarations, constructor-variable application, and impl heads are not source-supported.
+- source type parameters and interface parameters were effectively proper-type parameters;
+- do targets used compiler-known hidden dictionaries for `Act`, `Proc`, and `Workflow`;
+- `do:Result<_, E>` was deferred pending SPEC-066 partial application and Monad evidence;
+- higher-kinded interface declarations, constructor-variable application, and impl heads were not source-supported.
 
 ## 3. Scope
 
@@ -92,12 +92,14 @@ SPEC-034 where-bounded generic impls remain relevant. If the live generic-impl s
 
 ## 7. Do-Notation Evidence
 
-`do:K` resolves in this order after this spec lands:
+Full `do:K` evidence behavior resolves in this order:
 
 1. elaborate target `K` to a unary constructor expression;
 2. require `Monad<K>` evidence from TypeEnv;
 3. elaborate `return` and `<-` through the selected evidence;
 4. keep tower-specific effects for `Act`, `Proc`, and `Workflow` explicit.
+
+The Phase 120 MVP implements the target-resolution and return-only type boundary for explicit `Monad<K>` evidence. Generalized runtime lowering through arbitrary user-defined Monad `return`/`bind` method bodies remains deferred.
 
 The hidden Act/Proc/Workflow dictionaries may remain as compiler-prelude evidence during migration, but they must be shaped as ordinary `Monad<K>` entries at the TypeEnv boundary.
 
@@ -126,6 +128,14 @@ Required diagnostics:
 | HKT-7 | `do:Option` after evidence | typed elaboration uses Monad evidence |
 | HKT-8 | `do:List` without evidence | missing Monad evidence diagnostic |
 
-## 10. Implementation Tasks
+## 10. MVP Closeout Evidence and Deferrals
+
+Phase 120 implements the SPEC-067 MVP through TASK-904 through TASK-911. The closeout evidence is recorded in [TASK-910 HKT acceptance and non-interference matrix](../plan/audits/TASK-910-hkt-acceptance-matrix.md) and [TASK-911 HKT closeout](../plan/audits/TASK-911-hkt-closeout.md).
+
+The MVP covers constructor-kinded binders, constructor-variable application, higher-kinded interface/impl evidence shape and overlap rejection, explicit `Monad<K>` do-target evidence lookup, public summary non-interference, and the diagnostics listed above. It preserves the non-goals in §3: higher-rank polymorphism, unrestricted source type lambdas, automatic do-target inference, law proving or automatic law assumption, arbitrary associated-type-family inversion, and broad multi-parameter constructor classes remain deferred.
+
+`impl Monad<Result<_, E>>` is implemented as SPEC-066-shaped partial-constructor evidence shape. Generalized runtime lowering through arbitrary user-defined Monad `return`/`bind` method bodies remains outside this MVP; the accepted do-target evidence boundary is covered for target resolution and return-only typing.
+
+## 11. Implementation Tasks
 
 See [PLAN-116](../plan/PLAN-116-CONSTRUCTOR-KINDED-PARAMETERS-AND-HKT.md).

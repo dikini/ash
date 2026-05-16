@@ -62,7 +62,7 @@ fn workflow_typecheck_no_longer_rejects_task_907_constructor_kinded_type_params(
 }
 
 #[test]
-fn type_env_interface_registration_rejects_constructor_kinded_type_params() {
+fn type_env_interface_registration_accepts_task_908_constructor_kinded_interface_binders() {
     let module = parse(
         r#"
         interface Functor<F : * -> *> {}
@@ -78,12 +78,9 @@ fn type_env_interface_registration_rejects_constructor_kinded_type_params() {
         .expect("interface should be present");
 
     let mut env = TypeEnv::with_builtin_types();
-    let error = env
-        .register_interface(interface)
-        .expect_err("type env must fail closed for constructor-kinded interface binders");
-
-    assert!(error.to_string().contains("kinded binders"));
-    assert!(error.to_string().contains("TASK-908"));
+    env.register_interface(interface).expect(
+        "TypeEnv interface registration now accepts TASK-908 constructor-kinded interface binders",
+    );
 }
 
 #[test]

@@ -132,16 +132,20 @@ fn env_with_act_unit() -> TypeEnv {
     env
 }
 
-fn assert_err_contains(expr: Expr, needles: &[&str]) {
+fn err_text_for(expr: Expr) -> String {
     let env = env_with_act_unit();
     let result = check_expr(&env, &expr);
     assert!(!result.is_ok(), "expected type error, got {result:?}");
-    let text = result
+    result
         .errors
         .iter()
         .map(ToString::to_string)
         .collect::<Vec<_>>()
-        .join("\n");
+        .join("\n")
+}
+
+fn assert_err_contains(expr: Expr, needles: &[&str]) {
+    let text = err_text_for(expr);
     for needle in needles {
         assert!(
             text.contains(needle),
@@ -286,7 +290,21 @@ fn comprehension_rejects_missing_dictionary_target() {
         var("x"),
         vec![bind_qual("x", unit_call("act", int_lit(1)))],
     );
-    assert_err_contains(expr, &["do target Option", "no MVP dictionary"]);
+    let text = err_text_for(expr);
+    for needle in [
+        "do target Option",
+        "missing Monad evidence",
+        "Monad<Option>",
+    ] {
+        assert!(
+            text.contains(needle),
+            "expected error text to contain {needle:?}; got:\n{text}"
+        );
+    }
+    assert!(
+        !text.contains("no MVP dictionary"),
+        "expected SPEC-067 Monad evidence diagnostic, got stale text:\n{text}"
+    );
 }
 
 #[test]

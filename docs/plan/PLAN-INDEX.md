@@ -3536,7 +3536,7 @@ Phase 119 implements explicit source holes and partial type-constructor applicat
 ## Phase 120: Constructor-Kinded Parameters and HKT
 
 **Priority:** High (required for user-defined `Functor`, `Applicative`, `Monad`, and generalized do-target evidence)
-**Status:** 🚧 In Progress
+**Status:** ✅ Complete
 **Spec:** [SPEC-067](../spec/SPEC-067-CONSTRUCTOR-KINDED-PARAMETERS-AND-HKT.md)
 **Design:** [DESIGN-038](../design/DESIGN-038-CONSTRUCTOR-KINDED-PARAMETERS-AND-HKT.md)
 **Plan:** [docs/plan/PLAN-116-CONSTRUCTOR-KINDED-PARAMETERS-AND-HKT.md](PLAN-116-CONSTRUCTOR-KINDED-PARAMETERS-AND-HKT.md)
@@ -3552,7 +3552,7 @@ Phase 120 implements constructor-kinded binders and higher-kinded interface evid
 | [TASK-908](tasks/TASK-908-higher-kinded-interface-and-impl-coherence.md) | Higher-kinded interface/impl coherence | 10 | ✅ Complete |
 | [TASK-909](tasks/TASK-909-monad-dictionary-do-target-resolution.md) | Monad dictionary do-target resolution | 8 | ✅ Complete |
 | [TASK-910](tasks/TASK-910-hkt-diagnostics-and-acceptance-matrix.md) | HKT diagnostics and acceptance matrix | 7 | ✅ Complete |
-| [TASK-911](tasks/TASK-911-hkt-closeout.md) | SPEC-067 closeout | 5 | 📝 Planned |
+| [TASK-911](tasks/TASK-911-hkt-closeout.md) | SPEC-067 closeout | 5 | ✅ Complete |
 
 ## Phase 121: Pattern and Exhaustiveness Canonicalization
 

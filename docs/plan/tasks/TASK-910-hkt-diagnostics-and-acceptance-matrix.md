@@ -1,6 +1,6 @@
 # TASK-910: Add Functor/Applicative/Monad diagnostics, acceptance, and non-interference matrix
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -66,11 +66,26 @@ commands:
   - git diff --check
   - cargo check --workspace
 checklist:
-  - [ ] Focused tests are non-zero and pass
-  - [ ] cargo fmt --check passes
-  - [ ] git diff --check passes
-  - [ ] Status surfaces and CHANGELOG are reconciled if this task completes
+  - [x] Focused tests are non-zero and pass
+  - [x] cargo fmt --check passes
+  - [x] git diff --check passes
+  - [x] Status surfaces and CHANGELOG are reconciled if this task completes
 ```
+
+## Evidence
+
+- 2026-05-16 RED evidence: `cargo test -p ash-typeck --test task_910_hkt_acceptance_matrix` initially failed 1 of 10 tests because `impl <E : *> Monad<Result<_, E>> {}` was lowered as a proper `Result<_, E>` type instead of a SPEC-066 partial constructor shape.
+- 2026-05-16 remediation RED evidence: `cargo test -p ash-parser --test task_910_hkt_diagnostics_surface` initially failed 5 of 9 tests because parser `_` holes were accepted in ordinary function, interface, proposition, resource/capability, and associated type binding positions.
+- 2026-05-16 remediation RED evidence: `cargo test -p ash-parser --test task_910_hkt_diagnostics_surface underscore_prefixed_type_names_are_not_treated_as_holes` initially failed 1 of 1 test because the impl-head hole recognizer treated `_M` as a hole prefix instead of an underscore-prefixed type name.
+- 2026-05-16 focused verification: `cargo test -p ash-parser --test task_910_hkt_diagnostics_surface` passed 10 tests.
+- 2026-05-16 focused verification: `cargo test -p ash-typeck --test task_910_hkt_acceptance_matrix` passed 10 tests.
+- 2026-05-16 focused verification: `cargo test -p ash-engine --test task_910_hkt_summary_non_interference` passed 1 test.
+- 2026-05-16 relevant regression verification: `cargo test -p ash-parser --test task_900_type_hole_surface` passed 4 tests; `cargo test -p ash-parser --test task_906_hkt_kinded_binder_surface` passed 5 tests; `cargo test -p ash-parser --test task_906_hkt_non_interference` passed 3 tests; `cargo test -p ash-typeck --test task_902_do_target_partial_application` passed 6 tests; `cargo test -p ash-typeck --test task_908_hkt_interface_impl_coherence` passed 4 tests; `cargo test -p ash-typeck --test task_908_hkt_evidence_lookup` passed 3 tests; `cargo test -p ash-typeck --test task_909_monad_do_target_resolution` passed 4 tests; `cargo test -p ash-engine --test task_908_hkt_summary_non_interference` passed 1 test.
+- 2026-05-16 required gates: `cargo fmt --check`, `git diff --check`, and `cargo check --workspace` passed.
+
+## Acceptance Artifact
+
+- [TASK-910 HKT acceptance and non-interference matrix](../audits/TASK-910-hkt-acceptance-matrix.md)
 
 ## Dependencies for Next Task
 

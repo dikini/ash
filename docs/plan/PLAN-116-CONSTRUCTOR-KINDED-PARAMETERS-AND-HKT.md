@@ -26,7 +26,7 @@
 | [TASK-907](tasks/TASK-907-typeenv-constructor-variable-kinding-and-unification.md) | Track constructor variables, apply them by kind, and add non-inverting constructor unification | Typeck | 10 | ✅ Complete |
 | [TASK-908](tasks/TASK-908-higher-kinded-interface-and-impl-coherence.md) | Register and resolve higher-kinded interface/impl evidence without overlap or output-directed selection | Typeck/Coherence | 10 | ✅ Complete |
 | [TASK-909](tasks/TASK-909-monad-dictionary-do-target-resolution.md) | Route generalized do target resolution through `Monad<K>` evidence while preserving Act/Proc/Workflow bridge semantics | Typeck/Do | 8 | ✅ Complete |
-| [TASK-910](tasks/TASK-910-hkt-diagnostics-and-acceptance-matrix.md) | Add Functor/Applicative/Monad diagnostics, acceptance, and non-interference matrix | Diagnostics/Tests | 7 | 📝 Planned |
+| [TASK-910](tasks/TASK-910-hkt-diagnostics-and-acceptance-matrix.md) | Add Functor/Applicative/Monad diagnostics, acceptance, and non-interference matrix | Diagnostics/Tests | 7 | ✅ Complete |
 | [TASK-911](tasks/TASK-911-hkt-closeout.md) | Reconcile SPEC-067/PLAN-116 docs, broad gates, and independent review remediation | Docs/Closeout | 5 | 📝 Planned |
 
 ## Execution Tracks
@@ -73,6 +73,6 @@ cargo doc --workspace --no-deps 2>&1 | tee /tmp/ash-plan-116-doc.log
 
 - [x] Audit gate artifact exists and downstream guards are patched.
 - [ ] Parser/core/typeck/engine ownership matches [SPEC-067](../spec/SPEC-067-CONSTRUCTOR-KINDED-PARAMETERS-AND-HKT.md).
-- [ ] Acceptance/non-interference matrix maps every SPEC row to focused evidence.
+- [x] Acceptance/non-interference matrix maps every SPEC row to focused evidence.
 - [ ] Broad workspace gates pass after the final code/doc change.
 - [ ] Independent review remediation complete.

@@ -32,6 +32,20 @@ use crate::surface::{
 };
 use crate::token::Span;
 
+#[derive(Clone, Copy)]
+enum TypeHolePolicy {
+    Disallow,
+    Allow,
+}
+
+fn starts_with_standalone_type_hole(input: &ParseInput<'_>) -> bool {
+    let mut chars = input.input.as_ref().chars();
+    matches!(chars.next(), Some('_'))
+        && !chars
+            .next()
+            .is_some_and(crate::parse_utils::is_identifier_continue)
+}
+
 /// Parse a module declaration.
 ///
 /// Supports both file-based modules (`mod foo;`) and inline modules (`mod foo { ... }`).
@@ -1452,7 +1466,7 @@ fn parse_impl_definition(input: &mut ParseInput) -> ModalResult<Definition> {
     skip_whitespace_and_comments(input);
     let interface = identifier(input)?;
     skip_whitespace_and_comments(input);
-    let type_args = parse_optional_type_arguments(input)?;
+    let type_args = parse_optional_impl_head_type_arguments(input)?;
     skip_whitespace_and_comments(input);
     let where_bounds = if starts_with_keyword(input, "where") {
         parse_where_bounds(input)?
@@ -1661,12 +1675,19 @@ fn parse_optional_type_parameter_names(input: &mut ParseInput) -> ModalResult<Ve
 }
 
 fn parse_required_type_arguments(input: &mut ParseInput) -> ModalResult<Vec<Type>> {
+    parse_required_type_arguments_with_holes(input, TypeHolePolicy::Disallow)
+}
+
+fn parse_required_type_arguments_with_holes(
+    input: &mut ParseInput,
+    hole_policy: TypeHolePolicy,
+) -> ModalResult<Vec<Type>> {
     let _ = literal_str("<").parse_next(input)?;
     skip_whitespace_and_comments(input);
     let mut args = Vec::new();
 
     loop {
-        args.push(parse_surface_type(input)?);
+        args.push(parse_surface_type_with_holes(input, hole_policy)?);
         skip_whitespace_and_comments(input);
 
         if input.input.starts_with(",") {
@@ -1683,12 +1704,12 @@ fn parse_required_type_arguments(input: &mut ParseInput) -> ModalResult<Vec<Type
     Ok(args)
 }
 
-fn parse_optional_type_arguments(input: &mut ParseInput) -> ModalResult<Vec<Type>> {
+fn parse_optional_impl_head_type_arguments(input: &mut ParseInput) -> ModalResult<Vec<Type>> {
     if !input.input.starts_with("<") {
         return Ok(Vec::new());
     }
 
-    parse_required_type_arguments(input)
+    parse_required_type_arguments_with_holes(input, TypeHolePolicy::Allow)
 }
 
 fn parse_effect_type(input: &mut ParseInput) -> ModalResult<EffectType> {
@@ -1825,10 +1846,22 @@ fn parse_optional_return_type(input: &mut ParseInput) -> ModalResult<Option<Type
 }
 
 fn parse_surface_type(input: &mut ParseInput) -> ModalResult<Type> {
+    parse_surface_type_with_holes(input, TypeHolePolicy::Disallow)
+}
+
+fn parse_surface_type_with_holes(
+    input: &mut ParseInput,
+    hole_policy: TypeHolePolicy,
+) -> ModalResult<Type> {
     skip_whitespace_and_comments(input);
 
     if input.input.starts_with("<") {
-        return parse_associated_family_projection_type(input);
+        return match hole_policy {
+            TypeHolePolicy::Disallow => parse_associated_family_projection_type(input),
+            TypeHolePolicy::Allow => {
+                parse_associated_family_projection_type_with_holes(input, hole_policy)
+            }
+        };
     }
 
     // Parse explicit Fn(T1, T2) -> T3 type syntax
@@ -1839,27 +1872,30 @@ fn parse_surface_type(input: &mut ParseInput) -> ModalResult<Type> {
         let mut params = Vec::new();
         skip_whitespace_and_comments(input);
         if !input.input.starts_with(")") {
-            params.push(parse_surface_type(input)?);
+            params.push(parse_surface_type_with_holes(input, hole_policy)?);
             loop {
                 if !consume_comma_separator(input) {
                     break;
                 }
-                params.push(parse_surface_type(input)?);
+                params.push(parse_surface_type_with_holes(input, hole_policy)?);
             }
         }
         let _ = literal_str(")").parse_next(input)?;
         skip_whitespace_and_comments(input);
         let _ = literal_str("->").parse_next(input)?;
         skip_whitespace_and_comments(input);
-        let ret = parse_surface_type(input)?;
+        let ret = parse_surface_type_with_holes(input, hole_policy)?;
         return Ok(Type::Fn(params, Box::new(ret)));
     }
 
-    let lhs = parse_surface_type_atom(input)?;
+    let lhs = match hole_policy {
+        TypeHolePolicy::Disallow => parse_surface_type_atom(input)?,
+        TypeHolePolicy::Allow => parse_surface_type_atom_with_holes(input, hole_policy)?,
+    };
     skip_whitespace_and_comments(input);
     if literal_str("->").parse_next(input).is_ok() {
         skip_whitespace_and_comments(input);
-        let rhs = parse_surface_type(input)?;
+        let rhs = parse_surface_type_with_holes(input, hole_policy)?;
         Ok(Type::Fn(vec![lhs], Box::new(rhs)))
     } else {
         Ok(lhs)
@@ -1867,12 +1903,22 @@ fn parse_surface_type(input: &mut ParseInput) -> ModalResult<Type> {
 }
 
 fn parse_associated_family_projection_type(input: &mut ParseInput) -> ModalResult<Type> {
+    parse_associated_family_projection_type_with_holes(input, TypeHolePolicy::Disallow)
+}
+
+fn parse_associated_family_projection_type_with_holes(
+    input: &mut ParseInput,
+    hole_policy: TypeHolePolicy,
+) -> ModalResult<Type> {
     let start = input.state.pos;
     let _ = literal_str("<").parse_next(input)?;
     skip_whitespace_and_comments(input);
     let interface = identifier(input)?;
     skip_whitespace_and_comments(input);
-    let args = parse_required_type_arguments(input)?;
+    let args = match hole_policy {
+        TypeHolePolicy::Disallow => parse_required_type_arguments(input)?,
+        TypeHolePolicy::Allow => parse_required_type_arguments_with_holes(input, hole_policy)?,
+    };
     skip_whitespace_and_comments(input);
     let _ = literal_str(">").parse_next(input)?;
     skip_whitespace_and_comments(input);
@@ -1889,7 +1935,27 @@ fn parse_associated_family_projection_type(input: &mut ParseInput) -> ModalResul
 }
 
 fn parse_surface_type_atom(input: &mut ParseInput) -> ModalResult<Type> {
+    parse_surface_type_atom_with_holes(input, TypeHolePolicy::Disallow)
+}
+
+fn parse_surface_type_atom_with_holes(
+    input: &mut ParseInput,
+    hole_policy: TypeHolePolicy,
+) -> ModalResult<Type> {
     skip_whitespace_and_comments(input);
+
+    if starts_with_standalone_type_hole(input) {
+        if matches!(hole_policy, TypeHolePolicy::Disallow) {
+            return Err(winnow::error::ErrMode::Backtrack(
+                winnow::error::ContextError::new(),
+            ));
+        }
+        let start = input.state.pos;
+        let _ = literal_str("_").parse_next(input)?;
+        return Ok(Type::Hole {
+            span: crate::input::span_from(&start, &input.state.pos),
+        });
+    }
 
     if starts_with_keyword(input, "capability") {
         let _ = keyword("capability").parse_next(input)?;
@@ -1900,7 +1966,7 @@ fn parse_surface_type_atom(input: &mut ParseInput) -> ModalResult<Type> {
 
     if input.input.starts_with("[") {
         let _ = literal_str("[").parse_next(input)?;
-        let inner = parse_surface_type(input)?;
+        let inner = parse_surface_type_with_holes(input, hole_policy)?;
         skip_whitespace_and_comments(input);
         let _ = literal_str("]").parse_next(input)?;
         return Ok(Type::List(Box::new(inner)));
@@ -1912,12 +1978,12 @@ fn parse_surface_type_atom(input: &mut ParseInput) -> ModalResult<Type> {
 
         let mut items = Vec::new();
         if !input.input.starts_with(")") {
-            items.push(parse_surface_type(input)?);
+            items.push(parse_surface_type_with_holes(input, hole_policy)?);
             loop {
                 if !consume_comma_separator(input) {
                     break;
                 }
-                items.push(parse_surface_type(input)?);
+                items.push(parse_surface_type_with_holes(input, hole_policy)?);
             }
         }
 
@@ -1941,7 +2007,7 @@ fn parse_surface_type_atom(input: &mut ParseInput) -> ModalResult<Type> {
             skip_whitespace_and_comments(input);
             let _ = literal_str(":").parse_next(input)?;
             skip_whitespace_and_comments(input);
-            let field_type = parse_surface_type(input)?;
+            let field_type = parse_surface_type_with_holes(input, hole_policy)?;
             fields.push((field_name.into(), field_type));
 
             if consume_comma_separator(input) {
@@ -1959,7 +2025,10 @@ fn parse_surface_type_atom(input: &mut ParseInput) -> ModalResult<Type> {
     skip_whitespace_and_comments(input);
 
     let mut base = if input.input.starts_with("<") {
-        let args = parse_required_type_arguments(input)?;
+        let args = match hole_policy {
+            TypeHolePolicy::Disallow => parse_required_type_arguments(input)?,
+            TypeHolePolicy::Allow => parse_required_type_arguments_with_holes(input, hole_policy)?,
+        };
         Type::Constructor {
             name: name.into(),
             args,

@@ -27,14 +27,22 @@ Add Functor/Applicative/Monad diagnostics, acceptance, and non-interference matr
 
 ## File Targets
 
-- Exact files must be confirmed by the audit gate before implementation.
+- Parser diagnostics/tests: `crates/ash-parser/src/error.rs`, `crates/ash-parser/src/parse_module.rs`, `crates/ash-parser/src/parse_expr.rs`
+- TypeEnv diagnostics/tests: `crates/ash-typeck/src/type_env.rs`, `crates/ash-typeck/src/do_target.rs`, `crates/ash-typeck/src/check_expr.rs`, `crates/ash-typeck/src/diagnostic.rs`
+- Engine non-interference/tests: `crates/ash-engine/src/module_loader.rs`
+- Acceptance artifact: `docs/plan/audits/TASK-910-hkt-acceptance-matrix.md`
+- Focused tests:
+  - `crates/ash-parser/tests/task_910_hkt_diagnostics_surface.rs`
+  - `crates/ash-typeck/tests/task_910_hkt_acceptance_matrix.rs`
+  - `crates/ash-engine/tests/task_910_hkt_summary_non_interference.rs`
+- Audit source: `docs/plan/audits/TASK-904-hkt-audit-gate.md`
 
 ## TDD / Execution Steps
 
 1. Re-read the referenced SPEC and this task file.
 2. Add the smallest failing parser/typechecker/core/engine/doc test that proves this task's boundary.
 3. Implement only this task's boundary; do not import later-task semantics.
-4. Run the focused command set recorded in this task after the audit gate replaces any failing placeholder.
+4. Run the focused command set recorded in this task.
 5. Update this task status, the owning PLAN row, PLAN-INDEX, and CHANGELOG only after verification evidence is fresh.
 
 ## Dispatch
@@ -51,7 +59,12 @@ toolsets: [terminal, file]
 ```yaml
 strictness: clean
 commands:
-  - false # TASK-910 must replace this guard with exact focused commands after its audit gate
+  - cargo test -p ash-parser --test task_910_hkt_diagnostics_surface
+  - cargo test -p ash-typeck --test task_910_hkt_acceptance_matrix
+  - cargo test -p ash-engine --test task_910_hkt_summary_non_interference
+  - cargo fmt --check
+  - git diff --check
+  - cargo check --workspace
 checklist:
   - [ ] Focused tests are non-zero and pass
   - [ ] cargo fmt --check passes

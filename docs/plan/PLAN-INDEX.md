@@ -3536,7 +3536,7 @@ Phase 119 implements explicit source holes and partial type-constructor applicat
 ## Phase 120: Constructor-Kinded Parameters and HKT
 
 **Priority:** High (required for user-defined `Functor`, `Applicative`, `Monad`, and generalized do-target evidence)
-**Status:** 📝 Planned
+**Status:** 🚧 In Progress
 **Spec:** [SPEC-067](../spec/SPEC-067-CONSTRUCTOR-KINDED-PARAMETERS-AND-HKT.md)
 **Design:** [DESIGN-038](../design/DESIGN-038-CONSTRUCTOR-KINDED-PARAMETERS-AND-HKT.md)
 **Plan:** [docs/plan/PLAN-116-CONSTRUCTOR-KINDED-PARAMETERS-AND-HKT.md](PLAN-116-CONSTRUCTOR-KINDED-PARAMETERS-AND-HKT.md)
@@ -3545,7 +3545,7 @@ Phase 120 implements constructor-kinded binders and higher-kinded interface evid
 
 | Task | Description | Est. Hours | Status |
 |------|-------------|------------|--------|
-| [TASK-904](tasks/TASK-904-hkt-audit-gate.md) | HKT audit gate | 6 | 📝 Planned |
+| [TASK-904](tasks/TASK-904-hkt-audit-gate.md) | HKT audit gate | 6 | ✅ Complete |
 | [TASK-905](tasks/TASK-905-core-kinded-binder-and-constructor-var-carriers.md) | Core kinded binders and constructor variables | 8 | 📝 Planned |
 | [TASK-906](tasks/TASK-906-parser-kinded-binder-surface.md) | Parser kinded-binder surface | 7 | 📝 Planned |
 | [TASK-907](tasks/TASK-907-typeenv-constructor-variable-kinding-and-unification.md) | TypeEnv constructor-variable kinding and unification | 10 | 📝 Planned |

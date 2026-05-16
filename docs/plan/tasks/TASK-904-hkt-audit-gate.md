@@ -1,6 +1,6 @@
 # TASK-904: Audit live interface/impl/type-param/do-target and generic-impl seams before HKT implementation
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -55,11 +55,11 @@ commands:
   - test -f docs/plan/audits/TASK-904-hkt-audit-gate.md
   - git diff --check
 checklist:
-  - [ ] Audit artifact exists and names exact live callsites
-  - [ ] Downstream fail-closed guards are replaced with focused non-zero commands
-  - [ ] cargo fmt --check passes
-  - [ ] git diff --check passes
-  - [ ] Status surfaces and CHANGELOG are reconciled if this task completes
+  - [x] Audit artifact exists and names exact live callsites
+  - [x] Downstream fail-closed guards are replaced with focused non-zero commands
+  - [x] cargo fmt --check passes
+  - [x] git diff --check passes
+  - [x] Status surfaces and CHANGELOG are reconciled if this task completes
 ```
 
 ## Dependencies for Next Task
@@ -69,3 +69,13 @@ This task produces its verified slice for later tasks in [PLAN-116](../PLAN-116-
 ## Notes
 
 HKT is a cross-cutting type-system feature; do not implement as do-only magic.
+
+## Completion Evidence
+
+- Audit artifact: [TASK-904-hkt-audit-gate.md](../audits/TASK-904-hkt-audit-gate.md).
+- Downstream guards patched in TASK-905 through TASK-910 with exact focused commands and expected future test target names.
+- Verification run on 2026-05-16:
+  - `cargo fmt --check`
+  - `test -f docs/plan/audits/TASK-904-hkt-audit-gate.md`
+  - `git diff --check`
+  - `! rg -n 'false # TASK-90[5-9]|false # TASK-910|placeholder|PLACEHOLDER|TODO replace|must replace this guard' docs/plan/tasks/TASK-90{5,6,7,8,9}-*.md docs/plan/tasks/TASK-910-*.md`

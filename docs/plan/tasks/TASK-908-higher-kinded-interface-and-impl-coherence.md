@@ -1,6 +1,6 @@
 # TASK-908: Register and resolve higher-kinded interface/impl evidence without overlap or output-directed selection
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -64,11 +64,18 @@ commands:
   - git diff --check
   - cargo check --workspace
 checklist:
-  - [ ] Focused tests are non-zero and pass
-  - [ ] cargo fmt --check passes
-  - [ ] git diff --check passes
-  - [ ] Status surfaces and CHANGELOG are reconciled if this task completes
+  - [x] Focused tests are non-zero and pass
+  - [x] cargo fmt --check passes
+  - [x] git diff --check passes
+  - [x] Status surfaces and CHANGELOG are reconciled if this task completes
 ```
+
+## Evidence
+
+- 2026-05-16 Hermes focused verification: `cargo test -p ash-typeck --test task_908_hkt_interface_impl_coherence` passed 4 tests.
+- 2026-05-16 Hermes focused verification: `cargo test -p ash-typeck --test task_908_hkt_evidence_lookup` passed 3 tests.
+- 2026-05-16 Hermes focused verification: `cargo test -p ash-engine --test task_908_hkt_summary_non_interference` passed 1 test.
+- 2026-05-16 required gates: `cargo fmt --check`, `git diff --check`, and `cargo check --workspace` passed.
 
 ## Dependencies for Next Task
 

@@ -2483,6 +2483,7 @@ pub(crate) fn collect_module_exports(
     )?);
     attach_public_type_function_summaries(&mut exports, &type_metadata, &path)?;
     attach_public_associated_family_summaries(&mut exports, &type_metadata, &path, &source)?;
+    attach_public_interface_identity_summaries(&mut exports, &path, &source)?;
     attach_public_proposition_summaries(&mut exports, &type_metadata, &path, &source)?;
     if let Some(summary) = exports.semantic_summary.as_ref() {
         summary
@@ -3220,6 +3221,54 @@ fn attach_public_associated_family_summaries(
         .filter(|family| !is_dependency_metadata_name(&family.visible_name))
         .map(|family| (family.visible_name.clone(), family))
         .collect();
+    Ok(())
+}
+
+fn attach_public_interface_identity_summaries(
+    exports: &mut ModuleExports,
+    path: &Path,
+    source: &str,
+) -> Result<(), EngineError> {
+    let module = parse_module_file_for_type_metadata(path, source)?;
+    let has_public_interface = module.definitions.iter().any(|definition| {
+        matches!(
+            definition,
+            Definition::Interface(interface)
+                if matches!(interface.visibility, ash_parser::surface::Visibility::Public)
+        )
+    });
+    if !has_public_interface {
+        return Ok(());
+    }
+    let Some(summary) = exports.semantic_summary.as_mut() else {
+        return Ok(());
+    };
+
+    let source_origin = ash_core::semantic_summary::SourceOrigin::File(path.display().to_string());
+    let mut type_env = ash_typeck::TypeEnv::with_builtin_types();
+    type_env.set_current_module_identity(summary.module.clone());
+    for definition in &module.definitions {
+        if let Definition::Interface(interface) = definition {
+            type_env.register_interface(interface).map_err(|error| {
+                EngineError::Parse(format!(
+                    "in '{}': public interface identity registration failed: {error}; span {:?}",
+                    path.display(),
+                    type_env_error_span(&error)
+                ))
+            })?;
+        }
+    }
+
+    for interface in collect_public_interface_identity_summaries(&type_env, &module, &source_origin)
+    {
+        if !summary
+            .interface_identities
+            .iter()
+            .any(|existing| existing.id == interface.id)
+        {
+            summary.interface_identities.push(interface);
+        }
+    }
     Ok(())
 }
 

@@ -559,10 +559,21 @@ pub struct InterfaceInfo {
     pub visibility: ash_core::ast::Visibility,
     /// Interface-level type parameter names.
     pub type_params: Vec<String>,
+    /// Interface-level type parameter kinds.
+    pub type_param_kinds: Vec<Kind>,
     /// Associated types declared by the interface.
     pub associated_types: Vec<String>,
     /// Methods declared by the interface.
     pub methods: HashMap<String, InterfaceMethodInfo>,
+}
+
+/// Typed interface evidence argument used for impl coherence keys.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum InterfaceEvidenceArg {
+    /// A proper type argument of kind `*`.
+    Proper(Type),
+    /// A constructor argument such as `Option` for kind `* -> *`.
+    Constructor(Box<TypeConstructorExpr>),
 }
 
 /// Internal representation of a capability interface operation signature.
@@ -762,6 +773,7 @@ pub struct ImplScheme {
     pub interface: String,
     pub type_params: Vec<TypeVar>,
     pub head: Type,
+    pub head_args: Vec<InterfaceEvidenceArg>,
     pub where_bounds: Vec<WhereBound>,
     pub associated_type_bindings: HashMap<String, Type>,
     pub methods: Vec<ImplMethodInfo>,
@@ -2746,6 +2758,194 @@ fn is_closed_world_nominal_impl_target(ty: &Type) -> bool {
         Type::Constructor { args, .. } => args.iter().all(is_closed_world_nominal_impl_target),
         Type::ConstructorVariableApp { .. } => false,
         Type::Associated { .. } => false,
+    }
+}
+
+fn interface_param_kind(param: &InterfaceTypeParam) -> Kind {
+    param
+        .kind
+        .as_ref()
+        .map(|annotation| annotation.kind.clone())
+        .unwrap_or(Kind::Type)
+}
+
+fn interface_param_kinds(params: &[InterfaceTypeParam]) -> Vec<Kind> {
+    params.iter().map(interface_param_kind).collect()
+}
+
+fn render_type_constructor_head(head: &TypeConstructorHeadId) -> String {
+    match head {
+        TypeConstructorHeadId::Nominal { visible_name, .. } => visible_name.clone(),
+        TypeConstructorHeadId::Computation(head) => head.name.clone(),
+        _ => "<unsupported-type-constructor-head>".to_string(),
+    }
+}
+
+fn render_type_constructor_expr(expr: &TypeConstructorExpr) -> String {
+    match expr {
+        TypeConstructorExpr::ProperType(ty) => format!("{ty:?}"),
+        TypeConstructorExpr::ConstructorHead(head) => render_type_constructor_head(head),
+        TypeConstructorExpr::PartialApplication(app) => render_type_constructor_head(&app.head),
+        _ => "<unsupported-type-constructor-expr>".to_string(),
+    }
+}
+
+fn type_contains_constructor_variable_app(ty: &Type) -> bool {
+    match ty {
+        Type::ConstructorVariableApp { .. } => true,
+        Type::List(inner) => type_contains_constructor_variable_app(inner),
+        Type::Record(fields) => fields
+            .iter()
+            .any(|(_, ty)| type_contains_constructor_variable_app(ty)),
+        Type::Fun(params, ret, _) | Type::Fn(params, ret) => {
+            params.iter().any(type_contains_constructor_variable_app)
+                || type_contains_constructor_variable_app(ret)
+        }
+        Type::Constructor { args, .. } => args.iter().any(type_contains_constructor_variable_app),
+        Type::Associated { base, .. } => type_contains_constructor_variable_app(base),
+        Type::Int
+        | Type::String
+        | Type::Bool
+        | Type::Float
+        | Type::Null
+        | Type::Time
+        | Type::Ref
+        | Type::Var(_)
+        | Type::Cap { .. }
+        | Type::Instance { .. }
+        | Type::InstanceAddr { .. }
+        | Type::ControlLink { .. } => false,
+    }
+}
+
+fn apply_constructor_evidence_arg(
+    arg: &InterfaceEvidenceArg,
+    applied_args: &[Type],
+) -> Option<Type> {
+    match arg {
+        InterfaceEvidenceArg::Constructor(expr) => match expr.as_ref() {
+            TypeConstructorExpr::ConstructorHead(TypeConstructorHeadId::Nominal {
+                visible_name,
+                ..
+            }) => Some(Type::Constructor {
+                name: QualifiedName::root(visible_name.clone()),
+                args: applied_args.to_vec(),
+                kind: Kind::Type,
+            }),
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
+fn substitute_constructor_variable_apps(
+    ty: &Type,
+    constructor_args: &HashMap<String, InterfaceEvidenceArg>,
+) -> Type {
+    match ty {
+        Type::ConstructorVariableApp {
+            constructor,
+            args,
+            kind,
+        } => {
+            let args = args
+                .iter()
+                .map(|arg| substitute_constructor_variable_apps(arg, constructor_args))
+                .collect::<Vec<_>>();
+            constructor_args
+                .get(constructor)
+                .and_then(|arg| apply_constructor_evidence_arg(arg, &args))
+                .unwrap_or_else(|| Type::ConstructorVariableApp {
+                    constructor: constructor.clone(),
+                    args,
+                    kind: kind.clone(),
+                })
+        }
+        Type::List(inner) => Type::List(Box::new(substitute_constructor_variable_apps(
+            inner,
+            constructor_args,
+        ))),
+        Type::Record(fields) => Type::Record(
+            fields
+                .iter()
+                .map(|(name, ty)| {
+                    (
+                        name.clone(),
+                        substitute_constructor_variable_apps(ty, constructor_args),
+                    )
+                })
+                .collect(),
+        ),
+        Type::Fun(params, ret, effect) => Type::Fun(
+            params
+                .iter()
+                .map(|ty| substitute_constructor_variable_apps(ty, constructor_args))
+                .collect(),
+            Box::new(substitute_constructor_variable_apps(ret, constructor_args)),
+            *effect,
+        ),
+        Type::Fn(params, ret) => Type::Fn(
+            params
+                .iter()
+                .map(|ty| substitute_constructor_variable_apps(ty, constructor_args))
+                .collect(),
+            Box::new(substitute_constructor_variable_apps(ret, constructor_args)),
+        ),
+        Type::Constructor { name, args, kind } => Type::Constructor {
+            name: name.clone(),
+            args: args
+                .iter()
+                .map(|ty| substitute_constructor_variable_apps(ty, constructor_args))
+                .collect(),
+            kind: kind.clone(),
+        },
+        Type::Associated {
+            interface,
+            base,
+            name,
+        } => Type::Associated {
+            interface: interface.clone(),
+            base: Box::new(substitute_constructor_variable_apps(base, constructor_args)),
+            name: name.clone(),
+        },
+        other => other.clone(),
+    }
+}
+
+fn render_interface_evidence_arg(arg: &InterfaceEvidenceArg) -> String {
+    match arg {
+        InterfaceEvidenceArg::Proper(ty) => ty.to_string(),
+        InterfaceEvidenceArg::Constructor(expr) => render_type_constructor_expr(expr),
+    }
+}
+
+fn render_interface_evidence_key(interface: &str, args: &[InterfaceEvidenceArg]) -> String {
+    let args = args
+        .iter()
+        .map(render_interface_evidence_arg)
+        .collect::<Vec<_>>()
+        .join(", ");
+    format!("{interface}<{args}>")
+}
+
+fn interface_evidence_arg_as_legacy_type(arg: &InterfaceEvidenceArg) -> Type {
+    match arg {
+        InterfaceEvidenceArg::Proper(ty) => ty.clone(),
+        InterfaceEvidenceArg::Constructor(expr) => match expr.as_ref() {
+            TypeConstructorExpr::ConstructorHead(TypeConstructorHeadId::Nominal {
+                visible_name,
+                ..
+            }) => Type::Constructor {
+                name: QualifiedName::root(visible_name.clone()),
+                args: Vec::new(),
+                kind: Kind::n_ary(1),
+            },
+            other => Type::Constructor {
+                name: QualifiedName::root(render_type_constructor_expr(other)),
+                args: Vec::new(),
+                kind: Kind::n_ary(1),
+            },
+        },
     }
 }
 
@@ -13599,12 +13799,6 @@ impl TypeEnv {
                 Span::default(),
             ));
         }
-        reject_constructor_kinded_interface_params(
-            &def.type_params,
-            "interface parameter",
-            "TASK-908",
-        )?;
-
         let has_sealed_family = def
             .associated_types
             .iter()
@@ -13723,6 +13917,7 @@ impl TypeEnv {
 
         let ordered_param_names: Vec<String> =
             def.type_params.iter().map(ToString::to_string).collect();
+        let type_param_kinds = interface_param_kinds(&def.type_params);
         let interface_type_params = def
             .type_params
             .iter()
@@ -13744,16 +13939,22 @@ impl TypeEnv {
                 name: interface_name.clone(),
                 visibility: core_visibility_from_surface(&def.visibility),
                 type_params: interface_type_params.clone(),
+                type_param_kinds: type_param_kinds.clone(),
                 associated_types: associated_types.clone(),
                 methods: HashMap::new(),
             },
         );
 
+        let mut method_env = self.clone();
+        for (name, kind) in interface_type_params.iter().zip(type_param_kinds.iter()) {
+            method_env.register_type_parameter_kind(name, kind.clone())?;
+        }
+
         let methods = match def
             .methods
             .iter()
             .map(|method| {
-                self.convert_interface_method(
+                method_env.convert_interface_method(
                     method,
                     &param_mapping,
                     &ordered_param_names,
@@ -13775,6 +13976,7 @@ impl TypeEnv {
                 name: interface_name.clone(),
                 visibility: core_visibility_from_surface(&def.visibility),
                 type_params: interface_type_params.clone(),
+                type_param_kinds: type_param_kinds.clone(),
                 associated_types: associated_types.clone(),
                 methods: methods.clone(),
             },
@@ -14950,6 +15152,106 @@ impl TypeEnv {
         body_env
     }
 
+    fn type_constructor_expr_kind(&self, expr: &TypeConstructorExpr) -> Option<Kind> {
+        match expr {
+            TypeConstructorExpr::ProperType(_) => Some(Kind::Type),
+            TypeConstructorExpr::ConstructorHead(head) => match head {
+                TypeConstructorHeadId::Nominal { visible_name, .. } => self
+                    .type_constructor_arity_for_visible_name(visible_name)
+                    .map(Kind::n_ary),
+                TypeConstructorHeadId::Computation(_) => None,
+                _ => None,
+            },
+            TypeConstructorExpr::PartialApplication(app) => Some(app.result_kind.clone()),
+            _ => None,
+        }
+    }
+
+    fn lower_interface_evidence_args(
+        &self,
+        interface_name: &str,
+        interface: &InterfaceInfo,
+        args: &[SurfaceType],
+        param_mapping: &HashMap<String, TypeVar>,
+    ) -> Result<Vec<InterfaceEvidenceArg>, TypeEnvError> {
+        interface
+            .type_param_kinds
+            .iter()
+            .zip(args.iter())
+            .map(|(expected_kind, arg)| {
+                if expected_kind.is_type() {
+                    return surface_type_to_type(arg, param_mapping, self)
+                        .map(InterfaceEvidenceArg::Proper);
+                }
+
+                let expr = match arg {
+                    SurfaceType::Name(name) => {
+                        let constructor = name.to_string();
+                        let arity = self
+                            .type_constructor_arity_for_visible_name(name.as_ref())
+                            .ok_or_else(|| {
+                                TypeEnvError::InvalidDefinition(
+                                    format!(
+                                        "unknown constructor evidence argument '{constructor}' for interface '{interface_name}'"
+                                    ),
+                                    Span::default(),
+                                )
+                            })?;
+                        if arity == 0 {
+                            self.lower_surface_type_to_canonical(arg)
+                                .map(TypeConstructorExpr::ProperType)
+                                .map_err(|err| {
+                                    TypeEnvError::InvalidDefinition(
+                                        format!(
+                                            "invalid constructor evidence argument for interface '{interface_name}': {err}"
+                                        ),
+                                        Span::default(),
+                                    )
+                                })?
+                        } else {
+                            let origin = self
+                                .type_identity_for_name(name.as_ref())
+                                .cloned()
+                                .unwrap_or_else(|| fallback_canonical_type_decl_id(name.as_ref()));
+                            TypeConstructorExpr::ConstructorHead(TypeConstructorHeadId::nominal(
+                                origin,
+                                constructor,
+                            ))
+                        }
+                    }
+                    _ => self.elaborate_partial_type_constructor(arg, false).map_err(|err| {
+                        TypeEnvError::InvalidDefinition(
+                            format!(
+                                "invalid constructor evidence argument for interface '{interface_name}': {err}"
+                            ),
+                            Span::default(),
+                        )
+                    })?,
+                };
+                let found_kind = self.type_constructor_expr_kind(&expr).ok_or_else(|| {
+                    TypeEnvError::InvalidDefinition(
+                        format!(
+                            "unsupported constructor evidence argument '{}' for interface '{interface_name}'",
+                            render_type_constructor_expr(&expr)
+                        ),
+                        Span::default(),
+                    )
+                })?;
+                if &found_kind != expected_kind {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "interface '{interface_name}' evidence argument '{}' has kind {found_kind}, expected {expected_kind}",
+                            render_type_constructor_expr(&expr)
+                        ),
+                        Span::default(),
+                    ));
+                }
+
+                Ok(InterfaceEvidenceArg::Constructor(Box::new(expr)))
+            })
+            .collect()
+    }
+
     /// Register a closed-world interface impl.
     pub fn register_impl(&mut self, def: &ImplDef) -> Result<(), TypeEnvError> {
         let interface_name = def.interface.to_string();
@@ -14980,11 +15282,17 @@ impl TypeEnv {
             .map(|param| (param.to_string(), TypeVar::fresh()))
             .collect();
 
-        let lowered_type_args: Vec<Type> = def
-            .type_args
+        let head_args = self.lower_interface_evidence_args(
+            &interface_name,
+            &interface,
+            &def.type_args,
+            &param_mapping,
+        )?;
+
+        let lowered_type_args: Vec<Type> = head_args
             .iter()
-            .map(|ta| surface_type_to_type(ta, &param_mapping, self))
-            .collect::<Result<Vec<_>, _>>()?;
+            .map(interface_evidence_arg_as_legacy_type)
+            .collect();
 
         if def.type_params.is_empty()
             && !lowered_type_args
@@ -15007,6 +15315,18 @@ impl TypeEnv {
         for scheme in self.impls.iter().filter(|s| s.interface == interface_name) {
             if self.unify_types(&scheme.head, &impl_head).is_ok() {
                 if scheme.type_params.is_empty() && def.type_params.is_empty() {
+                    if head_args
+                        .iter()
+                        .any(|arg| matches!(arg, InterfaceEvidenceArg::Constructor(_)))
+                    {
+                        return Err(TypeEnvError::InvalidDefinition(
+                            format!(
+                                "duplicate overlapping impl for evidence {}",
+                                render_interface_evidence_key(&interface_name, &head_args)
+                            ),
+                            Span::default(),
+                        ));
+                    }
                     return Err(TypeEnvError::DuplicateImpl {
                         interface: interface_name,
                         ty: impl_head.to_string(),
@@ -15261,10 +15581,17 @@ impl TypeEnv {
             interface: interface.name.clone(),
             type_params: param_mapping.values().copied().collect(),
             head: impl_head.clone(),
+            head_args: head_args.clone(),
             where_bounds: where_bounds.clone(),
             associated_type_bindings: associated_type_bindings.clone(),
             methods: vec![],
         };
+        let constructor_arg_mapping = interface
+            .type_params
+            .iter()
+            .cloned()
+            .zip(head_args.iter().cloned())
+            .collect::<HashMap<_, _>>();
 
         let mut method_names = HashSet::new();
         let mut method_infos = Vec::new();
@@ -15308,15 +15635,19 @@ impl TypeEnv {
 
             let mut method_env = self.clone();
             for (param_name, param_type) in method.params.iter().zip(method_info.params.iter()) {
-                let param_ty = subst.apply(param_type);
+                let param_ty = substitute_constructor_variable_apps(
+                    &subst.apply(param_type),
+                    &constructor_arg_mapping,
+                );
                 method_env.bind_variable(param_name.as_ref(), param_ty);
             }
 
-            let expected_return_ty = self.normalize_associated_types(
+            let expected_return_ty = substitute_constructor_variable_apps(
                 &subst.apply(&method_info.return_type),
-                &temp_scheme,
-                &subst,
-            )?;
+                &constructor_arg_mapping,
+            );
+            let expected_return_ty =
+                self.normalize_associated_types(&expected_return_ty, &temp_scheme, &subst)?;
 
             let body_result = crate::check_expr::check_expr(&method_env, &method.body);
             if !body_result.is_ok() {
@@ -15360,7 +15691,16 @@ impl TypeEnv {
             method_infos.push(ImplMethodInfo {
                 name: method_name,
                 type_params: method_info.type_params.clone(),
-                params: method_info.params.iter().map(|t| subst.apply(t)).collect(),
+                params: method_info
+                    .params
+                    .iter()
+                    .map(|t| {
+                        substitute_constructor_variable_apps(
+                            &subst.apply(t),
+                            &constructor_arg_mapping,
+                        )
+                    })
+                    .collect(),
                 return_type: expected_return_ty,
                 body: core_body,
             });
@@ -15431,6 +15771,7 @@ impl TypeEnv {
             interface: interface.name,
             type_params: param_mapping.values().copied().collect(),
             head: impl_head,
+            head_args,
             where_bounds,
             associated_type_bindings,
             methods: method_infos,
@@ -16127,6 +16468,39 @@ impl TypeEnv {
         self.interfaces.get(name)
     }
 
+    /// Resolve explicit interface evidence by matching the registered impl head spine.
+    pub fn resolve_interface_evidence(
+        &self,
+        interface: &str,
+        args: &[SurfaceType],
+    ) -> Result<&ImplScheme, TypeEnvError> {
+        let interface_info = self.interfaces.get(interface).ok_or_else(|| {
+            TypeEnvError::MissingInterface(interface.to_string(), Span::default())
+        })?;
+        if interface_info.type_params.len() != args.len() {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "interface '{}' expects {} type parameters, but evidence lookup provides {}",
+                    interface,
+                    interface_info.type_params.len(),
+                    args.len()
+                ),
+                Span::default(),
+            ));
+        }
+
+        let evidence_args =
+            self.lower_interface_evidence_args(interface, interface_info, args, &HashMap::new())?;
+        self.impls
+            .iter()
+            .find(|scheme| scheme.interface == interface && scheme.head_args == evidence_args)
+            .ok_or_else(|| TypeEnvError::MissingImpl {
+                interface: interface.to_string(),
+                ty: render_interface_evidence_key(interface, &evidence_args),
+                span: Span::default(),
+            })
+    }
+
     /// Check if a capability interface is registered.
     pub fn has_capability_interface(&self, name: &str) -> bool {
         self.capability_interfaces.contains_key(name)
@@ -16321,6 +16695,20 @@ impl TypeEnv {
                     method,
                     method_info.params.len(),
                     arg_types.len()
+                ),
+                Span::default(),
+            ));
+        }
+
+        if method_info
+            .params
+            .iter()
+            .any(type_contains_constructor_variable_app)
+        {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "interface '{}' type parameters could not be fully determined from arguments; evidence lookup does not invert constructor-variable applications",
+                    interface
                 ),
                 Span::default(),
             ));

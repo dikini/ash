@@ -209,6 +209,7 @@ fn projection_workflow_with_declared_return() -> WorkflowDef {
         name: "project".into(),
         type_params: vec![TypeParam {
             name: "T".into(),
+            kind: None,
             bounds: vec![InterfaceBound {
                 interface: "Serializer".into(),
                 span: span(),

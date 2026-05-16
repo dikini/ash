@@ -131,6 +131,7 @@ fn workflow_with_bound(bound_interface: &str) -> WorkflowDef {
         name: "record_event".into(),
         type_params: vec![TypeParam {
             name: "T".into(),
+            kind: None,
             bounds: vec![InterfaceBound {
                 interface: bound_interface.into(),
                 span: test_span(),
@@ -165,6 +166,7 @@ fn interface_method_call_workflow(type_name: &str) -> WorkflowDef {
         name: "record_event".into(),
         type_params: vec![TypeParam {
             name: "T".into(),
+            kind: None,
             bounds: vec![InterfaceBound {
                 interface: "Explain".into(),
                 span: test_span(),
@@ -931,6 +933,7 @@ fn rigid_projection_workflow() -> WorkflowDef {
         name: "test_rigid".into(),
         type_params: vec![TypeParam {
             name: "T".into(),
+            kind: None,
             bounds: vec![InterfaceBound {
                 interface: "Serializer".into(),
                 span: test_span(),
@@ -981,6 +984,7 @@ fn rigid_projection_concrete_mismatch_workflow() -> WorkflowDef {
         name: "test_rigid_mismatch".into(),
         type_params: vec![TypeParam {
             name: "T".into(),
+            kind: None,
             bounds: vec![InterfaceBound {
                 interface: "Serializer".into(),
                 span: test_span(),

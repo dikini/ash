@@ -52,6 +52,7 @@ fn param(name: &str, domain: Option<&str>) -> InterfaceTypeParam {
     InterfaceTypeParam {
         name: name.into(),
         domain: domain.map(|name| SurfaceType::Name(name.into())),
+        kind: None,
         span: span(),
     }
 }

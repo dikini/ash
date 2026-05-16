@@ -111,6 +111,25 @@ fn synthetic_program_module_identity() -> ash_core::semantic_summary::ModuleIden
     )
 }
 
+fn reject_constructor_kinded_type_params(
+    params: &[ash_parser::surface::TypeParam],
+    site: &str,
+    task: &str,
+) -> Result<(), TypeCheckError> {
+    for param in params {
+        if let Some(annotation) = &param.kind
+            && annotation.kind != Kind::Type
+        {
+            return Err(TypeCheckError::TypeError(format!(
+                "{site} kinded binders are parsed by TASK-906 but require {task}; binder '{}' has kind {}",
+                param.name, annotation.kind
+            )));
+        }
+    }
+
+    Ok(())
+}
+
 fn resolve_public_surface_associated_interface(
     env: &TypeEnv,
     base_ty: &Type,
@@ -1371,6 +1390,12 @@ pub fn fn_signature_type(
     env: &TypeEnv,
     function: &ash_parser::surface::FnDef,
 ) -> Result<Type, TypeCheckError> {
+    reject_constructor_kinded_type_params(
+        &function.type_params,
+        "function type parameter",
+        "TASK-907",
+    )?;
+
     let type_param_bindings: std::collections::HashMap<String, Type> = function
         .type_params
         .iter()
@@ -1400,6 +1425,12 @@ pub fn builtin_fn_signature_type(
     env: &TypeEnv,
     builtin_fn: &ash_parser::surface::BuiltinFnDef,
 ) -> Result<Type, TypeCheckError> {
+    reject_constructor_kinded_type_params(
+        &builtin_fn.type_params,
+        "builtin function type parameter",
+        "TASK-907",
+    )?;
+
     let type_param_bindings: std::collections::HashMap<String, Type> = builtin_fn
         .type_params
         .iter()
@@ -2415,6 +2446,11 @@ pub fn type_check_workflow_def_in_env(
     // NOTE: Previously we validated bounds here, but now we need workflow_env
     // set up first so that associated type resolution has access to interface bounds.
     // Bounds are validated below after workflow_env is created.
+    reject_constructor_kinded_type_params(
+        &workflow.type_params,
+        "workflow type parameter",
+        "TASK-907",
+    )?;
 
     let type_param_bindings: std::collections::HashMap<String, Type> = workflow
         .type_params

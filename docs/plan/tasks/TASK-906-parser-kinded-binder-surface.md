@@ -1,6 +1,6 @@
 # TASK-906: Parse kinded binders in interfaces, impls, functions, type functions, and propositions at audited sites
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -33,6 +33,7 @@ Parse kinded binders in interfaces, impls, functions, type functions, and propos
 - Focused tests:
   - `crates/ash-parser/tests/task_906_hkt_kinded_binder_surface.rs`
   - `crates/ash-parser/tests/task_906_hkt_non_interference.rs`
+  - `crates/ash-typeck/tests/task_906_hkt_fail_closed.rs`
 - Audit source: `docs/plan/audits/TASK-904-hkt-audit-gate.md`
 
 ## TDD / Execution Steps
@@ -59,14 +60,17 @@ strictness: clean
 commands:
   - cargo test -p ash-parser --test task_906_hkt_kinded_binder_surface
   - cargo test -p ash-parser --test task_906_hkt_non_interference
+  - cargo test -p ash-typeck --test task_906_hkt_fail_closed
   - cargo fmt --check
   - git diff --check
   - cargo check --workspace
 checklist:
-  - [ ] Focused tests are non-zero and pass
-  - [ ] cargo fmt --check passes
-  - [ ] git diff --check passes
-  - [ ] Status surfaces and CHANGELOG are reconciled if this task completes
+  - [x] Focused tests are non-zero and pass
+  - [x] Direct workflow lowering rejects constructor-kinded workflow parameters before TASK-907
+  - [x] TypeEnv signature/registration paths reject constructor-kinded binders before TASK-907/TASK-908
+  - [x] cargo fmt --check passes
+  - [x] git diff --check passes
+  - [x] Status surfaces and CHANGELOG are reconciled if this task completes
 ```
 
 ## Dependencies for Next Task

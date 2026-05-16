@@ -10,7 +10,10 @@ use winnow::prelude::*;
 use winnow::stream::Stream;
 use winnow::token::take_while;
 
+use ash_core::Kind;
+
 use crate::input::{ParseInput, offset_to_span};
+use crate::surface::KindAnnotation;
 use crate::token::Span;
 
 const LINE_COMMENT_PREFIXES: [&str; 2] = ["--", "//"];
@@ -140,6 +143,56 @@ pub(crate) fn identifier_with_span<'a>(input: &mut ParseInput<'a>) -> ModalResul
 /// Parse an identifier (without span).
 pub(crate) fn identifier<'a>(input: &mut ParseInput<'a>) -> ModalResult<&'a str> {
     identifier_with_span(input).map(|(s, _)| s)
+}
+
+/// Returns true when the current position starts an explicit kind annotation.
+pub(crate) fn starts_with_kind_syntax(input: &ParseInput<'_>) -> bool {
+    input.input.starts_with('*')
+}
+
+/// Parse an explicit source kind annotation.
+///
+/// TASK-906 intentionally keeps this grammar small: `*` and right-associative
+/// arrows such as `* -> *` or `* -> * -> *`.
+pub(crate) fn parse_kind_annotation(input: &mut ParseInput<'_>) -> ModalResult<KindAnnotation> {
+    skip_whitespace_and_comments(input);
+    let start = input.state.pos;
+    let kind = parse_kind(input)?;
+    let span = crate::input::span_from(&start, &input.state.pos);
+    Ok(KindAnnotation { kind, span })
+}
+
+fn parse_kind(input: &mut ParseInput<'_>) -> ModalResult<Kind> {
+    skip_whitespace_and_comments(input);
+    let mut lhs = parse_kind_atom(input)?;
+    skip_whitespace_and_comments(input);
+    if consume_literal(input, "->") {
+        let rhs = parse_kind(input)?;
+        lhs = Kind::arrow(lhs, rhs);
+    }
+    Ok(lhs)
+}
+
+fn parse_kind_atom(input: &mut ParseInput<'_>) -> ModalResult<Kind> {
+    skip_whitespace_and_comments(input);
+    if consume_literal(input, "*") {
+        Ok(Kind::Type)
+    } else {
+        Err(winnow::error::ErrMode::Backtrack(
+            winnow::error::ContextError::new(),
+        ))
+    }
+}
+
+fn consume_literal(input: &mut ParseInput<'_>, literal: &str) -> bool {
+    if !input.input.starts_with(literal) {
+        return false;
+    }
+    for ch in literal.chars() {
+        input.state.advance(ch);
+    }
+    let _ = input.input.next_slice(literal.len());
+    true
 }
 
 /// The kind of a comment.

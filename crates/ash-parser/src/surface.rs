@@ -6,10 +6,21 @@
 
 use std::fmt;
 
+use ash_core::Kind;
+
 use crate::token::Span;
 
 /// A name/identifier in the source code.
 pub type Name = Box<str>;
+
+/// Explicit source kind annotation preserved at parser-audited binder sites.
+#[derive(Debug, Clone, PartialEq)]
+pub struct KindAnnotation {
+    /// Parsed kind syntax, such as `*` or `* -> *`.
+    pub kind: Kind,
+    /// Source span covering the kind annotation only.
+    pub span: Span,
+}
 
 /// Crate root metadata for cross-crate dependency management.
 ///
@@ -248,6 +259,8 @@ pub struct PropositionPredicateParam {
     pub name: Name,
     /// Raw parser-owned domain/type annotation.
     pub domain: Type,
+    /// Explicit kind annotation when the parameter is constructor-kinded.
+    pub kind: Option<KindAnnotation>,
     /// Source span covering `name: domain`.
     pub span: Span,
 }
@@ -259,6 +272,8 @@ pub struct TypeFnParam {
     pub name: Name,
     /// Parameter type annotation.
     pub ty: Type,
+    /// Explicit kind annotation when the parameter is constructor-kinded.
+    pub kind: Option<KindAnnotation>,
     /// Source span covering `name: type`.
     pub span: Span,
 }
@@ -555,8 +570,8 @@ pub struct FnDef {
     pub visibility: Visibility,
     /// Function name
     pub name: Name,
-    /// Generic type parameters (e.g., `<T, U>`)
-    pub type_params: Vec<Name>,
+    /// Generic type parameters (e.g., `<T, U>` or `<F : * -> *>`)
+    pub type_params: Vec<TypeParam>,
     /// Function parameters with name and type
     pub params: Vec<Param>,
     /// Optional return type annotation
@@ -580,8 +595,8 @@ pub struct BuiltinFnDef {
     pub visibility: Visibility,
     /// Function name
     pub name: Name,
-    /// Generic type parameters (e.g., `<T, U>`)
-    pub type_params: Vec<Name>,
+    /// Generic type parameters (e.g., `<T, U>` or `<F : * -> *>`)
+    pub type_params: Vec<TypeParam>,
     /// Function parameters with name and type
     pub params: Vec<Param>,
     /// Required return type annotation
@@ -792,6 +807,8 @@ pub struct InterfaceTypeParam {
     pub name: Name,
     /// Optional raw domain annotation after `:`.
     pub domain: Option<Type>,
+    /// Explicit kind annotation when the parameter is constructor-kinded.
+    pub kind: Option<KindAnnotation>,
     /// Source span.
     pub span: Span,
 }
@@ -807,6 +824,7 @@ impl From<&str> for InterfaceTypeParam {
         Self {
             name: value.into(),
             domain: None,
+            kind: None,
             span: Span::default(),
         }
     }
@@ -817,6 +835,7 @@ impl From<String> for InterfaceTypeParam {
         Self {
             name: value.into(),
             domain: None,
+            kind: None,
             span: Span::default(),
         }
     }
@@ -880,10 +899,46 @@ pub struct ImplMethodDef {
 pub struct TypeParam {
     /// Type parameter name
     pub name: Name,
+    /// Explicit kind annotation when the parameter is constructor-kinded.
+    pub kind: Option<KindAnnotation>,
     /// Interface bounds in canonical `T: Interface` form
     pub bounds: Vec<InterfaceBound>,
     /// Source span
     pub span: Span,
+}
+
+impl AsRef<str> for TypeParam {
+    fn as_ref(&self) -> &str {
+        self.name.as_ref()
+    }
+}
+
+impl From<&str> for TypeParam {
+    fn from(value: &str) -> Self {
+        Self {
+            name: value.into(),
+            kind: None,
+            bounds: Vec::new(),
+            span: Span::default(),
+        }
+    }
+}
+
+impl From<String> for TypeParam {
+    fn from(value: String) -> Self {
+        Self {
+            name: value.into(),
+            kind: None,
+            bounds: Vec::new(),
+            span: Span::default(),
+        }
+    }
+}
+
+impl fmt::Display for TypeParam {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.name.as_ref())
+    }
 }
 
 /// A canonical interface bound `T: Interface`.

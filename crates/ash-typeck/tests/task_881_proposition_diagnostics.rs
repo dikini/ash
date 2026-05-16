@@ -122,6 +122,7 @@ fn predicate_decl(name: &str) -> PropositionPredicateDecl {
         params: vec![PropositionPredicateParam {
             name: "T".into(),
             domain: SurfaceType::Name("Int".into()),
+            kind: None,
             span: span(),
         }],
         span: span(),

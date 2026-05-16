@@ -13,7 +13,9 @@ use crate::parse_pattern::pattern;
 use crate::parse_receive::parse_receive;
 use crate::parse_send::parse_send;
 use crate::parse_set::parse_set;
-use crate::parse_utils::skip_whitespace_and_comments;
+use crate::parse_utils::{
+    parse_kind_annotation, skip_whitespace_and_comments, starts_with_kind_syntax,
+};
 use crate::surface::{
     ActionRef, CapabilityDecl, CheckTarget, ConstraintBlock, ConstraintField, ConstraintValue,
     Contract, EnsuresClause, Expr, Guard, InterfaceBound, Name, ObligationRef, Parameter, Pattern,
@@ -621,15 +623,21 @@ fn parse_type_params(input: &mut ParseInput) -> ModalResult<Vec<TypeParam>> {
         let name = identifier(input)?;
         skip_whitespace_and_comments(input);
 
+        let mut kind = None;
         let mut bounds = Vec::new();
         if input.input.starts_with(":") {
             let _ = literal_str(":").parse_next(input)?;
             skip_whitespace_and_comments(input);
-            bounds.push(parse_interface_bound(input)?);
+            if starts_with_kind_syntax(input) {
+                kind = Some(parse_kind_annotation(input)?);
+            } else {
+                bounds.push(parse_interface_bound(input)?);
+            }
         }
 
         params.push(TypeParam {
             name: name.into(),
+            kind,
             bounds,
             span: span_from(&start, &input.state.pos),
         });

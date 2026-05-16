@@ -188,6 +188,7 @@ fn public_family_interface(interface: &str, member: &str) -> InterfaceDef {
         type_params: vec![InterfaceTypeParam {
             name: "T".into(),
             domain: None,
+            kind: None,
             span: Span::default(),
         }],
         associated_types: vec![AssociatedTypeDecl {

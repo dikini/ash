@@ -41,6 +41,7 @@ fn interface_param(name: &str) -> InterfaceTypeParam {
     InterfaceTypeParam {
         name: name.into(),
         domain: None,
+        kind: None,
         span: span(),
     }
 }

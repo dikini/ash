@@ -22,7 +22,7 @@
 |------|-------------|------|------------|--------|
 | [TASK-904](tasks/TASK-904-hkt-audit-gate.md) | Audit live interface/impl/type-param/do-target and generic-impl seams before HKT implementation | Docs/Substrate | 6 | ✅ Complete |
 | [TASK-905](tasks/TASK-905-core-kinded-binder-and-constructor-var-carriers.md) | Add core kinded binder and constructor-variable application carriers | Core/Substrate | 8 | ✅ Complete |
-| [TASK-906](tasks/TASK-906-parser-kinded-binder-surface.md) | Parse kinded binders in interfaces, impls, functions, type functions, and propositions at audited sites | Parser | 7 | 📝 Planned |
+| [TASK-906](tasks/TASK-906-parser-kinded-binder-surface.md) | Parse kinded binders in interfaces, impls, functions, type functions, and propositions at audited sites | Parser | 7 | ✅ Complete |
 | [TASK-907](tasks/TASK-907-typeenv-constructor-variable-kinding-and-unification.md) | Track constructor variables, apply them by kind, and add non-inverting constructor unification | Typeck | 10 | 📝 Planned |
 | [TASK-908](tasks/TASK-908-higher-kinded-interface-and-impl-coherence.md) | Register and resolve higher-kinded interface/impl evidence without overlap or output-directed selection | Typeck/Coherence | 10 | 📝 Planned |
 | [TASK-909](tasks/TASK-909-monad-dictionary-do-target-resolution.md) | Route generalized do target resolution through `Monad<K>` evidence while preserving Act/Proc/Workflow bridge semantics | Typeck/Do | 8 | 📝 Planned |

@@ -113,6 +113,7 @@ fn task_875_lowers_all_surface_proposition_clause_families_to_typed_core_carrier
         params: vec![PropositionPredicateParam {
             name: "T".into(),
             domain: Type::Name("Int".into()),
+            kind: None,
             span: span(57, 67),
         }],
         span: span(57, 79),

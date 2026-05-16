@@ -3547,7 +3547,7 @@ Phase 120 implements constructor-kinded binders and higher-kinded interface evid
 |------|-------------|------------|--------|
 | [TASK-904](tasks/TASK-904-hkt-audit-gate.md) | HKT audit gate | 6 | ✅ Complete |
 | [TASK-905](tasks/TASK-905-core-kinded-binder-and-constructor-var-carriers.md) | Core kinded binders and constructor variables | 8 | ✅ Complete |
-| [TASK-906](tasks/TASK-906-parser-kinded-binder-surface.md) | Parser kinded-binder surface | 7 | 📝 Planned |
+| [TASK-906](tasks/TASK-906-parser-kinded-binder-surface.md) | Parser kinded-binder surface | 7 | ✅ Complete |
 | [TASK-907](tasks/TASK-907-typeenv-constructor-variable-kinding-and-unification.md) | TypeEnv constructor-variable kinding and unification | 10 | 📝 Planned |
 | [TASK-908](tasks/TASK-908-higher-kinded-interface-and-impl-coherence.md) | Higher-kinded interface/impl coherence | 10 | 📝 Planned |
 | [TASK-909](tasks/TASK-909-monad-dictionary-do-target-resolution.md) | Monad dictionary do-target resolution | 8 | 📝 Planned |

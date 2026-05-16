@@ -125,12 +125,16 @@ fn task_859_associated_family_typed_interface_params_preserve_domains_and_spans(
         InterfaceTypeParam {
             name: xs,
             domain: Some(xs_domain),
+            kind: None,
             span: xs_span,
+            ..
         },
         InterfaceTypeParam {
             name: ys,
             domain: Some(ys_domain),
+            kind: None,
             span: ys_span,
+            ..
         },
     ] = interface.type_params.as_slice()
     else {

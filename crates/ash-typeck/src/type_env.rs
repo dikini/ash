@@ -47,9 +47,10 @@ use ash_parser::surface::{
     AssociatedTypeKind, CapabilityImplementationDef, CapabilityImplementationDependency,
     CapabilityImplementationDependencyKind, CapabilityImplementationOperation,
     CapabilityInterfaceDef, CapabilityOperationMode, CapabilityOperationSig, ImplDef, InterfaceDef,
-    InterfaceMethodSig, PropositionClause, PropositionClauseKind, PropositionPredicateDecl,
-    PropositionTail, ResourceTypeDef, Type as SurfaceType, TypeFnDef as SurfaceTypeFnDef,
-    TypePattern as SurfaceTypePattern, Visibility as SurfaceVisibility,
+    InterfaceMethodSig, InterfaceTypeParam, PropositionClause, PropositionClauseKind,
+    PropositionPredicateDecl, PropositionPredicateParam, PropositionTail, ResourceTypeDef,
+    Type as SurfaceType, TypeFnDef as SurfaceTypeFnDef, TypePattern as SurfaceTypePattern,
+    Visibility as SurfaceVisibility,
 };
 use ash_parser::token::Span;
 use std::collections::{BTreeMap, HashMap, HashSet};
@@ -1371,6 +1372,65 @@ fn proposition_revalidation_error(error: TypeError) -> TypeEnvError {
             Span::default(),
         ),
     }
+}
+
+fn constructor_kinded_binder_error(
+    site: &str,
+    name: &str,
+    kind: &Kind,
+    task: &str,
+    span: Span,
+) -> TypeEnvError {
+    TypeEnvError::InvalidDefinition(
+        format!(
+            "{site} kinded binders are parsed by TASK-906 but require {task}; binder '{name}' has kind {kind}"
+        ),
+        span,
+    )
+}
+
+fn reject_constructor_kinded_interface_params(
+    params: &[InterfaceTypeParam],
+    site: &str,
+    task: &str,
+) -> Result<(), TypeEnvError> {
+    for param in params {
+        if let Some(annotation) = &param.kind
+            && annotation.kind != Kind::Type
+        {
+            return Err(constructor_kinded_binder_error(
+                site,
+                param.name.as_ref(),
+                &annotation.kind,
+                task,
+                param.span,
+            ));
+        }
+    }
+
+    Ok(())
+}
+
+fn reject_constructor_kinded_proposition_params(
+    params: &[PropositionPredicateParam],
+    site: &str,
+    task: &str,
+) -> Result<(), TypeEnvError> {
+    for param in params {
+        if let Some(annotation) = &param.kind
+            && annotation.kind != Kind::Type
+        {
+            return Err(constructor_kinded_binder_error(
+                site,
+                param.name.as_ref(),
+                &annotation.kind,
+                task,
+                param.span,
+            ));
+        }
+    }
+
+    Ok(())
 }
 
 fn required_proposition_discharge_error(
@@ -11007,6 +11067,13 @@ impl TypeEnv {
         &mut self,
         decl: &PropositionPredicateDecl,
     ) -> Result<PropositionPredicateId, TypeError> {
+        reject_constructor_kinded_proposition_params(
+            &decl.params,
+            "proposition predicate parameter",
+            "TASK-908",
+        )
+        .map_err(TypeError::from)?;
+
         let module = self
             .current_module_identity
             .clone()
@@ -13298,6 +13365,11 @@ impl TypeEnv {
                 Span::default(),
             ));
         }
+        reject_constructor_kinded_interface_params(
+            &def.type_params,
+            "interface parameter",
+            "TASK-908",
+        )?;
 
         let has_sealed_family = def
             .associated_types
@@ -14665,6 +14737,7 @@ impl TypeEnv {
                 Span::default(),
             ));
         }
+        reject_constructor_kinded_interface_params(&def.type_params, "impl parameter", "TASK-908")?;
 
         let param_mapping: HashMap<String, TypeVar> = def
             .type_params

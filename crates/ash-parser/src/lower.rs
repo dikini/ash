@@ -7,7 +7,7 @@ use std::{cell::RefCell, fmt};
 
 use ash_core::adt::tuple_field_name;
 use ash_core::{
-    Capability, Effect, Expr as CoreExpr, Guard as CoreGuard, MatchArm as CoreMatchArm,
+    Capability, Effect, Expr as CoreExpr, Guard as CoreGuard, Kind, MatchArm as CoreMatchArm,
     Obligation as CoreObligation, Pattern as CorePattern, Predicate as CorePredicate, Provenance,
     ReceiveArm as CoreReceiveArm, ReceivePattern as CoreReceivePattern, Role as CoreRole,
     Workflow as CoreWorkflow,
@@ -472,6 +472,11 @@ pub fn lower_workflow_with_context(
     def: &WorkflowDef,
     ctx: &LoweringContext,
 ) -> Result<CoreWorkflow, LoweringError> {
+    reject_kinded_type_params(
+        &def.type_params,
+        "kinded workflow type parameters are parsed by TASK-906 but lowered by TASK-907",
+    )?;
+
     // Create a provenance for the workflow
     let provenance = Provenance::new();
 
@@ -509,6 +514,11 @@ pub struct LoweredWorkflow {
 /// workflow X plays role(X_default) { ... }
 /// ```
 pub fn lower_workflow_def(def: &WorkflowDef) -> Result<LoweredWorkflow, LoweringError> {
+    reject_kinded_type_params(
+        &def.type_params,
+        "kinded workflow type parameters are parsed by TASK-906 but lowered by TASK-907",
+    )?;
+
     // Start with explicit plays_roles
     let mut plays_roles: Vec<String> = def.plays_roles.iter().map(|r| r.name.to_string()).collect();
 
@@ -542,6 +552,40 @@ pub fn lower_workflow_def(def: &WorkflowDef) -> Result<LoweredWorkflow, Lowering
         implicit_role,
         plays_roles,
     })
+}
+
+fn reject_kinded_type_params(
+    params: &[crate::surface::TypeParam],
+    message: &'static str,
+) -> Result<(), LoweringError> {
+    for param in params {
+        if param
+            .kind
+            .as_ref()
+            .is_some_and(|annotation| annotation.kind != Kind::Type)
+        {
+            return Err(LoweringError::UnsupportedFeature(message.to_string()));
+        }
+    }
+
+    Ok(())
+}
+
+fn reject_kinded_interface_type_params(
+    params: &[crate::surface::InterfaceTypeParam],
+    message: &'static str,
+) -> Result<(), LoweringError> {
+    for param in params {
+        if param
+            .kind
+            .as_ref()
+            .is_some_and(|annotation| annotation.kind != Kind::Type)
+        {
+            return Err(LoweringError::UnsupportedFeature(message.to_string()));
+        }
+    }
+
+    Ok(())
 }
 
 /// Generate implicit role name for a workflow.
@@ -1606,6 +1650,10 @@ pub fn lower_interface_def(
     iface: &crate::surface::InterfaceDef,
 ) -> Result<ash_core::ast::InterfaceDef, LoweringError> {
     use ash_core::ast::{AssociatedType, InterfaceDef, InterfaceMethodSig, Visibility};
+    reject_kinded_interface_type_params(
+        &iface.type_params,
+        "kinded interface parameters are parsed by TASK-906 but lowered by TASK-907",
+    )?;
     Ok(InterfaceDef {
         name: iface.name.to_string(),
         type_params: iface.type_params.iter().map(|n| n.to_string()).collect(),
@@ -1638,6 +1686,10 @@ pub fn lower_impl_def(
     impl_def: &crate::surface::ImplDef,
 ) -> Result<ash_core::ast::ImplDef, LoweringError> {
     use ash_core::ast::{AssociatedTypeBinding, ImplDef, Visibility, WhereBound};
+    reject_kinded_interface_type_params(
+        &impl_def.type_params,
+        "kinded impl parameters are parsed by TASK-906 but lowered by TASK-907",
+    )?;
     Ok(ImplDef {
         visibility: match impl_def.visibility {
             crate::surface::Visibility::Public => Visibility::Public,
@@ -2110,10 +2162,17 @@ pub(crate) fn lower_fn_def(
 ///
 /// Produces a callable registration with no body expression --
 /// the builtin marker indicates runtime dispatch by the host environment.
-pub fn lower_builtin_fn_def(def: &crate::surface::BuiltinFnDef) -> ash_core::ast::BuiltinFnDef {
+pub fn lower_builtin_fn_def(
+    def: &crate::surface::BuiltinFnDef,
+) -> Result<ash_core::ast::BuiltinFnDef, LoweringError> {
     use ash_core::ast::Visibility;
 
-    ash_core::ast::BuiltinFnDef {
+    reject_kinded_type_params(
+        &def.type_params,
+        "kinded builtin function type parameters are parsed by TASK-906 but lowered by TASK-907",
+    )?;
+
+    Ok(ash_core::ast::BuiltinFnDef {
         name: def.name.to_string(),
         type_params: def.type_params.iter().map(|n| n.to_string()).collect(),
         params: def
@@ -2127,7 +2186,7 @@ pub fn lower_builtin_fn_def(def: &crate::surface::BuiltinFnDef) -> ash_core::ast
             crate::surface::Visibility::Crate => Visibility::Crate,
             _ => Visibility::Private,
         },
-    }
+    })
 }
 
 /// Lower a policy expression to core IR.
@@ -3278,7 +3337,7 @@ mod tests {
             span: dummy_span(),
         };
 
-        let core = lower_builtin_fn_def(&def);
+        let core = lower_builtin_fn_def(&def).expect("builtin fn should lower");
 
         assert_eq!(core.name, "foo");
         assert!(core.type_params.is_empty());
@@ -3312,13 +3371,52 @@ mod tests {
             span: dummy_span(),
         };
 
-        let core = lower_builtin_fn_def(&def);
+        let core = lower_builtin_fn_def(&def).expect("builtin fn should lower");
 
         assert_eq!(core.name, "id");
         assert_eq!(core.type_params, vec!["T".to_string()]);
         assert_eq!(core.params.len(), 1);
         assert_eq!(core.params[0].0, "value");
         assert_eq!(core.visibility, ash_core::ast::Visibility::Public);
+    }
+
+    #[test]
+    fn test_lower_builtin_fn_rejects_kinded_type_params() {
+        use crate::surface::{BuiltinFnDef, KindAnnotation, Param, Type, TypeParam, Visibility};
+
+        let def = BuiltinFnDef {
+            visibility: Visibility::Public,
+            name: "pure".into(),
+            type_params: vec![TypeParam {
+                name: "M".into(),
+                kind: Some(KindAnnotation {
+                    kind: ash_core::Kind::arrow(ash_core::Kind::Type, ash_core::Kind::Type),
+                    span: dummy_span(),
+                }),
+                bounds: Vec::new(),
+                span: dummy_span(),
+            }],
+            params: vec![Param {
+                name: "value".into(),
+                ty: Type::Name("Int".into()),
+            }],
+            return_type: Type::Constructor {
+                name: "M".into(),
+                args: vec![Type::Name("Int".into())],
+            },
+            proposition_tail: None,
+            span: dummy_span(),
+        };
+
+        let err = lower_builtin_fn_def(&def).expect_err("kinded builtin fn should not lower yet");
+
+        assert_eq!(
+            err,
+            LoweringError::UnsupportedFeature(
+                "kinded builtin function type parameters are parsed by TASK-906 but lowered by TASK-907"
+                    .to_string()
+            )
+        );
     }
 
     #[test]
@@ -3344,7 +3442,7 @@ mod tests {
             span: dummy_span(),
         };
 
-        let core = lower_builtin_fn_def(&def);
+        let core = lower_builtin_fn_def(&def).expect("builtin fn should lower");
 
         assert_eq!(core.name, "add");
         assert_eq!(core.params.len(), 2);
@@ -3373,7 +3471,7 @@ mod tests {
             span: dummy_span(),
         };
 
-        let core = lower_builtin_fn_def(&def);
+        let core = lower_builtin_fn_def(&def).expect("builtin fn should lower");
 
         assert_eq!(core.name, "make_list");
         assert_eq!(
@@ -3400,7 +3498,7 @@ mod tests {
             span: dummy_span(),
         };
 
-        let core = lower_builtin_fn_def(&def);
+        let core = lower_builtin_fn_def(&def).expect("builtin fn should lower");
 
         assert_eq!(core.name, "get_time");
         assert!(core.params.is_empty());
@@ -3425,7 +3523,7 @@ mod tests {
 
         assert_eq!(builtin_def.name.as_ref(), "foo");
 
-        let core = lower_builtin_fn_def(&builtin_def);
+        let core = lower_builtin_fn_def(&builtin_def).expect("builtin fn should lower");
 
         assert_eq!(core.name, "foo");
         assert!(core.type_params.is_empty());
@@ -3458,7 +3556,7 @@ mod tests {
 
         assert_eq!(builtin_def.name.as_ref(), "map");
 
-        let core = lower_builtin_fn_def(&builtin_def);
+        let core = lower_builtin_fn_def(&builtin_def).expect("builtin fn should lower");
 
         assert_eq!(core.name, "map");
         assert_eq!(core.type_params, vec!["T".to_string()]);

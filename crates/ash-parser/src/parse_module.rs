@@ -11,7 +11,9 @@ use crate::combinators::keyword;
 use crate::input::ParseInput;
 use crate::module::{ModuleDecl, ModuleSource};
 use crate::parse_expr::{expr, parse_fn_expr_body_pub};
-use crate::parse_utils::skip_whitespace_and_comments;
+use crate::parse_utils::{
+    parse_kind_annotation, skip_whitespace_and_comments, starts_with_kind_syntax,
+};
 use crate::parse_visibility;
 use crate::parse_workflow::{parse_capabilities_clause, workflow_def};
 use crate::surface::{
@@ -25,8 +27,8 @@ use crate::surface::{
     Predicate, PropositionClause, PropositionClauseKind, PropositionPredicateDecl,
     PropositionPredicateParam, PropositionTail, ProxyDef, ResourceField, ResourceTypeDef, RoleDef,
     SealedDomainDef, Type, TypeBody, TypeDef, TypeField, TypeFnDecreases, TypeFnDef,
-    TypeFnEquation, TypeFnParam, TypePattern, VariantDef, VariantPayload, Visibility, WhereBound,
-    Workflow, YieldArm,
+    TypeFnEquation, TypeFnParam, TypeParam, TypePattern, VariantDef, VariantPayload, Visibility,
+    WhereBound, Workflow, YieldArm,
 };
 use crate::token::Span;
 
@@ -525,10 +527,16 @@ fn parse_proposition_predicate_param(
     skip_whitespace_and_comments(input);
     let _ = literal_str(":").parse_next(input)?;
     skip_whitespace_and_comments(input);
-    let domain = parse_surface_type(input)?;
+    let (domain, kind) = if starts_with_kind_syntax(input) {
+        let kind = parse_kind_annotation(input)?;
+        (Type::Name(kind.kind.to_string().into()), Some(kind))
+    } else {
+        (parse_surface_type(input)?, None)
+    };
     Ok(PropositionPredicateParam {
         name: name.into(),
         domain,
+        kind,
         span: crate::input::span_from(&start, &input.state.pos),
     })
 }
@@ -573,10 +581,16 @@ fn parse_type_fn_param(input: &mut ParseInput) -> ModalResult<TypeFnParam> {
     skip_whitespace_and_comments(input);
     let _ = literal_str(":").parse_next(input)?;
     skip_whitespace_and_comments(input);
-    let ty = parse_surface_type(input)?;
+    let (ty, kind) = if starts_with_kind_syntax(input) {
+        let kind = parse_kind_annotation(input)?;
+        (Type::Name(kind.kind.to_string().into()), Some(kind))
+    } else {
+        (parse_surface_type(input)?, None)
+    };
     Ok(TypeFnParam {
         name: name.into(),
         ty,
+        kind,
         span: crate::input::span_from(&start, &input.state.pos),
     })
 }
@@ -1567,15 +1581,20 @@ fn parse_optional_interface_type_params(
         let start = input.state.pos;
         let name = identifier(input)?;
         skip_whitespace_and_comments(input);
-        let domain = if literal_str(":").parse_next(input).is_ok() {
+        let (domain, kind) = if literal_str(":").parse_next(input).is_ok() {
             skip_whitespace_and_comments(input);
-            Some(parse_surface_type(input)?)
+            if starts_with_kind_syntax(input) {
+                (None, Some(parse_kind_annotation(input)?))
+            } else {
+                (Some(parse_surface_type(input)?), None)
+            }
         } else {
-            None
+            (None, None)
         };
         params.push(InterfaceTypeParam {
             name: name.into(),
             domain,
+            kind,
             span: crate::input::span_from(&start, &input.state.pos),
         });
         skip_whitespace_and_comments(input);
@@ -1594,7 +1613,7 @@ fn parse_optional_interface_type_params(
     Ok(params)
 }
 
-fn parse_optional_type_parameter_names(input: &mut ParseInput) -> ModalResult<Vec<Box<str>>> {
+fn parse_optional_type_parameter_names(input: &mut ParseInput) -> ModalResult<Vec<TypeParam>> {
     if !input.input.starts_with("<") {
         return Ok(Vec::new());
     }
@@ -1604,8 +1623,27 @@ fn parse_optional_type_parameter_names(input: &mut ParseInput) -> ModalResult<Ve
     let mut params = Vec::new();
 
     loop {
+        let start = input.state.pos;
         let name = identifier(input)?;
-        params.push(name.into());
+        skip_whitespace_and_comments(input);
+        let kind = if literal_str(":").parse_next(input).is_ok() {
+            skip_whitespace_and_comments(input);
+            if starts_with_kind_syntax(input) {
+                Some(parse_kind_annotation(input)?)
+            } else {
+                return Err(winnow::error::ErrMode::Backtrack(
+                    winnow::error::ContextError::new(),
+                ));
+            }
+        } else {
+            None
+        };
+        params.push(TypeParam {
+            name: name.into(),
+            kind,
+            bounds: Vec::new(),
+            span: crate::input::span_from(&start, &input.state.pos),
+        });
         skip_whitespace_and_comments(input);
 
         if input.input.starts_with(",") {

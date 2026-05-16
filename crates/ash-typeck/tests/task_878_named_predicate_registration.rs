@@ -51,6 +51,7 @@ fn param(name: &str, domain: SurfaceType, start: usize, end: usize) -> Propositi
     PropositionPredicateParam {
         name: name.into(),
         domain,
+        kind: None,
         span: span(start, end),
     }
 }

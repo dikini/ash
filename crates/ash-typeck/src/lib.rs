@@ -111,23 +111,22 @@ fn synthetic_program_module_identity() -> ash_core::semantic_summary::ModuleIden
     )
 }
 
-fn reject_constructor_kinded_type_params(
+fn register_surface_type_parameter_kinds(
+    env: &TypeEnv,
     params: &[ash_parser::surface::TypeParam],
-    site: &str,
-    task: &str,
-) -> Result<(), TypeCheckError> {
+) -> Result<TypeEnv, TypeCheckError> {
+    let mut scoped = env.clone();
     for param in params {
-        if let Some(annotation) = &param.kind
-            && annotation.kind != Kind::Type
-        {
-            return Err(TypeCheckError::TypeError(format!(
-                "{site} kinded binders are parsed by TASK-906 but require {task}; binder '{}' has kind {}",
-                param.name, annotation.kind
-            )));
-        }
+        let kind = param
+            .kind
+            .as_ref()
+            .map(|annotation| annotation.kind.clone())
+            .unwrap_or(Kind::Type);
+        scoped
+            .register_type_parameter_kind(param.name.to_string(), kind)
+            .map_err(TypeCheckError::from)?;
     }
-
-    Ok(())
+    Ok(scoped)
 }
 
 fn resolve_public_surface_associated_interface(
@@ -181,6 +180,14 @@ fn workflow_surface_type_to_type(
         ))),
         ash_parser::surface::Type::Name(name) => {
             if let Some(ty) = type_params.get(name.as_ref()) {
+                if let Some(kind) = env.type_parameter_kind(name.as_ref())
+                    && !kind.is_type()
+                {
+                    return Err(TypeCheckError::TypeError(format!(
+                        "constructor variable '{}' has kind {}; expected a fully applied proper type",
+                        name, kind
+                    )));
+                }
                 return Ok(ty.clone());
             }
 
@@ -239,6 +246,32 @@ fn workflow_surface_type_to_type(
             effect: ash_core::Effect::Operational,
         }),
         ash_parser::surface::Type::Constructor { name, args } => {
+            if let Some(kind) = env.type_parameter_kind(name.as_ref()) {
+                if kind.is_type() {
+                    return Err(TypeCheckError::TypeError(format!(
+                        "proper type variable '{}' of kind * cannot be applied as a constructor",
+                        name
+                    )));
+                }
+                let expected_arity = kind.arity();
+                if args.len() != expected_arity {
+                    return Err(TypeCheckError::TypeError(format!(
+                        "wrong arity for constructor variable '{}': expected {}, found {}",
+                        name,
+                        expected_arity,
+                        args.len()
+                    )));
+                }
+                let args = args
+                    .iter()
+                    .map(|arg| workflow_surface_type_to_type(env, arg, type_params))
+                    .collect::<Result<Vec<_>, _>>()?;
+                return Ok(Type::ConstructorVariableApp {
+                    constructor: name.to_string(),
+                    args,
+                    kind: Kind::Type,
+                });
+            }
             let (qualified, _) = env
                 .resolve_type(name.as_ref())
                 .map_err(|e| TypeCheckError::TypeError(format!("{e}")))?;
@@ -1390,26 +1423,22 @@ pub fn fn_signature_type(
     env: &TypeEnv,
     function: &ash_parser::surface::FnDef,
 ) -> Result<Type, TypeCheckError> {
-    reject_constructor_kinded_type_params(
-        &function.type_params,
-        "function type parameter",
-        "TASK-907",
-    )?;
+    let signature_env = register_surface_type_parameter_kinds(env, &function.type_params)?;
 
     let type_param_bindings: std::collections::HashMap<String, Type> = function
         .type_params
         .iter()
-        .map(|param| (param.to_string(), Type::Var(TypeVar::fresh())))
+        .map(|param| (param.name.to_string(), Type::Var(TypeVar::fresh())))
         .collect();
 
     let params = function
         .params
         .iter()
-        .map(|param| workflow_surface_type_to_type(env, &param.ty, &type_param_bindings))
+        .map(|param| workflow_surface_type_to_type(&signature_env, &param.ty, &type_param_bindings))
         .collect::<Result<Vec<_>, _>>()?;
 
     let ret = match &function.return_type {
-        Some(ret) => workflow_surface_type_to_type(env, ret, &type_param_bindings)?,
+        Some(ret) => workflow_surface_type_to_type(&signature_env, ret, &type_param_bindings)?,
         None => Type::Var(TypeVar::fresh()),
     };
 
@@ -1425,25 +1454,25 @@ pub fn builtin_fn_signature_type(
     env: &TypeEnv,
     builtin_fn: &ash_parser::surface::BuiltinFnDef,
 ) -> Result<Type, TypeCheckError> {
-    reject_constructor_kinded_type_params(
-        &builtin_fn.type_params,
-        "builtin function type parameter",
-        "TASK-907",
-    )?;
+    let signature_env = register_surface_type_parameter_kinds(env, &builtin_fn.type_params)?;
 
     let type_param_bindings: std::collections::HashMap<String, Type> = builtin_fn
         .type_params
         .iter()
-        .map(|param| (param.to_string(), Type::Var(TypeVar::fresh())))
+        .map(|param| (param.name.to_string(), Type::Var(TypeVar::fresh())))
         .collect();
 
     let params = builtin_fn
         .params
         .iter()
-        .map(|param| workflow_surface_type_to_type(env, &param.ty, &type_param_bindings))
+        .map(|param| workflow_surface_type_to_type(&signature_env, &param.ty, &type_param_bindings))
         .collect::<Result<Vec<_>, _>>()?;
 
-    let ret = workflow_surface_type_to_type(env, &builtin_fn.return_type, &type_param_bindings)?;
+    let ret = workflow_surface_type_to_type(
+        &signature_env,
+        &builtin_fn.return_type,
+        &type_param_bindings,
+    )?;
 
     Ok(Type::Fn(params, Box::new(ret)))
 }
@@ -1556,6 +1585,11 @@ fn collect_type_vars(ty: &Type, vars: &mut HashSet<TypeVar>) {
             collect_type_vars(ret, vars);
         }
         Type::Constructor { args, .. } => {
+            for arg_ty in args {
+                collect_type_vars(arg_ty, vars);
+            }
+        }
+        Type::ConstructorVariableApp { args, .. } => {
             for arg_ty in args {
                 collect_type_vars(arg_ty, vars);
             }
@@ -2446,11 +2480,7 @@ pub fn type_check_workflow_def_in_env(
     // NOTE: Previously we validated bounds here, but now we need workflow_env
     // set up first so that associated type resolution has access to interface bounds.
     // Bounds are validated below after workflow_env is created.
-    reject_constructor_kinded_type_params(
-        &workflow.type_params,
-        "workflow type parameter",
-        "TASK-907",
-    )?;
+    let mut workflow_env = register_surface_type_parameter_kinds(env, &workflow.type_params)?;
 
     let type_param_bindings: std::collections::HashMap<String, Type> = workflow
         .type_params
@@ -2460,7 +2490,6 @@ pub fn type_check_workflow_def_in_env(
 
     // Create workflow_env first so we can bind interface bounds before
     // resolving associated types in parameter and return types.
-    let mut workflow_env = env.clone();
     for type_param in &workflow.type_params {
         if let Some(Type::Var(var)) = type_param_bindings.get(type_param.name.as_ref()) {
             for bound in &type_param.bounds {

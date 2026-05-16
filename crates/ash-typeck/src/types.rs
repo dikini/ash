@@ -60,6 +60,16 @@ pub enum Type {
         kind: Kind,
     },
 
+    /// Constructor-variable application: `M<A>` where `M : * -> *`.
+    ConstructorVariableApp {
+        /// Source-visible constructor-variable head.
+        constructor: String,
+        /// Proper type arguments applied to the constructor variable.
+        args: Vec<Type>,
+        /// Kind of the fully applied expression.
+        kind: Kind,
+    },
+
     /// Associated type projection: `T::Ok`
     Associated {
         /// Interface that declares the associated type
@@ -164,6 +174,15 @@ impl Substitution {
             ),
             Type::Constructor { name, args, kind } => Type::Constructor {
                 name: name.clone(),
+                args: args.iter().map(|a| self.apply(a)).collect(),
+                kind: kind.clone(),
+            },
+            Type::ConstructorVariableApp {
+                constructor,
+                args,
+                kind,
+            } => Type::ConstructorVariableApp {
+                constructor: constructor.clone(),
                 args: args.iter().map(|a| self.apply(a)).collect(),
                 kind: kind.clone(),
             },
@@ -296,6 +315,22 @@ impl std::fmt::Display for Type {
                     write!(f, "{}", name)
                 } else {
                     write!(f, "{}<", name)?;
+                    for (i, arg) in args.iter().enumerate() {
+                        if i > 0 {
+                            write!(f, ", ")?;
+                        }
+                        write!(f, "{}", arg)?;
+                    }
+                    write!(f, ">")
+                }
+            }
+            Type::ConstructorVariableApp {
+                constructor, args, ..
+            } => {
+                if args.is_empty() {
+                    write!(f, "{}", constructor)
+                } else {
+                    write!(f, "{}<", constructor)?;
                     for (i, arg) in args.iter().enumerate() {
                         if i > 0 {
                             write!(f, ", ")?;
@@ -484,6 +519,43 @@ pub fn unify(t1: &Type, t2: &Type) -> Result<Substitution, UnifyError> {
             Ok(acc_sub)
         }
 
+        // Constructor-variable applications unify only structurally under the
+        // same rigid constructor-variable head. This deliberately does not infer
+        // a constructor from an expected nominal output.
+        (
+            ConstructorVariableApp {
+                constructor: c1,
+                args: a1,
+                kind: k1,
+            },
+            ConstructorVariableApp {
+                constructor: c2,
+                args: a2,
+                kind: k2,
+            },
+        ) => {
+            if c1 != c2 {
+                return Err(UnifyError::ConstructorNameMismatch {
+                    expected: format!("constructor-variable {c1}"),
+                    found: format!("constructor-variable {c2}"),
+                });
+            }
+            if k1 != k2 || a1.len() != a2.len() {
+                return Err(UnifyError::ConstructorArityMismatch {
+                    name: c1.clone(),
+                    expected_arity: a1.len(),
+                    found_arity: a2.len(),
+                });
+            }
+
+            let mut acc_sub = Substitution::new();
+            for (arg1, arg2) in a1.iter().zip(a2.iter()) {
+                let sub = unify(&acc_sub.apply(arg1), &acc_sub.apply(arg2))?;
+                acc_sub = acc_sub.compose(&sub);
+            }
+            Ok(acc_sub)
+        }
+
         // Constructor named List vs List
         (Constructor { name, args, .. }, List(elem))
             if name.name.ends_with("List") && args.len() == 1 =>
@@ -498,6 +570,10 @@ pub fn unify(t1: &Type, t2: &Type) -> Result<Substitution, UnifyError> {
 
         // Constructor cannot unify with primitives
         (Constructor { .. }, _) | (_, Constructor { .. }) => {
+            Err(UnifyError::Mismatch(t1.clone(), t2.clone()))
+        }
+
+        (ConstructorVariableApp { .. }, _) | (_, ConstructorVariableApp { .. }) => {
             Err(UnifyError::Mismatch(t1.clone(), t2.clone()))
         }
 
@@ -650,6 +726,7 @@ pub fn occurs_in(var: TypeVar, ty: &Type) -> bool {
     match ty {
         Type::Var(v) => *v == var,
         Type::Constructor { args, .. } => args.iter().any(|a| occurs_in(var, a)),
+        Type::ConstructorVariableApp { args, .. } => args.iter().any(|a| occurs_in(var, a)),
         Type::List(elem) => occurs_in(var, elem),
         Type::Record(fields) => fields.iter().any(|(_, ty)| occurs_in(var, ty)),
         Type::Fun(args, ret, _) => args.iter().any(|a| occurs_in(var, a)) || occurs_in(var, ret),
@@ -685,6 +762,7 @@ pub fn type_contains_fun(ty: &Type) -> bool {
     match ty {
         Type::Fun(..) => true,
         Type::Constructor { args, .. } => args.iter().any(type_contains_fun),
+        Type::ConstructorVariableApp { args, .. } => args.iter().any(type_contains_fun),
         Type::List(elem) => type_contains_fun(elem),
         Type::Record(fields) => fields.iter().any(|(_, t)| type_contains_fun(t)),
         Type::Fn(params, ret) => params.iter().any(type_contains_fun) || type_contains_fun(ret),

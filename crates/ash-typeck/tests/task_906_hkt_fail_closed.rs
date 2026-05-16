@@ -9,7 +9,7 @@ fn parse(source: &str) -> ash_parser::surface::ModuleFile {
 }
 
 #[test]
-fn fn_signature_type_rejects_constructor_kinded_type_params() {
+fn fn_signature_type_no_longer_rejects_task_907_constructor_kinded_type_params() {
     let module = parse(
         r#"
         fn lift<F : * -> *>(value: Int) -> Int { value }
@@ -24,19 +24,12 @@ fn fn_signature_type_rejects_constructor_kinded_type_params() {
         })
         .expect("function should be present");
 
-    let error = fn_signature_type(&TypeEnv::with_builtin_types(), function)
-        .expect_err("typeck must fail closed for constructor-kinded function binders");
-
-    assert!(
-        error
-            .to_string()
-            .contains("kinded binders are parsed by TASK-906")
-    );
-    assert!(error.to_string().contains("TASK-907"));
+    fn_signature_type(&TypeEnv::with_builtin_types(), function)
+        .expect("TASK-907 owns function-signature constructor-kinded binders");
 }
 
 #[test]
-fn builtin_signature_type_rejects_constructor_kinded_type_params() {
+fn builtin_signature_type_no_longer_rejects_task_907_constructor_kinded_type_params() {
     let module = parse(
         r#"
         builtin fn pure<M : * -> *>(value: Int) -> Int;
@@ -51,27 +44,21 @@ fn builtin_signature_type_rejects_constructor_kinded_type_params() {
         })
         .expect("builtin function should be present");
 
-    let error = builtin_fn_signature_type(&TypeEnv::with_builtin_types(), builtin)
-        .expect_err("typeck must fail closed for constructor-kinded builtin binders");
-
-    assert!(error.to_string().contains("kinded binders"));
-    assert!(error.to_string().contains("TASK-907"));
+    builtin_fn_signature_type(&TypeEnv::with_builtin_types(), builtin)
+        .expect("TASK-907 owns builtin-signature constructor-kinded binders");
 }
 
 #[test]
-fn workflow_typecheck_rejects_constructor_kinded_type_params() {
+fn workflow_typecheck_no_longer_rejects_task_907_constructor_kinded_type_params() {
     let module = parse(
         r#"
-        workflow run<W : * -> *>(value: Int) -> Int { done }
+        workflow run<W : * -> *>(value: Int) -> Null { done }
         "#,
     );
     let workflow = module.workflow.expect("workflow should be present");
 
-    let error = type_check_workflow_def_in_env(&TypeEnv::with_builtin_types(), &workflow)
-        .expect_err("typeck must fail closed for constructor-kinded workflow binders");
-
-    assert!(error.to_string().contains("kinded binders"));
-    assert!(error.to_string().contains("TASK-907"));
+    type_check_workflow_def_in_env(&TypeEnv::with_builtin_types(), &workflow)
+        .expect("TASK-907 owns workflow type-signature constructor-kinded binders");
 }
 
 #[test]

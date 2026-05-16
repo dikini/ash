@@ -31,12 +31,12 @@ use ash_core::type_ir::{
     AssociatedFamilyEquation, AssociatedFamilyHeadId, AssociatedFamilyPattern,
     AssociatedFamilyProjection, AssociatedFamilyProjectionMode, AssociatedFamilyResultConstraint,
     AssociatedFamilyResultExpr, AssociatedFamilyScheme, AssociatedFamilySchemeParam,
-    CanonicalTypeExpr, InterfaceBoundProposition, NamedPredicateProposition, NormalFormBlockReason,
-    NormalTypeExpr, PartialTypeArg, PartialTypeConstructorApp, ProjectionRigidity,
-    PropositionBoundary, PropositionDeferredKind, PropositionDeferredReason, PropositionEvidence,
-    PropositionEvidenceRule, PropositionOutcome, PropositionRefutation,
-    PropositionRefutationReason, PropositionTypeComparisonEvidence, TypeComputationHeadId,
-    TypeConstructorExpr, TypeConstructorHeadId, TypeDisequalityProposition,
+    CanonicalTypeExpr, ConstructorVariableApp, ConstructorVariableRef, InterfaceBoundProposition,
+    NamedPredicateProposition, NormalFormBlockReason, NormalTypeExpr, PartialTypeArg,
+    PartialTypeConstructorApp, ProjectionRigidity, PropositionBoundary, PropositionDeferredKind,
+    PropositionDeferredReason, PropositionEvidence, PropositionEvidenceRule, PropositionOutcome,
+    PropositionRefutation, PropositionRefutationReason, PropositionTypeComparisonEvidence,
+    TypeComputationHeadId, TypeConstructorExpr, TypeConstructorHeadId, TypeDisequalityProposition,
     TypeEqualityProposition, TypeFunctionDef, TypeFunctionEquation, TypeFunctionParam,
     TypeFunctionPattern, TypeFunctionPatternConstraint, TypeFunctionResultConstraint,
     TypeFunctionResultExpr, TypeFunctionSourceAnchors, TypeHoleAmbiguity, TypeHoleId,
@@ -280,6 +280,17 @@ pub fn type_expr_to_type(
         TypeExpr::Named(name) => {
             // Check if it's a type parameter
             if let Some(&var) = param_mapping.get(name) {
+                if let Some(kind) = type_env.type_parameter_kind(name)
+                    && !kind.is_type()
+                {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "constructor variable '{name}' has kind {kind}; expected a fully applied proper type"
+                        ),
+                        Span::default(),
+                    )
+                    .into());
+                }
                 return Ok(Type::Var(var));
             }
 
@@ -323,6 +334,24 @@ pub fn type_expr_to_type(
                     }
                 };
                 Ok(Type::Fn(arg_types, Box::new(ret)))
+            } else if let Some(kind) = type_env.type_parameter_kind(name) {
+                constructor_variable_application_to_type(name, kind, args.len(), || {
+                    args.iter()
+                        .map(|arg| type_expr_to_type(arg, param_mapping, type_env))
+                        .collect::<Result<Vec<_>, _>>()
+                        .map_err(|err| {
+                            TypeEnvError::InvalidDefinition(err.to_string(), Span::default())
+                        })
+                })
+                .map_err(TypeError::from)
+            } else if param_mapping.contains_key(name) {
+                Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "proper type variable '{name}' of kind * cannot be applied as a constructor"
+                    ),
+                    Span::default(),
+                )
+                .into())
             } else {
                 let (qualified, _) = type_env.resolve_type(name)?;
                 type_env.check_type_constructor_arity(&qualified, args.len())?;
@@ -1091,6 +1120,36 @@ fn lower_core_explicit_associated_family_projection_to_type(
     })
 }
 
+fn constructor_variable_application_to_type(
+    constructor: &str,
+    kind: &Kind,
+    found_arity: usize,
+    lower_args: impl FnOnce() -> Result<Vec<Type>, TypeEnvError>,
+) -> Result<Type, TypeEnvError> {
+    if kind.is_type() {
+        return Err(TypeEnvError::InvalidDefinition(
+            format!(
+                "proper type variable '{constructor}' of kind * cannot be applied as a constructor"
+            ),
+            Span::default(),
+        ));
+    }
+    let expected_arity = kind.arity();
+    if found_arity != expected_arity {
+        return Err(TypeEnvError::InvalidDefinition(
+            format!(
+                "wrong arity for constructor variable '{constructor}': expected {expected_arity}, found {found_arity}"
+            ),
+            Span::default(),
+        ));
+    }
+    Ok(Type::ConstructorVariableApp {
+        constructor: constructor.to_string(),
+        args: lower_args()?,
+        kind: Kind::Type,
+    })
+}
+
 fn surface_type_to_type(
     ty: &SurfaceType,
     param_mapping: &HashMap<String, TypeVar>,
@@ -1104,6 +1163,17 @@ fn surface_type_to_type(
         )),
         SurfaceType::Name(name) => {
             if let Some(var) = param_mapping.get(name.as_ref()) {
+                if let Some(kind) = type_env.type_parameter_kind(name.as_ref())
+                    && !kind.is_type()
+                {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "constructor variable '{}' has kind {}; expected a fully applied proper type",
+                            name, kind
+                        ),
+                        Span::default(),
+                    ));
+                }
                 return Ok(Type::Var(*var));
             }
 
@@ -1168,6 +1238,20 @@ fn surface_type_to_type(
             if name.as_ref() == "List" && args.len() == 1 {
                 surface_type_to_type(&args[0], param_mapping, type_env)
                     .map(|item| Type::List(Box::new(item)))
+            } else if let Some(kind) = type_env.type_parameter_kind(name.as_ref()) {
+                constructor_variable_application_to_type(name, kind, args.len(), || {
+                    args.iter()
+                        .map(|arg| surface_type_to_type(arg, param_mapping, type_env))
+                        .collect::<Result<Vec<_>, _>>()
+                })
+            } else if param_mapping.contains_key(name.as_ref()) {
+                Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "proper type variable '{}' of kind * cannot be applied as a constructor",
+                        name
+                    ),
+                    Span::default(),
+                ))
             } else {
                 let (qualified, _) = type_env.resolve_type(name.as_ref()).map_err(|e| {
                     TypeEnvError::InvalidDefinition(format!("{e}"), Span::default())
@@ -2660,6 +2744,7 @@ fn is_closed_world_nominal_impl_target(ty: &Type) -> bool {
         | Type::Fn(_, _) => false,
         Type::Var(_) => false,
         Type::Constructor { args, .. } => args.iter().all(is_closed_world_nominal_impl_target),
+        Type::ConstructorVariableApp { .. } => false,
         Type::Associated { .. } => false,
     }
 }
@@ -2906,6 +2991,8 @@ pub struct TypeEnv {
     proposition_predicates: HashMap<PropositionPredicateId, PropositionPredicateInfo>,
     /// Interface bounds attached to workflow type variables.
     pub(crate) type_var_interface_bounds: HashMap<TypeVar, HashSet<String>>,
+    /// Source-visible type parameter names classified by kind for HKT lowering.
+    type_parameter_kinds: HashMap<String, Kind>,
     /// Variable bindings: variable name -> type
     variables: HashMap<String, crate::types::Type>,
     /// Compiler-known workflow intrinsics whose parameters are not source-denotable types.
@@ -3642,6 +3729,7 @@ impl TypeEnv {
             proposition_predicate_aliases: HashMap::with_capacity(4),
             proposition_predicates: HashMap::with_capacity(4),
             type_var_interface_bounds: HashMap::with_capacity(4),
+            type_parameter_kinds: HashMap::with_capacity(4),
             variables: HashMap::with_capacity(10),
             workflow_intrinsics: HashMap::with_capacity(2),
             public_workflow_summaries: HashMap::with_capacity(2),
@@ -10989,23 +11077,70 @@ impl TypeEnv {
                 "Int" | "String" | "Bool" | "Float" | "Null" | "Unit" | "Time" | "Ref" => {
                     Ok(CanonicalTypeExpr::Primitive(name.clone()))
                 }
-                _ => match self.resolve_type(name) {
-                    Ok((qualified, _)) => {
-                        self.check_type_constructor_arity(&qualified, 0)?;
-                        Ok(CanonicalTypeExpr::NominalApp {
-                            origin: self.canonical_type_identity_for_visible_name(name)?,
-                            visible_name: name.clone(),
-                            args: vec![],
-                            kind: Kind::Type,
-                        })
+                _ => {
+                    if let Some(kind) = self.type_parameter_kind(name) {
+                        if kind.is_type() {
+                            Ok(CanonicalTypeExpr::Var(name.clone()))
+                        } else {
+                            Err(TypeError::from(TypeEnvError::InvalidDefinition(
+                                format!(
+                                    "constructor variable '{name}' has kind {kind}; expected a fully applied proper type"
+                                ),
+                                Span::default(),
+                            )))
+                        }
+                    } else {
+                        match self.resolve_type(name) {
+                            Ok((qualified, _)) => {
+                                self.check_type_constructor_arity(&qualified, 0)?;
+                                Ok(CanonicalTypeExpr::NominalApp {
+                                    origin: self.canonical_type_identity_for_visible_name(name)?,
+                                    visible_name: name.clone(),
+                                    args: vec![],
+                                    kind: Kind::Type,
+                                })
+                            }
+                            Err(TypeError::UnboundVariable(_, _)) => {
+                                Ok(CanonicalTypeExpr::Var(name.clone()))
+                            }
+                            Err(err) => Err(err),
+                        }
                     }
-                    Err(TypeError::UnboundVariable(_, _)) => {
-                        Ok(CanonicalTypeExpr::Var(name.clone()))
-                    }
-                    Err(err) => Err(err),
-                },
+                }
             },
             TypeExpr::Constructor { name, args } => {
+                if let Some(kind) = self.type_parameter_kind(name) {
+                    if kind.is_type() {
+                        return Err(TypeError::from(TypeEnvError::InvalidDefinition(
+                            format!(
+                                "proper type variable '{name}' of kind * cannot be applied as a constructor"
+                            ),
+                            Span::default(),
+                        )));
+                    }
+                    let expected_arity = kind.arity();
+                    if args.len() != expected_arity {
+                        return Err(TypeError::from(TypeEnvError::InvalidDefinition(
+                            format!(
+                                "wrong arity for constructor variable '{name}': expected {expected_arity}, found {}",
+                                args.len()
+                            ),
+                            Span::default(),
+                        )));
+                    }
+                    let lowered_args = args
+                        .iter()
+                        .map(|arg| self.lower_core_type_expr_to_canonical(arg))
+                        .collect::<Result<Vec<_>, _>>()?;
+                    return Ok(CanonicalTypeExpr::ConstructorVariableApp(Box::new(
+                        ConstructorVariableApp::new(
+                            ConstructorVariableRef::new(name.clone(), kind.clone(), None),
+                            lowered_args,
+                            Kind::Type,
+                            None,
+                        ),
+                    )));
+                }
                 let (qualified, _) = self.resolve_type(name)?;
                 self.check_type_constructor_arity(&qualified, args.len())?;
                 Ok(CanonicalTypeExpr::NominalApp {
@@ -12427,23 +12562,75 @@ impl TypeEnv {
                 "Int" | "String" | "Bool" | "Float" | "Null" | "Time" | "Ref" => {
                     Ok(CanonicalTypeExpr::Primitive(name.to_string()))
                 }
-                _ => match self.resolve_type(name.as_ref()) {
-                    Ok((qualified, _)) => {
-                        self.check_type_constructor_arity(&qualified, 0)?;
-                        Ok(CanonicalTypeExpr::NominalApp {
-                            origin: self.canonical_type_identity_for_visible_name(name.as_ref())?,
-                            visible_name: name.to_string(),
-                            args: vec![],
-                            kind: Kind::Type,
-                        })
+                _ => {
+                    if let Some(kind) = self.type_parameter_kind(name.as_ref()) {
+                        if kind.is_type() {
+                            Ok(CanonicalTypeExpr::Var(name.to_string()))
+                        } else {
+                            Err(TypeError::from(TypeEnvError::InvalidDefinition(
+                                format!(
+                                    "constructor variable '{}' has kind {}; expected a fully applied proper type",
+                                    name, kind
+                                ),
+                                Span::default(),
+                            )))
+                        }
+                    } else {
+                        match self.resolve_type(name.as_ref()) {
+                            Ok((qualified, _)) => {
+                                self.check_type_constructor_arity(&qualified, 0)?;
+                                Ok(CanonicalTypeExpr::NominalApp {
+                                    origin: self
+                                        .canonical_type_identity_for_visible_name(name.as_ref())?,
+                                    visible_name: name.to_string(),
+                                    args: vec![],
+                                    kind: Kind::Type,
+                                })
+                            }
+                            Err(TypeError::UnboundVariable(_, _)) => {
+                                Ok(CanonicalTypeExpr::Var(name.to_string()))
+                            }
+                            Err(err) => Err(err),
+                        }
                     }
-                    Err(TypeError::UnboundVariable(_, _)) => {
-                        Ok(CanonicalTypeExpr::Var(name.to_string()))
-                    }
-                    Err(err) => Err(err),
-                },
+                }
             },
             SurfaceType::Constructor { name, args } => {
+                if let Some(kind) = self.type_parameter_kind(name.as_ref()) {
+                    if kind.is_type() {
+                        return Err(TypeError::from(TypeEnvError::InvalidDefinition(
+                            format!(
+                                "proper type variable '{}' of kind * cannot be applied as a constructor",
+                                name
+                            ),
+                            Span::default(),
+                        )));
+                    }
+                    let expected_arity = kind.arity();
+                    if args.len() != expected_arity {
+                        return Err(TypeError::from(TypeEnvError::InvalidDefinition(
+                            format!(
+                                "wrong arity for constructor variable '{}': expected {}, found {}",
+                                name,
+                                expected_arity,
+                                args.len()
+                            ),
+                            Span::default(),
+                        )));
+                    }
+                    let lowered_args = args
+                        .iter()
+                        .map(|arg| self.lower_surface_type_to_canonical(arg))
+                        .collect::<Result<Vec<_>, _>>()?;
+                    return Ok(CanonicalTypeExpr::ConstructorVariableApp(Box::new(
+                        ConstructorVariableApp::new(
+                            ConstructorVariableRef::new(name.to_string(), kind.clone(), None),
+                            lowered_args,
+                            Kind::Type,
+                            None,
+                        ),
+                    )));
+                }
                 let (qualified, _) =
                     self.resolve_type(name.as_ref()).map_err(|err| match err {
                         TypeError::UnboundVariable(_, span) => {
@@ -13083,6 +13270,7 @@ impl TypeEnv {
             | Type::Cap { .. }
             | Type::Fun(_, _, _)
             | Type::Fn(_, _)
+            | Type::ConstructorVariableApp { .. }
             | Type::Instance { .. }
             | Type::InstanceAddr { .. }
             | Type::ControlLink { .. }
@@ -13113,6 +13301,18 @@ impl TypeEnv {
                     }
                 }
             }
+            Type::ConstructorVariableApp {
+                constructor,
+                args,
+                kind,
+            } => Type::ConstructorVariableApp {
+                constructor: constructor.clone(),
+                args: args
+                    .iter()
+                    .map(|arg| self.canonicalize_transparent_aliases(arg))
+                    .collect(),
+                kind: kind.clone(),
+            },
             Type::List(inner) => Type::List(Box::new(self.canonicalize_transparent_aliases(inner))),
             Type::Record(fields) => Type::Record(
                 fields
@@ -13172,6 +13372,18 @@ impl TypeEnv {
                     }
                 }
             }
+            Type::ConstructorVariableApp {
+                constructor,
+                args,
+                kind,
+            } => Type::ConstructorVariableApp {
+                constructor: constructor.clone(),
+                args: args
+                    .iter()
+                    .map(|arg| self.canonicalize_type_for_equality(arg))
+                    .collect(),
+                kind: kind.clone(),
+            },
             Type::List(inner) => Type::List(Box::new(self.canonicalize_type_for_equality(inner))),
             Type::Record(fields) => Type::Record(
                 fields
@@ -13288,6 +13500,28 @@ impl TypeEnv {
                     args,
                     kind: kind.clone(),
                 })
+            }
+            Type::ConstructorVariableApp {
+                constructor,
+                args,
+                kind,
+            } => {
+                let args: Vec<CanonicalTypeExpr> = args
+                    .iter()
+                    .map(|arg| self.type_to_canonical_expr_for_equality(arg))
+                    .collect::<Option<_>>()?;
+                let constructor_kind = self
+                    .type_parameter_kind(constructor)
+                    .cloned()
+                    .unwrap_or_else(|| Kind::n_ary(args.len()));
+                Some(CanonicalTypeExpr::ConstructorVariableApp(Box::new(
+                    ConstructorVariableApp::new(
+                        ConstructorVariableRef::new(constructor.clone(), constructor_kind, None),
+                        args,
+                        kind.clone(),
+                        None,
+                    ),
+                )))
             }
             Type::Associated {
                 interface,
@@ -14683,6 +14917,7 @@ impl TypeEnv {
             proposition_predicate_aliases: self.proposition_predicate_aliases.clone(),
             proposition_predicates: self.proposition_predicates.clone(),
             type_var_interface_bounds: self.type_var_interface_bounds.clone(),
+            type_parameter_kinds: self.type_parameter_kinds.clone(),
             variables: HashMap::with_capacity(10),
             workflow_intrinsics: self.workflow_intrinsics.clone(),
             public_workflow_summaries: HashMap::new(),
@@ -15727,6 +15962,37 @@ impl TypeEnv {
         }
     }
 
+    /// Register the kind of a source-visible type parameter in this TypeEnv.
+    pub fn register_type_parameter_kind(
+        &mut self,
+        name: impl Into<String>,
+        kind: Kind,
+    ) -> Result<(), TypeEnvError> {
+        let name = name.into();
+        if let Some(existing) = self.type_parameter_kinds.get(&name)
+            && existing != &kind
+        {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "type parameter '{name}' already has kind {existing}, cannot also register kind {kind}"
+                ),
+                Span::default(),
+            ));
+        }
+        self.type_parameter_kinds.insert(name, kind);
+        Ok(())
+    }
+
+    /// Look up the kind of a source-visible type parameter.
+    #[must_use]
+    pub fn type_parameter_kind(&self, name: &str) -> Option<&Kind> {
+        self.type_parameter_kinds.get(name).or_else(|| {
+            self.parent
+                .as_ref()
+                .and_then(|parent| parent.type_parameter_kind(name))
+        })
+    }
+
     /// Look up a variable's type in this environment
     ///
     /// Searches current scope first, then parent scopes
@@ -15824,6 +16090,7 @@ impl TypeEnv {
             proposition_predicate_aliases: self.proposition_predicate_aliases.clone(),
             proposition_predicates: self.proposition_predicates.clone(),
             type_var_interface_bounds: self.type_var_interface_bounds.clone(),
+            type_parameter_kinds: self.type_parameter_kinds.clone(),
             variables: HashMap::with_capacity(10),
             workflow_intrinsics: self.workflow_intrinsics.clone(),
             public_workflow_summaries: self.public_workflow_summaries.clone(),

@@ -165,7 +165,7 @@ fn wrong_kind_target_names_expected_computation_kind() {
 }
 
 #[test]
-fn unsupported_target_mentions_missing_dictionary_and_deferred_monad() {
+fn unsupported_target_mentions_missing_monad_evidence() {
     let mut env = TypeEnv::with_builtin_types();
     env.register_type(&computation_boxed_type_def())
         .expect("Boxed computation constructor should register");
@@ -177,12 +177,9 @@ fn unsupported_target_mentions_missing_dictionary_and_deferred_monad() {
         .map(ToString::to_string)
         .collect::<Vec<_>>()
         .join("\n");
-    assert!(
-        text.contains("do target Boxed has no MVP dictionary"),
-        "{text}"
-    );
+    assert!(text.contains("missing Monad evidence"), "{text}");
+    assert!(text.contains("Monad<Boxed>"), "{text}");
     assert!(text.contains("Monad<K>"), "{text}");
-    assert!(text.contains("deferred"), "{text}");
 }
 
 #[test]

@@ -1,6 +1,6 @@
 # TASK-909: Route generalized do target resolution through `Monad<K>` evidence while preserving Act/Proc/Workflow bridge semantics
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -59,15 +59,26 @@ strictness: clean
 commands:
   - cargo test -p ash-typeck --test task_909_monad_do_target_resolution
   - cargo test -p ash-typeck --test task_909_act_proc_workflow_bridge_non_interference
+  - cargo test -p ash-typeck do_target
+  - cargo clippy -p ash-typeck --all-targets --all-features -- -D warnings
   - cargo fmt --check
   - git diff --check
   - cargo check --workspace
 checklist:
-  - [ ] Focused tests are non-zero and pass
-  - [ ] cargo fmt --check passes
-  - [ ] git diff --check passes
-  - [ ] Status surfaces and CHANGELOG are reconciled if this task completes
+  - [x] Focused tests are non-zero and pass
+  - [x] cargo clippy -p ash-typeck --all-targets --all-features -- -D warnings passes
+  - [x] cargo fmt --check passes
+  - [x] git diff --check passes
+  - [x] cargo check --workspace passes
+  - [x] Status surfaces and CHANGELOG are reconciled if this task completes
 ```
+
+## Evidence
+
+- 2026-05-16 focused verification: `cargo test -p ash-typeck --test task_909_monad_do_target_resolution` passed 4 tests.
+- 2026-05-16 focused verification: `cargo test -p ash-typeck --test task_909_act_proc_workflow_bridge_non_interference` passed 4 tests.
+- 2026-05-16 focused regression: `cargo test -p ash-typeck do_target` passed 9 in-module do-target tests plus 2 matching integration tests, with no failures.
+- 2026-05-16 required gates: `cargo clippy -p ash-typeck --all-targets --all-features -- -D warnings`, `cargo fmt --check`, `git diff --check`, and `cargo check --workspace` passed.
 
 ## Dependencies for Next Task
 

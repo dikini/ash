@@ -3550,7 +3550,7 @@ Phase 120 implements constructor-kinded binders and higher-kinded interface evid
 | [TASK-906](tasks/TASK-906-parser-kinded-binder-surface.md) | Parser kinded-binder surface | 7 | ✅ Complete |
 | [TASK-907](tasks/TASK-907-typeenv-constructor-variable-kinding-and-unification.md) | TypeEnv constructor-variable kinding and unification | 10 | ✅ Complete |
 | [TASK-908](tasks/TASK-908-higher-kinded-interface-and-impl-coherence.md) | Higher-kinded interface/impl coherence | 10 | ✅ Complete |
-| [TASK-909](tasks/TASK-909-monad-dictionary-do-target-resolution.md) | Monad dictionary do-target resolution | 8 | 📝 Planned |
+| [TASK-909](tasks/TASK-909-monad-dictionary-do-target-resolution.md) | Monad dictionary do-target resolution | 8 | ✅ Complete |
 | [TASK-910](tasks/TASK-910-hkt-diagnostics-and-acceptance-matrix.md) | HKT diagnostics and acceptance matrix | 7 | 📝 Planned |
 | [TASK-911](tasks/TASK-911-hkt-closeout.md) | SPEC-067 closeout | 5 | 📝 Planned |
 

@@ -109,6 +109,7 @@ fn check_expr_reports_partial_result_target_missing_evidence() {
     let message = first_unsupported_with_env(&env, "do:Result<_, E> { return 1 }");
 
     assert!(message.contains("Result"), "{message}");
+    assert!(message.contains("missing Monad evidence"), "{message}");
+    assert!(message.contains("Monad<Result<_, E>>"), "{message}");
     assert!(message.contains("SPEC-067 Monad<K>"), "{message}");
-    assert!(message.contains("not implemented"), "{message}");
 }

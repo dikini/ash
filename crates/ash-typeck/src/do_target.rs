@@ -6,7 +6,7 @@
 
 #![allow(clippy::result_large_err)]
 
-use crate::error::ConstructorError;
+use crate::error::{ConstructorError, TypeEnvError};
 use crate::{Kind, PartialConstructorElaborationError, QualifiedName, TypeEnv};
 use ash_parser::surface::{DoTarget, Type as SurfaceType};
 
@@ -33,32 +33,23 @@ pub(crate) struct DoDictionary {
     pub(crate) tower_level: DoTowerLevel,
 }
 
-/// Resolve a surface `do:K` target to the MVP hidden dictionary.
+/// Resolve a surface `do:K` target to a sequencing dictionary.
 ///
-/// The accepted MVP targets are compiler-known `Act`, `Proc`, and `Workflow` unary type
-/// constructors. This is deliberately shaped like future `Monad<K>` evidence,
-/// but does not attempt interface/impl lookup yet.
+/// Compiler-known `Act`, `Proc`, and `Workflow` targets keep their hidden bridge
+/// dictionaries during the migration. Other well-shaped unary targets must have
+/// explicit `Monad<K>` evidence in the [`TypeEnv`].
 pub(crate) fn resolve_do_target(
     env: &TypeEnv,
     target: &DoTarget,
 ) -> Result<DoDictionary, ConstructorError> {
     let target_name = target.name.as_ref();
+    let surface_target = surface_target_type(target);
 
     if !target.args.is_empty() {
-        let surface_target = SurfaceType::Constructor {
-            name: target.name.to_string().into(),
-            args: target.args.clone(),
-        };
         env.elaborate_do_target_constructor_expr(&surface_target)
             .map_err(|err| do_target_shape_error(err, target.span))?;
 
-        return Err(ConstructorError::UnsupportedExpression {
-            kind: format!(
-                "missing Monad evidence for do target {}; target shape elaborated successfully, but SPEC-067 Monad<K> dictionary resolution is not implemented",
-                render_surface_type(&surface_target)
-            ),
-            span: target.span,
-        });
+        return resolve_monad_evidence_dictionary(env, target, &surface_target);
     }
 
     let (qualified, type_info) =
@@ -70,15 +61,10 @@ pub(crate) fn resolve_do_target(
                 span: target.span,
             })?;
 
-    if qualified.name == "Result" {
-        let surface_target = SurfaceType::Name(target.name.to_string().into());
-        if let Err(err) = env.elaborate_do_target_constructor_expr(&surface_target) {
-            return Err(do_target_shape_error(err, target.span));
-        }
-        return Err(ConstructorError::UnsupportedExpression {
-            kind: "missing Monad evidence for do target Result; target shape elaborated successfully, but SPEC-067 Monad<K> dictionary resolution is not implemented".to_string(),
-            span: target.span,
-        });
+    if qualified.name == "Result"
+        && let Err(err) = env.elaborate_do_target_constructor_expr(&surface_target)
+    {
+        return Err(do_target_shape_error(err, target.span));
     }
 
     let arity = type_info
@@ -136,12 +122,63 @@ pub(crate) fn resolve_do_target(
             tower_level: DoTowerLevel::Workflow,
         }),
         "Result" => unreachable!("Result is rejected before MVP dictionary selection"),
-        other => Err(ConstructorError::UnsupportedExpression {
-            kind: format!(
-                "do target {other} has no MVP dictionary; future Monad<K> interface resolution is deferred"
-            ),
-            span: target.span,
-        }),
+        _ => resolve_monad_evidence_dictionary(env, target, &surface_target),
+    }
+}
+
+fn surface_target_type(target: &DoTarget) -> SurfaceType {
+    if target.args.is_empty() {
+        SurfaceType::Name(target.name.to_string().into())
+    } else {
+        SurfaceType::Constructor {
+            name: target.name.to_string().into(),
+            args: target.args.clone(),
+        }
+    }
+}
+
+fn resolve_monad_evidence_dictionary(
+    env: &TypeEnv,
+    target: &DoTarget,
+    surface_target: &SurfaceType,
+) -> Result<DoDictionary, ConstructorError> {
+    env.resolve_interface_evidence("Monad", std::slice::from_ref(surface_target))
+        .map_err(|err| missing_monad_evidence_error(surface_target, err, target.span))?;
+
+    Ok(DoDictionary {
+        target: QualifiedName::root(target.name.to_string()),
+        value_constructor: QualifiedName::root(target.name.to_string()),
+        return_op: DoDictionaryOp::Ordinary(QualifiedName::qualified(
+            vec!["Monad".to_string()],
+            "return",
+        )),
+        bind_op: DoDictionaryOp::Ordinary(QualifiedName::qualified(
+            vec!["Monad".to_string()],
+            "bind",
+        )),
+        tower_level: DoTowerLevel::Effectful,
+    })
+}
+
+fn missing_monad_evidence_error(
+    surface_target: &SurfaceType,
+    err: TypeEnvError,
+    span: ash_parser::token::Span,
+) -> ConstructorError {
+    let target = render_surface_type(surface_target);
+    let evidence = format!("Monad<{target}>");
+    let detail = match err {
+        TypeEnvError::MissingImpl { .. } | TypeEnvError::MissingInterface(_, _) => {
+            "explicit evidence was not found".to_string()
+        }
+        other => other.to_string(),
+    };
+
+    ConstructorError::UnsupportedExpression {
+        kind: format!(
+            "missing Monad evidence for do target {target}; required SPEC-067 Monad<K> evidence {evidence}: {detail}"
+        ),
+        span,
     }
 }
 
@@ -449,9 +486,10 @@ mod tests {
 
         let message = error_text(
             resolve_do_target(&env, &target("Boxed"))
-                .expect_err("generic AST-only target has kind but no MVP dictionary"),
+                .expect_err("generic AST-only target has kind but no Monad evidence"),
         );
-        assert!(message.contains("no MVP dictionary"), "{message}");
+        assert!(message.contains("missing Monad evidence"), "{message}");
+        assert!(message.contains("Monad<Boxed>"), "{message}");
         assert!(!message.contains("has kind *"), "{message}");
     }
 }

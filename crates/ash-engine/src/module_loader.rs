@@ -3692,6 +3692,11 @@ fn rewrite_canonical_type_expr_visible_type_names(
                 rewrite_canonical_type_expr_visible_type_names(arg, alias_map);
             }
         }
+        CanonicalTypeExpr::ConstructorVariableApp(app) => {
+            for arg in &mut app.args {
+                rewrite_canonical_type_expr_visible_type_names(arg, alias_map);
+            }
+        }
     }
 }
 
@@ -4110,6 +4115,11 @@ fn collect_canonical_type_dependencies(
                 collect_canonical_type_dependencies(arg, dependencies);
             }
         }
+        CanonicalTypeExpr::ConstructorVariableApp(app) => {
+            for arg in &app.args {
+                collect_canonical_type_dependencies(arg, dependencies);
+            }
+        }
     }
 }
 
@@ -4320,6 +4330,11 @@ fn collect_canonical_type_function_heads(
             }
         }
         CanonicalTypeExpr::PromotedDataConstructorApp(app) => {
+            for arg in &app.args {
+                collect_canonical_type_function_heads(arg, heads);
+            }
+        }
+        CanonicalTypeExpr::ConstructorVariableApp(app) => {
             for arg in &app.args {
                 collect_canonical_type_function_heads(arg, heads);
             }

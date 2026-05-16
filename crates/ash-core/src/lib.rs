@@ -49,7 +49,8 @@ pub use stream::{
     ReceiveArm as StreamReceiveArm, ReceiveMode as StreamReceiveMode, StreamRef,
 };
 pub use type_ir::{
-    CanonicalTypeExpr, DomainConstructorApp, InterfaceBoundProposition, NamedPredicateProposition,
+    CanonicalTypeExpr, ConstructorVariableApp, ConstructorVariableRef, DomainConstructorApp,
+    InterfaceBoundProposition, KindedTypeBinder, KindedTypeBound, NamedPredicateProposition,
     NormalTypeExpr, PartialTypeArg, PartialTypeConstructorApp, PromotedConstructorApp,
     PropositionBoundary, PropositionDeferredKind, PropositionDeferredReason, PropositionEvidence,
     PropositionEvidenceRule, PropositionOutcome, PropositionRefutation,

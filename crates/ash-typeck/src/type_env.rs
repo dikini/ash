@@ -1638,6 +1638,7 @@ fn proposition_deferred_kind_from_blockers(blockers: &[NormalTypeExpr]) -> Propo
 fn normal_form_block_reason(normal: &NormalTypeExpr) -> Option<NormalFormBlockReason> {
     match normal {
         NormalTypeExpr::NeutralComputationApp { reason, .. } => Some(reason.clone()),
+        NormalTypeExpr::ConstructorVariableApp { reason, .. } => Some(reason.clone()),
         NormalTypeExpr::Projection { reason, .. } => {
             Some(reason.clone().unwrap_or(NormalFormBlockReason::Unsupported))
         }
@@ -1651,6 +1652,12 @@ fn normal_form_block_reason(normal: &NormalTypeExpr) -> Option<NormalFormBlockRe
 
 fn collect_proposition_blockers(normal: &NormalTypeExpr, blockers: &mut Vec<NormalTypeExpr>) {
     match normal {
+        NormalTypeExpr::ConstructorVariableApp { args, .. } => {
+            blockers.push(normal.clone());
+            for arg in args {
+                collect_proposition_blockers(arg, blockers);
+            }
+        }
         NormalTypeExpr::NeutralComputationApp { .. } | NormalTypeExpr::Projection { .. } => {
             blockers.push(normal.clone());
         }
@@ -1668,6 +1675,7 @@ fn collect_proposition_blockers(normal: &NormalTypeExpr, blockers: &mut Vec<Norm
 fn proposition_normal_form_is_open_or_blocked(normal: &NormalTypeExpr) -> bool {
     match normal {
         NormalTypeExpr::Var(_)
+        | NormalTypeExpr::ConstructorVariableApp { .. }
         | NormalTypeExpr::NeutralComputationApp { .. }
         | NormalTypeExpr::Projection { .. } => true,
         NormalTypeExpr::NominalApp { args, .. }
@@ -1714,6 +1722,7 @@ fn synthetic_proposition_module_identity() -> ModuleIdentity {
 fn canonical_expr_contains_var(expr: &CanonicalTypeExpr) -> bool {
     match expr {
         CanonicalTypeExpr::Var(_) => true,
+        CanonicalTypeExpr::ConstructorVariableApp(_) => true,
         CanonicalTypeExpr::NominalApp { args, .. }
         | CanonicalTypeExpr::Projection { args, .. }
         | CanonicalTypeExpr::ComputationHeadApp { args, .. } => {
@@ -1815,6 +1824,21 @@ fn canonical_projection_base_spelling(base: &CanonicalTypeExpr) -> String {
             }
         }
         CanonicalTypeExpr::PromotedDataConstructorApp(app) => {
+            if app.args.is_empty() {
+                app.constructor.name.clone()
+            } else {
+                format!(
+                    "{}<{}>",
+                    app.constructor.name,
+                    app.args
+                        .iter()
+                        .map(canonical_projection_base_spelling)
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                )
+            }
+        }
+        CanonicalTypeExpr::ConstructorVariableApp(app) => {
             if app.args.is_empty() {
                 app.constructor.name.clone()
             } else {
@@ -1999,80 +2023,87 @@ fn result_constraint_from_pattern(
 fn type_function_result_from_canonical(
     canonical: CanonicalTypeExpr,
     span: Span,
-) -> TypeFunctionResultExpr {
+) -> Result<TypeFunctionResultExpr, TypeEnvError> {
     match canonical {
-        CanonicalTypeExpr::Primitive(name) => TypeFunctionResultExpr::Primitive {
+        CanonicalTypeExpr::Primitive(name) => Ok(TypeFunctionResultExpr::Primitive {
             name: name.clone(),
             kind: Kind::Type,
             constraint: TypeFunctionResultConstraint::Kind(Kind::Type),
             source_anchor: span_anchor(span, format!("primitive type {name}")),
-        },
-        CanonicalTypeExpr::Var(name) => TypeFunctionResultExpr::Var {
+        }),
+        CanonicalTypeExpr::Var(name) => Ok(TypeFunctionResultExpr::Var {
             name: name.clone(),
             kind: Kind::Type,
             constraint: TypeFunctionResultConstraint::Kind(Kind::Type),
             source_anchor: span_anchor(span, format!("type variable {name}")),
-        },
+        }),
         CanonicalTypeExpr::NominalApp {
             origin,
             visible_name,
             args,
             kind,
-        } => TypeFunctionResultExpr::NominalApp {
+        } => Ok(TypeFunctionResultExpr::NominalApp {
             origin,
             visible_name: visible_name.clone(),
             args: args
                 .into_iter()
                 .map(|arg| type_function_result_from_canonical(arg, span))
-                .collect(),
+                .collect::<Result<Vec<_>, _>>()?,
             kind: kind.clone(),
             constraint: TypeFunctionResultConstraint::Kind(kind),
             source_anchor: span_anchor(span, format!("nominal type {visible_name}")),
-        },
+        }),
         CanonicalTypeExpr::Projection {
             interface,
             member,
             args,
             kind,
             rigidity,
-        } => TypeFunctionResultExpr::Projection {
+        } => Ok(TypeFunctionResultExpr::Projection {
             interface,
             member,
             args: args
                 .into_iter()
                 .map(|arg| type_function_result_from_canonical(arg, span))
-                .collect(),
+                .collect::<Result<Vec<_>, _>>()?,
             kind: kind.clone(),
             constraint: TypeFunctionResultConstraint::Kind(kind),
             rigidity,
             source_anchor: span_anchor(span, "associated projection"),
-        },
+        }),
         CanonicalTypeExpr::ComputationHeadApp { head, args, kind } => {
-            TypeFunctionResultExpr::ComputationHeadApp {
+            Ok(TypeFunctionResultExpr::ComputationHeadApp {
                 head,
                 args: args
                     .into_iter()
                     .map(|arg| type_function_result_from_canonical(arg, span))
-                    .collect(),
+                    .collect::<Result<Vec<_>, _>>()?,
                 kind: kind.clone(),
                 constraint: TypeFunctionResultConstraint::Kind(kind),
                 source_anchor: span_anchor(span, "type function call"),
-            }
+            })
         }
         CanonicalTypeExpr::PromotedDataConstructorApp(app) => {
-            TypeFunctionResultExpr::PromotedDataConstructorApp {
+            Ok(TypeFunctionResultExpr::PromotedDataConstructorApp {
                 constructor: Box::new(app.constructor),
                 data_kind: Box::new(app.data_kind),
                 args: app
                     .args
                     .into_iter()
                     .map(|arg| type_function_result_from_canonical(arg, span))
-                    .collect(),
+                    .collect::<Result<Vec<_>, _>>()?,
                 kind: app.kind.clone(),
                 constraint: TypeFunctionResultConstraint::Kind(app.kind),
                 source_anchor: span_anchor(span, "promoted data constructor"),
-            }
+            })
         }
+        CanonicalTypeExpr::ConstructorVariableApp(app) => Err(TypeEnvError::InvalidDefinition(
+            format!(
+                "constructor-variable application '{}' cannot be lowered to a type-function result until TASK-907 tracks constructor variables",
+                app.constructor.name
+            ),
+            span,
+        )),
     }
 }
 
@@ -2091,6 +2122,12 @@ fn canonical_type_expr_head_name(expr: &CanonicalTypeExpr) -> String {
         }
         CanonicalTypeExpr::PromotedDataConstructorApp(app) => {
             format!("promoted data constructor '{}'", app.constructor.name)
+        }
+        CanonicalTypeExpr::ConstructorVariableApp(app) => {
+            format!(
+                "constructor-variable application '{}'",
+                app.constructor.name
+            )
         }
     }
 }
@@ -2187,6 +2224,13 @@ fn associated_family_result_from_canonical(
             ),
             span,
         )),
+        CanonicalTypeExpr::ConstructorVariableApp(app) => Err(TypeEnvError::InvalidDefinition(
+            format!(
+                "constructor-variable application '{}' cannot be used as an associated-family result until TASK-907 tracks constructor variables and TASK-908 defines higher-kinded interface evidence",
+                app.constructor.name
+            ),
+            span,
+        )),
     }
 }
 
@@ -2271,6 +2315,15 @@ fn associated_family_result_from_normal(
             rigidity,
             source_anchor,
         }),
+        NormalTypeExpr::ConstructorVariableApp { constructor, .. } => {
+            Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "constructor-variable application '{}' cannot be published as an associated-family result until TASK-907 tracks constructor variables",
+                    constructor.name
+                ),
+                span,
+            ))
+        }
         NormalTypeExpr::PromotedDataConstructorApp { constructor, .. } => {
             Err(TypeEnvError::InvalidDefinition(
                 format!(
@@ -4751,12 +4804,12 @@ impl TypeEnv {
                 let canonical = self
                     .lower_surface_type_to_canonical(ty)
                     .map_err(|err| TypeEnvError::InvalidDefinition(format!("{err}"), span))?;
-                Ok(Self::associated_family_pattern_from_canonical(
+                Self::associated_family_pattern_from_canonical(
                     canonical,
                     &constraint,
                     var_constraints,
                     span,
-                ))
+                )
             }
             SurfaceType::Constructor { name, args } => {
                 if let Some(domain_id) = expected_domain {
@@ -4783,12 +4836,12 @@ impl TypeEnv {
                 let canonical = self
                     .lower_surface_type_to_canonical(ty)
                     .map_err(|err| TypeEnvError::InvalidDefinition(format!("{err}"), span))?;
-                Ok(Self::associated_family_pattern_from_canonical(
+                Self::associated_family_pattern_from_canonical(
                     canonical,
                     &constraint,
                     var_constraints,
                     span,
-                ))
+                )
             }
             SurfaceType::List(item) => {
                 if expected_domain.is_some() {
@@ -4806,12 +4859,12 @@ impl TypeEnv {
                 let canonical = self
                     .lower_surface_type_to_canonical(&list_ty)
                     .map_err(|err| TypeEnvError::InvalidDefinition(format!("{err}"), span))?;
-                Ok(Self::associated_family_pattern_from_canonical(
+                Self::associated_family_pattern_from_canonical(
                     canonical,
                     &constraint,
                     var_constraints,
                     span,
-                ))
+                )
             }
             _ => Err(TypeEnvError::WrongAssociatedFamilyResultDomain {
                 family: "<impl head>".to_string(),
@@ -4829,30 +4882,30 @@ impl TypeEnv {
         constraint: &AssociatedFamilyResultConstraint,
         var_constraints: &HashMap<String, AssociatedFamilyResultConstraint>,
         span: Span,
-    ) -> AssociatedFamilyPattern {
+    ) -> Result<AssociatedFamilyPattern, TypeEnvError> {
         match canonical {
-            CanonicalTypeExpr::Primitive(name) => AssociatedFamilyPattern::Primitive {
+            CanonicalTypeExpr::Primitive(name) => Ok(AssociatedFamilyPattern::Primitive {
                 name: name.clone(),
                 constraint: constraint.clone(),
                 source_anchor: span_anchor(
                     span,
                     format!("associated family primitive pattern {name}"),
                 ),
-            },
-            CanonicalTypeExpr::Var(name) => AssociatedFamilyPattern::Var {
+            }),
+            CanonicalTypeExpr::Var(name) => Ok(AssociatedFamilyPattern::Var {
                 name: name.clone(),
                 constraint: var_constraints
                     .get(name.as_str())
                     .cloned()
                     .unwrap_or_else(|| constraint.clone()),
                 source_anchor: span_anchor(span, format!("associated family pattern {name}")),
-            },
+            }),
             CanonicalTypeExpr::NominalApp {
                 origin,
                 visible_name,
                 args,
                 kind: _,
-            } => AssociatedFamilyPattern::NominalApp {
+            } => Ok(AssociatedFamilyPattern::NominalApp {
                 origin,
                 visible_name: visible_name.clone(),
                 args: args
@@ -4865,21 +4918,28 @@ impl TypeEnv {
                             span,
                         )
                     })
-                    .collect(),
+                    .collect::<Result<Vec<_>, _>>()?,
                 constraint: constraint.clone(),
                 source_anchor: span_anchor(
                     span,
                     format!("associated family pattern {visible_name}"),
                 ),
-            },
+            }),
             CanonicalTypeExpr::Projection { .. }
             | CanonicalTypeExpr::ComputationHeadApp { .. }
             | CanonicalTypeExpr::PromotedDataConstructorApp(_) => {
-                AssociatedFamilyPattern::Wildcard {
+                Ok(AssociatedFamilyPattern::Wildcard {
                     constraint: constraint.clone(),
                     source_anchor: span_anchor(span, "associated family unsupported pattern"),
-                }
+                })
             }
+            CanonicalTypeExpr::ConstructorVariableApp(app) => Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "constructor-variable application '{}' cannot be lowered to an associated-family pattern until TASK-907 tracks constructor variables",
+                    app.constructor.name
+                ),
+                span,
+            )),
         }
     }
 
@@ -6848,6 +6908,13 @@ impl TypeEnv {
                 }
                 Ok(())
             }
+            CanonicalTypeExpr::ConstructorVariableApp(app) => Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "type-function summary '{owner}' {position} contains constructor-variable application '{}', which is unsupported until TASK-907",
+                    app.constructor.name
+                ),
+                Span::default(),
+            )),
             CanonicalTypeExpr::ComputationHeadApp { head, args, kind } => {
                 if kind != &Kind::Type {
                     return Err(TypeEnvError::InvalidDefinition(
@@ -8388,6 +8455,11 @@ impl TypeEnv {
                     self.collect_public_canonical_type_closure_for_associated_family(arg, closure);
                 }
             }
+            CanonicalTypeExpr::ConstructorVariableApp(app) => {
+                for arg in &app.args {
+                    self.collect_public_canonical_type_closure_for_associated_family(arg, closure);
+                }
+            }
         }
     }
 
@@ -8684,6 +8756,11 @@ impl TypeEnv {
                 closure
                     .ordinary_types
                     .insert(app.data_kind.source_type.clone());
+                for arg in &app.args {
+                    self.collect_public_canonical_type_closure(arg, closure);
+                }
+            }
+            CanonicalTypeExpr::ConstructorVariableApp(app) => {
                 for arg in &app.args {
                     self.collect_public_canonical_type_closure(arg, closure);
                 }
@@ -9208,6 +9285,13 @@ impl TypeEnv {
                 }
                 Ok(())
             }
+            CanonicalTypeExpr::ConstructorVariableApp(app) => Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "public type function '{}' cannot export constructor-variable application '{}' until TASK-907 tracks constructor variables",
+                    def.name, app.constructor.name
+                ),
+                span,
+            )),
         }
     }
 
@@ -10122,7 +10206,10 @@ impl TypeEnv {
             ),
             other => self
                 .lower_surface_type_to_canonical(other)
-                .map(|canonical| type_function_result_from_canonical(canonical, span))
+                .and_then(|canonical| {
+                    type_function_result_from_canonical(canonical, span)
+                        .map_err(|err| TypeError::TypeEnv(Box::new(err)))
+                })
                 .map_err(|err| {
                     TypeEnvError::InvalidDefinition(format!("result kind mismatch: {err}"), span)
                 }),
@@ -10347,7 +10434,10 @@ impl TypeEnv {
             }
         };
         self.lower_surface_type_to_canonical(&surface)
-            .map(|canonical| type_function_result_from_canonical(canonical, span))
+            .and_then(|canonical| {
+                type_function_result_from_canonical(canonical, span)
+                    .map_err(|err| TypeError::TypeEnv(Box::new(err)))
+            })
             .map_err(|_| {
                 let prefix =
                     if name.chars().next().is_some_and(char::is_uppercase) && args.is_empty() {
@@ -11490,6 +11580,13 @@ impl TypeEnv {
                 }
                 Ok(())
             }
+            CanonicalTypeExpr::ConstructorVariableApp(app) => Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "public proposition '{public_item}' cannot export constructor-variable application '{}' until TASK-908 defines higher-kinded evidence summaries",
+                    app.constructor.name
+                ),
+                span,
+            )),
         }
     }
 
@@ -11873,6 +11970,12 @@ impl TypeEnv {
                     {
                         self.validate_canonical_promoted_data_kind(arg, expected_kind, span)?;
                     }
+                }
+                Ok(())
+            }
+            CanonicalTypeExpr::ConstructorVariableApp(app) => {
+                for arg in &app.args {
+                    self.validate_canonical_proposition_promoted_operands(arg, span)?;
                 }
                 Ok(())
             }
@@ -12274,7 +12377,19 @@ impl TypeEnv {
                 },
             },
             SurfaceType::Constructor { name, args } => {
-                let (qualified, _) = self.resolve_type(name.as_ref())?;
+                let (qualified, _) =
+                    self.resolve_type(name.as_ref()).map_err(|err| match err {
+                        TypeError::UnboundVariable(_, span) => {
+                            TypeError::from(TypeEnvError::InvalidDefinition(
+                                format!(
+                                    "constructor-variable application '{}<...>' cannot be lowered until TASK-907 tracks constructor variables",
+                                    name
+                                ),
+                                span,
+                            ))
+                        }
+                        err => err,
+                    })?;
                 self.check_type_constructor_arity(&qualified, args.len())?;
                 Ok(CanonicalTypeExpr::NominalApp {
                     origin: self.canonical_type_identity_for_visible_name(name.as_ref())?,

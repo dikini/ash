@@ -333,6 +333,9 @@ pub struct NormalizationTraceEvent {
 pub enum NormalizationEvidence {
     /// The skeleton normalizer performed structural identity conversion only.
     StructuralIdentity,
+    /// A constructor-variable application was preserved without attempting
+    /// constructor unification or evidence search.
+    ConstructorVariableApplicationPreserved,
     /// A computation head was preserved as neutral because no equation registry
     /// exists in TASK-819.
     NeutralUnsupportedComputation,
@@ -611,6 +614,7 @@ impl<'env> Normalizer<'env> {
                     .with_normal_slice(normal)))
                 }
                 normal @ (NormalTypeExpr::Var(_)
+                | NormalTypeExpr::ConstructorVariableApp { .. }
                 | NormalTypeExpr::NeutralComputationApp { .. }
                 | NormalTypeExpr::Projection { .. }) => {
                     Err(Box::new(NormalizerDiagnostic::new(
@@ -749,6 +753,26 @@ fn collect_normal_form_diagnostics(
                 collect_normal_form_diagnostics(arg, diagnostics);
             }
         }
+        NormalTypeExpr::ConstructorVariableApp {
+            constructor,
+            args,
+            reason,
+            ..
+        } => {
+            diagnostics.push(
+                NormalizerDiagnostic::new(
+                    NormalizerDiagnosticKind::NeutralStuckNormalizationNote,
+                    format!(
+                        "constructor-variable application '{}' is preserved without constructor unification until TASK-907 ({reason:?})",
+                        constructor.name
+                    ),
+                )
+                .with_normal_slice(normal.clone()),
+            );
+            for arg in args {
+                collect_normal_form_diagnostics(arg, diagnostics);
+            }
+        }
         NormalTypeExpr::NominalApp { args, .. }
         | NormalTypeExpr::DomainConstructorApp { args, .. }
         | NormalTypeExpr::PromotedDataConstructorApp { args, .. } => {
@@ -861,6 +885,24 @@ fn normal_forms_definitionally_equal(lhs: &NormalTypeExpr, rhs: &NormalTypeExpr)
         ) => {
             lhs_constructor == rhs_constructor
                 && lhs_data_kind == rhs_data_kind
+                && lhs_kind == rhs_kind
+                && normal_arg_spines_definitionally_equal(lhs_args, rhs_args)
+        }
+        (
+            NormalTypeExpr::ConstructorVariableApp {
+                constructor: lhs_constructor,
+                args: lhs_args,
+                kind: lhs_kind,
+                ..
+            },
+            NormalTypeExpr::ConstructorVariableApp {
+                constructor: rhs_constructor,
+                args: rhs_args,
+                kind: rhs_kind,
+                ..
+            },
+        ) => {
+            lhs_constructor == rhs_constructor
                 && lhs_kind == rhs_kind
                 && normal_arg_spines_definitionally_equal(lhs_args, rhs_args)
         }
@@ -984,6 +1026,10 @@ fn normal_forms_are_structurally_disjoint(lhs: &NormalTypeExpr, rhs: &NormalType
                 || normal_arg_spines_structurally_disjoint(lhs_args, rhs_args)
         }
         (
+            NormalTypeExpr::ConstructorVariableApp { .. },
+            NormalTypeExpr::ConstructorVariableApp { .. },
+        ) => false,
+        (
             NormalTypeExpr::NeutralComputationApp {
                 head: lhs_head,
                 args: lhs_args,
@@ -1072,6 +1118,7 @@ fn normal_form_is_concrete(expr: &NormalTypeExpr) -> bool {
             args.iter().all(normal_form_is_concrete)
         }
         NormalTypeExpr::Var(_)
+        | NormalTypeExpr::ConstructorVariableApp { .. }
         | NormalTypeExpr::NeutralComputationApp { .. }
         | NormalTypeExpr::Projection { .. } => false,
     }
@@ -1089,6 +1136,12 @@ fn neutrality_blockers_for_mismatch(
 
 fn collect_neutrality_blockers(expr: &NormalTypeExpr, blockers: &mut Vec<NormalTypeExpr>) {
     match expr {
+        NormalTypeExpr::ConstructorVariableApp { args, .. } => {
+            blockers.push(expr.clone());
+            for arg in args {
+                collect_neutrality_blockers(arg, blockers);
+            }
+        }
         NormalTypeExpr::NeutralComputationApp { .. } | NormalTypeExpr::Projection { .. } => {
             blockers.push(expr.clone());
         }
@@ -1321,7 +1374,7 @@ fn block_reason_for_normal(arg: &NormalTypeExpr) -> NormalFormBlockReason {
 
 fn normal_contains_var(normal: &NormalTypeExpr) -> bool {
     match normal {
-        NormalTypeExpr::Var(_) => true,
+        NormalTypeExpr::Var(_) | NormalTypeExpr::ConstructorVariableApp { .. } => true,
         NormalTypeExpr::NominalApp { args, .. }
         | NormalTypeExpr::DomainConstructorApp { args, .. }
         | NormalTypeExpr::PromotedDataConstructorApp { args, .. }
@@ -1404,6 +1457,15 @@ impl<'env> NormalizationState<'env> {
                     kind: app.kind.clone(),
                 },
                 NormalizationEvidence::StructuralIdentity,
+            ),
+            CanonicalTypeExpr::ConstructorVariableApp(app) => (
+                NormalTypeExpr::ConstructorVariableApp {
+                    constructor: Box::new(app.constructor.clone()),
+                    args: self.normalize_args(&app.args)?,
+                    kind: app.kind.clone(),
+                    reason: NormalFormBlockReason::Unsupported,
+                },
+                NormalizationEvidence::ConstructorVariableApplicationPreserved,
             ),
             CanonicalTypeExpr::Projection {
                 interface,

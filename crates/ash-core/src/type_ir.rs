@@ -214,6 +214,135 @@ impl PartialTypeConstructorApp {
     }
 }
 
+/// Shared source/core binder for a named type parameter with an explicit kind.
+///
+/// This carrier is intentionally semantic substrate only. Parser and TypeEnv
+/// tasks decide when source syntax may create it and how bounds are validated.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct KindedTypeBinder {
+    /// Source-visible binder name.
+    pub name: String,
+    /// Kind assigned to the binder, such as `*` or `* -> *`.
+    pub kind: Kind,
+    /// Optional source anchor for diagnostics.
+    pub source_anchor: Option<SourceAnchor>,
+    /// Interface/proposition bounds attached to this binder when available.
+    pub bounds: Vec<KindedTypeBound>,
+}
+
+impl KindedTypeBinder {
+    /// Creates a kinded type binder carrier.
+    #[must_use]
+    pub fn new(
+        name: impl Into<String>,
+        kind: Kind,
+        source_anchor: Option<SourceAnchor>,
+        bounds: Vec<KindedTypeBound>,
+    ) -> Self {
+        Self {
+            name: name.into(),
+            kind,
+            source_anchor,
+            bounds,
+        }
+    }
+}
+
+/// Interface-bound metadata attached to a kinded type binder.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct KindedTypeBound {
+    /// Interface identity for the bound.
+    pub interface: InterfaceIdentityId,
+    /// Additional interface argument spine, if the bound is not unary.
+    pub args: Vec<TypeConstructorExpr>,
+    /// Optional source anchor for diagnostics.
+    pub source_anchor: Option<SourceAnchor>,
+}
+
+impl KindedTypeBound {
+    /// Creates kinded binder bound metadata.
+    #[must_use]
+    pub fn new(
+        interface: InterfaceIdentityId,
+        args: Vec<TypeConstructorExpr>,
+        source_anchor: Option<SourceAnchor>,
+    ) -> Self {
+        Self {
+            interface,
+            args,
+            source_anchor,
+        }
+    }
+}
+
+/// Reference to a constructor-kinded type variable.
+///
+/// The name is scoped by the owning binder environment; this carrier is separate
+/// from nominal type identities so `M<A>` cannot be confused with a type named
+/// `M` applied to `A`.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct ConstructorVariableRef {
+    /// Binder name for the constructor variable.
+    pub name: String,
+    /// Kind assigned to the constructor variable.
+    pub kind: Kind,
+    /// Optional source anchor for diagnostics.
+    pub source_anchor: Option<SourceAnchor>,
+}
+
+impl ConstructorVariableRef {
+    /// Creates a constructor-variable reference carrier.
+    #[must_use]
+    pub fn new(name: impl Into<String>, kind: Kind, source_anchor: Option<SourceAnchor>) -> Self {
+        Self {
+            name: name.into(),
+            kind,
+            source_anchor,
+        }
+    }
+
+    /// Creates a constructor-variable reference from a kinded binder.
+    #[must_use]
+    pub fn from_binder(binder: &KindedTypeBinder) -> Self {
+        Self {
+            name: binder.name.clone(),
+            kind: binder.kind.clone(),
+            source_anchor: binder.source_anchor.clone(),
+        }
+    }
+}
+
+/// Canonical application of a constructor variable to a type argument spine.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct ConstructorVariableApp {
+    /// Constructor-variable head being applied.
+    pub constructor: ConstructorVariableRef,
+    /// Proper type argument spine.
+    pub args: Vec<CanonicalTypeExpr>,
+    /// Result kind after applying the argument spine.
+    pub kind: Kind,
+    /// Optional source anchor for diagnostics.
+    pub source_anchor: Option<SourceAnchor>,
+}
+
+impl ConstructorVariableApp {
+    /// Creates a constructor-variable application carrier.
+    #[must_use]
+    pub fn new(
+        constructor: ConstructorVariableRef,
+        args: Vec<CanonicalTypeExpr>,
+        kind: Kind,
+        source_anchor: Option<SourceAnchor>,
+    ) -> Self {
+        Self {
+            constructor,
+            args,
+            kind,
+            source_anchor,
+        }
+    }
+}
+
 /// Canonical carrier for expressions that may denote proper types or constructors.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[non_exhaustive]
@@ -375,6 +504,7 @@ pub enum CanonicalTypeExpr {
         args: Vec<CanonicalTypeExpr>,
         kind: Kind,
     },
+    ConstructorVariableApp(Box<ConstructorVariableApp>),
 }
 
 /// Canonical type-level proposition crossing crate/module/cache/summary or stable
@@ -857,6 +987,14 @@ pub enum NormalTypeExpr {
         data_kind: Box<PromotedDataKindId>,
         args: Vec<NormalTypeExpr>,
         kind: Kind,
+    },
+    ConstructorVariableApp {
+        constructor: Box<ConstructorVariableRef>,
+        args: Vec<NormalTypeExpr>,
+        kind: Kind,
+        /// Reason preserved while constructor-variable kinding and unification
+        /// remain owned by later HKT TypeEnv tasks.
+        reason: NormalFormBlockReason,
     },
     NeutralComputationApp {
         head: TypeComputationHeadId,

@@ -1,6 +1,6 @@
 # TASK-905: Add core kinded binder and constructor-variable application carriers
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -61,11 +61,19 @@ commands:
   - git diff --check
   - cargo check --workspace
 checklist:
-  - [ ] Focused tests are non-zero and pass
-  - [ ] cargo fmt --check passes
-  - [ ] git diff --check passes
-  - [ ] Status surfaces and CHANGELOG are reconciled if this task completes
+  - [x] Focused tests are non-zero and pass
+  - [x] cargo fmt --check passes
+  - [x] git diff --check passes
+  - [x] Status surfaces and CHANGELOG are reconciled if this task completes
 ```
+
+## Completion Evidence
+
+- `cargo test -p ash-core --test task_905_hkt_core_carriers`: 2 passed
+- `cargo test -p ash-typeck --test task_905_hkt_typeenv_fail_closed`: 1 passed
+- `cargo fmt --check`: passed
+- `git diff --check`: passed
+- `cargo check --workspace`: passed
 
 ## Dependencies for Next Task
 
@@ -74,3 +82,5 @@ This task produces its verified slice for later tasks in [PLAN-116](../PLAN-116-
 ## Notes
 
 HKT is a cross-cutting type-system feature; do not implement as do-only magic.
+
+Explicit deferrals remain owned by later tasks: parser syntax is TASK-906, TypeEnv constructor-variable kinding/unification is TASK-907, and HKT evidence is TASK-908.

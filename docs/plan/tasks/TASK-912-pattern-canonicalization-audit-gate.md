@@ -1,6 +1,6 @@
 # TASK-912: Audit pattern/exhaustiveness constructor resolution and decide equality API vs pattern-specific API
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -55,11 +55,11 @@ commands:
   - test -f docs/plan/audits/TASK-912-pattern-canonicalization-audit-gate.md
   - git diff --check
 checklist:
-  - [ ] Audit artifact exists and names exact live callsites
-  - [ ] Downstream fail-closed guards are replaced with focused non-zero commands
-  - [ ] cargo fmt --check passes
-  - [ ] git diff --check passes
-  - [ ] Status surfaces and CHANGELOG are reconciled if this task completes
+  - [x] Audit artifact exists and names exact live callsites
+  - [x] Downstream fail-closed guards are replaced with focused non-zero commands
+  - [x] cargo fmt --check passes
+  - [x] git diff --check passes
+  - [x] Status surfaces and CHANGELOG are reconciled if this task completes
 ```
 
 ## Dependencies for Next Task
@@ -69,3 +69,14 @@ This task produces its verified slice for later tasks in [PLAN-117](../PLAN-117-
 ## Notes
 
 Pattern canonicalization is audit-first and must not solve under neutral computation heads.
+
+## Completion Evidence
+
+- Audit artifact: [TASK-912-pattern-canonicalization-audit-gate.md](../audits/TASK-912-pattern-canonicalization-audit-gate.md).
+- Decision: downstream implementation must add a pattern-specific TypeEnv API rather than directly consuming `canonicalize_type_for_equality`.
+- Downstream guards patched in TASK-913 through TASK-916 with exact focused non-zero commands and expected future `ash-typeck` integration test binaries.
+- Verification run on 2026-05-17:
+  - `cargo fmt --check`
+  - `test -f docs/plan/audits/TASK-912-pattern-canonicalization-audit-gate.md`
+  - `git diff --check`
+  - `! rg -n 'false # TASK-91[3-6]' docs/plan/tasks/TASK-91{3,4,5,6}-*.md`

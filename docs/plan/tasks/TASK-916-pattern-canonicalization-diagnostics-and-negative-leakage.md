@@ -27,7 +27,12 @@ Add blocked-neutral, wrong-identity, and unrelated-name leakage diagnostics/test
 
 ## File Targets
 
-- Exact files must be confirmed by the audit gate before implementation.
+- `crates/ash-typeck/src/error.rs`: add or route stable pattern canonicalization diagnostics if existing variants are insufficient.
+- `crates/ash-typeck/src/check_pattern.rs`: report wrong-identity and blocked canonicalization errors from the TASK-913/TASK-914 boundary.
+- `crates/ash-typeck/src/check_expr.rs`: report blocked exhaustiveness universe diagnostics from the TASK-915 boundary.
+- `crates/ash-typeck/tests/task_916_pattern_canonicalization_diagnostics.rs`: create focused blocked-neutral and wrong-identity diagnostic tests.
+- `crates/ash-typeck/tests/task_916_pattern_canonicalization_negative_leakage.rs`: create focused unrelated same-visible-name and direct ADT non-interference tests.
+- Audit reference: [TASK-912 pattern canonicalization audit gate](../audits/TASK-912-pattern-canonicalization-audit-gate.md).
 
 ## TDD / Execution Steps
 
@@ -51,7 +56,11 @@ toolsets: [terminal, file]
 ```yaml
 strictness: clean
 commands:
-  - false # TASK-916 must replace this guard with exact focused commands after its audit gate
+  - cargo test -p ash-typeck --test task_916_pattern_canonicalization_diagnostics -- --nocapture
+  - cargo test -p ash-typeck --test task_916_pattern_canonicalization_negative_leakage -- --nocapture
+  - cargo fmt --check
+  - git diff --check
+  - cargo check --workspace
 checklist:
   - [ ] Focused tests are non-zero and pass
   - [ ] cargo fmt --check passes

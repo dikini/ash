@@ -20,7 +20,7 @@
 
 | Task | Description | Type | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-912](tasks/TASK-912-pattern-canonicalization-audit-gate.md) | Audit pattern/exhaustiveness constructor resolution and decide equality API vs pattern-specific API | Docs/Substrate | 5 | 📝 Planned |
+| [TASK-912](tasks/TASK-912-pattern-canonicalization-audit-gate.md) | Audit pattern/exhaustiveness constructor resolution and decide equality API vs pattern-specific API | Docs/Substrate | 5 | ✅ Complete |
 | [TASK-913](tasks/TASK-913-pattern-canonicalization-api.md) | Add or select the canonicalization API consumed by pattern typing | Typeck/Substrate | 6 | 📝 Planned |
 | [TASK-914](tasks/TASK-914-alias-aware-constructor-resolution.md) | Use canonical ADT identities for alias-equivalent constructor lookup without name leakage | Typeck/Pattern | 7 | 📝 Planned |
 | [TASK-915](tasks/TASK-915-exhaustiveness-canonical-constructor-universe.md) | Run exhaustiveness over the same canonical constructor universe as pattern typing | Typeck/Exhaustiveness | 7 | 📝 Planned |
@@ -67,7 +67,7 @@ cargo doc --workspace --no-deps 2>&1 | tee /tmp/ash-plan-117-doc.log
 
 ## Completion Checklist
 
-- [ ] Audit gate artifact exists and downstream guards are patched.
+- [x] Audit gate artifact exists and downstream guards are patched.
 - [ ] Parser/core/typeck/engine ownership matches [SPEC-068](../spec/SPEC-068-PATTERN-EXHAUSTIVENESS-CANONICALIZATION.md).
 - [ ] Acceptance/non-interference matrix maps every SPEC row to focused evidence.
 - [ ] Broad workspace gates pass after the final code/doc change.

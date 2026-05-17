@@ -26,7 +26,10 @@ Add or select the canonicalization API consumed by pattern typing
 
 ## File Targets
 
-- Exact files must be confirmed by the audit gate before implementation.
+- `crates/ash-typeck/src/type_env.rs`: add the `TypeEnv` pattern-specific canonicalization API and result type.
+- `crates/ash-typeck/src/types.rs`: use existing type carriers only; add no runtime ADT layout changes.
+- `crates/ash-typeck/tests/task_913_pattern_canonicalization_api.rs`: create focused API tests for alias, selected projection, and blocked neutral behavior.
+- Audit reference: [TASK-912 pattern canonicalization audit gate](../audits/TASK-912-pattern-canonicalization-audit-gate.md).
 
 ## TDD / Execution Steps
 
@@ -50,7 +53,10 @@ toolsets: [terminal, file]
 ```yaml
 strictness: clean
 commands:
-  - false # TASK-913 must replace this guard with exact focused commands after its audit gate
+  - cargo test -p ash-typeck --test task_913_pattern_canonicalization_api -- --nocapture
+  - cargo fmt --check
+  - git diff --check
+  - cargo check --workspace
 checklist:
   - [ ] Focused tests are non-zero and pass
   - [ ] cargo fmt --check passes

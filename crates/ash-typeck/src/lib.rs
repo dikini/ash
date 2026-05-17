@@ -80,9 +80,10 @@ pub use solver::{Solver, TypeError};
 pub use type_env::{
     AuthorityProvenanceKind, AuthorityProvenanceReport, BindingProvenanceSourceInfo,
     CapabilityBindingInfo, CapabilityBindingProvenanceInfo, ImplementationAuthoritySourceInfo,
-    PartialConstructorElaborationError, ProvenanceSourceKind, ResourceBindingProvenanceInfo,
-    ResourceTypeInfo, StoredFnContract, TypeEnv, WorkflowIntrinsicKind,
-    WorkflowIntrinsicParameterClass,
+    PartialConstructorElaborationError, PatternCanonicalConstructor, PatternCanonicalType,
+    PatternCanonicalization, PatternCanonicalizationBlockedReason, ProvenanceSourceKind,
+    ResourceBindingProvenanceInfo, ResourceTypeInfo, StoredFnContract, TypeEnv,
+    WorkflowIntrinsicKind, WorkflowIntrinsicParameterClass,
 };
 pub use types::*;
 pub use visibility::{ModulePath, VisibilityChecker, VisibilityError, VisibilityExt};

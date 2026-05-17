@@ -485,6 +485,96 @@ impl TypeInfo {
     }
 }
 
+/// Pattern-specific canonicalization outcome for a scrutinee type.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum PatternCanonicalization {
+    /// The scrutinee has a concrete ordinary ADT identity and constructor universe.
+    Matchable(PatternCanonicalType),
+    /// The scrutinee cannot be matched as an ordinary ADT pattern universe.
+    Blocked {
+        /// Source type passed to the pattern canonicalization API.
+        source_type: Type,
+        /// Typed reason pattern canonicalization did not produce an ADT universe.
+        reason: PatternCanonicalizationBlockedReason,
+    },
+}
+
+/// Canonical ADT type and constructor universe used by pattern consumers.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PatternCanonicalType {
+    /// Source type passed to the pattern canonicalization API.
+    pub source_type: Type,
+    /// Canonical concrete ADT type after transparent alias/projection normalization.
+    pub canonical_type: Type,
+    /// Canonical ordinary ADT name.
+    pub canonical_name: QualifiedName,
+    /// Canonical type arguments applied to the ordinary ADT.
+    pub canonical_type_args: Vec<Type>,
+    /// Constructor universe for the canonical ADT, in variant order.
+    pub constructors: Vec<PatternCanonicalConstructor>,
+}
+
+/// Canonical constructor entry for a pattern-matchable ADT.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PatternCanonicalConstructor {
+    /// Source-visible constructor name.
+    pub name: String,
+    /// Variant index within the canonical ADT.
+    pub variant_index: VariantIndex,
+    /// Payload fields after substituting the canonical ADT type arguments.
+    pub fields: Vec<(FieldName, Type)>,
+    /// Canonical payload shape.
+    pub payload_shape: VariantPayloadShape,
+}
+
+/// Typed reason why a scrutinee type did not yield a matchable ADT universe.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum PatternCanonicalizationBlockedReason {
+    /// The type is known but is not an ordinary enum ADT.
+    NonAdt,
+    /// The type head is an unresolved type variable.
+    TypeVariable,
+    /// The canonical ADT application still contains an unresolved type argument.
+    NonConcreteTypeArgument,
+    /// The type is an associated projection that is rigid, neutral, or unresolved.
+    RigidAssociatedProjection {
+        /// Source-visible interface name.
+        interface: String,
+        /// Source-visible associated member name.
+        member: String,
+    },
+    /// The type is headed by a constructor variable such as `M<A>`.
+    ConstructorVariableApplication {
+        /// Source-visible constructor-variable name.
+        constructor: String,
+    },
+    /// The nominal type head is not known to this environment.
+    UnknownType {
+        /// Source-visible type name.
+        name: QualifiedName,
+    },
+    /// The ADT representation exists but its exported constructor universe is incomplete.
+    UnknownConstructorUniverse {
+        /// Canonical ordinary ADT name.
+        name: QualifiedName,
+    },
+    /// The type shape is outside the runtime pattern ADT surface.
+    UnsupportedType,
+}
+
+fn primitive_pattern_type(name: &str) -> Option<Type> {
+    match name {
+        "Int" => Some(Type::Int),
+        "String" => Some(Type::String),
+        "Bool" => Some(Type::Bool),
+        "Float" => Some(Type::Float),
+        "Null" => Some(Type::Null),
+        "Time" => Some(Type::Time),
+        "Ref" => Some(Type::Ref),
+        _ => None,
+    }
+}
+
 /// Errors reported while elaborating explicit type holes and partial
 /// type-constructor applications into the core constructor-expression carrier.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
@@ -13623,6 +13713,205 @@ impl TypeEnv {
             }
             other => other.clone(),
         }
+    }
+
+    /// Canonicalize a scrutinee type for pattern typing and exhaustiveness.
+    ///
+    /// Unlike equality canonicalization, this API only succeeds when the result
+    /// is a concrete ordinary enum ADT with a known constructor universe.
+    #[must_use]
+    pub fn canonicalize_type_for_pattern(&self, ty: &Type) -> PatternCanonicalization {
+        let source_type = ty.clone();
+        let candidate = match self.pattern_canonical_candidate_type(ty) {
+            Ok(candidate) => candidate,
+            Err(reason) => {
+                return PatternCanonicalization::Blocked {
+                    source_type,
+                    reason,
+                };
+            }
+        };
+
+        let Type::Constructor { name, args, kind } = candidate else {
+            return PatternCanonicalization::Blocked {
+                source_type,
+                reason: PatternCanonicalizationBlockedReason::NonAdt,
+            };
+        };
+
+        if !name.is_root() {
+            return PatternCanonicalization::Blocked {
+                source_type,
+                reason: PatternCanonicalizationBlockedReason::UnknownType { name },
+            };
+        }
+
+        let canonical_name = self.canonical_constructor_name_for_equality(&name);
+        let canonical_type = Type::Constructor {
+            name: canonical_name.clone(),
+            args: args.clone(),
+            kind,
+        };
+
+        if args.iter().any(Self::pattern_type_contains_unresolved_var) {
+            return PatternCanonicalization::Blocked {
+                source_type,
+                reason: PatternCanonicalizationBlockedReason::NonConcreteTypeArgument,
+            };
+        }
+
+        match self.pattern_constructors_for_adt(&canonical_name, &args) {
+            Ok(constructors) => PatternCanonicalization::Matchable(PatternCanonicalType {
+                source_type,
+                canonical_type,
+                canonical_name,
+                canonical_type_args: args,
+                constructors,
+            }),
+            Err(reason) => PatternCanonicalization::Blocked {
+                source_type,
+                reason,
+            },
+        }
+    }
+
+    fn pattern_canonical_candidate_type(
+        &self,
+        ty: &Type,
+    ) -> Result<Type, PatternCanonicalizationBlockedReason> {
+        match ty {
+            Type::Associated {
+                interface, name, ..
+            } => self
+                .pattern_normalize_associated_projection(ty)
+                .map_err(
+                    |()| PatternCanonicalizationBlockedReason::RigidAssociatedProjection {
+                        interface: interface.clone(),
+                        member: name.clone(),
+                    },
+                ),
+            Type::Var(_) => Err(PatternCanonicalizationBlockedReason::TypeVariable),
+            Type::ConstructorVariableApp { constructor, .. } => Err(
+                PatternCanonicalizationBlockedReason::ConstructorVariableApplication {
+                    constructor: constructor.clone(),
+                },
+            ),
+            _ => Ok(self.canonicalize_type_for_equality(ty)),
+        }
+    }
+
+    fn pattern_type_contains_unresolved_var(ty: &Type) -> bool {
+        match ty {
+            Type::Var(_) => true,
+            Type::List(inner) => Self::pattern_type_contains_unresolved_var(inner),
+            Type::Record(fields) => fields
+                .iter()
+                .any(|(_, field_ty)| Self::pattern_type_contains_unresolved_var(field_ty)),
+            Type::Fn(params, ret) => {
+                params
+                    .iter()
+                    .any(Self::pattern_type_contains_unresolved_var)
+                    || Self::pattern_type_contains_unresolved_var(ret)
+            }
+            Type::Fun(params, ret, _) => {
+                params
+                    .iter()
+                    .any(Self::pattern_type_contains_unresolved_var)
+                    || Self::pattern_type_contains_unresolved_var(ret)
+            }
+            Type::Constructor { args, .. } | Type::ConstructorVariableApp { args, .. } => {
+                args.iter().any(Self::pattern_type_contains_unresolved_var)
+            }
+            Type::Associated { base, .. } => Self::pattern_type_contains_unresolved_var(base),
+            Type::Int
+            | Type::String
+            | Type::Bool
+            | Type::Float
+            | Type::Null
+            | Type::Time
+            | Type::Ref
+            | Type::Cap { .. }
+            | Type::Instance { .. }
+            | Type::InstanceAddr { .. }
+            | Type::ControlLink { .. } => false,
+        }
+    }
+
+    fn pattern_normalize_associated_projection(&self, ty: &Type) -> Result<Type, ()> {
+        let canonical = self.type_to_canonical_expr_for_equality(ty).ok_or(())?;
+        let outcome = Normalizer::new(self)
+            .normalize(&canonical)
+            .map_err(|_| ())?;
+        self.normal_type_to_pattern_type(&outcome.normal).ok_or(())
+    }
+
+    fn normal_type_to_pattern_type(&self, normal: &NormalTypeExpr) -> Option<Type> {
+        match normal {
+            NormalTypeExpr::Primitive(name) => primitive_pattern_type(name),
+            NormalTypeExpr::NominalApp {
+                visible_name,
+                args,
+                kind,
+                ..
+            } => {
+                let args = args
+                    .iter()
+                    .map(|arg| self.normal_type_to_pattern_type(arg))
+                    .collect::<Option<Vec<_>>>()?;
+                let name = self.canonical_constructor_name_for_equality(&QualifiedName::root(
+                    visible_name.clone(),
+                ));
+                Some(Type::Constructor {
+                    name,
+                    args,
+                    kind: kind.clone(),
+                })
+            }
+            NormalTypeExpr::Var(_)
+            | NormalTypeExpr::ConstructorVariableApp { .. }
+            | NormalTypeExpr::NeutralComputationApp { .. }
+            | NormalTypeExpr::Projection { .. }
+            | NormalTypeExpr::DomainConstructorApp { .. }
+            | NormalTypeExpr::PromotedDataConstructorApp { .. } => None,
+        }
+    }
+
+    fn pattern_constructors_for_adt(
+        &self,
+        name: &QualifiedName,
+        args: &[Type],
+    ) -> Result<Vec<PatternCanonicalConstructor>, PatternCanonicalizationBlockedReason> {
+        let unfolded = self.unfold_constructor(name, args).map_err(|_| {
+            PatternCanonicalizationBlockedReason::UnknownType { name: name.clone() }
+        })?;
+
+        let UnfoldedBody::Enum(variants) = unfolded else {
+            return Err(PatternCanonicalizationBlockedReason::NonAdt);
+        };
+
+        let mut constructors = Vec::with_capacity(variants.len());
+        for (variant_index, variant) in variants.into_iter().enumerate() {
+            match self.constructors.get(&variant.name) {
+                Some((constructor_type, constructor_index))
+                    if constructor_type == &name.name && *constructor_index == variant_index => {}
+                _ => {
+                    return Err(
+                        PatternCanonicalizationBlockedReason::UnknownConstructorUniverse {
+                            name: name.clone(),
+                        },
+                    );
+                }
+            }
+
+            constructors.push(PatternCanonicalConstructor {
+                name: variant.name,
+                variant_index,
+                fields: variant.fields,
+                payload_shape: variant.payload_shape,
+            });
+        }
+
+        Ok(constructors)
     }
 
     /// Unify types using TypeEnv's canonical imported-summary identity map.

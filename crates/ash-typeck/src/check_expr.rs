@@ -5,14 +5,14 @@
 #![allow(clippy::result_large_err)]
 
 use crate::error::ConstructorError;
-use crate::exhaustiveness::{Coverage, check_exhaustive_canonical};
+use crate::exhaustiveness::{Coverage, check_exhaustive, check_exhaustive_canonical};
 use crate::type_env::{
     PatternCanonicalization, PatternCanonicalizationBlockedReason, TypeEnv, TypeInfo, VariantIndex,
     VariantInfo, WorkflowIntrinsic,
 };
 use crate::types::{Substitution, Type, TypeVar, unify};
 use ash_core::adt::{VariantPayloadShape, tuple_field_name};
-use ash_core::ast::{Expr as CoreExpr, Pattern as CorePattern};
+use ash_core::ast::{Expr as CoreExpr, Pattern as CorePattern, TypeBody, TypeDef};
 use ash_core::workflow_carrier::{
     ActLowerSummary, ContractPlan, OpenPostcondition, PostconditionTarget, ProcLowerSummary,
     ProjectionEvent, ProjectionEventKind, ProjectionKind, PublicWorkflowSummary, SourceOrigin,
@@ -2707,8 +2707,41 @@ fn collect_top_level_variant_pattern_names(arms: &[MatchArm]) -> Vec<String> {
     names
 }
 
+#[allow(clippy::collapsible_if)]
+fn resolve_enum_type_def_for_match<'a>(
+    env: &'a TypeEnv,
+    scrutinee: &Expr,
+    arms: &[MatchArm],
+) -> Option<&'a TypeDef> {
+    if let Expr::Constructor { name, .. } = scrutinee {
+        if let Some((type_name, _)) = env.lookup_constructor(name.as_ref()) {
+            if let Some(def) = env.lookup_type(type_name.as_str()) {
+                if matches!(&def.body, TypeBody::Enum(_)) {
+                    return Some(def);
+                }
+            }
+        }
+    }
+    for arm in arms {
+        if let Pattern::Variant { name, .. } = &arm.pattern {
+            if let Some((type_name, _)) = env.lookup_constructor(name.as_ref()) {
+                if let Some(def) = env.lookup_type(type_name.as_str()) {
+                    if matches!(&def.body, TypeBody::Enum(_)) {
+                        return Some(def);
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
 fn should_block_legacy_pattern_fallback(reason: &PatternCanonicalizationBlockedReason) -> bool {
-    !matches!(reason, PatternCanonicalizationBlockedReason::NonAdt)
+    !matches!(
+        reason,
+        PatternCanonicalizationBlockedReason::NonAdt
+            | PatternCanonicalizationBlockedReason::NonConcreteTypeArgument
+    )
 }
 
 fn format_pattern_canonicalization_blocked(
@@ -2786,6 +2819,27 @@ fn check_match(env: &TypeEnv, scrutinee: &Expr, arms: &[MatchArm]) -> CheckResul
         if let Coverage::Missing(witnesses) = check_exhaustive_canonical(&patterns, canonical) {
             errors.push(ConstructorError::NonExhaustiveMatch {
                 scrutinee_type: canonical.canonical_name.name.clone(),
+                missing: format_missing_witnesses(&witnesses),
+                span: Span::default(),
+            });
+        }
+    } else if !pattern_canonicalization_blocked
+        && !matches!(
+            env.canonicalize_type_for_pattern(&scrutinee_ty),
+            PatternCanonicalization::Blocked {
+                reason: PatternCanonicalizationBlockedReason::NonAdt,
+                ..
+            }
+        )
+        && let Some(type_def) = resolve_enum_type_def_for_match(env, scrutinee, arms)
+    {
+        let patterns: Vec<CorePattern> = arms
+            .iter()
+            .filter_map(|arm| lower_pattern(&arm.pattern).ok())
+            .collect();
+        if let Coverage::Missing(witnesses) = check_exhaustive(&patterns, type_def) {
+            errors.push(ConstructorError::NonExhaustiveMatch {
+                scrutinee_type: type_def.name.clone(),
                 missing: format_missing_witnesses(&witnesses),
                 span: Span::default(),
             });
@@ -2967,7 +3021,8 @@ fn check_tuple_constructor_fields(
         errors.extend(field_result.errors);
 
         let expected_ty_subst = substitution.apply(expected_ty);
-        match unify(&expected_ty_subst, &field_result.ty) {
+        let field_ty = field_result.substitution.apply(&field_result.ty);
+        match unify(&expected_ty_subst, &field_ty) {
             Ok(sub) => {
                 *substitution = substitution.compose(&sub);
             }
@@ -2975,7 +3030,7 @@ fn check_tuple_constructor_fields(
                 constructor: constructor_name.to_string(),
                 position: index,
                 expected: expected_ty.to_string(),
-                actual: field_result.ty.to_string(),
+                actual: field_ty.to_string(),
                 span: Span::default(),
             }),
         }
@@ -3029,7 +3084,8 @@ fn check_named_constructor_fields(
             errors.extend(field_result.errors);
 
             let expected_ty_subst = substitution.apply(expected_ty);
-            match unify(&expected_ty_subst, &field_result.ty) {
+            let field_ty = field_result.substitution.apply(&field_result.ty);
+            match unify(&expected_ty_subst, &field_ty) {
                 Ok(sub) => {
                     *substitution = substitution.compose(&sub);
                 }
@@ -3038,7 +3094,7 @@ fn check_named_constructor_fields(
                         constructor: constructor_name.to_string(),
                         field: field_name.to_string(),
                         expected: expected_ty.to_string(),
-                        actual: field_result.ty.to_string(),
+                        actual: field_ty.to_string(),
                         span: Span::default(),
                     });
                 }

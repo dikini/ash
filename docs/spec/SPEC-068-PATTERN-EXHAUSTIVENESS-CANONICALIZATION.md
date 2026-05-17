@@ -1,6 +1,6 @@
 # SPEC-068: Pattern and Exhaustiveness Canonicalization
 
-**Status:** Draft
+**Status:** Implemented MVP
 **Date:** 2026-05-14
 **Promotes:** [DESIGN-039](../design/DESIGN-039-PATTERN-EXHAUSTIVENESS-CANONICALIZATION.md)
 **Origin:** [TASK-890](../plan/tasks/TASK-890-pattern-exhaustiveness-alias-canonicalization-packet.md)
@@ -81,14 +81,16 @@ Required diagnostics:
 
 ## 8. Acceptance Matrix
 
-| ID | Case | Expected result |
-|----|------|-----------------|
-| PC-1 | `type MyOption<T> = Option<T>` then match with `Some`/`None` | accepted if alias transparent |
-| PC-2 | associated projection reduces to concrete ADT before match | accepted if selected/reducible |
-| PC-3 | rigid where-bound projection as match scrutinee | blocked diagnostic |
-| PC-4 | neutral type-function result as match scrutinee | blocked diagnostic |
-| PC-5 | same visible constructor name from unrelated ADT | no leakage, rejected or resolved by source identity |
-| PC-6 | existing direct ADT match/exhaustiveness tests | unchanged |
+Phase 121 implements the MVP pattern/exhaustiveness slice for ordinary runtime ADTs. It does not add GADT/refinement patterns, type-level sealed-domain or promoted-constructor runtime matching, broad equality adoption, ADT runtime layout changes, or inversion under neutral computation heads.
+
+| ID | Case | Expected result | Phase 121 evidence | Scope status |
+|----|------|-----------------|--------------------|--------------|
+| PC-1 | `type MyOption<T> = Option<T>` then match with `Some`/`None` | accepted if alias transparent | `TASK-913` `transparent_alias_to_adt_canonicalizes_to_underlying_constructor_universe`; `TASK-914` `transparent_alias_scrutinee_accepts_canonical_variant_pattern_and_binds_payload`; `TASK-915` `transparent_alias_full_match_uses_canonical_result_universe_and_is_exhaustive`; `TASK-916` `transparent_alias_match_remains_accepted` | Implemented MVP for transparent aliases over ordinary ADTs |
+| PC-2 | associated projection reduces to concrete ADT before match | accepted if selected/reducible | `TASK-913` `selected_associated_projection_to_adt_canonicalizes_to_constructor_universe` | Implemented MVP at the pattern canonicalization API boundary; match-surface projection coverage remains limited to selected/reducible projections that already normalize to an ordinary ADT |
+| PC-3 | rigid where-bound projection as match scrutinee | blocked diagnostic | `TASK-913` `unresolved_associated_projection_returns_typed_blocked_result`; `TASK-916` `unresolved_associated_projection_returns_typed_blocked_reason_for_patterns` | Implemented MVP as a typed blocked pattern-canonicalization result |
+| PC-4 | neutral type-function result as match scrutinee | blocked diagnostic | `TASK-913` `constructor_variable_application_returns_typed_blocked_result`; `TASK-915` `blocked_non_matchable_scrutinee_does_not_guess_visible_arm_constructor_universe`; `TASK-916` `primitive_scrutinee_with_visible_constructor_does_not_fabricate_missing_witness` | Partial MVP boundary coverage: neutral/non-matchable heads are blocked and exhaustiveness does not guess, but Phase 121 does not introduce source-level type-function-result runtime matching |
+| PC-5 | same visible constructor name from unrelated ADT | no leakage, rejected or resolved by source identity | `TASK-914` `visible_constructor_from_unrelated_adt_is_rejected_for_different_scrutinee_adt`; `TASK-916` `same_visible_constructor_from_unrelated_adt_is_rejected_for_scrutinee_identity` and `unrelated_constructor_name_is_rejected_and_does_not_bind_payload` | Implemented MVP |
+| PC-6 | existing direct ADT match/exhaustiveness tests | unchanged | `TASK-914` `direct_adt_scrutinee_still_accepts_variant_pattern`; `TASK-915` `direct_result_full_match_remains_exhaustive`; `TASK-916` `direct_adt_match_remains_accepted` | Implemented MVP non-interference |
 
 ## 9. Implementation Tasks
 

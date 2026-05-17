@@ -1,6 +1,6 @@
 # TASK-914: Use canonical ADT identities for alias-equivalent constructor lookup without name leakage
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -27,7 +27,11 @@ Use canonical ADT identities for alias-equivalent constructor lookup without nam
 
 ## File Targets
 
-- Exact files must be confirmed by the audit gate before implementation.
+- `crates/ash-typeck/src/check_pattern.rs`: resolve variant patterns against the canonical ADT universe returned by TASK-913.
+- `crates/ash-typeck/src/check_expr.rs`: thread canonical pattern information through match arm checking without changing constructor expression semantics.
+- `crates/ash-typeck/src/lib.rs`: update `variant_field_types` only if the live helper remains on the pattern-binding path.
+- `crates/ash-typeck/tests/task_914_alias_aware_constructor_resolution.rs`: create focused alias-positive and unrelated same-visible-name negative tests.
+- Audit reference: [TASK-912 pattern canonicalization audit gate](../audits/TASK-912-pattern-canonicalization-audit-gate.md).
 
 ## TDD / Execution Steps
 
@@ -51,13 +55,30 @@ toolsets: [terminal, file]
 ```yaml
 strictness: clean
 commands:
-  - false # TASK-914 must replace this guard with exact focused commands after its audit gate
+  - cargo test -p ash-typeck --test task_914_alias_aware_constructor_resolution -- --nocapture
+  - cargo fmt --check
+  - git diff --check
+  - cargo check --workspace
 checklist:
-  - [ ] Focused tests are non-zero and pass
-  - [ ] cargo fmt --check passes
-  - [ ] git diff --check passes
-  - [ ] Status surfaces and CHANGELOG are reconciled if this task completes
+  - [x] Focused tests are non-zero and pass
+  - [x] cargo fmt --check passes
+  - [x] git diff --check passes
+  - [x] Status surfaces and CHANGELOG are reconciled if this task completes
 ```
+
+## Verification Evidence
+
+- RED: `cargo test -p ash-typeck --test task_914_alias_aware_constructor_resolution -- --nocapture` failed with 0 passed and 3 failed before production edits. Direct and alias scrutinee matches did not bind payload variables, and the unrelated-constructor case did not report the leaked constructor.
+- GREEN: `cargo test -p ash-typeck --test task_914_alias_aware_constructor_resolution -- --nocapture` passed with 4 tests after routing match pattern checks through the TASK-913 canonical constructor universe.
+- Final gate evidence:
+  - `cargo test -p ash-typeck --test task_914_alias_aware_constructor_resolution -- --nocapture` passed with 4 tests.
+  - `cargo fmt --check` passed.
+  - `git diff --check` passed.
+  - `RUSTC_WRAPPER= cargo check --workspace` passed.
+
+## Scope Boundary
+
+TASK-914 intentionally leaves match exhaustiveness universe selection on the existing path. TASK-915 owns replacing visible-name enum guessing with the same canonical constructor universe used by pattern typing.
 
 ## Dependencies for Next Task
 

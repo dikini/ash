@@ -92,6 +92,16 @@ pub enum TypeError {
     /// Unknown variant in pattern
     #[error("Unknown variant: {0}")]
     UnknownVariant(String, Span),
+    /// Variant pattern is outside the canonical constructor universe.
+    #[error(
+        "Unknown variant: {variant} for canonical pattern boundary {canonical_type} (source type {source_type})"
+    )]
+    UnknownVariantForCanonicalType {
+        variant: String,
+        canonical_type: Box<Type>,
+        source_type: Box<Type>,
+        span: Span,
+    },
     /// Pattern arity mismatch
     #[error("Pattern arity mismatch: expected {expected} elements, got {actual}")]
     PatternArityMismatch {

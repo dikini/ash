@@ -1,6 +1,6 @@
 # TASK-916: Add blocked-neutral, wrong-identity, and unrelated-name leakage diagnostics/tests
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -27,7 +27,12 @@ Add blocked-neutral, wrong-identity, and unrelated-name leakage diagnostics/test
 
 ## File Targets
 
-- Exact files must be confirmed by the audit gate before implementation.
+- `crates/ash-typeck/src/error.rs`: add or route stable pattern canonicalization diagnostics if existing variants are insufficient.
+- `crates/ash-typeck/src/check_pattern.rs`: report wrong-identity and blocked canonicalization errors from the TASK-913/TASK-914 boundary.
+- `crates/ash-typeck/src/check_expr.rs`: report blocked exhaustiveness universe diagnostics from the TASK-915 boundary.
+- `crates/ash-typeck/tests/task_916_pattern_canonicalization_diagnostics.rs`: create focused blocked-neutral and wrong-identity diagnostic tests.
+- `crates/ash-typeck/tests/task_916_pattern_canonicalization_negative_leakage.rs`: create focused unrelated same-visible-name and direct ADT non-interference tests.
+- Audit reference: [TASK-912 pattern canonicalization audit gate](../audits/TASK-912-pattern-canonicalization-audit-gate.md).
 
 ## TDD / Execution Steps
 
@@ -51,13 +56,27 @@ toolsets: [terminal, file]
 ```yaml
 strictness: clean
 commands:
-  - false # TASK-916 must replace this guard with exact focused commands after its audit gate
+  - RUSTC_WRAPPER= cargo test -p ash-typeck --test task_916_pattern_canonicalization_diagnostics -- --nocapture
+  - RUSTC_WRAPPER= cargo test -p ash-typeck --test task_916_pattern_canonicalization_negative_leakage -- --nocapture
+  - cargo fmt --check
+  - git diff --check
+  - RUSTC_WRAPPER= cargo check --workspace
 checklist:
-  - [ ] Focused tests are non-zero and pass
-  - [ ] cargo fmt --check passes
-  - [ ] git diff --check passes
-  - [ ] Status surfaces and CHANGELOG are reconciled if this task completes
+  - [x] Focused tests are non-zero and pass
+  - [x] cargo fmt --check passes
+  - [x] git diff --check passes
+  - [x] Status surfaces and CHANGELOG are reconciled if this task completes
 ```
+
+## Evidence
+
+2026-05-17:
+
+- RED: `RUSTC_WRAPPER= cargo test -p ash-typeck --test task_916_pattern_canonicalization_diagnostics -- --nocapture` failed because the wrong-constructor diagnostic named `Ghost` but did not name the canonical `Result` boundary.
+- RED: `RUSTC_WRAPPER= cargo test -p ash-typeck --test task_916_pattern_canonicalization_negative_leakage -- --nocapture` failed because an unrelated same-visible-name `Shared` constructor was accepted for the `Target` scrutinee.
+- GREEN: `RUSTC_WRAPPER= cargo test -p ash-typeck --test task_916_pattern_canonicalization_diagnostics -- --nocapture` passed, 3 tests.
+- GREEN: `RUSTC_WRAPPER= cargo test -p ash-typeck --test task_916_pattern_canonicalization_negative_leakage -- --nocapture` passed, 4 tests.
+- Required verification passed: `cargo fmt --check`; `git diff --check`; `RUSTC_WRAPPER= cargo check --workspace`.
 
 ## Dependencies for Next Task
 

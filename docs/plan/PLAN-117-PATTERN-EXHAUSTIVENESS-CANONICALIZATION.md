@@ -10,7 +10,7 @@
 
 ---
 
-**Status:** 📝 Planned
+**Status:** ✅ Complete (Implemented MVP)
 **Spec:** [SPEC-068](../spec/SPEC-068-PATTERN-EXHAUSTIVENESS-CANONICALIZATION.md)
 **Design:** [DESIGN-039](../design/DESIGN-039-PATTERN-EXHAUSTIVENESS-CANONICALIZATION.md)
 **Depends on:** SPEC-057 through SPEC-064 implemented MVPs
@@ -20,12 +20,12 @@
 
 | Task | Description | Type | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-912](tasks/TASK-912-pattern-canonicalization-audit-gate.md) | Audit pattern/exhaustiveness constructor resolution and decide equality API vs pattern-specific API | Docs/Substrate | 5 | 📝 Planned |
-| [TASK-913](tasks/TASK-913-pattern-canonicalization-api.md) | Add or select the canonicalization API consumed by pattern typing | Typeck/Substrate | 6 | 📝 Planned |
-| [TASK-914](tasks/TASK-914-alias-aware-constructor-resolution.md) | Use canonical ADT identities for alias-equivalent constructor lookup without name leakage | Typeck/Pattern | 7 | 📝 Planned |
-| [TASK-915](tasks/TASK-915-exhaustiveness-canonical-constructor-universe.md) | Run exhaustiveness over the same canonical constructor universe as pattern typing | Typeck/Exhaustiveness | 7 | 📝 Planned |
-| [TASK-916](tasks/TASK-916-pattern-canonicalization-diagnostics-and-negative-leakage.md) | Add blocked-neutral, wrong-identity, and unrelated-name leakage diagnostics/tests | Diagnostics/Tests | 6 | 📝 Planned |
-| [TASK-917](tasks/TASK-917-pattern-canonicalization-closeout.md) | Reconcile SPEC-068/PLAN-117 docs, acceptance matrix, broad gates, and review remediation | Docs/Closeout | 5 | 📝 Planned |
+| [TASK-912](tasks/TASK-912-pattern-canonicalization-audit-gate.md) | Audit pattern/exhaustiveness constructor resolution and decide equality API vs pattern-specific API | Docs/Substrate | 5 | ✅ Complete |
+| [TASK-913](tasks/TASK-913-pattern-canonicalization-api.md) | Add or select the canonicalization API consumed by pattern typing | Typeck/Substrate | 6 | ✅ Complete |
+| [TASK-914](tasks/TASK-914-alias-aware-constructor-resolution.md) | Use canonical ADT identities for alias-equivalent constructor lookup without name leakage | Typeck/Pattern | 7 | ✅ Complete |
+| [TASK-915](tasks/TASK-915-exhaustiveness-canonical-constructor-universe.md) | Run exhaustiveness over the same canonical constructor universe as pattern typing | Typeck/Exhaustiveness | 7 | ✅ Complete |
+| [TASK-916](tasks/TASK-916-pattern-canonicalization-diagnostics-and-negative-leakage.md) | Add blocked-neutral, wrong-identity, and unrelated-name leakage diagnostics/tests | Diagnostics/Tests | 6 | ✅ Complete |
+| [TASK-917](tasks/TASK-917-pattern-canonicalization-closeout.md) | Reconcile SPEC-068/PLAN-117 docs, acceptance matrix, broad gates, and review remediation | Docs/Closeout | 5 | ✅ Complete |
 
 ## Execution Tracks
 
@@ -67,8 +67,14 @@ cargo doc --workspace --no-deps 2>&1 | tee /tmp/ash-plan-117-doc.log
 
 ## Completion Checklist
 
-- [ ] Audit gate artifact exists and downstream guards are patched.
-- [ ] Parser/core/typeck/engine ownership matches [SPEC-068](../spec/SPEC-068-PATTERN-EXHAUSTIVENESS-CANONICALIZATION.md).
-- [ ] Acceptance/non-interference matrix maps every SPEC row to focused evidence.
-- [ ] Broad workspace gates pass after the final code/doc change.
-- [ ] Independent review remediation complete.
+- [x] Audit gate artifact exists and downstream guards are patched.
+- [x] Parser/core/typeck/engine ownership matches [SPEC-068](../spec/SPEC-068-PATTERN-EXHAUSTIVENESS-CANONICALIZATION.md): pattern semantics remain in `ash-typeck`, parser pattern names remain raw surface, `ash-core`/`ash-engine` do not gain runtime pattern semantics, and ADT runtime layout is unchanged.
+- [x] Acceptance/non-interference matrix maps every SPEC row to focused evidence in [SPEC-068](../spec/SPEC-068-PATTERN-EXHAUSTIVENESS-CANONICALIZATION.md) and [TASK-917](tasks/TASK-917-pattern-canonicalization-closeout.md), with PC-4 recorded as partial MVP boundary coverage rather than source-level type-function runtime matching.
+- [x] Broad workspace gates are recorded in [TASK-917](tasks/TASK-917-pattern-canonicalization-closeout.md).
+- [x] Review remediation surface reconciled for closeout; no TASK-917 review findings were present before the controller's unstaged verification/review pass.
+
+## Phase 121 Closeout
+
+PLAN-117 is complete as an implemented MVP of SPEC-068. The accepted slice canonicalizes transparent aliases and selected reducible associated projections to ordinary ADT constructor universes for pattern typing and exhaustiveness, rejects or blocks neutral/stuck/non-matchable forms without guessing, and preserves constructor identity hygiene for unrelated same-visible-name constructors.
+
+The closeout preserves these explicit boundaries: no GADT/refinement patterns, no runtime matching on type-level sealed-domain or promoted constructors, no broad search-and-replace adoption of equality canonicalization, no type-function or associated-family inversion, and no ADT runtime layout change.

@@ -5,11 +5,14 @@
 #![allow(clippy::result_large_err)]
 
 use crate::error::ConstructorError;
-use crate::exhaustiveness::{Coverage, check_exhaustive};
-use crate::type_env::{TypeEnv, TypeInfo, VariantIndex, VariantInfo, WorkflowIntrinsic};
+use crate::exhaustiveness::{Coverage, check_exhaustive_canonical};
+use crate::type_env::{
+    PatternCanonicalization, PatternCanonicalizationBlockedReason, TypeEnv, TypeInfo, VariantIndex,
+    VariantInfo, WorkflowIntrinsic,
+};
 use crate::types::{Substitution, Type, TypeVar, unify};
 use ash_core::adt::{VariantPayloadShape, tuple_field_name};
-use ash_core::ast::{Expr as CoreExpr, Pattern as CorePattern, TypeBody, TypeDef};
+use ash_core::ast::{Expr as CoreExpr, Pattern as CorePattern};
 use ash_core::workflow_carrier::{
     ActLowerSummary, ContractPlan, OpenPostcondition, PostconditionTarget, ProcLowerSummary,
     ProjectionEvent, ProjectionEventKind, ProjectionKind, PublicWorkflowSummary, SourceOrigin,
@@ -19,8 +22,7 @@ use ash_core::workflow_contract::Requirement;
 use ash_parser::lower_pattern;
 use ash_parser::surface::ConstructorPayload;
 use ash_parser::surface::{
-    ActStmt, BinaryOp, ComprehensionQualifier, DoStmt, Expr, Literal, MatchArm,
-    Pattern as SurfacePattern, UnaryOp,
+    ActStmt, BinaryOp, ComprehensionQualifier, DoStmt, Expr, Literal, MatchArm, Pattern, UnaryOp,
 };
 use ash_parser::token::Span;
 use ash_parser::workflow_contract_classifier;
@@ -2628,35 +2630,6 @@ fn check_with_error(env: &TypeEnv, body: &Expr, arms: &[MatchArm], span: Span) -
     }
 }
 
-#[allow(clippy::collapsible_if)]
-fn resolve_enum_type_def_for_match<'a>(
-    env: &'a TypeEnv,
-    scrutinee: &Expr,
-    arms: &[MatchArm],
-) -> Option<&'a TypeDef> {
-    if let Expr::Constructor { name, .. } = scrutinee {
-        if let Some((type_name, _)) = env.lookup_constructor(name.as_ref()) {
-            if let Some(def) = env.lookup_type(type_name.as_str()) {
-                if matches!(&def.body, TypeBody::Enum(_)) {
-                    return Some(def);
-                }
-            }
-        }
-    }
-    for arm in arms {
-        if let SurfacePattern::Variant { name, .. } = &arm.pattern {
-            if let Some((type_name, _)) = env.lookup_constructor(name.as_ref()) {
-                if let Some(def) = env.lookup_type(type_name.as_str()) {
-                    if matches!(&def.body, TypeBody::Enum(_)) {
-                        return Some(def);
-                    }
-                }
-            }
-        }
-    }
-    None
-}
-
 fn format_missing_witnesses(witnesses: &[CorePattern]) -> String {
     witnesses
         .iter()
@@ -2722,36 +2695,131 @@ fn is_tuple_witness_fields(fields: &[(String, CorePattern)]) -> bool {
         .all(|(index, (field, _))| field == &tuple_field_name(index))
 }
 
+fn collect_top_level_variant_pattern_names(arms: &[MatchArm]) -> Vec<String> {
+    let mut names = Vec::new();
+    for arm in arms {
+        if let Pattern::Variant { name, .. } = &arm.pattern {
+            names.push(name.to_string());
+        }
+    }
+    names.sort();
+    names.dedup();
+    names
+}
+
+fn should_block_legacy_pattern_fallback(reason: &PatternCanonicalizationBlockedReason) -> bool {
+    !matches!(reason, PatternCanonicalizationBlockedReason::NonAdt)
+}
+
+fn format_pattern_canonicalization_blocked(
+    source_type: &Type,
+    reason: &PatternCanonicalizationBlockedReason,
+    visible_constructors: &[String],
+) -> String {
+    let visible = if visible_constructors.is_empty() {
+        "none".to_string()
+    } else {
+        visible_constructors.join(", ")
+    };
+    match reason {
+        PatternCanonicalizationBlockedReason::RigidAssociatedProjection { interface, member } => {
+            format!(
+                "pattern canonicalization blocked for match on {source_type}: rigid associated projection {interface}::{member}; visible pattern constructors: {visible}"
+            )
+        }
+        PatternCanonicalizationBlockedReason::UnknownConstructorUniverse { name } => {
+            format!(
+                "pattern canonicalization blocked for match on {source_type}: canonical constructor universe for {name} is unavailable; visible pattern constructors: {visible}"
+            )
+        }
+        PatternCanonicalizationBlockedReason::UnknownType { name } => {
+            format!(
+                "pattern canonicalization blocked for match on {source_type}: unknown canonical type {name}; visible pattern constructors: {visible}"
+            )
+        }
+        PatternCanonicalizationBlockedReason::ConstructorVariableApplication { constructor } => {
+            format!(
+                "pattern canonicalization blocked for match on {source_type}: constructor variable application {constructor}; visible pattern constructors: {visible}"
+            )
+        }
+        other => {
+            format!(
+                "pattern canonicalization blocked for match on {source_type}: {other:?}; visible pattern constructors: {visible}"
+            )
+        }
+    }
+}
+
 fn check_match(env: &TypeEnv, scrutinee: &Expr, arms: &[MatchArm]) -> CheckResult {
     let scrutinee_result = check_expr(env, scrutinee);
     let mut errors: Vec<ConstructorError> = scrutinee_result.errors.clone();
+    let scrutinee_ty = scrutinee_result.substitution.apply(&scrutinee_result.ty);
+    let visible_variant_patterns = collect_top_level_variant_pattern_names(arms);
+    let mut pattern_canonicalization_blocked = false;
+    let canonical_scrutinee = match env.canonicalize_type_for_pattern(&scrutinee_ty) {
+        PatternCanonicalization::Matchable(canonical) => Some(canonical),
+        PatternCanonicalization::Blocked {
+            source_type,
+            reason,
+        } => {
+            if !visible_variant_patterns.is_empty() && should_block_legacy_pattern_fallback(&reason)
+            {
+                pattern_canonicalization_blocked = true;
+                errors.push(ConstructorError::UnsupportedExpression {
+                    kind: format_pattern_canonicalization_blocked(
+                        &source_type,
+                        &reason,
+                        &visible_variant_patterns,
+                    ),
+                    span: Span::default(),
+                });
+            }
+            None
+        }
+    };
 
-    if let Some(type_def) = resolve_enum_type_def_for_match(env, scrutinee, arms) {
+    if let Some(canonical) = canonical_scrutinee.as_ref() {
         let patterns: Vec<CorePattern> = arms
             .iter()
             .filter_map(|arm| lower_pattern(&arm.pattern).ok())
             .collect();
-        if let Coverage::Missing(witnesses) = check_exhaustive(&patterns, type_def) {
+        if let Coverage::Missing(witnesses) = check_exhaustive_canonical(&patterns, canonical) {
             errors.push(ConstructorError::NonExhaustiveMatch {
-                scrutinee_type: type_def.name.clone(),
+                scrutinee_type: canonical.canonical_name.name.clone(),
                 missing: format_missing_witnesses(&witnesses),
                 span: Span::default(),
             });
         }
     }
 
-    let scrutinee_ty = scrutinee_result.substitution.apply(&scrutinee_result.ty);
+    let pattern_env = pattern_type_env_from(env);
     let mut arm_merged: Option<CheckResult> = None;
     for arm in arms {
         let mut arm_env = env.clone();
-        if let Ok(bindings) = crate::check_pattern::check_pattern(
-            &crate::check_pattern::TypeEnv::new(),
-            &arm.pattern,
-            &scrutinee_ty,
-        ) {
-            for (name, ty) in bindings {
-                arm_env.bind_variable(&name, ty);
-            }
+        if !pattern_canonicalization_blocked {
+            let bindings = match canonical_scrutinee.as_ref() {
+                Some(canonical) => crate::check_pattern::check_pattern_with_canonical_type(
+                    &pattern_env,
+                    &arm.pattern,
+                    canonical,
+                ),
+                None => {
+                    crate::check_pattern::check_pattern(&pattern_env, &arm.pattern, &scrutinee_ty)
+                }
+            };
+            match bindings {
+                Ok(bindings) => {
+                    for (name, ty) in bindings {
+                        arm_env.bind_variable(&name, ty);
+                    }
+                }
+                Err(error) => {
+                    errors.push(ConstructorError::UnsupportedExpression {
+                        kind: format!("match arm pattern type error: {error}"),
+                        span: arm.span,
+                    });
+                }
+            };
         }
 
         let body_result = check_expr(&arm_env, &arm.body);

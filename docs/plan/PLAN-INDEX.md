@@ -297,7 +297,7 @@ Update this section as tasks complete:
 | 118 | 6 | 6 | ✅ Complete |
 | 119 | 6 | 6 | ✅ Complete |
 | 120 | 8 | 0 | 📝 Planned |
-| 121 | 6 | 0 | 📝 Planned |
+| 121 | 6 | 6 | ✅ Complete |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -3557,7 +3557,7 @@ Phase 120 implements constructor-kinded binders and higher-kinded interface evid
 ## Phase 121: Pattern and Exhaustiveness Canonicalization
 
 **Priority:** Medium (extends canonicalization from equality boundaries into pattern/exhaustiveness only after a live audit)
-**Status:** 📝 Planned
+**Status:** ✅ Complete (Implemented MVP)
 **Spec:** [SPEC-068](../spec/SPEC-068-PATTERN-EXHAUSTIVENESS-CANONICALIZATION.md)
 **Design:** [DESIGN-039](../design/DESIGN-039-PATTERN-EXHAUSTIVENESS-CANONICALIZATION.md)
 **Plan:** [docs/plan/PLAN-117-PATTERN-EXHAUSTIVENESS-CANONICALIZATION.md](PLAN-117-PATTERN-EXHAUSTIVENESS-CANONICALIZATION.md)
@@ -3566,9 +3566,9 @@ Phase 121 implements audit-first pattern/exhaustiveness canonicalization for tra
 
 | Task | Description | Est. Hours | Status |
 |------|-------------|------------|--------|
-| [TASK-912](tasks/TASK-912-pattern-canonicalization-audit-gate.md) | Pattern canonicalization audit gate | 5 | 📝 Planned |
-| [TASK-913](tasks/TASK-913-pattern-canonicalization-api.md) | Pattern canonicalization API | 6 | 📝 Planned |
-| [TASK-914](tasks/TASK-914-alias-aware-constructor-resolution.md) | Alias-aware constructor resolution | 7 | 📝 Planned |
-| [TASK-915](tasks/TASK-915-exhaustiveness-canonical-constructor-universe.md) | Exhaustiveness over canonical constructor universe | 7 | 📝 Planned |
-| [TASK-916](tasks/TASK-916-pattern-canonicalization-diagnostics-and-negative-leakage.md) | Diagnostics and negative leakage tests | 6 | 📝 Planned |
-| [TASK-917](tasks/TASK-917-pattern-canonicalization-closeout.md) | SPEC-068 closeout | 5 | 📝 Planned |
+| [TASK-912](tasks/TASK-912-pattern-canonicalization-audit-gate.md) | Pattern canonicalization audit gate | 5 | ✅ Complete |
+| [TASK-913](tasks/TASK-913-pattern-canonicalization-api.md) | Pattern canonicalization API | 6 | ✅ Complete |
+| [TASK-914](tasks/TASK-914-alias-aware-constructor-resolution.md) | Alias-aware constructor resolution | 7 | ✅ Complete |
+| [TASK-915](tasks/TASK-915-exhaustiveness-canonical-constructor-universe.md) | Exhaustiveness over canonical constructor universe | 7 | ✅ Complete |
+| [TASK-916](tasks/TASK-916-pattern-canonicalization-diagnostics-and-negative-leakage.md) | Diagnostics and negative leakage tests | 6 | ✅ Complete |
+| [TASK-917](tasks/TASK-917-pattern-canonicalization-closeout.md) | SPEC-068 closeout | 5 | ✅ Complete |

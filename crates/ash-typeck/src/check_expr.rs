@@ -6,7 +6,9 @@
 
 use crate::error::ConstructorError;
 use crate::exhaustiveness::{Coverage, check_exhaustive};
-use crate::type_env::{TypeEnv, TypeInfo, VariantIndex, VariantInfo, WorkflowIntrinsic};
+use crate::type_env::{
+    PatternCanonicalization, TypeEnv, TypeInfo, VariantIndex, VariantInfo, WorkflowIntrinsic,
+};
 use crate::types::{Substitution, Type, TypeVar, unify};
 use ash_core::adt::{VariantPayloadShape, tuple_field_name};
 use ash_core::ast::{Expr as CoreExpr, Pattern as CorePattern, TypeBody, TypeDef};
@@ -2725,6 +2727,11 @@ fn is_tuple_witness_fields(fields: &[(String, CorePattern)]) -> bool {
 fn check_match(env: &TypeEnv, scrutinee: &Expr, arms: &[MatchArm]) -> CheckResult {
     let scrutinee_result = check_expr(env, scrutinee);
     let mut errors: Vec<ConstructorError> = scrutinee_result.errors.clone();
+    let scrutinee_ty = scrutinee_result.substitution.apply(&scrutinee_result.ty);
+    let canonical_scrutinee = match env.canonicalize_type_for_pattern(&scrutinee_ty) {
+        PatternCanonicalization::Matchable(canonical) => Some(canonical),
+        PatternCanonicalization::Blocked { .. } => None,
+    };
 
     if let Some(type_def) = resolve_enum_type_def_for_match(env, scrutinee, arms) {
         let patterns: Vec<CorePattern> = arms
@@ -2740,17 +2747,29 @@ fn check_match(env: &TypeEnv, scrutinee: &Expr, arms: &[MatchArm]) -> CheckResul
         }
     }
 
-    let scrutinee_ty = scrutinee_result.substitution.apply(&scrutinee_result.ty);
+    let pattern_env = pattern_type_env_from(env);
     let mut arm_merged: Option<CheckResult> = None;
     for arm in arms {
         let mut arm_env = env.clone();
-        if let Ok(bindings) = crate::check_pattern::check_pattern(
-            &crate::check_pattern::TypeEnv::new(),
-            &arm.pattern,
-            &scrutinee_ty,
-        ) {
-            for (name, ty) in bindings {
-                arm_env.bind_variable(&name, ty);
+        let bindings = match canonical_scrutinee.as_ref() {
+            Some(canonical) => crate::check_pattern::check_pattern_with_canonical_type(
+                &pattern_env,
+                &arm.pattern,
+                canonical,
+            ),
+            None => crate::check_pattern::check_pattern(&pattern_env, &arm.pattern, &scrutinee_ty),
+        };
+        match bindings {
+            Ok(bindings) => {
+                for (name, ty) in bindings {
+                    arm_env.bind_variable(&name, ty);
+                }
+            }
+            Err(error) => {
+                errors.push(ConstructorError::UnsupportedExpression {
+                    kind: format!("match arm pattern type error: {error}"),
+                    span: arm.span,
+                });
             }
         }
 

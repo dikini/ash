@@ -1,6 +1,6 @@
 # TASK-914: Use canonical ADT identities for alias-equivalent constructor lookup without name leakage
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -60,11 +60,25 @@ commands:
   - git diff --check
   - cargo check --workspace
 checklist:
-  - [ ] Focused tests are non-zero and pass
-  - [ ] cargo fmt --check passes
-  - [ ] git diff --check passes
-  - [ ] Status surfaces and CHANGELOG are reconciled if this task completes
+  - [x] Focused tests are non-zero and pass
+  - [x] cargo fmt --check passes
+  - [x] git diff --check passes
+  - [x] Status surfaces and CHANGELOG are reconciled if this task completes
 ```
+
+## Verification Evidence
+
+- RED: `cargo test -p ash-typeck --test task_914_alias_aware_constructor_resolution -- --nocapture` failed with 0 passed and 3 failed before production edits. Direct and alias scrutinee matches did not bind payload variables, and the unrelated-constructor case did not report the leaked constructor.
+- GREEN: `cargo test -p ash-typeck --test task_914_alias_aware_constructor_resolution -- --nocapture` passed with 4 tests after routing match pattern checks through the TASK-913 canonical constructor universe.
+- Final gate evidence:
+  - `cargo test -p ash-typeck --test task_914_alias_aware_constructor_resolution -- --nocapture` passed with 4 tests.
+  - `cargo fmt --check` passed.
+  - `git diff --check` passed.
+  - `RUSTC_WRAPPER= cargo check --workspace` passed.
+
+## Scope Boundary
+
+TASK-914 intentionally leaves match exhaustiveness universe selection on the existing path. TASK-915 owns replacing visible-name enum guessing with the same canonical constructor universe used by pattern typing.
 
 ## Dependencies for Next Task
 

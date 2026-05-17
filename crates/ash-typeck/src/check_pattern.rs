@@ -6,6 +6,7 @@
 #![allow(clippy::result_large_err)]
 
 use crate::solver::TypeError;
+use crate::type_env::{PatternCanonicalConstructor, PatternCanonicalType};
 use crate::types::{Type, TypeVar};
 use ash_core::adt::tuple_field_name;
 use ash_core::ast::TypeBody;
@@ -151,6 +152,68 @@ pub fn check_pattern(
     let mut bindings = Bindings::new();
     check_pattern_inner(env, pattern, expected, &mut bindings)?;
     Ok(bindings)
+}
+
+/// Type check a pattern against a TASK-913 canonical ADT constructor universe.
+///
+/// This entrypoint resolves variant names only within `canonical.constructors`,
+/// so aliases can match their canonical ADT while unrelated visible
+/// constructors cannot leak in through global name lookup.
+pub fn check_pattern_with_canonical_type(
+    env: &TypeEnv,
+    pattern: &Pattern,
+    canonical: &PatternCanonicalType,
+) -> Result<Bindings, TypeError> {
+    let mut bindings = Bindings::new();
+    check_pattern_inner_with_canonical(env, pattern, canonical, &mut bindings)?;
+    Ok(bindings)
+}
+
+fn check_pattern_inner_with_canonical(
+    env: &TypeEnv,
+    pattern: &Pattern,
+    canonical: &PatternCanonicalType,
+    bindings: &mut Bindings,
+) -> Result<(), TypeError> {
+    match pattern {
+        Pattern::Variant {
+            name,
+            fields,
+            payload,
+        } => check_variant_pattern_with_canonical(
+            env,
+            name,
+            fields.as_deref(),
+            payload,
+            canonical,
+            bindings,
+        ),
+        _ => check_pattern_inner(env, pattern, &canonical.source_type, bindings),
+    }
+}
+
+fn check_variant_pattern_with_canonical(
+    env: &TypeEnv,
+    variant_name: &str,
+    field_patterns: Option<&[(Box<str>, Pattern)]>,
+    payload: &VariantPatternPayload,
+    canonical: &PatternCanonicalType,
+    bindings: &mut Bindings,
+) -> Result<(), TypeError> {
+    let variant = canonical
+        .constructors
+        .iter()
+        .find(|constructor| constructor.name == variant_name)
+        .ok_or_else(|| TypeError::UnknownVariant(variant_name.to_string(), Span::default()))?;
+
+    check_canonical_variant_fields(
+        env,
+        variant_name,
+        field_patterns,
+        payload,
+        variant,
+        bindings,
+    )
 }
 
 /// Inner recursive pattern checking function
@@ -365,6 +428,34 @@ fn check_variant_fields(
     }
 }
 
+fn check_canonical_variant_fields(
+    env: &TypeEnv,
+    variant_name: &str,
+    field_patterns: Option<&[(Box<str>, Pattern)]>,
+    payload: &VariantPatternPayload,
+    variant: &PatternCanonicalConstructor,
+    bindings: &mut Bindings,
+) -> Result<(), TypeError> {
+    match payload {
+        VariantPatternPayload::Tuple(items) => check_tuple_variant_fields_from_types(
+            env,
+            variant_name,
+            items,
+            &variant.fields,
+            bindings,
+        ),
+        VariantPatternPayload::Unit | VariantPatternPayload::Record(_) => {
+            check_record_variant_fields_from_types(
+                env,
+                variant_name,
+                field_patterns,
+                &variant.fields,
+                bindings,
+            )
+        }
+    }
+}
+
 fn check_record_variant_fields(
     env: &TypeEnv,
     variant_name: &str,
@@ -394,6 +485,42 @@ fn check_record_variant_fields(
                         span: Span::default(),
                     })?;
                 check_pattern_inner(env, field_pattern, &field_type, bindings)?;
+            }
+
+            Ok(())
+        }
+    }
+}
+
+fn check_record_variant_fields_from_types(
+    env: &TypeEnv,
+    variant_name: &str,
+    field_patterns: Option<&[(Box<str>, Pattern)]>,
+    variant_fields: &[(String, Type)],
+    bindings: &mut Bindings,
+) -> Result<(), TypeError> {
+    match field_patterns {
+        None => {
+            if variant_fields.is_empty() {
+                Ok(())
+            } else {
+                Err(TypeError::InvalidPattern {
+                    message: format!("variant {variant_name} requires fields"),
+                    span: Span::default(),
+                })
+            }
+        }
+        Some(field_pats) => {
+            for (field_name, field_pattern) in field_pats {
+                let field_type = variant_fields
+                    .iter()
+                    .find(|(name, _)| name == field_name.as_ref())
+                    .map(|(_, ty)| ty)
+                    .ok_or_else(|| TypeError::InvalidPattern {
+                        message: format!("unknown field: {field_name}"),
+                        span: Span::default(),
+                    })?;
+                check_pattern_inner(env, field_pattern, field_type, bindings)?;
             }
 
             Ok(())
@@ -435,6 +562,41 @@ fn check_tuple_variant_fields(
                 span: Span::default(),
             })?;
         check_pattern_inner(env, pattern, &field_type, bindings)?;
+    }
+
+    Ok(())
+}
+
+fn check_tuple_variant_fields_from_types(
+    env: &TypeEnv,
+    variant_name: &str,
+    items: &[Pattern],
+    variant_fields: &[(String, Type)],
+    bindings: &mut Bindings,
+) -> Result<(), TypeError> {
+    if items.len() != variant_fields.len() {
+        return Err(TypeError::InvalidPattern {
+            message: format!(
+                "tuple variant {variant_name} expects {} positional items, got {}",
+                variant_fields.len(),
+                items.len()
+            ),
+            span: Span::default(),
+        });
+    }
+
+    for (index, pattern) in items.iter().enumerate() {
+        let expected_name = tuple_field_name(index);
+        let field_type = variant_fields
+            .iter()
+            .find(|(name, _)| name == &expected_name)
+            .map(|(_, ty)| ty)
+            .or_else(|| variant_fields.get(index).map(|(_, ty)| ty))
+            .ok_or_else(|| TypeError::InvalidPattern {
+                message: format!("tuple variant {variant_name} is missing positional slot {index}"),
+                span: Span::default(),
+            })?;
+        check_pattern_inner(env, pattern, field_type, bindings)?;
     }
 
     Ok(())

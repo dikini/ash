@@ -5,13 +5,13 @@
 #![allow(clippy::result_large_err)]
 
 use crate::error::ConstructorError;
-use crate::exhaustiveness::{Coverage, check_exhaustive};
+use crate::exhaustiveness::{Coverage, check_exhaustive_canonical};
 use crate::type_env::{
     PatternCanonicalization, TypeEnv, TypeInfo, VariantIndex, VariantInfo, WorkflowIntrinsic,
 };
 use crate::types::{Substitution, Type, TypeVar, unify};
 use ash_core::adt::{VariantPayloadShape, tuple_field_name};
-use ash_core::ast::{Expr as CoreExpr, Pattern as CorePattern, TypeBody, TypeDef};
+use ash_core::ast::{Expr as CoreExpr, Pattern as CorePattern};
 use ash_core::workflow_carrier::{
     ActLowerSummary, ContractPlan, OpenPostcondition, PostconditionTarget, ProcLowerSummary,
     ProjectionEvent, ProjectionEventKind, ProjectionKind, PublicWorkflowSummary, SourceOrigin,
@@ -21,8 +21,7 @@ use ash_core::workflow_contract::Requirement;
 use ash_parser::lower_pattern;
 use ash_parser::surface::ConstructorPayload;
 use ash_parser::surface::{
-    ActStmt, BinaryOp, ComprehensionQualifier, DoStmt, Expr, Literal, MatchArm,
-    Pattern as SurfacePattern, UnaryOp,
+    ActStmt, BinaryOp, ComprehensionQualifier, DoStmt, Expr, Literal, MatchArm, UnaryOp,
 };
 use ash_parser::token::Span;
 use ash_parser::workflow_contract_classifier;
@@ -2630,35 +2629,6 @@ fn check_with_error(env: &TypeEnv, body: &Expr, arms: &[MatchArm], span: Span) -
     }
 }
 
-#[allow(clippy::collapsible_if)]
-fn resolve_enum_type_def_for_match<'a>(
-    env: &'a TypeEnv,
-    scrutinee: &Expr,
-    arms: &[MatchArm],
-) -> Option<&'a TypeDef> {
-    if let Expr::Constructor { name, .. } = scrutinee {
-        if let Some((type_name, _)) = env.lookup_constructor(name.as_ref()) {
-            if let Some(def) = env.lookup_type(type_name.as_str()) {
-                if matches!(&def.body, TypeBody::Enum(_)) {
-                    return Some(def);
-                }
-            }
-        }
-    }
-    for arm in arms {
-        if let SurfacePattern::Variant { name, .. } = &arm.pattern {
-            if let Some((type_name, _)) = env.lookup_constructor(name.as_ref()) {
-                if let Some(def) = env.lookup_type(type_name.as_str()) {
-                    if matches!(&def.body, TypeBody::Enum(_)) {
-                        return Some(def);
-                    }
-                }
-            }
-        }
-    }
-    None
-}
-
 fn format_missing_witnesses(witnesses: &[CorePattern]) -> String {
     witnesses
         .iter()
@@ -2733,14 +2703,14 @@ fn check_match(env: &TypeEnv, scrutinee: &Expr, arms: &[MatchArm]) -> CheckResul
         PatternCanonicalization::Blocked { .. } => None,
     };
 
-    if let Some(type_def) = resolve_enum_type_def_for_match(env, scrutinee, arms) {
+    if let Some(canonical) = canonical_scrutinee.as_ref() {
         let patterns: Vec<CorePattern> = arms
             .iter()
             .filter_map(|arm| lower_pattern(&arm.pattern).ok())
             .collect();
-        if let Coverage::Missing(witnesses) = check_exhaustive(&patterns, type_def) {
+        if let Coverage::Missing(witnesses) = check_exhaustive_canonical(&patterns, canonical) {
             errors.push(ConstructorError::NonExhaustiveMatch {
-                scrutinee_type: type_def.name.clone(),
+                scrutinee_type: canonical.canonical_name.name.clone(),
                 missing: format_missing_witnesses(&witnesses),
                 span: Span::default(),
             });

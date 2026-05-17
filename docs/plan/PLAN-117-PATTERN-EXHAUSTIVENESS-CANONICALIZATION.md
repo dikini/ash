@@ -23,7 +23,7 @@
 | [TASK-912](tasks/TASK-912-pattern-canonicalization-audit-gate.md) | Audit pattern/exhaustiveness constructor resolution and decide equality API vs pattern-specific API | Docs/Substrate | 5 | ✅ Complete |
 | [TASK-913](tasks/TASK-913-pattern-canonicalization-api.md) | Add or select the canonicalization API consumed by pattern typing | Typeck/Substrate | 6 | ✅ Complete |
 | [TASK-914](tasks/TASK-914-alias-aware-constructor-resolution.md) | Use canonical ADT identities for alias-equivalent constructor lookup without name leakage | Typeck/Pattern | 7 | ✅ Complete |
-| [TASK-915](tasks/TASK-915-exhaustiveness-canonical-constructor-universe.md) | Run exhaustiveness over the same canonical constructor universe as pattern typing | Typeck/Exhaustiveness | 7 | 📝 Planned |
+| [TASK-915](tasks/TASK-915-exhaustiveness-canonical-constructor-universe.md) | Run exhaustiveness over the same canonical constructor universe as pattern typing | Typeck/Exhaustiveness | 7 | ✅ Complete |
 | [TASK-916](tasks/TASK-916-pattern-canonicalization-diagnostics-and-negative-leakage.md) | Add blocked-neutral, wrong-identity, and unrelated-name leakage diagnostics/tests | Diagnostics/Tests | 6 | 📝 Planned |
 | [TASK-917](tasks/TASK-917-pattern-canonicalization-closeout.md) | Reconcile SPEC-068/PLAN-117 docs, acceptance matrix, broad gates, and review remediation | Docs/Closeout | 5 | 📝 Planned |
 

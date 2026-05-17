@@ -1,6 +1,6 @@
 # TASK-915: Run exhaustiveness over the same canonical constructor universe as pattern typing
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -59,10 +59,10 @@ commands:
   - git diff --check
   - cargo check --workspace
 checklist:
-  - [ ] Focused tests are non-zero and pass
-  - [ ] cargo fmt --check passes
-  - [ ] git diff --check passes
-  - [ ] Status surfaces and CHANGELOG are reconciled if this task completes
+  - [x] Focused tests are non-zero and pass
+  - [x] cargo fmt --check passes
+  - [x] git diff --check passes
+  - [x] Status surfaces and CHANGELOG are reconciled if this task completes
 ```
 
 ## Dependencies for Next Task
@@ -72,3 +72,18 @@ This task produces its verified slice for later tasks in [PLAN-117](../PLAN-117-
 ## Notes
 
 Pattern canonicalization is audit-first and must not solve under neutral computation heads.
+
+## Completion Evidence
+
+- RED: `RUSTC_WRAPPER= cargo test -p ash-typeck --test task_915_exhaustiveness_canonical_constructor_universe -- --nocapture` initially failed on the current implementation because exhaustiveness still guessed the `Result` universe from a visible `Ok` arm for a non-matchable `Int` scrutinee.
+- GREEN: `RUSTC_WRAPPER= cargo test -p ash-typeck --test task_915_exhaustiveness_canonical_constructor_universe -- --nocapture` passed with 4 tests after routing match exhaustiveness through the TASK-913/TASK-914 canonical constructor universe.
+- Final gate evidence:
+  - `RUSTC_WRAPPER= cargo test -p ash-typeck --test task_915_exhaustiveness_canonical_constructor_universe -- --nocapture` passed with 4 tests.
+  - `cargo fmt --check` passed.
+  - `git diff --check` passed.
+  - `RUSTC_WRAPPER= cargo check --workspace` passed.
+- Independent review verdict: APPROVED.
+
+## Scope Boundary
+
+TASK-915 intentionally avoids stable diagnostic wording changes. TASK-916 owns blocked-neutral, wrong-identity, and negative-leakage diagnostic polish and any stable diagnostic-code assertions.

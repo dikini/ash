@@ -3,7 +3,8 @@
 //! Provides exhaustiveness analysis to ensure all pattern match cases are covered.
 //! Uses a pattern matrix approach for analyzing coverage.
 
-use ash_core::adt::tuple_field_name;
+use crate::type_env::{PatternCanonicalConstructor, PatternCanonicalType};
+use ash_core::adt::{VariantPayloadShape, tuple_field_name};
 use ash_core::ast::{Pattern, TypeBody, TypeDef, VariantPayload};
 
 /// Coverage result for exhaustiveness checking
@@ -94,6 +95,19 @@ pub fn check_exhaustive(patterns: &[Pattern], type_def: &TypeDef) -> Coverage {
     }
 }
 
+/// Check if patterns cover all cases for a canonical pattern constructor universe.
+pub fn check_exhaustive_canonical(
+    patterns: &[Pattern],
+    canonical: &PatternCanonicalType,
+) -> Coverage {
+    let matrix = PatternMatrix::new(patterns);
+
+    match find_uncovered_canonical(&matrix, &canonical.constructors) {
+        None => Coverage::Covered,
+        Some(witnesses) => Coverage::Missing(witnesses),
+    }
+}
+
 /// Find uncovered patterns for a type
 fn find_uncovered(matrix: &PatternMatrix, type_def: &TypeDef) -> Option<Vec<Pattern>> {
     let variants = match &type_def.body {
@@ -146,6 +160,66 @@ fn find_uncovered(matrix: &PatternMatrix, type_def: &TypeDef) -> Option<Vec<Patt
 
             missing.push(Pattern::Variant {
                 name: variant.name.clone(),
+                fields: witness_fields,
+            });
+        }
+    }
+
+    if missing.is_empty() {
+        None
+    } else {
+        Some(missing)
+    }
+}
+
+/// Find uncovered patterns for a canonical constructor universe.
+fn find_uncovered_canonical(
+    matrix: &PatternMatrix,
+    constructors: &[PatternCanonicalConstructor],
+) -> Option<Vec<Pattern>> {
+    let has_wildcard = matrix
+        .rows
+        .iter()
+        .any(|row| matches!(row.first(), Some(PatternCell::Wildcard)));
+
+    if has_wildcard {
+        return None;
+    }
+
+    let mut missing = Vec::new();
+    for constructor in constructors {
+        let is_covered = matrix.rows.iter().any(|row| match row.first() {
+            Some(PatternCell::Constructor(name, pattern_fields)) if name == &constructor.name => {
+                match pattern_fields {
+                    None => matches!(constructor.payload_shape, VariantPayloadShape::Unit),
+                    Some(_) => true,
+                }
+            }
+            _ => false,
+        });
+
+        if !is_covered {
+            let witness_fields = match constructor.payload_shape {
+                VariantPayloadShape::Unit => None,
+                VariantPayloadShape::Record => Some(
+                    constructor
+                        .fields
+                        .iter()
+                        .map(|(field_name, _)| (field_name.clone(), Pattern::Wildcard))
+                        .collect(),
+                ),
+                VariantPayloadShape::Tuple => Some(
+                    constructor
+                        .fields
+                        .iter()
+                        .enumerate()
+                        .map(|(index, _)| (tuple_field_name(index), Pattern::Wildcard))
+                        .collect(),
+                ),
+            };
+
+            missing.push(Pattern::Variant {
+                name: constructor.name.clone(),
                 fields: witness_fields,
             });
         }

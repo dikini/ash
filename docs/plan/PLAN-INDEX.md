@@ -3570,5 +3570,5 @@ Phase 121 implements audit-first pattern/exhaustiveness canonicalization for tra
 | [TASK-913](tasks/TASK-913-pattern-canonicalization-api.md) | Pattern canonicalization API | 6 | ✅ Complete |
 | [TASK-914](tasks/TASK-914-alias-aware-constructor-resolution.md) | Alias-aware constructor resolution | 7 | ✅ Complete |
 | [TASK-915](tasks/TASK-915-exhaustiveness-canonical-constructor-universe.md) | Exhaustiveness over canonical constructor universe | 7 | ✅ Complete |
-| [TASK-916](tasks/TASK-916-pattern-canonicalization-diagnostics-and-negative-leakage.md) | Diagnostics and negative leakage tests | 6 | 📝 Planned |
+| [TASK-916](tasks/TASK-916-pattern-canonicalization-diagnostics-and-negative-leakage.md) | Diagnostics and negative leakage tests | 6 | ✅ Complete |
 | [TASK-917](tasks/TASK-917-pattern-canonicalization-closeout.md) | SPEC-068 closeout | 5 | 📝 Planned |

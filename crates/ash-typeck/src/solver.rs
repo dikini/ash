@@ -98,8 +98,8 @@ pub enum TypeError {
     )]
     UnknownVariantForCanonicalType {
         variant: String,
-        canonical_type: Type,
-        source_type: Type,
+        canonical_type: Box<Type>,
+        source_type: Box<Type>,
         span: Span,
     },
     /// Pattern arity mismatch

@@ -206,8 +206,8 @@ fn check_variant_pattern_with_canonical(
         .find(|constructor| constructor.name == variant_name)
         .ok_or_else(|| TypeError::UnknownVariantForCanonicalType {
             variant: variant_name.to_string(),
-            canonical_type: canonical.canonical_type.clone(),
-            source_type: canonical.source_type.clone(),
+            canonical_type: Box::new(canonical.canonical_type.clone()),
+            source_type: Box::new(canonical.source_type.clone()),
             span: Span::default(),
         })?;
 

@@ -851,6 +851,7 @@ pub struct WhereBound {
 #[derive(Debug, Clone, PartialEq)]
 pub struct ImplMethodInfo {
     pub name: String,
+    pub param_names: Vec<String>,
     pub type_params: Vec<TypeVar>,
     pub params: Vec<Type>,
     pub return_type: Type,
@@ -16360,6 +16361,11 @@ impl TypeEnv {
 
             method_infos.push(ImplMethodInfo {
                 name: method_name,
+                param_names: method
+                    .params
+                    .iter()
+                    .map(|param| param.to_string())
+                    .collect(),
                 type_params: method_info.type_params.clone(),
                 params: method_info
                     .params

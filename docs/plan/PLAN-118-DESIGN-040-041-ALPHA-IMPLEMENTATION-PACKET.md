@@ -38,7 +38,7 @@ TASK-919 is the completed documentation-packet task. TASK-920 completed the hard
 | [TASK-920](tasks/TASK-920-alpha-visible-tower-audit-gate.md) | Audit live do/evidence/tower/runtime/CLI seams and patch downstream exact evidence commands | 8 | ✅ Complete |
 | [TASK-921](tasks/TASK-921-public-tower-stdlib-manifest.md) | Public `Act`/`Proc`/`Workflow`/`Result` algebra manifest and no-magic intrinsic mapping | 8 | ✅ Complete |
 | [TASK-922](tasks/TASK-922-monad-evidence-method-body-lowering.md) | TypeEnv/evidence carriers for selected `Monad<K>` operation bodies or intrinsic shims | 10 | ✅ Complete |
-| [TASK-923](tasks/TASK-923-generalized-do-full-bind-lowering.md) | Full generalized `do:K` `<-` lowering through selected Monad evidence | 12 | 📝 Planned |
+| [TASK-923](tasks/TASK-923-generalized-do-full-bind-lowering.md) | Full generalized `do:K` `<-` lowering through selected Monad evidence | 12 | ✅ Complete |
 | [TASK-924](tasks/TASK-924-act-proc-workflow-opaque-carrier-alignment.md) | Align Act/Proc/Workflow opaque carrier semantics with visible algebra and explicit lifts | 10 | 📝 Planned |
 | [TASK-925](tasks/TASK-925-tcir-computation-expression-boundary.md) | Typed computation-expression/TCIR carrier with source/evidence/tower provenance | 12 | 📝 Planned |
 | [TASK-926](tasks/TASK-926-amir-bytecode-logical-schema.md) | Minimal AMIR and bytecode logical schema plus verifier/debug traceability contract | 14 | 📝 Planned |

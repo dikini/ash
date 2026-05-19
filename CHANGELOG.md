@@ -7,6 +7,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Added
+- [TASK-923](docs/plan/tasks/TASK-923-generalized-do-full-bind-lowering.md): Added focused typechecker, interpreter, and engine monomorphization evidence for generalized `do:K` bind lowering through selected `Monad<K>` evidence, including direct execution of selected method closures after engine monomorphization.
 - [TASK-922](docs/plan/tasks/TASK-922-monad-evidence-method-body-lowering.md): Extended Phase 122 do-target dictionaries to carry selected `Monad<K>` return/bind method bodies or intrinsic shims through the typed do elaboration seam. Return-only user `do:Option` lowering now records and calls the selected evidence handle, while full generalized `<-` bind lowering remains owned by TASK-923.
 - [TASK-921](docs/plan/tasks/TASK-921-public-tower-stdlib-manifest.md): Added the Phase 122 public tower stdlib manifest and no-magic intrinsic mapping for `Act`, `Proc`, `Workflow`, `P`, and `Result<_, E>`. `ash-typeck` now exposes typed manifest carriers through `TypeEnv::public_tower_manifest()`, records visible operation-to-intrinsic mappings without hidden independent semantic roots, and adds a real `std/src/workflow.ash` value-level Workflow algebra surface while documenting compiler-prelude-only workflow contract intrinsics.
 

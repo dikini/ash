@@ -126,6 +126,7 @@ fn monad_evidence_records_return_and_bind_method_bodies() {
     let SelectedDoOperation::EvidenceMethod {
         evidence_key,
         method,
+        params,
         body,
     } = evidence.return_op
     else {
@@ -133,6 +134,7 @@ fn monad_evidence_records_return_and_bind_method_bodies() {
     };
     assert_eq!(evidence_key, "Monad<Option>");
     assert_eq!(method, "return");
+    assert_eq!(params, vec!["value".to_string()]);
     assert!(
         matches!(body, CoreExpr::Constructor { ref name, .. } if name == "Some"),
         "return body should be the selected Option implementation body, got {body:?}"
@@ -141,6 +143,7 @@ fn monad_evidence_records_return_and_bind_method_bodies() {
     let SelectedDoOperation::EvidenceMethod {
         evidence_key,
         method,
+        params,
         body,
     } = evidence.bind_op
     else {
@@ -148,6 +151,7 @@ fn monad_evidence_records_return_and_bind_method_bodies() {
     };
     assert_eq!(evidence_key, "Monad<Option>");
     assert_eq!(method, "bind");
+    assert_eq!(params, vec!["value".to_string(), "_f".to_string()]);
     assert!(
         matches!(body, CoreExpr::Variable { ref name, .. } if name == "value"),
         "bind body should be the selected Option implementation body, got {body:?}"
@@ -169,6 +173,7 @@ fn do_option_return_only_lowers_through_selected_evidence_body() {
         Some(SelectedDoOperation::EvidenceMethod {
             evidence_key: "Monad<Option>".to_string(),
             method: "return".to_string(),
+            params: vec!["value".to_string()],
             body: CoreExpr::Constructor {
                 name: "Some".into(),
                 fields: vec![(
@@ -184,24 +189,16 @@ fn do_option_return_only_lowers_through_selected_evidence_body() {
     assert!(
         matches!(
             elaborated.expr,
-            CoreExpr::Call { ref module, ref func, ref arguments }
-                if module.as_deref() == Some("__ash_selected_evidence::Monad")
-                    && func == "return"
-                    && arguments.len() == 1
+            CoreExpr::FnApply { ref func, ref args }
+                if matches!(func.as_ref(), CoreExpr::FnDef { params, body, .. }
+                    if params.len() == 1
+                        && params[0].0 == "value"
+                        && matches!(body.as_ref(), CoreExpr::Constructor { name, .. } if name == "Some"))
+                    && args.len() == 1
         ),
-        "do:Option return must lower through selected evidence without using a rendered evidence key as semantic identity: {:?}",
+        "do:Option return must apply the selected method body directly without a rendered evidence key as semantic identity: {:?}",
         elaborated.expr
     );
-    if let CoreExpr::Call {
-        module: Some(module),
-        ..
-    } = &elaborated.expr
-    {
-        assert!(
-            !module.contains("Monad<Option>"),
-            "rendered evidence keys are diagnostics/snapshots only, got module {module}"
-        );
-    }
 }
 
 #[test]

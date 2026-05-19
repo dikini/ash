@@ -3578,12 +3578,12 @@ Phase 121 implements audit-first pattern/exhaustiveness canonicalization for tra
 ## Phase 122: DESIGN-040/041 Alpha Visible Tower and Runtime Regime
 
 **Priority:** High (alpha release boundary for visible computation algebra, generalized do lowering, traceable execution artifacts, and OS-facing runtime hosting)
-**Status:** 🚧 In progress / implementation underway (TASK-919 through TASK-922 complete; later implementation tasks planned)
+**Status:** 🚧 In progress / implementation underway (TASK-919 through TASK-923 complete; later implementation tasks planned)
 **Spec:** [SPEC-069](../spec/SPEC-069-ALPHA-VISIBLE-TOWER-ALGEBRA-AND-DO-LOWERING.md), [SPEC-070](../spec/SPEC-070-ALPHA-RUNTIME-KERNEL-AND-OS-SURFACE.md)
 **Design:** [DESIGN-040](../design/DESIGN-040-ALPHA-ALGEBRAIC-TOWER.md), [DESIGN-041](../design/DESIGN-041-RUNTIME-REGIME-AND-OS-SURFACE.md)
 **Plan:** [docs/plan/PLAN-118-DESIGN-040-041-ALPHA-IMPLEMENTATION-PACKET.md](PLAN-118-DESIGN-040-041-ALPHA-IMPLEMENTATION-PACKET.md)
 
-Phase 122 promotes DESIGN-040 and DESIGN-041 into an implementation-grade alpha packet. It makes visible `Monad<K>` evidence and tower algebra the construction authority for `Act`, `Proc`, `Workflow`, and user/library monads; plans full generalized `do:K` bind lowering; introduces a traceable TCIR/AMIR/bytecode execution substrate; and defines one RuntimeKernel with two host modes, `ash run` and local `ashd`. TASK-920 completed the hard pre-implementation audit gate and patched downstream exact evidence commands before Rust implementation work. TASK-921 added the public tower stdlib manifest and no-magic intrinsic mapping. TASK-922 added selected Monad evidence method-body/shim carriers for return-only lowering; TASK-923+ remain planned.
+Phase 122 promotes DESIGN-040 and DESIGN-041 into an implementation-grade alpha packet. It makes visible `Monad<K>` evidence and tower algebra the construction authority for `Act`, `Proc`, `Workflow`, and user/library monads; implements full generalized `do:K` bind lowering through selected evidence; introduces a traceable TCIR/AMIR/bytecode execution substrate; and defines one RuntimeKernel with two host modes, `ash run` and local `ashd`. TASK-920 completed the hard pre-implementation audit gate and patched downstream exact evidence commands before Rust implementation work. TASK-921 added the public tower stdlib manifest and no-magic intrinsic mapping. TASK-922 added selected Monad evidence method-body/shim carriers for return-only lowering. TASK-923 generalized `<-` lowering now applies selected method bodies as parameterized closures, hardens `Result<_, E>` evidence matching, and proves interpreter plus engine-monomorphization execution.
 
 | Task | Description | Est. Hours | Status |
 |------|-------------|------------|--------|
@@ -3591,7 +3591,7 @@ Phase 122 promotes DESIGN-040 and DESIGN-041 into an implementation-grade alpha 
 | [TASK-920](tasks/TASK-920-alpha-visible-tower-audit-gate.md) | Audit live do/evidence/tower/runtime/CLI seams and patch downstream exact evidence commands | 8 | ✅ Complete |
 | [TASK-921](tasks/TASK-921-public-tower-stdlib-manifest.md) | Public `Act`/`Proc`/`Workflow`/`Result` algebra manifest and no-magic intrinsic mapping | 8 | ✅ Complete |
 | [TASK-922](tasks/TASK-922-monad-evidence-method-body-lowering.md) | TypeEnv/evidence carriers for selected `Monad<K>` operation bodies or intrinsic shims | 10 | ✅ Complete |
-| [TASK-923](tasks/TASK-923-generalized-do-full-bind-lowering.md) | Full generalized `do:K` `<-` lowering through selected Monad evidence | 12 | 📝 Planned |
+| [TASK-923](tasks/TASK-923-generalized-do-full-bind-lowering.md) | Full generalized `do:K` `<-` lowering through selected Monad evidence | 12 | ✅ Complete |
 | [TASK-924](tasks/TASK-924-act-proc-workflow-opaque-carrier-alignment.md) | Align Act/Proc/Workflow opaque carrier semantics with visible algebra and explicit lifts | 10 | 📝 Planned |
 | [TASK-925](tasks/TASK-925-tcir-computation-expression-boundary.md) | Typed computation-expression/TCIR carrier with source/evidence/tower provenance | 12 | 📝 Planned |
 | [TASK-926](tasks/TASK-926-amir-bytecode-logical-schema.md) | Minimal AMIR and bytecode logical schema plus verifier/debug traceability contract | 14 | 📝 Planned |

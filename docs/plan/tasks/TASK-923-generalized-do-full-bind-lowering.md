@@ -1,6 +1,6 @@
 # TASK-923: Generalized Do Full Bind Lowering
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -80,12 +80,15 @@ commands:
     print("TASK-923 focused test file and names exist")
     PY
   - cargo test -p ash-typeck --test alpha_generalized_do_full_bind_lowering -- --nocapture
+  - cargo test -p ash-typeck --test alpha_monad_evidence_method_body_lowering -- --nocapture
+  - cargo test -p ash-interp --test task_923_selected_evidence_execution -- --nocapture
+  - cargo test -p ash-engine --test task_923_do_selected_evidence_monomorphize -- --nocapture
   - git diff --check
 checklist:
-  - [ ] Focused evidence command patched by TASK-920
-  - [ ] Focused tests pass
-  - [ ] Broad relevant gate passes
-  - [ ] Docs/status/changelog updated if public behavior changed
+  - [x] Focused evidence command patched by TASK-920
+  - [x] Focused tests pass
+  - [x] Broad relevant gate passes
+  - [x] Docs/status/changelog updated if public behavior changed
 ```
 
 ## Dependencies for Next Task
@@ -95,6 +98,6 @@ This task outputs:
 
 ## Notes
 
-- File targets to inspect or modify: `crates/ash-typeck/src/check_expr.rs`, `crates/ash-typeck/src/do_target.rs`, `crates/ash-engine/src/monomorphize.rs`, `crates/ash-interp/src/eval.rs`, `crates/ash-typeck/tests/`.
+- File targets to inspect or modify: `crates/ash-typeck/src/check_expr.rs`, `crates/ash-typeck/src/do_target.rs`, `crates/ash-engine/src/monomorphize.rs`, `crates/ash-interp/src/eval.rs`, `crates/ash-typeck/tests/`, `crates/ash-interp/tests/`, `crates/ash-engine/tests/`.
 - Keep PLAN-118 decision gates in sync with implementation reality.
 - Do not broaden scope beyond SPEC-069/SPEC-070 without a docs patch and review.

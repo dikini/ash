@@ -810,9 +810,7 @@ fn collect_do_notation_diagnostics(env: &TypeEnv, expr: &Expr, diagnostics: &mut
                             substitution = substitution.compose(&value_result.substitution);
                             let value_ty = diagnostic_expr_type(&block_env, value, &substitution);
                             if let Some(value_ty) = value_ty {
-                                if monadic_inner_type(&value_ty, &dictionary.value_constructor)
-                                    .is_some()
-                                {
+                                if monadic_inner_type(&value_ty, &dictionary).is_some() {
                                     diagnostics.push(format!(
                                         "do:{} let `{name}` binds monadic value {value_ty} without sequencing; use `{name} <- ...` to bind the produced value, or keep `let` only when you intentionally want the computation value itself",
                                         target.name.as_ref()
@@ -1238,7 +1236,7 @@ fn collect_comprehension_diagnostics(
                 let value_result = check_expr(&block_env, value);
                 substitution = substitution.compose(&value_result.substitution);
                 if let Some(value_ty) = diagnostic_expr_type(&block_env, value, &substitution) {
-                    if monadic_inner_type(&value_ty, &dictionary.value_constructor).is_some() {
+                    if monadic_inner_type(&value_ty, &dictionary).is_some() {
                         diagnostics.push(format!(
                             "comprehension:{} let `{name}` binds monadic value {value_ty} without sequencing; use `{name} <- ...` to bind the produced value, or keep `let` only when you intentionally want the computation value itself",
                             target.name.as_ref()
@@ -1253,9 +1251,7 @@ fn collect_comprehension_diagnostics(
                 substitution = substitution.compose(&value_result.substitution);
                 if value_result.is_ok() {
                     let value_ty = substitution.apply(&value_result.ty);
-                    if let Some(bound_ty) =
-                        monadic_inner_type(&value_ty, &dictionary.value_constructor)
-                    {
+                    if let Some(bound_ty) = monadic_inner_type(&value_ty, &dictionary) {
                         block_env.bind_variable(name.as_ref(), bound_ty);
                     }
                 }
@@ -1385,13 +1381,6 @@ fn elaborate_do_stmts(
             span: ash_core::Span::default(),
         }),
         [DoStmt::Bind { name, value, .. }, rest @ ..] => {
-            if dictionary.bind_op.is_selected_evidence() {
-                return Err(ConstructorError::UnsupportedExpression {
-                    kind: "generalized do bind lowering through selected Monad evidence is deferred to TASK-923; TASK-922 records the selected bind body only"
-                        .to_string(),
-                    span: Span::default(),
-                });
-            }
             let continuation = CoreExpr::FnDef {
                 params: vec![(name.to_string(), None)],
                 return_type: None,
@@ -1955,13 +1944,16 @@ fn dictionary_call(op: &crate::do_target::DoDictionaryOp, arguments: Vec<CoreExp
             module: (!name.module.is_empty()).then(|| name.module.join("::")),
             arguments,
         },
-        crate::do_target::DoDictionaryOp::EvidenceMethod {
-            evidence, method, ..
-        } => CoreExpr::Call {
-            func: method.clone(),
-            module: Some(evidence.core_module()),
-            arguments,
-        },
+        crate::do_target::DoDictionaryOp::EvidenceMethod { params, body, .. } => {
+            CoreExpr::FnApply {
+                func: Box::new(CoreExpr::FnDef {
+                    params: params.iter().map(|param| (param.clone(), None)).collect(),
+                    return_type: None,
+                    body: Box::new(body.clone()),
+                }),
+                args: arguments,
+            }
+        }
         crate::do_target::DoDictionaryOp::EvidenceIntrinsic { shim, .. } => CoreExpr::Call {
             func: shim.name.clone(),
             module: (!shim.module.is_empty()).then(|| shim.module.join("::")),
@@ -2007,6 +1999,7 @@ fn elaborate_lift_argument_expr(expr: &Expr) -> Result<CoreExpr, ConstructorErro
             "Act" => crate::do_target::DoDictionary {
                 target: crate::QualifiedName::root("Act"),
                 value_constructor: crate::QualifiedName::root("Act"),
+                target_args: Vec::new(),
                 return_op: crate::do_target::DoDictionaryOp::HiddenActReturn,
                 bind_op: crate::do_target::DoDictionaryOp::HiddenActBind,
                 tower_level: crate::do_target::DoTowerLevel::Effectful,
@@ -2014,6 +2007,7 @@ fn elaborate_lift_argument_expr(expr: &Expr) -> Result<CoreExpr, ConstructorErro
             "Proc" => crate::do_target::DoDictionary {
                 target: crate::QualifiedName::root("Proc"),
                 value_constructor: crate::QualifiedName::root("Proc"),
+                target_args: Vec::new(),
                 return_op: crate::do_target::DoDictionaryOp::Ordinary(
                     crate::QualifiedName::qualified(vec!["proc".to_string()], "unit"),
                 ),
@@ -2095,7 +2089,7 @@ fn check_do_block(
                 let value_ty = substitution.apply(&value_result.ty);
                 block_env.bind_variable(name.as_ref(), value_ty.clone());
                 if dictionary.tower_level == crate::do_target::DoTowerLevel::Workflow
-                    && monadic_inner_type(&value_ty, &dictionary.value_constructor).is_some()
+                    && monadic_inner_type(&value_ty, &dictionary).is_some()
                 {
                     if workflow_expr_has_live_artifact(&block_env, value, &live_workflow_bindings) {
                         live_workflow_bindings.insert(name.to_string());
@@ -2118,7 +2112,7 @@ fn check_do_block(
                 }
 
                 let value_ty = substitution.apply(&value_result.ty);
-                match monadic_inner_type(&value_ty, &dictionary.value_constructor) {
+                match monadic_inner_type(&value_ty, &dictionary) {
                     Some(bound_ty) => {
                         if dictionary.tower_level == crate::do_target::DoTowerLevel::Workflow
                             && !workflow_expr_has_live_artifact(
@@ -2184,8 +2178,8 @@ fn check_do_block(
 
     CheckResult {
         ty: Type::Constructor {
-            name: dictionary.value_constructor,
-            args: vec![return_ty],
+            name: dictionary.value_constructor.clone(),
+            args: computation_args_for_do_target(&dictionary, return_ty),
             kind: crate::Kind::Type,
         },
         substitution,
@@ -2203,10 +2197,89 @@ fn do_stmt_span(stmt: &DoStmt) -> Span {
     }
 }
 
-fn monadic_inner_type(ty: &Type, constructor: &crate::QualifiedName) -> Option<Type> {
-    match ty {
-        Type::Constructor { name, args, .. } if name == constructor && args.len() == 1 => {
-            Some(args[0].clone())
+fn monadic_inner_type(ty: &Type, dictionary: &crate::do_target::DoDictionary) -> Option<Type> {
+    let Type::Constructor { name, args, .. } = ty else {
+        return None;
+    };
+    if name != &dictionary.value_constructor {
+        return None;
+    }
+    if dictionary.target_args.is_empty() && args.len() == 1 {
+        return Some(args[0].clone());
+    }
+
+    let hole_index = do_target_hole_index(&dictionary.target_args)?;
+    if args.len() != dictionary.target_args.len() {
+        return None;
+    }
+    for (index, target_arg) in dictionary.target_args.iter().enumerate() {
+        if index == hole_index {
+            continue;
+        }
+        if !surface_type_arg_matches(target_arg, &args[index]) {
+            return None;
+        }
+    }
+    Some(args[hole_index].clone())
+}
+
+fn computation_args_for_do_target(
+    dictionary: &crate::do_target::DoDictionary,
+    return_ty: Type,
+) -> Vec<Type> {
+    let Some(hole_index) = do_target_hole_index(&dictionary.target_args) else {
+        return vec![return_ty];
+    };
+
+    dictionary
+        .target_args
+        .iter()
+        .enumerate()
+        .map(|(index, target_arg)| {
+            if index == hole_index {
+                return_ty.clone()
+            } else {
+                surface_type_arg_to_type(target_arg).unwrap_or(Type::Var(TypeVar::fresh()))
+            }
+        })
+        .collect()
+}
+
+fn do_target_hole_index(args: &[ash_parser::surface::Type]) -> Option<usize> {
+    args.iter()
+        .position(|arg| matches!(arg, ash_parser::surface::Type::Hole { .. }))
+}
+
+fn surface_type_arg_matches(target_arg: &ash_parser::surface::Type, actual: &Type) -> bool {
+    surface_type_arg_to_type(target_arg).is_some_and(|expected| expected == *actual)
+}
+
+fn surface_type_arg_to_type(target_arg: &ash_parser::surface::Type) -> Option<Type> {
+    match target_arg {
+        ash_parser::surface::Type::Name(name) => Some(match name.as_ref() {
+            "Int" => Type::Int,
+            "String" => Type::String,
+            "Bool" => Type::Bool,
+            "Float" => Type::Float,
+            "Null" | "Unit" => Type::Null,
+            "Time" => Type::Time,
+            "Ref" => Type::Ref,
+            other => Type::Constructor {
+                name: crate::QualifiedName::root(other),
+                args: Vec::new(),
+                kind: crate::Kind::Type,
+            },
+        }),
+        ash_parser::surface::Type::Constructor { name, args } => {
+            let lowered_args = args
+                .iter()
+                .map(surface_type_arg_to_type)
+                .collect::<Option<Vec<_>>>()?;
+            Some(Type::Constructor {
+                name: crate::QualifiedName::root(name.to_string()),
+                args: lowered_args,
+                kind: crate::Kind::Type,
+            })
         }
         _ => None,
     }

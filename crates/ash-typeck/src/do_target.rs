@@ -33,6 +33,7 @@ pub enum SelectedDoOperation {
     EvidenceMethod {
         evidence_key: String,
         method: String,
+        params: Vec<String>,
         body: CoreExpr,
     },
     EvidenceIntrinsic {
@@ -57,6 +58,7 @@ pub(crate) enum DoDictionaryOp {
     EvidenceMethod {
         evidence: DoEvidenceIdentity,
         method: String,
+        params: Vec<String>,
         body: CoreExpr,
     },
     EvidenceIntrinsic {
@@ -76,6 +78,7 @@ pub(crate) struct DoEvidenceIdentity {
 pub(crate) struct DoDictionary {
     pub(crate) target: QualifiedName,
     pub(crate) value_constructor: QualifiedName,
+    pub(crate) target_args: Vec<SurfaceType>,
     pub(crate) return_op: DoDictionaryOp,
     pub(crate) bind_op: DoDictionaryOp,
     pub(crate) tower_level: DoTowerLevel,
@@ -101,10 +104,12 @@ impl DoDictionaryOp {
             DoDictionaryOp::EvidenceMethod {
                 evidence,
                 method,
+                params,
                 body,
             } => SelectedDoOperation::EvidenceMethod {
                 evidence_key: evidence.diagnostic_key(),
                 method: method.clone(),
+                params: params.clone(),
                 body: body.clone(),
             },
             DoDictionaryOp::EvidenceIntrinsic {
@@ -118,13 +123,6 @@ impl DoDictionaryOp {
             },
         }
     }
-
-    pub(crate) fn is_selected_evidence(&self) -> bool {
-        matches!(
-            self,
-            DoDictionaryOp::EvidenceMethod { .. } | DoDictionaryOp::EvidenceIntrinsic { .. }
-        )
-    }
 }
 
 impl DoEvidenceIdentity {
@@ -133,10 +131,6 @@ impl DoEvidenceIdentity {
             interface: evidence.interface.clone(),
             head_args: evidence.head_args.clone(),
         }
-    }
-
-    pub(crate) fn core_module(&self) -> String {
-        format!("__ash_selected_evidence::{}", self.interface)
     }
 
     fn diagnostic_key(&self) -> String {
@@ -202,6 +196,7 @@ pub(crate) fn resolve_do_target(
         "Act" => Ok(DoDictionary {
             target: qualified.clone(),
             value_constructor: qualified,
+            target_args: target.args.clone(),
             return_op: DoDictionaryOp::HiddenActReturn,
             bind_op: DoDictionaryOp::HiddenActBind,
             tower_level: DoTowerLevel::Effectful,
@@ -209,6 +204,7 @@ pub(crate) fn resolve_do_target(
         "Proc" => Ok(DoDictionary {
             target: qualified.clone(),
             value_constructor: qualified,
+            target_args: target.args.clone(),
             return_op: DoDictionaryOp::Ordinary(QualifiedName::qualified(
                 vec!["proc".to_string()],
                 "unit",
@@ -222,6 +218,7 @@ pub(crate) fn resolve_do_target(
         "Workflow" => Ok(DoDictionary {
             target: qualified.clone(),
             value_constructor: qualified,
+            target_args: target.args.clone(),
             return_op: DoDictionaryOp::Ordinary(QualifiedName::qualified(
                 vec!["workflow".to_string()],
                 "unit",
@@ -253,18 +250,131 @@ fn resolve_monad_evidence_dictionary(
     target: &DoTarget,
     surface_target: &SurfaceType,
 ) -> Result<DoDictionary, ConstructorError> {
-    let evidence = env
-        .resolve_interface_evidence("Monad", std::slice::from_ref(surface_target))
-        .map_err(|err| missing_monad_evidence_error(surface_target, err, target.span))?;
+    let evidence =
+        match env.resolve_interface_evidence("Monad", std::slice::from_ref(surface_target)) {
+            Ok(evidence) => evidence,
+            Err(err) => resolve_partial_result_monad_evidence(env, surface_target)
+                .ok_or_else(|| missing_monad_evidence_error(surface_target, err, target.span))?,
+        };
     let evidence_identity = DoEvidenceIdentity::from_impl(evidence);
 
     Ok(DoDictionary {
         target: QualifiedName::root(target.name.to_string()),
         value_constructor: QualifiedName::root(target.name.to_string()),
+        target_args: target.args.clone(),
         return_op: selected_monad_op(evidence, &evidence_identity, "return", target.span)?,
         bind_op: selected_monad_op(evidence, &evidence_identity, "bind", target.span)?,
         tower_level: DoTowerLevel::Effectful,
     })
+}
+
+fn resolve_partial_result_monad_evidence<'a>(
+    env: &'a TypeEnv,
+    surface_target: &SurfaceType,
+) -> Option<&'a ImplScheme> {
+    if !is_result_partial_surface_target(surface_target) {
+        return None;
+    }
+
+    env.impl_schemes().iter().find(|scheme| {
+        scheme.interface == "Monad"
+            && scheme
+                .head_args
+                .iter()
+                .any(|arg| result_constructor_evidence_matches_surface_target(arg, surface_target))
+    })
+}
+
+fn result_constructor_evidence_matches_surface_target(
+    arg: &InterfaceEvidenceArg,
+    surface_target: &SurfaceType,
+) -> bool {
+    let SurfaceType::Constructor { name, args } = surface_target else {
+        return false;
+    };
+    if name.as_ref() != "Result" {
+        return false;
+    }
+
+    match arg {
+        InterfaceEvidenceArg::Constructor(expr) => match expr.as_ref() {
+            TypeConstructorExpr::PartialApplication(app) => {
+                type_constructor_head_name(&app.head).is_some_and(|head| head == "Result")
+                    && app.args.len() == args.len()
+                    && app
+                        .args
+                        .iter()
+                        .zip(args)
+                        .all(|(evidence_arg, surface_arg)| {
+                            partial_type_arg_matches_surface_type(evidence_arg, surface_arg)
+                        })
+            }
+            _ => false,
+        },
+        _ => false,
+    }
+}
+
+fn partial_type_arg_matches_surface_type(
+    evidence_arg: &PartialTypeArg,
+    surface_arg: &SurfaceType,
+) -> bool {
+    match (evidence_arg, surface_arg) {
+        (PartialTypeArg::Hole(_), SurfaceType::Hole { .. }) => true,
+        (PartialTypeArg::Applied(evidence_ty), surface_ty) => {
+            canonical_type_expr_matches_surface_type(evidence_ty, surface_ty)
+        }
+        _ => false,
+    }
+}
+
+fn canonical_type_expr_matches_surface_type(
+    evidence_ty: &CanonicalTypeExpr,
+    surface_ty: &SurfaceType,
+) -> bool {
+    match (evidence_ty, surface_ty) {
+        (CanonicalTypeExpr::Primitive(evidence), SurfaceType::Name(surface))
+        | (CanonicalTypeExpr::Var(evidence), SurfaceType::Name(surface)) => {
+            evidence == surface.as_ref()
+        }
+        (
+            CanonicalTypeExpr::NominalApp {
+                visible_name, args, ..
+            },
+            SurfaceType::Name(surface),
+        ) => args.is_empty() && visible_name == surface.as_ref(),
+        (
+            CanonicalTypeExpr::NominalApp {
+                visible_name,
+                args: evidence_args,
+                ..
+            },
+            SurfaceType::Constructor { name, args },
+        ) => {
+            visible_name == name.as_ref()
+                && evidence_args.len() == args.len()
+                && evidence_args
+                    .iter()
+                    .zip(args)
+                    .all(|(evidence_arg, surface_arg)| {
+                        canonical_type_expr_matches_surface_type(evidence_arg, surface_arg)
+                    })
+        }
+        _ => false,
+    }
+}
+
+fn is_result_partial_surface_target(surface_target: &SurfaceType) -> bool {
+    let SurfaceType::Constructor { name, args } = surface_target else {
+        return false;
+    };
+    name.as_ref() == "Result"
+        && args.len() == 2
+        && args
+            .iter()
+            .filter(|arg| matches!(arg, SurfaceType::Hole { .. }))
+            .count()
+            == 1
 }
 
 fn selected_monad_op(
@@ -277,6 +387,7 @@ fn selected_monad_op(
         return Ok(DoDictionaryOp::EvidenceMethod {
             evidence: evidence_identity.clone(),
             method: method.to_string(),
+            params: method_info.param_names.clone(),
             body: method_info.body.clone(),
         });
     }

@@ -7,8 +7,40 @@
 #![allow(clippy::result_large_err)]
 
 use crate::error::{ConstructorError, TypeEnvError};
+use crate::type_env::{ImplScheme, InterfaceEvidenceArg};
 use crate::{Kind, PartialConstructorElaborationError, QualifiedName, TypeEnv};
+use ash_core::ast::Expr as CoreExpr;
+use ash_core::type_ir::{
+    CanonicalTypeExpr, PartialTypeArg, TypeConstructorExpr, TypeConstructorHeadId,
+};
 use ash_parser::surface::{DoTarget, Type as SurfaceType};
+
+/// Selected `Monad<K>` evidence snapshot carried through typed do elaboration.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SelectedDoEvidence {
+    pub target: QualifiedName,
+    pub value_constructor: QualifiedName,
+    pub return_op: SelectedDoOperation,
+    pub bind_op: SelectedDoOperation,
+}
+
+/// Selected operation identity, method body, or intrinsic shim for do lowering.
+#[derive(Debug, Clone, PartialEq)]
+pub enum SelectedDoOperation {
+    HiddenActReturn,
+    HiddenActBind,
+    Ordinary(QualifiedName),
+    EvidenceMethod {
+        evidence_key: String,
+        method: String,
+        body: CoreExpr,
+    },
+    EvidenceIntrinsic {
+        evidence_key: String,
+        method: String,
+        shim: QualifiedName,
+    },
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum DoTowerLevel {
@@ -17,20 +49,99 @@ pub(crate) enum DoTowerLevel {
     Workflow,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub(crate) enum DoDictionaryOp {
     HiddenActReturn,
     HiddenActBind,
     Ordinary(QualifiedName),
+    EvidenceMethod {
+        evidence: DoEvidenceIdentity,
+        method: String,
+        body: CoreExpr,
+    },
+    EvidenceIntrinsic {
+        evidence: DoEvidenceIdentity,
+        method: String,
+        shim: QualifiedName,
+    },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub(crate) struct DoEvidenceIdentity {
+    interface: String,
+    head_args: Vec<InterfaceEvidenceArg>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub(crate) struct DoDictionary {
     pub(crate) target: QualifiedName,
     pub(crate) value_constructor: QualifiedName,
     pub(crate) return_op: DoDictionaryOp,
     pub(crate) bind_op: DoDictionaryOp,
     pub(crate) tower_level: DoTowerLevel,
+}
+
+impl DoDictionary {
+    pub(crate) fn selected_evidence(&self) -> SelectedDoEvidence {
+        SelectedDoEvidence {
+            target: self.target.clone(),
+            value_constructor: self.value_constructor.clone(),
+            return_op: self.return_op.selected_operation(),
+            bind_op: self.bind_op.selected_operation(),
+        }
+    }
+}
+
+impl DoDictionaryOp {
+    pub(crate) fn selected_operation(&self) -> SelectedDoOperation {
+        match self {
+            DoDictionaryOp::HiddenActReturn => SelectedDoOperation::HiddenActReturn,
+            DoDictionaryOp::HiddenActBind => SelectedDoOperation::HiddenActBind,
+            DoDictionaryOp::Ordinary(name) => SelectedDoOperation::Ordinary(name.clone()),
+            DoDictionaryOp::EvidenceMethod {
+                evidence,
+                method,
+                body,
+            } => SelectedDoOperation::EvidenceMethod {
+                evidence_key: evidence.diagnostic_key(),
+                method: method.clone(),
+                body: body.clone(),
+            },
+            DoDictionaryOp::EvidenceIntrinsic {
+                evidence,
+                method,
+                shim,
+            } => SelectedDoOperation::EvidenceIntrinsic {
+                evidence_key: evidence.diagnostic_key(),
+                method: method.clone(),
+                shim: shim.clone(),
+            },
+        }
+    }
+
+    pub(crate) fn is_selected_evidence(&self) -> bool {
+        matches!(
+            self,
+            DoDictionaryOp::EvidenceMethod { .. } | DoDictionaryOp::EvidenceIntrinsic { .. }
+        )
+    }
+}
+
+impl DoEvidenceIdentity {
+    fn from_impl(evidence: &ImplScheme) -> Self {
+        Self {
+            interface: evidence.interface.clone(),
+            head_args: evidence.head_args.clone(),
+        }
+    }
+
+    pub(crate) fn core_module(&self) -> String {
+        format!("__ash_selected_evidence::{}", self.interface)
+    }
+
+    fn diagnostic_key(&self) -> String {
+        render_evidence_key(&self.interface, &self.head_args)
+    }
 }
 
 /// Resolve a surface `do:K` target to a sequencing dictionary.
@@ -142,22 +253,169 @@ fn resolve_monad_evidence_dictionary(
     target: &DoTarget,
     surface_target: &SurfaceType,
 ) -> Result<DoDictionary, ConstructorError> {
-    env.resolve_interface_evidence("Monad", std::slice::from_ref(surface_target))
+    let evidence = env
+        .resolve_interface_evidence("Monad", std::slice::from_ref(surface_target))
         .map_err(|err| missing_monad_evidence_error(surface_target, err, target.span))?;
+    let evidence_identity = DoEvidenceIdentity::from_impl(evidence);
 
     Ok(DoDictionary {
         target: QualifiedName::root(target.name.to_string()),
         value_constructor: QualifiedName::root(target.name.to_string()),
-        return_op: DoDictionaryOp::Ordinary(QualifiedName::qualified(
-            vec!["Monad".to_string()],
-            "return",
-        )),
-        bind_op: DoDictionaryOp::Ordinary(QualifiedName::qualified(
-            vec!["Monad".to_string()],
-            "bind",
-        )),
+        return_op: selected_monad_op(evidence, &evidence_identity, "return", target.span)?,
+        bind_op: selected_monad_op(evidence, &evidence_identity, "bind", target.span)?,
         tower_level: DoTowerLevel::Effectful,
     })
+}
+
+fn selected_monad_op(
+    evidence: &ImplScheme,
+    evidence_identity: &DoEvidenceIdentity,
+    method: &str,
+    span: ash_parser::token::Span,
+) -> Result<DoDictionaryOp, ConstructorError> {
+    if let Some(method_info) = evidence.methods.iter().find(|info| info.name == method) {
+        return Ok(DoDictionaryOp::EvidenceMethod {
+            evidence: evidence_identity.clone(),
+            method: method.to_string(),
+            body: method_info.body.clone(),
+        });
+    }
+
+    match intrinsic_monad_shim(evidence, method) {
+        Some(shim) => Ok(DoDictionaryOp::EvidenceIntrinsic {
+            evidence: evidence_identity.clone(),
+            method: method.to_string(),
+            shim,
+        }),
+        None => Err(ConstructorError::UnsupportedExpression {
+            kind: format!(
+                "selected Monad evidence {} is missing {method} method body or intrinsic shim",
+                evidence_identity.diagnostic_key()
+            ),
+            span,
+        }),
+    }
+}
+
+fn intrinsic_monad_shim(evidence: &ImplScheme, method: &str) -> Option<QualifiedName> {
+    let is_result = evidence
+        .head_args
+        .iter()
+        .any(is_result_constructor_evidence);
+    match (is_result, method) {
+        (true, "return") => Some(QualifiedName::root("Ok".to_string())),
+        (true, "bind") => Some(QualifiedName::qualified(
+            vec!["result".to_string()],
+            "and_then",
+        )),
+        _ => None,
+    }
+}
+
+fn is_result_constructor_evidence(arg: &InterfaceEvidenceArg) -> bool {
+    match arg {
+        InterfaceEvidenceArg::Constructor(expr) => {
+            type_constructor_expr_head_name(expr).is_some_and(|name| name == "Result")
+        }
+        InterfaceEvidenceArg::Proper(crate::types::Type::Constructor { name, .. }) => {
+            name.name == "Result"
+        }
+        InterfaceEvidenceArg::Proper(_) => false,
+    }
+}
+
+fn type_constructor_expr_head_name(expr: &TypeConstructorExpr) -> Option<&str> {
+    match expr {
+        TypeConstructorExpr::ConstructorHead(head) => type_constructor_head_name(head),
+        TypeConstructorExpr::PartialApplication(app) => type_constructor_head_name(&app.head),
+        TypeConstructorExpr::ProperType(CanonicalTypeExpr::NominalApp { visible_name, .. }) => {
+            Some(visible_name.as_str())
+        }
+        _ => None,
+    }
+}
+
+fn type_constructor_head_name(head: &TypeConstructorHeadId) -> Option<&str> {
+    match head {
+        TypeConstructorHeadId::Nominal { visible_name, .. } => Some(visible_name.as_str()),
+        TypeConstructorHeadId::Computation(head) => Some(head.name.as_str()),
+        _ => None,
+    }
+}
+
+fn render_evidence_key(interface: &str, head_args: &[InterfaceEvidenceArg]) -> String {
+    format!(
+        "{}<{}>",
+        interface,
+        head_args
+            .iter()
+            .map(render_evidence_arg)
+            .collect::<Vec<_>>()
+            .join(", ")
+    )
+}
+
+fn render_evidence_arg(arg: &InterfaceEvidenceArg) -> String {
+    match arg {
+        InterfaceEvidenceArg::Proper(ty) => ty.to_string(),
+        InterfaceEvidenceArg::Constructor(expr) => render_type_constructor_expr(expr),
+    }
+}
+
+fn render_type_constructor_expr(expr: &TypeConstructorExpr) -> String {
+    match expr {
+        TypeConstructorExpr::ProperType(ty) => render_canonical_type_expr(ty),
+        TypeConstructorExpr::ConstructorHead(head) => render_type_constructor_head(head),
+        TypeConstructorExpr::PartialApplication(app) => format!(
+            "{}<{}>",
+            render_type_constructor_head(&app.head),
+            app.args
+                .iter()
+                .map(render_partial_type_arg)
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
+        _ => "<unsupported-type-constructor-expr>".to_string(),
+    }
+}
+
+fn render_type_constructor_head(head: &TypeConstructorHeadId) -> String {
+    match head {
+        TypeConstructorHeadId::Nominal { visible_name, .. } => visible_name.clone(),
+        TypeConstructorHeadId::Computation(head) => head.name.clone(),
+        _ => "<unsupported-type-constructor-head>".to_string(),
+    }
+}
+
+fn render_partial_type_arg(arg: &PartialTypeArg) -> String {
+    match arg {
+        PartialTypeArg::Applied(ty) => render_canonical_type_expr(ty),
+        PartialTypeArg::Hole(_) => "_".to_string(),
+        _ => "<unsupported-partial-type-arg>".to_string(),
+    }
+}
+
+fn render_canonical_type_expr(ty: &CanonicalTypeExpr) -> String {
+    match ty {
+        CanonicalTypeExpr::Primitive(name) | CanonicalTypeExpr::Var(name) => name.clone(),
+        CanonicalTypeExpr::NominalApp {
+            visible_name, args, ..
+        } => {
+            if args.is_empty() {
+                visible_name.clone()
+            } else {
+                format!(
+                    "{}<{}>",
+                    visible_name,
+                    args.iter()
+                        .map(render_canonical_type_expr)
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                )
+            }
+        }
+        other => format!("{other:?}"),
+    }
 }
 
 fn missing_monad_evidence_error(

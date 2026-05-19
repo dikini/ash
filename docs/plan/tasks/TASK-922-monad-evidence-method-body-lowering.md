@@ -1,6 +1,6 @@
 # TASK-922: Monad Evidence Method Body Lowering
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -73,6 +73,7 @@ commands:
         "monad_evidence_records_return_and_bind_method_bodies",
         "do_option_return_only_lowers_through_selected_evidence_body",
         "ambiguous_monad_evidence_rejected_before_lowering",
+        "malformed_monad_evidence_without_return_or_bind_fails_closed",
     ]
     missing = [name for name in names if f"fn {name}" not in text]
     assert not missing, missing
@@ -81,10 +82,10 @@ commands:
   - cargo test -p ash-typeck --test alpha_monad_evidence_method_body_lowering -- --nocapture
   - git diff --check
 checklist:
-  - [ ] Focused evidence command patched by TASK-920
-  - [ ] Focused tests pass
-  - [ ] Broad relevant gate passes
-  - [ ] Docs/status/changelog updated if public behavior changed
+  - [x] Focused evidence command patched by TASK-920
+  - [x] Focused tests pass
+  - [x] Broad relevant gate passes
+  - [x] Docs/status/changelog updated if public behavior changed
 ```
 
 ## Dependencies for Next Task
@@ -97,3 +98,11 @@ This task outputs:
 - File targets to inspect or modify: `crates/ash-typeck/src/type_env.rs`, `crates/ash-typeck/src/do_target.rs`, `crates/ash-engine/src/monomorphize.rs`, `crates/ash-interp/src/eval.rs`, `crates/ash-typeck/tests/`.
 - Keep PLAN-118 decision gates in sync with implementation reality.
 - Do not broaden scope beyond SPEC-069/SPEC-070 without a docs patch and review.
+
+## Completion Notes
+
+- Added `crates/ash-typeck/tests/alpha_monad_evidence_method_body_lowering.rs` with the TASK-920-bound non-empty focused tests.
+- Extended do-target dictionaries to carry selected `Monad<K>` operation identity with method bodies or intrinsic shims, rather than only symbolic `Monad::return` / `Monad::bind` placeholders.
+- Added a test-facing selected-evidence snapshot on typed do elaboration so later specialization tasks can preserve the selected evidence identity through the current seam.
+- Return-only `do:Option` now lowers through the selected `Monad<Option>.return` evidence handle. Full generalized `<-` bind lowering remains intentionally deferred to TASK-923, while TASK-922 records the selected bind method body.
+- Verification run: TASK-922 structure assertion, `cargo test -p ash-typeck --test alpha_monad_evidence_method_body_lowering -- --nocapture`, `cargo fmt --check`, `git diff --check`, and `cargo clippy -p ash-typeck --all-targets -- -D warnings`.

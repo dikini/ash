@@ -7,6 +7,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Added
+- [TASK-922](docs/plan/tasks/TASK-922-monad-evidence-method-body-lowering.md): Extended Phase 122 do-target dictionaries to carry selected `Monad<K>` return/bind method bodies or intrinsic shims through the typed do elaboration seam. Return-only user `do:Option` lowering now records and calls the selected evidence handle, while full generalized `<-` bind lowering remains owned by TASK-923.
 - [TASK-921](docs/plan/tasks/TASK-921-public-tower-stdlib-manifest.md): Added the Phase 122 public tower stdlib manifest and no-magic intrinsic mapping for `Act`, `Proc`, `Workflow`, `P`, and `Result<_, E>`. `ash-typeck` now exposes typed manifest carriers through `TypeEnv::public_tower_manifest()`, records visible operation-to-intrinsic mappings without hidden independent semantic roots, and adds a real `std/src/workflow.ash` value-level Workflow algebra surface while documenting compiler-prelude-only workflow contract intrinsics.
 
 ### Changed
@@ -44,6 +45,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Hardened the Phase 115 SPEC-063/PLAN-111/TASK-858..870 packet after focused implementability/spec-compliance/completeness review. The packet now explicitly assigns typed interface/impl parameter carriers, sealed associated-family declaration carriers, one-way family selection, concrete V4 summary schema and public-closure policy, module ownership context, local-vs-imported normalizer task ordering, diagnostic/blocker coverage, downstream audit binding checks, closeout task-file ownership, and zero-test-safe task verification.
 
 ### Fixed
+- [TASK-922](docs/plan/tasks/TASK-922-monad-evidence-method-body-lowering.md): Malformed selected `Monad<K>` evidence that lacks `return` or `bind` now fails closed with a recoverable constructor error instead of panicking during selected method-body lowering.
 - [TASK-917](docs/plan/tasks/TASK-917-pattern-canonicalization-closeout.md): Preserved legacy generic ADT match exhaustiveness after the Phase 121 canonical pattern/exhaustiveness merge. Matches over constructor expressions such as generic `Option<T>` now retain the existing enum-universe fallback when pattern canonicalization blocks only on unresolved type arguments, while non-ADT scrutinees still avoid visible-constructor universe guessing.
 - [TASK-910](docs/plan/tasks/TASK-910-hkt-diagnostics-and-acceptance-matrix.md): Scoped parser `_` type-hole acceptance to impl-head type argument spines such as `Monad<Result<_, E>>`, restoring fail-closed parsing for ordinary function, interface, proposition, alias, resource, capability, and associated type positions.
 - [TASK-906](docs/plan/tasks/TASK-906-parser-kinded-binder-surface.md): Remediated parser/typechecker review blockers so direct workflow lowering and audited TypeEnv signature/registration paths reject constructor-kinded binders before TASK-907/TASK-908 instead of silently treating them as proper type variables, while explicit `*` binders remain ordinary proper type parameters.

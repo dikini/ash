@@ -45,6 +45,9 @@ pub mod visibility;
 // Provides compile-time verification of policy constraints
 pub mod smt;
 
+#[doc(hidden)]
+pub use do_target::{SelectedDoEvidence, SelectedDoOperation};
+
 // Re-export smt module under a unified name
 pub use smt as policy;
 

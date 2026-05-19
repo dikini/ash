@@ -60,6 +60,8 @@ pub struct DoElaborationResult {
     pub ty: Type,
     /// Preserved workflow semantic artifact for `do:Workflow`.
     pub workflow_artifact: Option<WorkflowTypedArtifact>,
+    /// Selected evidence captured at the current do elaboration boundary.
+    pub selected_evidence: Option<crate::do_target::SelectedDoEvidence>,
 }
 
 impl CheckResult {
@@ -1189,6 +1191,7 @@ fn elaborate_typed_do_parts(
         expr: core,
         ty: check.ty,
         workflow_artifact,
+        selected_evidence: Some(dictionary.selected_evidence()),
     })
 }
 
@@ -1382,6 +1385,13 @@ fn elaborate_do_stmts(
             span: ash_core::Span::default(),
         }),
         [DoStmt::Bind { name, value, .. }, rest @ ..] => {
+            if dictionary.bind_op.is_selected_evidence() {
+                return Err(ConstructorError::UnsupportedExpression {
+                    kind: "generalized do bind lowering through selected Monad evidence is deferred to TASK-923; TASK-922 records the selected bind body only"
+                        .to_string(),
+                    span: Span::default(),
+                });
+            }
             let continuation = CoreExpr::FnDef {
                 params: vec![(name.to_string(), None)],
                 return_type: None,
@@ -1943,6 +1953,18 @@ fn dictionary_call(op: &crate::do_target::DoDictionaryOp, arguments: Vec<CoreExp
         crate::do_target::DoDictionaryOp::Ordinary(name) => CoreExpr::Call {
             func: name.name.clone(),
             module: (!name.module.is_empty()).then(|| name.module.join("::")),
+            arguments,
+        },
+        crate::do_target::DoDictionaryOp::EvidenceMethod {
+            evidence, method, ..
+        } => CoreExpr::Call {
+            func: method.clone(),
+            module: Some(evidence.core_module()),
+            arguments,
+        },
+        crate::do_target::DoDictionaryOp::EvidenceIntrinsic { shim, .. } => CoreExpr::Call {
+            func: shim.name.clone(),
+            module: (!shim.module.is_empty()).then(|| shim.module.join("::")),
             arguments,
         },
     }

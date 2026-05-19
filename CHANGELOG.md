@@ -6,6 +6,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 
+### Added
+- [TASK-921](docs/plan/tasks/TASK-921-public-tower-stdlib-manifest.md): Added the Phase 122 public tower stdlib manifest and no-magic intrinsic mapping for `Act`, `Proc`, `Workflow`, `P`, and `Result<_, E>`. `ash-typeck` now exposes typed manifest carriers through `TypeEnv::public_tower_manifest()`, records visible operation-to-intrinsic mappings without hidden independent semantic roots, and adds a real `std/src/workflow.ash` value-level Workflow algebra surface while documenting compiler-prelude-only workflow contract intrinsics.
+
 ### Changed
 - [TASK-920](docs/plan/tasks/TASK-920-alpha-visible-tower-audit-gate.md): Completed the Phase 122 alpha visible tower audit gate. Added `docs/plan/audits/TASK-920-alpha-visible-tower-audit-gate.md`, mapped live parser/typeck/evidence/tower/runtime/CLI seams, and replaced TASK-921 through TASK-931 fail-closed guards with focused Python file/name assertions plus exact cargo test commands.
 - [TASK-919](docs/plan/tasks/TASK-919-design040041-current-state-and-scope-reconciliation.md): Promoted DESIGN-040/DESIGN-041 into the Phase 122 alpha implementation packet. Added SPEC-069 for visible tower algebra and full generalized `Monad<K>` do-lowering, SPEC-070 for the one-kernel/two-host-mode runtime regime, PLAN-118 with TASK-919 through TASK-932, and PLAN-INDEX/spec-index entries that preserve TASK-920 as the hard pre-implementation audit gate. Hardened downstream task handoffs with review-discovered live-substrate constraints, corrected stale std/spec file targets, normalized decision-gate wording, made closeout docs-link verification executable, added missing ActEnv/type-env target coverage, clarified RuntimeKernel artifact-version dependencies plus `ash run` selector and daemon target-shape decision requirements, and documented TASK-920 completion-gate semantics for downstream fail-closed guards.

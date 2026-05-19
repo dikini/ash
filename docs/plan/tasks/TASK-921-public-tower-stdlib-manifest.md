@@ -1,6 +1,6 @@
 # TASK-921: Public Tower Stdlib Manifest
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -80,10 +80,10 @@ commands:
   - cargo test -p ash-typeck --test alpha_visible_tower_manifest -- --nocapture
   - git diff --check
 checklist:
-  - [ ] Focused evidence command patched by TASK-920
-  - [ ] Focused tests pass
-  - [ ] Broad relevant gate passes
-  - [ ] Docs/status/changelog updated if public behavior changed
+  - [x] Focused evidence command patched by TASK-920
+  - [x] Focused tests pass
+  - [x] Broad relevant gate passes
+  - [x] Docs/status/changelog updated if public behavior changed
 ```
 
 ## Dependencies for Next Task
@@ -96,3 +96,12 @@ This task outputs:
 - File targets to inspect or modify: `std/`, `crates/ash-typeck/src/type_env.rs`, `crates/ash-engine/src/module_loader.rs`, `crates/ash-interp/src/eval.rs`.
 - Keep PLAN-118 decision gates in sync with implementation reality.
 - Do not broaden scope beyond SPEC-069/SPEC-070 without a docs patch and review.
+
+## Completion Notes
+
+- Added `crates/ash-typeck/tests/alpha_visible_tower_manifest.rs` with the TASK-920-bound non-empty focused tests.
+- Added `ash_typeck::TypeEnv::public_tower_manifest()` and typed manifest carriers for public `Act`, `Proc`, `Workflow`, `P`, `Result<_, E>`, and canonical `Option` tower/example entries.
+- Recorded visible operation-to-intrinsic mappings for `act::unit`/`act::bind`, `proc::*`, `workflow::*`, `Ok`, and `result::and_then`; mappings retain hidden Act compiler-prelude evidence only behind the visible `act::unit`/`act::bind` names rather than as independent semantic roots.
+- Added TypeEnv-visible `act::*` and `result::and_then` qualified signatures needed by the manifest. Existing `proc::*` and workflow metadata remain the public hooks for later do-lowering tasks.
+- Added `std/src/workflow.ash` for value-level Workflow algebra operations and registered it from `std/src/lib.ash`. `workflow::requires` and `workflow::ensures` remain documented TypeEnv/compiler-prelude metadata because their parameter classes are not source-denotable stdlib types yet.
+- Verification run: TASK-921 structure assertion, `cargo test -p ash-typeck --test alpha_visible_tower_manifest -- --nocapture`, `cargo fmt --check`, and `git diff --check`.

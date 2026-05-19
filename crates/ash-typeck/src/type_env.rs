@@ -3226,6 +3226,381 @@ impl WorkflowIntrinsic {
     }
 }
 
+/// Public manifest role for a visible computation-tower entry.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum PublicTowerManifestKind {
+    /// A source-visible `Monad<K>` construction algebra.
+    Monad,
+    /// A source-visible opaque process-handle surface, not a constructor API.
+    ProcessHandle,
+    /// A source-visible library/domain example that participates in tower tests.
+    DomainExample,
+}
+
+/// Authority source for a public tower operation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum PublicTowerOperationAuthority {
+    /// The operation is requested by public, nameable Ash algebra.
+    VisibleAlgebra,
+    /// Reserved for detecting regressions where runtime/compiler magic becomes
+    /// an independent construction authority.
+    HiddenSemanticRoot,
+}
+
+/// Role played by a public tower operation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum PublicTowerOperationRole {
+    Return,
+    Bind,
+    Then,
+    ExplicitLift,
+    Process,
+    WorkflowContract,
+    DomainConstructor,
+    DomainBind,
+}
+
+/// Runtime/compiler implementation class for a visible tower operation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum PublicTowerIntrinsicKind {
+    /// Ordinary stdlib/library implementation.
+    LibrarySurface,
+    /// Runtime intrinsic backing a public stdlib operation.
+    RuntimeIntrinsic,
+    /// Compiler-prelude evidence retained during migration but shaped like an
+    /// ordinary selected operation.
+    CompilerPreludeEvidence,
+    /// Public data constructor used as a domain return operation.
+    DataConstructor,
+}
+
+/// Mapping from a public operation to the intrinsic or library implementation
+/// that backs it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct PublicTowerIntrinsicMapping {
+    pub kind: PublicTowerIntrinsicKind,
+    pub visible_operation: &'static str,
+    pub implementation: &'static str,
+}
+
+/// Public algebra entry for a tower carrier or canonical domain example.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct PublicTowerAlgebra {
+    pub name: &'static str,
+    pub kind: PublicTowerManifestKind,
+    pub nameable: bool,
+    pub typeable: bool,
+    pub user_constructible: bool,
+    pub note: &'static str,
+}
+
+/// Public operation entry in the computation-tower manifest.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct PublicTowerOperation {
+    pub name: &'static str,
+    pub algebra: &'static str,
+    pub role: PublicTowerOperationRole,
+    pub authority: PublicTowerOperationAuthority,
+    pub nameable: bool,
+    pub typeable: bool,
+    pub intrinsic: PublicTowerIntrinsicMapping,
+}
+
+/// Public computation-tower manifest used by the type environment and tests.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PublicTowerManifest {
+    algebras: &'static [PublicTowerAlgebra],
+    operations: &'static [PublicTowerOperation],
+}
+
+impl PublicTowerManifest {
+    /// Return all public algebra entries in this manifest.
+    #[must_use]
+    pub const fn algebras(&self) -> &'static [PublicTowerAlgebra] {
+        self.algebras
+    }
+
+    /// Return all public operation entries in this manifest.
+    #[must_use]
+    pub const fn operations(&self) -> &'static [PublicTowerOperation] {
+        self.operations
+    }
+
+    /// Look up a public algebra entry by manifest name.
+    #[must_use]
+    pub fn algebra(&self, name: &str) -> Option<&'static PublicTowerAlgebra> {
+        self.algebras.iter().find(|entry| entry.name == name)
+    }
+
+    /// Look up a public operation by fully-qualified source-visible name.
+    #[must_use]
+    pub fn operation(&self, name: &str) -> Option<&'static PublicTowerOperation> {
+        self.operations.iter().find(|entry| entry.name == name)
+    }
+}
+
+const PUBLIC_TOWER_ALGEBRAS: &[PublicTowerAlgebra] = &[
+    PublicTowerAlgebra {
+        name: "Act",
+        kind: PublicTowerManifestKind::Monad,
+        nameable: true,
+        typeable: true,
+        user_constructible: true,
+        note: "effectful computation algebra; ActEnv remains runtime-owned",
+    },
+    PublicTowerAlgebra {
+        name: "Proc",
+        kind: PublicTowerManifestKind::Monad,
+        nameable: true,
+        typeable: true,
+        user_constructible: true,
+        note: "process-capable computation algebra; process identity remains runtime-owned",
+    },
+    PublicTowerAlgebra {
+        name: "Workflow",
+        kind: PublicTowerManifestKind::Monad,
+        nameable: true,
+        typeable: true,
+        user_constructible: true,
+        note: "workflow algebra is currently exposed through TypeEnv/prelude metadata",
+    },
+    PublicTowerAlgebra {
+        name: "Result<_, E>",
+        kind: PublicTowerManifestKind::Monad,
+        nameable: true,
+        typeable: true,
+        user_constructible: true,
+        note: "canonical partial-constructor domain algebra using Ok and result::and_then",
+    },
+    PublicTowerAlgebra {
+        name: "Option",
+        kind: PublicTowerManifestKind::DomainExample,
+        nameable: true,
+        typeable: true,
+        user_constructible: true,
+        note: "canonical user/library monad example for later selected evidence lowering",
+    },
+    PublicTowerAlgebra {
+        name: "P",
+        kind: PublicTowerManifestKind::ProcessHandle,
+        nameable: true,
+        typeable: true,
+        user_constructible: false,
+        note: "opaque process handle returned by Proc operations",
+    },
+];
+
+const fn intrinsic(
+    kind: PublicTowerIntrinsicKind,
+    visible_operation: &'static str,
+    implementation: &'static str,
+) -> PublicTowerIntrinsicMapping {
+    PublicTowerIntrinsicMapping {
+        kind,
+        visible_operation,
+        implementation,
+    }
+}
+
+const PUBLIC_TOWER_OPERATIONS: &[PublicTowerOperation] = &[
+    PublicTowerOperation {
+        name: "act::unit",
+        algebra: "Act",
+        role: PublicTowerOperationRole::Return,
+        authority: PublicTowerOperationAuthority::VisibleAlgebra,
+        nameable: true,
+        typeable: true,
+        intrinsic: intrinsic(
+            PublicTowerIntrinsicKind::CompilerPreludeEvidence,
+            "act::unit",
+            "act::__unit",
+        ),
+    },
+    PublicTowerOperation {
+        name: "act::bind",
+        algebra: "Act",
+        role: PublicTowerOperationRole::Bind,
+        authority: PublicTowerOperationAuthority::VisibleAlgebra,
+        nameable: true,
+        typeable: true,
+        intrinsic: intrinsic(
+            PublicTowerIntrinsicKind::CompilerPreludeEvidence,
+            "act::bind",
+            "act::__bind",
+        ),
+    },
+    PublicTowerOperation {
+        name: "proc::unit",
+        algebra: "Proc",
+        role: PublicTowerOperationRole::Return,
+        authority: PublicTowerOperationAuthority::VisibleAlgebra,
+        nameable: true,
+        typeable: true,
+        intrinsic: intrinsic(
+            PublicTowerIntrinsicKind::RuntimeIntrinsic,
+            "proc::unit",
+            "proc::unit",
+        ),
+    },
+    PublicTowerOperation {
+        name: "proc::bind",
+        algebra: "Proc",
+        role: PublicTowerOperationRole::Bind,
+        authority: PublicTowerOperationAuthority::VisibleAlgebra,
+        nameable: true,
+        typeable: true,
+        intrinsic: intrinsic(
+            PublicTowerIntrinsicKind::RuntimeIntrinsic,
+            "proc::bind",
+            "proc::bind",
+        ),
+    },
+    PublicTowerOperation {
+        name: "proc::from_act",
+        algebra: "Proc",
+        role: PublicTowerOperationRole::ExplicitLift,
+        authority: PublicTowerOperationAuthority::VisibleAlgebra,
+        nameable: true,
+        typeable: true,
+        intrinsic: intrinsic(
+            PublicTowerIntrinsicKind::RuntimeIntrinsic,
+            "proc::from_act",
+            "proc::from_act",
+        ),
+    },
+    PublicTowerOperation {
+        name: "proc::par",
+        algebra: "Proc",
+        role: PublicTowerOperationRole::Process,
+        authority: PublicTowerOperationAuthority::VisibleAlgebra,
+        nameable: true,
+        typeable: true,
+        intrinsic: intrinsic(
+            PublicTowerIntrinsicKind::RuntimeIntrinsic,
+            "proc::par",
+            "proc::par",
+        ),
+    },
+    PublicTowerOperation {
+        name: "proc::await",
+        algebra: "Proc",
+        role: PublicTowerOperationRole::Process,
+        authority: PublicTowerOperationAuthority::VisibleAlgebra,
+        nameable: true,
+        typeable: true,
+        intrinsic: intrinsic(
+            PublicTowerIntrinsicKind::RuntimeIntrinsic,
+            "proc::await",
+            "proc::await",
+        ),
+    },
+    PublicTowerOperation {
+        name: "workflow::unit",
+        algebra: "Workflow",
+        role: PublicTowerOperationRole::Return,
+        authority: PublicTowerOperationAuthority::VisibleAlgebra,
+        nameable: true,
+        typeable: true,
+        intrinsic: intrinsic(
+            PublicTowerIntrinsicKind::RuntimeIntrinsic,
+            "workflow::unit",
+            "workflow::unit",
+        ),
+    },
+    PublicTowerOperation {
+        name: "workflow::bind",
+        algebra: "Workflow",
+        role: PublicTowerOperationRole::Bind,
+        authority: PublicTowerOperationAuthority::VisibleAlgebra,
+        nameable: true,
+        typeable: true,
+        intrinsic: intrinsic(
+            PublicTowerIntrinsicKind::RuntimeIntrinsic,
+            "workflow::bind",
+            "workflow::bind",
+        ),
+    },
+    PublicTowerOperation {
+        name: "workflow::from_proc",
+        algebra: "Workflow",
+        role: PublicTowerOperationRole::ExplicitLift,
+        authority: PublicTowerOperationAuthority::VisibleAlgebra,
+        nameable: true,
+        typeable: true,
+        intrinsic: intrinsic(
+            PublicTowerIntrinsicKind::RuntimeIntrinsic,
+            "workflow::from_proc",
+            "workflow::from_proc",
+        ),
+    },
+    PublicTowerOperation {
+        name: "workflow::from_act",
+        algebra: "Workflow",
+        role: PublicTowerOperationRole::ExplicitLift,
+        authority: PublicTowerOperationAuthority::VisibleAlgebra,
+        nameable: true,
+        typeable: true,
+        intrinsic: intrinsic(
+            PublicTowerIntrinsicKind::RuntimeIntrinsic,
+            "workflow::from_act",
+            "workflow::from_act",
+        ),
+    },
+    PublicTowerOperation {
+        name: "workflow::requires",
+        algebra: "Workflow",
+        role: PublicTowerOperationRole::WorkflowContract,
+        authority: PublicTowerOperationAuthority::VisibleAlgebra,
+        nameable: true,
+        typeable: true,
+        intrinsic: intrinsic(
+            PublicTowerIntrinsicKind::CompilerPreludeEvidence,
+            "workflow::requires",
+            "workflow::requires",
+        ),
+    },
+    PublicTowerOperation {
+        name: "workflow::ensures",
+        algebra: "Workflow",
+        role: PublicTowerOperationRole::WorkflowContract,
+        authority: PublicTowerOperationAuthority::VisibleAlgebra,
+        nameable: true,
+        typeable: true,
+        intrinsic: intrinsic(
+            PublicTowerIntrinsicKind::CompilerPreludeEvidence,
+            "workflow::ensures",
+            "workflow::ensures",
+        ),
+    },
+    PublicTowerOperation {
+        name: "Ok",
+        algebra: "Result<_, E>",
+        role: PublicTowerOperationRole::DomainConstructor,
+        authority: PublicTowerOperationAuthority::VisibleAlgebra,
+        nameable: true,
+        typeable: true,
+        intrinsic: intrinsic(PublicTowerIntrinsicKind::DataConstructor, "Ok", "Ok"),
+    },
+    PublicTowerOperation {
+        name: "result::and_then",
+        algebra: "Result<_, E>",
+        role: PublicTowerOperationRole::DomainBind,
+        authority: PublicTowerOperationAuthority::VisibleAlgebra,
+        nameable: true,
+        typeable: true,
+        intrinsic: intrinsic(
+            PublicTowerIntrinsicKind::LibrarySurface,
+            "result::and_then",
+            "result::and_then",
+        ),
+    },
+];
+
+static PUBLIC_TOWER_MANIFEST: PublicTowerManifest = PublicTowerManifest {
+    algebras: PUBLIC_TOWER_ALGEBRAS,
+    operations: PUBLIC_TOWER_OPERATIONS,
+};
+
 /// Type environment for tracking type definitions and constructor mappings
 #[derive(Debug, Clone, Default)]
 pub struct TypeEnv {
@@ -4053,6 +4428,12 @@ impl TypeEnv {
     #[must_use]
     pub fn workflow_effect(&self) -> Option<ash_core::Effect> {
         self.workflow_effect
+    }
+
+    /// Return the public computation-tower manifest for alpha tower algebra.
+    #[must_use]
+    pub fn public_tower_manifest(&self) -> &'static PublicTowerManifest {
+        &PUBLIC_TOWER_MANIFEST
     }
 
     /// Set the module identity used for source-local semantic declarations.
@@ -16124,8 +16505,10 @@ impl TypeEnv {
         self.add_proc_type();
         self.add_workflow_type();
         self.add_process_handle_type();
+        self.add_act_builtin_values();
         self.add_proc_builtin_values();
         self.add_workflow_builtin_values();
+        self.add_result_builtin_values();
         self.add_builtin_capability_symbols();
     }
 
@@ -16299,6 +16682,55 @@ impl TypeEnv {
             .expect("Failed to register P type");
     }
 
+    /// Add the qualified act module builtin value signatures.
+    fn add_act_builtin_values(&mut self) {
+        let a = crate::types::Type::Var(crate::types::TypeVar::fresh());
+        let b = crate::types::Type::Var(crate::types::TypeVar::fresh());
+        let act_a = crate::types::Type::Constructor {
+            name: crate::QualifiedName::root("Act"),
+            args: vec![a.clone()],
+            kind: crate::Kind::Type,
+        };
+        let act_b = crate::types::Type::Constructor {
+            name: crate::QualifiedName::root("Act"),
+            args: vec![b.clone()],
+            kind: crate::Kind::Type,
+        };
+
+        self.bind_variable(
+            "act::unit",
+            crate::types::Type::Fn(vec![a.clone()], Box::new(act_a.clone())),
+        );
+        self.bind_variable(
+            "act::bind",
+            crate::types::Type::Fn(
+                vec![
+                    act_a.clone(),
+                    crate::types::Type::Fn(vec![a], Box::new(act_b.clone())),
+                ],
+                Box::new(act_b.clone()),
+            ),
+        );
+        self.bind_variable(
+            "act::then",
+            crate::types::Type::Fn(vec![act_a.clone(), act_b.clone()], Box::new(act_b)),
+        );
+        self.bind_variable(
+            "act::guard",
+            crate::types::Type::Fn(
+                vec![crate::types::Type::String, act_a.clone()],
+                Box::new(act_a),
+            ),
+        );
+        self.bind_variable(
+            "act::policy_check",
+            crate::types::Type::Fn(
+                vec![crate::types::Type::String],
+                Box::new(crate::types::Type::Bool),
+            ),
+        );
+    }
+
     /// Add the qualified proc module builtin value signatures.
     fn add_proc_builtin_values(&mut self) {
         let a = crate::types::Type::Var(crate::types::TypeVar::fresh());
@@ -16422,8 +16854,8 @@ impl TypeEnv {
 
     /// Add the qualified workflow module builtin value signatures.
     fn add_workflow_builtin_values(&mut self) {
-        let a = crate::types::Type::Var(crate::types::TypeVar(0));
-        let b = crate::types::Type::Var(crate::types::TypeVar(1));
+        let a = crate::types::Type::Var(crate::types::TypeVar::fresh());
+        let b = crate::types::Type::Var(crate::types::TypeVar::fresh());
         let workflow_a = crate::types::Type::Constructor {
             name: crate::QualifiedName::root("Workflow"),
             args: vec![a.clone()],
@@ -16485,6 +16917,34 @@ impl TypeEnv {
         self.workflow_intrinsics.insert(
             "workflow::ensures".to_string(),
             WorkflowIntrinsic::ensures(workflow_unit),
+        );
+    }
+
+    /// Add the qualified result module helper signatures used by the public tower manifest.
+    fn add_result_builtin_values(&mut self) {
+        let t = crate::types::Type::Var(crate::types::TypeVar::fresh());
+        let e = crate::types::Type::Var(crate::types::TypeVar::fresh());
+        let u = crate::types::Type::Var(crate::types::TypeVar::fresh());
+        let result_t_e = crate::types::Type::Constructor {
+            name: crate::QualifiedName::root("Result"),
+            args: vec![t.clone(), e.clone()],
+            kind: crate::Kind::Type,
+        };
+        let result_u_e = crate::types::Type::Constructor {
+            name: crate::QualifiedName::root("Result"),
+            args: vec![u.clone(), e],
+            kind: crate::Kind::Type,
+        };
+
+        self.bind_variable(
+            "result::and_then",
+            crate::types::Type::Fn(
+                vec![
+                    result_t_e,
+                    crate::types::Type::Fn(vec![t], Box::new(result_u_e.clone())),
+                ],
+                Box::new(result_u_e),
+            ),
         );
     }
 

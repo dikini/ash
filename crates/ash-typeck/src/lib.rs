@@ -82,8 +82,10 @@ pub use type_env::{
     CapabilityBindingInfo, CapabilityBindingProvenanceInfo, ImplementationAuthoritySourceInfo,
     PartialConstructorElaborationError, PatternCanonicalConstructor, PatternCanonicalType,
     PatternCanonicalization, PatternCanonicalizationBlockedReason, ProvenanceSourceKind,
-    ResourceBindingProvenanceInfo, ResourceTypeInfo, StoredFnContract, TypeEnv,
-    WorkflowIntrinsicKind, WorkflowIntrinsicParameterClass,
+    PublicTowerAlgebra, PublicTowerIntrinsicKind, PublicTowerIntrinsicMapping, PublicTowerManifest,
+    PublicTowerManifestKind, PublicTowerOperation, PublicTowerOperationAuthority,
+    PublicTowerOperationRole, ResourceBindingProvenanceInfo, ResourceTypeInfo, StoredFnContract,
+    TypeEnv, WorkflowIntrinsicKind, WorkflowIntrinsicParameterClass,
 };
 pub use types::*;
 pub use visibility::{ModulePath, VisibilityChecker, VisibilityError, VisibilityExt};

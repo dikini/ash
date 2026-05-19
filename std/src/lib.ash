@@ -53,6 +53,9 @@ pub use act::{unit, bind, then, guard};
 -- Proc process-structured computation helpers
 pub mod proc;
 
+-- Workflow governed process computation helpers
+pub mod workflow;
+
 -- JSON functions
 pub use json::{parse, stringify, stringify_pretty};
 

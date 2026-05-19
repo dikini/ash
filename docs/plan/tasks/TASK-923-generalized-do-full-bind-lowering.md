@@ -65,7 +65,21 @@ toolsets: [terminal, file]
 ```
 strictness: clean
 commands:
-  - false # TASK-920 must replace this with exact focused non-zero evidence before implementation starts
+  - |
+    python3 - <<'PY'
+    from pathlib import Path
+    p = Path("crates/ash-typeck/tests/alpha_generalized_do_full_bind_lowering.rs")
+    text = p.read_text()
+    names = [
+        "do_result_bind_lowers_through_monad_bind_evidence",
+        "user_option_do_bind_uses_selected_monad_evidence",
+        "generic_monad_do_specializes_before_execution",
+    ]
+    missing = [name for name in names if f"fn {name}" not in text]
+    assert not missing, missing
+    print("TASK-923 focused test file and names exist")
+    PY
+  - cargo test -p ash-typeck --test alpha_generalized_do_full_bind_lowering -- --nocapture
   - git diff --check
 checklist:
   - [ ] Focused evidence command patched by TASK-920

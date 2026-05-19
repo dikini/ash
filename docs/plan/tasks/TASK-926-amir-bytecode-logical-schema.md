@@ -65,7 +65,21 @@ toolsets: [terminal, file]
 ```
 strictness: clean
 commands:
-  - false # TASK-920 must replace this with exact focused non-zero evidence before implementation starts
+  - |
+    python3 - <<'PY'
+    from pathlib import Path
+    p = Path("crates/ash-core/tests/alpha_amir_bytecode_schema.rs")
+    text = p.read_text()
+    names = [
+        "amir_sections_keep_tcir_source_provenance",
+        "bytecode_verifier_rejects_missing_or_stale_provenance",
+        "bytecode_schema_validates_without_source_reparse",
+    ]
+    missing = [name for name in names if f"fn {name}" not in text]
+    assert not missing, missing
+    print("TASK-926 focused test file and names exist")
+    PY
+  - cargo test -p ash-core --test alpha_amir_bytecode_schema -- --nocapture
   - git diff --check
 checklist:
   - [ ] Focused evidence command patched by TASK-920

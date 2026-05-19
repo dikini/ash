@@ -62,7 +62,23 @@ toolsets: [terminal, file]
 ```
 strictness: clean
 commands:
-  - false # TASK-920 must replace this with exact focused non-zero evidence before implementation starts
+  - |
+    python3 - <<'PY'
+    from pathlib import Path
+    audit = Path("docs/plan/audits/TASK-931-alpha-acceptance-matrix.md")
+    assert audit.is_file(), audit
+    p = Path("crates/ash-typeck/tests/alpha_visible_tower_acceptance_matrix.rs")
+    text = p.read_text()
+    names = [
+        "spec069_acceptance_cases_are_mapped_to_focused_tests",
+        "spec070_runtime_acceptance_cases_are_mapped_to_focused_tests",
+        "alpha_non_interference_matrix_covers_legacy_surfaces",
+    ]
+    missing = [name for name in names if f"fn {name}" not in text]
+    assert not missing, missing
+    print("TASK-931 focused acceptance artifact, test file, and names exist")
+    PY
+  - cargo test -p ash-typeck --test alpha_visible_tower_acceptance_matrix -- --nocapture
   - git diff --check
 checklist:
   - [ ] Focused evidence command patched by TASK-920

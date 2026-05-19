@@ -67,7 +67,21 @@ toolsets: [terminal, file]
 ```
 strictness: clean
 commands:
-  - false # TASK-920 must replace this with exact focused non-zero evidence before implementation starts
+  - |
+    python3 - <<'PY'
+    from pathlib import Path
+    p = Path("crates/ash-cli/tests/alpha_ashd_local_daemon_control_plane.rs")
+    text = p.read_text()
+    names = [
+        "ashd_serve_indexes_definitions_without_running_workflows",
+        "ashd_reload_updates_definition_table_and_preserves_kernel_mode",
+        "ashd_rejects_invalid_root",
+    ]
+    missing = [name for name in names if f"fn {name}" not in text]
+    assert not missing, missing
+    print("TASK-929 focused test file and names exist")
+    PY
+  - cargo test -p ash-cli --test alpha_ashd_local_daemon_control_plane -- --nocapture
   - git diff --check
 checklist:
   - [ ] Focused evidence command patched by TASK-920

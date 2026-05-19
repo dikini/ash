@@ -12,12 +12,12 @@
 
 ## 1. Status
 
-**Status:** 📝 Planned after completed docs/spec packet promotion
+**Status:** 🚧 In progress / implementation underway after completed TASK-920 audit gate
 **Spec:** [SPEC-069](../spec/SPEC-069-ALPHA-VISIBLE-TOWER-ALGEBRA-AND-DO-LOWERING.md), [SPEC-070](../spec/SPEC-070-ALPHA-RUNTIME-KERNEL-AND-OS-SURFACE.md)
 **Design:** [DESIGN-040](../design/DESIGN-040-ALPHA-ALGEBRAIC-TOWER.md), [DESIGN-041](../design/DESIGN-041-RUNTIME-REGIME-AND-OS-SURFACE.md)
 **Task range:** [TASK-919](tasks/TASK-919-design040041-current-state-and-scope-reconciliation.md) through [TASK-932](tasks/TASK-932-alpha-closeout-review-remediation.md)
 
-TASK-919 is the completed documentation-packet task. TASK-920 is the hard pre-implementation audit gate. TASK-921 through TASK-930 remain planned implementation/compatibility tasks until TASK-920 binds exact callsites and focused tests. TASK-931/TASK-932 close acceptance and review.
+TASK-919 is the completed documentation-packet task. TASK-920 completed the hard pre-implementation audit gate and bound exact callsites plus zero-test-safe focused commands. TASK-921 through TASK-930 remain planned implementation/compatibility tasks. TASK-931/TASK-932 close acceptance and review.
 
 ## 2. Current-state reconciliation
 
@@ -35,7 +35,7 @@ TASK-919 is the completed documentation-packet task. TASK-920 is the hard pre-im
 | Task | Description | Est. Hours | Status |
 | --- | --- | ---: | --- |
 | [TASK-919](tasks/TASK-919-design040041-current-state-and-scope-reconciliation.md) | Promote DESIGN-040/041 into SPEC-069/SPEC-070/PLAN-118 and register Phase 122 | 4 | ✅ Complete |
-| [TASK-920](tasks/TASK-920-alpha-visible-tower-audit-gate.md) | Audit live do/evidence/tower/runtime/CLI seams and patch downstream exact evidence commands | 8 | 📝 Planned |
+| [TASK-920](tasks/TASK-920-alpha-visible-tower-audit-gate.md) | Audit live do/evidence/tower/runtime/CLI seams and patch downstream exact evidence commands | 8 | ✅ Complete |
 | [TASK-921](tasks/TASK-921-public-tower-stdlib-manifest.md) | Public `Act`/`Proc`/`Workflow`/`Result` algebra manifest and no-magic intrinsic mapping | 8 | 📝 Planned |
 | [TASK-922](tasks/TASK-922-monad-evidence-method-body-lowering.md) | TypeEnv/evidence carriers for selected `Monad<K>` operation bodies or intrinsic shims | 10 | 📝 Planned |
 | [TASK-923](tasks/TASK-923-generalized-do-full-bind-lowering.md) | Full generalized `do:K` `<-` lowering through selected Monad evidence | 12 | 📝 Planned |

@@ -64,7 +64,20 @@ toolsets: [terminal, file]
 ```
 strictness: clean
 commands:
-  - false # TASK-920 must replace this with exact focused non-zero evidence before implementation starts
+  - |
+    python3 - <<'PY'
+    from pathlib import Path
+    p = Path("crates/ash-typeck/tests/alpha_visible_tower_manifest.rs")
+    text = p.read_text()
+    names = [
+        "public_tower_manifest_exposes_act_proc_workflow_result_algebra",
+        "visible_intrinsic_mapping_has_no_hidden_unrelated_do_magic",
+    ]
+    missing = [name for name in names if f"fn {name}" not in text]
+    assert not missing, missing
+    print("TASK-921 focused test file and names exist")
+    PY
+  - cargo test -p ash-typeck --test alpha_visible_tower_manifest -- --nocapture
   - git diff --check
 checklist:
   - [ ] Focused evidence command patched by TASK-920

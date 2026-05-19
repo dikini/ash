@@ -67,7 +67,20 @@ toolsets: [terminal, file]
 ```
 strictness: clean
 commands:
-  - false # TASK-920 must replace this with exact focused non-zero evidence before implementation starts
+  - |
+    python3 - <<'PY'
+    from pathlib import Path
+    p = Path("crates/ash-cli/tests/alpha_ash_run_runtime_kernel_mode.rs")
+    text = p.read_text()
+    names = [
+        "ash_run_executes_entry_through_one_shot_runtime_kernel",
+        "ash_run_reports_kernel_instance_and_artifact_identity",
+    ]
+    missing = [name for name in names if f"fn {name}" not in text]
+    assert not missing, missing
+    print("TASK-928 focused test file and names exist")
+    PY
+  - cargo test -p ash-cli --test alpha_ash_run_runtime_kernel_mode -- --nocapture
   - git diff --check
 checklist:
   - [ ] Focused evidence command patched by TASK-920

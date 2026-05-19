@@ -62,7 +62,20 @@ toolsets: [terminal, file]
 ```
 strictness: clean
 commands:
-  - false # TASK-920 must replace this with exact focused non-zero evidence before implementation starts
+  - |
+    python3 - <<'PY'
+    from pathlib import Path
+    p = Path("crates/ash-cli/tests/alpha_ooda_library_demotion.rs")
+    text = p.read_text()
+    names = [
+        "ooda_examples_are_library_or_template_calls_not_primitive_ir",
+        "ooda_lint_points_to_visible_tower_algebra",
+    ]
+    missing = [name for name in names if f"fn {name}" not in text]
+    assert not missing, missing
+    print("TASK-930 focused test file and names exist")
+    PY
+  - cargo test -p ash-cli --test alpha_ooda_library_demotion -- --nocapture
   - git diff --check
 checklist:
   - [ ] Focused evidence command patched by TASK-920

@@ -64,7 +64,20 @@ toolsets: [terminal, file]
 ```
 strictness: clean
 commands:
-  - false # TASK-920 must replace this with exact focused non-zero evidence before implementation starts
+  - |
+    python3 - <<'PY'
+    from pathlib import Path
+    p = Path("crates/ash-core/tests/alpha_tcir_computation_expression.rs")
+    text = p.read_text()
+    names = [
+        "tcir_records_source_do_target_and_selected_evidence",
+        "tcir_preserves_tower_level_and_workflow_artifact_provenance",
+    ]
+    missing = [name for name in names if f"fn {name}" not in text]
+    assert not missing, missing
+    print("TASK-925 focused test file and names exist")
+    PY
+  - cargo test -p ash-core --test alpha_tcir_computation_expression -- --nocapture
   - git diff --check
 checklist:
   - [ ] Focused evidence command patched by TASK-920

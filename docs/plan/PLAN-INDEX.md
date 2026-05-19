@@ -3578,17 +3578,17 @@ Phase 121 implements audit-first pattern/exhaustiveness canonicalization for tra
 ## Phase 122: DESIGN-040/041 Alpha Visible Tower and Runtime Regime
 
 **Priority:** High (alpha release boundary for visible computation algebra, generalized do lowering, traceable execution artifacts, and OS-facing runtime hosting)
-**Status:** 📝 Planned after docs/spec packet promotion (TASK-919 complete; implementation tasks planned)
+**Status:** 🚧 In progress / implementation underway (TASK-919 and TASK-920 complete; implementation tasks planned)
 **Spec:** [SPEC-069](../spec/SPEC-069-ALPHA-VISIBLE-TOWER-ALGEBRA-AND-DO-LOWERING.md), [SPEC-070](../spec/SPEC-070-ALPHA-RUNTIME-KERNEL-AND-OS-SURFACE.md)
 **Design:** [DESIGN-040](../design/DESIGN-040-ALPHA-ALGEBRAIC-TOWER.md), [DESIGN-041](../design/DESIGN-041-RUNTIME-REGIME-AND-OS-SURFACE.md)
 **Plan:** [docs/plan/PLAN-118-DESIGN-040-041-ALPHA-IMPLEMENTATION-PACKET.md](PLAN-118-DESIGN-040-041-ALPHA-IMPLEMENTATION-PACKET.md)
 
-Phase 122 promotes DESIGN-040 and DESIGN-041 into an implementation-grade alpha packet. It makes visible `Monad<K>` evidence and tower algebra the construction authority for `Act`, `Proc`, `Workflow`, and user/library monads; plans full generalized `do:K` bind lowering; introduces a traceable TCIR/AMIR/bytecode execution substrate; and defines one RuntimeKernel with two host modes, `ash run` and local `ashd`. TASK-920 is a hard pre-implementation audit gate that must patch downstream exact evidence commands before Rust work begins.
+Phase 122 promotes DESIGN-040 and DESIGN-041 into an implementation-grade alpha packet. It makes visible `Monad<K>` evidence and tower algebra the construction authority for `Act`, `Proc`, `Workflow`, and user/library monads; plans full generalized `do:K` bind lowering; introduces a traceable TCIR/AMIR/bytecode execution substrate; and defines one RuntimeKernel with two host modes, `ash run` and local `ashd`. TASK-920 completed the hard pre-implementation audit gate and patched downstream exact evidence commands before Rust implementation work.
 
 | Task | Description | Est. Hours | Status |
 |------|-------------|------------|--------|
 | [TASK-919](tasks/TASK-919-design040041-current-state-and-scope-reconciliation.md) | Promote DESIGN-040/041 into SPEC-069/SPEC-070/PLAN-118 and register Phase 122 | 4 | ✅ Complete |
-| [TASK-920](tasks/TASK-920-alpha-visible-tower-audit-gate.md) | Audit live do/evidence/tower/runtime/CLI seams and patch downstream exact evidence commands | 8 | 📝 Planned |
+| [TASK-920](tasks/TASK-920-alpha-visible-tower-audit-gate.md) | Audit live do/evidence/tower/runtime/CLI seams and patch downstream exact evidence commands | 8 | ✅ Complete |
 | [TASK-921](tasks/TASK-921-public-tower-stdlib-manifest.md) | Public `Act`/`Proc`/`Workflow`/`Result` algebra manifest and no-magic intrinsic mapping | 8 | 📝 Planned |
 | [TASK-922](tasks/TASK-922-monad-evidence-method-body-lowering.md) | TypeEnv/evidence carriers for selected `Monad<K>` operation bodies or intrinsic shims | 10 | 📝 Planned |
 | [TASK-923](tasks/TASK-923-generalized-do-full-bind-lowering.md) | Full generalized `do:K` `<-` lowering through selected Monad evidence | 12 | 📝 Planned |

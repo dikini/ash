@@ -66,7 +66,20 @@ toolsets: [terminal, file]
 ```
 strictness: clean
 commands:
-  - false # TASK-920 must replace this with exact focused non-zero evidence before implementation starts
+  - |
+    python3 - <<'PY'
+    from pathlib import Path
+    p = Path("crates/ash-core/tests/alpha_runtime_kernel_carriers.rs")
+    text = p.read_text()
+    names = [
+        "runtime_kernel_ids_cover_root_definition_artifact_instance_and_host_mode",
+        "runtime_kernel_host_modes_share_definition_and_artifact_identity",
+    ]
+    missing = [name for name in names if f"fn {name}" not in text]
+    assert not missing, missing
+    print("TASK-927 focused test file and names exist")
+    PY
+  - cargo test -p ash-core --test alpha_runtime_kernel_carriers -- --nocapture
   - git diff --check
 checklist:
   - [ ] Focused evidence command patched by TASK-920

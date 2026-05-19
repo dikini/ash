@@ -1,6 +1,6 @@
 # TASK-920: Alpha Visible Tower Audit Gate
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -57,7 +57,7 @@ toolsets: [terminal, file]
 
 ## Verification
 
-These are TASK-920 completion gates. They are expected to fail while TASK-920 remains Planned because TASK-921 through TASK-931 intentionally retain fail-closed guards until this audit patches exact focused commands.
+These are TASK-920 completion gates. They passed after the audit artifact was created and TASK-921 through TASK-931 verification commands were patched.
 
 ```
 strictness: clean
@@ -76,11 +76,17 @@ commands:
     PY
   - git diff --check
 checklist:
-  - [ ] Audit artifact exists
-  - [ ] Downstream focused commands patched
-  - [ ] No `false # TASK-920` or obvious zero-test/self-satisfying placeholders remain
-  - [ ] Scoped docs checks pass
+  - [x] Audit artifact exists
+  - [x] Downstream focused commands patched
+  - [x] No `false # TASK-920` or obvious zero-test/self-satisfying placeholders remain
+  - [x] Scoped docs checks pass
 ```
+
+## Completion Notes
+
+- Added `docs/plan/audits/TASK-920-alpha-visible-tower-audit-gate.md`.
+- Patched TASK-921 through TASK-931 verification blocks with Python file/name assertions and exact focused cargo test commands.
+- Verified `test -f docs/plan/audits/TASK-920-alpha-visible-tower-audit-gate.md`, the downstream guard scan, and `git diff --check`.
 
 ## Dependencies for Next Task
 

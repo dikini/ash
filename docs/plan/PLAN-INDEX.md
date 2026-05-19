@@ -298,6 +298,7 @@ Update this section as tasks complete:
 | 119 | 6 | 6 | ✅ Complete |
 | 120 | 8 | 0 | 📝 Planned |
 | 121 | 6 | 6 | ✅ Complete |
+| 122 | 14 | 1 | 📝 Planned |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -3573,3 +3574,44 @@ Phase 121 implements audit-first pattern/exhaustiveness canonicalization for tra
 | [TASK-915](tasks/TASK-915-exhaustiveness-canonical-constructor-universe.md) | Exhaustiveness over canonical constructor universe | 7 | ✅ Complete |
 | [TASK-916](tasks/TASK-916-pattern-canonicalization-diagnostics-and-negative-leakage.md) | Diagnostics and negative leakage tests | 6 | ✅ Complete |
 | [TASK-917](tasks/TASK-917-pattern-canonicalization-closeout.md) | SPEC-068 closeout | 5 | ✅ Complete |
+
+## Phase 122: DESIGN-040/041 Alpha Visible Tower and Runtime Regime
+
+**Priority:** High (alpha release boundary for visible computation algebra, generalized do lowering, traceable execution artifacts, and OS-facing runtime hosting)
+**Status:** 📝 Planned after docs/spec packet promotion (TASK-919 complete; implementation tasks planned)
+**Spec:** [SPEC-069](../spec/SPEC-069-ALPHA-VISIBLE-TOWER-ALGEBRA-AND-DO-LOWERING.md), [SPEC-070](../spec/SPEC-070-ALPHA-RUNTIME-KERNEL-AND-OS-SURFACE.md)
+**Design:** [DESIGN-040](../design/DESIGN-040-ALPHA-ALGEBRAIC-TOWER.md), [DESIGN-041](../design/DESIGN-041-RUNTIME-REGIME-AND-OS-SURFACE.md)
+**Plan:** [docs/plan/PLAN-118-DESIGN-040-041-ALPHA-IMPLEMENTATION-PACKET.md](PLAN-118-DESIGN-040-041-ALPHA-IMPLEMENTATION-PACKET.md)
+
+Phase 122 promotes DESIGN-040 and DESIGN-041 into an implementation-grade alpha packet. It makes visible `Monad<K>` evidence and tower algebra the construction authority for `Act`, `Proc`, `Workflow`, and user/library monads; plans full generalized `do:K` bind lowering; introduces a traceable TCIR/AMIR/bytecode execution substrate; and defines one RuntimeKernel with two host modes, `ash run` and local `ashd`. TASK-920 is a hard pre-implementation audit gate that must patch downstream exact evidence commands before Rust work begins.
+
+| Task | Description | Est. Hours | Status |
+|------|-------------|------------|--------|
+| [TASK-919](tasks/TASK-919-design040041-current-state-and-scope-reconciliation.md) | Promote DESIGN-040/041 into SPEC-069/SPEC-070/PLAN-118 and register Phase 122 | 4 | ✅ Complete |
+| [TASK-920](tasks/TASK-920-alpha-visible-tower-audit-gate.md) | Audit live do/evidence/tower/runtime/CLI seams and patch downstream exact evidence commands | 8 | 📝 Planned |
+| [TASK-921](tasks/TASK-921-public-tower-stdlib-manifest.md) | Public `Act`/`Proc`/`Workflow`/`Result` algebra manifest and no-magic intrinsic mapping | 8 | 📝 Planned |
+| [TASK-922](tasks/TASK-922-monad-evidence-method-body-lowering.md) | TypeEnv/evidence carriers for selected `Monad<K>` operation bodies or intrinsic shims | 10 | 📝 Planned |
+| [TASK-923](tasks/TASK-923-generalized-do-full-bind-lowering.md) | Full generalized `do:K` `<-` lowering through selected Monad evidence | 12 | 📝 Planned |
+| [TASK-924](tasks/TASK-924-act-proc-workflow-opaque-carrier-alignment.md) | Align Act/Proc/Workflow opaque carrier semantics with visible algebra and explicit lifts | 10 | 📝 Planned |
+| [TASK-925](tasks/TASK-925-tcir-computation-expression-boundary.md) | Typed computation-expression/TCIR carrier with source/evidence/tower provenance | 12 | 📝 Planned |
+| [TASK-926](tasks/TASK-926-amir-bytecode-logical-schema.md) | Minimal AMIR and bytecode logical schema plus verifier/debug traceability contract | 14 | 📝 Planned |
+| [TASK-927](tasks/TASK-927-runtime-kernel-host-mode-audit-and-carriers.md) | RuntimeKernel audit and core host-mode/definition/instance identity carriers | 10 | 📝 Planned |
+| [TASK-928](tasks/TASK-928-ash-run-runtime-kernel-mode.md) | Route one-shot `ash run` through RuntimeKernel without requiring daemon state | 12 | 📝 Planned |
+| [TASK-929](tasks/TASK-929-ashd-local-daemon-control-plane.md) | Local `ashd` daemon control surface, roots, instance table, and reload semantics | 16 | 📝 Planned |
+| [TASK-930](tasks/TASK-930-ooda-library-demotion-compatibility.md) | OODA library/template/lint compatibility and primitive-IR demotion plan | 8 | 📝 Planned |
+| [TASK-931](tasks/TASK-931-alpha-semantics-correspondence-and-acceptance-matrix.md) | SPEC-069/SPEC-070 acceptance matrix, semantics correspondence, and non-interference evidence | 8 | 📝 Planned |
+| [TASK-932](tasks/TASK-932-alpha-closeout-review-remediation.md) | Closeout docs, broad gates, and independent review remediation | 6 | 📝 Planned |
+
+**Decision gates:**
+- D1: Visible algebra is the normative construction authority. Runtime intrinsics are implementations of named/typeable operations, not extra semantic roots.
+- D2: `Monad<K>` evidence owns generalized do sequencing. Hidden Act/Proc/Workflow dictionaries may remain only as compiler-prelude evidence shaped like ordinary `Monad<K>` entries during migration.
+- D3: Full generalized user/library Monad `<-` lowering is alpha scope. It must not be downgraded to beta-only without a new design decision.
+- D4: `Result<_, E>` is the canonical partial-constructor do-target acceptance case; domain failure remains separate from operational bottom.
+- D5: No implicit tower lifts. `Act` inside `Proc`, and `Proc` inside `Workflow`, require explicit visible operations.
+- D6: Runtime execution has one semantic `RuntimeKernel` with two host modes: one-shot `ash run` and local daemon `ashd`.
+- D7: File presence does not execute code. Definitions are indexed; workflow instances start only by explicit run/start/autostart policy.
+- D8: Provider/resource existence is not authority. Admission grants capability/resource authority to a workflow instance.
+- D9: Existing running daemon instances keep their admitted artifact/version across reload; successful reload affects future starts only.
+- D10: OODA moves to library/template/lint surface by default. Alpha AMIR/bytecode must not depend on OODA as a privileged primitive.
+- D11: AMIR/bytecode artifacts must be verifier-checkable and source-traceable without reparsing source.
+- D12: TASK-920 is a hard gate requiring downstream TASK-921 through TASK-931 exact file/test/callsite bindings and zero-test-safe focused commands.

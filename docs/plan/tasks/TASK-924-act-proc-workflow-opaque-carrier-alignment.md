@@ -1,6 +1,6 @@
 # TASK-924: Act/Proc/Workflow Opaque Carrier Alignment
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -82,11 +82,30 @@ commands:
   - cargo test -p ash-typeck --test alpha_tower_opaque_carriers -- --nocapture
   - git diff --check
 checklist:
-  - [ ] Focused evidence command patched by TASK-920
-  - [ ] Focused tests pass
-  - [ ] Broad relevant gate passes
-  - [ ] Docs/status/changelog updated if public behavior changed
+  - [x] Focused evidence command patched by TASK-920
+  - [x] Focused tests pass
+  - [x] Broad relevant gate passes
+  - [x] Docs/status/changelog updated if public behavior changed
 ```
+
+## Completion Notes
+
+- Added `crates/ash-typeck/tests/alpha_tower_opaque_carriers.rs` with the TASK-920-required focused tests for explicit tower lifts and opaque carrier non-denotability.
+- Removed `ActEnv` from `TypeEnv::with_builtin_types()` and from `std/src/act.ash` so hidden Act runtime environment state is not an ordinary Ash source type. Public `Act<T>`, `Proc<T>`, `Workflow<T>`, and opaque `P<T>` handle typing remain available.
+- Preserved existing explicit lift behavior: direct `Act` in `do:Proc` and direct `Proc`/`Act` in `do:Workflow` fail with lift hints, while `proc::from_act`, `workflow::from_proc`, and `workflow::from_act` remain accepted.
+- Hardened the existing workflow builtin signature test to compare fresh type-variable structure instead of brittle global `TypeVar` IDs.
+
+## Verification Evidence
+
+- `python3 - <<'PY' ...` focused test-name structure assertion from this task.
+- `cargo test -p ash-typeck --test alpha_tower_opaque_carriers -- --nocapture`
+- `cargo test -p ash-typeck --test task_749_typed_do --test task_772_workflow_do --test alpha_visible_tower_manifest --test alpha_generalized_do_full_bind_lowering --test alpha_monad_evidence_method_body_lowering --test task_719_proc_from_act_types --test task_771_workflow_type_stdlib_intrinsics -- --nocapture`
+- `cargo test -p ash-typeck --lib task689d_act_env_type_expr_is_not_source_denotable -- --nocapture`
+- `cargo test -p ash-typeck --lib test_type_env_with_builtin_types -- --nocapture`
+- `target/debug/ash check std/src/act.ash`
+- `cargo fmt --check`
+- `git diff --check`
+- `RUSTC_WRAPPER= cargo clippy -p ash-typeck --test alpha_tower_opaque_carriers -- -D warnings`
 
 ## Dependencies for Next Task
 

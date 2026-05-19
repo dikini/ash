@@ -4,14 +4,23 @@ use ash_core::workflow_carrier::{
 };
 use ash_core::workflow_contract::{Requirement, RolePolicy};
 use ash_typeck::{
-    Kind, QualifiedName, Type, TypeEnv, WorkflowIntrinsicKind, WorkflowIntrinsicParameterClass,
+    QualifiedName, Type, TypeEnv, WorkflowIntrinsicKind, WorkflowIntrinsicParameterClass,
 };
 
-fn ctor(name: &str, arg: Type) -> Type {
-    Type::Constructor {
-        name: QualifiedName::root(name),
-        args: vec![arg],
-        kind: Kind::Type,
+fn lookup_fn(env: &TypeEnv, name: &str) -> (Vec<Type>, Type) {
+    match env.lookup_variable(name) {
+        Some(Type::Fn(params, ret)) => (params, *ret),
+        other => panic!("expected {name} to be a function type, got {other:?}"),
+    }
+}
+
+fn assert_unary_constructor<'a>(ty: &'a Type, expected_name: &str) -> &'a Type {
+    match ty {
+        Type::Constructor { name, args, .. } if name.display() == expected_name => {
+            assert_eq!(args.len(), 1, "{expected_name} should be unary");
+            &args[0]
+        }
+        other => panic!("expected {expected_name}<...>, got {other:?}"),
     }
 }
 
@@ -60,41 +69,50 @@ fn workflow_builtins_are_qualified_only() {
 #[test]
 fn workflow_value_builtin_signatures_match_first_slice_surface() {
     let env = TypeEnv::with_builtin_types();
-    let a = Type::Var(ash_typeck::types::TypeVar(0));
-    let b = Type::Var(ash_typeck::types::TypeVar(1));
-    let workflow_a = ctor("Workflow", a.clone());
-    let workflow_b = ctor("Workflow", b.clone());
-    let proc_a = ctor("Proc", a.clone());
-    let act_a = ctor("Act", a.clone());
 
+    let (unit_params, unit_ret) = lookup_fn(&env, "workflow::unit");
+    assert_eq!(unit_params.len(), 1);
     assert_eq!(
-        env.lookup_variable("workflow::unit"),
-        Some(Type::Fn(vec![a.clone()], Box::new(workflow_a.clone())))
+        assert_unary_constructor(&unit_ret, "Workflow"),
+        &unit_params[0]
     );
+
+    let (from_proc_params, from_proc_ret) = lookup_fn(&env, "workflow::from_proc");
+    assert_eq!(from_proc_params.len(), 1);
+    let from_proc_input = assert_unary_constructor(&from_proc_params[0], "Proc");
     assert_eq!(
-        env.lookup_variable("workflow::from_proc"),
-        Some(Type::Fn(vec![proc_a], Box::new(workflow_a.clone())))
+        assert_unary_constructor(&from_proc_ret, "Workflow"),
+        from_proc_input
     );
+
+    let (from_act_params, from_act_ret) = lookup_fn(&env, "workflow::from_act");
+    assert_eq!(from_act_params.len(), 1);
+    let from_act_input = assert_unary_constructor(&from_act_params[0], "Act");
     assert_eq!(
-        env.lookup_variable("workflow::from_act"),
-        Some(Type::Fn(vec![act_a], Box::new(workflow_a.clone())))
+        assert_unary_constructor(&from_act_ret, "Workflow"),
+        from_act_input
     );
+
+    let (then_params, then_ret) = lookup_fn(&env, "workflow::then");
+    assert_eq!(then_params.len(), 2);
+    assert_unary_constructor(&then_params[0], "Workflow");
+    let then_right = assert_unary_constructor(&then_params[1], "Workflow");
+    assert_eq!(assert_unary_constructor(&then_ret, "Workflow"), then_right);
+
+    let (bind_params, bind_ret) = lookup_fn(&env, "workflow::bind");
+    assert_eq!(bind_params.len(), 2);
+    let bind_input = assert_unary_constructor(&bind_params[0], "Workflow");
+    let Type::Fn(callback_params, callback_ret) = &bind_params[1] else {
+        panic!(
+            "workflow::bind callback should be a function: {:?}",
+            bind_params[1]
+        );
+    };
+    assert_eq!(callback_params, &[bind_input.clone()]);
+    let callback_output = assert_unary_constructor(callback_ret, "Workflow");
     assert_eq!(
-        env.lookup_variable("workflow::then"),
-        Some(Type::Fn(
-            vec![workflow_a.clone(), workflow_b.clone()],
-            Box::new(workflow_b.clone())
-        ))
-    );
-    assert_eq!(
-        env.lookup_variable("workflow::bind"),
-        Some(Type::Fn(
-            vec![
-                workflow_a.clone(),
-                Type::Fn(vec![a], Box::new(workflow_b.clone()))
-            ],
-            Box::new(workflow_b)
-        ))
+        assert_unary_constructor(&bind_ret, "Workflow"),
+        callback_output
     );
 }
 

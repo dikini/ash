@@ -16506,7 +16506,6 @@ impl TypeEnv {
         self.add_result_type();
         self.add_list_type();
         self.add_record_type();
-        self.add_act_env_type();
         self.add_act_type();
         self.add_proc_type();
         self.add_workflow_type();
@@ -16616,20 +16615,6 @@ impl TypeEnv {
             .expect("Failed to register Record type");
         self.expose_type_representation("Record")
             .expect("Failed to expose Record representation");
-    }
-
-    /// Add the ActEnv type
-    fn add_act_env_type(&mut self) {
-        let act_env_type = TypeDef {
-            name: "ActEnv".to_string(),
-            params: vec![],
-            body: TypeBody::Struct(vec![]),
-            visibility: ash_core::ast::Visibility::Public,
-            builtin: true,
-        };
-
-        self.register_type_identity(&act_env_type)
-            .expect("Failed to register ActEnv type");
     }
 
     /// Add the Act<T> type
@@ -17872,8 +17857,8 @@ mod tests {
         assert!(env.has_constructor("Ok"));
         assert!(env.has_constructor("Err"));
 
-        // Check runtime-managed Act substrate types exist
-        assert!(env.has_type("ActEnv"));
+        // Check visible Act algebra exists while the hidden runtime ActEnv does not.
+        assert!(!env.has_type("ActEnv"));
         assert!(env.has_type("Act"));
     }
 
@@ -18133,7 +18118,7 @@ mod tests {
     }
 
     #[test]
-    fn task689d_fn_constructor_type_expr_converts_to_function_type() {
+    fn task689d_act_env_type_expr_is_not_source_denotable() {
         let env = TypeEnv::with_builtin_types();
         let type_expr = TypeExpr::Constructor {
             name: "Fn".to_string(),
@@ -18146,26 +18131,9 @@ mod tests {
             ],
         };
 
-        let ty = type_expr_to_type(&type_expr, &HashMap::new(), &env).unwrap();
-        match ty {
-            Type::Fn(params, ret) => {
-                assert_eq!(params.len(), 1);
-                match &params[0] {
-                    Type::Constructor { name, args, .. } => {
-                        assert_eq!(name.display(), "ActEnv");
-                        assert!(args.is_empty());
-                    }
-                    other => panic!("expected ActEnv parameter type, got {other:?}"),
-                }
-                match ret.as_ref() {
-                    Type::Record(fields) => {
-                        assert_eq!(fields.len(), 2);
-                    }
-                    other => panic!("expected tuple-lowered return record, got {other:?}"),
-                }
-            }
-            other => panic!("expected Type::Fn, got {other:?}"),
-        }
+        let err = type_expr_to_type(&type_expr, &HashMap::new(), &env)
+            .expect_err("ActEnv is runtime-owned and not source-denotable");
+        assert!(err.to_string().contains("ActEnv"), "{err}");
     }
 
     fn task896_module_identity() -> ModuleIdentity {

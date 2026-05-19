@@ -1,12 +1,9 @@
 -- Act monad helpers
 --
 -- Phase 97 library surface for effectful computations.
--- Runtime-managed substrate:
---   builtin type ActEnv
---   type Act<A> = ActEnv -> (ActEnv, A)
+-- Runtime-managed substrate: hidden ActEnv is compiler/runtime-owned and not source-denotable.
+-- Public code sees only opaque Act<A> plus the operations below.
 
-builtin type ActEnv;
-type Act<A> = ActEnv -> (ActEnv, A);
 pub type Policy = String;
 
 builtin fn __unit<A>(v: A) -> Act<A>;

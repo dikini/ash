@@ -38,11 +38,30 @@ done
 # Format check must pass before anything else
 bash scripts/check-rust-format.sh
 
+classifier_output="$(bash scripts/check-gate-classifier.sh)"
+printf '%s\n' "gate-classifier:" "$classifier_output"
+docs_only="$(gate_classifier_value "$classifier_output" docs_only)"
+gate_relevant="$(gate_classifier_value "$classifier_output" gate_relevant)"
+unknown_relevant="$(gate_classifier_value "$classifier_output" unknown_relevant)"
+
 # Changelog check - ensure staged changes have corresponding changelog entry
 bash scripts/check-changelog-staged.sh
 
-# Regression tests for the staged changelog policy script.
+# Regression tests for gate policy scripts.
 bash scripts/check-changelog-staged-tests.sh
+bash scripts/check-gate-classifier-tests.sh
+bash scripts/check-gate-marker-tests.sh
+
+if [[ "$docs_only" == true && "$gate_relevant" == false && "$unknown_relevant" == false ]]; then
+  echo "pre-commit-gate: docs-only change set; running docs gate and skipping Rust/fuzz/doctest gate"
+  bash scripts/check-docs-gate.sh
+  if [[ "$write_marker" == true ]]; then
+    GATE_MARKER_DOCS_ONLY="$docs_only" GATE_MARKER_TREE="$(gate_index_tree_ref)" gate_write_marker "$marker_file"
+    echo "pre-commit-gate: marker updated at $marker_file"
+  fi
+  echo "pre-commit-gate: OK"
+  exit 0
+fi
 
 # Fast checks
 echo "pre-commit-gate: running cargo check"
@@ -65,7 +84,7 @@ echo "pre-commit-gate: running documentation tests"
 bash scripts/check-doc-tests.sh
 
 if [[ "$write_marker" == true ]]; then
-  gate_write_marker "$marker_file"
+  GATE_MARKER_DOCS_ONLY="$docs_only" GATE_MARKER_TREE="$(gate_index_tree_ref)" gate_write_marker "$marker_file"
   echo "pre-commit-gate: marker updated at $marker_file"
 fi
 

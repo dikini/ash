@@ -3463,13 +3463,14 @@ Phase 116 implements SPEC-H from DESIGN-034. It adds a conservative type-level p
 ## Maintenance: Local Gate Resource Hygiene
 
 **Priority:** High (local pre-push gates must be predictable on the development host)
-**Status:** ✅ Complete (TASK-885 complete)
+**Status:** ✅ Complete (TASK-885 and TASK-918 complete)
 
-This maintenance slice keeps repository tooling conservative when broad all-target verification creates avoidable memory or concurrency pressure.
+This maintenance slice keeps repository tooling conservative when broad all-target verification creates avoidable memory, concurrency, or repeated-work pressure.
 
 | Task | Description | Est. Hours | Status |
 |------|-------------|------------|--------|
 | [TASK-885](tasks/TASK-885-remove-alternate-test-runner-gate.md) | Remove alternate Rust test runner from local gates and use serial cargo test defaults | 1 | ✅ Complete |
+| [TASK-918](tasks/TASK-918-gate-relevance-and-marker-reuse.md) | Add relevance-aware docs-only gates and reuse fresh pre-commit markers in the full/pre-push gate | 2 | ✅ Complete |
 
 ## Phase 117: DESIGN-034 Deferred Type-Computation Gap Ownership
 

@@ -1,6 +1,6 @@
 # TASK-927: RuntimeKernel Host-Mode Audit and Carriers
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -80,13 +80,33 @@ commands:
     print("TASK-927 focused test file and names exist")
     PY
   - cargo test -p ash-core --test alpha_runtime_kernel_carriers -- --nocapture
+  - RUSTC_WRAPPER= cargo clippy -p ash-core --test alpha_runtime_kernel_carriers -- -D warnings
+  - cargo fmt --check
   - git diff --check
 checklist:
-  - [ ] Focused evidence command patched by TASK-920
-  - [ ] Focused tests pass
-  - [ ] Broad relevant gate passes
-  - [ ] Docs/status/changelog updated if public behavior changed
+  - [x] Focused evidence command patched by TASK-920
+  - [x] Focused tests pass
+  - [x] Focused clippy passes
+  - [x] Formatting and diff whitespace checks pass
+  - [x] Docs/status/changelog updated if public behavior changed
 ```
+
+## Completion Notes
+
+- Added `ash-core::runtime_kernel` with explicit host-mode, runtime-root, profile/config, artifact cache-key, workflow-definition, workflow-artifact, workflow-instance, process-tree, provider-registry, admission-grant, and kernel identity carriers.
+- Defined the TASK-927 relationship as `RuntimeEngineRelationship::ExistingAshEngineEmbedded`: the future `RuntimeKernel` owns host/root/admission identity while the current `ash-engine::Engine` remains embedded below it for checking/execution until TASK-928 routes `ash run`.
+- Added `RuntimeKernelCarrierInventory::task_927()` and module-level audit notes documenting reuse of existing `ash-core::runtime` IDs, `ash-engine::WorkflowAdmission*`, and `ash-interp::RuntimeState`/`Context` carriers.
+- Preserved the authority boundary: provider registry identity is host inventory only; explicit `AdmissionIdentity` grants carry admission authority.
+- Deferred CLI routing, daemon/control-plane behavior, reload semantics, and actual start/reload execution to TASK-928/TASK-929.
+
+## Evidence
+
+- RED: `cargo test -p ash-core --test alpha_runtime_kernel_carriers -- --nocapture` failed before implementation with unresolved import `ash_core::runtime_kernel`.
+- `python3` focused test-name assertion: passed; printed `TASK-927 focused test file and names exist`.
+- `cargo test -p ash-core --test alpha_runtime_kernel_carriers -- --nocapture`: passed, 2 passed / 0 failed.
+- `RUSTC_WRAPPER= cargo clippy -p ash-core --test alpha_runtime_kernel_carriers -- -D warnings`: passed.
+- `cargo fmt --check`: passed after formatting.
+- `git diff --check`: passed.
 
 ## Dependencies for Next Task
 

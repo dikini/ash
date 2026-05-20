@@ -14,6 +14,7 @@ pub mod kind;
 pub mod module_graph;
 pub mod provenance;
 pub mod runtime;
+pub mod runtime_kernel;
 pub mod semantic_summary;
 pub mod small_step;
 pub mod stream;

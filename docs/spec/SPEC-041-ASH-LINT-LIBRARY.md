@@ -200,6 +200,7 @@ The existing CLI lints must be reimplemented as AST visitors instead of string s
 | `L004` | — | Policy conflict not checked | Policy | After any `Workflow::Decide` or `Expr::Policy`, every control-flow path must contain a `Workflow::Check { target: CheckTarget, .. }` before a terminal node. |
 
 > **Compatibility:** The CLI binary must accept the legacy rule IDs `ooda-missing-decide` and `ooda-missing-orient` as aliases for `L001` and `L002` respectively when parsing `--allow` / `--deny` arguments.
+> These OODA lints are library/template compatibility guidance for historical examples. They should point users toward the visible tower algebra and explicit `Act`, `Proc`, and `Workflow` operations; they are not primitive alpha execution semantics.
 >
 > **Legacy alias semantic drift:** The aliases are **name-only** mappings. The original CLI performed primitive string searches, whereas the library rules operate on the AST, so behaviour may differ slightly (e.g., span precision and exact matching). These legacy IDs are **deprecated**; new code should use `L001` and `L002`.
 

@@ -37,13 +37,18 @@ ash-lint --format github workflow.ash
 
 ## Lint Rules
 
-### OODA Pattern Rules
+### OODA Compatibility Rules
+
+OODA lint rules are library/template compatibility guidance for historical
+Observe/Orient/Decide/Act material. They point users toward the visible tower algebra
+and explicit `Act`, `Proc`, and `Workflow` operations; they are not primitive
+alpha execution semantics.
 
 | Rule | Severity | Description |
 |------|----------|-------------|
-| `ooda-missing-decide` | Warning | OBSERVE without explicit DECIDE step |
-| `ooda-missing-orient` | Warning | OBSERVE result never used in ORIENT |
-| `ooda-out-of-order` | Error | OODA steps in wrong order |
+| `ooda-missing-decide` | Warning | Compatibility OODA template lacks an explicit decision marker |
+| `ooda-missing-orient` | Warning | Compatibility OODA template reaches action-shaped work without an orientation marker |
+| `ooda-out-of-order` | Error | Compatibility OODA markers appear in an unexpected order |
 
 ### Effect System Rules
 

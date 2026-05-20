@@ -41,6 +41,12 @@ These forms are the ones downstream phases must preserve:
 - core workflows: `Observe`, `Receive`, `Orient`, `Propose`, `Decide`, `Check`, `Act`, `Oblig`,
   `Let`, `If`, `Seq`, `ForEach`, `Ret`, `With`, `Maybe`, `Must`, `Done`
 
+For Phase 122 alpha execution artifacts, SPEC-069 demotes OODA-shaped
+Observe/Orient/Decide/Act teaching material to ordinary library/template/lint
+compatibility. Historical workflow IR references remain documented here, but
+alpha AMIR/bytecode must not treat OODA as privileged primitive execution
+roots.
+
 **Sequential workflow contract**: A single workflow in Ash is sequential. Concurrency and parallelism are modeled at the system level through multiple communicating workflows, not through workflow-internal parallel forms. This spec defines the sequential execution model for individual workflows.
 - core expressions: `Literal`, `Variable`, `FieldAccess`, `IndexAccess`, `Unary`, `Binary`,
   `Call`, `Match`, `Constructor`, `Let`

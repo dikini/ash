@@ -165,6 +165,12 @@ JIT compatibility should influence block/register bytecode shape and stable logi
 
 OODA concepts remain valuable but are not primitive alpha IR roots by default. Older OODA-shaped workflow forms migrate toward library/template calls, workflow contract/reporting patterns, and lints/teaching templates. SPEC-069 does not require deleting historical OODA references in one pass; it requires that new alpha execution IR and bytecode are not designed around OODA as a privileged primitive.
 
+TASK-930 adds the alpha compatibility surface as ordinary `std::ooda`
+library/template helpers plus lint/spec guidance. These helpers are source-level
+markers only; TCIR/AMIR/bytecode artifacts continue to lower through selected
+Monad evidence, visible tower operations, and traceable execution artifacts
+rather than OODA-specific opcodes or runtime roots.
+
 ## 10. Relationship to runtime regime
 
 [SPEC-070](SPEC-070-ALPHA-RUNTIME-KERNEL-AND-OS-SURFACE.md) owns OS-facing runtime hosting. SPEC-069 owns the language-semantic and execution-artifact side consumed by that runtime kernel. `ash run` and `ashd` must execute the same accepted semantics for a given compiled artifact.

@@ -56,6 +56,15 @@ pub mod proc;
 -- Workflow governed process computation helpers
 pub mod workflow;
 
+-- OODA library/template compatibility helpers
+pub mod ooda;
+pub use ooda::{
+    observe,
+    orient,
+    decide,
+    act
+};
+
 -- JSON functions
 pub use json::{parse, stringify, stringify_pretty};
 

@@ -410,6 +410,11 @@ Current workflow-form classification summary:
 | `With` / `Maybe` / `Must` | no extra grade of their own beyond enclosed workflows |
 | `Oblig` | governance/obligation form; no separate coarse grade beyond enclosed workflow unless later revised |
 
+Phase 122 keeps this historical workflow-form table for existing IR/type
+references, while alpha AMIR/bytecode lowering follows SPEC-069: OODA-shaped
+Observe/Orient/Decide/Act examples are ordinary library/template/lint
+compatibility, not privileged primitive alpha execution roots.
+
 The `Pure` bottom-element question remains explicit follow-up work before any corpus-wide lattice
 rewrite.
 

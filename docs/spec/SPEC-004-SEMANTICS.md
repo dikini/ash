@@ -620,6 +620,11 @@ contract in §6.2 plus the `RECEIVE-*` rules above.
 
 ### 4.2 Deliberative Layer
 
+Phase 122 preserves these historical workflow judgments as reference semantics
+for existing workflow forms. Alpha AMIR/bytecode compatibility is governed by
+SPEC-069: OODA-shaped examples migrate to ordinary library/template/lint
+surface and are not privileged primitive alpha execution roots.
+
 ```
 (ORIENT)
   Γ ⊢e expr ⇓ v

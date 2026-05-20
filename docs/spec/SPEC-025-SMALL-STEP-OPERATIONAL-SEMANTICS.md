@@ -1136,6 +1136,11 @@ WITH-ENTER | WITH-STEP | WITH-EXIT
 These rules preserve the accepted helper-owned boundaries from SPEC-004. The workflow rule fixes the
 surrounding small-step shape; the helper premise owns the operation-specific internals.
 
+Phase 122 keeps the historical small-step rules as reference material for
+existing workflow forms. SPEC-069 owns alpha execution-artifact compatibility:
+OODA-shaped examples are library/template/lint surface and must not become
+privileged AMIR or bytecode primitive roots.
+
 ```text
 (OBSERVE-STEP)
   observe_capability(C, capability, Γ, Ω, π) ↝ ObserveOk(v, ΔΩ, Δπ, ΔT, δε)

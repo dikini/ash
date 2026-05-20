@@ -1,6 +1,6 @@
 # TASK-930: OODA Library Demotion Compatibility
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -78,11 +78,25 @@ commands:
   - cargo test -p ash-cli --test alpha_ooda_library_demotion -- --nocapture
   - git diff --check
 checklist:
-  - [ ] Focused evidence command patched by TASK-920
-  - [ ] Focused tests pass
-  - [ ] Broad relevant gate passes
-  - [ ] Docs/status/changelog updated if public behavior changed
+  - [x] Focused evidence command patched by TASK-920
+  - [x] Focused tests pass
+  - [x] Broad relevant gate passes
+  - [x] Docs/status/changelog updated if public behavior changed
 ```
+
+## Completion Evidence
+
+- `python3 - <<'PY' ... PY`: focused test-name assertion prints `TASK-930 focused test file and names exist`.
+- `cargo test -p ash-cli --test alpha_ooda_library_demotion -- --nocapture`: 2 focused tests pass, proving the ordinary `std::ooda` compatibility surface, lint guidance toward visible tower algebra, historical-example preservation wording, and absence of OODA references in alpha AMIR/RuntimeKernel artifacts inspected by the test.
+- `git diff --check` passes.
+- `RUSTC_WRAPPER= cargo fmt --check` passes.
+- `RUSTC_WRAPPER= cargo check -p ash-cli` passes.
+
+## Implementation Notes
+
+- TASK-930 adds `std/src/ooda.ash` as source-level library/template compatibility helpers only. The helpers are ordinary identity-shaped functions and do not add builtins, core IR variants, AMIR opcodes, bytecode sections, or runtime roots.
+- Historical OODA examples and specs remain in place with compatibility notes that point alpha execution semantics to SPEC-069 visible tower algebra.
+- `ash-lint` keeps legacy OODA alias documentation while narrowing those rules to compatibility guidance rather than primitive alpha execution semantics.
 
 ## Dependencies for Next Task
 

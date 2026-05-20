@@ -4,6 +4,7 @@
 //! for the Ash workflow language.
 
 pub mod adt;
+pub mod amir;
 pub mod ast;
 pub mod capabilities;
 pub mod capability;

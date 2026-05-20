@@ -7,13 +7,13 @@ use ash_core::runtime_kernel::{
     RuntimeProfileId, RuntimeProfileIdentity, RuntimeRootSet, RuntimeRootSetId,
     WorkflowArtifactIdentity, WorkflowDefinitionIdentity, WorkflowInstanceIdentity,
 };
+use ash_engine::Engine;
+use ash_provenance::Hash as ProvenanceHash;
 use clap::{Args, Subcommand, ValueEnum};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::collections::BTreeMap;
-use std::collections::hash_map::DefaultHasher;
 use std::fs;
-use std::hash::{Hash, Hasher};
 use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
@@ -604,6 +604,15 @@ fn index_definitions(
         let Some(workflow) = module.workflow else {
             continue;
         };
+        let engine = Engine::new()
+            .build()
+            .context("parse/check/index failure: failed to build engine")?;
+        let mut checked_workflow = engine
+            .parse_file(&path)
+            .with_context(|| format!("parse/check/index failure in {}", path.display()))?;
+        engine
+            .check(&mut checked_workflow)
+            .with_context(|| format!("parse/check/index failure in {}", path.display()))?;
         let relative_module_path = path
             .strip_prefix(root)
             .unwrap_or(path.as_path())
@@ -614,7 +623,7 @@ fn index_definitions(
         let check_summary_hash = stable_digest(&[
             &source_hash,
             &workflow_name,
-            "parse-surface-file-source-check-summary",
+            "parse-surface-file-source-summary",
         ]);
         let artifact_version = "source-check-summary-v1".to_string();
         let definition = WorkflowDefinitionIdentity::new(
@@ -730,12 +739,14 @@ fn classify_daemon_error(error: &anyhow::Error) -> &'static str {
 }
 
 fn stable_digest(parts: &[&str]) -> String {
-    let mut hasher = DefaultHasher::new();
+    let mut bytes = Vec::new();
     for part in parts {
-        part.len().hash(&mut hasher);
-        part.hash(&mut hasher);
+        bytes.extend_from_slice(part.len().to_string().as_bytes());
+        bytes.push(0);
+        bytes.extend_from_slice(part.as_bytes());
+        bytes.push(0xff);
     }
-    format!("ash{:016x}", hasher.finish())
+    format!("sha256:{}", ProvenanceHash::from_bytes(&bytes))
 }
 
 fn host_mode_label(host_mode: RuntimeHostMode) -> &'static str {

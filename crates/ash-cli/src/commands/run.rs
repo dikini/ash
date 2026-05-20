@@ -19,12 +19,11 @@ use ash_engine::EngineError;
 use ash_interp::ExecError;
 use ash_parser::parse_utils::skip_whitespace_and_comments;
 use ash_parser::{Token, TokenKind, expr, lex_with_recovery, new_input};
+use ash_provenance::Hash as ProvenanceHash;
 use ash_provenance::{WorkflowTraceSession, create_trace_recorder};
 use async_trait::async_trait;
 use clap::Args;
 use serde::Serialize;
-use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
 use std::path::Path;
 use std::process::ExitCode;
 use std::sync::Arc;
@@ -258,13 +257,14 @@ struct OneShotRunSelection {
 
 impl OneShotRunSelection {
     fn parse(raw: &str) -> Self {
-        if let Some((path, workflow)) = raw.rsplit_once(':') {
-            if !workflow.is_empty() && Path::new(path).exists() {
-                return Self {
-                    path: path.into(),
-                    workflow: Some(workflow.to_string()),
-                };
-            }
+        if let Some((path, workflow)) = raw.rsplit_once(':')
+            && !workflow.is_empty()
+            && Path::new(path).exists()
+        {
+            return Self {
+                path: path.into(),
+                workflow: Some(workflow.to_string()),
+            };
         }
 
         Self {
@@ -439,12 +439,14 @@ impl OneShotRuntimeKernel {
 }
 
 fn stable_digest(parts: &[&str]) -> String {
-    let mut hasher = DefaultHasher::new();
+    let mut bytes = Vec::new();
     for part in parts {
-        part.len().hash(&mut hasher);
-        part.hash(&mut hasher);
+        bytes.extend_from_slice(part.len().to_string().as_bytes());
+        bytes.push(0);
+        bytes.extend_from_slice(part.as_bytes());
+        bytes.push(0xff);
     }
-    format!("ash{:016x}", hasher.finish())
+    format!("sha256:{}", ProvenanceHash::from_bytes(&bytes))
 }
 
 fn host_mode_label(host_mode: RuntimeHostMode) -> &'static str {

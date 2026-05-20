@@ -3,8 +3,8 @@
 //! Evaluates expressions in a runtime context, producing values.
 
 use ash_core::runtime::{
-    CapabilityBindingKind, EffectScopeId, FailureEvidence, OperationalFailure, ProcessId,
-    ProcessTerminalState,
+    CapabilityBindingId, CapabilityBindingKind, EffectScopeId, FailureEvidence, OperationalFailure,
+    ProcessId, ProcessTerminalState,
 };
 use ash_core::{BinaryOp, Expr, UnaryOp, Value, WorkflowId, ast::MatchArm, ast::Pattern};
 use ash_core::{ControlLink, Instance, InstanceAddr};
@@ -67,6 +67,17 @@ fn call_context_from_env(
     enters_effect_scope: bool,
 ) -> Context {
     let mut call_ctx = Context::from_env_frame(&env).inherit_runtime_metadata_from(runtime_ctx);
+    let mut admitted_bindings = runtime_ctx.admitted_capability_bindings().to_vec();
+    admitted_bindings.extend(env.iter_bindings().filter_map(|(name, value)| {
+        name.strip_prefix("__ash_admitted_capability_binding:")?;
+        match value {
+            Value::String(binding_id) => binding_id.parse().ok().map(CapabilityBindingId),
+            _ => None,
+        }
+    }));
+    if !admitted_bindings.is_empty() {
+        call_ctx = call_ctx.with_admitted_capability_bindings(admitted_bindings);
+    }
     if let Some(policy_evaluator) = runtime_ctx.policy_evaluator() {
         call_ctx = call_ctx.with_policy_evaluator_arc(policy_evaluator);
     }
@@ -754,6 +765,24 @@ pub fn builtin_dispatch_table() -> &'static HashMap<&'static str, BuiltinEntry> 
             );
         }
 
+        // ── Workflow module algebra builtins (qualified; typed lowering/runtime-owned) ──
+        for (name, arity) in [
+            ("workflow::unit", 1),
+            ("workflow::bind", 2),
+            ("workflow::then", 2),
+            ("workflow::from_proc", 1),
+            ("workflow::from_act", 1),
+        ] {
+            m.insert(
+                name,
+                BuiltinEntry {
+                    arity,
+                    variadic: false,
+                    implemented: false,
+                },
+            );
+        }
+
         // ── List module builtins (qualified) ──
         m.insert(
             "list::len",
@@ -1416,6 +1445,15 @@ fn maybe_execute_invoke_capture(value: Value, runtime_ctx: &Context) -> EvalResu
         .ok_or_else(|| {
             EvalError::ExecutionFailed("invoke capture missing string provider".to_string())
         })?;
+    let original_provider = provider.clone();
+    let provider = if let Some(Value::String(source_binding_name)) = runtime_ctx
+        .get(&format!("__ash_capability_dependency_alias:{provider}"))
+        .cloned()
+    {
+        source_binding_name
+    } else {
+        provider
+    };
     let action = fields
         .iter()
         .find(|(field, _)| field == "action")
@@ -1437,7 +1475,7 @@ fn maybe_execute_invoke_capture(value: Value, runtime_ctx: &Context) -> EvalResu
             EvalError::ExecutionFailed("invoke capture missing list args".to_string())
         })?;
 
-    let act_env = runtime_ctx.act_env().ok_or_else(|| {
+    runtime_ctx.act_env().ok_or_else(|| {
         EvalError::ExecutionFailed("invoke capture missing hidden runtime ActEnv".to_string())
     })?;
     let runtime_state = runtime_ctx.runtime_state();
@@ -1452,15 +1490,7 @@ fn maybe_execute_invoke_capture(value: Value, runtime_ctx: &Context) -> EvalResu
                 EvalError::ExecutionFailed(format!("invoke helper runtime build failed: {err}"))
             })?;
         runtime.block_on(async move {
-            let fallback_authorized = if let Some(runtime_state) = runtime_state {
-                runtime_state
-                    .capability_binding_by_name(&provider)
-                    .await
-                    .is_some_and(|binding| admitted_bindings.contains(&binding.id))
-            } else {
-                false
-            };
-            if !fallback_authorized {
+            let Some(runtime_state) = runtime_state else {
                 return Err(operational_eval_error_for_message_with_attribution(
                     format!(
                         "authority boundary failure: provider {provider} lacks RuntimeKernel admission for invoke fallback dispatch"
@@ -1468,11 +1498,44 @@ fn maybe_execute_invoke_capture(value: Value, runtime_ctx: &Context) -> EvalResu
                     failure_tower,
                     failure_entity,
                 ));
-            }
+            };
+            let primary_binding = runtime_state.capability_binding_by_name(&provider).await;
+            let fallback_binding = if primary_binding
+                .as_ref()
+                .is_some_and(|binding| admitted_bindings.contains(&binding.id))
+            {
+                None
+            } else {
+                runtime_state
+                    .capability_binding_by_name(&original_provider)
+                    .await
+            };
+            let binding_name = primary_binding
+                .or(fallback_binding)
+                .filter(|binding| admitted_bindings.contains(&binding.id))
+                .map(|binding| binding.name);
+            let Some(binding_name) = binding_name else {
+                return Err(operational_eval_error_for_message_with_attribution(
+                    format!(
+                        "authority boundary failure: provider {provider} lacks RuntimeKernel admission for invoke fallback dispatch"
+                    ),
+                    failure_tower,
+                    failure_entity,
+                ));
+            };
+            let projected_ctx = runtime_state
+                .create_capability_context_for_bindings(&admitted_bindings)
+                .await
+                .map_err(|err| {
+                    operational_eval_error_for_message_with_attribution(
+                        err.to_string(),
+                        failure_tower,
+                        failure_entity,
+                    )
+                })?;
 
-            act_env
-                .capability_ctx
-                .execute(&provider, &action, &args)
+            projected_ctx
+                .execute(&binding_name, &action, &args)
                 .await
                 .map_err(|err| {
                     operational_eval_error_for_message_with_attribution(
@@ -2281,6 +2344,7 @@ async fn maybe_execute_invoke_capture_async(
             EvalError::ExecutionFailed("invoke capture missing list args".to_string())
         })?;
 
+    let original_provider = provider.clone();
     let provider = if let Some(Value::String(source_binding_name)) = runtime_ctx
         .get(&format!("__ash_capability_dependency_alias:{provider}"))
         .cloned()
@@ -2313,30 +2377,45 @@ async fn maybe_execute_invoke_capture_async(
         .await;
     }
 
-    let fallback_authorized = if let Some(runtime_state) = runtime_ctx.runtime_state() {
-        runtime_state
-            .capability_binding_by_name(&provider)
-            .await
-            .is_some_and(|binding| {
-                runtime_ctx
-                    .admitted_capability_bindings()
-                    .contains(&binding.id)
-            })
-    } else {
-        false
-    };
-    if !fallback_authorized {
+    let admitted_bindings = runtime_ctx.admitted_capability_bindings();
+    let Some(runtime_state) = runtime_ctx.runtime_state() else {
         return Err(operational_eval_error_for_message(
             format!(
                 "authority boundary failure: provider {provider} lacks RuntimeKernel admission for invoke fallback dispatch"
             ),
             runtime_ctx,
         ));
-    }
+    };
+    let primary_binding = runtime_state.capability_binding_by_name(&provider).await;
+    let fallback_binding = if primary_binding
+        .as_ref()
+        .is_some_and(|binding| admitted_bindings.contains(&binding.id))
+    {
+        None
+    } else {
+        runtime_state
+            .capability_binding_by_name(&original_provider)
+            .await
+    };
+    let binding_name = primary_binding
+        .or(fallback_binding)
+        .filter(|binding| admitted_bindings.contains(&binding.id))
+        .map(|binding| binding.name);
+    let Some(binding_name) = binding_name else {
+        return Err(operational_eval_error_for_message(
+            format!(
+                "authority boundary failure: provider {provider} lacks RuntimeKernel admission for invoke fallback dispatch"
+            ),
+            runtime_ctx,
+        ));
+    };
+    let projected_ctx = runtime_state
+        .create_capability_context_for_bindings(admitted_bindings)
+        .await
+        .map_err(|err| operational_eval_error_for_message(err.to_string(), runtime_ctx))?;
 
-    let invoked = act_env
-        .capability_ctx
-        .execute(&provider, &action, &args)
+    let invoked = projected_ctx
+        .execute(&binding_name, &action, &args)
         .await
         .map_err(|err| operational_eval_error_for_message(err.to_string(), runtime_ctx))?;
     Ok(Value::List(Box::new(vec![Value::ActEnvToken, invoked])))
@@ -2377,20 +2456,15 @@ async fn execute_implementation_operation_body_async(
         ));
     }
 
-    let (capability_ctx, mut dependency_values, mut dependency_bindings) = runtime_state
+    let (capability_ctx, mut dependency_values, dependency_bindings) = runtime_state
         .implementation_binding_dependency_context(binding)
         .await
         .map_err(|err| operational_eval_error_for_message(err.to_string(), runtime_ctx))?;
 
-    let mut admitted_bindings = runtime_ctx.admitted_capability_bindings().to_vec();
-    admitted_bindings.append(&mut dependency_bindings);
-    admitted_bindings.sort_unstable_by_key(|binding_id| binding_id.0);
-    admitted_bindings.dedup();
-
     let mut body_ctx = Context::new()
         .inherit_runtime_metadata_from(runtime_ctx)
         .with_runtime_state_arc(std::sync::Arc::new(runtime_state.clone()))
-        .with_admitted_capability_bindings(admitted_bindings)
+        .with_added_admitted_capability_bindings(dependency_bindings)
         .with_act_env(crate::act_env::ActEnv::new(
             capability_ctx,
             outer_act_env.policies.clone(),

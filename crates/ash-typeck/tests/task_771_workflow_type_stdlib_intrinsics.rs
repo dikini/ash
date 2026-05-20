@@ -108,7 +108,7 @@ fn workflow_value_builtin_signatures_match_first_slice_surface() {
             bind_params[1]
         );
     };
-    assert_eq!(callback_params, &[bind_input.clone()]);
+    assert_eq!(callback_params, std::slice::from_ref(bind_input));
     let callback_output = assert_unary_constructor(callback_ret, "Workflow");
     assert_eq!(
         assert_unary_constructor(&bind_ret, "Workflow"),

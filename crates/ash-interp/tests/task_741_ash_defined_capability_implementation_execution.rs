@@ -5,7 +5,9 @@ use std::sync::Arc;
 use ash_core::runtime::{
     CapabilityImplementationId, CapabilityInterfaceId, ResourceId, ResourceTypeId,
 };
-use ash_core::{Effect, EnvFrame, Expr, Provenance, Value, WorkflowId};
+use ash_core::{
+    CapabilityBinding, CapabilityBindingId, Effect, EnvFrame, Expr, Provenance, Value, WorkflowId,
+};
 use ash_interp::act_env::ActEnv;
 use ash_interp::capability::MockProvider;
 use ash_interp::context::Context;
@@ -31,6 +33,46 @@ async fn act_context(runtime_state: &RuntimeState) -> Context {
     let act_env =
         ActEnv::from_runtime_state(runtime_state, PolicyEvaluator::new(), Provenance::new()).await;
     Context::new().with_act_env(act_env)
+}
+
+async fn act_context_with_admitted_bindings(
+    runtime_state: &RuntimeState,
+    binding_ids: Vec<CapabilityBindingId>,
+) -> Context {
+    let act_env = ActEnv::from_runtime_state_with_admitted_bindings(
+        runtime_state,
+        &binding_ids,
+        PolicyEvaluator::new(),
+        Provenance::new(),
+    )
+    .await
+    .expect("admitted bindings should project into ActEnv");
+    Context::new()
+        .with_runtime_state(runtime_state.clone())
+        .with_admitted_capability_bindings(binding_ids)
+        .with_act_env(act_env)
+}
+
+async fn admit_host_provider_binding(
+    runtime_state: &RuntimeState,
+    name: &str,
+    interface: &str,
+    provider_name: &str,
+    capability: &str,
+) -> CapabilityBindingId {
+    let binding = CapabilityBinding::host_provider(
+        CapabilityBindingId::new(),
+        name,
+        CapabilityInterfaceId::new(interface),
+        provider_name,
+        vec![capability.to_string()],
+    );
+    let binding_id = binding.id;
+    runtime_state
+        .admit_capability_binding(binding)
+        .await
+        .expect("host provider binding should admit");
+    binding_id
 }
 
 async fn admit_store_resource(runtime_state: &RuntimeState) -> ResourceId {
@@ -122,10 +164,7 @@ async fn registered_implementation_operation_body_executes_with_params_and_depen
         .await
         .expect("implementation binding can be admitted");
 
-    let ctx = act_context(&runtime_state)
-        .await
-        .with_runtime_state(runtime_state.clone())
-        .with_admitted_capability_bindings(vec![binding_id]);
+    let ctx = act_context_with_admitted_bindings(&runtime_state, vec![binding_id]).await;
     let result = eval_invoke_act(
         invoke_expr("kv", "get", vec![Value::String("a".to_string())]),
         &ctx,
@@ -170,10 +209,7 @@ async fn implementation_binding_without_registered_body_fails_as_operational_fai
         .await
         .expect("binding admission succeeds");
 
-    let ctx = act_context(&runtime_state)
-        .await
-        .with_runtime_state(runtime_state.clone())
-        .with_admitted_capability_bindings(vec![binding_id]);
+    let ctx = act_context_with_admitted_bindings(&runtime_state, vec![binding_id]).await;
     let err = eval_invoke_act(invoke_expr("kv", "get", vec![]), &ctx)
         .await
         .expect_err("missing body should fail");
@@ -227,7 +263,7 @@ async fn implementation_binding_invocation_requires_explicit_admission() {
         .await
         .expect_err("ambient lookup by binding name must not bypass explicit admission");
     assert!(
-        err.to_string().contains("not available"),
+        err.to_string().contains("lacks RuntimeKernel admission"),
         "unexpected error: {err:?}"
     );
 }
@@ -241,7 +277,10 @@ async fn host_provider_binding_behavior_remains_unchanged() {
                 .with_execute_result(Ok(Value::String("host".to_string()))),
         ),
     );
-    let ctx = act_context(&runtime_state).await;
+    let binding_id =
+        admit_host_provider_binding(&runtime_state, "sensor", "Sensor", "sensor", "sensor.read")
+            .await;
+    let ctx = act_context_with_admitted_bindings(&runtime_state, vec![binding_id]).await;
     let result = eval_invoke_act(invoke_expr("sensor", "read", vec![]), &ctx)
         .await
         .expect("host provider invoke should still dispatch");
@@ -263,13 +302,14 @@ async fn operation_body_can_invoke_only_explicit_capability_dependency_aliases()
                 .with_execute_result(Ok(Value::String("tick".to_string()))),
         ),
     );
-    let host_binding = ash_core::CapabilityBinding::host_provider(
-        ash_core::CapabilityBindingId::new(),
+    let host_binding = CapabilityBinding::host_provider(
+        CapabilityBindingId::new(),
         "workflow-clock",
         CapabilityInterfaceId::new("Clock"),
         "clock-provider",
-        vec!["clock-provider.read".to_string()],
+        vec!["workflow-clock.read".to_string()],
     );
+    let host_binding_id = host_binding.id;
     runtime_state
         .admit_capability_binding(host_binding)
         .await
@@ -302,10 +342,8 @@ async fn operation_body_can_invoke_only_explicit_capability_dependency_aliases()
         .await
         .expect("implementation binding can be admitted");
 
-    let ctx = act_context(&runtime_state)
-        .await
-        .with_runtime_state(runtime_state.clone())
-        .with_admitted_capability_bindings(vec![binding_id]);
+    let ctx =
+        act_context_with_admitted_bindings(&runtime_state, vec![binding_id, host_binding_id]).await;
     let result = eval_invoke_act(invoke_expr("kv", "get", vec![]), &ctx)
         .await
         .expect("body may invoke dependency alias admitted for the implementation");
@@ -355,10 +393,7 @@ async fn resource_dependencies_are_not_exposed_as_pure_body_variables() {
         .await
         .expect("implementation binding can be admitted");
 
-    let ctx = act_context(&runtime_state)
-        .await
-        .with_runtime_state(runtime_state.clone())
-        .with_admitted_capability_bindings(vec![binding_id]);
+    let ctx = act_context_with_admitted_bindings(&runtime_state, vec![binding_id]).await;
     let err = eval_invoke_act(invoke_expr("kv", "get", vec![]), &ctx)
         .await
         .expect_err("resource handles must remain environment-owned, not pure variables");
@@ -378,13 +413,14 @@ async fn capability_dependency_alias_variable_resolves_to_declared_alias() {
                 .with_execute_result(Ok(Value::String("tick".to_string()))),
         ),
     );
-    let host_binding = ash_core::CapabilityBinding::host_provider(
-        ash_core::CapabilityBindingId::new(),
+    let host_binding = CapabilityBinding::host_provider(
+        CapabilityBindingId::new(),
         "workflow-clock",
         CapabilityInterfaceId::new("Clock"),
         "clock-provider",
-        vec!["clock-provider.read".to_string()],
+        vec!["workflow-clock.read".to_string()],
     );
+    let host_binding_id = host_binding.id;
     runtime_state
         .admit_capability_binding(host_binding)
         .await
@@ -420,18 +456,7 @@ async fn capability_dependency_alias_variable_resolves_to_declared_alias() {
         .await
         .expect("implementation binding can be admitted");
 
-    let body = Expr::Call {
-        func: "invoke".to_string(),
-        module: None,
-        arguments: vec![
-            Expr::Variable {
-                name: "clock".to_string(),
-                span: Default::default(),
-            },
-            Expr::Literal(Value::String("read".to_string())),
-            Expr::Literal(Value::List(Box::default())),
-        ],
-    };
+    let body = invoke_expr("clock", "read", vec![]);
     runtime_state
         .register_implementation_operation_body(
             CapabilityImplementationId::new("ImplAlias"),
@@ -457,10 +482,11 @@ async fn capability_dependency_alias_variable_resolves_to_declared_alias() {
         .await
         .expect("alias implementation binding can be admitted");
 
-    let ctx = act_context(&runtime_state)
-        .await
-        .with_runtime_state(runtime_state.clone())
-        .with_admitted_capability_bindings(vec![binding_id, alias_binding_id]);
+    let ctx = act_context_with_admitted_bindings(
+        &runtime_state,
+        vec![binding_id, alias_binding_id, host_binding_id],
+    )
+    .await;
     let result = eval_invoke_act(invoke_expr("alias", "read_alias", vec![]), &ctx)
         .await
         .expect("capability dependency variable resolves to declared alias");
@@ -508,10 +534,7 @@ async fn pure_closure_results_are_returned_without_implicit_act_forcing() {
         .await
         .expect("binding admission succeeds");
 
-    let ctx = act_context(&runtime_state)
-        .await
-        .with_runtime_state(runtime_state.clone())
-        .with_admitted_capability_bindings(vec![binding_id]);
+    let ctx = act_context_with_admitted_bindings(&runtime_state, vec![binding_id]).await;
     let result = eval_invoke_act(invoke_expr("kv", "make_closure", vec![]), &ctx)
         .await
         .expect("pure closure result should be transported");
@@ -557,10 +580,7 @@ async fn body_arity_and_evaluation_failures_are_operationally_attributed() {
         )
         .await
         .expect("binding admission succeeds");
-    let ctx = act_context(&runtime_state)
-        .await
-        .with_runtime_state(runtime_state.clone())
-        .with_admitted_capability_bindings(vec![binding_id]);
+    let ctx = act_context_with_admitted_bindings(&runtime_state, vec![binding_id]).await;
 
     let arity_err = eval_invoke_act(invoke_expr("kv", "get", vec![]), &ctx)
         .await

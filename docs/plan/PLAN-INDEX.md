@@ -3578,7 +3578,7 @@ Phase 121 implements audit-first pattern/exhaustiveness canonicalization for tra
 ## Phase 122: DESIGN-040/041 Alpha Visible Tower and Runtime Regime
 
 **Priority:** High (alpha release boundary for visible computation algebra, generalized do lowering, traceable execution artifacts, and OS-facing runtime hosting)
-**Status:** 🚧 In progress / implementation underway (TASK-919 through TASK-931 complete; TASK-932 review/remediation planned)
+**Status:** ✅ Complete (TASK-919 through TASK-932 complete; SPEC-069/SPEC-070 closed as Partial MVP with documented limitations)
 **Spec:** [SPEC-069](../spec/SPEC-069-ALPHA-VISIBLE-TOWER-ALGEBRA-AND-DO-LOWERING.md), [SPEC-070](../spec/SPEC-070-ALPHA-RUNTIME-KERNEL-AND-OS-SURFACE.md)
 **Design:** [DESIGN-040](../design/DESIGN-040-ALPHA-ALGEBRAIC-TOWER.md), [DESIGN-041](../design/DESIGN-041-RUNTIME-REGIME-AND-OS-SURFACE.md)
 **Plan:** [docs/plan/PLAN-118-DESIGN-040-041-ALPHA-IMPLEMENTATION-PACKET.md](PLAN-118-DESIGN-040-041-ALPHA-IMPLEMENTATION-PACKET.md)
@@ -3600,7 +3600,7 @@ Phase 122 promotes DESIGN-040 and DESIGN-041 into an implementation-grade alpha 
 | [TASK-929](tasks/TASK-929-ashd-local-daemon-control-plane.md) | Local daemon control surface, roots, instance table, and reload semantics | 16 | ✅ Complete |
 | [TASK-930](tasks/TASK-930-ooda-library-demotion-compatibility.md) | OODA library/template/lint compatibility and primitive-IR demotion plan | 8 | ✅ Complete |
 | [TASK-931](tasks/TASK-931-alpha-semantics-correspondence-and-acceptance-matrix.md) | SPEC-069/SPEC-070 acceptance matrix, semantics correspondence, and non-interference evidence | 8 | ✅ Complete |
-| [TASK-932](tasks/TASK-932-alpha-closeout-review-remediation.md) | Closeout docs, broad gates, and independent review remediation | 6 | 📝 Planned |
+| [TASK-932](tasks/TASK-932-alpha-closeout-review-remediation.md) | Closeout docs, broad gates, and independent review remediation | 6 | ✅ Complete |
 
 **Decision gates:**
 - D1: Visible algebra is the normative construction authority. Runtime intrinsics are implementations of named/typeable operations, not extra semantic roots.
@@ -3615,3 +3615,32 @@ Phase 122 promotes DESIGN-040 and DESIGN-041 into an implementation-grade alpha 
 - D10: OODA moves to library/template/lint surface by default. Alpha AMIR/bytecode must not depend on OODA as a privileged primitive.
 - D11: AMIR/bytecode artifacts must be verifier-checkable and source-traceable without reparsing source.
 - D12: TASK-920 is a hard gate requiring downstream TASK-921 through TASK-931 exact file/test/callsite bindings and zero-test-safe focused commands.
+
+## Phase 123: SPEC-069/SPEC-070 Implemented MVP Closure
+
+**Priority:** High (promotes the Phase 122 Partial MVP to implemented alpha runtime/tower semantics once deferred acceptance rows have execution-grade evidence)
+**Status:** 📝 Planned (TASK-933 through TASK-941 planned; SPEC-069/SPEC-070 remain Partial MVP until TASK-941 closeout gates pass)
+**Spec:** [SPEC-069](../spec/SPEC-069-ALPHA-VISIBLE-TOWER-ALGEBRA-AND-DO-LOWERING.md), [SPEC-070](../spec/SPEC-070-ALPHA-RUNTIME-KERNEL-AND-OS-SURFACE.md)
+**Plan:** [docs/plan/PLAN-119-SPEC-069-070-IMPLEMENTED-MVP-CLOSURE.md](PLAN-119-SPEC-069-070-IMPLEMENTED-MVP-CLOSURE.md)
+
+Phase 123 is the follow-on to Phase 122. It must not reopen or rewrite Phase 122 history; it closes the explicit Partial MVP gaps by adding concrete execution evidence for `do:Result` operational bottom, bytecode-level run/daemon artifact equivalence, real admission-profile rejection before user body execution, daemon start args/config/admission-profile records, broader policy-profile grant enforcement, daemon child-failure trace semantics, and final status promotion only after broad gates plus Codex review.
+
+| Task | Description | Est. Hours | Status |
+|------|-------------|------------|--------|
+| [TASK-933](tasks/TASK-933-implemented-mvp-acceptance-delta-and-preflight-audit.md) | Implemented-MVP acceptance delta and preflight audit | 6 | 📝 Planned |
+| [TASK-934](tasks/TASK-934-do-result-fail-operational-bottom-execution.md) | `do:Result` operational-bottom execution evidence | 8 | 📝 Planned |
+| [TASK-935](tasks/TASK-935-runtime-kernel-verified-artifact-builder.md) | Shared RuntimeKernel verified artifact builder | 12 | 📝 Planned |
+| [TASK-936](tasks/TASK-936-run-daemon-bytecode-artifact-equivalence.md) | `ash run` / daemon bytecode artifact equivalence | 10 | 📝 Planned |
+| [TASK-937](tasks/TASK-937-admission-profile-pre-body-rejection.md) | Admission-profile rejection before user body execution | 12 | 📝 Planned |
+| [TASK-938](tasks/TASK-938-daemon-start-args-config-admission-profile.md) | Daemon start args/config/admission-profile protocol | 12 | 📝 Planned |
+| [TASK-939](tasks/TASK-939-policy-profile-grant-enforcement.md) | Policy-profile grant enforcement across runtime execution | 14 | 📝 Planned |
+| [TASK-940](tasks/TASK-940-daemon-child-failure-trace.md) | Daemon child Proc failure trace semantics | 12 | 📝 Planned |
+| [TASK-941](tasks/TASK-941-spec-069-spec-070-implemented-mvp-closeout.md) | SPEC-069/SPEC-070 Implemented MVP closeout | 8 | 📝 Planned |
+
+**Decision gates:**
+- D1: SPEC-069/SPEC-070 remain Partial MVP until TASK-941 verifies every formerly deferred acceptance row with concrete tests and Codex review.
+- D2: Admission-profile and policy-profile work must reject before user body execution; post-body authorization failures are not sufficient for A70-2.
+- D3: Cross-host equivalence must compare verifier-normalized bytecode/artifact summaries, not only matching IDs.
+- D4: Daemon start protocol extensions must preserve existing empty-admission MVP defaults.
+- D5: Child process failures under daemon hosting must be instance/workflow failures, not daemon host failures.
+- D6: Historical Phase 122 Partial MVP status must remain preserved; Phase 123 owns promotion.

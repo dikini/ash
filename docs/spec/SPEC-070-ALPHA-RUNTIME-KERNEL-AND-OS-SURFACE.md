@@ -1,6 +1,6 @@
 # SPEC-070: Alpha Runtime Kernel and OS-Facing Execution Surface
 
-**Status:** Draft
+**Status:** Partial MVP (Phase 122 implemented rows with documented admission/runtime limitations; see TASK-931/TASK-932 evidence)
 **Date:** 2026-05-19
 **Promotes:** [DESIGN-041](../design/DESIGN-041-RUNTIME-REGIME-AND-OS-SURFACE.md)
 **Builds on:** [SPEC-005](SPEC-005-CLI.md), [SPEC-021](SPEC-021-RUNTIME-OBSERVABLE-BEHAVIOR.md), [SPEC-047](SPEC-047-ACT-MONAD.md), [SPEC-048](SPEC-048-PROC-LIBRARY.md), [SPEC-049](SPEC-049-PROCESS-RUNTIME-SEMANTICS.md), [SPEC-050](SPEC-050-OPERATIONAL-BOTTOM-AND-SCOPED-HANDLING.md), [SPEC-051](SPEC-051-WORKFLOW-SEMANTICS.md), [SPEC-069](SPEC-069-ALPHA-VISIBLE-TOWER-ALGEBRA-AND-DO-LOWERING.md)

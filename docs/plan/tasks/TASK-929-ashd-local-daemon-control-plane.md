@@ -94,7 +94,7 @@ checklist:
 
 - `python3 - <<'PY' ... PY`: focused test-name assertion prints `TASK-929 focused test file and names exist`.
 - `cargo test -p ash-cli --test alpha_ashd_local_daemon_control_plane -- --nocapture`: 4 focused tests pass, covering `ash daemon serve`, `list`, `start`, `cancel`, `status`, transactional `reload`, invalid-root rejection, and preservation/rejection of pre-existing non-socket control paths.
-- `cargo fmt --check`, `git diff --check`, and `cargo check -p ash-cli` are the broad relevant gates for this task.
+- `cargo fmt --check`, `git diff --check`, and `cargo check -p ash-cli` passed as the broad relevant gates for this task. TASK-932 follow-up review also added `ashd_reload_rejects_type_invalid_workflow_and_preserves_prior_index`, proving reload stages a parse/check-valid index and preserves the prior admitted index on check failure.
 
 ## Implementation Notes
 

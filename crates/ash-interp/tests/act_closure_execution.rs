@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use ash_core::{Effect, Expr, Value};
+use ash_core::{CapabilityBinding, CapabilityBindingId, Effect, Expr, Value};
 use ash_interp::RuntimeState;
 use ash_interp::act_env::ActEnv;
 use ash_interp::capability::MockProvider;
@@ -127,14 +127,31 @@ async fn effectful_closure_composition_round_trips_through_force() {
                 .with_execute_result(Ok(Value::String("done".to_string()))),
         ),
     );
-    let act_env = ActEnv::from_runtime_state(
+    let binding = CapabilityBinding::host_provider(
+        CapabilityBindingId::new(),
+        "sensor",
+        ash_core::CapabilityInterfaceId::new("Sensor"),
+        "sensor",
+        vec!["sensor.read".to_string()],
+    );
+    let binding_id = binding.id;
+    runtime_state
+        .admit_capability_binding(binding)
+        .await
+        .expect("sensor binding admits");
+    let act_env = ActEnv::from_runtime_state_with_admitted_bindings(
         &runtime_state,
+        &[binding_id],
         ash_interp::PolicyEvaluator::new(),
         ash_core::Provenance::new(),
     )
-    .await;
+    .await
+    .expect("admitted bindings project into ActEnv");
 
-    let ctx = Context::new().with_act_env(act_env);
+    let ctx = Context::new()
+        .with_runtime_state(runtime_state)
+        .with_admitted_capability_bindings(vec![binding_id])
+        .with_act_env(act_env);
     let composed = eval_expr(
         &Expr::FnApply {
             func: Box::new(Expr::FnApply {

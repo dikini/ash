@@ -449,8 +449,10 @@ async fn forced_invoke_uses_projected_admission_surface_in_hidden_act_env() {
                     .as_deref()
                     .expect("hidden ActEnv invoke should preserve lower cause");
                 assert!(
-                    format!("{}", lower.payload).contains("capability not available: payments"),
-                    "expected projected hidden ActEnv failure, got {lower:?}"
+                    format!("{}", lower.payload).contains(
+                        "authority boundary failure: provider payments lacks RuntimeKernel admission"
+                    ),
+                    "expected projected hidden ActEnv admission failure, got {lower:?}"
                 );
             }
             other @ WorkflowBoundaryOutcome::WorkflowSucceeded { .. } => {

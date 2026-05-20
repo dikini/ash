@@ -1,4 +1,6 @@
+use ash_provenance::Hash as ProvenanceHash;
 use assert_cmd::Command;
+use predicates::prelude::*;
 use serde_json::Value;
 use std::fs;
 #[cfg(unix)]
@@ -91,6 +93,17 @@ fn daemon_dirs() -> DaemonDirs {
     }
 }
 
+fn expected_stable_digest(parts: &[&str]) -> String {
+    let mut bytes = Vec::new();
+    for part in parts {
+        bytes.extend_from_slice(part.len().to_string().as_bytes());
+        bytes.push(0);
+        bytes.extend_from_slice(part.as_bytes());
+        bytes.push(0xff);
+    }
+    format!("sha256:{}", ProvenanceHash::from_bytes(&bytes))
+}
+
 fn daemon_json(socket: &Path, args: &[&str]) -> Value {
     let mut cmd = Command::cargo_bin("ash").expect("ash binary exists");
     let output = cmd
@@ -132,6 +145,28 @@ fn ashd_serve_indexes_definitions_without_running_workflows() {
         .collect();
     assert!(names.contains(&"alpha"), "definitions: {list}");
     assert!(names.contains(&"beta"), "definitions: {list}");
+    let alpha_definition = list["definitions"]
+        .as_array()
+        .expect("definitions")
+        .iter()
+        .find(|definition| definition["workflow"] == "alpha")
+        .expect("alpha definition");
+    let alpha_source =
+        fs::read_to_string(root.path().join("alpha.ash")).expect("read alpha source");
+    let expected_source_hash = expected_stable_digest(&[&alpha_source, "alpha.ash", "alpha"]);
+    let expected_check_summary_hash = expected_stable_digest(&[
+        &expected_source_hash,
+        "alpha",
+        "parse-surface-file-source-summary",
+    ]);
+    assert_eq!(
+        alpha_definition["source_hash"], expected_source_hash,
+        "daemon source identity must use stable SHA-256 content digest"
+    );
+    assert_eq!(
+        alpha_definition["check_summary_hash"], expected_check_summary_hash,
+        "daemon summary identity must use stable SHA-256 content digest"
+    );
 
     let start = daemon_json(&dirs.socket, &["start", "alpha"]);
     let instance_id = start["instance_id"].as_str().expect("instance id");
@@ -191,6 +226,38 @@ fn ashd_reload_updates_definition_table_and_preserves_kernel_mode() {
     assert_eq!(status["host_mode"], "Daemon");
     assert_eq!(status["instance_id"], instance_id);
     assert_eq!(status["artifact_id"], first_artifact);
+}
+
+#[test]
+fn ashd_reload_rejects_type_invalid_workflow_and_preserves_prior_index() {
+    let root = tempdir().expect("root tempdir");
+    write_workflow(root.path(), "main", 1);
+    let dirs = daemon_dirs();
+    let _daemon = spawn_daemon(root.path(), &dirs);
+
+    let original = daemon_json(&dirs.socket, &["start", "main"]);
+    let original_artifact = original["artifact_id"].clone();
+
+    fs::write(
+        root.path().join("main.ash"),
+        "workflow main { ret missing_name; }\n",
+    )
+    .expect("write type-invalid workflow");
+    let mut failed_reload = Command::cargo_bin("ash").expect("ash binary exists");
+    failed_reload
+        .arg("daemon")
+        .arg("reload")
+        .arg("--socket")
+        .arg(&dirs.socket)
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("parse/check/index failure"));
+
+    let preserved = daemon_json(&dirs.socket, &["start", "main"]);
+    assert_eq!(
+        preserved["artifact_id"], original_artifact,
+        "failed check reload must preserve the previously admitted artifact identity"
+    );
 }
 
 #[test]

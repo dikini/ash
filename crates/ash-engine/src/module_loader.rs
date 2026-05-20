@@ -6626,6 +6626,16 @@ mod tests {
         assert!(env.lookup_promoted_data_kind_by_id(&kind).is_some());
     }
 
+    #[test]
+    fn import_continuation_is_limited_to_nested_use_trees() {
+        assert!(import_needs_more_lines("use child::{\n    Role"));
+        assert!(!import_needs_more_lines("use child"));
+        assert!(
+            !import_needs_more_lines("use child {"),
+            "unsupported root-brace syntax must not consume following source lines"
+        );
+    }
+
     /// Test 1: `pub mod child;` loads the child module's exports and stores
     /// them in `child_modules` under the child name.
     #[test]

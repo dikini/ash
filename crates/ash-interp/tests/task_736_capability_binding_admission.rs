@@ -63,10 +63,15 @@ async fn runtime_state_admits_and_projects_host_capability_binding_by_id() {
         .expect("projection succeeds for admitted host binding");
 
     assert_eq!(
-        projected.execute("clock", "now", &[]).await,
+        projected.execute("workflow-clock", "now", &[]).await,
         Ok(Value::String("tick".to_string()))
     );
-    assert!(projected.execute("clock", "later", &[]).await.is_err());
+    assert!(
+        projected
+            .execute("workflow-clock", "later", &[])
+            .await
+            .is_err()
+    );
 }
 
 #[tokio::test]
@@ -94,7 +99,12 @@ async fn runtime_state_projection_rejects_unadmitted_binding_ids_and_does_not_us
         .create_capability_context_for_bindings(&[])
         .await
         .expect("empty explicit admission set is valid");
-    assert!(empty_projected.execute("clock", "now", &[]).await.is_err());
+    assert!(
+        empty_projected
+            .execute("workflow-clock", "now", &[])
+            .await
+            .is_err()
+    );
 }
 
 #[tokio::test]
@@ -160,7 +170,12 @@ async fn runtime_state_admits_implementation_binding_as_dependency_metadata_with
         .await
         .expect("implementation binding projection is a metadata-only no-op");
     assert!(projected.execute("kv-binding", "get", &[]).await.is_err());
-    assert!(projected.execute("clock", "now", &[]).await.is_err());
+    assert!(
+        projected
+            .execute("workflow-clock", "now", &[])
+            .await
+            .is_err()
+    );
 }
 
 #[tokio::test]
@@ -189,7 +204,9 @@ async fn act_env_can_be_projected_from_explicit_admitted_bindings() {
     .expect("act env projection succeeds");
 
     assert_eq!(
-        env.capability_ctx.execute("clock", "now", &[]).await,
+        env.capability_ctx
+            .execute("workflow-clock", "now", &[])
+            .await,
         Ok(Value::String("tick".to_string()))
     );
 }
@@ -371,7 +388,7 @@ async fn mixed_projection_projects_only_host_bindings_and_keeps_implementation_m
         .await
         .expect("mixed projection succeeds");
     assert_eq!(
-        projected.execute("clock", "now", &[]).await,
+        projected.execute("clock-binding", "now", &[]).await,
         Ok(Value::String("tick".to_string()))
     );
     assert!(projected.execute("kv-binding", "get", &[]).await.is_err());

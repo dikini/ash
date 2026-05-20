@@ -291,6 +291,18 @@ impl Context {
         self
     }
 
+    pub(crate) fn with_added_admitted_capability_bindings(
+        mut self,
+        admitted_capability_bindings: impl IntoIterator<Item = CapabilityBindingId>,
+    ) -> Self {
+        self.admitted_capability_bindings
+            .extend(admitted_capability_bindings);
+        self.admitted_capability_bindings
+            .sort_unstable_by_key(|binding_id| binding_id.0);
+        self.admitted_capability_bindings.dedup();
+        self
+    }
+
     /// Return the current semantic-tower attribution and identity for `fail`.
     pub(crate) fn current_failure_attribution(&self) -> (TowerLevel, FailureEntity) {
         match self.current_tower {

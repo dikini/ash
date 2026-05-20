@@ -152,7 +152,7 @@ async fn runtime_admission_integrates_host_internal_and_derived_bindings_with_pr
         .await
         .expect("host binding should project to capability context");
     assert_eq!(
-        projected.execute("clock", "now", &[]).await,
+        projected.execute("workflow-clock", "now", &[]).await,
         Ok(Value::String("tick".to_string()))
     );
 

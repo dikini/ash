@@ -1,6 +1,6 @@
 # TASK-932: Alpha Closeout Review Remediation
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -34,7 +34,7 @@ Property tests are required for Rust semantic tasks when TASK-920 identifies a s
 
 ### Step 1: Re-run broad final gates
 
-Run `cargo fmt --check`, `cargo clippy --workspace --all-targets --all-features -- -D warnings`, `scripts/check-rust-tests.sh`, `cargo doc --workspace --no-deps`, scoped docs-link checks, and `git diff --check` on the final diff.
+Run `cargo fmt --check`, `cargo clippy --workspace --all-targets --all-features -- -D warnings`, `scripts/check-rust-tests.sh --workspace`, `cargo doc --workspace --no-deps`, scoped docs-link checks, and `git diff --check` on the final diff.
 
 ### Step 2: Reconcile status surfaces
 
@@ -64,7 +64,7 @@ strictness: clean
 commands:
   - cargo fmt --check
   - cargo clippy --workspace --all-targets --all-features -- -D warnings
-  - scripts/check-rust-tests.sh
+  - scripts/check-rust-tests.sh --workspace
   - cargo doc --workspace --no-deps
   - |
     python3 - <<'PY'
@@ -93,10 +93,10 @@ commands:
     PY
   - git diff --check
 checklist:
-  - [ ] Broad Rust gates pass on final diff
-  - [ ] Scoped docs links pass
-  - [ ] Independent review findings patched
-  - [ ] Specs/plan/tasks/index/changelog statuses reconciled
+  - [x] Broad Rust gates pass on final diff
+  - [x] Scoped docs links pass
+  - [x] Independent review findings patched
+  - [x] Specs/plan/tasks/index/changelog statuses reconciled
 ```
 
 ## Dependencies for Next Task
@@ -109,3 +109,18 @@ This task outputs:
 - File targets to inspect or modify: `docs/spec/README.md`, `docs/plan/PLAN-118-DESIGN-040-041-ALPHA-IMPLEMENTATION-PACKET.md`, `docs/plan/PLAN-INDEX.md`, `CHANGELOG.md`.
 - Keep PLAN-118 decision gates in sync with implementation reality.
 - Do not broaden scope beyond SPEC-069/SPEC-070 without a docs patch and review.
+
+## Closeout Review Progress
+
+- Independent closeout remediation completed. Focused remediation covers the stdlib corpus baseline, module-loader import-continuation regression guard, RuntimeKernel admission fail-closed invoke fallback behavior, admitted-binding projected fallback dispatch with action-surface narrowing, explicit hidden workflow `ActEnv` admission projection, capability implementation dependency alias dispatch, transported effectful closure admission preservation, standard pilot explicit admission projection, stable SHA-256 RuntimeKernel source/summary identities, daemon reload parse/check validation, and HKT Monad evidence fixture stabilization.
+- Final closeout evidence (2026-05-20T17:26:37Z, branch `phase122-alpha-runtime`):
+  - `cargo fmt --check` passed.
+  - `cargo check --workspace` passed.
+  - `cargo clippy --workspace --all-targets --all-features -- -D warnings` passed.
+  - `scripts/check-rust-tests.sh --workspace` passed with exit code 0.
+  - `cargo doc --workspace --no-deps` passed.
+  - Scoped local Markdown link check over SPEC-069, SPEC-070, PLAN-118, PLAN-INDEX, TASK-919 through TASK-932, docs/spec/README.md, and CHANGELOG.md passed (`checked 20 files`).
+  - `git diff --check` passed.
+- Independent Codex-style review after the broad gates found the in-progress surfaces were internally consistent and recommended either keeping SPEC-069/SPEC-070 honest as Draft/Partial or documenting exact Implemented MVP boundaries before promotion. TASK-932 therefore closes Phase 122 as an honest Partial MVP rather than over-promoting deferred A69/A70 rows.
+- Post-closeout review remediation (2026-05-20): Codex review found three blocking gaps; TASK-932 patched invoke fallback to execute through projected admitted binding contexts rather than ambient `ActEnv`, changed one-shot/daemon RuntimeKernel identity helpers from `DefaultHasher` to SHA-256 provenance hashes, and made daemon reload/indexing reject parse/check-invalid workflow sources while preserving the previous admitted index.
+- Remaining documented limitations are retained in `docs/plan/audits/TASK-931-alpha-acceptance-matrix.md`, especially A69-8 execution coverage, A69-12/A70-8 bytecode-level cross-host artifact equivalence, A70-2 full admission-profile rejection before user body execution, A70-4 daemon args/config/admission-profile fields, A70-6 policy-profile admission breadth, and A70-7 daemon child-failure execution traces.

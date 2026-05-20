@@ -1,6 +1,7 @@
 use ash_core::capability::CapabilityError;
 use ash_core::{
-    Constraint, ControlLink, Effect, Expr, Guard, Pattern, Provenance, Value, Workflow, WorkflowId,
+    CapabilityBinding, CapabilityBindingId, Constraint, ControlLink, Effect, Expr, Guard, Pattern,
+    Provenance, Value, Workflow, WorkflowId,
 };
 use ash_interp::RuntimeState;
 use ash_interp::act_env::ActEnv;
@@ -48,6 +49,22 @@ fn execution_contexts() -> (
         PolicyEvaluator::new(),
         BehaviourContext::new(),
     )
+}
+
+async fn admit_sensor_binding(runtime_state: &RuntimeState) -> CapabilityBindingId {
+    let binding = CapabilityBinding::host_provider(
+        CapabilityBindingId::new(),
+        "sensor",
+        ash_core::CapabilityInterfaceId::new("Sensor"),
+        "sensor",
+        vec!["sensor.read".to_string()],
+    );
+    let binding_id = binding.id;
+    runtime_state
+        .admit_capability_binding(binding)
+        .await
+        .expect("sensor host binding should admit");
+    binding_id
 }
 
 fn invoke_expr() -> Expr {
@@ -941,9 +958,11 @@ async fn workflow_can_transport_and_reapply_effectful_closures() {
         ),
     );
 
+    let binding_id = admit_sensor_binding(&runtime_state).await;
+
     let result = execute_workflow_with_behaviour_in_state(
         &workflow,
-        ctx,
+        ctx.with_admitted_capability_bindings(vec![binding_id]),
         &cap_ctx,
         &policy_eval,
         &behaviour_ctx,
@@ -957,13 +976,23 @@ async fn workflow_can_transport_and_reapply_effectful_closures() {
         "workflow should transport the public opaque Act closure until an ActEnv forces it, got {result:?}"
     );
 
-    let act_env = ActEnv::from_runtime_state(&runtime_state, policy_eval, Provenance::new()).await;
+    let act_env = ActEnv::from_runtime_state_with_admitted_bindings(
+        &runtime_state,
+        &[binding_id],
+        policy_eval,
+        Provenance::new(),
+    )
+    .await
+    .expect("admitted sensor binding should project into the hidden ActEnv");
     let forced = eval_expr(
         &Expr::FnApply {
             func: Box::new(Expr::Literal(result)),
             args: vec![Expr::Literal(Value::ActEnvToken)],
         },
-        &Context::new().with_act_env(act_env),
+        &Context::new()
+            .with_runtime_state(runtime_state)
+            .with_admitted_capability_bindings(vec![binding_id])
+            .with_act_env(act_env),
     )
     .expect("transported effectful closure should force through the hidden runtime ActEnv");
 

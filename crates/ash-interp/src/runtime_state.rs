@@ -603,6 +603,10 @@ impl RuntimeState {
                         ))
                     })?;
                     values.insert(name.clone(), Value::String(name.clone()));
+                    values.insert(
+                        format!("__ash_capability_dependency_alias:{name}"),
+                        Value::String(source.name.clone()),
+                    );
                     admitted_capability_dependencies.push(*binding_id);
 
                     let CapabilityBindingKind::HostProvider {
@@ -628,6 +632,15 @@ impl RuntimeState {
                         provider_name,
                         admitted_capabilities,
                     )
+                    .or_else(|| {
+                        ProviderAdmissionSurface::from_capabilities(name, admitted_capabilities)
+                    })
+                    .or_else(|| {
+                        ProviderAdmissionSurface::from_capabilities(
+                            &source.name,
+                            admitted_capabilities,
+                        )
+                    })
                     .ok_or_else(|| {
                         ExecError::InvalidRuntimeState(format!(
                             "capability dependency '{name}' exposes no admitted provider surface"
@@ -635,7 +648,7 @@ impl RuntimeState {
                     })?;
                     registry.register(Box::new(ProjectedProviderWrapper::new(
                         provider.clone(),
-                        name.clone(),
+                        source.name.clone(),
                         surface,
                     )));
                 }
@@ -1433,7 +1446,7 @@ impl RuntimeState {
         use crate::capability::{CapabilityContext, CapabilityRegistry};
 
         let bindings = self.capability_bindings.lock().await;
-        let mut projected_surfaces: Vec<(String, Vec<String>)> = Vec::new();
+        let mut projected_surfaces: Vec<(String, String, Vec<String>)> = Vec::new();
 
         for binding_id in binding_ids {
             let Some(binding) = bindings.get(binding_id) else {
@@ -1447,7 +1460,11 @@ impl RuntimeState {
                 admitted_capabilities,
             } = &binding.kind
             {
-                projected_surfaces.push((provider_name.clone(), admitted_capabilities.clone()));
+                projected_surfaces.push((
+                    provider_name.clone(),
+                    binding.name.clone(),
+                    admitted_capabilities.clone(),
+                ));
             }
         }
         drop(bindings);
@@ -1458,18 +1475,24 @@ impl RuntimeState {
             .expect("provider registry mutex poisoned");
         let mut registry = CapabilityRegistry::new();
 
-        for (provider_name, admitted_capabilities) in projected_surfaces {
+        for (provider_name, binding_name, admitted_capabilities) in projected_surfaces {
             let Some(provider) = providers.get(&provider_name) else {
                 return Err(ExecError::CapabilityNotAvailable(provider_name));
             };
             let Some(surface) =
                 ProviderAdmissionSurface::from_capabilities(&provider_name, &admitted_capabilities)
+                    .or_else(|| {
+                        ProviderAdmissionSurface::from_capabilities(
+                            &binding_name,
+                            &admitted_capabilities,
+                        )
+                    })
             else {
                 continue;
             };
             registry.register(Box::new(ProjectedProviderWrapper::new(
                 provider.clone(),
-                provider_name.clone(),
+                binding_name,
                 surface,
             )));
         }

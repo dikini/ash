@@ -44,8 +44,14 @@ fn impl_named(module: &ash_parser::surface::ModuleFile, name: &str) -> ImplDef {
 fn env_with_monad_option_evidence() -> TypeEnv {
     let module = parse(
         r#"
-        interface Monad<M : * -> *> {}
-        impl Monad<Option> {}
+        interface Monad<M : * -> *> {
+            return(Int) -> M<Int>
+            bind(M<Int>, Int -> M<Int>) -> M<Int>
+        }
+        impl Monad<Option> {
+            return(value) = Some { value: value }
+            bind(value, f) = value
+        }
         "#,
     );
     let interface = interface_named(&module, "Monad");

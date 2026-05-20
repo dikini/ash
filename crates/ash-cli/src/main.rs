@@ -15,8 +15,8 @@ use std::process::ExitCode;
 use clap::{Parser, Subcommand, ValueEnum};
 use colored::Colorize;
 
-use ash_cli::commands::{CheckArgs, DotArgs, ReplArgs, RunArgs, TestArgs, TraceArgs};
-use ash_cli::commands::{check, dot, repl, run, test, trace};
+use ash_cli::commands::{CheckArgs, DaemonArgs, DotArgs, ReplArgs, RunArgs, TestArgs, TraceArgs};
+use ash_cli::commands::{check, daemon, dot, repl, run, test, trace};
 use ash_cli::error::{CliError, CliResult};
 
 /// Color output options
@@ -80,6 +80,10 @@ enum Commands {
     /// Generate Graphviz DOT output (TASK-057)
     #[command(name = "dot", about = "Generate Graphviz DOT output")]
     Dot(DotArgs),
+
+    /// Control the local RuntimeKernel daemon (TASK-929)
+    #[command(name = "daemon", about = "Control the local RuntimeKernel daemon")]
+    Daemon(DaemonArgs),
 }
 
 #[tokio::main]
@@ -145,6 +149,10 @@ async fn execute_command(cli: &Cli) -> CliResult<ExitCode> {
             tracing::info!("Generating DOT for: {}", args.path);
             dot::dot(args).map_err(CliError::from)?;
             Ok(ExitCode::SUCCESS)
+        }
+        Commands::Daemon(args) => {
+            tracing::info!("Running daemon control command");
+            daemon::daemon(args).await.map_err(CliError::from)
         }
     }
 }

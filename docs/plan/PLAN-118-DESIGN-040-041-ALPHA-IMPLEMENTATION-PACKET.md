@@ -4,7 +4,7 @@
 
 **Goal:** Promote DESIGN-040 and DESIGN-041 into an implementation-grade alpha packet covering visible tower algebra, generalized do lowering, traceable execution artifacts, and a one-kernel/two-host-mode runtime regime.
 
-**Architecture:** SPEC-069 owns language semantics: visible `Monad<K>` evidence, full `do:K` bind lowering, tower algebra, TCIR/AMIR/bytecode traceability, and OODA demotion. SPEC-070 owns OS-facing runtime hosting: `RuntimeKernel`, `ash run`, local `ashd`, roots, admission, artifacts, reload, and control surface.
+**Architecture:** SPEC-069 owns language semantics: visible `Monad<K>` evidence, full `do:K` bind lowering, tower algebra, TCIR/AMIR/bytecode traceability, and OODA demotion. SPEC-070 owns OS-facing runtime hosting: `RuntimeKernel`, `ash run`, local daemon control through `ash daemon ...`, roots, admission, artifacts, reload, and control surface.
 
 **Tech Stack:** Rust workspace (`ash-core`, `ash-parser`, `ash-typeck`, `ash-engine`, `ash-interp`, `ash-cli`), Markdown specs/plans/tasks, repo-owned serial verification (`scripts/check-rust-tests.sh`), and scoped docs gates.
 
@@ -17,7 +17,7 @@
 **Design:** [DESIGN-040](../design/DESIGN-040-ALPHA-ALGEBRAIC-TOWER.md), [DESIGN-041](../design/DESIGN-041-RUNTIME-REGIME-AND-OS-SURFACE.md)
 **Task range:** [TASK-919](tasks/TASK-919-design040041-current-state-and-scope-reconciliation.md) through [TASK-932](tasks/TASK-932-alpha-closeout-review-remediation.md)
 
-TASK-919 is the completed documentation-packet task. TASK-920 completed the hard pre-implementation audit gate and bound exact callsites plus zero-test-safe focused commands. TASK-921 added the public tower manifest, TASK-922 added selected Monad evidence method-body/shim carriers at the do-target boundary, TASK-923 completed generalized bind lowering, TASK-924 aligned opaque carrier boundaries with explicit tower lifts, TASK-925 added the TCIR computation-expression carrier plus typed do attachment point, TASK-926 added the minimal AMIR/bytecode schema plus verifier/debug provenance contract, and TASK-927 added core RuntimeKernel identity carriers plus the host-mode/admission inventory boundary. TASK-928 through TASK-930 remain planned implementation/compatibility tasks. TASK-931/TASK-932 close acceptance and review.
+TASK-919 is the completed documentation-packet task. TASK-920 completed the hard pre-implementation audit gate and bound exact callsites plus zero-test-safe focused commands. TASK-921 added the public tower manifest, TASK-922 added selected Monad evidence method-body/shim carriers at the do-target boundary, TASK-923 completed generalized bind lowering, TASK-924 aligned opaque carrier boundaries with explicit tower lifts, TASK-925 added the TCIR computation-expression carrier plus typed do attachment point, TASK-926 added the minimal AMIR/bytecode schema plus verifier/debug provenance contract, TASK-927 added core RuntimeKernel identity carriers plus the host-mode/admission inventory boundary, TASK-928 routed one-shot `ash run` through RuntimeKernel mode, and TASK-929 added the local `ash daemon ...` control surface. TASK-930 remains planned implementation/compatibility work. TASK-931/TASK-932 close acceptance and review.
 
 ## 2. Current-state reconciliation
 
@@ -44,7 +44,7 @@ TASK-919 is the completed documentation-packet task. TASK-920 completed the hard
 | [TASK-926](tasks/TASK-926-amir-bytecode-logical-schema.md) | Minimal AMIR and bytecode logical schema plus verifier/debug traceability contract | 14 | ✅ Complete |
 | [TASK-927](tasks/TASK-927-runtime-kernel-host-mode-audit-and-carriers.md) | RuntimeKernel audit and core host-mode/definition/instance identity carriers | 10 | ✅ Complete |
 | [TASK-928](tasks/TASK-928-ash-run-runtime-kernel-mode.md) | Route one-shot `ash run` through RuntimeKernel without requiring daemon state | 12 | ✅ Complete |
-| [TASK-929](tasks/TASK-929-ashd-local-daemon-control-plane.md) | Local `ashd` daemon control surface, roots, instance table, and reload semantics | 16 | 📝 Planned |
+| [TASK-929](tasks/TASK-929-ashd-local-daemon-control-plane.md) | Local daemon control surface, roots, instance table, and reload semantics | 16 | ✅ Complete |
 | [TASK-930](tasks/TASK-930-ooda-library-demotion-compatibility.md) | OODA library/template/lint compatibility and primitive-IR demotion plan | 8 | 📝 Planned |
 | [TASK-931](tasks/TASK-931-alpha-semantics-correspondence-and-acceptance-matrix.md) | SPEC-069/SPEC-070 acceptance matrix, semantics correspondence, and non-interference evidence | 8 | 📝 Planned |
 | [TASK-932](tasks/TASK-932-alpha-closeout-review-remediation.md) | Closeout docs, broad gates, and independent review remediation | 6 | 📝 Planned |
@@ -54,7 +54,7 @@ TASK-919 is the completed documentation-packet task. TASK-920 completed the hard
 - **Track A — Packet and audit (12h):** TASK-919/TASK-920 establish docs, authority handoffs, live call graph, and downstream focused commands.
 - **Track B — Visible algebra and do lowering (40h):** TASK-921 through TASK-924 make tower operations visible and lower arbitrary accepted `do:K` binds through selected evidence.
 - **Track C — Traceable execution artifacts (26h):** TASK-925/TASK-926 introduce typed computation-expression, TCIR, AMIR, and bytecode schema contracts.
-- **Track D — Runtime regime (38h):** TASK-927 introduced core `RuntimeKernel` identity carriers; TASK-928 routes `ash run` through one-shot RuntimeKernel identity/report carriers with empty current grants, locally reportable failure emission, recorded-only `FILE[:WORKFLOW]` suffix identity, and a fail-closed guard for unadmitted `invoke` fallback host-provider dispatch; TASK-929 adds local `ashd` semantics. Final artifact/version equivalence depends on TASK-925/TASK-926; any earlier runtime work must record an explicit interim source/check-summary identity substrate.
+- **Track D — Runtime regime (38h):** TASK-927 introduced core `RuntimeKernel` identity carriers; TASK-928 routes `ash run` through one-shot RuntimeKernel identity/report carriers with empty current grants, locally reportable failure emission, recorded-only `FILE[:WORKFLOW]` suffix identity, and a fail-closed guard for unadmitted `invoke` fallback host-provider dispatch; TASK-929 adds local `ash daemon ...` semantics with Unix-socket JSON-lines control, index-only definition loading, admitted instance records, cancellation, and transactional reload over an interim source/check-summary identity substrate. Final artifact/version equivalence depends on TASK-925/TASK-926 bytecode/artifact adoption beyond this interim daemon identity.
 - **Track E — Compatibility, acceptance, review (22h):** TASK-930 through TASK-932 demote OODA, prove acceptance/non-interference, and remediate review findings.
 
 ## 5. Decision gates
@@ -64,7 +64,7 @@ TASK-919 is the completed documentation-packet task. TASK-920 completed the hard
 - **D3:** Full generalized user/library Monad `<-` lowering is alpha scope. It must not be downgraded to beta-only without a new design decision.
 - **D4:** `Result<_, E>` is the canonical partial-constructor do-target acceptance case; domain failure remains separate from operational bottom.
 - **D5:** No implicit tower lifts. `Act` inside `Proc`, and `Proc` inside `Workflow`, require explicit visible operations.
-- **D6:** Runtime execution has one semantic `RuntimeKernel` with two host modes: one-shot `ash run` and local daemon `ashd`.
+- **D6:** Runtime execution has one semantic `RuntimeKernel` with two host modes: one-shot `ash run` and local daemon control through `ash daemon ...`.
 - **D7:** File presence does not execute code. Definitions are indexed; workflow instances start only by explicit run/start/autostart policy.
 - **D8:** Provider/resource existence is not authority. Admission grants capability/resource authority to a workflow instance.
 - **D9:** Existing running daemon instances keep their admitted artifact/version across reload; successful reload affects future starts only.
@@ -89,7 +89,7 @@ TASK-919 is the completed documentation-packet task. TASK-920 completed the hard
 
 ## 7. Verification strategy
 
-TASK-920 must record the live call graph and replace fail-closed downstream guards with exact commands. The phase must eventually verify parser surface fidelity, typechecker evidence identity, `do:Result<_, E>` and user `Monad<Option>` binds, explicit lift diagnostics, TCIR/AMIR/bytecode provenance, shared `ash run`/`ashd` RuntimeKernel semantics, admission/resource authority, OODA ordinary-library behavior, scoped markdown links, and broad Rust gates.
+TASK-920 must record the live call graph and replace fail-closed downstream guards with exact commands. The phase must eventually verify parser surface fidelity, typechecker evidence identity, `do:Result<_, E>` and user `Monad<Option>` binds, explicit lift diagnostics, TCIR/AMIR/bytecode provenance, shared `ash run`/`ash daemon` RuntimeKernel semantics, admission/resource authority, OODA ordinary-library behavior, scoped markdown links, and broad Rust gates.
 
 ## 8. Closeout criteria
 

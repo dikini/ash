@@ -14,7 +14,7 @@ SPEC-070 defines the alpha OS-facing runtime regime for Ash. Ash has one semanti
 
 ```text
 ash run FILE[:WORKFLOW] = one-shot host process
-ashd serve ...          = long-lived local daemon (provisional command spelling pending TASK-929)
+ash daemon serve ...    = long-lived local daemon
 ```
 
 Both modes execute the same compiled semantics from [SPEC-069](SPEC-069-ALPHA-VISIBLE-TOWER-ALGEBRA-AND-DO-LOWERING.md). They differ in host lifetime and control plane, not language meaning.
@@ -31,7 +31,7 @@ Both modes execute the same compiled semantics from [SPEC-069](SPEC-069-ALPHA-VI
 
 ## 3. RuntimeKernel responsibilities
 
-A `RuntimeKernel` owns root configuration, definition indexing, artifact cache selection, TCIR/AMIR/bytecode loading and verification, provider/resource registries, workflow definition registry, workflow instance table, process scheduler/supervisor state, capability/resource admission state, report/audit/trace sinks, Tokio runtime integration, and a daemon control endpoint only when running as `ashd`.
+A `RuntimeKernel` owns root configuration, definition indexing, artifact cache selection, TCIR/AMIR/bytecode loading and verification, provider/resource registries, workflow definition registry, workflow instance table, process scheduler/supervisor state, capability/resource admission state, report/audit/trace sinks, Tokio runtime integration, and a daemon control endpoint only when running in local daemon host mode.
 
 The initial implementation may split these responsibilities across existing crates. The public architecture must still converge toward one kernel abstraction instead of separate semantic implementations for CLI and daemon modes.
 
@@ -52,21 +52,21 @@ exit with OS status
 Requirements:
 
 1. `ash run` must not require a daemon.
-2. It uses the same definition identity and artifact verification rules as `ashd`.
+2. It uses the same definition identity and artifact verification rules as the local daemon.
 3. It grants authority only through admission, not by provider/resource existence.
 4. Terminal workflow outcomes map to deterministic OS status classes.
 5. Reports/traces are emitted even on workflow failure when local report construction remains possible.
 
-## 5. Local `ashd` daemon
+## 5. Local daemon
 
-The local daemon is a local-first alpha service using the same `RuntimeKernel`. This spec shows the provisional command spelling as `ashd serve ...`; TASK-929 owns the final binary/subcommand choice and must patch this summary and A70-3 if the implemented shape differs.
+The local daemon is a local-first alpha service using the same `RuntimeKernel`. TASK-929 selected the final command spelling under the existing CLI as `ash daemon ...`.
 
 Alpha daemon scope:
 
-- Unix-domain-socket or equivalent same-user local control surface;
+- Unix-domain-socket or equivalent same-user local control surface, with alpha validation of root/socket/state/cache/log path ownership before binding and rejection of pre-existing non-socket control paths;
 - list definitions and instances;
-- start workflow instance with args/config/admission profile;
-- observe instance status/report/log path;
+- start workflow instance records pinned to the active artifact/source identity; explicit start args/config/admission-profile request fields remain beyond the TASK-929 MVP;
+- observe instance status and pinned artifact identity; report/log-path projection remains beyond the TASK-929 MVP;
 - request cancellation/stop;
 - reload roots/config for future starts.
 
@@ -104,12 +104,12 @@ Host-level start creates a root workflow instance. In-language `proc::par`, `spa
 | --- | --- | --- |
 | A70-1 | `ash run file.ash:main` finite success | one RuntimeKernel, one instance, emitted report, success OS status |
 | A70-2 | `ash run` admission failure | no user code executes; diagnostic distinguishes admission from body failure |
-| A70-3 | local daemon serve command, provisionally `ashd serve --root DIR` pending TASK-929 | daemon indexes definitions without file-presence execution |
-| A70-4 | daemon start command | creates instance pinned to artifact/version and admission profile |
-| A70-5 | daemon reload while instance runs | running instance keeps old artifact; future starts use new artifact after successful reload |
+| A70-3 | `ash daemon serve --root DIR --socket PATH ...` | daemon indexes definitions without file-presence execution |
+| A70-4 | daemon start command | creates instance record pinned to artifact/source identity and empty-admission MVP; args/config/admission-profile fields remain deferred |
+| A70-5 | daemon reload while instance runs | running instance keeps old artifact identity; future starts use new artifact identity after successful reload |
 | A70-6 | provider exists but not admitted | capability invocation fails at authority boundary |
 | A70-7 | child process failure | observed through Proc/Workflow semantics, not daemon host failure unless host breaks |
-| A70-8 | same artifact under `ash run` and `ashd` | language-level semantics match; host lifetime/control plane differs |
+| A70-8 | same artifact under `ash run` and `ash daemon` | language-level semantics match; host lifetime/control plane differs |
 
 ## 11. Implementation tasks
 

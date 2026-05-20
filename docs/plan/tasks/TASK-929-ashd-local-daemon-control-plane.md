@@ -1,10 +1,10 @@
 # TASK-929: ashd Local Daemon Control Plane
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
-Add a local-first alpha `ashd` daemon/control surface using the same RuntimeKernel semantics, with roots, definition index, instance table, start/list/status/cancel/reload behavior, and same-user local control.
+Add a local-first alpha daemon/control surface using the same RuntimeKernel semantics, with roots, definition index, instance table, start/list/status/cancel/reload behavior, and same-user local control. TASK-929 selected the final command spelling as `ash daemon ...`.
 
 ## Specification Reference
 
@@ -84,11 +84,23 @@ commands:
   - cargo test -p ash-cli --test alpha_ashd_local_daemon_control_plane -- --nocapture
   - git diff --check
 checklist:
-  - [ ] Focused evidence command patched by TASK-920
-  - [ ] Focused tests pass
-  - [ ] Broad relevant gate passes
-  - [ ] Docs/status/changelog updated if public behavior changed
+  - [x] Focused evidence command patched by TASK-920
+  - [x] Focused tests pass
+  - [x] Broad relevant gate passes
+  - [x] Docs/status/changelog updated if public behavior changed
 ```
+
+## Completion Evidence
+
+- `python3 - <<'PY' ... PY`: focused test-name assertion prints `TASK-929 focused test file and names exist`.
+- `cargo test -p ash-cli --test alpha_ashd_local_daemon_control_plane -- --nocapture`: 4 focused tests pass, covering `ash daemon serve`, `list`, `start`, `cancel`, `status`, transactional `reload`, invalid-root rejection, and preservation/rejection of pre-existing non-socket control paths.
+- `cargo fmt --check`, `git diff --check`, and `cargo check -p ash-cli` are the broad relevant gates for this task.
+
+## Implementation Notes
+
+- TASK-929 selects the final alpha command spelling as `ash daemon ...`, not a separate `ashd` binary.
+- The local control protocol is JSON-lines over a Unix-domain socket. The alpha implementation validates the root and local control path ownership before binding, rejects pre-existing non-socket control paths without deleting them, and only unlinks stale Unix-domain sockets. It does not add TCP, remote, multi-user, service-manager, distributed scheduling, or hot-swap semantics.
+- `ash daemon start` admits an instance record pinned to the active source/check-summary artifact identity. It does not claim bytecode execution of long-running workflow bodies in the daemon host, and explicit start args/config/admission-profile request fields plus report/log-path observation remain deferred beyond the TASK-929 MVP.
 
 ## Dependencies for Next Task
 

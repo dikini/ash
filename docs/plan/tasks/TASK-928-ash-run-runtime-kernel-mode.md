@@ -1,6 +1,6 @@
 # TASK-928: ash run RuntimeKernel Mode
 
-## Status: 📝 Planned
+## Status: ✅ Completed
 
 ## Description
 
@@ -83,11 +83,26 @@ commands:
   - cargo test -p ash-cli --test alpha_ash_run_runtime_kernel_mode -- --nocapture
   - git diff --check
 checklist:
-  - [ ] Focused evidence command patched by TASK-920
-  - [ ] Focused tests pass
-  - [ ] Broad relevant gate passes
-  - [ ] Docs/status/changelog updated if public behavior changed
+  - [x] Focused evidence command patched by TASK-920
+  - [x] Focused tests pass
+  - [x] Broad relevant gate passes
+  - [x] Docs/status/changelog updated if public behavior changed
 ```
+
+## Completion Evidence
+
+- RED: `cargo test -p ash-cli --test alpha_ash_run_runtime_kernel_mode -- --nocapture` failed with both required tests present and missing RuntimeKernel stderr/report evidence.
+- RED(review): `cargo test -p ash-cli --test alpha_ash_run_runtime_kernel_mode ash_run_emits_runtime_kernel_report_on_parse_failure_after_local_source_read -- --nocapture` failed because parse failure stderr lacked `runtime_kernel.host_mode=OneShot`; `cargo test -p ash-interp --test invoke_runtime_dispatch provider_in_act_env_without_runtime_state_binding_cannot_execute_through_invoke_fallback -- --nocapture` failed by returning `List([ActEnvToken, String("leaked")])`.
+- GREEN: `cargo test -p ash-cli --test alpha_ash_run_runtime_kernel_mode -- --nocapture` passed: 3 passed, 0 failed.
+- Authority seam: `cargo test -p ash-interp --test invoke_runtime_dispatch -- --nocapture` passed: 7 passed, 0 failed, including `registered_provider_without_admitted_binding_cannot_execute_through_invoke_fallback` and `provider_in_act_env_without_runtime_state_binding_cannot_execute_through_invoke_fallback`.
+- Carrier regression: `cargo test -p ash-core --test alpha_runtime_kernel_carriers -- --nocapture` passed: 2 passed, 0 failed.
+- Hygiene: `cargo fmt --check` and `git diff --check` passed.
+
+## Notes on Selector Scope
+
+TASK-928 implements a minimal `FILE[:WORKFLOW]` split for `ash run`: when the portion before the final colon exists as a path and the workflow suffix is non-empty, the suffix is recorded in the one-shot RuntimeKernel workflow definition identity/report. Existing execution still runs the current default workflow path; semantic non-`main` selection remains a later execution-selection enhancement if needed.
+
+The current one-shot RuntimeKernel admission report is an identity/report carrier over the existing embedded engine path, not a full admission projection substrate: `capability_grants` and `resource_grants` are empty. The authority-boundary guard added for TASK-928 is limited to `invoke` fallback host-provider dispatch and fails closed unless a RuntimeState binding authorizes the provider through the admitted binding set.
 
 ## Dependencies for Next Task
 

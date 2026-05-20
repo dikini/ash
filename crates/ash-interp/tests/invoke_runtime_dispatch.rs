@@ -1,9 +1,11 @@
 use std::sync::Arc;
 
-use ash_core::{Effect, Expr, Value};
+use ash_core::{
+    CapabilityBinding, CapabilityBindingId, CapabilityInterfaceId, Effect, Expr, Value,
+};
 use ash_interp::RuntimeState;
 use ash_interp::act_env::ActEnv;
-use ash_interp::capability::MockProvider;
+use ash_interp::capability::{CapabilityContext, MockProvider};
 use ash_interp::context::Context;
 use ash_interp::eval::{eval_expr, eval_expr_async};
 
@@ -28,12 +30,16 @@ fn one_arg_call(name: &str) -> Expr {
 }
 
 fn invoke_expr() -> Expr {
+    invoke_expr_for("sensor", "read")
+}
+
+fn invoke_expr_for(provider: &str, action: &str) -> Expr {
     Expr::Call {
         func: "invoke".into(),
         module: None,
         arguments: vec![
-            Expr::Literal(Value::String("sensor".to_string())),
-            Expr::Literal(Value::String("read".to_string())),
+            Expr::Literal(Value::String(provider.to_string())),
+            Expr::Literal(Value::String(action.to_string())),
             Expr::Literal(Value::List(Box::new(vec![Value::Int(1), Value::Int(2)]))),
         ],
     }
@@ -59,14 +65,31 @@ async fn invoke_dispatch_returns_closure_with_captured_state() {
                 .with_execute_result(Ok(Value::String("done".to_string()))),
         ),
     );
-    let act_env = ActEnv::from_runtime_state(
+    let binding = CapabilityBinding::host_provider(
+        CapabilityBindingId::new(),
+        "sensor",
+        CapabilityInterfaceId::new("Sensor"),
+        "sensor",
+        vec!["sensor.read".to_string()],
+    );
+    let binding_id = binding.id;
+    runtime_state
+        .admit_capability_binding(binding)
+        .await
+        .expect("sensor binding admission succeeds");
+    let act_env = ActEnv::from_runtime_state_with_admitted_bindings(
         &runtime_state,
+        &[binding_id],
         ash_interp::PolicyEvaluator::new(),
         ash_core::Provenance::new(),
     )
-    .await;
+    .await
+    .expect("act env projection succeeds");
 
-    let mut call_ctx = Context::new().with_act_env(act_env);
+    let mut call_ctx = Context::new()
+        .with_runtime_state(runtime_state)
+        .with_admitted_capability_bindings(vec![binding_id])
+        .with_act_env(act_env);
     call_ctx.set("act".to_string(), result);
     let applied = eval_expr(
         &Expr::Call {
@@ -84,6 +107,95 @@ async fn invoke_dispatch_returns_closure_with_captured_state() {
             Value::ActEnvToken,
             Value::String("done".to_string())
         ]))
+    );
+}
+
+#[tokio::test]
+async fn registered_provider_without_admitted_binding_cannot_execute_through_invoke_fallback() {
+    let ctx = Context::new();
+    let result =
+        eval_expr(&invoke_expr_for("sensor", "read"), &ctx).expect("invoke should dispatch");
+    let runtime_state = RuntimeState::new().with_provider(
+        "sensor",
+        Arc::new(
+            MockProvider::new("sensor", Effect::Operational)
+                .with_execute_result(Ok(Value::String("leaked".to_string()))),
+        ),
+    );
+    let binding = CapabilityBinding::host_provider(
+        CapabilityBindingId::new(),
+        "sensor",
+        CapabilityInterfaceId::new("Sensor"),
+        "sensor",
+        vec!["sensor.read".to_string()],
+    );
+    runtime_state
+        .admit_capability_binding(binding)
+        .await
+        .expect("binding exists in runtime registry but is not admitted to this context");
+    let act_env = ActEnv::from_runtime_state(
+        &runtime_state,
+        ash_interp::PolicyEvaluator::new(),
+        ash_core::Provenance::new(),
+    )
+    .await;
+
+    let mut call_ctx = Context::new()
+        .with_runtime_state(runtime_state)
+        .with_act_env(act_env);
+    call_ctx.set("act".to_string(), result);
+    let applied = eval_expr(
+        &Expr::Call {
+            func: "act".into(),
+            module: None,
+            arguments: vec![Expr::Literal(Value::ActEnvToken)],
+        },
+        &call_ctx,
+    )
+    .expect_err("registered provider existence alone must not grant authority");
+    let message = applied.to_string();
+    assert!(
+        message.contains("authority boundary")
+            && message.contains("admission")
+            && message.contains("sensor"),
+        "diagnostic should distinguish authority-boundary admission failure: {message}"
+    );
+}
+
+#[tokio::test]
+async fn provider_in_act_env_without_runtime_state_binding_cannot_execute_through_invoke_fallback()
+{
+    let ctx = Context::new();
+    let result =
+        eval_expr(&invoke_expr_for("sensor", "read"), &ctx).expect("invoke should dispatch");
+    let mut capability_ctx = CapabilityContext::new();
+    capability_ctx.register(Box::new(
+        MockProvider::new("sensor", Effect::Operational)
+            .with_execute_result(Ok(Value::String("leaked".to_string()))),
+    ));
+    let act_env = ActEnv::new(
+        capability_ctx,
+        ash_interp::PolicyEvaluator::new(),
+        ash_core::Provenance::new(),
+    );
+
+    let mut call_ctx = Context::new().with_act_env(act_env);
+    call_ctx.set("act".to_string(), result);
+    let applied = eval_expr(
+        &Expr::Call {
+            func: "act".into(),
+            module: None,
+            arguments: vec![Expr::Literal(Value::ActEnvToken)],
+        },
+        &call_ctx,
+    )
+    .expect_err("ActEnv provider registration without runtime admission must not grant authority");
+    let message = applied.to_string();
+    assert!(
+        message.contains("authority boundary")
+            && message.contains("admission")
+            && message.contains("sensor"),
+        "diagnostic should distinguish authority-boundary admission failure: {message}"
     );
 }
 

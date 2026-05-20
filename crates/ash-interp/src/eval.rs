@@ -1440,6 +1440,8 @@ fn maybe_execute_invoke_capture(value: Value, runtime_ctx: &Context) -> EvalResu
     let act_env = runtime_ctx.act_env().ok_or_else(|| {
         EvalError::ExecutionFailed("invoke capture missing hidden runtime ActEnv".to_string())
     })?;
+    let runtime_state = runtime_ctx.runtime_state();
+    let admitted_bindings = runtime_ctx.admitted_capability_bindings().to_vec();
     let (failure_tower, failure_entity) = runtime_ctx.current_failure_attribution();
 
     let invoked = std::thread::spawn(move || {
@@ -1450,6 +1452,24 @@ fn maybe_execute_invoke_capture(value: Value, runtime_ctx: &Context) -> EvalResu
                 EvalError::ExecutionFailed(format!("invoke helper runtime build failed: {err}"))
             })?;
         runtime.block_on(async move {
+            let fallback_authorized = if let Some(runtime_state) = runtime_state {
+                runtime_state
+                    .capability_binding_by_name(&provider)
+                    .await
+                    .is_some_and(|binding| admitted_bindings.contains(&binding.id))
+            } else {
+                false
+            };
+            if !fallback_authorized {
+                return Err(operational_eval_error_for_message_with_attribution(
+                    format!(
+                        "authority boundary failure: provider {provider} lacks RuntimeKernel admission for invoke fallback dispatch"
+                    ),
+                    failure_tower,
+                    failure_entity,
+                ));
+            }
+
             act_env
                 .capability_ctx
                 .execute(&provider, &action, &args)
@@ -2291,6 +2311,27 @@ async fn maybe_execute_invoke_capture_async(
             act_env,
         )
         .await;
+    }
+
+    let fallback_authorized = if let Some(runtime_state) = runtime_ctx.runtime_state() {
+        runtime_state
+            .capability_binding_by_name(&provider)
+            .await
+            .is_some_and(|binding| {
+                runtime_ctx
+                    .admitted_capability_bindings()
+                    .contains(&binding.id)
+            })
+    } else {
+        false
+    };
+    if !fallback_authorized {
+        return Err(operational_eval_error_for_message(
+            format!(
+                "authority boundary failure: provider {provider} lacks RuntimeKernel admission for invoke fallback dispatch"
+            ),
+            runtime_ctx,
+        ));
     }
 
     let invoked = act_env

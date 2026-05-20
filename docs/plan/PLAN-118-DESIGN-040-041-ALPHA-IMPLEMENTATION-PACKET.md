@@ -43,7 +43,7 @@ TASK-919 is the completed documentation-packet task. TASK-920 completed the hard
 | [TASK-925](tasks/TASK-925-tcir-computation-expression-boundary.md) | Typed computation-expression/TCIR carrier with source/evidence/tower provenance | 12 | ✅ Complete |
 | [TASK-926](tasks/TASK-926-amir-bytecode-logical-schema.md) | Minimal AMIR and bytecode logical schema plus verifier/debug traceability contract | 14 | ✅ Complete |
 | [TASK-927](tasks/TASK-927-runtime-kernel-host-mode-audit-and-carriers.md) | RuntimeKernel audit and core host-mode/definition/instance identity carriers | 10 | ✅ Complete |
-| [TASK-928](tasks/TASK-928-ash-run-runtime-kernel-mode.md) | Route one-shot `ash run` through RuntimeKernel without requiring daemon state | 12 | 📝 Planned |
+| [TASK-928](tasks/TASK-928-ash-run-runtime-kernel-mode.md) | Route one-shot `ash run` through RuntimeKernel without requiring daemon state | 12 | ✅ Complete |
 | [TASK-929](tasks/TASK-929-ashd-local-daemon-control-plane.md) | Local `ashd` daemon control surface, roots, instance table, and reload semantics | 16 | 📝 Planned |
 | [TASK-930](tasks/TASK-930-ooda-library-demotion-compatibility.md) | OODA library/template/lint compatibility and primitive-IR demotion plan | 8 | 📝 Planned |
 | [TASK-931](tasks/TASK-931-alpha-semantics-correspondence-and-acceptance-matrix.md) | SPEC-069/SPEC-070 acceptance matrix, semantics correspondence, and non-interference evidence | 8 | 📝 Planned |
@@ -54,7 +54,7 @@ TASK-919 is the completed documentation-packet task. TASK-920 completed the hard
 - **Track A — Packet and audit (12h):** TASK-919/TASK-920 establish docs, authority handoffs, live call graph, and downstream focused commands.
 - **Track B — Visible algebra and do lowering (40h):** TASK-921 through TASK-924 make tower operations visible and lower arbitrary accepted `do:K` binds through selected evidence.
 - **Track C — Traceable execution artifacts (26h):** TASK-925/TASK-926 introduce typed computation-expression, TCIR, AMIR, and bytecode schema contracts.
-- **Track D — Runtime regime (38h):** TASK-927 introduced core `RuntimeKernel` identity carriers; TASK-928/TASK-929 route `ash run` and add local `ashd` semantics. Final artifact/version equivalence depends on TASK-925/TASK-926; any earlier runtime work must record an explicit interim source/check-summary identity substrate.
+- **Track D — Runtime regime (38h):** TASK-927 introduced core `RuntimeKernel` identity carriers; TASK-928 routes `ash run` through one-shot RuntimeKernel identity/report carriers with empty current grants, locally reportable failure emission, recorded-only `FILE[:WORKFLOW]` suffix identity, and a fail-closed guard for unadmitted `invoke` fallback host-provider dispatch; TASK-929 adds local `ashd` semantics. Final artifact/version equivalence depends on TASK-925/TASK-926; any earlier runtime work must record an explicit interim source/check-summary identity substrate.
 - **Track E — Compatibility, acceptance, review (22h):** TASK-930 through TASK-932 demote OODA, prove acceptance/non-interference, and remediate review findings.
 
 ## 5. Decision gates

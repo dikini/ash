@@ -8,6 +8,12 @@
 
 use anyhow::{Context, Result};
 use ash_core::capability::{CapabilityError, CapabilityProvider};
+use ash_core::runtime_kernel::{
+    AdmissionIdentity, ArtifactVersion, ProviderRegistryIdentity, RuntimeArtifactCacheKey,
+    RuntimeConfigId, RuntimeEngineRelationship, RuntimeHostMode, RuntimeKernelIdentity,
+    RuntimeProfileId, RuntimeProfileIdentity, RuntimeRootSet, RuntimeRootSetId,
+    WorkflowArtifactIdentity, WorkflowDefinitionIdentity, WorkflowInstanceIdentity,
+};
 use ash_core::{Constraint, Effect, Value};
 use ash_engine::EngineError;
 use ash_interp::ExecError;
@@ -16,6 +22,9 @@ use ash_parser::{Token, TokenKind, expr, lex_with_recovery, new_input};
 use ash_provenance::{WorkflowTraceSession, create_trace_recorder};
 use async_trait::async_trait;
 use clap::Args;
+use serde::Serialize;
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 use std::path::Path;
 use std::process::ExitCode;
 use std::sync::Arc;
@@ -107,7 +116,8 @@ pub struct RunArgs {
 /// - Execution fails
 /// - Timeout is exceeded
 pub async fn run(args: &RunArgs) -> Result<RunOutcome> {
-    let path = Path::new(&args.path);
+    let selection = OneShotRunSelection::parse(&args.path);
+    let path = selection.path.as_path();
 
     // Build engine with default capabilities
     let engine = build_engine(args).context("Failed to build engine")?;
@@ -118,105 +128,332 @@ pub async fn run(args: &RunArgs) -> Result<RunOutcome> {
         .map_err(classify_engine_error)?;
     let source_kind = classify_workflow_source(&source);
     let use_entry_bootstrap = should_use_entry_bootstrap(source_kind);
+    let kernel = OneShotRuntimeKernel::admit(
+        path,
+        &source,
+        selection.workflow.as_deref().unwrap_or("main"),
+        if args.trace {
+            RuntimeHostMode::Trace
+        } else {
+            RuntimeHostMode::OneShot
+        },
+        &args.program_args,
+    );
 
-    // Dry-run mode: parse and check only
-    if args.dry_run {
-        if is_module_only_source(&source) {
+    let outcome: Result<RunOutcome> = async {
+        // Dry-run mode: parse and check only
+        if args.dry_run {
+            if is_module_only_source(&source) {
+                println!("Dry run successful");
+                return Ok(RunOutcome::completed());
+            }
+
+            let mut workflow = parse_runnable_workflow(&engine, &source, WorkflowSourceKind::Entry)
+                .map_err(classify_engine_error)?;
+            engine
+                .verify_entry_workflow(&workflow)
+                .map_err(classify_entry_verification_error)?;
+            engine.check(&mut workflow).map_err(classify_engine_error)?;
+
             println!("Dry run successful");
             return Ok(RunOutcome::completed());
         }
 
-        let mut workflow = parse_runnable_workflow(&engine, &source, WorkflowSourceKind::Entry)
-            .map_err(classify_engine_error)?;
-        engine
-            .verify_entry_workflow(&workflow)
-            .map_err(classify_entry_verification_error)?;
-        engine.check(&mut workflow).map_err(classify_engine_error)?;
-
-        println!("Dry run successful");
-        return Ok(RunOutcome::completed());
-    }
-
-    if use_entry_bootstrap {
-        let exit_code = if let Some(timeout_secs) = args.timeout {
-            match tokio::time::timeout(
-                Duration::from_secs(timeout_secs),
-                execute_entry_source(&engine, &source, args.trace),
-            )
-            .await
-            {
-                Ok(result) => result.map_err(classify_entry_bootstrap_error)?,
-                Err(_) => {
-                    return Err(anyhow::anyhow!("timeout after {timeout_secs}s"));
-                }
-            }
-        } else {
-            execute_entry_source(&engine, &source, args.trace)
+        if use_entry_bootstrap {
+            let exit_code = if let Some(timeout_secs) = args.timeout {
+                match tokio::time::timeout(
+                    Duration::from_secs(timeout_secs),
+                    execute_entry_source(&engine, &source, args.trace),
+                )
                 .await
-                .map_err(classify_entry_bootstrap_error)?
-        };
-
-        if exit_code == 0 {
-            emit_entry_output(args).await?;
-        }
-
-        return Ok(RunOutcome::Exit(ExitCode::from(exit_code)));
-    }
-
-    // Run the workflow file with optional timeout.
-    // Ordinary files use the module-resolver-backed file path for import resolution.
-    // LeadingRuntimePrelude files use the source-based path with entry-source parsing.
-    let result = if source_kind == WorkflowSourceKind::Ordinary {
-        if let Some(timeout_secs) = args.timeout {
-            match tokio::time::timeout(
-                Duration::from_secs(timeout_secs),
-                run_ordinary_file(&engine, path, args.trace),
-            )
-            .await
-            {
-                Ok(result) => result?,
-                Err(_) => {
-                    return Err(anyhow::anyhow!("timeout after {timeout_secs}s"));
+                {
+                    Ok(result) => result.map_err(classify_entry_bootstrap_error)?,
+                    Err(_) => {
+                        return Err(anyhow::anyhow!("timeout after {timeout_secs}s"));
+                    }
                 }
-            }
-        } else {
-            run_ordinary_file(&engine, path, args.trace).await?
-        }
-    } else {
-        // LeadingRuntimePrelude: source-based path
-        if let Some(timeout_secs) = args.timeout {
-            let timeout_duration = Duration::from_secs(timeout_secs);
-            let execution_fut = async {
-                if args.trace {
-                    let mut workflow = parse_runnable_workflow(&engine, &source, source_kind)
-                        .map_err(classify_engine_error)?;
-                    engine.check(&mut workflow).map_err(classify_engine_error)?;
-                    execute_with_trace(&engine, &workflow).await
-                } else {
-                    run_workflow_source(&engine, &source, source_kind).await
-                }
+            } else {
+                execute_entry_source(&engine, &source, args.trace)
+                    .await
+                    .map_err(classify_entry_bootstrap_error)?
             };
 
-            match tokio::time::timeout(timeout_duration, execution_fut).await {
-                Ok(result) => result?,
-                Err(_) => {
-                    return Err(anyhow::anyhow!("timeout after {timeout_secs}s"));
-                }
+            if exit_code == 0 {
+                emit_entry_output(args).await?;
             }
-        } else if args.trace {
-            let mut workflow = parse_runnable_workflow(&engine, &source, source_kind)
-                .map_err(classify_engine_error)?;
-            engine.check(&mut workflow).map_err(classify_engine_error)?;
-            execute_with_trace(&engine, &workflow).await?
-        } else {
-            run_workflow_source(&engine, &source, source_kind).await?
+
+            return Ok(RunOutcome::Exit(ExitCode::from(exit_code)));
         }
-    };
 
-    // Output results
-    output_result(&result, &args.output, args.format).await?;
+        // Run the workflow file with optional timeout.
+        // Ordinary files use the module-resolver-backed file path for import resolution.
+        // LeadingRuntimePrelude files use the source-based path with entry-source parsing.
+        let result = if source_kind == WorkflowSourceKind::Ordinary {
+            if let Some(timeout_secs) = args.timeout {
+                match tokio::time::timeout(
+                    Duration::from_secs(timeout_secs),
+                    run_ordinary_file(&engine, path, args.trace),
+                )
+                .await
+                {
+                    Ok(result) => result?,
+                    Err(_) => {
+                        return Err(anyhow::anyhow!("timeout after {timeout_secs}s"));
+                    }
+                }
+            } else {
+                run_ordinary_file(&engine, path, args.trace).await?
+            }
+        } else {
+            // LeadingRuntimePrelude: source-based path
+            if let Some(timeout_secs) = args.timeout {
+                let timeout_duration = Duration::from_secs(timeout_secs);
+                let execution_fut = async {
+                    if args.trace {
+                        let mut workflow = parse_runnable_workflow(&engine, &source, source_kind)
+                            .map_err(classify_engine_error)?;
+                        engine.check(&mut workflow).map_err(classify_engine_error)?;
+                        execute_with_trace(&engine, &workflow).await
+                    } else {
+                        run_workflow_source(&engine, &source, source_kind).await
+                    }
+                };
 
-    Ok(RunOutcome::completed())
+                match tokio::time::timeout(timeout_duration, execution_fut).await {
+                    Ok(result) => result?,
+                    Err(_) => {
+                        return Err(anyhow::anyhow!("timeout after {timeout_secs}s"));
+                    }
+                }
+            } else if args.trace {
+                let mut workflow = parse_runnable_workflow(&engine, &source, source_kind)
+                    .map_err(classify_engine_error)?;
+                engine.check(&mut workflow).map_err(classify_engine_error)?;
+                execute_with_trace(&engine, &workflow).await?
+            } else {
+                run_workflow_source(&engine, &source, source_kind).await?
+            }
+        };
+
+        // Output results
+        output_result(&result, &args.output, args.format).await?;
+        Ok(RunOutcome::completed())
+    }
+    .await;
+
+    if let Err(error) = outcome {
+        let _ = kernel.emit_report_if_requested();
+        return Err(error);
+    }
+
+    kernel.emit_report_if_requested()?;
+    outcome
+}
+
+#[derive(Debug, Clone)]
+struct OneShotRunSelection {
+    path: std::path::PathBuf,
+    workflow: Option<String>,
+}
+
+impl OneShotRunSelection {
+    fn parse(raw: &str) -> Self {
+        if let Some((path, workflow)) = raw.rsplit_once(':') {
+            if !workflow.is_empty() && Path::new(path).exists() {
+                return Self {
+                    path: path.into(),
+                    workflow: Some(workflow.to_string()),
+                };
+            }
+        }
+
+        Self {
+            path: raw.into(),
+            workflow: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+struct OneShotRuntimeKernel {
+    identity: RuntimeKernelIdentity,
+    definition: WorkflowDefinitionIdentity,
+    artifact: WorkflowArtifactIdentity,
+    instance: WorkflowInstanceIdentity,
+    workflow_name: String,
+}
+
+#[derive(Debug, Serialize)]
+struct OneShotKernelReport<'a> {
+    kernel_id: String,
+    host_mode: &'a str,
+    workflow: &'a str,
+    definition_id: &'a str,
+    artifact_id: &'a str,
+    instance_id: String,
+    admission: AdmissionReport,
+    provider_registry: ProviderRegistryReport,
+    source_hash: &'a str,
+    check_summary_hash: &'a str,
+}
+
+#[derive(Debug, Serialize)]
+struct AdmissionReport {
+    status: &'static str,
+    capability_grants: usize,
+    resource_grants: usize,
+}
+
+#[derive(Debug, Serialize)]
+struct ProviderRegistryReport {
+    provider_names: Vec<String>,
+    grants_admission_authority: bool,
+}
+
+impl OneShotRuntimeKernel {
+    fn admit(
+        path: &Path,
+        source: &str,
+        workflow_name: &str,
+        host_mode: RuntimeHostMode,
+        program_args: &[String],
+    ) -> Self {
+        let source_hash = stable_digest(&[source, &path.display().to_string()]);
+        let check_summary_hash = stable_digest(&[&source_hash, workflow_name, "checked-by-engine"]);
+        let profile_id = RuntimeProfileId::new("default");
+        let config_id = RuntimeConfigId::new("default");
+        let root_id = RuntimeRootSetId::new(
+            path.parent()
+                .map_or_else(|| ".".to_string(), |parent| parent.display().to_string()),
+        );
+        let roots = RuntimeRootSet::new(
+            root_id.clone(),
+            vec![path.display().to_string()],
+            Vec::new(),
+            Vec::new(),
+            ".ash/state",
+            ".ash/cache",
+            ".ash/log",
+        );
+        let artifact_version = ArtifactVersion::new("source-check-summary-v1");
+        let cache_key = RuntimeArtifactCacheKey::new(
+            root_id.clone(),
+            profile_id.clone(),
+            config_id.clone(),
+            source_hash,
+            check_summary_hash,
+            artifact_version.clone(),
+        );
+        let identity = RuntimeKernelIdentity::new(
+            host_mode,
+            roots,
+            cache_key.clone(),
+            RuntimeEngineRelationship::ExistingAshEngineEmbedded,
+        );
+        let definition = WorkflowDefinitionIdentity::new(
+            root_id,
+            path.file_name()
+                .and_then(|name| name.to_str())
+                .unwrap_or("<source>"),
+            workflow_name,
+            profile_id.clone(),
+            config_id.clone(),
+            identity.cache_key.source_hash.clone(),
+        );
+        let artifact =
+            WorkflowArtifactIdentity::new(definition.id.clone(), cache_key, artifact_version);
+        let profile = RuntimeProfileIdentity::new(
+            profile_id,
+            config_id,
+            vec!["ash run one-shot default profile/config".to_string()],
+        );
+        let provider_registry = ProviderRegistryIdentity::new(
+            program_args
+                .iter()
+                .enumerate()
+                .map(|(index, _)| format!("Args:{index}"))
+                .collect(),
+        );
+        let admission = AdmissionIdentity::empty();
+        let instance = WorkflowInstanceIdentity::admit(
+            host_mode,
+            definition.id.clone(),
+            artifact.id.clone(),
+            profile,
+            provider_registry,
+            admission,
+        );
+
+        Self {
+            identity,
+            definition,
+            artifact,
+            instance,
+            workflow_name: workflow_name.to_string(),
+        }
+    }
+
+    fn emit_report_if_requested(&self) -> Result<()> {
+        let Ok(mode) = std::env::var("ASH_RUNTIME_KERNEL_REPORT") else {
+            return Ok(());
+        };
+        if mode.eq_ignore_ascii_case("json") {
+            eprintln!("{}", serde_json::to_string_pretty(&self.report())?);
+        } else {
+            eprintln!(
+                "runtime_kernel.host_mode={}",
+                host_mode_label(self.identity.host_mode)
+            );
+            eprintln!("runtime_kernel.admission=admitted");
+            eprintln!("runtime_kernel.kernel_id={}", self.identity.id);
+            eprintln!("runtime_kernel.instance_id={}", self.instance.id.0);
+            eprintln!("runtime_kernel.artifact_id={}", self.artifact.id.as_str());
+        }
+        Ok(())
+    }
+
+    fn report(&self) -> OneShotKernelReport<'_> {
+        OneShotKernelReport {
+            kernel_id: self.identity.id.to_string(),
+            host_mode: host_mode_label(self.identity.host_mode),
+            workflow: &self.workflow_name,
+            definition_id: self.definition.id.as_str(),
+            artifact_id: self.artifact.id.as_str(),
+            instance_id: self.instance.id.0.to_string(),
+            admission: AdmissionReport {
+                status: "admitted",
+                capability_grants: self.instance.admission.capability_grants.len(),
+                resource_grants: self.instance.admission.resource_grants.len(),
+            },
+            provider_registry: ProviderRegistryReport {
+                provider_names: self.instance.provider_registry.provider_names.clone(),
+                grants_admission_authority: self
+                    .instance
+                    .provider_registry
+                    .grants_admission_authority(),
+            },
+            source_hash: &self.identity.cache_key.source_hash,
+            check_summary_hash: &self.identity.cache_key.check_summary_hash,
+        }
+    }
+}
+
+fn stable_digest(parts: &[&str]) -> String {
+    let mut hasher = DefaultHasher::new();
+    for part in parts {
+        part.len().hash(&mut hasher);
+        part.hash(&mut hasher);
+    }
+    format!("ash{:016x}", hasher.finish())
+}
+
+fn host_mode_label(host_mode: RuntimeHostMode) -> &'static str {
+    match host_mode {
+        RuntimeHostMode::Entry => "Entry",
+        RuntimeHostMode::OneShot => "OneShot",
+        RuntimeHostMode::Trace => "Trace",
+        RuntimeHostMode::Daemon => "Daemon",
+    }
 }
 
 /// Build an engine with default capabilities

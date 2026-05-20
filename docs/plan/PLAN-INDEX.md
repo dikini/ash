@@ -3596,7 +3596,7 @@ Phase 122 promotes DESIGN-040 and DESIGN-041 into an implementation-grade alpha 
 | [TASK-925](tasks/TASK-925-tcir-computation-expression-boundary.md) | Typed computation-expression/TCIR carrier with source/evidence/tower provenance | 12 | ✅ Complete |
 | [TASK-926](tasks/TASK-926-amir-bytecode-logical-schema.md) | Minimal AMIR and bytecode logical schema plus verifier/debug traceability contract | 14 | ✅ Complete |
 | [TASK-927](tasks/TASK-927-runtime-kernel-host-mode-audit-and-carriers.md) | RuntimeKernel audit and core host-mode/definition/instance identity carriers | 10 | ✅ Complete |
-| [TASK-928](tasks/TASK-928-ash-run-runtime-kernel-mode.md) | Route one-shot `ash run` through RuntimeKernel without requiring daemon state | 12 | 📝 Planned |
+| [TASK-928](tasks/TASK-928-ash-run-runtime-kernel-mode.md) | Route one-shot `ash run` through RuntimeKernel without requiring daemon state | 12 | ✅ Complete |
 | [TASK-929](tasks/TASK-929-ashd-local-daemon-control-plane.md) | Local `ashd` daemon control surface, roots, instance table, and reload semantics | 16 | 📝 Planned |
 | [TASK-930](tasks/TASK-930-ooda-library-demotion-compatibility.md) | OODA library/template/lint compatibility and primitive-IR demotion plan | 8 | 📝 Planned |
 | [TASK-931](tasks/TASK-931-alpha-semantics-correspondence-and-acceptance-matrix.md) | SPEC-069/SPEC-070 acceptance matrix, semantics correspondence, and non-interference evidence | 8 | 📝 Planned |

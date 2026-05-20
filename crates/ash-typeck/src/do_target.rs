@@ -133,7 +133,7 @@ impl DoEvidenceIdentity {
         }
     }
 
-    fn diagnostic_key(&self) -> String {
+    pub(crate) fn diagnostic_key(&self) -> String {
         render_evidence_key(&self.interface, &self.head_args)
     }
 }

@@ -12,12 +12,17 @@
 //! It defines only carriers. Lowering, normalization algorithms, definitional
 //! equality, and diagnostics are owned by later Phase 112 tasks.
 
-use crate::ast::Visibility;
+use crate::ast::{Expr, Visibility};
 use crate::kind::Kind;
+use crate::runtime::TowerLevel;
 use crate::semantic_summary::{
     AssociatedMemberIdentityId, DomainConstructorId, InterfaceIdentityId, ModuleIdentity,
     ModuleSummaryRef, PromotedConstructorId, PromotedDataKindId, PropositionPredicateId,
     SealedDomainId, SourceAnchor, TypeDeclId, ValidatedDecreasesSummary,
+};
+use crate::workflow_carrier::{
+    ProjectionEvent, ProjectionEventKind, SourceOrigin as WorkflowSourceOrigin, WorkflowNodeId,
+    WorkflowObligation,
 };
 use serde::{Deserialize, Serialize};
 
@@ -353,6 +358,290 @@ pub enum TypeConstructorExpr {
     ConstructorHead(TypeConstructorHeadId),
     /// An explicitly partial application that preserves holes structurally.
     PartialApplication(PartialTypeConstructorApp),
+}
+
+/// Stable identity for a TCIR statement in one typed computation expression.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub struct TcirStatementId(u64);
+
+impl TcirStatementId {
+    /// Creates a TCIR statement identity from an already allocated number.
+    #[must_use]
+    pub const fn new(id: u64) -> Self {
+        Self(id)
+    }
+
+    /// Returns the numeric statement identity.
+    #[must_use]
+    pub const fn as_u64(self) -> u64 {
+        self.0
+    }
+}
+
+/// Typed computation-expression carrier for source `do:K` lowering.
+///
+/// TCIR preserves the source, target, evidence, tower, lift, failure-boundary,
+/// and workflow-artifact provenance needed by later AMIR/bytecode lowering. It
+/// is a structural carrier only; executable lowering remains owned by later
+/// crates/tasks.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TcirComputationExpression {
+    /// Source anchor for the whole computation expression.
+    pub source_anchor: SourceAnchor,
+    /// Source target constructor and structural constructor identity.
+    pub target: TcirDoTarget,
+    /// Selected sequencing evidence used by lowering.
+    pub evidence: TcirSelectedEvidence,
+    /// Semantic tower attributed to this computation expression.
+    pub tower_level: TowerLevel,
+    /// Result type of the typed computation expression.
+    pub result_type: CanonicalTypeExpr,
+    /// Source-order statement carriers with stable per-expression IDs.
+    pub statements: Vec<TcirStatement>,
+    /// Explicit cross-tower lift provenance requested by source/library calls.
+    pub explicit_lifts: Vec<TcirExplicitLiftProvenance>,
+    /// Failure-boundary provenance retained for runtime/report lowering.
+    pub failure_boundaries: Vec<TcirFailureBoundaryProvenance>,
+    /// Workflow artifact provenance, when the computation target is workflow-shaped.
+    pub workflow_artifact: Option<TcirWorkflowArtifactProvenance>,
+}
+
+/// TCIR source `do` target identity.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct TcirDoTarget {
+    /// Structural target constructor identity; display is not semantic identity.
+    pub constructor: TypeConstructorExpr,
+    /// Source-style display text for diagnostics.
+    pub display: String,
+    /// Source anchor for the target syntax.
+    pub source_anchor: SourceAnchor,
+}
+
+/// Selected sequencing evidence retained at the TCIR boundary.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TcirSelectedEvidence {
+    /// Interface selected for sequencing, usually `Monad`.
+    pub interface: String,
+    /// Stable selected-evidence key from the producing typechecker.
+    pub evidence_key: String,
+    /// Return operation selected for final return lowering.
+    pub return_op: TcirOperation,
+    /// Bind operation selected for `<-` lowering.
+    pub bind_op: TcirOperation,
+}
+
+/// Operation reference retained by TCIR for evidence and tower operations.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TcirOperation {
+    /// Operation identity. This is deliberately typed instead of debug-string only.
+    pub kind: TcirOperationKind,
+    /// Optional source/evidence anchor for diagnostics and traceability.
+    pub source_anchor: Option<SourceAnchor>,
+}
+
+impl TcirOperation {
+    /// Creates a hidden compiler-prelude operation reference.
+    #[must_use]
+    pub fn hidden_compiler_prelude(
+        name: impl Into<String>,
+        source_anchor: Option<SourceAnchor>,
+    ) -> Self {
+        Self {
+            kind: TcirOperationKind::HiddenCompilerPrelude { name: name.into() },
+            source_anchor,
+        }
+    }
+
+    /// Creates a visible Ash operation reference.
+    #[must_use]
+    pub fn visible_operation(
+        module_path: Vec<String>,
+        name: impl Into<String>,
+        source_anchor: Option<SourceAnchor>,
+    ) -> Self {
+        Self {
+            kind: TcirOperationKind::VisibleOperation {
+                module_path,
+                name: name.into(),
+            },
+            source_anchor,
+        }
+    }
+
+    /// Creates an evidence-selected method-body operation reference.
+    #[must_use]
+    pub fn evidence_method(
+        evidence_key: impl Into<String>,
+        method: impl Into<String>,
+        params: Vec<String>,
+        body: Expr,
+        source_anchor: Option<SourceAnchor>,
+    ) -> Self {
+        Self {
+            kind: TcirOperationKind::EvidenceMethod {
+                evidence_key: evidence_key.into(),
+                method: method.into(),
+                params,
+                body: Box::new(body),
+            },
+            source_anchor,
+        }
+    }
+
+    /// Creates an evidence-selected intrinsic operation reference.
+    #[must_use]
+    pub fn evidence_intrinsic(
+        evidence_key: impl Into<String>,
+        method: impl Into<String>,
+        module_path: Vec<String>,
+        name: impl Into<String>,
+        source_anchor: Option<SourceAnchor>,
+    ) -> Self {
+        Self {
+            kind: TcirOperationKind::EvidenceIntrinsic {
+                evidence_key: evidence_key.into(),
+                method: method.into(),
+                module_path,
+                name: name.into(),
+            },
+            source_anchor,
+        }
+    }
+}
+
+/// Typed TCIR operation identity.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[non_exhaustive]
+pub enum TcirOperationKind {
+    /// Compiler-prelude operation kept hidden from ordinary source data.
+    HiddenCompilerPrelude { name: String },
+    /// Visible Ash operation such as `proc::from_act`.
+    VisibleOperation {
+        module_path: Vec<String>,
+        name: String,
+    },
+    /// Selected user evidence method body, preserved as a parameterized closure.
+    EvidenceMethod {
+        evidence_key: String,
+        method: String,
+        params: Vec<String>,
+        body: Box<Expr>,
+    },
+    /// Selected compiler intrinsic implementing an evidence method.
+    EvidenceIntrinsic {
+        evidence_key: String,
+        method: String,
+        module_path: Vec<String>,
+        name: String,
+    },
+}
+
+/// One source statement in a typed computation expression.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TcirStatement {
+    /// Stable statement identity within the containing TCIR expression.
+    pub id: TcirStatementId,
+    /// Source anchor for this statement.
+    pub source_anchor: SourceAnchor,
+    /// Statement payload.
+    pub kind: TcirStatementKind,
+}
+
+/// TCIR statement payloads.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[non_exhaustive]
+pub enum TcirStatementKind {
+    /// Pure lexical binding inside a computation expression.
+    Let {
+        binder: TcirBinder,
+        value: Box<Expr>,
+    },
+    /// Monadic bind with selected bind operation and continuation closure facts.
+    Bind {
+        binder: TcirBinder,
+        source: Box<Expr>,
+        bind_op: Box<TcirOperation>,
+        closure: TcirClosure,
+    },
+    /// Final return with selected return operation.
+    Return {
+        value: Box<Expr>,
+        return_op: Box<TcirOperation>,
+    },
+    /// Workflow-specific artifact event retained at the TCIR boundary.
+    WorkflowArtifact {
+        node: WorkflowNodeId,
+        event: ProjectionEventKind,
+    },
+    /// Explicit cross-tower lift requested by source/library operation.
+    ExplicitLift { lift: TcirExplicitLiftProvenance },
+    /// Failure-boundary provenance retained for later runtime/report lowering.
+    FailureBoundary {
+        boundary: TcirFailureBoundaryProvenance,
+    },
+}
+
+/// TCIR source binder.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct TcirBinder {
+    /// Binder name.
+    pub name: String,
+    /// Optional binder source anchor.
+    pub source_anchor: Option<SourceAnchor>,
+}
+
+/// Continuation closure facts for a TCIR bind.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct TcirClosure {
+    /// Source anchor for the continuation closure.
+    pub source_anchor: SourceAnchor,
+    /// Closure parameters.
+    pub params: Vec<TcirBinder>,
+    /// Statement IDs that belong to this continuation body.
+    pub body_statement_ids: Vec<TcirStatementId>,
+}
+
+/// Provenance for an explicit cross-tower lift.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TcirExplicitLiftProvenance {
+    /// Operation that requested the lift.
+    pub operation: TcirOperation,
+    /// Source tower.
+    pub from_tower: TowerLevel,
+    /// Destination tower.
+    pub to_tower: TowerLevel,
+    /// Source anchor for the lift expression.
+    pub source_anchor: SourceAnchor,
+}
+
+/// Failure-boundary provenance retained by TCIR.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TcirFailureBoundaryProvenance {
+    /// Tower owning the boundary.
+    pub tower: TowerLevel,
+    /// Optional runtime entity identity when already known by the producer.
+    ///
+    /// Typechecking does not fabricate runtime UUIDs. Later runtime lowering may
+    /// bind this boundary to an execution entity once an actual run/process/workflow
+    /// identity exists.
+    pub entity: Option<crate::runtime::FailureEntity>,
+    /// Source anchor for the failure boundary.
+    pub source_anchor: SourceAnchor,
+    /// Human-readable notes for diagnostics; not semantic identity.
+    pub notes: Vec<String>,
+}
+
+/// Workflow artifact provenance retained by TCIR.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TcirWorkflowArtifactProvenance {
+    /// Workflow-carrier source origin for the artifact.
+    pub source_origin: WorkflowSourceOrigin,
+    /// Workflow nodes participating in this artifact.
+    pub nodes: Vec<WorkflowNodeId>,
+    /// Projection events preserved independently from lowered expressions.
+    pub projection_events: Vec<ProjectionEvent>,
+    /// Workflow obligations preserved independently from lowered expressions.
+    pub obligations: Vec<WorkflowObligation>,
 }
 
 /// Canonical identity for a reducible associated-family head.

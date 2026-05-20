@@ -1,6 +1,6 @@
 # TASK-925: TCIR Computation Expression Boundary
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -78,13 +78,30 @@ commands:
     print("TASK-925 focused test file and names exist")
     PY
   - cargo test -p ash-core --test alpha_tcir_computation_expression -- --nocapture
+  - cargo test -p ash-typeck --test alpha_tcir_typeck_attachment -- --nocapture
   - git diff --check
 checklist:
-  - [ ] Focused evidence command patched by TASK-920
-  - [ ] Focused tests pass
-  - [ ] Broad relevant gate passes
-  - [ ] Docs/status/changelog updated if public behavior changed
+  - [x] Focused evidence command patched by TASK-920
+  - [x] Focused tests pass
+  - [x] Broad relevant gate passes
+  - [x] Docs/status/changelog updated if public behavior changed
 ```
+
+## Completion Notes
+
+- Added `TcirComputationExpression` and related TCIR carriers in `ash-core::type_ir`, re-exported from `ash-core`, preserving source anchors, structural target constructor identity, selected evidence operations, tower level, statement/closure facts, explicit lift provenance, failure-boundary provenance, and workflow artifact provenance.
+- Attached TCIR to typed do elaboration as `DoElaborationResult::tcir` without replacing existing lowered `CoreExpr` or `WorkflowTypedArtifact` outputs.
+- Added focused non-collapse coverage proving user monad targets such as `Option` remain structurally identified as user constructors rather than Act/Proc/Workflow runtime bridge terms.
+- Deferred AMIR/bytecode schemas, verifiers, and RuntimeKernel consumption to TASK-926 and later tasks.
+
+## Verification Evidence
+
+- `python3 - <<'PY' ...` focused test-name structure assertion from this task.
+- `cargo test -p ash-core --test alpha_tcir_computation_expression -- --nocapture`
+- `cargo test -p ash-typeck --test alpha_tcir_typeck_attachment -- --nocapture`
+- `cargo fmt --check`
+- `git diff --check`
+- `RUSTC_WRAPPER= cargo clippy -p ash-core --test alpha_tcir_computation_expression -- -D warnings`
 
 ## Dependencies for Next Task
 

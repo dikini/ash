@@ -12,7 +12,22 @@ use crate::type_env::{
 };
 use crate::types::{Substitution, Type, TypeVar, unify};
 use ash_core::adt::{VariantPayloadShape, tuple_field_name};
-use ash_core::ast::{Expr as CoreExpr, Pattern as CorePattern, TypeBody, TypeDef};
+use ash_core::ast::{
+    Expr as CoreExpr, Pattern as CorePattern, Span as CoreSpan, TypeBody, TypeDef,
+};
+use ash_core::module_graph::ModuleId;
+use ash_core::runtime::TowerLevel;
+use ash_core::semantic_summary::{
+    ModuleIdentity, ModuleSourceOrigin, SourceAnchor, SourceOrigin as SemanticSourceOrigin,
+    TypeDeclId,
+};
+use ash_core::type_ir::{
+    CanonicalTypeExpr, ConstructorVariableApp, ConstructorVariableRef, TcirBinder, TcirClosure,
+    TcirComputationExpression, TcirDoTarget, TcirExplicitLiftProvenance,
+    TcirFailureBoundaryProvenance, TcirOperation, TcirOperationKind, TcirSelectedEvidence,
+    TcirStatement, TcirStatementId, TcirStatementKind, TcirWorkflowArtifactProvenance,
+    TypeConstructorHeadId,
+};
 use ash_core::workflow_carrier::{
     ActLowerSummary, ContractPlan, OpenPostcondition, PostconditionTarget, ProcLowerSummary,
     ProjectionEvent, ProjectionEventKind, ProjectionKind, PublicWorkflowSummary, SourceOrigin,
@@ -22,7 +37,8 @@ use ash_core::workflow_contract::Requirement;
 use ash_parser::lower_pattern;
 use ash_parser::surface::ConstructorPayload;
 use ash_parser::surface::{
-    ActStmt, BinaryOp, ComprehensionQualifier, DoStmt, Expr, Literal, MatchArm, Pattern, UnaryOp,
+    ActStmt, BinaryOp, ComprehensionQualifier, DoStmt, Expr, Literal, MatchArm, Pattern,
+    Type as SurfaceType, UnaryOp,
 };
 use ash_parser::token::Span;
 use ash_parser::workflow_contract_classifier;
@@ -62,6 +78,8 @@ pub struct DoElaborationResult {
     pub workflow_artifact: Option<WorkflowTypedArtifact>,
     /// Selected evidence captured at the current do elaboration boundary.
     pub selected_evidence: Option<crate::do_target::SelectedDoEvidence>,
+    /// Typed computation-expression carrier retained for later execution lowering.
+    pub tcir: Option<TcirComputationExpression>,
 }
 
 impl CheckResult {
@@ -1185,12 +1203,585 @@ fn elaborate_typed_do_parts(
     } else {
         None
     };
+    let tcir = build_tcir_computation_expression(
+        env,
+        target,
+        stmts,
+        span,
+        &dictionary,
+        &check.ty,
+        workflow_artifact.as_ref(),
+    )
+    .map_err(|err| vec![err])?;
     Ok(DoElaborationResult {
         expr: core,
         ty: check.ty,
         workflow_artifact,
         selected_evidence: Some(dictionary.selected_evidence()),
+        tcir: Some(tcir),
     })
+}
+
+fn build_tcir_computation_expression(
+    env: &TypeEnv,
+    target: &ash_parser::surface::DoTarget,
+    stmts: &[DoStmt],
+    span: Span,
+    dictionary: &crate::do_target::DoDictionary,
+    ty: &Type,
+    workflow_artifact: Option<&WorkflowTypedArtifact>,
+) -> Result<TcirComputationExpression, ConstructorError> {
+    let target_type = tcir_surface_target_type(target);
+    let constructor = tcir_target_constructor_expr(env, &target_type, target.span)?;
+    let bind_op = tcir_operation_from_dictionary_op(&dictionary.bind_op);
+    let return_op = tcir_operation_from_dictionary_op(&dictionary.return_op);
+    let evidence_key = tcir_evidence_key(&return_op, &bind_op)
+        .unwrap_or_else(|| format!("compiler-prelude::{}", dictionary.target.display()));
+    let explicit_lifts = collect_tcir_explicit_lifts(stmts);
+    let workflow_artifact = workflow_artifact.map(tcir_workflow_artifact_provenance);
+
+    Ok(TcirComputationExpression {
+        source_anchor: tcir_source_anchor(span, "do block"),
+        target: TcirDoTarget {
+            constructor,
+            display: render_tcir_surface_type(&target_type),
+            source_anchor: tcir_source_anchor(target.span, "do target"),
+        },
+        evidence: TcirSelectedEvidence {
+            interface: "Monad".to_string(),
+            evidence_key,
+            return_op: return_op.clone(),
+            bind_op: bind_op.clone(),
+        },
+        tower_level: tcir_tower_level(dictionary.tower_level),
+        result_type: tcir_type_to_canonical(env, ty, span)?,
+        statements: build_tcir_statements(stmts, &return_op, &bind_op, workflow_artifact.as_ref())?,
+        explicit_lifts,
+        failure_boundaries: vec![TcirFailureBoundaryProvenance {
+            tower: tcir_tower_level(dictionary.tower_level),
+            entity: None,
+            source_anchor: tcir_source_anchor(span, "do failure boundary"),
+            notes: vec![format!(
+                "do:{} failure attribution retained at TCIR boundary",
+                dictionary.target.display()
+            )],
+        }],
+        workflow_artifact,
+    })
+}
+
+fn build_tcir_statements(
+    stmts: &[DoStmt],
+    return_op: &TcirOperation,
+    bind_op: &TcirOperation,
+    workflow_artifact: Option<&TcirWorkflowArtifactProvenance>,
+) -> Result<Vec<TcirStatement>, ConstructorError> {
+    let mut workflow_events = workflow_artifact
+        .map(|artifact| artifact.projection_events.iter())
+        .into_iter()
+        .flatten();
+    stmts
+        .iter()
+        .enumerate()
+        .map(|(index, stmt)| {
+            let id = TcirStatementId::new(index as u64);
+            let source_anchor = tcir_source_anchor(do_stmt_span(stmt), "do statement");
+            let kind = match stmt {
+                DoStmt::Let { name, value, .. } => TcirStatementKind::Let {
+                    binder: TcirBinder {
+                        name: name.to_string(),
+                        source_anchor: Some(source_anchor.clone()),
+                    },
+                    value: Box::new(elaborate_workflow_call_expr(value)?),
+                },
+                DoStmt::Bind { name, value, .. } => TcirStatementKind::Bind {
+                    binder: TcirBinder {
+                        name: name.to_string(),
+                        source_anchor: Some(source_anchor.clone()),
+                    },
+                    source: Box::new(elaborate_workflow_call_expr(value)?),
+                    bind_op: Box::new(bind_op.clone()),
+                    closure: TcirClosure {
+                        source_anchor: source_anchor.clone(),
+                        params: vec![TcirBinder {
+                            name: name.to_string(),
+                            source_anchor: Some(source_anchor.clone()),
+                        }],
+                        body_statement_ids: ((index + 1)..stmts.len())
+                            .map(|statement_index| TcirStatementId::new(statement_index as u64))
+                            .collect(),
+                    },
+                },
+                DoStmt::Return { value, .. } => TcirStatementKind::Return {
+                    value: Box::new(elaborate_workflow_call_expr(value)?),
+                    return_op: Box::new(return_op.clone()),
+                },
+                DoStmt::WorkflowRequires { expr, .. } => {
+                    let event = workflow_events
+                        .find(|event| matches!(event.kind, ProjectionEventKind::Requires { .. }));
+                    let (node, kind) = if let Some(event) = event {
+                        (event.node, event.kind.clone())
+                    } else {
+                        (
+                            ash_core::workflow_carrier::WorkflowNodeId(index as u64),
+                            ProjectionEventKind::Requires {
+                                requirement: classify_requirement(expr)?,
+                            },
+                        )
+                    };
+                    TcirStatementKind::WorkflowArtifact { node, event: kind }
+                }
+                DoStmt::WorkflowEnsures { expr, .. } => {
+                    let event = workflow_events
+                        .find(|event| matches!(event.kind, ProjectionEventKind::Ensures { .. }));
+                    let (node, kind) = if let Some(event) = event {
+                        (event.node, event.kind.clone())
+                    } else {
+                        (
+                            ash_core::workflow_carrier::WorkflowNodeId(index as u64),
+                            ProjectionEventKind::Ensures {
+                                postcondition: classify_postcondition(expr)?,
+                            },
+                        )
+                    };
+                    TcirStatementKind::WorkflowArtifact { node, event: kind }
+                }
+            };
+            Ok(TcirStatement {
+                id,
+                source_anchor,
+                kind,
+            })
+        })
+        .collect()
+}
+
+fn tcir_operation_from_dictionary_op(op: &crate::do_target::DoDictionaryOp) -> TcirOperation {
+    match op {
+        crate::do_target::DoDictionaryOp::HiddenActReturn => {
+            TcirOperation::hidden_compiler_prelude("act::unit", None)
+        }
+        crate::do_target::DoDictionaryOp::HiddenActBind => {
+            TcirOperation::hidden_compiler_prelude("act::bind", None)
+        }
+        crate::do_target::DoDictionaryOp::Ordinary(name) => {
+            TcirOperation::visible_operation(name.module.clone(), name.name.clone(), None)
+        }
+        crate::do_target::DoDictionaryOp::EvidenceMethod {
+            evidence,
+            method,
+            params,
+            body,
+        } => TcirOperation::evidence_method(
+            evidence.diagnostic_key(),
+            method.clone(),
+            params.clone(),
+            body.clone(),
+            None,
+        ),
+        crate::do_target::DoDictionaryOp::EvidenceIntrinsic {
+            evidence,
+            method,
+            shim,
+        } => TcirOperation::evidence_intrinsic(
+            evidence.diagnostic_key(),
+            method.clone(),
+            shim.module.clone(),
+            shim.name.clone(),
+            None,
+        ),
+    }
+}
+
+fn tcir_evidence_key(return_op: &TcirOperation, bind_op: &TcirOperation) -> Option<String> {
+    [return_op, bind_op]
+        .into_iter()
+        .find_map(|op| match &op.kind {
+            TcirOperationKind::EvidenceMethod { evidence_key, .. }
+            | TcirOperationKind::EvidenceIntrinsic { evidence_key, .. } => {
+                Some(evidence_key.clone())
+            }
+            _ => None,
+        })
+}
+
+fn collect_tcir_explicit_lifts(stmts: &[DoStmt]) -> Vec<TcirExplicitLiftProvenance> {
+    let mut lifts = Vec::new();
+    for stmt in stmts {
+        match stmt {
+            DoStmt::Let { value, .. }
+            | DoStmt::Bind { value, .. }
+            | DoStmt::Return { value, .. } => {
+                collect_tcir_lifts_from_expr(value, &mut lifts);
+            }
+            DoStmt::WorkflowRequires { .. } | DoStmt::WorkflowEnsures { .. } => {}
+        }
+    }
+    lifts
+}
+
+fn collect_tcir_lifts_from_expr(expr: &Expr, lifts: &mut Vec<TcirExplicitLiftProvenance>) {
+    match expr {
+        Expr::Call {
+            module: Some(module),
+            func,
+            args,
+            span,
+        } if module.as_ref() == "workflow" && matches!(func.as_ref(), "from_proc" | "from_act") => {
+            let from_tower = if func.as_ref() == "from_proc" {
+                TowerLevel::Proc
+            } else {
+                TowerLevel::Effectful
+            };
+            lifts.push(TcirExplicitLiftProvenance {
+                operation: TcirOperation::visible_operation(
+                    vec!["workflow".to_string()],
+                    func.to_string(),
+                    Some(tcir_source_anchor(*span, "explicit workflow lift")),
+                ),
+                from_tower,
+                to_tower: TowerLevel::Workflow,
+                source_anchor: tcir_source_anchor(*span, "explicit workflow lift"),
+            });
+            for arg in args {
+                collect_tcir_lifts_from_expr(arg, lifts);
+            }
+        }
+        Expr::Call { args, .. } => {
+            for arg in args {
+                collect_tcir_lifts_from_expr(arg, lifts);
+            }
+        }
+        Expr::DoBlock { stmts, .. } => {
+            for stmt in stmts {
+                match stmt {
+                    DoStmt::Let { value, .. }
+                    | DoStmt::Bind { value, .. }
+                    | DoStmt::Return { value, .. } => collect_tcir_lifts_from_expr(value, lifts),
+                    DoStmt::WorkflowRequires { .. } | DoStmt::WorkflowEnsures { .. } => {}
+                }
+            }
+        }
+        _ => {}
+    }
+}
+
+fn tcir_workflow_artifact_provenance(
+    artifact: &WorkflowTypedArtifact,
+) -> TcirWorkflowArtifactProvenance {
+    let mut nodes = Vec::new();
+    for event in &artifact.projection_events {
+        if !nodes.contains(&event.node) {
+            nodes.push(event.node);
+        }
+    }
+    TcirWorkflowArtifactProvenance {
+        source_origin: artifact.source_origin.clone(),
+        nodes,
+        projection_events: artifact.projection_events.clone(),
+        obligations: artifact.obligations.clone(),
+    }
+}
+
+fn tcir_type_to_canonical(
+    env: &TypeEnv,
+    ty: &Type,
+    span: Span,
+) -> Result<CanonicalTypeExpr, ConstructorError> {
+    match ty {
+        Type::Int => Ok(CanonicalTypeExpr::Primitive("Int".to_string())),
+        Type::String => Ok(CanonicalTypeExpr::Primitive("String".to_string())),
+        Type::Bool => Ok(CanonicalTypeExpr::Primitive("Bool".to_string())),
+        Type::Float => Ok(CanonicalTypeExpr::Primitive("Float".to_string())),
+        Type::Null => Ok(CanonicalTypeExpr::Primitive("Null".to_string())),
+        Type::Time => Ok(CanonicalTypeExpr::Primitive("Time".to_string())),
+        Type::Ref => Ok(CanonicalTypeExpr::Primitive("Ref".to_string())),
+        Type::Var(var) => Ok(CanonicalTypeExpr::Var(format!("?{}", var.0))),
+        Type::List(item) => Ok(CanonicalTypeExpr::NominalApp {
+            origin: tcir_type_origin(env, "List", span)?,
+            visible_name: "List".to_string(),
+            args: vec![tcir_type_to_canonical(env, item, span)?],
+            kind: crate::Kind::Type,
+        }),
+        Type::Constructor { name, args, kind } => Ok(CanonicalTypeExpr::NominalApp {
+            origin: tcir_type_origin(env, &name.name, span)?,
+            visible_name: name.name.clone(),
+            args: args
+                .iter()
+                .map(|arg| tcir_type_to_canonical(env, arg, span))
+                .collect::<Result<Vec<_>, _>>()?,
+            kind: kind.clone(),
+        }),
+        Type::ConstructorVariableApp {
+            constructor,
+            args,
+            kind,
+        } => Ok(CanonicalTypeExpr::ConstructorVariableApp(Box::new(
+            ConstructorVariableApp::new(
+                ConstructorVariableRef::new(constructor.clone(), crate::Kind::Type, None),
+                args.iter()
+                    .map(|arg| tcir_type_to_canonical(env, arg, span))
+                    .collect::<Result<Vec<_>, _>>()?,
+                kind.clone(),
+                None,
+            ),
+        ))),
+        Type::Record(fields) => Ok(CanonicalTypeExpr::NominalApp {
+            origin: tcir_synthetic_type_decl_id("Record"),
+            visible_name: "Record".to_string(),
+            args: fields
+                .iter()
+                .map(|(_, field_ty)| tcir_type_to_canonical(env, field_ty, span))
+                .collect::<Result<Vec<_>, _>>()?,
+            kind: crate::Kind::Type,
+        }),
+        Type::Cap { name, .. } => Ok(CanonicalTypeExpr::NominalApp {
+            origin: tcir_synthetic_type_decl_id(format!("Capability<{name}>").as_str()),
+            visible_name: format!("Capability<{name}>"),
+            args: Vec::new(),
+            kind: crate::Kind::Type,
+        }),
+        Type::Fun(params, ret, effect) => tcir_function_type_to_canonical(
+            env,
+            "Fun",
+            params,
+            ret,
+            Some(format!("{effect:?}")),
+            span,
+        ),
+        Type::Fn(params, ret) => {
+            tcir_function_type_to_canonical(env, "Fn", params, ret, None, span)
+        }
+        Type::Instance { workflow_type } => Ok(CanonicalTypeExpr::NominalApp {
+            origin: tcir_synthetic_type_decl_id(format!("Instance<{workflow_type}>").as_str()),
+            visible_name: format!("Instance<{workflow_type}>"),
+            args: Vec::new(),
+            kind: crate::Kind::Type,
+        }),
+        Type::InstanceAddr { workflow_type } => Ok(CanonicalTypeExpr::NominalApp {
+            origin: tcir_synthetic_type_decl_id(format!("InstanceAddr<{workflow_type}>").as_str()),
+            visible_name: format!("InstanceAddr<{workflow_type}>"),
+            args: Vec::new(),
+            kind: crate::Kind::Type,
+        }),
+        Type::ControlLink { workflow_type } => Ok(CanonicalTypeExpr::NominalApp {
+            origin: tcir_synthetic_type_decl_id(format!("ControlLink<{workflow_type}>").as_str()),
+            visible_name: format!("ControlLink<{workflow_type}>"),
+            args: Vec::new(),
+            kind: crate::Kind::Type,
+        }),
+        Type::Associated {
+            interface,
+            base,
+            name,
+        } => tcir_associated_type_to_canonical(env, interface, base, name, span),
+    }
+}
+
+fn tcir_function_type_to_canonical(
+    env: &TypeEnv,
+    visible_name: &str,
+    params: &[Type],
+    ret: &Type,
+    effect_tag: Option<String>,
+    span: Span,
+) -> Result<CanonicalTypeExpr, ConstructorError> {
+    let mut args = params
+        .iter()
+        .map(|param| tcir_type_to_canonical(env, param, span))
+        .collect::<Result<Vec<_>, _>>()?;
+    args.push(tcir_type_to_canonical(env, ret, span)?);
+    if let Some(effect) = effect_tag {
+        args.push(CanonicalTypeExpr::Primitive(effect));
+    }
+    Ok(CanonicalTypeExpr::NominalApp {
+        origin: tcir_synthetic_type_decl_id(visible_name),
+        visible_name: visible_name.to_string(),
+        args,
+        kind: crate::Kind::Type,
+    })
+}
+
+fn tcir_associated_type_to_canonical(
+    env: &TypeEnv,
+    interface: &str,
+    base: &Type,
+    member: &str,
+    span: Span,
+) -> Result<CanonicalTypeExpr, ConstructorError> {
+    let interface_identity = env
+        .interface_identity_for_name(interface)
+        .cloned()
+        .unwrap_or_else(|| {
+            ash_core::semantic_summary::InterfaceIdentityId::new(
+                tcir_synthetic_module_identity(interface),
+                interface,
+            )
+        });
+    let member_identity = env
+        .associated_member_identity_for_interface_member(interface, member)
+        .cloned()
+        .unwrap_or_else(|| {
+            ash_core::semantic_summary::AssociatedMemberIdentityId::associated_type(
+                interface_identity.clone(),
+                member,
+                vec![interface.to_string(), member.to_string()],
+            )
+        });
+    Ok(CanonicalTypeExpr::Projection {
+        interface: interface_identity,
+        member: member_identity,
+        args: vec![tcir_type_to_canonical(env, base, span)?],
+        kind: crate::Kind::Type,
+        rigidity: ash_core::type_ir::ProjectionRigidity::Neutral,
+    })
+}
+
+fn tcir_type_origin(
+    env: &TypeEnv,
+    visible_name: &str,
+    span: Span,
+) -> Result<TypeDeclId, ConstructorError> {
+    env.type_identity_for_name(visible_name)
+        .cloned()
+        .or_else(|| {
+            env.has_type(visible_name)
+                .then(|| tcir_synthetic_type_decl_id(visible_name))
+        })
+        .ok_or_else(|| ConstructorError::UnsupportedExpression {
+            kind: format!("missing canonical type identity for TCIR type {visible_name}"),
+            span,
+        })
+}
+
+fn tcir_target_constructor_expr(
+    env: &TypeEnv,
+    target_type: &SurfaceType,
+    span: Span,
+) -> Result<ash_core::type_ir::TypeConstructorExpr, ConstructorError> {
+    match env.elaborate_partial_type_constructor(target_type, false) {
+        Ok(constructor) => Ok(constructor),
+        Err(err) => match target_type {
+            SurfaceType::Name(name) if env.has_type(name.as_ref()) => {
+                Ok(ash_core::type_ir::TypeConstructorExpr::ConstructorHead(
+                    TypeConstructorHeadId::nominal(
+                        tcir_synthetic_type_decl_id(name.as_ref()),
+                        name.to_string(),
+                    ),
+                ))
+            }
+            _ => Err(ConstructorError::UnsupportedExpression {
+                kind: format!("failed to preserve TCIR do target constructor: {err}"),
+                span,
+            }),
+        },
+    }
+}
+
+fn tcir_synthetic_type_decl_id(visible_name: &str) -> TypeDeclId {
+    TypeDeclId::ordinary(tcir_synthetic_module_identity(visible_name), visible_name)
+}
+
+fn tcir_synthetic_module_identity(reason_key: &str) -> ModuleIdentity {
+    ModuleIdentity::new(
+        None,
+        ModuleId(0),
+        vec!["<tcir>".to_string(), reason_key.to_string()],
+        ModuleSourceOrigin::Synthetic {
+            reason: "TCIR structural type identity fallback".to_string(),
+        },
+    )
+}
+
+fn tcir_surface_target_type(target: &ash_parser::surface::DoTarget) -> SurfaceType {
+    if target.args.is_empty() {
+        SurfaceType::Name(target.name.to_string().into())
+    } else {
+        SurfaceType::Constructor {
+            name: target.name.to_string().into(),
+            args: target.args.clone(),
+        }
+    }
+}
+
+fn render_tcir_surface_type(ty: &SurfaceType) -> String {
+    match ty {
+        SurfaceType::Name(name) => name.to_string(),
+        SurfaceType::Hole { .. } => "_".to_string(),
+        SurfaceType::List(item) => format!("[{}]", render_tcir_surface_type(item)),
+        SurfaceType::Tuple(items) => format!(
+            "({})",
+            items
+                .iter()
+                .map(render_tcir_surface_type)
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
+        SurfaceType::Record(fields) => format!(
+            "{{{}}}",
+            fields
+                .iter()
+                .map(|(name, ty)| format!("{name}: {}", render_tcir_surface_type(ty)))
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
+        SurfaceType::Capability(name) => format!("capability {name}"),
+        SurfaceType::Constructor { name, args } => format!(
+            "{}<{}>",
+            name,
+            args.iter()
+                .map(render_tcir_surface_type)
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
+        SurfaceType::Associated { base, name } => {
+            format!("{}::{name}", render_tcir_surface_type(base))
+        }
+        SurfaceType::AssociatedFamilyProjection {
+            interface,
+            args,
+            member,
+            ..
+        } => format!(
+            "<{}<{}>>::{}",
+            interface,
+            args.iter()
+                .map(render_tcir_surface_type)
+                .collect::<Vec<_>>()
+                .join(", "),
+            member
+        ),
+        SurfaceType::Fn(params, ret) => format!(
+            "Fn({}) -> {}",
+            params
+                .iter()
+                .map(render_tcir_surface_type)
+                .collect::<Vec<_>>()
+                .join(", "),
+            render_tcir_surface_type(ret)
+        ),
+    }
+}
+
+fn tcir_tower_level(level: crate::do_target::DoTowerLevel) -> TowerLevel {
+    match level {
+        crate::do_target::DoTowerLevel::Effectful => TowerLevel::Effectful,
+        crate::do_target::DoTowerLevel::Proc => TowerLevel::Proc,
+        crate::do_target::DoTowerLevel::Workflow => TowerLevel::Workflow,
+    }
+}
+
+fn tcir_source_anchor(span: Span, label: impl Into<String>) -> SourceAnchor {
+    SourceAnchor::new(
+        SemanticSourceOrigin::Synthetic {
+            reason: "typed do elaboration".to_string(),
+        },
+        Some(CoreSpan {
+            start: span.start,
+            end: span.end,
+        }),
+        label,
+    )
 }
 
 fn collect_comprehension_diagnostics(

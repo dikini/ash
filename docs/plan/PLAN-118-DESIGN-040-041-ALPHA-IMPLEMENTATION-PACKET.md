@@ -17,7 +17,7 @@
 **Design:** [DESIGN-040](../design/DESIGN-040-ALPHA-ALGEBRAIC-TOWER.md), [DESIGN-041](../design/DESIGN-041-RUNTIME-REGIME-AND-OS-SURFACE.md)
 **Task range:** [TASK-919](tasks/TASK-919-design040041-current-state-and-scope-reconciliation.md) through [TASK-932](tasks/TASK-932-alpha-closeout-review-remediation.md)
 
-TASK-919 is the completed documentation-packet task. TASK-920 completed the hard pre-implementation audit gate and bound exact callsites plus zero-test-safe focused commands. TASK-921 added the public tower manifest, TASK-922 added selected Monad evidence method-body/shim carriers at the do-target boundary, TASK-923 completed generalized bind lowering, and TASK-924 aligned opaque carrier boundaries with explicit tower lifts. TASK-925 through TASK-930 remain planned implementation/compatibility tasks. TASK-931/TASK-932 close acceptance and review.
+TASK-919 is the completed documentation-packet task. TASK-920 completed the hard pre-implementation audit gate and bound exact callsites plus zero-test-safe focused commands. TASK-921 added the public tower manifest, TASK-922 added selected Monad evidence method-body/shim carriers at the do-target boundary, TASK-923 completed generalized bind lowering, TASK-924 aligned opaque carrier boundaries with explicit tower lifts, and TASK-925 added the TCIR computation-expression carrier plus typed do attachment point. TASK-926 through TASK-930 remain planned implementation/compatibility tasks. TASK-931/TASK-932 close acceptance and review.
 
 ## 2. Current-state reconciliation
 
@@ -40,7 +40,7 @@ TASK-919 is the completed documentation-packet task. TASK-920 completed the hard
 | [TASK-922](tasks/TASK-922-monad-evidence-method-body-lowering.md) | TypeEnv/evidence carriers for selected `Monad<K>` operation bodies or intrinsic shims | 10 | ✅ Complete |
 | [TASK-923](tasks/TASK-923-generalized-do-full-bind-lowering.md) | Full generalized `do:K` `<-` lowering through selected Monad evidence | 12 | ✅ Complete |
 | [TASK-924](tasks/TASK-924-act-proc-workflow-opaque-carrier-alignment.md) | Align Act/Proc/Workflow opaque carrier semantics with visible algebra and explicit lifts | 10 | ✅ Complete |
-| [TASK-925](tasks/TASK-925-tcir-computation-expression-boundary.md) | Typed computation-expression/TCIR carrier with source/evidence/tower provenance | 12 | 📝 Planned |
+| [TASK-925](tasks/TASK-925-tcir-computation-expression-boundary.md) | Typed computation-expression/TCIR carrier with source/evidence/tower provenance | 12 | ✅ Complete |
 | [TASK-926](tasks/TASK-926-amir-bytecode-logical-schema.md) | Minimal AMIR and bytecode logical schema plus verifier/debug traceability contract | 14 | 📝 Planned |
 | [TASK-927](tasks/TASK-927-runtime-kernel-host-mode-audit-and-carriers.md) | RuntimeKernel audit and core host-mode/definition/instance identity carriers | 10 | 📝 Planned |
 | [TASK-928](tasks/TASK-928-ash-run-runtime-kernel-mode.md) | Route one-shot `ash run` through RuntimeKernel without requiring daemon state | 12 | 📝 Planned |

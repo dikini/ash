@@ -83,9 +83,9 @@ pub use execute::{
 pub use execute_observe::{execute_changed, execute_observe};
 pub use execute_set::execute_set;
 pub use execution_record::{
-    ExecutionBlockedReason, ExecutionEffectSummary, ExecutionInvalidReason,
-    ExecutionObligationState, ExecutionPhase, ExecutionRecord, ExecutionTerminal,
-    SemanticCompletionPayload, SemanticEffectTrace, SemanticWorkflowOutcome,
+    ExecutionAdmissionFacts, ExecutionBlockedReason, ExecutionEffectSummary,
+    ExecutionInvalidReason, ExecutionObligationState, ExecutionPhase, ExecutionRecord,
+    ExecutionTerminal, SemanticCompletionPayload, SemanticEffectTrace, SemanticWorkflowOutcome,
 };
 pub use guard::eval_guard;
 pub use mailbox::{Mailbox, MailboxError, SharedMailbox};

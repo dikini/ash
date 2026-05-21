@@ -67,6 +67,8 @@ fn call_context_from_env(
     enters_effect_scope: bool,
 ) -> Context {
     let mut call_ctx = Context::from_env_frame(&env).inherit_runtime_metadata_from(runtime_ctx);
+    call_ctx = call_ctx
+        .with_admitted_capability_bindings(runtime_ctx.admitted_capability_bindings().to_vec());
     if let Some(policy_evaluator) = runtime_ctx.policy_evaluator() {
         call_ctx = call_ctx.with_policy_evaluator_arc(policy_evaluator);
     }
@@ -754,6 +756,24 @@ pub fn builtin_dispatch_table() -> &'static HashMap<&'static str, BuiltinEntry> 
             );
         }
 
+        // ── Workflow module bridge builtins (qualified) ──
+        for (name, arity) in [
+            ("workflow::unit", 1),
+            ("workflow::from_act", 1),
+            ("workflow::from_proc", 1),
+            ("workflow::bind", 2),
+            ("workflow::then", 2),
+        ] {
+            m.insert(
+                name,
+                BuiltinEntry {
+                    arity,
+                    variadic: false,
+                    implemented: true,
+                },
+            );
+        }
+
         // ── List module builtins (qualified) ──
         m.insert(
             "list::len",
@@ -1078,7 +1098,7 @@ fn runtime_proc_unit(args: &[Value], ctx: &Context) -> EvalResult<Value> {
     })
 }
 
-fn runtime_proc_from_act(args: &[Value], ctx: &Context) -> EvalResult<Value> {
+fn runtime_proc_from_act(args: &[Value], _ctx: &Context) -> EvalResult<Value> {
     if args.len() != 1 {
         return Err(EvalError::WrongArity {
             expected: 1,
@@ -1110,7 +1130,7 @@ fn runtime_proc_from_act(args: &[Value], ctx: &Context) -> EvalResult<Value> {
         span,
     };
 
-    let mut frame = ash_core::env_frame::EnvFrame::with_parent(ctx.to_env_frame());
+    let mut frame = ash_core::env_frame::EnvFrame::new();
     frame.insert("__proc_from_act".to_string(), args[0].clone());
 
     Ok(Value::Closure {
@@ -1452,35 +1472,68 @@ fn maybe_execute_invoke_capture(value: Value, runtime_ctx: &Context) -> EvalResu
                 EvalError::ExecutionFailed(format!("invoke helper runtime build failed: {err}"))
             })?;
         runtime.block_on(async move {
-            let fallback_authorized = if let Some(runtime_state) = runtime_state {
-                runtime_state
-                    .capability_binding_by_name(&provider)
-                    .await
-                    .is_some_and(|binding| admitted_bindings.contains(&binding.id))
+            let binding = if let Some(runtime_state) = runtime_state.as_ref() {
+                runtime_state.capability_binding_by_name(&provider).await
             } else {
-                false
+                None
             };
-            if !fallback_authorized {
-                return Err(operational_eval_error_for_message_with_attribution(
+            let binding_admitted = binding
+                .as_ref()
+                .map(|binding| admitted_bindings.contains(&binding.id));
+            if binding_admitted == Some(true)
+                && let Some(runtime_state) = runtime_state.as_ref()
+                && let Some(CapabilityBindingKind::HostProvider { provider_name, .. }) =
+                    binding.as_ref().map(|binding| &binding.kind)
+            {
+                let projected_ctx = runtime_state
+                    .create_capability_context_for_bindings(&[binding.as_ref().expect("binding checked").id])
+                    .await
+                    .map_err(|err| EvalError::ExecutionFailed(err.to_string()))?;
+                return projected_ctx
+                    .execute(provider_name, &action, &args)
+                    .await
+                    .map_err(|err| {
+                        operational_eval_error_for_message_with_attribution(
+                            err.to_string(),
+                            failure_tower,
+                            failure_entity,
+                        )
+                    });
+            }
+            let ambient_runtime_authorized = act_env.has_runtime_state_ambient_authority()
+                && admitted_bindings.is_empty()
+                && binding_admitted.is_none();
+            let fallback_authorized = binding_admitted == Some(true) || ambient_runtime_authorized;
+            let invoke_result = act_env.capability_ctx.execute(&provider, &action, &args).await;
+            match invoke_result {
+                Ok(value) if fallback_authorized => Ok(value),
+                Ok(_) => Err(operational_eval_error_for_message_with_attribution(
                     format!(
                         "authority boundary failure: provider {provider} lacks RuntimeKernel admission for invoke fallback dispatch"
                     ),
                     failure_tower,
                     failure_entity,
-                ));
-            }
-
-            act_env
-                .capability_ctx
-                .execute(&provider, &action, &args)
-                .await
-                .map_err(|err| {
-                    operational_eval_error_for_message_with_attribution(
+                )),
+                Err(err) if !fallback_authorized && binding_admitted.is_none() => {
+                    Err(operational_eval_error_for_message_with_attribution(
                         err.to_string(),
                         failure_tower,
                         failure_entity,
-                    )
-                })
+                    ))
+                }
+                Err(err) if fallback_authorized => Err(operational_eval_error_for_message_with_attribution(
+                    err.to_string(),
+                    failure_tower,
+                    failure_entity,
+                )),
+                Err(_) => Err(operational_eval_error_for_message_with_attribution(
+                    format!(
+                        "authority boundary failure: provider {provider} lacks RuntimeKernel admission for invoke fallback dispatch"
+                    ),
+                    failure_tower,
+                    failure_entity,
+                )),
+            }
         })
     })
     .join()
@@ -1746,6 +1799,66 @@ fn runtime_policy_check(args: &[Value], ctx: &Context) -> EvalResult<Value> {
     Ok(Value::Bool(permitted))
 }
 
+fn runtime_result_and_then(args: &[Value], ctx: &Context) -> EvalResult<Value> {
+    if args.len() != 2 {
+        return Err(EvalError::WrongArity {
+            expected: 2,
+            actual: args.len(),
+            callee: Some("result::and_then".to_string()),
+        });
+    }
+
+    match &args[0] {
+        Value::Variant { name, fields } if name == "Ok" => {
+            let value = fields
+                .iter()
+                .find(|(field, _)| field == "value")
+                .map(|(_, value)| value.clone())
+                .ok_or_else(|| EvalError::FieldNotFound {
+                    field: "value".to_string(),
+                    value: Box::new(args[0].clone()),
+                })?;
+            match &args[1] {
+                Value::Closure { params, body, env } => {
+                    apply_closure(params, body, env, vec![value], ctx)
+                }
+                other => Err(EvalError::NotCallable {
+                    value: Box::new(other.clone()),
+                }),
+            }
+        }
+        Value::Variant { name, .. } if name == "Err" => Ok(args[0].clone()),
+        other => Err(EvalError::TypeMismatch {
+            expected: "Result".to_string(),
+            actual: format!("{other:?}"),
+        }),
+    }
+}
+
+fn runtime_result_ok(args: &[Value]) -> EvalResult<Value> {
+    if args.len() != 1 {
+        return Err(EvalError::WrongArity {
+            expected: 1,
+            actual: args.len(),
+            callee: Some("Ok".to_string()),
+        });
+    }
+
+    Ok(Value::variant("Ok", vec![("value", args[0].clone())]))
+}
+
+fn runtime_result_err(args: &[Value]) -> EvalResult<Value> {
+    if args.len() != 1 {
+        return Err(EvalError::WrongArity {
+            expected: 1,
+            actual: args.len(),
+            callee: Some("Err".to_string()),
+        });
+    }
+
+    Ok(Value::variant("Err", vec![("error", args[0].clone())]))
+}
+
 /// Evaluate an expression in the given context
 ///
 /// # Arguments
@@ -1965,6 +2078,11 @@ fn eval_expr_force_async<'a>(expr: &'a Expr, ctx: &'a Context) -> EvalBoxFuture<
                     (Some("proc"), "scatter") => return runtime_proc_scatter(&args, ctx),
                     (Some("proc"), "join") => return runtime_proc_join(&args, ctx),
                     (Some("proc"), "gather") => return runtime_proc_gather(&args, ctx),
+                    (Some("workflow"), "unit") => return runtime_proc_unit(&args, ctx),
+                    (Some("workflow"), "from_act") => return runtime_proc_from_act(&args, ctx),
+                    (Some("workflow"), "from_proc") => return runtime_proc_unit(&args, ctx),
+                    (Some("workflow"), "bind") => return runtime_proc_bind(&args, ctx),
+                    (Some("workflow"), "then") => return runtime_proc_then(&args, ctx),
                     _ => {}
                 }
                 if let (true, Some(Value::Closure { params, body, env })) =
@@ -2281,6 +2399,9 @@ async fn maybe_execute_invoke_capture_async(
             EvalError::ExecutionFailed("invoke capture missing list args".to_string())
         })?;
 
+    let provider_is_local_dependency = runtime_ctx
+        .get(&format!("__ash_capability_dependency_local:{provider}"))
+        .is_some();
     let provider = if let Some(Value::String(source_binding_name)) = runtime_ctx
         .get(&format!("__ash_capability_dependency_alias:{provider}"))
         .cloned()
@@ -2294,51 +2415,112 @@ async fn maybe_execute_invoke_capture_async(
         EvalError::ExecutionFailed("invoke capture missing hidden runtime ActEnv".to_string())
     })?;
 
+    if provider_is_local_dependency {
+        let invoked = act_env
+            .capability_ctx
+            .execute(&provider, &action, &args)
+            .await
+            .map_err(|err| operational_eval_error_for_message(err.to_string(), runtime_ctx))?;
+        return Ok(Value::List(Box::new(vec![Value::ActEnvToken, invoked])));
+    }
+
     if let Some(runtime_state) = runtime_ctx.runtime_state()
         && let Some(binding) = runtime_state.capability_binding_by_name(&provider).await
         && runtime_ctx
             .admitted_capability_bindings()
             .contains(&binding.id)
-        && let CapabilityBindingKind::Implementation { implementation } = &binding.kind
     {
-        return execute_implementation_operation_body_async(
-            runtime_state.as_ref(),
-            &binding,
-            implementation.clone(),
-            &action,
-            args,
-            runtime_ctx,
-            act_env,
-        )
-        .await;
+        match &binding.kind {
+            CapabilityBindingKind::Implementation { implementation } => {
+                return execute_implementation_operation_body_async(
+                    runtime_state.as_ref(),
+                    &binding,
+                    implementation.clone(),
+                    &action,
+                    args,
+                    runtime_ctx,
+                    act_env,
+                )
+                .await;
+            }
+            CapabilityBindingKind::HostProvider { provider_name, .. } => {
+                let projected_ctx = runtime_state
+                    .create_capability_context_for_bindings(&[binding.id])
+                    .await
+                    .map_err(|err| EvalError::ExecutionFailed(err.to_string()))?;
+                let dispatch_provider = provider_name.clone();
+                let invoked = projected_ctx
+                    .execute(&dispatch_provider, &action, &args)
+                    .await
+                    .map_err(|err| {
+                        operational_eval_error_for_message(err.to_string(), runtime_ctx)
+                    })?;
+                return Ok(Value::List(Box::new(vec![Value::ActEnvToken, invoked])));
+            }
+        }
     }
 
-    let fallback_authorized = if let Some(runtime_state) = runtime_ctx.runtime_state() {
+    let binding_admitted = if let Some(runtime_state) = runtime_ctx.runtime_state() {
         runtime_state
             .capability_binding_by_name(&provider)
             .await
-            .is_some_and(|binding| {
+            .map(|binding| {
                 runtime_ctx
                     .admitted_capability_bindings()
                     .contains(&binding.id)
             })
     } else {
-        false
+        None
     };
-    if !fallback_authorized {
+    let ambient_runtime_authorized = act_env.has_runtime_state_ambient_authority()
+        && runtime_ctx.admitted_capability_bindings().is_empty()
+        && binding_admitted.is_none();
+    let fallback_authorized = binding_admitted == Some(true) || ambient_runtime_authorized;
+    if let Some(runtime_state) = runtime_ctx.runtime_state()
+        && let Some(binding) = runtime_state.capability_binding_by_name(&provider).await
+        && matches!(binding.kind, CapabilityBindingKind::Implementation { .. })
+        && !fallback_authorized
+    {
         return Err(operational_eval_error_for_message(
-            format!(
-                "authority boundary failure: provider {provider} lacks RuntimeKernel admission for invoke fallback dispatch"
-            ),
+            format!("capability {provider} not available"),
             runtime_ctx,
         ));
     }
-
-    let invoked = act_env
+    let invoke_result = act_env
         .capability_ctx
         .execute(&provider, &action, &args)
-        .await
-        .map_err(|err| operational_eval_error_for_message(err.to_string(), runtime_ctx))?;
+        .await;
+    let invoked = match invoke_result {
+        Ok(value) if fallback_authorized => value,
+        Ok(_) => {
+            return Err(operational_eval_error_for_message(
+                format!(
+                    "authority boundary failure: provider {provider} lacks RuntimeKernel admission for invoke fallback dispatch"
+                ),
+                runtime_ctx,
+            ));
+        }
+        Err(err) if !fallback_authorized && binding_admitted.is_none() => {
+            return Err(operational_eval_error_for_message(
+                err.to_string(),
+                runtime_ctx,
+            ));
+        }
+        Err(err) if fallback_authorized => {
+            return Err(operational_eval_error_for_message(
+                err.to_string(),
+                runtime_ctx,
+            ));
+        }
+        Err(_) => {
+            return Err(operational_eval_error_for_message(
+                format!(
+                    "authority boundary failure: provider {provider} lacks RuntimeKernel admission for invoke fallback dispatch"
+                ),
+                runtime_ctx,
+            ));
+        }
+    };
     Ok(Value::List(Box::new(vec![Value::ActEnvToken, invoked])))
 }
 
@@ -2636,6 +2818,11 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
                 (Some("proc"), "scatter") => return runtime_proc_scatter(&args, ctx),
                 (Some("proc"), "join") => return runtime_proc_join(&args, ctx),
                 (Some("proc"), "gather") => return runtime_proc_gather(&args, ctx),
+                (Some("workflow"), "unit") => return runtime_proc_unit(&args, ctx),
+                (Some("workflow"), "from_act") => return runtime_proc_from_act(&args, ctx),
+                (Some("workflow"), "from_proc") => return runtime_proc_unit(&args, ctx),
+                (Some("workflow"), "bind") => return runtime_proc_bind(&args, ctx),
+                (Some("workflow"), "then") => return runtime_proc_then(&args, ctx),
                 _ => {}
             }
 
@@ -3108,6 +3295,9 @@ pub fn eval_function_call(
         (Some("proc"), "gather") => runtime_proc_gather(args, ctx),
         (Some("act"), "__guard") | (None, "__guard") => runtime_guard(args, ctx),
         (Some("act"), "policy_check") | (None, "policy_check") => runtime_policy_check(args, ctx),
+        (Some("result"), "and_then") => runtime_result_and_then(args, ctx),
+        (None, "Ok") => runtime_result_ok(args),
+        (None, "Err") => runtime_result_err(args),
         (Some("string"), "concat") => {
             let mut result = String::new();
             for arg in args {

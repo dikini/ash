@@ -9,13 +9,15 @@
 use anyhow::{Context, Result};
 use ash_core::capability::{CapabilityError, CapabilityProvider};
 use ash_core::runtime_kernel::{
-    AdmissionIdentity, ArtifactVersion, ProviderRegistryIdentity, RuntimeArtifactCacheKey,
-    RuntimeConfigId, RuntimeEngineRelationship, RuntimeHostMode, RuntimeKernelIdentity,
-    RuntimeProfileId, RuntimeProfileIdentity, RuntimeRootSet, RuntimeRootSetId,
-    WorkflowArtifactIdentity, WorkflowDefinitionIdentity, WorkflowInstanceIdentity,
+    AdmissionIdentity, AlphaAdmissionDecision, AlphaAdmissionProfile, AlphaAdmissionStatus,
+    ProviderRegistryIdentity, RuntimeConfigId, RuntimeEngineRelationship, RuntimeHostMode,
+    RuntimeKernelArtifactLanguageSummary, RuntimeKernelIdentity, RuntimeProfileId,
+    RuntimeProfileIdentity, RuntimeRootSet, RuntimeRootSetId, WorkflowArtifactIdentity,
+    WorkflowDefinitionIdentity, WorkflowInstanceIdentity,
 };
 use ash_core::{Constraint, Effect, Value};
 use ash_engine::EngineError;
+use ash_engine::runtime_artifact::{RuntimeArtifactBuildRequest, build_runtime_kernel_artifact};
 use ash_interp::ExecError;
 use ash_parser::parse_utils::skip_whitespace_and_comments;
 use ash_parser::{Token, TokenKind, expr, lex_with_recovery, new_input};
@@ -23,8 +25,6 @@ use ash_provenance::{WorkflowTraceSession, create_trace_recorder};
 use async_trait::async_trait;
 use clap::Args;
 use serde::Serialize;
-use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
 use std::path::Path;
 use std::process::ExitCode;
 use std::sync::Arc;
@@ -63,6 +63,28 @@ pub enum RunOutputFormat {
     Json,
 }
 
+/// Minimal alpha admission profile selection for `ash run`.
+#[derive(Debug, Clone, Copy, Default, clap::ValueEnum)]
+pub enum RunAdmissionProfile {
+    /// Preserve current empty-admission behavior.
+    #[default]
+    Empty,
+    /// Explicitly allow the one-shot workflow instance.
+    Allow,
+    /// Reject before workflow body execution.
+    Reject,
+}
+
+impl From<RunAdmissionProfile> for AlphaAdmissionProfile {
+    fn from(profile: RunAdmissionProfile) -> Self {
+        match profile {
+            RunAdmissionProfile::Empty => Self::Empty,
+            RunAdmissionProfile::Allow => Self::Allow,
+            RunAdmissionProfile::Reject => Self::Reject,
+        }
+    }
+}
+
 /// Arguments for the run command
 #[derive(Args, Debug, Clone)]
 pub struct RunArgs {
@@ -98,6 +120,10 @@ pub struct RunArgs {
     #[arg(long = "resource-init", value_name = "RESOURCE=INITIALIZER")]
     pub resource_init: Vec<String>,
 
+    /// Minimal alpha one-shot admission profile (empty, allow, reject).
+    #[arg(long = "admission-profile", value_enum, default_value = "empty")]
+    pub admission_profile: RunAdmissionProfile,
+
     /// Runtime arguments passed to the entry workflow after `--`
     #[arg(last = true, value_name = "ARGS")]
     pub program_args: Vec<String>,
@@ -128,17 +154,30 @@ pub async fn run(args: &RunArgs) -> Result<RunOutcome> {
         .map_err(classify_engine_error)?;
     let source_kind = classify_workflow_source(&source);
     let use_entry_bootstrap = should_use_entry_bootstrap(source_kind);
-    let kernel = OneShotRuntimeKernel::admit(
-        path,
-        &source,
-        selection.workflow.as_deref().unwrap_or("main"),
-        if args.trace {
-            RuntimeHostMode::Trace
-        } else {
-            RuntimeHostMode::OneShot
-        },
-        &args.program_args,
-    );
+    let workflow_name = selection.workflow.as_deref().unwrap_or("main");
+    let host_mode = if args.trace {
+        RuntimeHostMode::Trace
+    } else {
+        RuntimeHostMode::OneShot
+    };
+    let admission_profile = AlphaAdmissionProfile::from(args.admission_profile);
+    let admission_decision = admission_profile.evaluate();
+    if !admission_decision.is_admitted() {
+        emit_admission_rejection_report_if_requested(
+            host_mode,
+            workflow_name,
+            admission_profile,
+            &admission_decision,
+            &args.program_args,
+        )?;
+        anyhow::bail!(
+            "admission rejected: {}",
+            admission_decision
+                .reason
+                .as_deref()
+                .unwrap_or("alpha admission profile rejected the run")
+        );
+    }
 
     let outcome: Result<RunOutcome> = async {
         // Dry-run mode: parse and check only
@@ -241,13 +280,21 @@ pub async fn run(args: &RunArgs) -> Result<RunOutcome> {
     }
     .await;
 
-    if let Err(error) = outcome {
-        let _ = kernel.emit_report_if_requested();
-        return Err(error);
+    let outcome = outcome?;
+    if !is_module_only_source(&source) {
+        let kernel = OneShotRuntimeKernel::admit(
+            path,
+            &source,
+            workflow_name,
+            host_mode,
+            admission_profile,
+            &args.program_args,
+        )
+        .context("Failed to build RuntimeKernel artifact")?;
+        kernel.emit_report_if_requested()?;
     }
 
-    kernel.emit_report_if_requested()?;
-    outcome
+    Ok(outcome)
 }
 
 #[derive(Debug, Clone)]
@@ -258,13 +305,14 @@ struct OneShotRunSelection {
 
 impl OneShotRunSelection {
     fn parse(raw: &str) -> Self {
-        if let Some((path, workflow)) = raw.rsplit_once(':') {
-            if !workflow.is_empty() && Path::new(path).exists() {
-                return Self {
-                    path: path.into(),
-                    workflow: Some(workflow.to_string()),
-                };
-            }
+        if let Some((path, workflow)) = raw.rsplit_once(':')
+            && !workflow.is_empty()
+            && Path::new(path).exists()
+        {
+            return Self {
+                path: path.into(),
+                workflow: Some(workflow.to_string()),
+            };
         }
 
         Self {
@@ -279,8 +327,10 @@ struct OneShotRuntimeKernel {
     identity: RuntimeKernelIdentity,
     definition: WorkflowDefinitionIdentity,
     artifact: WorkflowArtifactIdentity,
+    artifact_summary: RuntimeKernelArtifactLanguageSummary,
     instance: WorkflowInstanceIdentity,
     workflow_name: String,
+    admission_profile: AlphaAdmissionProfile,
 }
 
 #[derive(Debug, Serialize)]
@@ -291,15 +341,27 @@ struct OneShotKernelReport<'a> {
     definition_id: &'a str,
     artifact_id: &'a str,
     instance_id: String,
-    admission: AdmissionReport,
+    admission: AdmissionReport<'a>,
     provider_registry: ProviderRegistryReport,
     source_hash: &'a str,
     check_summary_hash: &'a str,
+    artifact_summary: &'a RuntimeKernelArtifactLanguageSummary,
 }
 
 #[derive(Debug, Serialize)]
-struct AdmissionReport {
+struct OneShotAdmissionRejectionReport<'a> {
+    host_mode: &'a str,
+    workflow: &'a str,
+    admission: AdmissionReport<'a>,
+    provider_registry: ProviderRegistryReport,
+}
+
+#[derive(Debug, Serialize)]
+struct AdmissionReport<'a> {
     status: &'static str,
+    profile: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    reason: Option<&'a str>,
     capability_grants: usize,
     resource_grants: usize,
 }
@@ -316,16 +378,30 @@ impl OneShotRuntimeKernel {
         source: &str,
         workflow_name: &str,
         host_mode: RuntimeHostMode,
+        admission_profile: AlphaAdmissionProfile,
         program_args: &[String],
-    ) -> Self {
-        let source_hash = stable_digest(&[source, &path.display().to_string()]);
-        let check_summary_hash = stable_digest(&[&source_hash, workflow_name, "checked-by-engine"]);
+    ) -> Result<Self> {
         let profile_id = RuntimeProfileId::new("default");
         let config_id = RuntimeConfigId::new("default");
         let root_id = RuntimeRootSetId::new(
             path.parent()
                 .map_or_else(|| ".".to_string(), |parent| parent.display().to_string()),
         );
+        let relative_module_path = path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .unwrap_or("<source>");
+        let verified_artifact = build_runtime_kernel_artifact(&RuntimeArtifactBuildRequest::new(
+            root_id.as_str(),
+            relative_module_path,
+            workflow_name,
+            profile_id.as_str(),
+            config_id.as_str(),
+            source,
+            format!("workflow={workflow_name};check=alpha-runtime-kernel-shared"),
+        ))?;
+        let artifact_summary =
+            RuntimeKernelArtifactLanguageSummary::from_verified_artifact(&verified_artifact);
         let roots = RuntimeRootSet::new(
             root_id.clone(),
             vec![path.display().to_string()],
@@ -335,62 +411,40 @@ impl OneShotRuntimeKernel {
             ".ash/cache",
             ".ash/log",
         );
-        let artifact_version = ArtifactVersion::new("source-check-summary-v1");
-        let cache_key = RuntimeArtifactCacheKey::new(
-            root_id.clone(),
-            profile_id.clone(),
-            config_id.clone(),
-            source_hash,
-            check_summary_hash,
-            artifact_version.clone(),
-        );
         let identity = RuntimeKernelIdentity::new(
             host_mode,
             roots,
-            cache_key.clone(),
+            verified_artifact.cache_key.clone(),
             RuntimeEngineRelationship::ExistingAshEngineEmbedded,
         );
-        let definition = WorkflowDefinitionIdentity::new(
-            root_id,
-            path.file_name()
-                .and_then(|name| name.to_str())
-                .unwrap_or("<source>"),
-            workflow_name,
-            profile_id.clone(),
-            config_id.clone(),
-            identity.cache_key.source_hash.clone(),
-        );
-        let artifact =
-            WorkflowArtifactIdentity::new(definition.id.clone(), cache_key, artifact_version);
         let profile = RuntimeProfileIdentity::new(
             profile_id,
             config_id,
             vec!["ash run one-shot default profile/config".to_string()],
         );
-        let provider_registry = ProviderRegistryIdentity::new(
-            program_args
-                .iter()
-                .enumerate()
-                .map(|(index, _)| format!("Args:{index}"))
-                .collect(),
-        );
+        let provider_registry =
+            ProviderRegistryIdentity::new(runtime_arg_provider_names(program_args));
         let admission = AdmissionIdentity::empty();
+        let definition_id = verified_artifact.definition.id.clone();
+        let artifact_id = verified_artifact.artifact.id.clone();
         let instance = WorkflowInstanceIdentity::admit(
             host_mode,
-            definition.id.clone(),
-            artifact.id.clone(),
+            definition_id,
+            artifact_id,
             profile,
             provider_registry,
             admission,
         );
 
-        Self {
+        Ok(Self {
             identity,
-            definition,
-            artifact,
+            definition: verified_artifact.definition,
+            artifact: verified_artifact.artifact,
+            artifact_summary,
             instance,
             workflow_name: workflow_name.to_string(),
-        }
+            admission_profile,
+        })
     }
 
     fn emit_report_if_requested(&self) -> Result<()> {
@@ -405,6 +459,10 @@ impl OneShotRuntimeKernel {
                 host_mode_label(self.identity.host_mode)
             );
             eprintln!("runtime_kernel.admission=admitted");
+            eprintln!(
+                "runtime_kernel.admission_profile={}",
+                self.admission_profile.as_str()
+            );
             eprintln!("runtime_kernel.kernel_id={}", self.identity.id);
             eprintln!("runtime_kernel.instance_id={}", self.instance.id.0);
             eprintln!("runtime_kernel.artifact_id={}", self.artifact.id.as_str());
@@ -421,7 +479,9 @@ impl OneShotRuntimeKernel {
             artifact_id: self.artifact.id.as_str(),
             instance_id: self.instance.id.0.to_string(),
             admission: AdmissionReport {
-                status: "admitted",
+                status: AlphaAdmissionStatus::Admitted.as_str(),
+                profile: self.admission_profile.as_str(),
+                reason: None,
                 capability_grants: self.instance.admission.capability_grants.len(),
                 resource_grants: self.instance.admission.resource_grants.len(),
             },
@@ -434,17 +494,57 @@ impl OneShotRuntimeKernel {
             },
             source_hash: &self.identity.cache_key.source_hash,
             check_summary_hash: &self.identity.cache_key.check_summary_hash,
+            artifact_summary: &self.artifact_summary,
         }
     }
 }
 
-fn stable_digest(parts: &[&str]) -> String {
-    let mut hasher = DefaultHasher::new();
-    for part in parts {
-        part.len().hash(&mut hasher);
-        part.hash(&mut hasher);
+fn emit_admission_rejection_report_if_requested(
+    host_mode: RuntimeHostMode,
+    workflow_name: &str,
+    admission_profile: AlphaAdmissionProfile,
+    admission_decision: &AlphaAdmissionDecision,
+    program_args: &[String],
+) -> Result<()> {
+    let Ok(mode) = std::env::var("ASH_RUNTIME_KERNEL_REPORT") else {
+        return Ok(());
+    };
+    let reason = admission_decision.reason.as_deref();
+    if mode.eq_ignore_ascii_case("json") {
+        let provider_registry =
+            ProviderRegistryIdentity::new(runtime_arg_provider_names(program_args));
+        let grants_admission_authority = provider_registry.grants_admission_authority();
+        let report = OneShotAdmissionRejectionReport {
+            host_mode: host_mode_label(host_mode),
+            workflow: workflow_name,
+            admission: AdmissionReport {
+                status: admission_decision.status.as_str(),
+                profile: admission_profile.as_str(),
+                reason,
+                capability_grants: 0,
+                resource_grants: 0,
+            },
+            provider_registry: ProviderRegistryReport {
+                provider_names: provider_registry.provider_names,
+                grants_admission_authority,
+            },
+        };
+        eprintln!("{}", serde_json::to_string_pretty(&report)?);
+    } else {
+        eprintln!("runtime_kernel.host_mode={}", host_mode_label(host_mode));
+        eprintln!(
+            "runtime_kernel.admission={}",
+            admission_decision.status.as_str()
+        );
+        eprintln!(
+            "runtime_kernel.admission_profile={}",
+            admission_profile.as_str()
+        );
+        if let Some(reason) = reason {
+            eprintln!("runtime_kernel.admission_reason={reason}");
+        }
     }
-    format!("ash{:016x}", hasher.finish())
+    Ok(())
 }
 
 fn host_mode_label(host_mode: RuntimeHostMode) -> &'static str {
@@ -454,6 +554,14 @@ fn host_mode_label(host_mode: RuntimeHostMode) -> &'static str {
         RuntimeHostMode::Trace => "Trace",
         RuntimeHostMode::Daemon => "Daemon",
     }
+}
+
+fn runtime_arg_provider_names(program_args: &[String]) -> Vec<String> {
+    program_args
+        .iter()
+        .enumerate()
+        .map(|(index, _)| format!("Args:{index}"))
+        .collect()
 }
 
 /// Build an engine with default capabilities
@@ -1131,6 +1239,7 @@ mod tests {
             timeout: Some(30),
             capability_impl: vec![],
             resource_init: vec![],
+            admission_profile: RunAdmissionProfile::Empty,
             program_args: vec!["hello".to_string()],
         };
 
@@ -1154,6 +1263,7 @@ mod tests {
             timeout: None,
             capability_impl: vec![],
             resource_init: vec![],
+            admission_profile: RunAdmissionProfile::Empty,
             program_args: vec![],
         };
 
@@ -1176,6 +1286,7 @@ mod tests {
             timeout: None,
             capability_impl: vec![],
             resource_init: vec![],
+            admission_profile: RunAdmissionProfile::Empty,
             program_args: vec![],
         };
         let result = build_engine(&args);
@@ -1213,6 +1324,7 @@ mod tests {
             timeout: None,
             capability_impl: vec![],
             resource_init: vec![],
+            admission_profile: RunAdmissionProfile::Empty,
             program_args: vec![],
         };
 
@@ -1239,6 +1351,7 @@ mod tests {
             timeout: None,
             capability_impl: vec![],
             resource_init: vec![],
+            admission_profile: RunAdmissionProfile::Empty,
             program_args: vec![],
         };
 
@@ -1281,6 +1394,7 @@ mod tests {
             timeout: None,
             capability_impl: vec![],
             resource_init: vec![],
+            admission_profile: RunAdmissionProfile::Empty,
             program_args: vec![],
         };
 
@@ -1317,6 +1431,7 @@ mod tests {
             timeout: Some(30), // 30 second timeout
             capability_impl: vec![],
             resource_init: vec![],
+            admission_profile: RunAdmissionProfile::Empty,
             program_args: vec![],
         };
 
@@ -1355,6 +1470,7 @@ mod tests {
             timeout: None, // No timeout
             capability_impl: vec![],
             resource_init: vec![],
+            admission_profile: RunAdmissionProfile::Empty,
             program_args: vec![],
         };
 

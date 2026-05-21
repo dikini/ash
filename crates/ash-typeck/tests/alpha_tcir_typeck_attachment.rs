@@ -183,7 +183,7 @@ fn typeck_tcir_attachment_does_not_reject_non_nominal_result_types() {
     let DoStmt::Return { value, .. } = &mut stmts[0] else {
         panic!("test helper must produce return statement");
     };
-    *value = Box::new(Expr::Constructor {
+    **value = Expr::Constructor {
         name: "Pair".into(),
         fields: vec![("value".into(), Expr::Literal(Literal::Int(1)))],
         payload: ConstructorPayload::Record(vec![("value".into(), Expr::Literal(Literal::Int(1)))]),
@@ -193,7 +193,7 @@ fn typeck_tcir_attachment_does_not_reject_non_nominal_result_types() {
             line: 2,
             column: 5,
         },
-    });
+    };
 
     let elaborated = elaborate_typed_do_block(&env, &expr)
         .expect("TCIR attachment must not reject valid record result do blocks");

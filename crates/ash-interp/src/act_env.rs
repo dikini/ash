@@ -22,6 +22,7 @@ pub struct ActEnv {
     pub policies: PolicyEvaluator,
     pub provenance: Provenance,
     pub effects: Vec<Effect>,
+    runtime_state_ambient_authority: bool,
 }
 
 impl std::fmt::Debug for ActEnv {
@@ -47,6 +48,7 @@ impl ActEnv {
             policies,
             provenance,
             effects: Vec::new(),
+            runtime_state_ambient_authority: false,
         }
     }
 
@@ -61,7 +63,7 @@ impl ActEnv {
         provenance: Provenance,
     ) -> Self {
         let capability_ctx = runtime_state.create_capability_context().await;
-        Self::new(capability_ctx, policies, provenance)
+        Self::new(capability_ctx, policies, provenance).with_runtime_state_ambient_authority()
     }
 
     /// Construct an Act environment from explicitly admitted capability bindings.
@@ -81,6 +83,15 @@ impl ActEnv {
     pub fn with_effects(mut self, effects: Vec<Effect>) -> Self {
         self.effects = effects;
         self
+    }
+
+    fn with_runtime_state_ambient_authority(mut self) -> Self {
+        self.runtime_state_ambient_authority = true;
+        self
+    }
+
+    pub(crate) fn has_runtime_state_ambient_authority(&self) -> bool {
+        self.runtime_state_ambient_authority
     }
 }
 

@@ -20,9 +20,106 @@
 //!   intentionally separate from admission authority grants.
 
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
+use thiserror::Error;
 use uuid::Uuid;
 
+use crate::amir::{
+    AmirModule, AmirSectionKind, AmirVerifier, BytecodeModule, BytecodeOpcode, BytecodeSectionKind,
+    BytecodeVerifier,
+};
 use crate::runtime::{CapabilityBindingId, ProcessId, ResourceId};
+use crate::type_ir::{TcirComputationExpression, TcirStatementId};
+
+/// Minimal alpha admission profile for one-shot RuntimeKernel starts.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum AlphaAdmissionProfile {
+    /// No requested grants or policy constraints; preserves existing alpha behavior.
+    #[default]
+    Empty,
+    /// Explicitly admit the one-shot workflow instance.
+    Allow,
+    /// Reject the one-shot workflow instance before body execution.
+    Reject,
+}
+
+impl AlphaAdmissionProfile {
+    /// Evaluate the profile into a one-shot admission decision.
+    #[must_use]
+    pub fn evaluate(self) -> AlphaAdmissionDecision {
+        match self {
+            Self::Empty | Self::Allow => AlphaAdmissionDecision::admitted(),
+            Self::Reject => {
+                AlphaAdmissionDecision::rejected("alpha admission profile requested rejection")
+            }
+        }
+    }
+
+    /// Stable profile label used in reports.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Empty => "empty",
+            Self::Allow => "allow",
+            Self::Reject => "reject",
+        }
+    }
+}
+
+/// Minimal alpha admission status.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum AlphaAdmissionStatus {
+    /// Admission succeeded.
+    Admitted,
+    /// Admission rejected before workflow body execution.
+    Rejected,
+}
+
+impl AlphaAdmissionStatus {
+    /// Stable status label used in reports.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Admitted => "admitted",
+            Self::Rejected => "rejected",
+        }
+    }
+}
+
+/// Result of evaluating a minimal alpha admission profile.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct AlphaAdmissionDecision {
+    /// Admission status.
+    pub status: AlphaAdmissionStatus,
+    /// Rejection reason or audit note.
+    pub reason: Option<String>,
+}
+
+impl AlphaAdmissionDecision {
+    /// Construct an admitted decision.
+    #[must_use]
+    pub fn admitted() -> Self {
+        Self {
+            status: AlphaAdmissionStatus::Admitted,
+            reason: None,
+        }
+    }
+
+    /// Construct a rejected decision.
+    #[must_use]
+    pub fn rejected(reason: impl Into<String>) -> Self {
+        Self {
+            status: AlphaAdmissionStatus::Rejected,
+            reason: Some(reason.into()),
+        }
+    }
+
+    /// Returns true when the workflow instance is admitted.
+    #[must_use]
+    pub const fn is_admitted(&self) -> bool {
+        matches!(self.status, AlphaAdmissionStatus::Admitted)
+    }
+}
 
 /// Host lifetime/control mode for one runtime kernel container.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -395,6 +492,41 @@ pub struct AdmissionIdentity {
     pub capability_grants: Vec<CapabilityBindingId>,
     /// Explicit resource grants.
     pub resource_grants: Vec<ResourceId>,
+    /// Explicit provider/action grants projected from admitted capability bindings.
+    pub action_grants: Vec<AdmissionActionGrant>,
+}
+
+/// Minimal alpha provider/action grant projected during RuntimeKernel admission.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct AdmissionActionGrant {
+    /// Capability binding that authorizes this action surface.
+    pub binding_id: CapabilityBindingId,
+    /// Host provider or runtime binding name receiving the projected grant.
+    pub provider_name: String,
+    /// Action name admitted for execution.
+    pub action_name: String,
+}
+
+impl AdmissionActionGrant {
+    /// Create a provider/action grant associated with one capability binding.
+    #[must_use]
+    pub fn new(
+        binding_id: CapabilityBindingId,
+        provider_name: impl Into<String>,
+        action_name: impl Into<String>,
+    ) -> Self {
+        Self {
+            binding_id,
+            provider_name: provider_name.into(),
+            action_name: action_name.into(),
+        }
+    }
+
+    /// Stable provider/action label used in reports.
+    #[must_use]
+    pub fn action_surface(&self) -> String {
+        format!("{}.{}", self.provider_name, self.action_name)
+    }
 }
 
 impl AdmissionIdentity {
@@ -405,6 +537,7 @@ impl AdmissionIdentity {
             id: Uuid::new_v4(),
             capability_grants: Vec::new(),
             resource_grants: Vec::new(),
+            action_grants: Vec::new(),
         }
     }
 
@@ -428,10 +561,19 @@ impl AdmissionIdentity {
         self
     }
 
+    /// Add an explicit provider/action grant.
+    #[must_use]
+    pub fn with_action_grant(mut self, grant: AdmissionActionGrant) -> Self {
+        self.action_grants.push(grant);
+        self
+    }
+
     /// Return true when this admission identity carries explicit authority.
     #[must_use]
     pub fn has_authority_grants(&self) -> bool {
-        !self.capability_grants.is_empty() || !self.resource_grants.is_empty()
+        !self.capability_grants.is_empty()
+            || !self.resource_grants.is_empty()
+            || !self.action_grants.is_empty()
     }
 }
 
@@ -564,6 +706,365 @@ impl RuntimeKernelIdentity {
             engine_relationship,
         }
     }
+}
+
+/// Artifact version emitted by the shared RuntimeKernel verified-artifact builder.
+pub const RUNTIME_KERNEL_ARTIFACT_VERSION: &str = "runtime-kernel-artifact-v1";
+
+/// Inputs needed to build a verifier-normalized RuntimeKernel artifact summary.
+#[derive(Debug, Clone, PartialEq)]
+pub struct RuntimeArtifactBuildInput {
+    /// Runtime root set identity used for definition/cache identity.
+    pub root_id: RuntimeRootSetId,
+    /// Selected profile/config identity used for definition/cache identity.
+    pub profile: RuntimeProfileIdentity,
+    /// Relative module path under the selected root.
+    pub relative_module_path: String,
+    /// Exported workflow name.
+    pub workflow_name: String,
+    /// Source text used only for stable content hashing.
+    pub source: String,
+    /// Check/type-summary facts used only for stable check-summary hashing.
+    pub check_summary: String,
+    /// Typed computation expression already produced by the checking/lowering pipeline.
+    pub tcir: TcirComputationExpression,
+    /// Honesty boundary for the carried TCIR used by the verifier.
+    pub tcir_carrier_scope: RuntimeTcirCarrierScope,
+}
+
+impl RuntimeArtifactBuildInput {
+    /// Create builder inputs from source/check/profile facts and a typed TCIR carrier.
+    #[must_use]
+    pub fn new(
+        identity: RuntimeArtifactBuildIdentity,
+        source: impl Into<String>,
+        check_summary: impl Into<String>,
+        tcir: TcirComputationExpression,
+        tcir_carrier_scope: RuntimeTcirCarrierScope,
+    ) -> Self {
+        Self {
+            root_id: identity.root_id,
+            profile: identity.profile,
+            relative_module_path: identity.relative_module_path,
+            workflow_name: identity.workflow_name,
+            source: source.into(),
+            check_summary: check_summary.into(),
+            tcir,
+            tcir_carrier_scope,
+        }
+    }
+}
+
+/// Identity fields for RuntimeKernel artifact construction.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RuntimeArtifactBuildIdentity {
+    /// Runtime root set identity used for definition/cache identity.
+    pub root_id: RuntimeRootSetId,
+    /// Selected profile/config identity used for definition/cache identity.
+    pub profile: RuntimeProfileIdentity,
+    /// Relative module path under the selected root.
+    pub relative_module_path: String,
+    /// Exported workflow name.
+    pub workflow_name: String,
+}
+
+impl RuntimeArtifactBuildIdentity {
+    /// Create artifact-builder identity inputs.
+    #[must_use]
+    pub fn new(
+        root_id: RuntimeRootSetId,
+        profile: RuntimeProfileIdentity,
+        relative_module_path: impl Into<String>,
+        workflow_name: impl Into<String>,
+    ) -> Self {
+        Self {
+            root_id,
+            profile,
+            relative_module_path: relative_module_path.into(),
+            workflow_name: workflow_name.into(),
+        }
+    }
+}
+
+/// Shared RuntimeKernel verified-artifact builder.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct RuntimeKernelArtifactBuilder;
+
+impl RuntimeKernelArtifactBuilder {
+    /// Create a RuntimeKernel artifact builder.
+    #[must_use]
+    pub const fn new() -> Self {
+        Self
+    }
+
+    /// Build a deterministic verifier-normalized artifact summary.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`RuntimeArtifactBuildError`] when AMIR or bytecode verification
+    /// rejects the supplied TCIR-derived artifact. Source text is never reparsed
+    /// during bytecode verification; it only participates in stable hashing.
+    pub fn build(
+        &self,
+        input: RuntimeArtifactBuildInput,
+    ) -> Result<RuntimeKernelVerifiedArtifact, RuntimeArtifactBuildError> {
+        let source_hash = stable_sha256(&["source", &input.source]);
+        let check_summary_hash = stable_sha256(&[
+            "check-summary",
+            input.profile.profile_id.as_str(),
+            input.profile.config_id.as_str(),
+            &source_hash,
+            &input.check_summary,
+        ]);
+        let artifact_version = ArtifactVersion::new(RUNTIME_KERNEL_ARTIFACT_VERSION);
+        let cache_key = RuntimeArtifactCacheKey::new(
+            input.root_id.clone(),
+            input.profile.profile_id.clone(),
+            input.profile.config_id.clone(),
+            source_hash.clone(),
+            check_summary_hash.clone(),
+            artifact_version.clone(),
+        );
+        let definition = WorkflowDefinitionIdentity::new(
+            input.root_id,
+            input.relative_module_path,
+            input.workflow_name,
+            input.profile.profile_id,
+            input.profile.config_id,
+            source_hash.clone(),
+        );
+        let artifact = WorkflowArtifactIdentity::new(
+            definition.id.clone(),
+            cache_key.clone(),
+            artifact_version.clone(),
+        );
+
+        let tcir = RuntimeTcirArtifactSummary::from_tcir(&input.tcir, input.tcir_carrier_scope);
+        let amir_module = AmirModule::from_tcir(&input.tcir);
+        AmirVerifier::verify(&amir_module, &input.tcir)
+            .map_err(|source| RuntimeArtifactBuildError::AmirVerification { source })?;
+        let bytecode_module = BytecodeModule::from_amir(&amir_module, &input.tcir)
+            .map_err(|source| RuntimeArtifactBuildError::AmirVerification { source })?;
+        BytecodeVerifier::verify(&bytecode_module, &input.tcir)
+            .map_err(|source| RuntimeArtifactBuildError::BytecodeVerification { source })?;
+
+        Ok(RuntimeKernelVerifiedArtifact {
+            source_hash,
+            check_summary_hash,
+            artifact_version,
+            cache_key,
+            definition,
+            artifact,
+            tcir,
+            amir: RuntimeAmirArtifactSummary::from_module(&amir_module),
+            bytecode: RuntimeBytecodeArtifactSummary::from_module(&bytecode_module),
+            verifier: RuntimeArtifactVerifierResult::Verified,
+        })
+    }
+}
+
+/// Deterministic RuntimeKernel artifact summary shared by one-shot and daemon hosts.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RuntimeKernelVerifiedArtifact {
+    /// Stable source content hash.
+    pub source_hash: String,
+    /// Stable hash of check/type-summary facts.
+    pub check_summary_hash: String,
+    /// RuntimeKernel artifact builder version.
+    pub artifact_version: ArtifactVersion,
+    /// Cache key derived from roots, profile/config, hashes, and version.
+    pub cache_key: RuntimeArtifactCacheKey,
+    /// Workflow definition identity derived from the builder input.
+    pub definition: WorkflowDefinitionIdentity,
+    /// Workflow artifact identity derived from the builder input.
+    pub artifact: WorkflowArtifactIdentity,
+    /// Verifier-normalized TCIR summary.
+    pub tcir: RuntimeTcirArtifactSummary,
+    /// Verifier-normalized AMIR summary.
+    pub amir: RuntimeAmirArtifactSummary,
+    /// Verifier-normalized bytecode summary.
+    pub bytecode: RuntimeBytecodeArtifactSummary,
+    /// Final verifier result.
+    pub verifier: RuntimeArtifactVerifierResult,
+}
+
+/// Language-level verifier-normalized artifact summary, excluding host identity.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RuntimeKernelArtifactLanguageSummary {
+    /// Stable source content hash.
+    pub source_hash: String,
+    /// Stable hash of check/type-summary facts.
+    pub check_summary_hash: String,
+    /// RuntimeKernel artifact builder version.
+    pub artifact_version: ArtifactVersion,
+    /// Verifier-normalized TCIR summary.
+    pub tcir: RuntimeTcirArtifactSummary,
+    /// Verifier-normalized AMIR summary.
+    pub amir: RuntimeAmirArtifactSummary,
+    /// Verifier-normalized bytecode summary.
+    pub bytecode: RuntimeBytecodeArtifactSummary,
+    /// Final verifier result.
+    pub verifier: RuntimeArtifactVerifierResult,
+}
+
+impl RuntimeKernelArtifactLanguageSummary {
+    /// Project the host-independent language artifact summary from a verified artifact.
+    #[must_use]
+    pub fn from_verified_artifact(artifact: &RuntimeKernelVerifiedArtifact) -> Self {
+        Self {
+            source_hash: artifact.source_hash.clone(),
+            check_summary_hash: artifact.check_summary_hash.clone(),
+            artifact_version: artifact.artifact_version.clone(),
+            tcir: artifact.tcir.clone(),
+            amir: artifact.amir.clone(),
+            bytecode: artifact.bytecode.clone(),
+            verifier: artifact.verifier,
+        }
+    }
+}
+
+/// Verifier result retained in the RuntimeKernel artifact summary.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RuntimeArtifactVerifierResult {
+    /// AMIR and bytecode verified against carried TCIR provenance.
+    Verified,
+}
+
+/// Scope of the TCIR carrier used by RuntimeKernel artifact verification.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RuntimeTcirCarrierScope {
+    /// Full checked TCIR supplied by a caller that owns actual typed lowering.
+    CheckedTcir,
+    /// Alpha host summary after parse/check when full workflow-body TCIR is not
+    /// yet exposed by the production engine pipeline.
+    AlphaCheckedWorkflowBoundary,
+}
+
+/// Runtime artifact build errors.
+#[derive(Debug, Error)]
+pub enum RuntimeArtifactBuildError {
+    /// AMIR verification rejected the TCIR-derived artifact.
+    #[error("AMIR verification failed: {source}")]
+    AmirVerification {
+        /// Underlying AMIR verification error.
+        #[from]
+        source: crate::amir::AmirVerificationError,
+    },
+    /// Bytecode verification rejected the TCIR-derived artifact.
+    #[error("bytecode verification failed: {source}")]
+    BytecodeVerification {
+        /// Underlying bytecode verification error.
+        #[from]
+        source: crate::amir::BytecodeVerificationError,
+    },
+}
+
+/// Verifier-normalized TCIR provenance summary.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RuntimeTcirArtifactSummary {
+    /// Honest scope of the TCIR carrier used for this alpha artifact summary.
+    pub carrier_scope: RuntimeTcirCarrierScope,
+    /// Source-facing target display retained by TCIR.
+    pub target_display: String,
+    /// Selected evidence key used for lowering.
+    pub evidence_key: String,
+    /// Semantic tower attributed to the computation.
+    pub tower_level: crate::runtime::TowerLevel,
+    /// Ordered TCIR statement identities.
+    pub statement_ids: Vec<TcirStatementId>,
+}
+
+impl RuntimeTcirArtifactSummary {
+    fn from_tcir(tcir: &TcirComputationExpression, carrier_scope: RuntimeTcirCarrierScope) -> Self {
+        Self {
+            carrier_scope,
+            target_display: tcir.target.display.clone(),
+            evidence_key: tcir.evidence.evidence_key.clone(),
+            tower_level: tcir.tower_level,
+            statement_ids: tcir
+                .statements
+                .iter()
+                .map(|statement| statement.id)
+                .collect(),
+        }
+    }
+}
+
+/// Verifier-normalized AMIR provenance summary.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RuntimeAmirArtifactSummary {
+    /// AMIR schema version.
+    pub schema_version: u16,
+    /// Stable AMIR section layout.
+    pub sections: Vec<AmirSectionKind>,
+    /// Number of AMIR instructions in stable lowering order.
+    pub instruction_count: usize,
+}
+
+impl RuntimeAmirArtifactSummary {
+    fn from_module(module: &AmirModule) -> Self {
+        Self {
+            schema_version: module.schema_version,
+            sections: module.sections.iter().map(|section| section.kind).collect(),
+            instruction_count: module
+                .blocks
+                .iter()
+                .map(|block| block.instructions.len())
+                .sum(),
+        }
+    }
+}
+
+/// Verifier-normalized bytecode provenance summary.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RuntimeBytecodeArtifactSummary {
+    /// Bytecode schema version.
+    pub schema_version: u16,
+    /// Stable bytecode section layout.
+    pub sections: Vec<BytecodeSectionKind>,
+    /// Stable bytecode opcodes in logical instruction order.
+    pub opcodes: Vec<BytecodeOpcode>,
+    /// Number of bytecode instructions in stable lowering order.
+    pub instruction_count: usize,
+    /// Whether verifier requires a source reparse.
+    pub requires_source_reparse: bool,
+}
+
+impl RuntimeBytecodeArtifactSummary {
+    fn from_module(module: &BytecodeModule) -> Self {
+        Self {
+            schema_version: module.schema_version,
+            sections: module.sections.iter().map(|section| section.kind).collect(),
+            opcodes: module
+                .instructions
+                .iter()
+                .map(|instruction| instruction.opcode)
+                .collect(),
+            instruction_count: module.instructions.len(),
+            requires_source_reparse: module.requires_source_reparse(),
+        }
+    }
+}
+
+fn stable_sha256(parts: &[&str]) -> String {
+    let mut hasher = Sha256::new();
+    for part in parts {
+        hasher.update(part.len().to_le_bytes());
+        hasher.update(part.as_bytes());
+    }
+    format!("sha256:{}", hex_lower(&hasher.finalize()))
+}
+
+fn hex_lower(bytes: &[u8]) -> String {
+    const HEX: &[u8; 16] = b"0123456789abcdef";
+    let mut out = String::with_capacity(bytes.len() * 2);
+    for byte in bytes {
+        out.push(HEX[(byte >> 4) as usize] as char);
+        out.push(HEX[(byte & 0x0f) as usize] as char);
+    }
+    out
 }
 
 /// Audit carrier documenting which existing runtime seams remain authoritative.

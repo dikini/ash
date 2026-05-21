@@ -1,12 +1,12 @@
 # SPEC-070: Alpha Runtime Kernel and OS-Facing Execution Surface
 
-**Status:** Draft
+**Status:** Implemented MVP (Phase 123 closeout; see TASK-941 successor evidence)
 **Date:** 2026-05-19
 **Promotes:** [DESIGN-041](../design/DESIGN-041-RUNTIME-REGIME-AND-OS-SURFACE.md)
 **Builds on:** [SPEC-005](SPEC-005-CLI.md), [SPEC-021](SPEC-021-RUNTIME-OBSERVABLE-BEHAVIOR.md), [SPEC-047](SPEC-047-ACT-MONAD.md), [SPEC-048](SPEC-048-PROC-LIBRARY.md), [SPEC-049](SPEC-049-PROCESS-RUNTIME-SEMANTICS.md), [SPEC-050](SPEC-050-OPERATIONAL-BOTTOM-AND-SCOPED-HANDLING.md), [SPEC-051](SPEC-051-WORKFLOW-SEMANTICS.md), [SPEC-069](SPEC-069-ALPHA-VISIBLE-TOWER-ALGEBRA-AND-DO-LOWERING.md)
 **Related:** [MCE-001](../ideas/minimal-core/MCE-001-ENTRY-POINT.md), [WORKFLOW_SPAWNING_AND_SUPERVISION](../design/WORKFLOW_SPAWNING_AND_SUPERVISION.md)
-**Plan:** [PLAN-118](../plan/PLAN-118-DESIGN-040-041-ALPHA-IMPLEMENTATION-PACKET.md)
-**Implementation Tasks:** [TASK-919](../plan/tasks/TASK-919-design040041-current-state-and-scope-reconciliation.md) through [TASK-932](../plan/tasks/TASK-932-alpha-closeout-review-remediation.md)
+**Plan:** [PLAN-118](../plan/PLAN-118-DESIGN-040-041-ALPHA-IMPLEMENTATION-PACKET.md), [PLAN-119](../plan/PLAN-119-SPEC-069-070-IMPLEMENTED-MVP-CLOSURE.md)
+**Implementation Tasks:** [TASK-919](../plan/tasks/TASK-919-design040041-current-state-and-scope-reconciliation.md) through [TASK-941](../plan/tasks/TASK-941-spec-069-spec-070-implemented-mvp-closeout.md)
 
 ## 1. Summary
 
@@ -65,7 +65,7 @@ Alpha daemon scope:
 
 - Unix-domain-socket or equivalent same-user local control surface, with alpha validation of root/socket/state/cache/log path ownership before binding and rejection of pre-existing non-socket control paths;
 - list definitions and instances;
-- start workflow instance records pinned to the active artifact/source identity; explicit start args/config/admission-profile request fields remain beyond the TASK-929 MVP;
+- start workflow instance records pinned to the active artifact/source identity, including alpha start args/config/admission-profile request fields;
 - observe instance status and pinned artifact identity; report/log-path projection remains beyond the TASK-929 MVP;
 - request cancellation/stop;
 - reload roots/config for future starts.
@@ -105,7 +105,7 @@ Host-level start creates a root workflow instance. In-language `proc::par`, `spa
 | A70-1 | `ash run file.ash:main` finite success | one RuntimeKernel, one instance, emitted report, success OS status |
 | A70-2 | `ash run` admission failure | no user code executes; diagnostic distinguishes admission from body failure |
 | A70-3 | `ash daemon serve --root DIR --socket PATH ...` | daemon indexes definitions without file-presence execution |
-| A70-4 | daemon start command | creates instance record pinned to artifact/source identity and empty-admission MVP; args/config/admission-profile fields remain deferred |
+| A70-4 | daemon start command | creates instance record pinned to artifact/source identity with args/config/admission-profile fields, preserving empty-admission defaults and rejecting invalid admission before activation |
 | A70-5 | daemon reload while instance runs | running instance keeps old artifact identity; future starts use new artifact identity after successful reload |
 | A70-6 | provider exists but not admitted | capability invocation fails at authority boundary |
 | A70-7 | child process failure | observed through Proc/Workflow semantics, not daemon host failure unless host breaks |
@@ -120,3 +120,7 @@ See [PLAN-118](../plan/PLAN-118-DESIGN-040-041-ALPHA-IMPLEMENTATION-PACKET.md).
 ### 2026-05-19
 
 - Initial draft promoted from DESIGN-041 and paired with SPEC-069/PLAN-118.
+
+### 2026-05-21
+
+- Promoted to Implemented MVP after PLAN-119/TASK-941 reconciled Phase 123 successor evidence for admission-profile rejection, daemon start records, policy-profile grant enforcement, daemon child-failure trace semantics, and run/daemon artifact equivalence while preserving local-only daemon scope and resource-operation enforcement limitations.

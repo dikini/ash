@@ -12,12 +12,12 @@
 
 ## 1. Status
 
-**Status:** 🚧 In progress / implementation underway after completed TASK-920 audit gate
+**Status:** ✅ Complete (Phase 122 closed as Partial MVP; limitations remain documented in TASK-931/TASK-932)
 **Spec:** [SPEC-069](../spec/SPEC-069-ALPHA-VISIBLE-TOWER-ALGEBRA-AND-DO-LOWERING.md), [SPEC-070](../spec/SPEC-070-ALPHA-RUNTIME-KERNEL-AND-OS-SURFACE.md)
 **Design:** [DESIGN-040](../design/DESIGN-040-ALPHA-ALGEBRAIC-TOWER.md), [DESIGN-041](../design/DESIGN-041-RUNTIME-REGIME-AND-OS-SURFACE.md)
 **Task range:** [TASK-919](tasks/TASK-919-design040041-current-state-and-scope-reconciliation.md) through [TASK-932](tasks/TASK-932-alpha-closeout-review-remediation.md)
 
-TASK-919 is the completed documentation-packet task. TASK-920 completed the hard pre-implementation audit gate and bound exact callsites plus zero-test-safe focused commands. TASK-921 added the public tower manifest, TASK-922 added selected Monad evidence method-body/shim carriers at the do-target boundary, TASK-923 completed generalized bind lowering, TASK-924 aligned opaque carrier boundaries with explicit tower lifts, TASK-925 added the TCIR computation-expression carrier plus typed do attachment point, TASK-926 added the minimal AMIR/bytecode schema plus verifier/debug provenance contract, TASK-927 added core RuntimeKernel identity carriers plus the host-mode/admission inventory boundary, TASK-928 routed one-shot `ash run` through RuntimeKernel mode, TASK-929 added the local `ash daemon ...` control surface, TASK-930 added OODA library/template/lint compatibility while preserving alpha AMIR/bytecode demotion, and TASK-931 added the SPEC-069/SPEC-070 acceptance/non-interference matrix with concrete focused evidence and limitations. TASK-932 remains planned for closeout review and remediation.
+TASK-919 is the completed documentation-packet task. TASK-920 completed the hard pre-implementation audit gate and bound exact callsites plus zero-test-safe focused commands. TASK-921 added the public tower manifest, TASK-922 added selected Monad evidence method-body/shim carriers at the do-target boundary, TASK-923 completed generalized bind lowering, TASK-924 aligned opaque carrier boundaries with explicit tower lifts, TASK-925 added the TCIR computation-expression carrier plus typed do attachment point, TASK-926 added the minimal AMIR/bytecode schema plus verifier/debug provenance contract, TASK-927 added core RuntimeKernel identity carriers plus the host-mode/admission inventory boundary, TASK-928 routed one-shot `ash run` through RuntimeKernel mode, TASK-929 added the local `ash daemon ...` control surface, TASK-930 added OODA library/template/lint compatibility while preserving alpha AMIR/bytecode demotion, and TASK-931 added the SPEC-069/SPEC-070 acceptance/non-interference matrix with concrete focused evidence and limitations. TASK-932 completed closeout review/remediation, recorded fresh broad serial Rust, rustdoc, docs-link, diff, check, and clippy evidence, and closes SPEC-069/SPEC-070 as honest Partial MVP surfaces with documented limitations.
 
 ## 2. Current-state reconciliation
 
@@ -47,7 +47,7 @@ TASK-919 is the completed documentation-packet task. TASK-920 completed the hard
 | [TASK-929](tasks/TASK-929-ashd-local-daemon-control-plane.md) | Local daemon control surface, roots, instance table, and reload semantics | 16 | ✅ Complete |
 | [TASK-930](tasks/TASK-930-ooda-library-demotion-compatibility.md) | OODA library/template/lint compatibility and primitive-IR demotion plan | 8 | ✅ Complete |
 | [TASK-931](tasks/TASK-931-alpha-semantics-correspondence-and-acceptance-matrix.md) | SPEC-069/SPEC-070 acceptance matrix, semantics correspondence, and non-interference evidence | 8 | ✅ Complete |
-| [TASK-932](tasks/TASK-932-alpha-closeout-review-remediation.md) | Closeout docs, broad gates, and independent review remediation | 6 | 📝 Planned |
+| [TASK-932](tasks/TASK-932-alpha-closeout-review-remediation.md) | Closeout docs, broad gates, and independent review remediation | 6 | ✅ Complete |
 
 ## 4. Track structure
 
@@ -55,7 +55,7 @@ TASK-919 is the completed documentation-packet task. TASK-920 completed the hard
 - **Track B — Visible algebra and do lowering (40h):** TASK-921 through TASK-924 make tower operations visible and lower arbitrary accepted `do:K` binds through selected evidence.
 - **Track C — Traceable execution artifacts (26h):** TASK-925/TASK-926 introduce typed computation-expression, TCIR, AMIR, and bytecode schema contracts.
 - **Track D — Runtime regime (38h):** TASK-927 introduced core `RuntimeKernel` identity carriers; TASK-928 routes `ash run` through one-shot RuntimeKernel identity/report carriers with empty current grants, locally reportable failure emission, recorded-only `FILE[:WORKFLOW]` suffix identity, and a fail-closed guard for unadmitted `invoke` fallback host-provider dispatch; TASK-929 adds local `ash daemon ...` semantics with Unix-socket JSON-lines control, index-only definition loading, admitted instance records, cancellation, and transactional reload over an interim source/check-summary identity substrate. Final artifact/version equivalence depends on TASK-925/TASK-926 bytecode/artifact adoption beyond this interim daemon identity.
-- **Track E — Compatibility, acceptance, review (22h):** TASK-930 demoted OODA into library/template/lint compatibility; TASK-931 maps final acceptance/non-interference evidence with explicit limitations; TASK-932 remains planned to remediate review findings and run closeout gates.
+- **Track E — Compatibility, acceptance, review (22h):** TASK-930 demoted OODA into library/template/lint compatibility; TASK-931 maps final acceptance/non-interference evidence with explicit limitations; TASK-932 completed closeout review remediation and recorded final closeout gates; remaining Phase 122 limitations stay explicit in TASK-931/TASK-932 rather than being over-promoted.
 
 ## 5. Decision gates
 

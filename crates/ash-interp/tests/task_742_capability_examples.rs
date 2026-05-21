@@ -121,11 +121,7 @@ async fn mock_internal_kv_can_substitute_for_host_provider_binding() {
         .with_admitted_capability_bindings(vec![host_binding_id]);
     assert_eq!(
         eval_invoke_act(
-            invoke_expr(
-                "prod-kv-provider",
-                "get",
-                vec![Value::String("k".to_string())],
-            ),
+            invoke_expr("kv", "get", vec![Value::String("k".to_string())],),
             &host_ctx
         )
         .await

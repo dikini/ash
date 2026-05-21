@@ -97,11 +97,7 @@ async fn workflow_kv_pilot_substitutes_internal_binding_for_host_binding() {
         .with_admitted_capability_bindings(vec![host_binding_id]);
     assert_eq!(
         eval_invoke_act(
-            invoke_expr(
-                "prod-kv-provider",
-                "get",
-                vec![Value::String("key".to_string())],
-            ),
+            invoke_expr("kv", "get", vec![Value::String("key".to_string())]),
             &host_ctx,
         )
         .await
@@ -191,7 +187,7 @@ async fn workflow_kv_pilot_preserves_explicit_admission_boundary() {
     .await
     .expect_err("pilot binding must not be available without explicit admission");
     assert!(
-        error.to_string().contains("capability not available: kv"),
+        error.to_string().contains("capability kv not available"),
         "unexpected error: {error}"
     );
 

@@ -1,4 +1,7 @@
-use ash_core::{Capability, ControlLink, Effect, Expr, Pattern, Value, Workflow, WorkflowId};
+use ash_core::{
+    Capability, CapabilityBinding, CapabilityBindingId, CapabilityInterfaceId, ControlLink, Effect,
+    Expr, Pattern, Value, Workflow, WorkflowId,
+};
 use ash_interp::behaviour::BehaviourContext;
 use ash_interp::capability::CapabilityContext;
 use ash_interp::context::Context;
@@ -100,6 +103,23 @@ fn execution_contexts() -> (
         CapabilityContext::new(),
         PolicyEvaluator::new(),
         BehaviourContext::new(),
+    )
+}
+
+fn host_binding(
+    binding_name: &str,
+    provider_name: &str,
+    admitted_capabilities: Vec<&str>,
+) -> CapabilityBinding {
+    CapabilityBinding::host_provider(
+        CapabilityBindingId::new(),
+        binding_name,
+        CapabilityInterfaceId::new(format!("{provider_name}-interface")),
+        provider_name,
+        admitted_capabilities
+            .into_iter()
+            .map(str::to_string)
+            .collect(),
     )
 }
 
@@ -641,6 +661,18 @@ async fn retained_completion_preserves_conservative_multi_effect_summary_content
                     .with_execute_result(Ok(Value::String("done".to_string()))),
             ),
         );
+    let deploy_binding = host_binding("deploy", "deploy", vec!["deploy.deploy"]);
+    let sensor_binding = host_binding("sensor", "sensor", vec!["sensor"]);
+    let deploy_binding_id = deploy_binding.id;
+    let sensor_binding_id = sensor_binding.id;
+    runtime_state
+        .admit_capability_binding(deploy_binding)
+        .await
+        .expect("deploy binding admission succeeds");
+    runtime_state
+        .admit_capability_binding(sensor_binding)
+        .await
+        .expect("sensor binding admission succeeds");
     runtime_state
         .register_child_workflow(
             "worker",
@@ -672,7 +704,7 @@ async fn retained_completion_preserves_conservative_multi_effect_summary_content
 
     let control = execute_workflow_with_behaviour_in_state(
         &spawn_and_return_control(Expr::Literal(Value::Null)),
-        ctx,
+        ctx.with_admitted_capability_bindings(vec![sensor_binding_id, deploy_binding_id]),
         &cap_ctx,
         &policy_eval,
         &behaviour_ctx,

@@ -2,7 +2,10 @@ use std::sync::Arc;
 
 use ash_core::capability::CapabilityError;
 use ash_core::runtime::{FailureEntity, ProcessId, TowerLevel};
-use ash_core::{Effect, Expr, Provenance, Value, ast::Pattern};
+use ash_core::{
+    CapabilityBinding, CapabilityBindingId, CapabilityInterfaceId, Effect, Expr, Provenance, Value,
+    ast::Pattern,
+};
 use ash_interp::act_env::ActEnv;
 use ash_interp::capability::MockProvider;
 use ash_interp::context::Context;
@@ -26,6 +29,26 @@ fn invoke_expr() -> Expr {
             Expr::Literal(Value::List(Box::default())),
         ],
     }
+}
+
+fn sensor_binding() -> CapabilityBinding {
+    CapabilityBinding::host_provider(
+        CapabilityBindingId::new(),
+        "sensor",
+        CapabilityInterfaceId::new("Sensor"),
+        "sensor",
+        vec!["sensor.read".to_string()],
+    )
+}
+
+async fn admit_sensor(runtime_state: &RuntimeState) -> CapabilityBindingId {
+    let binding = sensor_binding();
+    let binding_id = binding.id;
+    runtime_state
+        .admit_capability_binding(binding)
+        .await
+        .expect("sensor binding should be admitted");
+    binding_id
 }
 
 fn return_act_surface(value: i64) -> SurfaceExpr {
@@ -136,13 +159,22 @@ async fn forcing_embedded_act_via_hidden_act_env_succeeds_without_child_admissio
                 .with_execute_result(Ok(Value::String("done".to_string()))),
         ),
     );
-    let act_env =
-        ActEnv::from_runtime_state(&runtime_state, PolicyEvaluator::new(), Provenance::new()).await;
+    let binding_id = admit_sensor(&runtime_state).await;
+    let act_env = ActEnv::from_runtime_state_with_admitted_bindings(
+        &runtime_state,
+        &[binding_id],
+        PolicyEvaluator::new(),
+        Provenance::new(),
+    )
+    .await
+    .expect("admitted sensor binding should build ActEnv");
     let act_value =
         eval_expr(&invoke_expr(), &Context::new()).expect("invoke should build an Act closure");
     let proc_value = eval_expr(
         &proc_from_act_expr(act_value),
-        &Context::new().with_act_env(act_env),
+        &Context::new()
+            .with_admitted_capability_bindings(vec![binding_id])
+            .with_act_env(act_env),
     )
     .expect("proc::from_act should build a Proc closure from an Act value");
 
@@ -155,10 +187,18 @@ async fn forcing_embedded_act_via_hidden_act_env_succeeds_without_child_admissio
     let before_children = runtime_state.process_children(process_id).await;
 
     let forced = force_proc_in_context(
-        process_ctx.with_act_env(
-            ActEnv::from_runtime_state(&runtime_state, PolicyEvaluator::new(), Provenance::new())
-                .await,
-        ),
+        process_ctx
+            .with_admitted_capability_bindings(vec![binding_id])
+            .with_act_env(
+                ActEnv::from_runtime_state_with_admitted_bindings(
+                    &runtime_state,
+                    &[binding_id],
+                    PolicyEvaluator::new(),
+                    Provenance::new(),
+                )
+                .await
+                .expect("admitted sensor binding should build process ActEnv"),
+            ),
         proc_value,
         Value::Null,
     )
@@ -284,13 +324,22 @@ async fn proc_from_act_failing_embedded_act_preserves_effect_scope_operational_f
                 .with_execute_result(Err(CapabilityError::ExecutionFailed("boom".to_string()))),
         ),
     );
-    let act_env =
-        ActEnv::from_runtime_state(&runtime_state, PolicyEvaluator::new(), Provenance::new()).await;
+    let binding_id = admit_sensor(&runtime_state).await;
+    let act_env = ActEnv::from_runtime_state_with_admitted_bindings(
+        &runtime_state,
+        &[binding_id],
+        PolicyEvaluator::new(),
+        Provenance::new(),
+    )
+    .await
+    .expect("admitted sensor binding should build ActEnv");
     let act_value =
         eval_expr(&invoke_expr(), &Context::new()).expect("invoke should build an Act closure");
     let proc_value = eval_expr(
         &proc_from_act_expr(act_value),
-        &Context::new().with_act_env(act_env),
+        &Context::new()
+            .with_admitted_capability_bindings(vec![binding_id])
+            .with_act_env(act_env),
     )
     .expect("proc::from_act should build a Proc closure around the failing Act");
 
@@ -301,10 +350,18 @@ async fn proc_from_act_failing_embedded_act_preserves_effect_scope_operational_f
         .expect("root process should register");
 
     let err = force_proc_in_context(
-        process_context(runtime_state.clone(), process_id).with_act_env(
-            ActEnv::from_runtime_state(&runtime_state, PolicyEvaluator::new(), Provenance::new())
-                .await,
-        ),
+        process_context(runtime_state.clone(), process_id)
+            .with_admitted_capability_bindings(vec![binding_id])
+            .with_act_env(
+                ActEnv::from_runtime_state_with_admitted_bindings(
+                    &runtime_state,
+                    &[binding_id],
+                    PolicyEvaluator::new(),
+                    Provenance::new(),
+                )
+                .await
+                .expect("admitted sensor binding should build process ActEnv"),
+            ),
         proc_value,
         Value::Null,
     )

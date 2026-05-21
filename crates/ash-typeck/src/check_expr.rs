@@ -1390,6 +1390,15 @@ fn tcir_operation_from_dictionary_op(op: &crate::do_target::DoDictionaryOp) -> T
             shim.name.clone(),
             None,
         ),
+        crate::do_target::DoDictionaryOp::EvidenceUnavailable {
+            evidence, method, ..
+        } => TcirOperation::evidence_intrinsic(
+            evidence.diagnostic_key(),
+            method.clone(),
+            vec!["__ash_unavailable".to_string()],
+            method.clone(),
+            None,
+        ),
     }
 }
 
@@ -1958,10 +1967,10 @@ fn elaborate_do_stmts(
             kind: "empty do block".to_string(),
             span: Span::default(),
         }),
-        [DoStmt::Return { value, .. }] => Ok(dictionary_call(
+        [DoStmt::Return { value, .. }] => dictionary_call(
             &dictionary.return_op,
             vec![elaborate_workflow_call_expr(value)?],
-        )),
+        ),
         [DoStmt::Let { name, value, .. }, rest @ ..] => Ok(CoreExpr::Let {
             pattern: CorePattern::Variable {
                 name: name.to_string(),
@@ -1977,15 +1986,15 @@ fn elaborate_do_stmts(
                 return_type: None,
                 body: Box::new(elaborate_do_stmts(rest, dictionary)?),
             };
-            Ok(dictionary_call(
+            dictionary_call(
                 &dictionary.bind_op,
                 vec![elaborate_workflow_call_expr(value)?, continuation],
-            ))
+            )
         }
         [DoStmt::WorkflowRequires { expr, .. }, rest @ ..]
             if dictionary.tower_level == crate::do_target::DoTowerLevel::Workflow =>
         {
-            Ok(dictionary_call(
+            dictionary_call(
                 &dictionary.bind_op,
                 vec![
                     CoreExpr::Call {
@@ -1999,12 +2008,12 @@ fn elaborate_do_stmts(
                         body: Box::new(elaborate_do_stmts(rest, dictionary)?),
                     },
                 ],
-            ))
+            )
         }
         [DoStmt::WorkflowEnsures { expr, .. }, rest @ ..]
             if dictionary.tower_level == crate::do_target::DoTowerLevel::Workflow =>
         {
-            Ok(dictionary_call(
+            dictionary_call(
                 &dictionary.bind_op,
                 vec![
                     CoreExpr::Call {
@@ -2018,7 +2027,7 @@ fn elaborate_do_stmts(
                         body: Box::new(elaborate_do_stmts(rest, dictionary)?),
                     },
                 ],
-            ))
+            )
         }
         [stmt, ..] => Err(ConstructorError::UnsupportedExpression {
             kind: "invalid do statement sequence (return must be last)".to_string(),
@@ -2518,8 +2527,11 @@ fn validate_postcondition_expr(expr: &Expr) -> Result<(), ConstructorError> {
     Ok(())
 }
 
-fn dictionary_call(op: &crate::do_target::DoDictionaryOp, arguments: Vec<CoreExpr>) -> CoreExpr {
-    match op {
+fn dictionary_call(
+    op: &crate::do_target::DoDictionaryOp,
+    arguments: Vec<CoreExpr>,
+) -> Result<CoreExpr, ConstructorError> {
+    Ok(match op {
         crate::do_target::DoDictionaryOp::HiddenActReturn => CoreExpr::Call {
             func: "unit".to_string(),
             module: None,
@@ -2550,7 +2562,20 @@ fn dictionary_call(op: &crate::do_target::DoDictionaryOp, arguments: Vec<CoreExp
             module: (!shim.module.is_empty()).then(|| shim.module.join("::")),
             arguments,
         },
-    }
+        crate::do_target::DoDictionaryOp::EvidenceUnavailable {
+            evidence,
+            method,
+            span,
+        } => {
+            return Err(ConstructorError::UnsupportedExpression {
+                kind: format!(
+                    "selected Monad evidence {} is missing {method} method body or intrinsic shim",
+                    evidence.diagnostic_key()
+                ),
+                span: *span,
+            });
+        }
+    })
 }
 
 fn elaborate_workflow_call_expr(expr: &Expr) -> Result<CoreExpr, ConstructorError> {

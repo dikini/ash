@@ -3,7 +3,10 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
 
 use ash_core::capability::CapabilityError;
-use ash_core::{Capability, Constraint, Effect, Expr, Provenance, Value, Workflow};
+use ash_core::{
+    Capability, CapabilityBinding, CapabilityBindingId, CapabilityInterfaceId, Constraint, Effect,
+    Expr, Provenance, Value, Workflow,
+};
 use ash_interp::act_env::ActEnv;
 use ash_interp::behaviour::{MockSettableProvider, TypedSettableProvider};
 use ash_interp::capability::MockProvider;
@@ -1346,6 +1349,20 @@ async fn workflow_ret_iflet_uses_async_force_path_for_task_local_provider() {
     );
 }
 
+fn host_binding_for(
+    binding_name: &str,
+    provider_name: &str,
+    action_name: &str,
+) -> CapabilityBinding {
+    CapabilityBinding::host_provider(
+        CapabilityBindingId::new(),
+        binding_name,
+        CapabilityInterfaceId::new(format!("{provider_name}-interface")),
+        provider_name,
+        vec![format!("{provider_name}.{action_name}")],
+    )
+}
+
 fn tasklocal_invoke_force_expr() -> Expr {
     Expr::FnApply {
         func: Box::new(Expr::Call {
@@ -1364,6 +1381,12 @@ fn tasklocal_invoke_force_expr() -> Expr {
 #[tokio::test]
 async fn workflow_call_child_body_inherits_hidden_runtime_act_env() {
     let runtime_state = RuntimeState::new().with_provider("tasklocal", Arc::new(TaskLocalProvider));
+    let tasklocal_binding = host_binding_for("tasklocal", "tasklocal", "mark");
+    let tasklocal_binding_id = tasklocal_binding.id;
+    runtime_state
+        .admit_capability_binding(tasklocal_binding)
+        .await
+        .expect("tasklocal binding admission succeeds");
     runtime_state
         .register_callable_workflow(
             "worker",
@@ -1388,7 +1411,7 @@ async fn workflow_call_child_body_inherits_hidden_runtime_act_env() {
             "workflow-call-child-task-local",
             execute_workflow_with_behaviour_in_state(
                 &workflow,
-                Context::new(),
+                Context::new().with_admitted_capability_bindings(vec![tasklocal_binding_id]),
                 &CapabilityContext::new(),
                 &PolicyEvaluator::new(),
                 &BehaviourContext::new(),
@@ -1410,6 +1433,12 @@ async fn spawned_registered_child_body_has_hidden_runtime_act_env() {
                 .with_execute_result(Ok(Value::String("spawned child invoked".to_string()))),
         ),
     );
+    let sensor_binding = host_binding_for("sensor", "sensor", "read");
+    let sensor_binding_id = sensor_binding.id;
+    runtime_state
+        .admit_capability_binding(sensor_binding)
+        .await
+        .expect("sensor binding admission succeeds");
     runtime_state
         .register_child_workflow(
             "worker",
@@ -1463,7 +1492,7 @@ async fn spawned_registered_child_body_has_hidden_runtime_act_env() {
             "spawned-child-task-local",
             execute_workflow_with_behaviour_in_state(
                 &workflow,
-                Context::new(),
+                Context::new().with_admitted_capability_bindings(vec![sensor_binding_id]),
                 &CapabilityContext::new(),
                 &PolicyEvaluator::new(),
                 &BehaviourContext::new(),

@@ -89,27 +89,42 @@ fn ash_run_reports_kernel_instance_and_artifact_identity() {
     );
     assert_eq!(report["admission"]["status"], "admitted");
     assert_eq!(
+        report["artifact_summary"]["tcir"]["carrier_scope"],
+        "alpha_checked_workflow_boundary"
+    );
+    assert_eq!(
         report["provider_registry"]["grants_admission_authority"],
         false
     );
 }
 
 #[test]
-fn ash_run_emits_runtime_kernel_report_on_parse_failure_after_local_source_read() {
+fn ash_run_does_not_emit_verified_artifact_report_before_parse_check_success() {
     let temp = tempdir().expect("tempdir");
     let workflow_path = temp.path().join("bad.ash");
     fs::write(&workflow_path, "workflow main {").expect("write malformed workflow");
 
     let mut cmd = Command::cargo_bin("ash").expect("ash binary exists");
-    cmd.arg("run")
+    let output = cmd
+        .arg("run")
         .arg(&workflow_path)
-        .env("ASH_RUNTIME_KERNEL_REPORT", "1");
-
-    cmd.assert()
+        .env("ASH_RUNTIME_KERNEL_REPORT", "json")
+        .assert()
         .failure()
-        .stderr(predicate::str::contains("runtime_kernel.host_mode=OneShot"))
-        .stderr(predicate::str::contains(
-            "runtime_kernel.admission=admitted",
-        ))
-        .stderr(predicate::str::contains("parse"));
+        .get_output()
+        .clone();
+
+    let stderr = String::from_utf8(output.stderr).expect("stderr utf8");
+    assert!(
+        stderr.contains("parse"),
+        "parse diagnostics should remain visible: {stderr}"
+    );
+    assert!(
+        !stderr.contains("\"artifact_summary\""),
+        "parse-invalid source must not emit a verified artifact summary: {stderr}"
+    );
+    assert!(
+        !stderr.contains("\"verifier\": \"verified\""),
+        "parse-invalid source must not be reported as verified: {stderr}"
+    );
 }

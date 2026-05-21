@@ -4,6 +4,7 @@
 -- Runtime-managed substrate: hidden ActEnv is compiler/runtime-owned and not source-denotable.
 -- Public code sees only opaque Act<A> plus the operations below.
 
+pub builtin type Act<A>;
 pub type Policy = String;
 
 builtin fn __unit<A>(v: A) -> Act<A>;

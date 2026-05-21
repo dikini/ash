@@ -1,8 +1,12 @@
 use assert_cmd::Command;
+use predicates::prelude::*;
 use serde_json::Value;
 use std::fs;
+use std::io::{BufRead, BufReader, Write};
 #[cfg(unix)]
 use std::os::unix::fs::FileTypeExt;
+#[cfg(unix)]
+use std::os::unix::net::UnixStream;
 use std::path::Path;
 use std::process::{Child, Command as StdCommand, Stdio};
 use std::thread;
@@ -108,6 +112,19 @@ fn daemon_json(socket: &Path, args: &[&str]) -> Value {
     serde_json::from_slice(&output).expect("daemon json response")
 }
 
+#[cfg(unix)]
+fn daemon_protocol_json(socket: &Path, request: Value) -> Value {
+    let mut stream = UnixStream::connect(socket).expect("connect daemon socket");
+    serde_json::to_writer(&mut stream, &request).expect("write daemon request");
+    stream.write_all(b"\n").expect("terminate daemon request");
+
+    let mut line = String::new();
+    BufReader::new(stream)
+        .read_line(&mut line)
+        .expect("read daemon response");
+    serde_json::from_str(&line).expect("daemon protocol json response")
+}
+
 #[test]
 fn ashd_serve_indexes_definitions_without_running_workflows() {
     let root = tempdir().expect("root tempdir");
@@ -139,6 +156,136 @@ fn ashd_serve_indexes_definitions_without_running_workflows() {
     assert_eq!(cancel["host_mode"], "Daemon");
     assert_eq!(cancel["class"], "cancelled");
     assert_eq!(cancel["status"], "cancelled");
+}
+
+#[cfg(unix)]
+#[test]
+fn ashd_start_protocol_round_trips_args_config_and_admission_profile() {
+    let root = tempdir().expect("root tempdir");
+    write_workflow(root.path(), "main", 7);
+    let dirs = daemon_dirs();
+    let _daemon = spawn_daemon(root.path(), &dirs);
+
+    let start = daemon_protocol_json(
+        &dirs.socket,
+        serde_json::json!({
+            "command": "start",
+            "workflow": "main",
+            "args": ["alpha", "beta"],
+            "config_id": "staging",
+            "admission_profile": "allow"
+        }),
+    );
+
+    assert_eq!(start["ok"], true);
+    assert_eq!(start["host_mode"], "Daemon");
+    assert_eq!(start["workflow"], "main");
+    assert_eq!(start["args"], serde_json::json!(["alpha", "beta"]));
+    assert_eq!(start["config_id"], "staging");
+    assert_eq!(start["admission"]["status"], "admitted");
+    assert_eq!(start["admission"]["profile"], "allow");
+    assert_eq!(start["admission"]["capability_grants"], 0);
+    assert_eq!(start["admission"]["resource_grants"], 0);
+    let instance_id = start["instance_id"].as_str().expect("instance id");
+
+    let status = daemon_json(&dirs.socket, &["status", "--instance", instance_id]);
+    assert_eq!(status["instance_id"], instance_id);
+    assert_eq!(status["args"], serde_json::json!(["alpha", "beta"]));
+    assert_eq!(status["config_id"], "staging");
+    assert_eq!(status["admission"]["status"], "admitted");
+    assert_eq!(status["admission"]["profile"], "allow");
+
+    let list = daemon_json(&dirs.socket, &["list"]);
+    let instances = list["instances"].as_array().expect("instances");
+    assert_eq!(instances.len(), 1, "instances: {list}");
+    assert_eq!(instances[0]["instance_id"], instance_id);
+    assert_eq!(instances[0]["args"], serde_json::json!(["alpha", "beta"]));
+    assert_eq!(instances[0]["config_id"], "staging");
+    assert_eq!(instances[0]["admission"]["profile"], "allow");
+}
+
+#[cfg(unix)]
+#[test]
+fn ashd_start_cli_rejects_admission_profile_without_recording_instance() {
+    let root = tempdir().expect("root tempdir");
+    write_workflow(root.path(), "main", 9);
+    let dirs = daemon_dirs();
+    let _daemon = spawn_daemon(root.path(), &dirs);
+
+    let before = daemon_json(&dirs.socket, &["list"]);
+    assert_eq!(before["instances"].as_array().expect("instances").len(), 0);
+
+    let protocol_rejected = daemon_protocol_json(
+        &dirs.socket,
+        serde_json::json!({
+            "command": "start",
+            "workflow": "main",
+            "args": ["would-not-run"],
+            "config_id": "rejected-config",
+            "admission_profile": "reject"
+        }),
+    );
+    assert_eq!(protocol_rejected["ok"], false);
+    assert_eq!(protocol_rejected["error"]["class"], "admission_rejected");
+    assert!(
+        protocol_rejected["error"]["message"]
+            .as_str()
+            .expect("error message")
+            .contains("admission rejected"),
+        "protocol response must classify rejected admission: {protocol_rejected}"
+    );
+
+    let after_protocol_reject = daemon_json(&dirs.socket, &["list"]);
+    assert_eq!(
+        after_protocol_reject["instances"]
+            .as_array()
+            .expect("instances")
+            .len(),
+        0,
+        "protocol rejected admission must not record an instance: {after_protocol_reject}"
+    );
+
+    let mut rejected = Command::cargo_bin("ash").expect("ash binary exists");
+    rejected
+        .arg("daemon")
+        .arg("start")
+        .arg("--arg")
+        .arg("would-not-run")
+        .arg("--config-id")
+        .arg("rejected-config")
+        .arg("--admission-profile")
+        .arg("reject")
+        .arg("main")
+        .arg("--socket")
+        .arg(&dirs.socket)
+        .arg("--format")
+        .arg("json")
+        .assert()
+        .failure()
+        .stderr(predicates::str::contains("admission").and(predicates::str::contains("rejected")));
+
+    let after = daemon_json(&dirs.socket, &["list"]);
+    assert_eq!(
+        after["instances"].as_array().expect("instances").len(),
+        0,
+        "rejected admission must not record an instance: {after}"
+    );
+}
+
+#[test]
+fn ashd_start_cli_records_default_empty_admission_fields() {
+    let root = tempdir().expect("root tempdir");
+    write_workflow(root.path(), "main", 11);
+    let dirs = daemon_dirs();
+    let _daemon = spawn_daemon(root.path(), &dirs);
+
+    let start = daemon_json(&dirs.socket, &["start", "main"]);
+
+    assert_eq!(start["ok"], true);
+    assert_eq!(start["args"], serde_json::json!([]));
+    assert_eq!(start["config_id"], "default");
+    assert_eq!(start["admission"]["status"], "admitted");
+    assert_eq!(start["admission"]["profile"], "empty");
 }
 
 #[test]

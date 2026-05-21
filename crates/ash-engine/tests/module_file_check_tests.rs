@@ -248,7 +248,7 @@ fn test_check_module_file_stdlib_act_module() {
 
     assert_eq!(
         result.type_count, 2,
-        "act.ash should have public opaque Act and Policy definitions, got {}",
+        "act.ash should have 2 pub type definitions (opaque Act and Policy alias), got {}",
         result.type_count,
     );
     assert_eq!(

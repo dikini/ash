@@ -1,11 +1,14 @@
 use std::sync::Arc;
 
 use ash_core::{
-    CapabilityAuthorityProvenance, CapabilityBinding, CapabilityBindingDependency,
-    CapabilityBindingId, CapabilityImplementationId, CapabilityInterfaceId, Effect, ResourceId,
-    ResourceInstance, ResourceOwner, ResourceTypeId, Value, WorkflowId,
+    Capability, CapabilityAuthorityProvenance, CapabilityBinding, CapabilityBindingDependency,
+    CapabilityBindingId, CapabilityImplementationId, CapabilityInterfaceId, Effect, Guard, Pattern,
+    Provenance, ResourceId, ResourceInstance, ResourceOwner, ResourceTypeId, Value, Workflow,
+    WorkflowId,
 };
-use ash_interp::{ActEnv, MockProvider, PolicyEvaluator, RuntimeState};
+use ash_interp::{
+    ActEnv, MockProvider, PolicyEvaluator, RuntimeState, execute_with_bindings_in_state,
+};
 
 fn host_binding(name: &str, provider_name: &str, admitted: Vec<&str>) -> CapabilityBinding {
     host_binding_with_id(CapabilityBindingId::new(), name, provider_name, admitted)
@@ -104,6 +107,48 @@ async fn runtime_state_projection_rejects_unadmitted_binding_ids_and_does_not_us
             .execute("workflow-clock", "now", &[])
             .await
             .is_err()
+    );
+}
+
+#[tokio::test]
+async fn workflow_observe_with_admitted_bindings_does_not_fall_back_to_unadmitted_behaviour_provider()
+ {
+    let runtime_state = RuntimeState::new()
+        .with_provider(
+            "Args:0",
+            Arc::new(
+                MockProvider::new("Args:0", Effect::Epistemic)
+                    .with_observe_value(Value::String("ambient".to_string())),
+            ),
+        )
+        .with_provider(
+            "clock",
+            Arc::new(
+                MockProvider::new("clock", Effect::Operational)
+                    .with_execute_result(Ok(Value::String("tick".to_string()))),
+            ),
+        );
+    runtime_state
+        .admit_capability_binding(host_binding("workflow-clock", "clock", vec!["clock.now"]))
+        .await
+        .expect("unrelated clock binding should be admitted");
+
+    let workflow = Workflow::Observe {
+        capability: Capability {
+            name: "Args:0".to_string(),
+            effect: Effect::Epistemic,
+            constraints: vec![],
+        },
+        pattern: Pattern::Wildcard,
+        continuation: Box::new(Workflow::Done),
+    };
+
+    let err = execute_with_bindings_in_state(&workflow, &runtime_state, Default::default())
+        .await
+        .expect_err("unadmitted Args provider must not be reached through behaviour fallback");
+    assert!(
+        matches!(err, ash_interp::ExecError::CapabilityNotAvailable(_)),
+        "expected fail-closed capability error, got {err:?}"
     );
 }
 
@@ -477,4 +522,91 @@ async fn existing_runtime_state_capability_context_remains_provider_registry_com
         .await
         .expect("empty explicit admission set remains valid");
     assert!(explicitly_empty.execute("clock", "any", &[]).await.is_err());
+}
+
+#[tokio::test]
+async fn alpha_policy_profile_act_execution_uses_projected_action_grants() {
+    let runtime_state = RuntimeState::new().with_provider(
+        "deploy",
+        Arc::new(
+            MockProvider::new("deploy", Effect::Operational)
+                .with_execute_result(Ok(Value::String("leaked".to_string()))),
+        ),
+    );
+    runtime_state
+        .admit_capability_binding(host_binding(
+            "workflow-deploy",
+            "deploy",
+            vec!["deploy.plan"],
+        ))
+        .await
+        .expect("policy profile admits only the plan action");
+
+    let workflow = Workflow::Act {
+        provider_name: "deploy".to_string(),
+        action_name: "apply".to_string(),
+        arguments: vec![],
+        guard: Guard::Always,
+        provenance: Provenance::new(),
+        result_name: None,
+        continuation: Box::new(Workflow::Done),
+    };
+
+    let error = execute_with_bindings_in_state(&workflow, &runtime_state, Default::default())
+        .await
+        .expect_err("ungranted action must fail closed even when provider is registered");
+
+    assert!(
+        error.to_string().contains("deploy.apply")
+            || error
+                .to_string()
+                .contains("Capability not available: deploy"),
+        "diagnostic should identify the ungranted action/provider boundary: {error}"
+    );
+}
+
+#[tokio::test]
+async fn alpha_policy_profile_records_projected_grant_facts_in_execution_record() {
+    let runtime_state = RuntimeState::new().with_provider(
+        "deploy",
+        Arc::new(
+            MockProvider::new("deploy", Effect::Operational)
+                .with_execute_result(Ok(Value::String("planned".to_string()))),
+        ),
+    );
+    let binding = host_binding("workflow-deploy", "deploy", vec!["deploy.plan"]);
+    let binding_id = binding.id;
+    runtime_state
+        .admit_capability_binding(binding)
+        .await
+        .expect("policy profile admits the plan action");
+
+    let workflow = Workflow::Act {
+        provider_name: "deploy".to_string(),
+        action_name: "plan".to_string(),
+        arguments: vec![],
+        guard: Guard::Always,
+        provenance: Provenance::new(),
+        result_name: None,
+        continuation: Box::new(Workflow::Done),
+    };
+
+    let result = execute_with_bindings_in_state(&workflow, &runtime_state, Default::default())
+        .await
+        .expect("granted action should execute");
+    assert_eq!(result, Value::String("planned".to_string()));
+
+    let record = runtime_state
+        .last_execution_record()
+        .await
+        .expect("workflow execution should persist an execution record");
+    let record_debug = format!("{record:?}");
+    assert!(
+        record_debug.contains(&format!("{binding_id:?}")),
+        "execution record should include admitted binding identity: {record_debug}"
+    );
+    assert!(
+        record_debug.contains("deploy.plan"),
+        "execution record should include projected action grant: {record_debug}"
+    );
 }

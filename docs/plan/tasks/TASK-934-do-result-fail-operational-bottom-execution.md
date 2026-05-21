@@ -1,6 +1,6 @@
 # TASK-934: `do:Result` operational-bottom execution evidence
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -61,14 +61,14 @@ commands:
   - cargo fmt --check
   - git diff --check
 checklist:
-  - [ ] Focused RED test was observed failing for the intended reason, unless this is a docs/planning task.
-  - [ ] Focused GREEN test passes and runs non-zero tests, unless this is a docs/planning task.
-  - [ ] cargo fmt --check passes when Rust code changed.
-  - [ ] git diff --check passes.
-  - [ ] cargo check --workspace passes if shared carriers or public APIs changed.
-  - [ ] cargo clippy --workspace --all-targets --all-features -- -D warnings passes before task closeout if code changed.
-  - [ ] CHANGELOG.md updated if code/tooling/docs-policy/release-facing status changed.
-  - [ ] Codex verification reports no blockers.
+  - [x] Focused RED test was observed failing for the intended reason: `cargo test -p ash-interp --test alpha_do_result_fail_execution -- --nocapture` initially failed because `result::and_then` runtime execution was not callable.
+  - [x] Focused GREEN test passes and runs non-zero tests: `cargo test -p ash-interp --test alpha_do_result_fail_execution -- --nocapture` ran 2 tests; `cargo test -p ash-typeck --test alpha_generalized_do_full_bind_lowering -- --nocapture` ran 5 tests.
+  - [x] cargo fmt --check passes when Rust code changed.
+  - [x] git diff --check passes.
+  - [x] cargo check --workspace passes if shared carriers or public APIs changed.
+  - [x] cargo clippy --workspace --all-targets --all-features -- -D warnings passes before task closeout if code changed.
+  - [x] CHANGELOG.md updated if code/tooling/docs-policy/release-facing status changed.
+  - [x] Codex verification reports no blockers: TASK-934 review returned APPROVE after focused tests, fmt, diff check, and `RUSTC_WRAPPER= cargo clippy --workspace --all-targets --all-features -- -D warnings`.
 ```
 
 ## Dependencies for Next Task

@@ -23,6 +23,7 @@ pub mod module_loader;
 pub mod monomorphize;
 pub mod parse;
 pub mod providers;
+pub mod runtime_artifact;
 
 pub use entry::{
     EntryBootstrapError, EntryVerificationError, RuntimeEntryStdlibSource,

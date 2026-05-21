@@ -1,6 +1,6 @@
 # TASK-933: Implemented-MVP acceptance delta and preflight audit
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -20,18 +20,19 @@ Create the exact closure matrix for SPEC-069/SPEC-070 Implemented MVP before cha
 
 ### Functional Requirements
 
-1. Add a Phase 123 acceptance-delta section or artifact that lists A69-8, A69-12, A70-2, A70-4, A70-6/NI-4, A70-7, and A70-8.
+1. Add `docs/plan/audits/TASK-933-phase123-acceptance-delta.md` listing A69-8, A69-12, A70-2, A70-4, A70-6/NI-4, A70-7, and A70-8.
 2. For each row, name the exact planned test file, test name, implementation file, and expected RED failure mode.
 3. Check that no Phase 122 task is reopened; this phase is a follow-on.
 4. Update PLAN-119 if preflight discovers a missing prerequisite or wrong file target.
+5. Replace presence-only row checks with an exactly-one-owner audit over the acceptance-delta artifact's canonical owner table for TASK-934 through TASK-940.
 
-Property invariant: every deferred row has exactly one owning follow-on task and no row is silently dropped.
+Property invariant: every deferred row has exactly one owning follow-on task in the acceptance-delta artifact and no row is silently dropped.
 
 ## TDD Steps
 
 1. Read TASK-931/TASK-932 and SPEC-069/SPEC-070 limitation text.
 2. Create/update the Phase 123 acceptance-delta artifact or PLAN-119 section.
-3. Run a script asserting every deferred row appears in exactly one TASK-934 through TASK-940 file.
+3. Run the exactly-one-owner script from this task's Verification section and confirm every deferred row appears in exactly one TASK-934 through TASK-940 owner mapping in the acceptance-delta artifact.
 4. Ask Codex to review for invented APIs, missing acceptance rows, and task ordering.
 
 ## Dispatch
@@ -57,24 +58,44 @@ strictness: clean
 commands:
   - python3 - <<'PY'
 from pathlib import Path
-root=Path('docs/plan/tasks')
-required=['A69-8','A69-12','A70-2','A70-4','A70-6','A70-7','A70-8','NI-4']
-text='
-'.join(p.read_text() for p in sorted(root.glob('TASK-93[4-9]-*.md'))+sorted(root.glob('TASK-940-*.md')))
-missing=[r for r in required if r not in text]
-assert not missing, missing
-print('phase123 deferred-row owners present')
+import re
+artifact = Path('docs/plan/audits/TASK-933-phase123-acceptance-delta.md')
+text = artifact.read_text()
+expected = {
+    'A69-8': 'TASK-934',
+    'A69-12': 'TASK-936',
+    'A70-2': 'TASK-937',
+    'A70-4': 'TASK-938',
+    'A70-6': 'TASK-939',
+    'NI-4': 'TASK-939',
+    'A70-7': 'TASK-940',
+    'A70-8': 'TASK-936',
+}
+rows = [line for line in text.splitlines() if line.startswith('| A') or line.startswith('| NI-4')]
+owners = {}
+for line in rows:
+    cells = [cell.strip() for cell in line.strip('|').split('|')]
+    if len(cells) < 3:
+        continue
+    row_id, owner = cells[0], cells[2]
+    owners[row_id] = owner
+assert owners == expected, (owners, expected)
+for row_id, owner in expected.items():
+    task_text = next(Path('docs/plan/tasks').glob(f'{owner}-*.md')).read_text()
+    assert row_id in task_text, f'{row_id} missing from {owner}'
+assert re.search(r'exactly one owning follow-on task', text, re.I), 'artifact must state owner invariant'
+print('phase123 deferred rows have exactly one owner')
 PY
   - git diff --check
 checklist:
-  - [ ] Focused RED test was observed failing for the intended reason, unless this is a docs/planning task.
-  - [ ] Focused GREEN test passes and runs non-zero tests, unless this is a docs/planning task.
-  - [ ] cargo fmt --check passes when Rust code changed.
-  - [ ] git diff --check passes.
-  - [ ] cargo check --workspace passes if shared carriers or public APIs changed.
-  - [ ] cargo clippy --workspace --all-targets --all-features -- -D warnings passes before task closeout if code changed.
-  - [ ] CHANGELOG.md updated if code/tooling/docs-policy/release-facing status changed.
-  - [ ] Codex verification reports no blockers.
+  - [x] Focused RED test was observed failing for the intended reason, unless this is a docs/planning task. Docs/planning task: exact-owner verifier is the focused evidence.
+  - [x] Focused GREEN test passes and runs non-zero tests, unless this is a docs/planning task. Docs/planning task: exact-owner verifier passed with `phase123 deferred rows have exactly one owner`.
+  - [x] cargo fmt --check passes when Rust code changed. No Rust code changed for TASK-933.
+  - [x] git diff --check passes.
+  - [x] cargo check --workspace passes if shared carriers or public APIs changed. No shared carriers or public APIs changed for TASK-933.
+  - [x] cargo clippy --workspace --all-targets --all-features -- -D warnings passes before task closeout if code changed. No Rust code changed for TASK-933.
+  - [x] CHANGELOG.md updated if code/tooling/docs-policy/release-facing status changed.
+  - [x] Codex verification reports no blockers: remediation re-review returned APPROVE after checking canonical owner mapping, Phase 122/TASK-932 status consistency, Phase 123 non-promotion, SPEC-069/SPEC-070 Partial MVP status, and `git diff --check`.
 ```
 
 ## Dependencies for Next Task

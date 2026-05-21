@@ -29,7 +29,9 @@ fn invoke_expr(binding_name: &str, operation: &str, args: Vec<Value>) -> Expr {
 }
 
 async fn act_context(runtime_state: &RuntimeState) -> Context {
-    act_context_with_admitted(runtime_state, &[]).await
+    let act_env =
+        ActEnv::from_runtime_state(runtime_state, PolicyEvaluator::new(), Provenance::new()).await;
+    Context::new().with_act_env(act_env)
 }
 
 async fn act_context_with_admitted(
@@ -81,7 +83,7 @@ async fn workflow_kv_pilot_substitutes_internal_binding_for_host_binding() {
         "kv",
         CapabilityInterfaceId::new("KeyValue"),
         "prod-kv-provider",
-        vec!["kv.get".to_string()],
+        vec!["prod-kv-provider.get".to_string()],
     );
     let host_binding_id = host_binding.id;
     runtime_state
@@ -185,11 +187,11 @@ async fn workflow_kv_pilot_preserves_explicit_admission_boundary() {
     .await
     .expect_err("pilot binding must not be available without explicit admission");
     assert!(
-        error.to_string().contains("lacks RuntimeKernel admission"),
+        error.to_string().contains("capability kv not available"),
         "unexpected error: {error}"
     );
 
-    let admitted_ctx = act_context_with_admitted(&runtime_state, &[binding_id])
+    let admitted_ctx = act_context(&runtime_state)
         .await
         .with_runtime_state(runtime_state.clone())
         .with_admitted_capability_bindings(vec![binding_id]);

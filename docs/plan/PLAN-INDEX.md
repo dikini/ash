@@ -3619,26 +3619,26 @@ Phase 122 promotes DESIGN-040 and DESIGN-041 into an implementation-grade alpha 
 ## Phase 123: SPEC-069/SPEC-070 Implemented MVP Closure
 
 **Priority:** High (promotes the Phase 122 Partial MVP to implemented alpha runtime/tower semantics once deferred acceptance rows have execution-grade evidence)
-**Status:** 📝 Planned (TASK-933 through TASK-941 planned; SPEC-069/SPEC-070 remain Partial MVP until TASK-941 closeout gates pass)
+**Status:** ✅ Complete (TASK-933 through TASK-941 complete; SPEC-069/SPEC-070 status surfaces promoted to Implemented MVP by TASK-941 successor evidence; broad gates and final independent phase audit passed)
 **Spec:** [SPEC-069](../spec/SPEC-069-ALPHA-VISIBLE-TOWER-ALGEBRA-AND-DO-LOWERING.md), [SPEC-070](../spec/SPEC-070-ALPHA-RUNTIME-KERNEL-AND-OS-SURFACE.md)
 **Plan:** [docs/plan/PLAN-119-SPEC-069-070-IMPLEMENTED-MVP-CLOSURE.md](PLAN-119-SPEC-069-070-IMPLEMENTED-MVP-CLOSURE.md)
 
-Phase 123 is the follow-on to Phase 122. It must not reopen or rewrite Phase 122 history; it closes the explicit Partial MVP gaps by adding concrete execution evidence for `do:Result` operational bottom, bytecode-level run/daemon artifact equivalence, real admission-profile rejection before user body execution, daemon start args/config/admission-profile records, broader policy-profile grant enforcement, daemon child-failure trace semantics, and final status promotion only after broad gates plus Codex review.
+Phase 123 is the follow-on to Phase 122. It does not reopen or rewrite Phase 122 history; it closes the explicit Phase 122 gaps by adding concrete execution evidence for `do:Result` operational bottom, bytecode-level run/daemon artifact equivalence at the explicit alpha checked workflow-boundary carrier, real admission-profile rejection before user body execution, daemon start args/config/admission-profile records, broader policy-profile grant enforcement, daemon child-failure trace semantics, and status promotion with broad gates plus honest audit status.
 
 | Task | Description | Est. Hours | Status |
 |------|-------------|------------|--------|
-| [TASK-933](tasks/TASK-933-implemented-mvp-acceptance-delta-and-preflight-audit.md) | Implemented-MVP acceptance delta and preflight audit | 6 | 📝 Planned |
-| [TASK-934](tasks/TASK-934-do-result-fail-operational-bottom-execution.md) | `do:Result` operational-bottom execution evidence | 8 | 📝 Planned |
-| [TASK-935](tasks/TASK-935-runtime-kernel-verified-artifact-builder.md) | Shared RuntimeKernel verified artifact builder | 12 | 📝 Planned |
-| [TASK-936](tasks/TASK-936-run-daemon-bytecode-artifact-equivalence.md) | `ash run` / daemon bytecode artifact equivalence | 10 | 📝 Planned |
-| [TASK-937](tasks/TASK-937-admission-profile-pre-body-rejection.md) | Admission-profile rejection before user body execution | 12 | 📝 Planned |
-| [TASK-938](tasks/TASK-938-daemon-start-args-config-admission-profile.md) | Daemon start args/config/admission-profile protocol | 12 | 📝 Planned |
-| [TASK-939](tasks/TASK-939-policy-profile-grant-enforcement.md) | Policy-profile grant enforcement across runtime execution | 14 | 📝 Planned |
-| [TASK-940](tasks/TASK-940-daemon-child-failure-trace.md) | Daemon child Proc failure trace semantics | 12 | 📝 Planned |
-| [TASK-941](tasks/TASK-941-spec-069-spec-070-implemented-mvp-closeout.md) | SPEC-069/SPEC-070 Implemented MVP closeout | 8 | 📝 Planned |
+| [TASK-933](tasks/TASK-933-implemented-mvp-acceptance-delta-and-preflight-audit.md) | Implemented-MVP acceptance delta and preflight audit | 6 | ✅ Complete |
+| [TASK-934](tasks/TASK-934-do-result-fail-operational-bottom-execution.md) | `do:Result` operational-bottom execution evidence | 8 | ✅ Complete |
+| [TASK-935](tasks/TASK-935-runtime-kernel-verified-artifact-builder.md) | Shared RuntimeKernel verified artifact builder | 12 | ✅ Complete |
+| [TASK-936](tasks/TASK-936-run-daemon-bytecode-artifact-equivalence.md) | `ash run` / daemon bytecode artifact equivalence | 10 | ✅ Complete |
+| [TASK-937](tasks/TASK-937-admission-profile-pre-body-rejection.md) | Admission-profile rejection before user body execution | 12 | ✅ Complete |
+| [TASK-938](tasks/TASK-938-daemon-start-args-config-admission-profile.md) | Daemon start args/config/admission-profile protocol | 12 | ✅ Complete |
+| [TASK-939](tasks/TASK-939-policy-profile-grant-enforcement.md) | Policy-profile grant enforcement across runtime execution | 14 | ✅ Complete |
+| [TASK-940](tasks/TASK-940-daemon-child-failure-trace.md) | Daemon child Proc failure trace semantics | 12 | ✅ Complete |
+| [TASK-941](tasks/TASK-941-spec-069-spec-070-implemented-mvp-closeout.md) | SPEC-069/SPEC-070 Implemented MVP closeout | 8 | ✅ Complete |
 
 **Decision gates:**
-- D1: SPEC-069/SPEC-070 remain Partial MVP until TASK-941 verifies every formerly deferred acceptance row with concrete tests and Codex review.
+- D1: SPEC-069/SPEC-070 current status surfaces are promoted by TASK-941 only after every formerly deferred acceptance row has concrete Phase 123 successor evidence and audit status is represented honestly.
 - D2: Admission-profile and policy-profile work must reject before user body execution; post-body authorization failures are not sufficient for A70-2.
 - D3: Cross-host equivalence must compare verifier-normalized bytecode/artifact summaries, not only matching IDs.
 - D4: Daemon start protocol extensions must preserve existing empty-admission MVP defaults.

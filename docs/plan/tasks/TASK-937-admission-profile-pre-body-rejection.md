@@ -1,6 +1,6 @@
 # TASK-937: Admission-profile rejection before user body execution
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -62,15 +62,20 @@ commands:
   - cargo fmt --check
   - git diff --check
 checklist:
-  - [ ] Focused RED test was observed failing for the intended reason, unless this is a docs/planning task.
-  - [ ] Focused GREEN test passes and runs non-zero tests, unless this is a docs/planning task.
-  - [ ] cargo fmt --check passes when Rust code changed.
-  - [ ] git diff --check passes.
-  - [ ] cargo check --workspace passes if shared carriers or public APIs changed.
-  - [ ] cargo clippy --workspace --all-targets --all-features -- -D warnings passes before task closeout if code changed.
-  - [ ] CHANGELOG.md updated if code/tooling/docs-policy/release-facing status changed.
-  - [ ] Codex verification reports no blockers.
+  - [x] Focused RED test was observed failing for the intended reason: `cargo test -p ash-cli --test alpha_admission_profile -- --nocapture` ran 2 tests and failed because `--admission-profile` was not yet accepted.
+  - [x] Focused GREEN test passes and runs non-zero tests: `cargo test -p ash-cli --test alpha_admission_profile -- --nocapture` ran 2 tests; `cargo test -p ash-interp --test invoke_runtime_dispatch -- --nocapture` ran 7 tests; `cargo test -p ash-cli --test alpha_ash_run_runtime_kernel_mode -- --nocapture` ran 3 tests.
+  - [x] cargo fmt --check passes when Rust code changed.
+  - [x] git diff --check passes.
+  - [x] cargo check --workspace passes if shared carriers or public APIs changed (`RUSTC_WRAPPER=` used to avoid the sandboxed sccache wrapper).
+  - [x] cargo clippy --workspace --all-targets --all-features -- -D warnings passes before task closeout if code changed (`RUSTC_WRAPPER=` used to avoid the sandboxed sccache wrapper).
+  - [x] CHANGELOG.md updated if code/tooling/docs-policy/release-facing status changed.
+  - [x] Codex verification reports no blockers after status-surface reconciliation; independent review found only docs/changelog/status drift, which this closeout update resolves.
 ```
+
+Implemented evidence:
+- `ash run --admission-profile reject` evaluates admission before workflow body execution and reports `admission.status = rejected` without producing the body output file.
+- Default `--admission-profile empty` remains admitted and preserves existing `ash run` behavior.
+- Rejection reporting is distinct from parse/check/body failures and does not emit a verified artifact summary for a rejected body execution path.
 
 ## Dependencies for Next Task
 

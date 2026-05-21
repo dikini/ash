@@ -111,6 +111,65 @@ async fn invoke_dispatch_returns_closure_with_captured_state() {
 }
 
 #[tokio::test]
+async fn admitted_host_provider_sync_invoke_uses_projected_runtime_surface_not_manual_act_env() {
+    let ctx = Context::new();
+    let result =
+        eval_expr(&invoke_expr_for("sensor", "read"), &ctx).expect("invoke should dispatch");
+    let mut capability_ctx = CapabilityContext::new();
+    capability_ctx.register(Box::new(
+        MockProvider::new("sensor", Effect::Operational)
+            .with_execute_result(Ok(Value::String("leaked".to_string()))),
+    ));
+    let act_env = ActEnv::new(
+        capability_ctx,
+        ash_interp::PolicyEvaluator::new(),
+        ash_core::Provenance::new(),
+    );
+    let runtime_state = RuntimeState::new().with_provider(
+        "sensor",
+        Arc::new(
+            MockProvider::new("sensor", Effect::Operational)
+                .with_execute_result(Ok(Value::String("projected".to_string()))),
+        ),
+    );
+    let binding = CapabilityBinding::host_provider(
+        CapabilityBindingId::new(),
+        "sensor",
+        CapabilityInterfaceId::new("Sensor"),
+        "sensor",
+        vec!["sensor.read".to_string()],
+    );
+    let binding_id = binding.id;
+    runtime_state
+        .admit_capability_binding(binding)
+        .await
+        .expect("binding admission succeeds");
+
+    let mut call_ctx = Context::new()
+        .with_runtime_state(runtime_state)
+        .with_admitted_capability_bindings(vec![binding_id])
+        .with_act_env(act_env);
+    call_ctx.set("act".to_string(), result);
+    let applied = eval_expr(
+        &Expr::Call {
+            func: "act".into(),
+            module: None,
+            arguments: vec![Expr::Literal(Value::ActEnvToken)],
+        },
+        &call_ctx,
+    )
+    .expect("admitted sync invoke should use projected runtime provider");
+
+    assert_eq!(
+        applied,
+        Value::List(Box::new(vec![
+            Value::ActEnvToken,
+            Value::String("projected".to_string())
+        ]))
+    );
+}
+
+#[tokio::test]
 async fn registered_provider_without_admitted_binding_cannot_execute_through_invoke_fallback() {
     let ctx = Context::new();
     let result =
@@ -162,9 +221,9 @@ async fn registered_provider_without_admitted_binding_cannot_execute_through_inv
     );
 }
 
-#[tokio::test]
-async fn provider_in_act_env_without_runtime_state_binding_cannot_execute_through_invoke_fallback()
-{
+async fn assert_provider_in_act_env_without_runtime_state_binding_is_denied(
+    evaluate: impl AsyncFnOnce(&Expr, &Context) -> Result<Value, ash_interp::EvalError>,
+) {
     let ctx = Context::new();
     let result =
         eval_expr(&invoke_expr_for("sensor", "read"), &ctx).expect("invoke should dispatch");
@@ -178,10 +237,13 @@ async fn provider_in_act_env_without_runtime_state_binding_cannot_execute_throug
         ash_interp::PolicyEvaluator::new(),
         ash_core::Provenance::new(),
     );
+    let runtime_state = RuntimeState::new();
 
-    let mut call_ctx = Context::new().with_act_env(act_env);
+    let mut call_ctx = Context::new()
+        .with_runtime_state(runtime_state)
+        .with_act_env(act_env);
     call_ctx.set("act".to_string(), result);
-    let applied = eval_expr(
+    let applied = evaluate(
         &Expr::Call {
             func: "act".into(),
             module: None,
@@ -189,6 +251,7 @@ async fn provider_in_act_env_without_runtime_state_binding_cannot_execute_throug
         },
         &call_ctx,
     )
+    .await
     .expect_err("ActEnv provider registration without runtime admission must not grant authority");
     let message = applied.to_string();
     assert!(
@@ -197,6 +260,24 @@ async fn provider_in_act_env_without_runtime_state_binding_cannot_execute_throug
             && message.contains("sensor"),
         "diagnostic should distinguish authority-boundary admission failure: {message}"
     );
+}
+
+#[tokio::test]
+async fn provider_in_act_env_without_runtime_state_binding_cannot_execute_through_invoke_fallback()
+{
+    assert_provider_in_act_env_without_runtime_state_binding_is_denied(async |expr, ctx| {
+        eval_expr(expr, ctx)
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn provider_in_act_env_without_runtime_state_binding_cannot_execute_through_async_invoke_fallback()
+ {
+    assert_provider_in_act_env_without_runtime_state_binding_is_denied(async |expr, ctx| {
+        eval_expr_async(expr, ctx).await
+    })
+    .await;
 }
 
 #[test]

@@ -195,10 +195,44 @@ impl ExecutionEffectSummary {
 #[derive(Debug, Clone)]
 pub struct ExecutionRecord {
     phase: ExecutionPhase,
+    admission: ExecutionAdmissionFacts,
     obligations: ExecutionObligationState,
     provenance: Provenance,
     trace: Vec<TraceEvent>,
     effects: ExecutionEffectSummary,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct ExecutionAdmissionFacts {
+    capability_binding_grants: Vec<String>,
+    resource_grants: Vec<String>,
+    action_grants: Vec<String>,
+}
+
+impl ExecutionAdmissionFacts {
+    pub fn new(
+        capability_binding_grants: Vec<String>,
+        resource_grants: Vec<String>,
+        action_grants: Vec<String>,
+    ) -> Self {
+        Self {
+            capability_binding_grants,
+            resource_grants,
+            action_grants,
+        }
+    }
+
+    pub fn capability_binding_grants(&self) -> &[String] {
+        &self.capability_binding_grants
+    }
+
+    pub fn resource_grants(&self) -> &[String] {
+        &self.resource_grants
+    }
+
+    pub fn action_grants(&self) -> &[String] {
+        &self.action_grants
+    }
 }
 
 #[allow(dead_code)]
@@ -283,6 +317,7 @@ impl ExecutionRecord {
     pub fn new(provenance: Provenance) -> Self {
         Self {
             phase: ExecutionPhase::Running,
+            admission: ExecutionAdmissionFacts::default(),
             obligations: ExecutionObligationState::default(),
             provenance,
             trace: Vec::new(),
@@ -330,6 +365,7 @@ impl ExecutionRecord {
 
         Self {
             phase: ExecutionPhase::Terminal(terminal),
+            admission: ExecutionAdmissionFacts::default(),
             obligations,
             provenance,
             trace,
@@ -339,6 +375,10 @@ impl ExecutionRecord {
 
     pub fn phase(&self) -> &ExecutionPhase {
         &self.phase
+    }
+
+    pub fn admission(&self) -> &ExecutionAdmissionFacts {
+        &self.admission
     }
 
     pub fn obligations(&self) -> &ExecutionObligationState {
@@ -557,6 +597,13 @@ impl ExecutionRecorder {
             .lock()
             .expect("execution recorder mutex should not be poisoned")
             .obligations = ExecutionObligationState::from_context(ctx);
+    }
+
+    pub(crate) fn record_admission_facts(&self, admission: ExecutionAdmissionFacts) {
+        self.inner
+            .lock()
+            .expect("execution recorder mutex should not be poisoned")
+            .admission = admission;
     }
 
     pub(crate) fn record_effect(&self, effect: Effect) {

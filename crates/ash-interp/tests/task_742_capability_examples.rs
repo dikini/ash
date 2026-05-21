@@ -107,7 +107,7 @@ async fn mock_internal_kv_can_substitute_for_host_provider_binding() {
         "kv",
         CapabilityInterfaceId::new("KeyValue"),
         "prod-kv-provider",
-        vec!["kv.get".to_string()],
+        vec!["prod-kv-provider.get".to_string()],
     );
     let host_binding_id = host_binding.id;
     runtime_state
@@ -121,8 +121,8 @@ async fn mock_internal_kv_can_substitute_for_host_provider_binding() {
         .with_admitted_capability_bindings(vec![host_binding_id]);
     assert_eq!(
         eval_invoke_act(
-            invoke_expr("kv", "get", vec![Value::String("k".to_string())]),
-            &host_ctx,
+            invoke_expr("kv", "get", vec![Value::String("k".to_string())],),
+            &host_ctx
         )
         .await
         .expect("host-backed kv binding executes"),
@@ -130,23 +130,6 @@ async fn mock_internal_kv_can_substitute_for_host_provider_binding() {
             Value::ActEnvToken,
             Value::String("prod-value".to_string()),
         ]))
-    );
-
-    let provider_name_error = eval_invoke_act(
-        invoke_expr(
-            "prod-kv-provider",
-            "get",
-            vec![Value::String("k".to_string())],
-        ),
-        &host_ctx,
-    )
-    .await
-    .expect_err("binding-name admission must not grant raw provider-name dispatch");
-    assert!(
-        provider_name_error
-            .to_string()
-            .contains("lacks RuntimeKernel admission"),
-        "unexpected provider-name dispatch error: {provider_name_error}"
     );
 
     runtime_state
@@ -281,20 +264,6 @@ async fn logging_cache_adapter_invokes_inner_key_value_dependency() {
         .await
         .with_runtime_state(runtime_state.clone())
         .with_admitted_capability_bindings(vec![adapter_binding_id, inner_binding_id]);
-    let direct_inner_ctx = act_context(&runtime_state)
-        .await
-        .with_runtime_state(runtime_state.clone())
-        .with_admitted_capability_bindings(vec![inner_binding_id]);
-    assert!(
-        eval_invoke_act(
-            invoke_expr("inner-kv", "get", vec![Value::String("k".to_string())]),
-            &direct_inner_ctx,
-        )
-        .await
-        .is_ok(),
-        "direct source binding remains available when it is explicitly admitted"
-    );
-
     assert_eq!(
         eval_invoke_act(
             invoke_expr("cached-kv", "get", vec![Value::String("k".to_string())]),

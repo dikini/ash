@@ -110,24 +110,27 @@ fn extract_process_handles(value: Value) -> Vec<ProcessHandle> {
 }
 
 async fn wait_for_terminal_children(runtime_state: &RuntimeState, handles: &[ProcessHandle]) {
-    for _ in 0..1024 {
-        let mut all_ready = true;
-        for handle in handles {
-            if runtime_state
-                .process_terminal_state(handle.process_id)
-                .await
-                .is_none()
-            {
-                all_ready = false;
+    tokio::time::timeout(std::time::Duration::from_secs(1), async {
+        loop {
+            let mut all_ready = true;
+            for handle in handles {
+                if runtime_state
+                    .process_terminal_state(handle.process_id)
+                    .await
+                    .is_none()
+                {
+                    all_ready = false;
+                    break;
+                }
+            }
+            if all_ready {
                 break;
             }
+            tokio::task::yield_now().await;
         }
-        if all_ready {
-            return;
-        }
-        tokio::task::yield_now().await;
-    }
-    panic!("child processes did not reach terminal state within bounded scheduler yields");
+    })
+    .await
+    .expect("child processes did not reach terminal state within bounded wall-clock time");
 }
 
 #[tokio::test]

@@ -1,6 +1,6 @@
 # TASK-935: Shared RuntimeKernel verified artifact builder
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -60,14 +60,14 @@ commands:
   - cargo fmt --check
   - git diff --check
 checklist:
-  - [ ] Focused RED test was observed failing for the intended reason, unless this is a docs/planning task.
-  - [ ] Focused GREEN test passes and runs non-zero tests, unless this is a docs/planning task.
-  - [ ] cargo fmt --check passes when Rust code changed.
-  - [ ] git diff --check passes.
-  - [ ] cargo check --workspace passes if shared carriers or public APIs changed.
-  - [ ] cargo clippy --workspace --all-targets --all-features -- -D warnings passes before task closeout if code changed.
-  - [ ] CHANGELOG.md updated if code/tooling/docs-policy/release-facing status changed.
-  - [ ] Codex verification reports no blockers.
+  - [x] Focused RED test was observed failing for the intended reason: a detached HEAD worktree with only the new TASK-935 tests failed with unresolved imports for `RuntimeArtifactBuildInput`, `RuntimeArtifactVerifierResult`, and `RuntimeKernelArtifactBuilder` before implementation.
+  - [x] Focused GREEN test passes and runs non-zero tests: `cargo test -p ash-core --test alpha_runtime_kernel_artifact_builder -- --nocapture` ran 2 tests; `cargo test -p ash-engine --test alpha_runtime_kernel_artifact_builder -- --nocapture` ran 2 tests.
+  - [x] cargo fmt --check passes when Rust code changed.
+  - [x] git diff --check passes.
+  - [x] cargo check --workspace passes if shared carriers or public APIs changed.
+  - [x] cargo clippy --workspace --all-targets --all-features -- -D warnings passes before task closeout if code changed.
+  - [x] CHANGELOG.md updated if code/tooling/docs-policy/release-facing status changed.
+  - [x] Codex verification reports no blockers: TASK-935 review returned APPROVE after focused tests, fmt, diff check, workspace check, and clippy.
 ```
 
 ## Dependencies for Next Task

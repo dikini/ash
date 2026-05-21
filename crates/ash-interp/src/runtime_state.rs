@@ -23,7 +23,7 @@ use crate::control_link::{
 };
 use crate::{ExecError, ExecResult};
 
-use crate::execution_record::ExecutionRecord;
+use crate::execution_record::{ExecutionAdmissionFacts, ExecutionRecord};
 use crate::process_registry::{ProcessRecord, ProcessRegistry, ProcessRegistryError};
 use crate::proxy_registry::ProxyRegistry;
 use crate::runtime_outcome_state::RuntimeOutcomeState;
@@ -222,9 +222,29 @@ impl ProviderAdmissionSurface {
     }
 }
 
-#[derive(Debug)]
+fn normalized_action_grant(provider_name: &str, grant: &str) -> String {
+    if grant == provider_name {
+        return format!("{provider_name}.*");
+    }
+    if let Some((candidate_provider, action_name)) = grant.split_once('.')
+        && candidate_provider == provider_name
+        && !action_name.is_empty()
+    {
+        return format!("{candidate_provider}.{action_name}");
+    }
+    if let Some((candidate_provider, action_name)) = grant.split_once(':')
+        && candidate_provider == provider_name
+        && !action_name.is_empty()
+    {
+        return format!("{candidate_provider}.{action_name}");
+    }
+    grant.to_string()
+}
+
+#[derive(Debug, Clone)]
 struct ProjectedProviderWrapper {
     inner: Arc<dyn CapabilityProvider>,
+    provider_name: String,
     projected_name: String,
     surface: ProviderAdmissionSurface,
 }
@@ -232,14 +252,21 @@ struct ProjectedProviderWrapper {
 impl ProjectedProviderWrapper {
     fn new(
         inner: Arc<dyn CapabilityProvider>,
+        provider_name: String,
         projected_name: String,
         surface: ProviderAdmissionSurface,
     ) -> Self {
         Self {
             inner,
+            provider_name,
             projected_name,
             surface,
         }
+    }
+
+    fn with_projected_name(mut self, projected_name: String) -> Self {
+        self.projected_name = projected_name;
+        self
     }
 }
 
@@ -286,7 +313,7 @@ impl ash_core::capability::CapabilityProvider for ProjectedProviderWrapper {
         if self.surface.allows_observe() {
             self.inner.observe(constraints).await
         } else {
-            Err(CapabilityError::NotAvailable(self.inner.name().to_string()))
+            Err(CapabilityError::NotAvailable(self.provider_name.clone()))
         }
     }
 
@@ -300,8 +327,7 @@ impl ash_core::capability::CapabilityProvider for ProjectedProviderWrapper {
         } else {
             Err(CapabilityError::NotAvailable(format!(
                 "{}.{}",
-                self.inner.name(),
-                action_name
+                self.provider_name, action_name
             )))
         }
     }
@@ -603,10 +629,6 @@ impl RuntimeState {
                         ))
                     })?;
                     values.insert(name.clone(), Value::String(name.clone()));
-                    values.insert(
-                        format!("__ash_capability_dependency_alias:{name}"),
-                        Value::String(source.name.clone()),
-                    );
                     admitted_capability_dependencies.push(*binding_id);
 
                     let CapabilityBindingKind::HostProvider {
@@ -628,29 +650,53 @@ impl RuntimeState {
                     let provider = providers
                         .get(provider_name)
                         .ok_or_else(|| ExecError::CapabilityNotAvailable(provider_name.clone()))?;
+                    let mut dependency_capabilities = admitted_capabilities.clone();
+                    if source.name != *provider_name {
+                        dependency_capabilities.extend(admitted_capabilities.iter().filter_map(
+                            |grant| {
+                                grant
+                                    .strip_prefix(&format!("{}.", source.name))
+                                    .map(|action| format!("{provider_name}.{action}"))
+                                    .or_else(|| {
+                                        grant
+                                            .strip_prefix(&format!("{}:", source.name))
+                                            .map(|action| format!("{provider_name}:{action}"))
+                                    })
+                            },
+                        ));
+                    }
                     let surface = ProviderAdmissionSurface::from_capabilities(
                         provider_name,
-                        admitted_capabilities,
+                        &dependency_capabilities,
                     )
-                    .or_else(|| {
-                        ProviderAdmissionSurface::from_capabilities(name, admitted_capabilities)
-                    })
-                    .or_else(|| {
-                        ProviderAdmissionSurface::from_capabilities(
-                            &source.name,
-                            admitted_capabilities,
-                        )
-                    })
                     .ok_or_else(|| {
                         ExecError::InvalidRuntimeState(format!(
                             "capability dependency '{name}' exposes no admitted provider surface"
                         ))
                     })?;
-                    registry.register(Box::new(ProjectedProviderWrapper::new(
+                    let wrapper = ProjectedProviderWrapper::new(
                         provider.clone(),
+                        provider_name.clone(),
                         source.name.clone(),
                         surface,
-                    )));
+                    );
+                    registry.register(Box::new(wrapper.clone()));
+                    if source.name != *provider_name {
+                        registry.register(Box::new(
+                            wrapper.clone().with_projected_name(provider_name.clone()),
+                        ));
+                    }
+                    if name != &source.name && name != provider_name {
+                        registry.register(Box::new(wrapper.with_projected_name(name.clone())));
+                    }
+                    values.insert(
+                        format!("__ash_capability_dependency_alias:{name}"),
+                        Value::String(name.clone()),
+                    );
+                    values.insert(
+                        format!("__ash_capability_dependency_local:{name}"),
+                        Value::Bool(true),
+                    );
                 }
                 CapabilityBindingDependency::Resource { .. } => {}
                 CapabilityBindingDependency::Config { name, value } => {
@@ -926,6 +972,61 @@ impl RuntimeState {
         CapabilityContext::with_registry(registry)
     }
 
+    /// Create a BehaviourContext backed by runtime capability providers.
+    pub async fn create_behaviour_context(&self) -> crate::behaviour::BehaviourContext {
+        use crate::behaviour::{BehaviourContext, BehaviourProvider, BehaviourRegistry};
+        use crate::typed_provider::TypedBehaviourProvider;
+        use ash_typeck::{Type, TypeVar};
+
+        struct RuntimeProviderBehaviour {
+            provider: Arc<dyn CapabilityProvider>,
+            capability: String,
+            channel: String,
+        }
+
+        #[async_trait::async_trait]
+        impl BehaviourProvider for RuntimeProviderBehaviour {
+            fn capability_name(&self) -> &str {
+                &self.capability
+            }
+
+            fn channel_name(&self) -> &str {
+                &self.channel
+            }
+
+            async fn sample(&self, constraints: &[ash_core::Constraint]) -> ExecResult<Value> {
+                self.provider
+                    .observe(constraints)
+                    .await
+                    .map_err(|error| ExecError::ExecutionFailed(error.to_string()))
+            }
+        }
+
+        let mut registry = BehaviourRegistry::new();
+        let providers = self
+            .providers
+            .lock()
+            .expect("provider registry mutex poisoned");
+
+        for (name, provider) in providers.iter() {
+            if let Some((capability, channel)) = name.split_once(':')
+                && !capability.is_empty()
+                && !channel.is_empty()
+            {
+                registry.register(TypedBehaviourProvider::new(
+                    RuntimeProviderBehaviour {
+                        provider: provider.clone(),
+                        capability: capability.to_string(),
+                        channel: channel.to_string(),
+                    },
+                    Type::Var(TypeVar::fresh()),
+                ));
+            }
+        }
+
+        BehaviourContext::with_registry(registry)
+    }
+
     /// Create a CapabilityContext projected to the admitted provider/action surface.
     pub async fn create_projected_capability_context(
         &self,
@@ -949,6 +1050,7 @@ impl RuntimeState {
 
             let wrapper = Box::new(ProjectedProviderWrapper::new(
                 provider.clone(),
+                name.clone(),
                 name.clone(),
                 surface,
             ));
@@ -1446,7 +1548,7 @@ impl RuntimeState {
         use crate::capability::{CapabilityContext, CapabilityRegistry};
 
         let bindings = self.capability_bindings.lock().await;
-        let mut projected_surfaces: Vec<(String, String, Vec<String>)> = Vec::new();
+        let mut projected_surfaces: HashMap<String, (String, Vec<String>)> = HashMap::new();
 
         for binding_id in binding_ids {
             let Some(binding) = bindings.get(binding_id) else {
@@ -1460,11 +1562,11 @@ impl RuntimeState {
                 admitted_capabilities,
             } = &binding.kind
             {
-                projected_surfaces.push((
-                    provider_name.clone(),
-                    binding.name.clone(),
-                    admitted_capabilities.clone(),
-                ));
+                projected_surfaces
+                    .entry(provider_name.clone())
+                    .or_insert_with(|| (binding.name.clone(), Vec::new()))
+                    .1
+                    .extend(admitted_capabilities.iter().cloned());
             }
         }
         drop(bindings);
@@ -1475,29 +1577,89 @@ impl RuntimeState {
             .expect("provider registry mutex poisoned");
         let mut registry = CapabilityRegistry::new();
 
-        for (provider_name, binding_name, admitted_capabilities) in projected_surfaces {
+        for (provider_name, (projected_name, mut admitted_capabilities)) in projected_surfaces {
             let Some(provider) = providers.get(&provider_name) else {
                 return Err(ExecError::CapabilityNotAvailable(provider_name));
             };
+            admitted_capabilities.sort();
+            admitted_capabilities.dedup();
             let Some(surface) =
                 ProviderAdmissionSurface::from_capabilities(&provider_name, &admitted_capabilities)
-                    .or_else(|| {
-                        ProviderAdmissionSurface::from_capabilities(
-                            &binding_name,
-                            &admitted_capabilities,
-                        )
-                    })
             else {
                 continue;
             };
-            registry.register(Box::new(ProjectedProviderWrapper::new(
+            let wrapper = ProjectedProviderWrapper::new(
                 provider.clone(),
-                binding_name,
+                provider_name.clone(),
+                projected_name.clone(),
                 surface,
-            )));
+            );
+            registry.register(Box::new(wrapper.clone()));
+            if projected_name != provider_name {
+                registry.register(Box::new(wrapper.with_projected_name(provider_name.clone())));
+            }
         }
 
         Ok(CapabilityContext::with_registry(registry))
+    }
+
+    /// Return all currently admitted capability binding identities.
+    pub async fn admitted_capability_binding_ids(&self) -> Vec<CapabilityBindingId> {
+        let mut binding_ids = self
+            .capability_bindings
+            .lock()
+            .await
+            .keys()
+            .copied()
+            .collect::<Vec<_>>();
+        binding_ids.sort_unstable_by_key(|binding_id| binding_id.0);
+        binding_ids
+    }
+
+    /// Build audit facts for the projected alpha admission grant set.
+    pub async fn execution_admission_facts(
+        &self,
+        binding_ids: &[CapabilityBindingId],
+    ) -> ExecutionAdmissionFacts {
+        let bindings = self.capability_bindings.lock().await;
+        let mut capability_binding_grants = Vec::new();
+        let mut resource_grants = Vec::new();
+        let mut action_grants = Vec::new();
+
+        for binding_id in binding_ids {
+            let Some(binding) = bindings.get(binding_id) else {
+                continue;
+            };
+            capability_binding_grants.push(format!("{binding_id:?}"));
+            match &binding.kind {
+                CapabilityBindingKind::HostProvider {
+                    provider_name,
+                    admitted_capabilities,
+                } => {
+                    for grant in admitted_capabilities {
+                        action_grants.push(normalized_action_grant(provider_name, grant));
+                    }
+                }
+                CapabilityBindingKind::Implementation { .. } => {
+                    for dependency in &binding.dependencies {
+                        if let CapabilityBindingDependency::Resource { resource_id, .. } =
+                            dependency
+                        {
+                            resource_grants.push(format!("{resource_id:?}"));
+                        }
+                    }
+                }
+            }
+        }
+
+        capability_binding_grants.sort();
+        capability_binding_grants.dedup();
+        resource_grants.sort();
+        resource_grants.dedup();
+        action_grants.sort();
+        action_grants.dedup();
+
+        ExecutionAdmissionFacts::new(capability_binding_grants, resource_grants, action_grants)
     }
 
     pub(crate) fn control_registry(&self) -> Arc<AsyncMutex<ControlLinkRegistry>> {

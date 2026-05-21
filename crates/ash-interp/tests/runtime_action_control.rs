@@ -1,7 +1,7 @@
 use ash_core::capability::CapabilityError;
 use ash_core::{
-    CapabilityBinding, CapabilityBindingId, Constraint, ControlLink, Effect, Expr, Guard, Pattern,
-    Provenance, Value, Workflow, WorkflowId,
+    CapabilityBinding, CapabilityBindingId, CapabilityInterfaceId, Constraint, ControlLink, Effect,
+    Expr, Guard, Pattern, Provenance, Value, Workflow, WorkflowId,
 };
 use ash_interp::RuntimeState;
 use ash_interp::act_env::ActEnv;
@@ -51,19 +51,28 @@ fn execution_contexts() -> (
     )
 }
 
-async fn admit_sensor_binding(runtime_state: &RuntimeState) -> CapabilityBindingId {
-    let binding = CapabilityBinding::host_provider(
+fn host_binding(name: &str, provider_name: &str, admitted: Vec<&str>) -> CapabilityBinding {
+    CapabilityBinding::host_provider(
         CapabilityBindingId::new(),
-        "sensor",
-        ash_core::CapabilityInterfaceId::new("Sensor"),
-        "sensor",
-        vec!["sensor.read".to_string()],
-    );
+        name,
+        CapabilityInterfaceId::new("ActionControl"),
+        provider_name,
+        admitted.into_iter().map(str::to_string).collect(),
+    )
+}
+
+async fn admit_host_binding(
+    runtime_state: &RuntimeState,
+    name: &str,
+    provider_name: &str,
+    admitted: Vec<&str>,
+) -> CapabilityBindingId {
+    let binding = host_binding(name, provider_name, admitted);
     let binding_id = binding.id;
     runtime_state
         .admit_capability_binding(binding)
         .await
-        .expect("sensor host binding should admit");
+        .expect("test host binding admission should succeed");
     binding_id
 }
 
@@ -250,10 +259,17 @@ async fn runtime_state_with_blocking_worker(
 }
 
 async fn spawn_real_child_control(runtime_state: &RuntimeState) -> ash_core::ControlLink {
+    spawn_real_child_control_with_admitted(runtime_state, Vec::new()).await
+}
+
+async fn spawn_real_child_control_with_admitted(
+    runtime_state: &RuntimeState,
+    admitted_bindings: Vec<CapabilityBindingId>,
+) -> ash_core::ControlLink {
     let (ctx, cap_ctx, policy_eval, behaviour_ctx) = execution_contexts();
     let control = execute_workflow_with_behaviour_in_state(
         &spawn_and_return_control(),
-        ctx,
+        ctx.with_admitted_capability_bindings(admitted_bindings),
         &cap_ctx,
         &policy_eval,
         &behaviour_ctx,
@@ -437,8 +453,15 @@ async fn spawned_control_link_is_not_eagerly_terminated_before_supervisor_can_us
     let runtime_state =
         runtime_state_with_blocking_worker(started_block.clone(), release_rx, block_calls.clone())
             .await;
+    let binding_id = admit_host_binding(
+        &runtime_state,
+        "workflow-block",
+        "block",
+        vec!["block.block"],
+    )
+    .await;
 
-    let link = spawn_real_child_control(&runtime_state).await;
+    let link = spawn_real_child_control_with_admitted(&runtime_state, vec![binding_id]).await;
 
     timeout(Duration::from_millis(250), started_block.notified())
         .await
@@ -465,7 +488,14 @@ async fn kill_invalidates_future_control_operations() {
     let runtime_state =
         runtime_state_with_blocking_worker(started_block.clone(), release_rx, block_calls.clone())
             .await;
-    let link = spawn_real_child_control(&runtime_state).await;
+    let binding_id = admit_host_binding(
+        &runtime_state,
+        "workflow-block",
+        "block",
+        vec!["block.block"],
+    )
+    .await;
+    let link = spawn_real_child_control_with_admitted(&runtime_state, vec![binding_id]).await;
 
     timeout(Duration::from_millis(250), started_block.notified())
         .await
@@ -544,8 +574,21 @@ async fn pause_blocks_real_spawned_child_progress_until_resume() {
                 started_mark.clone(),
             )),
         );
+    let block_binding_id = admit_host_binding(
+        &runtime_state,
+        "workflow-block",
+        "block",
+        vec!["block.block"],
+    )
+    .await;
+    let mark_binding_id =
+        admit_host_binding(&runtime_state, "workflow-mark", "mark", vec!["mark.mark"]).await;
 
-    let link = spawn_real_child_control(&runtime_state).await;
+    let link = spawn_real_child_control_with_admitted(
+        &runtime_state,
+        vec![block_binding_id, mark_binding_id],
+    )
+    .await;
 
     timeout(Duration::from_millis(250), started_block.notified())
         .await
@@ -628,8 +671,21 @@ async fn kill_stops_real_spawned_child_before_later_steps_and_keeps_kill_seal() 
                 started_mark.clone(),
             )),
         );
+    let block_binding_id = admit_host_binding(
+        &runtime_state,
+        "workflow-block",
+        "block",
+        vec!["block.block"],
+    )
+    .await;
+    let mark_binding_id =
+        admit_host_binding(&runtime_state, "workflow-mark", "mark", vec!["mark.mark"]).await;
 
-    let link = spawn_real_child_control(&runtime_state).await;
+    let link = spawn_real_child_control_with_admitted(
+        &runtime_state,
+        vec![block_binding_id, mark_binding_id],
+    )
+    .await;
 
     timeout(Duration::from_millis(250), started_block.notified())
         .await
@@ -793,7 +849,13 @@ async fn spawned_child_success_retains_provenance_contents() {
                 .with_execute_result(Ok(Value::String("deployed".to_string()))),
         ),
     );
-    let link = spawn_real_child_control(&runtime_state).await;
+    let binding = host_binding("workflow-deploy", "deploy", vec!["deploy.deploy"]);
+    let binding_id = binding.id;
+    runtime_state
+        .admit_capability_binding(binding)
+        .await
+        .expect("spawned child authority should be admitted explicitly");
+    let link = spawn_real_child_control_with_admitted(&runtime_state, vec![binding_id]).await;
 
     let completion = wait_for_retained_completion(&runtime_state, &link).await;
 
@@ -818,6 +880,53 @@ async fn spawned_child_success_retains_provenance_contents() {
 }
 
 #[tokio::test]
+async fn spawned_child_without_inherited_grant_cannot_gain_provider_authority() {
+    let calls = Arc::new(AtomicUsize::new(0));
+    let started = Arc::new(Notify::new());
+    let runtime_state = runtime_state_with_registered_worker(Workflow::Act {
+        provider_name: "deploy".to_string(),
+        action_name: "deploy".to_string(),
+        arguments: vec![],
+        guard: Guard::Always,
+        provenance: ash_core::Provenance::new(),
+        result_name: None,
+        continuation: Box::new(Workflow::Done),
+    })
+    .await
+    .with_provider(
+        "deploy",
+        Arc::new(CountingActionProvider::new(
+            "deploy",
+            calls.clone(),
+            started.clone(),
+        )),
+    );
+
+    let link = spawn_real_child_control(&runtime_state).await;
+    let completion = wait_for_retained_completion(&runtime_state, &link).await;
+
+    assert_eq!(
+        calls.load(Ordering::SeqCst),
+        0,
+        "registered provider existence must not grant spawned child authority"
+    );
+    assert_eq!(
+        completion.outcome_state(),
+        RuntimeOutcomeState::ExecutionFailure
+    );
+    let terminal = completion
+        .terminal_result()
+        .expect("child should retain a terminal result");
+    let Err(error) = terminal else {
+        panic!("child should fail at the authority boundary, got {terminal:?}");
+    };
+    assert!(
+        error.to_string().contains("deploy"),
+        "child failure should identify the denied provider/action: {error}"
+    );
+}
+
+#[tokio::test]
 async fn spawned_child_failure_retains_provenance_contents() {
     let runtime_state = runtime_state_with_registered_worker(Workflow::Act {
         provider_name: "deploy".to_string(),
@@ -837,7 +946,13 @@ async fn spawned_child_failure_retains_provenance_contents() {
             )),
         ),
     );
-    let link = spawn_real_child_control(&runtime_state).await;
+    let binding = host_binding("workflow-deploy", "deploy", vec!["deploy.deploy"]);
+    let binding_id = binding.id;
+    runtime_state
+        .admit_capability_binding(binding)
+        .await
+        .expect("spawned child authority should be admitted explicitly");
+    let link = spawn_real_child_control_with_admitted(&runtime_state, vec![binding_id]).await;
 
     let completion = wait_for_retained_completion(&runtime_state, &link).await;
 
@@ -957,12 +1072,12 @@ async fn workflow_can_transport_and_reapply_effectful_closures() {
                 .with_execute_result(Ok(Value::String("read-result".to_string()))),
         ),
     );
-
-    let binding_id = admit_sensor_binding(&runtime_state).await;
+    let binding_id =
+        admit_host_binding(&runtime_state, "sensor", "sensor", vec!["sensor.read"]).await;
 
     let result = execute_workflow_with_behaviour_in_state(
         &workflow,
-        ctx.with_admitted_capability_bindings(vec![binding_id]),
+        ctx,
         &cap_ctx,
         &policy_eval,
         &behaviour_ctx,
@@ -983,7 +1098,7 @@ async fn workflow_can_transport_and_reapply_effectful_closures() {
         Provenance::new(),
     )
     .await
-    .expect("admitted sensor binding should project into the hidden ActEnv");
+    .expect("act env projection should succeed");
     let forced = eval_expr(
         &Expr::FnApply {
             func: Box::new(Expr::Literal(result)),

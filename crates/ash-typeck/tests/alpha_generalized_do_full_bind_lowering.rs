@@ -122,6 +122,25 @@ fn int_lit(value: i64) -> ash_parser::surface::Expr {
     ash_parser::surface::Expr::Literal(Literal::Int(value))
 }
 
+fn string_lit(value: &str) -> ash_parser::surface::Expr {
+    ash_parser::surface::Expr::Literal(Literal::String(value.into()))
+}
+
+fn fail_expr(payload: ash_parser::surface::Expr) -> ash_parser::surface::Expr {
+    ash_parser::surface::Expr::Fail {
+        payload: Box::new(payload),
+        span: Span::default(),
+    }
+}
+
+fn let_stmt(name: &str, value: ash_parser::surface::Expr) -> DoStmt {
+    DoStmt::Let {
+        name: name.into(),
+        value: Box::new(value),
+        span: Span::default(),
+    }
+}
+
 fn bind_stmt(name: &str, value: ash_parser::surface::Expr) -> DoStmt {
     DoStmt::Bind {
         name: name.into(),
@@ -289,6 +308,39 @@ fn do_result_bind_lowers_through_monad_bind_evidence() {
         CoreExpr::Call { ref func, module: Some(ref module), ref arguments }
             if func == "and_then" && module == "result" && arguments.len() == 2
     ));
+    assert_no_hidden_or_generic_bind(&elaborated.expr);
+}
+
+#[test]
+fn do_result_fail_body_preserves_monad_evidence_and_concrete_result_type() {
+    let env = env_with_monad_result_intrinsics();
+    let expr = do_block(
+        target("Result", vec![hole(), named_type("E")]),
+        vec![
+            bind_stmt("value", var("parsed")),
+            let_stmt("_bottom", fail_expr(string_lit("boom"))),
+            ret(var("value")),
+        ],
+    );
+
+    let elaborated =
+        elaborate_typed_do_block(&env, &expr).expect("do:Result<_, E> fail body lowers");
+
+    assert_eq!(
+        elaborated.ty,
+        computation_type("Result", vec![Type::Int, computation_type("E", Vec::new())],)
+    );
+    let evidence = elaborated
+        .selected_evidence
+        .expect("selected Result evidence should be preserved");
+    assert_eq!(
+        evidence.bind_op,
+        SelectedDoOperation::EvidenceIntrinsic {
+            evidence_key: "Monad<Result<_, E>>".to_string(),
+            method: "bind".to_string(),
+            shim: QualifiedName::qualified(vec!["result".to_string()], "and_then"),
+        }
+    );
     assert_no_hidden_or_generic_bind(&elaborated.expr);
 }
 

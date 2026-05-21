@@ -1,6 +1,6 @@
 # TASK-939: Policy-profile grant enforcement across runtime execution
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -63,14 +63,14 @@ commands:
   - cargo fmt --check
   - git diff --check
 checklist:
-  - [ ] Focused RED test was observed failing for the intended reason, unless this is a docs/planning task.
-  - [ ] Focused GREEN test passes and runs non-zero tests, unless this is a docs/planning task.
-  - [ ] cargo fmt --check passes when Rust code changed.
-  - [ ] git diff --check passes.
-  - [ ] cargo check --workspace passes if shared carriers or public APIs changed.
-  - [ ] cargo clippy --workspace --all-targets --all-features -- -D warnings passes before task closeout if code changed.
-  - [ ] CHANGELOG.md updated if code/tooling/docs-policy/release-facing status changed.
-  - [ ] Codex verification reports no blockers.
+  - [x] Focused RED test was observed failing for the intended reason, unless this is a docs/planning task.
+  - [x] Focused GREEN test passes and runs non-zero tests, unless this is a docs/planning task.
+  - [x] cargo fmt --check passes when Rust code changed.
+  - [x] git diff --check passes.
+  - [x] cargo check --workspace passes if shared carriers or public APIs changed.
+  - [x] cargo clippy --workspace --all-targets --all-features -- -D warnings passes before task closeout if code changed.
+  - [x] CHANGELOG.md updated if code/tooling/docs-policy/release-facing status changed.
+  - [x] Codex verification reports no blockers.
 ```
 
 ## Dependencies for Next Task
@@ -79,4 +79,36 @@ Produces Phase 123 evidence for downstream closeout and status reconciliation.
 
 ## Notes
 
-Do not mark this task complete until its own focused evidence, status surfaces, and Codex verification are reconciled.
+Completed on 2026-05-21.
+
+Implemented the minimal alpha policy-profile grant model available in the current runtime substrate:
+
+- capability binding grants are projected from admitted `CapabilityBindingId` values before execution;
+- host-provider bindings project provider/action surfaces such as `deploy.plan` and fail closed for ungranted actions such as `deploy.apply`;
+- spawned child workflow execution rebuilds capability and Act contexts from inherited admitted binding IDs, so a child cannot gain provider authority from provider registry existence alone;
+- execution records carry admission facts for projected capability bindings, action grants, and resource IDs reachable through implementation binding dependencies.
+
+Honest limitation: TASK-939 records resource grant facts from existing resource binding/dependency metadata, but it does not add a full first-class resource operation enforcement substrate. Existing process split/join resource policy remains the available resource enforcement path.
+
+Focused RED evidence:
+
+- `cargo test -p ash-interp --test task_736_capability_binding_admission -- --nocapture` failed before implementation with `ungranted action must fail closed even when provider is registered: String("leaked")`.
+- `cargo test -p ash-interp --test runtime_action_control spawned_child_without_inherited_grant_cannot_gain_provider_authority -- --nocapture` failed before implementation with `registered provider existence must not grant spawned child authority` and provider call count `left: 1 right: 0`.
+
+Focused GREEN evidence:
+
+- `cargo test -p ash-interp --test task_736_capability_binding_admission -- --nocapture` passed: 14 passed, 0 failed.
+- `cargo test -p ash-interp --test runtime_action_control -- --nocapture` passed: 18 passed, 0 failed.
+- `cargo test -p ash-interp --test invoke_runtime_dispatch -- --nocapture` passed: 7 passed, 0 failed.
+- `RUSTC_WRAPPER= CARGO_BUILD_JOBS=1 PROPTEST_CASES=2048 cargo test -p ash-interp --test task_712_par_scatter_child_admission proc_scatter_preserves_input_order -- --test-threads=1 --nocapture` passed: 1 passed, 0 failed.
+
+Checklist:
+
+- [x] Focused RED test was observed failing for the intended reason.
+- [x] Focused GREEN tests pass and run non-zero tests.
+- [x] `cargo fmt --check` passes when Rust code changed.
+- [x] `git diff --check` passes.
+- [x] `cargo check --workspace` passes.
+- [x] `cargo clippy --workspace --all-targets --all-features -- -D warnings` passes before task closeout if code changed.
+- [x] `CHANGELOG.md` updated.
+- [x] Codex verification reports no blockers.

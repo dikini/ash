@@ -98,15 +98,13 @@ assert_output_not_contains() {
 }
 
 repo="$(make_repo)"
-(
-  cd "$repo"
-  clean_git_env bash -c '
-    set -euo pipefail
-    source scripts/gate-helpers.sh
-    git_dir="$(git rev-parse --git-dir)"
-    GATE_MARKER_TREE="$(git write-tree)" gate_write_marker "$git_dir/.pre-commit-gate.ok"
-  '
-)
+clean_git_env bash -c '
+  set -euo pipefail
+  cd "$1"
+  source scripts/gate-helpers.sh
+  git_dir="$(git rev-parse --git-dir)"
+  GATE_MARKER_TREE="$(git write-tree)" gate_write_marker "$git_dir/.pre-commit-gate.ok"
+' _ "$repo"
 if ! run_script "$repo" "$tmp/fresh-marker.out"; then
   echo "FAIL: full gate with fresh marker failed" >&2
   cat "$tmp/fresh-marker.out" >&2
@@ -118,17 +116,15 @@ assert_output_contains fresh-marker "RUST_TESTS_RAN --workspace --all-targets"
 assert_output_contains fresh-marker "FUZZ_RAN"
 
 repo="$(make_repo)"
-(
-  cd "$repo"
-  clean_git_env bash -c '
-    set -euo pipefail
-    source scripts/gate-helpers.sh
-    git_dir="$(git rev-parse --git-dir)"
-    GATE_MARKER_TREE="$(git write-tree)" gate_write_marker "$git_dir/.pre-commit-gate.ok"
-    printf "changed\n" >>CHANGELOG.md
-    git add CHANGELOG.md
-  '
-)
+clean_git_env bash -c '
+  set -euo pipefail
+  cd "$1"
+  source scripts/gate-helpers.sh
+  git_dir="$(git rev-parse --git-dir)"
+  GATE_MARKER_TREE="$(git write-tree)" gate_write_marker "$git_dir/.pre-commit-gate.ok"
+  printf "changed\n" >>CHANGELOG.md
+  git add CHANGELOG.md
+' _ "$repo"
 if ! run_script "$repo" "$tmp/stale-marker.out"; then
   echo "FAIL: full gate with stale marker failed" >&2
   cat "$tmp/stale-marker.out" >&2

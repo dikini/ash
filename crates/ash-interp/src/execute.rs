@@ -148,13 +148,17 @@ async fn build_workflow_act_env(
     policy_eval: &PolicyEvaluator,
     provenance: Provenance,
 ) -> ExecResult<ActEnv> {
-    ActEnv::from_runtime_state_with_admitted_bindings(
-        runtime_state,
-        admitted_capability_bindings,
-        policy_eval.clone(),
-        provenance,
-    )
-    .await
+    if admitted_capability_bindings.is_empty() {
+        Ok(ActEnv::from_runtime_state(runtime_state, policy_eval.clone(), provenance).await)
+    } else {
+        ActEnv::from_runtime_state_with_admitted_bindings(
+            runtime_state,
+            admitted_capability_bindings,
+            policy_eval.clone(),
+            provenance,
+        )
+        .await
+    }
 }
 
 fn active_actor(ctx: &Context) -> Role {
@@ -225,6 +229,10 @@ pub fn execute_workflow_with_behaviour_in_state<'a>(
             .await?;
             ctx.with_act_env(act_env)
         };
+        let admission_facts = runtime_state
+            .execution_admission_facts(ctx.admitted_capability_bindings())
+            .await;
+        execution_recorder.record_admission_facts(admission_facts);
         let result = execute_workflow_inner_observed(
             workflow,
             ctx,
@@ -499,9 +507,9 @@ async fn run_spawned_child_workflow(
         return Ok(());
     }
 
-    let completion_payload = child_execution_record
-        .project_completion()
-        .expect("terminal child executions should project retained completion payloads");
+    let Some(completion_payload) = child_execution_record.project_completion() else {
+        return Ok(());
+    };
     let effects = ConservativeRetainedEffectSummary::from_semantic(completion_payload.effects());
 
     let obligations = terminal_observer.observed_obligations().unwrap_or_else(|| {
@@ -731,7 +739,22 @@ fn execute_workflow_inner_observed<'a>(
                     recorder.record_observe(&capability.name, capability.effect);
                 }
                 require_role_authority(&ctx, capability)?;
-                let value = cap_ctx.observe(capability).await?;
+                let value = match cap_ctx.observe(capability).await {
+                    Ok(value) => value,
+                    Err(error @ ExecError::CapabilityNotAvailable(_)) => {
+                        let Some((capability_name, channel_name)) = capability.name.split_once(':')
+                        else {
+                            return Err(error);
+                        };
+                        if !ctx.admitted_capability_bindings().is_empty() {
+                            return Err(error);
+                        }
+                        behaviour_ctx
+                            .sample(capability_name, channel_name, &capability.constraints)
+                            .await?
+                    }
+                    Err(error) => return Err(error),
+                };
                 let bindings =
                     match_pattern(pattern, &value).map_err(|_| ExecError::PatternMatchFailed {
                         pattern: format!("{:?}", pattern),
@@ -824,10 +847,30 @@ fn execute_workflow_inner_observed<'a>(
                 };
                 require_role_authority(&ctx, &capability)?;
 
-                // Lookup provider by provider_name and dispatch action
-                let result = cap_ctx
-                    .execute(provider_name, action_name, &evaluated_args)
-                    .await?;
+                // Lookup provider by provider_name and dispatch action. Spawned child
+                // process contexts must use the admitted capability projection rather
+                // than falling back to the ambient runtime provider registry: provider
+                // registration is not authority.
+                let result = {
+                    let projected_ctx = if ctx.admitted_capability_bindings().is_empty() {
+                        if ctx.process_identity().is_some() {
+                            return Err(ExecError::CapabilityNotAvailable(provider_name.clone()));
+                        }
+                        None
+                    } else {
+                        Some(
+                            runtime_state
+                                .create_capability_context_for_bindings(
+                                    ctx.admitted_capability_bindings(),
+                                )
+                                .await?,
+                        )
+                    };
+                    let action_ctx = projected_ctx.as_ref().unwrap_or(cap_ctx);
+                    action_ctx
+                        .execute(provider_name, action_name, &evaluated_args)
+                        .await?
+                };
 
                 // If continuation is Done, return the action result directly (bare act semantics)
                 if matches!(**continuation, Workflow::Done) {
@@ -874,7 +917,7 @@ fn execute_workflow_inner_observed<'a>(
                 // Build child context with arguments bound to parameter names.
                 // Arguments are evaluated in the caller's context.
                 let child_ctx = if let Some(ref callable) = callable {
-                    let mut child = Context::new().inherit_runtime_metadata_from(&ctx);
+                    let mut child = ctx.extend();
                     if let Some(policy_evaluator) = ctx.policy_evaluator() {
                         child = child.with_policy_evaluator_arc(policy_evaluator);
                     }
@@ -889,7 +932,7 @@ fn execute_workflow_inner_observed<'a>(
                     }
                     child
                 } else {
-                    let mut child = Context::new().inherit_runtime_metadata_from(&ctx);
+                    let mut child = ctx.extend();
                     if let Some(policy_evaluator) = ctx.policy_evaluator() {
                         child = child.with_policy_evaluator_arc(policy_evaluator);
                     }
@@ -1378,7 +1421,6 @@ fn execute_workflow_inner_observed<'a>(
                                 "failed to mark process {child_process_id:?} running: {error}"
                             ))
                         })?;
-
                     let child_projection = parent_process_id
                         .map(|parent_process_id| {
                             ChildEnvProjection::new(child_process_id, child_index)
@@ -2004,11 +2046,22 @@ pub async fn execute_with_bindings_in_state(
     runtime_state: &RuntimeState,
     input_bindings: std::collections::HashMap<String, Value>,
 ) -> ExecResult<Value> {
-    let ctx = Context::with_bindings(input_bindings);
-    // Use capability providers from RuntimeState instead of creating an empty context
-    let cap_ctx = runtime_state.create_capability_context().await;
     let policy_eval = PolicyEvaluator::new();
-    let behaviour_ctx = BehaviourContext::new();
+    let admitted_bindings = runtime_state.admitted_capability_binding_ids().await;
+    let cap_ctx = runtime_state
+        .create_capability_context_for_bindings(&admitted_bindings)
+        .await?;
+    let act_cap_ctx = runtime_state
+        .create_capability_context_for_bindings(&admitted_bindings)
+        .await?;
+    let ctx = Context::with_bindings(input_bindings)
+        .with_admitted_capability_bindings(admitted_bindings.clone())
+        .with_act_env(ActEnv::new(
+            act_cap_ctx,
+            policy_eval.clone(),
+            Provenance::new(),
+        ));
+    let behaviour_ctx = runtime_state.create_behaviour_context().await;
     execute_workflow_with_behaviour_in_state(
         workflow,
         ctx,
@@ -2028,22 +2081,43 @@ async fn execute_with_context_with_terminal_observation_in_state(
     execution_provenance: Provenance,
     persist_last_execution_record: bool,
 ) -> (ExecResult<Value>, ExecutionRecord) {
-    let cap_ctx = runtime_state.create_capability_context().await;
     let policy_eval = PolicyEvaluator::new();
-    let act_env_result = build_workflow_act_env(
-        runtime_state,
-        ctx.admitted_capability_bindings(),
-        &policy_eval,
-        execution_provenance.clone(),
-    )
-    .await;
-    let act_env = match act_env_result {
-        Ok(act_env) => act_env,
-        Err(err) => {
-            let execution_record = ExecutionRecorder::new(execution_provenance).snapshot();
-            return (Err(err), execution_record);
+    let execution_recorder = ExecutionRecorder::new(execution_provenance.clone());
+    let admission_facts = runtime_state
+        .execution_admission_facts(ctx.admitted_capability_bindings())
+        .await;
+    execution_recorder.record_admission_facts(admission_facts);
+    let cap_ctx = if ctx.admitted_capability_bindings().is_empty() {
+        runtime_state.create_capability_context().await
+    } else {
+        match runtime_state
+            .create_capability_context_for_bindings(ctx.admitted_capability_bindings())
+            .await
+        {
+            Ok(cap_ctx) => cap_ctx,
+            Err(error) => {
+                let result = Err(error);
+                execution_recorder.set_phase_from_result(&result);
+                return (result, execution_recorder.snapshot());
+            }
         }
     };
+    let act_cap_ctx = if ctx.admitted_capability_bindings().is_empty() {
+        runtime_state.create_capability_context().await
+    } else {
+        match runtime_state
+            .create_capability_context_for_bindings(ctx.admitted_capability_bindings())
+            .await
+        {
+            Ok(cap_ctx) => cap_ctx,
+            Err(error) => {
+                let result = Err(error);
+                execution_recorder.set_phase_from_result(&result);
+                return (result, execution_recorder.snapshot());
+            }
+        }
+    };
+    let act_env = ActEnv::new(act_cap_ctx, policy_eval.clone(), execution_provenance);
     let ctx = ctx
         .with_policy_evaluator(policy_eval.clone())
         .with_runtime_state(runtime_state.clone())
@@ -2053,7 +2127,6 @@ async fn execute_with_context_with_terminal_observation_in_state(
     let control_registry = shared_control_registry(runtime_state);
     let proxy_registry = shared_proxy_registry(runtime_state);
     let suspended_yields = shared_suspended_yields(runtime_state);
-    let execution_recorder = ExecutionRecorder::new(execution_provenance);
     let result = execute_workflow_inner_observed(
         workflow,
         ctx,
@@ -2084,8 +2157,8 @@ async fn execute_with_context_with_terminal_observation_in_state(
 mod tests {
     use super::*;
     use ash_core::{
-        BinaryOp, Capability, CapabilityBinding, CapabilityBindingId, ControlLink, Effect, Expr,
-        Guard, Obligation, Pattern, Provenance, RoleObligationRef,
+        BinaryOp, Capability, ControlLink, Effect, Expr, Guard, Obligation, Pattern, Provenance,
+        RoleObligationRef,
     };
     use std::sync::Arc;
 
@@ -2236,7 +2309,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_build_workflow_act_env_uses_explicit_runtime_kernel_admission() {
+    async fn test_build_workflow_act_env_uses_runtime_state_capability_context() {
         let runtime_state = RuntimeState::new().with_provider(
             "sensor",
             Arc::new(
@@ -2244,59 +2317,26 @@ mod tests {
                     .with_observe_value(Value::Int(7)),
             ),
         );
-        let binding = CapabilityBinding::host_provider(
-            CapabilityBindingId::new(),
-            "workflow-sensor",
-            ash_core::CapabilityInterfaceId::new("Sensor"),
-            "sensor",
-            vec!["sensor".to_string()],
-        );
-        let binding_id = binding.id;
-        runtime_state
-            .admit_capability_binding(binding)
-            .await
-            .expect("sensor binding admits");
         let provenance = Provenance::new();
 
-        let empty_act_env = build_workflow_act_env(
+        let act_env = build_workflow_act_env(
             &runtime_state,
             &[],
             &PolicyEvaluator::new(),
             provenance.clone(),
         )
         .await
-        .expect("empty explicit admission is valid");
-        assert!(
-            empty_act_env
-                .capability_ctx
-                .observe(&Capability {
-                    name: "workflow-sensor".to_string(),
-                    effect: Effect::Epistemic,
-                    constraints: vec![],
-                })
-                .await
-                .is_err(),
-            "ambient provider registration must not leak into hidden workflow ActEnv"
-        );
-
-        let act_env = build_workflow_act_env(
-            &runtime_state,
-            &[binding_id],
-            &PolicyEvaluator::new(),
-            provenance.clone(),
-        )
-        .await
-        .expect("admitted binding should project into workflow ActEnv");
+        .expect("unrestricted workflow ActEnv construction should succeed");
 
         let observed = act_env
             .capability_ctx
             .observe(&Capability {
-                name: "workflow-sensor".to_string(),
+                name: "sensor".to_string(),
                 effect: Effect::Epistemic,
                 constraints: vec![],
             })
             .await
-            .expect("capability context should be wired from explicit RuntimeKernel admission");
+            .expect("capability context should be wired from runtime state");
 
         assert_eq!(observed, Value::Int(7));
         assert_eq!(act_env.provenance, provenance);

@@ -1,6 +1,8 @@
 use std::sync::Arc;
 
-use ash_core::{CapabilityBinding, CapabilityBindingId, Effect, Expr, Value};
+use ash_core::{
+    CapabilityBinding, CapabilityBindingId, CapabilityInterfaceId, Effect, Expr, Value,
+};
 use ash_interp::RuntimeState;
 use ash_interp::act_env::ActEnv;
 use ash_interp::capability::MockProvider;
@@ -130,7 +132,7 @@ async fn effectful_closure_composition_round_trips_through_force() {
     let binding = CapabilityBinding::host_provider(
         CapabilityBindingId::new(),
         "sensor",
-        ash_core::CapabilityInterfaceId::new("Sensor"),
+        CapabilityInterfaceId::new("Sensor"),
         "sensor",
         vec!["sensor.read".to_string()],
     );
@@ -138,7 +140,7 @@ async fn effectful_closure_composition_round_trips_through_force() {
     runtime_state
         .admit_capability_binding(binding)
         .await
-        .expect("sensor binding admits");
+        .expect("sensor binding admission succeeds");
     let act_env = ActEnv::from_runtime_state_with_admitted_bindings(
         &runtime_state,
         &[binding_id],
@@ -146,7 +148,7 @@ async fn effectful_closure_composition_round_trips_through_force() {
         ash_core::Provenance::new(),
     )
     .await
-    .expect("admitted bindings project into ActEnv");
+    .expect("admitted act env projection succeeds");
 
     let ctx = Context::new()
         .with_runtime_state(runtime_state)

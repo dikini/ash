@@ -41,6 +41,10 @@ pub enum SelectedDoOperation {
         method: String,
         shim: QualifiedName,
     },
+    EvidenceUnavailable {
+        evidence_key: String,
+        method: String,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -65,6 +69,11 @@ pub(crate) enum DoDictionaryOp {
         evidence: DoEvidenceIdentity,
         method: String,
         shim: QualifiedName,
+    },
+    EvidenceUnavailable {
+        evidence: DoEvidenceIdentity,
+        method: String,
+        span: ash_parser::token::Span,
     },
 }
 
@@ -120,6 +129,12 @@ impl DoDictionaryOp {
                 evidence_key: evidence.diagnostic_key(),
                 method: method.clone(),
                 shim: shim.clone(),
+            },
+            DoDictionaryOp::EvidenceUnavailable {
+                evidence, method, ..
+            } => SelectedDoOperation::EvidenceUnavailable {
+                evidence_key: evidence.diagnostic_key(),
+                method: method.clone(),
             },
         }
     }
@@ -398,11 +413,9 @@ fn selected_monad_op(
             method: method.to_string(),
             shim,
         }),
-        None => Err(ConstructorError::UnsupportedExpression {
-            kind: format!(
-                "selected Monad evidence {} is missing {method} method body or intrinsic shim",
-                evidence_identity.diagnostic_key()
-            ),
+        None => Ok(DoDictionaryOp::EvidenceUnavailable {
+            evidence: evidence_identity.clone(),
+            method: method.to_string(),
             span,
         }),
     }

@@ -12,7 +12,7 @@
 
 ## Status
 
-📝 Planned.
+✅ Complete (TASK-933 through TASK-941 complete; TASK-941 status surfaces reconciled, broad gates and final independent phase audit passed).
 
 ## Scope
 
@@ -39,17 +39,17 @@ This phase closes the following Phase 122 limitations:
 
 ## Task Overview
 
-| Task | Title | Type | Est. Hours | Depends on |
-| --- | --- | --- | ---: | --- |
-| TASK-933 | Implemented-MVP acceptance delta and preflight audit | Docs/Planning | 6 | TASK-932 |
-| TASK-934 | `do:Result` operational-bottom execution evidence | Semantic | 8 | TASK-933 |
-| TASK-935 | Shared RuntimeKernel verified artifact builder | Substrate | 12 | TASK-933 |
-| TASK-936 | `ash run` / daemon bytecode artifact equivalence | Semantic | 10 | TASK-935 |
-| TASK-937 | One-shot admission-profile pre-body rejection | Semantic/Substrate | 12 | TASK-933, TASK-935 |
-| TASK-938 | Daemon start args/config/admission-profile protocol | Semantic/Substrate | 12 | TASK-937 |
-| TASK-939 | Policy-profile grant enforcement across runtime execution | Semantic/Substrate | 14 | TASK-937, TASK-938 |
-| TASK-940 | Daemon child Proc failure trace semantics | Semantic | 12 | TASK-938, TASK-939 |
-| TASK-941 | SPEC-069/SPEC-070 Implemented MVP closeout | Docs/Planning | 8 | TASK-934 through TASK-940 |
+| Task | Title | Type | Est. Hours | Depends on | Status |
+| --- | --- | --- | ---: | --- | --- |
+| TASK-933 | Implemented-MVP acceptance delta and preflight audit | Docs/Planning | 6 | TASK-932 | ✅ Complete |
+| TASK-934 | `do:Result` operational-bottom execution evidence | Semantic | 8 | TASK-933 | ✅ Complete |
+| TASK-935 | Shared RuntimeKernel verified artifact builder | Substrate | 12 | TASK-933 | ✅ Complete |
+| TASK-936 | `ash run` / daemon bytecode artifact equivalence | Semantic | 10 | TASK-935 | ✅ Complete |
+| TASK-937 | One-shot admission-profile pre-body rejection | Semantic/Substrate | 12 | TASK-933, TASK-935 | ✅ Complete |
+| TASK-938 | Daemon start args/config/admission-profile protocol | Semantic/Substrate | 12 | TASK-937 | ✅ Complete |
+| TASK-939 | Policy-profile grant enforcement across runtime execution | Semantic/Substrate | 14 | TASK-937, TASK-938 | ✅ Complete |
+| TASK-940 | Daemon child Proc failure trace semantics | Semantic | 12 | TASK-938, TASK-939 | ✅ Complete |
+| TASK-941 | SPEC-069/SPEC-070 Implemented MVP closeout | Docs/Planning | 8 | TASK-934 through TASK-940 | ✅ Complete |
 
 Estimated total: 94 hours.
 
@@ -96,7 +96,7 @@ PY
 
 SPEC-069/SPEC-070 may be promoted to Implemented MVP only after TASK-941 confirms:
 
-- every formerly partial row has concrete evidence cited in `docs/plan/audits/TASK-931-alpha-acceptance-matrix.md` or a Phase 123 successor section;
+- every formerly partial row has concrete evidence cited in `docs/plan/audits/TASK-931-alpha-acceptance-matrix.md` or the Phase 123 successor audit `docs/plan/audits/TASK-941-phase123-closeout-evidence.md`;
 - no current status surface still says SPEC-069/SPEC-070 are Partial MVP except historical Phase 122 notes;
 - all broad gates pass on the final diff;
-- Codex phase audit reports no blockers.
+- Codex phase audit status is represented honestly. TASK-941's implementation worker may record the final independent phase audit as pending when nested agents are unavailable.

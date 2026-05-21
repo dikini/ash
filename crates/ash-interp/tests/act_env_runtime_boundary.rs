@@ -71,58 +71,6 @@ struct CountingProvider {
     calls: Arc<AtomicUsize>,
 }
 
-async fn admit_host_provider(
-    runtime_state: &RuntimeState,
-    provider_name: &str,
-    interface_name: &str,
-    action: &str,
-) -> CapabilityBindingId {
-    let binding = CapabilityBinding::host_provider(
-        CapabilityBindingId::new(),
-        provider_name,
-        CapabilityInterfaceId::new(interface_name),
-        provider_name,
-        vec![format!("{provider_name}.{action}")],
-    );
-    runtime_state
-        .admit_capability_binding(binding)
-        .await
-        .expect("host provider binding should admit")
-}
-
-fn context_with_admitted_binding(binding_id: CapabilityBindingId) -> Context {
-    Context::new().with_admitted_capability_bindings(vec![binding_id])
-}
-
-async fn act_env_with_admitted_binding(
-    runtime_state: &RuntimeState,
-    binding_id: CapabilityBindingId,
-) -> ActEnv {
-    ActEnv::from_runtime_state_with_admitted_bindings(
-        runtime_state,
-        &[binding_id],
-        PolicyEvaluator::new(),
-        Provenance::new(),
-    )
-    .await
-    .expect("admitted binding should project into ActEnv")
-}
-
-async fn context_with_admitted_host_provider(
-    runtime_state: &RuntimeState,
-    provider_name: &str,
-    interface_name: &str,
-    action: &str,
-) -> Context {
-    let binding_id =
-        admit_host_provider(runtime_state, provider_name, interface_name, action).await;
-    let act_env = act_env_with_admitted_binding(runtime_state, binding_id).await;
-    Context::new()
-        .with_runtime_state(runtime_state.clone())
-        .with_admitted_capability_bindings(vec![binding_id])
-        .with_act_env(act_env)
-}
-
 #[async_trait]
 impl CapabilityProvider for TaskLocalProvider {
     fn name(&self) -> &str {
@@ -248,7 +196,6 @@ async fn invoke_forced_via_workflow_bridge_dispatches_through_hidden_runtime_act
                 .with_execute_result(Ok(Value::String("done".to_string()))),
         ),
     );
-    let binding_id = admit_host_provider(&runtime_state, "sensor", "Sensor", "read").await;
 
     let workflow = Workflow::Ret {
         expr: Expr::FnApply {
@@ -267,7 +214,7 @@ async fn invoke_forced_via_workflow_bridge_dispatches_through_hidden_runtime_act
 
     let result = execute_workflow_with_behaviour_in_state(
         &workflow,
-        context_with_admitted_binding(binding_id),
+        Context::new(),
         &CapabilityContext::new(),
         &PolicyEvaluator::new(),
         &BehaviourContext::new(),
@@ -290,7 +237,6 @@ async fn invoke_forced_via_workflow_bridge_dispatches_through_hidden_runtime_act
 #[tokio::test]
 async fn invoke_with_tokio_dependent_provider_dispatches_under_the_simplest_helper_runtime() {
     let runtime_state = RuntimeState::new().with_provider("sleepy", Arc::new(TokioSleepProvider));
-    let binding_id = admit_host_provider(&runtime_state, "sleepy", "Sleepy", "nap").await;
 
     let workflow = Workflow::Ret {
         expr: Expr::FnApply {
@@ -309,7 +255,7 @@ async fn invoke_with_tokio_dependent_provider_dispatches_under_the_simplest_help
 
     let result = execute_workflow_with_behaviour_in_state(
         &workflow,
-        context_with_admitted_binding(binding_id),
+        Context::new(),
         &CapabilityContext::new(),
         &PolicyEvaluator::new(),
         &BehaviourContext::new(),
@@ -330,12 +276,9 @@ async fn invoke_with_tokio_dependent_provider_dispatches_under_the_simplest_help
 #[tokio::test]
 async fn eval_expr_async_force_path_dispatches_tokio_provider_without_helper_runtime() {
     let runtime_state = RuntimeState::new().with_provider("sleepy", Arc::new(TokioSleepProvider));
-    let binding_id = admit_host_provider(&runtime_state, "sleepy", "Sleepy", "nap").await;
-    let act_env = act_env_with_admitted_binding(&runtime_state, binding_id).await;
-    let ctx = Context::new()
-        .with_runtime_state(runtime_state)
-        .with_admitted_capability_bindings(vec![binding_id])
-        .with_act_env(act_env);
+    let act_env =
+        ActEnv::from_runtime_state(&runtime_state, PolicyEvaluator::new(), Provenance::new()).await;
+    let ctx = Context::new().with_act_env(act_env);
 
     let expr = Expr::FnApply {
         func: Box::new(Expr::Call {
@@ -387,13 +330,7 @@ async fn workflow_ret_uses_async_force_path_for_task_local_provider() {
             "workflow-task-local",
             execute_workflow_with_behaviour_in_state(
                 &workflow,
-                context_with_admitted_host_provider(
-                    &runtime_state,
-                    "tasklocal",
-                    "TaskLocal",
-                    "mark",
-                )
-                .await,
+                Context::new(),
                 &CapabilityContext::new(),
                 &PolicyEvaluator::new(),
                 &BehaviourContext::new(),
@@ -446,13 +383,7 @@ async fn workflow_ret_unary_uses_async_force_path_for_task_local_provider() {
             "workflow-unary-task-local",
             execute_workflow_with_behaviour_in_state(
                 &workflow,
-                context_with_admitted_host_provider(
-                    &runtime_state,
-                    "tasklocal",
-                    "TaskLocal",
-                    "mark",
-                )
-                .await,
+                Context::new(),
                 &CapabilityContext::new(),
                 &PolicyEvaluator::new(),
                 &BehaviourContext::new(),
@@ -499,13 +430,7 @@ async fn workflow_let_uses_async_force_path_for_task_local_provider() {
             "workflow-let-task-local",
             execute_workflow_with_behaviour_in_state(
                 &workflow,
-                context_with_admitted_host_provider(
-                    &runtime_state,
-                    "tasklocal",
-                    "TaskLocal",
-                    "mark",
-                )
-                .await,
+                Context::new(),
                 &CapabilityContext::new(),
                 &PolicyEvaluator::new(),
                 &BehaviourContext::new(),
@@ -551,13 +476,7 @@ async fn workflow_orient_uses_async_force_path_for_task_local_provider() {
             "workflow-orient-task-local",
             execute_workflow_with_behaviour_in_state(
                 &workflow,
-                context_with_admitted_host_provider(
-                    &runtime_state,
-                    "tasklocal",
-                    "TaskLocal",
-                    "mark",
-                )
-                .await,
+                Context::new(),
                 &CapabilityContext::new(),
                 &PolicyEvaluator::new(),
                 &BehaviourContext::new(),
@@ -605,8 +524,7 @@ async fn workflow_foreach_uses_async_force_path_for_task_local_provider() {
             "workflow-foreach-task-local",
             execute_workflow_with_behaviour_in_state(
                 &workflow,
-                context_with_admitted_host_provider(&runtime_state, "tasklist", "TaskList", "mark")
-                    .await,
+                Context::new(),
                 &CapabilityContext::new(),
                 &PolicyEvaluator::new(),
                 &BehaviourContext::new(),
@@ -670,13 +588,7 @@ async fn workflow_check_condition_uses_async_force_path_for_task_local_provider(
             "workflow-check-task-local",
             execute_workflow_with_behaviour_in_state(
                 &workflow,
-                context_with_admitted_host_provider(
-                    &runtime_state,
-                    "tasklocal",
-                    "TaskLocal",
-                    "mark",
-                )
-                .await,
+                Context::new(),
                 &CapabilityContext::new(),
                 &PolicyEvaluator::new(),
                 &BehaviourContext::new(),
@@ -740,13 +652,7 @@ async fn workflow_decide_uses_async_force_path_for_task_local_provider() {
             "workflow-decide-task-local",
             execute_workflow_with_behaviour_in_state(
                 &workflow,
-                context_with_admitted_host_provider(
-                    &runtime_state,
-                    "tasklocal",
-                    "TaskLocal",
-                    "mark",
-                )
-                .await,
+                Context::new(),
                 &CapabilityContext::new(),
                 &policy_eval,
                 &BehaviourContext::new(),
@@ -841,13 +747,7 @@ async fn workflow_spawn_init_uses_async_force_path_for_task_local_provider() {
             "workflow-spawn-task-local",
             execute_workflow_with_behaviour_in_state(
                 &workflow,
-                context_with_admitted_host_provider(
-                    &runtime_state,
-                    "tasklocal",
-                    "TaskLocal",
-                    "mark",
-                )
-                .await,
+                Context::new(),
                 &CapabilityContext::new(),
                 &PolicyEvaluator::new(),
                 &BehaviourContext::new(),
@@ -890,13 +790,7 @@ async fn workflow_set_uses_async_force_path_for_task_local_provider() {
             "workflow-set-task-local",
             execute_workflow_with_behaviour_in_state(
                 &workflow,
-                context_with_admitted_host_provider(
-                    &runtime_state,
-                    "tasklocal",
-                    "TaskLocal",
-                    "mark",
-                )
-                .await,
+                Context::new(),
                 &CapabilityContext::new(),
                 &PolicyEvaluator::new(),
                 &behaviour_ctx,
@@ -952,13 +846,7 @@ async fn workflow_send_uses_async_force_path_for_task_local_provider() {
             "workflow-send-task-local",
             execute_workflow_with_stream_in_state(
                 &workflow,
-                context_with_admitted_host_provider(
-                    &runtime_state,
-                    "tasklocal",
-                    "TaskLocal",
-                    "mark",
-                )
-                .await,
+                Context::new(),
                 &CapabilityContext::new(),
                 &PolicyEvaluator::new(),
                 &BehaviourContext::new(),
@@ -1018,13 +906,7 @@ async fn workflow_yield_request_uses_async_force_path_for_task_local_provider() 
             "workflow-yield-task-local",
             execute_workflow_with_behaviour_in_state(
                 &workflow,
-                context_with_admitted_host_provider(
-                    &runtime_state,
-                    "tasklocal",
-                    "TaskLocal",
-                    "mark",
-                )
-                .await,
+                Context::new(),
                 &CapabilityContext::new(),
                 &PolicyEvaluator::new(),
                 &BehaviourContext::new(),
@@ -1095,13 +977,7 @@ async fn workflow_proxy_resume_response_uses_async_force_path_for_task_local_pro
             "workflow-proxy-resume-task-local",
             execute_workflow_with_behaviour_in_state(
                 &workflow,
-                context_with_admitted_host_provider(
-                    &runtime_state,
-                    "tasklocal",
-                    "TaskLocal",
-                    "mark",
-                )
-                .await,
+                Context::new(),
                 &CapabilityContext::new(),
                 &PolicyEvaluator::new(),
                 &BehaviourContext::new(),
@@ -1171,13 +1047,7 @@ async fn workflow_split_uses_async_force_path_for_task_local_provider() {
             "workflow-split-task-local",
             execute_workflow_with_behaviour_in_state(
                 &workflow,
-                context_with_admitted_host_provider(
-                    &runtime_state,
-                    "tasklocal",
-                    "TaskLocal",
-                    "mark",
-                )
-                .await,
+                Context::new(),
                 &CapabilityContext::new(),
                 &PolicyEvaluator::new(),
                 &BehaviourContext::new(),
@@ -1220,13 +1090,7 @@ async fn workflow_ret_constructor_uses_async_force_path_for_task_local_provider(
             "workflow-constructor-task-local",
             execute_workflow_with_behaviour_in_state(
                 &workflow,
-                context_with_admitted_host_provider(
-                    &runtime_state,
-                    "tasklocal",
-                    "TaskLocal",
-                    "mark",
-                )
-                .await,
+                Context::new(),
                 &CapabilityContext::new(),
                 &PolicyEvaluator::new(),
                 &BehaviourContext::new(),
@@ -1282,13 +1146,7 @@ async fn workflow_ret_call_uses_async_force_path_for_task_local_provider() {
             "workflow-call-task-local",
             execute_workflow_with_behaviour_in_state(
                 &workflow,
-                context_with_admitted_host_provider(
-                    &runtime_state,
-                    "tasklocal",
-                    "TaskLocal",
-                    "mark",
-                )
-                .await,
+                Context::new(),
                 &CapabilityContext::new(),
                 &PolicyEvaluator::new(),
                 &BehaviourContext::new(),
@@ -1343,13 +1201,7 @@ async fn workflow_ret_field_access_uses_async_force_path_for_task_local_provider
             "workflow-field-task-local",
             execute_workflow_with_behaviour_in_state(
                 &workflow,
-                context_with_admitted_host_provider(
-                    &runtime_state,
-                    "tasklocal",
-                    "TaskLocal",
-                    "mark",
-                )
-                .await,
+                Context::new(),
                 &CapabilityContext::new(),
                 &PolicyEvaluator::new(),
                 &BehaviourContext::new(),
@@ -1414,13 +1266,7 @@ async fn workflow_ret_match_uses_async_force_path_for_task_local_provider() {
             "workflow-match-task-local",
             execute_workflow_with_behaviour_in_state(
                 &workflow,
-                context_with_admitted_host_provider(
-                    &runtime_state,
-                    "tasklocal",
-                    "TaskLocal",
-                    "mark",
-                )
-                .await,
+                Context::new(),
                 &CapabilityContext::new(),
                 &PolicyEvaluator::new(),
                 &BehaviourContext::new(),
@@ -1484,13 +1330,7 @@ async fn workflow_ret_iflet_uses_async_force_path_for_task_local_provider() {
             "workflow-iflet-task-local",
             execute_workflow_with_behaviour_in_state(
                 &workflow,
-                context_with_admitted_host_provider(
-                    &runtime_state,
-                    "tasklocal",
-                    "TaskLocal",
-                    "mark",
-                )
-                .await,
+                Context::new(),
                 &CapabilityContext::new(),
                 &PolicyEvaluator::new(),
                 &BehaviourContext::new(),
@@ -1507,6 +1347,20 @@ async fn workflow_ret_iflet_uses_async_force_path_for_task_local_provider() {
             Value::String("workflow-iflet-task-local".to_string()),
         ]))
     );
+}
+
+fn host_binding_for(
+    binding_name: &str,
+    provider_name: &str,
+    action_name: &str,
+) -> CapabilityBinding {
+    CapabilityBinding::host_provider(
+        CapabilityBindingId::new(),
+        binding_name,
+        CapabilityInterfaceId::new(format!("{provider_name}-interface")),
+        provider_name,
+        vec![format!("{provider_name}.{action_name}")],
+    )
 }
 
 fn tasklocal_invoke_force_expr() -> Expr {
@@ -1527,6 +1381,12 @@ fn tasklocal_invoke_force_expr() -> Expr {
 #[tokio::test]
 async fn workflow_call_child_body_inherits_hidden_runtime_act_env() {
     let runtime_state = RuntimeState::new().with_provider("tasklocal", Arc::new(TaskLocalProvider));
+    let tasklocal_binding = host_binding_for("tasklocal", "tasklocal", "mark");
+    let tasklocal_binding_id = tasklocal_binding.id;
+    runtime_state
+        .admit_capability_binding(tasklocal_binding)
+        .await
+        .expect("tasklocal binding admission succeeds");
     runtime_state
         .register_callable_workflow(
             "worker",
@@ -1551,13 +1411,7 @@ async fn workflow_call_child_body_inherits_hidden_runtime_act_env() {
             "workflow-call-child-task-local",
             execute_workflow_with_behaviour_in_state(
                 &workflow,
-                context_with_admitted_host_provider(
-                    &runtime_state,
-                    "tasklocal",
-                    "TaskLocal",
-                    "mark",
-                )
-                .await,
+                Context::new().with_admitted_capability_bindings(vec![tasklocal_binding_id]),
                 &CapabilityContext::new(),
                 &PolicyEvaluator::new(),
                 &BehaviourContext::new(),
@@ -1579,6 +1433,12 @@ async fn spawned_registered_child_body_has_hidden_runtime_act_env() {
                 .with_execute_result(Ok(Value::String("spawned child invoked".to_string()))),
         ),
     );
+    let sensor_binding = host_binding_for("sensor", "sensor", "read");
+    let sensor_binding_id = sensor_binding.id;
+    runtime_state
+        .admit_capability_binding(sensor_binding)
+        .await
+        .expect("sensor binding admission succeeds");
     runtime_state
         .register_child_workflow(
             "worker",
@@ -1632,8 +1492,7 @@ async fn spawned_registered_child_body_has_hidden_runtime_act_env() {
             "spawned-child-task-local",
             execute_workflow_with_behaviour_in_state(
                 &workflow,
-                context_with_admitted_host_provider(&runtime_state, "sensor", "Sensor", "read")
-                    .await,
+                Context::new().with_admitted_capability_bindings(vec![sensor_binding_id]),
                 &CapabilityContext::new(),
                 &PolicyEvaluator::new(),
                 &BehaviourContext::new(),

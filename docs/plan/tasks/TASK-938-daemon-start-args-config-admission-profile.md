@@ -1,6 +1,6 @@
 # TASK-938: Daemon start args/config/admission-profile protocol
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -59,14 +59,14 @@ commands:
   - cargo fmt --check
   - git diff --check
 checklist:
-  - [ ] Focused RED test was observed failing for the intended reason, unless this is a docs/planning task.
-  - [ ] Focused GREEN test passes and runs non-zero tests, unless this is a docs/planning task.
-  - [ ] cargo fmt --check passes when Rust code changed.
-  - [ ] git diff --check passes.
-  - [ ] cargo check --workspace passes if shared carriers or public APIs changed.
-  - [ ] cargo clippy --workspace --all-targets --all-features -- -D warnings passes before task closeout if code changed.
-  - [ ] CHANGELOG.md updated if code/tooling/docs-policy/release-facing status changed.
-  - [ ] Codex verification reports no blockers.
+  - [x] Focused RED test was observed failing for the intended reason, unless this is a docs/planning task.
+  - [x] Focused GREEN test passes and runs non-zero tests, unless this is a docs/planning task.
+  - [x] cargo fmt --check passes when Rust code changed.
+  - [x] git diff --check passes.
+  - [x] cargo check --workspace passes if shared carriers or public APIs changed.
+  - [x] cargo clippy --workspace --all-targets --all-features -- -D warnings passes before task closeout if code changed.
+  - [x] CHANGELOG.md updated if code/tooling/docs-policy/release-facing status changed.
+  - [x] Codex verification reports no blockers.
 ```
 
 ## Dependencies for Next Task
@@ -76,3 +76,10 @@ Produces Phase 123 evidence for downstream closeout and status reconciliation.
 ## Notes
 
 Do not mark this task complete until its own focused evidence, status surfaces, and Codex verification are reconciled.
+
+## Completion Evidence
+
+- RED: `cargo test -p ash-cli --test alpha_ashd_local_daemon_control_plane -- --nocapture` failed with missing daemon start protocol fields/flags: JSON start returned `args: Null`, default start returned `args: Null`, and CLI rejected `--arg` as unexpected.
+- GREEN: `cargo test -p ash-cli --test alpha_ashd_local_daemon_control_plane -- --nocapture` passed 7 tests, including JSON protocol round-trip, default empty admission recording, and rejected admission leaving the instance table empty.
+- Regression: `cargo test -p ash-cli --test alpha_admission_profile -- --nocapture` passed 2 tests.
+- Broad gates: `cargo fmt --check`, `git diff --check`, `RUSTC_WRAPPER= cargo check --workspace`, and `RUSTC_WRAPPER= cargo clippy --workspace --all-targets --all-features -- -D warnings` passed.

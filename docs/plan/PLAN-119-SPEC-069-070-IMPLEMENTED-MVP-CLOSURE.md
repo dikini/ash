@@ -24,7 +24,7 @@ This phase closes the following Phase 122 limitations:
 | Bytecode-level `ash run` / `ash daemon` equivalence | SPEC-069 A69-12, SPEC-070 A70-8 | Shared artifact construction path and tests compare verified bytecode/provenance summaries across host modes. |
 | Admission-profile rejection before user code | SPEC-070 A70-2 | RuntimeKernel admission profile rejects before body execution and emits admission-specific report/status. |
 | Daemon start args/config/admission-profile fields | SPEC-070 A70-4 | Daemon start protocol records args/config/admission-profile and rejects invalid admission without running body. |
-| Broader policy-profile admission | SPEC-070 A70-6, NI-4 | Capability/resource/action grants are evaluated at admission and enforced through Act/Proc/Workflow execution. |
+| Broader policy-profile admission | SPEC-070 A70-6, NI-4 | Explicit capability binding/action grants are projected at admission and enforced fail-closed through the current Act/Proc/Workflow runtime execution surface. Resource grant facts are recorded from current metadata, while full first-class resource-operation enforcement remains limited to the existing process split/join policy path and is not broadened by this phase. |
 | Daemon child-failure trace | SPEC-070 A70-7 | Daemon-hosted workflow child failure is observed as Proc/Workflow failure while daemon host remains healthy. |
 | Status promotion | TASK-932 limitation list | SPEC-069/SPEC-070, spec index, phase plan, PLAN-INDEX, tasks, and CHANGELOG consistently say Implemented MVP only after gates/review. |
 

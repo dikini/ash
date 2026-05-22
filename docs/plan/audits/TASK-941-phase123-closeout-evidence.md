@@ -8,15 +8,20 @@ Specs: SPEC-069, SPEC-070
 
 ## Scope
 
-TASK-941 reconciles the current SPEC-069/SPEC-070 status surfaces after
-TASK-934 through TASK-940. This audit is the Phase 123 successor evidence for
-the Phase 122 Partial MVP limitations recorded in
+TASK-941 originally reconciled the current SPEC-069/SPEC-070 status surfaces
+after TASK-934 through TASK-940. This audit is the Phase 123 successor evidence
+for the Phase 122 Partial MVP limitations recorded in
 `docs/plan/audits/TASK-931-alpha-acceptance-matrix.md` and the preflight delta
-recorded in `docs/plan/audits/TASK-933-phase123-acceptance-delta.md`.
+recorded in `docs/plan/audits/TASK-933-phase123-acceptance-delta.md`; its
+post-merge addendum records TASK-942 through TASK-945 as later remediation
+evidence rather than treating those fixes as part of the original TASK-941
+closeout.
 
-Historical Phase 122 rows remain historical. Current SPEC-069/SPEC-070 status is
-promoted to Implemented MVP because each formerly partial/deferred row now has
-Phase 123 execution or artifact evidence.
+Historical Phase 122 rows remain historical. Current SPEC-069/SPEC-070 status
+is promoted to Implemented MVP because each formerly partial/deferred row now
+has Phase 123 execution or artifact evidence, and the later TASK-942 through
+TASK-945 post-merge remediation chain has reconciled the remaining status,
+source/config, authority, verifier, report, and daemon local-control gaps.
 
 ## Closeout Evidence Rows
 

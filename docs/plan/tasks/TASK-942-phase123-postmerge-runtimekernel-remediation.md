@@ -9,6 +9,18 @@
 
 A post-merge review of Phase 122 and Phase 123 on `main` found RuntimeKernel/OS-facing execution blockers after Phase 123 had been promoted to Implemented MVP. Per the Phase 123 promotion rule and verification-before-completion protocol, TASK-941 and the Phase 123 status surface are reopened until this remediation is implemented, independently reviewed, and broadly verified.
 
+Historical narrowing: this task is retained as the first Phase 123
+post-merge remediation slice, not as the final Phase 123 remediation record.
+Later review found additional gaps after TASK-942 closeout. TASK-943 owns the
+spawned-child empty-admission authority regression, TASK-944 owns the daemon
+second-read source/config remediation, and TASK-945 owns the final
+local-control, binding-alias, verifier, one-shot report, and status evidence.
+Use `docs/plan/audits/TASK-941-phase123-closeout-evidence.md`,
+`TASK-943-phase123-followup-child-admission-and-status-drift.md`,
+`TASK-944-phase123-daemon-admitted-source-config-remediation.md`, and
+`TASK-945-phase123-daemon-local-control-security-remediation.md` for the final
+Implemented MVP remediation chain.
+
 ## Review Findings to Fix
 
 1. `ash run` constructs and emits RuntimeKernel admission/report identity only after successful workflow execution. Failed execution bypasses RuntimeKernel reporting.
@@ -62,13 +74,38 @@ RUSTC_WRAPPER= cargo doc --workspace --no-deps 2>&1 | tee /tmp/phase123-remediat
 ## Completion Checklist
 
 - [x] RED tests added and verified against pre-fix behavior.
-- [x] `ash run` RuntimeKernel lifecycle/reporting is pre-execution or status/docs are narrowed honestly.
-- [x] daemon execution is pinned to admitted source/artifact or fails closed on live-source drift.
-- [x] workflow admission carries explicit admitted binding IDs where RuntimeKernel authority claims require them.
-- [x] empty-admission RuntimeKernel paths fail closed without ambient full-provider authority.
-- [x] binding alias dispatch boundary is tested and documented.
-- [x] SPEC-070 README wording is scoped to the alpha checked workflow-boundary carrier.
-- [x] TASK-941/PLAN-119/PLAN-INDEX/CHANGELOG status surfaces reconciled.
+- [x] `ash run` RuntimeKernel lifecycle/reporting was remediated for the
+      TASK-942 slice, with the later admission lifecycle caveat narrowed again
+      by TASK-945: admission-profile rejection happens before user code and
+      before verified artifact reporting; verified artifact reports are emitted
+      only after parse/check/artifact construction succeeds.
+- [x] daemon admitted-artifact drift checks were added for TASK-942, but later
+      review found that this did not fully pin daemon execution because
+      `start-execute` still performed a second workflow source read and daemon
+      non-default `config_id` values were over-accepted. TASK-944 is the
+      owning remediation for executing from already-read/hash-checked source
+      bytes and rejecting non-default daemon config IDs before instance
+      recording.
+- [x] workflow admission carries explicit admitted binding IDs where
+      RuntimeKernel authority claims require them; TASK-945 later tightened
+      host-provider grants so authority remains scoped per admitted binding
+      id/name rather than unioned by backing provider.
+- [x] empty-admission RuntimeKernel paths were narrowed for TASK-942, with
+      TASK-943 adding the spawned-child regression that proves empty inherited
+      authority does not repopulate from globally admitted runtime bindings.
+- [x] binding alias dispatch boundary was tested and documented for TASK-942;
+      TASK-945 is the final authority-projection evidence for alias/binding
+      grant non-union.
+- [x] SPEC-070 README wording is scoped to the alpha checked workflow-boundary
+      carrier.
+- [x] TASK-941/PLAN-119/PLAN-INDEX/CHANGELOG status surfaces were reconciled
+      for the original TASK-942 slice, then superseded by TASK-943 through
+      TASK-945 status/evidence reconciliation.
 - [x] Focused gates pass.
-- [x] Broad gates pass.
-- [x] Independent Codex review finds no blockers.
+- [x] Broad gates were recorded at original TASK-942 closeout, but final
+      Phase 123 evidence must use the later TASK-944 broad serial
+      workspace/rustdoc evidence plus TASK-945 final focused and broad evidence
+      recorded in `docs/plan/audits/TASK-941-phase123-closeout-evidence.md`.
+- [x] The original no-blocker Codex review was historical only; later review
+      produced TASK-943, TASK-944, and TASK-945. Final no-blocker status is not
+      claimed from TASK-942 alone.

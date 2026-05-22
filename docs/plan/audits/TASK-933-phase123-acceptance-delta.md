@@ -37,7 +37,7 @@ Every deferred row above has exactly one owning follow-on task in the acceptance
 - TASK-939 owns A70-6 and NI-4.
 - TASK-940 owns A70-7.
 
-`Specification Reference` sections in prerequisite tasks may cite rows they support without owning them. The exact-owner verifier therefore reads this artifact's owner table as the canonical ownership surface and separately checks that each owning task file cites its row. TASK-935 is a substrate prerequisite for TASK-936 and TASK-937, not the direct acceptance-row owner for A69-12/A70-8. TASK-941 owns final status promotion, broad gates, and Codex phase audit after TASK-934 through TASK-940 are complete.
+`Specification Reference` sections in prerequisite tasks may cite rows they support without owning them. The exact-owner verifier therefore reads this artifact's owner table as the canonical ownership surface and separately checks that each owning task file cites its row. TASK-935 is a substrate prerequisite for TASK-936 and TASK-937, not the direct acceptance-row owner for A69-12/A70-8. TASK-941 owns the original final status promotion, broad gates, and Codex phase audit after TASK-934 through TASK-940 are complete; current final Phase 123 status also depends on the later TASK-942 through TASK-945 post-merge remediation record.
 
 ## Preflight Findings
 

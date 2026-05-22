@@ -37,7 +37,8 @@ Property invariant: no current-status document may claim Partial MVP after promo
 
 ## TDD Steps
 
-1. Re-read TASK-934 through TASK-940 evidence.
+1. Re-read TASK-934 through TASK-940 evidence, then reconcile the post-merge
+   remediation addendum through TASK-942, TASK-943, TASK-944, and TASK-945.
 2. Update all status surfaces and CHANGELOG.
 3. Run broad gates from PLAN-119.
 4. Record final independent Codex phase audit status honestly; if no separate reviewer is available, leave that item pending rather than claiming it passed.
@@ -85,11 +86,18 @@ checklist:
 TASK-941 successor evidence is recorded in
 [`docs/plan/audits/TASK-941-phase123-closeout-evidence.md`](../audits/TASK-941-phase123-closeout-evidence.md).
 It maps A69-8, A69-12, A70-2, A70-4, A70-6/NI-4, A70-7, and A70-8 to the
-concrete TASK-934 through TASK-940 tests and preserves the remaining honest
-boundaries: no remote daemon, no JIT/native-code requirement, no arbitrary
-effects/handlers, no full Haskell-grade inference, no full workflow-body TCIR
-equivalence claim beyond `alpha_checked_workflow_boundary`, and no new full
-first-class resource operation enforcement substrate.
+concrete TASK-934 through TASK-940 tests, then records TASK-942 through
+TASK-945 as post-merge remediation evidence rather than rewriting TASK-941's
+original closeout as if it already contained those fixes. Final Phase 123
+Implemented MVP status depends on the successor audit plus the later
+remediation evidence for child authority, daemon source/config handling,
+binding-alias grant scoping, malformed artifact verification, one-shot report
+grant details, and local daemon-control hardening. The remaining honest
+boundaries are preserved: no remote daemon, no JIT/native-code requirement, no
+arbitrary effects/handlers, no full Haskell-grade inference, no full
+workflow-body TCIR equivalence claim beyond
+`alpha_checked_workflow_boundary`, and no new full first-class resource
+operation enforcement substrate.
 
 ## Dependencies for Next Task
 

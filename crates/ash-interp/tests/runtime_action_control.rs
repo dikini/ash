@@ -901,6 +901,13 @@ async fn spawned_child_without_inherited_grant_cannot_gain_provider_authority() 
             started.clone(),
         )),
     );
+    let _binding_id = admit_host_binding(
+        &runtime_state,
+        "workflow-deploy",
+        "deploy",
+        vec!["deploy.deploy"],
+    )
+    .await;
 
     let link = spawn_real_child_control(&runtime_state).await;
     let completion = wait_for_retained_completion(&runtime_state, &link).await;
@@ -908,7 +915,7 @@ async fn spawned_child_without_inherited_grant_cannot_gain_provider_authority() 
     assert_eq!(
         calls.load(Ordering::SeqCst),
         0,
-        "registered provider existence must not grant spawned child authority"
+        "globally admitted provider binding must not grant spawned child authority unless inherited"
     );
     assert_eq!(
         completion.outcome_state(),

@@ -57,3 +57,10 @@ successor evidence map. Final closeout gates passed:
 The final independent Codex-style phase audit found no semantic/code/test
 blocker in the fail-closed RuntimeKernel admission paths and no overbroad
 Implemented MVP claim beyond the status-surface reconciliation completed here.
+
+
+## Post-Merge Remediation Addendum
+
+TASK-942 and TASK-943 are part of the final Phase 123 status evidence after post-merge review reopened the closeout. TASK-942 remediated RuntimeKernel admission/report lifecycle, daemon admitted-artifact lifetime, binding-ID admission facts, empty-admission fail-closed authority, binding alias projection, and artifact-equivalence wording. TASK-943 adds the final spawned-child authority regression proving a child with no inherited admitted binding IDs cannot execute a globally admitted host binding, and reconciles SPEC-069/SPEC-070 status provenance through the post-merge remediation tasks.
+
+Final status claims for SPEC-069/SPEC-070 Implemented MVP therefore cite this TASK-941 successor evidence together with TASK-942 and TASK-943 remediation evidence. Historical Phase 122 remains Partial MVP; Phase 123 owns the promotion after remediation.

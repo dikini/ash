@@ -1,12 +1,12 @@
 # SPEC-069: Alpha Visible Tower Algebra and Generalized Do Lowering
 
-**Status:** Implemented MVP (Phase 123 closeout; see TASK-941 successor evidence)
+**Status:** Implemented MVP (Phase 123 closeout; see TASK-941 successor evidence plus TASK-942/TASK-943 post-merge remediation)
 **Date:** 2026-05-19
 **Promotes:** [DESIGN-040](../design/DESIGN-040-ALPHA-ALGEBRAIC-TOWER.md)
 **Builds on:** [SPEC-047](SPEC-047-ACT-MONAD.md), [SPEC-048](SPEC-048-PROC-LIBRARY.md), [SPEC-049](SPEC-049-PROCESS-RUNTIME-SEMANTICS.md), [SPEC-050](SPEC-050-OPERATIONAL-BOTTOM-AND-SCOPED-HANDLING.md), [SPEC-051](SPEC-051-WORKFLOW-SEMANTICS.md), [SPEC-054](SPEC-054-GENERALIZED-TYPED-DO-NOTATION.md), [SPEC-056](SPEC-056-FIRST-CLASS-WORKFLOW-CARRIER.md), [SPEC-066](SPEC-066-TYPE-HOLES-PARTIAL-CONSTRUCTOR-APPLICATION.md), [SPEC-067](SPEC-067-CONSTRUCTOR-KINDED-PARAMETERS-AND-HKT.md)
 **Related:** [SPEC-001](SPEC-001-IR.md), [SPEC-003](SPEC-003-TYPE-SYSTEM.md), [SPEC-004](SPEC-004-SEMANTICS.md), [SPEC-025](SPEC-025-SMALL-STEP-OPERATIONAL-SEMANTICS.md), [SPEC-070](SPEC-070-ALPHA-RUNTIME-KERNEL-AND-OS-SURFACE.md)
 **Plan:** [PLAN-118](../plan/PLAN-118-DESIGN-040-041-ALPHA-IMPLEMENTATION-PACKET.md), [PLAN-119](../plan/PLAN-119-SPEC-069-070-IMPLEMENTED-MVP-CLOSURE.md)
-**Implementation Tasks:** [TASK-919](../plan/tasks/TASK-919-design040041-current-state-and-scope-reconciliation.md) through [TASK-941](../plan/tasks/TASK-941-spec-069-spec-070-implemented-mvp-closeout.md)
+**Implementation Tasks:** [TASK-919](../plan/tasks/TASK-919-design040041-current-state-and-scope-reconciliation.md) through [TASK-943](../plan/tasks/TASK-943-phase123-followup-child-admission-and-status-drift.md)
 
 ## 1. Summary
 
@@ -218,4 +218,4 @@ See [PLAN-118](../plan/PLAN-118-DESIGN-040-041-ALPHA-IMPLEMENTATION-PACKET.md).
 
 ### 2026-05-21
 
-- Promoted to Implemented MVP after PLAN-119/TASK-941 reconciled Phase 123 successor evidence for A69-8 and A69-12 while preserving explicit non-goals for full free inference, arbitrary effects/handlers, JIT/native code, and full workflow-body TCIR equivalence beyond the alpha checked workflow-boundary carrier.
+- Promoted to Implemented MVP after PLAN-119/TASK-941 reconciled Phase 123 successor evidence and TASK-942/TASK-943 completed post-merge remediation for A69-8 and A69-12 while preserving explicit non-goals for full free inference, arbitrary effects/handlers, JIT/native code, and full workflow-body TCIR equivalence beyond the alpha checked workflow-boundary carrier.

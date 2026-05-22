@@ -12,7 +12,7 @@
 
 ## Status
 
-✅ Complete (TASK-942 post-merge RuntimeKernel remediation closed the review blockers; broad gates and final independent review passed).
+✅ Complete (TASK-943 follow-up remediation closed the spawned-child admission inheritance bug and status-drift docs follow-up; broad gates and final independent review passed).
 
 ## Scope
 
@@ -51,8 +51,9 @@ This phase closes the following Phase 122 limitations:
 | TASK-940 | Daemon child Proc failure trace semantics | Semantic | 12 | TASK-938, TASK-939 | ✅ Complete |
 | TASK-941 | SPEC-069/SPEC-070 Implemented MVP closeout | Docs/Planning | 8 | TASK-934 through TASK-940 | ✅ Complete |
 | TASK-942 | Phase 123 post-merge RuntimeKernel remediation | Semantic/Substrate/Docs | 10 | TASK-941 post-merge review | ✅ Complete |
+| TASK-943 | Phase 123 follow-up child admission and status drift | Semantic/Docs | 4 | TASK-942 post-merge review | ✅ Complete |
 
-Estimated total: 94 hours.
+Estimated total: 98 hours.
 
 ## Required Execution Discipline
 

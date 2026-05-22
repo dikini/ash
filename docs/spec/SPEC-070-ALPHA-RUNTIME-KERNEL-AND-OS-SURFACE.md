@@ -1,12 +1,12 @@
 # SPEC-070: Alpha Runtime Kernel and OS-Facing Execution Surface
 
-**Status:** Implemented MVP (Phase 123 closeout; see TASK-941 successor evidence)
+**Status:** Implemented MVP (Phase 123 closeout; see TASK-941 successor evidence plus TASK-942/TASK-943 post-merge remediation)
 **Date:** 2026-05-19
 **Promotes:** [DESIGN-041](../design/DESIGN-041-RUNTIME-REGIME-AND-OS-SURFACE.md)
 **Builds on:** [SPEC-005](SPEC-005-CLI.md), [SPEC-021](SPEC-021-RUNTIME-OBSERVABLE-BEHAVIOR.md), [SPEC-047](SPEC-047-ACT-MONAD.md), [SPEC-048](SPEC-048-PROC-LIBRARY.md), [SPEC-049](SPEC-049-PROCESS-RUNTIME-SEMANTICS.md), [SPEC-050](SPEC-050-OPERATIONAL-BOTTOM-AND-SCOPED-HANDLING.md), [SPEC-051](SPEC-051-WORKFLOW-SEMANTICS.md), [SPEC-069](SPEC-069-ALPHA-VISIBLE-TOWER-ALGEBRA-AND-DO-LOWERING.md)
 **Related:** [MCE-001](../ideas/minimal-core/MCE-001-ENTRY-POINT.md), [WORKFLOW_SPAWNING_AND_SUPERVISION](../design/WORKFLOW_SPAWNING_AND_SUPERVISION.md)
 **Plan:** [PLAN-118](../plan/PLAN-118-DESIGN-040-041-ALPHA-IMPLEMENTATION-PACKET.md), [PLAN-119](../plan/PLAN-119-SPEC-069-070-IMPLEMENTED-MVP-CLOSURE.md)
-**Implementation Tasks:** [TASK-919](../plan/tasks/TASK-919-design040041-current-state-and-scope-reconciliation.md) through [TASK-941](../plan/tasks/TASK-941-spec-069-spec-070-implemented-mvp-closeout.md)
+**Implementation Tasks:** [TASK-919](../plan/tasks/TASK-919-design040041-current-state-and-scope-reconciliation.md) through [TASK-943](../plan/tasks/TASK-943-phase123-followup-child-admission-and-status-drift.md)
 
 ## 1. Summary
 
@@ -123,4 +123,4 @@ See [PLAN-118](../plan/PLAN-118-DESIGN-040-041-ALPHA-IMPLEMENTATION-PACKET.md).
 
 ### 2026-05-21
 
-- Promoted to Implemented MVP after PLAN-119/TASK-941 reconciled Phase 123 successor evidence for admission-profile rejection, daemon start records, policy-profile grant enforcement, daemon child-failure trace semantics, and run/daemon artifact equivalence while preserving local-only daemon scope and resource-operation enforcement limitations.
+- Promoted to Implemented MVP after PLAN-119/TASK-941 reconciled Phase 123 successor evidence and TASK-942/TASK-943 completed post-merge remediation for admission-profile rejection, daemon start records, policy-profile grant enforcement, daemon child-failure trace semantics, and run/daemon artifact equivalence while preserving local-only daemon scope and resource-operation enforcement limitations.

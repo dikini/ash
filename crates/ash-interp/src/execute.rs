@@ -2106,7 +2106,9 @@ async fn execute_with_context_with_terminal_observation_in_state(
 ) -> (ExecResult<Value>, ExecutionRecord) {
     let policy_eval = PolicyEvaluator::new();
     let execution_recorder = ExecutionRecorder::new(execution_provenance.clone());
-    let admitted_bindings = if ctx.admitted_capability_bindings().is_empty() {
+    let is_process_context = ctx.process_identity().is_some();
+    let admitted_bindings = if ctx.admitted_capability_bindings().is_empty() && !is_process_context
+    {
         runtime_state.admitted_capability_binding_ids().await
     } else {
         ctx.admitted_capability_bindings().to_vec()
@@ -2115,7 +2117,8 @@ async fn execute_with_context_with_terminal_observation_in_state(
         .execution_admission_facts(&admitted_bindings)
         .await;
     execution_recorder.record_admission_facts(admission_facts);
-    let cap_ctx = if admitted_bindings.is_empty() {
+    let use_legacy_ambient_capabilities = admitted_bindings.is_empty() && !is_process_context;
+    let cap_ctx = if use_legacy_ambient_capabilities {
         runtime_state.create_capability_context().await
     } else {
         match runtime_state
@@ -2130,7 +2133,7 @@ async fn execute_with_context_with_terminal_observation_in_state(
             }
         }
     };
-    let act_cap_ctx = if admitted_bindings.is_empty() {
+    let act_cap_ctx = if use_legacy_ambient_capabilities {
         runtime_state.create_capability_context().await
     } else {
         match runtime_state

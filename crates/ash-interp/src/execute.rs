@@ -5,7 +5,9 @@
 use ash_core::runtime::{
     FailureEntity, LexicalFrameId, OperationalFailure, ProcessId, ProcessTerminalState, TowerLevel,
 };
-use ash_core::{Capability, Effect, Expr, Provenance, Value, Workflow, WorkflowId};
+use ash_core::{
+    Capability, CapabilityBindingKind, Effect, Expr, Provenance, Value, Workflow, WorkflowId,
+};
 
 use crate::act_env::ActEnv;
 
@@ -148,17 +150,13 @@ async fn build_workflow_act_env(
     policy_eval: &PolicyEvaluator,
     provenance: Provenance,
 ) -> ExecResult<ActEnv> {
-    if admitted_capability_bindings.is_empty() {
-        Ok(ActEnv::from_runtime_state(runtime_state, policy_eval.clone(), provenance).await)
-    } else {
-        ActEnv::from_runtime_state_with_admitted_bindings(
-            runtime_state,
-            admitted_capability_bindings,
-            policy_eval.clone(),
-            provenance,
-        )
-        .await
-    }
+    ActEnv::from_runtime_state_with_admitted_bindings(
+        runtime_state,
+        admitted_capability_bindings,
+        policy_eval.clone(),
+        provenance,
+    )
+    .await
 }
 
 fn active_actor(ctx: &Context) -> Role {
@@ -851,24 +849,49 @@ fn execute_workflow_inner_observed<'a>(
                 // process contexts must use the admitted capability projection rather
                 // than falling back to the ambient runtime provider registry: provider
                 // registration is not authority.
-                let result = {
-                    let projected_ctx = if ctx.admitted_capability_bindings().is_empty() {
-                        if ctx.process_identity().is_some() {
-                            return Err(ExecError::CapabilityNotAvailable(provider_name.clone()));
-                        }
-                        None
-                    } else {
-                        Some(
-                            runtime_state
-                                .create_capability_context_for_bindings(
-                                    ctx.admitted_capability_bindings(),
-                                )
-                                .await?,
-                        )
-                    };
-                    let action_ctx = projected_ctx.as_ref().unwrap_or(cap_ctx);
-                    action_ctx
+                let result = if ctx.admitted_capability_bindings().is_empty() {
+                    if ctx.process_identity().is_some() {
+                        return Err(ExecError::CapabilityNotAvailable(provider_name.clone()));
+                    }
+                    cap_ctx
                         .execute(provider_name, action_name, &evaluated_args)
+                        .await?
+                } else {
+                    let binding = ctx
+                        .admitted_capability_bindings()
+                        .iter()
+                        .find_map(|binding_id| {
+                            futures::executor::block_on(
+                                runtime_state.capability_binding(*binding_id),
+                            )
+                            .filter(|binding| match &binding.kind {
+                                CapabilityBindingKind::HostProvider {
+                                    provider_name: host_provider_name,
+                                    admitted_capabilities,
+                                } => {
+                                    let provider_matches = host_provider_name == provider_name
+                                        || binding.name == *provider_name;
+                                    let grant_prefix = if binding.name == *provider_name {
+                                        host_provider_name
+                                    } else {
+                                        provider_name
+                                    };
+                                    provider_matches
+                                        && admitted_capabilities.iter().any(|operation| {
+                                            operation == &format!("{grant_prefix}.{action_name}")
+                                                || operation == &format!("{grant_prefix}.*")
+                                                || operation == "*"
+                                        })
+                                }
+                                CapabilityBindingKind::Implementation { .. } => false,
+                            })
+                        })
+                        .ok_or_else(|| ExecError::CapabilityNotAvailable(provider_name.clone()))?;
+                    let projected_ctx = runtime_state
+                        .create_capability_context_for_bindings(&[binding.id])
+                        .await?;
+                    projected_ctx
+                        .execute(&binding.name, action_name, &evaluated_args)
                         .await?
                 };
 
@@ -2083,15 +2106,20 @@ async fn execute_with_context_with_terminal_observation_in_state(
 ) -> (ExecResult<Value>, ExecutionRecord) {
     let policy_eval = PolicyEvaluator::new();
     let execution_recorder = ExecutionRecorder::new(execution_provenance.clone());
+    let admitted_bindings = if ctx.admitted_capability_bindings().is_empty() {
+        runtime_state.admitted_capability_binding_ids().await
+    } else {
+        ctx.admitted_capability_bindings().to_vec()
+    };
     let admission_facts = runtime_state
-        .execution_admission_facts(ctx.admitted_capability_bindings())
+        .execution_admission_facts(&admitted_bindings)
         .await;
     execution_recorder.record_admission_facts(admission_facts);
-    let cap_ctx = if ctx.admitted_capability_bindings().is_empty() {
+    let cap_ctx = if admitted_bindings.is_empty() {
         runtime_state.create_capability_context().await
     } else {
         match runtime_state
-            .create_capability_context_for_bindings(ctx.admitted_capability_bindings())
+            .create_capability_context_for_bindings(&admitted_bindings)
             .await
         {
             Ok(cap_ctx) => cap_ctx,
@@ -2102,11 +2130,11 @@ async fn execute_with_context_with_terminal_observation_in_state(
             }
         }
     };
-    let act_cap_ctx = if ctx.admitted_capability_bindings().is_empty() {
+    let act_cap_ctx = if admitted_bindings.is_empty() {
         runtime_state.create_capability_context().await
     } else {
         match runtime_state
-            .create_capability_context_for_bindings(ctx.admitted_capability_bindings())
+            .create_capability_context_for_bindings(&admitted_bindings)
             .await
         {
             Ok(cap_ctx) => cap_ctx,
@@ -2120,6 +2148,7 @@ async fn execute_with_context_with_terminal_observation_in_state(
     let act_env = ActEnv::new(act_cap_ctx, policy_eval.clone(), execution_provenance);
     let ctx = ctx
         .with_policy_evaluator(policy_eval.clone())
+        .with_admitted_capability_bindings(admitted_bindings)
         .with_runtime_state(runtime_state.clone())
         .with_act_env(act_env);
     let behaviour_ctx = BehaviourContext::new();
@@ -2309,7 +2338,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_build_workflow_act_env_uses_runtime_state_capability_context() {
+    async fn test_build_workflow_act_env_with_empty_admission_is_fail_closed() {
         let runtime_state = RuntimeState::new().with_provider(
             "sensor",
             Arc::new(
@@ -2326,7 +2355,7 @@ mod tests {
             provenance.clone(),
         )
         .await
-        .expect("unrestricted workflow ActEnv construction should succeed");
+        .expect("fail-closed workflow ActEnv construction should succeed");
 
         let observed = act_env
             .capability_ctx
@@ -2335,10 +2364,12 @@ mod tests {
                 effect: Effect::Epistemic,
                 constraints: vec![],
             })
-            .await
-            .expect("capability context should be wired from runtime state");
+            .await;
 
-        assert_eq!(observed, Value::Int(7));
+        assert!(
+            observed.is_err(),
+            "empty RuntimeKernel admission must not expose ambient runtime providers"
+        );
         assert_eq!(act_env.provenance, provenance);
         assert!(act_env.effects.is_empty());
     }

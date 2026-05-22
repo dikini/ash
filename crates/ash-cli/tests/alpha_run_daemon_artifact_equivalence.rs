@@ -222,3 +222,45 @@ fn failed_daemon_reload_preserves_admitted_artifact_summary() {
     assert_eq!(preserved_definition_summary, initial_definition_summary);
     assert_eq!(preserved_instance_summary, &admitted_summary);
 }
+
+#[test]
+fn daemon_start_execute_fails_closed_when_live_source_drifts_from_admitted_artifact() {
+    let root = tempdir().expect("root tempdir");
+    let workflow_path = write_workflow(root.path(), "main");
+    let dirs = daemon_dirs();
+    let _daemon = spawn_daemon(root.path(), &dirs);
+
+    let list = daemon_json(&dirs.socket, &["list"]);
+    let admitted_definition = definition(&list, "main");
+    let admitted_source_hash = admitted_definition["source_hash"]
+        .as_str()
+        .expect("source hash")
+        .to_string();
+
+    fs::write(
+        &workflow_path,
+        r#"
+        use result::Result
+        use runtime::RuntimeError
+
+        workflow main() -> Result<(), RuntimeError> { done; }
+        "#,
+    )
+    .expect("rewrite workflow after daemon admission");
+
+    let start = daemon_json(&dirs.socket, &["start-execute", "main"]);
+    assert_eq!(start["status"], "failed", "start response: {start}");
+    assert_eq!(start["source_hash"], admitted_source_hash);
+    assert_eq!(
+        start["report"]["failure"]["kind"], "workflow_execution_failure",
+        "drift is a workflow-boundary execution failure, not a daemon host crash: {start}"
+    );
+    let failure_message = start["report"]["failure"]["message"]
+        .as_str()
+        .expect("failure message");
+    assert!(
+        failure_message.contains("admitted artifact drift")
+            && failure_message.contains(&admitted_source_hash),
+        "failure should identify the pinned admitted source/artifact boundary: {start}"
+    );
+}

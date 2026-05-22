@@ -38,7 +38,10 @@ use ash_core::runtime::{
     WorkflowBoundaryOutcome, WorkflowContractCheckEvidence, WorkflowEvidenceStatus,
     WorkflowFailure, WorkflowFailureKind, WorkflowReport,
 };
-use ash_core::{Provenance, Role, Value, WorkflowId, workflow_carrier::WorkflowProcProjection};
+use ash_core::{
+    CapabilityBinding, CapabilityBindingId, CapabilityInterfaceId, Provenance, Role, Value,
+    WorkflowId, workflow_carrier::WorkflowProcProjection,
+};
 use ash_interp::{
     BehaviourContext, Context, EvalError, ExecError, ExecResult, ExecutionRecord, PolicyEvaluator,
     RoleContext, RuntimeState, execute_workflow_with_behaviour_in_state, interpret_in_state,
@@ -1571,10 +1574,14 @@ impl Engine {
         if let Some(active_role) = request.active_role.as_deref() {
             let workflow_id = request.workflow_id.unwrap_or_default();
             let run_id = request.run_id.unwrap_or_default();
+            let admitted_capability_bindings = self
+                .runtime_state
+                .resolve_admitted_capability_bindings(&request.required_capabilities)
+                .await;
             let admission = WorkflowAdmissionContext {
                 active_role: Some(active_role.to_string()),
                 admitted_capabilities: request.required_capabilities.clone(),
-                admitted_capability_bindings: Vec::new(),
+                admitted_capability_bindings,
                 requires_evidence: Vec::new(),
             };
             let ensures_evidence = build_pending_ensures_evidence(&request.ensures);
@@ -1602,10 +1609,14 @@ impl Engine {
 
         let workflow_id = request.workflow_id.unwrap_or_default();
         let run_id = request.run_id.unwrap_or_default();
+        let admitted_capability_bindings = self
+            .runtime_state
+            .resolve_admitted_capability_bindings(&request.required_capabilities)
+            .await;
         let admission = WorkflowAdmissionContext {
             active_role: admitted_role_name(&request).map(ToOwned::to_owned),
             admitted_capabilities: request.required_capabilities.clone(),
-            admitted_capability_bindings: Vec::new(),
+            admitted_capability_bindings: admitted_capability_bindings.clone(),
             requires_evidence: Vec::new(),
         };
         let ensures_evidence = build_pending_ensures_evidence(&request.ensures);
@@ -1661,14 +1672,17 @@ impl Engine {
         if let Some(admitted_role) = request.admitted_role.clone() {
             ctx = ctx.with_role_context(RoleContext::new(admitted_role));
         }
+        ctx = ctx.with_admitted_capability_bindings(admitted_capability_bindings.clone());
         let cap_ctx = self
             .runtime_state
-            .create_projected_capability_context(&request.required_capabilities)
-            .await;
+            .create_capability_context_for_bindings(&admitted_capability_bindings)
+            .await
+            .unwrap_or_else(|_| ash_interp::capability::CapabilityContext::new());
         let act_cap_ctx = self
             .runtime_state
-            .create_projected_capability_context(&request.required_capabilities)
-            .await;
+            .create_capability_context_for_bindings(&admitted_capability_bindings)
+            .await
+            .unwrap_or_else(|_| ash_interp::capability::CapabilityContext::new());
         ctx = ctx.with_act_env(ash_interp::act_env::ActEnv::new(
             act_cap_ctx,
             PolicyEvaluator::new(),
@@ -2063,6 +2077,8 @@ pub struct EngineBuilder {
         String,
         std::sync::Arc<dyn ash_core::capability::CapabilityProvider>,
     >,
+    /// `RuntimeKernel` capability bindings to admit for custom providers.
+    custom_provider_bindings: Vec<CapabilityBinding>,
     /// Host-selected capability implementation recipes keyed by binding name.
     capability_implementation_selections: Vec<(String, String)>,
     /// Host-selected resource initializers keyed by resource type/name.
@@ -2124,6 +2140,10 @@ impl EngineBuilder {
 
         // Build the RuntimeState with the unified providers
         let runtime_state = RuntimeState::new().with_providers(providers);
+        for binding in self.custom_provider_bindings {
+            futures::executor::block_on(runtime_state.admit_capability_binding(binding))
+                .map_err(|error| EngineError::Configuration(error.to_string()))?;
+        }
         let capability_implementation_selections = selections_to_map(
             self.capability_implementation_selections,
             "capability implementation selection",
@@ -2234,12 +2254,26 @@ impl EngineBuilder {
     ///     .expect("engine builds");
     /// ```
     #[must_use]
+    #[allow(clippy::needless_pass_by_value)]
     pub fn with_custom_provider(
         mut self,
         name: &str,
         provider: std::sync::Arc<dyn ash_core::capability::CapabilityProvider>,
     ) -> Self {
-        self.custom_providers.insert(name.to_string(), provider);
+        self.custom_providers
+            .insert(name.to_string(), provider.clone());
+        if provider.effect().at_least(ash_core::Effect::Operational) {
+            self.custom_provider_bindings
+                .retain(|binding| binding.name != name);
+            self.custom_provider_bindings
+                .push(CapabilityBinding::host_provider(
+                    CapabilityBindingId::new(),
+                    name,
+                    CapabilityInterfaceId::new(name),
+                    name,
+                    vec![format!("{name}.*")],
+                ));
+        }
         self
     }
 

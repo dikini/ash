@@ -189,7 +189,7 @@ impl ProviderAdmissionSurface {
         let mut admitted_actions = HashSet::new();
 
         for capability in admitted_capabilities {
-            if capability == provider_name {
+            if capability == provider_name || capability == &format!("{provider_name}.*") {
                 return Some(Self::Provider);
             }
 
@@ -1583,9 +1583,32 @@ impl RuntimeState {
             };
             admitted_capabilities.sort();
             admitted_capabilities.dedup();
-            let Some(surface) =
-                ProviderAdmissionSurface::from_capabilities(&provider_name, &admitted_capabilities)
-            else {
+            let projected_capabilities = admitted_capabilities
+                .iter()
+                .map(|grant| {
+                    if let Some((candidate_provider, action_name)) = grant.split_once('.')
+                        && candidate_provider == provider_name
+                    {
+                        return format!("{projected_name}.{action_name}");
+                    }
+                    if let Some((candidate_provider, action_name)) = grant.split_once(':')
+                        && candidate_provider == provider_name
+                    {
+                        return format!("{projected_name}:{action_name}");
+                    }
+                    if grant == &format!("{provider_name}.*") {
+                        return projected_name.clone();
+                    }
+                    if grant == &provider_name {
+                        return projected_name.clone();
+                    }
+                    grant.clone()
+                })
+                .collect::<Vec<_>>();
+            let Some(surface) = ProviderAdmissionSurface::from_capabilities(
+                &projected_name,
+                &projected_capabilities,
+            ) else {
                 continue;
             };
             let wrapper = ProjectedProviderWrapper::new(
@@ -1594,10 +1617,7 @@ impl RuntimeState {
                 projected_name.clone(),
                 surface,
             );
-            registry.register(Box::new(wrapper.clone()));
-            if projected_name != provider_name {
-                registry.register(Box::new(wrapper.with_projected_name(provider_name.clone())));
-            }
+            registry.register(Box::new(wrapper));
         }
 
         Ok(CapabilityContext::with_registry(registry))
@@ -1613,6 +1633,41 @@ impl RuntimeState {
             .copied()
             .collect::<Vec<_>>();
         binding_ids.sort_unstable_by_key(|binding_id| binding_id.0);
+        binding_ids
+    }
+
+    /// Resolve requested provider/action grant strings to explicit admitted binding identities.
+    pub async fn resolve_admitted_capability_bindings(
+        &self,
+        admitted_capabilities: &[String],
+    ) -> Vec<CapabilityBindingId> {
+        let bindings = self.capability_bindings.lock().await;
+        let mut binding_ids = Vec::new();
+        for binding in bindings.values() {
+            let CapabilityBindingKind::HostProvider {
+                provider_name,
+                admitted_capabilities: binding_capabilities,
+            } = &binding.kind
+            else {
+                continue;
+            };
+            let grants_requested_surface = admitted_capabilities.iter().any(|requested| {
+                let normalized_request = normalized_action_grant(provider_name, requested);
+                binding.name == *requested
+                    || provider_name == requested
+                    || binding_capabilities.iter().any(|grant| {
+                        let normalized_grant = normalized_action_grant(provider_name, grant);
+                        normalized_grant == normalized_request
+                            || (normalized_grant == format!("{provider_name}.*")
+                                && normalized_request.starts_with(&format!("{provider_name}.")))
+                    })
+            });
+            if grants_requested_surface {
+                binding_ids.push(binding.id);
+            }
+        }
+        binding_ids.sort_unstable_by_key(|binding_id| binding_id.0);
+        binding_ids.dedup();
         binding_ids
     }
 

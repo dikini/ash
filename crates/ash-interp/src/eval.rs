@@ -1488,7 +1488,7 @@ fn maybe_execute_invoke_capture(value: Value, runtime_ctx: &Context) -> EvalResu
             });
             if binding_admitted == Some(true)
                 && let Some(runtime_state) = runtime_state.as_ref()
-                && let Some(CapabilityBindingKind::HostProvider { provider_name, .. }) =
+                && let Some(CapabilityBindingKind::HostProvider { .. }) =
                     binding.as_ref().map(|binding| &binding.kind)
             {
                 let projected_ctx = runtime_state
@@ -1496,7 +1496,7 @@ fn maybe_execute_invoke_capture(value: Value, runtime_ctx: &Context) -> EvalResu
                     .await
                     .map_err(|err| EvalError::ExecutionFailed(err.to_string()))?;
                 return projected_ctx
-                    .execute(provider_name, &action, &args)
+                    .execute(&provider, &action, &args)
                     .await
                     .map_err(|err| {
                         operational_eval_error_for_message_with_attribution(
@@ -2334,7 +2334,8 @@ fn apply_closure_async<'a>(
             let result = maybe_execute_invoke_capture_async(result, &call_ctx).await?;
             let result = maybe_execute_proc_await_capture_async(result, &call_ctx).await?;
             let result = maybe_execute_proc_yield_capture_async(result, &call_ctx).await?;
-            maybe_execute_proc_admission_capture_async(result, &call_ctx).await
+            let result = maybe_execute_proc_admission_capture_async(result, &call_ctx).await?;
+            maybe_execute_proc_wait_all_capture_async(result, &call_ctx).await
         } else if args.len() < params.len() {
             validates_hidden_act_env(params, &args)?;
             let mut new_env = ash_core::env_frame::EnvFrame::with_parent(env.clone());
@@ -2449,14 +2450,13 @@ async fn maybe_execute_invoke_capture_async(
                 )
                 .await;
             }
-            CapabilityBindingKind::HostProvider { provider_name, .. } => {
+            CapabilityBindingKind::HostProvider { .. } => {
                 let projected_ctx = runtime_state
                     .create_capability_context_for_bindings(&[binding.id])
                     .await
                     .map_err(|err| EvalError::ExecutionFailed(err.to_string()))?;
-                let dispatch_provider = provider_name.clone();
                 let invoked = projected_ctx
-                    .execute(&dispatch_provider, &action, &args)
+                    .execute(&provider, &action, &args)
                     .await
                     .map_err(|err| {
                         operational_eval_error_for_message(err.to_string(), runtime_ctx)

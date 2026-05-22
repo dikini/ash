@@ -196,6 +196,7 @@ async fn invoke_forced_via_workflow_bridge_dispatches_through_hidden_runtime_act
                 .with_execute_result(Ok(Value::String("done".to_string()))),
         ),
     );
+    let sensor_binding_id = admit_host_binding(&runtime_state, "sensor", "read").await;
 
     let workflow = Workflow::Ret {
         expr: Expr::FnApply {
@@ -214,7 +215,7 @@ async fn invoke_forced_via_workflow_bridge_dispatches_through_hidden_runtime_act
 
     let result = execute_workflow_with_behaviour_in_state(
         &workflow,
-        Context::new(),
+        admitted_context(sensor_binding_id),
         &CapabilityContext::new(),
         &PolicyEvaluator::new(),
         &BehaviourContext::new(),
@@ -237,6 +238,7 @@ async fn invoke_forced_via_workflow_bridge_dispatches_through_hidden_runtime_act
 #[tokio::test]
 async fn invoke_with_tokio_dependent_provider_dispatches_under_the_simplest_helper_runtime() {
     let runtime_state = RuntimeState::new().with_provider("sleepy", Arc::new(TokioSleepProvider));
+    let sleepy_binding_id = admit_host_binding(&runtime_state, "sleepy", "nap").await;
 
     let workflow = Workflow::Ret {
         expr: Expr::FnApply {
@@ -255,7 +257,7 @@ async fn invoke_with_tokio_dependent_provider_dispatches_under_the_simplest_help
 
     let result = execute_workflow_with_behaviour_in_state(
         &workflow,
-        Context::new(),
+        admitted_context(sleepy_binding_id),
         &CapabilityContext::new(),
         &PolicyEvaluator::new(),
         &BehaviourContext::new(),
@@ -309,6 +311,7 @@ async fn eval_expr_async_force_path_dispatches_tokio_provider_without_helper_run
 #[tokio::test]
 async fn workflow_ret_uses_async_force_path_for_task_local_provider() {
     let runtime_state = RuntimeState::new().with_provider("tasklocal", Arc::new(TaskLocalProvider));
+    let tasklocal_binding_id = admit_host_binding(&runtime_state, "tasklocal", "mark").await;
 
     let workflow = Workflow::Ret {
         expr: Expr::FnApply {
@@ -330,7 +333,7 @@ async fn workflow_ret_uses_async_force_path_for_task_local_provider() {
             "workflow-task-local",
             execute_workflow_with_behaviour_in_state(
                 &workflow,
-                Context::new(),
+                admitted_context(tasklocal_binding_id),
                 &CapabilityContext::new(),
                 &PolicyEvaluator::new(),
                 &BehaviourContext::new(),
@@ -352,6 +355,7 @@ async fn workflow_ret_uses_async_force_path_for_task_local_provider() {
 #[tokio::test]
 async fn workflow_ret_unary_uses_async_force_path_for_task_local_provider() {
     let runtime_state = RuntimeState::new().with_provider("tasklocal", Arc::new(TaskLocalProvider));
+    let tasklocal_binding_id = admit_host_binding(&runtime_state, "tasklocal", "mark").await;
 
     let workflow = Workflow::Ret {
         expr: Expr::Unary {
@@ -383,7 +387,7 @@ async fn workflow_ret_unary_uses_async_force_path_for_task_local_provider() {
             "workflow-unary-task-local",
             execute_workflow_with_behaviour_in_state(
                 &workflow,
-                Context::new(),
+                admitted_context(tasklocal_binding_id),
                 &CapabilityContext::new(),
                 &PolicyEvaluator::new(),
                 &BehaviourContext::new(),
@@ -399,6 +403,7 @@ async fn workflow_ret_unary_uses_async_force_path_for_task_local_provider() {
 #[tokio::test]
 async fn workflow_let_uses_async_force_path_for_task_local_provider() {
     let runtime_state = RuntimeState::new().with_provider("tasklocal", Arc::new(TaskLocalProvider));
+    let tasklocal_binding_id = admit_host_binding(&runtime_state, "tasklocal", "mark").await;
 
     let workflow = Workflow::Let {
         pattern: ash_core::Pattern::Variable {
@@ -430,7 +435,7 @@ async fn workflow_let_uses_async_force_path_for_task_local_provider() {
             "workflow-let-task-local",
             execute_workflow_with_behaviour_in_state(
                 &workflow,
-                Context::new(),
+                admitted_context(tasklocal_binding_id),
                 &CapabilityContext::new(),
                 &PolicyEvaluator::new(),
                 &BehaviourContext::new(),
@@ -452,6 +457,7 @@ async fn workflow_let_uses_async_force_path_for_task_local_provider() {
 #[tokio::test]
 async fn workflow_orient_uses_async_force_path_for_task_local_provider() {
     let runtime_state = RuntimeState::new().with_provider("tasklocal", Arc::new(TaskLocalProvider));
+    let tasklocal_binding_id = admit_host_binding(&runtime_state, "tasklocal", "mark").await;
 
     let workflow = Workflow::Orient {
         expr: Expr::FnApply {
@@ -476,7 +482,7 @@ async fn workflow_orient_uses_async_force_path_for_task_local_provider() {
             "workflow-orient-task-local",
             execute_workflow_with_behaviour_in_state(
                 &workflow,
-                Context::new(),
+                admitted_context(tasklocal_binding_id),
                 &CapabilityContext::new(),
                 &PolicyEvaluator::new(),
                 &BehaviourContext::new(),
@@ -493,6 +499,7 @@ async fn workflow_orient_uses_async_force_path_for_task_local_provider() {
 async fn workflow_foreach_uses_async_force_path_for_task_local_provider() {
     let runtime_state =
         RuntimeState::new().with_provider("tasklist", Arc::new(TaskLocalListProvider));
+    let tasklist_binding_id = admit_host_binding(&runtime_state, "tasklist", "mark").await;
 
     let workflow = Workflow::ForEach {
         pattern: ash_core::Pattern::Variable {
@@ -524,7 +531,7 @@ async fn workflow_foreach_uses_async_force_path_for_task_local_provider() {
             "workflow-foreach-task-local",
             execute_workflow_with_behaviour_in_state(
                 &workflow,
-                Context::new(),
+                admitted_context(tasklist_binding_id),
                 &CapabilityContext::new(),
                 &PolicyEvaluator::new(),
                 &BehaviourContext::new(),
@@ -545,6 +552,7 @@ async fn workflow_foreach_uses_async_force_path_for_task_local_provider() {
 #[tokio::test]
 async fn workflow_check_condition_uses_async_force_path_for_task_local_provider() {
     let runtime_state = RuntimeState::new().with_provider("tasklocal", Arc::new(TaskLocalProvider));
+    let tasklocal_binding_id = admit_host_binding(&runtime_state, "tasklocal", "mark").await;
 
     let reviewer = ash_core::Role {
         name: "reviewer".to_string(),
@@ -588,7 +596,7 @@ async fn workflow_check_condition_uses_async_force_path_for_task_local_provider(
             "workflow-check-task-local",
             execute_workflow_with_behaviour_in_state(
                 &workflow,
-                Context::new(),
+                admitted_context(tasklocal_binding_id),
                 &CapabilityContext::new(),
                 &PolicyEvaluator::new(),
                 &BehaviourContext::new(),
@@ -606,6 +614,7 @@ async fn workflow_check_condition_uses_async_force_path_for_task_local_provider(
 #[tokio::test]
 async fn workflow_decide_uses_async_force_path_for_task_local_provider() {
     let runtime_state = RuntimeState::new().with_provider("tasklocal", Arc::new(TaskLocalProvider));
+    let tasklocal_binding_id = admit_host_binding(&runtime_state, "tasklocal", "mark").await;
 
     let policy =
         ash_interp::Policy::new("tasklocal-decision").with_rule(ash_interp::PolicyRule::new(
@@ -652,7 +661,7 @@ async fn workflow_decide_uses_async_force_path_for_task_local_provider() {
             "workflow-decide-task-local",
             execute_workflow_with_behaviour_in_state(
                 &workflow,
-                Context::new(),
+                admitted_context(tasklocal_binding_id),
                 &CapabilityContext::new(),
                 &policy_eval,
                 &BehaviourContext::new(),
@@ -718,6 +727,7 @@ async fn denied_guard_does_not_force_guarded_provider_act() {
 #[tokio::test]
 async fn workflow_spawn_init_uses_async_force_path_for_task_local_provider() {
     let runtime_state = RuntimeState::new().with_provider("tasklocal", Arc::new(TaskLocalProvider));
+    let tasklocal_binding_id = admit_host_binding(&runtime_state, "tasklocal", "mark").await;
     runtime_state
         .register_child_workflow("worker", Workflow::Done)
         .await;
@@ -747,7 +757,7 @@ async fn workflow_spawn_init_uses_async_force_path_for_task_local_provider() {
             "workflow-spawn-task-local",
             execute_workflow_with_behaviour_in_state(
                 &workflow,
-                Context::new(),
+                admitted_context(tasklocal_binding_id),
                 &CapabilityContext::new(),
                 &PolicyEvaluator::new(),
                 &BehaviourContext::new(),
@@ -767,6 +777,7 @@ async fn workflow_set_uses_async_force_path_for_task_local_provider() {
     let mut behaviour_ctx = BehaviourContext::new();
     behaviour_ctx.register_settable(typed);
     let runtime_state = RuntimeState::new().with_provider("tasklocal", Arc::new(TaskLocalProvider));
+    let tasklocal_binding_id = admit_host_binding(&runtime_state, "tasklocal", "mark").await;
 
     let workflow = Workflow::Set {
         capability: "actuator".to_string(),
@@ -790,7 +801,7 @@ async fn workflow_set_uses_async_force_path_for_task_local_provider() {
             "workflow-set-task-local",
             execute_workflow_with_behaviour_in_state(
                 &workflow,
-                Context::new(),
+                admitted_context(tasklocal_binding_id),
                 &CapabilityContext::new(),
                 &PolicyEvaluator::new(),
                 &behaviour_ctx,
@@ -823,6 +834,7 @@ async fn workflow_send_uses_async_force_path_for_task_local_provider() {
     let mut stream_ctx = StreamContext::new();
     stream_ctx.register_sendable(typed);
     let runtime_state = RuntimeState::new().with_provider("tasklocal", Arc::new(TaskLocalProvider));
+    let tasklocal_binding_id = admit_host_binding(&runtime_state, "tasklocal", "mark").await;
 
     let workflow = Workflow::Send {
         capability: "queue".to_string(),
@@ -846,7 +858,7 @@ async fn workflow_send_uses_async_force_path_for_task_local_provider() {
             "workflow-send-task-local",
             execute_workflow_with_stream_in_state(
                 &workflow,
-                Context::new(),
+                admitted_context(tasklocal_binding_id),
                 &CapabilityContext::new(),
                 &PolicyEvaluator::new(),
                 &BehaviourContext::new(),
@@ -870,6 +882,7 @@ async fn workflow_send_uses_async_force_path_for_task_local_provider() {
 #[tokio::test]
 async fn workflow_yield_request_uses_async_force_path_for_task_local_provider() {
     let runtime_state = RuntimeState::new().with_provider("tasklocal", Arc::new(TaskLocalProvider));
+    let tasklocal_binding_id = admit_host_binding(&runtime_state, "tasklocal", "mark").await;
     {
         let proxy_registry = runtime_state.proxy_registry();
         let mut registry = proxy_registry.lock().await;
@@ -906,7 +919,7 @@ async fn workflow_yield_request_uses_async_force_path_for_task_local_provider() 
             "workflow-yield-task-local",
             execute_workflow_with_behaviour_in_state(
                 &workflow,
-                Context::new(),
+                admitted_context(tasklocal_binding_id),
                 &CapabilityContext::new(),
                 &PolicyEvaluator::new(),
                 &BehaviourContext::new(),
@@ -934,6 +947,7 @@ async fn workflow_yield_request_uses_async_force_path_for_task_local_provider() 
 #[tokio::test]
 async fn workflow_proxy_resume_response_uses_async_force_path_for_task_local_provider() {
     let runtime_state = RuntimeState::new().with_provider("tasklocal", Arc::new(TaskLocalProvider));
+    let tasklocal_binding_id = admit_host_binding(&runtime_state, "tasklocal", "mark").await;
     let correlation_id = ash_interp::yield_state::CorrelationId::new();
     {
         let suspended = runtime_state.suspended_yields();
@@ -977,7 +991,7 @@ async fn workflow_proxy_resume_response_uses_async_force_path_for_task_local_pro
             "workflow-proxy-resume-task-local",
             execute_workflow_with_behaviour_in_state(
                 &workflow,
-                Context::new(),
+                admitted_context(tasklocal_binding_id),
                 &CapabilityContext::new(),
                 &PolicyEvaluator::new(),
                 &BehaviourContext::new(),
@@ -999,6 +1013,7 @@ async fn workflow_proxy_resume_response_uses_async_force_path_for_task_local_pro
 #[tokio::test]
 async fn workflow_split_uses_async_force_path_for_task_local_provider() {
     let runtime_state = RuntimeState::new().with_provider("tasklocal", Arc::new(TaskLocalProvider));
+    let tasklocal_binding_id = admit_host_binding(&runtime_state, "tasklocal", "mark").await;
     runtime_state
         .register_child_workflow("worker", Workflow::Done)
         .await;
@@ -1047,7 +1062,7 @@ async fn workflow_split_uses_async_force_path_for_task_local_provider() {
             "workflow-split-task-local",
             execute_workflow_with_behaviour_in_state(
                 &workflow,
-                Context::new(),
+                admitted_context(tasklocal_binding_id),
                 &CapabilityContext::new(),
                 &PolicyEvaluator::new(),
                 &BehaviourContext::new(),
@@ -1063,6 +1078,7 @@ async fn workflow_split_uses_async_force_path_for_task_local_provider() {
 #[tokio::test]
 async fn workflow_ret_constructor_uses_async_force_path_for_task_local_provider() {
     let runtime_state = RuntimeState::new().with_provider("tasklocal", Arc::new(TaskLocalProvider));
+    let tasklocal_binding_id = admit_host_binding(&runtime_state, "tasklocal", "mark").await;
 
     let workflow = Workflow::Ret {
         expr: Expr::Constructor {
@@ -1090,7 +1106,7 @@ async fn workflow_ret_constructor_uses_async_force_path_for_task_local_provider(
             "workflow-constructor-task-local",
             execute_workflow_with_behaviour_in_state(
                 &workflow,
-                Context::new(),
+                admitted_context(tasklocal_binding_id),
                 &CapabilityContext::new(),
                 &PolicyEvaluator::new(),
                 &BehaviourContext::new(),
@@ -1118,6 +1134,7 @@ async fn workflow_ret_constructor_uses_async_force_path_for_task_local_provider(
 #[tokio::test]
 async fn workflow_ret_call_uses_async_force_path_for_task_local_provider() {
     let runtime_state = RuntimeState::new().with_provider("tasklocal", Arc::new(TaskLocalProvider));
+    let tasklocal_binding_id = admit_host_binding(&runtime_state, "tasklocal", "mark").await;
 
     let workflow = Workflow::Ret {
         expr: Expr::Call {
@@ -1146,7 +1163,7 @@ async fn workflow_ret_call_uses_async_force_path_for_task_local_provider() {
             "workflow-call-task-local",
             execute_workflow_with_behaviour_in_state(
                 &workflow,
-                Context::new(),
+                admitted_context(tasklocal_binding_id),
                 &CapabilityContext::new(),
                 &PolicyEvaluator::new(),
                 &BehaviourContext::new(),
@@ -1170,6 +1187,7 @@ async fn workflow_ret_call_uses_async_force_path_for_task_local_provider() {
 #[tokio::test]
 async fn workflow_ret_field_access_uses_async_force_path_for_task_local_provider() {
     let runtime_state = RuntimeState::new().with_provider("tasklocal", Arc::new(TaskLocalProvider));
+    let tasklocal_binding_id = admit_host_binding(&runtime_state, "tasklocal", "mark").await;
 
     let workflow = Workflow::Ret {
         expr: Expr::FieldAccess {
@@ -1201,7 +1219,7 @@ async fn workflow_ret_field_access_uses_async_force_path_for_task_local_provider
             "workflow-field-task-local",
             execute_workflow_with_behaviour_in_state(
                 &workflow,
-                Context::new(),
+                admitted_context(tasklocal_binding_id),
                 &CapabilityContext::new(),
                 &PolicyEvaluator::new(),
                 &BehaviourContext::new(),
@@ -1223,6 +1241,7 @@ async fn workflow_ret_field_access_uses_async_force_path_for_task_local_provider
 #[tokio::test]
 async fn workflow_ret_match_uses_async_force_path_for_task_local_provider() {
     let runtime_state = RuntimeState::new().with_provider("tasklocal", Arc::new(TaskLocalProvider));
+    let tasklocal_binding_id = admit_host_binding(&runtime_state, "tasklocal", "mark").await;
 
     let workflow = Workflow::Ret {
         expr: Expr::Match {
@@ -1266,7 +1285,7 @@ async fn workflow_ret_match_uses_async_force_path_for_task_local_provider() {
             "workflow-match-task-local",
             execute_workflow_with_behaviour_in_state(
                 &workflow,
-                Context::new(),
+                admitted_context(tasklocal_binding_id),
                 &CapabilityContext::new(),
                 &PolicyEvaluator::new(),
                 &BehaviourContext::new(),
@@ -1288,6 +1307,7 @@ async fn workflow_ret_match_uses_async_force_path_for_task_local_provider() {
 #[tokio::test]
 async fn workflow_ret_iflet_uses_async_force_path_for_task_local_provider() {
     let runtime_state = RuntimeState::new().with_provider("tasklocal", Arc::new(TaskLocalProvider));
+    let tasklocal_binding_id = admit_host_binding(&runtime_state, "tasklocal", "mark").await;
 
     let workflow = Workflow::Ret {
         expr: Expr::IfLet {
@@ -1330,7 +1350,7 @@ async fn workflow_ret_iflet_uses_async_force_path_for_task_local_provider() {
             "workflow-iflet-task-local",
             execute_workflow_with_behaviour_in_state(
                 &workflow,
-                Context::new(),
+                admitted_context(tasklocal_binding_id),
                 &CapabilityContext::new(),
                 &PolicyEvaluator::new(),
                 &BehaviourContext::new(),
@@ -1361,6 +1381,24 @@ fn host_binding_for(
         provider_name,
         vec![format!("{provider_name}.{action_name}")],
     )
+}
+
+async fn admit_host_binding(
+    runtime_state: &RuntimeState,
+    provider_name: &str,
+    action_name: &str,
+) -> CapabilityBindingId {
+    let binding = host_binding_for(provider_name, provider_name, action_name);
+    let binding_id = binding.id;
+    runtime_state
+        .admit_capability_binding(binding)
+        .await
+        .expect("host binding admission succeeds");
+    binding_id
+}
+
+fn admitted_context(binding_id: CapabilityBindingId) -> Context {
+    Context::new().with_admitted_capability_bindings(vec![binding_id])
 }
 
 fn tasklocal_invoke_force_expr() -> Expr {

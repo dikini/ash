@@ -179,6 +179,22 @@ pub async fn run(args: &RunArgs) -> Result<RunOutcome> {
         );
     }
 
+    let kernel = if !is_module_only_source(&source) {
+        Some(
+            OneShotRuntimeKernel::admit(
+                path,
+                &source,
+                workflow_name,
+                host_mode,
+                admission_profile,
+                &args.program_args,
+            )
+            .context("Failed to build RuntimeKernel artifact")?,
+        )
+    } else {
+        None
+    };
+
     let outcome: Result<RunOutcome> = async {
         // Dry-run mode: parse and check only
         if args.dry_run {
@@ -280,21 +296,31 @@ pub async fn run(args: &RunArgs) -> Result<RunOutcome> {
     }
     .await;
 
-    let outcome = outcome?;
-    if !is_module_only_source(&source) {
-        let kernel = OneShotRuntimeKernel::admit(
-            path,
-            &source,
-            workflow_name,
-            host_mode,
-            admission_profile,
-            &args.program_args,
-        )
-        .context("Failed to build RuntimeKernel artifact")?;
-        kernel.emit_report_if_requested()?;
+    match outcome {
+        Ok(outcome) => {
+            if let Some(kernel) = &kernel {
+                kernel.emit_report_if_requested()?;
+            }
+            Ok(outcome)
+        }
+        Err(error) => {
+            if let Some(kernel) = &kernel
+                && should_emit_kernel_report_for_error(&error)
+            {
+                kernel.emit_report_if_requested()?;
+            }
+            Err(error)
+        }
     }
+}
 
-    Ok(outcome)
+fn should_emit_kernel_report_for_error(error: &anyhow::Error) -> bool {
+    let message = error.to_string();
+    !(message.contains("parse error")
+        || message.contains("type error")
+        || message.contains("entry verification failed")
+        || message.contains("Unsupported workflow")
+        || message.contains("unsupported workflow"))
 }
 
 #[derive(Debug, Clone)]

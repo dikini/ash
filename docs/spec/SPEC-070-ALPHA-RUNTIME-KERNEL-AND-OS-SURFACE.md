@@ -1,12 +1,12 @@
 # SPEC-070: Alpha Runtime Kernel and OS-Facing Execution Surface
 
-**Status:** Implemented MVP (Phase 123 closeout; see TASK-941 successor evidence plus TASK-942/TASK-943 post-merge remediation)
+**Status:** Implemented MVP (Phase 123 closeout; see TASK-941 successor evidence plus TASK-942/TASK-943/TASK-944 post-merge remediation)
 **Date:** 2026-05-19
 **Promotes:** [DESIGN-041](../design/DESIGN-041-RUNTIME-REGIME-AND-OS-SURFACE.md)
 **Builds on:** [SPEC-005](SPEC-005-CLI.md), [SPEC-021](SPEC-021-RUNTIME-OBSERVABLE-BEHAVIOR.md), [SPEC-047](SPEC-047-ACT-MONAD.md), [SPEC-048](SPEC-048-PROC-LIBRARY.md), [SPEC-049](SPEC-049-PROCESS-RUNTIME-SEMANTICS.md), [SPEC-050](SPEC-050-OPERATIONAL-BOTTOM-AND-SCOPED-HANDLING.md), [SPEC-051](SPEC-051-WORKFLOW-SEMANTICS.md), [SPEC-069](SPEC-069-ALPHA-VISIBLE-TOWER-ALGEBRA-AND-DO-LOWERING.md)
 **Related:** [MCE-001](../ideas/minimal-core/MCE-001-ENTRY-POINT.md), [WORKFLOW_SPAWNING_AND_SUPERVISION](../design/WORKFLOW_SPAWNING_AND_SUPERVISION.md)
 **Plan:** [PLAN-118](../plan/PLAN-118-DESIGN-040-041-ALPHA-IMPLEMENTATION-PACKET.md), [PLAN-119](../plan/PLAN-119-SPEC-069-070-IMPLEMENTED-MVP-CLOSURE.md)
-**Implementation Tasks:** [TASK-919](../plan/tasks/TASK-919-design040041-current-state-and-scope-reconciliation.md) through [TASK-943](../plan/tasks/TASK-943-phase123-followup-child-admission-and-status-drift.md)
+**Implementation Tasks:** [TASK-919](../plan/tasks/TASK-919-design040041-current-state-and-scope-reconciliation.md) through [TASK-944](../plan/tasks/TASK-944-phase123-daemon-admitted-source-config-remediation.md)
 
 ## 1. Summary
 
@@ -57,6 +57,8 @@ Requirements:
 4. Terminal workflow outcomes map to deterministic OS status classes.
 5. Reports/traces are emitted even on workflow failure when local report construction remains possible.
 
+Alpha caveat: `FILE[:WORKFLOW]` currently records the workflow suffix in RuntimeKernel identity/report selection surfaces. Semantic execution of arbitrary non-`main` exported workflows remains outside the Implemented MVP until the full workflow-selection path is wired through parser, typecheck, and execution.
+
 ## 5. Local daemon
 
 The local daemon is a local-first alpha service using the same `RuntimeKernel`. TASK-929 selected the final command spelling under the existing CLI as `ash daemon ...`.
@@ -65,7 +67,7 @@ Alpha daemon scope:
 
 - Unix-domain-socket or equivalent same-user local control surface, with alpha validation of root/socket/state/cache/log path ownership before binding and rejection of pre-existing non-socket control paths;
 - list definitions and instances;
-- start workflow instance records pinned to the active artifact/source identity, including alpha start args/config/admission-profile request fields;
+- start workflow instance records pinned to the active artifact/source identity, including alpha start args/config/admission-profile request fields; non-default daemon `config_id` values are rejected until config-specific daemon artifacts exist;
 - observe instance status and pinned artifact identity; report/log-path projection remains beyond the TASK-929 MVP;
 - request cancellation/stop;
 - reload roots/config for future starts.
@@ -124,3 +126,7 @@ See [PLAN-118](../plan/PLAN-118-DESIGN-040-041-ALPHA-IMPLEMENTATION-PACKET.md).
 ### 2026-05-21
 
 - Promoted to Implemented MVP after PLAN-119/TASK-941 reconciled Phase 123 successor evidence and TASK-942/TASK-943 completed post-merge remediation for admission-profile rejection, daemon start records, policy-profile grant enforcement, daemon child-failure trace semantics, and run/daemon artifact equivalence while preserving local-only daemon scope and resource-operation enforcement limitations.
+
+### 2026-05-22
+
+- TASK-944 closed the remaining daemon admitted-source/config identity gaps: daemon start-execute now executes from the source bytes already read and hash-checked for admitted-artifact drift, and non-default daemon start `config_id` values fail before instance recording until profile-specific daemon artifacts exist. The public caveats for `FILE[:WORKFLOW]` semantic selection and daemon args/config execution semantics remain explicit alpha boundaries.

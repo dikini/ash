@@ -323,6 +323,22 @@ pub fn parse_program_with_functions(source: &str) -> Result<ash_parser::surface:
 #[allow(clippy::too_many_lines)]
 pub fn load_ordinary_file(path: &Path) -> Result<LoadedOrdinaryFile, EngineError> {
     let source = std::fs::read_to_string(path)?;
+    load_ordinary_source(path, &source)
+}
+
+/// Load an ordinary workflow source snapshot using `path` only as import and
+/// module-identity context.
+///
+/// This is for admitted-artifact execution paths that have already read and
+/// hashed the source bytes and must not read the entry file again before
+/// execution.
+///
+/// # Errors
+///
+/// Returns [`EngineError`] if an import cannot be resolved, or an imported
+/// module cannot be parsed into the supported type/callable subset.
+#[allow(clippy::too_many_lines)]
+pub fn load_ordinary_source(path: &Path, source: &str) -> Result<LoadedOrdinaryFile, EngineError> {
     let canonical_entry = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
     let entry_root = path.parent().ok_or_else(|| {
         EngineError::Configuration(format!("workflow path '{}' has no parent", path.display()))

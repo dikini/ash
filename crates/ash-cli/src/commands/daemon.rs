@@ -454,6 +454,13 @@ impl DaemonState {
         config_id: &str,
         admission_profile: DaemonAdmissionProfile,
     ) -> Result<Value> {
+        if config_id != self.config_id.as_str() {
+            bail!(
+                "non-default daemon config_id '{config_id}' is unsupported in the alpha daemon; restart the daemon with that default config or use config_id '{}'",
+                self.config_id.as_str()
+            );
+        }
+
         let definition = self
             .definitions
             .iter()
@@ -654,7 +661,8 @@ impl DaemonState {
                 ),
             )));
         }
-        let execution_path = path.clone();
+        let execution_source = current_source;
+        let execution_path = path;
         std::thread::scope(|scope| {
             let handle = scope.spawn(|| {
                 let runtime = tokio::runtime::Builder::new_current_thread()
@@ -672,11 +680,13 @@ impl DaemonState {
                             "failed to build daemon execution engine: {error}"
                         )))
                     })?;
-                    let mut workflow = engine.parse_file(&execution_path).map_err(|error| {
-                        Box::new(InstanceExecutionFailure::workflow_request(format!(
-                            "failed to parse daemon workflow for execution: {error}"
-                        )))
-                    })?;
+                    let mut workflow = engine
+                        .parse_file_source(&execution_path, &execution_source)
+                        .map_err(|error| {
+                            Box::new(InstanceExecutionFailure::workflow_request(format!(
+                                "failed to parse daemon workflow for execution: {error}"
+                            )))
+                        })?;
                     engine.check(&mut workflow).map_err(|error| {
                         Box::new(InstanceExecutionFailure::workflow_request(format!(
                             "failed to check daemon workflow for execution: {error}"

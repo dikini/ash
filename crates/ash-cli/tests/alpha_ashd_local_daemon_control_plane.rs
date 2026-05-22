@@ -207,7 +207,7 @@ fn ashd_start_protocol_round_trips_args_config_and_admission_profile() {
             "command": "start",
             "workflow": "main",
             "args": ["alpha", "beta"],
-            "config_id": "staging",
+            "config_id": "default",
             "admission_profile": "allow"
         }),
     );
@@ -216,7 +216,7 @@ fn ashd_start_protocol_round_trips_args_config_and_admission_profile() {
     assert_eq!(start["host_mode"], "Daemon");
     assert_eq!(start["workflow"], "main");
     assert_eq!(start["args"], serde_json::json!(["alpha", "beta"]));
-    assert_eq!(start["config_id"], "staging");
+    assert_eq!(start["config_id"], "default");
     assert_eq!(start["admission"]["status"], "admitted");
     assert_eq!(start["admission"]["profile"], "allow");
     assert_eq!(start["admission"]["capability_grants"], 0);
@@ -226,7 +226,7 @@ fn ashd_start_protocol_round_trips_args_config_and_admission_profile() {
     let status = daemon_json(&dirs.socket, &["status", "--instance", instance_id]);
     assert_eq!(status["instance_id"], instance_id);
     assert_eq!(status["args"], serde_json::json!(["alpha", "beta"]));
-    assert_eq!(status["config_id"], "staging");
+    assert_eq!(status["config_id"], "default");
     assert_eq!(status["admission"]["status"], "admitted");
     assert_eq!(status["admission"]["profile"], "allow");
 
@@ -235,8 +235,76 @@ fn ashd_start_protocol_round_trips_args_config_and_admission_profile() {
     assert_eq!(instances.len(), 1, "instances: {list}");
     assert_eq!(instances[0]["instance_id"], instance_id);
     assert_eq!(instances[0]["args"], serde_json::json!(["alpha", "beta"]));
-    assert_eq!(instances[0]["config_id"], "staging");
+    assert_eq!(instances[0]["config_id"], "default");
     assert_eq!(instances[0]["admission"]["profile"], "allow");
+}
+
+#[cfg(unix)]
+#[test]
+fn ashd_start_rejects_non_default_config_id_without_recording_instance() {
+    let root = tempdir().expect("root tempdir");
+    write_workflow(root.path(), "main", 8);
+    let dirs = daemon_dirs();
+    let _daemon = spawn_daemon(root.path(), &dirs);
+
+    let protocol_rejected = daemon_protocol_json(
+        &dirs.socket,
+        serde_json::json!({
+            "command": "start",
+            "workflow": "main",
+            "args": ["would-not-record"],
+            "config_id": "staging",
+            "admission_profile": "allow"
+        }),
+    );
+    assert_eq!(protocol_rejected["ok"], false);
+    assert_eq!(protocol_rejected["error"]["class"], "request_failure");
+    assert!(
+        protocol_rejected["error"]["message"]
+            .as_str()
+            .expect("error message")
+            .contains("non-default daemon config_id"),
+        "protocol response must explain unsupported non-default config IDs: {protocol_rejected}"
+    );
+
+    let after_protocol_reject = daemon_json(&dirs.socket, &["list"]);
+    assert_eq!(
+        after_protocol_reject["instances"]
+            .as_array()
+            .expect("instances")
+            .len(),
+        0,
+        "non-default config rejection must not record an instance: {after_protocol_reject}"
+    );
+
+    let mut rejected = Command::cargo_bin("ash").expect("ash binary exists");
+    rejected
+        .arg("daemon")
+        .arg("start")
+        .arg("--arg")
+        .arg("would-not-record")
+        .arg("--config-id")
+        .arg("staging")
+        .arg("--admission-profile")
+        .arg("allow")
+        .arg("main")
+        .arg("--socket")
+        .arg(&dirs.socket)
+        .arg("--format")
+        .arg("json")
+        .assert()
+        .failure()
+        .stderr(predicates::str::contains("non-default daemon config_id"));
+
+    let after_cli_reject = daemon_json(&dirs.socket, &["list"]);
+    assert_eq!(
+        after_cli_reject["instances"]
+            .as_array()
+            .expect("instances")
+            .len(),
+        0,
+        "CLI non-default config rejection must not record an instance: {after_cli_reject}"
+    );
 }
 
 #[cfg(unix)]
@@ -256,7 +324,7 @@ fn ashd_start_cli_rejects_admission_profile_without_recording_instance() {
             "command": "start",
             "workflow": "main",
             "args": ["would-not-run"],
-            "config_id": "rejected-config",
+            "config_id": "default",
             "admission_profile": "reject"
         }),
     );
@@ -287,7 +355,7 @@ fn ashd_start_cli_rejects_admission_profile_without_recording_instance() {
         .arg("--arg")
         .arg("would-not-run")
         .arg("--config-id")
-        .arg("rejected-config")
+        .arg("default")
         .arg("--admission-profile")
         .arg("reject")
         .arg("main")

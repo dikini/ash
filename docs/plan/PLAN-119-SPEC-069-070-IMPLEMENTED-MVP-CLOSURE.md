@@ -12,7 +12,7 @@
 
 ## Status
 
-✅ Complete (TASK-943 follow-up remediation closed the spawned-child admission inheritance bug and status-drift docs follow-up; broad gates and final independent review passed).
+✅ Complete (TASK-944 final post-merge remediation closed the remaining daemon admitted-source TOCTOU and non-default config-id identity gaps after TASK-942/TASK-943; focused gates/check/clippy, serial workspace tests/doctests, rustdoc warning check, and final independent review passed).
 
 ## Scope
 
@@ -52,8 +52,9 @@ This phase closes the following Phase 122 limitations:
 | TASK-941 | SPEC-069/SPEC-070 Implemented MVP closeout | Docs/Planning | 8 | TASK-934 through TASK-940 | ✅ Complete |
 | TASK-942 | Phase 123 post-merge RuntimeKernel remediation | Semantic/Substrate/Docs | 10 | TASK-941 post-merge review | ✅ Complete |
 | TASK-943 | Phase 123 follow-up child admission and status drift | Semantic/Docs | 4 | TASK-942 post-merge review | ✅ Complete |
+| TASK-944 | Phase 123 daemon admitted-source/config remediation | Semantic/Substrate/Docs | 6 | TASK-943 follow-up review | ✅ Complete |
 
-Estimated total: 98 hours.
+Estimated total: 104 hours.
 
 ## Required Execution Discipline
 
@@ -100,5 +101,5 @@ SPEC-069/SPEC-070 may be promoted to Implemented MVP only after TASK-941 confirm
 
 - every formerly partial row has concrete evidence cited in `docs/plan/audits/TASK-931-alpha-acceptance-matrix.md` or the Phase 123 successor audit `docs/plan/audits/TASK-941-phase123-closeout-evidence.md`;
 - no current status surface still says SPEC-069/SPEC-070 are Partial MVP except historical Phase 122 notes;
-- all broad gates pass on the final diff;
+- all broad gates pass on the final diff, or any narrower post-merge remediation scope records exact focused evidence and an explicit broad-gate caveat instead of claiming broad completion;
 - Codex phase audit status is represented honestly. TASK-941's implementation worker may record the final independent phase audit as pending when nested agents are unavailable.

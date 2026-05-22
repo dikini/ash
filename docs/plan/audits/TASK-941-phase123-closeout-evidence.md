@@ -1,6 +1,6 @@
 # TASK-941 Phase 123 Closeout Evidence
 
-Status: Complete; broad gates and independent final phase audit passed
+Status: Complete after TASK-944 focused gates/check/clippy, serial workspace tests/doctests, rustdoc warning check, and independent review
 Date: 2026-05-21
 Branch: phase123-implemented-mvp
 Phase: Phase 123 / PLAN-119
@@ -44,8 +44,7 @@ Phase 123 execution or artifact evidence.
 
 ## Verification Status
 
-TASK-941 implementation closeout reconciles the status surfaces and adds this
-successor evidence map. Final closeout gates passed:
+TASK-941 implementation closeout reconciled the Phase 123 successor evidence map. Its original final closeout gates passed before post-merge remediation:
 
 - `cargo fmt --check`
 - `git diff --check`
@@ -54,13 +53,13 @@ successor evidence map. Final closeout gates passed:
 - `RUSTC_WRAPPER= scripts/check-rust-tests.sh --workspace`
 - `RUSTC_WRAPPER= cargo doc --workspace --no-deps 2>&1 | tee /tmp/ash-phase123-doc.log && ! grep -i '^warning:' /tmp/ash-phase123-doc.log`
 
-The final independent Codex-style phase audit found no semantic/code/test
-blocker in the fail-closed RuntimeKernel admission paths and no overbroad
-Implemented MVP claim beyond the status-surface reconciliation completed here.
+TASK-944 post-merge remediation has fresh evidence: `git diff --check`, `cargo fmt --check`, `RUSTC_WRAPPER= cargo check -p ash-engine -p ash-cli`, `RUSTC_WRAPPER= cargo clippy -p ash-engine -p ash-cli --all-targets --all-features -- -D warnings`, focused daemon tests, focused run/daemon artifact-equivalence tests, focused RuntimeKernel authority tests, `RUSTC_WRAPPER= scripts/check-rust-tests.sh --workspace`, and `RUSTC_WRAPPER= cargo doc --workspace --no-deps 2>&1 | tee /tmp/ash-task944-doc.log && ! grep -i '^warning:' /tmp/ash-task944-doc.log` passed. An earlier raw `RUSTC_WRAPPER= cargo test --workspace` attempt was stopped while still compiling after about 17 minutes with no test failure; the serial wrapper supersedes that inconclusive raw attempt.
+
+The final independent Codex-style phase audit found no semantic/code/test blocker in the daemon admitted-source/config remediation after this status-honesty update. It retained a verification caveat that the TOCTOU regression is timing-based even though code inspection supports the source-snapshot fix.
 
 
 ## Post-Merge Remediation Addendum
 
-TASK-942 and TASK-943 are part of the final Phase 123 status evidence after post-merge review reopened the closeout. TASK-942 remediated RuntimeKernel admission/report lifecycle, daemon admitted-artifact lifetime, binding-ID admission facts, empty-admission fail-closed authority, binding alias projection, and artifact-equivalence wording. TASK-943 adds the final spawned-child authority regression proving a child with no inherited admitted binding IDs cannot execute a globally admitted host binding, and reconciles SPEC-069/SPEC-070 status provenance through the post-merge remediation tasks.
+TASK-942, TASK-943, and TASK-944 are part of the final Phase 123 status evidence after post-merge review reopened the closeout. TASK-942 remediated RuntimeKernel admission/report lifecycle, binding-ID admission facts, empty-admission fail-closed authority, binding alias projection, and artifact-equivalence wording. TASK-943 adds the spawned-child authority regression proving a child with no inherited admitted binding IDs cannot execute a globally admitted host binding, and reconciles SPEC-069/SPEC-070 status provenance through the post-merge remediation tasks. TASK-944 closes the final daemon admitted-artifact lifetime and config-identity gaps by executing daemon start-execute from the already-read/hash-checked source bytes instead of a second filesystem parse, and by rejecting non-default daemon `config_id` values before instance recording until config-specific daemon artifacts exist.
 
-Final status claims for SPEC-069/SPEC-070 Implemented MVP therefore cite this TASK-941 successor evidence together with TASK-942 and TASK-943 remediation evidence. Historical Phase 122 remains Partial MVP; Phase 123 owns the promotion after remediation.
+Final status claims for SPEC-069/SPEC-070 Implemented MVP therefore cite this TASK-941 successor evidence together with TASK-942, TASK-943, and TASK-944 remediation evidence. Historical Phase 122 remains Partial MVP; Phase 123 owns the promotion after remediation.

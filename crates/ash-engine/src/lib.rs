@@ -1023,13 +1023,41 @@ impl Engine {
         let path = path.as_ref();
         let module_identity = module_loader::module_identity_for_path(path);
         let loaded = module_loader::load_ordinary_file(path)?;
+        self.parse_loaded_ordinary_file(&loaded, &module_identity)
+    }
+
+    /// Parse a workflow from already-read ordinary-file source.
+    ///
+    /// `path` supplies only module identity and import-resolution context; the
+    /// entry workflow source is taken from `source` without re-reading `path`.
+    ///
+    /// # Errors
+    ///
+    /// Returns `EngineError::Parse` if the supplied source contains syntax
+    /// errors or `EngineError::Configuration` if path context is invalid.
+    pub fn parse_file_source(
+        &self,
+        path: impl AsRef<std::path::Path>,
+        source: &str,
+    ) -> Result<Workflow, EngineError> {
+        let path = path.as_ref();
+        let module_identity = module_loader::module_identity_for_path(path);
+        let loaded = module_loader::load_ordinary_source(path, source)?;
+        self.parse_loaded_ordinary_file(&loaded, &module_identity)
+    }
+
+    fn parse_loaded_ordinary_file(
+        &self,
+        loaded: &module_loader::LoadedOrdinaryFile,
+        module_identity: &ash_core::semantic_summary::ModuleIdentity,
+    ) -> Result<Workflow, EngineError> {
         self.parse_workflow_source_with_imports(
             &loaded.workflow_source,
-            loaded.imported_type_defs,
-            loaded.imported_semantic_summaries,
-            loaded.imported_type_function_heads,
+            loaded.imported_type_defs.clone(),
+            loaded.imported_semantic_summaries.clone(),
+            loaded.imported_type_function_heads.clone(),
             &loaded.imported_callables,
-            Some(&module_identity),
+            Some(module_identity),
         )
     }
     /// Extract local function definitions as closures and register helper workflows.

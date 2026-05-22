@@ -1,6 +1,9 @@
 use assert_cmd::Command;
 use serde_json::Value;
 use std::fs;
+use std::io::{BufRead, BufReader, Write};
+#[cfg(unix)]
+use std::os::unix::net::UnixStream;
 use std::path::Path;
 use std::process::{Child, Command as StdCommand, Stdio};
 use std::thread;
@@ -125,6 +128,19 @@ fn daemon_json(socket: &Path, args: &[&str]) -> Value {
         .stdout
         .clone();
     serde_json::from_slice(&output).expect("daemon json response")
+}
+
+#[cfg(unix)]
+fn daemon_protocol_json(socket: &Path, request: Value) -> Value {
+    let mut stream = UnixStream::connect(socket).expect("connect daemon socket");
+    serde_json::to_writer(&mut stream, &request).expect("write daemon request");
+    stream.write_all(b"\n").expect("terminate daemon request");
+
+    let mut line = String::new();
+    BufReader::new(stream)
+        .read_line(&mut line)
+        .expect("read daemon response");
+    serde_json::from_str(&line).expect("daemon protocol json response")
 }
 
 fn definition<'a>(list: &'a Value, workflow: &str) -> &'a Value {
@@ -263,4 +279,38 @@ fn daemon_start_execute_fails_closed_when_live_source_drifts_from_admitted_artif
             && failure_message.contains(&admitted_source_hash),
         "failure should identify the pinned admitted source/artifact boundary: {start}"
     );
+}
+
+#[cfg(unix)]
+#[test]
+fn daemon_start_execute_uses_hashed_source_bytes_after_drift_check() {
+    let root = tempdir().expect("root tempdir");
+    let workflow_path = write_workflow(root.path(), "main");
+    let dirs = daemon_dirs();
+    let _daemon = spawn_daemon(root.path(), &dirs);
+
+    let socket = dirs.socket.clone();
+    let response = thread::spawn(move || {
+        daemon_protocol_json(
+            &socket,
+            serde_json::json!({
+                "command": "start",
+                "workflow": "main",
+                "config_id": "default",
+                "admission_profile": "allow",
+                "execute": true
+            }),
+        )
+    });
+
+    thread::sleep(Duration::from_millis(15));
+    fs::write(&workflow_path, "workflow main {").expect("mutate workflow after drift check");
+
+    let start = response.join().expect("daemon response thread");
+    assert_eq!(start["ok"], true, "start-execute response: {start}");
+    assert_eq!(
+        start["status"], "succeeded",
+        "start-execute response: {start}"
+    );
+    assert_eq!(start["report"]["status"], "succeeded");
 }

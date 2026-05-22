@@ -75,6 +75,10 @@ async fn runtime_state_admits_and_projects_host_capability_binding_by_id() {
             .await
             .is_err()
     );
+    assert!(
+        projected.execute("clock", "now", &[]).await.is_err(),
+        "binding projection is alias-only; provider registry names are not an admitted dispatch alias"
+    );
 }
 
 #[tokio::test]
@@ -543,7 +547,7 @@ async fn alpha_policy_profile_act_execution_uses_projected_action_grants() {
         .expect("policy profile admits only the plan action");
 
     let workflow = Workflow::Act {
-        provider_name: "deploy".to_string(),
+        provider_name: "workflow-deploy".to_string(),
         action_name: "apply".to_string(),
         arguments: vec![],
         guard: Guard::Always,
@@ -560,7 +564,10 @@ async fn alpha_policy_profile_act_execution_uses_projected_action_grants() {
         error.to_string().contains("deploy.apply")
             || error
                 .to_string()
-                .contains("Capability not available: deploy"),
+                .contains("capability not available: deploy")
+            || error
+                .to_string()
+                .contains("capability not available: workflow-deploy"),
         "diagnostic should identify the ungranted action/provider boundary: {error}"
     );
 }
@@ -582,7 +589,7 @@ async fn alpha_policy_profile_records_projected_grant_facts_in_execution_record(
         .expect("policy profile admits the plan action");
 
     let workflow = Workflow::Act {
-        provider_name: "deploy".to_string(),
+        provider_name: "workflow-deploy".to_string(),
         action_name: "plan".to_string(),
         arguments: vec![],
         guard: Guard::Always,

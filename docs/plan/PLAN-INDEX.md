@@ -3619,7 +3619,7 @@ Phase 122 promotes DESIGN-040 and DESIGN-041 into an implementation-grade alpha 
 ## Phase 123: SPEC-069/SPEC-070 Implemented MVP Closure
 
 **Priority:** High (promotes the Phase 122 Partial MVP to implemented alpha runtime/tower semantics once deferred acceptance rows have execution-grade evidence)
-**Status:** ✅ Complete (TASK-933 through TASK-941 complete; SPEC-069/SPEC-070 status surfaces promoted to Implemented MVP by TASK-941 successor evidence; broad gates and final independent phase audit passed)
+**Status:** ✅ Complete (TASK-933 through TASK-942 complete; SPEC-069/SPEC-070 status surfaces promoted to Implemented MVP by TASK-941 successor evidence and TASK-942 post-merge RuntimeKernel remediation; broad gates and final independent phase audit passed)
 **Spec:** [SPEC-069](../spec/SPEC-069-ALPHA-VISIBLE-TOWER-ALGEBRA-AND-DO-LOWERING.md), [SPEC-070](../spec/SPEC-070-ALPHA-RUNTIME-KERNEL-AND-OS-SURFACE.md)
 **Plan:** [docs/plan/PLAN-119-SPEC-069-070-IMPLEMENTED-MVP-CLOSURE.md](PLAN-119-SPEC-069-070-IMPLEMENTED-MVP-CLOSURE.md)
 
@@ -3636,6 +3636,7 @@ Phase 123 is the follow-on to Phase 122. It does not reopen or rewrite Phase 122
 | [TASK-939](tasks/TASK-939-policy-profile-grant-enforcement.md) | Policy-profile grant enforcement across runtime execution | 14 | ✅ Complete |
 | [TASK-940](tasks/TASK-940-daemon-child-failure-trace.md) | Daemon child Proc failure trace semantics | 12 | ✅ Complete |
 | [TASK-941](tasks/TASK-941-spec-069-spec-070-implemented-mvp-closeout.md) | SPEC-069/SPEC-070 Implemented MVP closeout | 8 | ✅ Complete |
+| [TASK-942](tasks/TASK-942-phase123-postmerge-runtimekernel-remediation.md) | Post-merge RuntimeKernel admission/artifact-lifetime remediation | 10 | ✅ Complete |
 
 **Decision gates:**
 - D1: SPEC-069/SPEC-070 current status surfaces are promoted by TASK-941 only after every formerly deferred acceptance row has concrete Phase 123 successor evidence and audit status is represented honestly.

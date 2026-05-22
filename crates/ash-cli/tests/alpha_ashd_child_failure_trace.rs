@@ -37,7 +37,7 @@ use proc::unit;
 
 workflow main {
     ret bind(
-        par(unit(1), bind(unit(0), (fn(_) { fail "child proc boom" }))),
+        par(unit(1), then(unit(0), (fn(_) { fail "child proc boom" }))),
         (fn(handles) { join(handles.0, handles.1) })
     )
 }

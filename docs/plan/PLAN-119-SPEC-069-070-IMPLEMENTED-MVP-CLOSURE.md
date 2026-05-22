@@ -12,7 +12,7 @@
 
 ## Status
 
-✅ Complete (TASK-933 through TASK-941 complete; TASK-941 status surfaces reconciled, broad gates and final independent phase audit passed).
+✅ Complete (TASK-942 post-merge RuntimeKernel remediation closed the review blockers; broad gates and final independent review passed).
 
 ## Scope
 
@@ -50,6 +50,7 @@ This phase closes the following Phase 122 limitations:
 | TASK-939 | Policy-profile grant enforcement across runtime execution | Semantic/Substrate | 14 | TASK-937, TASK-938 | ✅ Complete |
 | TASK-940 | Daemon child Proc failure trace semantics | Semantic | 12 | TASK-938, TASK-939 | ✅ Complete |
 | TASK-941 | SPEC-069/SPEC-070 Implemented MVP closeout | Docs/Planning | 8 | TASK-934 through TASK-940 | ✅ Complete |
+| TASK-942 | Phase 123 post-merge RuntimeKernel remediation | Semantic/Substrate/Docs | 10 | TASK-941 post-merge review | ✅ Complete |
 
 Estimated total: 94 hours.
 

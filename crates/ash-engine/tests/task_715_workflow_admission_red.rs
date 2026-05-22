@@ -501,6 +501,10 @@ async fn action_qualified_admitted_capability_projects_provider_for_runtime_act(
                     report.admission.admitted_capabilities,
                     vec!["payments.charge".to_string()]
                 );
+                assert!(
+                    !report.admission.admitted_capability_bindings.is_empty(),
+                    "RuntimeKernel admission must carry explicit binding ids, not only string grants"
+                );
             }
             other @ WorkflowBoundaryOutcome::WorkflowFailed { .. } => {
                 panic!("expected projected action capability success, got {other:?}")

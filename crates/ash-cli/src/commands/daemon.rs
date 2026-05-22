@@ -55,6 +55,8 @@ pub enum DaemonCommand {
     List(DaemonSocketArgs),
     /// Start a workflow instance record.
     Start(DaemonStartArgs),
+    /// Start a workflow instance record and execute it immediately.
+    StartExecute(DaemonStartArgs),
     /// Report one workflow instance status.
     Status(DaemonStatusArgs),
     /// Cancel a non-terminal workflow instance record.
@@ -175,6 +177,18 @@ pub async fn daemon(args: &DaemonArgs) -> Result<ExitCode> {
             },
             "workflow instance admitted",
         ),
+        DaemonCommand::StartExecute(args) => client_request(
+            &args.socket,
+            args.format,
+            DaemonRequest::Start {
+                workflow: args.workflow.clone(),
+                args: args.start_args.clone(),
+                config_id: args.config_id.clone(),
+                admission_profile: args.admission_profile,
+                execute: true,
+            },
+            "workflow instance executed",
+        ),
         DaemonCommand::Status(args) => client_request(
             &args.socket,
             args.format,
@@ -265,6 +279,7 @@ fn default_config_id() -> String {
 struct DefinitionRecord {
     workflow: String,
     relative_module_path: String,
+    #[serde(skip_serializing)]
     definition_id: String,
     artifact_id: String,
     artifact_version: String,
@@ -553,7 +568,7 @@ impl DaemonState {
             .ok_or_else(|| anyhow!("daemon start response missing instance id"))?
             .to_string();
 
-        let outcome = self.execute_instance(workflow);
+        let outcome = self.execute_instance(workflow, &instance_id);
         let instance = self
             .instances
             .get_mut(&instance_id)
@@ -583,6 +598,7 @@ impl DaemonState {
     fn execute_instance(
         &self,
         workflow: &str,
+        instance_id: &str,
     ) -> std::result::Result<(), Box<InstanceExecutionFailure>> {
         let definition = self
             .definitions
@@ -593,7 +609,52 @@ impl DaemonState {
                     "workflow definition not indexed: {workflow}"
                 )))
             })?;
+        let instance = self.instances.get(instance_id).ok_or_else(|| {
+            Box::new(InstanceExecutionFailure::workflow_request(format!(
+                "workflow instance not found for execution: {instance_id}"
+            )))
+        })?;
+        if definition.source_hash != instance.source_hash {
+            return Err(Box::new(InstanceExecutionFailure::workflow_request(
+                format!(
+                    "admitted artifact drift: indexed definition source hash {} no longer matches admitted source hash {}",
+                    definition.source_hash, instance.source_hash
+                ),
+            )));
+        }
         let path = self.root.join(&definition.relative_module_path);
+        let current_source = std::fs::read_to_string(&path).map_err(|error| {
+            Box::new(InstanceExecutionFailure::workflow_request(format!(
+                "failed to read daemon workflow for admitted artifact drift check: {error}"
+            )))
+        })?;
+        let current_source_hash = build_runtime_kernel_artifact(&RuntimeArtifactBuildRequest::new(
+            self.root_id.as_str(),
+            definition.relative_module_path.clone(),
+            instance.workflow.clone(),
+            self.profile_id.as_str(),
+            instance.config_id.as_str(),
+            current_source.clone(),
+            format!(
+                "workflow={};check=alpha-runtime-kernel-shared",
+                instance.workflow
+            ),
+        ))
+        .map(|artifact| artifact.source_hash)
+        .map_err(|error| {
+            Box::new(InstanceExecutionFailure::workflow_request(format!(
+                "failed to rebuild daemon workflow artifact for admitted artifact drift check: {error}"
+            )))
+        })?;
+        if current_source_hash != instance.source_hash {
+            return Err(Box::new(InstanceExecutionFailure::workflow_request(
+                format!(
+                    "admitted artifact drift: live source hash {current_source_hash} no longer matches admitted source hash {}",
+                    instance.source_hash
+                ),
+            )));
+        }
+        let execution_path = path.clone();
         std::thread::scope(|scope| {
             let handle = scope.spawn(|| {
                 let runtime = tokio::runtime::Builder::new_current_thread()
@@ -611,7 +672,7 @@ impl DaemonState {
                             "failed to build daemon execution engine: {error}"
                         )))
                     })?;
-                    let mut workflow = engine.parse_file(&path).map_err(|error| {
+                    let mut workflow = engine.parse_file(&execution_path).map_err(|error| {
                         Box::new(InstanceExecutionFailure::workflow_request(format!(
                             "failed to parse daemon workflow for execution: {error}"
                         )))
@@ -1087,7 +1148,7 @@ fn index_definitions(
             workflow_name.clone(),
             profile_id.as_str(),
             config_id.as_str(),
-            source,
+            source.clone(),
             format!("workflow={workflow_name};check=alpha-runtime-kernel-shared"),
         ))?;
         let artifact_summary =

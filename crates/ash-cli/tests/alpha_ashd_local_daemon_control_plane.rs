@@ -4,9 +4,9 @@ use serde_json::Value;
 use std::fs;
 use std::io::{BufRead, BufReader, Write};
 #[cfg(unix)]
-use std::os::unix::fs::FileTypeExt;
+use std::os::unix::fs::{FileTypeExt, MetadataExt, PermissionsExt};
 #[cfg(unix)]
-use std::os::unix::net::UnixStream;
+use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::Path;
 use std::process::{Child, Command as StdCommand, Stdio};
 use std::thread;
@@ -29,6 +29,8 @@ fn ash_bin() -> std::path::PathBuf {
 }
 
 fn write_workflow(root: &Path, name: &str, value: i32) {
+    #[cfg(unix)]
+    set_dir_mode(root, 0o700);
     fs::write(
         root.join(format!("{name}.ash")),
         format!("workflow {name} {{ ret {value}; }}\n"),
@@ -86,12 +88,86 @@ fn daemon_dirs() -> DaemonDirs {
     let state = tempdir().expect("state tempdir");
     let cache = tempdir().expect("cache tempdir");
     let log = tempdir().expect("log tempdir");
+    #[cfg(unix)]
+    {
+        set_dir_mode(socket_parent.path(), 0o700);
+        set_dir_mode(state.path(), 0o700);
+        set_dir_mode(cache.path(), 0o700);
+        set_dir_mode(log.path(), 0o700);
+    }
     DaemonDirs {
         socket,
         _socket_parent: socket_parent,
         state,
         cache,
         log,
+    }
+}
+
+#[cfg(unix)]
+fn set_dir_mode(path: &Path, mode: u32) {
+    let mut permissions = fs::metadata(path)
+        .unwrap_or_else(|error| panic!("metadata for {}: {error}", path.display()))
+        .permissions();
+    permissions.set_mode(mode);
+    fs::set_permissions(path, permissions)
+        .unwrap_or_else(|error| panic!("chmod {mode:o} {}: {error}", path.display()));
+}
+
+#[cfg(unix)]
+fn assert_daemon_serve_rejects(root: &Path, dirs: &DaemonDirs, expected_stderr: &str) {
+    let mut child = StdCommand::new(ash_bin())
+        .arg("daemon")
+        .arg("serve")
+        .arg("--root")
+        .arg(root)
+        .arg("--socket")
+        .arg(&dirs.socket)
+        .arg("--state-dir")
+        .arg(dirs.state.path())
+        .arg("--cache-dir")
+        .arg(dirs.cache.path())
+        .arg("--log-dir")
+        .arg(dirs.log.path())
+        .arg("--format")
+        .arg("json")
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("spawn daemon rejection probe");
+
+    let deadline = Instant::now() + Duration::from_secs(2);
+    loop {
+        if child
+            .try_wait()
+            .expect("poll daemon rejection probe")
+            .is_some()
+        {
+            let output = child.wait_with_output().expect("daemon rejection output");
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            assert!(
+                !output.status.success(),
+                "daemon serve unexpectedly succeeded; stderr:\n{stderr}"
+            );
+            assert!(
+                stderr.contains(expected_stderr),
+                "expected stderr to contain {expected_stderr:?}; stderr:\n{stderr}"
+            );
+            return;
+        }
+
+        if Instant::now() >= deadline {
+            let _ = child.kill();
+            let output = child
+                .wait_with_output()
+                .expect("daemon rejection output after kill");
+            panic!(
+                "daemon serve started instead of rejecting unsafe local-control paths; stderr:\n{}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+        }
+
+        thread::sleep(Duration::from_millis(25));
     }
 }
 
@@ -143,6 +219,16 @@ fn ashd_serve_indexes_definitions_without_running_workflows() {
     write_workflow(root.path(), "beta", 2);
     let dirs = daemon_dirs();
     let _daemon = spawn_daemon(root.path(), &dirs);
+    #[cfg(unix)]
+    assert_eq!(
+        fs::symlink_metadata(&dirs.socket)
+            .expect("daemon socket metadata")
+            .permissions()
+            .mode()
+            & 0o777,
+        0o600,
+        "daemon socket must be same-user-only"
+    );
 
     let list = daemon_json(&dirs.socket, &["list"]);
 
@@ -503,6 +589,121 @@ fn ashd_rejects_invalid_root() {
     assert!(
         !dirs.socket.exists(),
         "invalid root must not leave daemon socket"
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn ashd_serve_rejects_world_writable_local_control_dirs() {
+    for unsafe_path in ["root", "socket_parent", "state", "cache", "log"] {
+        let root = tempdir().expect("root tempdir");
+        write_workflow(root.path(), "main", 1);
+        let dirs = daemon_dirs();
+
+        match unsafe_path {
+            "root" => set_dir_mode(root.path(), 0o777),
+            "socket_parent" => set_dir_mode(dirs.socket.parent().expect("socket parent"), 0o777),
+            "state" => set_dir_mode(dirs.state.path(), 0o777),
+            "cache" => set_dir_mode(dirs.cache.path(), 0o777),
+            "log" => set_dir_mode(dirs.log.path(), 0o777),
+            other => panic!("unknown unsafe path fixture {other}"),
+        }
+
+        assert_daemon_serve_rejects(root.path(), &dirs, "group/world-writable");
+        assert!(
+            !dirs.socket.exists(),
+            "unsafe {unsafe_path} must not leave daemon socket {}",
+            dirs.socket.display()
+        );
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn ashd_serve_rejects_root_not_owned_by_current_effective_user_when_available() {
+    let current_user_dir = tempdir().expect("current user tempdir");
+    let current_uid = fs::metadata(current_user_dir.path())
+        .expect("current user dir metadata")
+        .uid();
+    let root_not_owned_by_current_user = Path::new("/");
+    let candidate_uid = fs::metadata(root_not_owned_by_current_user)
+        .expect("candidate root metadata")
+        .uid();
+    if candidate_uid == current_uid {
+        eprintln!(
+            "skipping non-current-user ownership check: / is owned by the test effective user"
+        );
+        return;
+    }
+
+    let dirs = daemon_dirs();
+
+    assert_daemon_serve_rejects(
+        root_not_owned_by_current_user,
+        &dirs,
+        "current effective user",
+    );
+    assert!(
+        !dirs.socket.exists(),
+        "non-current-user root must not leave daemon socket"
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn ashd_serve_validates_socket_parent_before_removing_stale_socket() {
+    let root = tempdir().expect("root tempdir");
+    write_workflow(root.path(), "main", 1);
+    let dirs = daemon_dirs();
+    let stale_listener = match UnixListener::bind(&dirs.socket) {
+        Ok(listener) => listener,
+        Err(error) if error.kind() == std::io::ErrorKind::PermissionDenied => {
+            eprintln!(
+                "skipping stale socket removal ordering check: Unix socket bind is not permitted in this environment"
+            );
+            return;
+        }
+        Err(error) => panic!("bind stale socket: {error}"),
+    };
+    drop(stale_listener);
+    assert!(
+        fs::symlink_metadata(&dirs.socket)
+            .expect("stale socket metadata")
+            .file_type()
+            .is_socket(),
+        "fixture must create a stale Unix socket"
+    );
+    set_dir_mode(dirs.socket.parent().expect("socket parent"), 0o777);
+
+    assert_daemon_serve_rejects(root.path(), &dirs, "group/world-writable");
+
+    assert!(
+        fs::symlink_metadata(&dirs.socket)
+            .expect("stale socket must remain after unsafe parent rejection")
+            .file_type()
+            .is_socket(),
+        "unsafe socket parent rejection must happen before stale socket removal"
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn ashd_serve_rejects_symlinked_socket_parent_before_socket_bind() {
+    let root = tempdir().expect("root tempdir");
+    write_workflow(root.path(), "main", 1);
+    let real_socket_parent = tempdir().expect("real socket parent");
+    set_dir_mode(real_socket_parent.path(), 0o700);
+    let symlink_parent_root = tempdir().expect("symlink parent root");
+    let symlink_parent = symlink_parent_root.path().join("socket-link");
+    std::os::unix::fs::symlink(real_socket_parent.path(), &symlink_parent)
+        .expect("create socket parent symlink");
+    let mut dirs = daemon_dirs();
+    dirs.socket = symlink_parent.join("ashd.sock");
+
+    assert_daemon_serve_rejects(root.path(), &dirs, "symbolic links are not allowed");
+    assert!(
+        !dirs.socket.exists(),
+        "symlinked socket parent must be rejected before daemon socket bind"
     );
 }
 

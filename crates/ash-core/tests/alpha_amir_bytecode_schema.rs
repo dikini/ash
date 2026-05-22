@@ -14,6 +14,18 @@ use ash_core::type_ir::{
 };
 use ash_core::{Expr, Span, TowerLevel};
 
+fn assert_error_contains<E: std::fmt::Display, T: std::fmt::Debug>(
+    result: Result<T, E>,
+    needle: &str,
+) {
+    let error = result.expect_err("verification should reject malformed artifact");
+    let message = error.to_string();
+    assert!(
+        message.contains(needle),
+        "expected error containing '{needle}', got '{message}'"
+    );
+}
+
 fn source(label: &str, start: usize, end: usize) -> SourceAnchor {
     SourceAnchor::new(
         SourceOrigin::File("/tmp/task-926-source-is-not-read.ash".to_string()),
@@ -263,6 +275,45 @@ fn amir_sections_keep_tcir_source_provenance() {
 }
 
 #[test]
+fn amir_verifier_rejects_non_bijective_statement_coverage() {
+    let tcir = tcir_computation();
+    let amir = AmirModule::from_tcir(&tcir);
+
+    let mut missing_statement = amir.clone();
+    missing_statement.blocks[0].instructions.pop();
+    assert_error_contains(
+        AmirVerifier::verify(&missing_statement, &tcir),
+        "missing TCIR statement coverage",
+    );
+
+    let mut duplicate_statement = amir.clone();
+    duplicate_statement.blocks[0].instructions[1].opcode = AmirOpcode::Bind;
+    duplicate_statement.blocks[0].instructions[1]
+        .provenance
+        .as_mut()
+        .expect("valid AMIR instruction provenance")
+        .tcir_statement = Some(TcirStatementId::new(10));
+    duplicate_statement.blocks[0].instructions[1]
+        .provenance
+        .as_mut()
+        .expect("valid AMIR instruction provenance")
+        .source_anchor = Some(source("bind-statement", 20, 50));
+    assert_error_contains(
+        AmirVerifier::verify(&duplicate_statement, &tcir),
+        "duplicate TCIR statement reference",
+    );
+
+    let mut empty_instructions_for_non_empty_tcir = amir;
+    empty_instructions_for_non_empty_tcir.blocks[0]
+        .instructions
+        .clear();
+    assert_error_contains(
+        AmirVerifier::verify(&empty_instructions_for_non_empty_tcir, &tcir),
+        "empty AMIR instructions for non-empty TCIR",
+    );
+}
+
+#[test]
 fn bytecode_verifier_rejects_missing_or_stale_provenance() {
     let tcir = tcir_computation();
     let amir = AmirModule::from_tcir(&tcir);
@@ -336,6 +387,79 @@ fn bytecode_verifier_rejects_missing_or_stale_provenance() {
             actual: BytecodeOpcode::Return,
         }) if statement == TcirStatementId::new(10)
     ));
+}
+
+#[test]
+fn bytecode_verifier_rejects_non_bijective_statement_coverage_and_offsets() {
+    let tcir = tcir_computation();
+    let amir = AmirModule::from_tcir(&tcir);
+    let valid = BytecodeModule::from_amir(&amir, &tcir).expect("valid AMIR builds bytecode");
+
+    let mut missing_statement = valid.clone();
+    missing_statement.instructions.pop();
+    assert_error_contains(
+        BytecodeVerifier::verify(&missing_statement, &tcir),
+        "missing TCIR statement coverage",
+    );
+
+    let mut duplicate_statement = valid.clone();
+    duplicate_statement.instructions[1].opcode = BytecodeOpcode::InvokeBind;
+    duplicate_statement.instructions[1]
+        .provenance
+        .as_mut()
+        .expect("valid bytecode instruction provenance")
+        .tcir_statement = Some(TcirStatementId::new(10));
+    duplicate_statement.instructions[1]
+        .provenance
+        .as_mut()
+        .expect("valid bytecode instruction provenance")
+        .source_anchor = Some(source("bind-statement", 20, 50));
+    assert_error_contains(
+        BytecodeVerifier::verify(&duplicate_statement, &tcir),
+        "duplicate TCIR statement reference",
+    );
+
+    let mut empty_instructions_for_non_empty_tcir = valid.clone();
+    empty_instructions_for_non_empty_tcir.instructions.clear();
+    assert_error_contains(
+        BytecodeVerifier::verify(&empty_instructions_for_non_empty_tcir, &tcir),
+        "empty bytecode instructions for non-empty TCIR",
+    );
+
+    let mut duplicate_offset = valid.clone();
+    duplicate_offset.instructions[1].offset = 0;
+    assert_error_contains(
+        BytecodeVerifier::verify(&duplicate_offset, &tcir),
+        "duplicate bytecode offset",
+    );
+
+    let mut skipped_offset = valid;
+    skipped_offset.instructions[1].offset = 2;
+    assert_error_contains(
+        BytecodeVerifier::verify(&skipped_offset, &tcir),
+        "skipped bytecode offset",
+    );
+}
+
+#[test]
+fn verifiers_reject_duplicate_tcir_statement_ids() {
+    let mut tcir = tcir_computation();
+    tcir.statements[1].id = tcir.statements[0].id;
+
+    let amir = AmirModule::from_tcir(&tcir_computation());
+    assert_error_contains(
+        AmirVerifier::verify(&amir, &tcir),
+        "duplicate TCIR statement id",
+    );
+
+    let valid_tcir = tcir_computation();
+    let valid_amir = AmirModule::from_tcir(&valid_tcir);
+    let bytecode =
+        BytecodeModule::from_amir(&valid_amir, &valid_tcir).expect("valid AMIR builds bytecode");
+    assert_error_contains(
+        BytecodeVerifier::verify(&bytecode, &tcir),
+        "duplicate TCIR statement id",
+    );
 }
 
 #[test]

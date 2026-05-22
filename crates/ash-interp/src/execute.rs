@@ -869,17 +869,16 @@ fn execute_workflow_inner_observed<'a>(
                                     provider_name: host_provider_name,
                                     admitted_capabilities,
                                 } => {
-                                    let provider_matches = host_provider_name == provider_name
-                                        || binding.name == *provider_name;
-                                    let grant_prefix = if binding.name == *provider_name {
-                                        host_provider_name
-                                    } else {
-                                        provider_name
-                                    };
-                                    provider_matches
+                                    binding.name == *provider_name
                                         && admitted_capabilities.iter().any(|operation| {
-                                            operation == &format!("{grant_prefix}.{action_name}")
-                                                || operation == &format!("{grant_prefix}.*")
+                                            operation
+                                                == &format!("{host_provider_name}.{action_name}")
+                                                || operation
+                                                    == &format!("{}.{action_name}", binding.name)
+                                                || operation == &format!("{host_provider_name}.*")
+                                                || operation == &format!("{}.*", binding.name)
+                                                || operation == host_provider_name
+                                                || operation == &binding.name
                                                 || operation == "*"
                                         })
                                 }

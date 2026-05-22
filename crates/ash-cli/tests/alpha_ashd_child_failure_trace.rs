@@ -3,6 +3,8 @@ use serde_json::Value;
 use std::fs;
 use std::io::{BufRead, BufReader, Write};
 #[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
+#[cfg(unix)]
 use std::os::unix::net::UnixStream;
 use std::path::Path;
 use std::process::{Child, Command as StdCommand, Stdio};
@@ -26,6 +28,8 @@ fn ash_bin() -> std::path::PathBuf {
 }
 
 fn write_child_failure_workflow(root: &Path) {
+    #[cfg(unix)]
+    set_dir_mode(root, 0o700);
     fs::write(
         root.join("main.ash"),
         r#"
@@ -44,6 +48,16 @@ workflow main {
 "#,
     )
     .expect("write child failure workflow");
+}
+
+#[cfg(unix)]
+fn set_dir_mode(path: &Path, mode: u32) {
+    let mut permissions = fs::metadata(path)
+        .unwrap_or_else(|error| panic!("metadata for {}: {error}", path.display()))
+        .permissions();
+    permissions.set_mode(mode);
+    fs::set_permissions(path, permissions)
+        .unwrap_or_else(|error| panic!("chmod {mode:o} {}: {error}", path.display()));
 }
 
 fn spawn_daemon(root: &Path, dirs: &DaemonDirs) -> DaemonChild {
@@ -106,6 +120,8 @@ fn daemon_dirs() -> DaemonDirs {
     let log = base.join("l");
     for dir in [&socket_parent, &state, &cache, &log] {
         fs::create_dir_all(dir).expect("create daemon test dir");
+        #[cfg(unix)]
+        set_dir_mode(dir, 0o700);
     }
     let socket = socket_parent.join("d.sock");
     DaemonDirs {

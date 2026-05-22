@@ -1,12 +1,12 @@
 # SPEC-070: Alpha Runtime Kernel and OS-Facing Execution Surface
 
-**Status:** Implemented MVP (Phase 123 closeout; see TASK-941 successor evidence plus TASK-942/TASK-943/TASK-944 post-merge remediation)
+**Status:** Implemented MVP (Phase 123 closeout; see TASK-941 successor evidence plus TASK-942/TASK-943/TASK-944/TASK-945 post-merge remediation)
 **Date:** 2026-05-19
 **Promotes:** [DESIGN-041](../design/DESIGN-041-RUNTIME-REGIME-AND-OS-SURFACE.md)
 **Builds on:** [SPEC-005](SPEC-005-CLI.md), [SPEC-021](SPEC-021-RUNTIME-OBSERVABLE-BEHAVIOR.md), [SPEC-047](SPEC-047-ACT-MONAD.md), [SPEC-048](SPEC-048-PROC-LIBRARY.md), [SPEC-049](SPEC-049-PROCESS-RUNTIME-SEMANTICS.md), [SPEC-050](SPEC-050-OPERATIONAL-BOTTOM-AND-SCOPED-HANDLING.md), [SPEC-051](SPEC-051-WORKFLOW-SEMANTICS.md), [SPEC-069](SPEC-069-ALPHA-VISIBLE-TOWER-ALGEBRA-AND-DO-LOWERING.md)
 **Related:** [MCE-001](../ideas/minimal-core/MCE-001-ENTRY-POINT.md), [WORKFLOW_SPAWNING_AND_SUPERVISION](../design/WORKFLOW_SPAWNING_AND_SUPERVISION.md)
 **Plan:** [PLAN-118](../plan/PLAN-118-DESIGN-040-041-ALPHA-IMPLEMENTATION-PACKET.md), [PLAN-119](../plan/PLAN-119-SPEC-069-070-IMPLEMENTED-MVP-CLOSURE.md)
-**Implementation Tasks:** [TASK-919](../plan/tasks/TASK-919-design040041-current-state-and-scope-reconciliation.md) through [TASK-944](../plan/tasks/TASK-944-phase123-daemon-admitted-source-config-remediation.md)
+**Implementation Tasks:** [TASK-919](../plan/tasks/TASK-919-design040041-current-state-and-scope-reconciliation.md) through [TASK-945](../plan/tasks/TASK-945-phase123-daemon-local-control-security-remediation.md)
 
 ## 1. Summary
 
@@ -59,18 +59,30 @@ Requirements:
 
 Alpha caveat: `FILE[:WORKFLOW]` currently records the workflow suffix in RuntimeKernel identity/report selection surfaces. Semantic execution of arbitrary non-`main` exported workflows remains outside the Implemented MVP until the full workflow-selection path is wired through parser, typecheck, and execution.
 
+Alpha lifecycle caveat: the current one-shot path evaluates admission-profile
+rejection before user code and before verified artifact reporting. For admitted
+ordinary workflow sources, `ash run` builds the RuntimeKernel artifact after
+source read/config validation and emits verified artifact reports only after
+parse/check/artifact construction succeeds. Parse/check-invalid sources keep
+their diagnostics visible and do not receive a verified artifact summary.
+
 ## 5. Local daemon
 
 The local daemon is a local-first alpha service using the same `RuntimeKernel`. TASK-929 selected the final command spelling under the existing CLI as `ash daemon ...`.
 
 Alpha daemon scope:
 
-- Unix-domain-socket or equivalent same-user local control surface, with alpha validation of root/socket/state/cache/log path ownership before binding and rejection of pre-existing non-socket control paths;
+- Unix-domain-socket or equivalent same-user local control surface, with alpha validation that root/socket-parent/state/cache/log directories are owned by the current effective user and are not group/world-writable before stale socket removal or binding, plus rejection of pre-existing non-socket control paths;
 - list definitions and instances;
 - start workflow instance records pinned to the active artifact/source identity, including alpha start args/config/admission-profile request fields; non-default daemon `config_id` values are rejected until config-specific daemon artifacts exist;
 - observe instance status and pinned artifact identity; report/log-path projection remains beyond the TASK-929 MVP;
 - request cancellation/stop;
 - reload roots/config for future starts.
+
+Alpha drift caveat: TASK-944 pins daemon start-execute to the workflow source
+bytes already read and hash-checked for the admitted definition. It does not yet
+add a separate post-admission watcher or digest-closure check over imported
+module files; imported-module drift remains future artifact-dependency work.
 
 Out of scope: remote/multi-user daemon API, distributed scheduling, cluster service discovery, production init-system integration, and hot-swapping artifacts of already-running instances.
 
@@ -130,3 +142,4 @@ See [PLAN-118](../plan/PLAN-118-DESIGN-040-041-ALPHA-IMPLEMENTATION-PACKET.md).
 ### 2026-05-22
 
 - TASK-944 closed the remaining daemon admitted-source/config identity gaps: daemon start-execute now executes from the source bytes already read and hash-checked for admitted-artifact drift, and non-default daemon start `config_id` values fail before instance recording until profile-specific daemon artifacts exist. The public caveats for `FILE[:WORKFLOW]` semantic selection and daemon args/config execution semantics remain explicit alpha boundaries.
+- TASK-945 hardened daemon local-control security by requiring same-effective-user ownership for root/socket-parent/state/cache/log directories, rejecting group/world-writable daemon control directories before stale socket removal or binding, preserving pre-existing regular-file socket-path rejection, adding explicit RuntimeKernel one-shot admitted-grant report fields, documenting the imported-module daemon drift boundary, clarifying the `ash run` admission/report lifecycle without claiming a broader host refactor, and fixing host-provider capability projection so grants remain per binding id/name instead of unioning across aliases that share a backing provider.

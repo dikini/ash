@@ -88,6 +88,30 @@ fn ash_run_reports_kernel_instance_and_artifact_identity() {
             .is_some_and(|id| !id.is_empty())
     );
     assert_eq!(report["admission"]["status"], "admitted");
+    assert_eq!(report["admission"]["capability_grants"], 0);
+    assert_eq!(report["admission"]["resource_grants"], 0);
+    assert_eq!(report["admission"]["action_grants"], 0);
+    assert_eq!(
+        report["admission"]["capability_grant_ids"]
+            .as_array()
+            .expect("capability grant detail list")
+            .len(),
+        0
+    );
+    assert_eq!(
+        report["admission"]["resource_grant_ids"]
+            .as_array()
+            .expect("resource grant detail list")
+            .len(),
+        0
+    );
+    assert_eq!(
+        report["admission"]["action_grant_details"]
+            .as_array()
+            .expect("action grant detail list")
+            .len(),
+        0
+    );
     assert_eq!(
         report["artifact_summary"]["tcir"]["carrier_scope"],
         "alpha_checked_workflow_boundary"

@@ -10,6 +10,7 @@ use crate::type_ir::{
     TcirComputationExpression, TcirStatement, TcirStatementId, TcirStatementKind,
 };
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use thiserror::Error;
 
 /// Current AMIR logical schema version.
@@ -106,6 +107,9 @@ impl AmirVerifier {
             });
         }
 
+        reject_duplicate_tcir_statement_ids(tcir)
+            .map_err(|statement| AmirVerificationError::DuplicateTcirStatementId { statement })?;
+
         verify_computation_provenance(&module.provenance, tcir)
             .map_err(AmirVerificationError::from_shared)?;
 
@@ -134,6 +138,17 @@ impl AmirVerifier {
             })?;
         }
 
+        let expected_statement_count = tcir.statements.len();
+        let actual_instruction_count: usize = module
+            .blocks
+            .iter()
+            .map(|block| block.instructions.len())
+            .sum();
+        if expected_statement_count > 0 && actual_instruction_count == 0 {
+            return Err(AmirVerificationError::EmptyInstructionsForNonEmptyTcir);
+        }
+
+        let mut covered_statements = HashSet::with_capacity(actual_instruction_count);
         for block in &module.blocks {
             let provenance = block
                 .provenance
@@ -150,6 +165,12 @@ impl AmirVerifier {
                     verify_instruction_provenance(provenance, tcir).map_err(|error| {
                         AmirVerificationError::from_shared_for_instruction(block.id, error)
                     })?;
+                if !covered_statements.insert(statement.id) {
+                    return Err(AmirVerificationError::DuplicateTcirStatementReference {
+                        block: block.id,
+                        statement: statement.id,
+                    });
+                }
                 let expected_opcode = AmirOpcode::from_statement_kind(&statement.kind);
                 if instruction.opcode != expected_opcode {
                     return Err(AmirVerificationError::StaleInstructionOpcode {
@@ -159,6 +180,13 @@ impl AmirVerifier {
                         actual: instruction.opcode,
                     });
                 }
+            }
+        }
+        for statement in &tcir.statements {
+            if !covered_statements.contains(&statement.id) {
+                return Err(AmirVerificationError::MissingTcirStatementCoverage {
+                    statement: statement.id,
+                });
             }
         }
 
@@ -538,6 +566,18 @@ fn verify_statement_reference<'a>(
     Ok(tcir_statement)
 }
 
+fn reject_duplicate_tcir_statement_ids(
+    tcir: &TcirComputationExpression,
+) -> Result<(), TcirStatementId> {
+    let mut statement_ids = HashSet::with_capacity(tcir.statements.len());
+    for statement in &tcir.statements {
+        if !statement_ids.insert(statement.id) {
+            return Err(statement.id);
+        }
+    }
+    Ok(())
+}
+
 /// Bytecode logical-schema verifier.
 pub struct BytecodeVerifier;
 
@@ -558,6 +598,10 @@ impl BytecodeVerifier {
                 version: module.schema_version,
             });
         }
+
+        reject_duplicate_tcir_statement_ids(tcir).map_err(|statement| {
+            BytecodeVerificationError::DuplicateTcirStatementId { statement }
+        })?;
 
         let expected_sections = [
             BytecodeSectionKind::Header,
@@ -583,6 +627,32 @@ impl BytecodeVerifier {
             Self::verify_section_provenance(section.kind, provenance, tcir)?;
         }
 
+        if !tcir.statements.is_empty() && module.instructions.is_empty() {
+            return Err(BytecodeVerificationError::EmptyInstructionsForNonEmptyTcir);
+        }
+
+        let mut seen_offsets = HashSet::with_capacity(module.instructions.len());
+        for (expected_offset, instruction) in module.instructions.iter().enumerate() {
+            if !seen_offsets.insert(instruction.offset) {
+                return Err(BytecodeVerificationError::DuplicateBytecodeOffset {
+                    offset: instruction.offset,
+                });
+            }
+            let expected_offset = expected_offset as u32;
+            if instruction.offset != expected_offset {
+                if instruction.offset > expected_offset {
+                    return Err(BytecodeVerificationError::SkippedBytecodeOffset {
+                        expected: expected_offset,
+                        actual: instruction.offset,
+                    });
+                }
+                return Err(BytecodeVerificationError::DuplicateBytecodeOffset {
+                    offset: instruction.offset,
+                });
+            }
+        }
+
+        let mut covered_statements = HashSet::with_capacity(module.instructions.len());
         for instruction in &module.instructions {
             let provenance = instruction.provenance.as_ref().ok_or(
                 BytecodeVerificationError::MissingInstructionProvenance {
@@ -591,6 +661,12 @@ impl BytecodeVerifier {
             )?;
             let statement =
                 Self::verify_instruction_provenance(instruction.offset, provenance, tcir)?;
+            if !covered_statements.insert(statement.id) {
+                return Err(BytecodeVerificationError::DuplicateTcirStatementReference {
+                    offset: instruction.offset,
+                    statement: statement.id,
+                });
+            }
             let expected_opcode =
                 BytecodeOpcode::from_amir_opcode(AmirOpcode::from_statement_kind(&statement.kind));
             if instruction.opcode != expected_opcode {
@@ -599,6 +675,13 @@ impl BytecodeVerifier {
                     statement: statement.id,
                     expected: expected_opcode,
                     actual: instruction.opcode,
+                });
+            }
+        }
+        for statement in &tcir.statements {
+            if !covered_statements.contains(&statement.id) {
+                return Err(BytecodeVerificationError::MissingTcirStatementCoverage {
+                    statement: statement.id,
                 });
             }
         }
@@ -700,6 +783,29 @@ pub enum BytecodeVerificationError {
     /// The bytecode section layout is not the stable alpha layout.
     #[error("unstable bytecode section layout")]
     UnstableSectionLayout,
+    /// The bytecode instruction stream is empty even though TCIR has statements.
+    #[error("empty bytecode instructions for non-empty TCIR")]
+    EmptyInstructionsForNonEmptyTcir,
+    /// The TCIR input contains the same statement identity more than once.
+    #[error("duplicate TCIR statement id {statement:?}")]
+    DuplicateTcirStatementId {
+        /// Duplicate statement identity in the TCIR input.
+        statement: TcirStatementId,
+    },
+    /// A bytecode instruction offset appears more than once or goes backwards.
+    #[error("duplicate bytecode offset {offset}")]
+    DuplicateBytecodeOffset {
+        /// Duplicate or regressing offset.
+        offset: u32,
+    },
+    /// The bytecode instruction stream skipped the next logical offset.
+    #[error("skipped bytecode offset: expected {expected}, found {actual}")]
+    SkippedBytecodeOffset {
+        /// Next expected logical offset.
+        expected: u32,
+        /// Actual offset found in the instruction stream.
+        actual: u32,
+    },
     /// A bytecode section has no provenance record.
     #[error("missing provenance for bytecode section {section:?}")]
     MissingSectionProvenance {
@@ -776,6 +882,20 @@ pub enum BytecodeVerificationError {
         /// Opcode carried by the bytecode instruction.
         actual: BytecodeOpcode,
     },
+    /// A bytecode instruction stream references the same TCIR statement more than once.
+    #[error("duplicate TCIR statement reference {statement:?} at bytecode offset {offset}")]
+    DuplicateTcirStatementReference {
+        /// Instruction offset carrying the duplicate statement edge.
+        offset: u32,
+        /// Duplicate TCIR statement identity.
+        statement: TcirStatementId,
+    },
+    /// A TCIR statement has no corresponding bytecode instruction.
+    #[error("missing TCIR statement coverage for {statement:?}")]
+    MissingTcirStatementCoverage {
+        /// TCIR statement identity with no bytecode instruction coverage.
+        statement: TcirStatementId,
+    },
 }
 
 /// AMIR logical-schema verification errors.
@@ -790,6 +910,15 @@ pub enum AmirVerificationError {
     /// The AMIR section layout is not the stable alpha layout.
     #[error("unstable AMIR section layout")]
     UnstableSectionLayout,
+    /// The AMIR instruction stream is empty even though TCIR has statements.
+    #[error("empty AMIR instructions for non-empty TCIR")]
+    EmptyInstructionsForNonEmptyTcir,
+    /// The TCIR input contains the same statement identity more than once.
+    #[error("duplicate TCIR statement id {statement:?}")]
+    DuplicateTcirStatementId {
+        /// Duplicate statement identity in the TCIR input.
+        statement: TcirStatementId,
+    },
     /// The module-level provenance has no source anchor.
     #[error("missing AMIR module source provenance")]
     MissingModuleSource,
@@ -907,6 +1036,20 @@ pub enum AmirVerificationError {
         expected: AmirOpcode,
         /// Opcode carried by the AMIR instruction.
         actual: AmirOpcode,
+    },
+    /// An AMIR instruction stream references the same TCIR statement more than once.
+    #[error("duplicate TCIR statement reference {statement:?} in AMIR block {block:?}")]
+    DuplicateTcirStatementReference {
+        /// Block containing the duplicate statement edge.
+        block: AmirBlockId,
+        /// Duplicate TCIR statement identity.
+        statement: TcirStatementId,
+    },
+    /// A TCIR statement has no corresponding AMIR instruction.
+    #[error("missing TCIR statement coverage for {statement:?}")]
+    MissingTcirStatementCoverage {
+        /// TCIR statement identity with no AMIR instruction coverage.
+        statement: TcirStatementId,
     },
 }
 

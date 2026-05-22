@@ -45,6 +45,16 @@ fn invoke_expr_for(provider: &str, action: &str) -> Expr {
     }
 }
 
+fn host_binding_alias(name: &str, provider_name: &str, admitted: Vec<&str>) -> CapabilityBinding {
+    CapabilityBinding::host_provider(
+        CapabilityBindingId::new(),
+        name,
+        CapabilityInterfaceId::new("Sensor"),
+        provider_name,
+        admitted.into_iter().map(str::to_string).collect(),
+    )
+}
+
 #[tokio::test]
 async fn invoke_dispatch_returns_closure_with_captured_state() {
     let ctx = Context::new();
@@ -159,6 +169,109 @@ async fn admitted_host_provider_sync_invoke_uses_projected_runtime_surface_not_m
         &call_ctx,
     )
     .expect("admitted sync invoke should use projected runtime provider");
+
+    assert_eq!(
+        applied,
+        Value::List(Box::new(vec![
+            Value::ActEnvToken,
+            Value::String("projected".to_string())
+        ]))
+    );
+}
+
+#[tokio::test]
+async fn alias_only_invoke_rejects_direct_backing_provider_call() {
+    let ctx = Context::new();
+    let result =
+        eval_expr(&invoke_expr_for("sensor", "read"), &ctx).expect("invoke should dispatch");
+    let runtime_state = RuntimeState::new().with_provider(
+        "sensor",
+        Arc::new(
+            MockProvider::new("sensor", Effect::Operational)
+                .with_execute_result(Ok(Value::String("leaked".to_string()))),
+        ),
+    );
+    let binding = host_binding_alias("workflow-sensor", "sensor", vec!["sensor.read"]);
+    let binding_id = binding.id;
+    runtime_state
+        .admit_capability_binding(binding)
+        .await
+        .expect("alias binding admission succeeds");
+    let act_env = ActEnv::from_runtime_state_with_admitted_bindings(
+        &runtime_state,
+        &[binding_id],
+        ash_interp::PolicyEvaluator::new(),
+        ash_core::Provenance::new(),
+    )
+    .await
+    .expect("act env projection succeeds");
+
+    let mut call_ctx = Context::new()
+        .with_runtime_state(runtime_state)
+        .with_admitted_capability_bindings(vec![binding_id])
+        .with_act_env(act_env);
+    call_ctx.set("act".to_string(), result);
+    let applied = eval_expr(
+        &Expr::Call {
+            func: "act".into(),
+            module: None,
+            arguments: vec![Expr::Literal(Value::ActEnvToken)],
+        },
+        &call_ctx,
+    )
+    .expect_err("alias-only admission must not authorize direct backing-provider invoke");
+    let message = applied.to_string();
+    assert!(
+        message.contains("authority boundary")
+            && message.contains("admission")
+            && message.contains("sensor"),
+        "diagnostic should identify the direct provider admission boundary: {message}"
+    );
+}
+
+#[tokio::test]
+async fn alias_invoke_uses_projected_binding_alias_not_manual_act_env_provider() {
+    let ctx = Context::new();
+    let result = eval_expr(&invoke_expr_for("workflow-sensor", "read"), &ctx)
+        .expect("invoke should dispatch");
+    let mut capability_ctx = CapabilityContext::new();
+    capability_ctx.register(Box::new(
+        MockProvider::new("workflow-sensor", Effect::Operational)
+            .with_execute_result(Ok(Value::String("leaked".to_string()))),
+    ));
+    let act_env = ActEnv::new(
+        capability_ctx,
+        ash_interp::PolicyEvaluator::new(),
+        ash_core::Provenance::new(),
+    );
+    let runtime_state = RuntimeState::new().with_provider(
+        "sensor",
+        Arc::new(
+            MockProvider::new("sensor", Effect::Operational)
+                .with_execute_result(Ok(Value::String("projected".to_string()))),
+        ),
+    );
+    let binding = host_binding_alias("workflow-sensor", "sensor", vec!["sensor.read"]);
+    let binding_id = binding.id;
+    runtime_state
+        .admit_capability_binding(binding)
+        .await
+        .expect("alias binding admission succeeds");
+
+    let mut call_ctx = Context::new()
+        .with_runtime_state(runtime_state)
+        .with_admitted_capability_bindings(vec![binding_id])
+        .with_act_env(act_env);
+    call_ctx.set("act".to_string(), result);
+    let applied = eval_expr(
+        &Expr::Call {
+            func: "act".into(),
+            module: None,
+            arguments: vec![Expr::Literal(Value::ActEnvToken)],
+        },
+        &call_ctx,
+    )
+    .expect("admitted alias invoke should use the projected runtime provider");
 
     assert_eq!(
         applied,

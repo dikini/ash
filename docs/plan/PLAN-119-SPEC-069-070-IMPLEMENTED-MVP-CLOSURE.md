@@ -12,7 +12,7 @@
 
 ## Status
 
-✅ Complete (TASK-944 final post-merge remediation closed the remaining daemon admitted-source TOCTOU and non-default config-id identity gaps after TASK-942/TASK-943; focused gates/check/clippy, serial workspace tests/doctests, rustdoc warning check, and final independent review passed).
+✅ Complete after TASK-945 final remediation. Phase 123 owns the Implemented MVP promotion and TASK-942 through TASK-945 post-merge remediation record; Phase 122 remains the historical Partial MVP closeout.
 
 ## Scope
 
@@ -53,8 +53,9 @@ This phase closes the following Phase 122 limitations:
 | TASK-942 | Phase 123 post-merge RuntimeKernel remediation | Semantic/Substrate/Docs | 10 | TASK-941 post-merge review | ✅ Complete |
 | TASK-943 | Phase 123 follow-up child admission and status drift | Semantic/Docs | 4 | TASK-942 post-merge review | ✅ Complete |
 | TASK-944 | Phase 123 daemon admitted-source/config remediation | Semantic/Substrate/Docs | 6 | TASK-943 follow-up review | ✅ Complete |
+| TASK-945 | Phase 123 final remediation | Semantic/Substrate/Docs | 4 | TASK-944 final review | ✅ Complete |
 
-Estimated total: 104 hours.
+Estimated total: 108 hours.
 
 ## Required Execution Discipline
 
@@ -82,7 +83,7 @@ from pathlib import Path
 files = [
     Path('docs/plan/PLAN-119-SPEC-069-070-IMPLEMENTED-MVP-CLOSURE.md'),
     *sorted(Path('docs/plan/tasks').glob('TASK-93[3-9]-*.md')),
-    *sorted(Path('docs/plan/tasks').glob('TASK-94[0-1]-*.md')),
+    *sorted(Path('docs/plan/tasks').glob('TASK-94[0-5]-*.md')),
 ]
 missing = []
 for p in files:
@@ -99,7 +100,7 @@ PY
 
 SPEC-069/SPEC-070 may be promoted to Implemented MVP only after TASK-941 confirms:
 
-- every formerly partial row has concrete evidence cited in `docs/plan/audits/TASK-931-alpha-acceptance-matrix.md` or the Phase 123 successor audit `docs/plan/audits/TASK-941-phase123-closeout-evidence.md`;
+- every formerly partial row has concrete evidence cited in `docs/plan/audits/TASK-931-alpha-acceptance-matrix.md` or the Phase 123 successor audit `docs/plan/audits/TASK-941-phase123-closeout-evidence.md`, with TASK-942 through TASK-945 recorded as post-merge remediation rather than Phase 122 history;
 - no current status surface still says SPEC-069/SPEC-070 are Partial MVP except historical Phase 122 notes;
 - all broad gates pass on the final diff, or any narrower post-merge remediation scope records exact focused evidence and an explicit broad-gate caveat instead of claiming broad completion;
 - Codex phase audit status is represented honestly. TASK-941's implementation worker may record the final independent phase audit as pending when nested agents are unavailable.

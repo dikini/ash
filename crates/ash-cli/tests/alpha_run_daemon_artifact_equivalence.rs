@@ -10,6 +10,9 @@ use std::thread;
 use std::time::{Duration, Instant};
 use tempfile::{TempDir, tempdir};
 
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
+
 struct DaemonChild {
     child: Child,
 }
@@ -32,13 +35,33 @@ struct DaemonDirs {
 fn daemon_dirs() -> DaemonDirs {
     let socket_parent = tempdir().expect("socket tempdir");
     let socket = socket_parent.path().join("ashd.sock");
+    let state = tempdir().expect("state tempdir");
+    let cache = tempdir().expect("cache tempdir");
+    let log = tempdir().expect("log tempdir");
+    #[cfg(unix)]
+    {
+        set_dir_mode(socket_parent.path(), 0o700);
+        set_dir_mode(state.path(), 0o700);
+        set_dir_mode(cache.path(), 0o700);
+        set_dir_mode(log.path(), 0o700);
+    }
     DaemonDirs {
         socket,
         _socket_parent: socket_parent,
-        state: tempdir().expect("state tempdir"),
-        cache: tempdir().expect("cache tempdir"),
-        log: tempdir().expect("log tempdir"),
+        state,
+        cache,
+        log,
     }
+}
+
+#[cfg(unix)]
+fn set_dir_mode(path: &Path, mode: u32) {
+    let mut permissions = fs::metadata(path)
+        .unwrap_or_else(|error| panic!("metadata for {}: {error}", path.display()))
+        .permissions();
+    permissions.set_mode(mode);
+    fs::set_permissions(path, permissions)
+        .unwrap_or_else(|error| panic!("chmod {mode:o} {}: {error}", path.display()));
 }
 
 fn ash_bin() -> std::path::PathBuf {
@@ -82,6 +105,8 @@ fn spawn_daemon(root: &Path, dirs: &DaemonDirs) -> DaemonChild {
 }
 
 fn write_workflow(root: &Path, name: &str) -> std::path::PathBuf {
+    #[cfg(unix)]
+    set_dir_mode(root, 0o700);
     let path = root.join(format!("{name}.ash"));
     fs::write(
         &path,

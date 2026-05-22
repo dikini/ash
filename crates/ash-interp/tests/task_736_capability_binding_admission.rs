@@ -82,6 +82,55 @@ async fn runtime_state_admits_and_projects_host_capability_binding_by_id() {
 }
 
 #[tokio::test]
+async fn aliases_to_same_provider_do_not_merge_action_grants() {
+    let runtime_state = RuntimeState::new().with_provider(
+        "deploy",
+        Arc::new(
+            MockProvider::new("deploy", Effect::Operational)
+                .with_execute_result(Ok(Value::String("called".to_string()))),
+        ),
+    );
+    let planner = host_binding("planner", "deploy", vec!["deploy.plan"]);
+    let planner_id = planner.id;
+    let applier = host_binding("applier", "deploy", vec!["deploy.apply"]);
+    let applier_id = applier.id;
+    runtime_state
+        .admit_capability_binding(planner)
+        .await
+        .expect("planner binding admission succeeds");
+    runtime_state
+        .admit_capability_binding(applier)
+        .await
+        .expect("applier binding admission succeeds");
+
+    let projected = runtime_state
+        .create_capability_context_for_bindings(&[planner_id, applier_id])
+        .await
+        .expect("projection succeeds for both admitted aliases");
+
+    assert_eq!(
+        projected.execute("planner", "plan", &[]).await,
+        Ok(Value::String("called".to_string()))
+    );
+    assert!(
+        projected.execute("planner", "apply", &[]).await.is_err(),
+        "planner must not inherit applier's grant through the shared backing provider"
+    );
+    assert_eq!(
+        projected.execute("applier", "apply", &[]).await,
+        Ok(Value::String("called".to_string()))
+    );
+    assert!(
+        projected.execute("applier", "plan", &[]).await.is_err(),
+        "applier must not inherit planner's grant through the shared backing provider"
+    );
+    assert!(
+        projected.execute("deploy", "plan", &[]).await.is_err(),
+        "backing provider names are not admitted dispatch aliases"
+    );
+}
+
+#[tokio::test]
 async fn runtime_state_projection_rejects_unadmitted_binding_ids_and_does_not_use_ambient_provider_registry()
  {
     let runtime_state = RuntimeState::new().with_provider(
@@ -526,6 +575,31 @@ async fn existing_runtime_state_capability_context_remains_provider_registry_com
         .await
         .expect("empty explicit admission set remains valid");
     assert!(explicitly_empty.execute("clock", "any", &[]).await.is_err());
+}
+
+#[tokio::test]
+async fn custom_provider_registration_keeps_last_wins_behavior() {
+    let runtime_state = RuntimeState::new()
+        .with_provider(
+            "clock",
+            Arc::new(
+                MockProvider::new("clock", Effect::Operational)
+                    .with_execute_result(Ok(Value::String("first".to_string()))),
+            ),
+        )
+        .with_provider(
+            "clock",
+            Arc::new(
+                MockProvider::new("clock", Effect::Operational)
+                    .with_execute_result(Ok(Value::String("second".to_string()))),
+            ),
+        );
+
+    let legacy_context = runtime_state.create_capability_context().await;
+    assert_eq!(
+        legacy_context.execute("clock", "any", &[]).await,
+        Ok(Value::String("second".to_string()))
+    );
 }
 
 #[tokio::test]

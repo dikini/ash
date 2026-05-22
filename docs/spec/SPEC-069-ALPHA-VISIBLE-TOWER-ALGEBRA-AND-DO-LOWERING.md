@@ -1,12 +1,12 @@
 # SPEC-069: Alpha Visible Tower Algebra and Generalized Do Lowering
 
-**Status:** Implemented MVP (Phase 123 closeout; see TASK-941 successor evidence plus TASK-942/TASK-943/TASK-944 post-merge remediation)
+**Status:** Implemented MVP (Phase 123 closeout; see TASK-941 successor evidence plus TASK-942/TASK-943/TASK-944/TASK-945 post-merge remediation)
 **Date:** 2026-05-19
 **Promotes:** [DESIGN-040](../design/DESIGN-040-ALPHA-ALGEBRAIC-TOWER.md)
 **Builds on:** [SPEC-047](SPEC-047-ACT-MONAD.md), [SPEC-048](SPEC-048-PROC-LIBRARY.md), [SPEC-049](SPEC-049-PROCESS-RUNTIME-SEMANTICS.md), [SPEC-050](SPEC-050-OPERATIONAL-BOTTOM-AND-SCOPED-HANDLING.md), [SPEC-051](SPEC-051-WORKFLOW-SEMANTICS.md), [SPEC-054](SPEC-054-GENERALIZED-TYPED-DO-NOTATION.md), [SPEC-056](SPEC-056-FIRST-CLASS-WORKFLOW-CARRIER.md), [SPEC-066](SPEC-066-TYPE-HOLES-PARTIAL-CONSTRUCTOR-APPLICATION.md), [SPEC-067](SPEC-067-CONSTRUCTOR-KINDED-PARAMETERS-AND-HKT.md)
 **Related:** [SPEC-001](SPEC-001-IR.md), [SPEC-003](SPEC-003-TYPE-SYSTEM.md), [SPEC-004](SPEC-004-SEMANTICS.md), [SPEC-025](SPEC-025-SMALL-STEP-OPERATIONAL-SEMANTICS.md), [SPEC-070](SPEC-070-ALPHA-RUNTIME-KERNEL-AND-OS-SURFACE.md)
 **Plan:** [PLAN-118](../plan/PLAN-118-DESIGN-040-041-ALPHA-IMPLEMENTATION-PACKET.md), [PLAN-119](../plan/PLAN-119-SPEC-069-070-IMPLEMENTED-MVP-CLOSURE.md)
-**Implementation Tasks:** [TASK-919](../plan/tasks/TASK-919-design040041-current-state-and-scope-reconciliation.md) through [TASK-944](../plan/tasks/TASK-944-phase123-daemon-admitted-source-config-remediation.md)
+**Implementation Tasks:** [TASK-919](../plan/tasks/TASK-919-design040041-current-state-and-scope-reconciliation.md) through [TASK-945](../plan/tasks/TASK-945-phase123-daemon-local-control-security-remediation.md)
 
 ## 1. Summary
 
@@ -43,10 +43,13 @@ The live repository already contains these prerequisites:
 Phase 122 implemented the visible tower algebra, full evidence-selected `bind`
 lowering, typed computation-expression carriers, static specialization for
 accepted generic monadic code, traceable TCIR/AMIR/bytecode substrate, and OODA
-compatibility as library/template/lint surface. Phase 123 added the remaining
-execution and cross-host evidence for Implemented MVP closeout, including
-concrete `do:Result` operational-bottom execution and run/daemon verified
-artifact equivalence at the explicit `alpha_checked_workflow_boundary` carrier.
+compatibility as library/template/lint surface, then closed historically as a
+Partial MVP. Phase 123 owns the later Implemented MVP promotion: it added the
+remaining execution and cross-host evidence, including concrete `do:Result`
+operational-bottom execution, run/daemon verified artifact equivalence at the
+explicit `alpha_checked_workflow_boundary` carrier, and TASK-942 through
+TASK-945 post-merge remediation evidence. Phase 123 does not rewrite the Phase
+122 historical status.
 
 ## 3. Scope
 
@@ -223,3 +226,4 @@ See [PLAN-118](../plan/PLAN-118-DESIGN-040-041-ALPHA-IMPLEMENTATION-PACKET.md).
 ### 2026-05-22
 
 - TASK-944 kept SPEC-069 promotion provenance aligned with SPEC-070/PLAN-119 after final daemon admitted-source/config remediation. The TASK-944 implementation is runtime-kernel/daemon-scoped; it does not expand SPEC-069 tower semantics beyond the TASK-941 successor evidence and preserved non-goals.
+- TASK-945 closed final verifier/report/status and capability alias remediation for Phase 123 by hardening AMIR/bytecode negative verification evidence, aligning Phase 122 historical ownership wording with the Phase 123 promotion record, and preserving visible authority boundaries for alias-projected runtime capability dispatch. This does not expand SPEC-069 semantics beyond the existing Implemented MVP scope.

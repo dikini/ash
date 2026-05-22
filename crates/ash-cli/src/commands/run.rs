@@ -390,6 +390,18 @@ struct AdmissionReport<'a> {
     reason: Option<&'a str>,
     capability_grants: usize,
     resource_grants: usize,
+    action_grants: usize,
+    capability_grant_ids: Vec<String>,
+    resource_grant_ids: Vec<String>,
+    action_grant_details: Vec<ActionGrantReport>,
+}
+
+#[derive(Debug, Serialize)]
+struct ActionGrantReport {
+    binding_id: String,
+    provider_name: String,
+    action_name: String,
+    action_surface: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -510,6 +522,33 @@ impl OneShotRuntimeKernel {
                 reason: None,
                 capability_grants: self.instance.admission.capability_grants.len(),
                 resource_grants: self.instance.admission.resource_grants.len(),
+                action_grants: self.instance.admission.action_grants.len(),
+                capability_grant_ids: self
+                    .instance
+                    .admission
+                    .capability_grants
+                    .iter()
+                    .map(|binding_id| binding_id.0.to_string())
+                    .collect(),
+                resource_grant_ids: self
+                    .instance
+                    .admission
+                    .resource_grants
+                    .iter()
+                    .map(|resource_id| resource_id.0.to_string())
+                    .collect(),
+                action_grant_details: self
+                    .instance
+                    .admission
+                    .action_grants
+                    .iter()
+                    .map(|grant| ActionGrantReport {
+                        binding_id: grant.binding_id.0.to_string(),
+                        provider_name: grant.provider_name.clone(),
+                        action_name: grant.action_name.clone(),
+                        action_surface: grant.action_surface(),
+                    })
+                    .collect(),
             },
             provider_registry: ProviderRegistryReport {
                 provider_names: self.instance.provider_registry.provider_names.clone(),
@@ -549,6 +588,10 @@ fn emit_admission_rejection_report_if_requested(
                 reason,
                 capability_grants: 0,
                 resource_grants: 0,
+                action_grants: 0,
+                capability_grant_ids: Vec::new(),
+                resource_grant_ids: Vec::new(),
+                action_grant_details: Vec::new(),
             },
             provider_registry: ProviderRegistryReport {
                 provider_names: provider_registry.provider_names,

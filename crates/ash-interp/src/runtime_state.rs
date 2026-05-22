@@ -1548,7 +1548,7 @@ impl RuntimeState {
         use crate::capability::{CapabilityContext, CapabilityRegistry};
 
         let bindings = self.capability_bindings.lock().await;
-        let mut projected_surfaces: HashMap<String, (String, Vec<String>)> = HashMap::new();
+        let mut projected_surfaces = Vec::new();
 
         for binding_id in binding_ids {
             let Some(binding) = bindings.get(binding_id) else {
@@ -1562,11 +1562,11 @@ impl RuntimeState {
                 admitted_capabilities,
             } = &binding.kind
             {
-                projected_surfaces
-                    .entry(provider_name.clone())
-                    .or_insert_with(|| (binding.name.clone(), Vec::new()))
-                    .1
-                    .extend(admitted_capabilities.iter().cloned());
+                projected_surfaces.push((
+                    provider_name.clone(),
+                    binding.name.clone(),
+                    admitted_capabilities.clone(),
+                ));
             }
         }
         drop(bindings);
@@ -1577,7 +1577,7 @@ impl RuntimeState {
             .expect("provider registry mutex poisoned");
         let mut registry = CapabilityRegistry::new();
 
-        for (provider_name, (projected_name, mut admitted_capabilities)) in projected_surfaces {
+        for (provider_name, projected_name, mut admitted_capabilities) in projected_surfaces {
             let Some(provider) = providers.get(&provider_name) else {
                 return Err(ExecError::CapabilityNotAvailable(provider_name));
             };
@@ -1586,21 +1586,25 @@ impl RuntimeState {
             let projected_capabilities = admitted_capabilities
                 .iter()
                 .map(|grant| {
+                    if grant == &format!("{provider_name}.*")
+                        || grant == &format!("{projected_name}.*")
+                    {
+                        return projected_name.clone();
+                    }
+                    if grant == &provider_name || grant == &projected_name {
+                        return projected_name.clone();
+                    }
                     if let Some((candidate_provider, action_name)) = grant.split_once('.')
-                        && candidate_provider == provider_name
+                        && (candidate_provider == provider_name
+                            || candidate_provider == projected_name)
                     {
                         return format!("{projected_name}.{action_name}");
                     }
                     if let Some((candidate_provider, action_name)) = grant.split_once(':')
-                        && candidate_provider == provider_name
+                        && (candidate_provider == provider_name
+                            || candidate_provider == projected_name)
                     {
                         return format!("{projected_name}:{action_name}");
-                    }
-                    if grant == &format!("{provider_name}.*") {
-                        return projected_name.clone();
-                    }
-                    if grant == &provider_name {
-                        return projected_name.clone();
                     }
                     grant.clone()
                 })

@@ -364,6 +364,91 @@ async fn act_guard_failure_still_rejects_execution() {
 }
 
 #[tokio::test]
+async fn workflow_act_rejects_direct_backing_provider_when_only_alias_is_admitted() {
+    let runtime_state = RuntimeState::new().with_provider(
+        "deploy",
+        Arc::new(
+            MockProvider::new("deploy", Effect::Operational)
+                .with_execute_result(Ok(Value::String("leaked".to_string()))),
+        ),
+    );
+    let binding_id = admit_host_binding(
+        &runtime_state,
+        "workflow-deploy",
+        "deploy",
+        vec!["deploy.plan"],
+    )
+    .await;
+    let workflow = Workflow::Act {
+        provider_name: "deploy".to_string(),
+        action_name: "plan".to_string(),
+        arguments: vec![],
+        guard: Guard::Always,
+        provenance: Provenance::new(),
+        result_name: None,
+        continuation: Box::new(Workflow::Done),
+    };
+
+    let (ctx, cap_ctx, policy_eval, behaviour_ctx) = execution_contexts();
+    let error = execute_workflow_with_behaviour_in_state(
+        &workflow,
+        ctx.with_admitted_capability_bindings(vec![binding_id]),
+        &cap_ctx,
+        &policy_eval,
+        &behaviour_ctx,
+        &runtime_state,
+    )
+    .await
+    .expect_err("alias admission must not authorize direct backing-provider Workflow::Act");
+
+    assert!(
+        matches!(&error, ExecError::CapabilityNotAvailable(provider) if provider == "deploy"),
+        "expected backing provider to be rejected at the admission boundary, got {error:?}"
+    );
+}
+
+#[tokio::test]
+async fn workflow_act_uses_projected_binding_alias_for_admitted_action() {
+    let runtime_state = RuntimeState::new().with_provider(
+        "deploy",
+        Arc::new(
+            MockProvider::new("deploy", Effect::Operational)
+                .with_execute_result(Ok(Value::String("planned".to_string()))),
+        ),
+    );
+    let binding_id = admit_host_binding(
+        &runtime_state,
+        "workflow-deploy",
+        "deploy",
+        vec!["deploy.plan"],
+    )
+    .await;
+    let workflow = Workflow::Act {
+        provider_name: "workflow-deploy".to_string(),
+        action_name: "plan".to_string(),
+        arguments: vec![],
+        guard: Guard::Always,
+        provenance: Provenance::new(),
+        result_name: None,
+        continuation: Box::new(Workflow::Done),
+    };
+
+    let (ctx, cap_ctx, policy_eval, behaviour_ctx) = execution_contexts();
+    let result = execute_workflow_with_behaviour_in_state(
+        &workflow,
+        ctx.with_admitted_capability_bindings(vec![binding_id]),
+        &cap_ctx,
+        &policy_eval,
+        &behaviour_ctx,
+        &runtime_state,
+    )
+    .await
+    .expect("admitted binding alias should dispatch through its projected provider");
+
+    assert_eq!(result, Value::String("planned".to_string()));
+}
+
+#[tokio::test]
 async fn spawned_control_link_supports_pause_health_and_resume() {
     let (ctx, cap_ctx, policy_eval, behaviour_ctx) = execution_contexts();
     let runtime_state = runtime_state_with_registered_worker(Workflow::Done).await;
@@ -453,13 +538,8 @@ async fn spawned_control_link_is_not_eagerly_terminated_before_supervisor_can_us
     let runtime_state =
         runtime_state_with_blocking_worker(started_block.clone(), release_rx, block_calls.clone())
             .await;
-    let binding_id = admit_host_binding(
-        &runtime_state,
-        "workflow-block",
-        "block",
-        vec!["block.block"],
-    )
-    .await;
+    let binding_id =
+        admit_host_binding(&runtime_state, "block", "block", vec!["block.block"]).await;
 
     let link = spawn_real_child_control_with_admitted(&runtime_state, vec![binding_id]).await;
 
@@ -488,13 +568,8 @@ async fn kill_invalidates_future_control_operations() {
     let runtime_state =
         runtime_state_with_blocking_worker(started_block.clone(), release_rx, block_calls.clone())
             .await;
-    let binding_id = admit_host_binding(
-        &runtime_state,
-        "workflow-block",
-        "block",
-        vec!["block.block"],
-    )
-    .await;
+    let binding_id =
+        admit_host_binding(&runtime_state, "block", "block", vec!["block.block"]).await;
     let link = spawn_real_child_control_with_admitted(&runtime_state, vec![binding_id]).await;
 
     timeout(Duration::from_millis(250), started_block.notified())
@@ -574,15 +649,10 @@ async fn pause_blocks_real_spawned_child_progress_until_resume() {
                 started_mark.clone(),
             )),
         );
-    let block_binding_id = admit_host_binding(
-        &runtime_state,
-        "workflow-block",
-        "block",
-        vec!["block.block"],
-    )
-    .await;
+    let block_binding_id =
+        admit_host_binding(&runtime_state, "block", "block", vec!["block.block"]).await;
     let mark_binding_id =
-        admit_host_binding(&runtime_state, "workflow-mark", "mark", vec!["mark.mark"]).await;
+        admit_host_binding(&runtime_state, "mark", "mark", vec!["mark.mark"]).await;
 
     let link = spawn_real_child_control_with_admitted(
         &runtime_state,
@@ -671,15 +741,10 @@ async fn kill_stops_real_spawned_child_before_later_steps_and_keeps_kill_seal() 
                 started_mark.clone(),
             )),
         );
-    let block_binding_id = admit_host_binding(
-        &runtime_state,
-        "workflow-block",
-        "block",
-        vec!["block.block"],
-    )
-    .await;
+    let block_binding_id =
+        admit_host_binding(&runtime_state, "block", "block", vec!["block.block"]).await;
     let mark_binding_id =
-        admit_host_binding(&runtime_state, "workflow-mark", "mark", vec!["mark.mark"]).await;
+        admit_host_binding(&runtime_state, "mark", "mark", vec!["mark.mark"]).await;
 
     let link = spawn_real_child_control_with_admitted(
         &runtime_state,
@@ -849,7 +914,7 @@ async fn spawned_child_success_retains_provenance_contents() {
                 .with_execute_result(Ok(Value::String("deployed".to_string()))),
         ),
     );
-    let binding = host_binding("workflow-deploy", "deploy", vec!["deploy.deploy"]);
+    let binding = host_binding("deploy", "deploy", vec!["deploy.deploy"]);
     let binding_id = binding.id;
     runtime_state
         .admit_capability_binding(binding)
@@ -953,7 +1018,7 @@ async fn spawned_child_failure_retains_provenance_contents() {
             )),
         ),
     );
-    let binding = host_binding("workflow-deploy", "deploy", vec!["deploy.deploy"]);
+    let binding = host_binding("deploy", "deploy", vec!["deploy.deploy"]);
     let binding_id = binding.id;
     runtime_state
         .admit_capability_binding(binding)

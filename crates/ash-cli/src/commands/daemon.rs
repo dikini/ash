@@ -1205,30 +1205,64 @@ fn prepare_socket_path(socket: &Path) -> Result<()> {
 
 #[cfg(unix)]
 fn validate_local_control_paths(args: &DaemonServeArgs) -> Result<()> {
-    let root_uid = fs::metadata(&args.root)?.uid();
+    let euid = current_effective_uid();
     let socket_parent = args
         .socket
         .parent()
         .ok_or_else(|| anyhow!("invalid socket path {}: no parent", args.socket.display()))?;
     for (label, path) in [
+        ("root", args.root.as_path()),
         ("socket parent", socket_parent),
         ("state dir", args.state_dir.as_path()),
         ("cache dir", args.cache_dir.as_path()),
         ("log dir", args.log_dir.as_path()),
     ] {
-        let metadata = fs::metadata(path)
-            .with_context(|| format!("invalid {label} {}: not accessible", path.display()))?;
-        if !metadata.is_dir() {
-            bail!("invalid {label} {}: must be a directory", path.display());
-        }
-        if metadata.uid() != root_uid {
-            bail!(
-                "invalid {label} {}: ownership does not match root owner",
-                path.display()
-            );
-        }
+        validate_same_user_control_dir(label, path, euid)?;
     }
     Ok(())
+}
+
+#[cfg(unix)]
+fn validate_same_user_control_dir(label: &str, path: &Path, euid: u32) -> Result<()> {
+    let link_metadata = fs::symlink_metadata(path)
+        .with_context(|| format!("invalid {label} {}: not accessible", path.display()))?;
+    if link_metadata.file_type().is_symlink() {
+        bail!(
+            "invalid {label} {}: symbolic links are not allowed for local-control directories",
+            path.display()
+        );
+    }
+    let metadata = fs::metadata(path)
+        .with_context(|| format!("invalid {label} {}: not accessible", path.display()))?;
+    if !metadata.is_dir() {
+        bail!("invalid {label} {}: must be a directory", path.display());
+    }
+    if metadata.uid() != euid {
+        bail!(
+            "invalid {label} {}: owner uid {} does not match current effective user uid {euid}",
+            path.display(),
+            metadata.uid()
+        );
+    }
+    let mode = metadata.mode() & 0o777;
+    if mode & 0o022 != 0 {
+        bail!(
+            "invalid {label} {}: directory is group/world-writable (mode {mode:o})",
+            path.display()
+        );
+    }
+    Ok(())
+}
+
+#[cfg(unix)]
+fn current_effective_uid() -> u32 {
+    unsafe extern "C" {
+        fn geteuid() -> u32;
+    }
+
+    // SAFETY: POSIX `geteuid` has no arguments, does not require caller-owned
+    // memory, and is safe to call for querying the process effective UID.
+    unsafe { geteuid() }
 }
 
 #[cfg(not(unix))]

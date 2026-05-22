@@ -1,8 +1,8 @@
 # TASK-941 Phase 123 Closeout Evidence
 
-Status: Complete after TASK-944 focused gates/check/clippy, serial workspace tests/doctests, rustdoc warning check, and independent review
+Status: Complete after TASK-945 final remediation focused gates, with TASK-944 broad serial workspace/rustdoc evidence retained for the previous daemon remediation slice
 Date: 2026-05-21
-Branch: phase123-implemented-mvp
+Branch: phase123-implemented-mvp; post-merge remediation on phase123-final-remediation
 Phase: Phase 123 / PLAN-119
 Specs: SPEC-069, SPEC-070
 
@@ -55,11 +55,27 @@ TASK-941 implementation closeout reconciled the Phase 123 successor evidence map
 
 TASK-944 post-merge remediation has fresh evidence: `git diff --check`, `cargo fmt --check`, `RUSTC_WRAPPER= cargo check -p ash-engine -p ash-cli`, `RUSTC_WRAPPER= cargo clippy -p ash-engine -p ash-cli --all-targets --all-features -- -D warnings`, focused daemon tests, focused run/daemon artifact-equivalence tests, focused RuntimeKernel authority tests, `RUSTC_WRAPPER= scripts/check-rust-tests.sh --workspace`, and `RUSTC_WRAPPER= cargo doc --workspace --no-deps 2>&1 | tee /tmp/ash-task944-doc.log && ! grep -i '^warning:' /tmp/ash-task944-doc.log` passed. An earlier raw `RUSTC_WRAPPER= cargo test --workspace` attempt was stopped while still compiling after about 17 minutes with no test failure; the serial wrapper supersedes that inconclusive raw attempt.
 
-The final independent Codex-style phase audit found no semantic/code/test blocker in the daemon admitted-source/config remediation after this status-honesty update. It retained a verification caveat that the TOCTOU regression is timing-based even though code inspection supports the source-snapshot fix.
+TASK-945 final remediation has focused evidence for the remaining review gaps:
+`cargo test -p ash-core --test alpha_amir_bytecode_schema -- --nocapture`
+passed after RED failures proved the verifier previously accepted non-bijective
+TCIR statement coverage, and
+`cargo test -p ash-cli --test alpha_ash_run_runtime_kernel_mode ash_run_reports_kernel_instance_and_artifact_identity -- --nocapture`
+passed after RED evidence showed one-shot reports omitted admitted grant detail
+fields. Final focused CLI evidence also passed:
+`RUSTC_WRAPPER= cargo test -p ash-cli --test alpha_run_daemon_artifact_equivalence --test alpha_ash_run_runtime_kernel_mode -- --nocapture`
+reported `alpha_ash_run_runtime_kernel_mode` 3 passed, 0 failed and
+`alpha_run_daemon_artifact_equivalence` 4 passed, 0 failed after tightening
+fixture directory modes for the same-user/non-writable daemon-control rule.
+TASK-945 also has focused `ash-interp` authority evidence:
+`RUSTC_WRAPPER= cargo test -p ash-interp --test task_736_capability_binding_admission --test invoke_runtime_dispatch --test runtime_action_control -- --nocapture`
+passed after RED failures proved backing-provider dispatch and alias grant
+union could leak authority across explicit binding aliases.
+
+The TASK-944 independent Codex-style phase audit found no semantic/code/test blocker in the daemon admitted-source/config remediation after that slice's status-honesty update. It retained a verification caveat that the TOCTOU regression is timing-based even though code inspection supports the source-snapshot fix.
 
 
 ## Post-Merge Remediation Addendum
 
-TASK-942, TASK-943, and TASK-944 are part of the final Phase 123 status evidence after post-merge review reopened the closeout. TASK-942 remediated RuntimeKernel admission/report lifecycle, binding-ID admission facts, empty-admission fail-closed authority, binding alias projection, and artifact-equivalence wording. TASK-943 adds the spawned-child authority regression proving a child with no inherited admitted binding IDs cannot execute a globally admitted host binding, and reconciles SPEC-069/SPEC-070 status provenance through the post-merge remediation tasks. TASK-944 closes the final daemon admitted-artifact lifetime and config-identity gaps by executing daemon start-execute from the already-read/hash-checked source bytes instead of a second filesystem parse, and by rejecting non-default daemon `config_id` values before instance recording until config-specific daemon artifacts exist.
+TASK-942, TASK-943, TASK-944, and TASK-945 are part of the final Phase 123 status evidence after post-merge review reopened the closeout. TASK-942 remediated RuntimeKernel admission/report lifecycle, binding-ID admission facts, empty-admission fail-closed authority, binding alias projection, and artifact-equivalence wording. TASK-943 adds the spawned-child authority regression proving a child with no inherited admitted binding IDs cannot execute a globally admitted host binding, and reconciles SPEC-069/SPEC-070 status provenance through the post-merge remediation tasks. TASK-944 closes the daemon admitted-artifact lifetime and config-identity gaps by executing daemon start-execute from the already-read/hash-checked workflow source bytes instead of a second filesystem parse, and by rejecting non-default daemon `config_id` values before instance recording until config-specific daemon artifacts exist. TASK-945 closes final verifier/report/status gaps by hardening AMIR/bytecode malformed-artifact negatives, adding one-shot admitted-grant report details, extending the PLAN-119 embedded docs link-check to TASK-942 through TASK-945, documenting that imported-module daemon drift is not yet separately watched after admission, and fixing capability binding alias authority projection so host-provider grants remain per binding id/name without backing-provider grant union.
 
-Final status claims for SPEC-069/SPEC-070 Implemented MVP therefore cite this TASK-941 successor evidence together with TASK-942, TASK-943, and TASK-944 remediation evidence. Historical Phase 122 remains Partial MVP; Phase 123 owns the promotion after remediation.
+Final status claims for SPEC-069/SPEC-070 Implemented MVP therefore cite this TASK-941 successor evidence together with TASK-942, TASK-943, TASK-944, and TASK-945 remediation evidence. Historical Phase 122 remains Partial MVP; Phase 123 owns the promotion after remediation.

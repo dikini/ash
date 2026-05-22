@@ -48,5 +48,17 @@ Phase 123 status surfaces must also cite the post-merge follow-up tasks honestly
 
 ## Verification Evidence
 
-- RED: reverting `crates/ash-interp/src/execute.rs` while keeping the TASK-943 regression failed with provider call count `left: 1`, `right: 0`.
-- GREEN focused verification was rerun on the final diff by the main agent before commit.
+- RED: with the TASK-943 regression
+  `crates/ash-interp/tests/runtime_action_control.rs::spawned_child_without_inherited_grant_cannot_gain_provider_authority`
+  present, reverting the `crates/ash-interp/src/execute.rs` authority fix and
+  running
+  `cargo test -p ash-interp --test runtime_action_control spawned_child_without_inherited_grant_cannot_gain_provider_authority -- --nocapture`
+  failed with provider call count `left: 1`, `right: 0`.
+- GREEN focused evidence:
+  `cargo test -p ash-interp --test runtime_action_control spawned_child_without_inherited_grant_cannot_gain_provider_authority -- --nocapture`
+  passed after the fix, proving a child with no inherited admitted binding IDs
+  cannot execute the globally admitted `deploy.deploy` host binding.
+- Positive boundary evidence:
+  `crates/ash-interp/tests/runtime_action_control.rs::spawned_child_success_retains_provenance_contents`
+  and the broader `cargo test -p ash-interp --test runtime_action_control -- --nocapture`
+  run preserved explicit inherited-grant child execution.

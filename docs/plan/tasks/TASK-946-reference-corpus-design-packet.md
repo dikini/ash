@@ -4,7 +4,7 @@
 
 ## Description
 
-Create the initial documentation architecture packet: DESIGN-042, SPEC-071, PLAN-120, Phase 124 PLAN-INDEX entry, task files, spec index row, and changelog entry.
+Create the initial documentation architecture packet: DESIGN-042, SPEC-071, PLAN-120, Phase 124 PLAN-INDEX entry, task files, spec index row, and changelog entry. Use the `ash-documentation-style-guide` skill for documentation tone and style.
 
 ## Specification Reference
 
@@ -50,6 +50,7 @@ toolsets: [terminal, file]
 ```
 
 Codex instructions:
+
 - Work in a dedicated worktree.
 - Do not spawn nested agents.
 - Keep this task's scope narrow.

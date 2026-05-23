@@ -4,7 +4,7 @@
 
 ## Description
 
-Write the first semantic pilot reference pages for the Ash tower: Pure, Act, Proc, Workflow, and generalized do.
+Write the first semantic pilot reference pages for the Ash tower: Pure, Act, Proc, Workflow, and generalized do. Use the `ash-documentation-style-guide` skill for documentation tone and style.
 
 ## Specification Reference
 
@@ -50,6 +50,7 @@ toolsets: [terminal, file]
 ```
 
 Codex instructions:
+
 - Work in a dedicated worktree.
 - Do not spawn nested agents.
 - Keep this task's scope narrow.

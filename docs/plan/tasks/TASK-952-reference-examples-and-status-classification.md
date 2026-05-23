@@ -4,7 +4,7 @@
 
 ## Description
 
-Classify cited pilot examples, known limitations, and feature status entries so reference pages do not overclaim executable coverage.
+Classify cited pilot examples, known limitations, and feature status entries so reference pages do not overclaim executable coverage. Use the `ash-documentation-style-guide` skill for documentation tone and style.
 
 ## Specification Reference
 
@@ -51,6 +51,7 @@ toolsets: [terminal, file]
 ```
 
 Codex instructions:
+
 - Work in a dedicated worktree.
 - Do not spawn nested agents.
 - Keep this task's scope narrow.

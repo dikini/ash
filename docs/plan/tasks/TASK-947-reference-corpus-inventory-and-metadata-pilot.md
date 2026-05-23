@@ -4,7 +4,7 @@
 
 ## Description
 
-Inventory a real pilot slice of the existing Ash corpus and test SPEC-071 metadata against actual artifacts before bulk authoring reference pages.
+Inventory a real pilot slice of the existing Ash corpus and test SPEC-071 metadata against actual artifacts before bulk authoring reference pages. Use the `ash-documentation-style-guide` skill for documentation tone and style.
 
 ## Specification Reference
 
@@ -50,6 +50,7 @@ toolsets: [terminal, file]
 ```
 
 Codex instructions:
+
 - Work in a dedicated worktree.
 - Do not spawn nested agents.
 - Keep this task's scope narrow.

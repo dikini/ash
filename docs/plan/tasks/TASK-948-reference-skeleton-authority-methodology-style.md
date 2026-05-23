@@ -4,7 +4,7 @@
 
 ## Description
 
-Create the initial top-level `reference/` skeleton and the methodology/authority/style pages that govern later reference content.
+Create the initial top-level `reference/` skeleton and the methodology/authority/style pages that govern later reference content. Use the `ash-documentation-style-guide` skill for documentation tone and style.
 
 ## Specification Reference
 
@@ -50,6 +50,7 @@ toolsets: [terminal, file]
 ```
 
 Codex instructions:
+
 - Work in a dedicated worktree.
 - Do not spawn nested agents.
 - Keep this task's scope narrow.

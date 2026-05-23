@@ -4,7 +4,7 @@
 
 ## Description
 
-Implement the first repo-local static validator for reference frontmatter, links, paths, and internal IDs.
+Implement the first repo-local static validator for reference frontmatter, links, paths, and internal IDs. Use the `ash-documentation-style-guide` skill for documentation tone and style.
 
 ## Specification Reference
 
@@ -52,6 +52,7 @@ toolsets: [terminal, file]
 ```
 
 Codex instructions:
+
 - Work in a dedicated worktree.
 - Do not spawn nested agents.
 - Keep this task's scope narrow.

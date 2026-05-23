@@ -4,7 +4,7 @@
 
 ## Description
 
-Close out the PLAN-120 pilot by reconciling SPEC-071 acceptance criteria, validator evidence, drift findings, and next-slice recommendations.
+Close out the PLAN-120 pilot by reconciling SPEC-071 acceptance criteria, validator evidence, drift findings, and next-slice recommendations. Use the `ash-documentation-style-guide` skill for documentation tone and style.
 
 ## Specification Reference
 
@@ -55,6 +55,7 @@ toolsets: [terminal, file]
 ```
 
 Codex instructions:
+
 - Work in a dedicated worktree.
 - Do not spawn nested agents.
 - Keep this task's scope narrow.

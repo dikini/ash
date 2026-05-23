@@ -4,7 +4,7 @@
 
 ## Description
 
-Add AI-agent-facing derivatives for the pilot slice without forking semantic content from the reference pages.
+Add AI-agent-facing derivatives for the pilot slice without forking semantic content from the reference pages. Use the `ash-documentation-style-guide` skill for documentation tone and style.
 
 ## Specification Reference
 
@@ -50,6 +50,7 @@ toolsets: [terminal, file]
 ```
 
 Codex instructions:
+
 - Work in a dedicated worktree.
 - Do not spawn nested agents.
 - Keep this task's scope narrow.

@@ -1,6 +1,6 @@
 # TASK-952: Reference examples and status classification
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -75,8 +75,13 @@ commands:
         assert label in text, label
     PY
 checklist:
-  - [ ] Documentation impact classified.
-  - [ ] CHANGELOG.md updated if docs policy or release-facing status changed.
-  - [ ] New/changed links are scoped-checked.
-  - [ ] Reference metadata and authority links are honest for this task's maturity.
+  - [x] Documentation impact classified.
+  - [x] CHANGELOG.md updated if docs policy or release-facing status changed.
+  - [x] New/changed links are scoped-checked.
+  - [x] Reference metadata and authority links are honest for this task's maturity.
 ```
+
+
+## Completion Evidence
+
+Completed in Phase 124. Focused evidence is recorded in `reference/status/verification-evidence.md`; drift and remaining limits are recorded in `reference/status/drift-report.md`. The pilot validator passed with `python3 tools/reference/check_frontmatter.py --pilot`.

@@ -12,12 +12,12 @@
 
 ## 1. Status
 
-**Status:** 📝 Planned after packet creation
+**Status:** ✅ Complete — Phase 124 pilot implemented
 **Spec:** [SPEC-071](../spec/SPEC-071-REFERENCE-CORPUS-METADATA-AND-MAINTENANCE.md)
 **Design:** [DESIGN-042](../design/DESIGN-042-REFERENCE-CORPUS-AND-DOCUMENTATION-GOVERNANCE.md)
 **Task range:** [TASK-946](tasks/TASK-946-reference-corpus-design-packet.md) through [TASK-953](tasks/TASK-953-reference-corpus-closeout-and-drift-report.md)
 
-TASK-946 creates the design/spec/plan packet and registers Phase 124. TASK-947 through TASK-953 remain planned implementation tasks for the reference skeleton, metadata inventory, pilot pages, agent derivatives, validator, example/status classification, and closeout drift report.
+TASK-946 created the design/spec/plan packet. TASK-947 through TASK-953 implemented the Phase 124 pilot: inventory, reference skeleton, Pure/Act/Proc/Workflow pages, agent derivatives, static validator, example/status classification, and drift-report closeout. The phase remains a pilot, not a full corpus migration.
 
 ## 2. Scope
 
@@ -46,13 +46,13 @@ TASK-946 creates the design/spec/plan packet and registers Phase 124. TASK-947 t
 | Task | Description | Est. Hours | Status |
 | --- | --- | ---: | --- |
 | [TASK-946](tasks/TASK-946-reference-corpus-design-packet.md) | Create DESIGN-042/SPEC-071/PLAN-120 packet and register Phase 124 | 4 | ✅ Complete |
-| [TASK-947](tasks/TASK-947-reference-corpus-inventory-and-metadata-pilot.md) | Inventory/classify a pilot corpus slice and freeze metadata fit/friction points | 8 | 📝 Planned |
-| [TASK-948](tasks/TASK-948-reference-skeleton-authority-methodology-style.md) | Create `reference/` skeleton plus authority, methodology, style, and status guides | 8 | 📝 Planned |
-| [TASK-949](tasks/TASK-949-pure-act-proc-workflow-reference-pilot.md) | Write Pure/Act/Proc/Workflow pilot reference pages with typed traceability links | 12 | 📝 Planned |
-| [TASK-950](tasks/TASK-950-agent-concept-cards-and-context-pack-index.md) | Add agent concept cards, common-confusion warnings, and context-pack index for pilot slice | 8 | 📝 Planned |
-| [TASK-951](tasks/TASK-951-reference-static-validator-mvp.md) | Implement static reference metadata/link/path/ID validator MVP | 14 | 📝 Planned |
-| [TASK-952](tasks/TASK-952-reference-examples-and-status-classification.md) | Classify cited examples/status/limitations and wire pilot feature matrix | 10 | 📝 Planned |
-| [TASK-953](tasks/TASK-953-reference-corpus-closeout-and-drift-report.md) | Close out SPEC-071 pilot with drift report, verification evidence, and next-slice recommendation | 8 | 📝 Planned |
+| [TASK-947](tasks/TASK-947-reference-corpus-inventory-and-metadata-pilot.md) | Inventory/classify a pilot corpus slice and freeze metadata fit/friction points | 8 | ✅ Complete |
+| [TASK-948](tasks/TASK-948-reference-skeleton-authority-methodology-style.md) | Create `reference/` skeleton plus authority, methodology, style, and status guides | 8 | ✅ Complete |
+| [TASK-949](tasks/TASK-949-pure-act-proc-workflow-reference-pilot.md) | Write Pure/Act/Proc/Workflow pilot reference pages with typed traceability links | 12 | ✅ Complete |
+| [TASK-950](tasks/TASK-950-agent-concept-cards-and-context-pack-index.md) | Add agent concept cards, common-confusion warnings, and context-pack index for pilot slice | 8 | ✅ Complete |
+| [TASK-951](tasks/TASK-951-reference-static-validator-mvp.md) | Implement static reference metadata/link/path/ID validator MVP | 14 | ✅ Complete |
+| [TASK-952](tasks/TASK-952-reference-examples-and-status-classification.md) | Classify cited examples/status/limitations and wire pilot feature matrix | 10 | ✅ Complete |
+| [TASK-953](tasks/TASK-953-reference-corpus-closeout-and-drift-report.md) | Close out SPEC-071 pilot with drift report, verification evidence, and next-slice recommendation | 8 | ✅ Complete |
 
 ## 4. Tracks
 
@@ -102,3 +102,8 @@ PLAN-120 is complete only when:
 3. Reference validators run and report known limitations honestly.
 4. Independent review checks for overclaiming, stale authority links, and agent/human semantic divergence.
 5. The phase explicitly lists what remains outside the pilot.
+
+
+## 8. Phase 124 closeout
+
+Completed in the Phase 124 pilot. Evidence is recorded in `reference/status/verification-evidence.md` and `reference/status/drift-report.md`. SPEC-071 R71-1 through R71-7 are complete for the pilot slice. Remaining work is intentionally outside this phase: full stdlib/tool/runtime reference coverage, generated API extraction, and broad example executability validation.

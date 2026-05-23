@@ -1,6 +1,6 @@
 # SPEC-071: Reference Corpus Metadata and Maintenance
 
-**Status:** Draft
+**Status:** Implemented MVP
 **Date:** 2026-05-23
 **Promotes:** [DESIGN-042](../design/DESIGN-042-REFERENCE-CORPUS-AND-DOCUMENTATION-GOVERNANCE.md)
 **Related:** [DESIGN-035](../design/DESIGN-035-DOCUMENTATION-CORPUS-GOVERNANCE.md), [SPEC-045](SPEC-045-ASH-WIKI.md)

@@ -3654,7 +3654,7 @@ Phase 123 is the follow-on to Phase 122. It does not reopen or rewrite Phase 122
 ## Phase 124: Reference Corpus and Documentation Governance
 
 **Priority:** High (separates current human/agent reference material from the working/historical `docs/` corpus and introduces metadata/tooling policy to control documentation drift)
-**Status:** 📝 Planned after TASK-946 packet creation
+**Status:** ✅ Complete — reference corpus pilot implemented
 **Spec:** [SPEC-071](../spec/SPEC-071-REFERENCE-CORPUS-METADATA-AND-MAINTENANCE.md)
 **Design:** [DESIGN-042](../design/DESIGN-042-REFERENCE-CORPUS-AND-DOCUMENTATION-GOVERNANCE.md)
 **Plan:** [PLAN-120](PLAN-120-REFERENCE-CORPUS-ROLLOUT.md)
@@ -3664,13 +3664,13 @@ Phase 124 creates a separate top-level `reference/` corpus for current curated A
 | Task | Description | Est. Hours | Status |
 |------|-------------|------------|--------|
 | [TASK-946](tasks/TASK-946-reference-corpus-design-packet.md) | Create DESIGN-042/SPEC-071/PLAN-120 packet and register Phase 124 | 4 | ✅ Complete |
-| [TASK-947](tasks/TASK-947-reference-corpus-inventory-and-metadata-pilot.md) | Inventory/classify a pilot corpus slice and freeze metadata fit/friction points | 8 | 📝 Planned |
-| [TASK-948](tasks/TASK-948-reference-skeleton-authority-methodology-style.md) | Create `reference/` skeleton plus authority, methodology, style, and status guides | 8 | 📝 Planned |
-| [TASK-949](tasks/TASK-949-pure-act-proc-workflow-reference-pilot.md) | Write Pure/Act/Proc/Workflow pilot reference pages with typed traceability links | 12 | 📝 Planned |
-| [TASK-950](tasks/TASK-950-agent-concept-cards-and-context-pack-index.md) | Add agent concept cards, common-confusion warnings, and context-pack index for pilot slice | 8 | 📝 Planned |
-| [TASK-951](tasks/TASK-951-reference-static-validator-mvp.md) | Implement static reference metadata/link/path/ID validator MVP | 14 | 📝 Planned |
-| [TASK-952](tasks/TASK-952-reference-examples-and-status-classification.md) | Classify cited examples/status/limitations and wire pilot feature matrix | 10 | 📝 Planned |
-| [TASK-953](tasks/TASK-953-reference-corpus-closeout-and-drift-report.md) | Close out SPEC-071 pilot with drift report, verification evidence, and next-slice recommendation | 8 | 📝 Planned |
+| [TASK-947](tasks/TASK-947-reference-corpus-inventory-and-metadata-pilot.md) | Inventory/classify a pilot corpus slice and freeze metadata fit/friction points | 8 | ✅ Complete |
+| [TASK-948](tasks/TASK-948-reference-skeleton-authority-methodology-style.md) | Create `reference/` skeleton plus authority, methodology, style, and status guides | 8 | ✅ Complete |
+| [TASK-949](tasks/TASK-949-pure-act-proc-workflow-reference-pilot.md) | Write Pure/Act/Proc/Workflow pilot reference pages with typed traceability links | 12 | ✅ Complete |
+| [TASK-950](tasks/TASK-950-agent-concept-cards-and-context-pack-index.md) | Add agent concept cards, common-confusion warnings, and context-pack index for pilot slice | 8 | ✅ Complete |
+| [TASK-951](tasks/TASK-951-reference-static-validator-mvp.md) | Implement static reference metadata/link/path/ID validator MVP | 14 | ✅ Complete |
+| [TASK-952](tasks/TASK-952-reference-examples-and-status-classification.md) | Classify cited examples/status/limitations and wire pilot feature matrix | 10 | ✅ Complete |
+| [TASK-953](tasks/TASK-953-reference-corpus-closeout-and-drift-report.md) | Close out SPEC-071 pilot with drift report, verification evidence, and next-slice recommendation | 8 | ✅ Complete |
 
 **Decision gates:**
 - D1: `docs/` remains the working/historical corpus; the phase must not rewrite or move it wholesale.

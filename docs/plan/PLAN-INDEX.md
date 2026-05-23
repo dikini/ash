@@ -3681,3 +3681,22 @@ Phase 124 creates a separate top-level `reference/` corpus for current curated A
 - D6: Drift is reported explicitly rather than silently harmonized.
 - D7: Static validation starts repo-local and deterministic; no dynamic service/database is in scope.
 - D8: Phase closeout recommends the next reference slice based on pilot friction rather than bulk migration by default.
+
+## Phase 125: Reference Functions Chapter Expansion
+
+**Priority:** High (turns the Phase 124 reference skeleton into a daily-use end-user chapter for pure functions)
+**Status:** ✅ Complete — functions reference chapter expanded
+**Spec:** [SPEC-027](../spec/SPEC-027-PURE-FUNCTIONS.md), [SPEC-031](../spec/SPEC-031-FIRST-CLASS-FUNCTIONS.md), [SPEC-071](../spec/SPEC-071-REFERENCE-CORPUS-METADATA-AND-MAINTENANCE.md)
+
+Phase 125 expands `reference/language/functions.md` from a skeleton pilot page into a usable pure-functions reference chapter. It keeps the canonical chapter index at `reference/language/functions.md`, moves detailed material into `reference/language/functions/` sub-pages, adds examples for declaration, body, local/anonymous, call, function-value, pattern, and boundary cases, and updates the functions agent card so agents can use Ash functions without treating working specs as the daily-use documentation surface.
+
+| Task | Description | Est. Hours | Status |
+|------|-------------|------------|--------|
+| [TASK-954](tasks/TASK-954-functions-reference-chapter.md) | Expand the pure-functions reference chapter and agent card into daily-use documentation | 8 | ✅ Complete |
+
+**Decision gates:**
+- D1: The reference chapter must teach pure functions directly; spec links are authority, not the primary reading path.
+- D2: `reference/language/functions.md` remains the canonical functions entry page for stable `ref.language.functions` links.
+- D3: Detailed subsections live under `reference/language/functions/` with SPEC-071 metadata.
+- D4: Examples must be honest reference snippets unless separately classified as executable corpus examples.
+- D5: Agent cards may summarize operational rules but must link back to the canonical chapter and must not fork semantics.

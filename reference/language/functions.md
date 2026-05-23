@@ -9,25 +9,26 @@ stability: alpha
 owner: language
 last_verified: 2026-05-23
 verified_against:
-  git_commit: ff1f98f
+  git_commit: 414549f
   specs:
-    - docs/spec/SPEC-069-ALPHA-VISIBLE-TOWER-ALGEBRA-AND-DO-LOWERING.md
-    - docs/spec/SPEC-070-ALPHA-RUNTIME-KERNEL-AND-OS-SURFACE.md
-    - docs/spec/SPEC-071-REFERENCE-CORPUS-METADATA-AND-MAINTENANCE.md
     - docs/spec/SPEC-027-PURE-FUNCTIONS.md
     - docs/spec/SPEC-031-FIRST-CLASS-FUNCTIONS.md
+    - docs/spec/SPEC-071-REFERENCE-CORPUS-METADATA-AND-MAINTENANCE.md
   tasks:
-    - docs/plan/tasks/TASK-949-pure-act-proc-workflow-reference-pilot.md
-    - docs/plan/tasks/TASK-952-reference-examples-and-status-classification.md
+    - docs/plan/tasks/TASK-954-functions-reference-chapter.md
   code:
-    - std/src/prelude.ash
+    - crates/ash-parser/src/parse_module.rs
+    - crates/ash-parser/src/parse_expr.rs
+    - crates/ash-parser/src/surface.rs
+    - crates/ash-parser/src/lower.rs
+    - crates/ash-core/src/ast.rs
   tests:
-    - crates/ash-typeck/tests/alpha_visible_tower_acceptance_matrix.rs
+    []
   examples:
     - examples/01-basics/03-expressions.ash
 related:
   depends_on:
-    - ref.status.feature_matrix
+    []
   explains:
     - ref.language.act
   supersedes: []
@@ -35,54 +36,91 @@ related:
   historical_rationale:
     []
 refresh_trigger:
-  - SPEC-071 changes
-  - Phase closeout changes reference policy
+  - SPEC-027 changes
+  - SPEC-031 changes
+  - function parser or typechecker changes
 ---
-
 # Functions and Pure Code
 
 ## Summary
 
-Pure Ash code computes values without entering the runtime-managed effect tower. In the pilot tower model, Pure is below Act, Proc, and Workflow: `Pure < Act < Proc < Workflow`.
+A pure function is Ash code that computes a value without entering the runtime-managed effect tower. It can take parameters, bind local values, branch, match on data, call other pure functions, and return a value through the last expression of its body.
 
-## Concept
+Pure code sits below the rest of the Ash tower:
 
-A function can prepare values, select branches, and call other pure functions. It does not perform runtime-managed capability operations by itself. Effectful operations must enter the appropriate tower surface, normally through Act/Proc/Workflow APIs and provider-backed runtime execution.
+```text
+Pure < Act < Proc < Workflow
+```
+
+Crossing that boundary is explicit. A pure function may return an `Act<T>` value as data, but performing the effect belongs to the runtime-managed `Act`, `Proc`, or `Workflow` layer.
+
+## Concept: what is a pure function?
+
+A pure function describes a deterministic transformation from input values to an output value. The type checker treats the body as ordinary value-producing expression code and rejects constructs that require capabilities, process control, workflow obligations, or runtime provider dispatch.
+
+Use pure functions for ordinary computation: formatting a value, selecting a branch, mapping a `Result`, building a record, or extracting data from a constructor. When the code must observe external state, call a provider, spawn work, or enforce workflow contracts, move that behavior into the appropriate effectful layer instead of hiding it inside a function.
 
 ## Status
 
-This page is a Phase 124 pilot page. It is current for the cited alpha evidence and intentionally incomplete outside the pilot slice.
+This chapter is the first expanded reference chapter after the Phase 124 skeleton. It is current for the cited alpha parser/typechecker evidence, but it is still conservative about local closure runtime maturity and higher-order behavior. Sections call out known boundaries where the working specs describe future or partial behavior.
 
-## Syntax / surface
+## Chapter contents
 
-See the cited specs and stdlib files for full syntax. Examples here are small and classified through [example status](../examples/README.md).
+| Page | Use it for |
+| --- | --- |
+| [Function declaration syntax](functions/declarations.md) | Module-level `fn`, visibility, generics, return types, `where`, contracts. |
+| [Function bodies and expressions](functions/bodies-and-expressions.md) | Tail-expression return, `let`, blocks, `if`, `match`, `panic`, expression limits. |
+| [Local and anonymous functions](functions/local-and-anonymous.md) | `fn(...) { ... }`, named local functions, closure shorthand `|x| => ...`, capture rules. |
+| [Calling functions and using function values](functions/calls-and-values.md) | Direct calls, module-qualified calls, `Fn(...) -> ...` types, higher-order patterns. |
+| [Functions with pattern matching](functions/patterns.md) | Matching constructor values, using patterns in `let`, and exhaustiveness expectations. |
+| [Boundaries and common mistakes](functions/boundaries.md) | Pure vs `Act`, `builtin fn`, no implicit lifts, no capability calls in pure bodies. |
+| [Implementation notes](functions/implementation-notes.md) | Parser/core/typechecker/lowering details that explain the current alpha surface. |
+| [Authority and traceability](functions/authority-and-traceability.md) | Specs, code paths, tasks, examples, and drift notes used by this chapter. |
 
-## API / stdlib surface
+## Quick examples
 
-The public stdlib module paths are listed in `verified_against`. Runtime implementation details remain opaque unless a cited spec exposes them.
+A module-level pure function:
 
-## Implementation notes
+```ash
+pub fn add_one(n: Int) -> Int {
+    n + 1
+}
+```
 
-The reference page summarizes current public behavior only. It does not make a new normative contract.
+A generic pure function that accepts another pure function:
 
-## Authority and traceability
+```ash
+pub fn apply_twice<T>(x: T, f: Fn(T) -> T) -> T {
+    f(f(x))
+}
+```
 
-Primary authority is the cited SPEC-069/SPEC-070 text, stdlib files, tests, and example-status entries. Historical specs are linked only where they explain terminology.
+A local anonymous function value:
 
-## Agent notes
+```ash
+pub fn demo(n: Int) -> Int {
+    let double = fn(x: Int) -> Int { x * 2 };
+    double(n)
+}
+```
 
-Retrieve this page before using agent cards. Prefer explicit current limitations over older broad design claims.
+Closure shorthand for a small expression:
 
-## Examples
-
-- `examples/01-basics/03-expressions.ash` is classified as historical in [example status](../examples/README.md).
+```ash
+pub fn demo(n: Int) -> Int {
+    let double = |x| => x * 2;
+    double(n)
+}
+```
 
 ## Known limitations
 
-- The pilot does not attempt a full pure-language manual.
-- Do not infer that every old pure example is current normative evidence.
+- Module-level functions are exported definitions, not runtime closure values.
+- Local closures are alpha-scoped and should not be treated as serializable process/workflow values.
+- Partial application is not part of the current function contract.
+- `extern fn` is not documented here as current Ash syntax. Use `builtin fn` for runtime-provided pure functions exposed by stdlib/compiler surfaces.
+- Older docs may describe planned function features more broadly than the current reference chapter claims.
 
-## Common confusions
+## Agent notes
 
-- Pure code is not automatically lifted into Act, Proc, or Workflow.
-- A final expression in a `do` block is not an implicit return for arbitrary computation targets.
+Agents should treat this chapter as the daily-use entry point for pure functions. Use [Authority and traceability](functions/authority-and-traceability.md) when editing implementation code or adjudicating drift, but do not force ordinary readers to reconstruct syntax from the working specs.

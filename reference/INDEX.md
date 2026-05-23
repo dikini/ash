@@ -45,6 +45,14 @@ refresh_trigger:
 ## Language pilot
 
 - [Functions and pure code](language/functions.md)
+  - [Function declaration syntax](language/functions/declarations.md)
+  - [Function bodies and expressions](language/functions/bodies-and-expressions.md)
+  - [Local and anonymous functions](language/functions/local-and-anonymous.md)
+  - [Calling functions and function values](language/functions/calls-and-values.md)
+  - [Functions with pattern matching](language/functions/patterns.md)
+  - [Function boundaries and common mistakes](language/functions/boundaries.md)
+  - [Function implementation notes](language/functions/implementation-notes.md)
+  - [Function authority and traceability](language/functions/authority-and-traceability.md)
 - [Act effects](language/effects-act.md)
 - [Proc processes](language/processes-proc.md)
 - [Workflow boundaries](language/workflows.md)

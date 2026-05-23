@@ -296,9 +296,11 @@ Update this section as tasks complete:
 | 117 | 6 | 6 | ✅ Complete |
 | 118 | 6 | 6 | ✅ Complete |
 | 119 | 6 | 6 | ✅ Complete |
-| 120 | 8 | 0 | 📝 Planned |
+| 120 | 8 | 8 | ✅ Complete |
 | 121 | 6 | 6 | ✅ Complete |
-| 122 | 14 | 13 | 🚧 In Progress |
+| 122 | 14 | 14 | ✅ Complete |
+| 123 | 13 | 13 | ✅ Complete |
+| 124 | 8 | 1 | 📝 Planned after packet creation |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -3648,3 +3650,34 @@ Phase 123 is the follow-on to Phase 122. It does not reopen or rewrite Phase 122
 - D4: Daemon start protocol extensions must preserve existing empty-admission MVP defaults.
 - D5: Child process failures under daemon hosting must be instance/workflow failures, not daemon host failures.
 - D6: Historical Phase 122 Partial MVP status must remain preserved; Phase 123 owns promotion.
+
+## Phase 124: Reference Corpus and Documentation Governance
+
+**Priority:** High (separates current human/agent reference material from the working/historical `docs/` corpus and introduces metadata/tooling policy to control documentation drift)
+**Status:** 📝 Planned after TASK-946 packet creation
+**Spec:** [SPEC-071](../spec/SPEC-071-REFERENCE-CORPUS-METADATA-AND-MAINTENANCE.md)
+**Design:** [DESIGN-042](../design/DESIGN-042-REFERENCE-CORPUS-AND-DOCUMENTATION-GOVERNANCE.md)
+**Plan:** [PLAN-120](PLAN-120-REFERENCE-CORPUS-ROLLOUT.md)
+
+Phase 124 creates a separate top-level `reference/` corpus for current curated Ash documentation while preserving `docs/` as the working and historical corpus. The phase defines metadata, authority, lifecycle, crosslinking, tone, agent-derivative, and maintenance rules; pilots the structure on the Pure/Act/Proc/Workflow semantic tower; adds static validation tools; classifies cited examples/status; and closes with an explicit drift report and next-slice recommendation.
+
+| Task | Description | Est. Hours | Status |
+|------|-------------|------------|--------|
+| [TASK-946](tasks/TASK-946-reference-corpus-design-packet.md) | Create DESIGN-042/SPEC-071/PLAN-120 packet and register Phase 124 | 4 | ✅ Complete |
+| [TASK-947](tasks/TASK-947-reference-corpus-inventory-and-metadata-pilot.md) | Inventory/classify a pilot corpus slice and freeze metadata fit/friction points | 8 | 📝 Planned |
+| [TASK-948](tasks/TASK-948-reference-skeleton-authority-methodology-style.md) | Create `reference/` skeleton plus authority, methodology, style, and status guides | 8 | 📝 Planned |
+| [TASK-949](tasks/TASK-949-pure-act-proc-workflow-reference-pilot.md) | Write Pure/Act/Proc/Workflow pilot reference pages with typed traceability links | 12 | 📝 Planned |
+| [TASK-950](tasks/TASK-950-agent-concept-cards-and-context-pack-index.md) | Add agent concept cards, common-confusion warnings, and context-pack index for pilot slice | 8 | 📝 Planned |
+| [TASK-951](tasks/TASK-951-reference-static-validator-mvp.md) | Implement static reference metadata/link/path/ID validator MVP | 14 | 📝 Planned |
+| [TASK-952](tasks/TASK-952-reference-examples-and-status-classification.md) | Classify cited examples/status/limitations and wire pilot feature matrix | 10 | 📝 Planned |
+| [TASK-953](tasks/TASK-953-reference-corpus-closeout-and-drift-report.md) | Close out SPEC-071 pilot with drift report, verification evidence, and next-slice recommendation | 8 | 📝 Planned |
+
+**Decision gates:**
+- D1: `docs/` remains the working/historical corpus; the phase must not rewrite or move it wholesale.
+- D2: `reference/` is the pilot top-level curated reference root unless TASK-947 records a concrete blocker.
+- D3: Reference pages are canonical-adjacent projections of current specs, live code, examples, tests, and limitations; they do not replace specs.
+- D4: Human and AI-agent docs share one semantic spine; agent cards/context packs link back to reference pages and cannot fork semantics.
+- D5: Pilot reference pages require metadata, typed authority links, known limitations, and common-confusion sections.
+- D6: Drift is reported explicitly rather than silently harmonized.
+- D7: Static validation starts repo-local and deterministic; no dynamic service/database is in scope.
+- D8: Phase closeout recommends the next reference slice based on pilot friction rather than bulk migration by default.

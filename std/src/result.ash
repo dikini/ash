@@ -45,7 +45,7 @@ pub fn unwrap_or<T, E>(res: Result<T, E>, default: T) -> T {
 }
 
 -- Maps Result<T, E> to Result<U, E> by applying a function to Ok
-pub fn map<T, E, U>(res: Result<T, E>, f: Fn(T) -> U) -> Result<U, E> {
+pub fn map<T, E, U>(res: Result<T, E>, f: (T) -> U) -> Result<U, E> {
     match res {
         Ok { value: v } => Ok { value: f(v) },
         Err { error: e } => Err { error: e }
@@ -53,7 +53,7 @@ pub fn map<T, E, U>(res: Result<T, E>, f: Fn(T) -> U) -> Result<U, E> {
 }
 
 -- Maps Result<T, E> to Result<T, F> by applying a function to Err
-pub fn map_err<T, E, F>(res: Result<T, E>, f: Fn(E) -> F) -> Result<T, F> {
+pub fn map_err<T, E, F>(res: Result<T, E>, f: (E) -> F) -> Result<T, F> {
     match res {
         Ok { value: v } => Ok { value: v },
         Err { error: e } => Err { error: f(e) }
@@ -61,7 +61,7 @@ pub fn map_err<T, E, F>(res: Result<T, E>, f: Fn(E) -> F) -> Result<T, F> {
 }
 
 -- Chains operations that return Result
-pub fn and_then<T, E, U>(res: Result<T, E>, f: Fn(T) -> Result<U, E>) -> Result<U, E> {
+pub fn and_then<T, E, U>(res: Result<T, E>, f: (T) -> Result<U, E>) -> Result<U, E> {
     match res {
         Ok { value: v } => f(v),
         Err { error: e } => Err { error: e }

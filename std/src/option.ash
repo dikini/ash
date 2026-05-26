@@ -37,7 +37,7 @@ pub fn unwrap_or<T>(opt: Option<T>, default: T) -> T {
 }
 
 -- Maps Option<T> to Option<U> by applying a function
-pub fn map<T, U>(opt: Option<T>, f: Fn(T) -> U) -> Option<U> {
+pub fn map<T, U>(opt: Option<T>, f: (T) -> U) -> Option<U> {
     match opt {
         Some { value: v } => Some { value: f(v) },
         None => None

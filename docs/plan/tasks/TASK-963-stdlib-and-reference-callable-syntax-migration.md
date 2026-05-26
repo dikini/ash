@@ -1,6 +1,6 @@
 # TASK-963: Stdlib and reference callable syntax migration
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -17,11 +17,11 @@ Migrate Ash source examples and daily-use reference pages to the callable syntax
 
 - ✅ TASK-955: Tower callable syntax packet
 - ✅ TASK-956: Callable syntax audit gate
-- 📝 TASK-957: Pure callable type parser
-- 📝 TASK-958: Callable type typechecking and rendering
-- 📝 TASK-959: Pure closure arrow syntax
-- 📝 TASK-960: Reserved tower callable arrows
-- 📝 TASK-961: Callable syntax reference docs
+- ✅ TASK-957: Pure callable type parser
+- ✅ TASK-958: Callable type typechecking and rendering
+- ✅ TASK-959: Pure closure arrow syntax
+- ✅ TASK-960: Reserved tower callable arrows
+- ✅ TASK-961: Callable syntax reference docs
 
 ## Requirements
 
@@ -79,6 +79,7 @@ commands:
     required = [
         'stdlib_callable_signatures_parse_with_preferred_syntax',
         'stdlib_contains_no_legacy_fn_callback_signatures',
+        'stdlib_callback_signatures_do_not_use_bare_unary_arrow_domains',
         'reference_current_examples_prefer_callable_arrow_syntax',
         'reference_current_examples_prefer_pure_closure_arrow',
         'legacy_callable_examples_are_labeled_compatibility',
@@ -107,14 +108,14 @@ commands:
     assert not violations, 'unlabelled legacy callable syntax remains:\n' + '\n'.join(violations)
     PY
 checklist:
-  - [ ] `std/` callable type and pure closure syntax audited.
-  - [ ] Standard-library callable signatures prefer `(A, B) -> C` where accepted.
-  - [ ] Standard-library pure closures use `|args| -> body` where accepted.
-  - [ ] `reference/` current examples prefer the new syntax.
-  - [ ] Compatibility-only legacy examples are explicitly labeled.
-  - [ ] Higher-stratum arrow examples are marked reserved/future unless implemented.
-  - [ ] Reference validator passes.
-  - [ ] Independent review completed.
+  - [x] `std/` callable type and pure closure syntax audited.
+  - [x] Standard-library callable signatures prefer `(A, B) -> C` where accepted.
+  - [x] Standard-library pure closures use `|args| -> body` where accepted.
+  - [x] `reference/` current examples prefer the new syntax.
+  - [x] Compatibility-only legacy examples are explicitly labeled.
+  - [x] Higher-stratum arrow examples are marked reserved/future unless implemented.
+  - [x] Reference validator passes.
+  - [x] Independent review completed.
 ```
 
 ## Dependencies for Next Task
@@ -124,3 +125,10 @@ TASK-962 closeout depends on this task so the final acceptance matrix covers bot
 ## Notes
 
 Area: stdlib/reference migration. Treat `reference/` as the daily-use corpus and `docs/` as working/historical material. Do not mark PLAN-121 complete while current stdlib or reference examples still teach legacy callable syntax as the default.
+
+## Completion Notes
+
+- Audited `std/src` and `reference/` for legacy callable type spelling and old pure-closure shorthand. `std/src` contained callback signature hits in `act.ash`, `list.ash`, `option.ash`, `proc.ash`, `result.ash`, and `workflow.ash`; no stdlib pure-closure shorthand migration was required.
+- Migrated stdlib callback signatures to preferred callable arrow syntax: `(a) -> Bool`, `(a) -> b`, `(T) -> U`, `(E) -> F`, `(T) -> Result<U, E>`, `(A) -> Act<B>`, `(A) -> Proc<B>`, and `(A) -> Workflow<B>`.
+- Added `crates/ash-parser/tests/task_963_stdlib_reference_callable_syntax.rs` to parse migrated stdlib surfaces, enforce no stdlib legacy callback signatures, enforce current reference examples prefer callable-arrow and pure-closure-arrow syntax, and require compatibility/reserved labels for intentional legacy mentions.
+- Verified that remaining top-level `reference/` hits are labeled compatibility or reserved/future guidance from TASK-961, not current executable examples.

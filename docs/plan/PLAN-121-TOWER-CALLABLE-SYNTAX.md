@@ -12,7 +12,7 @@
 
 ## 1. Status
 
-**Status:** 🚧 In Progress — packet, audit, pure callable type, pure closure parser, reserved-arrow, and reference-doc slices complete
+**Status:** 🚧 In Progress — packet, audit, pure callable type, pure closure parser, reserved-arrow, reference-doc, and stdlib/reference migration slices complete
 **Spec:** [SPEC-072](../spec/SPEC-072-TOWER-CALLABLE-TYPE-AND-CLOSURE-SYNTAX.md)
 **Task range:** [TASK-955](tasks/TASK-955-tower-callable-syntax-packet.md) through [TASK-963](tasks/TASK-963-stdlib-and-reference-callable-syntax-migration.md)
 
@@ -54,7 +54,7 @@ TASK-955 creates the spec/plan/task packet. TASK-956 through TASK-963 are implem
 | [TASK-959](tasks/TASK-959-pure-closure-arrow-syntax.md) | Implement pure closure `|args| -> body` and migrate old pure fat-arrow handling | 12 | ✅ Complete |
 | [TASK-960](tasks/TASK-960-reserved-tower-callable-arrows.md) | Reserve `-*>`, `=>`, and `=*>` in callable type and closure contexts with diagnostics | 8 | ✅ Complete |
 | [TASK-961](tasks/TASK-961-callable-syntax-reference-docs.md) | Update reference chapter, agent card, and amended legacy specs for the new syntax | 8 | ✅ Complete |
-| [TASK-963](tasks/TASK-963-stdlib-and-reference-callable-syntax-migration.md) | Migrate `std/` and current `reference/` examples to preferred callable syntax | 8 | 📝 Planned |
+| [TASK-963](tasks/TASK-963-stdlib-and-reference-callable-syntax-migration.md) | Migrate `std/` and current `reference/` examples to preferred callable syntax | 8 | ✅ Complete |
 | [TASK-962](tasks/TASK-962-tower-callable-syntax-closeout.md) | Close out SPEC-072 with acceptance matrix, broad gates, and independent review remediation | 8 | 📝 Planned |
 
 ## 4. Decision gates

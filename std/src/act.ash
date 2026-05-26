@@ -8,7 +8,7 @@ pub builtin type Act<A>;
 pub type Policy = String;
 
 builtin fn __unit<A>(v: A) -> Act<A>;
-builtin fn __bind<A, B>(ma: Act<A>, f: A -> Act<B>) -> Act<B>;
+builtin fn __bind<A, B>(ma: Act<A>, f: (A) -> Act<B>) -> Act<B>;
 builtin fn __then<A, B>(ma: Act<A>, mb: Act<B>) -> Act<B>;
 builtin fn __fail<A>(error: String) -> Act<A>;
 builtin fn __guard<A>(p: String, ma: Act<A>) -> Act<A>;
@@ -18,7 +18,7 @@ pub fn unit<A>(v: A) -> Act<A> {
     __unit(v)
 }
 
-pub fn bind<A, B>(ma: Act<A>, f: A -> Act<B>) -> Act<B> {
+pub fn bind<A, B>(ma: Act<A>, f: (A) -> Act<B>) -> Act<B> {
     __bind(ma, f)
 }
 

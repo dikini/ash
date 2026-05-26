@@ -404,7 +404,7 @@ fn format_type(ty: &Type) -> String {
                 .map(format_type)
                 .collect::<Vec<_>>()
                 .join(", ");
-            format!("Fn({params}) -> {}", format_type(ret))
+            format!("({params}) -> {}", format_type(ret))
         }
         Type::Associated { base, name } => {
             format!("{}::{name}", format_type(base))

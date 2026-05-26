@@ -50,7 +50,7 @@ TASK-955 creates the spec/plan/task packet. TASK-956 through TASK-963 are implem
 | [TASK-955](tasks/TASK-955-tower-callable-syntax-packet.md) | Create SPEC-072/PLAN-121/task packet and register Phase 126 | 4 | ✅ Complete |
 | [TASK-956](tasks/TASK-956-callable-syntax-audit-gate.md) | Audit live parser/typechecker/renderer/module-summary closure seams before implementation | 6 | ✅ Complete |
 | [TASK-957](tasks/TASK-957-pure-callable-type-parser.md) | Parse preferred pure callable type syntax and legacy compatibility forms | 10 | ✅ Complete |
-| [TASK-958](tasks/TASK-958-callable-type-typeck-rendering.md) | Typecheck and render pure callable types with preferred syntax across imports/diagnostics | 10 | 📝 Planned |
+| [TASK-958](tasks/TASK-958-callable-type-typeck-rendering.md) | Typecheck and render pure callable types with preferred syntax across imports/diagnostics | 10 | ✅ Complete |
 | [TASK-959](tasks/TASK-959-pure-closure-arrow-syntax.md) | Implement pure closure `|args| -> body` and migrate old pure fat-arrow handling | 12 | 📝 Planned |
 | [TASK-960](tasks/TASK-960-reserved-tower-callable-arrows.md) | Reserve `-*>`, `=>`, and `=*>` in callable type and closure contexts with diagnostics | 8 | 📝 Planned |
 | [TASK-961](tasks/TASK-961-callable-syntax-reference-docs.md) | Update reference chapter, agent card, and amended legacy specs for the new syntax | 8 | 📝 Planned |

@@ -264,6 +264,21 @@ pub enum UnifyError {
     },
 }
 
+fn fmt_pure_fn_type(
+    f: &mut std::fmt::Formatter<'_>,
+    params: &[Type],
+    ret: &Type,
+) -> std::fmt::Result {
+    write!(f, "(")?;
+    for (i, param) in params.iter().enumerate() {
+        if i > 0 {
+            write!(f, ", ")?;
+        }
+        write!(f, "{param}")?;
+    }
+    write!(f, ") -> {ret}")
+}
+
 impl std::fmt::Display for Type {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -296,16 +311,7 @@ impl std::fmt::Display for Type {
                 }
                 write!(f, ") -> {} [{:?}]", ret, effect)
             }
-            Type::Fn(params, ret) => {
-                write!(f, "Fn(")?;
-                for (i, arg) in params.iter().enumerate() {
-                    if i > 0 {
-                        write!(f, ", ")?;
-                    }
-                    write!(f, "{}", arg)?;
-                }
-                write!(f, ") -> {}", ret)
-            }
+            Type::Fn(params, ret) => fmt_pure_fn_type(f, params, ret),
             Type::Var(v) => write!(f, "Var<{}>", v.0),
             Type::Instance { workflow_type } => write!(f, "Instance<{}>", workflow_type),
             Type::InstanceAddr { workflow_type } => write!(f, "InstanceAddr<{}>", workflow_type),
@@ -424,19 +430,16 @@ impl Type {
     /// Given a function type like `Type::Fn([T, T], T)` and actual args `[Int, Int]`,
     /// this produces `Some(Int)` (the instantiated return type).
     ///
-    /// If fewer arguments than parameters are provided, returns a partial
-    /// application type containing the remaining parameters.
-    ///
-    /// Returns `None` if too many arguments are provided.
+    /// Returns `None` if the call does not provide exactly the declared arity.
     /// Returns `Err` if argument types don't unify.
     pub fn instantiate_fn_call(&self, arg_types: &[Type]) -> Option<Result<Type, UnifyError>> {
-        let (params, ret, effect) = match self {
-            Type::Fn(params, ret) => (params, ret, None),
-            Type::Fun(params, ret, effect) => (params, ret, Some(*effect)),
+        let (params, ret) = match self {
+            Type::Fn(params, ret) => (params, ret),
+            Type::Fun(params, ret, _) => (params, ret),
             _ => return None,
         };
 
-        if arg_types.len() > params.len() {
+        if arg_types.len() != params.len() {
             return None;
         }
 
@@ -448,22 +451,7 @@ impl Type {
             }
         }
 
-        if arg_types.len() == params.len() {
-            // Full application
-            Some(Ok(acc_sub.apply(ret)))
-        } else {
-            // Partial application: return function type with remaining params
-            let remaining: Vec<Type> = params[arg_types.len()..]
-                .iter()
-                .map(|p| acc_sub.apply(p))
-                .collect();
-            let ret_ty = acc_sub.apply(ret);
-            let partial_ty = match effect {
-                Some(eff) => Type::Fun(remaining, Box::new(ret_ty), eff),
-                None => Type::Fn(remaining, Box::new(ret_ty)),
-            };
-            Some(Ok(partial_ty))
-        }
+        Some(Ok(acc_sub.apply(ret)))
     }
 }
 

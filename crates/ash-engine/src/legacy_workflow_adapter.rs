@@ -249,11 +249,10 @@ fn type_summary(ty: &Type) -> String {
             args.iter().map(type_summary).collect::<Vec<_>>().join(", "),
             member
         ),
-        Type::Fn(args, ret) => format!(
-            "Fn({}) -> {}",
-            args.iter().map(type_summary).collect::<Vec<_>>().join(", "),
-            type_summary(ret)
-        ),
+        Type::Fn(args, ret) => {
+            let args = args.iter().map(type_summary).collect::<Vec<_>>().join(", ");
+            format!("({args}) -> {}", type_summary(ret))
+        }
     }
 }
 

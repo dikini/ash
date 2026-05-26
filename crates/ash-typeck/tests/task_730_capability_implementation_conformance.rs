@@ -527,7 +527,7 @@ fn operation_body_is_checked_in_effectful_context() {
         &[
             "body",
             "callback",
-            "Fn(Int) -> Int",
+            "(Int) -> Int",
             "fn(Int) -> Int [Epistemic]",
         ],
     );

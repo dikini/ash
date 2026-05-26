@@ -408,7 +408,7 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
                                 None => {
                                     CheckResult::error(ConstructorError::UnsupportedExpression {
                                         kind: format!(
-                                            "Call ({qualified_name}): too many arguments — expected at most {} args, got {}",
+                                            "Call ({qualified_name}): expected exactly {} args, got {}",
                                             match &func_ty {
                                                 Type::Fn(params, _) => params.len(),
                                                 Type::Fun(params, _, _) => params.len(),
@@ -741,7 +741,7 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
                 None => {
                     let kind = if func_ty.is_function_type() {
                         format!(
-                            "FnApply: too many arguments — expected at most {} args, got {} for type {func_ty}",
+                            "FnApply: expected exactly {} args, got {} for type {func_ty}",
                             func_ty.fn_arity().unwrap_or(0),
                             arg_types.len()
                         )
@@ -1761,7 +1761,7 @@ fn render_tcir_surface_type(ty: &SurfaceType) -> String {
             member
         ),
         SurfaceType::Fn(params, ret) => format!(
-            "Fn({}) -> {}",
+            "({}) -> {}",
             params
                 .iter()
                 .map(render_tcir_surface_type)

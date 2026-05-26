@@ -687,7 +687,7 @@ fn render_surface_type(ty: &SurfaceType) -> String {
             member
         ),
         SurfaceType::Fn(params, ret) => format!(
-            "Fn({}) -> {}",
+            "({}) -> {}",
             params
                 .iter()
                 .map(render_surface_type)

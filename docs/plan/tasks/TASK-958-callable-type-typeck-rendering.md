@@ -1,6 +1,6 @@
 # TASK-958: Callable type typecheck and rendering
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -16,7 +16,7 @@ Wire preferred pure callable syntax through typechecking, rendering, diagnostics
 
 - ✅ TASK-955: Tower callable syntax packet
 - ✅ TASK-956: Callable syntax audit gate
-- 📝 TASK-957: Pure callable type parser
+- ✅ TASK-957: Pure callable type parser
 
 ## Requirements
 
@@ -86,10 +86,10 @@ commands:
   - cargo test -p ash-typeck --test task_958_callable_type_rendering -- --nocapture
   - cargo test -p ash-engine --test task_958_callable_module_summary -- --nocapture
 checklist:
-  - [ ] Focused tests pass.
-  - [ ] Formatting clean.
-  - [ ] Clippy clean if Rust touched.
-  - [ ] CHANGELOG.md updated for implementation or docs changes.
+  - [x] Focused tests pass.
+  - [x] Formatting clean.
+  - [x] Clippy clean if Rust touched.
+  - [x] CHANGELOG.md updated for implementation or docs changes.
 ```
 
 ## Dependencies for Next Task
@@ -99,3 +99,9 @@ This task contributes to PLAN-121 and SPEC-072 completion.
 ## Notes
 
 Area: typechecker. Keep the callable-stratum axis separate from return type. Pure smart constructors returning `Act<T>`, `Proc<T>`, or `Workflow<T>` remain pure callables.
+
+Completion notes:
+
+- RED evidence: after adding `crates/ash-typeck/tests/task_958_callable_type_rendering.rs`, `cargo test -p ash-typeck --test task_958_callable_type_rendering -- --nocapture` failed with 4 focused failures: `Type::Fn` rendered as legacy `Fn(...) -> ...`, too few arguments returned a partial callable type, and too many arguments reported `expected at most`. After adding `crates/ash-engine/tests/task_958_callable_module_summary.rs`, `cargo test -p ash-engine --test task_958_callable_module_summary -- --nocapture` failed with 3 focused failures where imported callable signatures rendered as legacy `Fn(...) -> ...`.
+- GREEN evidence: the focused TASK-958 typechecker target passes 5 tests and the focused engine module-summary target passes 3 tests after updating pure callable rendering and exact-arity checked call behavior.
+- Implementation scope: legacy `Fn(...) -> ...` parsing remains accepted from TASK-957; TASK-958 did not implement closure syntax or reserve higher-stratum arrows.

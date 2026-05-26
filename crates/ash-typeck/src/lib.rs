@@ -3002,13 +3002,11 @@ mod tests {
         let _ = Type::Int;
     }
 
-    /// SPEC-031 §4.8 / TASK-558: Positive-case test — a workflow with a declared
-    /// return type of `Fn(Int) -> Int` where the body produces a `Fun` (closure)
-    /// must be caught by the Fun-escape check.  The Fn≠Fun unification rejection
-    /// is tested separately in check_expr.rs; this test verifies the explicit
-    /// escape gate in type_check_workflow_def_in_env.
+    /// SPEC-072 / TASK-959: pure closure syntax remains `Fn` in workflow contexts,
+    /// so a workflow may return a closure when its declared return type is a
+    /// matching pure callable type.
     #[test]
-    fn task558_workflow_return_fun_escape_rejected() {
+    fn task959_workflow_return_pure_closure_is_accepted() {
         use ash_parser::surface::{Type as SurfaceType, Workflow, WorkflowDef};
         use ash_parser::token::Span;
 
@@ -3017,9 +3015,8 @@ mod tests {
         }
 
         // Construct a workflow whose body is a FnDef expression.
-        // With set_workflow_effect active, the body type will be Type::Fun.
-        // The declared return type is Fn(Int) -> Int (a pure function type).
-        // The escape check should catch the Fun before unification even runs.
+        // The declared return type is `(Int) -> Int` (a pure function type).
+        // TASK-959 keeps pure closure syntax at the Pure stratum even in workflow contexts.
         let workflow = WorkflowDef {
             name: "escape_test".into(),
             type_params: vec![],
@@ -3050,16 +3047,9 @@ mod tests {
         };
 
         let result = type_check_workflow_def_in_env(&TypeEnv::with_builtin_types(), &workflow);
-        // The error message should mention "Fun" or "closure" in the context
-        let err_msg = match result {
-            Err(e) => format!("{e}"),
-            Ok(_) => panic!("expected error for workflow returning Fun, but got Ok"),
-        };
-        // Pin to the Fun-escape gate specifically — if the type_contains_fun check
-        // were accidentally removed, this would fail even though unify also rejects.
         assert!(
-            err_msg.contains("Fun") && err_msg.contains("closure"),
-            "expected Fun-escape error mentioning Fun and closure, got: {err_msg}"
+            result.is_ok(),
+            "workflow returning a matching pure closure should typecheck, got {result:?}"
         );
     }
 }

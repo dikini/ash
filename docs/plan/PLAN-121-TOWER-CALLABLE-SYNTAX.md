@@ -12,7 +12,7 @@
 
 ## 1. Status
 
-**Status:** 🚧 In Progress — packet, audit, and pure callable parser slice complete
+**Status:** 🚧 In Progress — packet, audit, pure callable type, and pure closure parser slices complete
 **Spec:** [SPEC-072](../spec/SPEC-072-TOWER-CALLABLE-TYPE-AND-CLOSURE-SYNTAX.md)
 **Task range:** [TASK-955](tasks/TASK-955-tower-callable-syntax-packet.md) through [TASK-963](tasks/TASK-963-stdlib-and-reference-callable-syntax-migration.md)
 
@@ -51,7 +51,7 @@ TASK-955 creates the spec/plan/task packet. TASK-956 through TASK-963 are implem
 | [TASK-956](tasks/TASK-956-callable-syntax-audit-gate.md) | Audit live parser/typechecker/renderer/module-summary closure seams before implementation | 6 | ✅ Complete |
 | [TASK-957](tasks/TASK-957-pure-callable-type-parser.md) | Parse preferred pure callable type syntax and legacy compatibility forms | 10 | ✅ Complete |
 | [TASK-958](tasks/TASK-958-callable-type-typeck-rendering.md) | Typecheck and render pure callable types with preferred syntax across imports/diagnostics | 10 | ✅ Complete |
-| [TASK-959](tasks/TASK-959-pure-closure-arrow-syntax.md) | Implement pure closure `|args| -> body` and migrate old pure fat-arrow handling | 12 | 📝 Planned |
+| [TASK-959](tasks/TASK-959-pure-closure-arrow-syntax.md) | Implement pure closure `|args| -> body` and migrate old pure fat-arrow handling | 12 | ✅ Complete |
 | [TASK-960](tasks/TASK-960-reserved-tower-callable-arrows.md) | Reserve `-*>`, `=>`, and `=*>` in callable type and closure contexts with diagnostics | 8 | 📝 Planned |
 | [TASK-961](tasks/TASK-961-callable-syntax-reference-docs.md) | Update reference chapter, agent card, and amended legacy specs for the new syntax | 8 | 📝 Planned |
 | [TASK-963](tasks/TASK-963-stdlib-and-reference-callable-syntax-migration.md) | Migrate `std/` and current `reference/` examples to preferred callable syntax | 8 | 📝 Planned |

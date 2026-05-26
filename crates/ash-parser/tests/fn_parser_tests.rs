@@ -570,17 +570,17 @@ fn task556_anon_fn_at_module_scope_lower_error() {
 }
 
 // ===========================================================================
-// TASK-557: Closure syntax |params| => body
+// TASK-557/TASK-959: Closure syntax |params| -> body
 // ===========================================================================
 
 // ---------------------------------------------------------------------------
-// TASK-557.1: |x| => x + 1 parses as Expr::FnDef with one param
+// TASK-557.1: |x| -> x + 1 parses as Expr::FnDef with one param
 // ---------------------------------------------------------------------------
 #[test]
 fn task557_closure_single_param() {
     use ash_parser::parse_expr::expr;
-    let mut input = new_input(r#"|x| => x + 1"#);
-    let result = expr(&mut input).expect("|x| => x + 1 should parse");
+    let mut input = new_input(r#"|x| -> x + 1"#);
+    let result = expr(&mut input).expect("|x| -> x + 1 should parse");
     match result {
         Expr::FnDef {
             ref params,
@@ -600,13 +600,13 @@ fn task557_closure_single_param() {
 }
 
 // ---------------------------------------------------------------------------
-// TASK-557.2: |x, y| => x + y parses with two params
+// TASK-557.2: |x, y| -> x + y parses with two params
 // ---------------------------------------------------------------------------
 #[test]
 fn task557_closure_two_params() {
     use ash_parser::parse_expr::expr;
-    let mut input = new_input(r#"|x, y| => x + y"#);
-    let result = expr(&mut input).expect("|x, y| => x + y should parse");
+    let mut input = new_input(r#"|x, y| -> x + y"#);
+    let result = expr(&mut input).expect("|x, y| -> x + y should parse");
     match result {
         Expr::FnDef { ref params, .. } => {
             assert_eq!(params.len(), 2, "expected 2 params");
@@ -618,12 +618,12 @@ fn task557_closure_two_params() {
 }
 
 // ---------------------------------------------------------------------------
-// TASK-557.3: closure in call position parses: apply(|x| => x * 2, 5)
+// TASK-557.3: closure in call position parses: apply(|x| -> x * 2, 5)
 // ---------------------------------------------------------------------------
 #[test]
 fn task557_closure_in_call_position() {
     use ash_parser::parse_expr::expr;
-    let mut input = new_input(r#"apply(|x| => x * 2, 5)"#);
+    let mut input = new_input(r#"apply(|x| -> x * 2, 5)"#);
     let result = expr(&mut input).expect("call with closure arg should parse");
     // The outer expression is a function call; the first argument should be FnDef
     match result {
@@ -643,13 +643,13 @@ fn task557_closure_in_call_position() {
 }
 
 // ---------------------------------------------------------------------------
-// TASK-557.4: closure in let binding: let f = |x| => x + 1;
+// TASK-557.4: closure in let binding: let f = |x| -> x + 1;
 // ---------------------------------------------------------------------------
 #[test]
 fn task557_closure_in_let_binding() {
-    // Parse a fn body that contains `let f = |x| => x + 1;`
+    // Parse a fn body that contains `let f = |x| -> x + 1;`
     let src = r#"fn wrap() -> Int {
-    let f = |x| => x + 1;
+    let f = |x| -> x + 1;
     f(0)
 }"#;
     let mut input = new_input(src);
@@ -1088,7 +1088,7 @@ fn task590_debug_closure_in_call_arg() {
 
     let cases = [
         r#"filter([], fn(p) { p })"#,
-        r#"filter([], |p| => p)"#,
+        r#"filter([], |p| -> p)"#,
         r#"filter([], fn(p) { starts_with(p, "a") })"#,
     ];
     for (i, snippet) in cases.iter().enumerate() {
@@ -1107,9 +1107,9 @@ fn task590_debug_pipe_closure_in_call_arg() {
     use ash_parser::parse_expr::expr;
 
     let cases = [
-        r#"filter([], |p| => p)"#,
-        r#"filter([], |p| => starts_with(p, "a"))"#,
-        r#"filter([], |p| => starts_with(p, "a") && ends_with(p, "b"))"#,
+        r#"filter([], |p| -> p)"#,
+        r#"filter([], |p| -> starts_with(p, "a"))"#,
+        r#"filter([], |p| -> starts_with(p, "a") && ends_with(p, "b"))"#,
     ];
     for (i, snippet) in cases.iter().enumerate() {
         let mut input = new_input(snippet);

@@ -1,6 +1,6 @@
 # TASK-959: Pure closure arrow syntax
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -15,7 +15,7 @@ Implement pure closure shorthand `|args| -> body` and stop treating `|args| => b
 
 - ✅ TASK-955: Tower callable syntax packet
 - ✅ TASK-956: Callable syntax audit gate
-- 📝 TASK-957: Pure callable type parser, if shared arrow token handling lands there
+- ✅ TASK-957: Pure callable type parser
 
 ## Requirements
 
@@ -87,10 +87,10 @@ commands:
   - cargo test -p ash-typeck --test task_959_pure_closure_arrow -- --nocapture
   - cargo test -p ash-interp --test task_959_pure_closure_arrow -- --nocapture
 checklist:
-  - [ ] Focused tests pass.
-  - [ ] Formatting clean.
-  - [ ] Clippy clean if Rust touched.
-  - [ ] CHANGELOG.md updated for implementation or docs changes.
+  - [x] Focused tests pass.
+  - [x] Formatting clean.
+  - [x] Clippy clean if Rust touched.
+  - [x] CHANGELOG.md updated for implementation or docs changes.
 ```
 
 ## Dependencies for Next Task
@@ -100,3 +100,9 @@ This task contributes to PLAN-121 and SPEC-072 completion.
 ## Notes
 
 Area: parser/typechecker/runtime. Keep the callable-stratum axis separate from return type. Pure smart constructors returning `Act<T>`, `Proc<T>`, or `Workflow<T>` remain pure callables.
+
+Completion notes:
+
+- RED evidence: after adding `crates/ash-parser/tests/task_959_pure_closure_arrow.rs`, `cargo test -p ash-parser --test task_959_pure_closure_arrow -- --nocapture` failed with 3 focused failures: `|x| -> x + 1` and `|x, y| -> x + y` did not parse, while old `|x| => x + 1` still parsed as a pure `FnDef`. The typechecker and interpreter targets failed at parse time for the same missing `->` closure shorthand.
+- GREEN evidence: the focused TASK-959 parser target passes 4 tests, the typechecker target passes 2 tests, and the interpreter target passes 1 test after switching the closure-literal parser separator from `=>` to `->` and keeping `Expr::FnDef` at the Pure `Type::Fn` stratum even in workflow contexts.
+- Implementation scope: the parser still desugars pure closure shorthand to the existing surface `Expr::FnDef`, then the existing lowering/typechecker/runtime paths handle it. TASK-959 did not implement Act/Proc/Workflow callable semantics or reserve the higher-stratum closure arrows owned by TASK-960. Existing match-arm `=>` parsing remains covered as noninterference, and older TASK-558 workflow-context tests were updated to the SPEC-072 pure-closure boundary.

@@ -632,12 +632,9 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
         } => {
             // Anonymous function definition: check the body with params in scope.
             //
-            // Three-vertex boundary (SPEC-031 §4.8):
-            //   - Pure `fn` context  → Type::Fn(params, ret)
-            //   - Workflow context   → Type::Fun(params, ret, effect)
-            //
-            // The workflow effect level is carried on the TypeEnv so it propagates
-            // automatically through nested scopes without threading an extra parameter.
+            // Pure callable boundary (SPEC-072 / TASK-959):
+            //   - Pure `fn`/closure syntax always yields Type::Fn(params, ret)
+            //   - Workflow effect context does not reclassify pure closures as Type::Fun
             //
             // Parameter and return type annotations (SPEC-031 §5.1):
             //   Written type annotations constrain inference. `fn(x: Int) { ... }` gives
@@ -692,10 +689,7 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
                 None => body_ty,
             };
 
-            let fn_ty = match env.workflow_effect() {
-                Some(effect) => Type::Fun(param_types, Box::new(ret_ty), effect),
-                None => Type::Fn(param_types, Box::new(ret_ty)),
-            };
+            let fn_ty = Type::Fn(param_types, Box::new(ret_ty));
             CheckResult {
                 ty: fn_ty,
                 substitution,
@@ -4392,9 +4386,9 @@ mod tests {
         }
     }
 
-    /// Test 2 (TASK-558): FnDef in a workflow context → Type::Fun with the workflow's effect
+    /// Test 2 (TASK-558/TASK-959): FnDef remains a pure Type::Fn in a workflow context.
     #[test]
-    fn task558_fndef_in_workflow_context_yields_type_fun() {
+    fn task558_fndef_in_workflow_context_yields_type_fn() {
         let mut env = TypeEnv::with_builtin_types();
         env.set_workflow_effect(ash_core::Effect::Operational);
 
@@ -4403,17 +4397,14 @@ mod tests {
 
         assert!(result.is_ok(), "expected success, got {:?}", result.errors);
         match result.ty {
-            Type::Fun(params, _ret, effect) => {
-                assert_eq!(params.len(), 1);
-                assert_eq!(effect, ash_core::Effect::Operational);
-            }
-            other => panic!("expected Type::Fun, got {other:?}"),
+            Type::Fn(params, _ret) => assert_eq!(params.len(), 1),
+            other => panic!("expected Type::Fn, got {other:?}"),
         }
     }
 
-    /// Test 2b (TASK-558): workflow context at Epistemic level → Type::Fun(_, _, Epistemic)
+    /// Test 2b (TASK-558/TASK-959): workflow context at Epistemic level still yields Type::Fn.
     #[test]
-    fn task558_fndef_in_epistemic_workflow_yields_epistemic_fun() {
+    fn task558_fndef_in_epistemic_workflow_yields_type_fn() {
         let mut env = TypeEnv::with_builtin_types();
         env.set_workflow_effect(ash_core::Effect::Epistemic);
 
@@ -4422,10 +4413,8 @@ mod tests {
 
         assert!(result.is_ok(), "expected success, got {:?}", result.errors);
         match result.ty {
-            Type::Fun(_, _, effect) => {
-                assert_eq!(effect, ash_core::Effect::Epistemic);
-            }
-            other => panic!("expected Type::Fun, got {other:?}"),
+            Type::Fn(params, _ret) => assert_eq!(params.len(), 1),
+            other => panic!("expected Type::Fn, got {other:?}"),
         }
     }
 
@@ -4450,10 +4439,9 @@ mod tests {
         );
     }
 
-    /// Test 4 (TASK-558): FnApply where the function expects a pure Fn parameter but receives
-    /// a workflow Fun value triggers a type error via the unifier.
+    /// Test 4 (TASK-558/TASK-959): FnApply accepts pure closure syntax in workflow contexts.
     #[test]
-    fn task558_pass_fun_to_fn_parameter_is_rejected() {
+    fn task558_pass_workflow_context_fn_to_fn_parameter_is_accepted() {
         // Build env where `apply` is bound as  Fn([Fn([Int], Int)], Int)
         // i.e. apply : (Int -> Int) -> Int
         let mut env = TypeEnv::with_builtin_types();
@@ -4463,7 +4451,7 @@ mod tests {
         );
         env.bind_variable("apply", apply_ty);
 
-        // In workflow context, `fn(x) { x }` gets type Fun([Int], Int, Operational)
+        // In workflow context, pure closure syntax still gets type Fn([Int], Int).
         env.set_workflow_effect(ash_core::Effect::Operational);
         let closure_expr = make_fn_def_expr("x");
 
@@ -4478,12 +4466,13 @@ mod tests {
         };
 
         let result = check_expr(&env, &call_expr);
-        // The unifier must reject Fun where Fn is expected
+        // SPEC-072 keeps pure closure syntax at the Pure stratum, so this succeeds.
         assert!(
-            !result.is_ok(),
-            "passing Type::Fun where Type::Fn expected must fail, but got type {:?}",
-            result.ty
+            result.is_ok(),
+            "passing Type::Fn where Type::Fn expected should succeed, got errors {:?}",
+            result.errors
         );
+        assert_eq!(result.ty, Type::Int);
     }
 
     /// Test 5 (TASK-558): workflow_effect propagates into child scopes (extend()).
@@ -4498,35 +4487,32 @@ mod tests {
         );
     }
 
-    /// Escape case 1 (TASK-558): A FnDef in workflow context produces Type::Fun, which
-    /// must NOT unify with Type::Fn — enforcing that Fun cannot be returned where Fn is expected.
+    /// Escape case 1 (TASK-558/TASK-959): pure closure syntax remains Type::Fn in workflow contexts.
     #[test]
-    fn task558_return_fun_where_fn_expected_is_rejected() {
-        // In a workflow context, fn(x) { x } types as Type::Fun([Var], Var, Operational).
-        // Unifying that with Type::Fn([Int], Int) must fail — this is escape case 1:
-        // "return Fun from workflow where Fn is expected".
+    fn task558_return_workflow_context_closure_where_fn_expected_is_accepted() {
+        // In a workflow context, pure closure syntax types as Type::Fn([Var], Var).
         let mut env = TypeEnv::with_builtin_types();
         env.set_workflow_effect(ash_core::Effect::Operational);
 
         let expr = make_fn_def_expr("x");
         let result = check_expr(&env, &expr);
 
-        // Verify the closure typed as Fun in workflow context
+        // Verify the closure typed as Fn in workflow context.
         assert!(
-            matches!(&result.ty, Type::Fun(..)),
-            "FnDef in workflow context must produce Type::Fun, got {:?}",
+            matches!(&result.ty, Type::Fn(..)),
+            "FnDef in workflow context must produce Type::Fn, got {:?}",
             result.ty
         );
 
-        // Now attempt to unify with a pure Fn type — must fail (escape case 1)
+        // Now attempt to unify with a pure Fn type — succeeds after TASK-959.
         let pure_fn = Type::Fn(
             vec![Type::Var(TypeVar::fresh())],
             Box::new(Type::Var(TypeVar::fresh())),
         );
         let unify_result = unify(&result.ty, &pure_fn);
         assert!(
-            unify_result.is_err(),
-            "Type::Fun must not unify with Type::Fn (escape case 1: return Fun where Fn expected)"
+            unify_result.is_ok(),
+            "pure closure syntax should unify with Type::Fn in workflow contexts"
         );
     }
 

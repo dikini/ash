@@ -354,7 +354,7 @@ fn parse_act_block_as_do_block(input: &mut ParseInput, start_pos: &Position) -> 
 ///
 /// This handles the full expression grammar with proper precedence.
 pub fn expr(input: &mut ParseInput) -> ModalResult<Expr> {
-    // Try closure syntax first: |params| => body  (TASK-557)
+    // Try closure syntax first: |params| -> body  (TASK-959)
     if let Ok(closure) = parse_closure_expr(input) {
         return Ok(closure);
     }
@@ -524,11 +524,11 @@ pub fn parse_fn_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     })
 }
 
-/// Parse a closure expression: `|params| => body`. SPEC-031 §4.3, §8.3
+/// Parse a pure closure expression: `|params| -> body`. SPEC-072 §6.2
 ///
 /// Desugars immediately to `Expr::FnDef { params, return_type: None, body }`.
-/// `|x| => x + 1`  =>  `fn(x) { x + 1 }`
-/// `|x, y| => x + y`  =>  `fn(x, y) { x + y }`
+/// `|x| -> x + 1`  =>  `fn(x) { x + 1 }`
+/// `|x, y| -> x + y`  =>  `fn(x, y) { x + y }`
 ///
 /// No return-type annotation in the closure shorthand — use `fn(x: T) -> R { }` for that.
 pub(crate) fn parse_closure_expr(input: &mut ParseInput) -> ModalResult<Expr> {
@@ -560,14 +560,14 @@ pub(crate) fn parse_closure_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     let _ = literal_str("|").parse_next(input)?;
     skip_whitespace_and_comments(input);
 
-    // Mandatory `=>`
-    if !input.input.starts_with("=>") {
+    // Mandatory pure closure arrow. `=>` is no longer pure closure sugar.
+    if !input.input.starts_with("->") {
         *input = saved;
         return Err(winnow::error::ErrMode::Backtrack(
             winnow::error::ContextError::new(),
         ));
     }
-    let _ = literal_str("=>").parse_next(input)?;
+    let _ = literal_str("->").parse_next(input)?;
     skip_whitespace_and_comments(input);
 
     // Body: a single expression (not a block — that's what makes this a shorthand)

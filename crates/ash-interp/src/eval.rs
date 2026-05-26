@@ -4016,7 +4016,7 @@ fn builtin_arity_error(name: &str, expected: usize, actual: usize) -> EvalResult
 
 /// Build a synthetic closure that represents a partially-applied built-in.
 ///
-/// `ends_with(".md")` becomes a closure `|x| => ends_with(x, ".md")` (with args reordered).
+/// `ends_with(".md")` becomes a closure `|x| -> ends_with(x, ".md")` (with args reordered).
 ///
 /// This reordering ensures that when used in a pipeline like `filter(ends_with(".md"))`,
 /// the closure correctly receives the iterated element as its first argument.
@@ -4027,8 +4027,8 @@ fn make_partial_builtin(name: &str, applied_args: &[Value], total_arity: usize) 
         .collect();
 
     // Build call args with remaining params FIRST, then applied args.
-    // This ensures `ends_with(".md")` becomes `|x| => ends_with(x, ".md")`
-    // rather than `|x| => ends_with(".md", x)`.
+    // This ensures `ends_with(".md")` becomes `|x| -> ends_with(x, ".md")`
+    // rather than `|x| -> ends_with(".md", x)`.
     let mut call_args: Vec<Expr> = param_names
         .iter()
         .enumerate()
@@ -6146,7 +6146,7 @@ mod tests {
     // TASK-664: list::filter and list::map closure callback tests
     // ============================================================
 
-    /// Helper: build a simple 1-param closure (x => body).
+    /// Helper: build a simple 1-param closure (`|x| -> body`).
     fn simple_closure(body: Expr) -> Value {
         use ash_core::env_frame::EnvFrame;
         use std::sync::Arc;

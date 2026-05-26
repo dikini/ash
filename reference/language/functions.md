@@ -7,15 +7,17 @@ authority: canonical-adjacent
 status: current
 stability: alpha
 owner: language
-last_verified: 2026-05-23
+last_verified: 2026-05-26
 verified_against:
-  git_commit: 414549f
+  git_commit: 0874763
   specs:
     - docs/spec/SPEC-027-PURE-FUNCTIONS.md
     - docs/spec/SPEC-031-FIRST-CLASS-FUNCTIONS.md
     - docs/spec/SPEC-071-REFERENCE-CORPUS-METADATA-AND-MAINTENANCE.md
+    - docs/spec/SPEC-072-TOWER-CALLABLE-TYPE-AND-CLOSURE-SYNTAX.md
   tasks:
     - docs/plan/tasks/TASK-954-functions-reference-chapter.md
+    - docs/plan/tasks/TASK-961-callable-syntax-reference-docs.md
   code:
     - crates/ash-parser/src/parse_module.rs
     - crates/ash-parser/src/parse_expr.rs
@@ -70,8 +72,8 @@ This chapter is the first expanded reference chapter after the Phase 124 skeleto
 | --- | --- |
 | [Function declaration syntax](functions/declarations.md) | Module-level `fn`, visibility, generics, return types, `where`, contracts. |
 | [Function bodies and expressions](functions/bodies-and-expressions.md) | Tail-expression return, `let`, blocks, `if`, `match`, `panic`, expression limits. |
-| [Local and anonymous functions](functions/local-and-anonymous.md) | `fn(...) { ... }`, named local functions, closure shorthand `|x| => ...`, capture rules. |
-| [Calling functions and using function values](functions/calls-and-values.md) | Direct calls, module-qualified calls, `Fn(...) -> ...` types, higher-order patterns. |
+| [Local and anonymous functions](functions/local-and-anonymous.md) | `fn(...) { ... }`, named local functions, closure shorthand `|x| -> ...`, capture rules. |
+| [Calling functions and using function values](functions/calls-and-values.md) | Direct calls, module-qualified calls, `(A, B) -> C` callable types, higher-order patterns. |
 | [Functions with pattern matching](functions/patterns.md) | Matching constructor values, using patterns in `let`, and exhaustiveness expectations. |
 | [Boundaries and common mistakes](functions/boundaries.md) | Pure vs `Act`, `builtin fn`, no implicit lifts, no capability calls in pure bodies. |
 | [Implementation notes](functions/implementation-notes.md) | Parser/core/typechecker/lowering details that explain the current alpha surface. |
@@ -90,7 +92,7 @@ pub fn add_one(n: Int) -> Int {
 A generic pure function that accepts another pure function:
 
 ```ash
-pub fn apply_twice<T>(x: T, f: Fn(T) -> T) -> T {
+pub fn apply_twice<T>(x: T, f: (T) -> T) -> T {
     f(f(x))
 }
 ```
@@ -108,7 +110,7 @@ Closure shorthand for a small expression:
 
 ```ash
 pub fn demo(n: Int) -> Int {
-    let double = |x| => x * 2;
+    let double = |x| -> x * 2;
     double(n)
 }
 ```
@@ -118,6 +120,7 @@ pub fn demo(n: Int) -> Int {
 - Module-level functions are exported definitions, not runtime closure values.
 - Local closures are alpha-scoped and should not be treated as serializable process/workflow values.
 - Partial application is not part of the current function contract.
+- Higher-stratum callable arrows `-*>`, `=>`, and `=*>` are reserved. Use `->` for pure callables and return `Act<T>`, `Proc<T>`, or `Workflow<T>` values from pure smart constructors when you are only building tower values.
 - `extern fn` is not documented here as current Ash syntax. Use `builtin fn` for runtime-provided pure functions exposed by stdlib/compiler surfaces.
 - Older docs may describe planned function features more broadly than the current reference chapter claims.
 

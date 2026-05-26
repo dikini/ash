@@ -7,15 +7,17 @@ authority: canonical-adjacent
 status: current
 stability: alpha
 owner: language
-last_verified: 2026-05-23
+last_verified: 2026-05-26
 verified_against:
-  git_commit: 414549f
+  git_commit: 0874763
   specs:
     - docs/spec/SPEC-027-PURE-FUNCTIONS.md
     - docs/spec/SPEC-031-FIRST-CLASS-FUNCTIONS.md
+    - docs/spec/SPEC-072-TOWER-CALLABLE-TYPE-AND-CLOSURE-SYNTAX.md
     - docs/spec/SPEC-071-REFERENCE-CORPUS-METADATA-AND-MAINTENANCE.md
   tasks:
     - docs/plan/tasks/TASK-954-functions-reference-chapter.md
+    - docs/plan/tasks/TASK-961-callable-syntax-reference-docs.md
   code:
     - crates/ash-parser/src/parse_expr.rs
     - crates/ash-typeck/src/types.rs
@@ -70,10 +72,10 @@ This is distinct from capability/provider dispatch, which uses single-colon prov
 
 ## Function types
 
-Pure function values use `Fn(<params>) -> <return>`.
+Pure function values use `(<params>) -> <return>`. The legacy `Fn(<params>) -> <return>` spelling is compatibility syntax, not the preferred reference form.
 
 ```ash
-pub fn apply(value: Int, f: Fn(Int) -> Int) -> Int {
+pub fn apply(value: Int, f: (Int) -> Int) -> Int {
     f(value)
 }
 ```
@@ -81,7 +83,7 @@ pub fn apply(value: Int, f: Fn(Int) -> Int) -> Int {
 Multiple parameters are comma-separated:
 
 ```ash
-pub fn combine(a: Int, b: Int, f: Fn(Int, Int) -> Int) -> Int {
+pub fn combine(a: Int, b: Int, f: (Int, Int) -> Int) -> Int {
     f(a, b)
 }
 ```
@@ -100,11 +102,17 @@ Pass closure shorthand:
 
 ```ash
 pub fn demo(n: Int) -> Int {
-    apply(n, |x| => x + 1)
+    apply(n, |x| -> x + 1)
 }
 ```
 
 Return a local function value only within a pure/local scope where the caller can use it immediately. Do not treat returned closures as workflow/process payloads unless a later reference page documents that boundary explicitly.
+
+## Reserved tower callable arrows
+
+The arrows `-*>`, `=>`, and `=*>` are reserved for future `Act`, `Proc`, and `Workflow` callable syntax. The parser rejects them in callable-type and closure-literal contexts today. If a pure function constructs a tower value, keep the callable arrow pure and put the tower in the return type, for example `(Spec) -> Workflow<Result>`.
+
+`=>` remains the match-arm separator; it is only reserved in closure-literal and callable-type contexts.
 
 ## Arity
 

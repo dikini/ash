@@ -1,6 +1,6 @@
 # TASK-961: Callable syntax reference docs
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -15,7 +15,7 @@ Update reference pages, agent card, and amended legacy specs so daily readers le
 ## Dependencies
 
 - ✅ TASK-955: Tower callable syntax packet
-- 📝 TASK-957 through TASK-960 completion for final implemented-behavior docs, or explicit draft labels if run earlier.
+- ✅ TASK-957 through TASK-960 completion for final implemented-behavior docs.
 
 ## Requirements
 
@@ -55,11 +55,42 @@ toolsets: [terminal, file]
 strictness: clean
 commands:
   - git diff --check
-  - false # Replace with TASK-specific focused docs/audit/closeout verification command before marking complete.
+  - python3 -m py_compile tools/reference/check_frontmatter.py
+  - python3 tools/reference/check_frontmatter.py
+  - python3 tools/reference/check_frontmatter.py --pilot
+  - |
+    python3 - <<'PY'
+    from pathlib import Path
+    required = {
+        Path('reference/language/functions.md'): ['(T) -> T', '|x| -> x * 2', 'SPEC-072'],
+        Path('reference/language/functions/declarations.md'): ['f: (T) -> U'],
+        Path('reference/language/functions/calls-and-values.md'): ['f: (Int, Int) -> Int', 'reserved for future `Act`, `Proc`, and `Workflow` callable syntax'],
+        Path('reference/language/functions/local-and-anonymous.md'): ['|args| =>', 'reserved and rejected'],
+        Path('reference/language/functions/implementation-notes.md'): ['|params| -> expr', 'fail-closed reserved arrows'],
+        Path('reference/agents/cards/functions.md'): ['f: (T) -> U', '|x| -> x + 1', 'legacy `Fn(...) -> ...` as compatibility syntax only'],
+        Path('docs/spec/SPEC-027-PURE-FUNCTIONS.md'): ['SPEC-072 owns the current preferred callable source syntax'],
+        Path('docs/spec/SPEC-031-FIRST-CLASS-FUNCTIONS.md'): ['preferred pure closure shorthand is `|args| -> body`'],
+    }
+    for path, needles in required.items():
+        text = path.read_text()
+        missing = [needle for needle in needles if needle not in text]
+        assert not missing, f'{path} missing {missing}'
+    forbidden = {
+        Path('reference/language/functions.md'): ['|x| => x * 2', 'f: Fn(T) -> T'],
+        Path('reference/language/functions/declarations.md'): ['f: Fn(T) -> U'],
+        Path('reference/language/functions/calls-and-values.md'): ['f: Fn(Int)', 'f: Fn(Int, Int)', '|x| => x + 1'],
+        Path('reference/language/functions/implementation-notes.md'): ['|params| => expr` desugars'],
+        Path('reference/agents/cards/functions.md'): ['f: Fn(T) -> U', '|x| => x + 1', 'Use `Fn(T) -> U`'],
+    }
+    for path, needles in forbidden.items():
+        text = path.read_text()
+        present = [needle for needle in needles if needle in text]
+        assert not present, f'{path} still contains stale snippets {present}'
+    PY
 checklist:
-  - [ ] Required docs/audit artifacts updated.
-  - [ ] Status surfaces reconciled.
-  - [ ] Independent review completed where required.
+  - [x] Required docs/audit artifacts updated.
+  - [x] Status surfaces reconciled.
+  - [x] Independent review completed where required.
 ```
 
 ## Dependencies for Next Task
@@ -69,3 +100,9 @@ This task contributes to PLAN-121 and SPEC-072 completion.
 ## Notes
 
 Area: reference documentation. Keep the callable-stratum axis separate from return type. Pure smart constructors returning `Act<T>`, `Proc<T>`, or `Workflow<T>` remain pure callables. Broad current-corpus migration for `std/` and `reference/` is owned by TASK-963.
+
+## Completion Notes
+
+- Updated `reference/language/functions.md`, focused functions sub-pages, and `reference/agents/cards/functions.md` to prefer `(A, B) -> C` callable types and `|args| -> body` pure closures.
+- Added reader-facing guidance that `-*>, =>, =*>` are reserved in callable-type and closure-literal contexts, while pure smart constructors use `->` with tower values in return position.
+- Replaced the placeholder TASK-961 verification command with reference frontmatter gates and focused stale-snippet assertions; broad corpus migration remains owned by TASK-963.

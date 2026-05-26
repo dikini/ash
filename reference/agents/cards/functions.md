@@ -7,15 +7,17 @@ authority: derivative
 status: current
 stability: alpha
 owner: reference-corpus
-last_verified: 2026-05-23
+last_verified: 2026-05-26
 verified_against:
-  git_commit: 414549f
+  git_commit: 0874763
   specs:
     - docs/spec/SPEC-071-REFERENCE-CORPUS-METADATA-AND-MAINTENANCE.md
     - docs/spec/SPEC-027-PURE-FUNCTIONS.md
     - docs/spec/SPEC-031-FIRST-CLASS-FUNCTIONS.md
+    - docs/spec/SPEC-072-TOWER-CALLABLE-TYPE-AND-CLOSURE-SYNTAX.md
   tasks:
     - docs/plan/tasks/TASK-954-functions-reference-chapter.md
+    - docs/plan/tasks/TASK-961-callable-syntax-reference-docs.md
   code:
     []
   tests:
@@ -68,7 +70,7 @@ pub fn identity<T>(value: T) -> T {
 Function-typed parameter:
 
 ```ash
-pub fn apply<T, U>(value: T, f: Fn(T) -> U) -> U {
+pub fn apply<T, U>(value: T, f: (T) -> U) -> U {
     f(value)
 }
 ```
@@ -86,7 +88,7 @@ Closure shorthand inside a function body:
 
 ```ash
 pub fn demo(n: Int) -> Int {
-    let f = |x| => x + 1;
+    let f = |x| -> x + 1;
     f(n)
 }
 ```
@@ -101,11 +103,12 @@ pub builtin fn len<T>(items: List<T>) -> Int;
 
 - Use tail-expression return in `fn`; do not write `ret`.
 - Keep parameter types explicit.
-- Use `Fn(T) -> U` for pure function values.
+- Use `(T) -> U` and `(A, B) -> C` for pure function values; treat legacy `Fn(...) -> ...` as compatibility syntax only.
 - Use `::` for module-qualified function calls.
 - Treat `builtin fn` as a declaration with no body.
 - Do not call capabilities, `invoke(...)`, `act`, `observe`, `send`, `receive`, `spawn`, or workflow obligations inside pure functions.
 - Do not assume partial application.
+- Do not use reserved tower callable arrows `-*>, =>, =*>` as implemented syntax. `=>` remains legal for match arms, not pure closures.
 - Do not serialize or send local closures across process/workflow boundaries.
 - If a function returns `Act<T>`, describe it as constructing effectful work, not as executing the effect.
 

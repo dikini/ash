@@ -7,15 +7,17 @@ authority: canonical-adjacent
 status: current
 stability: alpha
 owner: language
-last_verified: 2026-05-23
+last_verified: 2026-05-26
 verified_against:
-  git_commit: 414549f
+  git_commit: 0874763
   specs:
     - docs/spec/SPEC-027-PURE-FUNCTIONS.md
     - docs/spec/SPEC-031-FIRST-CLASS-FUNCTIONS.md
+    - docs/spec/SPEC-072-TOWER-CALLABLE-TYPE-AND-CLOSURE-SYNTAX.md
     - docs/spec/SPEC-071-REFERENCE-CORPUS-METADATA-AND-MAINTENANCE.md
   tasks:
     - docs/plan/tasks/TASK-954-functions-reference-chapter.md
+    - docs/plan/tasks/TASK-961-callable-syntax-reference-docs.md
   code:
     - crates/ash-parser/src/parse_expr.rs
     - crates/ash-parser/src/lower.rs
@@ -83,12 +85,12 @@ For a short expression body, use closure shorthand:
 
 ```ash
 pub fn use_shorthand(n: Int) -> Int {
-    let double = |x| => x * 2;
+    let double = |x| -> x * 2;
     double(n)
 }
 ```
 
-The shorthand desugars immediately to an anonymous `fn` expression. It does not carry a return-type annotation; use full `fn(...) -> ... { ... }` syntax when the type needs to be explicit.
+The shorthand desugars immediately to an anonymous `fn` expression and remains pure even when written inside higher tower contexts. It does not carry a return-type annotation; use full `fn(...) -> ... { ... }` syntax when the type needs to be explicit. The higher-stratum closure arrows `|args| -*>`, `|args| =>`, and `|args| =*>` are reserved and rejected until those callable semantics exist.
 
 ## Capture
 

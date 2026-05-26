@@ -14,7 +14,7 @@ Implement pure closure shorthand `|args| -> body` and stop treating `|args| => b
 ## Dependencies
 
 - ✅ TASK-955: Tower callable syntax packet
-- 📝 TASK-956: Callable syntax audit gate (must locate live closure parser/lowering seams first)
+- ✅ TASK-956: Callable syntax audit gate
 - 📝 TASK-957: Pure callable type parser, if shared arrow token handling lands there
 
 ## Requirements
@@ -60,7 +60,32 @@ toolsets: [terminal, file]
 ```yaml
 strictness: clean
 commands:
-  - false # TASK-956 audit must replace this with exact focused non-zero verification commands before implementation starts.
+  - |
+    python3 - <<'PY'
+    from pathlib import Path
+    checks = {
+        Path('crates/ash-parser/tests/task_959_pure_closure_arrow.rs'): [
+            'pure_closure_arrow_single_param_parses_as_fn_def',
+            'pure_closure_arrow_two_params_parses_as_fn_def',
+            'old_fat_arrow_closure_is_not_silent_pure_shorthand',
+            'closure_arrow_does_not_steal_match_arm_fat_arrow',
+        ],
+        Path('crates/ash-typeck/tests/task_959_pure_closure_arrow.rs'): [
+            'pure_closure_arrow_typechecks_as_type_fn_in_pure_context',
+            'pure_closure_arrow_in_workflow_context_keeps_existing_boundary',
+        ],
+        Path('crates/ash-interp/tests/task_959_pure_closure_arrow.rs'): [
+            'pure_closure_arrow_executes_existing_closure_runtime_path',
+        ],
+    }
+    for path, names in checks.items():
+        text = path.read_text()
+        missing = [name for name in names if name not in text]
+        assert not missing, f'{path} missing tests: {missing}'
+    PY
+  - cargo test -p ash-parser --test task_959_pure_closure_arrow -- --nocapture
+  - cargo test -p ash-typeck --test task_959_pure_closure_arrow -- --nocapture
+  - cargo test -p ash-interp --test task_959_pure_closure_arrow -- --nocapture
 checklist:
   - [ ] Focused tests pass.
   - [ ] Formatting clean.

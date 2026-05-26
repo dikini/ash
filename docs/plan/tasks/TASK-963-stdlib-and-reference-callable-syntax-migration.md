@@ -16,7 +16,7 @@ Migrate Ash source examples and daily-use reference pages to the callable syntax
 ## Dependencies
 
 - ✅ TASK-955: Tower callable syntax packet
-- 📝 TASK-956: Callable syntax audit gate
+- ✅ TASK-956: Callable syntax audit gate
 - 📝 TASK-957: Pure callable type parser
 - 📝 TASK-958: Callable type typechecking and rendering
 - 📝 TASK-959: Pure closure arrow syntax
@@ -71,9 +71,41 @@ toolsets: [terminal, file]
 strictness: clean
 commands:
   - git diff --check
-  - false # Replace with exact stdlib parse/check command from TASK-956 before marking complete.
+  - |
+    python3 - <<'PY'
+    from pathlib import Path
+    path = Path('crates/ash-parser/tests/task_963_stdlib_reference_callable_syntax.rs')
+    text = path.read_text()
+    required = [
+        'stdlib_callable_signatures_parse_with_preferred_syntax',
+        'stdlib_contains_no_legacy_fn_callback_signatures',
+        'reference_current_examples_prefer_callable_arrow_syntax',
+        'reference_current_examples_prefer_pure_closure_arrow',
+        'legacy_callable_examples_are_labeled_compatibility',
+    ]
+    missing = [name for name in required if name not in text]
+    assert not missing, f'{path} missing tests: {missing}'
+    PY
+  - cargo test -p ash-parser --test task_963_stdlib_reference_callable_syntax -- --nocapture
   - python3 tools/reference/check_frontmatter.py
-  - false # Replace with syntax-scan command proving unlabelled legacy callable syntax is gone from std/ and current reference/ pages.
+  - |
+    python3 - <<'PY'
+    import re
+    from pathlib import Path
+    roots = [Path('std/src'), Path('reference')]
+    legacy_fn = re.compile(r'\bFn\s*\(')
+    old_closure = re.compile(r'\|[^|\n]*\|\s*=>')
+    allowed_markers = ('compatibility', 'legacy', 'migration', 'historical', 'reserved')
+    violations = []
+    for root in roots:
+        for path in sorted(root.rglob('*')):
+            if path.suffix not in {'.ash', '.md'}:
+                continue
+            for lineno, line in enumerate(path.read_text().splitlines(), 1):
+                if (legacy_fn.search(line) or old_closure.search(line)) and not any(marker in line.lower() for marker in allowed_markers):
+                    violations.append(f'{path}:{lineno}: {line.strip()}')
+    assert not violations, 'unlabelled legacy callable syntax remains:\n' + '\n'.join(violations)
+    PY
 checklist:
   - [ ] `std/` callable type and pure closure syntax audited.
   - [ ] Standard-library callable signatures prefer `(A, B) -> C` where accepted.

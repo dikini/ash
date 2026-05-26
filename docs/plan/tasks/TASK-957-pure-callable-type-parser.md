@@ -14,7 +14,7 @@ Implement preferred pure callable type parsing for `(A, B) -> C` while preservin
 ## Dependencies
 
 - ✅ TASK-955: Tower callable syntax packet
-- 📝 TASK-956: Callable syntax audit gate (must complete and patch exact focused commands first)
+- ✅ TASK-956: Callable syntax audit gate
 
 ## Requirements
 
@@ -59,7 +59,22 @@ toolsets: [terminal, file]
 ```yaml
 strictness: clean
 commands:
-  - false # TASK-956 audit must replace this with exact focused non-zero verification commands before implementation starts.
+  - |
+    python3 - <<'PY'
+    from pathlib import Path
+    path = Path('crates/ash-parser/tests/task_957_callable_type_parser.rs')
+    text = path.read_text()
+    required = [
+        'module_annotation_parses_parenthesized_n_ary_callable_domain',
+        'type_alias_parses_parenthesized_n_ary_callable_domain',
+        'legacy_fn_syntax_remains_compatible',
+        'tuple_domain_is_not_silently_lowered_as_unary_argument',
+        'unary_tuple_argument_spelling_is_explicit_or_diagnostic',
+    ]
+    missing = [name for name in required if name not in text]
+    assert not missing, f'{path} missing tests: {missing}'
+    PY
+  - cargo test -p ash-parser --test task_957_callable_type_parser -- --nocapture
 checklist:
   - [ ] Focused tests pass.
   - [ ] Formatting clean.

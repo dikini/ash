@@ -12,7 +12,7 @@
 
 ## 1. Status
 
-**Status:** 📝 Planned — design packet drafted; implementation not started
+**Status:** 🚧 In Progress — packet and audit complete; Rust implementation not started
 **Spec:** [SPEC-072](../spec/SPEC-072-TOWER-CALLABLE-TYPE-AND-CLOSURE-SYNTAX.md)
 **Task range:** [TASK-955](tasks/TASK-955-tower-callable-syntax-packet.md) through [TASK-963](tasks/TASK-963-stdlib-and-reference-callable-syntax-migration.md)
 
@@ -48,7 +48,7 @@ TASK-955 creates the spec/plan/task packet. TASK-956 through TASK-963 are implem
 | Task | Description | Est. Hours | Status |
 | --- | --- | ---: | --- |
 | [TASK-955](tasks/TASK-955-tower-callable-syntax-packet.md) | Create SPEC-072/PLAN-121/task packet and register Phase 126 | 4 | ✅ Complete |
-| [TASK-956](tasks/TASK-956-callable-syntax-audit-gate.md) | Audit live parser/typechecker/renderer/module-summary closure seams before implementation | 6 | 📝 Planned |
+| [TASK-956](tasks/TASK-956-callable-syntax-audit-gate.md) | Audit live parser/typechecker/renderer/module-summary closure seams before implementation | 6 | ✅ Complete |
 | [TASK-957](tasks/TASK-957-pure-callable-type-parser.md) | Parse preferred pure callable type syntax and legacy compatibility forms | 10 | 📝 Planned |
 | [TASK-958](tasks/TASK-958-callable-type-typeck-rendering.md) | Typecheck and render pure callable types with preferred syntax across imports/diagnostics | 10 | 📝 Planned |
 | [TASK-959](tasks/TASK-959-pure-closure-arrow-syntax.md) | Implement pure closure `|args| -> body` and migrate old pure fat-arrow handling | 12 | 📝 Planned |
@@ -78,7 +78,7 @@ TASK-955 creates the spec/plan/task packet. TASK-956 through TASK-963 are implem
 
 ## 6. Implementation feasibility gates
 
-TASK-956 must produce a live-seam audit before Rust implementation starts. It must explicitly cover both parser paths (`parse_module.rs` and `parse_type_def.rs`), the tuple-vs-callable-domain hazard, `Type::Fn`/`Type::Fun` rendering and application checking, module signature transport, stdlib syntax exposure, top-level `reference/` example exposure, and the live closure parser/lowering seam for old `|args| => body` handling.
+TASK-956 produced [the callable syntax audit gate](audits/TASK-956-callable-syntax-audit-gate.md) before Rust implementation starts. It explicitly covers both parser paths (`parse_module.rs` and `parse_type_def.rs`), the tuple-vs-callable-domain hazard, `Type::Fn`/`Type::Fun` rendering and application checking, module signature transport, stdlib syntax exposure, top-level `reference/` example exposure, and the live closure parser/lowering seam for old `|args| => body` handling.
 
 The audit must patch TASK-957 through TASK-960 and TASK-963 with exact focused non-zero verification commands. Downstream implementation and migration tasks must not proceed from the placeholder `false` verification guards.
 

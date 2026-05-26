@@ -1,6 +1,6 @@
 # TASK-956: Callable syntax audit gate
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -60,11 +60,43 @@ toolsets: [terminal, file]
 strictness: clean
 commands:
   - git diff --check
-  - false # Replace with TASK-specific focused docs/audit/closeout verification command before marking complete.
+  - |
+    python3 - <<'PY'
+    from pathlib import Path
+    audit = Path('docs/plan/audits/TASK-956-callable-syntax-audit-gate.md')
+    text = audit.read_text()
+    required = [
+        'Parser Seams',
+        'Typechecker, Rendering, And Application Seams',
+        'Closure And Runtime Seams',
+        'Module Summary And Import/Export Seams',
+        'Stdlib And Reference Exposure',
+        'tuple-vs-n-ary',
+        'Partial application',
+        'TASK-957',
+        'TASK-958',
+        'TASK-959',
+        'TASK-960',
+        'TASK-963',
+    ]
+    missing = [needle for needle in required if needle not in text]
+    assert not missing, f'{audit} missing required audit coverage: {missing}'
+    for rel in [
+        'docs/plan/tasks/TASK-957-pure-callable-type-parser.md',
+        'docs/plan/tasks/TASK-958-callable-type-typeck-rendering.md',
+        'docs/plan/tasks/TASK-959-pure-closure-arrow-syntax.md',
+        'docs/plan/tasks/TASK-960-reserved-tower-callable-arrows.md',
+        'docs/plan/tasks/TASK-963-stdlib-and-reference-callable-syntax-migration.md',
+    ]:
+        task_text = Path(rel).read_text()
+        placeholder = 'false' + ' #'
+        assert placeholder not in task_text, f'{rel} still contains a placeholder false command'
+        assert 'cargo test -p ' in task_text, f'{rel} missing focused cargo verification'
+    PY
 checklist:
-  - [ ] Required docs/audit artifacts updated.
-  - [ ] Status surfaces reconciled.
-  - [ ] Independent review completed where required.
+  - [x] Required docs/audit artifacts updated.
+  - [x] Status surfaces reconciled.
+  - [x] Independent review completed against the live tree; findings were cross-checked against this audit before closeout.
 ```
 
 ## Dependencies for Next Task

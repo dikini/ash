@@ -15,7 +15,7 @@ Wire preferred pure callable syntax through typechecking, rendering, diagnostics
 ## Dependencies
 
 - ✅ TASK-955: Tower callable syntax packet
-- 📝 TASK-956: Callable syntax audit gate (must complete and patch exact focused commands first)
+- ✅ TASK-956: Callable syntax audit gate
 - 📝 TASK-957: Pure callable type parser
 
 ## Requirements
@@ -61,7 +61,30 @@ toolsets: [terminal, file]
 ```yaml
 strictness: clean
 commands:
-  - false # TASK-956 audit must replace this with exact focused non-zero verification commands before implementation starts.
+  - |
+    python3 - <<'PY'
+    from pathlib import Path
+    checks = {
+        Path('crates/ash-typeck/tests/task_958_callable_type_rendering.rs'): [
+            'type_display_prefers_parenthesized_callable_domain',
+            'nested_return_callable_renders_right_associative',
+            'callable_application_requires_exact_arity',
+            'too_few_arguments_are_not_partial_application',
+            'too_many_arguments_report_exact_arity',
+        ],
+        Path('crates/ash-engine/tests/task_958_callable_module_summary.rs'): [
+            'imported_pub_fn_signature_preserves_n_ary_callable_parameter',
+            'imported_builtin_signature_preserves_preferred_callable_syntax',
+            'workflow_returning_smart_constructor_remains_pure_callable',
+        ],
+    }
+    for path, names in checks.items():
+        text = path.read_text()
+        missing = [name for name in names if name not in text]
+        assert not missing, f'{path} missing tests: {missing}'
+    PY
+  - cargo test -p ash-typeck --test task_958_callable_type_rendering -- --nocapture
+  - cargo test -p ash-engine --test task_958_callable_module_summary -- --nocapture
 checklist:
   - [ ] Focused tests pass.
   - [ ] Formatting clean.

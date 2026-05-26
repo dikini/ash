@@ -15,7 +15,7 @@ Reserve Act/Proc/Workflow callable and closure arrows with targeted diagnostics 
 ## Dependencies
 
 - ✅ TASK-955: Tower callable syntax packet
-- 📝 TASK-956: Callable syntax audit gate
+- ✅ TASK-956: Callable syntax audit gate
 - 📝 TASK-957: Pure callable type parser
 - 📝 TASK-959: Pure closure arrow syntax
 
@@ -62,7 +62,32 @@ toolsets: [terminal, file]
 ```yaml
 strictness: clean
 commands:
-  - false # TASK-956 audit must replace this with exact focused non-zero verification commands before implementation starts.
+  - |
+    python3 - <<'PY'
+    from pathlib import Path
+    checks = {
+        Path('crates/ash-parser/tests/task_960_reserved_callable_arrows.rs'): [
+            'act_callable_type_arrow_is_reserved',
+            'proc_callable_type_arrow_is_reserved',
+            'workflow_callable_type_arrow_is_reserved',
+            'act_closure_arrow_is_reserved',
+            'proc_closure_arrow_is_reserved',
+            'workflow_closure_arrow_is_reserved',
+            'match_arm_fat_arrow_remains_legal',
+        ],
+        Path('crates/ash-typeck/tests/task_960_reserved_callable_arrows.rs'): [
+            'reserved_type_arrows_do_not_lower_to_type_fn_or_type_fun',
+            'reserved_closure_arrows_do_not_typecheck_as_pure_or_effect_closures',
+            'smart_constructor_returning_workflow_remains_pure_callable',
+        ],
+    }
+    for path, names in checks.items():
+        text = path.read_text()
+        missing = [name for name in names if name not in text]
+        assert not missing, f'{path} missing tests: {missing}'
+    PY
+  - cargo test -p ash-parser --test task_960_reserved_callable_arrows -- --nocapture
+  - cargo test -p ash-typeck --test task_960_reserved_callable_arrows -- --nocapture
 checklist:
   - [ ] Focused tests pass.
   - [ ] Formatting clean.

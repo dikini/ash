@@ -1,0 +1,78 @@
+# TASK-958: Callable type typecheck and rendering
+
+## Status: 📝 Planned
+
+## Description
+
+Wire preferred pure callable syntax through typechecking, rendering, diagnostics, and module import/export surfaces without losing arity or return type data.
+
+## Specification Reference
+
+- SPEC-072 §7
+- SPEC-072 §9
+- SPEC-072 C72-1 through C72-3
+
+## Dependencies
+
+- ✅ TASK-955: Tower callable syntax packet
+- 📝 TASK-956: Callable syntax audit gate (must complete and patch exact focused commands first)
+- 📝 TASK-957: Pure callable type parser
+
+## Requirements
+
+### Functional Requirements
+
+1. Add RED typechecker/rendering tests for preferred pure callable syntax.
+2. Verify module summary import/export preserves function signatures.
+3. Update renderers to prefer `(A, B) -> C` while accepting legacy syntax.
+
+### Typechecker/Rendering Requirements
+
+1. Update `Display for Type` or successor renderers to prefer `(A, B) -> C` for `Type::Fn`.
+2. Audit and update exact-arity behavior in `instantiate_fn_call` or successor call-checking helpers. SPEC-072 requires `f(1)` to fail for `f : (Int, Int) -> Int`.
+3. Verify module export/import signature transport preserves callable arity and return type.
+4. Add focused tests for unary, n-ary, nested-return callable rendering, exact arity, too few arguments, and too many arguments.
+
+### Non-goals
+
+- Do not implement Act/Proc/Workflow callable runtime semantics unless this task explicitly says so.
+- Do not introduce partial application or currying.
+- Do not silently reinterpret higher-stratum arrows as pure functions returning computation values.
+
+## Work Steps
+
+1. Inspect the exact live files named by TASK-956 or this task.
+2. Write focused RED tests or docs assertions before changing behavior.
+3. Implement or document the minimal target behavior.
+4. Run focused verification.
+5. Update status surfaces and CHANGELOG.md if files beyond tests are changed.
+6. Request independent review before marking complete.
+
+## Dispatch
+
+```yaml
+agent: codex
+reasoning: medium
+toolsets: [terminal, file]
+```
+
+## Verification
+
+```yaml
+strictness: clean
+commands:
+  - false # TASK-956 audit must replace this with exact focused non-zero verification commands before implementation starts.
+checklist:
+  - [ ] Focused tests pass.
+  - [ ] Formatting clean.
+  - [ ] Clippy clean if Rust touched.
+  - [ ] CHANGELOG.md updated for implementation or docs changes.
+```
+
+## Dependencies for Next Task
+
+This task contributes to PLAN-121 and SPEC-072 completion.
+
+## Notes
+
+Area: typechecker. Keep the callable-stratum axis separate from return type. Pure smart constructors returning `Act<T>`, `Proc<T>`, or `Workflow<T>` remain pure callables.

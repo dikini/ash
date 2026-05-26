@@ -3,6 +3,7 @@
 **Status:** Draft
 **Date:** 2026-04-14
 **Version:** 0.4
+**Callable syntax amendment:** [SPEC-072](SPEC-072-TOWER-CALLABLE-TYPE-AND-CLOSURE-SYNTAX.md) supersedes this spec's pure closure shorthand `|args| => body`. The preferred pure closure shorthand is `|args| -> body`; `=>` is reserved for future Proc closures in closure-literal context.
 
 ## 1. Overview
 
@@ -62,10 +63,10 @@ The name is in lexical scope for subsequent expressions in the same block.
 ### 4.3 Closure Syntax (Sugar)
 
 ```
-|x, y| => x + y
+|x, y| -> x + y
 ```
 
-Desugars to `fn(x, y) { x + y }`.
+Desugars to `fn(x, y) { x + y }` as a Pure-stratum closure. Historical `|x, y| => x + y` pure closure syntax is superseded by SPEC-072; `=>` is reserved for future Proc closures in closure-literal context.
 
 ### 4.4 Function Application
 
@@ -118,12 +119,12 @@ The inner closure captures `n` from the outer function's scope via shared enviro
 
 ### 4.8 Three-Vertex Boundary
 
-Closures respect the three-vertex model:
+Closures respect the SPEC-072 arrow-classified callable model:
 
-- **Closures defined inside `fn` context** have type `Type::Fn(params, ret)` (pure). They can only capture pure values.
-- **Closures defined inside `workflow` context** have type `Type::Fun(params, ret, effect)` where `effect >= Epistemic`. The type checker prevents passing these into pure `fn` parameters that expect `Type::Fn`.
+- **Pure closure syntax** `|args| -> body` has type `Type::Fn(params, ret)` (pure). It remains Pure-stratum even when written inside a workflow/proc/act context; its captures and body must satisfy pure-closure rules.
+- **Act/Proc/Workflow closure syntax** `|args| -*> body`, `|args| => body`, and `|args| =*> body` is reserved by SPEC-072 until those callable application semantics are implemented.
+- Historical context-derived `Type::Fun(params, ret, effect)` closure classification is superseded for new closure syntax. Existing `Type::Fun` runtime/history notes below remain implementation background, not the source rule for SPEC-072 closures.
 - `Expr::Call` is the shared dispatch path for pure builtins and the distinguished runtime primitive `invoke`; `Expr::FnApply` is reserved for user-defined functions and closures.
-- This uses the **existing** `Type::Fn` / `Type::Fun` split in `ash_typeck` (see §6).
 
 **Prohibited escape cases and enforcement points:**
 
@@ -313,17 +314,13 @@ pub enum Type {
 | Expression | Type |
 |-----------|------|
 | `fn(x: Int) -> Int { x + 1 }` (in fn context) | `Type::Fn([Int], Int)` |
-| `fn(x: Int) -> Int { act ... }` (in workflow context) | `Type::Fun([Int], Int, Operational)` |
+| `fn(x: Int) -> Int { act ... }` (historical workflow-context model) | Superseded for new closure syntax by SPEC-072; higher-stratum closures require reserved arrows |
 | `f(args)` where `f: Type::Fn` or `Type::Fun` | Return type of `f` |
 | `Expr::FnApply { func, args }` | Type the func, unify args, return ret type |
 
 ### 6.3 Three-Vertex Enforcement
 
-Existing `Type::Fn` (pure) vs `Type::Fun` (effectful) split enforces the boundary:
-
-- A pure function parameter typed `Type::Fn(...)` rejects a `Type::Fun(...)` closure
-- This is already how the type system distinguishes pure vs effectful callables
-- No new effect marker or third type shape needed
+Historical `Type::Fn` (pure) vs `Type::Fun` (effectful) enforcement remains implementation background for pre-SPEC-072 closures. SPEC-072 changes the source rule: the closure arrow classifies callable stratum. Pure closure syntax `|args| -> body` maps to `Type::Fn(...)`; higher-stratum closure arrows are reserved until a stratum-aware callable representation is implemented. Implementations must not infer higher-stratum closure type solely from enclosing workflow context for new closure syntax.
 
 ### 6.4 Type Checker Changes
 
@@ -332,11 +329,11 @@ Existing `Type::Fn` (pure) vs `Type::Fun` (effectful) split enforces the boundar
 ```rust
 Expr::FnDef { params, return_type, body } => {
     // Type-check body in extended environment
-    // Result type: Type::Fn(param_types, ret_type) or Type::Fun(...) if in workflow context
+    // Result type under SPEC-072: Type::Fn(param_types, ret_type) for pure `|args| ->` / pure fn expressions; higher-stratum closure arrows are reserved until implemented
 }
 
 Expr::FnApply { func, args } => {
-    // Type func, check it's Type::Fn or Type::Fun
+    // Type func, check callable representation; SPEC-072 pure slice accepts Type::Fn and reserves higher-stratum callables
     // Unify arg types with param types
     // Return ret type
 }
@@ -391,7 +388,7 @@ Rather than threading context through the parser (which would require changing `
 
 ### 8.3 Closure Syntax
 
-`|params| => expr` is parsed as a new expression form in `parse_expr.rs`. It immediately desugars to `Expr::FnDef { params, body }` during parsing (no new surface AST node needed).
+`|params| -> expr` is the current pure closure expression form per SPEC-072. Historical `|params| => expr` must not be parsed as pure closure syntax after the SPEC-072 migration; it is reserved for Proc closures and should produce a targeted reserved/deprecation diagnostic unless Proc closures are implemented.
 
 ### 8.4 Named Local Functions: Parse and Desugar Path
 
@@ -588,14 +585,13 @@ During migration (Phase B), a temporary fallback in `Expr::Call` handles the tra
 
 ### Phase D: Parser Expression Forms
 1. Parse `fn(params) { body }` as expression in `parse_expr`
-2. Parse `|params| => body` closure syntax
+2. Parse `|params| -> body` pure closure syntax; historical `|params| => body` is superseded by SPEC-072 and reserved for Proc closures
 3. Post-parse validation: reject `FnDef` at module scope during lowering
 4. Update `parse_fn_rejects_nested_fn` test to expect parse-success + lower-reject
 
-### Phase E: Effect Typing for Workflow Closures
-1. Type-check FnDef in workflow context as `Type::Fun(..., effect)` 
-2. Reject `Type::Fun` where `Type::Fn` expected (three-vertex enforcement)
-3. This uses existing `Type::Fun` and `Effect` -- no new types
+### Phase E: Historical Effect Typing for Workflow Closures (superseded for new syntax)
+
+This phase described the pre-SPEC-072 context-derived model where an `FnDef` in workflow context became `Type::Fun(..., effect)`. SPEC-072 supersedes that rule for new closure syntax: the closure arrow classifies callable stratum. Pure `|args| -> body` remains `Type::Fn(...)` and must satisfy pure rules; higher-stratum closures use reserved arrows and remain rejected until implemented.
 
 ## 13. Conformance
 
@@ -606,7 +602,7 @@ An implementation must:
 - Apply closures via `Expr::FnApply` with correct parameter binding
 - Support recursion via `BindingSlot::Late`
 - Support higher-order functions (passing/returning closures as local let-bindings)
-- Use existing `Type::Fn` / `Type::Fun` for closure typing
+- Use `Type::Fn` for SPEC-072 pure closure typing; treat older `Type::Fun` closure guidance as historical unless a future higher-stratum callable representation supersedes it
 - Distinguish `Expr::Call` (built-ins) from `Expr::FnApply` (user functions)
 - Ensure `Value::Closure` is `Send + Sync` without `unsafe`
 - Reject serialization of `Value::Closure` at runtime (panic or error, no serialized form)
@@ -618,9 +614,9 @@ An implementation must:
 
 Additionally supports:
 - Anonymous function expressions in parser
-- Closure syntax `|x| => ...`
+- Closure syntax `|x| -> ...` for pure closures; historical `|x| => ...` is reserved for Proc closures per SPEC-072
 - Post-parse validation of fn-in-local-context
-- Three-vertex enforcement via `Type::Fn` vs `Type::Fun`
+- SPEC-072 arrow-stratum enforcement; legacy three-vertex `Type::Fn` vs `Type::Fun` enforcement remains historical/background
 - Tail-call optimization (future)
 
 ## 14. Files Affected

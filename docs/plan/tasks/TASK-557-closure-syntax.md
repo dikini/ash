@@ -1,5 +1,7 @@
 # TASK-557: Closure Syntax |params| => body
 
+**Superseded syntax note (2026-05-26):** [SPEC-072](../../spec/SPEC-072-TOWER-CALLABLE-TYPE-AND-CLOSURE-SYNTAX.md) supersedes this task's pure closure spelling. New pure closure work must use `|params| -> body`; `|params| => body` is reserved for future Proc closures in closure-literal context. This file is preserved as historical Phase 80 planning context, not current implementation guidance.
+
 **Phase:** 80
 **Spec:** SPEC-031 §4.3, §8.3
 **Depends on:** TASK-556

@@ -2,6 +2,8 @@
 
 ## Status: Draft
 
+**Callable syntax amendment:** [SPEC-072](SPEC-072-TOWER-CALLABLE-TYPE-AND-CLOSURE-SYNTAX.md) supersedes this spec's `Fn(<params>) -> <return>` source spelling as the preferred daily-use callable type syntax. The preferred spelling is `(A, B) -> C`; legacy `Fn(A, B) -> C` remains a migration compatibility form until SPEC-072 implementation closes it out.
+
 ## 1. Overview
 
 Define `fn` as a first-class construct for pure computation in Ash. Functions are deterministic,
@@ -15,7 +17,7 @@ the core `fn` validity criterion in this spec.
 ### 2.1 Function Definition
 
 ```
-[pub] fn <name>[<type_params>](<params>) [-> <return_type>]
+[pub] fn <name> [<type_params>] <param_list> [-> <return_type>]
     [requires: <predicate>]
     [ensures: <predicate>]
 {
@@ -113,16 +115,27 @@ function named `name` exported by `module`”. This is distinct from capability 
 
 ### 3.1 Function Type
 
+SPEC-072 owns the current preferred callable source syntax:
+
 ```
-FnType ::= Fn(<param_types>) -> <return_type>
+FnType ::= (<param_types>) -> <return_type>
 ```
+
+Examples:
+
+```
+(Int) -> Int
+(Int, String) -> Bool
+```
+
+Legacy `Fn(<param_types>) -> <return_type>` remains a migration compatibility spelling, but new examples and diagnostics should prefer the SPEC-072 arrow-domain spelling.
 
 The surface function-type form is intentionally non-generic: generic binders live on `fn`
 definitions and are instantiated at use sites, while the type node itself remains
 `Type::Fn(Vec<Type>, Box<Type>)`.
 
 The `Fun(T) -> U` surface syntax from the std/ files is revised to use the standard Ash form:
-`Fn(T) -> U`.
+`(T) -> U` in preferred syntax, or legacy `Fn(T) -> U` only for compatibility.
 
 **AST Coverage:** The `Type` enum in surface.rs must include:
 ```rust
@@ -136,13 +149,14 @@ pub enum Type {
 This matches the frozen SPEC-003 baseline: generic parameters belong to `fn` definitions and
 instantiation sites, not to the `Type::Fn` enum shape itself.
 
-**Parser Work:** Implement `parse_fn_type` to handle:
-- `Fn(Int) -> Int` - simple function type
-- `Fn(Int, String) -> Bool` - multiple parameters
+**Parser Work:** Implement callable type parsing to handle:
+- `(Int) -> Int` - simple unary function type
+- `(Int, String) -> Bool` - multiple parameters
+- legacy `Fn(Int, String) -> Bool` during migration
 - Function types whose parameter/return positions mention generic type variables already in scope:
-  `fn map<T, U>(f: Fn(T) -> U, xs: List<T>) -> List<U>`
-- Function types as parameter types: `fn map<T, U>(f: Fn(T) -> U) -> List<U>`
-- Function types in type constructors: `Option<Fn(Int) -> Int>`
+  `fn map<T, U>(f: (T) -> U, xs: List<T>) -> List<U>`
+- Function types as parameter types: `fn map<T, U>(f: (T) -> U) -> List<U>`
+- Function types in type constructors where the parser admits them, with SPEC-072 grouping rules
 
 **Relationship to SPEC-003 Type Model:**
 SPEC-003 normatively distinguishes pure and effectful callable types as follows:
@@ -160,7 +174,7 @@ SPEC-003 normatively distinguishes pure and effectful callable types as follows:
 ### 3.2 Function Type and Effect Neutrality
 
 The fn type does not carry an effect slot. fn types are pure by construction and continue to use
-the canonical surface syntax defined above: `Fn(<param_types>) -> <return_type>`.
+the preferred surface syntax defined by SPEC-072: `(<param_types>) -> <return_type>`. Legacy `Fn(<param_types>) -> <return_type>` is compatibility syntax, not the current canonical spelling.
 
 This is distinct from the existing `Type::Fun` which may carry an effect annotation. A fn type
 never has an effect slot; calling a fn does not add an effect grade beyond the effects already
@@ -178,7 +192,7 @@ must be explicitly annotated (no Hindley-Milner inference on parameters).
 ### 3.4 Generic Functions
 
 ```
-fn map<T, U>(opt: Option<T>, f: Fn(T) -> U) -> Option<U> { ... }
+fn map<T, U>(opt: Option<T>, f: (T) -> U) -> Option<U> { ... }
 ```
 
 Type parameters are instantiated at call sites by unification with argument types. Recursion is

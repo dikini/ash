@@ -301,6 +301,7 @@ Update this section as tasks complete:
 | 122 | 14 | 14 | ✅ Complete |
 | 123 | 13 | 13 | ✅ Complete |
 | 124 | 8 | 1 | 📝 Planned after packet creation |
+| 126 | 9 | 1 | 📝 Planned after packet creation |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -3700,3 +3701,34 @@ Phase 125 expands `reference/language/functions.md` from a skeleton pilot page i
 - D3: Detailed subsections live under `reference/language/functions/` with SPEC-071 metadata.
 - D4: Examples must be honest reference snippets unless separately classified as executable corpus examples.
 - D5: Agent cards may summarize operational rules but must link back to the canonical chapter and must not fork semantics.
+
+## Phase 126: Tower Callable Type and Closure Syntax
+
+**Priority:** High (resolves callable syntax ambiguity before further Pure/Act/Proc/Workflow reference and parser work)
+**Status:** 📝 Planned — syntax/spec packet drafted; implementation not started
+**Spec:** [SPEC-072](../spec/SPEC-072-TOWER-CALLABLE-TYPE-AND-CLOSURE-SYNTAX.md)
+**Plan:** [PLAN-121](PLAN-121-TOWER-CALLABLE-SYNTAX.md)
+
+Phase 126 introduces tower-aligned callable type and closure syntax. It makes `(A, B) -> C` the preferred pure callable type spelling, reserves `-*>`, `=>`, and `=*>` for Act/Proc/Workflow callables, and changes pure closure shorthand to `|args| -> body` so `=>` can be reserved for future Proc closures. The phase preserves legacy `Fn(A, B) -> C` as a compatibility spelling during migration and explicitly distinguishes pure smart constructors such as `Spec -> Workflow<Result>` from Workflow-level callables such as `Spec =*> Result`. Its implementation phase includes migrating the standard library and current `reference/` corpus so executable library surfaces and daily-use examples use the new syntax by default.
+
+| Task | Description | Est. Hours | Status |
+|------|-------------|------------|--------|
+| [TASK-955](tasks/TASK-955-tower-callable-syntax-packet.md) | Create the SPEC-072/PLAN-121/task packet and register Phase 126 | 4 | ✅ Complete |
+| [TASK-956](tasks/TASK-956-callable-syntax-audit-gate.md) | Audit parser/typechecker/renderer/module-summary/closure seams before implementation | 6 | 📝 Planned |
+| [TASK-957](tasks/TASK-957-pure-callable-type-parser.md) | Parse preferred pure callable type syntax and legacy compatibility forms | 10 | 📝 Planned |
+| [TASK-958](tasks/TASK-958-callable-type-typeck-rendering.md) | Typecheck and render pure callable types with preferred syntax across imports/diagnostics | 10 | 📝 Planned |
+| [TASK-959](tasks/TASK-959-pure-closure-arrow-syntax.md) | Implement pure closure `|args| -> body` and migrate old pure fat-arrow handling | 12 | 📝 Planned |
+| [TASK-960](tasks/TASK-960-reserved-tower-callable-arrows.md) | Reserve `-*>`, `=>`, and `=*>` in callable type and closure contexts with diagnostics | 8 | 📝 Planned |
+| [TASK-961](tasks/TASK-961-callable-syntax-reference-docs.md) | Update reference chapter, agent card, and amended legacy specs for the new syntax | 8 | 📝 Planned |
+| [TASK-963](tasks/TASK-963-stdlib-and-reference-callable-syntax-migration.md) | Migrate `std/` and current `reference/` examples to preferred callable syntax | 8 | 📝 Planned |
+| [TASK-962](tasks/TASK-962-tower-callable-syntax-closeout.md) | Close out SPEC-072 with acceptance matrix, broad gates, and independent review remediation | 8 | 📝 Planned |
+
+**Decision gates:**
+- D1: The callable arrow classifies application stratum; the return type does not.
+- D2: `(A, B) -> C` means a two-argument pure callable, not a unary tuple-argument callable.
+- D3: Pure smart constructors may return `Act<T>`, `Proc<T>`, or `Workflow<T>` without becoming higher-stratum callables.
+- D4: `-*>`, `=>`, and `=*>` are reserved now even if their callable semantics are not implemented now.
+- D5: `|args| -> body` is the pure closure shorthand; `|args| => body` must stop meaning pure closure after migration.
+- D6: Legacy `Fn(args...) -> ret` remains compatibility syntax during this phase, but docs/rendering should prefer the new syntax.
+- D6a: `std/` and top-level `reference/` must be migrated before closeout so legacy callable syntax remains only in explicitly labeled compatibility material.
+- D7: Higher-stratum arrows must fail closed rather than silently lowering to pure callables returning computation values.

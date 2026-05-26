@@ -97,6 +97,9 @@ pub fn parse_surface_file_with_path(
         }
         Err(e) => {
             let span = input::current_span(&input);
+            if let Some(error) = reserved_callable_arrow_diagnostic(source) {
+                return Err(vec![error]);
+            }
             if let Some((surface, help)) = unsupported_proposition_surface_at_span(source, span) {
                 return Err(vec![error::ParseError::unsupported_proposition_surface(
                     span, surface, help,
@@ -128,6 +131,229 @@ fn unsupported_proposition_surface_at_span(
     }
 
     None
+}
+
+#[derive(Debug, Clone, Copy)]
+enum ReservedCallableArrow {
+    Act,
+    Proc,
+    Workflow,
+}
+
+impl ReservedCallableArrow {
+    fn arrow(self) -> &'static str {
+        match self {
+            Self::Act => "-*>",
+            Self::Proc => "=>",
+            Self::Workflow => "=*>",
+        }
+    }
+
+    fn stratum(self) -> &'static str {
+        match self {
+            Self::Act => "Act",
+            Self::Proc => "Proc",
+            Self::Workflow => "Workflow",
+        }
+    }
+
+    fn pure_return_type(self) -> &'static str {
+        match self {
+            Self::Act => "Act<B>",
+            Self::Proc => "Proc<B>",
+            Self::Workflow => "Workflow<B>",
+        }
+    }
+}
+
+fn reserved_callable_arrow_diagnostic(source: &str) -> Option<error::ParseError> {
+    find_reserved_callable_arrow(source).map(|(offset, arrow, context)| {
+        let span = input::offset_to_span(source, offset, offset + arrow.arrow().len());
+        match context {
+            ReservedCallableArrowContext::Closure => {
+                error::ParseError::new(span, reserved_closure_arrow_message(arrow))
+                    .with_expected("pure closure arrow `->`")
+            }
+            ReservedCallableArrowContext::Type => {
+                error::ParseError::new(span, reserved_type_arrow_message(arrow))
+                    .with_expected("pure callable arrow `->`")
+            }
+        }
+    })
+}
+
+#[derive(Debug, Clone, Copy)]
+enum ReservedCallableArrowContext {
+    Type,
+    Closure,
+}
+
+fn find_reserved_callable_arrow(
+    source: &str,
+) -> Option<(usize, ReservedCallableArrow, ReservedCallableArrowContext)> {
+    let mut offset = 0;
+
+    while offset < source.len() {
+        if let Some(next_offset) = skip_lexical_region(source, offset) {
+            offset = next_offset;
+            continue;
+        }
+
+        let rest = &source[offset..];
+        let arrow = if rest.starts_with("=*>") {
+            Some(ReservedCallableArrow::Workflow)
+        } else if rest.starts_with("-*>") {
+            Some(ReservedCallableArrow::Act)
+        } else if rest.starts_with("=>") {
+            Some(ReservedCallableArrow::Proc)
+        } else {
+            None
+        };
+
+        if let Some(arrow) = arrow {
+            if is_reserved_closure_arrow_context(source, offset) {
+                return Some((offset, arrow, ReservedCallableArrowContext::Closure));
+            }
+            if is_reserved_type_arrow_context(source, offset) {
+                return Some((offset, arrow, ReservedCallableArrowContext::Type));
+            }
+            offset += arrow.arrow().len();
+        } else {
+            offset += source[offset..].chars().next().map_or(1, char::len_utf8);
+        }
+    }
+
+    None
+}
+
+fn skip_lexical_region(source: &str, offset: usize) -> Option<usize> {
+    let rest = &source[offset..];
+    if rest.starts_with("//") {
+        return Some(
+            source[offset..]
+                .find('\n')
+                .map_or(source.len(), |newline| offset + newline + 1),
+        );
+    }
+    if rest.starts_with("/*") {
+        return Some(
+            source[offset + 2..]
+                .find("*/")
+                .map_or(source.len(), |end| offset + 2 + end + 2),
+        );
+    }
+    if rest.starts_with('"') {
+        let mut escaped = false;
+        for (relative, ch) in source[offset + 1..].char_indices() {
+            if escaped {
+                escaped = false;
+                continue;
+            }
+            if ch == '\\' {
+                escaped = true;
+                continue;
+            }
+            if ch == '"' {
+                return Some(offset + 1 + relative + ch.len_utf8());
+            }
+        }
+        return Some(source.len());
+    }
+    None
+}
+
+fn is_reserved_closure_arrow_context(source: &str, arrow_offset: usize) -> bool {
+    previous_significant_char(source, arrow_offset).is_some_and(|(_, ch)| ch == '|')
+}
+
+fn is_reserved_type_arrow_context(source: &str, arrow_offset: usize) -> bool {
+    let Some((close_paren, ')')) = previous_significant_char(source, arrow_offset) else {
+        return false;
+    };
+    let Some(open_paren) = matching_open_paren_before(source, close_paren) else {
+        return false;
+    };
+
+    previous_significant_char(source, open_paren)
+        .is_some_and(|(_, ch)| matches!(ch, '=' | ':' | '(' | ',' | '>'))
+}
+
+fn matching_open_paren_before(source: &str, close_paren: usize) -> Option<usize> {
+    let mut depth = 0usize;
+    for (idx, ch) in source[..=close_paren].char_indices().rev() {
+        match ch {
+            ')' => depth += 1,
+            '(' => {
+                depth = depth.saturating_sub(1);
+                if depth == 0 {
+                    return Some(idx);
+                }
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
+fn previous_significant_char(source: &str, offset: usize) -> Option<(usize, char)> {
+    let mut end = offset.min(source.len());
+    loop {
+        while end > 0 {
+            let (idx, ch) = source[..end].char_indices().next_back()?;
+            if ch.is_whitespace() {
+                end = idx;
+                continue;
+            }
+            break;
+        }
+
+        if end == 0 {
+            return None;
+        }
+
+        if source[..end].ends_with("*/")
+            && let Some(start) = source[..end.saturating_sub(2)].rfind("/*")
+        {
+            end = start;
+            continue;
+        }
+
+        let line_start = source[..end].rfind('\n').map_or(0, |idx| idx + 1);
+        let line = &source[line_start..end];
+        if let Some(comment) = line.rfind("//") {
+            end = line_start + comment;
+            continue;
+        }
+
+        return source[..end].char_indices().next_back();
+    }
+}
+
+fn reserved_type_arrow_message(arrow: ReservedCallableArrow) -> String {
+    format!(
+        "{} callable syntax is reserved but not implemented yet: `{}`; use `(A) -> {}` for a pure smart constructor, or wait for {} callables",
+        arrow.stratum(),
+        arrow.arrow(),
+        arrow.pure_return_type(),
+        arrow.stratum()
+    )
+}
+
+fn reserved_closure_arrow_message(arrow: ReservedCallableArrow) -> String {
+    match arrow {
+        ReservedCallableArrow::Act => format!(
+            "Act closures are reserved but not implemented yet: `{}`; use `|x| -> ...` to build an Act value purely, or use `do:Act`/`act {{ ... }}` inside existing supported syntax",
+            arrow.arrow()
+        ),
+        ReservedCallableArrow::Proc => format!(
+            "Proc closures are reserved but not implemented yet: `{}`; use `|x| -> ...` to build a Proc value purely, or use `do:Proc` inside existing supported syntax",
+            arrow.arrow()
+        ),
+        ReservedCallableArrow::Workflow => format!(
+            "Workflow closures are reserved but not implemented yet: `{}`; use `|x| -> ...` to build a Workflow value purely, or use `do:Workflow` inside existing supported syntax",
+            arrow.arrow()
+        ),
+    }
 }
 
 fn attach_type_definition_source(definitions: &mut [surface::Definition], source: &str) {

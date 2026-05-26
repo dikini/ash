@@ -1,6 +1,6 @@
 # TASK-960: Reserved tower callable arrows
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -16,8 +16,9 @@ Reserve Act/Proc/Workflow callable and closure arrows with targeted diagnostics 
 
 - ✅ TASK-955: Tower callable syntax packet
 - ✅ TASK-956: Callable syntax audit gate
-- 📝 TASK-957: Pure callable type parser
-- 📝 TASK-959: Pure closure arrow syntax
+- ✅ TASK-957: Pure callable type parser
+- ✅ TASK-958: Callable type typechecking and rendering
+- ✅ TASK-959: Pure closure arrow syntax
 
 ## Requirements
 
@@ -89,10 +90,10 @@ commands:
   - cargo test -p ash-parser --test task_960_reserved_callable_arrows -- --nocapture
   - cargo test -p ash-typeck --test task_960_reserved_callable_arrows -- --nocapture
 checklist:
-  - [ ] Focused tests pass.
-  - [ ] Formatting clean.
-  - [ ] Clippy clean if Rust touched.
-  - [ ] CHANGELOG.md updated for implementation or docs changes.
+  - [x] Focused tests pass.
+  - [x] Formatting clean.
+  - [x] Clippy clean if Rust touched.
+  - [x] CHANGELOG.md updated for implementation or docs changes.
 ```
 
 ## Dependencies for Next Task
@@ -102,3 +103,10 @@ This task contributes to PLAN-121 and SPEC-072 completion.
 ## Notes
 
 Area: parser/typechecker diagnostics. Keep the callable-stratum axis separate from return type. Pure smart constructors returning `Act<T>`, `Proc<T>`, or `Workflow<T>` remain pure callables.
+
+## Completion Notes
+
+- Added parser diagnostics coverage for reserved Act/Proc/Workflow callable arrows in type aliases, function parameters, function returns, builtin signatures, interface signatures, and closure literal contexts.
+- Added typechecker boundary coverage proving reserved arrows are rejected before lowering to `Type::Fn`/`Type::Fun` or closure inference, while a pure smart constructor returning `Workflow<Int>` remains `Type::Fn`.
+- Implemented fail-closed diagnostics for reserved callable arrows in callable-type-shaped and closure-literal-shaped parse-failure contexts without adding Act/Proc/Workflow callable runtime semantics, partial application, or currying.
+- Review remediation added regressions for comment-separated reserved arrows, parenthesized match-arm `=>` false positives, and reserved-looking arrows in strings/comments; the diagnostic scan now skips lexical trivia and only classifies plausible callable-type/closure contexts.

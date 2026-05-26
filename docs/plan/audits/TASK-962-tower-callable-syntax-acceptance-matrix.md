@@ -26,8 +26,8 @@ TASK-962 closeout evidence for SPEC-072 C72-1 through C72-8 and PLAN-121 §8.
 | Focused tests prove old pure closure `|args| => body` is no longer silently accepted. | TASK-959 parser/typeck/interpreter tests. | Satisfied |
 | Reserved higher-stratum arrows fail closed with targeted diagnostics. | TASK-960 parser/typeck tests. | Satisfied |
 | Current `std/` and `reference/` examples use preferred syntax except explicitly labeled compatibility material. | TASK-963 std/reference scan test and focused Python scan in the TASK-963 verification block. | Satisfied |
-| Independent review checks parser ambiguity, stale docs, stdlib/reference migration coverage, and callable-stratum/return-type conflation. | Final independent review requested changes for duplicate changelog entries and stale review-status checkboxes; TASK-962 remediated both before commit. | Satisfied |
-| Broad gates run. | After the final TASK-962 remediation diff, `git diff --check`, `cargo fmt --check`, `cargo clippy --workspace --all-targets --all-features -- -D warnings`, `cargo test --workspace`, `cargo doc --workspace --no-deps`, `python3 tools/reference/check_frontmatter.py`, and `python3 tools/reference/check_frontmatter.py --pilot` all exited 0. The full workspace gate also exposed and then verified stale pipe-operator, stdlib-surface, and capability-implementation assertions. | Satisfied |
+| Independent review checks parser ambiguity, stale docs, stdlib/reference migration coverage, and callable-stratum/return-type conflation. | Independent reviews requested changes for duplicate changelog entries, stale review-status checkboxes, residual runtime partial application, unary reserved-arrow diagnostics, task-range metadata drift, and final evidence wording; TASK-962 remediated those findings before commit. | Satisfied |
+| Broad gates run. | After the final TASK-962 remediation diff, `git diff --check`, `cargo fmt --check`, `cargo clippy --workspace --all-targets --all-features -- -D warnings`, `bash scripts/check-rust-tests.sh --workspace --all-targets`, `cargo doc --workspace --no-deps` with warning scan, `python3 tools/reference/check_frontmatter.py`, and `python3 tools/reference/check_frontmatter.py --pilot` all exited 0. The broad gate also exposed and then verified stale pipe-operator, stdlib-surface, capability-implementation, and runtime action-control assertions. | Satisfied |
 
 ## Broad-gate note
 
@@ -39,6 +39,8 @@ A later broad rerun reached `crates/ash-parser/tests/stdlib_surface.rs` and fail
 
 A subsequent broad rerun reached `crates/ash-typeck/tests/task_730_capability_implementation_conformance.rs` and failed because `operation_body_is_checked_in_effectful_context` still expected a pure `fn` expression in an effectful capability operation body to become a legacy `Type::Fun(..., Effect)`. TASK-959/SPEC-072 intentionally keeps pure closures as `Type::Fn` in higher contexts, so TASK-962 renamed the test and now asserts successful registration for the pure callable result.
 
+A final pre-merge verification review found residual runtime partial-application behavior, missing targeted diagnostics for unary reserved tower callable arrows, SPEC-072 task-range metadata drift, duplicate TASK-963 changelog wording, and a `main...HEAD` whitespace issue in the TASK-956 audit artifact. The final remediation removes the runtime partial-application paths, adds unary reserved-arrow coverage for bare and generic domains, reconciles the metadata/changelog, and re-runs the focused and broad gates before merge.
+
 ## Final verification
 
 Final commands on the closeout diff:
@@ -47,10 +49,11 @@ Final commands on the closeout diff:
 git diff --check
 python3 tools/reference/check_frontmatter.py
 python3 tools/reference/check_frontmatter.py --pilot
-CARGO_INCREMENTAL=0 cargo fmt --check
-CARGO_INCREMENTAL=0 cargo clippy --workspace --all-targets --all-features -- -D warnings
-CARGO_INCREMENTAL=0 cargo test --workspace
-CARGO_INCREMENTAL=0 cargo doc --workspace --no-deps
+cargo fmt --check
+cargo clippy --workspace --all-targets --all-features -- -D warnings
+bash scripts/check-rust-tests.sh --workspace --all-targets
+cargo doc --workspace --no-deps 2>&1 | tee /tmp/phase126-cargo-doc.log
+! grep -i '^warning:' /tmp/phase126-cargo-doc.log
 ```
 
-All final commands exited 0 after remediating stale broad-gate tests.
+All final commands exited 0 after remediating stale broad-gate tests. A raw foreground `cargo test --workspace` run reached the tool timeout before completion, so the final broad test evidence uses the repo-owned serial all-target wrapper above.

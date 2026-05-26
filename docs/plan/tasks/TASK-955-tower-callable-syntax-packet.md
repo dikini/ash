@@ -21,7 +21,7 @@ Create the SPEC-072/PLAN-121/task packet for tower callable type and closure syn
 
 1. Create `docs/spec/SPEC-072-TOWER-CALLABLE-TYPE-AND-CLOSURE-SYNTAX.md`.
 2. Create `docs/plan/PLAN-121-TOWER-CALLABLE-SYNTAX.md`.
-3. Create TASK-955 through TASK-962 task files.
+3. Create TASK-955 through TASK-963 task files, with TASK-962 as the final closeout gate.
 4. Update `docs/spec/README.md`, `docs/plan/PLAN-INDEX.md`, `CHANGELOG.md`, and amended legacy spec notes.
 
 ### Non-goals
@@ -66,6 +66,7 @@ required = [
  'docs/plan/tasks/TASK-960-reserved-tower-callable-arrows.md',
  'docs/plan/tasks/TASK-961-callable-syntax-reference-docs.md',
  'docs/plan/tasks/TASK-962-tower-callable-syntax-closeout.md',
+ 'docs/plan/tasks/TASK-963-stdlib-and-reference-callable-syntax-migration.md',
 ]
 for rel in required:
     assert Path(rel).exists(), rel
@@ -73,7 +74,7 @@ PY
 checklist:
   - [x] SPEC-072 drafted.
   - [x] PLAN-121 drafted.
-  - [x] TASK-955 through TASK-962 created.
+  - [x] TASK-955 through TASK-963 created, with TASK-962 as the final closeout gate.
   - [x] PLAN-INDEX, spec index, amended spec notes, and CHANGELOG updated.
 ```
 

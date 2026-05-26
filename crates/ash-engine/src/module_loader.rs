@@ -343,6 +343,11 @@ pub fn load_ordinary_source(path: &Path, source: &str) -> Result<LoadedOrdinaryF
     let entry_root = path.parent().ok_or_else(|| {
         EngineError::Configuration(format!("workflow path '{}' has no parent", path.display()))
     })?;
+
+    if let Some(error) = ash_parser::reserved_callable_arrow_diagnostic(source) {
+        return Err(EngineError::Parse(error.to_string()));
+    }
+
     let mut module_cache = HashMap::new();
     let mut visiting = HashSet::new();
     visiting.insert(canonical_entry);

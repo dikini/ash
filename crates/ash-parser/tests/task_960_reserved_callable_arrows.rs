@@ -42,6 +42,46 @@ fn assert_reserved_in_type_contexts(arrow: &str, stratum: &str) {
         stratum,
     );
     assert_reserved(
+        &format!("type UnaryHandler = Int {arrow} Bool;"),
+        arrow,
+        stratum,
+    );
+    assert_reserved(
+        &format!("type GenericUnaryHandler = List<Int> {arrow} Bool;"),
+        arrow,
+        stratum,
+    );
+    assert_reserved(
+        &format!("type NestedGenericHandler = List<Int {arrow} Bool>;"),
+        arrow,
+        stratum,
+    );
+    assert_reserved(
+        &format!("type NestedGenericParenHandler = List<(Int) {arrow} Bool>;"),
+        arrow,
+        stratum,
+    );
+    assert_reserved(
+        &format!("type NestedGenericSecondHandler = Map<String, Int {arrow} Bool>;"),
+        arrow,
+        stratum,
+    );
+    assert_reserved(
+        &format!("type NestedGenericSecondParenHandler = Map<String, (Int) {arrow} Bool>;"),
+        arrow,
+        stratum,
+    );
+    assert_reserved(
+        &format!("type ListElementHandler = [Int {arrow} Bool];"),
+        arrow,
+        stratum,
+    );
+    assert_reserved(
+        &format!("type ListElementParenHandler = [(Int) {arrow} Bool];"),
+        arrow,
+        stratum,
+    );
+    assert_reserved(
         &format!("fn accept(handler: (Int) {arrow} Bool) -> Bool {{ true }}"),
         arrow,
         stratum,

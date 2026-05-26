@@ -68,3 +68,17 @@ fn stale_with_role_gets_targeted_diagnostic() {
     assert!(output.contains("with role:"), "{output}");
     assert!(!output.contains("ContextError"), "{output}");
 }
+
+#[test]
+fn reserved_proc_callable_arrow_in_list_type_gets_targeted_diagnostic() {
+    let output =
+        ash_check_output("fn f(x: [Int => Bool]) -> Bool { true }\nworkflow main { ret true }\n");
+
+    assert!(
+        output.contains("Proc callable syntax is reserved"),
+        "{output}"
+    );
+    assert!(output.contains("=>"), "{output}");
+    assert!(output.contains("pure callable arrow `->`"), "{output}");
+    assert!(!output.contains("ContextError"), "{output}");
+}

@@ -166,7 +166,14 @@ impl ReservedCallableArrow {
     }
 }
 
-fn reserved_callable_arrow_diagnostic(source: &str) -> Option<error::ParseError> {
+/// Return a targeted parse diagnostic when `source` contains a reserved
+/// Act/Proc/Workflow callable arrow in a type or closure context.
+///
+/// This helper intentionally ignores `=>` in match-arm contexts plus arrows in
+/// comments and string literals, so callers that perform pre-parsing source
+/// staging can preserve SPEC-072's fail-closed diagnostics without stealing
+/// unrelated syntax.
+pub fn reserved_callable_arrow_diagnostic(source: &str) -> Option<error::ParseError> {
     find_reserved_callable_arrow(source).map(|(offset, arrow, context)| {
         let span = input::offset_to_span(source, offset, offset + arrow.arrow().len());
         match context {
@@ -267,15 +274,97 @@ fn is_reserved_closure_arrow_context(source: &str, arrow_offset: usize) -> bool 
 }
 
 fn is_reserved_type_arrow_context(source: &str, arrow_offset: usize) -> bool {
-    let Some((close_paren, ')')) = previous_significant_char(source, arrow_offset) else {
-        return false;
-    };
-    let Some(open_paren) = matching_open_paren_before(source, close_paren) else {
+    if let Some((close_paren, ')')) = previous_significant_char(source, arrow_offset) {
+        let Some(open_paren) = matching_open_paren_before(source, close_paren) else {
+            return false;
+        };
+
+        return previous_significant_char(source, open_paren).is_some_and(|(idx, ch)| {
+            matches!(ch, '=' | ':' | '(' | '[' | '>' | '<')
+                || (ch == ',' && is_inside_generic_type_args(source, idx))
+        });
+    }
+
+    let Some(domain_start) = bare_type_domain_start_before(source, arrow_offset) else {
         return false;
     };
 
-    previous_significant_char(source, open_paren)
-        .is_some_and(|(_, ch)| matches!(ch, '=' | ':' | '(' | ',' | '>'))
+    previous_significant_char(source, domain_start).is_some_and(|(idx, ch)| {
+        matches!(ch, '=' | ':' | '(' | '[' | '>' | '<')
+            || (ch == ',' && is_inside_generic_type_args(source, idx))
+    })
+}
+
+fn is_inside_generic_type_args(source: &str, offset: usize) -> bool {
+    let mut depth = 0usize;
+    let mut idx = 0usize;
+
+    while idx < offset.min(source.len()) {
+        if let Some(next_offset) = skip_lexical_region(source, idx) {
+            idx = next_offset;
+            continue;
+        }
+
+        let Some(ch) = source[idx..].chars().next() else {
+            break;
+        };
+        match ch {
+            '<' => depth += 1,
+            '>' => depth = depth.saturating_sub(1),
+            _ => {}
+        }
+        idx += ch.len_utf8();
+    }
+
+    depth > 0
+}
+
+fn bare_type_domain_start_before(source: &str, arrow_offset: usize) -> Option<usize> {
+    let (end, ch) = previous_significant_char(source, arrow_offset)?;
+    if is_type_ident_char(ch) {
+        return Some(scan_type_ident_start(source, end));
+    }
+    if ch == '>' {
+        return generic_type_head_start_before(source, end);
+    }
+    None
+}
+
+fn generic_type_head_start_before(source: &str, close_angle: usize) -> Option<usize> {
+    let mut depth = 0usize;
+    for (idx, ch) in source[..=close_angle].char_indices().rev() {
+        match ch {
+            '>' => depth += 1,
+            '<' => {
+                depth = depth.saturating_sub(1);
+                if depth == 0 {
+                    let (head_end, head_ch) = previous_significant_char(source, idx)?;
+                    if !is_type_ident_char(head_ch) {
+                        return None;
+                    }
+                    return Some(scan_type_ident_start(source, head_end));
+                }
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
+fn scan_type_ident_start(source: &str, end: usize) -> usize {
+    let mut start = end;
+    for (idx, ch) in source[..end].char_indices().rev() {
+        if is_type_ident_char(ch) {
+            start = idx;
+        } else {
+            break;
+        }
+    }
+    start
+}
+
+fn is_type_ident_char(ch: char) -> bool {
+    ch.is_ascii_alphanumeric() || matches!(ch, '_' | ':')
 }
 
 fn matching_open_paren_before(source: &str, close_paren: usize) -> Option<usize> {

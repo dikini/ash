@@ -1124,14 +1124,11 @@ async fn workflow_can_transport_and_reapply_effectful_closures() {
         },
         continuation: Box::new(Workflow::Ret {
             expr: Expr::FnApply {
-                func: Box::new(Expr::FnApply {
-                    func: Box::new(Expr::Variable {
-                        name: "compose".to_string(),
-                        span: ash_core::ast::Span::default(),
-                    }),
-                    args: vec![invoke_expr()],
+                func: Box::new(Expr::Variable {
+                    name: "compose".to_string(),
+                    span: ash_core::ast::Span::default(),
                 }),
-                args: vec![],
+                args: vec![invoke_expr()],
             },
         }),
     };

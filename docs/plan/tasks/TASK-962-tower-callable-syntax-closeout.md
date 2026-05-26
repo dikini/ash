@@ -80,8 +80,9 @@ commands:
     PY
   - cargo fmt --check
   - cargo clippy --workspace --all-targets --all-features -- -D warnings
-  - cargo test --workspace
-  - cargo doc --workspace --no-deps
+  - bash scripts/check-rust-tests.sh --workspace --all-targets
+  - cargo doc --workspace --no-deps 2>&1 | tee /tmp/phase126-cargo-doc.log
+  - '! grep -i ''^warning:'' /tmp/phase126-cargo-doc.log'
   - python3 tools/reference/check_frontmatter.py
   - python3 tools/reference/check_frontmatter.py --pilot
 checklist:

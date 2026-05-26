@@ -2111,27 +2111,11 @@ fn eval_expr_force_async<'a>(expr: &'a Expr, ctx: &'a Context) -> EvalBoxFuture<
 
                 let qname = qualified_builtin_name(func, module.as_deref());
                 if let Some(result) = dispatch_builtin(&qname, &args, ctx) {
-                    match result {
-                        Err(EvalError::WrongArity {
-                            expected,
-                            actual,
-                            callee: Some(ref name),
-                        }) if actual < expected => {
-                            return Ok(make_partial_builtin(name, &args, expected));
-                        }
-                        other => return other,
-                    }
+                    return result;
                 }
 
                 match eval_function_call(func, module.as_deref(), &args, ctx) {
                     Ok(value) => Ok(value),
-                    Err(EvalError::WrongArity {
-                        expected,
-                        actual,
-                        callee: Some(builtin_name),
-                    }) if actual < expected => {
-                        Ok(make_partial_builtin(&builtin_name, &args, expected))
-                    }
                     Err(EvalError::UnknownFunction(_)) => match ctx.get(func) {
                         Some(Value::Closure { params, body, env }) => {
                             apply_closure_async(params, body, env, args, ctx).await
@@ -2336,18 +2320,6 @@ fn apply_closure_async<'a>(
             let result = maybe_execute_proc_yield_capture_async(result, &call_ctx).await?;
             let result = maybe_execute_proc_admission_capture_async(result, &call_ctx).await?;
             maybe_execute_proc_wait_all_capture_async(result, &call_ctx).await
-        } else if args.len() < params.len() {
-            validates_hidden_act_env(params, &args)?;
-            let mut new_env = ash_core::env_frame::EnvFrame::with_parent(env.clone());
-            for ((name, _ty), val) in params.iter().take(args.len()).zip(args.clone()) {
-                new_env.insert(name.clone(), val);
-            }
-            let remaining_params = params[args.len()..].to_vec();
-            Ok(Value::Closure {
-                params: remaining_params,
-                body: Box::new(body.clone()),
-                env: std::sync::Arc::new(new_env),
-            })
         } else {
             Err(EvalError::WrongArity {
                 expected: params.len(),
@@ -2856,10 +2828,8 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
                 _ => {}
             }
 
-            // Note: this early-exit returns apply_closure directly, bypassing the
-            // make_partial_builtin path below. Over-application through a closure found
-            // here produces WrongArity { callee: None } rather than a partial value;
-            // that is handled inside apply_closure itself.
+            // User-defined closures and builtins both use exact arity after SPEC-072;
+            // wrong-arity closure calls produce WrongArity { callee: None }.
             if let (true, Some(Value::Closure { params, body, env })) =
                 (module.is_none(), ctx.get(func))
             {
@@ -2886,29 +2856,13 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
             // dispatch_builtin returns Some(result) when the name is in the table.
             let qname = qualified_builtin_name(func, module.as_deref());
             if let Some(result) = dispatch_builtin(&qname, &args, ctx) {
-                // Preserve partial-application: if the table rejects for too-few
-                // args, fall through to make_partial_builtin just like the legacy path.
-                match result {
-                    Err(EvalError::WrongArity {
-                        expected,
-                        actual,
-                        callee: Some(ref name),
-                    }) if actual < expected => {
-                        return Ok(make_partial_builtin(name, &args, expected));
-                    }
-                    other => return other,
-                }
+                return result;
             }
 
             // Not in dispatch table: try legacy eval_function_call (covers
             // unqualified builtins like "len", "head" matched via pattern).
             match eval_function_call(func, module.as_deref(), &args, ctx) {
                 Ok(value) => Ok(value),
-                Err(EvalError::WrongArity {
-                    expected,
-                    actual,
-                    callee: Some(builtin_name),
-                }) if actual < expected => Ok(make_partial_builtin(&builtin_name, &args, expected)),
                 Err(EvalError::UnknownFunction(_)) => {
                     // Not a built-in: try looking up a closure in the context
                     match ctx.get(func) {
@@ -4014,44 +3968,7 @@ fn builtin_arity_error(name: &str, expected: usize, actual: usize) -> EvalResult
     })
 }
 
-/// Build a synthetic closure that represents a partially-applied built-in.
-///
-/// `ends_with(".md")` becomes a closure `|x| -> ends_with(x, ".md")` (with args reordered).
-///
-/// This reordering ensures that when used in a pipeline like `filter(ends_with(".md"))`,
-/// the closure correctly receives the iterated element as its first argument.
-fn make_partial_builtin(name: &str, applied_args: &[Value], total_arity: usize) -> Value {
-    let remaining = total_arity - applied_args.len();
-    let param_names: Vec<(String, Option<String>)> = (0..remaining)
-        .map(|i| (format!("__partial_{i}"), None))
-        .collect();
-
-    // Build call args with remaining params FIRST, then applied args.
-    // This ensures `ends_with(".md")` becomes `|x| -> ends_with(x, ".md")`
-    // rather than `|x| -> ends_with(".md", x)`.
-    let mut call_args: Vec<Expr> = param_names
-        .iter()
-        .enumerate()
-        .map(|(i, _)| Expr::Variable {
-            name: format!("__partial_{i}"),
-            span: ash_core::ast::Span::default(),
-        })
-        .collect();
-
-    call_args.extend(applied_args.iter().map(|v| Expr::Literal(v.clone())));
-
-    Value::Closure {
-        params: param_names,
-        body: Box::new(Expr::Call {
-            func: name.to_string(),
-            module: None,
-            arguments: call_args,
-        }),
-        env: std::sync::Arc::new(ash_core::env_frame::EnvFrame::new()),
-    }
-}
-
-/// Apply a closure, supporting partial application.
+/// Apply a closure with exact arity.
 fn apply_closure(
     params: &[(String, Option<String>)],
     body: &Expr,
@@ -4098,19 +4015,6 @@ fn apply_closure(
         let result = maybe_execute_invoke_capture(result, &call_ctx)?;
         let result = maybe_execute_proc_await_capture(result, &call_ctx)?;
         maybe_execute_proc_yield_capture(result, &call_ctx)
-    } else if args.len() < params.len() {
-        validates_hidden_act_env(params, &args)?;
-        // Partial application: bind provided params, keep remaining
-        let mut new_env = ash_core::env_frame::EnvFrame::with_parent(env.clone());
-        for ((name, _ty), val) in params.iter().take(args.len()).zip(args.clone()) {
-            new_env.insert(name.clone(), val);
-        }
-        let remaining_params = params[args.len()..].to_vec();
-        Ok(Value::Closure {
-            params: remaining_params,
-            body: Box::new(body.clone()),
-            env: std::sync::Arc::new(new_env),
-        })
     } else {
         Err(EvalError::WrongArity {
             expected: params.len(),
@@ -4423,10 +4327,17 @@ mod tests {
             module: None,
             arguments: vec![],
         };
-        let value = eval_expr(&expr, &ctx).unwrap();
+        let err = eval_expr(&expr, &ctx).unwrap_err();
         assert!(
-            matches!(value, Value::Closure { .. }),
-            "expected partial-application Closure, got {value:?}"
+            matches!(
+                err,
+                EvalError::WrongArity {
+                    expected: 1,
+                    actual: 0,
+                    callee: Some(ref callee),
+                } if callee == "len"
+            ),
+            "expected exact-arity WrongArity, got {err:?}"
         );
     }
 
@@ -5481,7 +5392,7 @@ mod tests {
         );
     }
 
-    /// SPEC-031 §5.7 – FnApply with wrong arity returns a partial-application Closure.
+    /// SPEC-072 C72-3 – FnApply with wrong arity returns a WrongArity error.
     #[test]
     fn task559_fnapply_wrong_arity_returns_error() {
         let ctx = Context::new();
@@ -5498,10 +5409,41 @@ mod tests {
             args: vec![Expr::Literal(Value::Int(1))], // only 1 arg, need 2
         };
 
-        let value = eval_expr(&expr, &ctx).unwrap();
+        let err = eval_expr(&expr, &ctx).unwrap_err();
         assert!(
-            matches!(value, Value::Closure { .. }),
-            "expected partial-application Closure, got {value:?}"
+            matches!(
+                err,
+                EvalError::WrongArity {
+                    expected: 2,
+                    actual: 1,
+                    callee: None,
+                }
+            ),
+            "expected exact-arity WrongArity, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn task962_builtin_call_too_few_args_returns_wrong_arity() {
+        let ctx = Context::new();
+
+        let expr = Expr::Call {
+            func: "ends_with".to_string(),
+            module: None,
+            arguments: vec![Expr::Literal(Value::String(".md".to_string()))],
+        };
+
+        let err = eval_expr(&expr, &ctx).unwrap_err();
+        assert!(
+            matches!(
+                err,
+                EvalError::WrongArity {
+                    expected: 2,
+                    actual: 1,
+                    callee: Some(ref callee),
+                } if callee == "ends_with"
+            ),
+            "expected builtin exact-arity WrongArity, got {err:?}"
         );
     }
 

@@ -1,6 +1,6 @@
 # TASK-957: Pure callable type parser
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -76,10 +76,10 @@ commands:
     PY
   - cargo test -p ash-parser --test task_957_callable_type_parser -- --nocapture
 checklist:
-  - [ ] Focused tests pass.
-  - [ ] Formatting clean.
-  - [ ] Clippy clean if Rust touched.
-  - [ ] CHANGELOG.md updated for implementation or docs changes.
+  - [x] Focused tests pass.
+  - [x] Formatting clean.
+  - [x] Clippy clean if Rust touched.
+  - [x] CHANGELOG.md updated for implementation or docs changes.
 ```
 
 ## Dependencies for Next Task
@@ -89,3 +89,10 @@ This task contributes to PLAN-121 and SPEC-072 completion.
 ## Notes
 
 Area: parser. Keep the callable-stratum axis separate from return type. Pure smart constructors returning `Act<T>`, `Proc<T>`, or `Workflow<T>` remain pure callables.
+
+Completion notes:
+
+- RED evidence: after adding `crates/ash-parser/tests/task_957_callable_type_parser.rs`, `RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ash-parser --test task_957_callable_type_parser -- --nocapture` failed because module annotations and type aliases parsed `(Int, String) -> Bool` as one tuple argument (`left: 1`, `right: 2`), and the tuple-domain guard reported "tuple domain was lowered as one argument".
+- GREEN evidence: the same focused test target passes with 5 tests after adding a parenthesized callable-domain parser path in both `parse_module.rs` and `parse_type_def.rs`.
+- Carrier decision: `parse_type_def::TypeExpr` still uses the existing synthetic `Constructor { name: "Fn" }` compatibility carrier for pure callable aliases, but the new parser path builds the `Fn` argument list directly from the callable domain before tuple lowering, preserving n-ary domain arity for `(A, B) -> C`. Future higher-stratum arrows still need an explicit carrier.
+- Unary tuple argument spelling: an explicit alias such as `type Pair = (Int, String); type Predicate = Pair -> Bool;` remains the supported spelling covered by this task.

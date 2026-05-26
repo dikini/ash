@@ -492,6 +492,14 @@ fn parse_alias_body(input: &mut ParseInput) -> ModalResult<TypeBody> {
 fn parse_type_expr(input: &mut ParseInput) -> ModalResult<TypeExpr> {
     skip_whitespace_and_comments(input);
 
+    if input.input.starts_with("(") {
+        let checkpoint = input.checkpoint();
+        if let Ok(callable) = parse_parenthesized_callable_type(input) {
+            return Ok(callable);
+        }
+        input.reset(&checkpoint);
+    }
+
     let mut lhs = alt((
         parse_associated_family_projection_type,
         parse_fn_type,
@@ -523,6 +531,33 @@ fn parse_type_expr(input: &mut ParseInput) -> ModalResult<TypeExpr> {
     } else {
         Ok(lhs)
     }
+}
+
+/// Parse preferred pure callable type syntax: `(A, B) -> C`.
+fn parse_parenthesized_callable_type(input: &mut ParseInput) -> ModalResult<TypeExpr> {
+    literal_str("(").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    let params = if literal_str(")").parse_next(input).is_ok() {
+        Vec::new()
+    } else {
+        let params = separated(1.., parse_type_expr, parse_type_arg_separator).parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        literal_str(")").parse_next(input)?;
+        params
+    };
+
+    skip_whitespace_and_comments(input);
+    literal_str("->").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let ret = parse_type_expr(input)?;
+
+    let mut args = params;
+    args.push(ret);
+    Ok(TypeExpr::Constructor {
+        name: "Fn".to_string(),
+        args,
+    })
 }
 
 /// Parse a function type: `Fn(Int, String) -> Bool`

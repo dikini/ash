@@ -1888,6 +1888,14 @@ fn parse_surface_type_with_holes(
         return Ok(Type::Fn(params, Box::new(ret)));
     }
 
+    if input.input.starts_with("(") {
+        let checkpoint = input.checkpoint();
+        if let Ok(fn_type) = parse_parenthesized_callable_type_with_holes(input, hole_policy) {
+            return Ok(fn_type);
+        }
+        input.reset(&checkpoint);
+    }
+
     let lhs = match hole_policy {
         TypeHolePolicy::Disallow => parse_surface_type_atom(input)?,
         TypeHolePolicy::Allow => parse_surface_type_atom_with_holes(input, hole_policy)?,
@@ -1900,6 +1908,33 @@ fn parse_surface_type_with_holes(
     } else {
         Ok(lhs)
     }
+}
+
+fn parse_parenthesized_callable_type_with_holes(
+    input: &mut ParseInput,
+    hole_policy: TypeHolePolicy,
+) -> ModalResult<Type> {
+    let _ = literal_str("(").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    let mut params = Vec::new();
+    if !input.input.starts_with(")") {
+        params.push(parse_surface_type_with_holes(input, hole_policy)?);
+        loop {
+            if !consume_comma_separator(input) {
+                break;
+            }
+            params.push(parse_surface_type_with_holes(input, hole_policy)?);
+        }
+    }
+
+    let _ = literal_str(")").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str("->").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let ret = parse_surface_type_with_holes(input, hole_policy)?;
+
+    Ok(Type::Fn(params, Box::new(ret)))
 }
 
 fn parse_associated_family_projection_type(input: &mut ParseInput) -> ModalResult<Type> {

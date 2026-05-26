@@ -102,7 +102,7 @@ fn proc_stdlib_surface_declares_par_and_scatter_handle_admission_builtins() {
     );
     assert!(
         proc_module.contains(
-            "pub builtin fn scatter<A, B>(items: List<A>, f: A -> Proc<B>) -> Proc<List<P<B>>>;"
+            "pub builtin fn scatter<A, B>(items: List<A>, f: (A) -> Proc<B>) -> Proc<List<P<B>>>;"
         ),
         "std/src/proc.ash should declare proc::scatter with ordered handle-list return shape"
     );

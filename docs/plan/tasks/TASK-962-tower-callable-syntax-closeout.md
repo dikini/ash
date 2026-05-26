@@ -1,6 +1,6 @@
 # TASK-962: Tower callable syntax closeout
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -14,13 +14,13 @@ Close out SPEC-072/PLAN-121 with acceptance evidence, broad gates, status reconc
 ## Dependencies
 
 - ✅ TASK-955: Tower callable syntax packet
-- 📝 TASK-956: Callable syntax audit gate
-- 📝 TASK-957: Pure callable type parser
-- 📝 TASK-958: Callable type typecheck and rendering
-- 📝 TASK-959: Pure closure arrow syntax
-- 📝 TASK-960: Reserved tower callable arrows
-- 📝 TASK-961: Callable syntax reference docs
-- 📝 TASK-963: Stdlib and reference callable syntax migration
+- ✅ TASK-956: Callable syntax audit gate
+- ✅ TASK-957: Pure callable type parser
+- ✅ TASK-958: Callable type typecheck and rendering
+- ✅ TASK-959: Pure closure arrow syntax
+- ✅ TASK-960: Reserved tower callable arrows
+- ✅ TASK-961: Callable syntax reference docs
+- ✅ TASK-963: Stdlib and reference callable syntax migration
 
 ## Requirements
 
@@ -61,12 +61,34 @@ toolsets: [terminal, file]
 strictness: clean
 commands:
   - git diff --check
-  - false # Replace with TASK-specific focused docs/audit/closeout verification command before marking complete.
+  - |
+    python3 - <<'PY'
+    from pathlib import Path
+    matrix = Path('docs/plan/audits/TASK-962-tower-callable-syntax-acceptance-matrix.md')
+    text = matrix.read_text()
+    for marker in [f'C72-{i}' for i in range(1, 9)]:
+        assert marker in text, f'missing {marker}'
+    for required in [
+        'task_957_callable_type_parser',
+        'task_958_callable_type_rendering',
+        'task_959_pure_closure_arrow',
+        'task_960_reserved_callable_arrows',
+        'task_963_stdlib_reference_callable_syntax',
+        'No space left on device',
+    ]:
+        assert required in text, f'missing evidence marker: {required}'
+    PY
+  - cargo fmt --check
+  - cargo clippy --workspace --all-targets --all-features -- -D warnings
+  - cargo test --workspace
+  - cargo doc --workspace --no-deps
+  - python3 tools/reference/check_frontmatter.py
+  - python3 tools/reference/check_frontmatter.py --pilot
 checklist:
-  - [ ] Required docs/audit artifacts updated.
-  - [ ] TASK-963 stdlib/reference migration evidence included in the acceptance matrix.
-  - [ ] Status surfaces reconciled.
-  - [ ] Independent review completed where required.
+  - [x] Required docs/audit artifacts updated.
+  - [x] TASK-963 stdlib/reference migration evidence included in the acceptance matrix.
+  - [x] Status surfaces reconciled.
+  - [x] Independent review completed where required.
 ```
 
 ## Dependencies for Next Task

@@ -3705,7 +3705,7 @@ Phase 125 expands `reference/language/functions.md` from a skeleton pilot page i
 ## Phase 126: Tower Callable Type and Closure Syntax
 
 **Priority:** High (resolves callable syntax ambiguity before further Pure/Act/Proc/Workflow reference and parser work)
-**Status:** 🚧 In Progress — pure callable type, pure closure parser, reserved-arrow, reference-doc, and stdlib/reference migration slices complete
+**Status:** ✅ Complete — SPEC-072 first implementation slice and closeout verified
 **Spec:** [SPEC-072](../spec/SPEC-072-TOWER-CALLABLE-TYPE-AND-CLOSURE-SYNTAX.md)
 **Plan:** [PLAN-121](PLAN-121-TOWER-CALLABLE-SYNTAX.md)
 
@@ -3721,7 +3721,7 @@ Phase 126 introduces tower-aligned callable type and closure syntax. It makes `(
 | [TASK-960](tasks/TASK-960-reserved-tower-callable-arrows.md) | Reserve `-*>`, `=>`, and `=*>` in callable type and closure contexts with diagnostics | 8 | ✅ Complete |
 | [TASK-961](tasks/TASK-961-callable-syntax-reference-docs.md) | Update reference chapter, agent card, and amended legacy specs for the new syntax | 8 | ✅ Complete |
 | [TASK-963](tasks/TASK-963-stdlib-and-reference-callable-syntax-migration.md) | Migrate `std/` and current `reference/` examples to preferred callable syntax | 8 | ✅ Complete |
-| [TASK-962](tasks/TASK-962-tower-callable-syntax-closeout.md) | Close out SPEC-072 with acceptance matrix, broad gates, and independent review remediation | 8 | 📝 Planned |
+| [TASK-962](tasks/TASK-962-tower-callable-syntax-closeout.md) | Close out SPEC-072 with acceptance matrix, broad gates, and independent review remediation | 8 | ✅ Complete |
 
 **Decision gates:**
 - D1: The callable arrow classifies application stratum; the return type does not.

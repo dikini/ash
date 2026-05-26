@@ -495,7 +495,7 @@ fn type_check_program_registers_capability_implementations_after_interfaces() {
 }
 
 #[test]
-fn operation_body_is_checked_in_effectful_context() {
+fn operation_body_accepts_pure_closure_result_in_effectful_context() {
     let callback_interface = interface(
         "CallbackSource",
         vec![operation_sig(
@@ -522,15 +522,8 @@ fn operation_body_is_checked_in_effectful_context() {
         )],
     );
 
-    assert_invalid_contains(
-        env.register_capability_implementation(&implementation),
-        &[
-            "body",
-            "callback",
-            "(Int) -> Int",
-            "fn(Int) -> Int [Epistemic]",
-        ],
-    );
+    env.register_capability_implementation(&implementation)
+        .expect("SPEC-072 pure closures stay Type::Fn even when checked inside effectful operation bodies");
 }
 
 #[test]

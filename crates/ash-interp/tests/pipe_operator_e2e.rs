@@ -39,13 +39,9 @@ fn mock_read_dir_closure() -> Value {
 fn setup_type_env() -> TypeEnv {
     let mut env = TypeEnv::with_builtin_types();
 
-    // Bind filter: Fun(List<String>, Fun(String, Bool)) -> List<String>
-    // All functions use Effect::Operational for consistency in this test
-    let predicate_type = Type::Fun(
-        vec![Type::String],
-        Box::new(Type::Bool),
-        Effect::Operational,
-    );
+    // Bind filter: Fun(List<String>, Fn(String) -> Bool) -> List<String>.
+    // SPEC-072 pure closures typecheck as Type::Fn even inside workflows.
+    let predicate_type = Type::Fn(vec![Type::String], Box::new(Type::Bool));
     let filter_type = Type::Fun(
         vec![Type::List(Box::new(Type::String)), predicate_type.clone()],
         Box::new(Type::List(Box::new(Type::String))),
@@ -53,9 +49,9 @@ fn setup_type_env() -> TypeEnv {
     );
     env.bind_variable("filter", filter_type);
 
-    // Bind ends_with: Fun(String, String) -> Bool
-    // Use Effect::Operational so partial application produces Fun(String) -> Bool,
-    // which matches the predicate type expected by filter
+    // Bind ends_with: Fun(String, String) -> Bool. SPEC-072 callable
+    // application is exact-arity, so callers use an explicit closure when a
+    // unary predicate is needed by filter.
     let ends_with_type = Type::Fun(
         vec![Type::String, Type::String],
         Box::new(Type::Bool),
@@ -80,13 +76,13 @@ fn setup_type_env() -> TypeEnv {
 /// The workflow under test:
 /// ```
 /// workflow main(path: String) -> List<String> {
-///     let md_files = read_dir(path) |> filter(ends_with(".md"));
+///     let md_files = read_dir(path) |> filter(|file| -> ends_with(file, ".md"));
 ///     ret md_files
 /// }
 /// ```
 #[tokio::test]
 async fn pipe_operator_e2e_read_dir_filter_md_files() {
-    let source = r#"workflow main(path: String) -> List<String> { let md_files = read_dir(path) |> filter(ends_with(".md")); ret md_files }"#;
+    let source = r#"workflow main(path: String) -> List<String> { let md_files = read_dir(path) |> filter(|file| -> ends_with(file, ".md")); ret md_files }"#;
 
     // Step 1: Parse
     let mut input = new_input(source);
@@ -136,24 +132,19 @@ async fn pipe_operator_e2e_read_dir_filter_md_files() {
     }
 }
 
-/// Test that partial application with pipe operator works correctly
-/// when the applied argument is meant to be the "configuration" and
-/// the piped value is the "subject".
+/// Test that pipe operator examples use explicit closures rather than
+/// implicit partial application when a unary predicate is needed.
 #[tokio::test]
-async fn pipe_operator_partial_application_ordering() {
-    // Test starts_with in a similar pattern
-    let source = r#"workflow main(paths: List<String>) -> List<String> { let rs_files = paths |> filter(starts_with("src/")); ret rs_files }"#;
+async fn pipe_operator_explicit_closure_ordering() {
+    // Test starts_with in a similar pattern.
+    let source = r#"workflow main(paths: List<String>) -> List<String> { let rs_files = paths |> filter(|path| -> starts_with(path, "src/")); ret rs_files }"#;
 
     let mut input = new_input(source);
     let parsed = workflow_def(&mut input).expect("workflow should parse");
 
     // Set up env with starts_with
     let mut env = TypeEnv::with_builtin_types();
-    let predicate_type = Type::Fun(
-        vec![Type::String],
-        Box::new(Type::Bool),
-        Effect::Operational,
-    );
+    let predicate_type = Type::Fn(vec![Type::String], Box::new(Type::Bool));
     let filter_type = Type::Fun(
         vec![Type::List(Box::new(Type::String)), predicate_type],
         Box::new(Type::List(Box::new(Type::String))),

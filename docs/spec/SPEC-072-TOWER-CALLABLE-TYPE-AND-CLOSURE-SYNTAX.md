@@ -1,6 +1,6 @@
 # SPEC-072: Tower Callable Type and Closure Syntax
 
-**Status:** Draft
+**Status:** Implemented MVP
 **Date:** 2026-05-26
 **Amends:** [SPEC-003](SPEC-003-TYPE-SYSTEM.md), [SPEC-027](SPEC-027-PURE-FUNCTIONS.md), [SPEC-031](SPEC-031-FIRST-CLASS-FUNCTIONS.md), [SPEC-047](SPEC-047-ACT-MONAD.md), [SPEC-048](SPEC-048-PROC-LIBRARY.md), [SPEC-056](SPEC-056-FIRST-CLASS-WORKFLOW-CARRIER.md)
 **Builds on:** [SPEC-049](SPEC-049-PROCESS-RUNTIME-SEMANTICS.md), [SPEC-050](SPEC-050-OPERATIONAL-BOTTOM-AND-SCOPED-HANDLING.md), [SPEC-054](SPEC-054-GENERALIZED-TYPED-DO-NOTATION.md), [SPEC-067](SPEC-067-CONSTRUCTOR-KINDED-PARAMETERS-AND-HKT.md), [SPEC-069](SPEC-069-ALPHA-VISIBLE-TOWER-ALGEBRA-AND-DO-LOWERING.md)
@@ -553,3 +553,4 @@ Requirements:
 ### 2026-05-26
 
 - Initial draft. Defines tower callable arrows `->`, `-*>`, `=>`, `=*>`; switches pure closure shorthand to `|args| -> body`; reserves Act/Proc/Workflow callable and closure syntax; and separates callable application stratum from returned computation value type.
+- Implemented MVP closeout via TASK-957 through TASK-963 and TASK-962. The first slice accepts preferred pure callable syntax, preserves legacy `Fn(...) -> ...` compatibility, enforces exact callable arity, implements pure closure `|args| -> body`, reserves higher-stratum arrows fail-closed, migrates std/reference daily-use surfaces, and records C72-1 through C72-8 evidence in `docs/plan/audits/TASK-962-tower-callable-syntax-acceptance-matrix.md`.

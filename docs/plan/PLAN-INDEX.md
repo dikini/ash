@@ -3737,7 +3737,7 @@ Phase 126 introduces tower-aligned callable type and closure syntax. It makes `(
 ## Phase 127: Ashgrove Install, Update, Cleanup, and Git Deployment
 
 **Priority:** High (alpha release boundary for coherent installation, update, removal, cleanup, and git-pinned deployment before registry package management)
-**Status:** ⚠️ Partial follow-up slice after TASK-974 report; SPEC-073 remains Draft pending deferred acceptance rows
+**Status:** ⚠️ Partial hardened vendored-dependency follow-up slice after TASK-974 report; SPEC-073 remains Draft pending deferred acceptance rows
 **Spec:** [SPEC-073](../spec/SPEC-073-ASHGROVE-INSTALL-UPDATE-CLEANUP-GIT-DEPLOYMENT.md)
 **Plan:** [PLAN-122](PLAN-122-ASHGROVE-INSTALL-UPDATE-CLEANUP-GIT-DEPLOYMENT.md)
 

@@ -12,7 +12,7 @@
 
 ## 1. Status
 
-**Status:** ⚠️ Partial follow-up slice after TASK-974 report; SPEC-073 remains Draft pending deferred acceptance rows
+**Status:** ⚠️ Partial hardened vendored-dependency follow-up slice after TASK-974 report; SPEC-073 remains Draft pending deferred acceptance rows
 **Spec:** [SPEC-073](../spec/SPEC-073-ASHGROVE-INSTALL-UPDATE-CLEANUP-GIT-DEPLOYMENT.md)
 **Task range:** [TASK-964](tasks/TASK-964-ashgrove-install-policy-packet.md) through [TASK-974](tasks/TASK-974-ashgrove-closeout-acceptance.md)
 

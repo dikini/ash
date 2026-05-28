@@ -5770,6 +5770,17 @@ fn resolve_module_path(module_segments: &[String], search_roots: &[PathBuf]) -> 
         if is_locked_vendor_root(root) && !locked_vendor_root_allows(root, module_segments) {
             continue;
         }
+        if is_locked_vendor_package_root(root) {
+            if !locked_vendor_package_root_allows(root, module_segments) {
+                continue;
+            }
+            if let Some(package_relative_segments) = module_segments.get(1..)
+                && let Some(path) = resolve_in_root(root.as_path(), package_relative_segments)
+            {
+                return Some(path);
+            }
+            continue;
+        }
         if let Some(path) = resolve_in_root(root.as_path(), module_segments) {
             return Some(path);
         }
@@ -5786,6 +5797,35 @@ fn is_locked_vendor_root(root: &Path) -> bool {
             == Some("vendor")
 }
 
+fn is_locked_vendor_package_root(root: &Path) -> bool {
+    root.parent()
+        .and_then(Path::file_name)
+        .and_then(|name| name.to_str())
+        == Some("ash")
+        && root
+            .parent()
+            .and_then(Path::parent)
+            .and_then(Path::file_name)
+            .and_then(|name| name.to_str())
+            == Some("vendor")
+}
+
+fn locked_vendor_package_root_allows(root: &Path, module_segments: &[String]) -> bool {
+    let Some(first) = module_segments.first() else {
+        return false;
+    };
+    let Some(package_name) = root.file_name().and_then(|name| name.to_str()) else {
+        return false;
+    };
+    if first != package_name {
+        return false;
+    }
+    let Some(project_root) = root.parent().and_then(Path::parent).and_then(Path::parent) else {
+        return false;
+    };
+    locked_project_allows_package(project_root, first)
+}
+
 fn locked_vendor_root_allows(root: &Path, module_segments: &[String]) -> bool {
     let Some(first) = module_segments.first() else {
         return false;
@@ -5793,20 +5833,24 @@ fn locked_vendor_root_allows(root: &Path, module_segments: &[String]) -> bool {
     let Some(project_root) = root.parent().and_then(Path::parent) else {
         return false;
     };
-    let Ok(lock_text) = std::fs::read_to_string(project_root.join("ash.lock")) else {
-        return false;
-    };
-    let Ok(lock) = toml::from_str::<toml::Value>(&lock_text) else {
+    locked_project_allows_package(project_root, first)
+}
+
+fn locked_project_allows_package(project_root: &Path, package_name: &str) -> bool {
+    let Ok(lock) = read_project_lock(project_root) else {
         return false;
     };
     lock.get("package")
         .and_then(toml::Value::as_array)
         .is_some_and(|packages| {
             packages.iter().any(|package| {
-                package
-                    .get("name")
-                    .and_then(toml::Value::as_str)
-                    .is_some_and(|name| name == first)
+                let Ok(name) = locked_package_name(package) else {
+                    return false;
+                };
+                if locked_package_commit(package).is_err() {
+                    return false;
+                }
+                name == package_name
             })
         })
 }
@@ -5929,12 +5973,12 @@ fn search_roots(root: &Path) -> Result<Vec<PathBuf>, EngineError> {
     if let Some(value) = std::env::var_os("ASH_LIBRARY_PATH") {
         roots.extend(std::env::split_paths(&value));
     }
-    roots.extend(discover_locked_vendor_roots(root)?);
+    roots.extend(discover_locked_project_roots(root)?);
     roots.push(builtin_stdlib_root());
     Ok(roots)
 }
 
-fn discover_locked_vendor_roots(importing_dir: &Path) -> Result<Vec<PathBuf>, EngineError> {
+fn discover_locked_project_roots(importing_dir: &Path) -> Result<Vec<PathBuf>, EngineError> {
     let Some(project_root) = discover_ash_project_root(importing_dir) else {
         return Ok(Vec::new());
     };
@@ -5944,36 +5988,39 @@ fn discover_locked_vendor_roots(importing_dir: &Path) -> Result<Vec<PathBuf>, En
         return Ok(Vec::new());
     }
 
+    let lock = read_project_lock(&project_root)?;
+    let packages = lock
+        .get("package")
+        .and_then(toml::Value::as_array)
+        .ok_or_else(|| EngineError::Configuration("ash.lock missing package entries".into()))?;
+
+    discover_locked_vendor_roots(&vendor_root, packages)
+}
+
+fn read_project_lock(project_root: &Path) -> Result<toml::Value, EngineError> {
     let lock_text = std::fs::read_to_string(project_root.join("ash.lock")).map_err(|error| {
         EngineError::Configuration(format!(
             "failed to read ash.lock for project '{}': {error}",
             project_root.display()
         ))
     })?;
-    let lock: toml::Value = toml::from_str(&lock_text).map_err(|error| {
+    toml::from_str(&lock_text).map_err(|error| {
         EngineError::Configuration(format!(
             "failed to parse ash.lock for project '{}': {error}",
             project_root.display()
         ))
-    })?;
-    let packages = lock
-        .get("package")
-        .and_then(toml::Value::as_array)
-        .ok_or_else(|| EngineError::Configuration("ash.lock missing package entries".into()))?;
+    })
+}
 
+fn discover_locked_vendor_roots(
+    vendor_root: &Path,
+    packages: &[toml::Value],
+) -> Result<Vec<PathBuf>, EngineError> {
     let mut roots = Vec::with_capacity(packages.len() + 1);
-    roots.push(vendor_root.clone());
+    roots.push(vendor_root.to_path_buf());
     for package in packages {
-        let name = package
-            .get("name")
-            .and_then(toml::Value::as_str)
-            .ok_or_else(|| EngineError::Configuration("ash.lock package missing name".into()))?;
-        validate_locked_package_name(name)?;
-        let commit = package
-            .get("commit")
-            .and_then(toml::Value::as_str)
-            .ok_or_else(|| EngineError::Configuration("ash.lock package missing commit".into()))?;
-        validate_locked_commit(commit)?;
+        let name = locked_package_name(package)?;
+        let _commit = locked_package_commit(package)?;
         let package_root = vendor_root.join(name);
         if !package_root.is_dir() {
             return Err(EngineError::Configuration(format!(
@@ -5983,6 +6030,24 @@ fn discover_locked_vendor_roots(importing_dir: &Path) -> Result<Vec<PathBuf>, En
         }
     }
     Ok(roots)
+}
+
+fn locked_package_name(package: &toml::Value) -> Result<&str, EngineError> {
+    let name = package
+        .get("name")
+        .and_then(toml::Value::as_str)
+        .ok_or_else(|| EngineError::Configuration("ash.lock package missing name".into()))?;
+    validate_locked_package_name(name)?;
+    Ok(name)
+}
+
+fn locked_package_commit(package: &toml::Value) -> Result<&str, EngineError> {
+    let commit = package
+        .get("commit")
+        .and_then(toml::Value::as_str)
+        .ok_or_else(|| EngineError::Configuration("ash.lock package missing commit".into()))?;
+    validate_locked_commit(commit)?;
+    Ok(commit)
 }
 
 fn discover_ash_project_root(importing_dir: &Path) -> Option<PathBuf> {

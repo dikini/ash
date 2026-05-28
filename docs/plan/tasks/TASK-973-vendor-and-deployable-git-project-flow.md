@@ -37,6 +37,7 @@ Implement vendor/offline deployment for git-pinned Ash projects.
 - `check_discovers_locked_vendored_dependency_without_dependency_root_env` proves offline `ash check src/main.ash` resolves a locked dependency from `vendor/ash/<package>/` with only lower-case `ash.toml` and `ash.lock`.
 - `run_discovers_locked_vendored_dependency_without_dependency_root_env` proves explicit offline `ash run src/main.ash:main` resolves the same locked vendored dependency without dependency-root environment variables.
 - `malformed_lock_package_name_fails_closed_without_resolving_vendor_escape` proves CLI discovery rejects traversal package names before resolving any escaped vendor directory.
+- `unlocked_vendor_package_is_not_importable`, `run_does_not_import_unlocked_vendor_package`, `unlocked_top_level_module_inside_locked_package_is_not_importable`, `run_does_not_import_top_level_module_inside_locked_package`, and `explicit_vendor_package_root_does_not_expose_top_level_modules` prove vendored dependency discovery is gated by the first import segment matching a validated locked package name for both `ash check`, explicit ordinary-file `ash run`, and explicit dependency-root package inputs.
 
 ### Non-goals
 

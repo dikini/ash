@@ -393,7 +393,7 @@ For alpha:
 4. The module loader must search those package roots when resolving imports for dependency aliases.
 5. A source-level `dependency <alias> from "<path>";` declaration from [SPEC-009](SPEC-009-MODULES.md) remains a local/path dependency form. A duplicate alias between source declarations and `ash.toml` dependencies is rejected in alpha rather than merged.
 
-Current implementation note: the Phase 127 follow-up slice teaches `ash-engine` module resolution to discover an ancestor lower-case `ash.toml`, read `ash.lock`, validate locked package names and full 40-character commits, and add `vendor/ash/` plus locked `vendor/ash/<package>/` directories for `ash check` without requiring `ASH_DEP_ROOTS` or `ASH_DEPENDENCY_ROOTS`. It does not crawl arbitrary directories. This remains partial because fetched-cache roots are not discovered without vendoring and `ash run` still has separate entry-runtime import limitations.
+Current implementation note: the Phase 127 follow-up slices teach `ash-engine` module resolution to discover an ancestor lower-case `ash.toml`, read `ash.lock`, validate locked package names and full 40-character commits, and add `vendor/ash/` plus locked `vendor/ash/<package>/` directories for `ash check src/main.ash` and explicit ordinary-file `ash run src/main.ash:main` without requiring `ASH_DEP_ROOTS` or `ASH_DEPENDENCY_ROOTS`. It does not crawl arbitrary directories. This remains partial because fetched-cache roots are not discovered without vendoring.
 
 TASK-972 owns the compiler/module-loader integration. Merely fetching git repositories is not enough to satisfy this spec.
 
@@ -405,7 +405,7 @@ TASK-972 owns the compiler/module-loader integration. Merely fetching git reposi
 
 `ashgrove vendor --check` validates that the vendor directory exactly matches `ash.lock` without writing or fetching anything.
 
-Current implementation note: the Phase 127 second slice materializes local git dependencies into `$XDG_CACHE_HOME/ash/git/repos/<package>-<url-digest>.git` plus `$XDG_CACHE_HOME/ash/git/checkouts/<package>-<url-digest>/<commit>/`, and `vendor` copies and checks package content from those locked checkouts. A follow-up slice adds `ash check` discovery for the default `vendor/ash/` layout. This is still not full acceptance because `ash run` lock/vendor integration and direct fetched-cache dependency roots remain deferred.
+Current implementation note: the Phase 127 second slice materializes local git dependencies into `$XDG_CACHE_HOME/ash/git/repos/<package>-<url-digest>.git` plus `$XDG_CACHE_HOME/ash/git/checkouts/<package>-<url-digest>/<commit>/`, and `vendor` copies and checks package content from those locked checkouts. Follow-up slices add `ash check src/main.ash` and explicit ordinary-file `ash run src/main.ash:main` discovery for the default `vendor/ash/` layout. This is still not full acceptance because direct fetched-cache dependency roots remain deferred.
 
 Deployment from git-based Ash projects MUST be possible with explicit current CLI forms:
 

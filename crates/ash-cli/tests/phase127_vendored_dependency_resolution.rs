@@ -78,7 +78,51 @@ fn check_discovers_locked_vendored_dependency_without_dependency_root_env() {
 }
 
 #[test]
+fn run_discovers_locked_vendored_dependency_without_dependency_root_env() {
+    let project = VendoredProject::new();
+
+    let mut command = ash_command();
+    command.args([
+        "run",
+        &format!("{}:main", project.main_path().to_str().expect("utf8")),
+    ]);
+
+    command
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("HelperToken"));
+}
+
+#[test]
 fn malformed_lock_package_name_fails_closed_without_resolving_vendor_escape() {
+    let project = malformed_lock_project();
+
+    let mut command = ash_command();
+    command.args(["check", project.main_path().to_str().expect("utf8")]);
+
+    command
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("invalid package name"));
+}
+
+#[test]
+fn run_fails_closed_on_malformed_lock_package_name() {
+    let project = malformed_lock_project();
+
+    let mut command = ash_command();
+    command.args([
+        "run",
+        &format!("{}:main", project.main_path().to_str().expect("utf8")),
+    ]);
+
+    command
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("invalid package name"));
+}
+
+fn malformed_lock_project() -> VendoredProject {
     let project = VendoredProject::new();
     fs::write(
         project.root.join("ash.lock"),
@@ -97,14 +141,7 @@ fn malformed_lock_package_name_fails_closed_without_resolving_vendor_escape() {
         "pub type EscapeToken = EscapeToken { value: Int };\n",
     )
     .expect("escape module");
-
-    let mut command = ash_command();
-    command.args(["check", project.main_path().to_str().expect("utf8")]);
-
-    command
-        .assert()
-        .failure()
-        .stderr(predicate::str::contains("invalid package name"));
+    project
 }
 
 #[test]

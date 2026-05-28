@@ -8,7 +8,7 @@
 
 This run salvaged and continued the live Phase 127 diff without starting over or touching another checkout. The resulting tree contains a new `ashgrove` workspace crate, focused tests for TASK-966 through TASK-973, an installed-stdlib/dependency-root module-loader seam in `ash-engine`, and status documentation that does not promote SPEC-073 to Implemented MVP.
 
-The implementation is intentionally reported as partial. Focused tests exercise a fixture-based first slice, but several SPEC-073 acceptance rows still require real source builds, atomic publish, release tarball production/schema validation, launcher shims, trust metadata preservation, and full `ash check`/`ash run` lockfile/vendor integration. Follow-up slices added executable-bit tarball validation, current-project and XDG daemon-state removal protections, XDG git cache checkouts at exact lockfile commits, vendor package content materialization, and `ash check` discovery of default vendored locked dependencies, but those rows remain partial where broader producer/cleanup/CLI integration behavior is still missing.
+The implementation is intentionally reported as partial. Focused tests exercise a fixture-based first slice, but several SPEC-073 acceptance rows still require real source builds, atomic publish, release tarball production/schema validation, launcher shims, trust metadata preservation, and direct fetched-cache dependency-root integration. Follow-up slices added executable-bit tarball validation, current-project and XDG daemon-state removal protections, XDG git cache checkouts at exact lockfile commits, vendor package content materialization, and `ash check`/explicit ordinary-file `ash run` discovery of default vendored locked dependencies, but those rows remain partial where broader producer/cleanup/CLI integration behavior is still missing.
 
 ## Completed Or Partially Completed Tasks
 
@@ -20,8 +20,8 @@ The implementation is intentionally reported as partial. Focused tests exercise 
 | TASK-969 | Partial | Tarball install validates basic safe extraction and required path shape, records a digest, rejects unsafe symlink entries, and rejects required binaries without executable bits; release producer, schema validation, archive-version policy, path/URL recording, and atomic publish remain deferred. |
 | TASK-970 | Partial | Default/list/current/update-from-existing selector flows are covered; launcher behavior and full source/tarball update semantics remain deferred. |
 | TASK-971 | Partial | Remove protects user default, current-project pins, `ASHGROVE_RUNNING_TOOLCHAIN`, and TOML daemon state under `$XDG_STATE_HOME/ash/daemon/`; cleanup dry-run is non-destructive for old-toolchain planning. Cleanup execution/cache/orphan/project planning remains deferred. |
-| TASK-972 | Partial follow-up slice | Lower-case `ash.toml` dependencies reject unpinned git entries, resolve local git tags/revs to exact commits in `ash.lock`, `lock --check` detects drift, `fetch` materializes local git dependencies into XDG cache checkouts keyed by exact lockfile commits, and `ash check` discovers validated vendored lock roots; trust preservation, direct fetched-cache root discovery, and `ash run` lockfile integration remain deferred. |
-| TASK-973 | Partial follow-up slice | `vendor` copies package content from locked XDG cache checkouts into `vendor/ash/<package>/`, writes provenance entries, rejects unsafe package names and non-40-hex lock commits, `vendor --check` is read-only, and offline `ash check src/main.ash` has focused smoke coverage; offline `ash run` smoke coverage remains deferred. |
+| TASK-972 | Partial follow-up slice | Lower-case `ash.toml` dependencies reject unpinned git entries, resolve local git tags/revs to exact commits in `ash.lock`, `lock --check` detects drift, `fetch` materializes local git dependencies into XDG cache checkouts keyed by exact lockfile commits, and `ash check` plus explicit ordinary-file `ash run` discover validated vendored lock roots; trust preservation and direct fetched-cache root discovery remain deferred. |
+| TASK-973 | Partial follow-up slice | `vendor` copies package content from locked XDG cache checkouts into `vendor/ash/<package>/`, writes provenance entries, rejects unsafe package names and non-40-hex lock commits, `vendor --check` is read-only, and offline `ash check src/main.ash` plus `ash run src/main.ash:main` have focused smoke coverage. |
 | TASK-974 | Reported | This report maps acceptance status, verification, review findings, changed files, and deferrals. |
 
 ## Acceptance Matrix
@@ -39,7 +39,7 @@ The implementation is intentionally reported as partial. Focused tests exercise 
 | A73-9 lock drift detection | Partial | `cargo test -p ashgrove task_972 -- --nocapture`; drift detected after manifest tag change. |
 | A73-10 selected toolchain stdlib | Partial | `cargo test -p ash-engine task_968 -- --nocapture`; explicit stdlib root override works, but launcher-selected installed `ash` flow remains deferred. |
 | A73-11 trust/signing reserved metadata | Deferred | No preservation test or model yet. |
-| A73-12 locked dependencies visible to `ash check`/`ash run` | Partial | `cargo test -p ash-engine task_972 -- --nocapture` proves explicit dependency roots are visible to the loader, `cargo test -p ashgrove task_973 -- --nocapture` proves vendored package content comes from locked cache checkouts, and `RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ash-cli --test phase127_vendored_dependency_resolution -- --nocapture` proves `ash check` discovers validated project `ash.lock`/`vendor/ash` roots without dependency-root env vars. `ash run` and direct fetched-cache roots remain deferred. |
+| A73-12 locked dependencies visible to `ash check`/`ash run` | Partial | `cargo test -p ash-engine task_972 -- --nocapture` proves explicit dependency roots are visible to the loader, `cargo test -p ashgrove task_973 -- --nocapture` proves vendored package content comes from locked cache checkouts, and `RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ash-cli --test phase127_vendored_dependency_resolution -- --nocapture` proves `ash check src/main.ash` and explicit ordinary-file `ash run src/main.ash:main` discover validated project `ash.lock`/`vendor/ash` roots without dependency-root env vars. Direct fetched-cache roots remain deferred. |
 
 ## Focused Verification
 
@@ -98,6 +98,9 @@ Commands run in this worktree:
   - `RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ashgrove --tests -- --nocapture` - passed, 23 tests.
   - `python3 tools/reference/check_frontmatter.py` - passed, `checked=33 pilot=False`.
   - `git diff --check` - passed.
+- Current explicit `ash run` vendored-root slice:
+  - `RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ash-cli --test phase127_vendored_dependency_resolution run_discovers_locked_vendored_dependency_without_dependency_root_env -- --nocapture` - initially failed with exit 2 because `ash run /tmp/.../src/main.ash:main` routed an ordinary dependency import through the entry-runtime import filter: `unsupported entry runtime import 'helper::{HelperToken}'`.
+  - After routing explicit non-entry `FILE:WORKFLOW` ordinary files through the module-loader-backed ordinary path, the same command passed, 1 test.
 
 ## Independent Review Findings
 
@@ -110,7 +113,7 @@ The remaining findings are accepted as current deferred gaps, not dismissed:
 
 - TASK-974 closeout evidence was missing before this report.
 - Source install does not build from source or atomically stage/publish.
-- Git dependency work now materializes XDG cache checkouts and vendor package content for local git fixtures, and `ash check` consumes project `ash.toml`/`ash.lock` plus default `vendor/ash` roots; `ash run` and direct fetched-cache root discovery remain deferred.
+- Git dependency work now materializes XDG cache checkouts and vendor package content for local git fixtures, and `ash check` plus explicit ordinary-file `ash run` consume project `ash.toml`/`ash.lock` plus default `vendor/ash` roots; direct fetched-cache root discovery remains deferred.
 - Remove/cleanup safety now has focused current-project and live-daemon state protection, but cleanup execution/cache/orphan/project planning remains incomplete.
 - Tarball validation now checks executable permissions for required binaries on Unix, but does not yet check full schemas or provide a producer.
 - Launcher dispatch is not implemented.
@@ -125,7 +128,7 @@ The remaining findings are accepted as current deferred gaps, not dismissed:
 - Full metadata models preserving reserved trust/signing fields.
 - Full cleanup execution, cache/orphan handling, and configured known-project root protection.
 - Remote-authenticated git fetch policy, trust metadata preservation, and direct fetched-cache dependency root discovery.
-- Offline deployment smoke tests through `ash run`; `ash check` has focused vendored-root coverage only.
+- Direct fetched-cache dependency-root discovery without vendoring.
 - Broader acceptance evidence before SPEC-073 can move beyond Draft.
 
 ## Changed Files

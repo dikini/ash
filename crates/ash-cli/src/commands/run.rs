@@ -153,6 +153,13 @@ pub async fn run(args: &RunArgs) -> Result<RunOutcome> {
         .validate_configuration_for_source(&source)
         .map_err(classify_engine_error)?;
     let source_kind = classify_workflow_source(&source);
+    let source_kind = if selection.workflow.is_some()
+        && matches!(source_kind, WorkflowSourceKind::EntryCandidate)
+    {
+        WorkflowSourceKind::Ordinary
+    } else {
+        source_kind
+    };
     let use_entry_bootstrap = should_use_entry_bootstrap(source_kind);
     let workflow_name = selection.workflow.as_deref().unwrap_or("main");
     let host_mode = if args.trace {

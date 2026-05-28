@@ -35,8 +35,8 @@ Implement project `ash.toml`, `ash.lock`, git dependency resolution, fetch, lock
 - `ashgrove fetch` now writes `ash.lock`, clones git dependencies into `$XDG_CACHE_HOME/ash/git/repos/<package>-<url-digest>.git`, and publishes detached checkouts under `$XDG_CACHE_HOME/ash/git/checkouts/<package>-<url-digest>/<commit>/`.
 - `task_972_fetch_materializes_exact_lock_commit_in_xdg_cache` proves a moved manifest tag does not change the already-materialized cached dependency root; the checkout content comes from the exact lockfile commit.
 - Lockfile commit values consumed by vendoring must be full 40-character hexadecimal commit hashes.
-- `ash check src/main.ash` now discovers an ancestor lower-case `ash.toml`, validates `ash.lock`, and resolves locked packages from the default `vendor/ash/` layout without `ASH_DEP_ROOTS` or `ASH_DEPENDENCY_ROOTS`.
-- The full requirement remains partial because direct fetched-cache root discovery, trust preservation, and `ash run` lock/vendor integration are still deferred.
+- `ash check src/main.ash` and explicit ordinary-file `ash run src/main.ash:main` now discover an ancestor lower-case `ash.toml`, validate `ash.lock`, and resolve locked packages from the default `vendor/ash/` layout without `ASH_DEP_ROOTS` or `ASH_DEPENDENCY_ROOTS`.
+- The full requirement remains partial because direct fetched-cache root discovery and trust preservation are still deferred.
 
 ### Non-goals
 
@@ -71,7 +71,7 @@ checklist:
   - [ ] Reject unpinned dependencies outside an explicit development override.
   - [ ] Preserve reserved trust/signing fields in manifest/lockfile read-modify-write flows.
   - [x] Implement `ashgrove fetch` and `ashgrove lock --check`.
-  - [ ] Integrate locked dependency roots with `ash-cli`/`ash-engine` module resolution so `ash check` and `ash run` can import fetched dependencies. `ash check` now covers vendored roots; `ash run` and direct fetched-cache roots remain incomplete.
+  - [ ] Integrate locked dependency roots with `ash-cli`/`ash-engine` module resolution so `ash check` and `ash run` can import fetched dependencies. `ash check` and explicit ordinary-file `ash run src/main.ash:main` now cover vendored roots; direct fetched-cache roots remain incomplete.
 ```
 
 

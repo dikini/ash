@@ -35,8 +35,8 @@ Implement vendor/offline deployment for git-pinned Ash projects.
 - `task_973_vendor_materializes_package_content_from_locked_cache_commit` proves vendored content follows the exact lockfile commit even after the manifest tag is moved.
 - `vendor --check` remains read-only and validates provenance plus vendored file content against the locked cached checkout without fetching or writing.
 - `check_discovers_locked_vendored_dependency_without_dependency_root_env` proves offline `ash check src/main.ash` resolves a locked dependency from `vendor/ash/<package>/` with only lower-case `ash.toml` and `ash.lock`.
+- `run_discovers_locked_vendored_dependency_without_dependency_root_env` proves explicit offline `ash run src/main.ash:main` resolves the same locked vendored dependency without dependency-root environment variables.
 - `malformed_lock_package_name_fails_closed_without_resolving_vendor_escape` proves CLI discovery rejects traversal package names before resolving any escaped vendor directory.
-- Offline `ash run src/main.ash:main` remains deferred because the current `ash run` entry-runtime path rejects ordinary dependency imports before the module-loader-backed execution path can prove the same root discovery.
 
 ### Non-goals
 
@@ -68,7 +68,7 @@ checklist:
   - [x] Implement `ashgrove vendor --check` as read-only validation without writes or network fetches.
   - [x] Add an offline deployment smoke test using a locked git dependency for `ash check`.
   - [ ] Verify selected toolchain stdlib remains separate from project dependencies.
-  - [ ] Verify explicit current CLI forms such as `ash check src/main.ash` and `ash run src/main.ash:main` work with vendored dependencies. `ash check src/main.ash` now has focused coverage; `ash run` remains incomplete.
+  - [x] Verify explicit current CLI forms such as `ash check src/main.ash` and `ash run src/main.ash:main` work with vendored dependencies.
 ```
 
 

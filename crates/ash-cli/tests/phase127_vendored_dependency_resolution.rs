@@ -169,10 +169,75 @@ fn explicit_vendor_root_does_not_bypass_lock_commit_validation() {
         .env("ASH_DEP_ROOTS", project.root.join("vendor/ash"))
         .args(["check", project.main_path().to_str().expect("utf8")]);
 
+    command.assert().failure().stderr(predicate::str::contains(
+        "locked git commit must be a full 40-character commit hash",
+    ));
+}
+
+#[test]
+fn explicit_vendor_root_fails_closed_on_unrelated_malformed_lock_package_name() {
+    let project = VendoredProject::new();
+    write_unrelated_malformed_name_before_valid_helper(&project);
+    fs::remove_file(project.root.join("ash.toml")).expect("remove manifest");
+
+    let mut command = ash_command();
+    command
+        .env("ASH_DEP_ROOTS", project.root.join("vendor/ash"))
+        .args(["check", project.main_path().to_str().expect("utf8")]);
+
     command
         .assert()
         .failure()
-        .stderr(predicate::str::contains("module 'helper' not found"));
+        .stderr(predicate::str::contains("invalid package name"));
+}
+
+#[test]
+fn explicit_vendor_root_fails_closed_on_unrelated_malformed_lock_commit() {
+    let project = VendoredProject::new();
+    write_unrelated_malformed_commit_before_valid_helper(&project);
+    fs::remove_file(project.root.join("ash.toml")).expect("remove manifest");
+
+    let mut command = ash_command();
+    command
+        .env("ASH_DEP_ROOTS", project.root.join("vendor/ash"))
+        .args(["check", project.main_path().to_str().expect("utf8")]);
+
+    command.assert().failure().stderr(predicate::str::contains(
+        "locked git commit must be a full 40-character commit hash",
+    ));
+}
+
+#[test]
+fn explicit_vendor_package_root_fails_closed_on_unrelated_malformed_lock_package_name() {
+    let project = VendoredProject::new();
+    write_unrelated_malformed_name_before_valid_helper(&project);
+    fs::remove_file(project.root.join("ash.toml")).expect("remove manifest");
+
+    let mut command = ash_command();
+    command
+        .env("ASH_DEP_ROOTS", project.root.join("vendor/ash/helper"))
+        .args(["check", project.main_path().to_str().expect("utf8")]);
+
+    command
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("invalid package name"));
+}
+
+#[test]
+fn explicit_vendor_package_root_fails_closed_on_unrelated_malformed_lock_commit() {
+    let project = VendoredProject::new();
+    write_unrelated_malformed_commit_before_valid_helper(&project);
+    fs::remove_file(project.root.join("ash.toml")).expect("remove manifest");
+
+    let mut command = ash_command();
+    command
+        .env("ASH_DEP_ROOTS", project.root.join("vendor/ash/helper"))
+        .args(["check", project.main_path().to_str().expect("utf8")]);
+
+    command.assert().failure().stderr(predicate::str::contains(
+        "locked git commit must be a full 40-character commit hash",
+    ));
 }
 
 #[test]
@@ -224,6 +289,26 @@ fn write_malformed_helper_commit(project: &VendoredProject) {
         format!("[[package]]\nname = \"helper\"\ngit = \"{HELPER_GIT_URL}\"\ncommit = \"short\"\n"),
     )
     .expect("malformed lock");
+}
+
+fn write_unrelated_malformed_name_before_valid_helper(project: &VendoredProject) {
+    fs::write(
+        project.root.join("ash.lock"),
+        format!(
+            "[[package]]\nname = \"../evil\"\ngit = \"file:///tmp/evil\"\ncommit = \"{HELPER_COMMIT}\"\n\n[[package]]\nname = \"helper\"\ngit = \"{HELPER_GIT_URL}\"\ncommit = \"{HELPER_COMMIT}\"\n",
+        ),
+    )
+    .expect("malformed unrelated lock name");
+}
+
+fn write_unrelated_malformed_commit_before_valid_helper(project: &VendoredProject) {
+    fs::write(
+        project.root.join("ash.lock"),
+        format!(
+            "[[package]]\nname = \"unrelated\"\ngit = \"file:///tmp/unrelated\"\ncommit = \"short\"\n\n[[package]]\nname = \"helper\"\ngit = \"{HELPER_GIT_URL}\"\ncommit = \"{HELPER_COMMIT}\"\n",
+        ),
+    )
+    .expect("malformed unrelated lock commit");
 }
 
 fn malformed_lock_project() -> VendoredProject {

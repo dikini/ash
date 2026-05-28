@@ -403,7 +403,7 @@ pub fn load_ordinary_source(path: &Path, source: &str) -> Result<LoadedOrdinaryF
             &absolute_roots,
         );
         let module_path =
-            resolve_module_path(&module_segments, &search_roots).ok_or_else(|| {
+            resolve_module_path(&module_segments, &search_roots)?.ok_or_else(|| {
                 EngineError::Parse(format!(
                     "module '{}' not found",
                     import.module_segments.join("::")
@@ -1780,7 +1780,7 @@ fn collect_import_visibility_info(
             crate_root,
             &absolute_roots,
         );
-        let Some(target_path) = resolve_module_path(&module_segments, &search_roots) else {
+        let Ok(Some(target_path)) = resolve_module_path(&module_segments, &search_roots) else {
             add_unresolved_import_selections(&mut info, import_spec.selections);
             continue;
         };
@@ -1868,7 +1868,7 @@ fn collect_public_import_visibility_exports(
             crate_root.as_deref(),
             &absolute_roots,
         );
-        let Some(target_path) = resolve_module_path(&module_segments, &search_roots) else {
+        let Ok(Some(target_path)) = resolve_module_path(&module_segments, &search_roots) else {
             continue;
         };
         let Ok(target_source) = std::fs::read_to_string(&target_path) else {
@@ -2609,7 +2609,7 @@ pub(crate) fn collect_module_exports(
                 crate_root.as_deref(),
                 &absolute_roots,
             );
-            if let Some(target_path) = resolve_module_path(&module_segments, &search_roots) {
+            if let Some(target_path) = resolve_module_path(&module_segments, &search_roots)? {
                 let target_canonical = target_path
                     .canonicalize()
                     .unwrap_or_else(|_| target_path.clone());
@@ -2692,7 +2692,7 @@ fn resolve_use_target(
         &absolute_roots,
     );
 
-    resolve_module_path(&module_segments, &search_roots).ok_or_else(|| {
+    resolve_module_path(&module_segments, &search_roots)?.ok_or_else(|| {
         EngineError::Parse(format!(
             "module '{}' not found (searched from '{}')",
             segments
@@ -5765,27 +5765,30 @@ where
     snippets
 }
 
-fn resolve_module_path(module_segments: &[String], search_roots: &[PathBuf]) -> Option<PathBuf> {
+fn resolve_module_path(
+    module_segments: &[String],
+    search_roots: &[PathBuf],
+) -> Result<Option<PathBuf>, EngineError> {
     for root in search_roots {
-        if is_locked_vendor_root(root) && !locked_vendor_root_allows(root, module_segments) {
+        if is_locked_vendor_root(root) && !locked_vendor_root_allows(root, module_segments)? {
             continue;
         }
         if is_locked_vendor_package_root(root) {
-            if !locked_vendor_package_root_allows(root, module_segments) {
+            if !locked_vendor_package_root_allows(root, module_segments)? {
                 continue;
             }
             if let Some(package_relative_segments) = module_segments.get(1..)
                 && let Some(path) = resolve_in_root(root.as_path(), package_relative_segments)
             {
-                return Some(path);
+                return Ok(Some(path));
             }
             continue;
         }
         if let Some(path) = resolve_in_root(root.as_path(), module_segments) {
-            return Some(path);
+            return Ok(Some(path));
         }
     }
-    None
+    Ok(None)
 }
 
 fn is_locked_vendor_root(root: &Path) -> bool {
@@ -5810,49 +5813,54 @@ fn is_locked_vendor_package_root(root: &Path) -> bool {
             == Some("vendor")
 }
 
-fn locked_vendor_package_root_allows(root: &Path, module_segments: &[String]) -> bool {
+fn locked_vendor_package_root_allows(
+    root: &Path,
+    module_segments: &[String],
+) -> Result<bool, EngineError> {
     let Some(first) = module_segments.first() else {
-        return false;
+        return Ok(false);
     };
     let Some(package_name) = root.file_name().and_then(|name| name.to_str()) else {
-        return false;
+        return Ok(false);
     };
     if first != package_name {
-        return false;
+        return Ok(false);
     }
     let Some(project_root) = root.parent().and_then(Path::parent).and_then(Path::parent) else {
-        return false;
+        return Ok(false);
     };
     locked_project_allows_package(project_root, first)
 }
 
-fn locked_vendor_root_allows(root: &Path, module_segments: &[String]) -> bool {
+fn locked_vendor_root_allows(root: &Path, module_segments: &[String]) -> Result<bool, EngineError> {
     let Some(first) = module_segments.first() else {
-        return false;
+        return Ok(false);
     };
     let Some(project_root) = root.parent().and_then(Path::parent) else {
-        return false;
+        return Ok(false);
     };
     locked_project_allows_package(project_root, first)
 }
 
-fn locked_project_allows_package(project_root: &Path, package_name: &str) -> bool {
-    let Ok(lock) = read_project_lock(project_root) else {
-        return false;
-    };
-    lock.get("package")
+fn locked_project_allows_package(
+    project_root: &Path,
+    package_name: &str,
+) -> Result<bool, EngineError> {
+    let lock = read_project_lock(project_root)?;
+    let packages = lock
+        .get("package")
         .and_then(toml::Value::as_array)
-        .is_some_and(|packages| {
-            packages.iter().any(|package| {
-                let Ok(name) = locked_package_name(package) else {
-                    return false;
-                };
-                if locked_package_commit(package).is_err() {
-                    return false;
-                }
-                name == package_name
-            })
-        })
+        .ok_or_else(|| EngineError::Configuration("ash.lock missing package entries".into()))?;
+
+    let mut allowed = false;
+    for package in packages {
+        let name = locked_package_name(package)?;
+        let _commit = locked_package_commit(package)?;
+        if name == package_name {
+            allowed = true;
+        }
+    }
+    Ok(allowed)
 }
 
 fn normalize_import_resolution(

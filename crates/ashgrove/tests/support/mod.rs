@@ -49,10 +49,22 @@ pub fn install_fake_toolchain(roots: &XdgFixture, id: &str) {
 }
 
 pub fn create_toolchain_shape(root: &Path, id: &str) {
+    #[cfg(unix)]
+    use std::os::unix::fs::PermissionsExt;
+
     std::fs::create_dir_all(root.join("bin")).expect("bin");
     std::fs::create_dir_all(root.join("lib/ash/std/src")).expect("std");
     std::fs::write(root.join("bin/ash"), "#!/bin/sh\n").expect("ash");
     std::fs::write(root.join("bin/ashgrove"), "#!/bin/sh\n").expect("ashgrove");
+    #[cfg(unix)]
+    {
+        for rel in ["bin/ash", "bin/ashgrove"] {
+            let path = root.join(rel);
+            let mut permissions = std::fs::metadata(&path).expect("metadata").permissions();
+            permissions.set_mode(0o755);
+            std::fs::set_permissions(path, permissions).expect("permissions");
+        }
+    }
     std::fs::write(
         root.join("lib/ash/std/ash.toml"),
         "[package]\nname = \"std\"\n",
@@ -74,13 +86,31 @@ pub fn create_toolchain_shape(root: &Path, id: &str) {
 pub fn toolchain_tarball_fixture(id: &str) -> tempfile::NamedTempFile {
     let source = tempfile::tempdir().expect("source");
     create_toolchain_shape(source.path(), id);
+    pack_toolchain_dir(id, source.path())
+}
+
+#[cfg(unix)]
+pub fn non_executable_toolchain_tarball_fixture(id: &str) -> tempfile::NamedTempFile {
+    use std::os::unix::fs::PermissionsExt;
+
+    let source = tempfile::tempdir().expect("source");
+    create_toolchain_shape(source.path(), id);
+    let mut permissions = std::fs::metadata(source.path().join("bin/ash"))
+        .expect("metadata")
+        .permissions();
+    permissions.set_mode(0o644);
+    std::fs::set_permissions(source.path().join("bin/ash"), permissions).expect("permissions");
+    pack_toolchain_dir(id, source.path())
+}
+
+fn pack_toolchain_dir(id: &str, source: &Path) -> tempfile::NamedTempFile {
     let file = tempfile::NamedTempFile::new().expect("archive");
     let encoder = flate2::write::GzEncoder::new(
         file.reopen().expect("reopen"),
         flate2::Compression::default(),
     );
     let mut builder = tar::Builder::new(encoder);
-    builder.append_dir_all(id, source.path()).expect("append");
+    builder.append_dir_all(id, source).expect("append");
     builder.finish().expect("finish");
     file
 }

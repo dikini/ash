@@ -55,12 +55,12 @@ commands:
   - cargo check -p ashgrove
   - git diff --check
 checklist:
-  - [ ] Implement `ashgrove remove <toolchain-id>` with default/current/project-selected/live-daemon/running-manager protection.
-  - [ ] Add or consume minimal `ash daemon` toolchain id/root state under `$XDG_STATE_HOME/ash/daemon/` for live protection.
-  - [ ] Define which protections `--force` may override and prove it cannot override live daemon or running-manager protection.
+  - [x] Implement `ashgrove remove <toolchain-id>` with default/current-working-directory project pin/live-daemon/running-manager protection; broader configured known-project root protection remains deferred.
+  - [x] Add or consume minimal `ash daemon` toolchain id/root state under `$XDG_STATE_HOME/ash/daemon/` for live protection.
+  - [x] Define which protections `--force` may override and prove it cannot override live daemon or running-manager protection.
   - [ ] Implement `ashgrove cleanup --project PATH --dry-run` as a non-destructive planner.
   - [ ] Implement cache/orphan/old-toolchain cleanup flags.
-  - [ ] Add deletion tests using isolated temp roots.
+  - [x] Add deletion tests using isolated temp roots.
 ```
 
 
@@ -80,3 +80,5 @@ This task contributes to PLAN-122 and SPEC-073 completion. Later tasks must pres
 ## Notes
 
 Area: lifecycle/semantic. Deletion safety outranks convenience.
+
+2026-05-28 follow-up slice: `ashgrove remove` now refuses toolchains referenced by current-project `ash.toml` pins unless `--force` is passed, refuses toolchains referenced by TOML daemon state under `$XDG_STATE_HOME/ash/daemon/` even with `--force`, and keeps running-manager protection non-overridable. TASK-971 remains partial because cleanup execution/cache/orphan policy is still conservative and `cleanup --project PATH --dry-run` is not a full planner.

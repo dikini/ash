@@ -420,6 +420,7 @@ fn install_from_tarball(paths: &AshgrovePaths, archive: &Path, switch: bool) -> 
         .context("toolchain root must be utf8")?;
     let id = ToolchainId::parse(id)?;
     verify_toolchain_shape(&root, &id)?;
+    verify_required_binaries_executable(&root, &id)?;
     publish_shape(paths, &root, &id)?;
     append_record(
         &paths.toolchain_dir(&id).join("install-record.toml"),
@@ -489,6 +490,31 @@ fn verify_toolchain_shape(root: &Path, id: &ToolchainId) -> Result<()> {
     if !manifest.contains(&format!("toolchain_id = \"{}\"", id.as_str())) {
         bail!("manifest toolchain id does not match {}", id.as_str());
     }
+    Ok(())
+}
+
+#[cfg(unix)]
+fn verify_required_binaries_executable(root: &Path, id: &ToolchainId) -> Result<()> {
+    use std::os::unix::fs::PermissionsExt;
+
+    for rel in ["bin/ash", "bin/ashgrove"] {
+        let path = root.join(rel);
+        let mode = fs::metadata(&path)
+            .with_context(|| format!("read required binary metadata {}", path.display()))?
+            .permissions()
+            .mode();
+        if mode & 0o111 == 0 {
+            bail!(
+                "toolchain '{}' required binary {rel} is not executable",
+                id.as_str()
+            );
+        }
+    }
+    Ok(())
+}
+
+#[cfg(not(unix))]
+fn verify_required_binaries_executable(_root: &Path, _id: &ToolchainId) -> Result<()> {
     Ok(())
 }
 
@@ -601,14 +627,53 @@ fn remove_toolchain(paths: &AshgrovePaths, id: &ToolchainId, force: bool) -> Res
             id.as_str()
         );
     }
+    if live_daemon_uses_toolchain(paths, id)? {
+        bail!("refusing to remove live daemon toolchain '{}'", id.as_str());
+    }
     if read_default(paths)?.as_deref() == Some(id.as_str()) && !force {
         bail!("refusing to remove default toolchain '{}'", id.as_str());
+    }
+    if current_project_uses_toolchain(id)? && !force {
+        bail!(
+            "refusing to remove current project toolchain '{}'",
+            id.as_str()
+        );
     }
     let dir = paths.toolchain_dir(id);
     if dir.exists() {
         fs::remove_dir_all(dir).context("remove toolchain")?;
     }
     Ok(())
+}
+
+fn current_project_uses_toolchain(id: &ToolchainId) -> Result<bool> {
+    let cwd = std::env::current_dir().context("read current directory")?;
+    Ok(project_toolchain_pin(&cwd)?.as_deref() == Some(id.as_str()))
+}
+
+fn live_daemon_uses_toolchain(paths: &AshgrovePaths, id: &ToolchainId) -> Result<bool> {
+    let daemon_dir = paths.state_dir().join("daemon");
+    if !daemon_dir.exists() {
+        return Ok(false);
+    }
+    for entry in fs::read_dir(&daemon_dir).context("read daemon state dir")? {
+        let entry = entry.context("read daemon state entry")?;
+        let metadata = entry
+            .file_type()
+            .with_context(|| format!("read daemon state type {}", entry.path().display()))?;
+        if !metadata.is_file() {
+            continue;
+        }
+        if entry.path().extension().and_then(OsStr::to_str) != Some("toml") {
+            continue;
+        }
+        let text = fs::read_to_string(entry.path()).context("read daemon state")?;
+        let value: toml::Value = toml::from_str(&text).context("parse daemon state")?;
+        if value.get("toolchain_id").and_then(toml::Value::as_str) == Some(id.as_str()) {
+            return Ok(true);
+        }
+    }
+    Ok(false)
 }
 
 fn cleanup(paths: &AshgrovePaths, args: CleanupArgs) -> Result<()> {

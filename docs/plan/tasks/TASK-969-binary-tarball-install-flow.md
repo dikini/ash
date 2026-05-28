@@ -59,7 +59,7 @@ checklist:
   - [ ] Validate tarball directory shape before publish.
   - [ ] Validate `manifest.toml` and `install-record.toml` schema.
   - [ ] Validate archive version/toolchain id matches the target directory.
-  - [ ] Validate executable presence/permissions for required binaries.
+  - [x] Validate executable presence/permissions for required binaries.
   - [ ] Validate stdlib manifest presence.
   - [ ] Reject unsafe archive entries including absolute paths, traversal, symlink/hardlink escapes, device files, and setuid/setgid bits.
   - [ ] Record tarball path/URL/digest/install time in install metadata.
@@ -82,3 +82,5 @@ This task contributes to PLAN-122 and SPEC-073 completion. Later tasks must pres
 ## Notes
 
 Area: install/semantic. Binary install acceptance requires both producer and consumer evidence.
+
+2026-05-28 follow-up slice: added focused coverage that rejects tarballs whose required `bin/ash` payload is present but lacks executable bits, and made fixture tarballs model executable `ash`/`ashgrove` binaries. TASK-969 remains partial because release tarball production, schema validation, archive-version policy, path/URL recording, and atomic publish are still not implemented.

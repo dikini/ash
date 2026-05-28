@@ -269,6 +269,10 @@ impl SelectorMetadata {
     pub fn project_toolchain(&self, project: &Path) -> Option<&ToolchainId> {
         self.projects.get(&project.display().to_string())
     }
+
+    fn project_pins(&self) -> impl Iterator<Item = &ToolchainId> {
+        self.projects.values()
+    }
 }
 
 /// Typed first-slice manifest for an immutable Ash toolchain.
@@ -1633,18 +1637,152 @@ fn live_daemon_uses_toolchain(paths: &AshgrovePaths, id: &ToolchainId) -> Result
 }
 
 fn cleanup(paths: &AshgrovePaths, args: CleanupArgs) -> Result<()> {
-    let _ = (&args.project, args.cache, args.orphans);
-    if args.dry_run {
-        if args.old_toolchains && paths.toolchains_dir().exists() {
-            for entry in fs::read_dir(paths.toolchains_dir())?.flatten() {
-                if entry.path().is_dir() {
-                    println!("would remove {}", entry.path().display());
-                }
-            }
-        }
+    let has_cleanup_flags = args.cache || args.orphans || args.old_toolchains;
+    let project_pin = args
+        .project
+        .as_deref()
+        .map(project_toolchain_pin)
+        .transpose()?
+        .flatten()
+        .map(|pin| ToolchainId::parse(&pin))
+        .transpose()?;
+
+    if args.dry_run && args.project.is_some() && !has_cleanup_flags {
+        cleanup_project_dry_run_plan(project_pin.as_ref());
         return Ok(());
     }
-    bail!("cleanup without --dry-run is not implemented for this conservative first slice");
+
+    if args.cache {
+        cleanup_cache(paths, args.dry_run)?;
+    }
+    if args.orphans {
+        cleanup_orphan_toolchain_dirs(paths, args.dry_run)?;
+    }
+    if args.old_toolchains {
+        cleanup_old_toolchains(paths, project_pin.as_ref(), args.dry_run)?;
+    }
+
+    if args.dry_run || has_cleanup_flags {
+        return Ok(());
+    }
+    bail!("cleanup requires at least one of --cache, --orphans, or --old-toolchains");
+}
+
+fn cleanup_project_dry_run_plan(project_pin: Option<&ToolchainId>) {
+    match project_pin {
+        Some(id) => println!("protected project {}", id.as_str()),
+        None => println!("protected project none"),
+    }
+    println!("no destructive cleanup will occur");
+}
+
+fn cleanup_cache(paths: &AshgrovePaths, dry_run: bool) -> Result<()> {
+    let cache_dir = paths.cache_dir();
+    if !cache_dir.exists() {
+        return Ok(());
+    }
+    for name in ["downloads", "git", "builds", "module-cache"] {
+        let path = cache_dir.join(name);
+        if !path.exists() {
+            continue;
+        }
+        if dry_run {
+            println!("would remove cache {}", path.display());
+        } else {
+            remove_path(&path).with_context(|| format!("remove cache {}", path.display()))?;
+            println!("removed cache {}", path.display());
+        }
+    }
+    Ok(())
+}
+
+fn cleanup_orphan_toolchain_dirs(paths: &AshgrovePaths, dry_run: bool) -> Result<()> {
+    if !paths.toolchains_dir().exists() {
+        return Ok(());
+    }
+    for entry in fs::read_dir(paths.toolchains_dir()).context("read toolchains dir")? {
+        let entry = entry.context("read toolchain dir entry")?;
+        if !entry
+            .file_type()
+            .with_context(|| format!("read file type {}", entry.path().display()))?
+            .is_dir()
+        {
+            continue;
+        }
+        let Some(name) = entry.file_name().to_str().map(ToOwned::to_owned) else {
+            continue;
+        };
+        let Ok(id) = ToolchainId::parse(&name) else {
+            continue;
+        };
+        if installed_toolchain_manifest(paths, &id).is_ok()
+            && verify_install_record_any_source(&entry.path(), &id).is_ok()
+        {
+            continue;
+        }
+        if dry_run {
+            println!("would remove orphan {}", entry.path().display());
+        } else {
+            fs::remove_dir_all(entry.path()).context("remove orphan toolchain")?;
+            println!("removed orphan {}", id.as_str());
+        }
+    }
+    Ok(())
+}
+
+fn cleanup_old_toolchains(
+    paths: &AshgrovePaths,
+    project_pin: Option<&ToolchainId>,
+    dry_run: bool,
+) -> Result<()> {
+    let mut ids = installed_toolchain_ids(paths)?;
+    ids.sort_by(|left, right| left.as_str().cmp(right.as_str()));
+    for id in ids {
+        if let Some(reason) = cleanup_protection_reason(paths, &id, project_pin)? {
+            println!("protected {reason} {}", id.as_str());
+            continue;
+        }
+        let dir = paths.toolchain_dir(&id);
+        if dry_run {
+            println!("would remove {}", dir.display());
+        } else {
+            fs::remove_dir_all(&dir).context("remove old toolchain")?;
+            println!("removed {}", id.as_str());
+        }
+    }
+    Ok(())
+}
+
+fn cleanup_protection_reason(
+    paths: &AshgrovePaths,
+    id: &ToolchainId,
+    project_pin: Option<&ToolchainId>,
+) -> Result<Option<&'static str>> {
+    if std::env::var("ASHGROVE_RUNNING_TOOLCHAIN").ok().as_deref() == Some(id.as_str()) {
+        return Ok(Some("running manager"));
+    }
+    if live_daemon_uses_toolchain(paths, id)? {
+        return Ok(Some("live daemon"));
+    }
+    if read_default(paths)?.as_ref() == Some(id) {
+        return Ok(Some("default"));
+    }
+    if project_pin == Some(id) || current_project_uses_toolchain(id)? {
+        return Ok(Some("project"));
+    }
+    if read_selector(paths)?.project_pins().any(|pin| pin == id) {
+        return Ok(Some("project"));
+    }
+    Ok(None)
+}
+
+fn remove_path(path: &Path) -> Result<()> {
+    if path.is_dir() {
+        fs::remove_dir_all(path)?;
+    } else {
+        fs::remove_file(path)?;
+    }
+    Ok(())
 }
 
 fn lock(project: &Path, check: bool) -> Result<()> {

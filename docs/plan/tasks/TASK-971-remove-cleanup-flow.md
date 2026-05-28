@@ -1,6 +1,6 @@
 # TASK-971: Remove cleanup flow
 
-## Status: ⚠️ Partial first slice
+## Status: ⚠️ Partial cleanup planner slice
 
 ## Description
 
@@ -58,8 +58,8 @@ checklist:
   - [x] Implement `ashgrove remove <toolchain-id>` with default/current-working-directory project pin/live-daemon/running-manager protection; broader configured known-project root protection remains deferred.
   - [x] Add or consume minimal `ash daemon` toolchain id/root state under `$XDG_STATE_HOME/ash/daemon/` for live protection.
   - [x] Define which protections `--force` may override and prove it cannot override live daemon or running-manager protection.
-  - [ ] Implement `ashgrove cleanup --project PATH --dry-run` as a non-destructive planner.
-  - [ ] Implement cache/orphan/old-toolchain cleanup flags.
+  - [x] Implement `ashgrove cleanup --project PATH --dry-run` as a non-destructive planner.
+  - [x] Implement conservative cache/orphan/old-toolchain cleanup flags.
   - [x] Add deletion tests using isolated temp roots.
 ```
 
@@ -81,4 +81,4 @@ This task contributes to PLAN-122 and SPEC-073 completion. Later tasks must pres
 
 Area: lifecycle/semantic. Deletion safety outranks convenience.
 
-2026-05-28 follow-up slice: `ashgrove remove` now refuses toolchains referenced by current-project `ash.toml` pins unless `--force` is passed, refuses toolchains referenced by TOML daemon state under `$XDG_STATE_HOME/ash/daemon/` even with `--force`, and keeps running-manager protection non-overridable. TASK-971 remains partial because cleanup execution/cache/orphan policy is still conservative and `cleanup --project PATH --dry-run` is not a full planner.
+2026-05-28 follow-up slice: `ashgrove remove` now refuses toolchains referenced by current-project `ash.toml` pins unless `--force` is passed, refuses toolchains referenced by TOML daemon state under `$XDG_STATE_HOME/ash/daemon/` even with `--force`, and keeps running-manager protection non-overridable. `ashgrove cleanup --project PATH --dry-run` now plans without deletion, protects project pins, and never touches project `ash.toml` or `ash.lock`. `--cache` removes only known Ash-owned cache children under `$XDG_CACHE_HOME/ash`, `--orphans` removes invalid toolchain directories under the toolchain root, and `--old-toolchains` removes installed toolchains only after preserving default, project-pinned, live-daemon, and running-manager toolchains. TASK-971 remains partial because broader orphan analysis across lockfile/cache references, interactive confirmation policy, and cache reachability beyond known Ash-owned cache roots remain deferred.

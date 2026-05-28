@@ -1,6 +1,6 @@
 # TASK-973: Vendor and deployable git project flow
 
-## Status: ⚠️ Partial first slice
+## Status: ⚠️ Partial second slice
 
 ## Description
 
@@ -29,6 +29,13 @@ Implement vendor/offline deployment for git-pinned Ash projects.
 5. Verify selected toolchain stdlib remains separate from project dependencies.
 6. Verify explicit current CLI forms such as `ash check src/main.ash` and `ash run src/main.ash:main` work with vendored dependencies.
 
+### Current Slice Evidence
+
+- `ashgrove vendor` now requires locked dependencies to have been materialized by `ashgrove fetch` and copies package content from `$XDG_CACHE_HOME/ash/git/checkouts/<package>-<url-digest>/<commit>/` into `vendor/ash/<package>/`.
+- `task_973_vendor_materializes_package_content_from_locked_cache_commit` proves vendored content follows the exact lockfile commit even after the manifest tag is moved.
+- `vendor --check` remains read-only and validates provenance plus vendored file content against the locked cached checkout without fetching or writing.
+- Offline `ash check src/main.ash` and `ash run src/main.ash:main` smoke tests remain deferred because `ash-cli` still lacks lockfile/vendor-root discovery.
+
 ### Non-goals
 
 - Do not invent registry semantics.
@@ -54,9 +61,9 @@ commands:
   - cargo check -p ashgrove
   - git diff --check
 checklist:
-  - [ ] Materialize locked dependencies into the default `vendor/ash/` directory or explicit `--output PATH`.
-  - [ ] Record vendor provenance linking each vendored package to a lockfile entry.
-  - [ ] Implement `ashgrove vendor --check` as read-only validation without writes or network fetches.
+  - [x] Materialize locked dependencies into the default `vendor/ash/` directory or explicit `--output PATH`.
+  - [x] Record vendor provenance linking each vendored package to a lockfile entry.
+  - [x] Implement `ashgrove vendor --check` as read-only validation without writes or network fetches.
   - [ ] Add an offline deployment smoke test using a locked git dependency.
   - [ ] Verify selected toolchain stdlib remains separate from project dependencies.
   - [ ] Verify explicit current CLI forms such as `ash check src/main.ash` and `ash run src/main.ash:main` work with vendored dependencies.

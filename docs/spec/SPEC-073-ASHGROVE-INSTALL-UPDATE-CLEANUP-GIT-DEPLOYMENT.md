@@ -403,6 +403,8 @@ TASK-972 owns the compiler/module-loader integration. Merely fetching git reposi
 
 `ashgrove vendor --check` validates that the vendor directory exactly matches `ash.lock` without writing or fetching anything.
 
+Current implementation note: the Phase 127 second slice materializes local git dependencies into `$XDG_CACHE_HOME/ash/git/repos/<package>-<url-digest>.git` plus `$XDG_CACHE_HOME/ash/git/checkouts/<package>-<url-digest>/<commit>/`, and `vendor` copies and checks package content from those locked checkouts. This is still not full acceptance because `ash-cli` does not yet discover `ash.lock` or `vendor/ash/` roots for `ash check`/`ash run`.
+
 Deployment from git-based Ash projects MUST be possible with explicit current CLI forms:
 
 ```text

@@ -102,3 +102,81 @@ fn task_972_lock_serializes_dependency_values_without_toml_injection() {
         Some("v1\n[[package]]\nname = \"evil\"")
     );
 }
+
+#[test]
+fn task_972_fetch_materializes_exact_lock_commit_in_xdg_cache() {
+    let project = support::project_fixture();
+    let dep = support::git_dep_fixture();
+    let v1 = dep.commit("v1");
+    std::fs::write(
+        project.path().join("ash.toml"),
+        format!(
+            "[package]\nname = \"app\"\n\n[dependencies.dep]\ngit = \"{}\"\ntag = \"v1\"\n",
+            dep.url()
+        ),
+    )
+    .expect("manifest");
+    let roots = support::xdg_fixture();
+
+    Command::cargo_bin("ashgrove")
+        .expect("ashgrove")
+        .args(["fetch", "--project", project.path().to_str().expect("utf8")])
+        .envs(roots.env())
+        .assert()
+        .success();
+
+    dep.force_tag("v1", "v2");
+
+    let checkout = roots
+        .cache
+        .path()
+        .join("ash/git/checkouts")
+        .join(format!("dep-{}", support::git_url_digest(&dep.url())))
+        .join(&v1);
+    let materialized = std::fs::read_to_string(checkout.join("lib.ash")).expect("checkout lib");
+    assert!(materialized.contains("pub type Dep = Dep;"));
+    assert!(!materialized.contains("Dep2"));
+}
+
+#[test]
+fn task_972_fetch_uses_existing_lock_commit_when_manifest_tag_moves() {
+    let project = support::project_fixture();
+    let dep = support::git_dep_fixture();
+    let v1 = dep.commit("v1");
+    std::fs::write(
+        project.path().join("ash.toml"),
+        format!(
+            "[package]\nname = \"app\"\n\n[dependencies.dep]\ngit = \"{}\"\ntag = \"v1\"\n",
+            dep.url()
+        ),
+    )
+    .expect("manifest");
+    let roots = support::xdg_fixture();
+
+    Command::cargo_bin("ashgrove")
+        .expect("ashgrove")
+        .args(["lock", "--project", project.path().to_str().expect("utf8")])
+        .envs(roots.env())
+        .assert()
+        .success();
+
+    dep.force_tag("v1", "v2");
+
+    Command::cargo_bin("ashgrove")
+        .expect("ashgrove")
+        .args(["fetch", "--project", project.path().to_str().expect("utf8")])
+        .envs(roots.env())
+        .assert()
+        .success();
+
+    let lock_text = std::fs::read_to_string(project.path().join("ash.lock")).expect("lock");
+    assert!(lock_text.contains(&format!("commit = \"{v1}\"")));
+    let checkout = roots
+        .cache
+        .path()
+        .join("ash/git/checkouts")
+        .join(format!("dep-{}", support::git_url_digest(&dep.url())))
+        .join(&v1);
+    let materialized = std::fs::read_to_string(checkout.join("lib.ash")).expect("checkout lib");
+    assert!(!materialized.contains("Dep2"));
+}

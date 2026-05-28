@@ -281,12 +281,16 @@ fn run_cli() -> Result<()> {
             force,
         } => remove_toolchain(&paths, &ToolchainId::parse(&toolchain_id)?, force),
         Commands::Cleanup(args) => cleanup(&paths, args),
-        Commands::Fetch(args) => fetch(args.project.as_deref().unwrap_or_else(|| Path::new("."))),
+        Commands::Fetch(args) => fetch(
+            &paths,
+            args.project.as_deref().unwrap_or_else(|| Path::new(".")),
+        ),
         Commands::Lock(args) => lock(
             args.project.as_deref().unwrap_or_else(|| Path::new(".")),
             args.check,
         ),
         Commands::Vendor(args) => vendor(
+            &paths,
             args.project.as_deref().unwrap_or_else(|| Path::new(".")),
             args.output.as_deref(),
             args.check,
@@ -707,32 +711,86 @@ fn lock(project: &Path, check: bool) -> Result<()> {
     Ok(())
 }
 
-fn fetch(project: &Path) -> Result<()> {
-    lock(project, false)
+fn fetch(paths: &AshgrovePaths, project: &Path) -> Result<()> {
+    let lock_path = project.join("ash.lock");
+    if !lock_path.exists() {
+        lock(project, false)?;
+    }
+    let lock = read_lock(project)?;
+    materialize_locked_packages(paths, project, &lock)
 }
 
-fn vendor(project: &Path, output: Option<&Path>, check: bool) -> Result<()> {
-    let lock_path = project.join("ash.lock");
-    let text = fs::read_to_string(&lock_path).context("read ash.lock")?;
-    let lock: LockFile = toml::from_str(&text).context("parse ash.lock")?;
+fn vendor(paths: &AshgrovePaths, project: &Path, output: Option<&Path>, check: bool) -> Result<()> {
+    let lock = read_lock(project)?;
     let out = output
         .map(Path::to_path_buf)
         .unwrap_or_else(|| project.join("vendor/ash"));
     if check {
         for package in &lock.package {
             validate_package_name(&package.name)?;
+            validate_commit(&package.commit)?;
             let name = &package.name;
-            if !out.join(name).join("provenance.toml").is_file() {
+            let provenance_path = out.join(name).join("provenance.toml");
+            if !provenance_path.is_file() {
                 bail!("vendor check failed for package '{name}'");
+            }
+            let provenance_text = fs::read_to_string(&provenance_path)
+                .with_context(|| format!("read vendor provenance for package '{name}'"))?;
+            let provenance: LockedPackage = toml::from_str(&provenance_text)
+                .with_context(|| format!("parse vendor provenance for package '{name}'"))?;
+            if &provenance != package {
+                bail!("vendor provenance does not match lockfile for package '{name}'");
+            }
+            let source = locked_package_root(paths, package);
+            if !source.is_dir() {
+                bail!(
+                    "locked package '{}' has not been materialized; run ashgrove fetch first",
+                    package.name
+                );
+            }
+            compare_vendor_content(&source, &out.join(name)).with_context(|| {
+                format!("vendor content does not match lockfile for package '{name}'")
+            })?;
+        }
+        let expected_packages = lock
+            .package
+            .iter()
+            .map(|package| package.name.as_str())
+            .collect::<std::collections::BTreeSet<_>>();
+        if out.exists() {
+            for entry in fs::read_dir(&out).context("read vendor root")? {
+                let entry = entry.context("read vendor root entry")?;
+                let file_type = entry.file_type().with_context(|| {
+                    format!("read vendor entry type {}", entry.path().display())
+                })?;
+                let name = entry
+                    .file_name()
+                    .into_string()
+                    .map_err(|_| anyhow!("vendor package name is not utf8"))?;
+                if !file_type.is_dir() || !expected_packages.contains(name.as_str()) {
+                    bail!("vendor contains unexpected package '{name}'");
+                }
             }
         }
         return Ok(());
     }
     for package in &lock.package {
         validate_package_name(&package.name)?;
+        validate_commit(&package.commit)?;
         let name = &package.name;
         let dest = out.join(name);
+        let source = locked_package_root(paths, package);
+        if !source.is_dir() {
+            bail!(
+                "locked package '{}' has not been materialized; run ashgrove fetch first",
+                package.name
+            );
+        }
+        if dest.exists() {
+            fs::remove_dir_all(&dest).context("replace vendor package")?;
+        }
         fs::create_dir_all(&dest).context("create vendor package")?;
+        copy_package_content(&source, &dest)?;
         fs::write(
             dest.join("provenance.toml"),
             toml::to_string(package).context("serialize provenance")?,
@@ -742,13 +800,213 @@ fn vendor(project: &Path, output: Option<&Path>, check: bool) -> Result<()> {
     Ok(())
 }
 
+fn read_lock(project: &Path) -> Result<LockFile> {
+    let lock_path = project.join("ash.lock");
+    let text = fs::read_to_string(&lock_path).context("read ash.lock")?;
+    toml::from_str(&text).context("parse ash.lock")
+}
+
+fn materialize_locked_packages(
+    paths: &AshgrovePaths,
+    _project: &Path,
+    lock: &LockFile,
+) -> Result<()> {
+    for package in &lock.package {
+        validate_package_name(&package.name)?;
+        validate_commit(&package.commit)?;
+        materialize_locked_package(paths, package)?;
+    }
+    Ok(())
+}
+
+fn materialize_locked_package(paths: &AshgrovePaths, package: &LockedPackage) -> Result<()> {
+    let repo = locked_package_repo(paths, package);
+    let checkout = locked_package_root(paths, package);
+    if !repo.exists() {
+        fs::create_dir_all(repo.parent().context("repo parent")?).context("create repo cache")?;
+        run_git_command(
+            Path::new("."),
+            &["clone", "--mirror", &package.git, repo_str(&repo)?],
+            &format!("clone git dependency '{}'", package.name),
+        )?;
+    } else {
+        run_git_command(
+            &repo,
+            &["fetch", "--tags", "--prune"],
+            &format!("fetch git dependency '{}'", package.name),
+        )?;
+    }
+
+    if checkout.exists() {
+        ensure_checkout_commit(&checkout, &package.commit)?;
+        return Ok(());
+    }
+
+    fs::create_dir_all(checkout.parent().context("checkout parent")?)
+        .context("create checkout cache")?;
+    let temp = tempfile::tempdir_in(checkout.parent().context("checkout parent")?)
+        .context("create checkout staging dir")?;
+    run_git_command(
+        Path::new("."),
+        &["clone", repo_str(&repo)?, path_str(temp.path())?],
+        &format!("checkout git dependency '{}'", package.name),
+    )?;
+    run_git_command(
+        temp.path(),
+        &["checkout", "--detach", &package.commit],
+        &format!("checkout locked commit for '{}'", package.name),
+    )?;
+    ensure_checkout_commit(temp.path(), &package.commit)?;
+    fs::rename(temp.path(), &checkout).context("publish checkout cache")?;
+    Ok(())
+}
+
+fn locked_package_repo(paths: &AshgrovePaths, package: &LockedPackage) -> PathBuf {
+    paths.cache_dir().join("git/repos").join(format!(
+        "{}-{}.git",
+        package.name,
+        git_url_digest(&package.git)
+    ))
+}
+
+fn locked_package_root(paths: &AshgrovePaths, package: &LockedPackage) -> PathBuf {
+    paths
+        .cache_dir()
+        .join("git/checkouts")
+        .join(format!("{}-{}", package.name, git_url_digest(&package.git)))
+        .join(&package.commit)
+}
+
+fn git_url_digest(url: &str) -> String {
+    let digest = Sha256::digest(url.as_bytes());
+    let mut out = String::new();
+    for byte in &digest[..8] {
+        out.push_str(&format!("{byte:02x}"));
+    }
+    out
+}
+
+fn ensure_checkout_commit(checkout: &Path, commit: &str) -> Result<()> {
+    let output = git_output(checkout, &["rev-parse", "HEAD"], "read checkout HEAD")?;
+    if output.trim() != commit {
+        bail!("cached checkout is not at locked commit {commit}");
+    }
+    Ok(())
+}
+
+fn run_git_command(cwd: &Path, args: &[&str], context: &str) -> Result<()> {
+    let output = Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgSign=false"])
+        .args(args)
+        .current_dir(cwd)
+        .output()
+        .with_context(|| context.to_string())?;
+    if !output.status.success() {
+        bail!("{context}: {}", String::from_utf8_lossy(&output.stderr));
+    }
+    Ok(())
+}
+
+fn git_output(cwd: &Path, args: &[&str], context: &str) -> Result<String> {
+    let output = Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgSign=false"])
+        .args(args)
+        .current_dir(cwd)
+        .output()
+        .with_context(|| context.to_string())?;
+    if !output.status.success() {
+        bail!("{context}: {}", String::from_utf8_lossy(&output.stderr));
+    }
+    String::from_utf8(output.stdout).context("git output utf8")
+}
+
+fn repo_str(path: &Path) -> Result<&str> {
+    path.to_str().context("repo path utf8")
+}
+
+fn path_str(path: &Path) -> Result<&str> {
+    path.to_str().context("path utf8")
+}
+
+fn copy_package_content(source: &Path, dest: &Path) -> Result<()> {
+    for entry in walkdir::WalkDir::new(source) {
+        let entry = entry.context("walk package source")?;
+        let rel = entry
+            .path()
+            .strip_prefix(source)
+            .context("strip package root")?;
+        if rel.as_os_str().is_empty() || rel.components().any(|part| part.as_os_str() == ".git") {
+            continue;
+        }
+        let target = dest.join(rel);
+        if entry.file_type().is_symlink() {
+            bail!("refusing to vendor symlink {}", entry.path().display());
+        }
+        if entry.file_type().is_dir() {
+            fs::create_dir_all(&target).with_context(|| format!("create {}", target.display()))?;
+        } else if entry.file_type().is_file() {
+            if let Some(parent) = target.parent() {
+                fs::create_dir_all(parent).context("create parent")?;
+            }
+            fs::copy(entry.path(), &target)
+                .with_context(|| format!("copy {}", entry.path().display()))?;
+        }
+    }
+    Ok(())
+}
+
+fn compare_vendor_content(source: &Path, vendor: &Path) -> Result<()> {
+    let source_files = collect_package_files(source, None)?;
+    let vendor_files = collect_package_files(vendor, Some(Path::new("provenance.toml")))?;
+    if source_files != vendor_files {
+        bail!("vendor content differs from locked checkout");
+    }
+    Ok(())
+}
+
+fn collect_package_files(
+    root: &Path,
+    skip_exact: Option<&Path>,
+) -> Result<std::collections::BTreeMap<PathBuf, Vec<u8>>> {
+    let mut files = std::collections::BTreeMap::new();
+    for entry in walkdir::WalkDir::new(root) {
+        let entry = entry.context("walk package content")?;
+        let rel = entry
+            .path()
+            .strip_prefix(root)
+            .context("strip package root")?;
+        if rel.as_os_str().is_empty()
+            || rel.components().any(|part| part.as_os_str() == ".git")
+            || skip_exact == Some(rel)
+        {
+            continue;
+        }
+        if entry.file_type().is_symlink() {
+            bail!("refusing symlink {}", entry.path().display());
+        }
+        if entry.file_type().is_file() {
+            files.insert(
+                rel.to_path_buf(),
+                fs::read(entry.path())
+                    .with_context(|| format!("read {}", entry.path().display()))?,
+            );
+        } else if !entry.file_type().is_dir() {
+            bail!(
+                "refusing unsupported package entry {}",
+                entry.path().display()
+            );
+        }
+    }
+    Ok(files)
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 struct LockFile {
     #[serde(default)]
     package: Vec<LockedPackage>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
 struct LockedPackage {
     name: String,
     git: String,
@@ -892,6 +1150,13 @@ fn validate_package_name(name: &str) -> Result<()> {
         || !chars.all(|ch| ch.is_ascii_alphanumeric() || ch == '_' || ch == '-')
     {
         bail!("invalid package name '{name}'");
+    }
+    Ok(())
+}
+
+fn validate_commit(commit: &str) -> Result<()> {
+    if commit.len() != 40 || !commit.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+        bail!("locked git commit must be a full 40-character commit hash");
     }
     Ok(())
 }

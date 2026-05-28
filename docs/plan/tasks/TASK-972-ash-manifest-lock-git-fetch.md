@@ -1,6 +1,6 @@
 # TASK-972: Ash manifest lock git fetch
 
-## Status: ⚠️ Partial first slice
+## Status: ⚠️ Partial second slice
 
 ## Description
 
@@ -30,6 +30,13 @@ Implement project `ash.toml`, `ash.lock`, git dependency resolution, fetch, lock
 7. Implement `ashgrove fetch` and `ashgrove lock --check`.
 8. Integrate locked dependency roots with `ash-cli`/`ash-engine` module resolution so `ash check` and `ash run` can import fetched dependencies.
 
+### Current Slice Evidence
+
+- `ashgrove fetch` now writes `ash.lock`, clones git dependencies into `$XDG_CACHE_HOME/ash/git/repos/<package>-<url-digest>.git`, and publishes detached checkouts under `$XDG_CACHE_HOME/ash/git/checkouts/<package>-<url-digest>/<commit>/`.
+- `task_972_fetch_materializes_exact_lock_commit_in_xdg_cache` proves a moved manifest tag does not change the already-materialized cached dependency root; the checkout content comes from the exact lockfile commit.
+- Lockfile commit values consumed by vendoring must be full 40-character hexadecimal commit hashes.
+- `ash-cli` still does not discover `ash.toml`/`ash.lock` automatically, so the full `ash check`/`ash run` requirement remains partial.
+
 ### Non-goals
 
 - Do not fetch the standard library as a third-party dependency.
@@ -58,11 +65,11 @@ commands:
 checklist:
   - [ ] Parse lower-case `ash.toml` package/toolchain/dependency metadata needed by SPEC-073.
   - [ ] Reject ambiguous package/dependency/toolchain metadata split across `ash.toml` and legacy `.ash.toml`.
-  - [ ] Resolve git tag dependencies to exact commits in `ash.lock`.
+  - [x] Resolve git tag dependencies to exact commits in `ash.lock`.
   - [ ] Expand accepted abbreviated revs to full commit hashes in `ash.lock` or reject them.
   - [ ] Reject unpinned dependencies outside an explicit development override.
   - [ ] Preserve reserved trust/signing fields in manifest/lockfile read-modify-write flows.
-  - [ ] Implement `ashgrove fetch` and `ashgrove lock --check`.
+  - [x] Implement `ashgrove fetch` and `ashgrove lock --check`.
   - [ ] Integrate locked dependency roots with `ash-cli`/`ash-engine` module resolution so `ash check` and `ash run` can import fetched dependencies.
 ```
 

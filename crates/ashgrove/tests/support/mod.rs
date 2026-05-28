@@ -2,6 +2,8 @@
 
 use std::path::{Path, PathBuf};
 
+use sha2::{Digest, Sha256};
+
 pub struct XdgFixture {
     pub data: tempfile::TempDir,
     pub config: tempfile::TempDir,
@@ -150,6 +152,16 @@ impl GitDepFixture {
     pub fn url(&self) -> String {
         format!("file://{}", self.dir.path().display())
     }
+
+    pub fn commit(&self, rev: &str) -> String {
+        git_output(self.dir.path(), &["rev-parse", rev])
+            .trim()
+            .to_string()
+    }
+
+    pub fn force_tag(&self, tag: &str, rev: &str) {
+        run_git(self.dir.path(), &["tag", "-f", tag, rev]);
+    }
 }
 
 pub fn git_dep_fixture() -> GitDepFixture {
@@ -182,6 +194,15 @@ pub fn locked_project_fixture() -> tempfile::TempDir {
     project
 }
 
+pub fn git_url_digest(url: &str) -> String {
+    let digest = Sha256::digest(url.as_bytes());
+    let mut out = String::new();
+    for byte in &digest[..8] {
+        out.push_str(&format!("{byte:02x}"));
+    }
+    out
+}
+
 fn run_git(dir: &Path, args: &[&str]) {
     let status = std::process::Command::new("git")
         .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgSign=false"])
@@ -190,4 +211,15 @@ fn run_git(dir: &Path, args: &[&str]) {
         .status()
         .expect("git");
     assert!(status.success(), "git {args:?}");
+}
+
+fn git_output(dir: &Path, args: &[&str]) -> String {
+    let output = std::process::Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgSign=false"])
+        .args(args)
+        .current_dir(dir)
+        .output()
+        .expect("git");
+    assert!(output.status.success(), "git {args:?}");
+    String::from_utf8(output.stdout).expect("git stdout")
 }

@@ -5878,6 +5878,14 @@ fn contains_ash_files(path: &Path) -> bool {
 
 fn search_roots(root: &Path) -> Vec<PathBuf> {
     let mut roots = vec![root.to_path_buf()];
+    MODULE_ROOT_OVERRIDE.with(|slot| {
+        if let Some(override_roots) = slot.borrow().as_ref() {
+            roots.extend(override_roots.dependency_roots.clone());
+        }
+    });
+    if let Some(value) = std::env::var_os("ASH_DEPENDENCY_ROOTS") {
+        roots.extend(std::env::split_paths(&value));
+    }
     if let Some(value) = std::env::var_os("ASH_LIBRARY_PATH") {
         roots.extend(std::env::split_paths(&value));
     }
@@ -5907,6 +5915,16 @@ fn resolve_in_root(root: &Path, module_segments: &[String]) -> Option<PathBuf> {
 }
 
 fn builtin_stdlib_root() -> PathBuf {
+    if let Some(root) = MODULE_ROOT_OVERRIDE.with(|slot| {
+        slot.borrow()
+            .as_ref()
+            .and_then(|override_roots| override_roots.stdlib_root.clone())
+    }) {
+        return root;
+    }
+    if let Some(root) = std::env::var_os("ASH_STDLIB_ROOT") {
+        return PathBuf::from(root);
+    }
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../../std/src")
 }
 
@@ -7274,4 +7292,38 @@ pub type Flag = On | Off;",
         );
         assert_eq!(summaries[0].exported_associated_families, vec![family]);
     }
+}
+use std::cell::RefCell;
+thread_local! {
+    static MODULE_ROOT_OVERRIDE: RefCell<Option<ModuleRootOverride>> = const { RefCell::new(None) };
+}
+
+#[derive(Debug, Clone)]
+struct ModuleRootOverride {
+    dependency_roots: Vec<PathBuf>,
+    stdlib_root: Option<PathBuf>,
+}
+
+/// Run module-loading code with explicit dependency and stdlib roots.
+///
+/// This is the Phase 127 installed-toolchain seam used by `ashgrove` and tests
+/// so callers do not need process-global environment mutation.
+///
+/// # Errors
+///
+/// Returns any error produced by `operation`.
+pub fn with_module_roots<T>(
+    dependency_roots: Vec<PathBuf>,
+    stdlib_root: Option<PathBuf>,
+    operation: impl FnOnce() -> Result<T, EngineError>,
+) -> Result<T, EngineError> {
+    MODULE_ROOT_OVERRIDE.with(|slot| {
+        let previous = slot.replace(Some(ModuleRootOverride {
+            dependency_roots,
+            stdlib_root,
+        }));
+        let result = operation();
+        slot.replace(previous);
+        result
+    })
 }

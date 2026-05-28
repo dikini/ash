@@ -301,7 +301,8 @@ Update this section as tasks complete:
 | 122 | 14 | 14 | ✅ Complete |
 | 123 | 13 | 13 | ✅ Complete |
 | 124 | 8 | 1 | 📝 Planned after packet creation |
-| 126 | 9 | 2 | 📝 Planned after audit gate |
+| 126 | 9 | 9 | ✅ Complete |
+| 127 | 11 | 4 + partial | ⚠️ Partial first slice |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -3732,3 +3733,39 @@ Phase 126 introduces tower-aligned callable type and closure syntax. It makes `(
 - D6: Legacy `Fn(args...) -> ret` remains compatibility syntax during this phase, but docs/rendering should prefer the new syntax.
 - D6a: `std/` and top-level `reference/` must be migrated before closeout so legacy callable syntax remains only in explicitly labeled compatibility material.
 - D7: Higher-stratum arrows must fail closed rather than silently lowering to pure callables returning computation values.
+
+## Phase 127: Ashgrove Install, Update, Cleanup, and Git Deployment
+
+**Priority:** High (alpha release boundary for coherent installation, update, removal, cleanup, and git-pinned deployment before registry package management)
+**Status:** ⚠️ Partial first slice after TASK-974 report; SPEC-073 remains Draft pending deferred acceptance rows
+**Spec:** [SPEC-073](../spec/SPEC-073-ASHGROVE-INSTALL-UPDATE-CLEANUP-GIT-DEPLOYMENT.md)
+**Plan:** [PLAN-122](PLAN-122-ASHGROVE-INSTALL-UPDATE-CLEANUP-GIT-DEPLOYMENT.md)
+
+Phase 127 introduces `ashgrove <command>` as the Ash toolchain and deployment manager. It defines user-local XDG-compatible installs, source and binary tarball install modes, immutable toolchain bundles containing `ash`, `ashgrove`, stdlib, selected standard tooling, metadata, conservative update/default/remove/cleanup behavior, and git URL + tag/rev project dependencies in lower-case `ash.toml` resolved to exact commits in `ash.lock`. The daemon surface remains `ash daemon ...`; a separate `ashd` binary is not required by this phase.
+
+| Task | Description | Est. Hours | Status |
+|------|-------------|------------|--------|
+| [TASK-964](tasks/TASK-964-ashgrove-install-policy-packet.md) | Create the SPEC-073/PLAN-122/task packet and register Phase 127 | 4 | ✅ Complete |
+| [TASK-965](tasks/TASK-965-ashgrove-live-install-audit-gate.md) | Audit CLI/build/release/stdlib/daemon/XDG/git seams before implementation | 8 | ✅ Complete |
+| [TASK-966](tasks/TASK-966-ashgrove-cli-crate-and-command-skeleton.md) | Add `ashgrove` command skeleton and shared reporting/errors | 8 | ✅ First slice |
+| [TASK-967](tasks/TASK-967-toolchain-metadata-and-xdg-layout.md) | Implement metadata schemas, XDG paths, launcher dispatch, selectors, stdlib metadata, trust preservation, staging/publish helpers | 14 | ⚠️ Partial |
+| [TASK-968](tasks/TASK-968-source-install-flow.md) | Implement source install path and installed-stdlib root use | 14 | ⚠️ Partial |
+| [TASK-969](tasks/TASK-969-binary-tarball-install-flow.md) | Implement conforming tarball production/validation/install path | 14 | ⚠️ Partial |
+| [TASK-970](tasks/TASK-970-update-default-list-current-flow.md) | Implement update/default/list/current flows | 10 | ⚠️ Partial |
+| [TASK-971](tasks/TASK-971-remove-cleanup-flow.md) | Implement remove and cleanup policy, including daemon/running-manager protection | 12 | ⚠️ Partial |
+| [TASK-972](tasks/TASK-972-ash-manifest-lock-git-fetch.md) | Implement `ash.toml`, `ash.lock`, git fetch, lock checking, trust preservation, and dependency-root module-loader integration | 18 | ⚠️ Partial |
+| [TASK-973](tasks/TASK-973-vendor-and-deployable-git-project-flow.md) | Implement vendor/offline deployment for git-pinned Ash projects | 12 | ⚠️ Partial |
+| [TASK-974](tasks/TASK-974-ashgrove-closeout-acceptance.md) | Close out SPEC-073 with acceptance matrix, broad gates, and independent review | 8 | ⚠️ Reported |
+
+**Decision gates:**
+- D1: Alpha installs are XDG-compatible and user-local; global/system install roots are deferred.
+- D2: Installing Ash installs a coherent toolchain bundle including `ash`, `ashgrove`, stdlib, metadata, and the TASK-965-frozen standard tooling list for that release.
+- D3: Daemon control remains `ash daemon ...`; `ashd` is optional future compatibility only.
+- D4: Updating Ash installs a new immutable toolchain; it does not mutate an old toolchain or update project dependencies.
+- D5: The stdlib is selected by the active toolchain, not fetched as an ordinary third-party dependency.
+- D6: Source install and binary tarball install must publish the same required toolchain shape.
+- D7: Lower-case `ash.toml` is the canonical project/package manifest; legacy `.ash.toml` configuration must not silently conflict.
+- D8: Git dependency tags are intent; `ash.lock` commit hashes are execution truth.
+- D9: Remove/cleanup commands must be conservative, dry-run visible, and protect active/default/live/running-manager toolchains by default.
+- D10: Signing/trust metadata is reserved but not mandatory for the first slice.
+- D11: TASK-965 is a hard audit gate and must replace downstream placeholder verification before Rust implementation starts.

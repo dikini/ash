@@ -1,0 +1,76 @@
+# TASK-974: Ashgrove closeout acceptance
+
+## Status: ⚠️ Reported first-slice status
+
+## Description
+
+Close out SPEC-073 with acceptance matrix, broad verification, and independent review remediation.
+
+## Specification Reference
+
+- SPEC-073 §20
+- PLAN-122 §8-§9
+
+## Dependencies
+
+- TASK-966 through TASK-973 completion.
+
+## Requirements
+
+### Functional Requirements
+
+1. Create an acceptance matrix mapping A73-1 through A73-12 to concrete evidence.
+2. Run focused task verification and repo-native broad gates.
+3. Update SPEC-073/PLAN-122/PLAN-INDEX/spec index/CHANGELOG status surfaces honestly.
+4. Run independent code/spec review and remediate blockers before completion.
+5. Confirm no package registry, global install, release-channel resolver, mandatory signing, or independent stdlib update support is overclaimed.
+
+### Non-goals
+
+- Do not mark SPEC-073 Implemented MVP until every acceptance row has evidence or explicit deferral.
+- Do not overclaim package signing, registry support, global installs, release-channel discovery, `ashd`, or manifest-aware bare `ash check`.
+
+## Work Steps
+
+1. Inspect the exact live files named by the task or audit output.
+2. Write focused RED tests or docs assertions before changing behavior.
+3. Implement or document the minimal target behavior.
+4. Run focused verification.
+5. Update status surfaces and `CHANGELOG.md` if files beyond tests are changed.
+6. Request independent review before marking complete.
+
+## Verification
+
+```yaml
+strictness: clean
+commands:
+  - bash scripts/check-rust-format.sh
+  - bash scripts/check-rust-clippy.sh
+  - bash scripts/check-rust-tests.sh --workspace --all-targets
+  - bash scripts/check-doc-tests.sh
+  - git diff --check
+checklist:
+  - [ ] Create an acceptance matrix mapping A73-1 through A73-12 to concrete evidence.
+  - [ ] Run focused task verification and repo-native broad gates.
+  - [ ] Update SPEC-073/PLAN-122/PLAN-INDEX/spec index/CHANGELOG status surfaces honestly.
+  - [ ] Run independent code/spec review and remediate blockers before completion.
+  - [ ] Confirm no package registry, global install, release-channel resolver, mandatory signing, or independent stdlib update support is overclaimed.
+```
+
+
+## Dispatch
+
+```yaml
+agent: codex
+reasoning: high
+toolsets: [terminal, file]
+```
+
+## Dependencies for Next Task
+
+This task contributes to PLAN-122 and SPEC-073 completion. Later tasks must preserve the alpha rules that toolchains are immutable, stdlib is bundled with the selected toolchain, lower-case `ash.toml` is the project manifest, and git dependencies resolve to exact commits in `ash.lock`.
+
+
+## Notes
+
+Area: closeout/verification. Completion requires acceptance-row evidence, not prose.

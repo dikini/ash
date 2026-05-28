@@ -33,6 +33,29 @@ fn plain_workflow_with_legacy_act_body_is_importable_by_signature() {
 }
 
 #[test]
+fn task_972_dependency_roots_from_env_are_visible_to_module_loader() {
+    let project = tempfile::tempdir().expect("project");
+    let dep_root = tempfile::tempdir().expect("dep");
+    std::fs::write(dep_root.path().join("dep.ash"), "pub type Dep = Dep;\n").expect("dep");
+    let main = project.path().join("main.ash");
+    std::fs::write(&main, "use dep::Dep\nworkflow main { ret 0 }\n").expect("main");
+
+    let loaded = ash_engine::module_loader::with_module_roots(
+        vec![dep_root.path().to_path_buf()],
+        None,
+        || load_ordinary_file(&main),
+    )
+    .expect("dependency root import should resolve");
+
+    assert!(
+        loaded
+            .imported_type_defs
+            .iter()
+            .any(|def| def.name == "Dep")
+    );
+}
+
+#[test]
 fn super_self_and_crate_imports_resolve_relative_to_importing_file() {
     let dir = tempfile::tempdir().expect("tempdir");
     let root = dir.path();

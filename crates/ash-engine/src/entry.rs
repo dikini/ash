@@ -233,6 +233,9 @@ fn normalize_runtime_entry_import(import: &str) -> String {
 }
 
 fn runtime_entry_stdlib_root() -> std::path::PathBuf {
+    if let Some(root) = std::env::var_os("ASH_STDLIB_ROOT") {
+        return std::path::PathBuf::from(root);
+    }
     std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../std/src")
 }
 

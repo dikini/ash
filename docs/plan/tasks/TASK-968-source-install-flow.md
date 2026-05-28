@@ -1,6 +1,6 @@
 # TASK-968: Source install flow
 
-## Status: ⚠️ Partial first slice
+## Status: ⚠️ Partial fixture-backed source install hardening slice
 
 ## Description
 
@@ -55,13 +55,13 @@ commands:
   - cargo check -p ashgrove
   - git diff --check
 checklist:
-  - [ ] Build or stage Ash binaries from source according to the TASK-965 audit decision.
+  - [x] Build or stage Ash binaries from source according to the TASK-965 audit decision.
   - [ ] Copy bundled stdlib and runtime support metadata into the toolchain layout.
-  - [ ] Record source URL/rev/build profile/target triple plus dirty/unidentified-source override state in install metadata.
-  - [ ] Reject dirty source installs unless `--allow-dirty-source` is provided and recorded.
+  - [x] Record source URL/rev/build profile/target triple plus dirty/unidentified-source override state in install metadata.
+  - [x] Reject dirty source installs unless `--allow-dirty-source` is provided and recorded.
   - [ ] Reject source archives without commit metadata unless `--allow-unidentified-source` is provided and recorded.
   - [ ] Prove installed `ash` uses the selected toolchain stdlib rather than workspace `std/src`.
-  - [ ] Prove identical source reinstall no-ops or rejects deterministically, and same-version/different-source builds follow the TASK-965 toolchain-id policy.
+  - [x] Prove identical source reinstall no-ops or rejects deterministically, and same-version/different-source builds follow the TASK-965 toolchain-id policy.
 ```
 
 
@@ -81,3 +81,5 @@ This task contributes to PLAN-122 and SPEC-073 completion. Later tasks must pres
 ## Notes
 
 Area: install/semantic. Source install must be reproducible unless explicitly marked otherwise.
+
+2026-05-28 follow-up slice: source installs now publish through the staged toolchain collision path, reject same-id manifest or source-metadata conflicts, keep identical reinstalls deterministic, and record source URL, source revision, build profile, target triple, dirty/unidentified override flags, reproducibility state, and install time. The focused evidence is fixture-backed: prepared source-shaped toolchain directories stand in for a real cargo build, and `ash-engine` proves the installed stdlib override seam directly. TASK-968 remains partial because a real source checkout/archive build path, git-derived dirty/source URL detection, source archive release metadata, runtime support metadata, and an installed `ash` launcher/CLI proof of selected-toolchain stdlib routing remain deferred.

@@ -673,15 +673,35 @@ pub fn classify_toolchain_collision(
     if !installed.exists() {
         return Ok(CollisionStatus::Absent);
     }
-    let installed_manifest =
-        fs::read_to_string(installed.join("manifest.toml")).context("read installed manifest")?;
-    let proposed_manifest = fs::read_to_string(proposed_root.join("manifest.toml"))
-        .context("read proposed manifest")?;
-    if normalize_ws(&installed_manifest) == normalize_ws(&proposed_manifest) {
+    if installed_metadata_matches(&installed, proposed_root)? {
         Ok(CollisionStatus::Identical)
     } else {
         Ok(CollisionStatus::Conflict)
     }
+}
+
+fn installed_metadata_matches(installed: &Path, proposed_root: &Path) -> Result<bool> {
+    let installed_manifest =
+        fs::read_to_string(installed.join("manifest.toml")).context("read installed manifest")?;
+    let proposed_manifest = fs::read_to_string(proposed_root.join("manifest.toml"))
+        .context("read proposed manifest")?;
+    if normalize_ws(&installed_manifest) != normalize_ws(&proposed_manifest) {
+        return Ok(false);
+    }
+
+    let installed_record = fs::read_to_string(installed.join("install-record.toml"))
+        .context("read installed install record")?;
+    let proposed_record = fs::read_to_string(proposed_root.join("install-record.toml"))
+        .context("read proposed install record")?;
+    Ok(normalize_install_record(&installed_record)? == normalize_install_record(&proposed_record)?)
+}
+
+fn normalize_install_record(text: &str) -> Result<toml::Value> {
+    let mut value = toml::from_str::<toml::Value>(text).context("parse install record")?;
+    if let Some(table) = value.as_table_mut() {
+        table.remove("installed_at");
+    }
+    Ok(value)
 }
 
 /// Stage the stdlib package manifest into `lib/ash/std/ash.toml`.
@@ -965,25 +985,134 @@ fn install_from_source(
             "dirty source rejected; pass --allow-dirty-source to record a non-reproducible install"
         );
     }
-    if !source.join(".source-rev").exists() && !allow_unidentified {
+    let source_rev = read_optional_trimmed(source.join(".source-rev"))?;
+    if source_rev.is_none() && !allow_unidentified {
         bail!("unidentified source rejected; pass --allow-unidentified-source to record it");
     }
     let id = read_toolchain_id(source)?;
-    publish_shape(paths, source, &id)?;
-    let record = paths.toolchain_dir(&id).join("install-record.toml");
-    append_record(
-        &record,
-        &format!(
-            "source_kind = \"source\"\nallow_dirty_source = {}\nallow_unidentified_source = {}\ninstalled_at = \"{}\"\n",
+    let source_url = read_optional_trimmed(source.join(".source-url"))?;
+    let stage = ToolchainStage::create(paths, id.clone())?;
+    stage.copy_toolchain_payload(source)?;
+    write_source_install_record(
+        &stage.path().join("install-record.toml"),
+        SourceInstallRecordInput {
+            id: &id,
+            source_rev: source_rev.as_deref(),
+            source_url: source_url.as_deref(),
             allow_dirty,
             allow_unidentified,
-            Utc::now().to_rfc3339()
-        ),
+        },
     )?;
+    stage.publish()?;
     if switch || read_default(paths)?.is_none() {
         set_default(paths, &id)?;
     }
     Ok(())
+}
+
+struct SourceInstallRecordInput<'a> {
+    id: &'a ToolchainId,
+    source_rev: Option<&'a str>,
+    source_url: Option<&'a str>,
+    allow_dirty: bool,
+    allow_unidentified: bool,
+}
+
+fn write_source_install_record(path: &Path, input: SourceInstallRecordInput<'_>) -> Result<()> {
+    let mut table = toml::map::Map::new();
+    table.insert(
+        "toolchain_id".to_string(),
+        toml::Value::String(input.id.as_str().to_string()),
+    );
+    table.insert(
+        "source_kind".to_string(),
+        toml::Value::String("source".to_string()),
+    );
+    if let Some(source_url) = input.source_url {
+        table.insert(
+            "source_url".to_string(),
+            toml::Value::String(source_url.to_string()),
+        );
+    }
+    if let Some(source_rev) = input.source_rev {
+        table.insert(
+            "source_rev".to_string(),
+            toml::Value::String(source_rev.to_string()),
+        );
+    }
+    table.insert(
+        "build_profile".to_string(),
+        toml::Value::String(build_profile().to_string()),
+    );
+    table.insert(
+        "target_triple".to_string(),
+        toml::Value::String(target_triple()),
+    );
+    table.insert(
+        "allow_dirty_source".to_string(),
+        toml::Value::Boolean(input.allow_dirty),
+    );
+    table.insert(
+        "allow_unidentified_source".to_string(),
+        toml::Value::Boolean(input.allow_unidentified),
+    );
+    table.insert(
+        "reproducible".to_string(),
+        toml::Value::Boolean(
+            input.source_rev.is_some() && !input.allow_dirty && !input.allow_unidentified,
+        ),
+    );
+    table.insert(
+        "installed_at".to_string(),
+        toml::Value::String(Utc::now().to_rfc3339()),
+    );
+    fs::write(path, toml::to_string(&toml::Value::Table(table))?)
+        .context("write source install record")
+}
+
+fn read_optional_trimmed(path: PathBuf) -> Result<Option<String>> {
+    match fs::read_to_string(&path) {
+        Ok(text) => {
+            let trimmed = text.trim();
+            if trimmed.is_empty() {
+                Ok(None)
+            } else {
+                Ok(Some(trimmed.to_string()))
+            }
+        }
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(None),
+        Err(error) => Err(error).with_context(|| format!("read {}", path.display())),
+    }
+}
+
+fn build_profile() -> &'static str {
+    if cfg!(debug_assertions) {
+        "debug"
+    } else {
+        "release"
+    }
+}
+
+fn target_triple() -> String {
+    let arch = std::env::consts::ARCH;
+    match std::env::consts::OS {
+        "linux" => format!("{arch}-unknown-linux-{}", target_env_suffix()),
+        "macos" => format!("{arch}-apple-darwin"),
+        "windows" => format!("{arch}-pc-windows-{}", target_env_suffix()),
+        os => format!("{arch}-unknown-{os}"),
+    }
+}
+
+fn target_env_suffix() -> &'static str {
+    if cfg!(target_env = "musl") {
+        "musl"
+    } else if cfg!(target_env = "msvc") {
+        "msvc"
+    } else if cfg!(target_env = "gnu") {
+        "gnu"
+    } else {
+        "unknown"
+    }
 }
 
 fn install_from_tarball(paths: &AshgrovePaths, archive: &Path, switch: bool) -> Result<()> {

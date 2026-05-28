@@ -12,7 +12,7 @@
 
 ## 1. Status
 
-**Status:** ⚠️ Partial hardened vendored-dependency follow-up slice after TASK-974 report; SPEC-073 remains Draft pending deferred acceptance rows
+**Status:** ⚠️ Partial source-install hardening slice after TASK-974 report; SPEC-073 remains Draft pending deferred acceptance rows
 **Spec:** [SPEC-073](../spec/SPEC-073-ASHGROVE-INSTALL-UPDATE-CLEANUP-GIT-DEPLOYMENT.md)
 **Task range:** [TASK-964](tasks/TASK-964-ashgrove-install-policy-packet.md) through [TASK-974](tasks/TASK-974-ashgrove-closeout-acceptance.md)
 
@@ -56,7 +56,7 @@ TASK-964 creates the docs/spec/plan/task packet. TASK-965 is a hard audit gate a
 | [TASK-965](tasks/TASK-965-ashgrove-live-install-audit-gate.md) | Audit live CLI/build/release/stdlib/daemon/XDG/git seams before implementation | 8 | ✅ Complete |
 | [TASK-966](tasks/TASK-966-ashgrove-cli-crate-and-command-skeleton.md) | Add `ashgrove` command skeleton and shared reporting/errors | 8 | ✅ Complete |
 | [TASK-967](tasks/TASK-967-toolchain-metadata-and-xdg-layout.md) | Implement metadata schemas, XDG paths, launcher dispatch, selectors, stdlib metadata, trust preservation, staging/publish helpers | 14 | ⚠️ Partial metadata/staging slice |
-| [TASK-968](tasks/TASK-968-source-install-flow.md) | Implement source install path and installed-stdlib root use | 14 | ⚠️ Partial |
+| [TASK-968](tasks/TASK-968-source-install-flow.md) | Implement source install path and installed-stdlib root use | 14 | ⚠️ Partial fixture-backed source install hardening slice |
 | [TASK-969](tasks/TASK-969-binary-tarball-install-flow.md) | Implement conforming tarball production/validation/install path | 14 | ⚠️ Partial |
 | [TASK-970](tasks/TASK-970-update-default-list-current-flow.md) | Implement update/default/list/current flows | 10 | ⚠️ Partial |
 | [TASK-971](tasks/TASK-971-remove-cleanup-flow.md) | Implement remove and cleanup policy, including daemon/running-manager protection | 12 | ⚠️ Partial |
@@ -120,6 +120,8 @@ Must implement typed path resolution, stable launcher dispatch, toolchain metada
 ### TASK-968: source install
 
 Must stage, build/copy, verify shape, and atomically publish a source-built toolchain. Dirty/unidentified source behavior must be explicit and recorded. The installed `ash` must use the selected toolchain stdlib rather than workspace `std/src`.
+
+Current implementation note: the fixture-backed source install slice stages prepared source-shaped toolchain payloads through the same collision path used by the metadata substrate, records source URL/revision/build profile/target triple plus dirty and unidentified-source override state, rejects dirty or unidentified installs unless explicitly allowed, rejects same-id metadata conflicts, and treats identical reinstalls as deterministic no-ops. This is not yet a real cargo build from a source checkout/archive, and selected-toolchain stdlib routing is proven through the `ash-engine` override seam rather than an installed `ash` launcher invocation.
 
 ### TASK-969: binary tarball install
 

@@ -442,6 +442,8 @@ The live pre-SPEC-073 implementation has historically used workspace-relative st
 
 Acceptance evidence must prove an installed/tarball-style `ash` uses a temporary toolchain stdlib and does not accidentally read the source workspace `std/src`.
 
+Current implementation note: the TASK-968 follow-up slice proves the `ash-engine` selected-stdlib override seam with a temporary installed-style stdlib root. Source installs now stage prepared source-shaped toolchain payloads, record source URL/revision/build profile/target triple plus dirty/unidentified override and reproducibility state, reject same-id metadata conflicts, and keep identical reinstalls deterministic. This remains partial because real source checkout/archive builds and an installed `ash` launcher/CLI proof of selected-toolchain stdlib routing are still deferred.
+
 ## 17. Rust/tooling implementation constraints
 
 TASK-965 must freeze exact implementation choices before Rust work starts:

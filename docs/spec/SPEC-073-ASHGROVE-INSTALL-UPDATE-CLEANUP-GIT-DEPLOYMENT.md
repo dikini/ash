@@ -405,7 +405,7 @@ TASK-972 owns the compiler/module-loader integration. Merely fetching git reposi
 
 `ashgrove vendor --check` validates that the vendor directory exactly matches `ash.lock` without writing or fetching anything.
 
-Current implementation note: the Phase 127 second slice materializes local git dependencies into `$XDG_CACHE_HOME/ash/git/repos/<package>-<url-digest>.git` plus `$XDG_CACHE_HOME/ash/git/checkouts/<package>-<url-digest>/<commit>/`, and `vendor` copies and checks package content from those locked checkouts. Follow-up slices add `ash check src/main.ash` and explicit ordinary-file `ash run src/main.ash:main` discovery for the default `vendor/ash/` layout. This is still not full acceptance because direct fetched-cache dependency roots remain deferred.
+Current implementation note: the Phase 127 metadata/staging slice adds typed `ashgrove` toolchain manifest and install-record carriers, XDG selector metadata that preserves reserved trust/signing fields during read-modify-write, stdlib package metadata staging with fail-closed missing-stdlib behavior, and deterministic staged-publish collision helpers. The git deployment slice materializes local git dependencies into `$XDG_CACHE_HOME/ash/git/repos/<package>-<url-digest>.git` plus `$XDG_CACHE_HOME/ash/git/checkouts/<package>-<url-digest>/<commit>/`, and `vendor` copies and checks package content from those locked checkouts. Follow-up slices add `ash check src/main.ash` and explicit ordinary-file `ash run src/main.ash:main` discovery for the default `vendor/ash/` layout. This is still not full acceptance because direct fetched-cache dependency roots and stable launcher dispatch remain deferred.
 
 Deployment from git-based Ash projects MUST be possible with explicit current CLI forms:
 
@@ -525,4 +525,6 @@ Diagnostics MUST be actionable and distinguish:
 
 ### 2026-05-28
 
+- TASK-966 completed the public `ashgrove` command skeleton evidence, including isolated non-zero CLI smoke tests and fail-closed bare install/update version rejection before release-index policy exists.
+- TASK-967 added typed toolchain metadata, selector trust preservation, stdlib metadata staging, and staging publish/collision helpers while leaving stable launcher dispatch as a remaining partial row.
 - Initial draft for `ashgrove` user-local install/update/remove/cleanup policy, source vs binary tarball install semantics, XDG layout, and git-pinned deployment substrate.

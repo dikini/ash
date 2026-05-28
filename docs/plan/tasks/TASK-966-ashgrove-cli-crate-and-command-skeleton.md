@@ -1,6 +1,6 @@
 # TASK-966: Ashgrove cli crate and command skeleton
 
-## Status: ✅ First slice
+## Status: ✅ Complete
 
 ## Description
 
@@ -50,11 +50,11 @@ commands:
   - cargo check -p ashgrove
   - git diff --check
 checklist:
-  - [ ] Add `ashgrove` as the public toolchain/deployment manager command, preferably in a new `crates/ashgrove` workspace member unless TASK-965 chooses otherwise.
-  - [ ] Implement subcommand parsing for install, update, default, list, current, remove, cleanup, fetch, lock, and vendor.
-  - [ ] Reject bare version install/update until release-index/channel policy exists.
-  - [ ] Route incomplete commands to fail-closed not-implemented diagnostics until owning tasks land.
-  - [ ] Add CLI smoke tests using isolated temp directories and non-zero test assertions.
+  - [x] Add `ashgrove` as the public toolchain/deployment manager command, preferably in a new `crates/ashgrove` workspace member unless TASK-965 chooses otherwise.
+  - [x] Implement subcommand parsing for install, update, default, list, current, remove, cleanup, fetch, lock, and vendor.
+  - [x] Reject bare version install/update until release-index/channel policy exists.
+  - [x] Route incomplete commands to fail-closed not-implemented diagnostics until owning tasks land.
+  - [x] Add CLI smoke tests using isolated temp directories and non-zero test assertions.
 ```
 
 

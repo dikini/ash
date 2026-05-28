@@ -1,5 +1,6 @@
 //! User-local Ash toolchain and deployment manager.
 
+use std::collections::BTreeMap;
 use std::ffi::OsStr;
 use std::fs;
 use std::io::{Read, Write};
@@ -9,7 +10,7 @@ use std::process::{Command, ExitCode};
 use anyhow::{Context, Result, anyhow, bail};
 use chrono::Utc;
 use clap::{Args, Parser, Subcommand, ValueEnum};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use sha2::{Digest, Sha256};
 
 /// User-local XDG-compatible path set for Ash installs.
@@ -95,7 +96,7 @@ impl AshgrovePaths {
 }
 
 /// Validated first-slice toolchain id.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize)]
 pub struct ToolchainId(String);
 
 impl ToolchainId {
@@ -125,6 +126,594 @@ impl ToolchainId {
     pub fn as_str(&self) -> &str {
         &self.0
     }
+}
+
+impl<'de> Deserialize<'de> for ToolchainId {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let value = String::deserialize(deserializer)?;
+        Self::parse(&value).map_err(serde::de::Error::custom)
+    }
+}
+
+/// User selector metadata with preserved reserved fields.
+#[derive(Debug, Clone)]
+pub struct SelectorMetadata {
+    value: toml::Value,
+    default: Option<ToolchainId>,
+    projects: BTreeMap<String, ToolchainId>,
+}
+
+impl SelectorMetadata {
+    /// Create empty selector metadata.
+    #[must_use]
+    pub fn empty() -> Self {
+        Self {
+            value: toml::Value::Table(toml::map::Map::new()),
+            default: None,
+            projects: BTreeMap::new(),
+        }
+    }
+
+    /// Read selector metadata from a TOML file.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when reading, parsing, or toolchain-id validation fails.
+    pub fn read_from_path(path: &Path) -> Result<Self> {
+        let text = fs::read_to_string(path).context("read selector metadata")?;
+        Self::from_toml_str(&text)
+    }
+
+    /// Parse selector metadata from TOML.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when parsing or toolchain-id validation fails.
+    pub fn from_toml_str(text: &str) -> Result<Self> {
+        let value: toml::Value = toml::from_str(text).context("parse selector metadata")?;
+        let default = value
+            .get("default")
+            .and_then(toml::Value::as_str)
+            .map(ToolchainId::parse)
+            .transpose()?;
+        let projects = value
+            .get("projects")
+            .and_then(toml::Value::as_table)
+            .map(|table| {
+                table
+                    .iter()
+                    .map(|(path, id)| {
+                        let id = id
+                            .as_str()
+                            .ok_or_else(|| {
+                                anyhow!("project selector for '{path}' must be a string")
+                            })
+                            .and_then(ToolchainId::parse)?;
+                        Ok((path.clone(), id))
+                    })
+                    .collect::<Result<BTreeMap<_, _>>>()
+            })
+            .transpose()?
+            .unwrap_or_default();
+        Ok(Self {
+            value,
+            default,
+            projects,
+        })
+    }
+
+    /// Write selector metadata to a TOML file while preserving reserved fields.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when serialization or writing fails.
+    pub fn write_to_path(&self, path: &Path) -> Result<()> {
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent).context("create selector parent")?;
+        }
+        fs::write(path, self.to_toml_string()?).context("write selector metadata")
+    }
+
+    /// Render selector metadata to TOML.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when serialization fails.
+    pub fn to_toml_string(&self) -> Result<String> {
+        let mut value = self.value.clone();
+        let table = value
+            .as_table_mut()
+            .ok_or_else(|| anyhow!("selector metadata must be a TOML table"))?;
+        match &self.default {
+            Some(id) => {
+                table.insert(
+                    "default".to_string(),
+                    toml::Value::String(id.as_str().to_string()),
+                );
+            }
+            None => {
+                table.remove("default");
+            }
+        }
+        let mut projects = toml::map::Map::new();
+        for (path, id) in &self.projects {
+            projects.insert(path.clone(), toml::Value::String(id.as_str().to_string()));
+        }
+        if !projects.is_empty() {
+            table.insert("projects".to_string(), toml::Value::Table(projects));
+        }
+        toml::to_string(&value).context("serialize selector metadata")
+    }
+
+    /// Set the user default toolchain.
+    pub fn set_default(&mut self, id: ToolchainId) {
+        self.default = Some(id);
+    }
+
+    /// Record a known project root and selected toolchain.
+    pub fn record_project_toolchain(&mut self, project: &Path, id: ToolchainId) {
+        self.projects.insert(project.display().to_string(), id);
+    }
+
+    /// Borrow the default selector.
+    #[must_use]
+    pub fn default(&self) -> Option<&ToolchainId> {
+        self.default.as_ref()
+    }
+
+    /// Borrow a known project selector.
+    #[must_use]
+    pub fn project_toolchain(&self, project: &Path) -> Option<&ToolchainId> {
+        self.projects.get(&project.display().to_string())
+    }
+}
+
+/// Typed first-slice manifest for an immutable Ash toolchain.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ToolchainManifest {
+    toolchain_id: ToolchainId,
+    version: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    target_triple: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    source_kind: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    stdlib: Option<StdlibMetadata>,
+    #[serde(default)]
+    standard_tools: Vec<StandardToolMetadata>,
+    #[serde(flatten)]
+    extra: BTreeMap<String, toml::Value>,
+}
+
+impl ToolchainManifest {
+    /// Create a manifest with the required identity and version.
+    #[must_use]
+    pub fn new(id: ToolchainId, version: impl Into<String>) -> Self {
+        Self {
+            toolchain_id: id,
+            version: version.into(),
+            target_triple: None,
+            source_kind: None,
+            stdlib: None,
+            standard_tools: Vec::new(),
+            extra: BTreeMap::new(),
+        }
+    }
+
+    /// Create the smallest manifest used by first-slice staging tests.
+    #[must_use]
+    pub fn minimal(
+        id: ToolchainId,
+        version: impl Into<String>,
+        target: impl Into<String>,
+        source_kind: impl Into<String>,
+    ) -> Self {
+        Self::new(id, version)
+            .with_target_triple(target)
+            .with_source_kind(source_kind)
+            .with_stdlib(StdlibMetadata::new("", "lib/ash/std"))
+            .with_tool(StandardToolMetadata::required("ash", "bin/ash"))
+            .with_tool(StandardToolMetadata::required("ashgrove", "bin/ashgrove"))
+    }
+
+    /// Add the target triple.
+    #[must_use]
+    pub fn with_target_triple(mut self, target: impl Into<String>) -> Self {
+        self.target_triple = Some(target.into());
+        self
+    }
+
+    /// Add the source kind.
+    #[must_use]
+    pub fn with_source_kind(mut self, source_kind: impl Into<String>) -> Self {
+        self.source_kind = Some(source_kind.into());
+        self
+    }
+
+    /// Add stdlib metadata.
+    #[must_use]
+    pub fn with_stdlib(mut self, stdlib: StdlibMetadata) -> Self {
+        self.stdlib = Some(stdlib);
+        self
+    }
+
+    /// Add a standard tool entry.
+    #[must_use]
+    pub fn with_tool(mut self, tool: StandardToolMetadata) -> Self {
+        self.standard_tools.push(tool);
+        self
+    }
+
+    /// Parse from TOML while preserving unknown future-compatible fields.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when TOML parsing or toolchain-id validation fails.
+    pub fn from_toml_str(text: &str) -> Result<Self> {
+        let manifest: Self = toml::from_str(text).context("parse toolchain manifest")?;
+        if manifest.stdlib.is_none() {
+            bail!("toolchain manifest missing stdlib metadata");
+        }
+        Ok(manifest)
+    }
+
+    /// Render TOML, including preserved unknown fields.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when serialization fails.
+    pub fn to_toml_string(&self) -> Result<String> {
+        toml::to_string(self).context("serialize toolchain manifest")
+    }
+
+    /// Write TOML to `path`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when serialization or writing fails.
+    pub fn write_to(&self, path: &Path) -> Result<()> {
+        fs::write(path, self.to_toml_string()?).context("write toolchain manifest")
+    }
+
+    /// Borrow the manifest toolchain id.
+    #[must_use]
+    pub fn toolchain_id(&self) -> &ToolchainId {
+        &self.toolchain_id
+    }
+
+    /// Borrow stdlib metadata.
+    #[must_use]
+    pub fn stdlib(&self) -> &StdlibMetadata {
+        self.stdlib.as_ref().expect("stdlib metadata present")
+    }
+
+    /// Iterate required tools.
+    pub fn required_tools(&self) -> impl Iterator<Item = &StandardToolMetadata> {
+        self.standard_tools.iter().filter(|tool| tool.required)
+    }
+
+    /// Find a required standard tool by name.
+    #[must_use]
+    pub fn required_tool(&self, name: &str) -> Option<&StandardToolMetadata> {
+        self.required_tools().find(|tool| tool.name() == name)
+    }
+
+    /// Validate this manifest belongs to the expected toolchain id.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the manifest id differs from `id`.
+    pub fn validate_for_toolchain(&self, id: &ToolchainId) -> Result<()> {
+        if &self.toolchain_id != id {
+            bail!("manifest toolchain id does not match {}", id.as_str());
+        }
+        Ok(())
+    }
+}
+
+/// Metadata for the bundled stdlib in a toolchain manifest.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StdlibMetadata {
+    version: String,
+    path: String,
+}
+
+impl StdlibMetadata {
+    /// Create stdlib metadata.
+    #[must_use]
+    pub fn new(version: impl Into<String>, path: impl Into<String>) -> Self {
+        Self {
+            version: version.into(),
+            path: path.into(),
+        }
+    }
+
+    /// Borrow the stdlib version.
+    #[must_use]
+    pub fn version(&self) -> &str {
+        &self.version
+    }
+}
+
+/// Metadata for a public standard tool bundled in a toolchain.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StandardToolMetadata {
+    name: String,
+    path: String,
+    required: bool,
+}
+
+impl StandardToolMetadata {
+    /// Create a required standard-tool entry.
+    #[must_use]
+    pub fn required(name: impl Into<String>, path: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            path: path.into(),
+            required: true,
+        }
+    }
+
+    /// Borrow the tool name.
+    #[must_use]
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+}
+
+/// Typed first-slice install record.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InstallRecord {
+    toolchain_id: ToolchainId,
+    source_kind: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    source_rev: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    build_profile: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    target_triple: Option<String>,
+    #[serde(default)]
+    reproducible: bool,
+    #[serde(flatten)]
+    extra: BTreeMap<String, toml::Value>,
+}
+
+impl InstallRecord {
+    /// Create a source-install record.
+    #[must_use]
+    pub fn source_install(id: ToolchainId) -> Self {
+        Self::minimal(id, "source")
+    }
+
+    /// Create a minimal install record.
+    #[must_use]
+    pub fn minimal(id: ToolchainId, source_kind: impl Into<String>) -> Self {
+        Self {
+            toolchain_id: id,
+            source_kind: source_kind.into(),
+            source_rev: None,
+            build_profile: None,
+            target_triple: None,
+            reproducible: false,
+            extra: BTreeMap::new(),
+        }
+    }
+
+    /// Record source revision.
+    #[must_use]
+    pub fn with_source_rev(mut self, rev: impl Into<String>) -> Self {
+        self.source_rev = Some(rev.into());
+        self
+    }
+
+    /// Record build profile.
+    #[must_use]
+    pub fn with_build_profile(mut self, profile: impl Into<String>) -> Self {
+        self.build_profile = Some(profile.into());
+        self
+    }
+
+    /// Record target triple.
+    #[must_use]
+    pub fn with_target_triple(mut self, target: impl Into<String>) -> Self {
+        self.target_triple = Some(target.into());
+        self
+    }
+
+    /// Record reproducibility state.
+    #[must_use]
+    pub fn with_reproducible(mut self, reproducible: bool) -> Self {
+        self.reproducible = reproducible;
+        self
+    }
+
+    /// Parse from TOML while preserving unknown future-compatible fields.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when TOML parsing or toolchain-id validation fails.
+    pub fn from_toml_str(text: &str) -> Result<Self> {
+        toml::from_str(text).context("parse install record")
+    }
+
+    /// Render TOML, including preserved unknown fields.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when serialization fails.
+    pub fn to_toml_string(&self) -> Result<String> {
+        toml::to_string(self).context("serialize install record")
+    }
+
+    /// Write TOML to `path`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when serialization or writing fails.
+    pub fn write_to(&self, path: &Path) -> Result<()> {
+        fs::write(path, self.to_toml_string()?).context("write install record")
+    }
+
+    /// Borrow the record toolchain id.
+    #[must_use]
+    pub fn toolchain_id(&self) -> &ToolchainId {
+        &self.toolchain_id
+    }
+
+    /// Whether the install is reproducible.
+    #[must_use]
+    pub fn is_reproducible(&self) -> bool {
+        self.reproducible
+    }
+
+    /// Borrow the source revision.
+    #[must_use]
+    pub fn source_rev(&self) -> Option<&str> {
+        self.source_rev.as_deref()
+    }
+}
+
+/// Publish result for a staged toolchain.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PublishOutcome {
+    /// A new immutable toolchain directory was published.
+    Published,
+    /// A toolchain with identical manifest metadata was already installed.
+    AlreadyInstalled,
+}
+
+/// Collision status for a proposed toolchain install.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CollisionStatus {
+    /// No installed toolchain directory currently exists for the id.
+    Absent,
+    /// The installed metadata matches the proposed metadata.
+    Identical,
+    /// The id already exists with different metadata.
+    Conflict,
+}
+
+/// Temporary staging directory for atomic toolchain publication.
+pub struct ToolchainStage {
+    paths: AshgrovePaths,
+    id: ToolchainId,
+    dir: tempfile::TempDir,
+}
+
+impl ToolchainStage {
+    /// Create a staging directory next to the final toolchain directory.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the staging parent or temporary directory cannot be created.
+    pub fn create(paths: &AshgrovePaths, id: ToolchainId) -> Result<Self> {
+        let staging_root = paths.toolchains_dir().join(".staging");
+        fs::create_dir_all(&staging_root).context("create toolchain staging root")?;
+        let dir = tempfile::tempdir_in(staging_root).context("create toolchain staging dir")?;
+        Ok(Self {
+            paths: paths.clone(),
+            id,
+            dir,
+        })
+    }
+
+    /// Borrow the staging path.
+    #[must_use]
+    pub fn path(&self) -> &Path {
+        self.dir.path()
+    }
+
+    /// Copy a prepared toolchain payload into staging.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when copying fails.
+    pub fn copy_toolchain_payload(&self, source: &Path) -> Result<()> {
+        copy_dir(source, self.path())
+    }
+
+    /// Atomically publish the staged toolchain.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when shape validation, collision checks, or publish fails.
+    pub fn publish(self) -> Result<PublishOutcome> {
+        verify_toolchain_shape(self.path(), &self.id)?;
+        match classify_toolchain_collision(&self.paths, &self.id, self.path())? {
+            CollisionStatus::Absent => {}
+            CollisionStatus::Identical => return Ok(PublishOutcome::AlreadyInstalled),
+            CollisionStatus::Conflict => {
+                bail!(
+                    "metadata collision for installed toolchain '{}'",
+                    self.id.as_str()
+                );
+            }
+        }
+        fs::create_dir_all(self.paths.toolchains_dir()).context("create toolchains dir")?;
+        fs::rename(self.path(), self.paths.toolchain_dir(&self.id))
+            .context("publish staged toolchain")?;
+        Ok(PublishOutcome::Published)
+    }
+}
+
+/// Classify whether a proposed toolchain collides with an installed id.
+///
+/// # Errors
+///
+/// Returns an error when metadata cannot be read.
+pub fn classify_toolchain_collision(
+    paths: &AshgrovePaths,
+    id: &ToolchainId,
+    proposed_root: &Path,
+) -> Result<CollisionStatus> {
+    let installed = paths.toolchain_dir(id);
+    if !installed.exists() {
+        return Ok(CollisionStatus::Absent);
+    }
+    let installed_manifest =
+        fs::read_to_string(installed.join("manifest.toml")).context("read installed manifest")?;
+    let proposed_manifest = fs::read_to_string(proposed_root.join("manifest.toml"))
+        .context("read proposed manifest")?;
+    if normalize_ws(&installed_manifest) == normalize_ws(&proposed_manifest) {
+        Ok(CollisionStatus::Identical)
+    } else {
+        Ok(CollisionStatus::Conflict)
+    }
+}
+
+/// Stage the stdlib package manifest into `lib/ash/std/ash.toml`.
+///
+/// # Errors
+///
+/// Returns an error when the stdlib root is missing or the manifest cannot be written.
+pub fn stage_stdlib_metadata(toolchain_root: &Path, metadata: &StdlibMetadata) -> Result<()> {
+    let metadata_path = Path::new(&metadata.path);
+    if metadata_path.is_absolute()
+        || metadata_path
+            .components()
+            .any(|part| matches!(part, Component::ParentDir | Component::Prefix(_)))
+    {
+        bail!(
+            "stdlib metadata path must stay inside the toolchain root: {}",
+            metadata.path
+        );
+    }
+    let std_root = toolchain_root.join(&metadata.path);
+    if !std_root.join("src").is_dir() {
+        bail!("stdlib source root is missing at {}", std_root.display());
+    }
+    fs::create_dir_all(&std_root).context("create stdlib root")?;
+    fs::write(
+        std_root.join("ash.toml"),
+        format!(
+            "[package]\nname = \"std\"\nversion = \"{}\"\n",
+            metadata.version()
+        ),
+    )
+    .context("write stdlib package metadata")
 }
 
 #[derive(Debug, Parser)]
@@ -194,10 +783,12 @@ struct InstallArgs {
 
 #[derive(Debug, Args)]
 struct UpdateArgs {
+    /// Rejected until a release index policy exists.
+    bare_version: Option<String>,
     #[arg(long)]
-    to: String,
+    to: Option<String>,
     #[arg(long = "from", value_enum)]
-    source: InstallSource,
+    source: Option<InstallSource>,
     #[arg(long)]
     path: Option<PathBuf>,
     #[arg(long)]
@@ -329,8 +920,13 @@ fn install(paths: &AshgrovePaths, args: InstallArgs) -> Result<()> {
 }
 
 fn update(paths: &AshgrovePaths, args: UpdateArgs) -> Result<()> {
-    let id = ToolchainId::parse(&args.to)?;
-    match args.source {
+    if args.bare_version.is_some() {
+        bail!("bare version update requires a release index policy, which is not available yet");
+    }
+    let to = args.to.context("--to is required for update")?;
+    let source = args.source.context("--from is required for update")?;
+    let id = ToolchainId::parse(&to)?;
+    match source {
         InstallSource::Existing => {
             if !paths.toolchain_dir(&id).is_dir() {
                 bail!("toolchain '{}' is not installed", id.as_str());
@@ -558,11 +1154,14 @@ fn set_default(paths: &AshgrovePaths, id: &ToolchainId) -> Result<()> {
         bail!("toolchain '{}' is not installed", id.as_str());
     }
     fs::create_dir_all(paths.config_dir()).context("create config dir")?;
-    fs::write(
-        paths.config_dir().join("toolchains.toml"),
-        format!("default = \"{}\"\n", id.as_str()),
-    )
-    .context("write selector")?;
+    let selector_path = paths.config_dir().join("toolchains.toml");
+    let mut selector = if selector_path.exists() {
+        SelectorMetadata::read_from_path(&selector_path)?
+    } else {
+        SelectorMetadata::empty()
+    };
+    selector.set_default(id.clone());
+    selector.write_to_path(&selector_path)?;
     println!("{}", id.as_str());
     Ok(())
 }

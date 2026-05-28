@@ -1788,8 +1788,13 @@ fn remove_path(path: &Path) -> Result<()> {
 fn lock(project: &Path, check: bool) -> Result<()> {
     reject_legacy_conflict(project)?;
     let manifest = Manifest::read(project)?;
-    let expected = manifest.lock_text(project)?;
     let lock_path = project.join("ash.lock");
+    let preserved_trust = if lock_path.exists() {
+        Some(read_lock_trust(&lock_path)?).flatten()
+    } else {
+        None
+    };
+    let expected = manifest.lock_text(project, preserved_trust)?;
     if check {
         let current = fs::read_to_string(&lock_path).context("read ash.lock")?;
         if normalize_ws(&current) != normalize_ws(&expected) {
@@ -1894,6 +1899,12 @@ fn read_lock(project: &Path) -> Result<LockFile> {
     let lock_path = project.join("ash.lock");
     let text = fs::read_to_string(&lock_path).context("read ash.lock")?;
     toml::from_str(&text).context("parse ash.lock")
+}
+
+fn read_lock_trust(lock_path: &Path) -> Result<Option<toml::Value>> {
+    let text = fs::read_to_string(lock_path).context("read ash.lock")?;
+    let value: toml::Value = toml::from_str(&text).context("parse ash.lock")?;
+    Ok(value.get("trust").cloned())
 }
 
 fn materialize_locked_packages(
@@ -2092,6 +2103,8 @@ fn collect_package_files(
 
 #[derive(Debug, Deserialize, Serialize)]
 struct LockFile {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    trust: Option<toml::Value>,
     #[serde(default)]
     package: Vec<LockedPackage>,
 }
@@ -2147,20 +2160,21 @@ impl Manifest {
         Ok(Self { dependencies })
     }
 
-    fn lock_text(&self, project: &Path) -> Result<String> {
+    fn lock_text(&self, project: &Path, trust: Option<toml::Value>) -> Result<String> {
         let mut package = Vec::with_capacity(self.dependencies.len());
         for dep in &self.dependencies {
             let commit = dep.resolve_commit(project)?;
+            let rev = dep.rev.as_ref().map(|_| commit.clone());
             package.push(LockedPackage {
                 name: dep.name.clone(),
                 git: dep.git.clone(),
                 tag: dep.tag.clone(),
-                rev: dep.rev.clone(),
+                rev,
                 commit,
                 source_path: dep.local_path().map(|path| path.display().to_string()),
             });
         }
-        toml::to_string(&LockFile { package }).context("serialize ash.lock")
+        toml::to_string(&LockFile { trust, package }).context("serialize ash.lock")
     }
 }
 

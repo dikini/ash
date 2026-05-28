@@ -180,3 +180,86 @@ fn task_972_fetch_uses_existing_lock_commit_when_manifest_tag_moves() {
     let materialized = std::fs::read_to_string(checkout.join("lib.ash")).expect("checkout lib");
     assert!(!materialized.contains("Dep2"));
 }
+
+#[test]
+fn task_972_lock_expands_abbreviated_rev_to_full_hash() {
+    let project = support::project_fixture();
+    let dep = support::git_dep_fixture();
+    let full = dep.commit("v1");
+    let short = &full[..12];
+    std::fs::write(
+        project.path().join("ash.toml"),
+        format!(
+            "[package]\nname = \"app\"\n\n[dependencies.dep]\ngit = \"{}\"\nrev = \"{}\"\n",
+            dep.url(),
+            short
+        ),
+    )
+    .expect("manifest");
+    let roots = support::xdg_fixture();
+
+    Command::cargo_bin("ashgrove")
+        .expect("ashgrove")
+        .args(["lock", "--project", project.path().to_str().expect("utf8")])
+        .envs(roots.env())
+        .assert()
+        .success();
+
+    let lock_text = std::fs::read_to_string(project.path().join("ash.lock")).expect("lock");
+    let lock: toml::Value = toml::from_str(&lock_text).expect("serialized lock TOML");
+    let package = lock
+        .get("package")
+        .and_then(toml::Value::as_array)
+        .and_then(|packages| packages.first())
+        .expect("package");
+    assert_eq!(
+        package.get("commit").and_then(toml::Value::as_str),
+        Some(full.as_str())
+    );
+    assert_eq!(
+        package.get("rev").and_then(toml::Value::as_str),
+        Some(full.as_str())
+    );
+}
+
+#[test]
+fn task_972_lock_preserves_reserved_trust_fields_on_rewrite() {
+    let project = support::project_fixture();
+    let dep = support::git_dep_fixture();
+    std::fs::write(
+        project.path().join("ash.toml"),
+        format!(
+            "[package]\nname = \"app\"\n\n[dependencies.dep]\ngit = \"{}\"\ntag = \"v1\"\n",
+            dep.url()
+        ),
+    )
+    .expect("manifest");
+    std::fs::write(
+        project.path().join("ash.lock"),
+        "[trust]\nsigning = \"none\"\nfuture = \"kept\"\n\n[[package]]\nname = \"stale\"\ngit = \"file:///tmp/stale\"\ncommit = \"0123456789abcdef0123456789abcdef01234567\"\n",
+    )
+    .expect("stale lock");
+    let roots = support::xdg_fixture();
+
+    Command::cargo_bin("ashgrove")
+        .expect("ashgrove")
+        .args(["lock", "--project", project.path().to_str().expect("utf8")])
+        .envs(roots.env())
+        .assert()
+        .success();
+
+    let lock_text = std::fs::read_to_string(project.path().join("ash.lock")).expect("lock");
+    let lock: toml::Value = toml::from_str(&lock_text).expect("serialized lock TOML");
+    let trust = lock
+        .get("trust")
+        .and_then(toml::Value::as_table)
+        .expect("trust");
+    assert_eq!(
+        trust.get("signing").and_then(toml::Value::as_str),
+        Some("none")
+    );
+    assert_eq!(
+        trust.get("future").and_then(toml::Value::as_str),
+        Some("kept")
+    );
+}

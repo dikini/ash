@@ -1,6 +1,6 @@
 # TASK-972: Ash manifest lock git fetch
 
-## Status: ⚠️ Partial second slice
+## Status: ⚠️ Partial rev/trust hardening slice
 
 ## Description
 
@@ -35,9 +35,11 @@ Implement project `ash.toml`, `ash.lock`, git dependency resolution, fetch, lock
 - `ashgrove fetch` now writes `ash.lock`, clones git dependencies into `$XDG_CACHE_HOME/ash/git/repos/<package>-<url-digest>.git`, and publishes detached checkouts under `$XDG_CACHE_HOME/ash/git/checkouts/<package>-<url-digest>/<commit>/`.
 - `task_972_fetch_materializes_exact_lock_commit_in_xdg_cache` proves a moved manifest tag does not change the already-materialized cached dependency root; the checkout content comes from the exact lockfile commit.
 - Lockfile commit values consumed by vendoring must be full 40-character hexadecimal commit hashes.
+- `task_972_lock_expands_abbreviated_rev_to_full_hash` proves accepted abbreviated manifest `rev` values are resolved and serialized as full commit hashes in `ash.lock`.
+- `task_972_lock_preserves_reserved_trust_fields_on_rewrite` proves existing lockfile `[trust]` metadata is preserved when `ashgrove lock` rewrites package entries.
 - `ash check src/main.ash` and explicit ordinary-file `ash run src/main.ash:main` now discover an ancestor lower-case `ash.toml`, validate `ash.lock`, and resolve locked packages from the default `vendor/ash/` layout without `ASH_DEP_ROOTS` or `ASH_DEPENDENCY_ROOTS`.
 - `malformed_lock_commit_fails_closed_without_resolving_vendor`, `run_fails_closed_on_malformed_lock_commit`, `explicit_vendor_root_does_not_bypass_lock_commit_validation`, `explicit_vendor_package_root_does_not_expose_top_level_modules`, and `project_without_vendor_root_does_not_require_lockfile` prove malformed lock commits fail closed for vendored module resolution, explicit dependency-root environment input remains package-bound, and non-vendored projects are not forced to carry `ash.lock`.
-- The full requirement remains partial because direct fetched-cache root discovery and trust preservation are still deferred.
+- The full requirement remains partial because direct fetched-cache root discovery and broader lower-case package/toolchain metadata coverage are still deferred.
 
 ### Non-goals
 
@@ -68,9 +70,9 @@ checklist:
   - [ ] Parse lower-case `ash.toml` package/toolchain/dependency metadata needed by SPEC-073.
   - [ ] Reject ambiguous package/dependency/toolchain metadata split across `ash.toml` and legacy `.ash.toml`.
   - [x] Resolve git tag dependencies to exact commits in `ash.lock`.
-  - [ ] Expand accepted abbreviated revs to full commit hashes in `ash.lock` or reject them.
-  - [ ] Reject unpinned dependencies outside an explicit development override.
-  - [ ] Preserve reserved trust/signing fields in manifest/lockfile read-modify-write flows.
+  - [x] Expand accepted abbreviated revs to full commit hashes in `ash.lock` or reject them.
+  - [x] Reject unpinned dependencies outside an explicit development override.
+  - [x] Preserve reserved trust/signing fields in manifest/lockfile read-modify-write flows for `ash.lock`; manifest trust preservation remains deferred until manifest rewrite flows exist.
   - [x] Implement `ashgrove fetch` and `ashgrove lock --check`.
   - [ ] Integrate locked dependency roots with `ash-cli`/`ash-engine` module resolution so `ash check` and `ash run` can import fetched dependencies. `ash check` and explicit ordinary-file `ash run src/main.ash:main` now cover vendored roots; direct fetched-cache roots remain incomplete.
 ```

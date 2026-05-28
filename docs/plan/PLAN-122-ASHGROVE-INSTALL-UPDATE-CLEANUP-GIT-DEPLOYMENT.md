@@ -12,7 +12,7 @@
 
 ## 1. Status
 
-**Status:** ⚠️ Partial second slice after TASK-974 report; SPEC-073 remains Draft pending deferred acceptance rows
+**Status:** ⚠️ Partial follow-up slice after TASK-974 report; SPEC-073 remains Draft pending deferred acceptance rows
 **Spec:** [SPEC-073](../spec/SPEC-073-ASHGROVE-INSTALL-UPDATE-CLEANUP-GIT-DEPLOYMENT.md)
 **Task range:** [TASK-964](tasks/TASK-964-ashgrove-install-policy-packet.md) through [TASK-974](tasks/TASK-974-ashgrove-closeout-acceptance.md)
 
@@ -60,8 +60,8 @@ TASK-964 creates the docs/spec/plan/task packet. TASK-965 is a hard audit gate a
 | [TASK-969](tasks/TASK-969-binary-tarball-install-flow.md) | Implement conforming tarball production/validation/install path | 14 | ⚠️ Partial |
 | [TASK-970](tasks/TASK-970-update-default-list-current-flow.md) | Implement update/default/list/current flows | 10 | ⚠️ Partial |
 | [TASK-971](tasks/TASK-971-remove-cleanup-flow.md) | Implement remove and cleanup policy, including daemon/running-manager protection | 12 | ⚠️ Partial |
-| [TASK-972](tasks/TASK-972-ash-manifest-lock-git-fetch.md) | Implement `ash.toml`, `ash.lock`, git fetch, lock checking, trust preservation, and dependency-root module-loader integration | 18 | ⚠️ Partial second slice |
-| [TASK-973](tasks/TASK-973-vendor-and-deployable-git-project-flow.md) | Implement vendor/offline deployment flow for git projects | 12 | ⚠️ Partial second slice |
+| [TASK-972](tasks/TASK-972-ash-manifest-lock-git-fetch.md) | Implement `ash.toml`, `ash.lock`, git fetch, lock checking, trust preservation, and dependency-root module-loader integration | 18 | ⚠️ Partial follow-up slice |
+| [TASK-973](tasks/TASK-973-vendor-and-deployable-git-project-flow.md) | Implement vendor/offline deployment flow for git projects | 12 | ⚠️ Partial follow-up slice |
 | [TASK-974](tasks/TASK-974-ashgrove-closeout-acceptance.md) | Close out SPEC-073 with acceptance matrix and broad verification | 8 | ⚠️ Reported |
 
 ## 4. Decision gates

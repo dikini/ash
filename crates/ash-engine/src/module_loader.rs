@@ -395,7 +395,7 @@ pub fn load_ordinary_source(path: &Path, source: &str) -> Result<LoadedOrdinaryF
 
     let crate_root = discover_crate_root(entry_root);
     for import in imports {
-        let absolute_roots = search_roots(entry_root);
+        let absolute_roots = search_roots(entry_root)?;
         let (module_segments, search_roots) = normalize_import_resolution(
             &import.module_segments,
             entry_root,
@@ -1773,7 +1773,7 @@ fn collect_import_visibility_info(
         let Ok(import_spec) = parse_ordinary_import(trimmed) else {
             continue;
         };
-        let absolute_roots = search_roots(module_root);
+        let absolute_roots = search_roots(module_root).unwrap_or_default();
         let (module_segments, search_roots) = normalize_import_resolution(
             &import_spec.module_segments,
             module_root,
@@ -1861,7 +1861,7 @@ fn collect_public_import_visibility_exports(
         let Ok(import_spec) = parse_ordinary_import(trimmed) else {
             continue;
         };
-        let absolute_roots = search_roots(module_root);
+        let absolute_roots = search_roots(module_root).unwrap_or_default();
         let (module_segments, search_roots) = normalize_import_resolution(
             &import_spec.module_segments,
             module_root,
@@ -2602,7 +2602,7 @@ pub(crate) fn collect_module_exports(
     for snippet in extract_import_snippets(&source) {
         let trimmed = snippet.trim();
         if let Ok(import_spec) = parse_ordinary_import(trimmed) {
-            let absolute_roots = search_roots(module_root);
+            let absolute_roots = search_roots(module_root)?;
             let (module_segments, search_roots) = normalize_import_resolution(
                 &import_spec.module_segments,
                 module_root,
@@ -2683,7 +2683,7 @@ fn resolve_use_target(
         .iter()
         .map(std::string::ToString::to_string)
         .collect::<Vec<_>>();
-    let absolute_roots = search_roots(module_root);
+    let absolute_roots = search_roots(module_root)?;
     let crate_root = discover_crate_root(module_root);
     let (module_segments, search_roots) = normalize_import_resolution(
         &module_segments,
@@ -5767,11 +5767,48 @@ where
 
 fn resolve_module_path(module_segments: &[String], search_roots: &[PathBuf]) -> Option<PathBuf> {
     for root in search_roots {
+        if is_locked_vendor_root(root) && !locked_vendor_root_allows(root, module_segments) {
+            continue;
+        }
         if let Some(path) = resolve_in_root(root.as_path(), module_segments) {
             return Some(path);
         }
     }
     None
+}
+
+fn is_locked_vendor_root(root: &Path) -> bool {
+    root.file_name().and_then(|name| name.to_str()) == Some("ash")
+        && root
+            .parent()
+            .and_then(Path::file_name)
+            .and_then(|name| name.to_str())
+            == Some("vendor")
+}
+
+fn locked_vendor_root_allows(root: &Path, module_segments: &[String]) -> bool {
+    let Some(first) = module_segments.first() else {
+        return false;
+    };
+    let Some(project_root) = root.parent().and_then(Path::parent) else {
+        return false;
+    };
+    let Ok(lock_text) = std::fs::read_to_string(project_root.join("ash.lock")) else {
+        return false;
+    };
+    let Ok(lock) = toml::from_str::<toml::Value>(&lock_text) else {
+        return false;
+    };
+    lock.get("package")
+        .and_then(toml::Value::as_array)
+        .is_some_and(|packages| {
+            packages.iter().any(|package| {
+                package
+                    .get("name")
+                    .and_then(toml::Value::as_str)
+                    .is_some_and(|name| name == first)
+            })
+        })
 }
 
 fn normalize_import_resolution(
@@ -5876,21 +5913,112 @@ fn contains_ash_files(path: &Path) -> bool {
     })
 }
 
-fn search_roots(root: &Path) -> Vec<PathBuf> {
+fn search_roots(root: &Path) -> Result<Vec<PathBuf>, EngineError> {
     let mut roots = vec![root.to_path_buf()];
     MODULE_ROOT_OVERRIDE.with(|slot| {
         if let Some(override_roots) = slot.borrow().as_ref() {
             roots.extend(override_roots.dependency_roots.clone());
         }
     });
+    if let Some(value) = std::env::var_os("ASH_DEP_ROOTS") {
+        roots.extend(std::env::split_paths(&value));
+    }
     if let Some(value) = std::env::var_os("ASH_DEPENDENCY_ROOTS") {
         roots.extend(std::env::split_paths(&value));
     }
     if let Some(value) = std::env::var_os("ASH_LIBRARY_PATH") {
         roots.extend(std::env::split_paths(&value));
     }
+    roots.extend(discover_locked_vendor_roots(root)?);
     roots.push(builtin_stdlib_root());
-    roots
+    Ok(roots)
+}
+
+fn discover_locked_vendor_roots(importing_dir: &Path) -> Result<Vec<PathBuf>, EngineError> {
+    let Some(project_root) = discover_ash_project_root(importing_dir) else {
+        return Ok(Vec::new());
+    };
+
+    let vendor_root = project_root.join("vendor/ash");
+    if !vendor_root.is_dir() {
+        return Ok(Vec::new());
+    }
+
+    let lock_text = std::fs::read_to_string(project_root.join("ash.lock")).map_err(|error| {
+        EngineError::Configuration(format!(
+            "failed to read ash.lock for project '{}': {error}",
+            project_root.display()
+        ))
+    })?;
+    let lock: toml::Value = toml::from_str(&lock_text).map_err(|error| {
+        EngineError::Configuration(format!(
+            "failed to parse ash.lock for project '{}': {error}",
+            project_root.display()
+        ))
+    })?;
+    let packages = lock
+        .get("package")
+        .and_then(toml::Value::as_array)
+        .ok_or_else(|| EngineError::Configuration("ash.lock missing package entries".into()))?;
+
+    let mut roots = Vec::with_capacity(packages.len() + 1);
+    roots.push(vendor_root.clone());
+    for package in packages {
+        let name = package
+            .get("name")
+            .and_then(toml::Value::as_str)
+            .ok_or_else(|| EngineError::Configuration("ash.lock package missing name".into()))?;
+        validate_locked_package_name(name)?;
+        let commit = package
+            .get("commit")
+            .and_then(toml::Value::as_str)
+            .ok_or_else(|| EngineError::Configuration("ash.lock package missing commit".into()))?;
+        validate_locked_commit(commit)?;
+        let package_root = vendor_root.join(name);
+        if !package_root.is_dir() {
+            return Err(EngineError::Configuration(format!(
+                "locked package '{name}' is missing from vendor root '{}'",
+                vendor_root.display()
+            )));
+        }
+    }
+    Ok(roots)
+}
+
+fn discover_ash_project_root(importing_dir: &Path) -> Option<PathBuf> {
+    let mut current = Some(importing_dir);
+    while let Some(path) = current {
+        if path.join("ash.toml").is_file() {
+            return Some(path.to_path_buf());
+        }
+        current = path.parent();
+    }
+    None
+}
+
+fn validate_locked_package_name(name: &str) -> Result<(), EngineError> {
+    let mut chars = name.chars();
+    let Some(first) = chars.next() else {
+        return Err(EngineError::Configuration("invalid package name ''".into()));
+    };
+    if !first.is_ascii_alphanumeric()
+        || !chars.all(|ch| ch.is_ascii_alphanumeric() || ch == '_' || ch == '-')
+    {
+        return Err(EngineError::Configuration(format!(
+            "invalid package name '{name}'"
+        )));
+    }
+    Ok(())
+}
+
+fn validate_locked_commit(commit: &str) -> Result<(), EngineError> {
+    if commit.len() == 40 && commit.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+        Ok(())
+    } else {
+        Err(EngineError::Configuration(
+            "locked git commit must be a full 40-character commit hash".into(),
+        ))
+    }
 }
 
 fn resolve_in_root(root: &Path, module_segments: &[String]) -> Option<PathBuf> {

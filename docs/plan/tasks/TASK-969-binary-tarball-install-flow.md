@@ -1,6 +1,6 @@
 # TASK-969: Binary tarball install flow
 
-## Status: ⚠️ Partial first slice
+## Status: ⚠️ Partial tarball validation slice
 
 ## Description
 
@@ -55,14 +55,14 @@ commands:
   - cargo check -p ashgrove
   - git diff --check
 checklist:
-  - [ ] Define a conforming release tarball shape and produce it through the TASK-965-selected script/command or test fixture helper.
-  - [ ] Validate tarball directory shape before publish.
-  - [ ] Validate `manifest.toml` and `install-record.toml` schema.
-  - [ ] Validate archive version/toolchain id matches the target directory.
+  - [x] Define a conforming release tarball shape and produce it through the TASK-965-selected script/command or test fixture helper.
+  - [x] Validate tarball directory shape before publish.
+  - [x] Validate `manifest.toml` and `install-record.toml` schema.
+  - [x] Validate archive version/toolchain id matches the target directory.
   - [x] Validate executable presence/permissions for required binaries.
-  - [ ] Validate stdlib manifest presence.
-  - [ ] Reject unsafe archive entries including absolute paths, traversal, symlink/hardlink escapes, device files, and setuid/setgid bits.
-  - [ ] Record tarball path/URL/digest/install time in install metadata.
+  - [x] Validate stdlib manifest presence.
+  - [x] Reject unsafe archive entries including absolute paths, traversal, symlink/hardlink escapes, device files, and setuid/setgid bits.
+  - [x] Record tarball path/digest/install time in install metadata.
 ```
 
 
@@ -84,3 +84,5 @@ This task contributes to PLAN-122 and SPEC-073 completion. Later tasks must pres
 Area: install/semantic. Binary install acceptance requires both producer and consumer evidence.
 
 2026-05-28 follow-up slice: added focused coverage that rejects tarballs whose required `bin/ash` payload is present but lacks executable bits, and made fixture tarballs model executable `ash`/`ashgrove` binaries. TASK-969 remains partial because release tarball production, schema validation, archive-version policy, path/URL recording, and atomic publish are still not implemented.
+
+2026-05-28 tarball validation slice: made fixture tarballs emit the conforming first-slice manifest/install-record shape, validated tarball root shape through typed `manifest.toml` and `install-record.toml` parsing before publish, required the root directory name and metadata toolchain id to match, required the bundled stdlib manifest, preserved executable required-binary validation, routed tarball installs through `ToolchainStage::publish`, rewrote tarball install metadata with local tarball path, digest, and install time, and added focused unsafe-entry coverage for symlink, hardlink, absolute path, parent traversal, and setuid mode rejection. TASK-969 remains partial because the repository `scripts/package-ash-toolchain.sh` release producer and authenticated URL download/recording path are still deferred.

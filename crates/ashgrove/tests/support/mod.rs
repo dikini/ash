@@ -79,15 +79,31 @@ pub fn create_toolchain_shape(root: &Path, id: &str) {
     .expect("stdlib");
     std::fs::write(
         root.join("manifest.toml"),
-        format!("toolchain_id = \"{id}\"\nversion = \"0.1.0\"\n"),
+        format!(
+            "toolchain_id = \"{id}\"\nversion = \"0.1.0\"\nsource_kind = \"fixture\"\n[stdlib]\nversion = \"0.1.0\"\npath = \"lib/ash/std\"\n[[standard_tools]]\nname = \"ash\"\npath = \"bin/ash\"\nrequired = true\n[[standard_tools]]\nname = \"ashgrove\"\npath = \"bin/ashgrove\"\nrequired = true\n"
+        ),
     )
     .expect("manifest");
-    std::fs::write(root.join("install-record.toml"), "source = \"fixture\"\n").expect("record");
+    std::fs::write(
+        root.join("install-record.toml"),
+        format!("toolchain_id = \"{id}\"\nsource_kind = \"tarball\"\n"),
+    )
+    .expect("record");
 }
 
 pub fn toolchain_tarball_fixture(id: &str) -> tempfile::NamedTempFile {
     let source = tempfile::tempdir().expect("source");
     create_toolchain_shape(source.path(), id);
+    pack_toolchain_dir(id, source.path())
+}
+
+pub fn toolchain_tarball_fixture_with_mutation(
+    id: &str,
+    mutate: impl FnOnce(&Path),
+) -> tempfile::NamedTempFile {
+    let source = tempfile::tempdir().expect("source");
+    create_toolchain_shape(source.path(), id);
+    mutate(source.path());
     pack_toolchain_dir(id, source.path())
 }
 
@@ -133,6 +149,74 @@ pub fn unsafe_tarball_fixture() -> tempfile::NamedTempFile {
     header.set_size(0);
     header.set_cksum();
     builder.append(&header, &[][..]).expect("append");
+    builder.finish().expect("finish");
+    file
+}
+
+pub fn unsafe_path_tarball_fixture(path: &str) -> tempfile::NamedTempFile {
+    let file = tempfile::NamedTempFile::new().expect("archive");
+    let encoder = flate2::write::GzEncoder::new(
+        file.reopen().expect("reopen"),
+        flate2::Compression::default(),
+    );
+    let mut builder = tar::Builder::new(encoder);
+    let bytes = b"escape";
+    let mut header = tar::Header::new_gnu();
+    header.set_entry_type(tar::EntryType::Regular);
+    set_raw_tar_path(&mut header, path);
+    header.set_size(bytes.len() as u64);
+    header.set_mode(0o644);
+    header.set_cksum();
+    builder.append(&header, &bytes[..]).expect("append");
+    builder.finish().expect("finish");
+    file
+}
+
+fn set_raw_tar_path(header: &mut tar::Header, path: &str) {
+    let bytes = path.as_bytes();
+    assert!(bytes.len() <= 100, "test tar path too long");
+    let header_bytes = header.as_mut_bytes();
+    header_bytes[..bytes.len()].copy_from_slice(bytes);
+    header_bytes[bytes.len()] = 0;
+}
+
+pub fn unsafe_hardlink_tarball_fixture() -> tempfile::NamedTempFile {
+    let file = tempfile::NamedTempFile::new().expect("archive");
+    let encoder = flate2::write::GzEncoder::new(
+        file.reopen().expect("reopen"),
+        flate2::Compression::default(),
+    );
+    let mut builder = tar::Builder::new(encoder);
+    let mut header = tar::Header::new_gnu();
+    header.set_entry_type(tar::EntryType::Link);
+    header
+        .set_path("ash-0.1.0+test.tarball.hardlink001/bin/ash")
+        .expect("path");
+    header.set_link_name("/tmp/escape").expect("link");
+    header.set_size(0);
+    header.set_cksum();
+    builder.append(&header, &[][..]).expect("append");
+    builder.finish().expect("finish");
+    file
+}
+
+pub fn unsafe_mode_tarball_fixture(mode: u32) -> tempfile::NamedTempFile {
+    let file = tempfile::NamedTempFile::new().expect("archive");
+    let encoder = flate2::write::GzEncoder::new(
+        file.reopen().expect("reopen"),
+        flate2::Compression::default(),
+    );
+    let mut builder = tar::Builder::new(encoder);
+    let bytes = b"mode";
+    let mut header = tar::Header::new_gnu();
+    header.set_entry_type(tar::EntryType::Regular);
+    header
+        .set_path("ash-0.1.0+test.tarball.mode0000001/bin/ash")
+        .expect("path");
+    header.set_size(bytes.len() as u64);
+    header.set_mode(mode);
+    header.set_cksum();
+    builder.append(&header, &bytes[..]).expect("append");
     builder.finish().expect("finish");
     file
 }

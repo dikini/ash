@@ -3,7 +3,7 @@
 use std::collections::BTreeMap;
 use std::ffi::OsStr;
 use std::fs;
-use std::io::{Read, Write};
+use std::io::Read;
 use std::path::{Component, Path, PathBuf};
 use std::process::{Command, ExitCode};
 
@@ -410,6 +410,18 @@ impl ToolchainManifest {
         if &self.toolchain_id != id {
             bail!("manifest toolchain id does not match {}", id.as_str());
         }
+        let expected_version = id
+            .as_str()
+            .strip_prefix("ash-")
+            .and_then(|suffix| suffix.split('+').next())
+            .unwrap_or_default();
+        if self.version != expected_version {
+            bail!(
+                "manifest version '{}' does not match toolchain id {}",
+                self.version,
+                id.as_str()
+            );
+        }
         Ok(())
     }
 }
@@ -436,6 +448,12 @@ impl StdlibMetadata {
     pub fn version(&self) -> &str {
         &self.version
     }
+
+    /// Borrow the stdlib path relative to the toolchain root.
+    #[must_use]
+    pub fn path(&self) -> &str {
+        &self.path
+    }
 }
 
 /// Metadata for a public standard tool bundled in a toolchain.
@@ -461,6 +479,12 @@ impl StandardToolMetadata {
     #[must_use]
     pub fn name(&self) -> &str {
         &self.name
+    }
+
+    /// Borrow the tool path relative to the toolchain root.
+    #[must_use]
+    pub fn path(&self) -> &str {
+        &self.path
     }
 }
 
@@ -573,6 +597,24 @@ impl InstallRecord {
     #[must_use]
     pub fn source_rev(&self) -> Option<&str> {
         self.source_rev.as_deref()
+    }
+
+    /// Borrow the source kind.
+    #[must_use]
+    pub fn source_kind(&self) -> &str {
+        &self.source_kind
+    }
+
+    /// Validate this record belongs to the expected toolchain id.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the record id differs from `id`.
+    pub fn validate_for_toolchain(&self, id: &ToolchainId) -> Result<()> {
+        if &self.toolchain_id != id {
+            bail!("install record toolchain id does not match {}", id.as_str());
+        }
+        Ok(())
     }
 }
 
@@ -700,6 +742,7 @@ fn normalize_install_record(text: &str) -> Result<toml::Value> {
     let mut value = toml::from_str::<toml::Value>(text).context("parse install record")?;
     if let Some(table) = value.as_table_mut() {
         table.remove("installed_at");
+        table.remove("tarball_path");
     }
     Ok(value)
 }
@@ -1148,16 +1191,14 @@ fn install_from_tarball(paths: &AshgrovePaths, archive: &Path, switch: bool) -> 
         .and_then(OsStr::to_str)
         .context("toolchain root must be utf8")?;
     let id = ToolchainId::parse(id)?;
-    verify_toolchain_shape(&root, &id)?;
+    let manifest = verify_toolchain_shape(&root, &id)?;
+    verify_install_record_shape(&root, &id)?;
     verify_required_binaries_executable(&root, &id)?;
-    publish_shape(paths, &root, &id)?;
-    append_record(
-        &paths.toolchain_dir(&id).join("install-record.toml"),
-        &format!(
-            "source_kind = \"tarball\"\ntarball_digest = \"sha256:{digest}\"\ninstalled_at = \"{}\"\n",
-            Utc::now().to_rfc3339()
-        ),
-    )?;
+    verify_required_manifest_tools(&root, &manifest)?;
+    write_tarball_install_record(&root.join("install-record.toml"), &id, archive, &digest)?;
+    let stage = ToolchainStage::create(paths, id.clone())?;
+    stage.copy_toolchain_payload(&root)?;
+    stage.publish()?;
     if switch || read_default(paths)?.is_none() {
         set_default(paths, &id)?;
     }
@@ -1189,23 +1230,10 @@ fn validate_archive_entry(entry: &tar::Entry<'_, impl Read>) -> Result<()> {
     Ok(())
 }
 
-fn publish_shape(paths: &AshgrovePaths, source: &Path, id: &ToolchainId) -> Result<()> {
-    verify_toolchain_shape(source, id)?;
-    let dest = paths.toolchain_dir(id);
-    if dest.exists() {
-        verify_toolchain_shape(&dest, id)?;
-        return Ok(());
-    }
-    fs::create_dir_all(paths.toolchains_dir()).context("create toolchains dir")?;
-    copy_dir(source, &dest)?;
-    Ok(())
-}
-
-fn verify_toolchain_shape(root: &Path, id: &ToolchainId) -> Result<()> {
+fn verify_toolchain_shape(root: &Path, id: &ToolchainId) -> Result<ToolchainManifest> {
     for rel in [
         "bin/ash",
         "bin/ashgrove",
-        "lib/ash/std/ash.toml",
         "lib/ash/std/src",
         "manifest.toml",
         "install-record.toml",
@@ -1215,11 +1243,103 @@ fn verify_toolchain_shape(root: &Path, id: &ToolchainId) -> Result<()> {
             bail!("toolchain '{}' missing required path {rel}", id.as_str());
         }
     }
-    let manifest = fs::read_to_string(root.join("manifest.toml")).context("read manifest")?;
-    if !manifest.contains(&format!("toolchain_id = \"{}\"", id.as_str())) {
-        bail!("manifest toolchain id does not match {}", id.as_str());
+    if !root.join("lib/ash/std/ash.toml").is_file() {
+        bail!("stdlib manifest is missing at lib/ash/std/ash.toml");
+    }
+    let manifest_text = fs::read_to_string(root.join("manifest.toml")).context("read manifest")?;
+    let manifest = ToolchainManifest::from_toml_str(&manifest_text)?;
+    manifest.validate_for_toolchain(id)?;
+    verify_stdlib_manifest(root, manifest.stdlib())?;
+    Ok(manifest)
+}
+
+fn verify_install_record_shape(root: &Path, id: &ToolchainId) -> Result<InstallRecord> {
+    let record_text =
+        fs::read_to_string(root.join("install-record.toml")).context("read install record")?;
+    let record = InstallRecord::from_toml_str(&record_text)?;
+    record.validate_for_toolchain(id)?;
+    if record.source_kind() != "tarball" {
+        bail!(
+            "install record source_kind must be tarball for {}",
+            id.as_str()
+        );
+    }
+    Ok(record)
+}
+
+fn verify_stdlib_manifest(root: &Path, metadata: &StdlibMetadata) -> Result<()> {
+    let stdlib_path = validate_relative_toolchain_path(metadata.path(), "stdlib metadata path")?;
+    let manifest = root.join(stdlib_path).join("ash.toml");
+    if !manifest.is_file() {
+        bail!("stdlib manifest is missing at {}", manifest.display());
     }
     Ok(())
+}
+
+fn verify_required_manifest_tools(root: &Path, manifest: &ToolchainManifest) -> Result<()> {
+    for name in ["ash", "ashgrove"] {
+        if manifest.required_tool(name).is_none() {
+            bail!("toolchain manifest missing required tool {name}");
+        }
+    }
+    for tool in manifest.required_tools() {
+        let rel = validate_relative_toolchain_path(tool.path(), "standard tool path")?;
+        let path = root.join(rel);
+        if !path.is_file() {
+            bail!(
+                "toolchain manifest required tool {} is missing at {}",
+                tool.name(),
+                path.display()
+            );
+        }
+    }
+    Ok(())
+}
+
+fn validate_relative_toolchain_path<'a>(path: &'a str, label: &str) -> Result<&'a Path> {
+    let path = Path::new(path);
+    if path.is_absolute()
+        || path
+            .components()
+            .any(|part| matches!(part, Component::ParentDir | Component::Prefix(_)))
+    {
+        bail!(
+            "{label} must stay inside the toolchain root: {}",
+            path.display()
+        );
+    }
+    Ok(path)
+}
+
+fn write_tarball_install_record(
+    path: &Path,
+    id: &ToolchainId,
+    archive: &Path,
+    digest: &str,
+) -> Result<()> {
+    let mut table = toml::map::Map::new();
+    table.insert(
+        "toolchain_id".to_string(),
+        toml::Value::String(id.as_str().to_string()),
+    );
+    table.insert(
+        "source_kind".to_string(),
+        toml::Value::String("tarball".to_string()),
+    );
+    table.insert(
+        "tarball_path".to_string(),
+        toml::Value::String(archive.display().to_string()),
+    );
+    table.insert(
+        "tarball_digest".to_string(),
+        toml::Value::String(format!("sha256:{digest}")),
+    );
+    table.insert(
+        "installed_at".to_string(),
+        toml::Value::String(Utc::now().to_rfc3339()),
+    );
+    fs::write(path, toml::to_string(&toml::Value::Table(table))?)
+        .context("write tarball install record")
 }
 
 #[cfg(unix)]
@@ -1901,17 +2021,6 @@ fn file_digest(path: &Path) -> Result<String> {
         hasher.update(&buf[..n]);
     }
     Ok(format!("{:x}", hasher.finalize()))
-}
-
-fn append_record(path: &Path, text: &str) -> Result<()> {
-    let mut file = fs::OpenOptions::new()
-        .append(true)
-        .create(true)
-        .open(path)
-        .context("open install record")?;
-    file.write_all(text.as_bytes())
-        .context("append install record")?;
-    Ok(())
 }
 
 fn normalize_ws(value: &str) -> String {

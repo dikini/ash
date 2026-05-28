@@ -1,6 +1,6 @@
 # TASK-970: Update default list current flow
 
-## Status: ⚠️ Partial first slice
+## Status: ⚠️ Partial local/source/tarball selector slice
 
 ## Description
 
@@ -30,6 +30,21 @@ Implement update, default, list, and current toolchain selection flows.
 6. Prove first install initializes default only when no default exists.
 7. Prove exact toolchain ids are required for selection when multiple installed toolchains share the same package version.
 
+### Implemented slice
+
+- `ashgrove list` reports only installed toolchains with valid manifest/install metadata and marks the selector default.
+- `ashgrove current` reads typed selector metadata and fails closed when the selected default or project pin is not an installed metadata-valid toolchain.
+- `ashgrove default <toolchain-id>` validates an installed exact toolchain id before updating selector metadata, with an exact-id diagnostic for package-version-only selection when multiple installed immutable ids share that version.
+- `ashgrove update --from source --path PATH --to TOOLCHAIN_ID` and `ashgrove update --from tarball --path PATH --to TOOLCHAIN_ID` install the local fixture-backed source/tarball payload only when the payload identity matches `--to`.
+- `update --switch` changes the default, update without `--switch` preserves an existing default, and first update install initializes the default when none exists.
+- Focused tests prove the old toolchain manifest and install record are unchanged after installing a new immutable source fixture.
+
+### Remaining limitations
+
+- Bare `ashgrove update VERSION` and network/release-index discovery remain intentionally rejected until an authenticated release-index policy exists.
+- Source update still uses the TASK-968 fixture-backed source-shaped payload path, not a real cargo build from a checkout or source archive.
+- Tarball update still uses local tarball files only; authenticated URL download and release signing/trust enforcement remain deferred.
+
 ### Non-goals
 
 - Do not update third-party project dependencies from toolchain update commands.
@@ -55,13 +70,13 @@ commands:
   - cargo check -p ashgrove
   - git diff --check
 checklist:
-  - [ ] Implement `ashgrove list` and `ashgrove current` against selector and install metadata.
-  - [ ] Implement `ashgrove default <toolchain-id>` as selector update plus launcher behavior.
-  - [ ] Implement `ashgrove update` as install-new-toolchain behavior using source or tarball input.
-  - [ ] Prove update does not mutate the previously installed toolchain.
-  - [ ] Prove `update --switch` changes user default and update without `--switch` preserves user default.
-  - [ ] Prove first install initializes default only when no default exists.
-  - [ ] Prove exact toolchain ids are required for selection when multiple installed toolchains share the same package version.
+  - [x] Implement `ashgrove list` and `ashgrove current` against selector and install metadata.
+  - [x] Implement `ashgrove default <toolchain-id>` as selector update; stable launcher behavior remains a TASK-967/Phase 127 deferred boundary.
+  - [x] Implement local/source/tarball `ashgrove update` as install-new-toolchain behavior using existing fixture-backed source/tarball paths.
+  - [x] Prove update does not mutate the previously installed toolchain.
+  - [x] Prove `update --switch` changes user default and update without `--switch` preserves user default.
+  - [x] Prove first update install initializes default only when no default exists.
+  - [x] Prove exact toolchain ids are required for selection when multiple installed toolchains share the same package version.
 ```
 
 
@@ -81,3 +96,5 @@ This task contributes to PLAN-122 and SPEC-073 completion. Later tasks must pres
 ## Notes
 
 Area: lifecycle/semantic. Toolchain update and project dependency update stay separate.
+
+TASK-970 is not a full release-channel update implementation. The landed behavior is the local, metadata-valid update/default/list/current selector slice over already supported source-shaped fixtures, local tarballs, and existing installed toolchains.

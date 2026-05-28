@@ -966,6 +966,7 @@ fn install(paths: &AshgrovePaths, args: InstallArgs) -> Result<()> {
                 args.allow_unidentified_source,
                 args.switch,
             )
+            .map(|_| ())
         }
         InstallSource::Tarball => {
             if let Some(url) = args.url {
@@ -976,7 +977,7 @@ fn install(paths: &AshgrovePaths, args: InstallArgs) -> Result<()> {
             let path = args
                 .path
                 .context("--path is required for tarball install")?;
-            install_from_tarball(paths, &path, args.switch)
+            install_from_tarball(paths, &path, args.switch, None).map(|_| ())
         }
         InstallSource::Existing => bail!("install --from existing is only valid for update tests"),
     }
@@ -1001,6 +1002,14 @@ fn update(paths: &AshgrovePaths, args: UpdateArgs) -> Result<()> {
         }
         InstallSource::Source => {
             let source = args.path.context("--path is required for source update")?;
+            let source_id = read_toolchain_id(&source)?;
+            if source_id != id {
+                bail!(
+                    "update --to {} does not match source toolchain {}",
+                    id.as_str(),
+                    source_id.as_str()
+                );
+            }
             install_from_source(
                 paths,
                 &source,
@@ -1008,10 +1017,11 @@ fn update(paths: &AshgrovePaths, args: UpdateArgs) -> Result<()> {
                 args.allow_unidentified_source,
                 args.switch,
             )
+            .map(|_| ())
         }
         InstallSource::Tarball => {
             let path = args.path.context("--path is required for tarball update")?;
-            install_from_tarball(paths, &path, args.switch)
+            install_from_tarball(paths, &path, args.switch, Some(&id)).map(|_| ())
         }
     }
 }
@@ -1022,7 +1032,7 @@ fn install_from_source(
     allow_dirty: bool,
     allow_unidentified: bool,
     switch: bool,
-) -> Result<()> {
+) -> Result<ToolchainId> {
     if source.join(".dirty").exists() && !allow_dirty {
         bail!(
             "dirty source rejected; pass --allow-dirty-source to record a non-reproducible install"
@@ -1050,7 +1060,7 @@ fn install_from_source(
     if switch || read_default(paths)?.is_none() {
         set_default(paths, &id)?;
     }
-    Ok(())
+    Ok(id)
 }
 
 struct SourceInstallRecordInput<'a> {
@@ -1158,7 +1168,12 @@ fn target_env_suffix() -> &'static str {
     }
 }
 
-fn install_from_tarball(paths: &AshgrovePaths, archive: &Path, switch: bool) -> Result<()> {
+fn install_from_tarball(
+    paths: &AshgrovePaths,
+    archive: &Path,
+    switch: bool,
+    expected_id: Option<&ToolchainId>,
+) -> Result<ToolchainId> {
     let digest = file_digest(archive)?;
     let temp = tempfile::tempdir().context("create extraction staging dir")?;
     let file = fs::File::open(archive)
@@ -1191,6 +1206,15 @@ fn install_from_tarball(paths: &AshgrovePaths, archive: &Path, switch: bool) -> 
         .and_then(OsStr::to_str)
         .context("toolchain root must be utf8")?;
     let id = ToolchainId::parse(id)?;
+    if let Some(expected_id) = expected_id
+        && &id != expected_id
+    {
+        bail!(
+            "update --to {} does not match tarball toolchain {}",
+            expected_id.as_str(),
+            id.as_str()
+        );
+    }
     let manifest = verify_toolchain_shape(&root, &id)?;
     verify_install_record_shape(&root, &id)?;
     verify_required_binaries_executable(&root, &id)?;
@@ -1202,7 +1226,7 @@ fn install_from_tarball(paths: &AshgrovePaths, archive: &Path, switch: bool) -> 
     if switch || read_default(paths)?.is_none() {
         set_default(paths, &id)?;
     }
-    Ok(())
+    Ok(id)
 }
 
 fn validate_archive_entry(entry: &tar::Entry<'_, impl Read>) -> Result<()> {
@@ -1400,8 +1424,25 @@ fn copy_dir(source: &Path, dest: &Path) -> Result<()> {
 
 fn set_default(paths: &AshgrovePaths, id: &ToolchainId) -> Result<()> {
     if !paths.toolchain_dir(id).is_dir() {
+        let package_version = id
+            .as_str()
+            .strip_prefix("ash-")
+            .and_then(|suffix| suffix.split('+').next())
+            .unwrap_or_default();
+        if !package_version.is_empty()
+            && installed_toolchain_ids(paths)?.iter().any(|installed| {
+                installed
+                    .as_str()
+                    .starts_with(&format!("ash-{package_version}+"))
+            })
+        {
+            bail!(
+                "exact toolchain id required when installed toolchains share package version {package_version}"
+            );
+        }
         bail!("toolchain '{}' is not installed", id.as_str());
     }
+    require_installed_toolchain(paths, id)?;
     fs::create_dir_all(paths.config_dir()).context("create config dir")?;
     let selector_path = paths.config_dir().join("toolchains.toml");
     let mut selector = if selector_path.exists() {
@@ -1415,31 +1456,31 @@ fn set_default(paths: &AshgrovePaths, id: &ToolchainId) -> Result<()> {
     Ok(())
 }
 
-fn read_default(paths: &AshgrovePaths) -> Result<Option<String>> {
+fn read_selector(paths: &AshgrovePaths) -> Result<SelectorMetadata> {
     let path = paths.config_dir().join("toolchains.toml");
     if !path.exists() {
-        return Ok(None);
+        return Ok(SelectorMetadata::empty());
     }
-    let text = fs::read_to_string(path).context("read selector")?;
-    let value: toml::Value = toml::from_str(&text).context("parse selector")?;
-    Ok(value
-        .get("default")
-        .and_then(toml::Value::as_str)
-        .map(ToOwned::to_owned))
+    SelectorMetadata::read_from_path(&path)
+}
+
+fn read_default(paths: &AshgrovePaths) -> Result<Option<ToolchainId>> {
+    Ok(read_selector(paths)?.default().cloned())
 }
 
 fn list_toolchains(paths: &AshgrovePaths) -> Result<()> {
     if !paths.toolchains_dir().exists() {
         return Ok(());
     }
-    let mut ids = fs::read_dir(paths.toolchains_dir())?
-        .flatten()
-        .filter(|entry| entry.path().is_dir())
-        .filter_map(|entry| entry.file_name().into_string().ok())
-        .collect::<Vec<_>>();
-    ids.sort();
+    let default = read_default(paths)?;
+    let mut ids = installed_toolchain_ids(paths)?;
+    ids.sort_by(|left, right| left.as_str().cmp(right.as_str()));
     for id in ids {
-        println!("{id}");
+        if default.as_ref() == Some(&id) {
+            println!("{} (default)", id.as_str());
+        } else {
+            println!("{}", id.as_str());
+        }
     }
     Ok(())
 }
@@ -1448,13 +1489,76 @@ fn current(paths: &AshgrovePaths, project: Option<&Path>) -> Result<()> {
     if let Some(project) = project
         && let Some(pin) = project_toolchain_pin(project)?
     {
-        println!("{pin}");
+        let id = ToolchainId::parse(&pin)?;
+        require_installed_toolchain(paths, &id)?;
+        println!("{}", id.as_str());
         return Ok(());
     }
     let Some(default) = read_default(paths)? else {
         bail!("no default Ash toolchain is configured");
     };
-    println!("{default}");
+    require_installed_toolchain(paths, &default)?;
+    println!("{}", default.as_str());
+    Ok(())
+}
+
+fn installed_toolchain_ids(paths: &AshgrovePaths) -> Result<Vec<ToolchainId>> {
+    if !paths.toolchains_dir().exists() {
+        return Ok(Vec::new());
+    }
+    let mut ids = Vec::new();
+    for entry in fs::read_dir(paths.toolchains_dir()).context("read toolchains dir")? {
+        let entry = entry.context("read toolchain dir entry")?;
+        if !entry
+            .file_type()
+            .with_context(|| format!("read file type {}", entry.path().display()))?
+            .is_dir()
+        {
+            continue;
+        }
+        let Some(name) = entry.file_name().to_str().map(ToOwned::to_owned) else {
+            continue;
+        };
+        let Ok(id) = ToolchainId::parse(&name) else {
+            continue;
+        };
+        if installed_toolchain_manifest(paths, &id).is_ok()
+            && verify_install_record_any_source(&entry.path(), &id).is_ok()
+        {
+            ids.push(id);
+        }
+    }
+    Ok(ids)
+}
+
+fn installed_toolchain_manifest(
+    paths: &AshgrovePaths,
+    id: &ToolchainId,
+) -> Result<ToolchainManifest> {
+    let root = paths.toolchain_dir(id);
+    let manifest_text = fs::read_to_string(root.join("manifest.toml"))
+        .with_context(|| format!("read installed manifest for {}", id.as_str()))?;
+    let manifest = ToolchainManifest::from_toml_str(&manifest_text)?;
+    manifest.validate_for_toolchain(id)?;
+    verify_stdlib_manifest(&root, manifest.stdlib())?;
+    verify_required_manifest_tools(&root, &manifest)?;
+    Ok(manifest)
+}
+
+fn verify_install_record_any_source(root: &Path, id: &ToolchainId) -> Result<InstallRecord> {
+    let record_text =
+        fs::read_to_string(root.join("install-record.toml")).context("read install record")?;
+    let record = InstallRecord::from_toml_str(&record_text)?;
+    record.validate_for_toolchain(id)?;
+    Ok(record)
+}
+
+fn require_installed_toolchain(paths: &AshgrovePaths, id: &ToolchainId) -> Result<()> {
+    if !paths.toolchain_dir(id).is_dir() {
+        bail!("toolchain '{}' is not installed", id.as_str());
+    }
+    installed_toolchain_manifest(paths, id)?;
+    verify_install_record_any_source(&paths.toolchain_dir(id), id)?;
     Ok(())
 }
 
@@ -1482,7 +1586,7 @@ fn remove_toolchain(paths: &AshgrovePaths, id: &ToolchainId, force: bool) -> Res
     if live_daemon_uses_toolchain(paths, id)? {
         bail!("refusing to remove live daemon toolchain '{}'", id.as_str());
     }
-    if read_default(paths)?.as_deref() == Some(id.as_str()) && !force {
+    if read_default(paths)?.as_ref() == Some(id) && !force {
         bail!("refusing to remove default toolchain '{}'", id.as_str());
     }
     if current_project_uses_toolchain(id)? && !force {

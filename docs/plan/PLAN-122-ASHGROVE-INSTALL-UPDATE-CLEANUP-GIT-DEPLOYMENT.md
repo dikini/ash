@@ -131,6 +131,8 @@ Must define and produce a conforming tarball fixture or release artifact, verify
 
 Must prove update does not mutate the old toolchain; first install/default/current/list work; `update --switch` changes the default; update without `--switch` preserves the current default.
 
+Current implementation note: the local/source/tarball selector slice validates `list` and `current` against selector plus installed manifest/install metadata, requires `default <toolchain-id>` to name an installed exact id, installs new immutable toolchains through the existing fixture-backed source and local tarball paths when `--to` matches the payload identity, preserves the old default unless `--switch` is passed, initializes the first default when none exists, and proves old installed metadata is not mutated. Bare release-index/network update remains intentionally rejected, and real source builds plus authenticated tarball URL update remain deferred.
+
 ### TASK-971: remove/cleanup
 
 Must prove default/current/live daemon/running-manager toolchain deletion is refused by default and `cleanup --dry-run` is non-destructive. Must add or consume the minimal daemon toolchain registry/status needed for live protection.

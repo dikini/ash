@@ -1,9 +1,9 @@
 //! User-local Ash toolchain and deployment manager.
 
 use std::collections::BTreeMap;
-use std::ffi::OsStr;
+use std::ffi::{OsStr, OsString};
 use std::fs;
-use std::io::Read;
+use std::io::{Read, Write};
 use std::path::{Component, Path, PathBuf};
 use std::process::{Command, ExitCode};
 
@@ -372,6 +372,114 @@ impl LauncherDispatch {
     }
 }
 
+/// Install stable user-local launcher shims for bundled Ash tools.
+///
+/// The installed shims call `dispatcher` with ashgrove's hidden launcher
+/// dispatch command, which resolves the selected immutable toolchain before
+/// executing the versioned tool binary.
+///
+/// # Errors
+///
+/// Returns an error when the dispatcher path is not a file or the launcher
+/// directory/script files cannot be created.
+pub fn install_launcher_shims(paths: &AshgrovePaths, dispatcher: &Path) -> Result<()> {
+    if !dispatcher.is_file() {
+        bail!(
+            "launcher dispatcher is not a file: {}",
+            dispatcher.display()
+        );
+    }
+    fs::create_dir_all(paths.launcher_bin()).context("create launcher bin directory")?;
+    for tool in ["ash", "ashgrove"] {
+        write_launcher_shim(paths, dispatcher, tool)?;
+    }
+    Ok(())
+}
+
+fn install_launcher_shims_from_current_exe(paths: &AshgrovePaths) -> Result<()> {
+    let current_exe = std::env::current_exe().context("resolve current ashgrove executable")?;
+    fs::create_dir_all(paths.launcher_bin()).context("create launcher bin directory")?;
+    let dispatcher = paths.launcher_bin().join(".ashgrove-dispatcher");
+    install_executable_copy(&current_exe, &dispatcher)?;
+    install_launcher_shims(paths, &dispatcher)
+}
+
+fn install_executable_copy(source: &Path, target: &Path) -> Result<()> {
+    let bytes = fs::read(source)
+        .with_context(|| format!("read launcher dispatcher source {}", source.display()))?;
+    write_executable_file_atomically(target, ".ashgrove-dispatcher.tmp-", &bytes)
+        .with_context(|| format!("publish stable launcher dispatcher {}", target.display()))
+}
+
+fn write_launcher_shim(paths: &AshgrovePaths, dispatcher: &Path, tool: &str) -> Result<()> {
+    validate_launcher_tool_name(tool)?;
+    let shim_path = paths.launcher_bin().join(tool);
+    let script = launcher_shim_script(dispatcher, tool);
+    write_executable_file_atomically(&shim_path, &format!(".{tool}.tmp-"), script.as_bytes())
+        .with_context(|| format!("publish launcher {}", shim_path.display()))
+}
+
+fn write_executable_file_atomically(
+    target: &Path,
+    temp_prefix: &str,
+    contents: &[u8],
+) -> Result<()> {
+    let parent = target.parent().ok_or_else(|| {
+        anyhow!(
+            "launcher target must have a parent directory: {}",
+            target.display()
+        )
+    })?;
+    let mut temp = tempfile::Builder::new()
+        .prefix(temp_prefix)
+        .tempfile_in(parent)
+        .with_context(|| format!("create temporary launcher file in {}", parent.display()))?;
+    temp.as_file_mut()
+        .write_all(contents)
+        .with_context(|| format!("write temporary launcher file {}", temp.path().display()))?;
+    temp.as_file_mut()
+        .sync_all()
+        .with_context(|| format!("sync temporary launcher file {}", temp.path().display()))?;
+    make_launcher_executable(temp.path())?;
+    let temp_path = temp.into_temp_path();
+    fs::rename(&temp_path, target)
+        .with_context(|| format!("publish launcher file {}", target.display()))?;
+    Ok(())
+}
+
+fn launcher_shim_script(dispatcher: &Path, tool: &str) -> String {
+    format!(
+        "#!/bin/sh\nexec {} __launcher-dispatch --tool {} -- \"$@\"\n",
+        shell_quote_path(dispatcher),
+        shell_quote(tool),
+    )
+}
+
+fn shell_quote_path(path: &Path) -> String {
+    shell_quote(&path.display().to_string())
+}
+
+fn shell_quote(value: &str) -> String {
+    format!("'{}'", value.replace('\'', "'\\''"))
+}
+
+#[cfg(unix)]
+fn make_launcher_executable(path: &Path) -> Result<()> {
+    use std::os::unix::fs::PermissionsExt;
+
+    let mut permissions = fs::metadata(path)
+        .with_context(|| format!("read launcher metadata {}", path.display()))?
+        .permissions();
+    permissions.set_mode(0o755);
+    fs::set_permissions(path, permissions)
+        .with_context(|| format!("make launcher executable {}", path.display()))
+}
+
+#[cfg(not(unix))]
+fn make_launcher_executable(_path: &Path) -> Result<()> {
+    Ok(())
+}
+
 /// Resolve stable launcher dispatch without creating or executing a shim.
 ///
 /// Resolution order matches SPEC-073: explicit override, project pin, then user
@@ -506,7 +614,35 @@ fn ensure_dispatch_toolchain_installed(
     id: &ToolchainId,
     selection_source: LauncherSelectionSource,
 ) -> Result<()> {
-    if !paths.toolchain_dir(id).is_dir() {
+    let toolchain_dir = paths.toolchain_dir(id);
+    let metadata = match fs::symlink_metadata(&toolchain_dir) {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            bail!(
+                "selected toolchain '{}' from {} is not installed; install it or change the selector",
+                id.as_str(),
+                selection_source.diagnostic_label()
+            );
+        }
+        Err(error) => {
+            return Err(error).with_context(|| {
+                format!(
+                    "inspect selected toolchain '{}' from {}",
+                    id.as_str(),
+                    selection_source.diagnostic_label()
+                )
+            });
+        }
+    };
+    if metadata.file_type().is_symlink() {
+        bail!(
+            "selected toolchain '{}' from {} is a symlink; install a real directory under {}",
+            id.as_str(),
+            selection_source.diagnostic_label(),
+            paths.toolchains_dir().display()
+        );
+    }
+    if !metadata.is_dir() {
         bail!(
             "selected toolchain '{}' from {} is not installed; install it or change the selector",
             id.as_str(),
@@ -1063,6 +1199,9 @@ enum Commands {
     Lock(LockArgs),
     /// Materialize locked dependencies for offline deployment.
     Vendor(VendorArgs),
+    /// Internal stable launcher dispatch entry point.
+    #[command(name = "__launcher-dispatch", hide = true)]
+    LauncherDispatch(LauncherDispatchArgs),
 }
 
 #[derive(Debug, Args)]
@@ -1152,11 +1291,23 @@ struct VendorArgs {
     check: bool,
 }
 
+#[derive(Debug, Args)]
+struct LauncherDispatchArgs {
+    #[arg(long)]
+    tool: String,
+    #[arg(long)]
+    toolchain: Option<String>,
+    #[arg(long)]
+    project: Option<PathBuf>,
+    #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+    args: Vec<OsString>,
+}
+
 /// CLI entry point.
 #[must_use]
 pub fn main() -> ExitCode {
     match run_cli() {
-        Ok(()) => ExitCode::SUCCESS,
+        Ok(exit_code) => exit_code,
         Err(error) => {
             eprintln!("error: {error:#}");
             ExitCode::FAILURE
@@ -1164,7 +1315,7 @@ pub fn main() -> ExitCode {
     }
 }
 
-fn run_cli() -> Result<()> {
+fn run_cli() -> Result<ExitCode> {
     let cli = Cli::parse();
     let paths = AshgrovePaths::from_env()?;
     match cli.command {
@@ -1194,7 +1345,52 @@ fn run_cli() -> Result<()> {
             args.output.as_deref(),
             args.check,
         ),
+        Commands::LauncherDispatch(args) => return run_launcher_dispatch(&paths, args),
+    }?;
+    Ok(ExitCode::SUCCESS)
+}
+
+fn run_launcher_dispatch(paths: &AshgrovePaths, args: LauncherDispatchArgs) -> Result<ExitCode> {
+    let mut request = LauncherDispatchRequest::new(args.tool);
+    let explicit = args
+        .toolchain
+        .or_else(|| std::env::var("ASH_TOOLCHAIN").ok())
+        .map(|id| ToolchainId::parse(&id))
+        .transpose()?;
+    if let Some(id) = explicit {
+        request = request.with_explicit_toolchain(id);
     }
+    let project = match args.project {
+        Some(project) => project,
+        None => std::env::current_dir().context("read current directory for launcher dispatch")?,
+    };
+    request = request.with_project(project);
+    let dispatch = resolve_launcher_dispatch(paths, request)?;
+    let mut command = Command::new(dispatch.tool_path());
+    command.args(args.args).env(
+        "ASHGROVE_RUNNING_TOOLCHAIN",
+        dispatch.toolchain_id().as_str(),
+    );
+    exec_or_status(command, dispatch.tool_path())
+}
+
+#[cfg(unix)]
+fn exec_or_status(mut command: Command, tool_path: &Path) -> Result<ExitCode> {
+    use std::os::unix::process::CommandExt;
+
+    Err(command.exec())
+        .with_context(|| format!("execute selected launcher tool {}", tool_path.display()))
+}
+
+#[cfg(not(unix))]
+fn exec_or_status(mut command: Command, tool_path: &Path) -> Result<ExitCode> {
+    let status = command
+        .status()
+        .with_context(|| format!("execute selected launcher tool {}", tool_path.display()))?;
+    if let Some(code) = status.code() {
+        return Ok(ExitCode::from(code as u8));
+    }
+    Ok(ExitCode::FAILURE)
 }
 
 fn install(paths: &AshgrovePaths, args: InstallArgs) -> Result<()> {
@@ -1302,6 +1498,7 @@ fn install_from_source(
         },
     )?;
     stage.publish()?;
+    install_launcher_shims_from_current_exe(paths)?;
     if switch || read_default(paths)?.is_none() {
         set_default(paths, &id)?;
     }
@@ -1468,6 +1665,7 @@ fn install_from_tarball(
     let stage = ToolchainStage::create(paths, id.clone())?;
     stage.copy_toolchain_payload(&root)?;
     stage.publish()?;
+    install_launcher_shims_from_current_exe(paths)?;
     if switch || read_default(paths)?.is_none() {
         set_default(paths, &id)?;
     }

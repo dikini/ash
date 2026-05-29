@@ -61,6 +61,19 @@ pub fn install_fake_toolchain(roots: &XdgFixture, id: &str) {
     create_toolchain_shape(&path, id);
 }
 
+pub fn write_tool_script(path: &Path, body: &str) {
+    #[cfg(unix)]
+    use std::os::unix::fs::PermissionsExt;
+
+    std::fs::write(path, format!("#!/bin/sh\n{body}")).expect("tool script");
+    #[cfg(unix)]
+    {
+        let mut permissions = std::fs::metadata(path).expect("metadata").permissions();
+        permissions.set_mode(0o755);
+        std::fs::set_permissions(path, permissions).expect("permissions");
+    }
+}
+
 pub fn create_toolchain_shape(root: &Path, id: &str) {
     #[cfg(unix)]
     use std::os::unix::fs::PermissionsExt;

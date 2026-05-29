@@ -1,9 +1,11 @@
 use ashgrove::{
     AshgrovePaths, CollisionStatus, InstallRecord, LauncherDispatchRequest, PublishOutcome,
     SelectorMetadata, StandardToolMetadata, StdlibMetadata, ToolchainId, ToolchainManifest,
-    ToolchainStage, classify_toolchain_collision, resolve_launcher_dispatch, stage_stdlib_metadata,
+    ToolchainStage, classify_toolchain_collision, install_launcher_shims,
+    resolve_launcher_dispatch, stage_stdlib_metadata,
 };
-use assert_cmd::Command;
+use assert_cmd::{Command, assert::OutputAssertExt};
+use predicates::prelude::*;
 
 mod support;
 
@@ -273,6 +275,176 @@ fn task_967_launcher_dispatch_falls_back_to_user_default() {
 }
 
 #[test]
+fn task_967_launcher_shims_install_under_temp_home_and_execute_user_default_tool() {
+    let roots = support::xdg_fixture();
+    let id = "ash-0.1.0+test.source.shimdefault";
+    support::install_fake_toolchain(&roots, id);
+    support::write_tool_script(
+        &roots.toolchain(id).join("bin/ash"),
+        "printf 'ash:%s:%s\\n' \"$ASHGROVE_RUNNING_TOOLCHAIN\" \"$1\"\n",
+    );
+    let paths = support::ashgrove_paths(&roots);
+    SelectorMetadata::from_toml_str(&format!("default = \"{id}\"\n"))
+        .expect("selector")
+        .write_to_path(&roots.config.path().join("ash/toolchains.toml"))
+        .expect("write selector");
+    let dispatcher = assert_cmd::cargo::cargo_bin("ashgrove");
+
+    install_launcher_shims(&paths, &dispatcher).expect("install launcher shims");
+
+    let ash_shim = paths.launcher_bin().join("ash");
+    let ashgrove_shim = paths.launcher_bin().join("ashgrove");
+    assert!(ash_shim.is_file());
+    assert!(ashgrove_shim.is_file());
+    assert!(ash_shim.starts_with(roots.home.path()));
+    assert!(ashgrove_shim.starts_with(roots.home.path()));
+
+    std::process::Command::new(ash_shim)
+        .arg("payload")
+        .envs(roots.env())
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(format!("ash:{id}:payload")));
+}
+
+#[test]
+fn task_967_launcher_dispatch_preserves_selected_tool_exit_code_without_wrapper_error() {
+    let roots = support::xdg_fixture();
+    let id = "ash-0.1.0+test.source.exitcode001";
+    support::install_fake_toolchain(&roots, id);
+    support::write_tool_script(&roots.toolchain(id).join("bin/ash"), "exit 73\n");
+    let paths = support::ashgrove_paths(&roots);
+    SelectorMetadata::from_toml_str(&format!("default = \"{id}\"\n"))
+        .expect("selector")
+        .write_to_path(&roots.config.path().join("ash/toolchains.toml"))
+        .expect("write selector");
+    install_launcher_shims(&paths, &assert_cmd::cargo::cargo_bin("ashgrove"))
+        .expect("install launcher shims");
+
+    std::process::Command::new(paths.launcher_bin().join("ash"))
+        .envs(roots.env())
+        .assert()
+        .code(73)
+        .stderr(predicate::str::is_empty());
+}
+
+#[test]
+fn task_967_install_command_writes_shims_to_stable_user_local_dispatcher_copy() {
+    let roots = support::xdg_fixture();
+    let id = "ash-0.1.0+test.source.stabledisp1";
+    let source = support::source_fixture(id);
+
+    Command::cargo_bin("ashgrove")
+        .expect("ashgrove binary")
+        .args([
+            "install",
+            "--from",
+            "source",
+            "--path",
+            &source.path().display().to_string(),
+        ])
+        .envs(roots.env())
+        .assert()
+        .success();
+
+    let paths = support::ashgrove_paths(&roots);
+    let ash_shim = paths.launcher_bin().join("ash");
+    let shim_text = std::fs::read_to_string(&ash_shim).expect("ash shim");
+    assert!(shim_text.contains(".ashgrove-dispatcher"));
+    assert!(
+        !shim_text.contains(
+            &assert_cmd::cargo::cargo_bin("ashgrove")
+                .display()
+                .to_string()
+        )
+    );
+    assert!(paths.launcher_bin().join(".ashgrove-dispatcher").is_file());
+}
+
+#[cfg(unix)]
+#[test]
+fn task_967_launcher_shim_install_does_not_follow_predictable_tmp_symlink() {
+    use std::os::unix::fs::symlink;
+
+    let roots = support::xdg_fixture();
+    let paths = support::ashgrove_paths(&roots);
+    std::fs::create_dir_all(paths.launcher_bin()).expect("launcher bin");
+    let outside = tempfile::tempdir().expect("outside");
+    let victim = outside.path().join("victim");
+    std::fs::write(&victim, "do-not-touch").expect("victim");
+    let predictable = paths
+        .launcher_bin()
+        .join(format!(".ash.tmp-{}", std::process::id()));
+    symlink(&victim, &predictable).expect("predictable tmp symlink");
+
+    install_launcher_shims(&paths, &assert_cmd::cargo::cargo_bin("ashgrove"))
+        .expect("install launcher shims");
+
+    assert_eq!(
+        std::fs::read_to_string(&victim).expect("victim text"),
+        "do-not-touch"
+    );
+}
+
+#[test]
+fn task_967_launcher_shim_explicit_env_override_wins_before_project_pin_and_default() {
+    let roots = support::xdg_fixture();
+    let default_id = "ash-0.1.0+test.source.shimdefault2";
+    let project_id = "ash-0.1.0+test.source.shimproject2";
+    let override_id = "ash-0.1.0+test.source.shimoverrid2";
+    for id in [default_id, project_id, override_id] {
+        support::install_fake_toolchain(&roots, id);
+        support::write_tool_script(
+            &roots.toolchain(id).join("bin/ash"),
+            "printf 'selected:%s\\n' \"$ASHGROVE_RUNNING_TOOLCHAIN\"\n",
+        );
+    }
+    let project = support::project_fixture();
+    std::fs::write(
+        project.path().join("ash.toml"),
+        format!("[toolchain]\nash = \"{project_id}\"\n"),
+    )
+    .expect("project manifest");
+    let paths = support::ashgrove_paths(&roots);
+    SelectorMetadata::from_toml_str(&format!("default = \"{default_id}\"\n"))
+        .expect("selector")
+        .write_to_path(&roots.config.path().join("ash/toolchains.toml"))
+        .expect("write selector");
+    install_launcher_shims(&paths, &assert_cmd::cargo::cargo_bin("ashgrove"))
+        .expect("install launcher shims");
+
+    std::process::Command::new(paths.launcher_bin().join("ash"))
+        .current_dir(project.path())
+        .envs(roots.env())
+        .env("ASH_TOOLCHAIN", override_id)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(format!("selected:{override_id}")));
+}
+
+#[test]
+fn task_967_launcher_shim_fails_closed_before_executing_incomplete_toolchain() {
+    let roots = support::xdg_fixture();
+    let id = "ash-0.1.0+test.source.shimbroken1";
+    support::install_fake_toolchain(&roots, id);
+    std::fs::remove_file(roots.toolchain(id).join("manifest.toml")).expect("remove manifest");
+    let paths = support::ashgrove_paths(&roots);
+    SelectorMetadata::from_toml_str(&format!("default = \"{id}\"\n"))
+        .expect("selector")
+        .write_to_path(&roots.config.path().join("ash/toolchains.toml"))
+        .expect("write selector");
+    install_launcher_shims(&paths, &assert_cmd::cargo::cargo_bin("ashgrove"))
+        .expect("install launcher shims");
+
+    std::process::Command::new(paths.launcher_bin().join("ash"))
+        .envs(roots.env())
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("validate selected toolchain"))
+        .stderr(predicate::str::contains(id));
+}
+
+#[test]
 fn task_967_launcher_dispatch_fails_closed_for_missing_selected_toolchain() {
     let roots = support::xdg_fixture();
     let project = support::project_fixture();
@@ -321,6 +493,58 @@ fn task_967_launcher_dispatch_rejects_symlink_tool_escaping_toolchain_root() {
     let error = resolve_launcher_dispatch(&paths, LauncherDispatchRequest::new("ash"))
         .expect_err("escaping tool symlink must fail closed");
 
-    assert!(error.to_string().contains("standard tool path"));
-    assert!(error.to_string().contains("toolchain root"));
+    let diagnostic = format!("{error:#}");
+    assert!(diagnostic.contains("standard tool path"));
+    assert!(diagnostic.contains("toolchain root"));
+}
+
+#[cfg(unix)]
+#[test]
+fn task_967_launcher_dispatch_rejects_symlink_toolchain_root_before_canonicalizing() {
+    use std::os::unix::fs::symlink;
+
+    let roots = support::xdg_fixture();
+    let id = "ash-0.1.0+test.source.rootsymlink";
+    let outside = tempfile::tempdir().expect("outside");
+    support::create_toolchain_shape(outside.path(), id);
+    std::fs::create_dir_all(roots.data.path().join("ash/toolchains")).expect("toolchains root");
+    symlink(outside.path(), roots.toolchain(id)).expect("toolchain root symlink");
+    let paths = support::ashgrove_paths(&roots);
+    SelectorMetadata::from_toml_str(&format!("default = \"{id}\"\n"))
+        .expect("selector")
+        .write_to_path(&roots.config.path().join("ash/toolchains.toml"))
+        .expect("write selector");
+
+    let error = resolve_launcher_dispatch(&paths, LauncherDispatchRequest::new("ash"))
+        .expect_err("symlink toolchain root must fail closed");
+
+    let diagnostic = format!("{error:#}");
+    assert!(diagnostic.contains("selected toolchain"));
+    assert!(diagnostic.contains("symlink"));
+}
+
+#[test]
+fn task_967_launcher_dispatch_rejects_manifest_tool_path_traversal() {
+    let roots = support::xdg_fixture();
+    let id = "ash-0.1.0+test.source.toolpathtrav";
+    support::install_fake_toolchain(&roots, id);
+    std::fs::write(
+        roots.toolchain(id).join("manifest.toml"),
+        format!(
+            "toolchain_id = \"{id}\"\nversion = \"0.1.0\"\nsource_kind = \"fixture\"\n[stdlib]\nversion = \"0.1.0\"\npath = \"lib/ash/std\"\n[[standard_tools]]\nname = \"ash\"\npath = \"../escape/ash\"\nrequired = true\n[[standard_tools]]\nname = \"ashgrove\"\npath = \"bin/ashgrove\"\nrequired = true\n"
+        ),
+    )
+    .expect("manifest");
+    let paths = support::ashgrove_paths(&roots);
+    SelectorMetadata::from_toml_str(&format!("default = \"{id}\"\n"))
+        .expect("selector")
+        .write_to_path(&roots.config.path().join("ash/toolchains.toml"))
+        .expect("write selector");
+
+    let error = resolve_launcher_dispatch(&paths, LauncherDispatchRequest::new("ash"))
+        .expect_err("manifest tool traversal must fail closed");
+
+    let diagnostic = format!("{error:#}");
+    assert!(diagnostic.contains("standard tool path"));
+    assert!(diagnostic.contains("toolchain root"));
 }

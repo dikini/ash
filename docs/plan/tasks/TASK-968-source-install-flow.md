@@ -1,6 +1,6 @@
 # TASK-968: Source install flow
 
-## Status: ⚠️ Partial fixture-backed source install hardening slice
+## Status: ⚠️ Partial source-root install hardening slice
 
 ## Description
 
@@ -49,18 +49,18 @@ Implement `ashgrove install --from source` for source checkouts/source archives.
 ```yaml
 strictness: clean
 commands:
-  - cargo test -p ashgrove task_968 -- --nocapture
-  - cargo test -p ash-engine task_968 -- --nocapture
+  - cargo test -p ashgrove --test task_968_source_install -- --nocapture
   - cargo fmt --check
   - cargo check -p ashgrove
+  - cargo clippy -p ashgrove --all-targets --all-features -- -D warnings
   - git diff --check
 checklist:
   - [x] Build or stage Ash binaries from source according to the TASK-965 audit decision.
   - [ ] Copy bundled stdlib and runtime support metadata into the toolchain layout.
   - [x] Record source URL/rev/build profile/target triple plus dirty/unidentified-source override state in install metadata.
   - [x] Reject dirty source installs unless `--allow-dirty-source` is provided and recorded.
-  - [ ] Reject source archives without commit metadata unless `--allow-unidentified-source` is provided and recorded.
-  - [ ] Prove installed `ash` uses the selected toolchain stdlib rather than workspace `std/src`.
+  - [x] Reject source archives without commit metadata unless `--allow-unidentified-source` is provided and recorded.
+  - [x] Prove installed `ash` uses the selected toolchain stdlib rather than workspace `std/src`.
   - [x] Prove identical source reinstall no-ops or rejects deterministically, and same-version/different-source builds follow the TASK-965 toolchain-id policy.
 ```
 
@@ -82,4 +82,8 @@ This task contributes to PLAN-122 and SPEC-073 completion. Later tasks must pres
 
 Area: install/semantic. Source install must be reproducible unless explicitly marked otherwise.
 
-2026-05-28 follow-up slice: source installs now publish through the staged toolchain collision path, reject same-id manifest or source-metadata conflicts, keep identical reinstalls deterministic, and record source URL, source revision, build profile, target triple, dirty/unidentified override flags, reproducibility state, and install time. The focused evidence is fixture-backed: prepared source-shaped toolchain directories stand in for a real cargo build, and `ash-engine` proves the installed stdlib override seam directly. TASK-968 remains partial because a real source checkout/archive build path, git-derived dirty/source URL detection, source archive release metadata, runtime support metadata, and an installed `ash` launcher/CLI proof of selected-toolchain stdlib routing remain deferred.
+2026-05-28 follow-up slice: source installs now publish through the staged toolchain collision path, reject same-id manifest or source-metadata conflicts, keep identical reinstalls deterministic, and record source URL, source revision, build profile, target triple, dirty/unidentified override flags, reproducibility state, and install time. Prepared source-shaped directory installs remain covered for archive-shaped local inputs.
+
+2026-05-29 review remediation: real local source-root installs build `ash` and `ashgrove` from an isolated cache copy with an external `CARGO_TARGET_DIR`, use `--locked` when the source root has `Cargo.lock`, leave clean source roots without `Cargo.lock` clean, fail closed when a git-like source cannot report `HEAD` or `git status --porcelain`, and add a dirty tree digest to both install metadata and dirty override toolchain IDs so distinct dirty payloads at the same HEAD do not collapse to the same install identity. Launcher dispatch now passes the selected installed stdlib root to `ash` through `ASH_STDLIB_ROOT`.
+
+TASK-968 remains partial because source archive release metadata and concrete runtime-support payload metadata are still undefined by current repo tooling.

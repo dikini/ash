@@ -56,6 +56,94 @@ pub fn source_fixture(id: &str) -> tempfile::TempDir {
     dir
 }
 
+pub struct SourceWorkspaceFixture {
+    dir: tempfile::TempDir,
+    revision: String,
+}
+
+impl SourceWorkspaceFixture {
+    pub fn path(&self) -> &Path {
+        self.dir.path()
+    }
+
+    pub fn revision(&self) -> &str {
+        &self.revision
+    }
+
+    pub fn toolchain_id(&self) -> String {
+        format!("ash-0.1.0+source.{}", &self.revision[..12])
+    }
+}
+
+pub fn git_status(dir: &Path) -> String {
+    git_output(dir, &["status", "--porcelain"])
+}
+
+pub fn source_workspace_fixture() -> SourceWorkspaceFixture {
+    let dir = tempfile::tempdir().expect("source workspace");
+    create_source_workspace(dir.path());
+    run_git(dir.path(), &["init"]);
+    run_git(dir.path(), &["config", "user.email", "ash@example.invalid"]);
+    run_git(dir.path(), &["config", "user.name", "Ash Test"]);
+    run_git(
+        dir.path(),
+        &["remote", "add", "origin", "https://example.invalid/ash.git"],
+    );
+    run_git(dir.path(), &["add", "."]);
+    run_git(dir.path(), &["commit", "-m", "initial"]);
+    let revision = git_output(dir.path(), &["rev-parse", "HEAD"])
+        .trim()
+        .to_string();
+    SourceWorkspaceFixture { dir, revision }
+}
+
+pub fn unidentified_source_workspace_fixture() -> tempfile::TempDir {
+    let dir = tempfile::tempdir().expect("source workspace");
+    create_source_workspace(dir.path());
+    dir
+}
+
+fn create_source_workspace(root: &Path) {
+    std::fs::create_dir_all(root.join("crates/ash-cli/src")).expect("ash-cli src");
+    std::fs::create_dir_all(root.join("crates/ashgrove/src")).expect("ashgrove src");
+    std::fs::create_dir_all(root.join("std/src")).expect("std src");
+    std::fs::write(
+        root.join("Cargo.toml"),
+        "[workspace]\nmembers = [\"crates/ash-cli\", \"crates/ashgrove\"]\nresolver = \"2\"\n\n[workspace.package]\nversion = \"0.1.0\"\nedition = \"2024\"\n",
+    )
+    .expect("workspace manifest");
+    std::fs::write(
+        root.join("crates/ash-cli/Cargo.toml"),
+        "[package]\nname = \"ash-cli\"\nversion.workspace = true\nedition.workspace = true\n\n[[bin]]\nname = \"ash\"\npath = \"src/main.rs\"\n",
+    )
+    .expect("ash-cli manifest");
+    std::fs::write(
+        root.join("crates/ash-cli/src/main.rs"),
+        "fn main() { println!(\"ash source fixture\"); }\n",
+    )
+    .expect("ash main");
+    std::fs::write(
+        root.join("crates/ashgrove/Cargo.toml"),
+        "[package]\nname = \"ashgrove\"\nversion.workspace = true\nedition.workspace = true\n\n[[bin]]\nname = \"ashgrove\"\npath = \"src/main.rs\"\n",
+    )
+    .expect("ashgrove manifest");
+    std::fs::write(
+        root.join("crates/ashgrove/src/main.rs"),
+        "fn main() { println!(\"ashgrove source fixture\"); }\n",
+    )
+    .expect("ashgrove main");
+    std::fs::write(
+        root.join("std/Cargo.toml"),
+        "[package]\nname = \"ash-stdlib\"\nversion = \"0.1.0\"\nedition = \"2024\"\n",
+    )
+    .expect("std manifest");
+    std::fs::write(
+        root.join("std/src/lib.ash"),
+        "pub type SourceRootSentinel = SourceRootSentinel;\n",
+    )
+    .expect("stdlib source");
+}
+
 pub fn install_fake_toolchain(roots: &XdgFixture, id: &str) {
     let path = roots.toolchain(id);
     create_toolchain_shape(&path, id);

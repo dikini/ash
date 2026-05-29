@@ -441,9 +441,11 @@ fn write_executable_file_atomically(
         .sync_all()
         .with_context(|| format!("sync temporary launcher file {}", temp.path().display()))?;
     make_launcher_executable(temp.path())?;
-    let temp_path = temp.into_temp_path();
-    fs::rename(&temp_path, target)
+    let persisted = temp
+        .persist(target)
+        .map_err(|error| error.error)
         .with_context(|| format!("publish launcher file {}", target.display()))?;
+    drop(persisted);
     Ok(())
 }
 
@@ -1366,12 +1368,31 @@ fn run_launcher_dispatch(paths: &AshgrovePaths, args: LauncherDispatchArgs) -> R
     };
     request = request.with_project(project);
     let dispatch = resolve_launcher_dispatch(paths, request)?;
+    let stdlib_root = selected_stdlib_source_root(paths, dispatch.toolchain_id())?;
     let mut command = Command::new(dispatch.tool_path());
-    command.args(args.args).env(
-        "ASHGROVE_RUNNING_TOOLCHAIN",
-        dispatch.toolchain_id().as_str(),
-    );
+    command
+        .args(args.args)
+        .env(
+            "ASHGROVE_RUNNING_TOOLCHAIN",
+            dispatch.toolchain_id().as_str(),
+        )
+        .env("ASH_STDLIB_ROOT", stdlib_root);
     exec_or_status(command, dispatch.tool_path())
+}
+
+fn selected_stdlib_source_root(paths: &AshgrovePaths, id: &ToolchainId) -> Result<PathBuf> {
+    let manifest = installed_toolchain_manifest(paths, id)?;
+    let stdlib_path =
+        validate_relative_toolchain_path(manifest.stdlib().path(), "stdlib metadata path")?;
+    let root = paths.toolchain_dir(id).join(stdlib_path).join("src");
+    if !root.is_dir() {
+        bail!(
+            "selected toolchain '{}' stdlib source root is missing at {}",
+            id.as_str(),
+            root.display()
+        );
+    }
+    Ok(root)
 }
 
 #[cfg(unix)]
@@ -1479,20 +1500,30 @@ fn install_from_source(
             "dirty source rejected; pass --allow-dirty-source to record a non-reproducible install"
         );
     }
+    if is_source_root(source) {
+        return install_from_source_root(paths, source, allow_dirty, allow_unidentified, switch);
+    }
     let source_rev = read_optional_trimmed(source.join(".source-rev"))?;
     if source_rev.is_none() && !allow_unidentified {
         bail!("unidentified source rejected; pass --allow-unidentified-source to record it");
     }
     let id = read_toolchain_id(source)?;
     let source_url = read_optional_trimmed(source.join(".source-url"))?;
+    let dirty_source_digest = if allow_dirty {
+        Some(source_tree_digest(source)?)
+    } else {
+        None
+    };
     let stage = ToolchainStage::create(paths, id.clone())?;
     stage.copy_toolchain_payload(source)?;
     write_source_install_record(
         &stage.path().join("install-record.toml"),
         SourceInstallRecordInput {
             id: &id,
+            source_path: source,
             source_rev: source_rev.as_deref(),
             source_url: source_url.as_deref(),
+            dirty_source_digest: dirty_source_digest.as_deref(),
             allow_dirty,
             allow_unidentified,
         },
@@ -1505,10 +1536,326 @@ fn install_from_source(
     Ok(id)
 }
 
+fn is_source_root(source: &Path) -> bool {
+    source.join("Cargo.toml").is_file() && source.join("std/src").is_dir()
+}
+
+fn install_from_source_root(
+    paths: &AshgrovePaths,
+    source: &Path,
+    allow_dirty: bool,
+    allow_unidentified: bool,
+    switch: bool,
+) -> Result<ToolchainId> {
+    let metadata = SourceRootMetadata::inspect(source)?;
+    if metadata.dirty && !allow_dirty {
+        bail!(
+            "dirty source rejected; pass --allow-dirty-source to record a non-reproducible install"
+        );
+    }
+    if metadata.rev.is_none() && !allow_unidentified {
+        bail!("unidentified source rejected; pass --allow-unidentified-source to record it");
+    }
+    let version = source_package_version(source)?;
+    let source_digest = source_tree_digest(source)?;
+    let dirty_digest = if metadata.dirty {
+        Some(source_digest.as_str())
+    } else {
+        None
+    };
+    let id = source_toolchain_id(&version, source, metadata.rev.as_deref(), dirty_digest)?;
+    let stage = ToolchainStage::create(paths, id.clone())?;
+    stage_source_root_toolchain(paths, source, &stage, &id, &version, &source_digest)?;
+    write_source_install_record(
+        &stage.path().join("install-record.toml"),
+        SourceInstallRecordInput {
+            id: &id,
+            source_path: source,
+            source_rev: metadata.rev.as_deref(),
+            source_url: metadata.url.as_deref(),
+            dirty_source_digest: dirty_digest,
+            allow_dirty,
+            allow_unidentified,
+        },
+    )?;
+    stage.publish()?;
+    install_launcher_shims_from_current_exe(paths)?;
+    if switch || read_default(paths)?.is_none() {
+        set_default(paths, &id)?;
+    }
+    Ok(id)
+}
+
+#[derive(Debug)]
+struct SourceRootMetadata {
+    rev: Option<String>,
+    url: Option<String>,
+    dirty: bool,
+}
+
+impl SourceRootMetadata {
+    fn inspect(source: &Path) -> Result<Self> {
+        let git_like = source.join(".git").exists() || git_is_inside_work_tree(source)?;
+        let rev = git_output_optional(source, &["rev-parse", "HEAD"])?;
+        if rev.is_none() && git_like {
+            bail!(
+                "git revision failed for git source root {}; cannot determine source identity",
+                source.display()
+            );
+        }
+        let dirty = match git_status_porcelain(source, git_like || rev.is_some())? {
+            Some(status) => !status.trim().is_empty(),
+            None => source.join(".dirty").exists(),
+        };
+        let url = git_output_optional(source, &["config", "--get", "remote.origin.url"])?
+            .or(read_optional_trimmed(source.join(".source-url"))?);
+        Ok(Self {
+            rev: rev.map(|value| value.trim().to_string()),
+            url: url.map(|value| value.trim().to_string()),
+            dirty,
+        })
+    }
+}
+
+fn git_is_inside_work_tree(source: &Path) -> Result<bool> {
+    Ok(
+        git_output_optional(source, &["rev-parse", "--is-inside-work-tree"])?.as_deref()
+            == Some("true"),
+    )
+}
+
+fn source_package_version(source: &Path) -> Result<String> {
+    let text = fs::read_to_string(source.join("Cargo.toml")).context("read source Cargo.toml")?;
+    let value: toml::Value = toml::from_str(&text).context("parse source Cargo.toml")?;
+    let version = value
+        .get("workspace")
+        .and_then(|workspace| workspace.get("package"))
+        .and_then(|package| package.get("version"))
+        .or_else(|| {
+            value
+                .get("package")
+                .and_then(|package| package.get("version"))
+        })
+        .and_then(toml::Value::as_str)
+        .context("source Cargo.toml missing package version")?;
+    Ok(version.to_string())
+}
+
+fn source_toolchain_id(
+    version: &str,
+    source: &Path,
+    rev: Option<&str>,
+    dirty_digest: Option<&str>,
+) -> Result<ToolchainId> {
+    let suffix = match rev {
+        Some(rev) => {
+            let mut suffix = rev.chars().take(12).collect::<String>();
+            if let Some(digest) = dirty_digest {
+                suffix.push_str(".dirty");
+                suffix.extend(digest.chars().take(12));
+            }
+            suffix
+        }
+        None => {
+            let digest = Sha256::digest(source.display().to_string().as_bytes());
+            let mut value = String::from("unidentified");
+            for byte in &digest[..6] {
+                value.push_str(&format!("{byte:02x}"));
+            }
+            value
+        }
+    };
+    ToolchainId::parse(&format!("ash-{version}+source.{suffix}"))
+}
+
+fn stage_source_root_toolchain(
+    paths: &AshgrovePaths,
+    source: &Path,
+    stage: &ToolchainStage,
+    id: &ToolchainId,
+    version: &str,
+    expected_source_digest: &str,
+) -> Result<()> {
+    build_source_binaries(paths, source, id)?;
+    let post_build_digest = source_tree_digest(source)?;
+    if post_build_digest != expected_source_digest {
+        bail!(
+            "source cargo build dirtied source root {}; aborting before publish",
+            source.display()
+        );
+    }
+    fs::create_dir_all(stage.path().join("bin")).context("create source stage bin")?;
+    let build_dir = source_build_dir(paths, id).join(build_profile());
+    install_executable_copy(
+        &build_dir.join(executable_name("ash")),
+        &stage.path().join("bin").join(executable_name("ash")),
+    )
+    .context("stage source-built ash binary")?;
+    install_executable_copy(
+        &build_dir.join(executable_name("ashgrove")),
+        &stage.path().join("bin").join(executable_name("ashgrove")),
+    )
+    .context("stage source-built ashgrove binary")?;
+
+    copy_dir(
+        &source.join("std/src"),
+        &stage.path().join("lib/ash/std/src"),
+    )?;
+    let stdlib = StdlibMetadata::new(version, "lib/ash/std");
+    stage_stdlib_metadata(stage.path(), &stdlib)?;
+    ToolchainManifest::minimal(id.clone(), version, target_triple(), "source")
+        .write_to(&stage.path().join("manifest.toml"))?;
+    Ok(())
+}
+
+fn build_source_binaries(paths: &AshgrovePaths, source: &Path, id: &ToolchainId) -> Result<()> {
+    let target_dir = source_build_dir(paths, id);
+    fs::create_dir_all(&target_dir).context("create source build target dir")?;
+    let build_source_root = paths.cache_dir().join("source-build-roots");
+    fs::create_dir_all(&build_source_root).context("create source build root cache")?;
+    let build_source =
+        tempfile::tempdir_in(&build_source_root).context("create isolated source build dir")?;
+    copy_source_tree_for_build(source, build_source.path())?;
+
+    let mut command = Command::new("cargo");
+    command.args([
+        "build",
+        "--package",
+        "ash-cli",
+        "--bin",
+        "ash",
+        "--package",
+        "ashgrove",
+        "--bin",
+        "ashgrove",
+    ]);
+    if source.join("Cargo.lock").is_file() {
+        command.arg("--locked");
+    }
+    let status = command
+        .current_dir(build_source.path())
+        .env("CARGO_TARGET_DIR", &target_dir)
+        .status()
+        .with_context(|| format!("run cargo build in source root {}", source.display()))?;
+    if !status.success() {
+        bail!("source cargo build failed for {}", source.display());
+    }
+    Ok(())
+}
+
+fn copy_source_tree_for_build(source: &Path, dest: &Path) -> Result<()> {
+    for entry in walkdir::WalkDir::new(source) {
+        let entry = entry.context("walk source build input")?;
+        let rel = entry.path().strip_prefix(source).context("strip prefix")?;
+        if rel.as_os_str().is_empty() || source_digest_skip_path(rel) {
+            continue;
+        }
+        let target = dest.join(rel);
+        if entry.file_type().is_dir() {
+            fs::create_dir_all(&target).with_context(|| format!("create {}", target.display()))?;
+        } else if entry.file_type().is_file() {
+            if let Some(parent) = target.parent() {
+                fs::create_dir_all(parent).context("create parent")?;
+            }
+            fs::copy(entry.path(), &target)
+                .with_context(|| format!("copy {}", entry.path().display()))?;
+        }
+    }
+    Ok(())
+}
+
+fn source_tree_digest(source: &Path) -> Result<String> {
+    let mut files = Vec::new();
+    for entry in walkdir::WalkDir::new(source) {
+        let entry = entry.context("walk source digest input")?;
+        if !entry.file_type().is_file() {
+            continue;
+        }
+        let rel = entry.path().strip_prefix(source).context("strip prefix")?;
+        if source_digest_skip_path(rel) {
+            continue;
+        }
+        files.push(rel.to_path_buf());
+    }
+    files.sort();
+
+    let mut hasher = Sha256::new();
+    for rel in files {
+        hasher.update(rel.to_string_lossy().as_bytes());
+        hasher.update([0]);
+        let mut file = fs::File::open(source.join(&rel))
+            .with_context(|| format!("open source digest input {}", rel.display()))?;
+        let mut buf = [0u8; 8192];
+        loop {
+            let n = file
+                .read(&mut buf)
+                .with_context(|| format!("read source digest input {}", rel.display()))?;
+            if n == 0 {
+                break;
+            }
+            hasher.update(&buf[..n]);
+        }
+        hasher.update([0]);
+    }
+    Ok(format!("{:x}", hasher.finalize()))
+}
+
+fn source_digest_skip_path(rel: &Path) -> bool {
+    matches!(
+        rel.components().next(),
+        Some(Component::Normal(name)) if name == OsStr::new(".git") || name == OsStr::new("target")
+    )
+}
+
+fn source_build_dir(paths: &AshgrovePaths, id: &ToolchainId) -> PathBuf {
+    paths.cache_dir().join("builds").join(id.as_str())
+}
+
+fn executable_name(name: &str) -> String {
+    format!("{name}{}", std::env::consts::EXE_SUFFIX)
+}
+
+fn git_output_optional(source: &Path, args: &[&str]) -> Result<Option<String>> {
+    let output = Command::new("git")
+        .args(args)
+        .current_dir(source)
+        .output()
+        .with_context(|| format!("run git {} in {}", args.join(" "), source.display()))?;
+    if !output.status.success() {
+        return Ok(None);
+    }
+    Ok(Some(
+        String::from_utf8_lossy(&output.stdout).trim().to_string(),
+    ))
+}
+
+fn git_status_porcelain(source: &Path, fail_closed: bool) -> Result<Option<String>> {
+    let output = Command::new("git")
+        .args(["status", "--porcelain"])
+        .current_dir(source)
+        .output()
+        .with_context(|| format!("run git status --porcelain in {}", source.display()))?;
+    if output.status.success() {
+        return Ok(Some(
+            String::from_utf8_lossy(&output.stdout).trim().to_string(),
+        ));
+    }
+    if fail_closed {
+        bail!(
+            "git status failed for identified source root {}: {}",
+            source.display(),
+            String::from_utf8_lossy(&output.stderr).trim()
+        );
+    }
+    Ok(None)
+}
+
 struct SourceInstallRecordInput<'a> {
     id: &'a ToolchainId,
+    source_path: &'a Path,
     source_rev: Option<&'a str>,
     source_url: Option<&'a str>,
+    dirty_source_digest: Option<&'a str>,
     allow_dirty: bool,
     allow_unidentified: bool,
 }
@@ -1523,6 +1870,10 @@ fn write_source_install_record(path: &Path, input: SourceInstallRecordInput<'_>)
         "source_kind".to_string(),
         toml::Value::String("source".to_string()),
     );
+    table.insert(
+        "source_path".to_string(),
+        toml::Value::String(input.source_path.display().to_string()),
+    );
     if let Some(source_url) = input.source_url {
         table.insert(
             "source_url".to_string(),
@@ -1533,6 +1884,12 @@ fn write_source_install_record(path: &Path, input: SourceInstallRecordInput<'_>)
         table.insert(
             "source_rev".to_string(),
             toml::Value::String(source_rev.to_string()),
+        );
+    }
+    if let Some(dirty_source_digest) = input.dirty_source_digest {
+        table.insert(
+            "dirty_source_digest".to_string(),
+            toml::Value::String(format!("sha256:{dirty_source_digest}")),
         );
     }
     table.insert(

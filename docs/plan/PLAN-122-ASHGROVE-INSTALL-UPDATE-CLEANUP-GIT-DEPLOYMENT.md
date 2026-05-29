@@ -56,7 +56,7 @@ TASK-964 creates the docs/spec/plan/task packet. TASK-965 is a hard audit gate a
 | [TASK-965](tasks/TASK-965-ashgrove-live-install-audit-gate.md) | Audit live CLI/build/release/stdlib/daemon/XDG/git seams before implementation | 8 | ✅ Complete |
 | [TASK-966](tasks/TASK-966-ashgrove-cli-crate-and-command-skeleton.md) | Add `ashgrove` command skeleton and shared reporting/errors | 8 | ✅ Complete |
 | [TASK-967](tasks/TASK-967-toolchain-metadata-and-xdg-layout.md) | Implement metadata schemas, XDG paths, launcher dispatch, selectors, stdlib metadata, trust preservation, staging/publish helpers | 14 | ✅ Complete |
-| [TASK-968](tasks/TASK-968-source-install-flow.md) | Implement source install path and installed-stdlib root use | 14 | ⚠️ Partial fixture-backed source install hardening slice |
+| [TASK-968](tasks/TASK-968-source-install-flow.md) | Implement source install path and installed-stdlib root use | 14 | ⚠️ Partial source-root install hardening slice |
 | [TASK-969](tasks/TASK-969-binary-tarball-install-flow.md) | Implement conforming tarball production/validation/install path | 14 | ⚠️ Partial tarball validation slice |
 | [TASK-970](tasks/TASK-970-update-default-list-current-flow.md) | Implement update/default/list/current flows | 10 | ⚠️ Partial |
 | [TASK-971](tasks/TASK-971-remove-cleanup-flow.md) | Implement remove and cleanup policy, including daemon/running-manager protection | 12 | ⚠️ Partial cleanup planner slice |
@@ -123,7 +123,7 @@ Current implementation note: the substrate now includes typed XDG path resolutio
 
 Must stage, build/copy, verify shape, and atomically publish a source-built toolchain. Dirty/unidentified source behavior must be explicit and recorded. The installed `ash` must use the selected toolchain stdlib rather than workspace `std/src`.
 
-Current implementation note: the fixture-backed source install slice stages prepared source-shaped toolchain payloads through the same collision path used by the metadata substrate, records source URL/revision/build profile/target triple plus dirty and unidentified-source override state, rejects dirty or unidentified installs unless explicitly allowed, rejects same-id metadata conflicts, and treats identical reinstalls as deterministic no-ops. This is not yet a real cargo build from a source checkout/archive, and selected-toolchain stdlib routing is proven through the `ash-engine` override seam rather than an installed `ash` launcher invocation.
+Current implementation note: the source install slice builds real local source roots from an isolated cache copy with an external Cargo target dir, passes `--locked` when `Cargo.lock` exists, rejects git-like roots when `HEAD` or dirty status cannot be determined, leaves clean no-lock source fixtures clean, records source URL/revision/build profile/target triple plus dirty and unidentified-source override state, and adds dirty tree digests to metadata and dirty override toolchain IDs. Prepared source-shaped directory installs still cover archive-shaped local inputs, and staged publish/collision checks keep identical reinstalls deterministic while rejecting metadata conflicts. TASK-968 remains partial because source archive release metadata and concrete runtime-support payload metadata are still undefined.
 
 ### TASK-969: binary tarball install
 

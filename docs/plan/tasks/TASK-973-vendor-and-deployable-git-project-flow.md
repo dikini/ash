@@ -1,6 +1,6 @@
 # TASK-973: Vendor and deployable git project flow
 
-## Status: ⚠️ Partial stdlib-separation slice
+## Status: ✅ Complete for SPEC-073 alpha offline vendor/deployable git project flow
 
 ## Description
 
@@ -32,8 +32,11 @@ Implement vendor/offline deployment for git-pinned Ash projects.
 ### Current Slice Evidence
 
 - `ashgrove vendor` now requires locked dependencies to have been materialized by `ashgrove fetch` and copies package content from `$XDG_CACHE_HOME/ash/git/checkouts/<package>-<url-digest>/<commit>/` into `vendor/ash/<package>/`.
+- `task_973_vendor_materializes_every_locked_package_to_default_vendor_root` proves the default `vendor/ash/` layout materializes every locked package from its exact XDG fetched checkout commit and writes package-specific provenance.
 - `task_973_vendor_materializes_package_content_from_locked_cache_commit` proves vendored content follows the exact lockfile commit even after the manifest tag is moved.
+- `task_973_vendor_explicit_output_records_and_checks_provenance` proves explicit `--output PATH` materializes package content, records provenance, and is validated by `vendor --check`.
 - `vendor --check` remains read-only and validates provenance plus vendored file content against the locked cached checkout without fetching or writing.
+- `task_973_vendor_check_fails_read_only_when_cache_or_vendor_content_is_missing` proves `vendor --check` fails on missing vendored content and missing fetched-cache evidence without recreating cache directories.
 - `check_discovers_locked_vendored_dependency_without_dependency_root_env` proves offline `ash check src/main.ash` resolves a locked dependency from `vendor/ash/<package>/` with only lower-case `ash.toml` and `ash.lock`.
 - `run_discovers_locked_vendored_dependency_without_dependency_root_env` proves explicit offline `ash run src/main.ash:main` resolves the same locked vendored dependency without dependency-root environment variables.
 - `malformed_lock_package_name_fails_closed_without_resolving_vendor_escape` proves CLI discovery rejects traversal package names before resolving any escaped vendor directory.
@@ -60,11 +63,13 @@ Implement vendor/offline deployment for git-pinned Ash projects.
 ```yaml
 strictness: clean
 commands:
-  - RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ashgrove task_973 -- --nocapture
+  - RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ashgrove --test task_973_vendor -- --nocapture
   - RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ash-cli --test phase127_vendored_dependency_resolution -- --nocapture
   - RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ash-engine task_968 -- --nocapture
-  - cargo fmt --check
-  - cargo check -p ashgrove
+  - RUSTC_WRAPPER= cargo test -p ashgrove --test task_972_manifest_lock_git -- --nocapture
+  - RUSTC_WRAPPER= cargo fmt --check
+  - RUSTC_WRAPPER= cargo check -p ashgrove
+  - RUSTC_WRAPPER= cargo clippy -p ashgrove --all-targets --all-features -- -D warnings
   - git diff --check
 checklist:
   - [x] Materialize locked dependencies into the default `vendor/ash/` directory or explicit `--output PATH`.
@@ -74,6 +79,10 @@ checklist:
   - [x] Verify selected toolchain stdlib remains separate from project dependencies.
   - [x] Verify explicit current CLI forms such as `ash check src/main.ash` and `ash run src/main.ash:main` work with vendored dependencies.
 ```
+
+## Completion Notes
+
+2026-05-29 completion evidence: TASK-973 is complete for the SPEC-073 alpha offline vendor/deployable git project flow. The verified boundary is locked local-git packages materialized by `ashgrove fetch`, copied into default `vendor/ash/` or an explicit `--output PATH`, provenance checked by read-only `vendor --check`, and consumed offline by `ash check src/main.ash` plus explicit ordinary-file `ash run src/main.ash:main` from the default project vendor layout without dependency-root environment variables or usable XDG fetched cache. SPEC-073 remains Draft for TASK-974 closeout and deferred rows including source-archive release metadata, authenticated URL install policy, packaged dispatcher lifecycle, registry-scale package metadata, broader cleanup reachability, and mandatory trust/signing enforcement.
 
 
 ## Dispatch

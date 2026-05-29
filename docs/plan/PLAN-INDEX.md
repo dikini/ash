@@ -303,6 +303,7 @@ Update this section as tasks complete:
 | 124 | 8 | 1 | 📝 Planned after packet creation |
 | 126 | 9 | 9 | ✅ Complete |
 | 127 | 11 | 4 + partial | ⚠️ Partial first slice |
+| 128 | 12 | 1 | 📝 Planned after packet creation |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -3769,3 +3770,37 @@ Phase 127 introduces `ashgrove <command>` as the Ash toolchain and deployment ma
 - D9: Remove/cleanup commands must be conservative, dry-run visible, and protect active/default/live/running-manager toolchains by default.
 - D10: Signing/trust metadata is reserved but not mandatory for the first slice.
 - D11: TASK-965 is a hard audit gate and must replace downstream placeholder verification before Rust implementation starts.
+
+## Phase 128: SPEC-073 Ashgrove Release, Trust, Registry-Ready Metadata, and Runtime-Support Completion
+
+**Priority:** High (closes the Phase 127 SPEC-073 deferred acceptance rows needed before Ashgrove can move beyond Draft)
+**Status:** 📝 Planned after packet creation; implementation blocked on TASK-976 audit gate
+**Spec:** [SPEC-073](../spec/SPEC-073-ASHGROVE-INSTALL-UPDATE-CLEANUP-GIT-DEPLOYMENT.md)
+**Plan:** [PLAN-123](PLAN-123-SPEC-073-ASHGROVE-RELEASE-TRUST-REGISTRY-RUNTIME-SUPPORT-COMPLETION.md)
+
+Phase 128 is the follow-on to Phase 127. It does not reopen or rewrite Phase 127 history; it closes the documented SPEC-073 deferred rows for source-archive release metadata, runtime-support payload metadata, authenticated tarball URL/release-index trust policy, packaged dispatcher lifecycle, registry-ready package metadata, broader cleanup reachability, trust-preserving manifest rewrites, mandatory trust/signing enforcement, remote-authenticated git fetch policy, and end-to-end release/deployment acceptance evidence.
+
+| Task | Description | Est. Hours | Status |
+|------|-------------|------------|--------|
+| [TASK-975](tasks/TASK-975-spec073-ashgrove-completion-packet.md) | Create PLAN-123/TASK-975..986 packet and register Phase 128 | 4 | ✅ Complete |
+| [TASK-976](tasks/TASK-976-ashgrove-completion-acceptance-delta-and-audit-gate.md) | Map every SPEC-073 deferred row to exact owners, files, tests, and RED failure modes | 8 | 📝 Planned |
+| [TASK-977](tasks/TASK-977-source-archive-release-metadata.md) | Implement source-archive release metadata and reproducibility checks | 10 | 📝 Planned |
+| [TASK-978](tasks/TASK-978-runtime-support-payload-metadata.md) | Define and verify concrete runtime-support payload metadata across source/tarball installs | 10 | 📝 Planned |
+| [TASK-979](tasks/TASK-979-release-index-authenticated-tarball-url-policy.md) | Add authenticated tarball URL recording and release-index trust policy | 14 | 📝 Planned |
+| [TASK-980](tasks/TASK-980-packaged-dispatcher-lifecycle-policy.md) | Finalize packaged dispatcher lifecycle and launcher update/remove policy | 10 | 📝 Planned |
+| [TASK-981](tasks/TASK-981-registry-scale-package-metadata-substrate.md) | Add registry-ready package metadata without creating a hosted registry service | 12 | 📝 Planned |
+| [TASK-982](tasks/TASK-982-cleanup-lockfile-cache-reachability.md) | Implement broader cleanup reachability across lockfiles, fetched cache, vendor metadata, and installed toolchains | 12 | 📝 Planned |
+| [TASK-983](tasks/TASK-983-manifest-rewrite-trust-preservation.md) | Preserve manifest and lockfile trust metadata during read-modify-write operations | 8 | 📝 Planned |
+| [TASK-984](tasks/TASK-984-mandatory-trust-signing-and-remote-git-fetch-policy.md) | Implement mandatory trust/signing enforcement and remote-authenticated git fetch policy | 16 | 📝 Planned |
+| [TASK-985](tasks/TASK-985-ashgrove-release-deployment-acceptance-integration.md) | Prove release/deployment flows cover the completed SPEC-073 rows end-to-end | 12 | 📝 Planned |
+| [TASK-986](tasks/TASK-986-spec073-implemented-mvp-closeout.md) | Promote SPEC-073 only after acceptance matrix, broad gates, and independent review pass | 8 | 📝 Planned |
+
+**Decision gates:**
+- D1: Phase 127 remains the historical partial closeout; Phase 128 owns completion evidence.
+- D2: SPEC-073 stays Draft until TASK-986 maps every deferred row to concrete evidence.
+- D3: Registry-ready metadata is in scope; a hosted registry service and SemVer dependency solver remain out of scope unless a new spec explicitly expands scope.
+- D4: Runtime-support payload metadata must be concrete and equivalent across source and tarball install paths before A73-3/A73-10 can be promoted.
+- D5: Release-index and tarball URL support must be authenticated or fail closed; bare version install/update must not become best-effort network lookup.
+- D6: Trust/signing metadata preservation and enforcement must be tested as data-preservation and security behavior, not prose-only policy.
+- D7: Cleanup reachability must be conservative, visible in dry-run, and must never delete project-local `ash.toml` or `ash.lock`.
+- D8: TASK-976 is a hard audit gate and must replace downstream placeholder verification before implementation starts.

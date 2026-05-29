@@ -5,7 +5,9 @@
 **Amends:** [SPEC-005](SPEC-005-CLI.md), [SPEC-009](SPEC-009-MODULES.md), [SPEC-012](SPEC-012-IMPORTS.md), [SPEC-038](SPEC-038-LANGUAGE-SERVER.md), [SPEC-070](SPEC-070-ALPHA-RUNTIME-KERNEL-AND-OS-SURFACE.md)
 **Builds on:** [SPEC-069](SPEC-069-ALPHA-VISIBLE-TOWER-ALGEBRA-AND-DO-LOWERING.md), [SPEC-071](SPEC-071-REFERENCE-CORPUS-METADATA-AND-MAINTENANCE.md)
 **Plan:** [PLAN-122](../plan/PLAN-122-ASHGROVE-INSTALL-UPDATE-CLEANUP-GIT-DEPLOYMENT.md)
+**Follow-on Plan:** [PLAN-123](../plan/PLAN-123-SPEC-073-ASHGROVE-RELEASE-TRUST-REGISTRY-RUNTIME-SUPPORT-COMPLETION.md)
 **Implementation Tasks:** [TASK-964](../plan/tasks/TASK-964-ashgrove-install-policy-packet.md) through [TASK-974](../plan/tasks/TASK-974-ashgrove-closeout-acceptance.md)
+**Follow-on Tasks:** [TASK-975](../plan/tasks/TASK-975-spec073-ashgrove-completion-packet.md) through [TASK-986](../plan/tasks/TASK-986-spec073-implemented-mvp-closeout.md)
 
 ## 1. Summary
 
@@ -525,10 +527,26 @@ Diagnostics MUST be actionable and distinguish:
 - [TASK-973](../plan/tasks/TASK-973-vendor-and-deployable-git-project-flow.md): Implement vendor/offline deployment flow for git-based Ash projects.
 - [TASK-974](../plan/tasks/TASK-974-ashgrove-closeout-acceptance.md): Close out SPEC-073 with acceptance matrix, broad gates, and independent review remediation. Complete as a report/closeout task; SPEC-073 remains Draft because deferred acceptance rows remain.
 
+Follow-on completion tasks from Phase 128:
+
+- [TASK-975](../plan/tasks/TASK-975-spec073-ashgrove-completion-packet.md): Create PLAN-123/TASK-975..986 packet and register Phase 128.
+- [TASK-976](../plan/tasks/TASK-976-ashgrove-completion-acceptance-delta-and-audit-gate.md): Map every SPEC-073 deferred row to exact owners, files, tests, and RED failure modes.
+- [TASK-977](../plan/tasks/TASK-977-source-archive-release-metadata.md): Implement source-archive release metadata and reproducibility checks.
+- [TASK-978](../plan/tasks/TASK-978-runtime-support-payload-metadata.md): Define and verify concrete runtime-support payload metadata across source/tarball installs.
+- [TASK-979](../plan/tasks/TASK-979-release-index-authenticated-tarball-url-policy.md): Add authenticated tarball URL recording and release-index trust policy.
+- [TASK-980](../plan/tasks/TASK-980-packaged-dispatcher-lifecycle-policy.md): Finalize packaged dispatcher lifecycle and launcher update/remove policy.
+- [TASK-981](../plan/tasks/TASK-981-registry-scale-package-metadata-substrate.md): Add registry-ready package metadata without creating a hosted registry service.
+- [TASK-982](../plan/tasks/TASK-982-cleanup-lockfile-cache-reachability.md): Implement broader cleanup reachability across lockfiles, fetched cache, vendor metadata, and installed toolchains.
+- [TASK-983](../plan/tasks/TASK-983-manifest-rewrite-trust-preservation.md): Preserve manifest and lockfile trust metadata during read-modify-write operations.
+- [TASK-984](../plan/tasks/TASK-984-mandatory-trust-signing-and-remote-git-fetch-policy.md): Implement mandatory trust/signing enforcement and remote-authenticated git fetch policy.
+- [TASK-985](../plan/tasks/TASK-985-ashgrove-release-deployment-acceptance-integration.md): Prove release/deployment flows cover the completed SPEC-073 rows end-to-end.
+- [TASK-986](../plan/tasks/TASK-986-spec073-implemented-mvp-closeout.md): Promote SPEC-073 only after acceptance matrix, broad gates, and independent review pass.
+
 ## 22. Changelog
 
 ### 2026-05-29
 
+- TASK-975 created PLAN-123 and TASK-975 through TASK-986 as the SPEC-073 completion follow-on packet. SPEC-073 remains Draft until the Phase 128 audit gate, implementation tasks, integration evidence, broad gates, and independent closeout review prove every deferred acceptance row.
 - TASK-974 completed the final closeout report and broad gate evidence without promoting SPEC-073 beyond Draft. Deferred rows remain for source archive release metadata, authenticated tarball URL recording, packaged dispatcher lifecycle policy, registry-scale package metadata, broader cleanup reachability, mandatory trust/signing enforcement, and runtime-support payload metadata.
 
 ### 2026-05-28

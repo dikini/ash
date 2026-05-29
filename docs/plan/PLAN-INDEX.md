@@ -3737,7 +3737,7 @@ Phase 126 introduces tower-aligned callable type and closure syntax. It makes `(
 ## Phase 127: Ashgrove Install, Update, Cleanup, and Git Deployment
 
 **Priority:** High (alpha release boundary for coherent installation, update, removal, cleanup, and git-pinned deployment before registry package management)
-**Status:** ⚠️ Partial Phase 127 after TASK-973 alpha offline vendor/deployable flow completion; SPEC-073 remains Draft pending deferred acceptance rows
+**Status:** ⚠️ Partial Phase 127 after TASK-974 closeout; SPEC-073 remains Draft pending deferred acceptance rows
 **Spec:** [SPEC-073](../spec/SPEC-073-ASHGROVE-INSTALL-UPDATE-CLEANUP-GIT-DEPLOYMENT.md)
 **Plan:** [PLAN-122](PLAN-122-ASHGROVE-INSTALL-UPDATE-CLEANUP-GIT-DEPLOYMENT.md)
 
@@ -3755,7 +3755,7 @@ Phase 127 introduces `ashgrove <command>` as the Ash toolchain and deployment ma
 | [TASK-971](tasks/TASK-971-remove-cleanup-flow.md) | Implement remove and cleanup policy, including daemon/running-manager protection | 12 | ✅ Complete for SPEC-073 alpha remove/cleanup policy |
 | [TASK-972](tasks/TASK-972-ash-manifest-lock-git-fetch.md) | Implement `ash.toml`, `ash.lock`, git fetch, lock checking, trust preservation, and dependency-root module-loader integration | 18 | ✅ Complete for SPEC-073 alpha git lock/fetch and dependency-root integration |
 | [TASK-973](tasks/TASK-973-vendor-and-deployable-git-project-flow.md) | Implement vendor/offline deployment for git-pinned Ash projects | 12 | ✅ Complete for SPEC-073 alpha offline vendor/deployable git project flow |
-| [TASK-974](tasks/TASK-974-ashgrove-closeout-acceptance.md) | Close out SPEC-073 with acceptance matrix, broad gates, and independent review | 8 | ⚠️ Reported |
+| [TASK-974](tasks/TASK-974-ashgrove-closeout-acceptance.md) | Close out SPEC-073 with acceptance matrix, broad gates, and independent review | 8 | ✅ Complete closeout report; Phase 127 remains partial |
 
 **Decision gates:**
 - D1: Alpha installs are XDG-compatible and user-local; global/system install roots are deferred.

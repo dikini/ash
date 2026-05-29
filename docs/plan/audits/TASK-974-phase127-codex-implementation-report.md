@@ -1,12 +1,12 @@
 # TASK-974 Phase 127 Codex Implementation Report
 
-**Date:** 2026-05-28
+**Date:** 2026-05-28 through 2026-05-29
 **Worktree:** `/home/dikini/Projects/ash/.worktrees/phase-127-ashgrove`
-**Status:** Partial Phase 127 after TASK-973 alpha offline vendor/deployable flow completion; SPEC-073 remains Draft.
+**Status:** TASK-974 complete closeout report; Phase 127 remains partial and SPEC-073 remains Draft.
 
 ## Summary
 
-This run salvaged and continued the live Phase 127 diff without starting over or touching another checkout. The resulting tree contains a new `ashgrove` workspace crate, focused tests for TASK-966 through TASK-973, an installed-stdlib/dependency-root module-loader seam in `ash-engine`, and status documentation that does not promote SPEC-073 to Implemented MVP.
+This run salvaged and continued the live Phase 127 diff without starting over or touching another checkout. The resulting tree contains a new `ashgrove` workspace crate, focused tests for TASK-966 through TASK-973, an installed-stdlib/dependency-root module-loader seam in `ash-engine`, exact closeout verification targets for TASK-966 and TASK-970, and status documentation that does not promote SPEC-073 to Implemented MVP.
 
 The implementation is intentionally reported as partial. Focused tests now exercise real local source-root builds plus prepared source-shaped directory inputs, and the TASK-969 follow-up adds a repository release tarball producer plus schema-versioned local tarball install proof. Several SPEC-073 acceptance rows still require source archive release metadata, concrete runtime-support payload metadata, manifest rewrite trust preservation, authenticated URL install policy, packaged dispatcher lifecycle policy, and mandatory trust/signing enforcement. Follow-up slices added executable-bit tarball validation, current-project and XDG daemon-state removal protections, explicit confirmation for protected force-removal and old-toolchain cleanup, conservative cleanup execution for cache/orphan/old-toolchain flags, XDG git cache checkouts at exact lockfile commits, vendor package content materialization, `ash check`/explicit ordinary-file `ash run` discovery of default vendored locked dependencies and direct fetched-cache locked dependencies, and real temp-root `ash`/`ashgrove` launcher shims backed by typed ashgrove dispatch through a stable user-local dispatcher copy. Broader lockfile/cache cleanup reachability remains deferred by the SPEC-073 alpha boundary.
 
@@ -22,7 +22,7 @@ The implementation is intentionally reported as partial. Focused tests now exerc
 | TASK-971 | Complete for SPEC-073 alpha remove/cleanup policy | Remove protects user default, current-project pins, `ASHGROVE_RUNNING_TOOLCHAIN`, and TOML daemon state under `$XDG_STATE_HOME/ash/daemon/`; `--force` overrides only default/current-project pin protection after explicit stdin confirmation; live-daemon and running-manager protection remain non-overridable; bare `cleanup --project PATH --dry-run` is a non-destructive planner; `--cache`, `--orphans`, and `--old-toolchains` execute conservatively under isolated XDG roots, with old-toolchain deletion requiring explicit stdin confirmation before any combined cleanup deletion. Broader lockfile/cache reachability remains deferred. |
 | TASK-972 | Complete for SPEC-073 alpha git lock/fetch and dependency-root integration | Lower-case `ash.toml` dependencies reject unpinned git entries, reject legacy `.ash.toml` metadata conflicts, resolve local git tags/revs to exact commits in `ash.lock`, expand accepted abbreviated revs, preserve existing lockfile `[trust]` metadata, `lock --check` detects drift, `fetch` materializes local git dependencies into XDG cache checkouts keyed by exact lockfile commits, and `ash check` plus explicit ordinary-file `ash run` discover validated vendored lock roots and direct fetched-cache roots without dependency-root environment variables. Direct fetched roots fail closed when missing or when git `HEAD` does not match the lock commit, and selected stdlib roots keep precedence over stdlib-shaped locked packages. Manifest rewrite trust preservation and mandatory trust/signing enforcement remain deferred. |
 | TASK-973 | Complete for SPEC-073 alpha offline vendor/deployable git project flow | `vendor` copies every locked package from exact XDG cache checkouts into default `vendor/ash/<package>/` or explicit `--output PATH`, writes provenance entries, rejects unsafe package names and non-40-hex lock commits, `vendor --check` is read-only and fails on provenance/content/cache drift without fetch writes, offline `ash check src/main.ash` plus explicit ordinary-file `ash run src/main.ash:main` resolve default vendored dependencies without dependency-root env vars or usable XDG fetched cache, and selected/explicit stdlib roots take precedence over the auto-discovered `vendor/ash` dependency namespace even when it contains a stdlib-shaped package. |
-| TASK-974 | Reported | This report maps acceptance status, verification, review findings, changed files, and deferrals. |
+| TASK-974 | Complete closeout report | This report maps acceptance status, verification, review findings, changed files, and deferrals, and records the fresh required closeout gates from 2026-05-29. Phase 127 remains partial because deferred acceptance rows remain. |
 
 ## Acceptance Matrix
 
@@ -112,6 +112,28 @@ Commands run in this worktree:
   - `cargo test -p ashgrove --test task_967_layout -- --nocapture` - initially failed 4 new regressions because selected-tool exit status collapsed to a wrapper error, source/tarball install shims embedded the transient `current_exe()` path, selected toolchain-root symlinks were accepted, and predictable shim temp files followed attacker-controlled symlinks. After adding Unix `exec`/non-Unix exit-code preservation, stable user-local `.ashgrove-dispatcher` copies, pre-canonicalization toolchain-root symlink rejection, and hardened temp-file writes, passed with 20 tests.
 - Current TASK-973 completion reconciliation slice:
   - `RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ashgrove --test task_973_vendor -- --nocapture` - passed, 7 tests, after adding evidence for multi-package default vendoring, explicit `--output PATH` provenance/check behavior, and read-only `vendor --check` failures for missing vendor/cache evidence. No production-code change was needed for these regressions.
+- Final TASK-974 closeout gate:
+  - `RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ashgrove --test task_966_metadata -- --nocapture` - initially failed because the required test target did not exist; after adding the narrow alias target, passed, 6 tests.
+  - `RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ashgrove --test task_967_layout -- --nocapture` - passed, 20 tests.
+  - `RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ashgrove --test task_968_source_install -- --nocapture` - passed, 17 tests.
+  - `RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ashgrove --test task_969_tarball_install -- --nocapture` - passed, 18 tests.
+  - `RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ashgrove --test task_970_update_default -- --nocapture` - initially failed before this final run because the required test target did not exist; after adding the narrow alias target, passed, 10 tests.
+  - `RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ashgrove --test task_971_remove_cleanup -- --nocapture` - passed, 21 tests.
+  - `RUSTC_WRAPPER= cargo test -p ashgrove --test task_972_manifest_lock_git -- --nocapture` - passed, 8 tests.
+  - `RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ashgrove --test task_973_vendor -- --nocapture` - passed, 7 tests.
+  - `RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ash-cli --test phase127_vendored_dependency_resolution -- --nocapture` - passed, 24 tests.
+  - `RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ash-engine task_968 -- --nocapture` - passed, 1 matching test.
+  - `RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ash-engine task_972 -- --nocapture` - passed, 5 matching tests.
+  - `RUSTC_WRAPPER= cargo fmt --check` - passed.
+  - `RUSTC_WRAPPER= cargo check -p ashgrove` - passed.
+  - `RUSTC_WRAPPER= cargo clippy -p ashgrove --all-targets --all-features -- -D warnings` - passed.
+  - `git diff --check` - passed.
+- Independent-review follow-up repo-native broad gate:
+  - `bash scripts/check-rust-format.sh` - passed.
+  - `bash scripts/check-rust-clippy.sh` - passed.
+  - `bash scripts/check-rust-tests.sh --workspace --all-targets` - passed.
+  - `bash scripts/check-doc-tests.sh` - passed.
+  - `git diff --check` - passed.
 
 ## Independent Review Findings
 
@@ -133,12 +155,14 @@ The remaining findings are accepted as current deferred gaps, not dismissed:
 
 ## Deferred Gaps
 
-- Source archive release metadata and concrete runtime-support payload metadata for source installs.
+- Source archive release metadata for source installs.
+- Concrete runtime-support payload metadata for source/tarball equivalence.
 - Authenticated tarball URL download/recording and release-index trust policy.
-- Release packaging and lifecycle policy for the stable user-local dispatcher copy.
-- Full metadata models preserving reserved trust/signing fields.
+- Packaged dispatcher lifecycle policy for the stable user-local dispatcher copy.
+- Registry-scale package metadata.
 - Broader cleanup reachability across lockfiles/cache metadata.
-- Remote-authenticated git fetch policy, manifest rewrite trust metadata preservation, and mandatory trust/signing enforcement.
+- Manifest rewrite trust metadata preservation and mandatory trust/signing enforcement.
+- Remote-authenticated git fetch policy.
 - Broader acceptance evidence before SPEC-073 can move beyond Draft.
 
 ## Changed Files
@@ -156,10 +180,12 @@ The remaining findings are accepted as current deferred gaps, not dismissed:
 - `crates/ashgrove/src/main.rs`
 - `crates/ashgrove/tests/support/mod.rs`
 - `crates/ashgrove/tests/task_966_ashgrove_cli.rs`
+- `crates/ashgrove/tests/task_966_metadata.rs`
 - `crates/ashgrove/tests/task_967_layout.rs`
 - `crates/ashgrove/tests/task_968_source_install.rs`
 - `crates/ashgrove/tests/task_969_tarball_install.rs`
 - `crates/ashgrove/tests/task_970_selectors.rs`
+- `crates/ashgrove/tests/task_970_update_default.rs`
 - `crates/ashgrove/tests/task_971_remove_cleanup.rs`
 - `crates/ashgrove/tests/task_972_manifest_lock_git.rs`
 - `crates/ashgrove/tests/task_973_vendor.rs`

@@ -1,6 +1,6 @@
 # SPEC-073: Ashgrove Install, Update, Cleanup, and Git Deployment
 
-**Status:** Draft
+**Status:** Draft; TASK-974 closeout report complete with deferred acceptance rows
 **Date:** 2026-05-28
 **Amends:** [SPEC-005](SPEC-005-CLI.md), [SPEC-009](SPEC-009-MODULES.md), [SPEC-012](SPEC-012-IMPORTS.md), [SPEC-038](SPEC-038-LANGUAGE-SERVER.md), [SPEC-070](SPEC-070-ALPHA-RUNTIME-KERNEL-AND-OS-SURFACE.md)
 **Builds on:** [SPEC-069](SPEC-069-ALPHA-VISIBLE-TOWER-ALGEBRA-AND-DO-LOWERING.md), [SPEC-071](SPEC-071-REFERENCE-CORPUS-METADATA-AND-MAINTENANCE.md)
@@ -523,9 +523,13 @@ Diagnostics MUST be actionable and distinguish:
 - [TASK-971](../plan/tasks/TASK-971-remove-cleanup-flow.md): Implement remove and cleanup policy, including daemon/running-manager protection.
 - [TASK-972](../plan/tasks/TASK-972-ash-manifest-lock-git-fetch.md): Implement `ash.toml` dependency metadata, `ash.lock`, git fetch, lock checking, trust-field preservation, and module-loader dependency-root integration.
 - [TASK-973](../plan/tasks/TASK-973-vendor-and-deployable-git-project-flow.md): Implement vendor/offline deployment flow for git-based Ash projects.
-- [TASK-974](../plan/tasks/TASK-974-ashgrove-closeout-acceptance.md): Close out SPEC-073 with acceptance matrix, broad gates, and independent review remediation.
+- [TASK-974](../plan/tasks/TASK-974-ashgrove-closeout-acceptance.md): Close out SPEC-073 with acceptance matrix, broad gates, and independent review remediation. Complete as a report/closeout task; SPEC-073 remains Draft because deferred acceptance rows remain.
 
 ## 22. Changelog
+
+### 2026-05-29
+
+- TASK-974 completed the final closeout report and broad gate evidence without promoting SPEC-073 beyond Draft. Deferred rows remain for source archive release metadata, authenticated tarball URL recording, packaged dispatcher lifecycle policy, registry-scale package metadata, broader cleanup reachability, mandatory trust/signing enforcement, and runtime-support payload metadata.
 
 ### 2026-05-28
 

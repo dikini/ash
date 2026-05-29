@@ -76,3 +76,5 @@ This task contributes to PLAN-122 and SPEC-073 completion. Later tasks must pres
 Area: closeout/verification. Completion requires acceptance-row evidence, not prose.
 
 2026-05-29 continuation evidence: TASK-973 added a public CLI regression proving selected/explicit stdlib roots are not overridden by the auto-discovered project `vendor/ash` dependency namespace, even when a locked vendored package is shaped like a stdlib module. This strengthens A73-10/A73-12 evidence but does not complete TASK-974 or promote SPEC-073 beyond Draft because launcher-selected installed `ash`, direct fetched-cache roots, source builds, release packaging, trust preservation, and broad closeout gates remain deferred.
+
+2026-05-29 TASK-967 continuation evidence: `cargo test -p ashgrove task_967 -- --nocapture` now includes 12 passing focused tests, including public launcher-dispatch helper coverage for project pin precedence, user default fallback, fail-closed missing-toolchain diagnostics, and symlink-escape rejection under temporary XDG roots. This strengthens the launcher selection evidence but does not claim real `$HOME/.local/bin` launcher shim installation or execution.

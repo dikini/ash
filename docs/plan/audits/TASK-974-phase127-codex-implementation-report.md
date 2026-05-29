@@ -8,14 +8,14 @@
 
 This run salvaged and continued the live Phase 127 diff without starting over or touching another checkout. The resulting tree contains a new `ashgrove` workspace crate, focused tests for TASK-966 through TASK-973, an installed-stdlib/dependency-root module-loader seam in `ash-engine`, and status documentation that does not promote SPEC-073 to Implemented MVP.
 
-The implementation is intentionally reported as partial. Focused tests exercise a fixture-based first slice, but several SPEC-073 acceptance rows still require real source builds, atomic publish, release tarball production/schema validation, launcher shims, trust metadata preservation, and direct fetched-cache dependency-root integration. Follow-up slices added executable-bit tarball validation, current-project and XDG daemon-state removal protections, XDG git cache checkouts at exact lockfile commits, vendor package content materialization, and `ash check`/explicit ordinary-file `ash run` discovery of default vendored locked dependencies, but those rows remain partial where broader producer/cleanup/CLI integration behavior is still missing.
+The implementation is intentionally reported as partial. Focused tests exercise a fixture-based first slice, but several SPEC-073 acceptance rows still require real source builds, release tarball production/schema validation, real launcher shims, full trust metadata preservation, and direct fetched-cache dependency-root integration. Follow-up slices added executable-bit tarball validation, current-project and XDG daemon-state removal protections, XDG git cache checkouts at exact lockfile commits, vendor package content materialization, `ash check`/explicit ordinary-file `ash run` discovery of default vendored locked dependencies, and a typed ashgrove launcher-dispatch helper, but those rows remain partial where broader producer/cleanup/CLI integration behavior is still missing.
 
 ## Completed Or Partially Completed Tasks
 
 | Task | Status | Evidence |
 | --- | --- | --- |
 | TASK-966 | First slice | `ashgrove` crate exists; command help lists install/update/default/list/current/remove/cleanup/fetch/lock/vendor; bare version install fails closed. |
-| TASK-967 | Partial | XDG path defaults/overrides and first-slice `ToolchainId` validation exist; launcher dispatch, typed metadata preservation, and atomic publish remain deferred. |
+| TASK-967 | Partial dispatch-helper slice | XDG path defaults/overrides, first-slice `ToolchainId` validation, typed manifest/install-record metadata, selector trust preservation, staged publish/collision helpers, and typed launcher dispatch helper coverage exist; real `$HOME/.local/bin` launcher shim creation/execution and broader metadata trust/signing models remain deferred. |
 | TASK-968 | Partial | Fixture-shaped source install copies required shape, rejects dirty/unidentified source without overrides, and `ash-engine` can load from an explicit installed stdlib root; real build-from-source and atomic staging remain deferred. |
 | TASK-969 | Partial | Tarball install validates basic safe extraction and required path shape, records a digest, rejects unsafe symlink entries, and rejects required binaries without executable bits; release producer, schema validation, archive-version policy, path/URL recording, and atomic publish remain deferred. |
 | TASK-970 | Partial | Default/list/current/update-from-existing selector flows are covered; launcher behavior and full source/tarball update semantics remain deferred. |
@@ -32,7 +32,7 @@ The implementation is intentionally reported as partial. Focused tests exercise 
 | A73-2 binary tarball install | Partial | `cargo test -p ashgrove task_969 -- --nocapture`; fixture tarball only; executable-bit validation is covered, but release producer, full schema/archive-version validation, path/URL recording, and atomic publish remain deferred. |
 | A73-3 equivalent toolchain contents | Partial | Source/tarball fixtures require `bin/ash`, `bin/ashgrove`, stdlib manifest/src, manifest, install record; no runtime/support metadata equivalence proof. |
 | A73-4 immutable update | Partial | `cargo test -p ashgrove task_970 -- --nocapture`; update-from-existing selector test preserves old manifest, but real update install path remains thin. |
-| A73-5 default switches metadata | Partial | `cargo test -p ashgrove task_970 -- --nocapture`; no launcher rewrite/project rewrite proof beyond selector file. |
+| A73-5 default switches metadata | Partial | `cargo test -p ashgrove task_970 -- --nocapture`; `cargo test -p ashgrove task_967 -- --nocapture` now proves typed dispatch selection honors project pins before defaults and falls back to user defaults. Real launcher rewrite/execution and project rewrite proof remain deferred. |
 | A73-6 remove protections | Partial | `cargo test -p ashgrove task_971 -- --nocapture`; default, current-project, live-daemon, and running-manager protections are covered, including non-overridable daemon/running-manager cases. Broader cleanup policy and explicit configured known-project roots remain deferred. |
 | A73-7 cleanup dry-run | Partial | `cargo test -p ashgrove task_971 -- --nocapture`; dry-run old-toolchain planning only. |
 | A73-8 tag resolves to exact commit | Partial | `cargo test -p ashgrove task_972 -- --nocapture`; local file git tags resolve to full commits and `fetch` materializes the exact lockfile commit under XDG cache even if a tag later moves. |
@@ -104,6 +104,8 @@ Commands run in this worktree:
 - Current stdlib/vendor separation slice:
   - `cargo test -p ash-cli --test phase127_vendored_dependency_resolution cli_uses_explicit_stdlib_root_when_vendor_dependency_has_stdlib_module_name -- --exact --nocapture` - initially failed with 1 failed test because `option::{SelectedOption}` resolved through locked `vendor/ash/option` instead of the explicit stdlib root.
   - `RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ash-cli --test phase127_vendored_dependency_resolution cli_uses_explicit_stdlib_root_when_vendor_dependency_has_stdlib_module_name -- --exact --nocapture` - passed, 1 test, after the auto-discovered project `vendor/ash` dependency namespace was moved after the selected stdlib root in module resolution.
+- Current TASK-967 dispatch-helper slice:
+  - `RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ashgrove task_967 -- --nocapture` - initially failed at compile time because no typed launcher dispatch API existed, then review found a symlink-escape containment blocker; after adding `LauncherDispatchRequest`, `LauncherSelectionSource`, `LauncherDispatch`, `resolve_launcher_dispatch`, contained tool-path validation, and a symlink-escape regression, passed with 12 tests.
 
 ## Independent Review Findings
 
@@ -119,7 +121,7 @@ The remaining findings are accepted as current deferred gaps, not dismissed:
 - Git dependency work now materializes XDG cache checkouts and vendor package content for local git fixtures, and `ash check` plus explicit ordinary-file `ash run` consume project `ash.toml`/`ash.lock` plus default `vendor/ash` roots; direct fetched-cache root discovery remains deferred.
 - Remove/cleanup safety now has focused current-project and live-daemon state protection, but cleanup execution/cache/orphan/project planning remains incomplete.
 - Tarball validation now checks executable permissions for required binaries on Unix, but does not yet check full schemas or provide a producer.
-- Launcher dispatch is not implemented.
+- Real launcher shims are not implemented. The typed `ashgrove` dispatch helper now resolves explicit override, project pin, then user default and returns the selected bundled binary path with missing-toolchain diagnostics.
 - Lock/vendor format is still too thin for full reproducible offline deployment beyond local git cache checkout, package content copy, remediated escaping, package-name validation, and full-commit validation.
 - Status/changelog surfaces were stale before the current reconciliation edits.
 
@@ -127,7 +129,7 @@ The remaining findings are accepted as current deferred gaps, not dismissed:
 
 - Real source build/stage/install flow with source URL/rev/build profile/target triple and atomic publish.
 - Public release tarball producer plus full schema, version/id, path/URL recording, digest, and atomic publish validation.
-- Stable launchers under `$HOME/.local/bin` resolving explicit override, project pin, then default.
+- Real stable launchers under `$HOME/.local/bin`; the current implementation only provides the typed dispatch helper resolving explicit override, project pin, then default.
 - Full metadata models preserving reserved trust/signing fields.
 - Full cleanup execution, cache/orphan handling, and configured known-project root protection.
 - Remote-authenticated git fetch policy, trust metadata preservation, and direct fetched-cache dependency root discovery.

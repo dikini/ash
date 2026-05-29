@@ -1,7 +1,7 @@
 use ashgrove::{
-    AshgrovePaths, CollisionStatus, InstallRecord, PublishOutcome, SelectorMetadata,
-    StandardToolMetadata, StdlibMetadata, ToolchainId, ToolchainManifest, ToolchainStage,
-    classify_toolchain_collision, stage_stdlib_metadata,
+    AshgrovePaths, CollisionStatus, InstallRecord, LauncherDispatchRequest, PublishOutcome,
+    SelectorMetadata, StandardToolMetadata, StdlibMetadata, ToolchainId, ToolchainManifest,
+    ToolchainStage, classify_toolchain_collision, resolve_launcher_dispatch, stage_stdlib_metadata,
 };
 use assert_cmd::Command;
 
@@ -33,9 +33,9 @@ fn task_967_toolchain_id_rejects_path_like_values() {
 #[test]
 fn task_967_toolchain_manifest_and_install_record_are_typed_public_apis() {
     let id = ToolchainId::parse("ash-0.1.0+test.source.metadatapi01").expect("toolchain id");
-    let manifest = ToolchainManifest::new(id.clone(), "0.1.0-alpha.1")
+    let manifest = ToolchainManifest::new(id.clone(), "0.1.0")
         .with_target_triple("x86_64-unknown-linux-gnu")
-        .with_stdlib(StdlibMetadata::new("0.1.0-alpha.1", "lib/ash/std"))
+        .with_stdlib(StdlibMetadata::new("0.1.0", "lib/ash/std"))
         .with_tool(StandardToolMetadata::required("ash", "bin/ash"))
         .with_tool(StandardToolMetadata::required("ashgrove", "bin/ashgrove"));
 
@@ -45,7 +45,7 @@ fn task_967_toolchain_manifest_and_install_record_are_typed_public_apis() {
         .validate_for_toolchain(&id)
         .expect("manifest matches toolchain id");
     assert_eq!(parsed_manifest.toolchain_id(), &id);
-    assert_eq!(parsed_manifest.stdlib().version(), "0.1.0-alpha.1");
+    assert_eq!(parsed_manifest.stdlib().version(), "0.1.0");
     assert!(parsed_manifest.required_tool("ash").is_some());
 
     let record = InstallRecord::source_install(id.clone())
@@ -215,4 +215,112 @@ fn task_967_stdlib_metadata_rejects_paths_outside_toolchain_root() {
     let error = stage_stdlib_metadata(root.path(), &absolute)
         .expect_err("absolute stdlib path must fail closed");
     assert!(error.to_string().contains("stdlib metadata path"));
+}
+
+#[test]
+fn task_967_launcher_dispatch_prefers_project_pin_over_user_default() {
+    let roots = support::xdg_fixture();
+    support::install_fake_toolchain(&roots, "ash-0.1.0+test.source.defaultpin01");
+    support::install_fake_toolchain(&roots, "ash-0.1.0+test.source.projectpin01");
+    let project = support::project_fixture();
+    std::fs::write(
+        project.path().join("ash.toml"),
+        "[toolchain]\nash = \"ash-0.1.0+test.source.projectpin01\"\n",
+    )
+    .expect("project manifest");
+    let paths = support::ashgrove_paths(&roots);
+    SelectorMetadata::from_toml_str("default = \"ash-0.1.0+test.source.defaultpin01\"\n")
+        .expect("selector")
+        .write_to_path(&roots.config.path().join("ash/toolchains.toml"))
+        .expect("write selector");
+
+    let dispatch = resolve_launcher_dispatch(
+        &paths,
+        LauncherDispatchRequest::new("ash").with_project(project.path()),
+    )
+    .expect("resolve dispatch");
+
+    assert_eq!(
+        dispatch.toolchain_id().as_str(),
+        "ash-0.1.0+test.source.projectpin01"
+    );
+    assert_eq!(dispatch.tool_name(), "ash");
+    assert!(dispatch.tool_path().ends_with("bin/ash"));
+}
+
+#[test]
+fn task_967_launcher_dispatch_falls_back_to_user_default() {
+    let roots = support::xdg_fixture();
+    support::install_fake_toolchain(&roots, "ash-0.1.0+test.source.defaultonly1");
+    let project = support::project_fixture();
+    let paths = support::ashgrove_paths(&roots);
+    SelectorMetadata::from_toml_str("default = \"ash-0.1.0+test.source.defaultonly1\"\n")
+        .expect("selector")
+        .write_to_path(&roots.config.path().join("ash/toolchains.toml"))
+        .expect("write selector");
+
+    let dispatch = resolve_launcher_dispatch(
+        &paths,
+        LauncherDispatchRequest::new("ashgrove").with_project(project.path()),
+    )
+    .expect("resolve dispatch");
+
+    assert_eq!(
+        dispatch.toolchain_id().as_str(),
+        "ash-0.1.0+test.source.defaultonly1"
+    );
+    assert!(dispatch.tool_path().ends_with("bin/ashgrove"));
+}
+
+#[test]
+fn task_967_launcher_dispatch_fails_closed_for_missing_selected_toolchain() {
+    let roots = support::xdg_fixture();
+    let project = support::project_fixture();
+    std::fs::write(
+        project.path().join("ash.toml"),
+        "[toolchain]\nash = \"ash-0.1.0+test.source.missingpin001\"\n",
+    )
+    .expect("project manifest");
+    let paths = support::ashgrove_paths(&roots);
+    SelectorMetadata::from_toml_str("default = \"ash-0.1.0+test.source.missingdefault1\"\n")
+        .expect("selector")
+        .write_to_path(&roots.config.path().join("ash/toolchains.toml"))
+        .expect("write selector");
+
+    let error = resolve_launcher_dispatch(
+        &paths,
+        LauncherDispatchRequest::new("ash").with_project(project.path()),
+    )
+    .expect_err("missing project pin must fail closed");
+
+    assert!(error.to_string().contains("project pin"));
+    assert!(error.to_string().contains("is not installed"));
+    assert!(error.to_string().contains("install"));
+}
+
+#[cfg(unix)]
+#[test]
+fn task_967_launcher_dispatch_rejects_symlink_tool_escaping_toolchain_root() {
+    use std::os::unix::fs::symlink;
+
+    let roots = support::xdg_fixture();
+    let id = "ash-0.1.0+test.source.symlinkescape";
+    support::install_fake_toolchain(&roots, id);
+    let outside = tempfile::tempdir().expect("outside");
+    let escaped_tool = outside.path().join("ash");
+    std::fs::write(&escaped_tool, "#!/bin/sh\n").expect("escaped tool");
+    let tool_path = roots.toolchain(id).join("bin/ash");
+    std::fs::remove_file(&tool_path).expect("remove original tool");
+    symlink(&escaped_tool, &tool_path).expect("escaping symlink");
+    let paths = support::ashgrove_paths(&roots);
+    SelectorMetadata::from_toml_str(&format!("default = \"{id}\"\n"))
+        .expect("selector")
+        .write_to_path(&roots.config.path().join("ash/toolchains.toml"))
+        .expect("write selector");
+
+    let error = resolve_launcher_dispatch(&paths, LauncherDispatchRequest::new("ash"))
+        .expect_err("escaping tool symlink must fail closed");
+
+    assert!(error.to_string().contains("standard tool path"));
+    assert!(error.to_string().contains("toolchain root"));
 }

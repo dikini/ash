@@ -3748,7 +3748,7 @@ Phase 127 introduces `ashgrove <command>` as the Ash toolchain and deployment ma
 | [TASK-964](tasks/TASK-964-ashgrove-install-policy-packet.md) | Create the SPEC-073/PLAN-122/task packet and register Phase 127 | 4 | ✅ Complete |
 | [TASK-965](tasks/TASK-965-ashgrove-live-install-audit-gate.md) | Audit CLI/build/release/stdlib/daemon/XDG/git seams before implementation | 8 | ✅ Complete |
 | [TASK-966](tasks/TASK-966-ashgrove-cli-crate-and-command-skeleton.md) | Add `ashgrove` command skeleton and shared reporting/errors | 8 | ✅ Complete |
-| [TASK-967](tasks/TASK-967-toolchain-metadata-and-xdg-layout.md) | Implement metadata schemas, XDG paths, launcher dispatch, selectors, stdlib metadata, trust preservation, staging/publish helpers | 14 | ⚠️ Partial metadata/staging slice |
+| [TASK-967](tasks/TASK-967-toolchain-metadata-and-xdg-layout.md) | Implement metadata schemas, XDG paths, launcher dispatch, selectors, stdlib metadata, trust preservation, staging/publish helpers | 14 | ⚠️ Partial metadata/staging/dispatch-helper slice |
 | [TASK-968](tasks/TASK-968-source-install-flow.md) | Implement source install path and installed-stdlib root use | 14 | ⚠️ Partial fixture-backed source install hardening slice |
 | [TASK-969](tasks/TASK-969-binary-tarball-install-flow.md) | Implement conforming tarball production/validation/install path | 14 | ⚠️ Partial tarball validation slice |
 | [TASK-970](tasks/TASK-970-update-default-list-current-flow.md) | Implement update/default/list/current flows | 10 | ⚠️ Partial local/source/tarball selector slice |

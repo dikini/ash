@@ -2,6 +2,7 @@
 
 use std::path::{Path, PathBuf};
 
+use ashgrove::AshgrovePaths;
 use sha2::{Digest, Sha256};
 
 pub struct XdgFixture {
@@ -36,6 +37,16 @@ pub fn xdg_fixture() -> XdgFixture {
         state: tempfile::tempdir().expect("state"),
         home: tempfile::tempdir().expect("home"),
     }
+}
+
+pub fn ashgrove_paths(roots: &XdgFixture) -> AshgrovePaths {
+    AshgrovePaths::from_roots(
+        roots.home.path().to_path_buf(),
+        Some(roots.data.path().to_path_buf()),
+        Some(roots.config.path().to_path_buf()),
+        Some(roots.cache.path().to_path_buf()),
+        Some(roots.state.path().to_path_buf()),
+    )
 }
 
 pub fn source_fixture(id: &str) -> tempfile::TempDir {

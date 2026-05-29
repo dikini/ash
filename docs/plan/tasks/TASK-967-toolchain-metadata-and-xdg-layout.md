@@ -1,6 +1,6 @@
 # TASK-967: Toolchain metadata and xdg layout
 
-## Status: ⚠️ Partial metadata/staging slice
+## Status: ⚠️ Partial metadata/staging/dispatch-helper slice
 
 ## Description
 
@@ -56,7 +56,7 @@ commands:
 checklist:
   - [x] Define typed toolchain manifest and install-record models.
   - [x] Implement XDG data/config/cache/state path resolution with test overrides.
-  - [ ] Implement stable launcher dispatch semantics for project pin, user default, and missing-toolchain diagnostics.
+  - [x] Implement stable launcher dispatch semantics for project pin, user default, and missing-toolchain diagnostics.
   - [x] Implement user default selector metadata and known-project root metadata.
   - [x] Generate or stage `lib/ash/std/ash.toml` from stdlib/release metadata, or fail explicitly if missing.
   - [x] Preserve reserved trust/signing fields during metadata read-modify-write operations.
@@ -83,3 +83,5 @@ This task contributes to PLAN-122 and SPEC-073 completion. Later tasks must pres
 Area: metadata/substrate. This task creates the path/metadata substrate consumed by install/update/remove/dependency tasks.
 
 The metadata/staging slice covers staged publish with implicit temporary-directory cleanup on failure or drop. A later install hardening slice may add an explicit user-facing rollback command if needed.
+
+2026-05-29 continuation evidence: `crates/ashgrove::resolve_launcher_dispatch` now provides a typed launcher-resolution helper that validates installed toolchain metadata and resolves bundled tools in explicit override, project pin, then user-default order. Focused public tests in `crates/ashgrove/tests/task_967_layout.rs` cover project pin precedence over user default, user default fallback, and fail-closed missing-project-pin diagnostics under fully temporary XDG roots. This does not install or execute real `$HOME/.local/bin` launcher shims.

@@ -275,6 +275,247 @@ impl SelectorMetadata {
     }
 }
 
+/// Request used by a stable launcher shim to resolve a versioned tool binary.
+#[derive(Debug, Clone)]
+pub struct LauncherDispatchRequest {
+    tool_name: String,
+    explicit_toolchain: Option<ToolchainId>,
+    project: Option<PathBuf>,
+}
+
+impl LauncherDispatchRequest {
+    /// Create a dispatch request for a bundled standard tool such as `ash` or `ashgrove`.
+    #[must_use]
+    pub fn new(tool_name: impl Into<String>) -> Self {
+        Self {
+            tool_name: tool_name.into(),
+            explicit_toolchain: None,
+            project: None,
+        }
+    }
+
+    /// Select a toolchain explicitly before project and user-default selectors are considered.
+    #[must_use]
+    pub fn with_explicit_toolchain(mut self, id: ToolchainId) -> Self {
+        self.explicit_toolchain = Some(id);
+        self
+    }
+
+    /// Set the project root whose `ash.toml` may contain a `[toolchain] ash = "..."`
+    /// selector.
+    #[must_use]
+    pub fn with_project(mut self, project: impl AsRef<Path>) -> Self {
+        self.project = Some(project.as_ref().to_path_buf());
+        self
+    }
+
+    /// Borrow the requested tool name.
+    #[must_use]
+    pub fn tool_name(&self) -> &str {
+        &self.tool_name
+    }
+}
+
+/// Selector source used to choose a launcher dispatch target.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LauncherSelectionSource {
+    /// An explicit launcher override selected the toolchain.
+    ExplicitOverride,
+    /// The project `ash.toml` selected the toolchain.
+    ProjectPin,
+    /// The user default selector selected the toolchain.
+    UserDefault,
+}
+
+impl LauncherSelectionSource {
+    fn diagnostic_label(self) -> &'static str {
+        match self {
+            Self::ExplicitOverride => "explicit override",
+            Self::ProjectPin => "project pin",
+            Self::UserDefault => "user default",
+        }
+    }
+}
+
+/// Resolved launcher dispatch target.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LauncherDispatch {
+    toolchain_id: ToolchainId,
+    tool_name: String,
+    tool_path: PathBuf,
+    selection_source: LauncherSelectionSource,
+}
+
+impl LauncherDispatch {
+    /// Borrow the selected toolchain id.
+    #[must_use]
+    pub fn toolchain_id(&self) -> &ToolchainId {
+        &self.toolchain_id
+    }
+
+    /// Borrow the requested standard tool name.
+    #[must_use]
+    pub fn tool_name(&self) -> &str {
+        &self.tool_name
+    }
+
+    /// Borrow the selected versioned binary path.
+    #[must_use]
+    pub fn tool_path(&self) -> &Path {
+        &self.tool_path
+    }
+
+    /// Borrow the selector source that selected the toolchain.
+    #[must_use]
+    pub fn selection_source(&self) -> LauncherSelectionSource {
+        self.selection_source
+    }
+}
+
+/// Resolve stable launcher dispatch without creating or executing a shim.
+///
+/// Resolution order matches SPEC-073: explicit override, project pin, then user
+/// default. The returned target is validated against installed toolchain
+/// metadata and install records.
+///
+/// # Errors
+///
+/// Returns an error when the selector metadata is invalid, no suitable selector
+/// exists, the selected toolchain is not installed, or the requested tool is not
+/// part of the selected toolchain manifest.
+pub fn resolve_launcher_dispatch(
+    paths: &AshgrovePaths,
+    request: LauncherDispatchRequest,
+) -> Result<LauncherDispatch> {
+    validate_launcher_tool_name(request.tool_name())?;
+    let (id, selection_source) = select_launcher_toolchain(paths, &request)?;
+    ensure_dispatch_toolchain_installed(paths, &id, selection_source)?;
+    let manifest = installed_toolchain_manifest(paths, &id).with_context(|| {
+        format!(
+            "validate selected toolchain '{}' from {}",
+            id.as_str(),
+            selection_source.diagnostic_label()
+        )
+    })?;
+    verify_install_record_any_source(&paths.toolchain_dir(&id), &id).with_context(|| {
+        format!(
+            "validate selected toolchain '{}' from {}",
+            id.as_str(),
+            selection_source.diagnostic_label()
+        )
+    })?;
+    let tool = manifest.required_tool(request.tool_name()).ok_or_else(|| {
+        anyhow!(
+            "selected toolchain '{}' from {} does not provide required tool '{}'",
+            id.as_str(),
+            selection_source.diagnostic_label(),
+            request.tool_name()
+        )
+    })?;
+    let toolchain_root = paths.toolchain_dir(&id);
+    let tool_path = validate_contained_standard_tool_path(&toolchain_root, tool.path())?;
+    Ok(LauncherDispatch {
+        toolchain_id: id,
+        tool_name: request.tool_name,
+        tool_path,
+        selection_source,
+    })
+}
+
+fn validate_launcher_tool_name(tool_name: &str) -> Result<()> {
+    if tool_name.is_empty()
+        || tool_name.contains('/')
+        || tool_name.contains('\\')
+        || tool_name.contains("..")
+        || tool_name.chars().any(char::is_control)
+    {
+        bail!("invalid launcher tool name '{tool_name}'");
+    }
+    Ok(())
+}
+
+fn validate_contained_standard_tool_path(root: &Path, path: &str) -> Result<PathBuf> {
+    let rel = validate_relative_toolchain_path(path, "standard tool path")?;
+    let tool_path = root.join(rel);
+    let metadata = fs::symlink_metadata(&tool_path).with_context(|| {
+        format!(
+            "validate standard tool path {} inside toolchain root {}",
+            tool_path.display(),
+            root.display()
+        )
+    })?;
+    if metadata.file_type().is_symlink() {
+        bail!(
+            "standard tool path must stay inside the toolchain root: {}",
+            tool_path.display()
+        );
+    }
+    if !metadata.is_file() {
+        bail!(
+            "standard tool path must be a file inside the toolchain root: {}",
+            tool_path.display()
+        );
+    }
+    let canonical_root = root.canonicalize().with_context(|| {
+        format!(
+            "canonicalize selected toolchain root {} for standard tool path validation",
+            root.display()
+        )
+    })?;
+    let canonical_tool = tool_path.canonicalize().with_context(|| {
+        format!(
+            "canonicalize standard tool path {} inside toolchain root {}",
+            tool_path.display(),
+            root.display()
+        )
+    })?;
+    if !canonical_tool.starts_with(&canonical_root) {
+        bail!(
+            "standard tool path must stay inside the toolchain root: {}",
+            tool_path.display()
+        );
+    }
+    Ok(tool_path)
+}
+
+fn select_launcher_toolchain(
+    paths: &AshgrovePaths,
+    request: &LauncherDispatchRequest,
+) -> Result<(ToolchainId, LauncherSelectionSource)> {
+    if let Some(id) = &request.explicit_toolchain {
+        return Ok((id.clone(), LauncherSelectionSource::ExplicitOverride));
+    }
+    if let Some(project) = &request.project
+        && let Some(pin) = project_toolchain_pin(project)?
+    {
+        return Ok((
+            ToolchainId::parse(&pin)?,
+            LauncherSelectionSource::ProjectPin,
+        ));
+    }
+    if let Some(default) = read_default(paths)? {
+        return Ok((default, LauncherSelectionSource::UserDefault));
+    }
+    bail!(
+        "no suitable Ash toolchain is installed; add [toolchain] ash to ash.toml or run `ashgrove default <toolchain-id>`"
+    );
+}
+
+fn ensure_dispatch_toolchain_installed(
+    paths: &AshgrovePaths,
+    id: &ToolchainId,
+    selection_source: LauncherSelectionSource,
+) -> Result<()> {
+    if !paths.toolchain_dir(id).is_dir() {
+        bail!(
+            "selected toolchain '{}' from {} is not installed; install it or change the selector",
+            id.as_str(),
+            selection_source.diagnostic_label()
+        );
+    }
+    Ok(())
+}
+
 /// Typed first-slice manifest for an immutable Ash toolchain.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ToolchainManifest {

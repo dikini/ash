@@ -82,7 +82,7 @@ fn task_966_isolated_cli_smoke_tests_are_non_zero_and_fail_closed() {
         .envs(roots.env())
         .assert()
         .failure()
-        .stderr(predicate::str::contains("not implemented"));
+        .stderr(predicate::str::contains("cleanup requires at least one of"));
 }
 
 #[test]

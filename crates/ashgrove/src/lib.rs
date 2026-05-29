@@ -2482,14 +2482,19 @@ fn remove_toolchain(paths: &AshgrovePaths, id: &ToolchainId, force: bool) -> Res
     if live_daemon_uses_toolchain(paths, id)? {
         bail!("refusing to remove live daemon toolchain '{}'", id.as_str());
     }
-    if read_default(paths)?.as_ref() == Some(id) && !force {
+    let overrides_default = read_default(paths)?.as_ref() == Some(id);
+    let overrides_current_project = current_project_uses_toolchain(id)?;
+    if overrides_default && !force {
         bail!("refusing to remove default toolchain '{}'", id.as_str());
     }
-    if current_project_uses_toolchain(id)? && !force {
+    if overrides_current_project && !force {
         bail!(
             "refusing to remove current project toolchain '{}'",
             id.as_str()
         );
+    }
+    if force && (overrides_default || overrides_current_project) {
+        confirm_remove_force(id)?;
     }
     let dir = paths.toolchain_dir(id);
     if dir.exists() {
@@ -2528,6 +2533,51 @@ fn live_daemon_uses_toolchain(paths: &AshgrovePaths, id: &ToolchainId) -> Result
     Ok(false)
 }
 
+fn confirm_remove_force(id: &ToolchainId) -> Result<()> {
+    eprintln!(
+        "confirmation required: type 'yes' or '{}' to remove protected toolchain '{}'",
+        id.as_str(),
+        id.as_str()
+    );
+    let answer = read_stdin_confirmation()?;
+    if answer == "yes" || answer == id.as_str() {
+        return Ok(());
+    }
+    bail!(
+        "confirmation required to remove protected toolchain '{}'",
+        id.as_str()
+    );
+}
+
+fn confirm_cleanup_old_toolchains(candidates: &[ToolchainId]) -> Result<()> {
+    eprintln!(
+        "confirmation required: type 'yes' to remove {} old toolchain(s)",
+        candidates.len()
+    );
+    let answer = read_stdin_confirmation()?;
+    if answer == "yes" {
+        return Ok(());
+    }
+    bail!("confirmation required to remove old toolchains");
+}
+
+fn read_stdin_confirmation() -> Result<String> {
+    let mut input = String::new();
+    let bytes = std::io::stdin()
+        .read_line(&mut input)
+        .context("read confirmation")?;
+    if bytes == 0 {
+        return Ok(String::new());
+    }
+    if let Some(stripped) = input.strip_suffix('\n') {
+        input.truncate(stripped.len());
+        if let Some(stripped) = input.strip_suffix('\r') {
+            input.truncate(stripped.len());
+        }
+    }
+    Ok(input)
+}
+
 fn cleanup(paths: &AshgrovePaths, args: CleanupArgs) -> Result<()> {
     let has_cleanup_flags = args.cache || args.orphans || args.old_toolchains;
     let project_pin = args
@@ -2544,13 +2594,16 @@ fn cleanup(paths: &AshgrovePaths, args: CleanupArgs) -> Result<()> {
         return Ok(());
     }
 
+    if args.old_toolchains && !args.dry_run {
+        cleanup_old_toolchains(paths, project_pin.as_ref(), args.dry_run)?;
+    }
     if args.cache {
         cleanup_cache(paths, args.dry_run)?;
     }
     if args.orphans {
         cleanup_orphan_toolchain_dirs(paths, args.dry_run)?;
     }
-    if args.old_toolchains {
+    if args.old_toolchains && args.dry_run {
         cleanup_old_toolchains(paths, project_pin.as_ref(), args.dry_run)?;
     }
 
@@ -2629,6 +2682,7 @@ fn cleanup_old_toolchains(
 ) -> Result<()> {
     let mut ids = installed_toolchain_ids(paths)?;
     ids.sort_by(|left, right| left.as_str().cmp(right.as_str()));
+    let mut deletion_candidates = Vec::new();
     for id in ids {
         if let Some(reason) = cleanup_protection_reason(paths, &id, project_pin)? {
             println!("protected {reason} {}", id.as_str());
@@ -2638,9 +2692,17 @@ fn cleanup_old_toolchains(
         if dry_run {
             println!("would remove {}", dir.display());
         } else {
-            fs::remove_dir_all(&dir).context("remove old toolchain")?;
-            println!("removed {}", id.as_str());
+            deletion_candidates.push(id);
         }
+    }
+    if dry_run || deletion_candidates.is_empty() {
+        return Ok(());
+    }
+    confirm_cleanup_old_toolchains(&deletion_candidates)?;
+    for id in deletion_candidates {
+        let dir = paths.toolchain_dir(&id);
+        fs::remove_dir_all(&dir).context("remove old toolchain")?;
+        println!("removed {}", id.as_str());
     }
     Ok(())
 }

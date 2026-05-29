@@ -12,7 +12,7 @@
 
 ## 1. Status
 
-**Status:** ⚠️ Partial Phase 127 after TASK-970 completion; SPEC-073 remains Draft pending deferred acceptance rows
+**Status:** ⚠️ Partial Phase 127 after TASK-971 completion; SPEC-073 remains Draft pending deferred acceptance rows
 **Spec:** [SPEC-073](../spec/SPEC-073-ASHGROVE-INSTALL-UPDATE-CLEANUP-GIT-DEPLOYMENT.md)
 **Task range:** [TASK-964](tasks/TASK-964-ashgrove-install-policy-packet.md) through [TASK-974](tasks/TASK-974-ashgrove-closeout-acceptance.md)
 
@@ -59,7 +59,7 @@ TASK-964 creates the docs/spec/plan/task packet. TASK-965 is a hard audit gate a
 | [TASK-968](tasks/TASK-968-source-install-flow.md) | Implement source install path and installed-stdlib root use | 14 | ⚠️ Partial source-root install hardening slice |
 | [TASK-969](tasks/TASK-969-binary-tarball-install-flow.md) | Implement conforming tarball production/validation/install path | 14 | ✅ Complete |
 | [TASK-970](tasks/TASK-970-update-default-list-current-flow.md) | Implement update/default/list/current flows | 10 | ✅ Complete for alpha local source/tarball updates |
-| [TASK-971](tasks/TASK-971-remove-cleanup-flow.md) | Implement remove and cleanup policy, including daemon/running-manager protection | 12 | ⚠️ Partial cleanup planner slice |
+| [TASK-971](tasks/TASK-971-remove-cleanup-flow.md) | Implement remove and cleanup policy, including daemon/running-manager protection | 12 | ✅ Complete for SPEC-073 alpha remove/cleanup policy |
 | [TASK-972](tasks/TASK-972-ash-manifest-lock-git-fetch.md) | Implement `ash.toml`, `ash.lock`, git fetch, lock checking, trust preservation, and dependency-root module-loader integration | 18 | ⚠️ Partial rev/trust hardening slice |
 | [TASK-973](tasks/TASK-973-vendor-and-deployable-git-project-flow.md) | Implement vendor/offline deployment flow for git projects | 12 | ⚠️ Partial follow-up slice |
 | [TASK-974](tasks/TASK-974-ashgrove-closeout-acceptance.md) | Close out SPEC-073 with acceptance matrix and broad verification | 8 | ⚠️ Reported |
@@ -141,7 +141,7 @@ Current implementation note: the alpha local/source/tarball selector slice valid
 
 Must prove default/current/live daemon/running-manager toolchain deletion is refused by default and `cleanup --dry-run` is non-destructive. Must add or consume the minimal daemon toolchain registry/status needed for live protection.
 
-Current implementation note: the cleanup planner slice implements `cleanup --project PATH --dry-run` without deletion, protects default, project-pinned, live-daemon, and running-manager toolchains, removes only known Ash-owned cache children under `$XDG_CACHE_HOME/ash` for `--cache`, removes invalid toolchain directories under the XDG toolchain root for `--orphans`, and removes unprotected installed toolchains for `--old-toolchains`. Broader orphan analysis across lockfile/cache references, interactive confirmation policy, and cache reachability beyond known Ash-owned cache roots remain deferred.
+Current implementation note: the alpha remove/cleanup slice implements `remove` protection for default, current-project, live-daemon, and running-manager toolchains with `--force` limited to explicitly confirmed default/current-project pin overrides; implements bare `cleanup --project PATH --dry-run` as a non-destructive planner; protects default, project-pinned, live-daemon, and running-manager toolchains during old-toolchain cleanup; removes only known Ash-owned cache children under `$XDG_CACHE_HOME/ash` for `--cache`; removes invalid toolchain directories under the XDG toolchain root for `--orphans`; and removes only explicitly confirmed unprotected installed toolchains for `--old-toolchains`. Broader orphan analysis across lockfile/cache references and cache reachability beyond known Ash-owned cache roots remain deferred.
 
 ### TASK-972: git lock/fetch
 

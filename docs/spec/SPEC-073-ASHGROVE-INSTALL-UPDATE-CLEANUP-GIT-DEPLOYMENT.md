@@ -312,7 +312,7 @@ For alpha, **known projects** means only the current project supplied by `--proj
 
 Cleanup MUST NOT delete project-local `ash.toml` or `ash.lock` files.
 
-Current implementation note: the TASK-971 cleanup planner slice implements dry-run reporting for project-pinned toolchains, conservative deletion for known Ash-owned cache children, invalid toolchain-directory orphan cleanup under the XDG toolchain root, and old-toolchain cleanup that preserves default, project-pinned, live-daemon, and running-manager toolchains. It does not yet implement broader lockfile/cache reachability analysis or interactive confirmation policy.
+Current implementation note: the TASK-971 cleanup slice implements explicit stdin confirmation for `remove --force` default/current-project pin overrides and non-dry-run `cleanup --old-toolchains` deletions, dry-run reporting for project-pinned/cache/orphan/old-toolchain candidates, conservative deletion for known Ash-owned cache children, invalid toolchain-directory orphan cleanup under the XDG toolchain root, and old-toolchain cleanup that preserves default, project-pinned, live-daemon, and running-manager toolchains. It does not yet implement broader lockfile/cache reachability analysis.
 
 ## 12. Project manifest and git dependency metadata
 

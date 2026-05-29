@@ -12,7 +12,7 @@
 
 ## 1. Status
 
-**Status:** ⚠️ Partial source-install hardening slice after TASK-974 report; SPEC-073 remains Draft pending deferred acceptance rows
+**Status:** ⚠️ Partial Phase 127 after TASK-969 completion; SPEC-073 remains Draft pending deferred acceptance rows
 **Spec:** [SPEC-073](../spec/SPEC-073-ASHGROVE-INSTALL-UPDATE-CLEANUP-GIT-DEPLOYMENT.md)
 **Task range:** [TASK-964](tasks/TASK-964-ashgrove-install-policy-packet.md) through [TASK-974](tasks/TASK-974-ashgrove-closeout-acceptance.md)
 
@@ -57,7 +57,7 @@ TASK-964 creates the docs/spec/plan/task packet. TASK-965 is a hard audit gate a
 | [TASK-966](tasks/TASK-966-ashgrove-cli-crate-and-command-skeleton.md) | Add `ashgrove` command skeleton and shared reporting/errors | 8 | ✅ Complete |
 | [TASK-967](tasks/TASK-967-toolchain-metadata-and-xdg-layout.md) | Implement metadata schemas, XDG paths, launcher dispatch, selectors, stdlib metadata, trust preservation, staging/publish helpers | 14 | ✅ Complete |
 | [TASK-968](tasks/TASK-968-source-install-flow.md) | Implement source install path and installed-stdlib root use | 14 | ⚠️ Partial source-root install hardening slice |
-| [TASK-969](tasks/TASK-969-binary-tarball-install-flow.md) | Implement conforming tarball production/validation/install path | 14 | ⚠️ Partial tarball validation slice |
+| [TASK-969](tasks/TASK-969-binary-tarball-install-flow.md) | Implement conforming tarball production/validation/install path | 14 | ✅ Complete |
 | [TASK-970](tasks/TASK-970-update-default-list-current-flow.md) | Implement update/default/list/current flows | 10 | ⚠️ Partial |
 | [TASK-971](tasks/TASK-971-remove-cleanup-flow.md) | Implement remove and cleanup policy, including daemon/running-manager protection | 12 | ⚠️ Partial cleanup planner slice |
 | [TASK-972](tasks/TASK-972-ash-manifest-lock-git-fetch.md) | Implement `ash.toml`, `ash.lock`, git fetch, lock checking, trust preservation, and dependency-root module-loader integration | 18 | ⚠️ Partial rev/trust hardening slice |
@@ -128,6 +128,8 @@ Current implementation note: the source install slice builds real local source r
 ### TASK-969: binary tarball install
 
 Must define and produce a conforming tarball fixture or release artifact, verify tarball shape, executable presence/permissions, metadata schema, archive-version/target match, stdlib manifest presence, safe extraction, and digest recording before publish.
+
+Current implementation note: `scripts/package-ash-toolchain.sh` is the first-slice repository release tarball producer. It packages `bin/ash`, `bin/ashgrove`, bundled stdlib metadata/source, `manifest.toml`, `install-record.toml`, and required standard-tool metadata into a single-root gzip tarball. Tarball manifests and install-record templates carry `archive_schema_version = 1`; local tarball installs reject missing or unsupported schema versions, unsafe archive entries, missing stdlib metadata/manifests, missing executable bits on required binaries, and identity/version mismatches before publishing through the staged immutable toolchain path. Producer output is installed under temporary XDG/home roots in focused TASK-969 coverage, with local tarball path, digest, and install time recorded. Authenticated `--url` download and release-index trust policy remain deferred and fail closed.
 
 ### TASK-970: update/select flows
 

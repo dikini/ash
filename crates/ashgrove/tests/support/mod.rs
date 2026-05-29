@@ -192,13 +192,13 @@ pub fn create_toolchain_shape(root: &Path, id: &str) {
     std::fs::write(
         root.join("manifest.toml"),
         format!(
-            "toolchain_id = \"{id}\"\nversion = \"0.1.0\"\nsource_kind = \"fixture\"\n[stdlib]\nversion = \"0.1.0\"\npath = \"lib/ash/std\"\n[[standard_tools]]\nname = \"ash\"\npath = \"bin/ash\"\nrequired = true\n[[standard_tools]]\nname = \"ashgrove\"\npath = \"bin/ashgrove\"\nrequired = true\n"
+            "toolchain_id = \"{id}\"\nversion = \"0.1.0\"\narchive_schema_version = 1\nsource_kind = \"fixture\"\n[stdlib]\nversion = \"0.1.0\"\npath = \"lib/ash/std\"\n[[standard_tools]]\nname = \"ash\"\npath = \"bin/ash\"\nrequired = true\n[[standard_tools]]\nname = \"ashgrove\"\npath = \"bin/ashgrove\"\nrequired = true\n"
         ),
     )
     .expect("manifest");
     std::fs::write(
         root.join("install-record.toml"),
-        format!("toolchain_id = \"{id}\"\nsource_kind = \"tarball\"\n"),
+        format!("toolchain_id = \"{id}\"\nsource_kind = \"tarball\"\narchive_schema_version = 1\n"),
     )
     .expect("record");
 }
@@ -217,6 +217,34 @@ pub fn toolchain_tarball_fixture_with_mutation(
     create_toolchain_shape(source.path(), id);
     mutate(source.path());
     pack_toolchain_dir(id, source.path())
+}
+
+pub fn remove_toml_line(path: impl AsRef<Path>, key: &str) {
+    let path = path.as_ref();
+    let text = std::fs::read_to_string(path).expect("read toml");
+    let filtered = text
+        .lines()
+        .filter(|line| !line.trim_start().starts_with(key))
+        .collect::<Vec<_>>()
+        .join("\n");
+    std::fs::write(path, format!("{filtered}\n")).expect("write toml");
+}
+
+pub fn replace_toml_line(path: impl AsRef<Path>, key: &str, replacement: &str) {
+    let path = path.as_ref();
+    let text = std::fs::read_to_string(path).expect("read toml");
+    let replaced = text
+        .lines()
+        .map(|line| {
+            if line.trim_start().starts_with(key) {
+                replacement
+            } else {
+                line
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    std::fs::write(path, format!("{replaced}\n")).expect("write toml");
 }
 
 #[cfg(unix)]

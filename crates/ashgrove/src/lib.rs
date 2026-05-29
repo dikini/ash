@@ -13,6 +13,8 @@ use clap::{Args, Parser, Subcommand, ValueEnum};
 use serde::{Deserialize, Deserializer, Serialize};
 use sha2::{Digest, Sha256};
 
+const TOOLCHAIN_ARCHIVE_SCHEMA_VERSION: u32 = 1;
+
 /// User-local XDG-compatible path set for Ash installs.
 #[derive(Debug, Clone)]
 pub struct AshgrovePaths {
@@ -660,6 +662,8 @@ pub struct ToolchainManifest {
     toolchain_id: ToolchainId,
     version: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    archive_schema_version: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     target_triple: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     source_kind: Option<String>,
@@ -678,6 +682,7 @@ impl ToolchainManifest {
         Self {
             toolchain_id: id,
             version: version.into(),
+            archive_schema_version: None,
             target_triple: None,
             source_kind: None,
             stdlib: None,
@@ -713,6 +718,13 @@ impl ToolchainManifest {
     #[must_use]
     pub fn with_source_kind(mut self, source_kind: impl Into<String>) -> Self {
         self.source_kind = Some(source_kind.into());
+        self
+    }
+
+    /// Add the release archive schema version.
+    #[must_use]
+    pub fn with_archive_schema_version(mut self, version: u32) -> Self {
+        self.archive_schema_version = Some(version);
         self
     }
 
@@ -807,6 +819,18 @@ impl ToolchainManifest {
         }
         Ok(())
     }
+
+    fn validate_archive_schema_version(&self) -> Result<()> {
+        match self.archive_schema_version {
+            Some(TOOLCHAIN_ARCHIVE_SCHEMA_VERSION) => Ok(()),
+            Some(version) => bail!(
+                "unsupported archive schema version {version}; expected {TOOLCHAIN_ARCHIVE_SCHEMA_VERSION}"
+            ),
+            None => bail!(
+                "archive schema version is required; expected {TOOLCHAIN_ARCHIVE_SCHEMA_VERSION}"
+            ),
+        }
+    }
 }
 
 /// Metadata for the bundled stdlib in a toolchain manifest.
@@ -877,6 +901,8 @@ pub struct InstallRecord {
     toolchain_id: ToolchainId,
     source_kind: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    archive_schema_version: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     source_rev: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     build_profile: Option<String>,
@@ -901,6 +927,7 @@ impl InstallRecord {
         Self {
             toolchain_id: id,
             source_kind: source_kind.into(),
+            archive_schema_version: None,
             source_rev: None,
             build_profile: None,
             target_triple: None,
@@ -934,6 +961,13 @@ impl InstallRecord {
     #[must_use]
     pub fn with_reproducible(mut self, reproducible: bool) -> Self {
         self.reproducible = reproducible;
+        self
+    }
+
+    /// Record the release archive schema version.
+    #[must_use]
+    pub fn with_archive_schema_version(mut self, version: u32) -> Self {
+        self.archive_schema_version = Some(version);
         self
     }
 
@@ -998,6 +1032,18 @@ impl InstallRecord {
             bail!("install record toolchain id does not match {}", id.as_str());
         }
         Ok(())
+    }
+
+    fn validate_archive_schema_version(&self) -> Result<()> {
+        match self.archive_schema_version {
+            Some(TOOLCHAIN_ARCHIVE_SCHEMA_VERSION) => Ok(()),
+            Some(version) => bail!(
+                "unsupported archive schema version {version}; expected {TOOLCHAIN_ARCHIVE_SCHEMA_VERSION}"
+            ),
+            None => bail!(
+                "archive schema version is required; expected {TOOLCHAIN_ARCHIVE_SCHEMA_VERSION}"
+            ),
+        }
     }
 }
 
@@ -2015,6 +2061,7 @@ fn install_from_tarball(
         );
     }
     let manifest = verify_toolchain_shape(&root, &id)?;
+    manifest.validate_archive_schema_version()?;
     verify_install_record_shape(&root, &id)?;
     verify_required_binaries_executable(&root, &id)?;
     verify_required_manifest_tools(&root, &manifest)?;
@@ -2088,6 +2135,7 @@ fn verify_install_record_shape(root: &Path, id: &ToolchainId) -> Result<InstallR
             id.as_str()
         );
     }
+    record.validate_archive_schema_version()?;
     Ok(record)
 }
 
@@ -2149,6 +2197,10 @@ fn write_tarball_install_record(
     table.insert(
         "source_kind".to_string(),
         toml::Value::String("tarball".to_string()),
+    );
+    table.insert(
+        "archive_schema_version".to_string(),
+        toml::Value::Integer(i64::from(TOOLCHAIN_ARCHIVE_SCHEMA_VERSION)),
     );
     table.insert(
         "tarball_path".to_string(),

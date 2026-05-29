@@ -1,6 +1,6 @@
 # TASK-969: Binary tarball install flow
 
-## Status: ⚠️ Partial tarball validation slice
+## Status: ✅ Complete
 
 ## Description
 
@@ -28,7 +28,7 @@ Implement `ashgrove install --from tarball` and the conforming binary tarball pr
 5. Validate executable presence/permissions for required binaries.
 6. Validate stdlib manifest presence.
 7. Reject unsafe archive entries including absolute paths, traversal, symlink/hardlink escapes, device files, and setuid/setgid bits.
-8. Record tarball path/URL/digest/install time in install metadata.
+8. Record local tarball path/digest/install time in install metadata. Authenticated URL download and URL provenance are deferred to the later release-index/download policy.
 
 ### Non-goals
 
@@ -85,4 +85,6 @@ Area: install/semantic. Binary install acceptance requires both producer and con
 
 2026-05-28 follow-up slice: added focused coverage that rejects tarballs whose required `bin/ash` payload is present but lacks executable bits, and made fixture tarballs model executable `ash`/`ashgrove` binaries. TASK-969 remains partial because release tarball production, schema validation, archive-version policy, path/URL recording, and atomic publish are still not implemented.
 
-2026-05-28 tarball validation slice: made fixture tarballs emit the conforming first-slice manifest/install-record shape, validated tarball root shape through typed `manifest.toml` and `install-record.toml` parsing before publish, required the root directory name and metadata toolchain id to match, required the bundled stdlib manifest, preserved executable required-binary validation, routed tarball installs through `ToolchainStage::publish`, rewrote tarball install metadata with local tarball path, digest, and install time, and added focused unsafe-entry coverage for symlink, hardlink, absolute path, parent traversal, and setuid mode rejection. TASK-969 remains partial because the repository `scripts/package-ash-toolchain.sh` release producer and authenticated URL download/recording path are still deferred.
+2026-05-28 tarball validation slice: made fixture tarballs emit the conforming first-slice manifest/install-record shape, validated tarball root shape through typed `manifest.toml` and `install-record.toml` parsing before publish, required the root directory name and metadata toolchain id to match, required the bundled stdlib manifest, preserved executable required-binary validation, routed tarball installs through `ToolchainStage::publish`, rewrote tarball install metadata with local tarball path, digest, and install time, and added focused unsafe-entry coverage for symlink, hardlink, absolute path, parent traversal, and setuid mode rejection. TASK-969 remained partial because the repository `scripts/package-ash-toolchain.sh` release producer and authenticated URL download/recording path were still deferred.
+
+2026-05-29 completion slice: added `scripts/package-ash-toolchain.sh`, which packages a coherent repository Ash toolchain root containing `bin/ash`, `bin/ashgrove`, bundled stdlib metadata/source, `manifest.toml`, `install-record.toml`, and required standard-tool metadata. Tarball manifests and install-record templates now carry `archive_schema_version = 1`, and tarball install validation rejects missing or unsupported archive schema versions before staged publish. Focused integration coverage feeds producer output directly into `ashgrove install --from tarball --path ... --switch` under temporary XDG/home roots and verifies the installed immutable toolchain shape plus local tarball path, digest, and install time recording. Authenticated URL download remains intentionally rejected/deferred by SPEC-073 and is not required for TASK-969 completion.

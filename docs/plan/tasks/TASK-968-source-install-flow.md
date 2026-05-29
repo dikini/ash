@@ -1,6 +1,6 @@
 # TASK-968: Source install flow
 
-## Status: ⚠️ Partial source-root install hardening slice
+## Status: ✅ Complete source-install-owned slice
 
 ## Description
 
@@ -56,7 +56,7 @@ commands:
   - git diff --check
 checklist:
   - [x] Build or stage Ash binaries from source according to the TASK-965 audit decision.
-  - [ ] Copy bundled stdlib and runtime support metadata into the toolchain layout.
+  - [x] Copy bundled stdlib and runtime support metadata into the toolchain layout.
   - [x] Record source URL/rev/build profile/target triple plus dirty/unidentified-source override state in install metadata.
   - [x] Reject dirty source installs unless `--allow-dirty-source` is provided and recorded.
   - [x] Reject source archives without commit metadata unless `--allow-unidentified-source` is provided and recorded.
@@ -86,4 +86,13 @@ Area: install/semantic. Source install must be reproducible unless explicitly ma
 
 2026-05-29 review remediation: real local source-root installs build `ash` and `ashgrove` from an isolated cache copy with an external `CARGO_TARGET_DIR`, use `--locked` when the source root has `Cargo.lock`, leave clean source roots without `Cargo.lock` clean, fail closed when a git-like source cannot report `HEAD` or `git status --porcelain`, and add a dirty tree digest to both install metadata and dirty override toolchain IDs so distinct dirty payloads at the same HEAD do not collapse to the same install identity. Launcher dispatch now passes the selected installed stdlib root to `ash` through `ASH_STDLIB_ROOT`.
 
-TASK-968 remains partial because source archive release metadata and concrete runtime-support payload metadata are still undefined by current repo tooling.
+2026-05-29 completion slice: source-root installs now copy the source stdlib package
+metadata from `std/Cargo.toml` into installed `lib/ash/std/ash.toml`, preserve the
+bundled runtime stdlib support modules under `lib/ash/std/src/runtime/`, and fail
+closed before publish when source stdlib metadata is missing. This completes the
+TASK-968-owned source install layout behavior.
+
+Honest deferral boundary: Phase 127 and SPEC-073 remain partial/draft because
+source archive release metadata is owned by TASK-977 and concrete runtime-support
+payload metadata is owned by TASK-978 after the TASK-976 audit gate. TASK-968 did
+not define or overclaim those Phase 128 contracts.

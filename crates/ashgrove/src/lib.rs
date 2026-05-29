@@ -1208,6 +1208,34 @@ pub fn stage_stdlib_metadata(toolchain_root: &Path, metadata: &StdlibMetadata) -
     .context("write stdlib package metadata")
 }
 
+fn stage_source_stdlib_metadata(
+    source: &Path,
+    toolchain_root: &Path,
+    metadata: &StdlibMetadata,
+) -> Result<()> {
+    let metadata_path = validate_relative_toolchain_path(&metadata.path, "stdlib metadata path")?;
+    let std_root = toolchain_root.join(metadata_path);
+    if !std_root.join("src").is_dir() {
+        bail!("stdlib source root is missing at {}", std_root.display());
+    }
+    let source_manifest = source.join("std/Cargo.toml");
+    let manifest_text = fs::read_to_string(&source_manifest)
+        .with_context(|| format!("read stdlib metadata {}", source_manifest.display()))?;
+    let manifest: toml::Value =
+        toml::from_str(&manifest_text).context("parse source stdlib metadata")?;
+    if manifest
+        .get("package")
+        .and_then(toml::Value::as_table)
+        .is_none()
+    {
+        bail!(
+            "source stdlib metadata missing [package] at {}",
+            source_manifest.display()
+        );
+    }
+    fs::write(std_root.join("ash.toml"), manifest_text).context("write stdlib package metadata")
+}
+
 #[derive(Debug, Parser)]
 #[command(name = "ashgrove")]
 #[command(about = "Ash user-local toolchain and deployment manager")]
@@ -1769,7 +1797,7 @@ fn stage_source_root_toolchain(
         &stage.path().join("lib/ash/std/src"),
     )?;
     let stdlib = StdlibMetadata::new(version, "lib/ash/std");
-    stage_stdlib_metadata(stage.path(), &stdlib)?;
+    stage_source_stdlib_metadata(source, stage.path(), &stdlib)?;
     ToolchainManifest::minimal(id.clone(), version, target_triple(), "source")
         .write_to(&stage.path().join("manifest.toml"))?;
     Ok(())

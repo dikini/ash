@@ -106,7 +106,7 @@ pub fn unidentified_source_workspace_fixture() -> tempfile::TempDir {
 fn create_source_workspace(root: &Path) {
     std::fs::create_dir_all(root.join("crates/ash-cli/src")).expect("ash-cli src");
     std::fs::create_dir_all(root.join("crates/ashgrove/src")).expect("ashgrove src");
-    std::fs::create_dir_all(root.join("std/src")).expect("std src");
+    std::fs::create_dir_all(root.join("std/src/runtime")).expect("std runtime src");
     std::fs::write(
         root.join("Cargo.toml"),
         "[workspace]\nmembers = [\"crates/ash-cli\", \"crates/ashgrove\"]\nresolver = \"2\"\n\n[workspace.package]\nversion = \"0.1.0\"\nedition = \"2024\"\n",
@@ -142,6 +142,11 @@ fn create_source_workspace(root: &Path) {
         "pub type SourceRootSentinel = SourceRootSentinel;\n",
     )
     .expect("stdlib source");
+    std::fs::write(
+        root.join("std/src/runtime/args.ash"),
+        "pub type SourceRuntimeArgs = SourceRuntimeArgs;\n",
+    )
+    .expect("runtime support source");
 }
 
 pub fn install_fake_toolchain(roots: &XdgFixture, id: &str) {

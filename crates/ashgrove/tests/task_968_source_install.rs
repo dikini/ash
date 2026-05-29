@@ -46,8 +46,15 @@ fn task_968_source_install_builds_real_source_root_and_records_git_metadata() {
     assert!(installed.join("bin/ashgrove").is_file());
     assert!(installed.join("lib/ash/std/ash.toml").is_file());
     assert!(installed.join("lib/ash/std/src/lib.ash").is_file());
+    assert!(installed.join("lib/ash/std/src/runtime/args.ash").is_file());
     assert!(installed.join("manifest.toml").is_file());
     assert!(installed.join("install-record.toml").is_file());
+
+    let source_stdlib_manifest =
+        std::fs::read_to_string(source.path().join("std/Cargo.toml")).expect("source std manifest");
+    let installed_stdlib_manifest = std::fs::read_to_string(installed.join("lib/ash/std/ash.toml"))
+        .expect("installed std manifest");
+    assert_eq!(installed_stdlib_manifest, source_stdlib_manifest);
 
     let manifest = std::fs::read_to_string(installed.join("manifest.toml")).expect("manifest");
     assert!(manifest.contains(&format!("toolchain_id = \"{expected_id}\"")));
@@ -64,6 +71,43 @@ fn task_968_source_install_builds_real_source_root_and_records_git_metadata() {
     assert!(record.contains("allow_dirty_source = false"));
     assert!(record.contains("allow_unidentified_source = false"));
     assert!(record.contains("reproducible = true"));
+}
+
+#[test]
+fn task_968_source_install_rejects_missing_source_stdlib_metadata_before_publish() {
+    let source = support::unidentified_source_workspace_fixture();
+    std::fs::remove_file(source.path().join("std/Cargo.toml")).expect("remove std metadata");
+    let roots = support::xdg_fixture();
+
+    let mut cmd = Command::cargo_bin("ashgrove").expect("ashgrove binary");
+    cmd.args([
+        "install",
+        "--from",
+        "source",
+        "--path",
+        source.path().to_str().expect("utf8"),
+        "--allow-unidentified-source",
+    ])
+    .envs(roots.env())
+    .assert()
+    .failure()
+    .stderr(predicates::str::contains("read stdlib metadata"));
+
+    let toolchains = roots.data.path().join("ash/toolchains");
+    let installed_count = if toolchains.exists() {
+        std::fs::read_dir(toolchains)
+            .expect("toolchains")
+            .filter(|entry| {
+                entry
+                    .as_ref()
+                    .map(|entry| entry.file_name() != ".staging")
+                    .unwrap_or(false)
+            })
+            .count()
+    } else {
+        0
+    };
+    assert_eq!(installed_count, 0);
 }
 
 #[test]

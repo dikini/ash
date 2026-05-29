@@ -1,6 +1,6 @@
 # TASK-970: Update default list current flow
 
-## Status: ⚠️ Partial local/source/tarball selector slice
+## Status: ✅ Complete for SPEC-073 alpha local source/tarball update selectors
 
 ## Description
 
@@ -35,14 +35,15 @@ Implement update, default, list, and current toolchain selection flows.
 - `ashgrove list` reports only installed toolchains with valid manifest/install metadata and marks the selector default.
 - `ashgrove current` reads typed selector metadata and fails closed when the selected default or project pin is not an installed metadata-valid toolchain.
 - `ashgrove default <toolchain-id>` validates an installed exact toolchain id before updating selector metadata, with an exact-id diagnostic for package-version-only selection when multiple installed immutable ids share that version.
-- `ashgrove update --from source --path PATH --to TOOLCHAIN_ID` and `ashgrove update --from tarball --path PATH --to TOOLCHAIN_ID` install the local fixture-backed source/tarball payload only when the payload identity matches `--to`.
+- `ashgrove update --from source --path PATH --to TOOLCHAIN_ID` builds/stages a real source workspace through the TASK-968 source-root substrate, records source metadata, and installs only when the computed source identity matches `--to`.
+- `ashgrove update --from tarball --path PATH --to TOOLCHAIN_ID` consumes TASK-969 producer-compatible local tarballs, records tarball path/digest/install time, and installs only when the archive identity matches `--to`.
 - `update --switch` changes the default, update without `--switch` preserves an existing default, and first update install initializes the default when none exists.
-- Focused tests prove the old toolchain manifest and install record are unchanged after installing a new immutable source fixture.
+- Focused tests prove old installed manifest and install-record metadata remain unchanged after installing a new immutable update payload.
+- Bare version update and tarball URL update fail closed with diagnostics that name the missing release-index/authenticated-download policy.
 
-### Remaining limitations
+### Explicit SPEC-073 deferrals, not TASK-970 blockers
 
 - Bare `ashgrove update VERSION` and network/release-index discovery remain intentionally rejected until an authenticated release-index policy exists.
-- Source update still uses the TASK-968 fixture-backed source-shaped payload path, not a real cargo build from a checkout or source archive.
 - Tarball update still uses local tarball files only; authenticated URL download and release signing/trust enforcement remain deferred.
 
 ### Non-goals
@@ -72,7 +73,7 @@ commands:
 checklist:
   - [x] Implement `ashgrove list` and `ashgrove current` against selector and install metadata.
   - [x] Implement `ashgrove default <toolchain-id>` as selector update; stable launcher behavior remains a TASK-967/Phase 127 deferred boundary.
-  - [x] Implement local/source/tarball `ashgrove update` as install-new-toolchain behavior using existing fixture-backed source/tarball paths.
+  - [x] Implement local/source/tarball `ashgrove update` as install-new-toolchain behavior using the real source-root and local producer-tarball substrates.
   - [x] Prove update does not mutate the previously installed toolchain.
   - [x] Prove `update --switch` changes user default and update without `--switch` preserves user default.
   - [x] Prove first update install initializes default only when no default exists.
@@ -97,4 +98,4 @@ This task contributes to PLAN-122 and SPEC-073 completion. Later tasks must pres
 
 Area: lifecycle/semantic. Toolchain update and project dependency update stay separate.
 
-TASK-970 is not a full release-channel update implementation. The landed behavior is the local, metadata-valid update/default/list/current selector slice over already supported source-shaped fixtures, local tarballs, and existing installed toolchains.
+TASK-970 is not a full release-channel update implementation. The landed behavior is the local, metadata-valid update/default/list/current selector slice over real source-root builds, producer-compatible local tarballs, and installed toolchain selector metadata.

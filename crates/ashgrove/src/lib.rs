@@ -1287,6 +1287,10 @@ struct UpdateArgs {
     #[arg(long)]
     path: Option<PathBuf>,
     #[arg(long)]
+    url: Option<String>,
+    #[arg(long)]
+    digest: Option<String>,
+    #[arg(long)]
     switch: bool,
     #[arg(long)]
     allow_dirty_source: bool,
@@ -1298,7 +1302,6 @@ struct UpdateArgs {
 enum InstallSource {
     Source,
     Tarball,
-    Existing,
 }
 
 #[derive(Debug, Args)]
@@ -1473,6 +1476,7 @@ fn install(paths: &AshgrovePaths, args: InstallArgs) -> Result<()> {
                 args.allow_dirty_source,
                 args.allow_unidentified_source,
                 args.switch,
+                None,
             )
             .map(|_| ())
         }
@@ -1485,9 +1489,9 @@ fn install(paths: &AshgrovePaths, args: InstallArgs) -> Result<()> {
             let path = args
                 .path
                 .context("--path is required for tarball install")?;
-            install_from_tarball(paths, &path, args.switch, None).map(|_| ())
+            install_from_tarball(paths, &path, args.switch, None, args.digest.as_deref())
+                .map(|_| ())
         }
-        InstallSource::Existing => bail!("install --from existing is only valid for update tests"),
     }
 }
 
@@ -1499,37 +1503,27 @@ fn update(paths: &AshgrovePaths, args: UpdateArgs) -> Result<()> {
     let source = args.source.context("--from is required for update")?;
     let id = ToolchainId::parse(&to)?;
     match source {
-        InstallSource::Existing => {
-            if !paths.toolchain_dir(&id).is_dir() {
-                bail!("toolchain '{}' is not installed", id.as_str());
-            }
-            if args.switch {
-                set_default(paths, &id)?;
-            }
-            Ok(())
-        }
         InstallSource::Source => {
             let source = args.path.context("--path is required for source update")?;
-            let source_id = read_toolchain_id(&source)?;
-            if source_id != id {
-                bail!(
-                    "update --to {} does not match source toolchain {}",
-                    id.as_str(),
-                    source_id.as_str()
-                );
-            }
             install_from_source(
                 paths,
                 &source,
                 args.allow_dirty_source,
                 args.allow_unidentified_source,
                 args.switch,
+                Some(&id),
             )
             .map(|_| ())
         }
         InstallSource::Tarball => {
+            if let Some(url) = args.url {
+                bail!(
+                    "tarball URL update is reserved until authenticated download policy exists: {url}"
+                );
+            }
             let path = args.path.context("--path is required for tarball update")?;
-            install_from_tarball(paths, &path, args.switch, Some(&id)).map(|_| ())
+            install_from_tarball(paths, &path, args.switch, Some(&id), args.digest.as_deref())
+                .map(|_| ())
         }
     }
 }
@@ -1540,6 +1534,7 @@ fn install_from_source(
     allow_dirty: bool,
     allow_unidentified: bool,
     switch: bool,
+    expected_id: Option<&ToolchainId>,
 ) -> Result<ToolchainId> {
     if source.join(".dirty").exists() && !allow_dirty {
         bail!(
@@ -1547,13 +1542,21 @@ fn install_from_source(
         );
     }
     if is_source_root(source) {
-        return install_from_source_root(paths, source, allow_dirty, allow_unidentified, switch);
+        return install_from_source_root(
+            paths,
+            source,
+            allow_dirty,
+            allow_unidentified,
+            switch,
+            expected_id,
+        );
     }
     let source_rev = read_optional_trimmed(source.join(".source-rev"))?;
     if source_rev.is_none() && !allow_unidentified {
         bail!("unidentified source rejected; pass --allow-unidentified-source to record it");
     }
     let id = read_toolchain_id(source)?;
+    verify_expected_source_id(expected_id, &id)?;
     let source_url = read_optional_trimmed(source.join(".source-url"))?;
     let dirty_source_digest = if allow_dirty {
         Some(source_tree_digest(source)?)
@@ -1592,6 +1595,7 @@ fn install_from_source_root(
     allow_dirty: bool,
     allow_unidentified: bool,
     switch: bool,
+    expected_id: Option<&ToolchainId>,
 ) -> Result<ToolchainId> {
     let metadata = SourceRootMetadata::inspect(source)?;
     if metadata.dirty && !allow_dirty {
@@ -1610,6 +1614,7 @@ fn install_from_source_root(
         None
     };
     let id = source_toolchain_id(&version, source, metadata.rev.as_deref(), dirty_digest)?;
+    verify_expected_source_id(expected_id, &id)?;
     let stage = ToolchainStage::create(paths, id.clone())?;
     stage_source_root_toolchain(paths, source, &stage, &id, &version, &source_digest)?;
     write_source_install_record(
@@ -1630,6 +1635,22 @@ fn install_from_source_root(
         set_default(paths, &id)?;
     }
     Ok(id)
+}
+
+fn verify_expected_source_id(
+    expected_id: Option<&ToolchainId>,
+    actual_id: &ToolchainId,
+) -> Result<()> {
+    if let Some(expected_id) = expected_id
+        && expected_id != actual_id
+    {
+        bail!(
+            "update --to {} does not match source toolchain {}",
+            expected_id.as_str(),
+            actual_id.as_str()
+        );
+    }
+    Ok(())
 }
 
 #[derive(Debug)]
@@ -2018,8 +2039,10 @@ fn install_from_tarball(
     archive: &Path,
     switch: bool,
     expected_id: Option<&ToolchainId>,
+    expected_digest: Option<&str>,
 ) -> Result<ToolchainId> {
     let digest = file_digest(archive)?;
+    verify_expected_tarball_digest(expected_digest, &digest)?;
     let temp = tempfile::tempdir().context("create extraction staging dir")?;
     let file = fs::File::open(archive)
         .with_context(|| format!("failed to open tarball {}", archive.display()))?;
@@ -2074,6 +2097,27 @@ fn install_from_tarball(
         set_default(paths, &id)?;
     }
     Ok(id)
+}
+
+fn verify_expected_tarball_digest(
+    expected_digest: Option<&str>,
+    actual_digest: &str,
+) -> Result<()> {
+    if let Some(expected_digest) = expected_digest {
+        let Some(expected_hex) = expected_digest.strip_prefix("sha256:") else {
+            bail!("tarball digest must use sha256:<hex> format");
+        };
+        if expected_hex.len() != 64 || !expected_hex.chars().all(|ch| ch.is_ascii_hexdigit()) {
+            bail!("tarball digest must use sha256:<64-hex> format");
+        }
+        let expected = expected_hex.to_ascii_lowercase();
+        if expected != actual_digest {
+            bail!(
+                "tarball digest mismatch: expected sha256:{expected}, got sha256:{actual_digest}"
+            );
+        }
+    }
+    Ok(())
 }
 
 fn validate_archive_entry(entry: &tar::Entry<'_, impl Read>) -> Result<()> {

@@ -3737,7 +3737,7 @@ Phase 126 introduces tower-aligned callable type and closure syntax. It makes `(
 ## Phase 127: Ashgrove Install, Update, Cleanup, and Git Deployment
 
 **Priority:** High (alpha release boundary for coherent installation, update, removal, cleanup, and git-pinned deployment before registry package management)
-**Status:** ⚠️ Partial Phase 127 after TASK-969 completion; SPEC-073 remains Draft pending deferred acceptance rows
+**Status:** ⚠️ Partial Phase 127 after TASK-970 completion; SPEC-073 remains Draft pending deferred acceptance rows
 **Spec:** [SPEC-073](../spec/SPEC-073-ASHGROVE-INSTALL-UPDATE-CLEANUP-GIT-DEPLOYMENT.md)
 **Plan:** [PLAN-122](PLAN-122-ASHGROVE-INSTALL-UPDATE-CLEANUP-GIT-DEPLOYMENT.md)
 
@@ -3751,7 +3751,7 @@ Phase 127 introduces `ashgrove <command>` as the Ash toolchain and deployment ma
 | [TASK-967](tasks/TASK-967-toolchain-metadata-and-xdg-layout.md) | Implement metadata schemas, XDG paths, launcher dispatch, selectors, stdlib metadata, trust preservation, staging/publish helpers | 14 | ✅ Complete |
 | [TASK-968](tasks/TASK-968-source-install-flow.md) | Implement source install path and installed-stdlib root use | 14 | ⚠️ Partial source-root install hardening slice |
 | [TASK-969](tasks/TASK-969-binary-tarball-install-flow.md) | Implement conforming tarball production/validation/install path | 14 | ✅ Complete |
-| [TASK-970](tasks/TASK-970-update-default-list-current-flow.md) | Implement update/default/list/current flows | 10 | ⚠️ Partial local/source/tarball selector slice |
+| [TASK-970](tasks/TASK-970-update-default-list-current-flow.md) | Implement update/default/list/current flows | 10 | ✅ Complete for alpha local source/tarball updates |
 | [TASK-971](tasks/TASK-971-remove-cleanup-flow.md) | Implement remove and cleanup policy, including daemon/running-manager protection | 12 | ⚠️ Partial cleanup planner slice |
 | [TASK-972](tasks/TASK-972-ash-manifest-lock-git-fetch.md) | Implement `ash.toml`, `ash.lock`, git fetch, lock checking, trust preservation, and dependency-root module-loader integration | 18 | ⚠️ Partial rev/trust hardening slice |
 | [TASK-973](tasks/TASK-973-vendor-and-deployable-git-project-flow.md) | Implement vendor/offline deployment for git-pinned Ash projects | 12 | ⚠️ Partial stdlib-separation slice |

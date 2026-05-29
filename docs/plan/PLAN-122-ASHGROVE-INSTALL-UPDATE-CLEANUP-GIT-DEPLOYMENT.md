@@ -12,7 +12,7 @@
 
 ## 1. Status
 
-**Status:** ⚠️ Partial Phase 127 after TASK-969 completion; SPEC-073 remains Draft pending deferred acceptance rows
+**Status:** ⚠️ Partial Phase 127 after TASK-970 completion; SPEC-073 remains Draft pending deferred acceptance rows
 **Spec:** [SPEC-073](../spec/SPEC-073-ASHGROVE-INSTALL-UPDATE-CLEANUP-GIT-DEPLOYMENT.md)
 **Task range:** [TASK-964](tasks/TASK-964-ashgrove-install-policy-packet.md) through [TASK-974](tasks/TASK-974-ashgrove-closeout-acceptance.md)
 
@@ -58,7 +58,7 @@ TASK-964 creates the docs/spec/plan/task packet. TASK-965 is a hard audit gate a
 | [TASK-967](tasks/TASK-967-toolchain-metadata-and-xdg-layout.md) | Implement metadata schemas, XDG paths, launcher dispatch, selectors, stdlib metadata, trust preservation, staging/publish helpers | 14 | ✅ Complete |
 | [TASK-968](tasks/TASK-968-source-install-flow.md) | Implement source install path and installed-stdlib root use | 14 | ⚠️ Partial source-root install hardening slice |
 | [TASK-969](tasks/TASK-969-binary-tarball-install-flow.md) | Implement conforming tarball production/validation/install path | 14 | ✅ Complete |
-| [TASK-970](tasks/TASK-970-update-default-list-current-flow.md) | Implement update/default/list/current flows | 10 | ⚠️ Partial |
+| [TASK-970](tasks/TASK-970-update-default-list-current-flow.md) | Implement update/default/list/current flows | 10 | ✅ Complete for alpha local source/tarball updates |
 | [TASK-971](tasks/TASK-971-remove-cleanup-flow.md) | Implement remove and cleanup policy, including daemon/running-manager protection | 12 | ⚠️ Partial cleanup planner slice |
 | [TASK-972](tasks/TASK-972-ash-manifest-lock-git-fetch.md) | Implement `ash.toml`, `ash.lock`, git fetch, lock checking, trust preservation, and dependency-root module-loader integration | 18 | ⚠️ Partial rev/trust hardening slice |
 | [TASK-973](tasks/TASK-973-vendor-and-deployable-git-project-flow.md) | Implement vendor/offline deployment flow for git projects | 12 | ⚠️ Partial follow-up slice |
@@ -135,7 +135,7 @@ Current implementation note: `scripts/package-ash-toolchain.sh` is the first-sli
 
 Must prove update does not mutate the old toolchain; first install/default/current/list work; `update --switch` changes the default; update without `--switch` preserves the current default.
 
-Current implementation note: the local/source/tarball selector slice validates `list` and `current` against selector plus installed manifest/install metadata, requires `default <toolchain-id>` to name an installed exact id, installs new immutable toolchains through the existing fixture-backed source and local tarball paths when `--to` matches the payload identity, preserves the old default unless `--switch` is passed, initializes the first default when none exists, and proves old installed metadata is not mutated. Bare release-index/network update remains intentionally rejected, and real source builds plus authenticated tarball URL update remain deferred.
+Current implementation note: the alpha local/source/tarball selector slice validates `list` and `current` against selector plus installed manifest/install metadata, requires `default <toolchain-id>` to name an installed exact id, installs new immutable toolchains through the TASK-968 real source-root build/stage path or TASK-969 producer-compatible local tarball path when `--to` matches the payload identity, preserves the old default unless `--switch` is passed, initializes the first default when none exists, and proves old installed metadata is not mutated. Bare release-index/network update and authenticated tarball URL update remain intentionally rejected until a later release-index/download trust policy exists.
 
 ### TASK-971: remove/cleanup
 

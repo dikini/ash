@@ -262,7 +262,7 @@ For alpha release/deployment reproducibility, exact pins are preferred. Compatib
 
 ## 10. Update policy
 
-`ashgrove update` installs a new coherent toolchain bundle and optionally switches the active default. `--from source` and `--from tarball` use the same source/tarball validation rules as `install`. Channel-based update discovery is deferred until a release-index/channel policy exists.
+`ashgrove update` installs a new coherent toolchain bundle and optionally switches the active default. `--from source` and `--from tarball` use the same source/tarball validation rules as `install`, and alpha local updates require `--to` to match the computed source-root identity or local tarball payload identity before publishing. Channel-based update discovery and authenticated URL download are deferred until a release-index/channel policy exists.
 
 An update MUST update together:
 
@@ -529,6 +529,7 @@ Diagnostics MUST be actionable and distinguish:
 
 ### 2026-05-28
 
+- TASK-970 completed the alpha local update/default/list/current selector surface: source updates build from real source roots, local tarball updates consume producer-compatible payloads, `--to` must match payload identity, selectors preserve or switch defaults according to `--switch`, incomplete toolchains fail closed, and bare/network update remains rejected pending release-index/download policy.
 - TASK-966 completed the public `ashgrove` command skeleton evidence, including isolated non-zero CLI smoke tests and fail-closed bare install/update version rejection before release-index policy exists.
 - TASK-967 added typed toolchain metadata, selector trust preservation, stdlib metadata staging, staging publish/collision helpers, and stable launcher shim installation/dispatch coverage under temporary XDG/home roots.
 - Initial draft for `ashgrove` user-local install/update/remove/cleanup policy, source vs binary tarball install semantics, XDG layout, and git-pinned deployment substrate.

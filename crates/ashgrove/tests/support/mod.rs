@@ -209,6 +209,43 @@ pub fn toolchain_tarball_fixture(id: &str) -> tempfile::NamedTempFile {
     pack_toolchain_dir(id, source.path())
 }
 
+pub fn produced_toolchain_tarball_in(id: &str, output: &Path) -> std::path::PathBuf {
+    let ash = tempfile::NamedTempFile::new().expect("ash");
+    let ashgrove = tempfile::NamedTempFile::new().expect("ashgrove");
+    write_tool_script(ash.path(), "echo produced ash\n");
+    write_tool_script(ashgrove.path(), "echo produced ashgrove\n");
+
+    let repo_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .ancestors()
+        .nth(2)
+        .expect("workspace root");
+    let package = std::process::Command::new(repo_root.join("scripts/package-ash-toolchain.sh"))
+        .args([
+            "--toolchain-id",
+            id,
+            "--output-dir",
+            output.to_str().expect("utf8 output"),
+        ])
+        .env("ASH_PACKAGE_ASH_BIN", ash.path())
+        .env("ASH_PACKAGE_ASHGROVE_BIN", ashgrove.path())
+        .output()
+        .expect("run package producer");
+    assert!(
+        package.status.success(),
+        "producer failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&package.stdout),
+        String::from_utf8_lossy(&package.stderr)
+    );
+    let stdout = String::from_utf8(package.stdout).expect("producer stdout utf8");
+    let archive = stdout
+        .lines()
+        .find_map(|line| line.strip_prefix("archive="))
+        .map(std::path::PathBuf::from)
+        .expect("archive output");
+    assert!(archive.is_file(), "archive exists at {}", archive.display());
+    archive
+}
+
 pub fn toolchain_tarball_fixture_with_mutation(
     id: &str,
     mutate: impl FnOnce(&Path),

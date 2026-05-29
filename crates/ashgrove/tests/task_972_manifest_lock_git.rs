@@ -22,6 +22,34 @@ fn task_972_lock_rejects_unpinned_git_dependency() {
 }
 
 #[test]
+fn task_972_lock_rejects_legacy_manifest_metadata_conflict() {
+    let project = support::project_fixture();
+    let dep = support::git_dep_fixture();
+    std::fs::write(
+        project.path().join("ash.toml"),
+        format!(
+            "[package]\nname = \"app\"\n\n[toolchain]\nash = \"ash-0.1.0+test\"\n\n[dependencies.dep]\ngit = \"{}\"\ntag = \"v1\"\n",
+            dep.url()
+        ),
+    )
+    .expect("manifest");
+    std::fs::write(
+        project.path().join(".ash.toml"),
+        "[toolchain]\nash = \"ash-legacy\"\n",
+    )
+    .expect("legacy manifest");
+    let roots = support::xdg_fixture();
+
+    Command::cargo_bin("ashgrove")
+        .expect("ashgrove")
+        .args(["lock", "--project", project.path().to_str().expect("utf8")])
+        .envs(roots.env())
+        .assert()
+        .failure()
+        .stderr(predicates::str::contains("legacy .ash.toml conflicts"));
+}
+
+#[test]
 fn task_972_lock_check_detects_manifest_drift() {
     let project = support::project_fixture();
     let dep = support::git_dep_fixture();

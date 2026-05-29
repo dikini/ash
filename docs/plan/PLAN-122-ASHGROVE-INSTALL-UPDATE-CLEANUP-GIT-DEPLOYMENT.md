@@ -12,7 +12,7 @@
 
 ## 1. Status
 
-**Status:** ⚠️ Partial Phase 127 after TASK-971 completion; SPEC-073 remains Draft pending deferred acceptance rows
+**Status:** ⚠️ Partial Phase 127 after TASK-972 alpha git integration completion; SPEC-073 remains Draft pending deferred acceptance rows
 **Spec:** [SPEC-073](../spec/SPEC-073-ASHGROVE-INSTALL-UPDATE-CLEANUP-GIT-DEPLOYMENT.md)
 **Task range:** [TASK-964](tasks/TASK-964-ashgrove-install-policy-packet.md) through [TASK-974](tasks/TASK-974-ashgrove-closeout-acceptance.md)
 
@@ -60,7 +60,7 @@ TASK-964 creates the docs/spec/plan/task packet. TASK-965 is a hard audit gate a
 | [TASK-969](tasks/TASK-969-binary-tarball-install-flow.md) | Implement conforming tarball production/validation/install path | 14 | ✅ Complete |
 | [TASK-970](tasks/TASK-970-update-default-list-current-flow.md) | Implement update/default/list/current flows | 10 | ✅ Complete for alpha local source/tarball updates |
 | [TASK-971](tasks/TASK-971-remove-cleanup-flow.md) | Implement remove and cleanup policy, including daemon/running-manager protection | 12 | ✅ Complete for SPEC-073 alpha remove/cleanup policy |
-| [TASK-972](tasks/TASK-972-ash-manifest-lock-git-fetch.md) | Implement `ash.toml`, `ash.lock`, git fetch, lock checking, trust preservation, and dependency-root module-loader integration | 18 | ⚠️ Partial rev/trust hardening slice |
+| [TASK-972](tasks/TASK-972-ash-manifest-lock-git-fetch.md) | Implement `ash.toml`, `ash.lock`, git fetch, lock checking, trust preservation, and dependency-root module-loader integration | 18 | ✅ Complete for SPEC-073 alpha git lock/fetch and dependency-root integration |
 | [TASK-973](tasks/TASK-973-vendor-and-deployable-git-project-flow.md) | Implement vendor/offline deployment flow for git projects | 12 | ⚠️ Partial follow-up slice |
 | [TASK-974](tasks/TASK-974-ashgrove-closeout-acceptance.md) | Close out SPEC-073 with acceptance matrix and broad verification | 8 | ⚠️ Reported |
 
@@ -147,13 +147,13 @@ Current implementation note: the alpha remove/cleanup slice implements `remove` 
 
 Must prove tag resolution writes exact commits, `lock --check` detects manifest/lock drift, reserved trust fields are preserved, unpinned deps fail closed, and fetched dependency roots are visible to `ash check`/`ash run` through module-loader integration. Fetch-only behavior is insufficient.
 
-Current implementation note: `ashgrove lock` now resolves accepted abbreviated manifest `rev` values to full commit hashes in `ash.lock`, rejects unpinned git dependencies, preserves existing lockfile `[trust]` metadata during package rewrites, and keeps prior fetch/vendor/module-loader hardening. Direct fetched-cache dependency roots and broader lower-case package/toolchain metadata coverage remain deferred.
+Current implementation note: `ashgrove lock` resolves accepted abbreviated manifest `rev` values to full commit hashes in `ash.lock`, rejects unpinned git dependencies, detects lock drift, rejects legacy `.ash.toml` metadata conflicts, and preserves existing lockfile `[trust]` metadata during package rewrites. `ashgrove fetch` materializes locked git checkouts under `$XDG_CACHE_HOME/ash/git/checkouts/<package>-<url-digest>/<commit>/`. `ash-engine`/`ash-cli` now discover lower-case `ash.toml` plus `ash.lock` for both default `vendor/ash/` roots and direct fetched-cache roots, validate locked package names and full commits, verify fetched checkout `HEAD` matches the lock commit, fail closed for missing/mismatched cache roots, and keep selected stdlib roots ahead of stdlib-shaped locked packages. Broader registry metadata, authenticated trust/signing enforcement, manifest rewrite preservation, and release-channel behavior remain outside this TASK-972 alpha slice.
 
 ### TASK-973: vendor/deployment
 
 Must prove a git-based project can be materialized for offline or reproducible deployment from lockfile data without fetching stdlib as a dependency. `vendor --check` must validate the default `vendor/ash/` directory or an explicit `--output PATH` without writing/fetching.
 
-Current implementation note: the stdlib-separation slice proves the selected/explicit stdlib root has precedence over the auto-discovered project `vendor/ash` dependency namespace, while ordinary locked dependency imports still resolve through the lock-gated vendor package namespace. TASK-973 remains partial because direct fetched-cache dependency-root discovery and broader deployable-project packaging are deferred.
+Current implementation note: the stdlib-separation slice proves the selected/explicit stdlib root has precedence over the auto-discovered project `vendor/ash` dependency namespace, while ordinary locked dependency imports still resolve through the lock-gated vendor package namespace. TASK-973 remains partial because broader deployable-project packaging is deferred.
 
 ## 8. Verification strategy
 

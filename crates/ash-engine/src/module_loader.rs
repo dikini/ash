@@ -39,8 +39,10 @@ use ash_parser::parse_type_def::{
 use ash_parser::parse_use::parse_use;
 use ash_parser::parse_workflow::workflow_def;
 use ash_parser::surface::{Definition, Expr, Type, Workflow, WorkflowDef};
+use sha2::{Digest, Sha256};
 use std::cell::Cell;
 use std::collections::{HashMap, HashSet};
+use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 use winnow::prelude::Parser;
 
@@ -395,13 +397,8 @@ pub fn load_ordinary_source(path: &Path, source: &str) -> Result<LoadedOrdinaryF
 
     let crate_root = discover_crate_root(entry_root);
     for import in imports {
-        let absolute_roots = search_roots(entry_root)?;
-        let (module_segments, search_roots) = normalize_import_resolution(
-            &import.module_segments,
-            entry_root,
-            crate_root.as_deref(),
-            &absolute_roots,
-        );
+        let (module_segments, search_roots) =
+            import_resolution_roots(&import.module_segments, entry_root, crate_root.as_deref())?;
         let module_path =
             resolve_module_path(&module_segments, &search_roots)?.ok_or_else(|| {
                 EngineError::Parse(format!(
@@ -1773,13 +1770,12 @@ fn collect_import_visibility_info(
         let Ok(import_spec) = parse_ordinary_import(trimmed) else {
             continue;
         };
-        let absolute_roots = search_roots(module_root).unwrap_or_default();
-        let (module_segments, search_roots) = normalize_import_resolution(
-            &import_spec.module_segments,
-            module_root,
-            crate_root,
-            &absolute_roots,
-        );
+        let Ok((module_segments, search_roots)) =
+            import_resolution_roots(&import_spec.module_segments, module_root, crate_root)
+        else {
+            add_unresolved_import_selections(&mut info, import_spec.selections);
+            continue;
+        };
         let Ok(Some(target_path)) = resolve_module_path(&module_segments, &search_roots) else {
             add_unresolved_import_selections(&mut info, import_spec.selections);
             continue;
@@ -1861,13 +1857,13 @@ fn collect_public_import_visibility_exports(
         let Ok(import_spec) = parse_ordinary_import(trimmed) else {
             continue;
         };
-        let absolute_roots = search_roots(module_root).unwrap_or_default();
-        let (module_segments, search_roots) = normalize_import_resolution(
+        let Ok((module_segments, search_roots)) = import_resolution_roots(
             &import_spec.module_segments,
             module_root,
             crate_root.as_deref(),
-            &absolute_roots,
-        );
+        ) else {
+            continue;
+        };
         let Ok(Some(target_path)) = resolve_module_path(&module_segments, &search_roots) else {
             continue;
         };
@@ -2602,13 +2598,11 @@ pub(crate) fn collect_module_exports(
     for snippet in extract_import_snippets(&source) {
         let trimmed = snippet.trim();
         if let Ok(import_spec) = parse_ordinary_import(trimmed) {
-            let absolute_roots = search_roots(module_root)?;
-            let (module_segments, search_roots) = normalize_import_resolution(
+            let (module_segments, search_roots) = import_resolution_roots(
                 &import_spec.module_segments,
                 module_root,
                 crate_root.as_deref(),
-                &absolute_roots,
-            );
+            )?;
             if let Some(target_path) = resolve_module_path(&module_segments, &search_roots)? {
                 let target_canonical = target_path
                     .canonicalize()
@@ -2683,14 +2677,9 @@ fn resolve_use_target(
         .iter()
         .map(std::string::ToString::to_string)
         .collect::<Vec<_>>();
-    let absolute_roots = search_roots(module_root)?;
     let crate_root = discover_crate_root(module_root);
-    let (module_segments, search_roots) = normalize_import_resolution(
-        &module_segments,
-        module_root,
-        crate_root.as_deref(),
-        &absolute_roots,
-    );
+    let (module_segments, search_roots) =
+        import_resolution_roots(&module_segments, module_root, crate_root.as_deref())?;
 
     resolve_module_path(&module_segments, &search_roots)?.ok_or_else(|| {
         EngineError::Parse(format!(
@@ -5767,28 +5756,71 @@ where
 
 fn resolve_module_path(
     module_segments: &[String],
-    search_roots: &[PathBuf],
+    search_roots: &[SearchRoot],
 ) -> Result<Option<PathBuf>, EngineError> {
     for root in search_roots {
-        if is_locked_vendor_root(root) && !locked_vendor_root_allows(root, module_segments)? {
+        if is_locked_vendor_root(&root.path)
+            && !locked_vendor_root_allows(&root.path, module_segments)?
+        {
             continue;
         }
-        if is_locked_vendor_package_root(root) {
-            if !locked_vendor_package_root_allows(root, module_segments)? {
+        if is_locked_vendor_package_root(&root.path) {
+            if !locked_vendor_package_root_allows(&root.path, module_segments)? {
                 continue;
             }
             if let Some(package_relative_segments) = module_segments.get(1..)
-                && let Some(path) = resolve_in_root(root.as_path(), package_relative_segments)
+                && let Some(path) = resolve_in_root(root.path.as_path(), package_relative_segments)
             {
                 return Ok(Some(path));
             }
             continue;
         }
-        if let Some(path) = resolve_in_root(root.as_path(), module_segments) {
+        if root.kind == SearchRootKind::LockedCache
+            && let Some(package_name) = locked_cache_package_name(&root.path)
+        {
+            if module_segments.first().map(String::as_str) != Some(package_name.as_str()) {
+                continue;
+            }
+            if let Some(package_relative_segments) = module_segments.get(1..)
+                && let Some(path) = resolve_in_root(root.path.as_path(), package_relative_segments)
+            {
+                return Ok(Some(path));
+            }
+            continue;
+        }
+        if let Some(path) = resolve_in_root(root.path.as_path(), module_segments) {
             return Ok(Some(path));
         }
     }
     Ok(None)
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct SearchRoot {
+    path: PathBuf,
+    kind: SearchRootKind,
+}
+
+impl SearchRoot {
+    const fn ordinary(path: PathBuf) -> Self {
+        Self {
+            path,
+            kind: SearchRootKind::Ordinary,
+        }
+    }
+
+    const fn locked_cache(path: PathBuf) -> Self {
+        Self {
+            path,
+            kind: SearchRootKind::LockedCache,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SearchRootKind {
+    Ordinary,
+    LockedCache,
 }
 
 fn is_locked_vendor_root(root: &Path) -> bool {
@@ -5811,6 +5843,21 @@ fn is_locked_vendor_package_root(root: &Path) -> bool {
             .and_then(Path::file_name)
             .and_then(|name| name.to_str())
             == Some("vendor")
+}
+
+fn locked_cache_package_name(root: &Path) -> Option<String> {
+    root.parent()
+        .and_then(Path::parent)
+        .and_then(Path::file_name)
+        .and_then(|name| name.to_str())
+        .filter(|name| *name == "checkouts")?;
+    let package_digest = root.parent()?.file_name()?.to_str()?;
+    let (package_name, digest) = package_digest.rsplit_once('-')?;
+    if digest.len() == 16 && digest.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+        Some(package_name.to_string())
+    } else {
+        None
+    }
 }
 
 fn locked_vendor_package_root_allows(
@@ -5867,8 +5914,8 @@ fn normalize_import_resolution(
     module_segments: &[String],
     importing_dir: &Path,
     crate_root: Option<&Path>,
-    absolute_roots: &[PathBuf],
-) -> (Vec<String>, Vec<PathBuf>) {
+    absolute_roots: &[SearchRoot],
+) -> (Vec<String>, Vec<SearchRoot>) {
     let Some(first) = module_segments.first().map(String::as_str) else {
         return (Vec::new(), absolute_roots.to_vec());
     };
@@ -5876,18 +5923,18 @@ fn normalize_import_resolution(
     match first {
         "self" => (
             module_segments[1..].to_vec(),
-            vec![importing_dir.to_path_buf()],
+            vec![SearchRoot::ordinary(importing_dir.to_path_buf())],
         ),
         "super" => {
             let mut root = importing_dir.to_path_buf();
-            let mut roots = vec![root.clone()];
+            let mut roots = vec![SearchRoot::ordinary(root.clone())];
             let mut index = 0usize;
             while module_segments
                 .get(index)
                 .is_some_and(|segment| segment == "super")
             {
                 root.pop();
-                roots.push(root.clone());
+                roots.push(SearchRoot::ordinary(root.clone()));
                 index += 1;
             }
             (module_segments[index..].to_vec(), roots)
@@ -5900,17 +5947,42 @@ fn normalize_import_resolution(
     }
 }
 
-fn crate_import_roots(importing_dir: &Path, crate_root: Option<&Path>) -> Vec<PathBuf> {
+fn import_resolution_roots(
+    module_segments: &[String],
+    importing_dir: &Path,
+    crate_root: Option<&Path>,
+) -> Result<(Vec<String>, Vec<SearchRoot>), EngineError> {
+    let absolute_roots = if import_uses_local_roots(module_segments) {
+        Vec::new()
+    } else {
+        search_roots(importing_dir)?
+    };
+    Ok(normalize_import_resolution(
+        module_segments,
+        importing_dir,
+        crate_root,
+        &absolute_roots,
+    ))
+}
+
+fn import_uses_local_roots(module_segments: &[String]) -> bool {
+    matches!(
+        module_segments.first().map(String::as_str),
+        Some("self" | "super" | "crate")
+    )
+}
+
+fn crate_import_roots(importing_dir: &Path, crate_root: Option<&Path>) -> Vec<SearchRoot> {
     let mut roots = Vec::new();
     let mut current = Some(importing_dir);
     while let Some(path) = current {
-        roots.push(path.to_path_buf());
+        roots.push(SearchRoot::ordinary(path.to_path_buf()));
         current = path.parent();
     }
 
     match crate_root {
-        Some(root) if !roots.iter().any(|candidate| candidate == root) => {
-            roots.push(root.to_path_buf());
+        Some(root) if !roots.iter().any(|candidate| candidate.path == root) => {
+            roots.push(SearchRoot::ordinary(root.to_path_buf()));
         }
         _ => {}
     }
@@ -5965,34 +6037,40 @@ fn contains_ash_files(path: &Path) -> bool {
     })
 }
 
-fn search_roots(root: &Path) -> Result<Vec<PathBuf>, EngineError> {
-    let mut roots = vec![root.to_path_buf()];
+fn search_roots(root: &Path) -> Result<Vec<SearchRoot>, EngineError> {
+    let mut roots = vec![SearchRoot::ordinary(root.to_path_buf())];
     MODULE_ROOT_OVERRIDE.with(|slot| {
         if let Some(override_roots) = slot.borrow().as_ref() {
-            roots.extend(override_roots.dependency_roots.clone());
+            roots.extend(
+                override_roots
+                    .dependency_roots
+                    .iter()
+                    .cloned()
+                    .map(SearchRoot::ordinary),
+            );
         }
     });
     if let Some(value) = std::env::var_os("ASH_DEP_ROOTS") {
-        roots.extend(std::env::split_paths(&value));
+        roots.extend(std::env::split_paths(&value).map(SearchRoot::ordinary));
     }
     if let Some(value) = std::env::var_os("ASH_DEPENDENCY_ROOTS") {
-        roots.extend(std::env::split_paths(&value));
+        roots.extend(std::env::split_paths(&value).map(SearchRoot::ordinary));
     }
     if let Some(value) = std::env::var_os("ASH_LIBRARY_PATH") {
-        roots.extend(std::env::split_paths(&value));
+        roots.extend(std::env::split_paths(&value).map(SearchRoot::ordinary));
     }
-    roots.push(builtin_stdlib_root());
+    roots.push(SearchRoot::ordinary(builtin_stdlib_root()));
     roots.extend(discover_locked_project_roots(root)?);
     Ok(roots)
 }
 
-fn discover_locked_project_roots(importing_dir: &Path) -> Result<Vec<PathBuf>, EngineError> {
+fn discover_locked_project_roots(importing_dir: &Path) -> Result<Vec<SearchRoot>, EngineError> {
     let Some(project_root) = discover_ash_project_root(importing_dir) else {
         return Ok(Vec::new());
     };
 
     let vendor_root = project_root.join("vendor/ash");
-    if !vendor_root.is_dir() {
+    if !vendor_root.is_dir() && !project_root.join("ash.lock").is_file() {
         return Ok(Vec::new());
     }
 
@@ -6002,7 +6080,11 @@ fn discover_locked_project_roots(importing_dir: &Path) -> Result<Vec<PathBuf>, E
         .and_then(toml::Value::as_array)
         .ok_or_else(|| EngineError::Configuration("ash.lock missing package entries".into()))?;
 
-    discover_locked_vendor_roots(&vendor_root, packages)
+    if vendor_root.is_dir() {
+        discover_locked_vendor_roots(&vendor_root, packages)
+    } else {
+        discover_locked_cache_roots(packages)
+    }
 }
 
 fn read_project_lock(project_root: &Path) -> Result<toml::Value, EngineError> {
@@ -6023,9 +6105,9 @@ fn read_project_lock(project_root: &Path) -> Result<toml::Value, EngineError> {
 fn discover_locked_vendor_roots(
     vendor_root: &Path,
     packages: &[toml::Value],
-) -> Result<Vec<PathBuf>, EngineError> {
+) -> Result<Vec<SearchRoot>, EngineError> {
     let mut roots = Vec::with_capacity(packages.len() + 1);
-    roots.push(vendor_root.to_path_buf());
+    roots.push(SearchRoot::ordinary(vendor_root.to_path_buf()));
     for package in packages {
         let name = locked_package_name(package)?;
         let _commit = locked_package_commit(package)?;
@@ -6040,6 +6122,69 @@ fn discover_locked_vendor_roots(
     Ok(roots)
 }
 
+fn discover_locked_cache_roots(packages: &[toml::Value]) -> Result<Vec<SearchRoot>, EngineError> {
+    let mut roots = Vec::with_capacity(packages.len());
+    let cache_home = xdg_cache_home()?;
+    for package in packages {
+        let name = locked_package_name(package)?;
+        let git = locked_package_git(package)?;
+        let commit = locked_package_commit(package)?;
+        let package_root = cache_home
+            .join("ash/git/checkouts")
+            .join(format!("{}-{}", name, git_url_digest(git)))
+            .join(commit);
+        if !package_root.is_dir() {
+            return Err(EngineError::Configuration(format!(
+                "locked package '{name}' is missing from fetched cache '{}'",
+                package_root.display()
+            )));
+        }
+        ensure_fetched_checkout_commit(&package_root, commit)?;
+        roots.push(SearchRoot::locked_cache(package_root));
+    }
+    Ok(roots)
+}
+
+fn ensure_fetched_checkout_commit(checkout: &Path, commit: &str) -> Result<(), EngineError> {
+    if !checkout.join(".git").exists() {
+        return Err(EngineError::Configuration(format!(
+            "locked package fetched cache '{}' is not a git checkout",
+            checkout.display()
+        )));
+    }
+    let output = std::process::Command::new("git")
+        .args(["-C"])
+        .arg(checkout)
+        .args(["rev-parse", "HEAD"])
+        .output()
+        .map_err(|error| {
+            EngineError::Configuration(format!(
+                "failed to inspect fetched cache checkout '{}': {error}",
+                checkout.display()
+            ))
+        })?;
+    if !output.status.success() {
+        return Err(EngineError::Configuration(format!(
+            "failed to inspect fetched cache checkout '{}': {}",
+            checkout.display(),
+            String::from_utf8_lossy(&output.stderr)
+        )));
+    }
+    let head = String::from_utf8(output.stdout).map_err(|error| {
+        EngineError::Configuration(format!(
+            "fetched cache checkout '{}' reported non-utf8 HEAD: {error}",
+            checkout.display()
+        ))
+    })?;
+    if head.trim() != commit {
+        return Err(EngineError::Configuration(format!(
+            "fetched cache checkout '{}' is not at locked commit {commit}",
+            checkout.display()
+        )));
+    }
+    Ok(())
+}
+
 fn locked_package_name(package: &toml::Value) -> Result<&str, EngineError> {
     let name = package
         .get("name")
@@ -6049,6 +6194,13 @@ fn locked_package_name(package: &toml::Value) -> Result<&str, EngineError> {
     Ok(name)
 }
 
+fn locked_package_git(package: &toml::Value) -> Result<&str, EngineError> {
+    package
+        .get("git")
+        .and_then(toml::Value::as_str)
+        .ok_or_else(|| EngineError::Configuration("ash.lock package missing git".into()))
+}
+
 fn locked_package_commit(package: &toml::Value) -> Result<&str, EngineError> {
     let commit = package
         .get("commit")
@@ -6056,6 +6208,16 @@ fn locked_package_commit(package: &toml::Value) -> Result<&str, EngineError> {
         .ok_or_else(|| EngineError::Configuration("ash.lock package missing commit".into()))?;
     validate_locked_commit(commit)?;
     Ok(commit)
+}
+
+fn xdg_cache_home() -> Result<PathBuf, EngineError> {
+    if let Some(root) = std::env::var_os("XDG_CACHE_HOME") {
+        return Ok(PathBuf::from(root));
+    }
+    let home = std::env::var_os("HOME").ok_or_else(|| {
+        EngineError::Configuration("HOME is required for XDG cache lookup".into())
+    })?;
+    Ok(PathBuf::from(home).join(".cache"))
 }
 
 fn discover_ash_project_root(importing_dir: &Path) -> Option<PathBuf> {
@@ -6092,6 +6254,15 @@ fn validate_locked_commit(commit: &str) -> Result<(), EngineError> {
             "locked git commit must be a full 40-character commit hash".into(),
         ))
     }
+}
+
+fn git_url_digest(url: &str) -> String {
+    let digest = Sha256::digest(url.as_bytes());
+    let mut out = String::new();
+    for byte in &digest[..8] {
+        let _ = write!(out, "{byte:02x}");
+    }
+    out
 }
 
 fn resolve_in_root(root: &Path, module_segments: &[String]) -> Option<PathBuf> {

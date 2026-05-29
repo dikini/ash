@@ -1,6 +1,6 @@
 # TASK-972: Ash manifest lock git fetch
 
-## Status: ⚠️ Partial rev/trust hardening slice
+## Status: ✅ Complete for SPEC-073 alpha git lock/fetch and dependency-root integration
 
 ## Description
 
@@ -39,7 +39,10 @@ Implement project `ash.toml`, `ash.lock`, git dependency resolution, fetch, lock
 - `task_972_lock_preserves_reserved_trust_fields_on_rewrite` proves existing lockfile `[trust]` metadata is preserved when `ashgrove lock` rewrites package entries.
 - `ash check src/main.ash` and explicit ordinary-file `ash run src/main.ash:main` now discover an ancestor lower-case `ash.toml`, validate `ash.lock`, and resolve locked packages from the default `vendor/ash/` layout without `ASH_DEP_ROOTS` or `ASH_DEPENDENCY_ROOTS`.
 - `malformed_lock_commit_fails_closed_without_resolving_vendor`, `run_fails_closed_on_malformed_lock_commit`, `explicit_vendor_root_does_not_bypass_lock_commit_validation`, `explicit_vendor_package_root_does_not_expose_top_level_modules`, and `project_without_vendor_root_does_not_require_lockfile` prove malformed lock commits fail closed for vendored module resolution, explicit dependency-root environment input remains package-bound, and non-vendored projects are not forced to carry `ash.lock`.
-- The full requirement remains partial because direct fetched-cache root discovery and broader lower-case package/toolchain metadata coverage are still deferred.
+- `task_972_fetched_cache_dependency_roots_are_visible_to_module_loader`, `check_discovers_locked_fetched_cache_dependency_without_dependency_root_env`, and `run_discovers_locked_fetched_cache_dependency_without_dependency_root_env` prove locked fetched-cache checkouts under `$XDG_CACHE_HOME/ash/git/checkouts/<package>-<url-digest>/<commit>/` are visible to `ash-engine`, `ash check src/main.ash`, and explicit ordinary-file `ash run src/main.ash:main` without vendoring or dependency-root environment variables.
+- `task_972_missing_fetched_cache_checkout_fails_closed`, `missing_fetched_cache_checkout_fails_closed_without_source_fallback`, and `mismatched_fetched_cache_checkout_fails_closed_without_source_fallback` prove direct fetched-cache resolution fails closed for missing checkouts and checkouts whose git `HEAD` does not match the lockfile commit instead of falling back to source tag/current repository state.
+- `cli_uses_explicit_stdlib_root_when_fetched_dependency_has_stdlib_module_name` proves selected/explicit stdlib roots remain ahead of auto-discovered fetched-cache dependencies, so stdlib-shaped fetched packages cannot shadow the active stdlib.
+- The alpha requirement is complete for local git lock/fetch/check/run integration. Broader registry package metadata, manifest rewrite trust preservation, authenticated dependency trust/signing enforcement, and release-channel behavior remain outside this TASK-972 alpha slice.
 
 ### Non-goals
 
@@ -67,14 +70,14 @@ commands:
   - cargo check -p ashgrove
   - git diff --check
 checklist:
-  - [ ] Parse lower-case `ash.toml` package/toolchain/dependency metadata needed by SPEC-073.
-  - [ ] Reject ambiguous package/dependency/toolchain metadata split across `ash.toml` and legacy `.ash.toml`.
+  - [x] Parse lower-case `ash.toml` package/toolchain/dependency metadata needed by SPEC-073 alpha.
+  - [x] Reject ambiguous package/dependency/toolchain metadata split across `ash.toml` and legacy `.ash.toml`.
   - [x] Resolve git tag dependencies to exact commits in `ash.lock`.
   - [x] Expand accepted abbreviated revs to full commit hashes in `ash.lock` or reject them.
   - [x] Reject unpinned dependencies outside an explicit development override.
   - [x] Preserve reserved trust/signing fields in manifest/lockfile read-modify-write flows for `ash.lock`; manifest trust preservation remains deferred until manifest rewrite flows exist.
   - [x] Implement `ashgrove fetch` and `ashgrove lock --check`.
-  - [ ] Integrate locked dependency roots with `ash-cli`/`ash-engine` module resolution so `ash check` and `ash run` can import fetched dependencies. `ash check` and explicit ordinary-file `ash run src/main.ash:main` now cover vendored roots; direct fetched-cache roots remain incomplete.
+  - [x] Integrate locked dependency roots with `ash-cli`/`ash-engine` module resolution so `ash check` and `ash run` can import fetched dependencies.
 ```
 
 

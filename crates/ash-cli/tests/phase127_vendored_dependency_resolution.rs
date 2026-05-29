@@ -6,13 +6,80 @@ use tempfile::TempDir;
 
 const HELPER_COMMIT: &str = "0123456789abcdef0123456789abcdef01234567";
 const HELPER_GIT_URL: &str = "file:///tmp/helper";
+const HELPER_GIT_DIGEST: &str = "520d384526df63a4";
 const OPTION_COMMIT: &str = "fedcba9876543210fedcba9876543210fedcba98";
 const OPTION_GIT_URL: &str = "file:///tmp/option";
+const OPTION_GIT_DIGEST: &str = "89d73728824c6295";
 
 struct VendoredProject {
     _temp: TempDir,
     root: PathBuf,
     main: PathBuf,
+}
+
+struct FetchedProject {
+    _temp: TempDir,
+    _cache: TempDir,
+    _helper_dep: TempDir,
+    root: PathBuf,
+    cache_root: PathBuf,
+    helper_commit: String,
+    main: PathBuf,
+}
+
+impl FetchedProject {
+    fn new() -> Self {
+        let temp = tempfile::tempdir().expect("temp project");
+        let cache = tempfile::tempdir().expect("xdg cache");
+        let helper_dep = tempfile::tempdir().expect("helper git dep");
+        let helper_commit = init_git_dep(
+            helper_dep.path(),
+            "pub type HelperToken = HelperToken { value: Int };\n",
+        );
+        let root = temp.path().to_path_buf();
+        let src = root.join("src");
+        fs::create_dir_all(&src).expect("src");
+        fs::write(
+            root.join("ash.toml"),
+            format!(
+                "[package]\nname = \"app\"\n\n[dependencies.helper]\ngit = \"{HELPER_GIT_URL}\"\nrev = \"{helper_commit}\"\n",
+            ),
+        )
+        .expect("manifest");
+        fs::write(
+            root.join("ash.lock"),
+            format!(
+                "[[package]]\nname = \"helper\"\ngit = \"{HELPER_GIT_URL}\"\ncommit = \"{helper_commit}\"\n",
+            ),
+        )
+        .expect("lock");
+        let checkout = cache
+            .path()
+            .join("ash/git/checkouts")
+            .join(format!("helper-{HELPER_GIT_DIGEST}"))
+            .join(&helper_commit);
+        clone_git_dep(helper_dep.path(), &checkout);
+        let main = src.join("main.ash");
+        fs::write(
+            &main,
+            "use helper::{HelperToken}\nworkflow main() -> HelperToken { ret HelperToken { value: 7 }; }\n",
+        )
+        .expect("main");
+
+        Self {
+            _temp: temp,
+            cache_root: cache.path().to_path_buf(),
+            _cache: cache,
+            _helper_dep: helper_dep,
+            root,
+            helper_commit,
+            main,
+        }
+    }
+
+    fn main_path(&self) -> &Path {
+        &self.main
+    }
 }
 
 impl VendoredProject {
@@ -73,6 +140,48 @@ fn ash_command() -> Command {
     command
 }
 
+fn init_git_dep(root: &Path, module_source: &str) -> String {
+    fs::write(root.join("mod.ash"), module_source).expect("git dep module");
+    run_git(root, &["init"]);
+    run_git(root, &["config", "user.email", "ash@example.invalid"]);
+    run_git(root, &["config", "user.name", "Ash Test"]);
+    run_git(root, &["add", "."]);
+    run_git(root, &["commit", "-m", "initial"]);
+    git_output(root, &["rev-parse", "HEAD"]).trim().to_string()
+}
+
+fn clone_git_dep(source: &Path, checkout: &Path) {
+    run_git(
+        Path::new("."),
+        &[
+            "clone",
+            source.to_str().expect("utf8"),
+            checkout.to_str().expect("utf8"),
+        ],
+    );
+}
+
+fn run_git(dir: &Path, args: &[&str]) {
+    let status = std::process::Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgSign=false"])
+        .args(args)
+        .current_dir(dir)
+        .status()
+        .expect("git");
+    assert!(status.success(), "git {args:?}");
+}
+
+fn git_output(dir: &Path, args: &[&str]) -> String {
+    let output = std::process::Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgSign=false"])
+        .args(args)
+        .current_dir(dir)
+        .output()
+        .expect("git");
+    assert!(output.status.success(), "git {args:?}");
+    String::from_utf8(output.stdout).expect("git stdout")
+}
+
 #[test]
 fn check_discovers_locked_vendored_dependency_without_dependency_root_env() {
     let project = VendoredProject::new();
@@ -101,6 +210,93 @@ fn run_discovers_locked_vendored_dependency_without_dependency_root_env() {
         .assert()
         .success()
         .stdout(predicate::str::contains("HelperToken"));
+}
+
+#[test]
+fn check_discovers_locked_fetched_cache_dependency_without_dependency_root_env() {
+    let project = FetchedProject::new();
+
+    let mut command = ash_command();
+    command
+        .env("XDG_CACHE_HOME", &project.cache_root)
+        .args(["check", project.main_path().to_str().expect("utf8")]);
+
+    command
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("[OK]"))
+        .stdout(predicate::str::contains("main.ash"));
+}
+
+#[test]
+fn run_discovers_locked_fetched_cache_dependency_without_dependency_root_env() {
+    let project = FetchedProject::new();
+
+    let mut command = ash_command();
+    command.env("XDG_CACHE_HOME", &project.cache_root).args([
+        "run",
+        &format!("{}:main", project.main_path().to_str().expect("utf8")),
+    ]);
+
+    command
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("HelperToken"));
+}
+
+#[test]
+fn missing_fetched_cache_checkout_fails_closed_without_source_fallback() {
+    let project = FetchedProject::new();
+    fs::remove_dir_all(
+        project
+            .cache_root
+            .join("ash/git/checkouts")
+            .join(format!("helper-{HELPER_GIT_DIGEST}"))
+            .join(&project.helper_commit),
+    )
+    .expect("remove checkout");
+
+    let mut command = ash_command();
+    command
+        .env("XDG_CACHE_HOME", &project.cache_root)
+        .args(["check", project.main_path().to_str().expect("utf8")]);
+
+    command.assert().failure().stderr(predicate::str::contains(
+        "locked package 'helper' is missing from fetched cache",
+    ));
+}
+
+#[test]
+fn mismatched_fetched_cache_checkout_fails_closed_without_source_fallback() {
+    let project = FetchedProject::new();
+    let mismatched_commit = "1111111111111111111111111111111111111111";
+    fs::write(
+        project.root.join("ash.lock"),
+        format!(
+            "[[package]]\nname = \"helper\"\ngit = \"{HELPER_GIT_URL}\"\ncommit = \"{mismatched_commit}\"\n",
+        ),
+    )
+    .expect("mismatched lock");
+    let mismatched_checkout = project
+        .cache_root
+        .join("ash/git/checkouts")
+        .join(format!("helper-{HELPER_GIT_DIGEST}"))
+        .join(mismatched_commit);
+    let real_checkout = project
+        .cache_root
+        .join("ash/git/checkouts")
+        .join(format!("helper-{HELPER_GIT_DIGEST}"))
+        .join(&project.helper_commit);
+    clone_git_dep(&real_checkout, &mismatched_checkout);
+
+    let mut command = ash_command();
+    command
+        .env("XDG_CACHE_HOME", &project.cache_root)
+        .args(["check", project.main_path().to_str().expect("utf8")]);
+
+    command.assert().failure().stderr(predicate::str::contains(
+        "is not at locked commit 1111111111111111111111111111111111111111",
+    ));
 }
 
 #[test]
@@ -157,6 +353,60 @@ fn cli_uses_explicit_stdlib_root_when_vendor_dependency_has_stdlib_module_name()
     run.assert()
         .success()
         .stdout(predicate::str::contains("HelperToken"));
+}
+
+#[test]
+fn cli_uses_explicit_stdlib_root_when_fetched_dependency_has_stdlib_module_name() {
+    let stdlib = tempfile::tempdir().expect("explicit stdlib");
+    fs::write(
+        stdlib.path().join("option.ash"),
+        "pub type SelectedOption = SelectedOption;\n",
+    )
+    .expect("selected stdlib option module");
+
+    let project = FetchedProject::new();
+    let option_dep = tempfile::tempdir().expect("option git dep");
+    let option_commit = init_git_dep(
+        option_dep.path(),
+        "pub type FetchedOption = FetchedOption;\n",
+    );
+    fs::write(
+        project.root.join("ash.toml"),
+        format!(
+            "[package]\nname = \"app\"\n\n[dependencies.helper]\ngit = \"{HELPER_GIT_URL}\"\nrev = \"{}\"\n\n[dependencies.option]\ngit = \"{OPTION_GIT_URL}\"\nrev = \"{option_commit}\"\n",
+            project.helper_commit
+        ),
+    )
+    .expect("manifest");
+    fs::write(
+        project.root.join("ash.lock"),
+        format!(
+            "[[package]]\nname = \"helper\"\ngit = \"{HELPER_GIT_URL}\"\ncommit = \"{}\"\n\n[[package]]\nname = \"option\"\ngit = \"{OPTION_GIT_URL}\"\ncommit = \"{option_commit}\"\n",
+            project.helper_commit
+        ),
+    )
+    .expect("lock");
+    let option_checkout = project
+        .cache_root
+        .join("ash/git/checkouts")
+        .join(format!("option-{OPTION_GIT_DIGEST}"))
+        .join(&option_commit);
+    clone_git_dep(option_dep.path(), &option_checkout);
+    fs::write(
+        project.root.join("src/main.ash"),
+        "use helper::{HelperToken}\nuse option::{SelectedOption}\nworkflow main() -> HelperToken { ret HelperToken { value: 7 }; }\n",
+    )
+    .expect("main");
+
+    let mut check = ash_command();
+    check
+        .env("ASH_STDLIB_ROOT", stdlib.path())
+        .env("XDG_CACHE_HOME", &project.cache_root)
+        .args(["check", project.main_path().to_str().expect("utf8")]);
+    check
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("[OK]"));
 }
 
 #[test]
@@ -340,6 +590,35 @@ fn explicit_vendor_package_root_does_not_expose_top_level_modules() {
         .assert()
         .failure()
         .stderr(predicate::str::contains("module 'util' not found"));
+}
+
+#[test]
+fn explicit_cache_shaped_dependency_root_does_not_bypass_lock_boundary() {
+    let temp = tempfile::tempdir().expect("temp project");
+    let root = temp.path();
+    let checkout = root.join("checkouts/helper-0000000000000000/not-a-locked-commit");
+    fs::create_dir_all(&checkout).expect("checkout");
+    fs::write(
+        checkout.join("mod.ash"),
+        "pub type HelperToken = HelperToken { value: Int };\n",
+    )
+    .expect("helper module");
+    let main = root.join("main.ash");
+    fs::write(
+        &main,
+        "use helper::{HelperToken}\nworkflow main() -> HelperToken { ret HelperToken { value: 7 }; }\n",
+    )
+    .expect("main");
+
+    let mut command = ash_command();
+    command
+        .env("ASH_DEPENDENCY_ROOTS", checkout)
+        .args(["check", main.to_str().expect("utf8")]);
+
+    command
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("module 'helper' not found"));
 }
 
 fn write_malformed_helper_commit(project: &VendoredProject) {

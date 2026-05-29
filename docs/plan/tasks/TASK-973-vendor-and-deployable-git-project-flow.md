@@ -1,6 +1,6 @@
 # TASK-973: Vendor and deployable git project flow
 
-## Status: ⚠️ Partial second slice
+## Status: ⚠️ Partial stdlib-separation slice
 
 ## Description
 
@@ -38,6 +38,7 @@ Implement vendor/offline deployment for git-pinned Ash projects.
 - `run_discovers_locked_vendored_dependency_without_dependency_root_env` proves explicit offline `ash run src/main.ash:main` resolves the same locked vendored dependency without dependency-root environment variables.
 - `malformed_lock_package_name_fails_closed_without_resolving_vendor_escape` proves CLI discovery rejects traversal package names before resolving any escaped vendor directory.
 - `unlocked_vendor_package_is_not_importable`, `run_does_not_import_unlocked_vendor_package`, `unlocked_top_level_module_inside_locked_package_is_not_importable`, `run_does_not_import_top_level_module_inside_locked_package`, and `explicit_vendor_package_root_does_not_expose_top_level_modules` prove vendored dependency discovery is gated by the first import segment matching a validated locked package name for both `ash check`, explicit ordinary-file `ash run`, and explicit dependency-root package inputs.
+- `cli_uses_explicit_stdlib_root_when_vendor_dependency_has_stdlib_module_name` proves an explicit selected stdlib root is searched before the auto-discovered project `vendor/ash` dependency namespace, so a locked vendored package shaped like a stdlib module cannot override the selected stdlib while ordinary locked dependency imports still resolve through `vendor/ash/<package>/`.
 
 ### Non-goals
 
@@ -59,7 +60,9 @@ Implement vendor/offline deployment for git-pinned Ash projects.
 ```yaml
 strictness: clean
 commands:
-  - cargo test -p ashgrove task_973 -- --nocapture
+  - RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ashgrove task_973 -- --nocapture
+  - RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ash-cli --test phase127_vendored_dependency_resolution -- --nocapture
+  - RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ash-engine task_968 -- --nocapture
   - cargo fmt --check
   - cargo check -p ashgrove
   - git diff --check
@@ -68,7 +71,7 @@ checklist:
   - [x] Record vendor provenance linking each vendored package to a lockfile entry.
   - [x] Implement `ashgrove vendor --check` as read-only validation without writes or network fetches.
   - [x] Add an offline deployment smoke test using a locked git dependency for `ash check`.
-  - [ ] Verify selected toolchain stdlib remains separate from project dependencies.
+  - [x] Verify selected toolchain stdlib remains separate from project dependencies.
   - [x] Verify explicit current CLI forms such as `ash check src/main.ash` and `ash run src/main.ash:main` work with vendored dependencies.
 ```
 

@@ -3754,7 +3754,7 @@ Phase 127 introduces `ashgrove <command>` as the Ash toolchain and deployment ma
 | [TASK-970](tasks/TASK-970-update-default-list-current-flow.md) | Implement update/default/list/current flows | 10 | ⚠️ Partial local/source/tarball selector slice |
 | [TASK-971](tasks/TASK-971-remove-cleanup-flow.md) | Implement remove and cleanup policy, including daemon/running-manager protection | 12 | ⚠️ Partial cleanup planner slice |
 | [TASK-972](tasks/TASK-972-ash-manifest-lock-git-fetch.md) | Implement `ash.toml`, `ash.lock`, git fetch, lock checking, trust preservation, and dependency-root module-loader integration | 18 | ⚠️ Partial rev/trust hardening slice |
-| [TASK-973](tasks/TASK-973-vendor-and-deployable-git-project-flow.md) | Implement vendor/offline deployment for git-pinned Ash projects | 12 | ⚠️ Partial follow-up slice |
+| [TASK-973](tasks/TASK-973-vendor-and-deployable-git-project-flow.md) | Implement vendor/offline deployment for git-pinned Ash projects | 12 | ⚠️ Partial stdlib-separation slice |
 | [TASK-974](tasks/TASK-974-ashgrove-closeout-acceptance.md) | Close out SPEC-073 with acceptance matrix, broad gates, and independent review | 8 | ⚠️ Reported |
 
 **Decision gates:**

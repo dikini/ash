@@ -149,6 +149,8 @@ Current implementation note: `ashgrove lock` now resolves accepted abbreviated m
 
 Must prove a git-based project can be materialized for offline or reproducible deployment from lockfile data without fetching stdlib as a dependency. `vendor --check` must validate the default `vendor/ash/` directory or an explicit `--output PATH` without writing/fetching.
 
+Current implementation note: the stdlib-separation slice proves the selected/explicit stdlib root has precedence over the auto-discovered project `vendor/ash` dependency namespace, while ordinary locked dependency imports still resolve through the lock-gated vendor package namespace. TASK-973 remains partial because direct fetched-cache dependency-root discovery and broader deployable-project packaging are deferred.
+
 ## 8. Verification strategy
 
 Docs-only packet verification:

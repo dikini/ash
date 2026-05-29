@@ -74,3 +74,5 @@ This task contributes to PLAN-122 and SPEC-073 completion. Later tasks must pres
 ## Notes
 
 Area: closeout/verification. Completion requires acceptance-row evidence, not prose.
+
+2026-05-29 continuation evidence: TASK-973 added a public CLI regression proving selected/explicit stdlib roots are not overridden by the auto-discovered project `vendor/ash` dependency namespace, even when a locked vendored package is shaped like a stdlib module. This strengthens A73-10/A73-12 evidence but does not complete TASK-974 or promote SPEC-073 beyond Draft because launcher-selected installed `ash`, direct fetched-cache roots, source builds, release packaging, trust preservation, and broad closeout gates remain deferred.

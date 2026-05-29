@@ -5981,8 +5981,8 @@ fn search_roots(root: &Path) -> Result<Vec<PathBuf>, EngineError> {
     if let Some(value) = std::env::var_os("ASH_LIBRARY_PATH") {
         roots.extend(std::env::split_paths(&value));
     }
-    roots.extend(discover_locked_project_roots(root)?);
     roots.push(builtin_stdlib_root());
+    roots.extend(discover_locked_project_roots(root)?);
     Ok(roots)
 }
 

@@ -6,6 +6,8 @@ use tempfile::TempDir;
 
 const HELPER_COMMIT: &str = "0123456789abcdef0123456789abcdef01234567";
 const HELPER_GIT_URL: &str = "file:///tmp/helper";
+const OPTION_COMMIT: &str = "fedcba9876543210fedcba9876543210fedcba98";
+const OPTION_GIT_URL: &str = "file:///tmp/option";
 
 struct VendoredProject {
     _temp: TempDir,
@@ -66,7 +68,8 @@ fn ash_command() -> Command {
         .arg("never")
         .env_remove("ASH_DEPENDENCY_ROOTS")
         .env_remove("ASH_DEP_ROOTS")
-        .env_remove("ASH_LIBRARY_PATH");
+        .env_remove("ASH_LIBRARY_PATH")
+        .env_remove("ASH_STDLIB_ROOT");
     command
 }
 
@@ -96,6 +99,62 @@ fn run_discovers_locked_vendored_dependency_without_dependency_root_env() {
 
     command
         .assert()
+        .success()
+        .stdout(predicate::str::contains("HelperToken"));
+}
+
+#[test]
+fn cli_uses_explicit_stdlib_root_when_vendor_dependency_has_stdlib_module_name() {
+    let stdlib = tempfile::tempdir().expect("explicit stdlib");
+    fs::write(
+        stdlib.path().join("option.ash"),
+        "pub type SelectedOption = SelectedOption;\n",
+    )
+    .expect("selected stdlib option module");
+
+    let project = VendoredProject::new();
+    let vendored_option = project.root.join("vendor/ash/option");
+    fs::create_dir_all(&vendored_option).expect("option vendor dir");
+    fs::write(
+        vendored_option.join("mod.ash"),
+        "pub type VendoredOption = VendoredOption;\n",
+    )
+    .expect("vendored option module");
+    fs::write(
+        project.root.join("ash.toml"),
+        format!(
+            "[package]\nname = \"app\"\n\n[dependencies.helper]\ngit = \"{HELPER_GIT_URL}\"\nrev = \"{HELPER_COMMIT}\"\n\n[dependencies.option]\ngit = \"{OPTION_GIT_URL}\"\nrev = \"{OPTION_COMMIT}\"\n",
+        ),
+    )
+    .expect("manifest");
+    fs::write(
+        project.root.join("ash.lock"),
+        format!(
+            "[[package]]\nname = \"helper\"\ngit = \"{HELPER_GIT_URL}\"\ncommit = \"{HELPER_COMMIT}\"\n\n[[package]]\nname = \"option\"\ngit = \"{OPTION_GIT_URL}\"\ncommit = \"{OPTION_COMMIT}\"\n",
+        ),
+    )
+    .expect("lock");
+    fs::write(
+        project.root.join("src/main.ash"),
+        "use helper::{HelperToken}\nuse option::{SelectedOption}\nworkflow main() -> HelperToken { ret HelperToken { value: 7 }; }\n",
+    )
+    .expect("main");
+
+    let mut check = ash_command();
+    check
+        .env("ASH_STDLIB_ROOT", stdlib.path())
+        .args(["check", project.main_path().to_str().expect("utf8")]);
+    check
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("[OK]"));
+
+    let mut run = ash_command();
+    run.env("ASH_STDLIB_ROOT", stdlib.path()).args([
+        "run",
+        &format!("{}:main", project.main_path().to_str().expect("utf8")),
+    ]);
+    run.assert()
         .success()
         .stdout(predicate::str::contains("HelperToken"));
 }

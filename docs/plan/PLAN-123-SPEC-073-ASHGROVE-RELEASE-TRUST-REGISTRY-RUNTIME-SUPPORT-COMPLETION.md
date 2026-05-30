@@ -12,11 +12,11 @@
 
 ## 1. Status
 
-**Status:** ✅ TASK-984 complete; implementation ready for TASK-985
+**Status:** ✅ TASK-985 complete; SPEC-073 remains Draft pending TASK-986 closeout
 **Spec:** [SPEC-073](../spec/SPEC-073-ASHGROVE-INSTALL-UPDATE-CLEANUP-GIT-DEPLOYMENT.md)
 **Task range:** [TASK-975](tasks/TASK-975-spec073-ashgrove-completion-packet.md) through [TASK-986](tasks/TASK-986-spec073-implemented-mvp-closeout.md)
 
-TASK-975 created this docs packet. TASK-976 completed the hard audit gate and patched exact downstream verification commands before Rust implementation starts. TASK-984 now enforces required trust/signing evidence and remote git policy while keeping URL install/update on explicit digest evidence and end-to-end release/deployment acceptance owned by TASK-985. TASK-985 is next.
+TASK-975 created this docs packet. TASK-976 completed the hard audit gate and patched exact downstream verification commands before Rust implementation starts. TASK-985 now proves the completed release/deployment slices compose end to end while keeping SPEC-073 Draft. TASK-986 is next and owns final closeout, broad status reconciliation, independent review, and any promotion.
 
 ## 2. Scope
 
@@ -58,7 +58,7 @@ TASK-975 created this docs packet. TASK-976 completed the hard audit gate and pa
 | [TASK-982](tasks/TASK-982-cleanup-lockfile-cache-reachability.md) | Implement broader cleanup reachability across lockfiles, fetched cache, vendor metadata, and installed toolchains | 12 | ✅ Complete |
 | [TASK-983](tasks/TASK-983-manifest-rewrite-trust-preservation.md) | Preserve manifest and lockfile trust metadata during read-modify-write operations | 8 | ✅ Complete |
 | [TASK-984](tasks/TASK-984-mandatory-trust-signing-and-remote-git-fetch-policy.md) | Implement mandatory trust/signing enforcement and remote-authenticated git fetch policy | 16 | ✅ Complete |
-| [TASK-985](tasks/TASK-985-ashgrove-release-deployment-acceptance-integration.md) | Prove release/deployment flows cover the completed SPEC-073 rows end-to-end | 12 | 📝 Planned |
+| [TASK-985](tasks/TASK-985-ashgrove-release-deployment-acceptance-integration.md) | Prove release/deployment flows cover the completed SPEC-073 rows end-to-end | 12 | ✅ Complete |
 | [TASK-986](tasks/TASK-986-spec073-implemented-mvp-closeout.md) | Promote SPEC-073 only after acceptance matrix, broad gates, and independent review pass | 8 | 📝 Planned |
 
 ## 4. Deferred-row ownership
@@ -134,3 +134,4 @@ SPEC-073 may be promoted beyond Draft only after TASK-986 confirms:
 - TASK-981 implemented the registry-ready package metadata substrate. `ashgrove lock` preserves package/version/registry metadata for explicit git-pinned dependencies, vendor provenance records and checks that metadata, ash-engine accepts the registry-style lock carrier, and hosted registry/SemVer dependency resolution remains fail-closed and out of scope.
 - TASK-982 implemented cleanup lockfile/cache reachability. Cleanup now derives reachability only from supplied or registered known projects, preserves lock/vendor-provenance referenced fetched git checkouts and repos plus project-pinned toolchains, reports reachable and unreachable git cache entries in dry-run, and preserves project-local `ash.toml`/`ash.lock` files.
 - TASK-984 implemented mandatory trust/signing enforcement and remote-authenticated git policy. Required tarball sidecar signature evidence, source-archive attestation evidence, unsigned or unbound release indexes, lock signature mismatches in both ashgrove and ash-engine consumers, untrusted git protocols, and credential-bearing lockfile origins fail closed before publish, fetch, or lock use. HTTPS credentials are redacted before lockfile serialization, and credential-bearing `ssh://` URLs are rejected.
+- TASK-985 completed release/deployment acceptance integration. Focused integration tests prove source archive installs compose with runtime-support metadata, selected-toolchain state, git dependency fetch, and cleanup reachability; tarball URL update composes with explicit digest evidence, unsigned release-index fail-closed behavior, required signature sidecar evidence, packaged dispatcher refresh, and remove; and the installed CLI composes locked authenticated dependency resolution with selected-toolchain stdlib/runtime-support dispatch. SPEC-073 remains Draft pending TASK-986.

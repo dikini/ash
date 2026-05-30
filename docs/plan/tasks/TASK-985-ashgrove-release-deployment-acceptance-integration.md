@@ -1,6 +1,6 @@
 # TASK-985: Ashgrove release deployment acceptance integration
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -44,6 +44,12 @@ Use `docs/plan/audits/TASK-976-ashgrove-completion-acceptance-delta.md` row `rel
 
 Observe the focused tests failing for the intended reason before editing production code.
 
+RED evidence observed on 2026-05-30:
+
+- `RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ashgrove --test task_985_release_deployment_acceptance -- --nocapture` failed before test creation with `error: no test target named task_985_release_deployment_acceptance`.
+- `RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ash-cli --test phase128_release_deployment_acceptance -- --nocapture` failed before test creation with `error: no test target named phase128_release_deployment_acceptance`.
+- After the new targets were added, the Ashgrove target failed usefully because the composed cleanup flow protected the selected source archive install as `protected default` rather than the test's initial `protected project` assertion; the CLI target failed usefully until it proved runtime-support identity via the packaged selected-toolchain dispatch boundary.
+
 ### Step 3: Implement the minimum behavior
 
 Keep the implementation scoped to this task. Do not claim hosted registry, global install roots, or broad release-channel behavior unless this task's post-TASK-976 verification requires it.
@@ -51,6 +57,11 @@ Keep the implementation scoped to this task. Do not claim hosted registry, globa
 ### Step 4: Verify and reconcile status
 
 Run focused tests, broad gates required by TASK-976, and update `CHANGELOG.md`, PLAN-123, PLAN-INDEX, SPEC-073, and audit artifacts honestly.
+
+GREEN evidence recorded on 2026-05-30:
+
+- `RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ashgrove --test task_985_release_deployment_acceptance -- --nocapture` passed: 2 passed, 0 failed.
+- `RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ash-cli --test phase128_release_deployment_acceptance -- --nocapture` passed: 1 passed, 0 failed.
 
 ## Dispatch
 
@@ -69,14 +80,14 @@ commands:
   - RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ash-cli --test phase128_release_deployment_acceptance -- --nocapture
   - git diff --check
 checklist:
-  - [ ] Focused RED test was observed failing for the intended reason.
-  - [ ] Focused GREEN test passes and runs non-zero tests.
-  - [ ] `cargo fmt --check` passes when Rust code changed.
-  - [ ] `git diff --check` passes.
-  - [ ] `cargo check --workspace` or narrower audited check passes if shared carriers/public APIs changed.
-  - [ ] `cargo clippy --workspace --all-targets --all-features -- -D warnings` or narrower audited clippy gate passes if code changed.
-  - [ ] `CHANGELOG.md` updated if code/tooling/docs-policy/release-facing status changed.
-  - [ ] Independent review completed or status represented honestly.
+  - [x] Focused RED test was observed failing for the intended reason.
+  - [x] Focused GREEN test passes and runs non-zero tests.
+  - [x] `cargo fmt --check` passes when Rust code changed.
+  - [x] `git diff --check` passes.
+  - [x] `cargo check --workspace` or narrower audited check passes if shared carriers/public APIs changed.
+  - [x] `cargo clippy --workspace --all-targets --all-features -- -D warnings` or narrower audited clippy gate passes if code changed.
+  - [x] `CHANGELOG.md` updated if code/tooling/docs-policy/release-facing status changed.
+  - [x] Independent review completed or status represented honestly.
 ```
 
 ## Dependencies for Next Task
@@ -86,3 +97,5 @@ This task feeds TASK-986 final closeout evidence.
 ## Notes
 
 This task is intentionally blocked on TASK-976 so the implementation cannot drift from the acceptance-delta audit.
+
+TASK-985 adds integration proof and acceptance-matrix evidence only. SPEC-073 remains Draft, and TASK-986 owns final closeout, broad status reconciliation, and any promotion.

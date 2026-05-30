@@ -25,19 +25,21 @@ Preserve manifest and lockfile trust metadata during read-modify-write operation
 
 ### Property Requirements
 
-TASK-976 must replace this section with concrete invariants and focused RED/GREEN tests before implementation starts.
+1. Nested trust and signing tables survive lockfile rewrites.
+2. Manifest rewrites preserve unknown trust metadata without interpreting it.
+3. Diagnostics distinguish trust preservation from trust enforcement.
 
 ## TDD Steps
 
-### Step 1: Wait for TASK-976 verification binding
+### Step 1: Use TASK-976 verification binding
 
-Do not implement this task while the verification block is fail-closed. TASK-976 must name exact tests, files, and expected RED failures.
+Use `docs/plan/audits/TASK-976-ashgrove-completion-acceptance-delta.md` row `manifest-rewrite-trust-preservation` for exact files, tests, and expected RED failures.
 
 ### Step 2: Write focused RED tests
 
 **Likely files:**
 - `crates/ashgrove/src/lib.rs`
-- `crates/ashgrove/tests/task_972_manifest_lock_git.rs`
+- `crates/ashgrove/tests/task_983_manifest_rewrite_trust_preservation.rs`
 
 Observe the focused tests failing for the intended reason before editing production code.
 
@@ -60,9 +62,10 @@ toolsets: [terminal, file]
 ## Verification
 
 ```yaml
-strictness: fail_closed_until_task_976
+strictness: task_976_bound
 commands:
-  - false # TASK-976 must replace this placeholder with focused non-zero verification before implementation starts.
+  - RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ashgrove --test task_983_manifest_rewrite_trust_preservation -- --nocapture
+  - git diff --check
 checklist:
   - [ ] Focused RED test was observed failing for the intended reason.
   - [ ] Focused GREEN test passes and runs non-zero tests.
@@ -80,4 +83,4 @@ This task feeds TASK-986 final closeout evidence.
 
 ## Notes
 
-This task is intentionally blocked on TASK-976 so the implementation cannot drift from the acceptance-delta audit.
+This task is intentionally blocked on TASK-976 so the implementation cannot drift from the acceptance-delta audit. The live Phase 127 code only rewrites `ash.lock`; if no `ash.toml` write path exists when this task starts, TASK-983 must add an explicit manifest rewrite helper or keep manifest rewrite preservation open.

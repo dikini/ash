@@ -12,11 +12,11 @@
 
 ## 1. Status
 
-**Status:** 📝 Planned after TASK-975 packet creation; implementation blocked on TASK-976 audit gate
+**Status:** ✅ TASK-976 audit gate complete; implementation proceeds sequentially through TASK-977 through TASK-986
 **Spec:** [SPEC-073](../spec/SPEC-073-ASHGROVE-INSTALL-UPDATE-CLEANUP-GIT-DEPLOYMENT.md)
 **Task range:** [TASK-975](tasks/TASK-975-spec073-ashgrove-completion-packet.md) through [TASK-986](tasks/TASK-986-spec073-implemented-mvp-closeout.md)
 
-TASK-975 creates this docs packet. TASK-976 is a hard audit gate and must patch exact downstream verification commands before Rust implementation starts.
+TASK-975 created this docs packet. TASK-976 completed the hard audit gate and patched exact downstream verification commands before Rust implementation starts.
 
 ## 2. Scope
 
@@ -49,7 +49,7 @@ TASK-975 creates this docs packet. TASK-976 is a hard audit gate and must patch 
 | Task | Description | Est. Hours | Status |
 |------|-------------|------------|--------|
 | [TASK-975](tasks/TASK-975-spec073-ashgrove-completion-packet.md) | Create PLAN-123/TASK-975..986 packet and register Phase 128 | 4 | ✅ Complete |
-| [TASK-976](tasks/TASK-976-ashgrove-completion-acceptance-delta-and-audit-gate.md) | Map every SPEC-073 deferred row to exact owners, files, tests, and RED failure modes | 8 | 📝 Planned |
+| [TASK-976](tasks/TASK-976-ashgrove-completion-acceptance-delta-and-audit-gate.md) | Map every SPEC-073 deferred row to exact owners, files, tests, and RED failure modes | 8 | ✅ Complete |
 | [TASK-977](tasks/TASK-977-source-archive-release-metadata.md) | Implement source-archive release metadata and reproducibility checks | 10 | 📝 Planned |
 | [TASK-978](tasks/TASK-978-runtime-support-payload-metadata.md) | Define and verify concrete runtime-support payload metadata across source/tarball installs | 10 | 📝 Planned |
 | [TASK-979](tasks/TASK-979-release-index-authenticated-tarball-url-policy.md) | Add authenticated tarball URL recording and release-index trust policy | 14 | 📝 Planned |
@@ -69,10 +69,10 @@ TASK-975 creates this docs packet. TASK-976 is a hard audit gate and must patch 
 | Runtime-support payload metadata and source/tarball equivalence | TASK-974 deferred gap; A73-3/A73-10 | TASK-978 |
 | Authenticated tarball URL recording and release-index trust policy | TASK-974 deferred gap; A73-2/A73-4 | TASK-979 |
 | Packaged dispatcher lifecycle policy | TASK-974 deferred gap; A73-5 | TASK-980 |
-| Registry-scale package metadata | TASK-974 deferred gap | TASK-981 |
+| Registry-scale package metadata | TASK-974 deferred gap; A73-8/A73-9 adjacency | TASK-981 |
 | Broader cleanup reachability | TASK-974 deferred gap; A73-7 | TASK-982 |
 | Manifest rewrite trust metadata preservation | TASK-974 deferred gap; A73-11 | TASK-983 |
-| Mandatory trust/signing enforcement | TASK-974 deferred gap; A73-11 | TASK-984 |
+| Mandatory trust/signing enforcement | TASK-974 deferred gap; A73-11 hardening; requires SPEC-073 wording amendment before closeout | TASK-984 |
 | Remote-authenticated git fetch policy | TASK-974 deferred gap; A73-8/A73-9/A73-12 | TASK-984 |
 | End-to-end release/deployment acceptance | SPEC-073 A73-1 through A73-12 | TASK-985/TASK-986 |
 
@@ -86,6 +86,7 @@ TASK-975 creates this docs packet. TASK-976 is a hard audit gate and must patch 
 - D6: Trust/signing metadata preservation and enforcement must be tested as data-preservation and security behavior, not prose-only policy.
 - D7: Cleanup reachability must be conservative, visible in dry-run, and must never delete project-local `ash.toml` or `ash.lock`.
 - D8: TASK-976 is a hard audit gate and must replace downstream placeholder verification before implementation starts.
+- D9: A73-11's Phase 127 wording covered reserved trust/signing preservation without mandatory enforcement. Phase 128 may only claim mandatory enforcement after TASK-984 amends SPEC-073 and proves source/tarball publish plus git fetch/lock fail closed.
 
 ## 6. Verification strategy
 
@@ -123,3 +124,7 @@ SPEC-073 may be promoted beyond Draft only after TASK-986 confirms:
 ### 2026-05-29
 
 - TASK-975 created this follow-on packet for SPEC-073 completion. The packet keeps SPEC-073 Draft, preserves Phase 127 as historical partial closeout, and assigns deferred release, trust, registry-ready metadata, cleanup reachability, runtime-support, remote git, and closeout evidence to TASK-976 through TASK-986.
+
+### 2026-05-30
+
+- TASK-976 completed the hard audit gate by creating the acceptance-delta artifact, binding TASK-977 through TASK-985 to focused non-zero verification commands, and recording the A73-11 wording amendment required before mandatory trust/signing enforcement can be claimed.

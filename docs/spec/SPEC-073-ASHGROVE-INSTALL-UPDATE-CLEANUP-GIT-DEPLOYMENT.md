@@ -549,6 +549,10 @@ Follow-on completion tasks from Phase 128:
 - TASK-975 created PLAN-123 and TASK-975 through TASK-986 as the SPEC-073 completion follow-on packet. SPEC-073 remains Draft until the Phase 128 audit gate, implementation tasks, integration evidence, broad gates, and independent closeout review prove every deferred acceptance row.
 - TASK-974 completed the final closeout report and broad gate evidence without promoting SPEC-073 beyond Draft. Deferred rows remain for source archive release metadata, authenticated tarball URL recording, packaged dispatcher lifecycle policy, registry-scale package metadata, broader cleanup reachability, mandatory trust/signing enforcement, and runtime-support payload metadata.
 
+### 2026-05-30
+
+- TASK-976 completed the Phase 128 acceptance-delta audit. The audit keeps SPEC-073 Draft, binds every TASK-974 deferred gap to exactly one owner task, and records that A73-11's Phase 127 reserved-metadata wording must be amended by TASK-984/TASK-986 before mandatory trust/signing enforcement can be claimed.
+
 ### 2026-05-28
 
 - TASK-970 completed the alpha local update/default/list/current selector surface: source updates build from real source roots, local tarball updates consume producer-compatible payloads, `--to` must match payload identity, selectors preserve or switch defaults according to `--switch`, incomplete toolchains fail closed, and bare/network update remains rejected pending release-index/download policy.

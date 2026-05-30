@@ -3774,7 +3774,7 @@ Phase 127 introduces `ashgrove <command>` as the Ash toolchain and deployment ma
 ## Phase 128: SPEC-073 Ashgrove Release, Trust, Registry-Ready Metadata, and Runtime-Support Completion
 
 **Priority:** High (closes the Phase 127 SPEC-073 deferred acceptance rows needed before Ashgrove can move beyond Draft)
-**Status:** 📝 Planned after packet creation; implementation blocked on TASK-976 audit gate
+**Status:** ✅ TASK-976 audit gate complete; implementation proceeds sequentially through TASK-977 through TASK-986
 **Spec:** [SPEC-073](../spec/SPEC-073-ASHGROVE-INSTALL-UPDATE-CLEANUP-GIT-DEPLOYMENT.md)
 **Plan:** [PLAN-123](PLAN-123-SPEC-073-ASHGROVE-RELEASE-TRUST-REGISTRY-RUNTIME-SUPPORT-COMPLETION.md)
 
@@ -3783,7 +3783,7 @@ Phase 128 is the follow-on to Phase 127. It does not reopen or rewrite Phase 127
 | Task | Description | Est. Hours | Status |
 |------|-------------|------------|--------|
 | [TASK-975](tasks/TASK-975-spec073-ashgrove-completion-packet.md) | Create PLAN-123/TASK-975..986 packet and register Phase 128 | 4 | ✅ Complete |
-| [TASK-976](tasks/TASK-976-ashgrove-completion-acceptance-delta-and-audit-gate.md) | Map every SPEC-073 deferred row to exact owners, files, tests, and RED failure modes | 8 | 📝 Planned |
+| [TASK-976](tasks/TASK-976-ashgrove-completion-acceptance-delta-and-audit-gate.md) | Map every SPEC-073 deferred row to exact owners, files, tests, and RED failure modes | 8 | ✅ Complete |
 | [TASK-977](tasks/TASK-977-source-archive-release-metadata.md) | Implement source-archive release metadata and reproducibility checks | 10 | 📝 Planned |
 | [TASK-978](tasks/TASK-978-runtime-support-payload-metadata.md) | Define and verify concrete runtime-support payload metadata across source/tarball installs | 10 | 📝 Planned |
 | [TASK-979](tasks/TASK-979-release-index-authenticated-tarball-url-policy.md) | Add authenticated tarball URL recording and release-index trust policy | 14 | 📝 Planned |
@@ -3804,3 +3804,4 @@ Phase 128 is the follow-on to Phase 127. It does not reopen or rewrite Phase 127
 - D6: Trust/signing metadata preservation and enforcement must be tested as data-preservation and security behavior, not prose-only policy.
 - D7: Cleanup reachability must be conservative, visible in dry-run, and must never delete project-local `ash.toml` or `ash.lock`.
 - D8: TASK-976 is a hard audit gate and must replace downstream placeholder verification before implementation starts.
+- D9: A73-11 mandatory trust/signing enforcement requires a SPEC-073 wording amendment and publish/fetch fail-closed evidence before closeout.

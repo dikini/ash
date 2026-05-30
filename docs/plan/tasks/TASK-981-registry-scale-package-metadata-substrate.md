@@ -25,21 +25,23 @@ Add registry-ready package metadata while keeping hosted registry and SemVer sol
 
 ### Property Requirements
 
-TASK-976 must replace this section with concrete invariants and focused RED/GREEN tests before implementation starts.
+1. Manifest, lock, and vendor surfaces preserve registry-ready package metadata.
+2. Vendor provenance records registry metadata and detects drift.
+3. Hosted registry or SemVer dependency solving remains fail-closed and out of scope.
 
 ## TDD Steps
 
-### Step 1: Wait for TASK-976 verification binding
+### Step 1: Use TASK-976 verification binding
 
-Do not implement this task while the verification block is fail-closed. TASK-976 must name exact tests, files, and expected RED failures.
+Use `docs/plan/audits/TASK-976-ashgrove-completion-acceptance-delta.md` row `registry-scale-package-metadata` for exact files, tests, and expected RED failures.
 
 ### Step 2: Write focused RED tests
 
 **Likely files:**
 - `crates/ashgrove/src/lib.rs`
-- `crates/ashgrove/tests/task_972_manifest_lock_git.rs`
-- `crates/ashgrove/tests/task_973_vendor.rs`
+- `crates/ashgrove/tests/task_981_registry_metadata_substrate.rs`
 - `crates/ash-engine/src/module_loader.rs`
+- `crates/ash-engine/tests/task_981_registry_metadata_lock_consumers.rs`
 
 Observe the focused tests failing for the intended reason before editing production code.
 
@@ -62,9 +64,11 @@ toolsets: [terminal, file]
 ## Verification
 
 ```yaml
-strictness: fail_closed_until_task_976
+strictness: task_976_bound
 commands:
-  - false # TASK-976 must replace this placeholder with focused non-zero verification before implementation starts.
+  - RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ashgrove --test task_981_registry_metadata_substrate -- --nocapture
+  - RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ash-engine --test task_981_registry_metadata_lock_consumers -- --nocapture
+  - git diff --check
 checklist:
   - [ ] Focused RED test was observed failing for the intended reason.
   - [ ] Focused GREEN test passes and runs non-zero tests.

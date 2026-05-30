@@ -25,20 +25,25 @@ Define and verify concrete runtime-support payload metadata across source and ta
 
 ### Property Requirements
 
-TASK-976 must replace this section with concrete invariants and focused RED/GREEN tests before implementation starts.
+1. Source and tarball install paths produce equivalent required runtime-support metadata.
+2. A tarball missing required runtime-support metadata fails before publish.
+3. Runtime artifact construction records the selected toolchain runtime-support identity.
 
 ## TDD Steps
 
-### Step 1: Wait for TASK-976 verification binding
+### Step 1: Use TASK-976 verification binding
 
-Do not implement this task while the verification block is fail-closed. TASK-976 must name exact tests, files, and expected RED failures.
+Use `docs/plan/audits/TASK-976-ashgrove-completion-acceptance-delta.md` row `runtime-support-payload-metadata` for exact files, tests, and expected RED failures.
 
 ### Step 2: Write focused RED tests
 
 **Likely files:**
 - `crates/ashgrove/src/lib.rs`
-- `crates/ashgrove/tests/task_969_tarball_install.rs`
+- `crates/ashgrove/tests/task_978_runtime_support_payload_metadata.rs`
 - `crates/ash-engine/src/runtime_artifact.rs`
+- `crates/ash-engine/tests/task_978_runtime_support_payload.rs`
+- `crates/ash-cli/src/commands/run.rs`
+- `crates/ash-cli/src/commands/daemon.rs`
 
 Observe the focused tests failing for the intended reason before editing production code.
 
@@ -61,9 +66,11 @@ toolsets: [terminal, file]
 ## Verification
 
 ```yaml
-strictness: fail_closed_until_task_976
+strictness: task_976_bound
 commands:
-  - false # TASK-976 must replace this placeholder with focused non-zero verification before implementation starts.
+  - RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ashgrove --test task_978_runtime_support_payload_metadata -- --nocapture
+  - RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ash-engine --test task_978_runtime_support_payload -- --nocapture
+  - git diff --check
 checklist:
   - [ ] Focused RED test was observed failing for the intended reason.
   - [ ] Focused GREEN test passes and runs non-zero tests.

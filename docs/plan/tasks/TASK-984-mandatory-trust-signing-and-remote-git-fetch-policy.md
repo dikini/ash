@@ -25,19 +25,23 @@ Implement mandatory trust/signing enforcement and remote-authenticated git fetch
 
 ### Property Requirements
 
-TASK-976 must replace this section with concrete invariants and focused RED/GREEN tests before implementation starts.
+1. Untrusted remote protocols fail before fetch or publish use.
+2. Required signature or attestation failures fail before publish or lock use.
+3. Authenticated remote policy records no credentials or secrets in lockfiles.
 
 ## TDD Steps
 
-### Step 1: Wait for TASK-976 verification binding
+### Step 1: Use TASK-976 verification binding
 
-Do not implement this task while the verification block is fail-closed. TASK-976 must name exact tests, files, and expected RED failures.
+Use `docs/plan/audits/TASK-976-ashgrove-completion-acceptance-delta.md` rows `mandatory-trust-signing-enforcement` and `remote-authenticated-git-fetch` for exact files, tests, and expected RED failures.
 
 ### Step 2: Write focused RED tests
 
 **Likely files:**
 - `crates/ashgrove/src/lib.rs`
-- `crates/ashgrove/tests/task_972_manifest_lock_git.rs`
+- `crates/ashgrove/tests/task_984_trust_signing_remote_git_policy.rs`
+- `scripts/package-ash-toolchain.sh`
+- `scripts/package-ash-source-archive.sh`
 
 Observe the focused tests failing for the intended reason before editing production code.
 
@@ -60,9 +64,11 @@ toolsets: [terminal, file]
 ## Verification
 
 ```yaml
-strictness: fail_closed_until_task_976
+strictness: task_976_bound
 commands:
-  - false # TASK-976 must replace this placeholder with focused non-zero verification before implementation starts.
+  - RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ashgrove --test task_984_trust_signing_remote_git_policy -- --nocapture
+  - RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ash-cli --test phase127_vendored_dependency_resolution -- --nocapture
+  - git diff --check
 checklist:
   - [ ] Focused RED test was observed failing for the intended reason.
   - [ ] Focused GREEN test passes and runs non-zero tests.
@@ -80,4 +86,4 @@ This task feeds TASK-986 final closeout evidence.
 
 ## Notes
 
-This task is intentionally blocked on TASK-976 so the implementation cannot drift from the acceptance-delta audit.
+This task is intentionally blocked on TASK-976 so the implementation cannot drift from the acceptance-delta audit. TASK-984 must cover source/tarball install and update publish paths as well as git fetch/lock paths, and must amend SPEC-073's A73-11 wording before claiming mandatory trust/signing enforcement complete.

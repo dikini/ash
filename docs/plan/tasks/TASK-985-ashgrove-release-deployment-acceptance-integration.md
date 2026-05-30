@@ -25,20 +25,21 @@ Prove release/deployment flows cover completed SPEC-073 rows end-to-end before c
 
 ### Property Requirements
 
-TASK-976 must replace this section with concrete invariants and focused RED/GREEN tests before implementation starts.
+1. Source archive, runtime-support, cleanup, and selected-toolchain flows compose end to end.
+2. Tarball URL, release-index, trust, and dispatcher flows compose end to end.
+3. Phase 127 alpha acceptance flows remain green while Phase 128 evidence is added.
 
 ## TDD Steps
 
-### Step 1: Wait for TASK-976 verification binding
+### Step 1: Use TASK-976 verification binding
 
-Do not implement this task while the verification block is fail-closed. TASK-976 must name exact tests, files, and expected RED failures.
+Use `docs/plan/audits/TASK-976-ashgrove-completion-acceptance-delta.md` row `release-deployment-acceptance-integration` for exact files, tests, and expected RED failures.
 
 ### Step 2: Write focused RED tests
 
 **Likely files:**
-- `crates/ashgrove/tests/`
-- `crates/ash-cli/tests/`
-- `crates/ash-engine/tests/`
+- `crates/ashgrove/tests/task_985_release_deployment_acceptance.rs`
+- `crates/ash-cli/tests/phase128_release_deployment_acceptance.rs`
 - `docs/plan/audits/TASK-986-spec073-completion-closeout-evidence.md`
 
 Observe the focused tests failing for the intended reason before editing production code.
@@ -62,9 +63,11 @@ toolsets: [terminal, file]
 ## Verification
 
 ```yaml
-strictness: fail_closed_until_task_976
+strictness: task_976_bound
 commands:
-  - false # TASK-976 must replace this placeholder with focused non-zero verification before implementation starts.
+  - RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ashgrove --test task_985_release_deployment_acceptance -- --nocapture
+  - RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ash-cli --test phase128_release_deployment_acceptance -- --nocapture
+  - git diff --check
 checklist:
   - [ ] Focused RED test was observed failing for the intended reason.
   - [ ] Focused GREEN test passes and runs non-zero tests.

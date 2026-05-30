@@ -25,19 +25,21 @@ Implement broader cleanup reachability across lockfiles, fetched cache, vendor m
 
 ### Property Requirements
 
-TASK-976 must replace this section with concrete invariants and focused RED/GREEN tests before implementation starts.
+1. Dry-run reports lock-reachable and unreachable cache entries without deleting.
+2. Known project lockfiles preserve referenced checkouts and installed toolchains.
+3. Cleanup never deletes project-local `ash.toml` or `ash.lock`.
 
 ## TDD Steps
 
-### Step 1: Wait for TASK-976 verification binding
+### Step 1: Use TASK-976 verification binding
 
-Do not implement this task while the verification block is fail-closed. TASK-976 must name exact tests, files, and expected RED failures.
+Use `docs/plan/audits/TASK-976-ashgrove-completion-acceptance-delta.md` row `cleanup-lockfile-cache-reachability` for exact files, tests, and expected RED failures.
 
 ### Step 2: Write focused RED tests
 
 **Likely files:**
 - `crates/ashgrove/src/lib.rs`
-- `crates/ashgrove/tests/task_971_remove_cleanup.rs`
+- `crates/ashgrove/tests/task_982_cleanup_reachability.rs`
 
 Observe the focused tests failing for the intended reason before editing production code.
 
@@ -60,9 +62,10 @@ toolsets: [terminal, file]
 ## Verification
 
 ```yaml
-strictness: fail_closed_until_task_976
+strictness: task_976_bound
 commands:
-  - false # TASK-976 must replace this placeholder with focused non-zero verification before implementation starts.
+  - RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ashgrove --test task_982_cleanup_reachability -- --nocapture
+  - git diff --check
 checklist:
   - [ ] Focused RED test was observed failing for the intended reason.
   - [ ] Focused GREEN test passes and runs non-zero tests.

@@ -1,6 +1,6 @@
 # TASK-980: Packaged dispatcher lifecycle policy
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -13,20 +13,20 @@ Finalize packaged dispatcher lifecycle and launcher update/remove policy beyond 
 
 ## Dependencies
 
-- 📝 Depends on TASK-979 completion.
+- ✅ TASK-979 complete.
 
 ## Requirements
 
 ### Functional Requirements
 
 1. Dispatcher refresh is atomic and preserves selected tool exit behavior.
-2. Remove/cleanup protects running dispatcher state.
+2. Remove/cleanup protects running dispatcher state when executed by TASK-980-aware packaged managers after a packaged update.
 3. Default switching does not rewrite project files.
 
 ### Property Requirements
 
 1. Packaged install/update refreshes the stable dispatcher atomically.
-2. Running-manager toolchain protection remains non-overridable after packaged updates.
+2. Running-manager toolchain protection remains non-overridable for TASK-980-aware packaged managers after packaged updates.
 3. Default switching never rewrites project-local `ash.toml`.
 
 ## TDD Steps
@@ -68,19 +68,20 @@ commands:
   - RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ashgrove --test task_980_packaged_dispatcher_lifecycle -- --nocapture
   - git diff --check
 checklist:
-  - [ ] Focused RED test was observed failing for the intended reason.
-  - [ ] Focused GREEN test passes and runs non-zero tests.
-  - [ ] `cargo fmt --check` passes when Rust code changed.
-  - [ ] `git diff --check` passes.
-  - [ ] `cargo check --workspace` or narrower audited check passes if shared carriers/public APIs changed.
-  - [ ] `cargo clippy --workspace --all-targets --all-features -- -D warnings` or narrower audited clippy gate passes if code changed.
-  - [ ] `CHANGELOG.md` updated if code/tooling/docs-policy/release-facing status changed.
-  - [ ] Independent review completed or status represented honestly.
+  - [x] Focused RED test was observed failing for the intended reason: packaged dispatcher lifecycle metadata was missing and a post-update manager toolchain could be removed by TASK-980-aware manager execution; the project-manifest rewrite regression already passed on baseline.
+  - [x] Focused cleanup dry-run coverage proves `cleanup --old-toolchains --dry-run` reports the packaged dispatcher owner as `protected running manager` after packaged update and does not list it as removable.
+  - [x] Focused GREEN test passes and runs non-zero tests.
+  - [x] `cargo fmt --check` passes when Rust code changed.
+  - [x] `git diff --check` passes.
+  - [x] `cargo check --workspace` or narrower audited check passes if shared carriers/public APIs changed.
+  - [x] `cargo clippy --workspace --all-targets --all-features -- -D warnings` or narrower audited clippy gate passes if code changed.
+  - [x] `CHANGELOG.md` updated if code/tooling/docs-policy/release-facing status changed.
+  - [x] Independent review completed or status represented honestly.
 ```
 
 ## Dependencies for Next Task
 
-This task feeds TASK-986 final closeout evidence.
+TASK-980 is complete and feeds TASK-986 final closeout evidence. TASK-981 remains the next planned Phase 128 task and was not started in this checkpoint.
 
 ## Notes
 

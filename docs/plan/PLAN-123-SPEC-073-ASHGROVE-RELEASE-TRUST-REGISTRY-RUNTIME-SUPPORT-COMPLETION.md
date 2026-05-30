@@ -12,11 +12,11 @@
 
 ## 1. Status
 
-**Status:** ✅ TASK-979 complete; implementation ready for TASK-980
+**Status:** ✅ TASK-980 complete; implementation ready for TASK-981
 **Spec:** [SPEC-073](../spec/SPEC-073-ASHGROVE-INSTALL-UPDATE-CLEANUP-GIT-DEPLOYMENT.md)
 **Task range:** [TASK-975](tasks/TASK-975-spec073-ashgrove-completion-packet.md) through [TASK-986](tasks/TASK-986-spec073-implemented-mvp-closeout.md)
 
-TASK-975 created this docs packet. TASK-976 completed the hard audit gate and patched exact downstream verification commands before Rust implementation starts. TASK-979 now closes the authenticated tarball URL slice for explicit-digest `file://` URLs while keeping unsupported network lookup fail-closed.
+TASK-975 created this docs packet. TASK-976 completed the hard audit gate and patched exact downstream verification commands before Rust implementation starts. TASK-980 now closes the packaged dispatcher lifecycle slice by refreshing the stable dispatcher from packaged tarball managers, recording the owning manager toolchain, protecting that running-manager owner from remove/cleanup in TASK-980-aware manager execution after packaged updates, and keeping default switching selector-only.
 
 ## 2. Scope
 
@@ -53,7 +53,7 @@ TASK-975 created this docs packet. TASK-976 completed the hard audit gate and pa
 | [TASK-977](tasks/TASK-977-source-archive-release-metadata.md) | Implement source-archive release metadata and reproducibility checks | 10 | ✅ Complete |
 | [TASK-978](tasks/TASK-978-runtime-support-payload-metadata.md) | Define and verify concrete runtime-support payload metadata across source/tarball installs | 10 | ✅ Complete |
 | [TASK-979](tasks/TASK-979-release-index-authenticated-tarball-url-policy.md) | Add authenticated tarball URL recording and release-index trust policy | 14 | ✅ Complete |
-| [TASK-980](tasks/TASK-980-packaged-dispatcher-lifecycle-policy.md) | Finalize packaged dispatcher lifecycle and launcher update/remove policy | 10 | 📝 Planned |
+| [TASK-980](tasks/TASK-980-packaged-dispatcher-lifecycle-policy.md) | Finalize packaged dispatcher lifecycle and launcher update/remove policy | 10 | ✅ Complete |
 | [TASK-981](tasks/TASK-981-registry-scale-package-metadata-substrate.md) | Add registry-ready package metadata without creating a hosted registry service | 12 | 📝 Planned |
 | [TASK-982](tasks/TASK-982-cleanup-lockfile-cache-reachability.md) | Implement broader cleanup reachability across lockfiles, fetched cache, vendor metadata, and installed toolchains | 12 | 📝 Planned |
 | [TASK-983](tasks/TASK-983-manifest-rewrite-trust-preservation.md) | Preserve manifest and lockfile trust metadata during read-modify-write operations | 8 | 📝 Planned |

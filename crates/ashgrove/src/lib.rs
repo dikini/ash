@@ -14,6 +14,7 @@ use serde::{Deserialize, Deserializer, Serialize};
 use sha2::{Digest, Sha256};
 
 const TOOLCHAIN_ARCHIVE_SCHEMA_VERSION: u32 = 1;
+const DISPATCHER_LIFECYCLE_FILE: &str = ".ashgrove-dispatcher.toml";
 
 /// User-local XDG-compatible path set for Ash installs.
 #[derive(Debug, Clone)]
@@ -406,10 +407,38 @@ fn install_launcher_shims_from_current_exe(paths: &AshgrovePaths) -> Result<()> 
     install_launcher_shims(paths, &dispatcher)
 }
 
+fn install_packaged_launcher_shims(
+    paths: &AshgrovePaths,
+    id: &ToolchainId,
+    manifest: &ToolchainManifest,
+) -> Result<()> {
+    let root = paths.toolchain_dir(id);
+    let manager = manifest
+        .required_tool("ashgrove")
+        .context("packaged toolchain manifest missing ashgrove manager tool")?;
+    let manager_path = validate_contained_standard_tool_path(&root, manager.path())?;
+    fs::create_dir_all(paths.launcher_bin()).context("create launcher bin directory")?;
+    let dispatcher = paths.launcher_bin().join(".ashgrove-dispatcher");
+    install_executable_copy(&manager_path, &dispatcher)?;
+    DispatcherLifecycleMetadata::new(id.clone())
+        .write_to_path(&paths.launcher_bin().join(DISPATCHER_LIFECYCLE_FILE))?;
+    install_launcher_shims(paths, &dispatcher)
+}
+
+fn stable_dispatcher_manager_toolchain(paths: &AshgrovePaths) -> Result<Option<ToolchainId>> {
+    let lifecycle = paths.launcher_bin().join(DISPATCHER_LIFECYCLE_FILE);
+    if !lifecycle.exists() {
+        return Ok(None);
+    }
+    Ok(Some(
+        DispatcherLifecycleMetadata::read_from_path(&lifecycle)?.manager_toolchain_id,
+    ))
+}
+
 fn install_executable_copy(source: &Path, target: &Path) -> Result<()> {
     let bytes = fs::read(source)
         .with_context(|| format!("read launcher dispatcher source {}", source.display()))?;
-    write_executable_file_atomically(target, ".ashgrove-dispatcher.tmp-", &bytes)
+    write_file_atomically(target, ".ashgrove-dispatcher.tmp-", &bytes, true)
         .with_context(|| format!("publish stable launcher dispatcher {}", target.display()))
 }
 
@@ -425,6 +454,15 @@ fn write_executable_file_atomically(
     target: &Path,
     temp_prefix: &str,
     contents: &[u8],
+) -> Result<()> {
+    write_file_atomically(target, temp_prefix, contents, true)
+}
+
+fn write_file_atomically(
+    target: &Path,
+    temp_prefix: &str,
+    contents: &[u8],
+    executable: bool,
 ) -> Result<()> {
     let parent = target.parent().ok_or_else(|| {
         anyhow!(
@@ -442,13 +480,45 @@ fn write_executable_file_atomically(
     temp.as_file_mut()
         .sync_all()
         .with_context(|| format!("sync temporary launcher file {}", temp.path().display()))?;
-    make_launcher_executable(temp.path())?;
+    if executable {
+        make_launcher_executable(temp.path())?;
+    }
     let persisted = temp
         .persist(target)
         .map_err(|error| error.error)
         .with_context(|| format!("publish launcher file {}", target.display()))?;
     drop(persisted);
     Ok(())
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct DispatcherLifecycleMetadata {
+    manager_toolchain_id: ToolchainId,
+}
+
+impl DispatcherLifecycleMetadata {
+    fn new(manager_toolchain_id: ToolchainId) -> Self {
+        Self {
+            manager_toolchain_id,
+        }
+    }
+
+    fn read_from_path(path: &Path) -> Result<Self> {
+        let text = fs::read_to_string(path)
+            .with_context(|| format!("read dispatcher lifecycle metadata {}", path.display()))?;
+        toml::from_str(&text).context("parse dispatcher lifecycle metadata")
+    }
+
+    fn write_to_path(&self, path: &Path) -> Result<()> {
+        let text = toml::to_string(self).context("serialize dispatcher lifecycle metadata")?;
+        write_file_atomically(
+            path,
+            ".ashgrove-dispatcher.toml.tmp-",
+            text.as_bytes(),
+            false,
+        )
+        .with_context(|| format!("publish dispatcher lifecycle metadata {}", path.display()))
+    }
 }
 
 fn launcher_shim_script(dispatcher: &Path, tool: &str) -> String {
@@ -2342,7 +2412,7 @@ fn install_from_tarball(
     let stage = ToolchainStage::create(paths, id.clone())?;
     stage.copy_toolchain_payload(&root)?;
     stage.publish()?;
-    install_launcher_shims_from_current_exe(paths)?;
+    install_packaged_launcher_shims(paths, &id, &manifest)?;
     if switch || read_default(paths)?.is_none() {
         set_default(paths, &id)?;
     }
@@ -2795,6 +2865,12 @@ fn remove_toolchain(paths: &AshgrovePaths, id: &ToolchainId, force: bool) -> Res
             id.as_str()
         );
     }
+    if stable_dispatcher_manager_toolchain(paths)?.as_ref() == Some(id) {
+        bail!(
+            "refusing to remove running manager toolchain '{}'",
+            id.as_str()
+        );
+    }
     if live_daemon_uses_toolchain(paths, id)? {
         bail!("refusing to remove live daemon toolchain '{}'", id.as_str());
     }
@@ -3029,6 +3105,9 @@ fn cleanup_protection_reason(
     project_pin: Option<&ToolchainId>,
 ) -> Result<Option<&'static str>> {
     if std::env::var("ASHGROVE_RUNNING_TOOLCHAIN").ok().as_deref() == Some(id.as_str()) {
+        return Ok(Some("running manager"));
+    }
+    if stable_dispatcher_manager_toolchain(paths)?.as_ref() == Some(id) {
         return Ok(Some("running manager"));
     }
     if live_daemon_uses_toolchain(paths, id)? {

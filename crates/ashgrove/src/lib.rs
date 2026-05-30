@@ -1347,6 +1347,22 @@ pub fn stage_stdlib_metadata(toolchain_root: &Path, metadata: &StdlibMetadata) -
     .context("write stdlib package metadata")
 }
 
+/// Rewrite a project `ash.toml` without interpreting reserved trust/signing metadata.
+///
+/// This helper exists for read-modify-write callers that need to normalize or rewrite the
+/// project manifest while preserving future-compatible trust metadata as opaque TOML data.
+///
+/// # Errors
+///
+/// Returns an error when `ash.toml` cannot be read, parsed, serialized, or written.
+pub fn rewrite_project_manifest_preserving_trust_metadata(project: impl AsRef<Path>) -> Result<()> {
+    let path = project.as_ref().join("ash.toml");
+    let text = fs::read_to_string(&path).context("read ash.toml")?;
+    let value: toml::Value = toml::from_str(&text).context("parse ash.toml")?;
+    let rewritten = toml::to_string(&value).context("serialize ash.toml")?;
+    fs::write(path, rewritten).context("write ash.toml")
+}
+
 fn stage_source_stdlib_metadata(
     source: &Path,
     toolchain_root: &Path,
@@ -3303,20 +3319,31 @@ fn lock(project: &Path, check: bool) -> Result<()> {
     reject_legacy_conflict(project)?;
     let manifest = Manifest::read(project)?;
     let lock_path = project.join("ash.lock");
-    let preserved_trust = if lock_path.exists() {
-        Some(read_lock_trust(&lock_path)?).flatten()
+    let preserved_metadata = if lock_path.exists() {
+        read_lock_reserved_metadata(&lock_path)?
     } else {
-        None
+        LockReservedMetadata::default()
     };
-    let expected = manifest.lock_text(project, preserved_trust)?;
+    let preserved_any = preserved_metadata.has_reserved_metadata();
+    let expected = manifest.lock_text(project, preserved_metadata)?;
     if check {
         let current = fs::read_to_string(&lock_path).context("read ash.lock")?;
         if normalize_ws(&current) != normalize_ws(&expected) {
             bail!("lockfile drift detected");
         }
+        if preserved_any {
+            println!(
+                "preserved trust metadata; mandatory trust enforcement is not performed by ashgrove lock"
+            );
+        }
         return Ok(());
     }
     fs::write(lock_path, expected).context("write ash.lock")?;
+    if preserved_any {
+        println!(
+            "preserved trust metadata; mandatory trust enforcement is not performed by ashgrove lock"
+        );
+    }
     Ok(())
 }
 
@@ -3419,10 +3446,13 @@ fn read_lock(project: &Path) -> Result<LockFile> {
     Ok(lock)
 }
 
-fn read_lock_trust(lock_path: &Path) -> Result<Option<toml::Value>> {
+fn read_lock_reserved_metadata(lock_path: &Path) -> Result<LockReservedMetadata> {
     let text = fs::read_to_string(lock_path).context("read ash.lock")?;
     let value: toml::Value = toml::from_str(&text).context("parse ash.lock")?;
-    Ok(value.get("trust").cloned())
+    Ok(LockReservedMetadata {
+        trust: value.get("trust").cloned(),
+        signing: value.get("signing").cloned(),
+    })
 }
 
 fn materialize_locked_packages(
@@ -3628,8 +3658,22 @@ struct LockFile {
     version: u32,
     #[serde(skip_serializing_if = "Option::is_none")]
     trust: Option<toml::Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    signing: Option<toml::Value>,
     #[serde(default)]
     package: Vec<LockedPackage>,
+}
+
+#[derive(Debug, Default)]
+struct LockReservedMetadata {
+    trust: Option<toml::Value>,
+    signing: Option<toml::Value>,
+}
+
+impl LockReservedMetadata {
+    fn has_reserved_metadata(&self) -> bool {
+        self.trust.is_some() || self.signing.is_some()
+    }
 }
 
 const fn lockfile_schema_version() -> u32 {
@@ -3746,7 +3790,7 @@ impl Manifest {
         Ok(Self { dependencies })
     }
 
-    fn lock_text(&self, project: &Path, trust: Option<toml::Value>) -> Result<String> {
+    fn lock_text(&self, project: &Path, reserved: LockReservedMetadata) -> Result<String> {
         let mut package = Vec::with_capacity(self.dependencies.len());
         for dep in &self.dependencies {
             let commit = dep.resolve_commit(project)?;
@@ -3776,7 +3820,8 @@ impl Manifest {
         }
         toml::to_string(&LockFile {
             version: lockfile_schema_version(),
-            trust,
+            trust: reserved.trust,
+            signing: reserved.signing,
             package,
         })
         .context("serialize ash.lock")

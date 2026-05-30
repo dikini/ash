@@ -12,11 +12,11 @@
 
 ## 1. Status
 
-**Status:** ✅ TASK-982 complete; implementation ready for TASK-983
+**Status:** ✅ TASK-983 complete; implementation ready for TASK-984
 **Spec:** [SPEC-073](../spec/SPEC-073-ASHGROVE-INSTALL-UPDATE-CLEANUP-GIT-DEPLOYMENT.md)
 **Task range:** [TASK-975](tasks/TASK-975-spec073-ashgrove-completion-packet.md) through [TASK-986](tasks/TASK-986-spec073-implemented-mvp-closeout.md)
 
-TASK-975 created this docs packet. TASK-976 completed the hard audit gate and patched exact downstream verification commands before Rust implementation starts. TASK-982 now closes cleanup lockfile/cache reachability by preserving known-project lock-referenced fetched checkouts and project-pinned toolchains while reporting reachable and unreachable git cache entries in dry-run. TASK-983 is next.
+TASK-975 created this docs packet. TASK-976 completed the hard audit gate and patched exact downstream verification commands before Rust implementation starts. TASK-983 now preserves reserved trust/signing metadata through manifest and lockfile rewrites while keeping mandatory trust enforcement owned by TASK-984. TASK-984 is next.
 
 ## 2. Scope
 
@@ -56,7 +56,7 @@ TASK-975 created this docs packet. TASK-976 completed the hard audit gate and pa
 | [TASK-980](tasks/TASK-980-packaged-dispatcher-lifecycle-policy.md) | Finalize packaged dispatcher lifecycle and launcher update/remove policy | 10 | ✅ Complete |
 | [TASK-981](tasks/TASK-981-registry-scale-package-metadata-substrate.md) | Add registry-ready package metadata without creating a hosted registry service | 12 | ✅ Complete |
 | [TASK-982](tasks/TASK-982-cleanup-lockfile-cache-reachability.md) | Implement broader cleanup reachability across lockfiles, fetched cache, vendor metadata, and installed toolchains | 12 | ✅ Complete |
-| [TASK-983](tasks/TASK-983-manifest-rewrite-trust-preservation.md) | Preserve manifest and lockfile trust metadata during read-modify-write operations | 8 | 📝 Planned |
+| [TASK-983](tasks/TASK-983-manifest-rewrite-trust-preservation.md) | Preserve manifest and lockfile trust metadata during read-modify-write operations | 8 | ✅ Complete |
 | [TASK-984](tasks/TASK-984-mandatory-trust-signing-and-remote-git-fetch-policy.md) | Implement mandatory trust/signing enforcement and remote-authenticated git fetch policy | 16 | 📝 Planned |
 | [TASK-985](tasks/TASK-985-ashgrove-release-deployment-acceptance-integration.md) | Prove release/deployment flows cover the completed SPEC-073 rows end-to-end | 12 | 📝 Planned |
 | [TASK-986](tasks/TASK-986-spec073-implemented-mvp-closeout.md) | Promote SPEC-073 only after acceptance matrix, broad gates, and independent review pass | 8 | 📝 Planned |

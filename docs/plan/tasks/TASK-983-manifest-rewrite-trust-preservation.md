@@ -1,6 +1,6 @@
 # TASK-983: Manifest rewrite trust preservation
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -13,7 +13,7 @@ Preserve manifest and lockfile trust metadata during read-modify-write operation
 
 ## Dependencies
 
-- 📝 Depends on TASK-981 completion.
+- ✅ Depends on TASK-981 completion.
 
 ## Requirements
 
@@ -67,15 +67,22 @@ commands:
   - RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ashgrove --test task_983_manifest_rewrite_trust_preservation -- --nocapture
   - git diff --check
 checklist:
-  - [ ] Focused RED test was observed failing for the intended reason.
-  - [ ] Focused GREEN test passes and runs non-zero tests.
-  - [ ] `cargo fmt --check` passes when Rust code changed.
-  - [ ] `git diff --check` passes.
-  - [ ] `cargo check --workspace` or narrower audited check passes if shared carriers/public APIs changed.
-  - [ ] `cargo clippy --workspace --all-targets --all-features -- -D warnings` or narrower audited clippy gate passes if code changed.
-  - [ ] `CHANGELOG.md` updated if code/tooling/docs-policy/release-facing status changed.
-  - [ ] Independent review completed or status represented honestly.
+  - [x] Focused RED test was observed failing for the intended reason.
+  - [x] Focused GREEN test passes and runs non-zero tests.
+  - [x] `cargo fmt --check` passes when Rust code changed.
+  - [x] `git diff --check` passes.
+  - [x] `cargo check --workspace` or narrower audited check passes if shared carriers/public APIs changed.
+  - [x] `cargo clippy --workspace --all-targets --all-features -- -D warnings` or narrower audited clippy gate passes if code changed.
+  - [x] `CHANGELOG.md` updated if code/tooling/docs-policy/release-facing status changed.
+  - [x] Independent review completed or status represented honestly.
 ```
+
+## Evidence
+
+- RED: `RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ashgrove --test task_983_manifest_rewrite_trust_preservation -- --nocapture` failed with unresolved import for the missing `rewrite_project_manifest_preserving_trust_metadata` helper.
+- GREEN: `RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ashgrove --test task_983_manifest_rewrite_trust_preservation -- --nocapture` passed 3 tests.
+- Regression/quality gates: TASK-967 and TASK-972 adjacent tests, `cargo fmt --check`, `cargo check -p ashgrove`, `cargo clippy -p ashgrove --all-targets --all-features -- -D warnings`, `git diff --check`, and local pre-commit passed for the TASK-983 slice.
+- Review: independent review checked nested lock trust/signing preservation, unknown manifest trust preservation, preservation-only diagnostics, TASK-981 registry/source metadata compatibility, TASK-982 cleanup reachability/status compatibility, and status-surface wording.
 
 ## Dependencies for Next Task
 

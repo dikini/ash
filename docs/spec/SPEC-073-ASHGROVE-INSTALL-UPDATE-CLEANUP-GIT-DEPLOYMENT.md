@@ -1,6 +1,6 @@
 # SPEC-073: Ashgrove Install, Update, Cleanup, and Git Deployment
 
-**Status:** Draft; TASK-974 closeout report complete with deferred acceptance rows
+**Status:** Implemented MVP after TASK-986 closeout
 **Date:** 2026-05-28
 **Amends:** [SPEC-005](SPEC-005-CLI.md), [SPEC-009](SPEC-009-MODULES.md), [SPEC-012](SPEC-012-IMPORTS.md), [SPEC-038](SPEC-038-LANGUAGE-SERVER.md), [SPEC-070](SPEC-070-ALPHA-RUNTIME-KERNEL-AND-OS-SURFACE.md)
 **Builds on:** [SPEC-069](SPEC-069-ALPHA-VISIBLE-TOWER-ALGEBRA-AND-DO-LOWERING.md), [SPEC-071](SPEC-071-REFERENCE-CORPUS-METADATA-AND-MAINTENANCE.md)
@@ -63,15 +63,15 @@ The alpha answer is intentionally thin but strict: install immutable toolchain b
 7. Project manifest and lockfile fields needed for git-based deployment.
 8. Git dependency fetch/lock behavior for tags and exact revisions.
 9. Compiler/module-loader integration needed for locked git dependencies to be importable.
-10. Reserved trust/signing metadata without mandatory signature enforcement.
+10. Reserved trust/signing metadata preservation plus mandatory fail-closed enforcement at the implemented release/download/git trust boundaries.
 
 ### 4.2 Out of scope
 
 1. System-wide/global installation roots.
 2. A hosted Ash package registry.
-3. Release-channel discovery or remote version indexes.
+3. Hosted release-channel discovery or remote version indexes.
 4. Dependency solving across SemVer ranges from a registry.
-5. Mandatory package signing or transparency logs.
+5. Transparency logs or a signed release-index resolver that binds toolchain id, tarball URL, and digest.
 6. Editor plugin installation.
 7. OS package-manager integration (`apt`, `dnf`, Homebrew, Nix, etc.).
 8. Automatic user-project rewriting during toolchain update.
@@ -264,7 +264,7 @@ For alpha release/deployment reproducibility, exact pins are preferred. Compatib
 
 ## 10. Update policy
 
-`ashgrove update` installs a new coherent toolchain bundle and optionally switches the active default. `--from source` and `--from tarball` use the same source/tarball validation rules as `install`, and alpha local updates require `--to` to match the computed source-root identity or local tarball payload identity before publishing. Channel-based update discovery and authenticated URL download are deferred until a release-index/channel policy exists.
+`ashgrove update` installs a new coherent toolchain bundle and optionally switches the active default. `--from source` and `--from tarball` use the same source/tarball validation rules as `install`, and alpha local updates require `--to` to match the computed source-root identity or local tarball payload identity before publishing. Explicit-digest `file://` tarball URL install/update is implemented; hosted channel discovery and bare release-index lookup remain outside the MVP until a signed resolver binds toolchain id, tarball URL, and digest.
 
 An update MUST update together:
 
@@ -314,7 +314,7 @@ For alpha, **known projects** means only the current project supplied by `--proj
 
 Cleanup MUST NOT delete project-local `ash.toml` or `ash.lock` files.
 
-Current implementation note: the TASK-971 cleanup slice implements explicit stdin confirmation for `remove --force` default/current-project pin overrides and non-dry-run `cleanup --old-toolchains` deletions, dry-run reporting for project-pinned/cache/orphan/old-toolchain candidates, conservative deletion for known Ash-owned cache children, invalid toolchain-directory orphan cleanup under the XDG toolchain root, and old-toolchain cleanup that preserves default, project-pinned, live-daemon, and running-manager toolchains. It does not yet implement broader lockfile/cache reachability analysis.
+Current implementation note: the TASK-971 cleanup slice implements explicit stdin confirmation for `remove --force` default/current-project pin overrides and non-dry-run `cleanup --old-toolchains` deletions, dry-run reporting for project-pinned/cache/orphan/old-toolchain candidates, conservative deletion for known Ash-owned cache children, invalid toolchain-directory orphan cleanup under the XDG toolchain root, and old-toolchain cleanup that preserves default, project-pinned, live-daemon, and running-manager toolchains. TASK-982 adds broader known-project lockfile/cache reachability: cleanup dry-run reports reachable and unreachable fetched git cache entries, destructive cleanup preserves lockfile and vendor-provenance referenced checkouts/repos plus project-pinned toolchains, and cleanup remains bounded to supplied or registered project roots without deleting project-local `ash.toml` or `ash.lock`.
 
 ## 12. Project manifest and git dependency metadata
 
@@ -409,7 +409,7 @@ TASK-972 owns the compiler/module-loader integration. Merely fetching git reposi
 
 `ashgrove vendor --check` validates that the vendor directory exactly matches `ash.lock` without writing or fetching anything.
 
-Current implementation note: the Phase 127 metadata/staging slice adds typed `ashgrove` toolchain manifest and install-record carriers, XDG selector metadata that preserves reserved trust/signing fields during read-modify-write, stdlib package metadata staging with fail-closed missing-stdlib behavior, deterministic staged-publish collision helpers, and stable `ash`/`ashgrove` launcher shims that dispatch through typed metadata under temporary XDG/home roots. The launcher shims target a stable user-local `.ashgrove-dispatcher` copy instead of a transient versioned `current_exe()` path, preserve selected-tool exit status, reject selected toolchain roots that are symlinks, and harden shim temp-file writes. The tarball slice provides `scripts/package-ash-toolchain.sh` as a repository release producer, validates typed manifest/install-record identity and `archive_schema_version = 1` before publish, rejects unsafe symlink, hardlink, absolute-path, parent-traversal, and setuid archive entries, installs through staged publish, and records local tarball path, digest, and install time. The git deployment slice materializes local git dependencies into `$XDG_CACHE_HOME/ash/git/repos/<package>-<url-digest>.git` plus `$XDG_CACHE_HOME/ash/git/checkouts/<package>-<url-digest>/<commit>/`, expands accepted abbreviated manifest `rev` values to full lockfile commits, preserves existing lockfile `[trust]` metadata during `ashgrove lock` rewrites, copies every locked package into the default `vendor/ash/` layout or explicit `--output PATH`, writes package provenance, and checks provenance plus package bytes read-only through `vendor --check` without network or fetch writes. `ash check src/main.ash` and explicit ordinary-file `ash run src/main.ash:main` discover both the default vendored layout and direct fetched-cache checkouts, with selected stdlib roots taking precedence over stdlib-shaped locked packages. TASK-981 adds registry-ready package metadata preservation for explicit git-pinned dependencies: lockfiles can carry package/version/registry/source/requested/resolved metadata, vendor provenance records and checks it, and ash-engine consumes the registry-style lock carrier without hosted registry lookup. Default vendored projects run offline without dependency-root environment variables and without usable XDG fetched cache. This is still not full SPEC-073 acceptance because broader cleanup reachability, trust/signing hardening, remote-authenticated git fetch policy, and final release/deployment integration remain deferred.
+Current implementation note: the Phase 127 metadata/staging slice adds typed `ashgrove` toolchain manifest and install-record carriers, XDG selector metadata that preserves reserved trust/signing fields during read-modify-write, stdlib package metadata staging with fail-closed missing-stdlib behavior, deterministic staged-publish collision helpers, and stable `ash`/`ashgrove` launcher shims that dispatch through typed metadata under temporary XDG/home roots. The launcher shims target a stable user-local `.ashgrove-dispatcher` copy instead of a transient versioned `current_exe()` path, preserve selected-tool exit status, reject selected toolchain roots that are symlinks, and harden shim temp-file writes. The tarball slice provides `scripts/package-ash-toolchain.sh` as a repository release producer, validates typed manifest/install-record identity and `archive_schema_version = 1` before publish, rejects unsafe symlink, hardlink, absolute-path, parent-traversal, and setuid archive entries, installs through staged publish, and records local tarball path, digest, and install time. Phase 128 adds source-archive release metadata, concrete runtime-support metadata, explicit-digest tarball URL policy, packaged dispatcher lifecycle metadata, registry-ready package metadata preservation, cleanup reachability, mandatory trust/signing enforcement, remote-authenticated git policy, and composed release/deployment acceptance evidence. The git deployment slice materializes local git dependencies into `$XDG_CACHE_HOME/ash/git/repos/<package>-<url-digest>.git` plus `$XDG_CACHE_HOME/ash/git/checkouts/<package>-<url-digest>/<commit>/`, expands accepted abbreviated manifest `rev` values to full lockfile commits, preserves existing lockfile `[trust]` metadata during `ashgrove lock` rewrites, copies every locked package into the default `vendor/ash/` layout or explicit `--output PATH`, writes package provenance, and checks provenance plus package bytes read-only through `vendor --check` without network or fetch writes. `ash check src/main.ash` and explicit ordinary-file `ash run src/main.ash:main` discover both the default vendored layout and direct fetched-cache checkouts, with selected stdlib roots taking precedence over stdlib-shaped locked packages. Registry-ready package metadata remains local substrate only: lockfiles can carry package/version/registry/source/requested/resolved metadata, vendor provenance records and checks it, and ash-engine consumes the registry-style lock carrier without hosted registry lookup.
 
 Deployment from git-based Ash projects MUST be possible with explicit current CLI forms:
 
@@ -446,7 +446,7 @@ The live pre-SPEC-073 implementation has historically used workspace-relative st
 
 Acceptance evidence must prove an installed/tarball-style `ash` uses a temporary toolchain stdlib and does not accidentally read the source workspace `std/src`.
 
-Current implementation note: the TASK-968, TASK-977, TASK-978, and TASK-984 follow-up slices prove the `ash-engine` selected-stdlib override seam with a temporary installed-style stdlib root, source-archive release metadata, concrete runtime-support payload metadata, and mandatory trust/signing plus remote git policy. Source installs now build real local source checkouts from an isolated cache copy with an external Cargo target dir, stage immutable toolchains through the staged publish path, record source URL/revision/build profile/target triple plus dirty/unidentified override and reproducibility state, reject dirty or unidentified source roots unless the matching explicit override is present, fail closed when git-like roots cannot report `HEAD` or dirty status, reject source archives without typed `release-source.toml` origin-commit metadata unless `--allow-unidentified-source` is explicit, record `source_archive_digest` and `source_origin_commit` for identified source archives, require source-archive attestation evidence for identified source archives before publish, reject same-id metadata conflicts, keep identical reinstalls deterministic, copy source stdlib package metadata into `lib/ash/std/ash.toml`, require equivalent `[runtime_support]` identity/path/required metadata for source and tarball toolchains, validate the `lib/ash/std/src/runtime` payload directory before publish, propagate the selected runtime-support identity to `ash`, and include that identity in runtime artifact construction. SPEC-073 remains Draft because Phase 128 still owns integration acceptance and final release/deployment closeout.
+Current implementation note: the TASK-968, TASK-977, TASK-978, TASK-984, and TASK-985 slices prove the `ash-engine` selected-stdlib override seam with a temporary installed-style stdlib root, source-archive release metadata, concrete runtime-support payload metadata, mandatory trust/signing plus remote git policy, and composed release/deployment integration. Source installs now build real local source checkouts from an isolated cache copy with an external Cargo target dir, stage immutable toolchains through the staged publish path, record source URL/revision/build profile/target triple plus dirty/unidentified override and reproducibility state, reject dirty or unidentified source roots unless the matching explicit override is present, fail closed when git-like roots cannot report `HEAD` or dirty status, reject source archives without typed `release-source.toml` origin-commit metadata unless `--allow-unidentified-source` is explicit, record `source_archive_digest` and `source_origin_commit` for identified source archives, require source-archive attestation evidence for identified source archives before publish, reject same-id metadata conflicts, keep identical reinstalls deterministic, copy source stdlib package metadata into `lib/ash/std/ash.toml`, require equivalent `[runtime_support]` identity/path/required metadata for source and tarball toolchains, validate the `lib/ash/std/src/runtime` payload directory before publish, propagate the selected runtime-support identity to `ash`, and include that identity in runtime artifact construction.
 
 ## 17. Rust/tooling implementation constraints
 
@@ -462,9 +462,9 @@ TASK-965 must freeze exact implementation choices before Rust work starts:
 8. Module-loader integration points for dependency roots and installed stdlib roots.
 9. Daemon status/registry integration points for live toolchain removal protection.
 
-## 18. Trust and signing placeholders
+## 18. Trust and signing enforcement
 
-The first implementation reserves trust metadata but does not require signature enforcement.
+The MVP preserves trust metadata and enforces required trust/signing evidence at the implemented release/download/git trust boundaries.
 
 Manifests and lockfiles MAY include:
 
@@ -475,7 +475,7 @@ signature = ""
 attestation = ""
 ```
 
-A later spec may make signature verification mandatory for release channels or registries.
+Required tarball sidecar signature evidence, source-archive attestation evidence, unsigned or unbound release-index metadata, lock signature mismatches, untrusted git protocols, and credential-bearing lockfile origins fail closed before publish, fetch, or lock use. Explicit-digest URL install/update remains the supported URL boundary. Release-index signature metadata is not accepted as digest evidence until a later resolver binds signed entries to toolchain id, tarball URL, and digest.
 
 ## 19. Diagnostics
 
@@ -525,7 +525,7 @@ Diagnostics MUST be actionable and distinguish:
 - [TASK-971](../plan/tasks/TASK-971-remove-cleanup-flow.md): Implement remove and cleanup policy, including daemon/running-manager protection.
 - [TASK-972](../plan/tasks/TASK-972-ash-manifest-lock-git-fetch.md): Implement `ash.toml` dependency metadata, `ash.lock`, git fetch, lock checking, trust-field preservation, and module-loader dependency-root integration.
 - [TASK-973](../plan/tasks/TASK-973-vendor-and-deployable-git-project-flow.md): Implement vendor/offline deployment flow for git-based Ash projects.
-- [TASK-974](../plan/tasks/TASK-974-ashgrove-closeout-acceptance.md): Close out SPEC-073 with acceptance matrix, broad gates, and independent review remediation. Complete as a report/closeout task; SPEC-073 remains Draft because deferred acceptance rows remain.
+- [TASK-974](../plan/tasks/TASK-974-ashgrove-closeout-acceptance.md): Close out Phase 127 with acceptance matrix, broad gates, and independent review remediation. Complete as a historical report/closeout task; Phase 127 remains partial.
 
 Follow-on completion tasks from Phase 128:
 
@@ -540,17 +540,18 @@ Follow-on completion tasks from Phase 128:
 - [TASK-983](../plan/tasks/TASK-983-manifest-rewrite-trust-preservation.md): Preserve manifest and lockfile trust metadata during read-modify-write operations.
 - [TASK-984](../plan/tasks/TASK-984-mandatory-trust-signing-and-remote-git-fetch-policy.md): Implement mandatory trust/signing enforcement and remote-authenticated git fetch policy.
 - [TASK-985](../plan/tasks/TASK-985-ashgrove-release-deployment-acceptance-integration.md): Prove release/deployment flows cover the completed SPEC-073 rows end-to-end.
-- [TASK-986](../plan/tasks/TASK-986-spec073-implemented-mvp-closeout.md): Promote SPEC-073 only after acceptance matrix, broad gates, and independent review pass.
+- [TASK-986](../plan/tasks/TASK-986-spec073-implemented-mvp-closeout.md): Promote SPEC-073 after acceptance matrix, broad gates, and independent review pass.
 
 ## 22. Changelog
 
 ### 2026-05-29
 
-- TASK-975 created PLAN-123 and TASK-975 through TASK-986 as the SPEC-073 completion follow-on packet. SPEC-073 remains Draft until the Phase 128 audit gate, implementation tasks, integration evidence, broad gates, and independent closeout review prove every deferred acceptance row.
+- TASK-975 created PLAN-123 and TASK-975 through TASK-986 as the SPEC-073 completion follow-on packet. At packet creation, SPEC-073 stayed Draft until the Phase 128 audit gate, implementation tasks, integration evidence, broad gates, and independent closeout review could prove every deferred acceptance row.
 - TASK-974 completed the final closeout report and broad gate evidence without promoting SPEC-073 beyond Draft. Deferred rows remain for source archive release metadata, authenticated tarball URL recording, packaged dispatcher lifecycle policy, registry-scale package metadata, broader cleanup reachability, mandatory trust/signing enforcement, and runtime-support payload metadata.
 
 ### 2026-05-30
 
+- TASK-986 completed the Phase 128 closeout. SPEC-073 is promoted to Implemented MVP after the A73-1 through A73-12 evidence matrix, broad gates, status reconciliation, and independent review. The MVP boundary remains explicit: no hosted registry service, no global/system install roots, no OS package-manager integration, no arbitrary SemVer dependency solver, and no signed release-index-as-digest evidence beyond explicit-digest URL install/update.
 - TASK-976 completed the Phase 128 acceptance-delta audit. The audit keeps SPEC-073 Draft, binds every TASK-974 deferred gap to exactly one owner task, and records that A73-11's Phase 127 reserved-metadata wording must be amended by TASK-984/TASK-986 before mandatory trust/signing enforcement can be claimed.
 - TASK-977 completed source-archive release metadata. Source archive installs now require typed `release-source.toml` origin-commit metadata unless `--allow-unidentified-source` is explicit, record `source_archive_digest` and `source_origin_commit` in install records, and mark unidentified overrides non-reproducible.
 - TASK-978 completed runtime-support payload metadata. Source and tarball manifests now carry equivalent required `[runtime_support]` metadata for `lib/ash/std/src/runtime`, installs fail closed when the metadata or payload is missing, launcher dispatch exports the selected runtime-support identity, and runtime artifact construction incorporates that identity.
@@ -558,9 +559,9 @@ Follow-on completion tasks from Phase 128:
 - TASK-980 completed packaged dispatcher lifecycle policy. Tarball installs and updates now refresh the stable `.ashgrove-dispatcher` from the packaged `ashgrove` manager, write lifecycle metadata naming the manager toolchain owner, protect that running-manager owner from remove/cleanup in TASK-980-aware manager execution after packaged updates, preserve selected-tool exit behavior, and keep `ashgrove default` selector-only without rewriting project manifests.
 - TASK-981 completed registry-ready package metadata substrate. Explicit git-pinned dependencies can preserve package/version/registry/source/requested/resolved metadata through `ash.toml`, `ash.lock`, vendor provenance, and ash-engine lock consumers while hosted registry lookup and SemVer dependency solving remain fail-closed and out of scope.
 - TASK-982 completed cleanup lockfile/cache reachability. Cleanup now reports reachable and unreachable git cache entries in dry-run, preserves known-project lockfile and vendor-provenance referenced fetched checkouts and repos, preserves project-pinned installed toolchains, and keeps cleanup bounded to supplied or registered project roots without deleting project-local `ash.toml` or `ash.lock`.
-- TASK-983 completed manifest rewrite trust preservation. Project manifest rewrites preserve opaque trust/signing TOML metadata, lock rewrites preserve nested `[trust]` and sibling `[signing]` metadata, and `ashgrove lock` diagnostics describe preservation without claiming mandatory trust enforcement. SPEC-073 remains Draft pending TASK-984 through TASK-986.
-- TASK-984 completed mandatory trust/signing enforcement and remote-authenticated git policy. Required tarball sidecar signature evidence, source-archive attestation evidence, unsigned or unbound release-index metadata, and lock signature evidence now fail closed on mismatch or absence before publish, fetch, or lock use; ash-engine lock consumers enforce the same required lock signature policy used by ashgrove; untrusted git protocols are rejected before `git clone`; HTTPS remote credentials are redacted before `ash.lock` serialization; and credential-bearing `ssh://` URLs are rejected before serialization. SPEC-073 remains Draft pending TASK-985 through TASK-986.
-- TASK-985 completed release/deployment acceptance integration evidence. Source archive, runtime-support payload, cleanup reachability, selected-toolchain dispatch, tarball URL explicit-digest update, release-index trust fail-closed boundary, tarball trust sidecar enforcement, packaged dispatcher lifecycle, update/remove flows, and locked authenticated CLI dependency resolution now have composed focused tests. SPEC-073 remains Draft pending TASK-986 closeout and promotion review.
+- TASK-983 completed manifest rewrite trust preservation. Project manifest rewrites preserve opaque trust/signing TOML metadata, lock rewrites preserve nested `[trust]` and sibling `[signing]` metadata, and `ashgrove lock` diagnostics describe preservation without claiming mandatory trust enforcement. Later TASK-984/TASK-986 evidence owns enforcement and promotion.
+- TASK-984 completed mandatory trust/signing enforcement and remote-authenticated git policy. Required tarball sidecar signature evidence, source-archive attestation evidence, unsigned or unbound release-index metadata, and lock signature evidence now fail closed on mismatch or absence before publish, fetch, or lock use; ash-engine lock consumers enforce the same required lock signature policy used by ashgrove; untrusted git protocols are rejected before `git clone`; HTTPS remote credentials are redacted before `ash.lock` serialization; and credential-bearing `ssh://` URLs are rejected before serialization. Later TASK-985/TASK-986 evidence owns integration and promotion.
+- TASK-985 completed release/deployment acceptance integration evidence. Source archive, runtime-support payload, cleanup reachability, selected-toolchain dispatch, tarball URL explicit-digest update, release-index trust fail-closed boundary, tarball trust sidecar enforcement, packaged dispatcher lifecycle, update/remove flows, and locked authenticated CLI dependency resolution now have composed focused tests. TASK-986 owns final promotion review.
 
 ### 2026-05-28
 

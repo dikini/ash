@@ -54,6 +54,7 @@ fn spawn_daemon(root: &Path, dirs: &DaemonDirs) -> DaemonChild {
         .arg(dirs.log.path())
         .arg("--format")
         .arg("json")
+        .env_remove("ASH_RUNTIME_SUPPORT_IDENTITY")
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
@@ -171,6 +172,8 @@ fn assert_daemon_serve_rejects(root: &Path, dirs: &DaemonDirs, expected_stderr: 
     }
 }
 
+const DEFAULT_RUNTIME_SUPPORT_IDENTITY: &str = "ash-runtime-support:unselected";
+
 fn expected_runtime_kernel_digest(parts: &[&str]) -> String {
     use sha2::{Digest, Sha256};
 
@@ -180,6 +183,12 @@ fn expected_runtime_kernel_digest(parts: &[&str]) -> String {
         hasher.update(part.as_bytes());
     }
     format!("sha256:{:x}", hasher.finalize())
+}
+
+fn expected_check_summary(workflow_name: &str) -> String {
+    format!(
+        "workflow={workflow_name};check=alpha-runtime-kernel-shared;runtime_support_identity={DEFAULT_RUNTIME_SUPPORT_IDENTITY}"
+    )
 }
 
 fn daemon_json(socket: &Path, args: &[&str]) -> Value {
@@ -255,12 +264,13 @@ fn ashd_serve_indexes_definitions_without_running_workflows() {
     let alpha_source =
         fs::read_to_string(root.path().join("alpha.ash")).expect("read alpha source");
     let expected_source_hash = expected_runtime_kernel_digest(&["source", &alpha_source]);
+    let check_summary = expected_check_summary("alpha");
     let expected_check_summary_hash = expected_runtime_kernel_digest(&[
         "check-summary",
         "default",
         "default",
         &expected_source_hash,
-        "workflow=alpha;check=alpha-runtime-kernel-shared",
+        &check_summary,
     ]);
     assert_eq!(
         alpha_definition["source_hash"], expected_source_hash,

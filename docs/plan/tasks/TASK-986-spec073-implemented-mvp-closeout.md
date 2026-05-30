@@ -1,6 +1,6 @@
 # TASK-986: SPEC-073 Implemented MVP closeout
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -61,23 +61,29 @@ toolsets: [terminal, file]
 strictness: clean
 commands:
   - bash scripts/check-rust-format.sh
-  - bash scripts/check-rust-clippy.sh
-  - bash scripts/check-rust-tests.sh --workspace --all-targets
-  - bash scripts/check-doc-tests.sh
+  - RUSTC_WRAPPER= bash scripts/check-rust-clippy.sh
+  - RUSTC_WRAPPER= bash scripts/check-rust-tests.sh --workspace --all-targets
+  - RUSTC_WRAPPER= bash scripts/check-doc-tests.sh
   - git diff --check
   - python3 -c "from pathlib import Path; files=[Path('docs/spec/SPEC-073-ASHGROVE-INSTALL-UPDATE-CLEANUP-GIT-DEPLOYMENT.md'),Path('docs/spec/README.md'),Path('docs/plan/PLAN-122-ASHGROVE-INSTALL-UPDATE-CLEANUP-GIT-DEPLOYMENT.md'),Path('docs/plan/PLAN-123-SPEC-073-ASHGROVE-RELEASE-TRUST-REGISTRY-RUNTIME-SUPPORT-COMPLETION.md'),Path('docs/plan/PLAN-INDEX.md'),*sorted(Path('docs/plan/tasks').glob('TASK-97[5-9]-*.md')),*sorted(Path('docs/plan/tasks').glob('TASK-98[0-6]-*.md')),Path('docs/plan/audits/TASK-976-ashgrove-completion-acceptance-delta.md'),Path('docs/plan/audits/TASK-986-spec073-completion-closeout-evidence.md')]; missing=[str(p) for p in files if not p.exists()]; assert not missing, missing; spec=files[0].read_text(); closeout=Path('docs/plan/audits/TASK-986-spec073-completion-closeout-evidence.md').read_text(); assert all(f'A73-{n}' in spec and f'A73-{n}' in closeout for n in range(1,13)); print(f'checked {len(files)} SPEC-073/Phase128 status files')"
 checklist:
-  - [ ] A73-1 through A73-12 have concrete evidence or explicit accepted non-MVP boundaries.
-  - [ ] TASK-974 deferred gaps have current successor evidence.
-  - [ ] SPEC-073, docs/spec/README.md, PLAN-122, PLAN-123, PLAN-INDEX, tasks, audits, and CHANGELOG agree on status.
-  - [ ] Historical Phase 127 partial language is preserved.
-  - [ ] Broad gates pass on final diff.
-  - [ ] Independent phase review completed and blockers remediated or status represented honestly.
+  - [x] A73-1 through A73-12 have concrete evidence or explicit accepted non-MVP boundaries.
+  - [x] TASK-974 deferred gaps have current successor evidence.
+  - [x] SPEC-073, docs/spec/README.md, PLAN-122, PLAN-123, PLAN-INDEX, tasks, audits, and CHANGELOG agree on status.
+  - [x] Historical Phase 127 partial language is preserved.
+  - [x] Broad gates pass on final diff.
+  - [x] Independent phase review completed and blockers remediated or status represented honestly.
 ```
 
 ## Dependencies for Next Task
 
 This is the final task in Phase 128.
+
+## Completion Notes
+
+- SPEC-073 is promoted to Implemented MVP after TASK-986 closeout evidence, broad gates, and independent review.
+- Phase 127 remains the historical partial closeout; Phase 128 owns the successor evidence.
+- Non-goals remain explicit: no hosted registry service, no global/system install roots, no OS package-manager integration, no arbitrary SemVer dependency solver, and no signed release-index-as-digest resolver.
 
 ## Notes
 

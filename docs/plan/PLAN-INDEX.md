@@ -303,7 +303,7 @@ Update this section as tasks complete:
 | 124 | 8 | 1 | 📝 Planned after packet creation |
 | 126 | 9 | 9 | ✅ Complete |
 | 127 | 11 | 4 + partial | ⚠️ Partial first slice |
-| 128 | 12 | 11 | ✅ TASK-985 release/deployment acceptance integration complete; SPEC-073 remains Draft pending TASK-986 closeout |
+| 128 | 12 | 12 | ✅ Complete; SPEC-073 Implemented MVP |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -3738,7 +3738,7 @@ Phase 126 introduces tower-aligned callable type and closure syntax. It makes `(
 ## Phase 127: Ashgrove Install, Update, Cleanup, and Git Deployment
 
 **Priority:** High (alpha release boundary for coherent installation, update, removal, cleanup, and git-pinned deployment before registry package management)
-**Status:** ⚠️ Partial Phase 127 after TASK-974 closeout; SPEC-073 remains Draft pending deferred acceptance rows
+**Status:** ⚠️ Historical partial Phase 127 after TASK-974 closeout; at that closeout SPEC-073 remained Draft pending deferred rows. Phase 128/TASK-986 later closed those rows and promoted SPEC-073 to Implemented MVP.
 **Spec:** [SPEC-073](../spec/SPEC-073-ASHGROVE-INSTALL-UPDATE-CLEANUP-GIT-DEPLOYMENT.md)
 **Plan:** [PLAN-122](PLAN-122-ASHGROVE-INSTALL-UPDATE-CLEANUP-GIT-DEPLOYMENT.md)
 
@@ -3774,7 +3774,7 @@ Phase 127 introduces `ashgrove <command>` as the Ash toolchain and deployment ma
 ## Phase 128: SPEC-073 Ashgrove Release, Trust, Registry-Ready Metadata, and Runtime-Support Completion
 
 **Priority:** High (closes the Phase 127 SPEC-073 deferred acceptance rows needed before Ashgrove can move beyond Draft)
-**Status:** ✅ TASK-985 release/deployment acceptance integration complete; SPEC-073 remains Draft pending TASK-986 closeout
+**Status:** ✅ Complete; SPEC-073 Implemented MVP after TASK-986 closeout
 **Spec:** [SPEC-073](../spec/SPEC-073-ASHGROVE-INSTALL-UPDATE-CLEANUP-GIT-DEPLOYMENT.md)
 **Plan:** [PLAN-123](PLAN-123-SPEC-073-ASHGROVE-RELEASE-TRUST-REGISTRY-RUNTIME-SUPPORT-COMPLETION.md)
 
@@ -3793,11 +3793,11 @@ Phase 128 is the follow-on to Phase 127. It does not reopen or rewrite Phase 127
 | [TASK-983](tasks/TASK-983-manifest-rewrite-trust-preservation.md) | Preserve manifest and lockfile trust metadata during read-modify-write operations | 8 | ✅ Complete |
 | [TASK-984](tasks/TASK-984-mandatory-trust-signing-and-remote-git-fetch-policy.md) | Implement mandatory trust/signing enforcement and remote-authenticated git fetch policy | 16 | ✅ Complete |
 | [TASK-985](tasks/TASK-985-ashgrove-release-deployment-acceptance-integration.md) | Prove release/deployment flows cover the completed SPEC-073 rows end-to-end | 12 | ✅ Complete |
-| [TASK-986](tasks/TASK-986-spec073-implemented-mvp-closeout.md) | Promote SPEC-073 only after acceptance matrix, broad gates, and independent review pass | 8 | 📝 Planned |
+| [TASK-986](tasks/TASK-986-spec073-implemented-mvp-closeout.md) | Promote SPEC-073 only after acceptance matrix, broad gates, and independent review pass | 8 | ✅ Complete |
 
 **Decision gates:**
 - D1: Phase 127 remains the historical partial closeout; Phase 128 owns completion evidence.
-- D2: SPEC-073 stays Draft until TASK-986 maps every deferred row to concrete evidence.
+- D2: SPEC-073 is Implemented MVP after TASK-986 mapped every deferred row to concrete evidence.
 - D3: Registry-ready metadata is in scope; a hosted registry service and SemVer dependency solver remain out of scope unless a new spec explicitly expands scope.
 - D4: Runtime-support payload metadata must be concrete and equivalent across source and tarball install paths before A73-3/A73-10 can be promoted.
 - D5: Release-index and tarball URL support must be authenticated or fail closed; bare version install/update must not become best-effort network lookup.

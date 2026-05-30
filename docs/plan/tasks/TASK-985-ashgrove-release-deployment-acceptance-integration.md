@@ -98,4 +98,4 @@ This task feeds TASK-986 final closeout evidence.
 
 This task is intentionally blocked on TASK-976 so the implementation cannot drift from the acceptance-delta audit.
 
-TASK-985 adds integration proof and acceptance-matrix evidence only. SPEC-073 remains Draft, and TASK-986 owns final closeout, broad status reconciliation, and any promotion.
+TASK-985 added integration proof and acceptance-matrix evidence only. At TASK-985 completion, SPEC-073 remained Draft and TASK-986 owned final closeout, broad status reconciliation, and any promotion.

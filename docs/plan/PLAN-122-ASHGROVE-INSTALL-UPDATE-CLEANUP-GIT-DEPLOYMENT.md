@@ -12,11 +12,11 @@
 
 ## 1. Status
 
-**Status:** ⚠️ Partial Phase 127 after TASK-974 closeout; SPEC-073 remains Draft pending deferred acceptance rows
+**Status:** ⚠️ Historical partial Phase 127 after TASK-974 closeout; at that closeout SPEC-073 remained Draft pending deferred rows. Phase 128/TASK-986 later closed those rows and promoted SPEC-073 to Implemented MVP.
 **Spec:** [SPEC-073](../spec/SPEC-073-ASHGROVE-INSTALL-UPDATE-CLEANUP-GIT-DEPLOYMENT.md)
 **Task range:** [TASK-964](tasks/TASK-964-ashgrove-install-policy-packet.md) through [TASK-974](tasks/TASK-974-ashgrove-closeout-acceptance.md)
 
-TASK-964 creates the docs/spec/plan/task packet. TASK-965 is a hard audit gate and must patch exact downstream verification commands before Rust implementation starts.
+TASK-964 creates the docs/spec/plan/task packet. TASK-965 is a hard audit gate and must patch exact downstream verification commands before Rust implementation starts. Phase 127 remains the historical partial closeout; Phase 128/TASK-986 later closed the deferred rows and promoted SPEC-073 to Implemented MVP.
 
 ## 2. Scope
 
@@ -199,7 +199,7 @@ Closeout must also run a scoped docs/link/metadata sweep for all SPEC-073/PLAN-1
 
 TASK-974 owns the final acceptance matrix. It must map SPEC-073 A73-1 through A73-12 to concrete tests, command output, or documented deferrals. No row may be marked accepted by prose alone.
 
-Current closeout note: TASK-974 completed the acceptance matrix and required broad verification on 2026-05-29, including the exact focused Phase 127 commands and `cargo fmt --check`, `cargo check -p ashgrove`, `cargo clippy -p ashgrove --all-targets --all-features -- -D warnings`, and `git diff --check`. The closeout does not promote SPEC-073 beyond Draft because source archive release metadata, authenticated tarball URL recording, packaged dispatcher lifecycle policy, registry-scale metadata, broader cleanup reachability, mandatory trust/signing enforcement, and runtime-support payload metadata remain deferred.
+Current closeout note: TASK-974 completed the Phase 127 acceptance matrix and required broad verification on 2026-05-29, including the exact focused Phase 127 commands and `cargo fmt --check`, `cargo check -p ashgrove`, `cargo clippy -p ashgrove --all-targets --all-features -- -D warnings`, and `git diff --check`. That historical closeout did not promote SPEC-073 beyond Draft because source archive release metadata, authenticated tarball URL recording, packaged dispatcher lifecycle policy, registry-scale metadata, broader cleanup reachability, mandatory trust/signing enforcement, and runtime-support payload metadata remained deferred. Phase 128/TASK-986 later closed those deferred rows and promoted SPEC-073 to Implemented MVP without changing the Phase 127 record.
 
 ## 10. Changelog
 

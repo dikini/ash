@@ -6,7 +6,11 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 
+### Fixed
+- [TASK-981](docs/plan/tasks/TASK-981-registry-scale-package-metadata-substrate.md): Hardened lockfile consumers so `source` metadata, when present, must be `git+` and must match any legacy `git` URL before ash-engine or ashgrove use fetched cache, default `vendor/ash`, or provenance paths.
+
 ### Added
+- [TASK-981](docs/plan/tasks/TASK-981-registry-scale-package-metadata-substrate.md): Added registry-ready Ash package metadata preservation across `ash.toml`, `ash.lock`, vendor provenance, and ash-engine lock consumers while keeping hosted registry lookup and SemVer dependency solving fail-closed and out of scope.
 - [TASK-980](docs/plan/tasks/TASK-980-packaged-dispatcher-lifecycle-policy.md): Added packaged Ashgrove dispatcher lifecycle metadata so tarball installs and updates refresh the stable user-local dispatcher from the packaged manager, preserve selected tool exit behavior, protect the packaged dispatcher owner from remove/cleanup in TASK-980-aware manager execution after updates, and keep default switching selector-only without rewriting project manifests.
 - [TASK-979](docs/plan/tasks/TASK-979-release-index-authenticated-tarball-url-policy.md): Added authenticated Ashgrove tarball URL install/update policy for explicit-digest `file://` tarball URLs, recording URL, digest, and authentication provenance in install records while keeping missing evidence and unsupported network lookup fail-closed.
 - [TASK-978](docs/plan/tasks/TASK-978-runtime-support-payload-metadata.md): Added required runtime-support payload metadata to Ashgrove toolchain manifests, made source and tarball installs fail closed when the payload metadata or directory is missing, propagated the selected runtime-support identity from launcher dispatch into `ash`, and included that identity in runtime artifact construction.

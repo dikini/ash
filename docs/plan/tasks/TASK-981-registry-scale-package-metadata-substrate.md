@@ -1,6 +1,6 @@
 # TASK-981: Registry-scale package metadata substrate
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -13,7 +13,7 @@ Add registry-ready package metadata while keeping hosted registry and SemVer sol
 
 ## Dependencies
 
-- 📝 Depends on TASK-976 completion.
+- ✅ Depends on TASK-976 completion.
 
 ## Requirements
 
@@ -70,19 +70,19 @@ commands:
   - RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ash-engine --test task_981_registry_metadata_lock_consumers -- --nocapture
   - git diff --check
 checklist:
-  - [ ] Focused RED test was observed failing for the intended reason.
-  - [ ] Focused GREEN test passes and runs non-zero tests.
-  - [ ] `cargo fmt --check` passes when Rust code changed.
-  - [ ] `git diff --check` passes.
-  - [ ] `cargo check --workspace` or narrower audited check passes if shared carriers/public APIs changed.
-  - [ ] `cargo clippy --workspace --all-targets --all-features -- -D warnings` or narrower audited clippy gate passes if code changed.
-  - [ ] `CHANGELOG.md` updated if code/tooling/docs-policy/release-facing status changed.
-  - [ ] Independent review completed or status represented honestly.
+  - [x] Focused RED test was observed failing for the intended reason: manifest/lock/vendor surfaces dropped registry-ready metadata, registry-shaped dependencies produced only a generic missing-git diagnostic, ash-engine rejected registry-style lock entries with `source`/`resolved`, and ash-engine vendored lock discovery accepted poisoned `source`/legacy `git` combinations before remediation.
+  - [x] Focused GREEN tests pass and run non-zero tests: ashgrove ran 5 tests; ash-engine ran 5 tests.
+  - [x] `cargo fmt --check` passes when Rust code changed.
+  - [x] `git diff --check` passes.
+  - [x] Narrow affected checks pass for touched crates.
+  - [x] Narrow affected clippy gates pass for touched crates.
+  - [x] `CHANGELOG.md` updated if code/tooling/docs-policy/release-facing status changed.
+  - [x] Independent review completed.
 ```
 
 ## Dependencies for Next Task
 
-This task feeds TASK-986 final closeout evidence.
+This task feeds TASK-982 cleanup reachability metadata inputs and TASK-986 final closeout evidence. TASK-982 has not been started.
 
 ## Notes
 

@@ -2,6 +2,7 @@
 
 use std::collections::BTreeMap;
 use std::ffi::{OsStr, OsString};
+use std::fmt::Write as _;
 use std::fs;
 use std::io::{Read, Write};
 use std::path::{Component, Path, PathBuf};
@@ -3185,7 +3186,9 @@ fn vendor(paths: &AshgrovePaths, project: &Path, output: Option<&Path>, check: b
             if &provenance != package {
                 bail!("vendor provenance does not match lockfile for package '{name}'");
             }
-            let source = locked_package_root(paths, package);
+            package.git_url()?;
+            provenance.git_url()?;
+            let source = locked_package_root(paths, package)?;
             if !source.is_dir() {
                 bail!(
                     "locked package '{}' has not been materialized; run ashgrove fetch first",
@@ -3223,7 +3226,7 @@ fn vendor(paths: &AshgrovePaths, project: &Path, output: Option<&Path>, check: b
         validate_commit(&package.commit)?;
         let name = &package.name;
         let dest = out.join(name);
-        let source = locked_package_root(paths, package);
+        let source = locked_package_root(paths, package)?;
         if !source.is_dir() {
             bail!(
                 "locked package '{}' has not been materialized; run ashgrove fetch first",
@@ -3247,7 +3250,9 @@ fn vendor(paths: &AshgrovePaths, project: &Path, output: Option<&Path>, check: b
 fn read_lock(project: &Path) -> Result<LockFile> {
     let lock_path = project.join("ash.lock");
     let text = fs::read_to_string(&lock_path).context("read ash.lock")?;
-    toml::from_str(&text).context("parse ash.lock")
+    let lock: LockFile = toml::from_str(&text).context("parse ash.lock")?;
+    lock.validate()?;
+    Ok(lock)
 }
 
 fn read_lock_trust(lock_path: &Path) -> Result<Option<toml::Value>> {
@@ -3270,13 +3275,14 @@ fn materialize_locked_packages(
 }
 
 fn materialize_locked_package(paths: &AshgrovePaths, package: &LockedPackage) -> Result<()> {
-    let repo = locked_package_repo(paths, package);
-    let checkout = locked_package_root(paths, package);
+    let git = package.git_url()?;
+    let repo = locked_package_repo(paths, package)?;
+    let checkout = locked_package_root(paths, package)?;
     if !repo.exists() {
         fs::create_dir_all(repo.parent().context("repo parent")?).context("create repo cache")?;
         run_git_command(
             Path::new("."),
-            &["clone", "--mirror", &package.git, repo_str(&repo)?],
+            &["clone", "--mirror", git, repo_str(&repo)?],
             &format!("clone git dependency '{}'", package.name),
         )?;
     } else {
@@ -3311,20 +3317,22 @@ fn materialize_locked_package(paths: &AshgrovePaths, package: &LockedPackage) ->
     Ok(())
 }
 
-fn locked_package_repo(paths: &AshgrovePaths, package: &LockedPackage) -> PathBuf {
-    paths.cache_dir().join("git/repos").join(format!(
+fn locked_package_repo(paths: &AshgrovePaths, package: &LockedPackage) -> Result<PathBuf> {
+    let git = package.git_url()?;
+    Ok(paths.cache_dir().join("git/repos").join(format!(
         "{}-{}.git",
         package.name,
-        git_url_digest(&package.git)
-    ))
+        git_url_digest(git)
+    )))
 }
 
-fn locked_package_root(paths: &AshgrovePaths, package: &LockedPackage) -> PathBuf {
-    paths
+fn locked_package_root(paths: &AshgrovePaths, package: &LockedPackage) -> Result<PathBuf> {
+    let git = package.git_url()?;
+    Ok(paths
         .cache_dir()
         .join("git/checkouts")
-        .join(format!("{}-{}", package.name, git_url_digest(&package.git)))
-        .join(&package.commit)
+        .join(format!("{}-{}", package.name, git_url_digest(git)))
+        .join(&package.commit))
 }
 
 fn git_url_digest(url: &str) -> String {
@@ -3452,10 +3460,25 @@ fn collect_package_files(
 
 #[derive(Debug, Deserialize, Serialize)]
 struct LockFile {
+    #[serde(default = "lockfile_schema_version")]
+    version: u32,
     #[serde(skip_serializing_if = "Option::is_none")]
     trust: Option<toml::Value>,
     #[serde(default)]
     package: Vec<LockedPackage>,
+}
+
+const fn lockfile_schema_version() -> u32 {
+    1
+}
+
+impl LockFile {
+    fn validate(&self) -> Result<()> {
+        for package in &self.package {
+            package.git_url()?;
+        }
+        Ok(())
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
@@ -3463,12 +3486,62 @@ struct LockedPackage {
     name: String,
     git: String,
     #[serde(skip_serializing_if = "Option::is_none")]
+    source: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    package: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    version: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    registry: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    kind: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    license: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     tag: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     rev: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    requested: Option<RequestedPackage>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    resolved: Option<ResolvedPackage>,
     commit: String,
     #[serde(skip_serializing_if = "Option::is_none")]
+    manifest_digest: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     source_path: Option<String>,
+}
+
+impl LockedPackage {
+    fn git_url(&self) -> Result<&str> {
+        match self.source.as_deref() {
+            Some(source) => {
+                let source_git = source.strip_prefix("git+").ok_or_else(|| {
+                    anyhow!(
+                        "hosted registry dependencies are out of scope; ash.lock package source must be git+ URL"
+                    )
+                })?;
+                if source_git != self.git {
+                    bail!("ash.lock package source does not match legacy git URL");
+                }
+                Ok(source_git)
+            }
+            None => Ok(self.git.as_str()),
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
+struct RequestedPackage {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    tag: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    rev: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
+struct ResolvedPackage {
+    rev: String,
 }
 
 fn reject_legacy_conflict(project: &Path) -> Result<()> {
@@ -3517,13 +3590,32 @@ impl Manifest {
             package.push(LockedPackage {
                 name: dep.name.clone(),
                 git: dep.git.clone(),
+                source: Some(format!("git+{}", dep.git)),
+                package: dep.package.clone(),
+                version: dep.version.clone(),
+                registry: dep.registry.clone(),
+                kind: dep.kind.clone(),
+                license: dep.license.clone(),
                 tag: dep.tag.clone(),
                 rev,
+                requested: Some(RequestedPackage {
+                    tag: dep.tag.clone(),
+                    rev: dep.rev.clone(),
+                }),
+                resolved: Some(ResolvedPackage {
+                    rev: commit.clone(),
+                }),
                 commit,
+                manifest_digest: dep.registry_metadata_digest()?,
                 source_path: dep.local_path().map(|path| path.display().to_string()),
             });
         }
-        toml::to_string(&LockFile { trust, package }).context("serialize ash.lock")
+        toml::to_string(&LockFile {
+            version: lockfile_schema_version(),
+            trust,
+            package,
+        })
+        .context("serialize ash.lock")
     }
 }
 
@@ -3531,6 +3623,11 @@ impl Manifest {
 struct Dependency {
     name: String,
     git: String,
+    package: Option<String>,
+    version: Option<String>,
+    registry: Option<String>,
+    kind: Option<String>,
+    license: Option<String>,
     tag: Option<String>,
     rev: Option<String>,
 }
@@ -3538,11 +3635,20 @@ struct Dependency {
 impl Dependency {
     fn from_value(name: &str, value: &toml::Value) -> Result<Self> {
         validate_package_name(name)?;
-        let git = value
-            .get("git")
-            .and_then(toml::Value::as_str)
-            .context("git dependency missing git URL")?
-            .to_string();
+        let package = optional_dependency_string(value, "package")?;
+        let version = optional_dependency_string(value, "version")?;
+        let registry = optional_dependency_string(value, "registry")?;
+        let kind = optional_dependency_string(value, "kind")?;
+        let license = optional_dependency_string(value, "license")?;
+        let git = match value.get("git").and_then(toml::Value::as_str) {
+            Some(git) => git.to_string(),
+            None if package.is_some() || version.is_some() || registry.is_some() => {
+                bail!(
+                    "hosted registry dependencies are not supported and remain out of scope; dependency '{name}' must use explicit git plus tag or rev"
+                );
+            }
+            None => bail!("git dependency missing git URL"),
+        };
         let tag = value
             .get("tag")
             .and_then(toml::Value::as_str)
@@ -3557,6 +3663,11 @@ impl Dependency {
         Ok(Self {
             name: name.to_string(),
             git,
+            package,
+            version,
+            registry,
+            kind,
+            license,
             tag,
             rev,
         })
@@ -3592,6 +3703,56 @@ impl Dependency {
     fn local_path(&self) -> Option<PathBuf> {
         self.git.strip_prefix("file://").map(PathBuf::from)
     }
+
+    fn registry_metadata_digest(&self) -> Result<Option<String>> {
+        if self.package.is_none()
+            && self.version.is_none()
+            && self.registry.is_none()
+            && self.kind.is_none()
+            && self.license.is_none()
+        {
+            return Ok(None);
+        }
+        let mut table = toml::map::Map::new();
+        insert_optional_metadata(&mut table, "package", &self.package);
+        insert_optional_metadata(&mut table, "version", &self.version);
+        insert_optional_metadata(&mut table, "registry", &self.registry);
+        insert_optional_metadata(&mut table, "kind", &self.kind);
+        insert_optional_metadata(&mut table, "license", &self.license);
+        let text = toml::to_string(&toml::Value::Table(table))
+            .context("serialize registry metadata for digest")?;
+        Ok(Some(format!("sha256:{}", sha256_hex(text.as_bytes()))))
+    }
+}
+
+fn optional_dependency_string(value: &toml::Value, key: &str) -> Result<Option<String>> {
+    value
+        .get(key)
+        .map(|raw| {
+            raw.as_str()
+                .map(ToOwned::to_owned)
+                .ok_or_else(|| anyhow!("dependency metadata field '{key}' must be a string"))
+        })
+        .transpose()
+}
+
+fn insert_optional_metadata(
+    table: &mut toml::map::Map<String, toml::Value>,
+    key: &str,
+    value: &Option<String>,
+) {
+    if let Some(value) = value {
+        table.insert(key.to_string(), toml::Value::String(value.clone()));
+    }
+}
+
+fn sha256_hex(bytes: &[u8]) -> String {
+    let digest = Sha256::digest(bytes);
+    let mut out = String::new();
+    for byte in digest {
+        let _ = write!(out, "{byte:02x}");
+    }
+    out
 }
 
 fn validate_package_name(name: &str) -> Result<()> {

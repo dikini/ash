@@ -6110,6 +6110,7 @@ fn discover_locked_vendor_roots(
     roots.push(SearchRoot::ordinary(vendor_root.to_path_buf()));
     for package in packages {
         let name = locked_package_name(package)?;
+        let _git = locked_package_git(package)?;
         let _commit = locked_package_commit(package)?;
         let package_root = vendor_root.join(name);
         if !package_root.is_dir() {
@@ -6195,17 +6196,46 @@ fn locked_package_name(package: &toml::Value) -> Result<&str, EngineError> {
 }
 
 fn locked_package_git(package: &toml::Value) -> Result<&str, EngineError> {
-    package
-        .get("git")
-        .and_then(toml::Value::as_str)
-        .ok_or_else(|| EngineError::Configuration("ash.lock package missing git".into()))
+    let git = package.get("git").and_then(toml::Value::as_str);
+    let source = package.get("source").and_then(toml::Value::as_str);
+    match (source, git) {
+        (Some(source), Some(git)) => {
+            let source_git = locked_package_source_git(source)?;
+            if source_git != git {
+                return Err(EngineError::Configuration(
+                    "ash.lock package source does not match legacy git URL".into(),
+                ));
+            }
+            Ok(source_git)
+        }
+        (Some(source), None) => locked_package_source_git(source),
+        (None, Some(git)) => Ok(git),
+        (None, None) => Err(EngineError::Configuration(
+            "ash.lock package missing git".into(),
+        )),
+    }
+}
+
+fn locked_package_source_git(source: &str) -> Result<&str, EngineError> {
+    source.strip_prefix("git+").ok_or_else(|| {
+        EngineError::Configuration(
+            "hosted registry dependencies are out of scope; ash.lock package source must be git+ URL"
+                .into(),
+        )
+    })
 }
 
 fn locked_package_commit(package: &toml::Value) -> Result<&str, EngineError> {
-    let commit = package
-        .get("commit")
-        .and_then(toml::Value::as_str)
-        .ok_or_else(|| EngineError::Configuration("ash.lock package missing commit".into()))?;
+    let commit = if let Some(commit) = package.get("commit").and_then(toml::Value::as_str) {
+        commit
+    } else {
+        package
+            .get("resolved")
+            .and_then(toml::Value::as_table)
+            .and_then(|resolved| resolved.get("rev"))
+            .and_then(toml::Value::as_str)
+            .ok_or_else(|| EngineError::Configuration("ash.lock package missing commit".into()))?
+    };
     validate_locked_commit(commit)?;
     Ok(commit)
 }

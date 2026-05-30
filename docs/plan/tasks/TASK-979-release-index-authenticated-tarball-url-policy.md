@@ -1,6 +1,6 @@
 # TASK-979: Release-index authenticated tarball URL policy
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -13,21 +13,21 @@ Add authenticated tarball URL recording and release-index trust policy without b
 
 ## Dependencies
 
-- 📝 Depends on TASK-978 completion.
+- ✅ Depends on TASK-978 completion.
 
 ## Requirements
 
 ### Functional Requirements
 
-1. URL installs require digest or signed release-index evidence.
-2. Digest mismatch fails before publish.
-3. URL provenance is recorded in install/update metadata.
+1. ✅ URL installs require digest or signed release-index evidence.
+2. ✅ Digest mismatch fails before publish.
+3. ✅ URL provenance is recorded in install/update metadata.
 
 ### Property Requirements
 
-1. URL installs require an expected digest or signed release-index evidence.
-2. Digest mismatches fail before any toolchain publish.
-3. Authenticated URL provenance is recorded in install/update metadata.
+1. ✅ URL installs require an expected digest or signed release-index evidence.
+2. ✅ Digest mismatches fail before any toolchain publish.
+3. ✅ Authenticated URL provenance is recorded in install/update metadata.
 
 ## TDD Steps
 
@@ -68,14 +68,14 @@ commands:
   - RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ashgrove --test task_979_release_index_tarball_url_policy -- --nocapture
   - git diff --check
 checklist:
-  - [ ] Focused RED test was observed failing for the intended reason.
-  - [ ] Focused GREEN test passes and runs non-zero tests.
-  - [ ] `cargo fmt --check` passes when Rust code changed.
-  - [ ] `git diff --check` passes.
-  - [ ] `cargo check --workspace` or narrower audited check passes if shared carriers/public APIs changed.
-  - [ ] `cargo clippy --workspace --all-targets --all-features -- -D warnings` or narrower audited clippy gate passes if code changed.
-  - [ ] `CHANGELOG.md` updated if code/tooling/docs-policy/release-facing status changed.
-  - [ ] Independent review completed or status represented honestly.
+  - [x] Focused RED test was observed failing for the intended reason.
+  - [x] Focused GREEN test passes and runs non-zero tests.
+  - [x] `cargo fmt --check` passes when Rust code changed.
+  - [x] `git diff --check` passes.
+  - [x] `cargo check --workspace` or narrower audited check passes if shared carriers/public APIs changed.
+  - [x] `cargo clippy --workspace --all-targets --all-features -- -D warnings` or narrower audited clippy gate passes if code changed.
+  - [x] `CHANGELOG.md` updated if code/tooling/docs-policy/release-facing status changed.
+  - [x] Independent review completed or status represented honestly.
 ```
 
 ## Dependencies for Next Task
@@ -85,3 +85,5 @@ This task feeds TASK-986 final closeout evidence.
 ## Notes
 
 This task is intentionally blocked on TASK-976 so the implementation cannot drift from the acceptance-delta audit.
+
+Completion note: TASK-979 implements explicit-digest `file://` tarball URL install/update through the existing tarball validation and staged-publish path. Missing digest or signed release-index evidence fails closed, digest mismatch is checked before publish, and URL installs record `tarball_url`, `tarball_digest`, and `tarball_authentication = "explicit-digest"` in `install-record.toml`. Unsupported network URL schemes remain fail-closed rather than performing best-effort lookup.

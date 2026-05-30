@@ -303,7 +303,7 @@ Update this section as tasks complete:
 | 124 | 8 | 1 | 📝 Planned after packet creation |
 | 126 | 9 | 9 | ✅ Complete |
 | 127 | 11 | 4 + partial | ⚠️ Partial first slice |
-| 128 | 12 | 4 | ✅ TASK-978 runtime-support payload metadata complete; implementation ready for TASK-979 |
+| 128 | 12 | 5 | ✅ TASK-979 authenticated tarball URL policy complete; implementation ready for TASK-980 |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -3774,7 +3774,7 @@ Phase 127 introduces `ashgrove <command>` as the Ash toolchain and deployment ma
 ## Phase 128: SPEC-073 Ashgrove Release, Trust, Registry-Ready Metadata, and Runtime-Support Completion
 
 **Priority:** High (closes the Phase 127 SPEC-073 deferred acceptance rows needed before Ashgrove can move beyond Draft)
-**Status:** ✅ TASK-978 runtime-support payload metadata complete; implementation proceeds sequentially through TASK-979 through TASK-986
+**Status:** ✅ TASK-979 authenticated tarball URL policy complete; implementation proceeds sequentially through TASK-980 through TASK-986
 **Spec:** [SPEC-073](../spec/SPEC-073-ASHGROVE-INSTALL-UPDATE-CLEANUP-GIT-DEPLOYMENT.md)
 **Plan:** [PLAN-123](PLAN-123-SPEC-073-ASHGROVE-RELEASE-TRUST-REGISTRY-RUNTIME-SUPPORT-COMPLETION.md)
 
@@ -3786,7 +3786,7 @@ Phase 128 is the follow-on to Phase 127. It does not reopen or rewrite Phase 127
 | [TASK-976](tasks/TASK-976-ashgrove-completion-acceptance-delta-and-audit-gate.md) | Map every SPEC-073 deferred row to exact owners, files, tests, and RED failure modes | 8 | ✅ Complete |
 | [TASK-977](tasks/TASK-977-source-archive-release-metadata.md) | Implement source-archive release metadata and reproducibility checks | 10 | ✅ Complete |
 | [TASK-978](tasks/TASK-978-runtime-support-payload-metadata.md) | Define and verify concrete runtime-support payload metadata across source/tarball installs | 10 | ✅ Complete |
-| [TASK-979](tasks/TASK-979-release-index-authenticated-tarball-url-policy.md) | Add authenticated tarball URL recording and release-index trust policy | 14 | 📝 Planned |
+| [TASK-979](tasks/TASK-979-release-index-authenticated-tarball-url-policy.md) | Add authenticated tarball URL recording and release-index trust policy | 14 | ✅ Complete |
 | [TASK-980](tasks/TASK-980-packaged-dispatcher-lifecycle-policy.md) | Finalize packaged dispatcher lifecycle and launcher update/remove policy | 10 | 📝 Planned |
 | [TASK-981](tasks/TASK-981-registry-scale-package-metadata-substrate.md) | Add registry-ready package metadata without creating a hosted registry service | 12 | 📝 Planned |
 | [TASK-982](tasks/TASK-982-cleanup-lockfile-cache-reachability.md) | Implement broader cleanup reachability across lockfiles, fetched cache, vendor metadata, and installed toolchains | 12 | 📝 Planned |

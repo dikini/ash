@@ -12,11 +12,11 @@
 
 ## 1. Status
 
-**Status:** ✅ TASK-978 complete; implementation ready for TASK-979
+**Status:** ✅ TASK-979 complete; implementation ready for TASK-980
 **Spec:** [SPEC-073](../spec/SPEC-073-ASHGROVE-INSTALL-UPDATE-CLEANUP-GIT-DEPLOYMENT.md)
 **Task range:** [TASK-975](tasks/TASK-975-spec073-ashgrove-completion-packet.md) through [TASK-986](tasks/TASK-986-spec073-implemented-mvp-closeout.md)
 
-TASK-975 created this docs packet. TASK-976 completed the hard audit gate and patched exact downstream verification commands before Rust implementation starts.
+TASK-975 created this docs packet. TASK-976 completed the hard audit gate and patched exact downstream verification commands before Rust implementation starts. TASK-979 now closes the authenticated tarball URL slice for explicit-digest `file://` URLs while keeping unsupported network lookup fail-closed.
 
 ## 2. Scope
 
@@ -52,7 +52,7 @@ TASK-975 created this docs packet. TASK-976 completed the hard audit gate and pa
 | [TASK-976](tasks/TASK-976-ashgrove-completion-acceptance-delta-and-audit-gate.md) | Map every SPEC-073 deferred row to exact owners, files, tests, and RED failure modes | 8 | ✅ Complete |
 | [TASK-977](tasks/TASK-977-source-archive-release-metadata.md) | Implement source-archive release metadata and reproducibility checks | 10 | ✅ Complete |
 | [TASK-978](tasks/TASK-978-runtime-support-payload-metadata.md) | Define and verify concrete runtime-support payload metadata across source/tarball installs | 10 | ✅ Complete |
-| [TASK-979](tasks/TASK-979-release-index-authenticated-tarball-url-policy.md) | Add authenticated tarball URL recording and release-index trust policy | 14 | 📝 Planned |
+| [TASK-979](tasks/TASK-979-release-index-authenticated-tarball-url-policy.md) | Add authenticated tarball URL recording and release-index trust policy | 14 | ✅ Complete |
 | [TASK-980](tasks/TASK-980-packaged-dispatcher-lifecycle-policy.md) | Finalize packaged dispatcher lifecycle and launcher update/remove policy | 10 | 📝 Planned |
 | [TASK-981](tasks/TASK-981-registry-scale-package-metadata-substrate.md) | Add registry-ready package metadata without creating a hosted registry service | 12 | 📝 Planned |
 | [TASK-982](tasks/TASK-982-cleanup-lockfile-cache-reachability.md) | Implement broader cleanup reachability across lockfiles, fetched cache, vendor metadata, and installed toolchains | 12 | 📝 Planned |
@@ -130,3 +130,4 @@ SPEC-073 may be promoted beyond Draft only after TASK-986 confirms:
 - TASK-976 completed the hard audit gate by creating the acceptance-delta artifact, binding TASK-977 through TASK-985 to focused non-zero verification commands, and recording the A73-11 wording amendment required before mandatory trust/signing enforcement can be claimed.
 - TASK-977 implemented source-archive release metadata by requiring typed `release-source.toml` origin-commit metadata unless `--allow-unidentified-source` is explicit, recording `source_archive_digest` and `source_origin_commit` in source archive install records, and keeping unidentified archives non-reproducible.
 - TASK-978 implemented concrete runtime-support payload metadata by requiring source and tarball toolchain manifests to carry equivalent `[runtime_support]` identity/path/required metadata, validating the payload directory before publish, propagating the selected runtime-support identity through launcher dispatch, and including that identity in runtime artifact construction.
+- TASK-979 implemented authenticated tarball URL install/update policy for explicit-digest `file://` tarball URLs, records URL/digest/authentication provenance in `install-record.toml`, rejects URL installs without digest or signed release-index evidence, rejects digest mismatches before publish, and keeps unsupported network URL schemes fail-closed rather than adding best-effort lookup.

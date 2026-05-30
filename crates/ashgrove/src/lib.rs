@@ -1608,15 +1608,27 @@ fn install(paths: &AshgrovePaths, args: InstallArgs) -> Result<()> {
         }
         InstallSource::Tarball => {
             if let Some(url) = args.url {
-                bail!(
-                    "tarball URL install is reserved until authenticated download policy exists: {url}"
-                );
+                return install_from_tarball_url(
+                    paths,
+                    &url,
+                    args.switch,
+                    None,
+                    args.digest.as_deref(),
+                )
+                .map(|_| ());
             }
             let path = args
                 .path
                 .context("--path is required for tarball install")?;
-            install_from_tarball(paths, &path, args.switch, None, args.digest.as_deref())
-                .map(|_| ())
+            install_from_tarball(
+                paths,
+                &path,
+                args.switch,
+                None,
+                args.digest.as_deref(),
+                None,
+            )
+            .map(|_| ())
         }
     }
 }
@@ -1643,13 +1655,25 @@ fn update(paths: &AshgrovePaths, args: UpdateArgs) -> Result<()> {
         }
         InstallSource::Tarball => {
             if let Some(url) = args.url {
-                bail!(
-                    "tarball URL update is reserved until authenticated download policy exists: {url}"
-                );
+                return install_from_tarball_url(
+                    paths,
+                    &url,
+                    args.switch,
+                    Some(&id),
+                    args.digest.as_deref(),
+                )
+                .map(|_| ());
             }
             let path = args.path.context("--path is required for tarball update")?;
-            install_from_tarball(paths, &path, args.switch, Some(&id), args.digest.as_deref())
-                .map(|_| ())
+            install_from_tarball(
+                paths,
+                &path,
+                args.switch,
+                Some(&id),
+                args.digest.as_deref(),
+                None,
+            )
+            .map(|_| ())
         }
     }
 }
@@ -2259,6 +2283,7 @@ fn install_from_tarball(
     switch: bool,
     expected_id: Option<&ToolchainId>,
     expected_digest: Option<&str>,
+    tarball_url: Option<&str>,
 ) -> Result<ToolchainId> {
     let digest = file_digest(archive)?;
     verify_expected_tarball_digest(expected_digest, &digest)?;
@@ -2307,7 +2332,13 @@ fn install_from_tarball(
     verify_install_record_shape(&root, &id)?;
     verify_required_binaries_executable(&root, &id)?;
     verify_required_manifest_tools(&root, &manifest)?;
-    write_tarball_install_record(&root.join("install-record.toml"), &id, archive, &digest)?;
+    write_tarball_install_record(
+        &root.join("install-record.toml"),
+        &id,
+        archive,
+        &digest,
+        tarball_url,
+    )?;
     let stage = ToolchainStage::create(paths, id.clone())?;
     stage.copy_toolchain_payload(&root)?;
     stage.publish()?;
@@ -2316,6 +2347,41 @@ fn install_from_tarball(
         set_default(paths, &id)?;
     }
     Ok(id)
+}
+
+fn install_from_tarball_url(
+    paths: &AshgrovePaths,
+    url: &str,
+    switch: bool,
+    expected_id: Option<&ToolchainId>,
+    expected_digest: Option<&str>,
+) -> Result<ToolchainId> {
+    if expected_digest.is_none() {
+        bail!(
+            "tarball URL install requires authenticated download policy evidence: explicit sha256 digest or signed release-index evidence"
+        );
+    }
+    let archive = authenticated_tarball_url_path(url)?;
+    install_from_tarball(
+        paths,
+        &archive,
+        switch,
+        expected_id,
+        expected_digest,
+        Some(url),
+    )
+}
+
+fn authenticated_tarball_url_path(url: &str) -> Result<PathBuf> {
+    let Some(path) = url.strip_prefix("file://") else {
+        bail!(
+            "authenticated download policy supports file:// tarball URLs with explicit sha256 digest; no best-effort network lookup for {url}"
+        );
+    };
+    if path.trim().is_empty() {
+        bail!("tarball URL must include a file path");
+    }
+    Ok(PathBuf::from(path))
 }
 
 fn verify_expected_tarball_digest(
@@ -2470,6 +2536,7 @@ fn write_tarball_install_record(
     id: &ToolchainId,
     archive: &Path,
     digest: &str,
+    tarball_url: Option<&str>,
 ) -> Result<()> {
     let mut table = toml::map::Map::new();
     table.insert(
@@ -2492,6 +2559,16 @@ fn write_tarball_install_record(
         "tarball_digest".to_string(),
         toml::Value::String(format!("sha256:{digest}")),
     );
+    if let Some(tarball_url) = tarball_url {
+        table.insert(
+            "tarball_url".to_string(),
+            toml::Value::String(tarball_url.to_string()),
+        );
+        table.insert(
+            "tarball_authentication".to_string(),
+            toml::Value::String("explicit-digest".to_string()),
+        );
+    }
     table.insert(
         "installed_at".to_string(),
         toml::Value::String(Utc::now().to_rfc3339()),

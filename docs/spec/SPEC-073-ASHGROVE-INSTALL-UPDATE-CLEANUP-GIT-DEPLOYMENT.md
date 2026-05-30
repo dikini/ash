@@ -554,6 +554,7 @@ Follow-on completion tasks from Phase 128:
 - TASK-976 completed the Phase 128 acceptance-delta audit. The audit keeps SPEC-073 Draft, binds every TASK-974 deferred gap to exactly one owner task, and records that A73-11's Phase 127 reserved-metadata wording must be amended by TASK-984/TASK-986 before mandatory trust/signing enforcement can be claimed.
 - TASK-977 completed source-archive release metadata. Source archive installs now require typed `release-source.toml` origin-commit metadata unless `--allow-unidentified-source` is explicit, record `source_archive_digest` and `source_origin_commit` in install records, and mark unidentified overrides non-reproducible.
 - TASK-978 completed runtime-support payload metadata. Source and tarball manifests now carry equivalent required `[runtime_support]` metadata for `lib/ash/std/src/runtime`, installs fail closed when the metadata or payload is missing, launcher dispatch exports the selected runtime-support identity, and runtime artifact construction incorporates that identity.
+- TASK-979 completed authenticated tarball URL policy for explicit-digest `file://` tarball URLs. URL install/update now requires explicit `sha256:` digest or signed release-index evidence, rejects digest mismatches before publish, records `tarball_url`, `tarball_digest`, and `tarball_authentication` provenance, and keeps unsupported network URL schemes fail-closed without best-effort lookup.
 
 ### 2026-05-28
 

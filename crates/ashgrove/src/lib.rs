@@ -1,6 +1,6 @@
 //! User-local Ash toolchain and deployment manager.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::ffi::{OsStr, OsString};
 use std::fmt::Write as _;
 use std::fs;
@@ -276,6 +276,10 @@ impl SelectorMetadata {
 
     fn project_pins(&self) -> impl Iterator<Item = &ToolchainId> {
         self.projects.values()
+    }
+
+    fn project_roots(&self) -> impl Iterator<Item = PathBuf> + '_ {
+        self.projects.keys().map(PathBuf::from)
     }
 }
 
@@ -2973,31 +2977,28 @@ fn read_stdin_confirmation() -> Result<String> {
 
 fn cleanup(paths: &AshgrovePaths, args: CleanupArgs) -> Result<()> {
     let has_cleanup_flags = args.cache || args.orphans || args.old_toolchains;
+    let reachability = CleanupReachability::collect(paths, args.project.as_deref())?;
     let project_pin = args
         .project
         .as_deref()
-        .map(project_toolchain_pin)
-        .transpose()?
-        .flatten()
-        .map(|pin| ToolchainId::parse(&pin))
-        .transpose()?;
+        .and_then(|project| reachability.project_toolchain(project));
 
     if args.dry_run && args.project.is_some() && !has_cleanup_flags {
-        cleanup_project_dry_run_plan(project_pin.as_ref());
+        cleanup_project_dry_run_plan(project_pin);
         return Ok(());
     }
 
     if args.old_toolchains && !args.dry_run {
-        cleanup_old_toolchains(paths, project_pin.as_ref(), args.dry_run)?;
+        cleanup_old_toolchains(paths, &reachability, args.dry_run)?;
     }
     if args.cache {
-        cleanup_cache(paths, args.dry_run)?;
+        cleanup_cache(paths, &reachability, args.dry_run)?;
     }
     if args.orphans {
         cleanup_orphan_toolchain_dirs(paths, args.dry_run)?;
     }
     if args.old_toolchains && args.dry_run {
-        cleanup_old_toolchains(paths, project_pin.as_ref(), args.dry_run)?;
+        cleanup_old_toolchains(paths, &reachability, args.dry_run)?;
     }
 
     if args.dry_run || has_cleanup_flags {
@@ -3014,12 +3015,116 @@ fn cleanup_project_dry_run_plan(project_pin: Option<&ToolchainId>) {
     println!("no destructive cleanup will occur");
 }
 
-fn cleanup_cache(paths: &AshgrovePaths, dry_run: bool) -> Result<()> {
+#[derive(Debug, Default)]
+struct CleanupReachability {
+    project_toolchains: BTreeMap<PathBuf, ToolchainId>,
+    package_roots: BTreeSet<PathBuf>,
+    package_repos: BTreeSet<PathBuf>,
+}
+
+impl CleanupReachability {
+    fn collect(paths: &AshgrovePaths, supplied_project: Option<&Path>) -> Result<Self> {
+        let mut reachability = Self::default();
+        let mut projects = BTreeSet::new();
+        if let Some(project) = supplied_project {
+            projects.insert(project.to_path_buf());
+        }
+        projects.insert(std::env::current_dir().context("read current directory")?);
+        let selector = read_selector(paths)?;
+        projects.extend(selector.project_roots());
+
+        for project in projects {
+            if !project.exists() {
+                continue;
+            }
+            if let Some(pin) = project_toolchain_pin(&project)? {
+                reachability
+                    .project_toolchains
+                    .insert(project.clone(), ToolchainId::parse(&pin)?);
+            }
+            if project.join("ash.lock").is_file() {
+                let lock = read_lock(&project)
+                    .with_context(|| format!("read cleanup lockfile {}", project.display()))?;
+                reachability.record_lock(paths, &lock)?;
+            }
+            reachability.record_vendor_provenance(paths, &project)?;
+        }
+        Ok(reachability)
+    }
+
+    fn record_lock(&mut self, paths: &AshgrovePaths, lock: &LockFile) -> Result<()> {
+        for package in &lock.package {
+            validate_package_name(&package.name)?;
+            validate_commit(&package.commit)?;
+            self.package_roots
+                .insert(locked_package_root(paths, package)?);
+            self.package_repos
+                .insert(locked_package_repo(paths, package)?);
+        }
+        Ok(())
+    }
+
+    fn record_vendor_provenance(&mut self, paths: &AshgrovePaths, project: &Path) -> Result<()> {
+        let vendor_root = project.join("vendor/ash");
+        if !vendor_root.is_dir() {
+            return Ok(());
+        }
+        for entry in fs::read_dir(&vendor_root)
+            .with_context(|| format!("read vendor root {}", vendor_root.display()))?
+        {
+            let entry = entry.context("read vendor package entry")?;
+            if !entry
+                .file_type()
+                .with_context(|| format!("read vendor package type {}", entry.path().display()))?
+                .is_dir()
+            {
+                continue;
+            }
+            let provenance_path = entry.path().join("provenance.toml");
+            if !provenance_path.is_file() {
+                continue;
+            }
+            let text = fs::read_to_string(&provenance_path)
+                .with_context(|| format!("read vendor provenance {}", provenance_path.display()))?;
+            let package: LockedPackage = toml::from_str(&text).with_context(|| {
+                format!("parse vendor provenance {}", provenance_path.display())
+            })?;
+            package.git_url()?;
+            validate_package_name(&package.name)?;
+            validate_commit(&package.commit)?;
+            self.package_roots
+                .insert(locked_package_root(paths, &package)?);
+            self.package_repos
+                .insert(locked_package_repo(paths, &package)?);
+        }
+        Ok(())
+    }
+
+    fn project_toolchain(&self, project: &Path) -> Option<&ToolchainId> {
+        self.project_toolchains.get(project)
+    }
+
+    fn protects_toolchain(&self, id: &ToolchainId) -> bool {
+        self.project_toolchains.values().any(|pin| pin == id)
+    }
+
+    fn is_reachable_cache_path(&self, path: &Path) -> bool {
+        self.package_roots.contains(path) || self.package_repos.contains(path)
+    }
+}
+
+fn cleanup_cache(
+    paths: &AshgrovePaths,
+    reachability: &CleanupReachability,
+    dry_run: bool,
+) -> Result<()> {
     let cache_dir = paths.cache_dir();
     if !cache_dir.exists() {
         return Ok(());
     }
-    for name in ["downloads", "git", "builds", "module-cache"] {
+    cleanup_cache_tree(&cache_dir.join("git/repos"), reachability, dry_run)?;
+    cleanup_cache_tree(&cache_dir.join("git/checkouts"), reachability, dry_run)?;
+    for name in ["downloads", "builds", "module-cache"] {
         let path = cache_dir.join(name);
         if !path.exists() {
             continue;
@@ -3030,6 +3135,65 @@ fn cleanup_cache(paths: &AshgrovePaths, dry_run: bool) -> Result<()> {
             remove_path(&path).with_context(|| format!("remove cache {}", path.display()))?;
             println!("removed cache {}", path.display());
         }
+    }
+    Ok(())
+}
+
+fn cleanup_cache_tree(
+    root: &Path,
+    reachability: &CleanupReachability,
+    dry_run: bool,
+) -> Result<()> {
+    if !root.exists() {
+        return Ok(());
+    }
+    for entry in fs::read_dir(root).with_context(|| format!("read cache {}", root.display()))? {
+        let entry = entry.context("read cache entry")?;
+        let path = entry.path();
+        if root.ends_with("checkouts") && entry.file_type()?.is_dir() {
+            for checkout in fs::read_dir(&path)
+                .with_context(|| format!("read cache checkout namespace {}", path.display()))?
+            {
+                let checkout = checkout.context("read cache checkout entry")?;
+                report_or_remove_cache_entry(&checkout.path(), reachability, dry_run)?;
+            }
+            if !dry_run {
+                remove_empty_dir(&path)?;
+            }
+        } else {
+            report_or_remove_cache_entry(&path, reachability, dry_run)?;
+        }
+    }
+    Ok(())
+}
+
+fn report_or_remove_cache_entry(
+    path: &Path,
+    reachability: &CleanupReachability,
+    dry_run: bool,
+) -> Result<()> {
+    if reachability.is_reachable_cache_path(path) {
+        println!("reachable cache {}", path.display());
+        return Ok(());
+    }
+    if dry_run {
+        println!("would remove cache {}", path.display());
+    } else {
+        remove_path(path).with_context(|| format!("remove cache {}", path.display()))?;
+        println!("removed cache {}", path.display());
+    }
+    Ok(())
+}
+
+fn remove_empty_dir(path: &Path) -> Result<()> {
+    if path.is_dir()
+        && fs::read_dir(path)
+            .with_context(|| format!("read cache dir {}", path.display()))?
+            .next()
+            .is_none()
+    {
+        fs::remove_dir(path)
+            .with_context(|| format!("remove empty cache dir {}", path.display()))?;
     }
     Ok(())
 }
@@ -3070,14 +3234,14 @@ fn cleanup_orphan_toolchain_dirs(paths: &AshgrovePaths, dry_run: bool) -> Result
 
 fn cleanup_old_toolchains(
     paths: &AshgrovePaths,
-    project_pin: Option<&ToolchainId>,
+    reachability: &CleanupReachability,
     dry_run: bool,
 ) -> Result<()> {
     let mut ids = installed_toolchain_ids(paths)?;
     ids.sort_by(|left, right| left.as_str().cmp(right.as_str()));
     let mut deletion_candidates = Vec::new();
     for id in ids {
-        if let Some(reason) = cleanup_protection_reason(paths, &id, project_pin)? {
+        if let Some(reason) = cleanup_protection_reason(paths, &id, reachability)? {
             println!("protected {reason} {}", id.as_str());
             continue;
         }
@@ -3103,7 +3267,7 @@ fn cleanup_old_toolchains(
 fn cleanup_protection_reason(
     paths: &AshgrovePaths,
     id: &ToolchainId,
-    project_pin: Option<&ToolchainId>,
+    reachability: &CleanupReachability,
 ) -> Result<Option<&'static str>> {
     if std::env::var("ASHGROVE_RUNNING_TOOLCHAIN").ok().as_deref() == Some(id.as_str()) {
         return Ok(Some("running manager"));
@@ -3117,7 +3281,7 @@ fn cleanup_protection_reason(
     if read_default(paths)?.as_ref() == Some(id) {
         return Ok(Some("default"));
     }
-    if project_pin == Some(id) || current_project_uses_toolchain(id)? {
+    if reachability.protects_toolchain(id) || current_project_uses_toolchain(id)? {
         return Ok(Some("project"));
     }
     if read_selector(paths)?.project_pins().any(|pin| pin == id) {

@@ -1,6 +1,6 @@
 # TASK-982: Cleanup lockfile/cache reachability
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -13,7 +13,7 @@ Implement broader cleanup reachability across lockfiles, fetched cache, vendor m
 
 ## Dependencies
 
-- 📝 Depends on TASK-981 completion.
+- ✅ Depends on TASK-981 completion.
 
 ## Requirements
 
@@ -67,15 +67,24 @@ commands:
   - RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ashgrove --test task_982_cleanup_reachability -- --nocapture
   - git diff --check
 checklist:
-  - [ ] Focused RED test was observed failing for the intended reason.
-  - [ ] Focused GREEN test passes and runs non-zero tests.
-  - [ ] `cargo fmt --check` passes when Rust code changed.
-  - [ ] `git diff --check` passes.
-  - [ ] `cargo check --workspace` or narrower audited check passes if shared carriers/public APIs changed.
-  - [ ] `cargo clippy --workspace --all-targets --all-features -- -D warnings` or narrower audited clippy gate passes if code changed.
-  - [ ] `CHANGELOG.md` updated if code/tooling/docs-policy/release-facing status changed.
-  - [ ] Independent review completed or status represented honestly.
+  - [x] Focused RED test was observed failing for the intended reason.
+  - [x] Focused GREEN test passes and runs non-zero tests.
+  - [x] `cargo fmt --check` passes when Rust code changed.
+  - [x] `git diff --check` passes.
+  - [x] `cargo check --workspace` or narrower audited check passes if shared carriers/public APIs changed.
+  - [x] `cargo clippy --workspace --all-targets --all-features -- -D warnings` or narrower audited clippy gate passes if code changed.
+  - [x] `CHANGELOG.md` updated if code/tooling/docs-policy/release-facing status changed.
+  - [x] Independent review completed or status represented honestly.
 ```
+
+## Evidence
+
+- RED: `RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ashgrove --test task_982_cleanup_reachability -- --nocapture` failed before production edits because cleanup reported `would remove cache .../ash/git` instead of the expected reachable checkout and unreachable stale checkout entries; 2 failed, 1 passed.
+- GREEN: `RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ashgrove --test task_982_cleanup_reachability -- --nocapture` passed; 3 passed, 0 failed.
+- Adjacent cleanup regression: `RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ashgrove --test task_971_remove_cleanup -- --nocapture` passed; 21 passed, 0 failed.
+- Packaged dispatcher cleanup regression: `RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ashgrove --test task_980_packaged_dispatcher_lifecycle -- --nocapture` passed; 4 passed, 0 failed.
+- Code gates: `cargo fmt --check`, `RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo check -p ashgrove`, and `RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo clippy -p ashgrove --all-targets --all-features -- -D warnings` passed.
+- Review: independent review completed for lock/cache reachability, project-local manifest/lock preservation, no unregistered root crawling, dry-run truthfulness, TASK-980 running-manager owner protection, TASK-981 source/git fail-closed boundaries, and status-surface claims.
 
 ## Dependencies for Next Task
 
@@ -83,4 +92,4 @@ This task feeds TASK-986 final closeout evidence.
 
 ## Notes
 
-This task is intentionally blocked on TASK-976 so the implementation cannot drift from the acceptance-delta audit.
+This task used the TASK-976 acceptance-delta row as the implementation binding.

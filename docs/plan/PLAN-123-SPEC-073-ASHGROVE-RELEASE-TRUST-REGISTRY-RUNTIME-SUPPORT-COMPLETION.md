@@ -74,7 +74,7 @@ TASK-975 created this docs packet. TASK-976 completed the hard audit gate and pa
 | Manifest rewrite trust metadata preservation | TASK-974 deferred gap; A73-11 | TASK-983 |
 | Mandatory trust/signing enforcement | TASK-974 deferred gap; A73-11 hardening; requires SPEC-073 wording amendment before closeout | TASK-984 |
 | Remote-authenticated git fetch policy | TASK-974 deferred gap; A73-8/A73-9/A73-12 | TASK-984 |
-| End-to-end release/deployment acceptance | SPEC-073 A73-1 through A73-12 | TASK-985/TASK-986 |
+| End-to-end release/deployment acceptance | SPEC-073 A73-1 through A73-12 | TASK-985 |
 
 ## 5. Decision gates
 

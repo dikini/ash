@@ -167,6 +167,54 @@ fn task_981_vendor_provenance_records_registry_metadata_and_detects_drift() {
 }
 
 #[test]
+fn task_981_fetch_and_vendor_accept_source_only_git_lock_entries() {
+    let project = support::project_fixture();
+    let dep = support::git_dep_fixture();
+    let commit = dep.commit("v1");
+    std::fs::write(
+        project.path().join("ash.toml"),
+        "[package]\nname = \"app\"\n",
+    )
+    .expect("manifest");
+    std::fs::write(
+        project.path().join("ash.lock"),
+        format!(
+            "[[package]]\nname = \"dep\"\nversion = \"0.2.0\"\nregistry = \"ash.test\"\nsource = \"git+{}\"\ncommit = \"{}\"\nresolved = {{ rev = \"{}\" }}\n",
+            dep.url(),
+            commit,
+            commit
+        ),
+    )
+    .expect("lock");
+    let roots = support::xdg_fixture();
+
+    Command::cargo_bin("ashgrove")
+        .expect("ashgrove")
+        .args(["fetch", "--project", project.path().to_str().expect("utf8")])
+        .envs(roots.env())
+        .assert()
+        .success();
+
+    Command::cargo_bin("ashgrove")
+        .expect("ashgrove")
+        .args([
+            "vendor",
+            "--project",
+            project.path().to_str().expect("utf8"),
+        ])
+        .envs(roots.env())
+        .assert()
+        .success();
+
+    assert!(
+        project
+            .path()
+            .join("vendor/ash/dep/provenance.toml")
+            .is_file()
+    );
+}
+
+#[test]
 fn task_981_fetch_rejects_non_git_source_even_with_legacy_git() {
     let project = support::project_fixture();
     let dep = support::git_dep_fixture();

@@ -161,6 +161,34 @@ async fn task_981_engine_rejects_vendored_source_git_mismatch() {
     );
 }
 
+#[tokio::test]
+async fn task_981_engine_rejects_explicit_vendor_root_non_git_source() {
+    let fixture = poisoned_vendor_lock_fixture(
+        "registry+https://registry.example.invalid/helper",
+        LegacyGit::Valid,
+    );
+    let cache_root = fixture.cache.path().to_path_buf();
+    let vendor_root = fixture.vendor_root.clone();
+    let error = temp_env::async_with_vars(
+        [
+            ("XDG_CACHE_HOME", Some(cache_root.as_os_str())),
+            ("ASH_DEP_ROOTS", Some(vendor_root.as_os_str())),
+            ("ASH_DEPENDENCY_ROOTS", None::<&std::ffi::OsStr>),
+            ("ASH_LIBRARY_PATH", None::<&std::ffi::OsStr>),
+        ],
+        async { load_ordinary_file(&fixture.main) },
+    )
+    .await
+    .expect_err("explicit vendor roots must validate lock source before use");
+
+    assert!(
+        error
+            .to_string()
+            .contains("ash.lock package source must be git+ URL"),
+        "{error}"
+    );
+}
+
 #[derive(Clone, Copy)]
 enum LegacyGit {
     Valid,
@@ -177,6 +205,7 @@ struct PoisonedVendorLockFixture {
     _project: tempfile::TempDir,
     cache: tempfile::TempDir,
     _dep: tempfile::TempDir,
+    vendor_root: std::path::PathBuf,
     main: std::path::PathBuf,
 }
 
@@ -256,6 +285,7 @@ fn poisoned_vendor_lock_fixture(source: &str, legacy_git: LegacyGit) -> Poisoned
     .expect("main");
 
     PoisonedVendorLockFixture {
+        vendor_root: project.path().join("vendor/ash"),
         _project: project,
         cache,
         _dep: dep,

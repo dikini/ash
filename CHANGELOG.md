@@ -7,6 +7,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Fixed
+- [TASK-986](docs/plan/tasks/TASK-986-spec073-implemented-mvp-closeout.md): Remediated Phase 128 post-closeout review findings by preserving fail-closed source-archive attestation, lockfile source validation, and credential-redaction behavior while keeping registry-style lock metadata inside the SPEC-073 MVP boundary.
 - [TASK-986](docs/plan/tasks/TASK-986-spec073-implemented-mvp-closeout.md): Reconciled the daemon control-plane regression expectation with the TASK-978 runtime-support identity hashing boundary so broad Phase 128 workspace gates validate the selected runtime-support artifact identity.
 - [TASK-981](docs/plan/tasks/TASK-981-registry-scale-package-metadata-substrate.md): Hardened lockfile consumers so `source` metadata, when present, must be `git+` and must match any legacy `git` URL before ash-engine or ashgrove use fetched cache, default `vendor/ash`, or provenance paths.
 

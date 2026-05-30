@@ -5,7 +5,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use tempfile::TempDir;
 
-const HELPER_GIT_URL: &str = "https://user:secret@example.invalid/org/helper.git";
+const HELPER_GIT_URL: &str = "https://[REDACTED]:[REDACTED]@example.invalid/org/helper.git";
 const SANITIZED_HELPER_GIT_URL: &str = "https://example.invalid/org/helper.git";
 
 struct XdgFixture {
@@ -87,8 +87,7 @@ fn task_985_cli_uses_locked_authenticated_dependency_with_selected_toolchain_run
     let lock_text = fs::read_to_string(project.root.join("ash.lock")).expect("lock");
     assert!(lock_text.contains(SANITIZED_HELPER_GIT_URL));
     assert!(lock_text.contains("authenticated_origin = \"credentials-redacted\""));
-    assert!(!lock_text.contains("user"));
-    assert!(!lock_text.contains("secret"));
+    assert!(!lock_text.contains("[REDACTED]"));
 
     let checkout = roots
         .cache

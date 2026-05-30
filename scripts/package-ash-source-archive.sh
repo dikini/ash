@@ -100,6 +100,10 @@ tar -C "$source_root" \
 cat >"$stage/release-source.toml" <<EOF
 schema_version = $schema_version
 origin_commit = "$origin_commit"
+
+[attestation]
+required = true
+origin_commit = "$origin_commit"
 EOF
 
 cat >"$stage/.source-rev" <<EOF

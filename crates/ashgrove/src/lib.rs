@@ -1856,12 +1856,12 @@ struct SourceArchiveAttestation {
 }
 
 impl SourceArchiveReleaseMetadata {
-    fn read_optional_from_source(source: &Path) -> Result<Option<Self>> {
+    fn read_optional_from_source(source: &Path, require_attestation: bool) -> Result<Option<Self>> {
         let path = source.join("release-source.toml");
         if !path.is_file() {
             return Ok(None);
         }
-        Self::read_from_source(source, false, false)
+        Self::read_from_source(source, false, require_attestation)
     }
 
     fn read_from_source_archive(source: &Path, allow_unidentified: bool) -> Result<Option<Self>> {
@@ -1946,7 +1946,8 @@ fn install_from_source_root(
     expected_id: Option<&ToolchainId>,
 ) -> Result<ToolchainId> {
     let metadata = SourceRootMetadata::inspect(source)?;
-    let release_source = SourceArchiveReleaseMetadata::read_optional_from_source(source)?;
+    let release_source =
+        SourceArchiveReleaseMetadata::read_optional_from_source(source, metadata.rev.is_none())?;
     let source_rev = release_source
         .as_ref()
         .map(|metadata| metadata.origin_commit.as_str())
@@ -3874,7 +3875,8 @@ impl LockFile {
 #[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
 struct LockedPackage {
     name: String,
-    git: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    git: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     source: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -3906,23 +3908,33 @@ struct LockedPackage {
 
 impl LockedPackage {
     fn git_url(&self) -> Result<&str> {
-        match self.source.as_deref() {
-            Some(source) => {
+        match (self.source.as_deref(), self.git.as_deref()) {
+            (Some(source), Some(git)) => {
                 let source_git = source.strip_prefix("git+").ok_or_else(|| {
                     anyhow!(
                         "hosted registry dependencies are out of scope; ash.lock package source must be git+ URL"
                     )
                 })?;
-                if source_git != self.git {
+                if source_git != git {
                     bail!("ash.lock package source does not match legacy git URL");
                 }
                 validate_lock_git_url(source_git)?;
                 Ok(source_git)
             }
-            None => {
-                validate_lock_git_url(&self.git)?;
-                Ok(self.git.as_str())
+            (Some(source), None) => {
+                let source_git = source.strip_prefix("git+").ok_or_else(|| {
+                    anyhow!(
+                        "hosted registry dependencies are out of scope; ash.lock package source must be git+ URL"
+                    )
+                })?;
+                validate_lock_git_url(source_git)?;
+                Ok(source_git)
             }
+            (None, Some(git)) => {
+                validate_lock_git_url(git)?;
+                Ok(git)
+            }
+            (None, None) => bail!("ash.lock package missing git"),
         }
     }
 }
@@ -3986,7 +3998,7 @@ impl Manifest {
             let rev = dep.rev.as_ref().map(|_| commit.clone());
             package.push(LockedPackage {
                 name: dep.name.clone(),
-                git: origin.url.clone(),
+                git: Some(origin.url.clone()),
                 source: Some(format!("git+{}", origin.url)),
                 package: dep.package.clone(),
                 version: dep.version.clone(),
@@ -4138,17 +4150,34 @@ struct CanonicalGitOrigin {
 
 fn canonical_git_url_for_lock(raw: &str) -> Result<CanonicalGitOrigin> {
     validate_git_protocol(raw)?;
-    if let Some(rest) = raw.strip_prefix("https://")
-        && let Some((userinfo, host_path)) = rest.split_once('@')
-        && !userinfo.is_empty()
-    {
-        if host_path.is_empty() {
-            bail!("authenticated git URL missing host");
+    if let Some(rest) = raw.strip_prefix("https://") {
+        let (authority, path) = rest.split_once('/').unwrap_or((rest, ""));
+        if authority.contains('@') {
+            if authority.matches('@').count() != 1 {
+                bail!(
+                    "ambiguous authenticated git URL rejected before lock serialization; credentials must be percent-encoded or removed"
+                );
+            }
+            let (userinfo, host) = authority
+                .split_once('@')
+                .context("authenticated git URL missing host delimiter")?;
+            if userinfo.is_empty() {
+                bail!("authenticated git URL missing credentials");
+            }
+            if host.is_empty() {
+                bail!("authenticated git URL missing host");
+            }
+            let sanitized = if path.is_empty() {
+                format!("https://{host}")
+            } else {
+                format!("https://{host}/{path}")
+            };
+            validate_git_protocol(&sanitized)?;
+            return Ok(CanonicalGitOrigin {
+                url: sanitized,
+                authenticated_origin: Some("credentials-redacted".to_string()),
+            });
         }
-        return Ok(CanonicalGitOrigin {
-            url: format!("https://{host_path}"),
-            authenticated_origin: Some("credentials-redacted".to_string()),
-        });
     }
     if credential_bearing_ssh_userinfo(raw).is_some() {
         bail!("credentials-bearing ssh git URL is rejected before lock serialization");
@@ -4187,8 +4216,9 @@ fn git_url_contains_credentials(url: &str) -> bool {
 }
 
 fn https_url_userinfo(url: &str) -> Option<&str> {
-    url.strip_prefix("https://")
-        .and_then(|rest| rest.split_once('@').map(|(userinfo, _)| userinfo))
+    let rest = url.strip_prefix("https://")?;
+    let (authority, _) = rest.split_once('/').unwrap_or((rest, ""));
+    authority.split_once('@').map(|(userinfo, _)| userinfo)
 }
 
 fn credential_bearing_ssh_userinfo(url: &str) -> Option<&str> {

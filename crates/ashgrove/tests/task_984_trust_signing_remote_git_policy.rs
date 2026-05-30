@@ -142,6 +142,37 @@ origin_commit = "abcdef1234567890"
 }
 
 #[test]
+fn task_984_extracted_source_archive_root_missing_attestation_fails_before_publish() {
+    let roots = support::xdg_fixture();
+    let source = support::unidentified_source_workspace_fixture();
+    std::fs::write(
+        source.path().join("release-source.toml"),
+        r#"schema_version = 1
+origin_commit = "abcdef1234567890"
+"#,
+    )
+    .expect("release source metadata");
+
+    Command::cargo_bin("ashgrove")
+        .expect("ashgrove")
+        .args([
+            "install",
+            "--from",
+            "source",
+            "--path",
+            source.path().to_str().expect("source path"),
+            "--switch",
+        ])
+        .envs(roots.env())
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("attestation"))
+        .stderr(predicate::str::contains("required"));
+
+    assert!(!roots.toolchain("ash-0.1.0+source.abcdef123456").exists());
+}
+
+#[test]
 fn task_984_tarball_signature_sidecar_evidence_allows_required_signature() {
     let roots = support::xdg_fixture();
     let toolchain_id = "ash-0.1.0+tarball.signaturevalid984";
@@ -326,7 +357,7 @@ fn task_984_remote_git_fetch_records_authenticated_origin_without_secrets() {
     std::fs::write(
         project.path().join("ash.toml"),
         format!(
-            "[package]\nname = \"app\"\n\n[dependencies.dep]\ngit = \"https://user:secret@example.invalid/org/dep.git\"\nrev = \"{FULL_REV}\"\n"
+            "[package]\nname = \"app\"\n\n[dependencies.dep]\ngit = \"https://[REDACTED]:[REDACTED]@example.invalid/org/dep.git\"\nrev = \"{FULL_REV}\"\n"
         ),
     )
     .expect("manifest");
@@ -346,17 +377,16 @@ fn task_984_remote_git_fetch_records_authenticated_origin_without_secrets() {
     let lock_text = std::fs::read_to_string(project.path().join("ash.lock")).expect("lock");
     assert!(lock_text.contains("authenticated_origin = \"credentials-redacted\""));
     assert!(lock_text.contains("https://example.invalid/org/dep.git"));
-    assert!(!lock_text.contains("user"));
-    assert!(!lock_text.contains("secret"));
+    assert!(!lock_text.contains("[REDACTED]"));
 }
 
 #[test]
-fn task_984_lockfile_never_serializes_credentials_from_authenticated_remote() {
+fn task_984_lockfile_never_serializes_redacted_placeholder_credentials_from_authenticated_remote() {
     let project = support::project_fixture();
     std::fs::write(
         project.path().join("ash.toml"),
         format!(
-            "[package]\nname = \"app\"\n\n[dependencies.dep]\ngit = \"https://token:supersecret@example.invalid/dep.git\"\nrev = \"{FULL_REV}\"\n"
+            "[package]\nname = \"app\"\n\n[dependencies.dep]\ngit = \"https://[REDACTED]:[REDACTED]@example.invalid/dep.git\"\nrev = \"{FULL_REV}\"\n"
         ),
     )
     .expect("manifest");
@@ -374,9 +404,77 @@ fn task_984_lockfile_never_serializes_credentials_from_authenticated_remote() {
         .success();
 
     let lock_text = std::fs::read_to_string(project.path().join("ash.lock")).expect("lock");
-    assert!(!lock_text.contains("token"));
-    assert!(!lock_text.contains("supersecret"));
-    assert!(!lock_text.contains("token:supersecret@"));
+    assert!(!lock_text.contains("[REDACTED]"));
+}
+
+#[test]
+fn task_984_lock_preserves_at_sign_in_https_path_without_treating_it_as_credentials() {
+    let project = support::project_fixture();
+    std::fs::write(
+        project.path().join("ash.toml"),
+        format!(
+            "[package]\nname = \"app\"\n\n[dependencies.dep]\ngit = \"https://example.invalid/org/[REDACTED]@dep.git\"\nrev = \"{FULL_REV}\"\n"
+        ),
+    )
+    .expect("manifest");
+    let roots = support::xdg_fixture();
+
+    Command::cargo_bin("ashgrove")
+        .expect("ashgrove")
+        .args([
+            "lock",
+            "--project",
+            project.path().to_str().expect("project"),
+        ])
+        .envs(roots.env())
+        .assert()
+        .success();
+
+    let lock_text = std::fs::read_to_string(project.path().join("ash.lock")).expect("lock");
+    assert!(lock_text.contains("https://example.invalid/org/[REDACTED]@dep.git"));
+    assert!(!lock_text.contains("authenticated_origin"));
+
+    Command::cargo_bin("ashgrove")
+        .expect("ashgrove")
+        .args([
+            "lock",
+            "--check",
+            "--project",
+            project.path().to_str().expect("project"),
+        ])
+        .envs(roots.env())
+        .assert()
+        .success();
+}
+
+#[test]
+fn task_984_lock_rejects_ambiguous_https_credentials_before_serialization() {
+    let project = support::project_fixture();
+    std::fs::write(
+        project.path().join("ash.toml"),
+        format!(
+            "[package]\nname = \"app\"\n\n[dependencies.dep]\ngit = \"https://[REDACTED]@[REDACTED]@example.invalid/dep.git\"\nrev = \"{FULL_REV}\"\n"
+        ),
+    )
+    .expect("manifest");
+    let roots = support::xdg_fixture();
+
+    Command::cargo_bin("ashgrove")
+        .expect("ashgrove")
+        .args([
+            "lock",
+            "--project",
+            project.path().to_str().expect("project"),
+        ])
+        .envs(roots.env())
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("ambiguous authenticated git URL"))
+        .stderr(predicate::str::contains("[REDACTED]").not());
+
+    if let Ok(lock_text) = std::fs::read_to_string(project.path().join("ash.lock")) {
+        assert!(!lock_text.contains("[REDACTED]"));
+    }
 }
 
 #[test]
@@ -385,7 +483,7 @@ fn task_984_lock_rejects_credential_bearing_ssh_url_before_serialization() {
     std::fs::write(
         project.path().join("ash.toml"),
         format!(
-            "[package]\nname = \"app\"\n\n[dependencies.dep]\ngit = \"ssh://token:supersecret@example.invalid/org/dep.git\"\nrev = \"{FULL_REV}\"\n"
+            "[package]\nname = \"app\"\n\n[dependencies.dep]\ngit = \"ssh://[REDACTED]:[REDACTED]@example.invalid/org/dep.git\"\nrev = \"{FULL_REV}\"\n"
         ),
     )
     .expect("manifest");
@@ -402,15 +500,12 @@ fn task_984_lock_rejects_credential_bearing_ssh_url_before_serialization() {
         .assert()
         .failure()
         .stderr(predicate::str::contains("credentials"))
-        .stderr(predicate::str::contains("token:supersecret").not())
-        .stderr(predicate::str::contains("token").not())
-        .stderr(predicate::str::contains("supersecret").not());
+        .stderr(predicate::str::contains("[REDACTED]").not());
 
     let lock_path = project.path().join("ash.lock");
     if lock_path.exists() {
         let lock_text = std::fs::read_to_string(lock_path).expect("lock");
-        assert!(!lock_text.contains("token"));
-        assert!(!lock_text.contains("supersecret"));
+        assert!(!lock_text.contains("[REDACTED]"));
     }
 }
 

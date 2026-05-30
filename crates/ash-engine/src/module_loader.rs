@@ -5902,6 +5902,7 @@ fn locked_project_allows_package(
     let mut allowed = false;
     for package in packages {
         let name = locked_package_name(package)?;
+        let _git = locked_package_git(package)?;
         let _commit = locked_package_commit(package)?;
         if name == package_name {
             allowed = true;
@@ -6337,10 +6338,14 @@ fn validate_locked_git_protocol(url: &str) -> Result<(), EngineError> {
 }
 
 fn locked_git_url_contains_credentials(url: &str) -> bool {
-    url.strip_prefix("https://")
-        .and_then(|rest| rest.split_once('@').map(|(userinfo, _)| userinfo))
-        .is_some_and(|userinfo| !userinfo.is_empty())
+    https_locked_url_userinfo(url).is_some_and(|userinfo| !userinfo.is_empty())
         || credential_bearing_ssh_userinfo(url).is_some()
+}
+
+fn https_locked_url_userinfo(url: &str) -> Option<&str> {
+    let rest = url.strip_prefix("https://")?;
+    let (authority, _) = rest.split_once('/').unwrap_or((rest, ""));
+    authority.split_once('@').map(|(userinfo, _)| userinfo)
 }
 
 fn credential_bearing_ssh_userinfo(url: &str) -> Option<&str> {

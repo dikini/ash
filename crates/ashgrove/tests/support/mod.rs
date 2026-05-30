@@ -177,7 +177,7 @@ pub fn create_toolchain_shape(root: &Path, id: &str) {
     use std::os::unix::fs::PermissionsExt;
 
     std::fs::create_dir_all(root.join("bin")).expect("bin");
-    std::fs::create_dir_all(root.join("lib/ash/std/src")).expect("std");
+    std::fs::create_dir_all(root.join("lib/ash/std/src/runtime")).expect("std");
     std::fs::write(root.join("bin/ash"), "#!/bin/sh\n").expect("ash");
     std::fs::write(root.join("bin/ashgrove"), "#!/bin/sh\n").expect("ashgrove");
     #[cfg(unix)]
@@ -200,9 +200,14 @@ pub fn create_toolchain_shape(root: &Path, id: &str) {
     )
     .expect("stdlib");
     std::fs::write(
+        root.join("lib/ash/std/src/runtime/args.ash"),
+        "pub type RuntimeArgs = RuntimeArgs;\n",
+    )
+    .expect("runtime support");
+    std::fs::write(
         root.join("manifest.toml"),
         format!(
-            "toolchain_id = \"{id}\"\nversion = \"0.1.0\"\narchive_schema_version = 1\nsource_kind = \"fixture\"\n[stdlib]\nversion = \"0.1.0\"\npath = \"lib/ash/std\"\n[[standard_tools]]\nname = \"ash\"\npath = \"bin/ash\"\nrequired = true\n[[standard_tools]]\nname = \"ashgrove\"\npath = \"bin/ashgrove\"\nrequired = true\n"
+            "toolchain_id = \"{id}\"\nversion = \"0.1.0\"\narchive_schema_version = 1\nsource_kind = \"fixture\"\n[stdlib]\nversion = \"0.1.0\"\npath = \"lib/ash/std\"\n[runtime_support]\nidentity = \"ash-runtime-support:0.1.0\"\npath = \"lib/ash/std/src/runtime\"\nrequired = true\n[[standard_tools]]\nname = \"ash\"\npath = \"bin/ash\"\nrequired = true\n[[standard_tools]]\nname = \"ashgrove\"\npath = \"bin/ashgrove\"\nrequired = true\n"
         ),
     )
     .expect("manifest");

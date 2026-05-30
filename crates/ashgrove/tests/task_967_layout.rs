@@ -1,7 +1,7 @@
 use ashgrove::{
     AshgrovePaths, CollisionStatus, InstallRecord, LauncherDispatchRequest, PublishOutcome,
-    SelectorMetadata, StandardToolMetadata, StdlibMetadata, ToolchainId, ToolchainManifest,
-    ToolchainStage, classify_toolchain_collision, install_launcher_shims,
+    RuntimeSupportMetadata, SelectorMetadata, StandardToolMetadata, StdlibMetadata, ToolchainId,
+    ToolchainManifest, ToolchainStage, classify_toolchain_collision, install_launcher_shims,
     resolve_launcher_dispatch, stage_stdlib_metadata,
 };
 use assert_cmd::{Command, assert::OutputAssertExt};
@@ -38,6 +38,10 @@ fn task_967_toolchain_manifest_and_install_record_are_typed_public_apis() {
     let manifest = ToolchainManifest::new(id.clone(), "0.1.0")
         .with_target_triple("x86_64-unknown-linux-gnu")
         .with_stdlib(StdlibMetadata::new("0.1.0", "lib/ash/std"))
+        .with_runtime_support(RuntimeSupportMetadata::required(
+            "0.1.0",
+            "lib/ash/std/src/runtime",
+        ))
         .with_tool(StandardToolMetadata::required("ash", "bin/ash"))
         .with_tool(StandardToolMetadata::required("ashgrove", "bin/ashgrove"));
 
@@ -531,7 +535,7 @@ fn task_967_launcher_dispatch_rejects_manifest_tool_path_traversal() {
     std::fs::write(
         roots.toolchain(id).join("manifest.toml"),
         format!(
-            "toolchain_id = \"{id}\"\nversion = \"0.1.0\"\nsource_kind = \"fixture\"\n[stdlib]\nversion = \"0.1.0\"\npath = \"lib/ash/std\"\n[[standard_tools]]\nname = \"ash\"\npath = \"../escape/ash\"\nrequired = true\n[[standard_tools]]\nname = \"ashgrove\"\npath = \"bin/ashgrove\"\nrequired = true\n"
+            "toolchain_id = \"{id}\"\nversion = \"0.1.0\"\nsource_kind = \"fixture\"\n[stdlib]\nversion = \"0.1.0\"\npath = \"lib/ash/std\"\n[runtime_support]\nidentity = \"ash-runtime-support:0.1.0\"\npath = \"lib/ash/std/src/runtime\"\nrequired = true\n[[standard_tools]]\nname = \"ash\"\npath = \"../escape/ash\"\nrequired = true\n[[standard_tools]]\nname = \"ashgrove\"\npath = \"bin/ashgrove\"\nrequired = true\n"
         ),
     )
     .expect("manifest");

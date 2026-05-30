@@ -521,7 +521,7 @@ fn task_968_source_install_rejects_same_id_with_different_source_metadata() {
     let second = support::source_fixture("ash-0.1.0+test.source.ffffffffffff");
     std::fs::write(
         second.path().join("manifest.toml"),
-        "toolchain_id = \"ash-0.1.0+test.source.ffffffffffff\"\nversion = \"0.1.0\"\nsource_kind = \"fixture\"\n[stdlib]\nversion = \"0.1.1\"\npath = \"lib/ash/std\"\n[[standard_tools]]\nname = \"ash\"\npath = \"bin/ash\"\nrequired = true\n[[standard_tools]]\nname = \"ashgrove\"\npath = \"bin/ashgrove\"\nrequired = true\n",
+        "toolchain_id = \"ash-0.1.0+test.source.ffffffffffff\"\nversion = \"0.1.0\"\nsource_kind = \"fixture\"\n[stdlib]\nversion = \"0.1.1\"\npath = \"lib/ash/std\"\n[runtime_support]\nidentity = \"ash-runtime-support:0.1.0\"\npath = \"lib/ash/std/src/runtime\"\nrequired = true\n[[standard_tools]]\nname = \"ash\"\npath = \"bin/ash\"\nrequired = true\n[[standard_tools]]\nname = \"ashgrove\"\npath = \"bin/ashgrove\"\nrequired = true\n",
     )
     .expect("different manifest");
     let roots = support::xdg_fixture();

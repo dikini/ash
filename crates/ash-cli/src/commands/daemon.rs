@@ -646,7 +646,8 @@ impl DaemonState {
                 "workflow={};check=alpha-runtime-kernel-shared",
                 instance.workflow
             ),
-        ))
+        )
+        .with_runtime_support_identity(selected_runtime_support_identity()))
         .map(|artifact| artifact.source_hash)
         .map_err(|error| {
             Box::new(InstanceExecutionFailure::workflow_request(format!(
@@ -1152,15 +1153,18 @@ fn index_definitions(
             .to_string_lossy()
             .replace('\\', "/");
         let workflow_name = workflow.name.to_string();
-        let verified_artifact = build_runtime_kernel_artifact(&RuntimeArtifactBuildRequest::new(
-            root_id.as_str(),
-            relative_module_path.clone(),
-            workflow_name.clone(),
-            profile_id.as_str(),
-            config_id.as_str(),
-            source.clone(),
-            format!("workflow={workflow_name};check=alpha-runtime-kernel-shared"),
-        ))?;
+        let verified_artifact = build_runtime_kernel_artifact(
+            &RuntimeArtifactBuildRequest::new(
+                root_id.as_str(),
+                relative_module_path.clone(),
+                workflow_name.clone(),
+                profile_id.as_str(),
+                config_id.as_str(),
+                source.clone(),
+                format!("workflow={workflow_name};check=alpha-runtime-kernel-shared"),
+            )
+            .with_runtime_support_identity(selected_runtime_support_identity()),
+        )?;
         let artifact_summary =
             RuntimeKernelArtifactLanguageSummary::from_verified_artifact(&verified_artifact);
         definitions.push(DefinitionRecord {
@@ -1276,6 +1280,11 @@ fn provider_registry_json(provider_registry: &ProviderRegistryIdentity) -> Value
         "provider_names": provider_registry.provider_names,
         "grants_admission_authority": provider_registry.grants_admission_authority(),
     })
+}
+
+fn selected_runtime_support_identity() -> String {
+    std::env::var("ASH_RUNTIME_SUPPORT_IDENTITY")
+        .unwrap_or_else(|_| "ash-runtime-support:unselected".to_string())
 }
 
 fn classify_daemon_error(error: &anyhow::Error) -> &'static str {

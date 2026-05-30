@@ -147,6 +147,11 @@ source_kind = "tarball"
 version = "$version"
 path = "lib/ash/std"
 
+[runtime_support]
+identity = "ash-runtime-support:$version"
+path = "lib/ash/std/src/runtime"
+required = true
+
 [[standard_tools]]
 name = "ash"
 path = "bin/ash"

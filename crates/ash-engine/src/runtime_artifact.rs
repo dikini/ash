@@ -34,6 +34,8 @@ pub struct RuntimeArtifactBuildRequest {
     pub source: String,
     /// Check summary text used for check-summary hashing.
     pub check_summary: String,
+    /// Selected toolchain runtime-support identity used by the host.
+    pub runtime_support_identity: Option<String>,
 }
 
 impl RuntimeArtifactBuildRequest {
@@ -56,7 +58,22 @@ impl RuntimeArtifactBuildRequest {
             config_id: config_id.into(),
             source: source.into(),
             check_summary: check_summary.into(),
+            runtime_support_identity: None,
         }
+    }
+
+    /// Record the selected toolchain runtime-support identity for artifact construction.
+    #[must_use]
+    pub fn with_runtime_support_identity(mut self, identity: impl Into<String>) -> Self {
+        self.runtime_support_identity = Some(identity.into());
+        self
+    }
+
+    fn check_summary_with_runtime_support(&self) -> String {
+        self.runtime_support_identity.as_ref().map_or_else(
+            || self.check_summary.clone(),
+            |identity| format!("{};runtime_support_identity={identity}", self.check_summary),
+        )
     }
 }
 
@@ -72,10 +89,7 @@ pub fn build_runtime_kernel_artifact(
     let profile = RuntimeProfileIdentity::new(
         RuntimeProfileId::new(request.profile_id.clone()),
         RuntimeConfigId::new(request.config_id.clone()),
-        vec![format!(
-            "profile={};config={}",
-            request.profile_id, request.config_id
-        )],
+        runtime_profile_selection_facts(request),
     );
     let input = RuntimeArtifactBuildInput::new(
         RuntimeArtifactBuildIdentity::new(
@@ -85,11 +99,22 @@ pub fn build_runtime_kernel_artifact(
             request.workflow_name.clone(),
         ),
         request.source.clone(),
-        request.check_summary.clone(),
+        request.check_summary_with_runtime_support(),
         synthetic_tcir(request),
         RuntimeTcirCarrierScope::AlphaCheckedWorkflowBoundary,
     );
     RuntimeKernelArtifactBuilder::new().build(input)
+}
+
+fn runtime_profile_selection_facts(request: &RuntimeArtifactBuildRequest) -> Vec<String> {
+    let mut facts = vec![format!(
+        "profile={};config={}",
+        request.profile_id, request.config_id
+    )];
+    if let Some(identity) = &request.runtime_support_identity {
+        facts.push(format!("runtime_support_identity={identity}"));
+    }
+    facts
 }
 
 fn synthetic_tcir(request: &RuntimeArtifactBuildRequest) -> TcirComputationExpression {

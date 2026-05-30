@@ -406,7 +406,7 @@ fn task_969_tarball_install_rejects_root_name_manifest_mismatch() {
         |root| {
             std::fs::write(
                 root.join("manifest.toml"),
-                "toolchain_id = \"ash-0.1.0+test.tarball.otherroot001\"\nversion = \"0.1.0\"\narchive_schema_version = 1\n[stdlib]\nversion = \"0.1.0\"\npath = \"lib/ash/std\"\n[[standard_tools]]\nname = \"ash\"\npath = \"bin/ash\"\nrequired = true\n[[standard_tools]]\nname = \"ashgrove\"\npath = \"bin/ashgrove\"\nrequired = true\n",
+                "toolchain_id = \"ash-0.1.0+test.tarball.otherroot001\"\nversion = \"0.1.0\"\narchive_schema_version = 1\n[stdlib]\nversion = \"0.1.0\"\npath = \"lib/ash/std\"\n[runtime_support]\nidentity = \"ash-runtime-support:0.1.0\"\npath = \"lib/ash/std/src/runtime\"\nrequired = true\n[[standard_tools]]\nname = \"ash\"\npath = \"bin/ash\"\nrequired = true\n[[standard_tools]]\nname = \"ashgrove\"\npath = \"bin/ashgrove\"\nrequired = true\n",
             )
             .expect("manifest");
         },
@@ -434,7 +434,7 @@ fn task_969_tarball_install_rejects_version_manifest_mismatch() {
         |root| {
             std::fs::write(
                 root.join("manifest.toml"),
-                "toolchain_id = \"ash-0.1.0+test.tarball.versionmis01\"\nversion = \"9.9.9\"\narchive_schema_version = 1\n[stdlib]\nversion = \"0.1.0\"\npath = \"lib/ash/std\"\n[[standard_tools]]\nname = \"ash\"\npath = \"bin/ash\"\nrequired = true\n[[standard_tools]]\nname = \"ashgrove\"\npath = \"bin/ashgrove\"\nrequired = true\n",
+                "toolchain_id = \"ash-0.1.0+test.tarball.versionmis01\"\nversion = \"9.9.9\"\narchive_schema_version = 1\n[stdlib]\nversion = \"0.1.0\"\npath = \"lib/ash/std\"\n[runtime_support]\nidentity = \"ash-runtime-support:0.1.0\"\npath = \"lib/ash/std/src/runtime\"\nrequired = true\n[[standard_tools]]\nname = \"ash\"\npath = \"bin/ash\"\nrequired = true\n[[standard_tools]]\nname = \"ashgrove\"\npath = \"bin/ashgrove\"\nrequired = true\n",
             )
             .expect("manifest");
         },

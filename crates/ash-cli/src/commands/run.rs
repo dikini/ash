@@ -436,15 +436,18 @@ impl OneShotRuntimeKernel {
             .file_name()
             .and_then(|name| name.to_str())
             .unwrap_or("<source>");
-        let verified_artifact = build_runtime_kernel_artifact(&RuntimeArtifactBuildRequest::new(
-            root_id.as_str(),
-            relative_module_path,
-            workflow_name,
-            profile_id.as_str(),
-            config_id.as_str(),
-            source,
-            format!("workflow={workflow_name};check=alpha-runtime-kernel-shared"),
-        ))?;
+        let verified_artifact = build_runtime_kernel_artifact(
+            &RuntimeArtifactBuildRequest::new(
+                root_id.as_str(),
+                relative_module_path,
+                workflow_name,
+                profile_id.as_str(),
+                config_id.as_str(),
+                source,
+                format!("workflow={workflow_name};check=alpha-runtime-kernel-shared"),
+            )
+            .with_runtime_support_identity(selected_runtime_support_identity()),
+        )?;
         let artifact_summary =
             RuntimeKernelArtifactLanguageSummary::from_verified_artifact(&verified_artifact);
         let roots = RuntimeRootSet::new(
@@ -1090,6 +1093,11 @@ fn classify_workflow_source(source: &str) -> WorkflowSourceKind {
     } else {
         WorkflowSourceKind::Ordinary
     }
+}
+
+fn selected_runtime_support_identity() -> String {
+    std::env::var("ASH_RUNTIME_SUPPORT_IDENTITY")
+        .unwrap_or_else(|_| "ash-runtime-support:unselected".to_string())
 }
 
 fn parse_runnable_workflow(

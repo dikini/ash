@@ -1,6 +1,6 @@
 # TASK-978: Runtime-support payload metadata
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -72,14 +72,14 @@ commands:
   - RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ash-engine --test task_978_runtime_support_payload -- --nocapture
   - git diff --check
 checklist:
-  - [ ] Focused RED test was observed failing for the intended reason.
-  - [ ] Focused GREEN test passes and runs non-zero tests.
-  - [ ] `cargo fmt --check` passes when Rust code changed.
-  - [ ] `git diff --check` passes.
-  - [ ] `cargo check --workspace` or narrower audited check passes if shared carriers/public APIs changed.
-  - [ ] `cargo clippy --workspace --all-targets --all-features -- -D warnings` or narrower audited clippy gate passes if code changed.
-  - [ ] `CHANGELOG.md` updated if code/tooling/docs-policy/release-facing status changed.
-  - [ ] Independent review completed or status represented honestly.
+  - [x] Focused RED test was observed failing for the intended reason.
+  - [x] Focused GREEN test passes and runs non-zero tests.
+  - [x] `cargo fmt --check` passes when Rust code changed.
+  - [x] `git diff --check` passes.
+  - [x] `cargo check --workspace` or narrower audited check passes if shared carriers/public APIs changed.
+  - [x] `cargo clippy --workspace --all-targets --all-features -- -D warnings` or narrower audited clippy gate passes if code changed.
+  - [x] `CHANGELOG.md` updated if code/tooling/docs-policy/release-facing status changed.
+  - [x] Independent review completed or status represented honestly.
 ```
 
 ## Dependencies for Next Task
@@ -89,3 +89,5 @@ This task feeds TASK-986 final closeout evidence.
 ## Notes
 
 This task is intentionally blocked on TASK-976 so the implementation cannot drift from the acceptance-delta audit.
+
+2026-05-30 completion slice: source-root and tarball toolchains now carry required `[runtime_support]` manifest metadata with identity `ash-runtime-support:<version>` and path `lib/ash/std/src/runtime`; source and tarball installs validate the metadata and payload directory before publish; launcher dispatch passes `ASH_RUNTIME_SUPPORT_IDENTITY` to selected `ash`; and runtime artifact construction incorporates the selected runtime-support identity into artifact/check identity.

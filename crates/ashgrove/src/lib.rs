@@ -669,6 +669,8 @@ pub struct ToolchainManifest {
     source_kind: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     stdlib: Option<StdlibMetadata>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    runtime_support: Option<RuntimeSupportMetadata>,
     #[serde(default)]
     standard_tools: Vec<StandardToolMetadata>,
     #[serde(flatten)]
@@ -686,6 +688,7 @@ impl ToolchainManifest {
             target_triple: None,
             source_kind: None,
             stdlib: None,
+            runtime_support: None,
             standard_tools: Vec::new(),
             extra: BTreeMap::new(),
         }
@@ -699,10 +702,15 @@ impl ToolchainManifest {
         target: impl Into<String>,
         source_kind: impl Into<String>,
     ) -> Self {
-        Self::new(id, version)
+        let version = version.into();
+        Self::new(id, version.clone())
             .with_target_triple(target)
             .with_source_kind(source_kind)
             .with_stdlib(StdlibMetadata::new("", "lib/ash/std"))
+            .with_runtime_support(RuntimeSupportMetadata::required(
+                version,
+                "lib/ash/std/src/runtime",
+            ))
             .with_tool(StandardToolMetadata::required("ash", "bin/ash"))
             .with_tool(StandardToolMetadata::required("ashgrove", "bin/ashgrove"))
     }
@@ -735,6 +743,13 @@ impl ToolchainManifest {
         self
     }
 
+    /// Add runtime-support payload metadata.
+    #[must_use]
+    pub fn with_runtime_support(mut self, runtime_support: RuntimeSupportMetadata) -> Self {
+        self.runtime_support = Some(runtime_support);
+        self
+    }
+
     /// Add a standard tool entry.
     #[must_use]
     pub fn with_tool(mut self, tool: StandardToolMetadata) -> Self {
@@ -751,6 +766,9 @@ impl ToolchainManifest {
         let manifest: Self = toml::from_str(text).context("parse toolchain manifest")?;
         if manifest.stdlib.is_none() {
             bail!("toolchain manifest missing stdlib metadata");
+        }
+        if manifest.runtime_support.is_none() {
+            bail!("toolchain manifest missing runtime support metadata");
         }
         Ok(manifest)
     }
@@ -783,6 +801,14 @@ impl ToolchainManifest {
     #[must_use]
     pub fn stdlib(&self) -> &StdlibMetadata {
         self.stdlib.as_ref().expect("stdlib metadata present")
+    }
+
+    /// Borrow runtime-support payload metadata.
+    #[must_use]
+    pub fn runtime_support(&self) -> &RuntimeSupportMetadata {
+        self.runtime_support
+            .as_ref()
+            .expect("runtime support metadata present")
     }
 
     /// Iterate required tools.
@@ -860,6 +886,44 @@ impl StdlibMetadata {
     #[must_use]
     pub fn path(&self) -> &str {
         &self.path
+    }
+}
+
+/// Metadata for the bundled runtime-support payload in a toolchain manifest.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RuntimeSupportMetadata {
+    identity: String,
+    path: String,
+    required: bool,
+}
+
+impl RuntimeSupportMetadata {
+    /// Create required runtime-support payload metadata for an Ash version.
+    #[must_use]
+    pub fn required(version: impl AsRef<str>, path: impl Into<String>) -> Self {
+        Self {
+            identity: format!("ash-runtime-support:{}", version.as_ref()),
+            path: path.into(),
+            required: true,
+        }
+    }
+
+    /// Borrow the runtime-support identity.
+    #[must_use]
+    pub fn identity(&self) -> &str {
+        &self.identity
+    }
+
+    /// Borrow the runtime-support path relative to the toolchain root.
+    #[must_use]
+    pub fn path(&self) -> &str {
+        &self.path
+    }
+
+    /// Whether this runtime-support payload is required for the toolchain.
+    #[must_use]
+    pub const fn is_required(&self) -> bool {
+        self.required
     }
 }
 
@@ -1472,6 +1536,8 @@ fn run_launcher_dispatch(paths: &AshgrovePaths, args: LauncherDispatchArgs) -> R
     request = request.with_project(project);
     let dispatch = resolve_launcher_dispatch(paths, request)?;
     let stdlib_root = selected_stdlib_source_root(paths, dispatch.toolchain_id())?;
+    let runtime_support_identity =
+        selected_runtime_support_identity(paths, dispatch.toolchain_id())?;
     let mut command = Command::new(dispatch.tool_path());
     command
         .args(args.args)
@@ -1479,8 +1545,14 @@ fn run_launcher_dispatch(paths: &AshgrovePaths, args: LauncherDispatchArgs) -> R
             "ASHGROVE_RUNNING_TOOLCHAIN",
             dispatch.toolchain_id().as_str(),
         )
-        .env("ASH_STDLIB_ROOT", stdlib_root);
+        .env("ASH_STDLIB_ROOT", stdlib_root)
+        .env("ASH_RUNTIME_SUPPORT_IDENTITY", runtime_support_identity);
     exec_or_status(command, dispatch.tool_path())
+}
+
+fn selected_runtime_support_identity(paths: &AshgrovePaths, id: &ToolchainId) -> Result<String> {
+    let manifest = installed_toolchain_manifest(paths, id)?;
+    Ok(manifest.runtime_support().identity().to_string())
 }
 
 fn selected_stdlib_source_root(paths: &AshgrovePaths, id: &ToolchainId) -> Result<PathBuf> {
@@ -2312,6 +2384,7 @@ fn verify_toolchain_shape(root: &Path, id: &ToolchainId) -> Result<ToolchainMani
     let manifest = ToolchainManifest::from_toml_str(&manifest_text)?;
     manifest.validate_for_toolchain(id)?;
     verify_stdlib_manifest(root, manifest.stdlib())?;
+    verify_runtime_support_payload(root, manifest.runtime_support())?;
     Ok(manifest)
 }
 
@@ -2335,6 +2408,24 @@ fn verify_stdlib_manifest(root: &Path, metadata: &StdlibMetadata) -> Result<()> 
     let manifest = root.join(stdlib_path).join("ash.toml");
     if !manifest.is_file() {
         bail!("stdlib manifest is missing at {}", manifest.display());
+    }
+    Ok(())
+}
+
+fn verify_runtime_support_payload(root: &Path, metadata: &RuntimeSupportMetadata) -> Result<()> {
+    if metadata.identity().trim().is_empty() {
+        bail!("runtime support metadata identity is required");
+    }
+    if !metadata.is_required() {
+        bail!("runtime support metadata must mark the payload required");
+    }
+    let payload_path = validate_relative_toolchain_path(metadata.path(), "runtime support path")?;
+    let payload = root.join(payload_path);
+    if !payload.is_dir() {
+        bail!(
+            "runtime support payload is missing at {}",
+            payload.display()
+        );
     }
     Ok(())
 }
@@ -2584,6 +2675,7 @@ fn installed_toolchain_manifest(
     let manifest = ToolchainManifest::from_toml_str(&manifest_text)?;
     manifest.validate_for_toolchain(id)?;
     verify_stdlib_manifest(&root, manifest.stdlib())?;
+    verify_runtime_support_payload(&root, manifest.runtime_support())?;
     verify_required_manifest_tools(&root, &manifest)?;
     Ok(manifest)
 }

@@ -303,7 +303,7 @@ Update this section as tasks complete:
 | 124 | 8 | 1 | 📝 Planned after packet creation |
 | 126 | 9 | 9 | ✅ Complete |
 | 127 | 11 | 4 + partial | ⚠️ Partial first slice |
-| 128 | 12 | 2 | ✅ TASK-976 audit gate complete; implementation ready for TASK-977 |
+| 128 | 12 | 3 | ✅ TASK-977 source archive release metadata complete; implementation ready for TASK-978 |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -3774,7 +3774,7 @@ Phase 127 introduces `ashgrove <command>` as the Ash toolchain and deployment ma
 ## Phase 128: SPEC-073 Ashgrove Release, Trust, Registry-Ready Metadata, and Runtime-Support Completion
 
 **Priority:** High (closes the Phase 127 SPEC-073 deferred acceptance rows needed before Ashgrove can move beyond Draft)
-**Status:** ✅ TASK-976 audit gate complete; implementation proceeds sequentially through TASK-977 through TASK-986
+**Status:** ✅ TASK-977 source archive release metadata complete; implementation proceeds sequentially through TASK-978 through TASK-986
 **Spec:** [SPEC-073](../spec/SPEC-073-ASHGROVE-INSTALL-UPDATE-CLEANUP-GIT-DEPLOYMENT.md)
 **Plan:** [PLAN-123](PLAN-123-SPEC-073-ASHGROVE-RELEASE-TRUST-REGISTRY-RUNTIME-SUPPORT-COMPLETION.md)
 
@@ -3784,7 +3784,7 @@ Phase 128 is the follow-on to Phase 127. It does not reopen or rewrite Phase 127
 |------|-------------|------------|--------|
 | [TASK-975](tasks/TASK-975-spec073-ashgrove-completion-packet.md) | Create PLAN-123/TASK-975..986 packet and register Phase 128 | 4 | ✅ Complete |
 | [TASK-976](tasks/TASK-976-ashgrove-completion-acceptance-delta-and-audit-gate.md) | Map every SPEC-073 deferred row to exact owners, files, tests, and RED failure modes | 8 | ✅ Complete |
-| [TASK-977](tasks/TASK-977-source-archive-release-metadata.md) | Implement source-archive release metadata and reproducibility checks | 10 | 📝 Planned |
+| [TASK-977](tasks/TASK-977-source-archive-release-metadata.md) | Implement source-archive release metadata and reproducibility checks | 10 | ✅ Complete |
 | [TASK-978](tasks/TASK-978-runtime-support-payload-metadata.md) | Define and verify concrete runtime-support payload metadata across source/tarball installs | 10 | 📝 Planned |
 | [TASK-979](tasks/TASK-979-release-index-authenticated-tarball-url-policy.md) | Add authenticated tarball URL recording and release-index trust policy | 14 | 📝 Planned |
 | [TASK-980](tasks/TASK-980-packaged-dispatcher-lifecycle-policy.md) | Finalize packaged dispatcher lifecycle and launcher update/remove policy | 10 | 📝 Planned |

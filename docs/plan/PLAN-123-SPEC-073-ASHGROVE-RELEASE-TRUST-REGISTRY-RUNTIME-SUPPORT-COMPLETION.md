@@ -12,7 +12,7 @@
 
 ## 1. Status
 
-**Status:** ✅ TASK-976 audit gate complete; implementation proceeds sequentially through TASK-977 through TASK-986
+**Status:** ✅ TASK-977 complete; implementation ready for TASK-978
 **Spec:** [SPEC-073](../spec/SPEC-073-ASHGROVE-INSTALL-UPDATE-CLEANUP-GIT-DEPLOYMENT.md)
 **Task range:** [TASK-975](tasks/TASK-975-spec073-ashgrove-completion-packet.md) through [TASK-986](tasks/TASK-986-spec073-implemented-mvp-closeout.md)
 
@@ -50,7 +50,7 @@ TASK-975 created this docs packet. TASK-976 completed the hard audit gate and pa
 |------|-------------|------------|--------|
 | [TASK-975](tasks/TASK-975-spec073-ashgrove-completion-packet.md) | Create PLAN-123/TASK-975..986 packet and register Phase 128 | 4 | ✅ Complete |
 | [TASK-976](tasks/TASK-976-ashgrove-completion-acceptance-delta-and-audit-gate.md) | Map every SPEC-073 deferred row to exact owners, files, tests, and RED failure modes | 8 | ✅ Complete |
-| [TASK-977](tasks/TASK-977-source-archive-release-metadata.md) | Implement source-archive release metadata and reproducibility checks | 10 | 📝 Planned |
+| [TASK-977](tasks/TASK-977-source-archive-release-metadata.md) | Implement source-archive release metadata and reproducibility checks | 10 | ✅ Complete |
 | [TASK-978](tasks/TASK-978-runtime-support-payload-metadata.md) | Define and verify concrete runtime-support payload metadata across source/tarball installs | 10 | 📝 Planned |
 | [TASK-979](tasks/TASK-979-release-index-authenticated-tarball-url-policy.md) | Add authenticated tarball URL recording and release-index trust policy | 14 | 📝 Planned |
 | [TASK-980](tasks/TASK-980-packaged-dispatcher-lifecycle-policy.md) | Finalize packaged dispatcher lifecycle and launcher update/remove policy | 10 | 📝 Planned |
@@ -128,3 +128,4 @@ SPEC-073 may be promoted beyond Draft only after TASK-986 confirms:
 ### 2026-05-30
 
 - TASK-976 completed the hard audit gate by creating the acceptance-delta artifact, binding TASK-977 through TASK-985 to focused non-zero verification commands, and recording the A73-11 wording amendment required before mandatory trust/signing enforcement can be claimed.
+- TASK-977 implemented source-archive release metadata by requiring typed `release-source.toml` origin-commit metadata unless `--allow-unidentified-source` is explicit, recording `source_archive_digest` and `source_origin_commit` in source archive install records, and keeping unidentified archives non-reproducible.

@@ -1605,15 +1605,17 @@ fn install_from_source(
             expected_id,
         );
     }
-    let source_rev = read_optional_trimmed(source.join(".source-rev"))?;
-    if source_rev.is_none() && !allow_unidentified {
-        bail!("unidentified source rejected; pass --allow-unidentified-source to record it");
-    }
+    let release_source =
+        SourceArchiveReleaseMetadata::read_from_source(source, allow_unidentified)?;
+    let source_archive_digest = source_tree_digest(source)?;
+    let source_rev = release_source
+        .as_ref()
+        .map(|metadata| metadata.origin_commit.as_str());
     let id = read_toolchain_id(source)?;
     verify_expected_source_id(expected_id, &id)?;
     let source_url = read_optional_trimmed(source.join(".source-url"))?;
     let dirty_source_digest = if allow_dirty {
-        Some(source_tree_digest(source)?)
+        Some(source_archive_digest.as_str())
     } else {
         None
     };
@@ -1624,9 +1626,11 @@ fn install_from_source(
         SourceInstallRecordInput {
             id: &id,
             source_path: source,
-            source_rev: source_rev.as_deref(),
+            source_rev,
             source_url: source_url.as_deref(),
-            dirty_source_digest: dirty_source_digest.as_deref(),
+            source_origin_commit: source_rev,
+            source_archive_digest: Some(source_archive_digest.as_str()),
+            dirty_source_digest,
             allow_dirty,
             allow_unidentified,
         },
@@ -1637,6 +1641,64 @@ fn install_from_source(
         set_default(paths, &id)?;
     }
     Ok(id)
+}
+
+#[derive(Debug, Deserialize)]
+struct SourceArchiveReleaseMetadata {
+    schema_version: u32,
+    origin_commit: String,
+}
+
+impl SourceArchiveReleaseMetadata {
+    fn read_optional_from_source(source: &Path) -> Result<Option<Self>> {
+        let path = source.join("release-source.toml");
+        if !path.is_file() {
+            return Ok(None);
+        }
+        Self::read_from_source(source, false)
+    }
+
+    fn read_from_source(source: &Path, allow_unidentified: bool) -> Result<Option<Self>> {
+        let path = source.join("release-source.toml");
+        let text = match fs::read_to_string(&path) {
+            Ok(text) => text,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                if allow_unidentified {
+                    return Ok(None);
+                }
+                bail!(
+                    "release-source metadata is required for source archives; pass --allow-unidentified-source to record a non-reproducible install"
+                );
+            }
+            Err(error) => {
+                return Err(error)
+                    .with_context(|| format!("read release-source metadata {}", path.display()));
+            }
+        };
+        let metadata: Self = toml::from_str(&text).context("parse release-source metadata")?;
+        metadata.validate()?;
+        if let Some(legacy_rev) = read_optional_trimmed(source.join(".source-rev"))?
+            && legacy_rev != metadata.origin_commit
+        {
+            bail!("release-source origin_commit does not match legacy source revision");
+        }
+        Ok(Some(metadata))
+    }
+
+    fn validate(&self) -> Result<()> {
+        if self.schema_version != TOOLCHAIN_ARCHIVE_SCHEMA_VERSION {
+            bail!(
+                "unsupported release-source schema version {}; expected {TOOLCHAIN_ARCHIVE_SCHEMA_VERSION}",
+                self.schema_version
+            );
+        }
+        if !(7..=64).contains(&self.origin_commit.len())
+            || !self.origin_commit.chars().all(|ch| ch.is_ascii_hexdigit())
+        {
+            bail!("release-source origin_commit must be a git commit hash");
+        }
+        Ok(())
+    }
 }
 
 fn is_source_root(source: &Path) -> bool {
@@ -1652,22 +1714,33 @@ fn install_from_source_root(
     expected_id: Option<&ToolchainId>,
 ) -> Result<ToolchainId> {
     let metadata = SourceRootMetadata::inspect(source)?;
+    let release_source = SourceArchiveReleaseMetadata::read_optional_from_source(source)?;
+    let source_rev = release_source
+        .as_ref()
+        .map(|metadata| metadata.origin_commit.as_str())
+        .or(metadata.rev.as_deref());
+    if let (Some(release_source), Some(git_rev)) = (&release_source, metadata.rev.as_deref())
+        && release_source.origin_commit != git_rev
+    {
+        bail!("release-source origin_commit does not match source root git revision");
+    }
     if metadata.dirty && !allow_dirty {
         bail!(
             "dirty source rejected; pass --allow-dirty-source to record a non-reproducible install"
         );
     }
-    if metadata.rev.is_none() && !allow_unidentified {
+    if source_rev.is_none() && !allow_unidentified {
         bail!("unidentified source rejected; pass --allow-unidentified-source to record it");
     }
     let version = source_package_version(source)?;
     let source_digest = source_tree_digest(source)?;
+    let source_archive_digest = release_source.as_ref().map(|_| source_digest.as_str());
     let dirty_digest = if metadata.dirty {
         Some(source_digest.as_str())
     } else {
         None
     };
-    let id = source_toolchain_id(&version, source, metadata.rev.as_deref(), dirty_digest)?;
+    let id = source_toolchain_id(&version, source, source_rev, dirty_digest)?;
     verify_expected_source_id(expected_id, &id)?;
     let stage = ToolchainStage::create(paths, id.clone())?;
     stage_source_root_toolchain(paths, source, &stage, &id, &version, &source_digest)?;
@@ -1676,8 +1749,12 @@ fn install_from_source_root(
         SourceInstallRecordInput {
             id: &id,
             source_path: source,
-            source_rev: metadata.rev.as_deref(),
+            source_rev,
             source_url: metadata.url.as_deref(),
+            source_origin_commit: release_source
+                .as_ref()
+                .map(|metadata| metadata.origin_commit.as_str()),
+            source_archive_digest,
             dirty_source_digest: dirty_digest,
             allow_dirty,
             allow_unidentified,
@@ -1976,6 +2053,8 @@ struct SourceInstallRecordInput<'a> {
     source_path: &'a Path,
     source_rev: Option<&'a str>,
     source_url: Option<&'a str>,
+    source_origin_commit: Option<&'a str>,
+    source_archive_digest: Option<&'a str>,
     dirty_source_digest: Option<&'a str>,
     allow_dirty: bool,
     allow_unidentified: bool,
@@ -2007,6 +2086,18 @@ fn write_source_install_record(path: &Path, input: SourceInstallRecordInput<'_>)
             toml::Value::String(source_rev.to_string()),
         );
     }
+    if let Some(source_origin_commit) = input.source_origin_commit {
+        table.insert(
+            "source_origin_commit".to_string(),
+            toml::Value::String(source_origin_commit.to_string()),
+        );
+    }
+    if let Some(source_archive_digest) = input.source_archive_digest {
+        table.insert(
+            "source_archive_digest".to_string(),
+            toml::Value::String(format!("sha256:{source_archive_digest}")),
+        );
+    }
     if let Some(dirty_source_digest) = input.dirty_source_digest {
         table.insert(
             "dirty_source_digest".to_string(),
@@ -2032,7 +2123,9 @@ fn write_source_install_record(path: &Path, input: SourceInstallRecordInput<'_>)
     table.insert(
         "reproducible".to_string(),
         toml::Value::Boolean(
-            input.source_rev.is_some() && !input.allow_dirty && !input.allow_unidentified,
+            (input.source_rev.is_some() || input.source_origin_commit.is_some())
+                && !input.allow_dirty
+                && !input.allow_unidentified,
         ),
     );
     table.insert(

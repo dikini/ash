@@ -402,6 +402,8 @@ fn task_968_source_install_publishes_toolchain_shape_with_override() {
 #[test]
 fn task_968_source_install_rejects_unidentified_archive_without_override() {
     let fixture = support::source_fixture("ash-0.1.0+test.source.cccccccccccc");
+    std::fs::remove_file(fixture.path().join("release-source.toml"))
+        .expect("remove release source metadata");
     std::fs::remove_file(fixture.path().join(".source-rev")).expect("remove source rev");
     let roots = support::xdg_fixture();
 
@@ -416,12 +418,14 @@ fn task_968_source_install_rejects_unidentified_archive_without_override() {
     .envs(roots.env())
     .assert()
     .failure()
-    .stderr(predicates::str::contains("unidentified source"));
+    .stderr(predicates::str::contains("release-source metadata"));
 }
 
 #[test]
 fn task_968_source_install_rejects_empty_source_rev_without_override() {
     let fixture = support::source_fixture("ash-0.1.0+test.source.cddddddddddd");
+    std::fs::remove_file(fixture.path().join("release-source.toml"))
+        .expect("remove release source metadata");
     std::fs::write(fixture.path().join(".source-rev"), " \n").expect("empty source rev");
     let roots = support::xdg_fixture();
 
@@ -436,7 +440,7 @@ fn task_968_source_install_rejects_empty_source_rev_without_override() {
     .envs(roots.env())
     .assert()
     .failure()
-    .stderr(predicates::str::contains("unidentified source"));
+    .stderr(predicates::str::contains("release-source metadata"));
 }
 
 #[test]
@@ -482,6 +486,8 @@ fn task_968_source_install_records_source_metadata_and_overrides() {
 #[test]
 fn task_968_source_install_records_unidentified_override_as_non_reproducible() {
     let fixture = support::source_fixture("ash-0.1.0+test.source.eeeeeeeeeeee");
+    std::fs::remove_file(fixture.path().join("release-source.toml"))
+        .expect("remove release source metadata");
     std::fs::remove_file(fixture.path().join(".source-rev")).expect("remove source rev");
     let roots = support::xdg_fixture();
 
@@ -554,6 +560,11 @@ fn task_968_source_install_rejects_same_id_with_different_source_rev() {
     let second = support::source_fixture("ash-0.1.0+test.source.aaaaaaaa9999");
     std::fs::write(second.path().join(".source-rev"), "fedcba0987654321\n")
         .expect("different source rev");
+    std::fs::write(
+        second.path().join("release-source.toml"),
+        "schema_version = 1\norigin_commit = \"fedcba0987654321\"\n",
+    )
+    .expect("different release-source metadata");
     let roots = support::xdg_fixture();
 
     let mut first_cmd = Command::cargo_bin("ashgrove").expect("ashgrove binary");

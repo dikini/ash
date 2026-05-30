@@ -1,6 +1,6 @@
 # TASK-977: Source archive release metadata
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -68,14 +68,14 @@ commands:
   - RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ashgrove --test task_977_source_archive_release_metadata -- --nocapture
   - git diff --check
 checklist:
-  - [ ] Focused RED test was observed failing for the intended reason.
-  - [ ] Focused GREEN test passes and runs non-zero tests.
-  - [ ] `cargo fmt --check` passes when Rust code changed.
-  - [ ] `git diff --check` passes.
-  - [ ] `cargo check --workspace` or narrower audited check passes if shared carriers/public APIs changed.
-  - [ ] `cargo clippy --workspace --all-targets --all-features -- -D warnings` or narrower audited clippy gate passes if code changed.
-  - [ ] `CHANGELOG.md` updated if code/tooling/docs-policy/release-facing status changed.
-  - [ ] Independent review completed or status represented honestly.
+  - [x] Focused RED test was observed failing for the intended reason.
+  - [x] Focused GREEN test passes and runs non-zero tests.
+  - [x] `cargo fmt --check` passes when Rust code changed.
+  - [x] `git diff --check` passes.
+  - [x] `cargo check --workspace` or narrower audited check passes if shared carriers/public APIs changed.
+  - [x] `cargo clippy --workspace --all-targets --all-features -- -D warnings` or narrower audited clippy gate passes if code changed.
+  - [x] `CHANGELOG.md` updated if code/tooling/docs-policy/release-facing status changed.
+  - [x] Independent review completed or status represented honestly.
 ```
 
 ## Dependencies for Next Task

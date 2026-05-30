@@ -53,6 +53,11 @@ pub fn source_fixture(id: &str) -> tempfile::TempDir {
     let dir = tempfile::tempdir().expect("source");
     create_toolchain_shape(dir.path(), id);
     std::fs::write(dir.path().join(".source-rev"), "abcdef1234567890").expect("rev");
+    std::fs::write(
+        dir.path().join("release-source.toml"),
+        "schema_version = 1\norigin_commit = \"abcdef1234567890\"\n",
+    )
+    .expect("release source metadata");
     dir
 }
 

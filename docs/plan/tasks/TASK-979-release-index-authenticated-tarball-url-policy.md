@@ -19,13 +19,13 @@ Add authenticated tarball URL recording and release-index trust policy without b
 
 ### Functional Requirements
 
-1. ✅ URL installs require digest or signed release-index evidence.
+1. ✅ URL installs require explicit digest evidence; release-index metadata is not accepted as digest evidence until signed entries are bound.
 2. ✅ Digest mismatch fails before publish.
 3. ✅ URL provenance is recorded in install/update metadata.
 
 ### Property Requirements
 
-1. ✅ URL installs require an expected digest or signed release-index evidence.
+1. ✅ URL installs require an expected digest; release-index metadata is not accepted as digest evidence until signed entries are bound.
 2. ✅ Digest mismatches fail before any toolchain publish.
 3. ✅ Authenticated URL provenance is recorded in install/update metadata.
 
@@ -86,4 +86,4 @@ This task feeds TASK-986 final closeout evidence.
 
 This task is intentionally blocked on TASK-976 so the implementation cannot drift from the acceptance-delta audit.
 
-Completion note: TASK-979 implements explicit-digest `file://` tarball URL install/update through the existing tarball validation and staged-publish path. Missing digest or signed release-index evidence fails closed, digest mismatch is checked before publish, and URL installs record `tarball_url`, `tarball_digest`, and `tarball_authentication = "explicit-digest"` in `install-record.toml`. Unsupported network URL schemes remain fail-closed rather than performing best-effort lookup.
+Completion note: TASK-979 implements explicit-digest `file://` tarball URL install/update through the existing tarball validation and staged-publish path. Missing explicit digest evidence fails closed, digest mismatch is checked before publish, and URL installs record `tarball_url`, `tarball_digest`, and `tarball_authentication = "explicit-digest"` in `install-record.toml`. Release-index signature metadata is not accepted as digest evidence until a later resolver binds signed entries to toolchain id, tarball URL, and digest. Unsupported network URL schemes remain fail-closed rather than performing best-effort lookup.

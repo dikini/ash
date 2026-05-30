@@ -303,7 +303,7 @@ Update this section as tasks complete:
 | 124 | 8 | 1 | 📝 Planned after packet creation |
 | 126 | 9 | 9 | ✅ Complete |
 | 127 | 11 | 4 + partial | ⚠️ Partial first slice |
-| 128 | 12 | 9 | ✅ TASK-983 manifest rewrite trust preservation complete; implementation ready for TASK-984 |
+| 128 | 12 | 10 | ✅ TASK-984 trust/signing and remote git policy complete with explicit-digest URL boundary; implementation ready for TASK-985 |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -3774,11 +3774,11 @@ Phase 127 introduces `ashgrove <command>` as the Ash toolchain and deployment ma
 ## Phase 128: SPEC-073 Ashgrove Release, Trust, Registry-Ready Metadata, and Runtime-Support Completion
 
 **Priority:** High (closes the Phase 127 SPEC-073 deferred acceptance rows needed before Ashgrove can move beyond Draft)
-**Status:** ✅ TASK-983 manifest rewrite trust preservation complete; implementation proceeds sequentially through TASK-984 through TASK-986
+**Status:** ✅ TASK-984 trust/signing and remote git policy complete with explicit-digest URL boundary; implementation proceeds sequentially through TASK-985 through TASK-986
 **Spec:** [SPEC-073](../spec/SPEC-073-ASHGROVE-INSTALL-UPDATE-CLEANUP-GIT-DEPLOYMENT.md)
 **Plan:** [PLAN-123](PLAN-123-SPEC-073-ASHGROVE-RELEASE-TRUST-REGISTRY-RUNTIME-SUPPORT-COMPLETION.md)
 
-Phase 128 is the follow-on to Phase 127. It does not reopen or rewrite Phase 127 history; it closes the documented SPEC-073 deferred rows for source-archive release metadata, runtime-support payload metadata, authenticated tarball URL/release-index trust policy, packaged dispatcher lifecycle, registry-ready package metadata, broader cleanup reachability, trust-preserving manifest rewrites, mandatory trust/signing enforcement, remote-authenticated git fetch policy, and end-to-end release/deployment acceptance evidence.
+Phase 128 is the follow-on to Phase 127. It does not reopen or rewrite Phase 127 history; it closes the documented SPEC-073 deferred rows for source-archive release metadata, runtime-support payload metadata, explicit-digest tarball URL policy with release-index metadata fail-closed until signed entries are bound, packaged dispatcher lifecycle, registry-ready package metadata, broader cleanup reachability, trust-preserving manifest rewrites, mandatory trust/signing enforcement, remote-authenticated git fetch policy, and end-to-end release/deployment acceptance evidence.
 
 | Task | Description | Est. Hours | Status |
 |------|-------------|------------|--------|
@@ -3791,7 +3791,7 @@ Phase 128 is the follow-on to Phase 127. It does not reopen or rewrite Phase 127
 | [TASK-981](tasks/TASK-981-registry-scale-package-metadata-substrate.md) | Add registry-ready package metadata without creating a hosted registry service | 12 | ✅ Complete |
 | [TASK-982](tasks/TASK-982-cleanup-lockfile-cache-reachability.md) | Implement broader cleanup reachability across lockfiles, fetched cache, vendor metadata, and installed toolchains | 12 | ✅ Complete |
 | [TASK-983](tasks/TASK-983-manifest-rewrite-trust-preservation.md) | Preserve manifest and lockfile trust metadata during read-modify-write operations | 8 | ✅ Complete |
-| [TASK-984](tasks/TASK-984-mandatory-trust-signing-and-remote-git-fetch-policy.md) | Implement mandatory trust/signing enforcement and remote-authenticated git fetch policy | 16 | 📝 Planned |
+| [TASK-984](tasks/TASK-984-mandatory-trust-signing-and-remote-git-fetch-policy.md) | Implement mandatory trust/signing enforcement and remote-authenticated git fetch policy | 16 | ✅ Complete |
 | [TASK-985](tasks/TASK-985-ashgrove-release-deployment-acceptance-integration.md) | Prove release/deployment flows cover the completed SPEC-073 rows end-to-end | 12 | 📝 Planned |
 | [TASK-986](tasks/TASK-986-spec073-implemented-mvp-closeout.md) | Promote SPEC-073 only after acceptance matrix, broad gates, and independent review pass | 8 | 📝 Planned |
 

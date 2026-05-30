@@ -214,7 +214,7 @@ fn task_983_diagnostics_distinguish_trust_preservation_from_enforcement() {
         .success()
         .stdout(predicate::str::contains("preserved trust metadata"))
         .stdout(predicate::str::contains(
-            "mandatory trust enforcement is not performed",
+            "lock signing policy preserved for subsequent enforcement",
         ))
         .stdout(predicate::str::contains("trust enforced").not());
 }

@@ -1,6 +1,6 @@
 # TASK-984: Mandatory trust signing and remote git fetch policy
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -13,21 +13,22 @@ Implement mandatory trust/signing enforcement and remote-authenticated git fetch
 
 ## Dependencies
 
-- 📝 Depends on TASK-983 completion.
+- ✅ Depends on TASK-983 completion.
 
 ## Requirements
 
 ### Functional Requirements
 
 1. Untrusted remote protocols fail closed.
-2. Signature or attestation failures fail closed before publish or fetch use.
+2. Signature or attestation evidence failures fail closed before publish or fetch use.
 3. Remote-authenticated git policy records no secrets in lockfiles.
+4. URL install/update continues to require explicit digest evidence; release-index signing fails closed until a later resolver binds signed entries to toolchain id, tarball URL, and digest.
 
 ### Property Requirements
 
 1. Untrusted remote protocols fail before fetch or publish use.
-2. Required signature or attestation failures fail before publish or lock use.
-3. Authenticated remote policy records no credentials or secrets in lockfiles.
+2. Required tarball sidecar signature evidence, source-archive attestation evidence, and lock signature evidence failures fail before publish or lock use.
+3. Authenticated remote policy records no credentials or secrets in lockfiles; HTTPS credentials are redacted and credential-bearing `ssh://` URLs are rejected before serialization.
 
 ## TDD Steps
 
@@ -70,19 +71,27 @@ commands:
   - RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ash-cli --test phase127_vendored_dependency_resolution -- --nocapture
   - git diff --check
 checklist:
-  - [ ] Focused RED test was observed failing for the intended reason.
-  - [ ] Focused GREEN test passes and runs non-zero tests.
-  - [ ] `cargo fmt --check` passes when Rust code changed.
-  - [ ] `git diff --check` passes.
-  - [ ] `cargo check --workspace` or narrower audited check passes if shared carriers/public APIs changed.
-  - [ ] `cargo clippy --workspace --all-targets --all-features -- -D warnings` or narrower audited clippy gate passes if code changed.
-  - [ ] `CHANGELOG.md` updated if code/tooling/docs-policy/release-facing status changed.
-  - [ ] Independent review completed or status represented honestly.
+  - [x] Focused RED test was observed failing for the intended reason.
+  - [x] Focused GREEN test passes and runs non-zero tests.
+  - [x] `cargo fmt --check` passes when Rust code changed.
+  - [x] `git diff --check` passes.
+  - [x] `cargo check --workspace` or narrower audited check passes if shared carriers/public APIs changed.
+  - [x] `cargo clippy --workspace --all-targets --all-features -- -D warnings` or narrower audited clippy gate passes if code changed.
+  - [x] `CHANGELOG.md` updated if code/tooling/docs-policy/release-facing status changed.
+  - [x] Independent review completed or status represented honestly.
 ```
+
+## Evidence
+
+- RED: `RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ashgrove --test task_984_trust_signing_remote_git_policy -- --nocapture` failed with 0 passed / 7 failed before production edits. Failures showed signature and attestation metadata were accepted, untrusted git reached `git clone`, credential-bearing remotes could not produce redacted lockfiles, lock signing failed as drift rather than signature policy, and `--release-index` was absent.
+- Review remediation RED: focused TASK-984 and ash-cli regressions failed before remediation for credential-bearing `ssh://` lock serialization, missing source-archive attestation evidence, required tarball sidecar signature evidence, and ash-engine lock signature bypass.
+- GREEN: `RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ashgrove --test task_984_trust_signing_remote_git_policy -- --nocapture` passed with 10 passed / 0 failed.
+- Regression: `RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ash-cli --test phase127_vendored_dependency_resolution -- --nocapture` passed with 25 passed / 0 failed.
+- Adjacent ashgrove regressions passed for TASK-979, TASK-981, and TASK-983.
 
 ## Dependencies for Next Task
 
-This task feeds TASK-986 final closeout evidence.
+This task feeds TASK-985 release/deployment acceptance integration and TASK-986 final closeout evidence.
 
 ## Notes
 

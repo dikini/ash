@@ -6094,6 +6094,7 @@ fn read_project_lock(project_root: &Path) -> Result<toml::Value, EngineError> {
             project_root.display()
         ))
     })?;
+    enforce_lock_signature_policy(&lock_text)?;
     toml::from_str(&lock_text).map_err(|error| {
         EngineError::Configuration(format!(
             "failed to parse ash.lock for project '{}': {error}",
@@ -6206,10 +6207,18 @@ fn locked_package_git(package: &toml::Value) -> Result<&str, EngineError> {
                     "ash.lock package source does not match legacy git URL".into(),
                 ));
             }
+            validate_locked_git_url(source_git)?;
             Ok(source_git)
         }
-        (Some(source), None) => locked_package_source_git(source),
-        (None, Some(git)) => Ok(git),
+        (Some(source), None) => {
+            let git = locked_package_source_git(source)?;
+            validate_locked_git_url(git)?;
+            Ok(git)
+        }
+        (None, Some(git)) => {
+            validate_locked_git_url(git)?;
+            Ok(git)
+        }
         (None, None) => Err(EngineError::Configuration(
             "ash.lock package missing git".into(),
         )),
@@ -6238,6 +6247,121 @@ fn locked_package_commit(package: &toml::Value) -> Result<&str, EngineError> {
     };
     validate_locked_commit(commit)?;
     Ok(commit)
+}
+
+fn enforce_lock_signature_policy(lock_text: &str) -> Result<(), EngineError> {
+    let value: toml::Value = toml::from_str(lock_text).map_err(|error| {
+        EngineError::Configuration(format!("failed to parse ash.lock trust metadata: {error}"))
+    })?;
+    let Some(signing_lock) = value
+        .get("signing")
+        .and_then(toml::Value::as_table)
+        .and_then(|signing| signing.get("lock"))
+        .and_then(toml::Value::as_table)
+    else {
+        return Ok(());
+    };
+    if !signing_lock
+        .get("required")
+        .and_then(toml::Value::as_bool)
+        .unwrap_or(false)
+    {
+        return Ok(());
+    }
+    let expected = signing_lock
+        .get("package_manifest_digest")
+        .and_then(toml::Value::as_str)
+        .ok_or_else(|| {
+            EngineError::Configuration(
+                "required lock signature package_manifest_digest is missing".into(),
+            )
+        })
+        .and_then(|digest| parse_sha256_digest(digest, "lock signature package_manifest_digest"))?;
+    let packages = value
+        .get("package")
+        .and_then(toml::Value::as_array)
+        .ok_or_else(|| {
+            EngineError::Configuration("required lock signature has no packages to verify".into())
+        })?;
+    let matched = packages.iter().any(|package| {
+        package
+            .get("manifest_digest")
+            .and_then(toml::Value::as_str)
+            .and_then(|digest| digest.strip_prefix("sha256:"))
+            .is_some_and(|digest| digest.eq_ignore_ascii_case(&expected))
+    });
+    if !matched {
+        return Err(EngineError::Configuration(format!(
+            "lock signature mismatch for required package manifest digest sha256:{expected}"
+        )));
+    }
+    Ok(())
+}
+
+fn parse_sha256_digest(value: &str, label: &str) -> Result<String, EngineError> {
+    let digest = value.strip_prefix("sha256:").ok_or_else(|| {
+        EngineError::Configuration(format!("{label} must use sha256:<64-hex> format"))
+    })?;
+    if digest.len() != 64 || !digest.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+        return Err(EngineError::Configuration(format!(
+            "{label} must use sha256:<64-hex> format"
+        )));
+    }
+    Ok(digest.to_ascii_lowercase())
+}
+
+fn validate_locked_git_url(url: &str) -> Result<(), EngineError> {
+    validate_locked_git_protocol(url)?;
+    if locked_git_url_contains_credentials(url) {
+        return Err(EngineError::Configuration(
+            "ash.lock git URL must not contain credentials or secrets".into(),
+        ));
+    }
+    Ok(())
+}
+
+fn validate_locked_git_protocol(url: &str) -> Result<(), EngineError> {
+    if url.starts_with("file://")
+        || url.starts_with("https://")
+        || url.starts_with("ssh://")
+        || is_scp_like_ssh_url(url)
+    {
+        return Ok(());
+    }
+    let scheme = url
+        .split_once("://")
+        .map_or("unknown", |(scheme, _)| scheme);
+    Err(EngineError::Configuration(format!(
+        "untrusted git protocol '{scheme}' rejected before lock use"
+    )))
+}
+
+fn locked_git_url_contains_credentials(url: &str) -> bool {
+    url.strip_prefix("https://")
+        .and_then(|rest| rest.split_once('@').map(|(userinfo, _)| userinfo))
+        .is_some_and(|userinfo| !userinfo.is_empty())
+        || credential_bearing_ssh_userinfo(url).is_some()
+}
+
+fn credential_bearing_ssh_userinfo(url: &str) -> Option<&str> {
+    let rest = url.strip_prefix("ssh://")?;
+    let (authority, _) = rest.split_once('/').unwrap_or((rest, ""));
+    let (userinfo, host) = authority.split_once('@')?;
+    if host.is_empty() || userinfo.is_empty() || !userinfo.contains(':') {
+        return None;
+    }
+    Some(userinfo)
+}
+
+fn is_scp_like_ssh_url(url: &str) -> bool {
+    let Some((user_host, path)) = url.split_once(':') else {
+        return false;
+    };
+    !path.is_empty()
+        && !user_host.contains('/')
+        && !user_host.is_empty()
+        && user_host.contains('@')
+        && !user_host.contains("://")
 }
 
 fn xdg_cache_home() -> Result<PathBuf, EngineError> {

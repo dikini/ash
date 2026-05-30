@@ -468,6 +468,57 @@ fn run_fails_closed_on_malformed_lock_commit() {
 }
 
 #[test]
+fn check_fails_closed_on_required_lock_signature_mismatch() {
+    let project = VendoredProject::new();
+    let mut lock_text = fs::read_to_string(project.root.join("ash.lock")).expect("lock");
+    lock_text.push_str(
+        "\n[signing.lock]\nrequired = true\npackage_manifest_digest = \"sha256:0000000000000000000000000000000000000000000000000000000000000000\"\n",
+    );
+    fs::write(project.root.join("ash.lock"), lock_text).expect("signed lock mismatch");
+
+    let mut command = ash_command();
+    command.args(["check", project.main_path().to_str().expect("utf8")]);
+
+    command
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("lock signature mismatch"));
+}
+
+#[test]
+fn check_rejects_git_protocol_lock_url_before_resolving_vendored_root() {
+    let project = VendoredProject::new();
+    write_helper_git_url(&project, "git://example.invalid/helper.git");
+
+    let mut command = ash_command();
+    command.args(["check", project.main_path().to_str().expect("utf8")]);
+
+    command
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("untrusted git protocol"))
+        .stderr(predicate::str::contains("git"));
+}
+
+#[test]
+fn run_rejects_http_protocol_lock_url_before_resolving_vendored_root() {
+    let project = VendoredProject::new();
+    write_helper_git_url(&project, "http://example.invalid/helper.git");
+
+    let mut command = ash_command();
+    command.args([
+        "run",
+        &format!("{}:main", project.main_path().to_str().expect("utf8")),
+    ]);
+
+    command
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("untrusted git protocol"))
+        .stderr(predicate::str::contains("http"));
+}
+
+#[test]
 fn explicit_vendor_root_does_not_bypass_lock_commit_validation() {
     let project = VendoredProject::new();
     write_malformed_helper_commit(&project);
@@ -627,6 +678,16 @@ fn write_malformed_helper_commit(project: &VendoredProject) {
         format!("[[package]]\nname = \"helper\"\ngit = \"{HELPER_GIT_URL}\"\ncommit = \"short\"\n"),
     )
     .expect("malformed lock");
+}
+
+fn write_helper_git_url(project: &VendoredProject, git_url: &str) {
+    fs::write(
+        project.root.join("ash.lock"),
+        format!(
+            "[[package]]\nname = \"helper\"\ngit = \"{git_url}\"\ncommit = \"{HELPER_COMMIT}\"\n"
+        ),
+    )
+    .expect("lock git url");
 }
 
 fn write_unrelated_malformed_name_before_valid_helper(project: &VendoredProject) {

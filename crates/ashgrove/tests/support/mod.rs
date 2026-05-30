@@ -55,7 +55,7 @@ pub fn source_fixture(id: &str) -> tempfile::TempDir {
     std::fs::write(dir.path().join(".source-rev"), "abcdef1234567890").expect("rev");
     std::fs::write(
         dir.path().join("release-source.toml"),
-        "schema_version = 1\norigin_commit = \"abcdef1234567890\"\n",
+        "schema_version = 1\norigin_commit = \"abcdef1234567890\"\n\n[attestation]\norigin_commit = \"abcdef1234567890\"\n",
     )
     .expect("release source metadata");
     dir

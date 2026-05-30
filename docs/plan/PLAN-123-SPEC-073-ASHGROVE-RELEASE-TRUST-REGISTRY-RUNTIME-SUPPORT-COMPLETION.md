@@ -12,11 +12,11 @@
 
 ## 1. Status
 
-**Status:** ✅ TASK-983 complete; implementation ready for TASK-984
+**Status:** ✅ TASK-984 complete; implementation ready for TASK-985
 **Spec:** [SPEC-073](../spec/SPEC-073-ASHGROVE-INSTALL-UPDATE-CLEANUP-GIT-DEPLOYMENT.md)
 **Task range:** [TASK-975](tasks/TASK-975-spec073-ashgrove-completion-packet.md) through [TASK-986](tasks/TASK-986-spec073-implemented-mvp-closeout.md)
 
-TASK-975 created this docs packet. TASK-976 completed the hard audit gate and patched exact downstream verification commands before Rust implementation starts. TASK-983 now preserves reserved trust/signing metadata through manifest and lockfile rewrites while keeping mandatory trust enforcement owned by TASK-984. TASK-984 is next.
+TASK-975 created this docs packet. TASK-976 completed the hard audit gate and patched exact downstream verification commands before Rust implementation starts. TASK-984 now enforces required trust/signing evidence and remote git policy while keeping URL install/update on explicit digest evidence and end-to-end release/deployment acceptance owned by TASK-985. TASK-985 is next.
 
 ## 2. Scope
 
@@ -57,7 +57,7 @@ TASK-975 created this docs packet. TASK-976 completed the hard audit gate and pa
 | [TASK-981](tasks/TASK-981-registry-scale-package-metadata-substrate.md) | Add registry-ready package metadata without creating a hosted registry service | 12 | ✅ Complete |
 | [TASK-982](tasks/TASK-982-cleanup-lockfile-cache-reachability.md) | Implement broader cleanup reachability across lockfiles, fetched cache, vendor metadata, and installed toolchains | 12 | ✅ Complete |
 | [TASK-983](tasks/TASK-983-manifest-rewrite-trust-preservation.md) | Preserve manifest and lockfile trust metadata during read-modify-write operations | 8 | ✅ Complete |
-| [TASK-984](tasks/TASK-984-mandatory-trust-signing-and-remote-git-fetch-policy.md) | Implement mandatory trust/signing enforcement and remote-authenticated git fetch policy | 16 | 📝 Planned |
+| [TASK-984](tasks/TASK-984-mandatory-trust-signing-and-remote-git-fetch-policy.md) | Implement mandatory trust/signing enforcement and remote-authenticated git fetch policy | 16 | ✅ Complete |
 | [TASK-985](tasks/TASK-985-ashgrove-release-deployment-acceptance-integration.md) | Prove release/deployment flows cover the completed SPEC-073 rows end-to-end | 12 | 📝 Planned |
 | [TASK-986](tasks/TASK-986-spec073-implemented-mvp-closeout.md) | Promote SPEC-073 only after acceptance matrix, broad gates, and independent review pass | 8 | 📝 Planned |
 
@@ -130,6 +130,7 @@ SPEC-073 may be promoted beyond Draft only after TASK-986 confirms:
 - TASK-976 completed the hard audit gate by creating the acceptance-delta artifact, binding TASK-977 through TASK-985 to focused non-zero verification commands, and recording the A73-11 wording amendment required before mandatory trust/signing enforcement can be claimed.
 - TASK-977 implemented source-archive release metadata by requiring typed `release-source.toml` origin-commit metadata unless `--allow-unidentified-source` is explicit, recording `source_archive_digest` and `source_origin_commit` in source archive install records, and keeping unidentified archives non-reproducible.
 - TASK-978 implemented concrete runtime-support payload metadata by requiring source and tarball toolchain manifests to carry equivalent `[runtime_support]` identity/path/required metadata, validating the payload directory before publish, propagating the selected runtime-support identity through launcher dispatch, and including that identity in runtime artifact construction.
-- TASK-979 implemented authenticated tarball URL install/update policy for explicit-digest `file://` tarball URLs, records URL/digest/authentication provenance in `install-record.toml`, rejects URL installs without digest or signed release-index evidence, rejects digest mismatches before publish, and keeps unsupported network URL schemes fail-closed rather than adding best-effort lookup.
+- TASK-979 implemented authenticated tarball URL install/update policy for explicit-digest `file://` tarball URLs, records URL/digest/authentication provenance in `install-record.toml`, rejects URL installs without explicit digest evidence, rejects digest mismatches before publish, and keeps unsupported network URL schemes fail-closed rather than adding best-effort lookup. Release-index signature metadata is not accepted as digest evidence until a later resolver binds signed entries to toolchain id, tarball URL, and digest.
 - TASK-981 implemented the registry-ready package metadata substrate. `ashgrove lock` preserves package/version/registry metadata for explicit git-pinned dependencies, vendor provenance records and checks that metadata, ash-engine accepts the registry-style lock carrier, and hosted registry/SemVer dependency resolution remains fail-closed and out of scope.
 - TASK-982 implemented cleanup lockfile/cache reachability. Cleanup now derives reachability only from supplied or registered known projects, preserves lock/vendor-provenance referenced fetched git checkouts and repos plus project-pinned toolchains, reports reachable and unreachable git cache entries in dry-run, and preserves project-local `ash.toml`/`ash.lock` files.
+- TASK-984 implemented mandatory trust/signing enforcement and remote-authenticated git policy. Required tarball sidecar signature evidence, source-archive attestation evidence, unsigned or unbound release indexes, lock signature mismatches in both ashgrove and ash-engine consumers, untrusted git protocols, and credential-bearing lockfile origins fail closed before publish, fetch, or lock use. HTTPS credentials are redacted before lockfile serialization, and credential-bearing `ssh://` URLs are rejected.

@@ -1478,6 +1478,8 @@ struct InstallArgs {
     #[arg(long)]
     digest: Option<String>,
     #[arg(long)]
+    release_index: Option<PathBuf>,
+    #[arg(long)]
     allow_dirty_source: bool,
     #[arg(long)]
     allow_unidentified_source: bool,
@@ -1499,6 +1501,8 @@ struct UpdateArgs {
     url: Option<String>,
     #[arg(long)]
     digest: Option<String>,
+    #[arg(long)]
+    release_index: Option<PathBuf>,
     #[arg(long)]
     switch: bool,
     #[arg(long)]
@@ -1698,6 +1702,9 @@ fn install(paths: &AshgrovePaths, args: InstallArgs) -> Result<()> {
             .map(|_| ())
         }
         InstallSource::Tarball => {
+            if let Some(release_index) = args.release_index.as_deref() {
+                verify_signed_release_index(release_index)?;
+            }
             if let Some(url) = args.url {
                 return install_from_tarball_url(
                     paths,
@@ -1745,6 +1752,9 @@ fn update(paths: &AshgrovePaths, args: UpdateArgs) -> Result<()> {
             .map(|_| ())
         }
         InstallSource::Tarball => {
+            if let Some(release_index) = args.release_index.as_deref() {
+                verify_signed_release_index(release_index)?;
+            }
             if let Some(url) = args.url {
                 return install_from_tarball_url(
                     paths,
@@ -1793,7 +1803,7 @@ fn install_from_source(
         );
     }
     let release_source =
-        SourceArchiveReleaseMetadata::read_from_source(source, allow_unidentified)?;
+        SourceArchiveReleaseMetadata::read_from_source_archive(source, allow_unidentified)?;
     let source_archive_digest = source_tree_digest(source)?;
     let source_rev = release_source
         .as_ref()
@@ -1834,6 +1844,15 @@ fn install_from_source(
 struct SourceArchiveReleaseMetadata {
     schema_version: u32,
     origin_commit: String,
+    #[serde(default)]
+    attestation: Option<SourceArchiveAttestation>,
+}
+
+#[derive(Debug, Deserialize)]
+struct SourceArchiveAttestation {
+    #[serde(default)]
+    required: bool,
+    origin_commit: Option<String>,
 }
 
 impl SourceArchiveReleaseMetadata {
@@ -1842,10 +1861,18 @@ impl SourceArchiveReleaseMetadata {
         if !path.is_file() {
             return Ok(None);
         }
-        Self::read_from_source(source, false)
+        Self::read_from_source(source, false, false)
     }
 
-    fn read_from_source(source: &Path, allow_unidentified: bool) -> Result<Option<Self>> {
+    fn read_from_source_archive(source: &Path, allow_unidentified: bool) -> Result<Option<Self>> {
+        Self::read_from_source(source, allow_unidentified, true)
+    }
+
+    fn read_from_source(
+        source: &Path,
+        allow_unidentified: bool,
+        require_attestation: bool,
+    ) -> Result<Option<Self>> {
         let path = source.join("release-source.toml");
         let text = match fs::read_to_string(&path) {
             Ok(text) => text,
@@ -1863,7 +1890,7 @@ impl SourceArchiveReleaseMetadata {
             }
         };
         let metadata: Self = toml::from_str(&text).context("parse release-source metadata")?;
-        metadata.validate()?;
+        metadata.validate(require_attestation)?;
         if let Some(legacy_rev) = read_optional_trimmed(source.join(".source-rev"))?
             && legacy_rev != metadata.origin_commit
         {
@@ -1872,7 +1899,7 @@ impl SourceArchiveReleaseMetadata {
         Ok(Some(metadata))
     }
 
-    fn validate(&self) -> Result<()> {
+    fn validate(&self, require_attestation: bool) -> Result<()> {
         if self.schema_version != TOOLCHAIN_ARCHIVE_SCHEMA_VERSION {
             bail!(
                 "unsupported release-source schema version {}; expected {TOOLCHAIN_ARCHIVE_SCHEMA_VERSION}",
@@ -1883,6 +1910,24 @@ impl SourceArchiveReleaseMetadata {
             || !self.origin_commit.chars().all(|ch| ch.is_ascii_hexdigit())
         {
             bail!("release-source origin_commit must be a git commit hash");
+        }
+        let Some(attestation) = &self.attestation else {
+            if require_attestation {
+                bail!("source archive attestation evidence is required");
+            }
+            return Ok(());
+        };
+        if require_attestation || attestation.required {
+            let attested = attestation
+                .origin_commit
+                .as_deref()
+                .context("source archive attestation origin_commit is required")?;
+            if attested != self.origin_commit {
+                bail!(
+                    "source archive attestation origin_commit mismatch: expected {}, got {attested}",
+                    self.origin_commit
+                );
+            }
         }
         Ok(())
     }
@@ -1996,7 +2041,9 @@ impl SourceRootMetadata {
             .or(read_optional_trimmed(source.join(".source-url"))?);
         Ok(Self {
             rev: rev.map(|value| value.trim().to_string()),
-            url: url.map(|value| value.trim().to_string()),
+            url: url
+                .map(|value| canonical_git_url_for_lock(value.trim()).map(|origin| origin.url))
+                .transpose()?,
             dirty,
         })
     }
@@ -2420,6 +2467,7 @@ fn install_from_tarball(
     }
     let manifest = verify_toolchain_shape(&root, &id)?;
     manifest.validate_archive_schema_version()?;
+    enforce_toolchain_release_signature(&manifest, &id, archive, &digest)?;
     verify_install_record_shape(&root, &id)?;
     verify_required_binaries_executable(&root, &id)?;
     verify_required_manifest_tools(&root, &manifest)?;
@@ -2449,7 +2497,7 @@ fn install_from_tarball_url(
 ) -> Result<ToolchainId> {
     if expected_digest.is_none() {
         bail!(
-            "tarball URL install requires authenticated download policy evidence: explicit sha256 digest or signed release-index evidence"
+            "tarball URL install requires authenticated download policy evidence: explicit sha256 digest"
         );
     }
     let archive = authenticated_tarball_url_path(url)?;
@@ -2460,6 +2508,24 @@ fn install_from_tarball_url(
         expected_id,
         expected_digest,
         Some(url),
+    )
+}
+
+fn verify_signed_release_index(path: &Path) -> Result<()> {
+    let text = fs::read_to_string(path)
+        .with_context(|| format!("read release index {}", path.display()))?;
+    let value: toml::Value = toml::from_str(&text).context("parse release index")?;
+    let signed = value
+        .get("signing")
+        .and_then(toml::Value::as_table)
+        .and_then(|signing| signing.get("signature"))
+        .and_then(toml::Value::as_str)
+        .is_some_and(|signature| !signature.trim().is_empty());
+    if !signed {
+        bail!("unsigned release index rejected before publish");
+    }
+    bail!(
+        "release-index signature binding is not implemented; explicit --digest remains required for URL install/update"
     )
 }
 
@@ -2475,18 +2541,85 @@ fn authenticated_tarball_url_path(url: &str) -> Result<PathBuf> {
     Ok(PathBuf::from(path))
 }
 
+fn enforce_toolchain_release_signature(
+    manifest: &ToolchainManifest,
+    id: &ToolchainId,
+    archive: &Path,
+    archive_digest: &str,
+) -> Result<()> {
+    let Some(trust) = manifest.extra.get("trust") else {
+        return Ok(());
+    };
+    let Some(release) = trust.get("release").and_then(toml::Value::as_table) else {
+        return Ok(());
+    };
+    if !release
+        .get("signature_required")
+        .and_then(toml::Value::as_bool)
+        .unwrap_or(false)
+    {
+        return Ok(());
+    }
+    let evidence = ReleaseSignatureEvidence::read_for_archive(archive)?;
+    if evidence.schema_version != TOOLCHAIN_ARCHIVE_SCHEMA_VERSION {
+        bail!(
+            "unsupported toolchain release signature schema version {}; expected {TOOLCHAIN_ARCHIVE_SCHEMA_VERSION}",
+            evidence.schema_version
+        );
+    }
+    if evidence.toolchain_id != *id {
+        bail!(
+            "toolchain release signature toolchain_id mismatch: expected {}, got {}",
+            id.as_str(),
+            evidence.toolchain_id.as_str()
+        );
+    }
+    let expected = parse_sha256_digest(
+        &evidence.tarball_digest,
+        "toolchain release signature tarball_digest",
+    )?;
+    if expected != archive_digest {
+        bail!(
+            "toolchain release signature mismatch: expected sha256:{expected}, got sha256:{archive_digest}"
+        );
+    }
+    if evidence.signature.trim().is_empty() {
+        bail!("toolchain release signature evidence is empty");
+    }
+    Ok(())
+}
+
+#[derive(Debug, Deserialize)]
+struct ReleaseSignatureEvidence {
+    schema_version: u32,
+    toolchain_id: ToolchainId,
+    tarball_digest: String,
+    signature: String,
+}
+
+impl ReleaseSignatureEvidence {
+    fn read_for_archive(archive: &Path) -> Result<Self> {
+        let path = release_signature_sidecar_path(archive);
+        let text = fs::read_to_string(&path).with_context(|| {
+            format!(
+                "required toolchain release signature evidence is missing at {}",
+                path.display()
+            )
+        })?;
+        toml::from_str(&text).context("parse toolchain release signature evidence")
+    }
+}
+
+fn release_signature_sidecar_path(archive: &Path) -> PathBuf {
+    PathBuf::from(format!("{}.release-signature.toml", archive.display()))
+}
+
 fn verify_expected_tarball_digest(
     expected_digest: Option<&str>,
     actual_digest: &str,
 ) -> Result<()> {
     if let Some(expected_digest) = expected_digest {
-        let Some(expected_hex) = expected_digest.strip_prefix("sha256:") else {
-            bail!("tarball digest must use sha256:<hex> format");
-        };
-        if expected_hex.len() != 64 || !expected_hex.chars().all(|ch| ch.is_ascii_hexdigit()) {
-            bail!("tarball digest must use sha256:<64-hex> format");
-        }
-        let expected = expected_hex.to_ascii_lowercase();
+        let expected = parse_sha256_digest(expected_digest, "tarball digest")?;
         if expected != actual_digest {
             bail!(
                 "tarball digest mismatch: expected sha256:{expected}, got sha256:{actual_digest}"
@@ -2494,6 +2627,16 @@ fn verify_expected_tarball_digest(
         }
     }
     Ok(())
+}
+
+fn parse_sha256_digest(value: &str, label: &str) -> Result<String> {
+    let Some(hex) = value.strip_prefix("sha256:") else {
+        bail!("{label} must use sha256:<hex> format");
+    };
+    if hex.len() != 64 || !hex.chars().all(|ch| ch.is_ascii_hexdigit()) {
+        bail!("{label} must use sha256:<64-hex> format");
+    }
+    Ok(hex.to_ascii_lowercase())
 }
 
 fn validate_archive_entry(entry: &tar::Entry<'_, impl Read>) -> Result<()> {
@@ -3328,20 +3471,19 @@ fn lock(project: &Path, check: bool) -> Result<()> {
     let expected = manifest.lock_text(project, preserved_metadata)?;
     if check {
         let current = fs::read_to_string(&lock_path).context("read ash.lock")?;
+        enforce_lock_signature_policy(&current)?;
         if normalize_ws(&current) != normalize_ws(&expected) {
             bail!("lockfile drift detected");
         }
         if preserved_any {
-            println!(
-                "preserved trust metadata; mandatory trust enforcement is not performed by ashgrove lock"
-            );
+            println!("preserved trust metadata; lock signing policy enforced when required");
         }
         return Ok(());
     }
     fs::write(lock_path, expected).context("write ash.lock")?;
     if preserved_any {
         println!(
-            "preserved trust metadata; mandatory trust enforcement is not performed by ashgrove lock"
+            "preserved trust metadata; lock signing policy preserved for subsequent enforcement"
         );
     }
     Ok(())
@@ -3441,9 +3583,49 @@ fn vendor(paths: &AshgrovePaths, project: &Path, output: Option<&Path>, check: b
 fn read_lock(project: &Path) -> Result<LockFile> {
     let lock_path = project.join("ash.lock");
     let text = fs::read_to_string(&lock_path).context("read ash.lock")?;
+    enforce_lock_signature_policy(&text)?;
     let lock: LockFile = toml::from_str(&text).context("parse ash.lock")?;
     lock.validate()?;
     Ok(lock)
+}
+
+fn enforce_lock_signature_policy(lock_text: &str) -> Result<()> {
+    let value: toml::Value = toml::from_str(lock_text).context("parse ash.lock trust metadata")?;
+    let Some(signing_lock) = value
+        .get("signing")
+        .and_then(toml::Value::as_table)
+        .and_then(|signing| signing.get("lock"))
+        .and_then(toml::Value::as_table)
+    else {
+        return Ok(());
+    };
+    if !signing_lock
+        .get("required")
+        .and_then(toml::Value::as_bool)
+        .unwrap_or(false)
+    {
+        return Ok(());
+    }
+    let expected = signing_lock
+        .get("package_manifest_digest")
+        .and_then(toml::Value::as_str)
+        .context("required lock signature package_manifest_digest is missing")?;
+    let expected = parse_sha256_digest(expected, "lock signature package_manifest_digest")?;
+    let packages = value
+        .get("package")
+        .and_then(toml::Value::as_array)
+        .context("required lock signature has no packages to verify")?;
+    let matched = packages.iter().any(|package| {
+        package
+            .get("manifest_digest")
+            .and_then(toml::Value::as_str)
+            .and_then(|digest| digest.strip_prefix("sha256:"))
+            .is_some_and(|digest| digest.eq_ignore_ascii_case(&expected))
+    });
+    if !matched {
+        bail!("lock signature mismatch for required package manifest digest sha256:{expected}");
+    }
+    Ok(())
 }
 
 fn read_lock_reserved_metadata(lock_path: &Path) -> Result<LockReservedMetadata> {
@@ -3718,6 +3900,8 @@ struct LockedPackage {
     manifest_digest: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     source_path: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    authenticated_origin: Option<String>,
 }
 
 impl LockedPackage {
@@ -3732,9 +3916,13 @@ impl LockedPackage {
                 if source_git != self.git {
                     bail!("ash.lock package source does not match legacy git URL");
                 }
+                validate_lock_git_url(source_git)?;
                 Ok(source_git)
             }
-            None => Ok(self.git.as_str()),
+            None => {
+                validate_lock_git_url(&self.git)?;
+                Ok(self.git.as_str())
+            }
         }
     }
 }
@@ -3794,11 +3982,12 @@ impl Manifest {
         let mut package = Vec::with_capacity(self.dependencies.len());
         for dep in &self.dependencies {
             let commit = dep.resolve_commit(project)?;
+            let origin = canonical_git_url_for_lock(&dep.git)?;
             let rev = dep.rev.as_ref().map(|_| commit.clone());
             package.push(LockedPackage {
                 name: dep.name.clone(),
-                git: dep.git.clone(),
-                source: Some(format!("git+{}", dep.git)),
+                git: origin.url.clone(),
+                source: Some(format!("git+{}", origin.url)),
                 package: dep.package.clone(),
                 version: dep.version.clone(),
                 registry: dep.registry.clone(),
@@ -3816,6 +4005,7 @@ impl Manifest {
                 commit,
                 manifest_digest: dep.registry_metadata_digest()?,
                 source_path: dep.local_path().map(|path| path.display().to_string()),
+                authenticated_origin: origin.authenticated_origin,
             });
         }
         toml::to_string(&LockFile {
@@ -3850,7 +4040,10 @@ impl Dependency {
         let kind = optional_dependency_string(value, "kind")?;
         let license = optional_dependency_string(value, "license")?;
         let git = match value.get("git").and_then(toml::Value::as_str) {
-            Some(git) => git.to_string(),
+            Some(git) => {
+                validate_git_protocol(git)?;
+                git.to_string()
+            }
             None if package.is_some() || version.is_some() || registry.is_some() => {
                 bail!(
                     "hosted registry dependencies are not supported and remain out of scope; dependency '{name}' must use explicit git plus tag or rev"
@@ -3884,6 +4077,9 @@ impl Dependency {
 
     fn resolve_commit(&self, project: &Path) -> Result<String> {
         let reference = self.rev.as_ref().or(self.tag.as_ref()).expect("validated");
+        if self.tag.is_none() && is_full_git_commit(reference) && self.local_path().is_none() {
+            return Ok(reference.to_string());
+        }
         let path = self
             .local_path()
             .unwrap_or_else(|| project.join(".ash/cache/git").join(&self.name));
@@ -3932,6 +4128,92 @@ impl Dependency {
             .context("serialize registry metadata for digest")?;
         Ok(Some(format!("sha256:{}", sha256_hex(text.as_bytes()))))
     }
+}
+
+#[derive(Debug)]
+struct CanonicalGitOrigin {
+    url: String,
+    authenticated_origin: Option<String>,
+}
+
+fn canonical_git_url_for_lock(raw: &str) -> Result<CanonicalGitOrigin> {
+    validate_git_protocol(raw)?;
+    if let Some(rest) = raw.strip_prefix("https://")
+        && let Some((userinfo, host_path)) = rest.split_once('@')
+        && !userinfo.is_empty()
+    {
+        if host_path.is_empty() {
+            bail!("authenticated git URL missing host");
+        }
+        return Ok(CanonicalGitOrigin {
+            url: format!("https://{host_path}"),
+            authenticated_origin: Some("credentials-redacted".to_string()),
+        });
+    }
+    if credential_bearing_ssh_userinfo(raw).is_some() {
+        bail!("credentials-bearing ssh git URL is rejected before lock serialization");
+    }
+    Ok(CanonicalGitOrigin {
+        url: raw.to_string(),
+        authenticated_origin: None,
+    })
+}
+
+fn validate_lock_git_url(url: &str) -> Result<()> {
+    validate_git_protocol(url)?;
+    if git_url_contains_credentials(url) {
+        bail!("ash.lock git URL must not contain credentials or secrets");
+    }
+    Ok(())
+}
+
+fn validate_git_protocol(url: &str) -> Result<()> {
+    if url.starts_with("file://")
+        || url.starts_with("https://")
+        || url.starts_with("ssh://")
+        || is_scp_like_ssh_url(url)
+    {
+        return Ok(());
+    }
+    let scheme = url
+        .split_once("://")
+        .map_or("unknown", |(scheme, _)| scheme);
+    bail!("untrusted git protocol '{scheme}' rejected before fetch");
+}
+
+fn git_url_contains_credentials(url: &str) -> bool {
+    https_url_userinfo(url).is_some_and(|userinfo| !userinfo.is_empty())
+        || credential_bearing_ssh_userinfo(url).is_some()
+}
+
+fn https_url_userinfo(url: &str) -> Option<&str> {
+    url.strip_prefix("https://")
+        .and_then(|rest| rest.split_once('@').map(|(userinfo, _)| userinfo))
+}
+
+fn credential_bearing_ssh_userinfo(url: &str) -> Option<&str> {
+    let rest = url.strip_prefix("ssh://")?;
+    let (authority, _) = rest.split_once('/').unwrap_or((rest, ""));
+    let (userinfo, host) = authority.split_once('@')?;
+    if host.is_empty() || userinfo.is_empty() || !userinfo.contains(':') {
+        return None;
+    }
+    Some(userinfo)
+}
+
+fn is_scp_like_ssh_url(url: &str) -> bool {
+    let Some((user_host, path)) = url.split_once(':') else {
+        return false;
+    };
+    !path.is_empty()
+        && !user_host.contains('/')
+        && !user_host.is_empty()
+        && user_host.contains('@')
+        && !user_host.contains("://")
+}
+
+fn is_full_git_commit(value: &str) -> bool {
+    value.len() == 40 && value.bytes().all(|byte| byte.is_ascii_hexdigit())
 }
 
 fn optional_dependency_string(value: &toml::Value, key: &str) -> Result<Option<String>> {

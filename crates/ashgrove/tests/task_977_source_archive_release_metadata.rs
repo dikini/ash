@@ -112,7 +112,7 @@ fn task_977_source_archive_with_origin_commit_records_reproducible_metadata() {
     let fixture = support::source_fixture("ash-0.1.0+test.source.archive977b");
     std::fs::write(
         fixture.path().join("release-source.toml"),
-        "schema_version = 1\norigin_commit = \"abcdef1234567890\"\n",
+        "schema_version = 1\norigin_commit = \"abcdef1234567890\"\n\n[attestation]\norigin_commit = \"abcdef1234567890\"\n",
     )
     .expect("release-source metadata");
     let roots = support::xdg_fixture();

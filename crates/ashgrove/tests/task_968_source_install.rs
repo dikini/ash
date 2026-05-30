@@ -562,7 +562,7 @@ fn task_968_source_install_rejects_same_id_with_different_source_rev() {
         .expect("different source rev");
     std::fs::write(
         second.path().join("release-source.toml"),
-        "schema_version = 1\norigin_commit = \"fedcba0987654321\"\n",
+        "schema_version = 1\norigin_commit = \"fedcba0987654321\"\n\n[attestation]\norigin_commit = \"fedcba0987654321\"\n",
     )
     .expect("different release-source metadata");
     let roots = support::xdg_fixture();

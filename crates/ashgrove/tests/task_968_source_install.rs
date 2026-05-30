@@ -77,21 +77,57 @@ fn task_968_source_install_builds_real_source_root_and_records_git_metadata() {
 fn task_968_source_install_rejects_missing_source_stdlib_metadata_before_publish() {
     let source = support::unidentified_source_workspace_fixture();
     std::fs::remove_file(source.path().join("std/Cargo.toml")).expect("remove std metadata");
-    let roots = support::xdg_fixture();
 
+    assert_source_install_fails_without_publishing(
+        source.path(),
+        predicates::str::contains("read stdlib metadata"),
+    );
+}
+
+#[test]
+fn task_968_source_install_rejects_incomplete_source_stdlib_metadata_before_publish() {
+    let source = support::unidentified_source_workspace_fixture();
+    std::fs::write(
+        source.path().join("std/Cargo.toml"),
+        "[package]\nversion = \"0.1.0\"\n",
+    )
+    .expect("write missing stdlib package name");
+
+    assert_source_install_fails_without_publishing(
+        source.path(),
+        predicates::str::contains("missing [package].name"),
+    );
+
+    std::fs::write(
+        source.path().join("std/Cargo.toml"),
+        "[package]\nname = \"ash-stdlib\"\n",
+    )
+    .expect("write missing stdlib package version");
+
+    assert_source_install_fails_without_publishing(
+        source.path(),
+        predicates::str::contains("missing [package].version"),
+    );
+}
+
+fn assert_source_install_fails_without_publishing<P>(source: &std::path::Path, stderr: P)
+where
+    P: predicates::Predicate<str>,
+{
+    let roots = support::xdg_fixture();
     let mut cmd = Command::cargo_bin("ashgrove").expect("ashgrove binary");
     cmd.args([
         "install",
         "--from",
         "source",
         "--path",
-        source.path().to_str().expect("utf8"),
+        source.to_str().expect("utf8"),
         "--allow-unidentified-source",
     ])
     .envs(roots.env())
     .assert()
     .failure()
-    .stderr(predicates::str::contains("read stdlib metadata"));
+    .stderr(stderr);
 
     let toolchains = roots.data.path().join("ash/toolchains");
     let installed_count = if toolchains.exists() {

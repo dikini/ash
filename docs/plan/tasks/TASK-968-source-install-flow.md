@@ -22,7 +22,7 @@ Implement `ashgrove install --from source` for source checkouts/source archives.
 ### Functional Requirements
 
 1. Build or stage Ash binaries from source according to the TASK-965 audit decision.
-2. Copy bundled stdlib and runtime support metadata into the toolchain layout.
+2. Copy bundled stdlib package metadata and existing runtime stdlib support modules into the toolchain layout.
 3. Record source URL/rev/build profile/target triple plus dirty/unidentified-source override state in install metadata.
 4. Reject dirty source installs unless `--allow-dirty-source` is provided and recorded.
 5. Reject source archives without commit metadata unless `--allow-unidentified-source` is provided and recorded.
@@ -56,7 +56,7 @@ commands:
   - git diff --check
 checklist:
   - [x] Build or stage Ash binaries from source according to the TASK-965 audit decision.
-  - [x] Copy bundled stdlib and runtime support metadata into the toolchain layout.
+  - [x] Copy bundled stdlib package metadata and existing runtime stdlib support modules into the toolchain layout.
   - [x] Record source URL/rev/build profile/target triple plus dirty/unidentified-source override state in install metadata.
   - [x] Reject dirty source installs unless `--allow-dirty-source` is provided and recorded.
   - [x] Reject source archives without commit metadata unless `--allow-unidentified-source` is provided and recorded.

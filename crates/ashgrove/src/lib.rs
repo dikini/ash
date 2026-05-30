@@ -1223,17 +1223,43 @@ fn stage_source_stdlib_metadata(
         .with_context(|| format!("read stdlib metadata {}", source_manifest.display()))?;
     let manifest: toml::Value =
         toml::from_str(&manifest_text).context("parse source stdlib metadata")?;
-    if manifest
+    let package = manifest
         .get("package")
         .and_then(toml::Value::as_table)
-        .is_none()
+        .with_context(|| {
+            format!(
+                "source stdlib metadata missing [package] at {}",
+                source_manifest.display()
+            )
+        })?;
+    if package
+        .get("name")
+        .and_then(toml::Value::as_str)
+        .is_none_or(|name| name.trim().is_empty())
     {
         bail!(
-            "source stdlib metadata missing [package] at {}",
+            "source stdlib metadata missing [package].name at {}",
+            source_manifest.display()
+        );
+    }
+    if !package_version_is_present(package.get("version")) {
+        bail!(
+            "source stdlib metadata missing [package].version at {}",
             source_manifest.display()
         );
     }
     fs::write(std_root.join("ash.toml"), manifest_text).context("write stdlib package metadata")
+}
+
+fn package_version_is_present(value: Option<&toml::Value>) -> bool {
+    match value {
+        Some(toml::Value::String(version)) => !version.trim().is_empty(),
+        Some(toml::Value::Table(table)) => table
+            .get("workspace")
+            .and_then(toml::Value::as_bool)
+            .unwrap_or(false),
+        _ => false,
+    }
 }
 
 #[derive(Debug, Parser)]

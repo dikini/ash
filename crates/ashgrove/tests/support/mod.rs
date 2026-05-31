@@ -108,7 +108,7 @@ pub fn unidentified_source_workspace_fixture() -> tempfile::TempDir {
     dir
 }
 
-fn create_source_workspace(root: &Path) {
+pub fn create_source_workspace(root: &Path) {
     std::fs::create_dir_all(root.join("crates/ash-cli/src")).expect("ash-cli src");
     std::fs::create_dir_all(root.join("crates/ashgrove/src")).expect("ashgrove src");
     std::fs::create_dir_all(root.join("std/src/runtime")).expect("std runtime src");

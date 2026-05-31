@@ -1,6 +1,6 @@
 # SPEC-074: Ashgrove Source Payload and Local-State Ignore Policy
 
-**Status:** Draft
+**Status:** Accepted/Implemented
 **Date:** 2026-05-31
 **Amends:** [SPEC-073](SPEC-073-ASHGROVE-INSTALL-UPDATE-CLEANUP-GIT-DEPLOYMENT.md)
 **Plan:** [PLAN-124](../plan/PLAN-124-ASHGROVE-SOURCE-PAYLOAD-LOCAL-STATE-IGNORE.md)
@@ -197,3 +197,4 @@ A practical implementation path is:
 
 - Initial draft specifying source-root payload membership, local-state exclusion, source-archive boundary preservation, and TASK-987 through TASK-990 implementation plan.
 - Review remediation tightened source-shaped archive classification, git membership fail-closed rules, `.dirty` sentinel handling, update-path parity evidence, A74-6 ownership, and fake-cargo regression requirements.
+- TASK-990 accepted the amendment after A74-1 through A74-8 were evidenced by focused TASK-989 regressions, source-archive non-regression, broad ashgrove test/clippy/fmt gates, and closeout review.

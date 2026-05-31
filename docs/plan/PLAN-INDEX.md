@@ -304,6 +304,7 @@ Update this section as tasks complete:
 | 126 | 9 | 9 | ✅ Complete |
 | 127 | 11 | 4 + partial | ⚠️ Partial first slice |
 | 128 | 12 | 12 | ✅ Complete; SPEC-073 Implemented MVP |
+| 129 | 4 | 4 | ✅ Complete; SPEC-074 Accepted/Implemented |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -3809,7 +3810,7 @@ Phase 128 is the follow-on to Phase 127. It does not reopen or rewrite Phase 127
 ## Phase 129: SPEC-074 Ashgrove Source Payload and Local-State Ignore Policy
 
 **Priority:** High (fixes a source-install correctness bug where ignored local state can falsely trip the source-payload mutation check)
-**Status:** 🟡 Ready; docs packet and audit gate complete, implementation next
+**Status:** ✅ Complete; SPEC-074 Accepted/Implemented
 **Spec:** [SPEC-074](../spec/SPEC-074-ASHGROVE-SOURCE-PAYLOAD-LOCAL-STATE-IGNORE.md)
 **Plan:** [PLAN-124](PLAN-124-ASHGROVE-SOURCE-PAYLOAD-LOCAL-STATE-IGNORE.md)
 
@@ -3819,8 +3820,8 @@ Phase 129 is a targeted amendment to the SPEC-073 Implemented MVP. It separates 
 |------|-------------|------------|--------|
 | [TASK-987](tasks/TASK-987-ashgrove-source-payload-local-state-packet.md) | Create SPEC-074/PLAN-124/TASK packet and register Phase 129 | 3 | ✅ Complete |
 | [TASK-988](tasks/TASK-988-ashgrove-source-payload-audit-gate.md) | Audit source payload membership and freeze focused verification commands | 5 | ✅ Complete |
-| [TASK-989](tasks/TASK-989-ashgrove-source-payload-ignore-implementation.md) | Implement source-root payload walker, digest/copy sharing, metadata/diagnostics, and focused regressions | 10 | 🟡 Ready |
-| [TASK-990](tasks/TASK-990-ashgrove-source-payload-local-state-closeout.md) | Run composed acceptance, independent review, status reconciliation, and broad gates | 5 | 📝 Planned |
+| [TASK-989](tasks/TASK-989-ashgrove-source-payload-ignore-implementation.md) | Implement source-root payload walker, digest/copy sharing, metadata/diagnostics, and focused regressions | 10 | ✅ Complete |
+| [TASK-990](tasks/TASK-990-ashgrove-source-payload-local-state-closeout.md) | Run composed acceptance, independent review, status reconciliation, and broad gates | 5 | ✅ Complete |
 
 **Decision gates:**
 - D1: SPEC-073 stays Implemented MVP; SPEC-074 owns the post-MVP source-payload/local-state amendment.

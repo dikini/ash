@@ -1,6 +1,6 @@
 # TASK-989: Ashgrove source payload ignore implementation
 
-## Status: 🟡 Ready
+## Status: ✅ Complete
 
 ## Description
 
@@ -86,6 +86,16 @@ Patch post-build mismatch diagnostics and add `source_payload_digest_policy` / `
 
 Run the exact focused command frozen by TASK-988. Expected: all TASK-989 tests pass and source-archive non-regression passes.
 
+## Implementation Evidence
+
+- RED: `RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ashgrove --test task_989_source_payload_ignore -- --nocapture` exited 101 before production changes. The focused failures showed the legacy pre-classification `.dirty` rejection, ignored nested `target/` being copied into the isolated build, and the old generic post-build dirty-source diagnostic.
+- GREEN: `RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ashgrove --test task_989_source_payload_ignore -- --nocapture` exited 0 with all focused TASK-989 regressions passing.
+- Review-blocker RED: `RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ashgrove --test task_989_source_payload_ignore -- --nocapture` exited 101 after adding direct regressions for source-shaped archives inside unrelated git worktrees and git worktree classification failure. Failures showed surrounding git revision comparison and non-git fallback behavior.
+- Review-blocker GREEN: `RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ashgrove --test task_989_source_payload_ignore -- --nocapture` exited 0 with 10 focused TASK-989 regressions passing, including source-shaped archive attestation/digest semantics, fail-closed git-like classification, and non-git built-in local-state ignore coverage.
+- Source archive non-regression: `RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ashgrove source_archive -- --nocapture` exited 0.
+- Clippy precheck: `RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo clippy -p ashgrove --all-targets --all-features -- -D warnings` exited 0 after addressing the local Clippy finding.
+- Review-blocker final gate: `git diff --check`, `RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ashgrove --test task_989_source_payload_ignore -- --nocapture`, `RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ashgrove source_archive -- --nocapture`, `RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo clippy -p ashgrove --all-targets --all-features -- -D warnings`, and `cargo fmt --all --check` exited 0.
+
 ## Dispatch
 
 ```yaml
@@ -105,15 +115,18 @@ commands:
   - RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo clippy -p ashgrove --all-targets --all-features -- -D warnings
   - cargo fmt --all --check
 checklist:
-  - [ ] Ignored `.agents/` mutation during source install succeeds without dirty override.
-  - [ ] Nested `target/` local state is excluded from digest and isolated build copy.
-  - [ ] Nonignored source payload mutation still fails before publish.
-  - [ ] Dirty nonignored source root still rejects without `--allow-dirty-source`.
-  - [ ] Source archive attestation behavior remains fail-closed and archive digest policy does not use source-root ignores.
-  - [ ] Digest/copy source-root membership is shared, not duplicated.
-  - [ ] `ashgrove update --from source` uses the same source-root payload policy.
-  - [ ] Live git source-root membership fails closed on git membership errors.
-  - [ ] Legacy `.dirty` sentinel does not force dirty override for gitignored local state in git roots.
+  - [x] Ignored `.agents/` mutation during source install succeeds without dirty override.
+  - [x] Nested `target/` local state is excluded from digest and isolated build copy.
+  - [x] Nonignored source payload mutation still fails before publish.
+  - [x] Dirty nonignored source root still rejects without `--allow-dirty-source`.
+  - [x] Source archive attestation behavior remains fail-closed and archive digest policy does not use source-root ignores.
+  - [x] Source-shaped archives inside unrelated git worktrees keep source-archive digest/attestation semantics and do not compare `origin_commit` to the surrounding git revision.
+  - [x] Digest/copy source-root membership is shared, not duplicated.
+  - [x] `ashgrove update --from source` uses the same source-root payload policy.
+  - [x] Live git source-root membership fails closed on git membership errors.
+  - [x] Git-like source-root classification fails closed when git worktree detection fails, before non-git fallback.
+  - [x] Non-git source-root built-in local-state ignores are covered by a direct digest/copy regression.
+  - [x] Legacy `.dirty` sentinel does not force dirty override for gitignored local state in git roots.
 ```
 
 ## Dependencies for Next Task

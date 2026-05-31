@@ -61,8 +61,8 @@ The source-install code currently skips only top-level `.git/` and top-level `ta
 | --- | --- | ---: | --- |
 | [TASK-987](tasks/TASK-987-ashgrove-source-payload-local-state-packet.md) | Create SPEC-074/PLAN-124/TASK packet and register Phase 129 | 3 | ✅ Complete |
 | [TASK-988](tasks/TASK-988-ashgrove-source-payload-audit-gate.md) | Audit source payload membership, freeze implementation choice, and replace focused verification placeholders | 5 | ✅ Complete |
-| [TASK-989](tasks/TASK-989-ashgrove-source-payload-ignore-implementation.md) | Implement source-root payload walker, digest/copy sharing, metadata/diagnostics, and focused regressions | 10 | 🟡 Ready |
-| [TASK-990](tasks/TASK-990-ashgrove-source-payload-local-state-closeout.md) | Run composed acceptance, independent review, status reconciliation, and broad gates | 5 | 📝 Planned |
+| [TASK-989](tasks/TASK-989-ashgrove-source-payload-ignore-implementation.md) | Implement source-root payload walker, digest/copy sharing, metadata/diagnostics, and focused regressions | 10 | ✅ Complete |
+| [TASK-990](tasks/TASK-990-ashgrove-source-payload-local-state-closeout.md) | Run composed acceptance, independent review, status reconciliation, and broad gates | 5 | ✅ Complete |
 
 Total estimate: 23 hours.
 
@@ -168,3 +168,7 @@ The phase is complete only when:
 - source archive trust/attestation behavior and digest-policy noninterference have a non-regression test or cited existing focused test;
 - ashgrove clippy/tests/fmt pass; and
 - an independent review reports no blocking spec or code-quality findings.
+
+## 10. Closeout
+
+TASK-990 completed Phase 129. The closeout audit at `docs/plan/audits/TASK-990-ashgrove-source-payload-local-state-closeout.md` maps SPEC-074 A74-1 through A74-8 to concrete tests, implementation review evidence, and controller-run command evidence. SPEC-073 remains Implemented MVP; SPEC-074 owns the accepted/implemented source-payload/local-state amendment.

@@ -1,6 +1,6 @@
 # TASK-990: Ashgrove source payload local-state closeout
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -13,7 +13,7 @@ Close Phase 129 after TASK-989 implementation by running composed acceptance, in
 
 ## Dependencies
 
-- 📝 TASK-989: Source payload ignore implementation and focused regressions complete.
+- ✅ TASK-989: Source payload ignore implementation and focused regressions complete.
 
 ## Requirements
 
@@ -31,7 +31,7 @@ Close Phase 129 after TASK-989 implementation by running composed acceptance, in
 No proptest is required. Closeout invariant:
 
 ```text
-All A74 acceptance rows have concrete evidence or SPEC-074 remains Draft with explicit open rows.
+All A74 acceptance rows have concrete evidence and SPEC-074 is promoted only after those rows are satisfied.
 ```
 
 ## TDD Steps
@@ -87,11 +87,19 @@ commands:
   - cargo fmt --all --check
   - python3 -c "from pathlib import Path; audit=Path('docs/plan/audits/TASK-990-ashgrove-source-payload-local-state-closeout.md'); assert audit.exists(), audit; text=audit.read_text(); required=['A74-1','A74-8','independent review','cargo']; missing=[s for s in required if s not in text]; assert not missing, missing; print('TASK-990 closeout artifact verified')"
 checklist:
-  - [ ] A74-1 through A74-8 evidence recorded, including A74-6 implementation evidence and A74-7 update parity.
-  - [ ] Independent review completed and blockers resolved.
-  - [ ] SPEC/PLAN/TASK/CHANGELOG statuses reconciled.
-  - [ ] Broad gates pass or blockers are honestly recorded with SPEC-074 left Draft.
+  - [x] A74-1 through A74-8 evidence recorded, including A74-6 implementation evidence and A74-7 update parity.
+  - [x] Independent review completed and blockers resolved.
+  - [x] SPEC/PLAN/TASK/CHANGELOG statuses reconciled.
+  - [x] Broad gates pass; no blockers remain, and SPEC-074 is promoted by the closeout evidence.
 ```
+
+## Closeout Evidence
+
+- Audit artifact: `docs/plan/audits/TASK-990-ashgrove-source-payload-local-state-closeout.md`.
+- Focused regression evidence: `RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ashgrove --test task_989_source_payload_ignore -- --nocapture` exited 0 with 10 tests passed.
+- Source-archive non-regression evidence: `RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ashgrove source_archive -- --nocapture` exited 0.
+- Broad ashgrove evidence: `RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ashgrove`, `RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ashgrove --all-targets -- --nocapture`, `RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo clippy -p ashgrove --all-targets --all-features -- -D warnings`, `cargo fmt --all --check`, and `git diff --check` exited 0.
+- Status reconciliation: SPEC-074 is Accepted/Implemented, PLAN-124 and PLAN-INDEX Phase 129 are complete, and SPEC-073 remains historical Implemented MVP with SPEC-074 as the source-payload/local-state amendment owner.
 
 ## Dependencies for Next Task
 

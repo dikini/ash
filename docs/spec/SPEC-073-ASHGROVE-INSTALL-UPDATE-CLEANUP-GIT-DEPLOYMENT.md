@@ -8,6 +8,7 @@
 **Follow-on Plan:** [PLAN-123](../plan/PLAN-123-SPEC-073-ASHGROVE-RELEASE-TRUST-REGISTRY-RUNTIME-SUPPORT-COMPLETION.md)
 **Implementation Tasks:** [TASK-964](../plan/tasks/TASK-964-ashgrove-install-policy-packet.md) through [TASK-974](../plan/tasks/TASK-974-ashgrove-closeout-acceptance.md)
 **Follow-on Tasks:** [TASK-975](../plan/tasks/TASK-975-spec073-ashgrove-completion-packet.md) through [TASK-986](../plan/tasks/TASK-986-spec073-implemented-mvp-closeout.md)
+**Amended by:** [SPEC-074](SPEC-074-ASHGROVE-SOURCE-PAYLOAD-LOCAL-STATE-IGNORE.md) for source-root payload/local-state ignore semantics after the Implemented MVP closeout.
 
 ## 1. Summary
 
@@ -174,6 +175,8 @@ A source install MUST:
 9. Install into a temporary staging directory first, then atomically publish the completed toolchain directory.
 
 A source install MUST NOT install from a dirty checkout unless the user passes `--allow-dirty-source`. Dirty-source installs must mark `install-record.toml` as non-reproducible.
+
+[SPEC-074](SPEC-074-ASHGROVE-SOURCE-PAYLOAD-LOCAL-STATE-IGNORE.md) amends this source-root rule by defining the source payload/local-state boundary: gitignored and known local-state files are not dirty source payload, must not affect source-root payload digest, and must not be copied into the isolated source-build root. Nonignored source payload changes remain fail-closed.
 
 ### 7.2 Binary tarball install
 

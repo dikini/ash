@@ -3805,3 +3805,28 @@ Phase 128 is the follow-on to Phase 127. It does not reopen or rewrite Phase 127
 - D7: Cleanup reachability must be conservative, visible in dry-run, and must never delete project-local `ash.toml` or `ash.lock`.
 - D8: TASK-976 is a hard audit gate and must replace downstream placeholder verification before implementation starts.
 - D9: A73-11 mandatory trust/signing enforcement requires a SPEC-073 wording amendment and publish/fetch fail-closed evidence before closeout.
+
+## Phase 129: SPEC-074 Ashgrove Source Payload and Local-State Ignore Policy
+
+**Priority:** High (fixes a source-install correctness bug where ignored local state can falsely trip the source-payload mutation check)
+**Status:** 🟡 Ready; docs packet complete, audit gate next
+**Spec:** [SPEC-074](../spec/SPEC-074-ASHGROVE-SOURCE-PAYLOAD-LOCAL-STATE-IGNORE.md)
+**Plan:** [PLAN-124](PLAN-124-ASHGROVE-SOURCE-PAYLOAD-LOCAL-STATE-IGNORE.md)
+
+Phase 129 is a targeted amendment to the SPEC-073 Implemented MVP. It separates source-root payload identity from local checkout state so ignored files such as `.agents/status/dashboard.json`, nested `target/` directories, worktrees, and caches cannot falsely abort `ashgrove install --from source`, while nonignored source payload mutations and source-archive attestation failures remain fail-closed.
+
+| Task | Description | Est. Hours | Status |
+|------|-------------|------------|--------|
+| [TASK-987](tasks/TASK-987-ashgrove-source-payload-local-state-packet.md) | Create SPEC-074/PLAN-124/TASK packet and register Phase 129 | 3 | ✅ Complete |
+| [TASK-988](tasks/TASK-988-ashgrove-source-payload-audit-gate.md) | Audit source payload membership and freeze focused verification commands | 5 | 🟡 Ready |
+| [TASK-989](tasks/TASK-989-ashgrove-source-payload-ignore-implementation.md) | Implement source-root payload walker, digest/copy sharing, metadata/diagnostics, and focused regressions | 10 | 📝 Planned |
+| [TASK-990](tasks/TASK-990-ashgrove-source-payload-local-state-closeout.md) | Run composed acceptance, independent review, status reconciliation, and broad gates | 5 | 📝 Planned |
+
+**Decision gates:**
+- D1: SPEC-073 stays Implemented MVP; SPEC-074 owns the post-MVP source-payload/local-state amendment.
+- D2: Source-root payload membership and source-archive integrity remain separate policies.
+- D3: Git source-root payload membership must align with git ignore semantics; ignored local state must not require `--allow-dirty-source`.
+- D4: Payload digest and isolated build copy must share one file-selection implementation.
+- D5: Nonignored source payload mutation during build remains fail-closed before publish.
+- D6: No broad arbitrary user ignore-glob CLI is added in the first fix.
+- D7: TASK-988 is a hard audit gate and must replace downstream placeholder verification before Rust implementation starts.

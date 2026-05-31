@@ -63,8 +63,9 @@ The source-install code currently skips only top-level `.git/` and top-level `ta
 | [TASK-988](tasks/TASK-988-ashgrove-source-payload-audit-gate.md) | Audit source payload membership, freeze implementation choice, and replace focused verification placeholders | 5 | ✅ Complete |
 | [TASK-989](tasks/TASK-989-ashgrove-source-payload-ignore-implementation.md) | Implement source-root payload walker, digest/copy sharing, metadata/diagnostics, and focused regressions | 10 | ✅ Complete |
 | [TASK-990](tasks/TASK-990-ashgrove-source-payload-local-state-closeout.md) | Run composed acceptance, independent review, status reconciliation, and broad gates | 5 | ✅ Complete |
+| [TASK-991](tasks/TASK-991-ashgrove-ignored-lockfile-source-install.md) | Follow-up fix for ignored original-root `Cargo.lock` incorrectly forcing `--locked` outside the isolated source-build payload | 1 | ✅ Complete |
 
-Total estimate: 23 hours.
+Total estimate: 24 hours.
 
 ## 5. Decision gates
 
@@ -172,3 +173,5 @@ The phase is complete only when:
 ## 10. Closeout
 
 TASK-990 completed Phase 129. The closeout audit at `docs/plan/audits/TASK-990-ashgrove-source-payload-local-state-closeout.md` maps SPEC-074 A74-1 through A74-8 to concrete tests, implementation review evidence, and controller-run command evidence. SPEC-073 remains Implemented MVP; SPEC-074 owns the accepted/implemented source-payload/local-state amendment.
+
+TASK-991 completed a focused post-closeout regression fix without changing SPEC-074 acceptance scope: live source-root builds now decide Cargo `--locked` from the isolated build copy after payload filtering, so an ignored original-root `Cargo.lock` is excluded consistently while a tracked/copied lockfile still enables locked builds.

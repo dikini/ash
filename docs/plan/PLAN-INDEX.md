@@ -304,7 +304,7 @@ Update this section as tasks complete:
 | 126 | 9 | 9 | ✅ Complete |
 | 127 | 11 | 4 + partial | ⚠️ Partial first slice |
 | 128 | 12 | 12 | ✅ Complete; SPEC-073 Implemented MVP |
-| 129 | 4 | 4 | ✅ Complete; SPEC-074 Accepted/Implemented |
+| 129 | 5 | 5 | ✅ Complete; SPEC-074 Accepted/Implemented; TASK-991 follow-up fixed |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -3822,6 +3822,7 @@ Phase 129 is a targeted amendment to the SPEC-073 Implemented MVP. It separates 
 | [TASK-988](tasks/TASK-988-ashgrove-source-payload-audit-gate.md) | Audit source payload membership and freeze focused verification commands | 5 | ✅ Complete |
 | [TASK-989](tasks/TASK-989-ashgrove-source-payload-ignore-implementation.md) | Implement source-root payload walker, digest/copy sharing, metadata/diagnostics, and focused regressions | 10 | ✅ Complete |
 | [TASK-990](tasks/TASK-990-ashgrove-source-payload-local-state-closeout.md) | Run composed acceptance, independent review, status reconciliation, and broad gates | 5 | ✅ Complete |
+| [TASK-991](tasks/TASK-991-ashgrove-ignored-lockfile-source-install.md) | Follow-up fix for ignored original-root `Cargo.lock` incorrectly forcing `--locked` outside the isolated source-build payload | 1 | ✅ Complete |
 
 **Decision gates:**
 - D1: SPEC-073 stays Implemented MVP; SPEC-074 owns the post-MVP source-payload/local-state amendment.
@@ -3831,3 +3832,5 @@ Phase 129 is a targeted amendment to the SPEC-073 Implemented MVP. It separates 
 - D5: Nonignored source payload mutation during build remains fail-closed before publish.
 - D6: No broad arbitrary user ignore-glob CLI is added in the first fix.
 - D7: TASK-988 is a hard audit gate and must replace downstream placeholder verification before Rust implementation starts.
+
+**Post-closeout follow-up:** TASK-991 fixed a focused source-install regression without expanding Phase 129 acceptance scope: Cargo `--locked` is now decided from the isolated build source after payload filtering, so ignored original-root lockfiles are excluded consistently while tracked/copied lockfiles still use locked builds.

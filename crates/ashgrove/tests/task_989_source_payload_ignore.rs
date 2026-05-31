@@ -407,6 +407,76 @@ fn task_989_non_git_source_root_builtin_local_state_is_excluded_from_digest_and_
     assert!(record.get("source_archive_digest").is_none());
 }
 
+#[test]
+fn task_991_ignored_original_root_cargo_lock_does_not_force_locked_build() {
+    let source = support::source_workspace_fixture();
+    write_and_commit_gitignore(source.path(), "/Cargo.lock\n");
+    write_file(source.path().join("Cargo.lock"), "# ignored local lock\n");
+    assert_git_clean(source.path());
+    let roots = support::xdg_fixture();
+    let fake = FakeCargo::new(source.path(), FakeCargoAction::check_absent("Cargo.lock"));
+
+    ashgrove_cmd()
+        .args([
+            "install",
+            "--from",
+            "source",
+            "--path",
+            source.path().to_str().expect("utf8 source"),
+        ])
+        .envs(roots.env())
+        .envs(fake.env())
+        .env("PATH", fake.path_env())
+        .assert()
+        .success();
+
+    let observation = fake.observation();
+    assert!(
+        !cargo_argv_contains(&observation, "--locked"),
+        "ignored original-root Cargo.lock must not force --locked in isolated source build\n{observation}"
+    );
+}
+
+#[test]
+fn task_991_tracked_copied_cargo_lock_keeps_locked_build() {
+    let source = support::source_workspace_fixture();
+    write_file(source.path().join("Cargo.lock"), "# tracked lock\n");
+    run_git(source.path(), &["add", "Cargo.lock"]);
+    run_git(
+        source.path(),
+        &[
+            "-c",
+            "commit.gpgsign=false",
+            "commit",
+            "-m",
+            "add tracked cargo lock",
+        ],
+    );
+    assert_git_clean(source.path());
+    let roots = support::xdg_fixture();
+    let fake = FakeCargo::new(source.path(), FakeCargoAction::check_present("Cargo.lock"));
+
+    ashgrove_cmd()
+        .args([
+            "install",
+            "--from",
+            "source",
+            "--path",
+            source.path().to_str().expect("utf8 source"),
+        ])
+        .envs(roots.env())
+        .envs(fake.env())
+        .env("PATH", fake.path_env())
+        .assert()
+        .success();
+
+    let observation = fake.observation();
+    assert!(
+        cargo_argv_contains(&observation, "--locked"),
+        "tracked copied Cargo.lock must keep --locked in isolated source build\n{observation}"
+    );
+}
+
 struct FakeCargo {
     bin: tempfile::TempDir,
     observation: PathBuf,
@@ -424,6 +494,7 @@ impl FakeCargo {
 : "${TASK_989_SOURCE_ROOT:?}"
 : "${TASK_989_OBSERVATION:?}"
 printf 'pwd=%s\n' "$PWD" > "$TASK_989_OBSERVATION"
+printf 'argv=%s\n' "$*" >> "$TASK_989_OBSERVATION"
 if [ -n "${TASK_989_COPY_ABSENT_REL:-}" ]; then
   if [ -e "$PWD/$TASK_989_COPY_ABSENT_REL" ]; then
     printf 'copy_unexpected=%s\n' "$TASK_989_COPY_ABSENT_REL" >> "$TASK_989_OBSERVATION"
@@ -522,6 +593,14 @@ impl FakeCargoAction {
         }
     }
 
+    fn check_absent(rel: &str) -> Self {
+        Self {
+            copy_absent_rel: Some(rel.to_string()),
+            copy_present_rel: None,
+            mutate_rel: None,
+        }
+    }
+
     fn check_present(rel: &str) -> Self {
         Self {
             copy_absent_rel: None,
@@ -529,6 +608,13 @@ impl FakeCargoAction {
             mutate_rel: None,
         }
     }
+}
+
+fn cargo_argv_contains(observation: &str, expected: &str) -> bool {
+    observation
+        .lines()
+        .find_map(|line| line.strip_prefix("argv="))
+        .is_some_and(|argv| argv.split_whitespace().any(|arg| arg == expected))
 }
 
 fn ashgrove_cmd() -> Command {

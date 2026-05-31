@@ -2327,7 +2327,7 @@ fn build_source_binaries(
         "--bin",
         "ashgrove",
     ]);
-    if source.join("Cargo.lock").is_file() {
+    if build_source.path().join("Cargo.lock").is_file() {
         command.arg("--locked");
     }
     let status = command

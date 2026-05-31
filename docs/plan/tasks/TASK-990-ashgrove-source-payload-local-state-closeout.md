@@ -19,7 +19,7 @@ Close Phase 129 after TASK-989 implementation by running composed acceptance, in
 
 ### Functional Requirements
 
-1. Rerun every focused TASK-989 test and record evidence in `docs/plan/audits/TASK-990-ashgrove-source-payload-local-state-closeout.md`.
+1. Rerun every focused TASK-989 test, the source-archive non-regression command, and the update-parity regression, then record evidence in `docs/plan/audits/TASK-990-ashgrove-source-payload-local-state-closeout.md`.
 2. Run an independent code/spec review and address blocking findings.
 3. Prove the reported failure mode is fixed by either a deterministic equivalent regression or the actual local checkout install command under isolated XDG roots.
 4. Reconcile SPEC-074, PLAN-124, PLAN-INDEX, task statuses, and CHANGELOG.
@@ -48,10 +48,10 @@ Use isolated XDG roots and a live or deterministic source root with ignored `.ag
 
 Dispatch an independent reviewer with SPEC-074, PLAN-124, TASK-988 audit, and TASK-989 diff. Require review of:
 
-- source-root/source-archive policy separation;
+- source-root/source-archive policy separation, including source-shaped archives;
 - digest/copy membership sharing;
 - fail-closed nonignored mutation behavior;
-- test quality;
+- test quality, including fake-cargo observation plumbing and update parity;
 - docs/status consistency.
 
 ### Step 4: Patch findings
@@ -80,13 +80,14 @@ toolsets: [terminal, file]
 strictness: clean
 commands:
   - git diff --check
-  - false # TASK-988/TASK-989 must replace with exact focused source-payload regression command before closeout.
+  - RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ashgrove --test task_989_source_payload_ignore -- --nocapture
+  - RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ashgrove source_archive -- --nocapture
   - RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ashgrove --all-targets -- --nocapture
   - RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo clippy -p ashgrove --all-targets --all-features -- -D warnings
   - cargo fmt --all --check
   - python3 -c "from pathlib import Path; audit=Path('docs/plan/audits/TASK-990-ashgrove-source-payload-local-state-closeout.md'); assert audit.exists(), audit; text=audit.read_text(); required=['A74-1','A74-8','independent review','cargo']; missing=[s for s in required if s not in text]; assert not missing, missing; print('TASK-990 closeout artifact verified')"
 checklist:
-  - [ ] A74-1 through A74-8 evidence recorded.
+  - [ ] A74-1 through A74-8 evidence recorded, including A74-6 implementation evidence and A74-7 update parity.
   - [ ] Independent review completed and blockers resolved.
   - [ ] SPEC/PLAN/TASK/CHANGELOG statuses reconciled.
   - [ ] Broad gates pass or blockers are honestly recorded with SPEC-074 left Draft.

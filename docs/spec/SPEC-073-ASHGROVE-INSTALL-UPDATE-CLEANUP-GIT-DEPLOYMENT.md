@@ -176,7 +176,7 @@ A source install MUST:
 
 A source install MUST NOT install from a dirty checkout unless the user passes `--allow-dirty-source`. Dirty-source installs must mark `install-record.toml` as non-reproducible.
 
-[SPEC-074](SPEC-074-ASHGROVE-SOURCE-PAYLOAD-LOCAL-STATE-IGNORE.md) amends this source-root rule by defining the source payload/local-state boundary: gitignored and known local-state files are not dirty source payload, must not affect source-root payload digest, and must not be copied into the isolated source-build root. Nonignored source payload changes remain fail-closed.
+[SPEC-074](SPEC-074-ASHGROVE-SOURCE-PAYLOAD-LOCAL-STATE-IGNORE.md) is a Draft post-MVP amendment to this source-root rule. It defines the intended source payload/local-state boundary: gitignored and known local-state files are not dirty source payload, must not affect source-root payload digest, and must not be copied into the isolated source-build root once Phase 129 is implemented. Nonignored source payload changes remain fail-closed.
 
 ### 7.2 Binary tarball install
 

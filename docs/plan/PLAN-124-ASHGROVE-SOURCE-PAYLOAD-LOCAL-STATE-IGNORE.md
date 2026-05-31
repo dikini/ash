@@ -4,7 +4,7 @@
 
 **Goal:** Fix `ashgrove install --from source` so local ignored state in a developer checkout cannot falsely trip the post-build source-payload mutation check.
 
-**Architecture:** Introduce one policy-aware source-payload membership layer and make both source-root digesting and isolated build-copying consume it. Git source roots use git-compatible ignore membership; non-git source roots use a conservative built-in local-state ignore set; source archives keep SPEC-073 attestation behavior separate.
+**Architecture:** Introduce one policy-aware source-payload membership layer and make both live source-root digesting and isolated build-copying consume it. Git source roots use fail-closed git-compatible ignore membership; live non-git source roots use a conservative built-in local-state ignore set; source-shaped and non-source-root archives keep SPEC-073 attestation/digest behavior separate.
 
 **Tech Stack:** Rust 2024, ashgrove crate, git CLI or equivalent ignore-compatible walker, cargo integration tests with fake cargo fixtures, SPEC-073/SPEC-074 docs.
 
@@ -53,15 +53,15 @@ The source-install code currently skips only top-level `.git/` and top-level `ta
 | Isolated build copy | `copy_source_tree_for_build` | Use the exact same source-root payload membership as digest. |
 | Post-build mutation check | `stage_source_root_toolchain` | Compare policy-aware payload digests and report source-payload mutation. |
 | Shallow skip predicate | `source_digest_skip_path` | Replace or fence with policy-aware walker. |
-| Source archive path | `install_from_source` archive branch | Preserve release-source metadata and source-archive digest semantics. |
+| Source archive path | `install_from_source` archive branch plus source-shaped archive path through `install_from_source_root` | Preserve release-source metadata and source-archive digest semantics; do not apply source-root ignore policy to attested archives. |
 
 ## 4. Task table
 
 | Task | Description | Est. Hours | Status |
 | --- | --- | ---: | --- |
 | [TASK-987](tasks/TASK-987-ashgrove-source-payload-local-state-packet.md) | Create SPEC-074/PLAN-124/TASK packet and register Phase 129 | 3 | ✅ Complete |
-| [TASK-988](tasks/TASK-988-ashgrove-source-payload-audit-gate.md) | Audit source payload membership, freeze implementation choice, and replace focused verification placeholders | 5 | 🟡 Ready |
-| [TASK-989](tasks/TASK-989-ashgrove-source-payload-ignore-implementation.md) | Implement source-root payload walker, digest/copy sharing, metadata/diagnostics, and focused regressions | 10 | 📝 Planned |
+| [TASK-988](tasks/TASK-988-ashgrove-source-payload-audit-gate.md) | Audit source payload membership, freeze implementation choice, and replace focused verification placeholders | 5 | ✅ Complete |
+| [TASK-989](tasks/TASK-989-ashgrove-source-payload-ignore-implementation.md) | Implement source-root payload walker, digest/copy sharing, metadata/diagnostics, and focused regressions | 10 | 🟡 Ready |
 | [TASK-990](tasks/TASK-990-ashgrove-source-payload-local-state-closeout.md) | Run composed acceptance, independent review, status reconciliation, and broad gates | 5 | 📝 Planned |
 
 Total estimate: 23 hours.
@@ -69,7 +69,7 @@ Total estimate: 23 hours.
 ## 5. Decision gates
 
 - D1: SPEC-073 stays Implemented MVP; SPEC-074 is a targeted amendment for a post-MVP correctness bug.
-- D2: Source-root payload membership and source-archive integrity are separate policies.
+- D2: Source-root payload membership and source-archive integrity are separate policies; source-shaped archives carrying `release-source.toml` must not be accidentally reclassified into live-source-root ignore policy.
 - D3: Git source-root payload membership must align with git ignore semantics; git-clean ignored state must not trigger `--allow-dirty-source`.
 - D4: Payload digest and isolated build copy must share one file-selection implementation.
 - D5: Nonignored source payload mutation during build remains fail-closed before publish.
@@ -80,13 +80,15 @@ Total estimate: 23 hours.
 
 ### 6.1 Source-payload walker
 
-Introduce a single source-payload membership abstraction in `crates/ashgrove/src/lib.rs`. The implementation may be private for the first slice.
+Introduce a single live-source-root payload membership abstraction in `crates/ashgrove/src/lib.rs`. The implementation may be private for the first slice, but source archive digesting must remain a separate policy path.
 
 Suggested shapes:
 
 ```rust
 enum SourcePayloadKind {
-    SourceRoot,
+    LiveGitSourceRoot,
+    LiveNonGitSourceRoot,
+    SourceShapedArchive,
     SourceArchive,
 }
 
@@ -99,22 +101,23 @@ struct SourcePayloadPolicy {
 or a simpler private helper:
 
 ```rust
-fn source_root_payload_files(source: &Path) -> Result<Vec<PathBuf>>;
-fn source_archive_payload_files(source: &Path) -> Result<Vec<PathBuf>>;
+fn source_root_payload_files(source: &Path, kind: SourcePayloadKind) -> Result<Vec<PathBuf>>;
+fn source_root_payload_digest(source: &Path, kind: SourcePayloadKind) -> Result<String>;
+fn source_archive_digest(source: &Path) -> Result<String>;
 ```
 
-The important invariant is not the type shape; it is shared use by digest and copy.
+The important invariant is not the type shape; it is shared use by live-source-root digest and copy, while source archives keep separate attestation digest semantics.
 
 ### 6.2 Git membership strategy
 
 TASK-988 must choose one git-compatible strategy for git source roots:
 
-1. `git ls-files --cached --others --exclude-standard -z`; or
+1. fail-closed `git ls-files --cached --others --exclude-standard -z`; or
 2. a Rust ignore-compatible walker dependency that matches git's standard exclude behavior for the tested source roots.
 
 A narrow built-in policy is acceptable only for non-git source roots. Git-compatible membership is not optional for git roots unless SPEC-074 is explicitly weakened first.
 
-Preferred first implementation: use git CLI membership for git source roots because ashgrove already shells out to git for source identity and dirty checks.
+Selected first implementation from TASK-988: use git CLI membership for live git source roots because ashgrove already shells out to git for source identity and dirty checks. Do not use optional git helpers that convert nonzero git exits into `None` for membership selection.
 
 ### 6.3 Deterministic test strategy
 
@@ -123,11 +126,12 @@ Avoid slow real builds where possible. Use a fake `cargo` executable earlier in 
 1. records that ashgrove invoked cargo from the isolated source-build copy;
 2. mutates the original source root ignored local-state file, e.g. `.agents/status/dashboard.json`;
 3. writes executable fixture `ash` and `ashgrove` binaries to `$CARGO_TARGET_DIR/debug/`; and
-4. exits 0.
+4. records whether ignored local-state files were absent from the isolated copy; and
+5. exits 0.
 
 Then assert source install succeeds without `--allow-dirty-source` and that installed/copy payload does not include ignored state.
 
-Add a second fake-cargo test that mutates a nonignored source payload file and assert publish fails before toolchain publication.
+Add focused fake-cargo tests for nonignored source payload mutation, update-path parity, and source-archive digest-policy noninterference; assert nonignored mutation fails before toolchain publication.
 
 ## 7. Verification strategy
 
@@ -136,6 +140,7 @@ Focused commands are intentionally finalized by TASK-988. Expected broad closeou
 ```bash
 git diff --check
 RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ashgrove --test task_989_source_payload_ignore -- --nocapture
+RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ashgrove source_archive -- --nocapture
 RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo test -p ashgrove --all-targets -- --nocapture
 RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo clippy -p ashgrove --all-targets --all-features -- -D warnings
 cargo fmt --all --check
@@ -160,6 +165,6 @@ The phase is complete only when:
 - ignored local state mutation during source-root install is covered by a focused regression;
 - nested target/local-state exclusion is covered by a focused regression;
 - nonignored source payload mutation still fails before publish;
-- source archive trust/attestation behavior has a non-regression test or cited existing focused test;
+- source archive trust/attestation behavior and digest-policy noninterference have a non-regression test or cited existing focused test;
 - ashgrove clippy/tests/fmt pass; and
 - an independent review reports no blocking spec or code-quality findings.

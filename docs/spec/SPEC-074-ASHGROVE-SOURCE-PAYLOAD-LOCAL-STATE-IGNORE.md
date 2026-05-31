@@ -30,7 +30,7 @@ The alpha installer needs both properties:
 ## 3. Normative terms
 
 - **Source root:** A directory accepted by ashgrove as a buildable source checkout, currently detected by `Cargo.toml` plus `std/src/`.
-- **Source archive:** A prepared source-shaped directory that is not a live source root and must carry `release-source.toml` unless `--allow-unidentified-source` is explicit.
+- **Source archive:** A prepared source-shaped directory governed by release-source attestation semantics. It can be non-source-root-shaped or source-shaped after extraction; a source-shaped archive may satisfy source-root detection but must still keep source-archive digest/attestation policy unless classified as a live source root by the TASK-988 audit rules.
 - **Source payload:** The files ashgrove considers part of the reproducible source-root build/install identity.
 - **Local state:** Files under a source root that are intentionally outside the source payload, including VCS metadata, build outputs, local runtime state, agent dashboards, caches, worktrees, and gitignored artifacts.
 - **Payload digest:** The deterministic digest over the source payload, used to detect source-payload changes during source-root install.
@@ -70,7 +70,7 @@ The live implementation has these relevant seams:
 | Post-build digest | `stage_source_root_toolchain` | Calls `source_tree_digest(source)` again and aborts on mismatch. |
 | Digest/copy skip | `source_digest_skip_path` | Skips only first path component `.git` or `target`; includes `.agents/`, nested `target/`, and other ignored state. |
 
-This spec changes the digest/copy membership contract, not the immutable toolchain layout or tarball install contract.
+This spec changes the live source-root digest/copy membership contract, not the immutable toolchain layout or tarball install contract. TASK-989 must explicitly classify live git source roots, live non-git source roots, source-shaped archives carrying `release-source.toml`, and non-source-root source archives before choosing a digest policy.
 
 ## 6. Source-root payload membership
 
@@ -99,7 +99,7 @@ For a source root inside a git work tree, ashgrove MUST use git-compatible ignor
 5. Ignored local state MUST NOT require `--allow-dirty-source`.
 6. Ignored local state MUST NOT make the install non-reproducible.
 
-Implementation may obtain this membership with `git ls-files --cached --others --exclude-standard` or an equivalent `.gitignore`-compatible walker. If the chosen implementation shells out to git, git failures in git-like source roots remain fail-closed rather than silently falling back to broad filesystem walking.
+Implementation may obtain this membership with `git ls-files --cached --others --exclude-standard` or an equivalent `.gitignore`-compatible walker. If the chosen implementation shells out to git, git failures in git-like source roots remain fail-closed rather than silently falling back to broad filesystem walking. The first implementation uses `git ls-files --cached --others --exclude-standard -z` for live git source roots; helper paths that convert nonzero git exits into `None` are not sufficient for membership selection.
 
 ### 6.3 Non-git source roots
 
@@ -119,7 +119,7 @@ The built-in policy may grow, but it MUST stay narrowly focused on local state a
 
 ### 6.4 Source archives
 
-Source archives remain governed by SPEC-073 source-archive release metadata and attestation rules. Ashgrove MUST NOT silently weaken source-archive integrity by applying broad developer-checkout ignore rules to arbitrary archives.
+Source archives remain governed by SPEC-073 source-archive release metadata and attestation rules. Ashgrove MUST NOT silently weaken source-archive integrity by applying broad developer-checkout ignore rules to arbitrary archives, including extracted source-shaped archives that contain `Cargo.toml`, `std/src/`, and `release-source.toml`.
 
 The first implementation SHOULD keep source-archive digest behavior separate from source-root payload digest behavior. These are distinct concepts and call paths, not a requirement that two arbitrary digest strings must always differ:
 
@@ -177,7 +177,7 @@ This future flag is not required by this spec.
 | A74-3 | Nonignored source payload mutation during build still fails before publish. | TASK-989 |
 | A74-4 | Nonignored dirty source roots remain rejected unless `--allow-dirty-source` is explicit. | TASK-988/TASK-989 |
 | A74-5 | Source archive release metadata and attestation behavior remains fail-closed and unchanged unless explicitly amended. | TASK-989 |
-| A74-6 | Payload digest and payload copy share one membership policy. | TASK-988 |
+| A74-6 | Payload digest and payload copy share one membership policy. | TASK-988/TASK-989 |
 | A74-7 | Install/update source paths use the same source-root payload policy. | TASK-989 |
 | A74-8 | Closeout proves the reported local Ash checkout failure mode no longer reproduces or is covered by an equivalent deterministic regression. | TASK-990 |
 
@@ -186,13 +186,14 @@ This future flag is not required by this spec.
 A practical implementation path is:
 
 1. Introduce a policy-aware source payload walker in `crates/ashgrove/src/lib.rs`.
-2. Make `source_tree_digest` and `copy_source_tree_for_build` consume that walker instead of each walking with a shallow skip predicate.
-3. For git source roots, prefer `git ls-files --cached --others --exclude-standard -z` or equivalent membership so git cleanliness and payload membership agree.
-4. Preserve the current fail-closed git-source identity checks in `SourceRootMetadata::inspect`.
-5. Add deterministic tests with a fake `cargo` earlier in `PATH`; the fake cargo mutates ignored local state in the original source root and writes executable fixture binaries under `$CARGO_TARGET_DIR/debug`.
+2. Split live source-root payload digesting from source-archive digesting, then make source-root digest and `copy_source_tree_for_build` consume one shared source-root membership list instead of each walking with a shallow skip predicate.
+3. For live git source roots, use `git ls-files --cached --others --exclude-standard -z` or equivalent membership so git cleanliness and payload membership agree, failing closed on git membership errors.
+4. Preserve fail-closed git-source identity checks in `SourceRootMetadata::inspect`, but fence the legacy `.dirty` sentinel so gitignored `.dirty` files in git roots cannot bypass gitignore-aware cleanliness.
+5. Add deterministic tests with a fake `cargo` earlier in `PATH`; the fake cargo receives the original source root through a test environment variable, records its isolated-copy working directory, verifies ignored local state is absent from that copy, mutates ignored or nonignored files in the original source root, and writes executable fixture binaries under `$CARGO_TARGET_DIR/debug`.
 
 ## 12. Changelog
 
 ### 2026-05-31
 
 - Initial draft specifying source-root payload membership, local-state exclusion, source-archive boundary preservation, and TASK-987 through TASK-990 implementation plan.
+- Review remediation tightened source-shaped archive classification, git membership fail-closed rules, `.dirty` sentinel handling, update-path parity evidence, A74-6 ownership, and fake-cargo regression requirements.

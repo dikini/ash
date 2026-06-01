@@ -15,8 +15,8 @@ Close out Reference Slice 2 by validating every new page, metadata surface, stat
 
 ## Dependencies
 
-- 📝 TASK-993: Reference maintenance metadata and staleness substrate completion
-- 📝 TASK-994: Reference getting-started journey
+- ✅ TASK-993: Reference maintenance metadata and staleness substrate
+- ✅ TASK-994: Reference getting-started journey
 - 📝 TASK-995: Reference Ashgrove and CLI procedures
 - 📝 TASK-996: Reference RuntimeKernel pages
 - 📝 TASK-997: Reference stdlib tower pages

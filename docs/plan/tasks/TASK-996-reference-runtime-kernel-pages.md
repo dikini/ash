@@ -17,8 +17,8 @@ Create RuntimeKernel concept and status pages that teach current Alpha execution
 
 ## Dependencies
 
-- 📝 TASK-993: Reference maintenance metadata and staleness substrate completion
-- 📝 TASK-994: Reader journey link targets established
+- ✅ TASK-993: Reference maintenance metadata and staleness substrate
+- ✅ TASK-994: Reader journey link targets established
 
 ## Requirements
 

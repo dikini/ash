@@ -305,7 +305,7 @@ Update this section as tasks complete:
 | 127 | 11 | 4 + partial | ⚠️ Partial first slice |
 | 128 | 12 | 12 | ✅ Complete; SPEC-073 Implemented MVP |
 | 129 | 5 | 5 | ✅ Complete; SPEC-074 Accepted/Implemented; TASK-991 follow-up fixed |
-| 130 | 8 | 1 | 📝 Planned; TASK-992 complete |
+| 130 | 8 | 3 | 🚧 In Progress; TASK-992 through TASK-994 complete |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -3839,7 +3839,7 @@ Phase 129 is a targeted amendment to the SPEC-073 Implemented MVP. It separates 
 ## Phase 130: Reference Slice 2 Runtime, Toolchain, and Maintenance Manual
 
 **Priority:** High (turns the Phase 124 reference pilot into a maintainable Alpha user/operator reference before more runtime/tooling changes accumulate)
-**Status:** 🚧 In Progress; TASK-992 and TASK-993 complete
+**Status:** 🚧 In Progress; TASK-992 through TASK-994 complete
 **Spec:** [SPEC-075](../spec/SPEC-075-REFERENCE-SLICE-2-RUNTIME-TOOLCHAIN-MAINTENANCE.md)
 **Design:** [DESIGN-043](../design/DESIGN-043-REFERENCE-SLICE-2-RUNTIME-TOOLCHAIN-MAINTENANCE.md)
 **Plan:** [PLAN-125](PLAN-125-REFERENCE-SLICE-2-RUNTIME-TOOLCHAIN-MAINTENANCE.md)
@@ -3850,7 +3850,7 @@ Phase 130 expands `reference/` from a narrow pilot into the first maintainable A
 |------|-------------|------------|--------|
 | [TASK-992](tasks/TASK-992-reference-slice-2-packet.md) | Create DESIGN-043/SPEC-075/PLAN-125/TASK packet and register Phase 130 | 5 | ✅ Complete |
 | [TASK-993](tasks/TASK-993-reference-maintenance-metadata-and-staleness.md) | Create the maintenance metadata/staleness procedure substrate before bulk pages | 10 | ✅ Complete |
-| [TASK-994](tasks/TASK-994-reference-getting-started-journey.md) | Add basic reader-journey pages for what Ash is, install, update, run, daemon, cleanup, and next steps | 10 | 📝 Planned |
+| [TASK-994](tasks/TASK-994-reference-getting-started-journey.md) | Add basic reader-journey pages for what Ash is, install, update, run, daemon, cleanup, and next steps | 10 | ✅ Complete |
 | [TASK-995](tasks/TASK-995-reference-ashgrove-and-cli-procedures.md) | Add `ash`/`ashgrove` toolchain and procedure reference pages | 14 | 📝 Planned |
 | [TASK-996](tasks/TASK-996-reference-runtime-kernel-pages.md) | Add RuntimeKernel concept and status pages | 12 | 📝 Planned |
 | [TASK-997](tasks/TASK-997-reference-stdlib-tower-pages.md) | Add stdlib tower reference pages for Act, Proc, Workflow, and Result | 12 | 📝 Planned |

@@ -9,7 +9,7 @@ stability: alpha
 owner: reference-corpus
 last_verified: 2026-06-01
 verified_against:
-  git_commit: 4fa1eba
+  git_commit: 598a8f6
   release_tag: null
   ash_version: unreleased-alpha
   specs:
@@ -18,6 +18,7 @@ verified_against:
   tasks:
     - docs/plan/tasks/TASK-948-reference-skeleton-authority-methodology-style.md
     - docs/plan/tasks/TASK-993-reference-maintenance-metadata-and-staleness.md
+    - docs/plan/tasks/TASK-994-reference-getting-started-journey.md
   code:
     []
   tests:
@@ -43,10 +44,24 @@ refresh_trigger:
   - docs/spec/SPEC-071-REFERENCE-CORPUS-METADATA-AND-MAINTENANCE.md changes
   - docs/spec/SPEC-075-REFERENCE-SLICE-2-RUNTIME-TOOLCHAIN-MAINTENANCE.md changes
   - reference/maintenance/** changes
+  - reference/getting-started/** changes
+  - reference/tools/** changes
+  - reference/runtime/** changes
   - Phase closeout changes reference policy
 ---
 
 # Reference Index
+
+## Getting started
+
+- [Getting started](getting-started/README.md)
+  - [What is Ash?](getting-started/what-is-ash.md)
+  - [Install Ash](getting-started/install.md)
+  - [Update Ash](getting-started/update.md)
+  - [Run a program](getting-started/run-a-program.md)
+  - [Run as a local daemon](getting-started/run-as-daemon.md)
+  - [Clean up Ash state](getting-started/cleanup.md)
+  - [Next steps](getting-started/next-steps.md)
 
 ## Language pilot
 
@@ -63,6 +78,19 @@ refresh_trigger:
 - [Proc processes](language/processes-proc.md)
 - [Workflow boundaries](language/workflows.md)
 - [Generalized do](language/generalized-do.md)
+
+## Tools and runtime
+
+- [Tools index](tools/README.md)
+- [CLI tools](tools/cli.md)
+- [Ashgrove](tools/ashgrove.md)
+  - [Install](tools/ashgrove/install.md)
+  - [Update](tools/ashgrove/update.md)
+  - [Remove and cleanup](tools/ashgrove/remove-cleanup.md)
+- [Runtime index](runtime/README.md)
+- [RuntimeKernel](runtime/kernel.md)
+- [Runtime artifacts](runtime/artifacts.md)
+- [Runtime daemon](runtime/daemon.md)
 
 ## Agent derivatives
 

@@ -1,6 +1,6 @@
 # TASK-994: Reference getting-started journey
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -16,7 +16,7 @@ Create the basic reader journey for Alpha Ash. These pages should help readers o
 ## Dependencies
 
 - ✅ TASK-992: Reference Slice 2 packet
-- 📝 TASK-993: Reference maintenance metadata and staleness substrate completion
+- ✅ TASK-993: Reference maintenance metadata and staleness substrate completion
 
 ## Requirements
 
@@ -77,12 +77,16 @@ commands:
         assert 'refresh_trigger:' in text, rel
     PY
 checklist:
-  - [ ] All getting-started pages created.
-  - [ ] Pages cross-link to subsystem details.
-  - [ ] Pages avoid duplicating full subsystem policy.
-  - [ ] Unsupported practical/deployment advice is not overclaimed.
+  - [x] All getting-started pages created.
+  - [x] Pages cross-link to subsystem details.
+  - [x] Pages avoid duplicating full subsystem policy.
+  - [x] Unsupported practical/deployment advice is not overclaimed.
 ```
 
 ## Dependencies for Next Task
 
 TASK-995 through TASK-997 supply the detailed subsystem pages linked by this journey.
+
+## Completion Notes
+
+TASK-994 created the `reference/getting-started/` reader journey and surfaced it from the reference root/index. Because TASK-995 and TASK-996 had not yet created the toolchain and runtime detail pages, this task added only minimal frontmatter-valid draft targets under `reference/tools/` and `reference/runtime/` to keep journey links valid without overclaiming complete subsystem coverage.

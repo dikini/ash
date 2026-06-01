@@ -39,6 +39,7 @@ refresh_trigger:
   - docs/spec/SPEC-075-REFERENCE-SLICE-2-RUNTIME-TOOLCHAIN-MAINTENANCE.md changes
   - reference/maintenance/** changes
   - reference/status/drift-report.md changes
+  - reference/status/alpha-limitations.md changes
   - reference/status/known-limitations.md changes
 ---
 

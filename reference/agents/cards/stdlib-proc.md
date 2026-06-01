@@ -9,7 +9,7 @@ stability: alpha
 owner: reference-corpus
 last_verified: 2026-06-01
 verified_against:
-  git_commit: 7fc92f6
+  git_commit: 01bafb4
   release_tag: null
   ash_version: unreleased-alpha
   specs:
@@ -20,6 +20,7 @@ verified_against:
   tasks:
     - docs/plan/tasks/TASK-997-reference-stdlib-tower-pages.md
     - docs/plan/tasks/TASK-998-reference-agent-cards-and-context-pack.md
+    - docs/plan/tasks/TASK-999-reference-slice-2-closeout.md
   code:
     - std/src/proc.ash
     - std/src/lib.ash
@@ -74,7 +75,7 @@ Retrieve the canonical page first, then use this card for search tags, stale-cla
 - ../../stdlib/proc.md
 - ../../stdlib/act.md
 - ../../stdlib/workflow.md
-- ../../status/known-limitations.md
+- ../../status/alpha-limitations.md
 - ../../../std/src/proc.ash
 - ../../../std/src/lib.ash
 - ../../../docs/spec/SPEC-048-PROC-LIBRARY.md

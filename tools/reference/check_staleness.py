@@ -18,6 +18,71 @@ from check_frontmatter import as_list, parse_frontmatter
 
 PATH_LIST_KEYS = ("specs", "tasks", "code", "tests", "examples")
 DECLARED_STALE_STATES = {"stale", "partial", "superseded"}
+REFERENCE_SLICE_2_PATHS = (
+    "reference/README.md",
+    "reference/INDEX.md",
+    "reference/getting-started/README.md",
+    "reference/getting-started/what-is-ash.md",
+    "reference/getting-started/install.md",
+    "reference/getting-started/update.md",
+    "reference/getting-started/run-a-program.md",
+    "reference/getting-started/run-as-daemon.md",
+    "reference/getting-started/cleanup.md",
+    "reference/getting-started/next-steps.md",
+    "reference/stdlib/README.md",
+    "reference/stdlib/act.md",
+    "reference/stdlib/proc.md",
+    "reference/stdlib/workflow.md",
+    "reference/stdlib/result.md",
+    "reference/language/effects-act.md",
+    "reference/language/processes-proc.md",
+    "reference/language/workflows.md",
+    "reference/language/generalized-do.md",
+    "reference/tools/README.md",
+    "reference/tools/cli.md",
+    "reference/tools/ashgrove.md",
+    "reference/tools/ashgrove/install.md",
+    "reference/tools/ashgrove/update.md",
+    "reference/tools/ashgrove/list-current-default.md",
+    "reference/tools/ashgrove/remove-cleanup.md",
+    "reference/tools/ashgrove/project-dependencies.md",
+    "reference/tools/ashgrove/vendor-deploy.md",
+    "reference/tools/ashgrove/trust-and-signing.md",
+    "reference/tools/ashgrove/source-payload.md",
+    "reference/runtime/README.md",
+    "reference/runtime/kernel.md",
+    "reference/runtime/admission.md",
+    "reference/runtime/artifacts.md",
+    "reference/runtime/daemon.md",
+    "reference/runtime/policy-profiles.md",
+    "reference/status/runtime-kernel.md",
+    "reference/status/ashgrove.md",
+    "reference/status/reference-maintenance.md",
+    "reference/status/README.md",
+    "reference/status/alpha-limitations.md",
+    "reference/status/known-limitations.md",
+    "reference/status/drift-report.md",
+    "reference/status/verification-evidence.md",
+    "reference/status/feature-matrix.md",
+    "reference/maintenance/README.md",
+    "reference/maintenance/metadata-reference.md",
+    "reference/maintenance/staleness-inspection.md",
+    "reference/maintenance/refresh-procedure.md",
+    "reference/maintenance/stale-doc-triage.md",
+    "reference/maintenance/release-checklist.md",
+    "reference/maintenance/agent-card-procedure.md",
+    "reference/agents/README.md",
+    "reference/agents/context-pack-index.md",
+    "reference/agents/common-confusions.md",
+    "reference/agents/cards/stdlib-act.md",
+    "reference/agents/cards/stdlib-proc.md",
+    "reference/agents/cards/stdlib-workflow.md",
+    "reference/agents/cards/stdlib-result.md",
+    "reference/agents/cards/ash-cli.md",
+    "reference/agents/cards/ashgrove.md",
+    "reference/agents/cards/runtime-kernel.md",
+)
+SLICE_PATHS = {"reference-slice-2": REFERENCE_SLICE_2_PATHS}
 
 
 def run_git_diff(root: Path, baseline: str) -> tuple[list[str], str | None]:
@@ -43,6 +108,19 @@ def iter_markdown(root: Path, path_arg: str) -> list[Path]:
     if target.is_file():
         return [target]
     return sorted(target.rglob("*.md"))
+
+
+def iter_slice_markdown(root: Path, slice_name: str) -> tuple[list[Path], list[str]]:
+    rel_paths = SLICE_PATHS[slice_name]
+    pages: list[Path] = []
+    missing: list[str] = []
+    for rel in rel_paths:
+        page = root / rel
+        if page.exists():
+            pages.append(page.resolve())
+        else:
+            missing.append(rel)
+    return pages, missing
 
 
 def is_path_like(value: str) -> bool:
@@ -111,6 +189,11 @@ def main() -> int:
     parser.add_argument("--root", default=".", help="repository root")
     parser.add_argument("--path", default="reference", help="reference page or directory to inspect")
     parser.add_argument(
+        "--slice",
+        choices=sorted(SLICE_PATHS),
+        help="named reference slice scope to inspect instead of --path",
+    )
+    parser.add_argument(
         "--fail-on-needs-inspection",
         action="store_true",
         help="return non-zero when any page needs inspection",
@@ -118,9 +201,18 @@ def main() -> int:
     args = parser.parse_args()
 
     root = Path(args.root).resolve()
-    pages = iter_markdown(root, args.path)
+    if args.slice:
+        pages, missing = iter_slice_markdown(root, args.slice)
+        if missing:
+            for rel in missing:
+                print(f"ERROR: {args.slice}: missing markdown file: {rel}", file=sys.stderr)
+            return 1
+        inspected = args.slice
+    else:
+        pages = iter_markdown(root, args.path)
+        inspected = args.path
     if not pages:
-        print(f"staleness inspection failed: no markdown files under {args.path}", file=sys.stderr)
+        print(f"staleness inspection failed: no markdown files under {inspected}", file=sys.stderr)
         return 1
 
     diff_cache: dict[str, tuple[list[str], str | None]] = {}

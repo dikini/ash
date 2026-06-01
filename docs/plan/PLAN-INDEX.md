@@ -305,7 +305,7 @@ Update this section as tasks complete:
 | 127 | 11 | 4 + partial | ⚠️ Partial first slice |
 | 128 | 12 | 12 | ✅ Complete; SPEC-073 Implemented MVP |
 | 129 | 5 | 5 | ✅ Complete; SPEC-074 Accepted/Implemented; TASK-991 follow-up fixed |
-| 130 | 8 | 7 | 🚧 In Progress; TASK-992 through TASK-998 complete |
+| 130 | 8 | 8 | ✅ Complete; SPEC-075 Implemented MVP |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -3839,12 +3839,12 @@ Phase 129 is a targeted amendment to the SPEC-073 Implemented MVP. It separates 
 ## Phase 130: Reference Slice 2 Runtime, Toolchain, and Maintenance Manual
 
 **Priority:** High (turns the Phase 124 reference pilot into a maintainable Alpha user/operator reference before more runtime/tooling changes accumulate)
-**Status:** 🚧 In Progress; TASK-992 through TASK-998 complete
+**Status:** ✅ Complete; SPEC-075 Implemented MVP
 **Spec:** [SPEC-075](../spec/SPEC-075-REFERENCE-SLICE-2-RUNTIME-TOOLCHAIN-MAINTENANCE.md)
 **Design:** [DESIGN-043](../design/DESIGN-043-REFERENCE-SLICE-2-RUNTIME-TOOLCHAIN-MAINTENANCE.md)
 **Plan:** [PLAN-125](PLAN-125-REFERENCE-SLICE-2-RUNTIME-TOOLCHAIN-MAINTENANCE.md)
 
-Phase 130 expands `reference/` from a narrow pilot into the first maintainable Alpha manual. It uses subsystem detail pages for implementation-backed behavior, thin reader-journey pages for basic tasks, dedicated maintenance pages for metadata and staleness procedures, and agent cards derived from canonical pages. The phase keeps `docs/` historical, preserves SPEC-071 metadata governance, and makes `verified_against.git_commit` the pre-Alpha freshness anchor for diff-based staleness inspection. TASK-996 replaced the runtime draft targets with RuntimeKernel pages that preserve SPEC-070 integrity, admission, artifact, daemon, policy-profile, and non-goal boundaries. TASK-997 added stdlib tower pages that keep public API/library surfaces separate from language concept pages. TASK-998 added derivative agent cards and context-pack warnings for stdlib, toolchain, and RuntimeKernel pages.
+Phase 130 expands `reference/` from a narrow pilot into the first maintainable Alpha manual. It uses subsystem detail pages for implementation-backed behavior, thin reader-journey pages for basic tasks, dedicated maintenance pages for metadata and staleness procedures, and agent cards derived from canonical pages. The phase keeps `docs/` historical, preserves SPEC-071 metadata governance, and makes `verified_against.git_commit` the pre-Alpha freshness anchor for diff-based staleness inspection. TASK-996 replaced the runtime draft targets with RuntimeKernel pages that preserve SPEC-070 integrity, admission, artifact, daemon, policy-profile, and non-goal boundaries. TASK-997 added stdlib tower pages that keep public API/library surfaces separate from language concept pages. TASK-998 added derivative agent cards and context-pack warnings for stdlib, toolchain, and RuntimeKernel pages. TASK-999 completed closeout by mapping A75-1 through A75-8, adding alpha limitations, reconciling status/evidence surfaces, and adding the `reference-slice-2` staleness audit without changing runtime/parser/typechecker/stdlib semantics.
 
 | Task | Description | Est. Hours | Status |
 |------|-------------|------------|--------|
@@ -3855,7 +3855,7 @@ Phase 130 expands `reference/` from a narrow pilot into the first maintainable A
 | [TASK-996](tasks/TASK-996-reference-runtime-kernel-pages.md) | Add RuntimeKernel concept and status pages | 12 | ✅ Complete |
 | [TASK-997](tasks/TASK-997-reference-stdlib-tower-pages.md) | Add stdlib tower reference pages for Act, Proc, Workflow, and Result | 12 | ✅ Complete |
 | [TASK-998](tasks/TASK-998-reference-agent-cards-and-context-pack.md) | Add/update agent cards, context-pack index, and common-confusion warnings | 8 | ✅ Complete |
-| [TASK-999](tasks/TASK-999-reference-slice-2-closeout.md) | Run validator/checker hardening, drift/feature/status reconciliation, broad docs checks, and independent review | 8 | 📝 Planned |
+| [TASK-999](tasks/TASK-999-reference-slice-2-closeout.md) | Run validator/checker hardening, drift/feature/status reconciliation, broad docs checks, and independent review | 8 | ✅ Complete |
 
 **Decision gates:**
 - D1: Subsystem pages are the durable detail/reference surfaces; reader journeys are cross-linked entry paths.

@@ -1,6 +1,6 @@
 # SPEC-075: Reference Slice 2 Runtime, Toolchain, and Maintenance Manual
 
-**Status:** Draft
+**Status:** Implemented MVP
 **Date:** 2026-06-01
 **Promotes:** [DESIGN-043](../design/DESIGN-043-REFERENCE-SLICE-2-RUNTIME-TOOLCHAIN-MAINTENANCE.md)
 **Extends:** [SPEC-071](SPEC-071-REFERENCE-CORPUS-METADATA-AND-MAINTENANCE.md)
@@ -252,4 +252,5 @@ Implementation is governed by [PLAN-125](../plan/PLAN-125-REFERENCE-SLICE-2-RUNT
 
 ### 2026-06-01
 
+- TASK-999 closeout promoted SPEC-075 to Implemented MVP after mapping A75-1 through A75-8 to evidence, updating Reference Slice 2 status pages, adding `reference/status/alpha-limitations.md`, and adding the path-based `--slice reference-slice-2` staleness audit command. Runtime/parser/typechecker/stdlib semantics remain unchanged.
 - Initial draft for Reference Slice 2, extending SPEC-071 with subsystem/page-scope requirements, reader-journey basics, runtime/toolchain/stdlib coverage, maintenance procedures, and diff-based staleness inspection semantics.

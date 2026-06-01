@@ -9,7 +9,7 @@ stability: alpha
 owner: reference-corpus
 last_verified: 2026-06-01
 verified_against:
-  git_commit: 598a8f6
+  git_commit: 01bafb4
   release_tag: null
   ash_version: unreleased-alpha
   specs:
@@ -17,6 +17,7 @@ verified_against:
     - docs/spec/SPEC-075-REFERENCE-SLICE-2-RUNTIME-TOOLCHAIN-MAINTENANCE.md
   tasks:
     - docs/plan/tasks/TASK-994-reference-getting-started-journey.md
+    - docs/plan/tasks/TASK-999-reference-slice-2-closeout.md
   code:
     []
   tests:
@@ -42,6 +43,7 @@ refresh_trigger:
   - reference/getting-started/** changes
   - reference/tools/** changes
   - reference/runtime/** changes
+  - reference/stdlib/** changes
 ---
 
 # Next Steps
@@ -49,8 +51,9 @@ refresh_trigger:
 After the getting-started path, use the subsystem pages for detail:
 
 - Language concepts: [Pure functions](../language/functions.md), [Act](../language/effects-act.md), [Proc](../language/processes-proc.md), and [Workflow](../language/workflows.md).
+- Stdlib tower APIs: [stdlib tower](../stdlib/README.md), [Act stdlib](../stdlib/act.md), [Proc stdlib](../stdlib/proc.md), [Workflow stdlib](../stdlib/workflow.md), and [Result stdlib](../stdlib/result.md).
 - Tooling: [Tools index](../tools/README.md), [CLI tools](../tools/cli.md), and [Ashgrove](../tools/ashgrove.md).
 - Runtime: [Runtime index](../runtime/README.md), [RuntimeKernel](../runtime/kernel.md), and [daemon](../runtime/daemon.md).
 - Corpus freshness: [Reference maintenance](../maintenance/README.md) and [verification evidence](../status/verification-evidence.md).
 
-Ashgrove toolchain pages are now expanded in [Tools](../tools/README.md). RuntimeKernel and stdlib API pages are still being expanded by later Phase 130 tasks. Treat pages marked `draft` or `partial` as link targets with honest limitations, not complete subsystem manuals.
+Reference Slice 2 now includes the getting-started path, toolchain pages, RuntimeKernel pages, stdlib tower pages, maintenance procedures, status evidence, and agent cards. Treat pages marked `partial` as honest Alpha boundaries, not as a signal that later Phase 130 subsystem pages still need to be created.

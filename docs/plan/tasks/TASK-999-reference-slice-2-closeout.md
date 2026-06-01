@@ -1,6 +1,6 @@
 # TASK-999: Reference Slice 2 closeout
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -80,15 +80,19 @@ commands:
     assert 'Implemented MVP' in spec or 'Accepted' in spec
     PY
 checklist:
-  - [ ] A75-1 through A75-8 mapped to evidence.
-  - [ ] Full reference validator passes.
-  - [ ] Pilot reference validator still passes.
-  - [ ] Staleness inspection audit completed.
-  - [ ] Drift/status/feature/verification pages updated.
-  - [ ] Independent review completed and findings addressed.
-  - [ ] PLAN-INDEX, PLAN-125, SPEC-075, task files, spec README, and CHANGELOG reconciled.
+  - [x] A75-1 through A75-8 mapped to evidence.
+  - [x] Full reference validator passes.
+  - [x] Pilot reference validator still passes.
+  - [x] Staleness inspection audit completed.
+  - [x] Drift/status/feature/verification pages updated.
+  - [x] Independent review completed and findings addressed.
+  - [x] PLAN-INDEX, PLAN-125, SPEC-075, task files, spec README, and CHANGELOG reconciled.
 ```
 
 ## Notes
 
 If `tools/reference/check_staleness.py` is not implemented by closeout, replace that command with a documented manual staleness-inspection audit over every Slice 2 page and update this task before marking it complete. Do not leave a failing or nonexistent closeout command in a completed task.
+
+## Completion notes
+
+Completed on 2026-06-01. TASK-999 added a conservative stdlib-only `--slice reference-slice-2` alias to `tools/reference/check_staleness.py`, created `reference/status/alpha-limitations.md`, retained `reference/status/known-limitations.md` as the Phase 124 compatibility alias, mapped SPEC-075 A75-1 through A75-8 in the drift report, updated verification evidence, feature matrix, reference-maintenance status, SPEC-075/spec index, PLAN-125, PLAN-INDEX, task status, and CHANGELOG. The direct closeout review checked overclaim boundaries and preserved docs/reference-only scope: no Ash runtime, parser, typechecker, or stdlib semantics changed.

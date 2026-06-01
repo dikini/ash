@@ -4,12 +4,14 @@ title: Known Limitations
 kind: status
 audience: [human, agent]
 authority: canonical-adjacent
-status: current
+status: superseded
 stability: alpha
 owner: reference-corpus
 last_verified: 2026-06-01
 verified_against:
   git_commit: 710340f
+  release_tag: null
+  ash_version: unreleased-alpha
   specs:
     - docs/spec/SPEC-071-REFERENCE-CORPUS-METADATA-AND-MAINTENANCE.md
     - docs/spec/SPEC-070-ALPHA-RUNTIME-KERNEL-AND-OS-SURFACE.md
@@ -18,6 +20,7 @@ verified_against:
     - docs/plan/tasks/TASK-952-reference-examples-and-status-classification.md
     - docs/plan/tasks/TASK-996-reference-runtime-kernel-pages.md
     - docs/plan/tasks/TASK-997-reference-stdlib-tower-pages.md
+    - docs/plan/tasks/TASK-999-reference-slice-2-closeout.md
   code:
     []
   tests:
@@ -30,7 +33,7 @@ related:
   explains:
     []
   supersedes: []
-  superseded_by: null
+  superseded_by: reference/status/alpha-limitations.md
   historical_rationale:
     []
 refresh_trigger:
@@ -42,6 +45,8 @@ refresh_trigger:
 ---
 
 # Known Limitations
+
+This Phase 124 pilot limitations page is retained for existing links. Reference Slice 2 uses [Alpha limitations](alpha-limitations.md) as the current limitations status page.
 
 ## Language/reference pilot
 

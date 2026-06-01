@@ -9,7 +9,7 @@ stability: alpha
 owner: reference-corpus
 last_verified: 2026-06-01
 verified_against:
-  git_commit: 7fc92f6
+  git_commit: 01bafb4
   release_tag: null
   ash_version: unreleased-alpha
   specs:
@@ -23,6 +23,7 @@ verified_against:
     - docs/plan/tasks/TASK-996-reference-runtime-kernel-pages.md
     - docs/plan/tasks/TASK-997-reference-stdlib-tower-pages.md
     - docs/plan/tasks/TASK-998-reference-agent-cards-and-context-pack.md
+    - docs/plan/tasks/TASK-999-reference-slice-2-closeout.md
   code:
     []
   tests:
@@ -132,7 +133,8 @@ refresh_trigger:
 - [RuntimeKernel status](status/runtime-kernel.md)
 - [Reference maintenance status](status/reference-maintenance.md)
 - [Feature matrix](status/feature-matrix.md)
-- [Known limitations](status/known-limitations.md)
+- [Alpha limitations](status/alpha-limitations.md)
+- [Known limitations](status/known-limitations.md) (retained Phase 124 alias)
 - [Drift report](status/drift-report.md)
 - [Verification evidence](status/verification-evidence.md)
 

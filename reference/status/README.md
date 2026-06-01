@@ -7,13 +7,17 @@ authority: canonical-adjacent
 status: current
 stability: alpha
 owner: reference-corpus
-last_verified: 2026-05-23
+last_verified: 2026-06-01
 verified_against:
-  git_commit: ff1f98f
+  git_commit: 4fa1eba
+  release_tag: null
+  ash_version: unreleased-alpha
   specs:
     - docs/spec/SPEC-071-REFERENCE-CORPUS-METADATA-AND-MAINTENANCE.md
+    - docs/spec/SPEC-075-REFERENCE-SLICE-2-RUNTIME-TOOLCHAIN-MAINTENANCE.md
   tasks:
     - docs/plan/tasks/TASK-948-reference-skeleton-authority-methodology-style.md
+    - docs/plan/tasks/TASK-993-reference-maintenance-metadata-and-staleness.md
   code:
     []
   tests:
@@ -33,7 +37,10 @@ related:
   historical_rationale:
     []
 refresh_trigger:
-  - SPEC-071 changes
+  - docs/spec/SPEC-071-REFERENCE-CORPUS-METADATA-AND-MAINTENANCE.md changes
+  - docs/spec/SPEC-075-REFERENCE-SLICE-2-RUNTIME-TOOLCHAIN-MAINTENANCE.md changes
+  - reference/status/** changes
+  - reference/maintenance/** changes
   - Phase closeout changes reference policy
 ---
 
@@ -45,3 +52,4 @@ Status pages record what the pilot claims and what it does not claim.
 - [Known limitations](known-limitations.md): current alpha and reference-pilot limits.
 - [Drift report](drift-report.md): mismatches, caveats, and next-slice recommendations.
 - [Verification evidence](verification-evidence.md): R71 acceptance evidence and command results.
+- [Reference maintenance](reference-maintenance.md): Slice 2 metadata, staleness, and refresh status links.

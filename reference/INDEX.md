@@ -7,13 +7,17 @@ authority: canonical-adjacent
 status: current
 stability: alpha
 owner: reference-corpus
-last_verified: 2026-05-23
+last_verified: 2026-06-01
 verified_against:
-  git_commit: ff1f98f
+  git_commit: 4fa1eba
+  release_tag: null
+  ash_version: unreleased-alpha
   specs:
     - docs/spec/SPEC-071-REFERENCE-CORPUS-METADATA-AND-MAINTENANCE.md
+    - docs/spec/SPEC-075-REFERENCE-SLICE-2-RUNTIME-TOOLCHAIN-MAINTENANCE.md
   tasks:
     - docs/plan/tasks/TASK-948-reference-skeleton-authority-methodology-style.md
+    - docs/plan/tasks/TASK-993-reference-maintenance-metadata-and-staleness.md
   code:
     []
   tests:
@@ -36,7 +40,9 @@ related:
   historical_rationale:
     []
 refresh_trigger:
-  - SPEC-071 changes
+  - docs/spec/SPEC-071-REFERENCE-CORPUS-METADATA-AND-MAINTENANCE.md changes
+  - docs/spec/SPEC-075-REFERENCE-SLICE-2-RUNTIME-TOOLCHAIN-MAINTENANCE.md changes
+  - reference/maintenance/** changes
   - Phase closeout changes reference policy
 ---
 
@@ -67,10 +73,21 @@ refresh_trigger:
 ## Status
 
 - [Status index](status/README.md)
+- [Reference maintenance status](status/reference-maintenance.md)
 - [Feature matrix](status/feature-matrix.md)
 - [Known limitations](status/known-limitations.md)
 - [Drift report](status/drift-report.md)
 - [Verification evidence](status/verification-evidence.md)
+
+## Maintenance
+
+- [Maintenance index](maintenance/README.md)
+- [Metadata reference](maintenance/metadata-reference.md)
+- [Staleness inspection](maintenance/staleness-inspection.md)
+- [Refresh procedure](maintenance/refresh-procedure.md)
+- [Stale document triage](maintenance/stale-doc-triage.md)
+- [Release checklist](maintenance/release-checklist.md)
+- [Agent-card procedure](maintenance/agent-card-procedure.md)
 
 ## Examples
 

@@ -7,13 +7,17 @@ authority: canonical-adjacent
 status: current
 stability: alpha
 owner: reference-corpus
-last_verified: 2026-05-23
+last_verified: 2026-06-01
 verified_against:
-  git_commit: ff1f98f
+  git_commit: 4fa1eba
+  release_tag: null
+  ash_version: unreleased-alpha
   specs:
     - docs/spec/SPEC-071-REFERENCE-CORPUS-METADATA-AND-MAINTENANCE.md
+    - docs/spec/SPEC-075-REFERENCE-SLICE-2-RUNTIME-TOOLCHAIN-MAINTENANCE.md
   tasks:
     - docs/plan/tasks/TASK-948-reference-skeleton-authority-methodology-style.md
+    - docs/plan/tasks/TASK-993-reference-maintenance-metadata-and-staleness.md
   code:
     []
   tests:
@@ -30,7 +34,9 @@ related:
   historical_rationale:
     []
 refresh_trigger:
-  - SPEC-071 changes
+  - docs/spec/SPEC-071-REFERENCE-CORPUS-METADATA-AND-MAINTENANCE.md changes
+  - docs/spec/SPEC-075-REFERENCE-SLICE-2-RUNTIME-TOOLCHAIN-MAINTENANCE.md changes
+  - reference/maintenance/** changes
   - Phase closeout changes reference policy
 ---
 
@@ -41,3 +47,5 @@ Reference pages are written from evidence outward. The author checks current spe
 Claims use current tense only when evidence is current. Older design or example material is linked as historical rationale. Proposed or non-executable material is labeled as aspirational, historical, or reference-only.
 
 Pilot refresh triggers are intentionally broad: changes to SPEC-069, SPEC-070, SPEC-071, public `std/src/{act,proc,workflow,result}.ash`, generalized do lowering, RuntimeKernel admission, examples cited by the page, or agent-card policy.
+
+Slice 2 maintenance procedures live under [Reference Maintenance](maintenance/README.md), with separate pages for [metadata](maintenance/metadata-reference.md), [staleness inspection](maintenance/staleness-inspection.md), and [refresh](maintenance/refresh-procedure.md).

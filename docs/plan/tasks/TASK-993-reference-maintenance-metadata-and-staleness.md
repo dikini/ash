@@ -1,6 +1,6 @@
 # TASK-993: Reference maintenance metadata and staleness substrate
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -54,8 +54,10 @@ strictness: clean
 commands:
   - git diff --check
   - python3 -m py_compile tools/reference/check_frontmatter.py
+  - python3 -m py_compile tools/reference/check_staleness.py
   - python3 tools/reference/check_frontmatter.py --pilot
   - python3 tools/reference/check_frontmatter.py
+  - python3 tools/reference/check_staleness.py --path reference/maintenance
   - |
     python3 - <<'PY'
     from pathlib import Path
@@ -77,12 +79,16 @@ commands:
     assert 'git diff --name-only' in inspect
     PY
 checklist:
-  - [ ] Maintenance pages created.
-  - [ ] Metadata semantics define commit baseline and optional release/version fields.
-  - [ ] Staleness inspection defines derived `needs-inspection` state.
-  - [ ] Ordinary pages are not burdened with page-specific maintenance procedures.
-  - [ ] Validator/checker strategy is implemented or explicitly deferred to TASK-999.
+  - [x] Maintenance pages created.
+  - [x] Metadata semantics define commit baseline and optional release/version fields.
+  - [x] Staleness inspection defines derived `needs-inspection` state.
+  - [x] Ordinary pages are not burdened with page-specific maintenance procedures.
+  - [x] Validator/checker strategy is implemented or explicitly deferred to TASK-999.
 ```
+
+## Tooling Strategy
+
+TASK-993 adds `tools/reference/check_staleness.py` as a deterministic, stdlib-only path-diff inspector. It reports derived inspection states from `verified_against.git_commit`, evidence paths, and path-like refresh triggers. Semantic stale/partial/superseded decisions remain human or agent review work and are still reconciled at TASK-999 closeout.
 
 ## Dependencies for Next Task
 

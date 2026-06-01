@@ -7,13 +7,17 @@ authority: canonical-adjacent
 status: current
 stability: alpha
 owner: reference-corpus
-last_verified: 2026-05-23
+last_verified: 2026-06-01
 verified_against:
-  git_commit: ff1f98f
+  git_commit: 4fa1eba
+  release_tag: null
+  ash_version: unreleased-alpha
   specs:
     - docs/spec/SPEC-071-REFERENCE-CORPUS-METADATA-AND-MAINTENANCE.md
+    - docs/spec/SPEC-075-REFERENCE-SLICE-2-RUNTIME-TOOLCHAIN-MAINTENANCE.md
   tasks:
     - docs/plan/tasks/TASK-948-reference-skeleton-authority-methodology-style.md
+    - docs/plan/tasks/TASK-993-reference-maintenance-metadata-and-staleness.md
   code:
     []
   tests:
@@ -30,7 +34,9 @@ related:
   historical_rationale:
     []
 refresh_trigger:
-  - SPEC-071 changes
+  - docs/spec/SPEC-071-REFERENCE-CORPUS-METADATA-AND-MAINTENANCE.md changes
+  - docs/spec/SPEC-075-REFERENCE-SLICE-2-RUNTIME-TOOLCHAIN-MAINTENANCE.md changes
+  - reference/maintenance/metadata-reference.md changes
   - Phase closeout changes reference policy
 ---
 
@@ -41,3 +47,5 @@ Every Markdown page in `reference/` carries SPEC-071 frontmatter. Required field
 Use repo-relative paths inside `verified_against`. Use `ref.*` IDs in `related` when pointing to reference pages. Use `historical_rationale` for old plans or design notes that explain why a feature exists but are not current authority.
 
 The pilot validator is `tools/reference/check_frontmatter.py --pilot`.
+
+Slice 2 maintenance semantics are defined in [Reference Maintenance Metadata](maintenance/metadata-reference.md). Diff-based freshness inspection is defined in [Reference Staleness Inspection](maintenance/staleness-inspection.md).

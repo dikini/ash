@@ -305,6 +305,7 @@ Update this section as tasks complete:
 | 127 | 11 | 4 + partial | ⚠️ Partial first slice |
 | 128 | 12 | 12 | ✅ Complete; SPEC-073 Implemented MVP |
 | 129 | 5 | 5 | ✅ Complete; SPEC-074 Accepted/Implemented; TASK-991 follow-up fixed |
+| 130 | 8 | 1 | 📝 Planned; TASK-992 complete |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -3834,3 +3835,33 @@ Phase 129 is a targeted amendment to the SPEC-073 Implemented MVP. It separates 
 - D7: TASK-988 is a hard audit gate and must replace downstream placeholder verification before Rust implementation starts.
 
 **Post-closeout follow-up:** TASK-991 fixed a focused source-install regression without expanding Phase 129 acceptance scope: Cargo `--locked` is now decided from the isolated build source after payload filtering, so ignored original-root lockfiles are excluded consistently while tracked/copied lockfiles still use locked builds.
+
+## Phase 130: Reference Slice 2 Runtime, Toolchain, and Maintenance Manual
+
+**Priority:** High (turns the Phase 124 reference pilot into a maintainable Alpha user/operator reference before more runtime/tooling changes accumulate)
+**Status:** 📝 Planned; TASK-992 packet complete
+**Spec:** [SPEC-075](../spec/SPEC-075-REFERENCE-SLICE-2-RUNTIME-TOOLCHAIN-MAINTENANCE.md)
+**Design:** [DESIGN-043](../design/DESIGN-043-REFERENCE-SLICE-2-RUNTIME-TOOLCHAIN-MAINTENANCE.md)
+**Plan:** [PLAN-125](PLAN-125-REFERENCE-SLICE-2-RUNTIME-TOOLCHAIN-MAINTENANCE.md)
+
+Phase 130 expands `reference/` from a narrow pilot into the first maintainable Alpha manual. It uses subsystem detail pages for implementation-backed behavior, thin reader-journey pages for basic tasks, dedicated maintenance pages for metadata and staleness procedures, and agent cards derived from canonical pages. The phase keeps `docs/` historical, preserves SPEC-071 metadata governance, and makes `verified_against.git_commit` the pre-Alpha freshness anchor for diff-based staleness inspection.
+
+| Task | Description | Est. Hours | Status |
+|------|-------------|------------|--------|
+| [TASK-992](tasks/TASK-992-reference-slice-2-packet.md) | Create DESIGN-043/SPEC-075/PLAN-125/TASK packet and register Phase 130 | 5 | ✅ Complete |
+| [TASK-993](tasks/TASK-993-reference-maintenance-metadata-and-staleness.md) | Create the maintenance metadata/staleness procedure substrate before bulk pages | 10 | 📝 Planned |
+| [TASK-994](tasks/TASK-994-reference-getting-started-journey.md) | Add basic reader-journey pages for what Ash is, install, update, run, daemon, cleanup, and next steps | 10 | 📝 Planned |
+| [TASK-995](tasks/TASK-995-reference-ashgrove-and-cli-procedures.md) | Add `ash`/`ashgrove` toolchain and procedure reference pages | 14 | 📝 Planned |
+| [TASK-996](tasks/TASK-996-reference-runtime-kernel-pages.md) | Add RuntimeKernel concept and status pages | 12 | 📝 Planned |
+| [TASK-997](tasks/TASK-997-reference-stdlib-tower-pages.md) | Add stdlib tower reference pages for Act, Proc, Workflow, and Result | 12 | 📝 Planned |
+| [TASK-998](tasks/TASK-998-reference-agent-cards-and-context-pack.md) | Add/update agent cards, context-pack index, and common-confusion warnings | 8 | 📝 Planned |
+| [TASK-999](tasks/TASK-999-reference-slice-2-closeout.md) | Run validator/checker hardening, drift/feature/status reconciliation, broad docs checks, and independent review | 8 | 📝 Planned |
+
+**Decision gates:**
+- D1: Subsystem pages are the durable detail/reference surfaces; reader journeys are cross-linked entry paths.
+- D2: Maintenance procedures live under `reference/maintenance/`; ordinary pages carry metadata and user-facing limitations, not page-specific maintenance playbooks.
+- D3: `verified_against.git_commit` is the strong pre-Alpha freshness anchor. Optional version/release fields are advisory until Alpha tags exist.
+- D4: `needs-inspection` is a derived state computed from diffs against evidence paths and refresh triggers, not a new frontmatter lifecycle status in this phase.
+- D5: `reference/language/` concept pages and `reference/stdlib/` API pages remain distinct and cross-linked.
+- D6: Ashgrove and RuntimeKernel pages must preserve SPEC-073/SPEC-074/SPEC-070 non-goals and fail-closed authority/integrity boundaries.
+- D7: TASK-993 is a hard gate; bulk page tasks must not start until maintenance metadata/staleness semantics are documented.

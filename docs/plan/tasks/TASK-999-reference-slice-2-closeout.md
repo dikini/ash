@@ -19,8 +19,8 @@ Close out Reference Slice 2 by validating every new page, metadata surface, stat
 - ✅ TASK-994: Reference getting-started journey
 - ✅ TASK-995: Reference Ashgrove and CLI procedures
 - ✅ TASK-996: Reference RuntimeKernel pages
-- 📝 TASK-997: Reference stdlib tower pages
-- 📝 TASK-998: Reference agent cards and context pack
+- ✅ TASK-997: Reference stdlib tower pages
+- ✅ TASK-998: Reference agent cards and context pack
 
 ## Requirements
 

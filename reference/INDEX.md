@@ -9,7 +9,7 @@ stability: alpha
 owner: reference-corpus
 last_verified: 2026-06-01
 verified_against:
-  git_commit: 710340f
+  git_commit: 7fc92f6
   release_tag: null
   ash_version: unreleased-alpha
   specs:
@@ -22,6 +22,7 @@ verified_against:
     - docs/plan/tasks/TASK-995-reference-ashgrove-and-cli-procedures.md
     - docs/plan/tasks/TASK-996-reference-runtime-kernel-pages.md
     - docs/plan/tasks/TASK-997-reference-stdlib-tower-pages.md
+    - docs/plan/tasks/TASK-998-reference-agent-cards-and-context-pack.md
   code:
     []
   tests:
@@ -116,6 +117,13 @@ refresh_trigger:
 - [Agent guide](agents/README.md)
 - [Context-pack index](agents/context-pack-index.md)
 - [Common confusions](agents/common-confusions.md)
+  - [Stdlib Act card](agents/cards/stdlib-act.md)
+  - [Stdlib Proc card](agents/cards/stdlib-proc.md)
+  - [Stdlib Workflow card](agents/cards/stdlib-workflow.md)
+  - [Stdlib Result card](agents/cards/stdlib-result.md)
+  - [Ash CLI card](agents/cards/ash-cli.md)
+  - [Ashgrove card](agents/cards/ashgrove.md)
+  - [RuntimeKernel card](agents/cards/runtime-kernel.md)
 
 ## Status
 

@@ -1,6 +1,6 @@
 # TASK-998: Reference agent cards and context pack
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -78,10 +78,10 @@ commands:
         assert 'forbidden' in text.lower() or 'stale' in text.lower(), rel
     PY
 checklist:
-  - [ ] Agent cards created.
-  - [ ] Cards resolve to canonical pages.
-  - [ ] Common confusions updated.
-  - [ ] Cards do not fork canonical page semantics.
+  - [x] Agent cards created.
+  - [x] Cards resolve to canonical pages.
+  - [x] Common confusions updated.
+  - [x] Cards do not fork canonical page semantics.
 ```
 
 ## Dependencies for Next Task

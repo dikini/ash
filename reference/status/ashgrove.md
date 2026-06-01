@@ -92,4 +92,4 @@ Ashgrove fails closed rather than guessing across trust/source boundaries: dirty
 
 ## Open Follow-Ups
 
-TASK-997 completed the stdlib tower reference expansion. TASK-998 must derive agent cards from the canonical stdlib, Ashgrove, CLI, and RuntimeKernel pages without forking their semantics.
+TASK-997 completed the stdlib tower reference expansion. TASK-998 derived agent cards from the canonical stdlib, Ashgrove, CLI, and RuntimeKernel pages. TASK-999 owns final closeout validation and must verify those derivative cards still point back to canonical pages without forking semantics.

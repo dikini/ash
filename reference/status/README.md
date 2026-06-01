@@ -9,7 +9,7 @@ stability: alpha
 owner: reference-corpus
 last_verified: 2026-06-01
 verified_against:
-  git_commit: 9fd1b8f
+  git_commit: 710340f
   release_tag: null
   ash_version: unreleased-alpha
   specs:
@@ -20,6 +20,7 @@ verified_against:
     - docs/plan/tasks/TASK-993-reference-maintenance-metadata-and-staleness.md
     - docs/plan/tasks/TASK-995-reference-ashgrove-and-cli-procedures.md
     - docs/plan/tasks/TASK-996-reference-runtime-kernel-pages.md
+    - docs/plan/tasks/TASK-997-reference-stdlib-tower-pages.md
   code:
     []
   tests:
@@ -43,6 +44,7 @@ refresh_trigger:
   - docs/spec/SPEC-075-REFERENCE-SLICE-2-RUNTIME-TOOLCHAIN-MAINTENANCE.md changes
   - reference/status/** changes
   - reference/maintenance/** changes
+  - reference/stdlib/** changes
   - Phase closeout changes reference policy
 ---
 

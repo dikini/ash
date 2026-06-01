@@ -9,7 +9,7 @@ stability: alpha
 owner: reference-corpus
 last_verified: 2026-06-01
 verified_against:
-  git_commit: 9fd1b8f
+  git_commit: 710340f
   specs:
     - docs/spec/SPEC-071-REFERENCE-CORPUS-METADATA-AND-MAINTENANCE.md
     - docs/spec/SPEC-070-ALPHA-RUNTIME-KERNEL-AND-OS-SURFACE.md
@@ -17,6 +17,7 @@ verified_against:
   tasks:
     - docs/plan/tasks/TASK-952-reference-examples-and-status-classification.md
     - docs/plan/tasks/TASK-996-reference-runtime-kernel-pages.md
+    - docs/plan/tasks/TASK-997-reference-stdlib-tower-pages.md
   code:
     []
   tests:
@@ -36,6 +37,7 @@ refresh_trigger:
   - SPEC-071 changes
   - SPEC-070 changes
   - reference/runtime/** changes
+  - reference/stdlib/** changes
   - Phase closeout changes reference policy
 ---
 
@@ -54,6 +56,8 @@ refresh_trigger:
 - Effectful operations go through CapabilityProvider/runtime provider machinery.
 - Generalized do does not provide blanket final-expression returns or automatic target inference.
 - Historical examples are not silently promoted to normative-pass.
+- Stdlib tower API pages document current public `std/src` names only; they do not invent implicit lifts, hidden constructors, or full generated API extraction.
+- `Result<T, E>` is a domain value type. `Err` is not operational bottom, and `fail` is not implicit `Err` construction.
 
 ## RuntimeKernel Alpha limits
 

@@ -1,6 +1,6 @@
 # TASK-997: Reference stdlib tower pages
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -78,12 +78,23 @@ commands:
     assert 'operational bottom' in text or 'Operational bottom' in text
     PY
 checklist:
-  - [ ] Stdlib tower pages created.
-  - [ ] Language concept pages remain distinct.
-  - [ ] Current examples are grounded in live stdlib/parser evidence.
-  - [ ] Result/domain failure is not collapsed into operational bottom.
+  - [x] Stdlib tower pages created.
+  - [x] Language concept pages remain distinct.
+  - [x] Current examples are grounded in live stdlib/parser evidence.
+  - [x] Result/domain failure is not collapsed into operational bottom.
 ```
 
 ## Dependencies for Next Task
 
 TASK-998 must create stdlib agent cards from these canonical pages after they exist.
+
+## Completion Notes
+
+Completed on 2026-06-01 against verification baseline `710340f`.
+
+Evidence inspected:
+
+- `std/src/act.ash`, `std/src/proc.ash`, `std/src/workflow.ash`, `std/src/result.ash`, and `std/src/lib.ash`.
+- `crates/ash-cli/tests/stdlib_corpus_check.rs` and `crates/ash-cli/tests/example_corpus_check.rs` for stdlib/example classification.
+- `crates/ash-engine/tests/task_718_proc_stdlib.rs` and `crates/ash-engine/tests/task_719_proc_from_act_stdlib.rs` for Proc stdlib behavior.
+- `crates/ash-typeck/tests/alpha_tower_opaque_carriers.rs` and `crates/ash-typeck/tests/alpha_generalized_do_full_bind_lowering.rs` for explicit lifts, hidden `ActEnv`, public `P<T>`, and Result do evidence boundaries.

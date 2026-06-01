@@ -12,12 +12,12 @@
 
 ## 1. Status
 
-**Status:** 🚧 In Progress; TASK-992 through TASK-996 complete
+**Status:** 🚧 In Progress; TASK-992 through TASK-997 complete
 **Spec:** [SPEC-075](../spec/SPEC-075-REFERENCE-SLICE-2-RUNTIME-TOOLCHAIN-MAINTENANCE.md)
 **Design:** [DESIGN-043](../design/DESIGN-043-REFERENCE-SLICE-2-RUNTIME-TOOLCHAIN-MAINTENANCE.md)
 **Task range:** [TASK-992](tasks/TASK-992-reference-slice-2-packet.md) through [TASK-999](tasks/TASK-999-reference-slice-2-closeout.md)
 
-TASK-992 created the design/spec/plan/task packet and registered Phase 130. TASK-993 defined the metadata/staleness maintenance model. TASK-994 added the thin getting-started reader journey and draft link targets for later subsystem pages. TASK-995 expanded the Ash CLI/Ashgrove command and procedure reference pages. TASK-996 replaced the draft runtime targets with RuntimeKernel concept, admission, artifact, daemon, policy-profile, and status pages.
+TASK-992 created the design/spec/plan/task packet and registered Phase 130. TASK-993 defined the metadata/staleness maintenance model. TASK-994 added the thin getting-started reader journey and draft link targets for later subsystem pages. TASK-995 expanded the Ash CLI/Ashgrove command and procedure reference pages. TASK-996 replaced the draft runtime targets with RuntimeKernel concept, admission, artifact, daemon, policy-profile, and status pages. TASK-997 added stdlib tower pages for `Act`, `Proc`, `Workflow`, and `Result` while keeping language concept pages distinct.
 
 ## 2. Scope
 
@@ -50,7 +50,7 @@ TASK-992 created the design/spec/plan/task packet and registered Phase 130. TASK
 | [TASK-994](tasks/TASK-994-reference-getting-started-journey.md) | Add basic reader-journey pages for what Ash is, install, update, run, daemon, cleanup, and next steps | 10 | ✅ Complete |
 | [TASK-995](tasks/TASK-995-reference-ashgrove-and-cli-procedures.md) | Add `ash`/`ashgrove` toolchain and procedure reference pages | 14 | ✅ Complete |
 | [TASK-996](tasks/TASK-996-reference-runtime-kernel-pages.md) | Add RuntimeKernel concept and status pages | 12 | ✅ Complete |
-| [TASK-997](tasks/TASK-997-reference-stdlib-tower-pages.md) | Add stdlib tower reference pages for Act, Proc, Workflow, and Result | 12 | 📝 Planned |
+| [TASK-997](tasks/TASK-997-reference-stdlib-tower-pages.md) | Add stdlib tower reference pages for Act, Proc, Workflow, and Result | 12 | ✅ Complete |
 | [TASK-998](tasks/TASK-998-reference-agent-cards-and-context-pack.md) | Add/update agent cards, context-pack index, and common-confusion warnings | 8 | 📝 Planned |
 | [TASK-999](tasks/TASK-999-reference-slice-2-closeout.md) | Run validator/checker hardening, drift/feature/status reconciliation, broad docs checks, and independent review | 8 | 📝 Planned |
 
@@ -207,6 +207,7 @@ The phase is complete only when:
 
 ### 2026-06-01
 
+- TASK-997 added the stdlib tower reference index and public API pages for `Act`, `Proc`, `Workflow`, and `Result`, cross-linked them with the language concept pages, and preserved explicit tower lifts plus the `Result` domain-failure versus operational-bottom boundary.
 - TASK-996 replaced the TASK-994 draft runtime placeholders with RuntimeKernel concept and status pages covering one-shot and local daemon host modes, admission authority, source/check-summary artifacts, reload lifetime, policy-profile grants, and explicit runtime non-goals.
 - TASK-993 added the Reference Slice 2 maintenance pages, reference-maintenance status surface, cross-links, and stdlib-only path-based staleness checker while keeping later Slice 2 page tasks planned.
 - TASK-994 added the getting-started reader journey, surfaced it from the reference root/index, and created draft toolchain/runtime detail targets for later subsystem expansion.

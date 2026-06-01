@@ -9,7 +9,7 @@ stability: alpha
 owner: reference-corpus
 last_verified: 2026-06-01
 verified_against:
-  git_commit: 9fd1b8f
+  git_commit: 710340f
   release_tag: null
   ash_version: unreleased-alpha
   specs:
@@ -21,6 +21,7 @@ verified_against:
     - docs/plan/tasks/TASK-994-reference-getting-started-journey.md
     - docs/plan/tasks/TASK-995-reference-ashgrove-and-cli-procedures.md
     - docs/plan/tasks/TASK-996-reference-runtime-kernel-pages.md
+    - docs/plan/tasks/TASK-997-reference-stdlib-tower-pages.md
   code:
     []
   tests:
@@ -49,6 +50,7 @@ refresh_trigger:
   - reference/getting-started/** changes
   - reference/tools/** changes
   - reference/runtime/** changes
+  - reference/stdlib/** changes
   - Phase closeout changes reference policy
 ---
 
@@ -80,6 +82,14 @@ refresh_trigger:
 - [Proc processes](language/processes-proc.md)
 - [Workflow boundaries](language/workflows.md)
 - [Generalized do](language/generalized-do.md)
+
+## Standard library
+
+- [Stdlib tower index](stdlib/README.md)
+- [Act stdlib](stdlib/act.md)
+- [Proc stdlib](stdlib/proc.md)
+- [Workflow stdlib](stdlib/workflow.md)
+- [Result stdlib](stdlib/result.md)
 
 ## Tools and runtime
 

@@ -7,9 +7,9 @@ authority: canonical-adjacent
 status: current
 stability: alpha
 owner: language-runtime
-last_verified: 2026-05-23
+last_verified: 2026-06-01
 verified_against:
-  git_commit: ff1f98f
+  git_commit: 710340f
   specs:
     - docs/spec/SPEC-069-ALPHA-VISIBLE-TOWER-ALGEBRA-AND-DO-LOWERING.md
     - docs/spec/SPEC-070-ALPHA-RUNTIME-KERNEL-AND-OS-SURFACE.md
@@ -18,6 +18,7 @@ verified_against:
   tasks:
     - docs/plan/tasks/TASK-949-pure-act-proc-workflow-reference-pilot.md
     - docs/plan/tasks/TASK-952-reference-examples-and-status-classification.md
+    - docs/plan/tasks/TASK-997-reference-stdlib-tower-pages.md
   code:
     - std/src/workflow.ash
     - crates/ash-core/src/runtime_kernel.rs
@@ -39,6 +40,8 @@ related:
     []
 refresh_trigger:
   - SPEC-071 changes
+  - std/src/workflow.ash changes
+  - reference/stdlib/workflow.md changes
   - Phase closeout changes reference policy
 ---
 
@@ -62,7 +65,7 @@ See the cited specs and stdlib files for full syntax. Examples here are small an
 
 ## API / stdlib surface
 
-The public stdlib module paths are listed in `verified_against`. Runtime implementation details remain opaque unless a cited spec exposes them.
+The public stdlib module paths are listed in `verified_against`. Runtime implementation details remain opaque unless a cited spec exposes them. For the current public API list, use [Workflow stdlib](../stdlib/workflow.md); this page remains the language/runtime-boundary concept page.
 
 ## Implementation notes
 

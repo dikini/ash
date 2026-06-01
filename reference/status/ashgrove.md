@@ -9,7 +9,7 @@ stability: alpha
 owner: ashgrove
 last_verified: 2026-06-01
 verified_against:
-  git_commit: 9fd1b8f
+  git_commit: 710340f
   release_tag: null
   ash_version: unreleased-alpha
   specs:
@@ -19,6 +19,7 @@ verified_against:
   tasks:
     - docs/plan/tasks/TASK-995-reference-ashgrove-and-cli-procedures.md
     - docs/plan/tasks/TASK-996-reference-runtime-kernel-pages.md
+    - docs/plan/tasks/TASK-997-reference-stdlib-tower-pages.md
   code:
     - crates/ashgrove/src/lib.rs
     - crates/ashgrove/src/main.rs
@@ -34,6 +35,7 @@ related:
   depends_on:
     - ref.status.index
     - ref.tools.ashgrove
+    - ref.stdlib.index
   explains:
     - ref.tools.ashgrove.install
     - ref.tools.ashgrove.update
@@ -49,6 +51,7 @@ refresh_trigger:
   - docs/spec/SPEC-074-ASHGROVE-SOURCE-PAYLOAD-LOCAL-STATE-IGNORE.md changes
   - crates/ashgrove/src/** changes
   - reference/tools/ashgrove/** changes
+  - reference/stdlib/** changes
   - reference/status/ashgrove.md changes
 ---
 
@@ -89,4 +92,4 @@ Ashgrove fails closed rather than guessing across trust/source boundaries: dirty
 
 ## Open Follow-Ups
 
-TASK-997 remains future/draft for stdlib reference expansion. TASK-998 must derive agent cards from the canonical Ashgrove, CLI, and RuntimeKernel pages without forking their semantics.
+TASK-997 completed the stdlib tower reference expansion. TASK-998 must derive agent cards from the canonical stdlib, Ashgrove, CLI, and RuntimeKernel pages without forking their semantics.

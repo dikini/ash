@@ -7,9 +7,9 @@ authority: canonical-adjacent
 status: current
 stability: alpha
 owner: language-typechecker
-last_verified: 2026-05-23
+last_verified: 2026-06-01
 verified_against:
-  git_commit: ff1f98f
+  git_commit: 710340f
   specs:
     - docs/spec/SPEC-069-ALPHA-VISIBLE-TOWER-ALGEBRA-AND-DO-LOWERING.md
     - docs/spec/SPEC-070-ALPHA-RUNTIME-KERNEL-AND-OS-SURFACE.md
@@ -19,6 +19,7 @@ verified_against:
   tasks:
     - docs/plan/tasks/TASK-949-pure-act-proc-workflow-reference-pilot.md
     - docs/plan/tasks/TASK-952-reference-examples-and-status-classification.md
+    - docs/plan/tasks/TASK-997-reference-stdlib-tower-pages.md
   code:
     - std/src/act.ash
     - std/src/proc.ash
@@ -43,6 +44,11 @@ related:
     []
 refresh_trigger:
   - SPEC-071 changes
+  - std/src/act.ash changes
+  - std/src/proc.ash changes
+  - std/src/workflow.ash changes
+  - std/src/result.ash changes
+  - reference/stdlib/** changes
   - Phase closeout changes reference policy
 ---
 
@@ -66,7 +72,7 @@ See the cited specs and stdlib files for full syntax. Examples here are small an
 
 ## API / stdlib surface
 
-The public stdlib module paths are listed in `verified_against`. Runtime implementation details remain opaque unless a cited spec exposes them.
+The public stdlib module paths are listed in `verified_against`. Runtime implementation details remain opaque unless a cited spec exposes them. For current public operation lists, use the [stdlib tower index](../stdlib/README.md); this page remains the generalized-do concept page.
 
 ## Implementation notes
 

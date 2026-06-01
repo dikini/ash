@@ -9,7 +9,7 @@ stability: alpha
 owner: reference-corpus
 last_verified: 2026-06-01
 verified_against:
-  git_commit: 598a8f6
+  git_commit: e06944a
   release_tag: null
   ash_version: unreleased-alpha
   specs:
@@ -19,6 +19,7 @@ verified_against:
     - docs/plan/tasks/TASK-948-reference-skeleton-authority-methodology-style.md
     - docs/plan/tasks/TASK-993-reference-maintenance-metadata-and-staleness.md
     - docs/plan/tasks/TASK-994-reference-getting-started-journey.md
+    - docs/plan/tasks/TASK-995-reference-ashgrove-and-cli-procedures.md
   code:
     []
   tests:
@@ -86,7 +87,12 @@ refresh_trigger:
 - [Ashgrove](tools/ashgrove.md)
   - [Install](tools/ashgrove/install.md)
   - [Update](tools/ashgrove/update.md)
+  - [List, current, and default](tools/ashgrove/list-current-default.md)
   - [Remove and cleanup](tools/ashgrove/remove-cleanup.md)
+  - [Project dependencies](tools/ashgrove/project-dependencies.md)
+  - [Vendor and deploy](tools/ashgrove/vendor-deploy.md)
+  - [Trust and signing](tools/ashgrove/trust-and-signing.md)
+  - [Source payload and local state](tools/ashgrove/source-payload.md)
 - [Runtime index](runtime/README.md)
 - [RuntimeKernel](runtime/kernel.md)
 - [Runtime artifacts](runtime/artifacts.md)
@@ -101,6 +107,7 @@ refresh_trigger:
 ## Status
 
 - [Status index](status/README.md)
+- [Ashgrove status](status/ashgrove.md)
 - [Reference maintenance status](status/reference-maintenance.md)
 - [Feature matrix](status/feature-matrix.md)
 - [Known limitations](status/known-limitations.md)

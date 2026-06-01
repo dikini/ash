@@ -1,6 +1,6 @@
 # TASK-995: Reference Ashgrove and CLI procedures
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -81,12 +81,18 @@ commands:
         assert phrase in ashgrove_text, phrase
     PY
 checklist:
-  - [ ] Tool pages created.
-  - [ ] Live command surface checked or examples marked non-executable.
-  - [ ] SPEC-073/SPEC-074 non-goals preserved.
-  - [ ] Source-payload/local-state policy documented without overclaiming.
+- [x] Tool pages created.
+- [x] Live command surface checked or examples marked non-executable.
+- [x] SPEC-073/SPEC-074 non-goals preserved.
+- [x] Source-payload/local-state policy documented without overclaiming.
 ```
 
 ## Dependencies for Next Task
 
 TASK-998 must create agent cards from these canonical pages after they exist.
+
+## Completion Notes
+
+Completed on 2026-06-01. Replaced the TASK-994 Ashgrove/CLI draft placeholders with command-map and Ashgrove procedure pages under `reference/tools/`, added `reference/status/ashgrove.md`, updated reference indexes/status links, and reconciled PLAN-125/PLAN-INDEX.
+
+Live command surfaces were checked with `cargo run -p ash-cli -- --help`, `cargo run -p ashgrove -- --help`, and focused subcommand help for documented command forms. Initial help execution hit the sandboxed `sccache` wrapper; reruns used `RUSTC_WRAPPER=` to expose the same live clap command surfaces.

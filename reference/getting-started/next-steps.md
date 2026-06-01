@@ -53,4 +53,4 @@ After the getting-started path, use the subsystem pages for detail:
 - Runtime: [Runtime index](../runtime/README.md), [RuntimeKernel](../runtime/kernel.md), and [daemon](../runtime/daemon.md).
 - Corpus freshness: [Reference maintenance](../maintenance/README.md) and [verification evidence](../status/verification-evidence.md).
 
-Detailed Ashgrove, RuntimeKernel, and stdlib API pages are still being expanded by later Phase 130 tasks. Treat pages marked `draft` or `partial` as link targets with honest limitations, not complete subsystem manuals.
+Ashgrove toolchain pages are now expanded in [Tools](../tools/README.md). RuntimeKernel and stdlib API pages are still being expanded by later Phase 130 tasks. Treat pages marked `draft` or `partial` as link targets with honest limitations, not complete subsystem manuals.

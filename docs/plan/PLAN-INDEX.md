@@ -3839,7 +3839,7 @@ Phase 129 is a targeted amendment to the SPEC-073 Implemented MVP. It separates 
 ## Phase 130: Reference Slice 2 Runtime, Toolchain, and Maintenance Manual
 
 **Priority:** High (turns the Phase 124 reference pilot into a maintainable Alpha user/operator reference before more runtime/tooling changes accumulate)
-**Status:** 🚧 In Progress; TASK-992 through TASK-994 complete
+**Status:** 🚧 In Progress; TASK-992 through TASK-995 complete
 **Spec:** [SPEC-075](../spec/SPEC-075-REFERENCE-SLICE-2-RUNTIME-TOOLCHAIN-MAINTENANCE.md)
 **Design:** [DESIGN-043](../design/DESIGN-043-REFERENCE-SLICE-2-RUNTIME-TOOLCHAIN-MAINTENANCE.md)
 **Plan:** [PLAN-125](PLAN-125-REFERENCE-SLICE-2-RUNTIME-TOOLCHAIN-MAINTENANCE.md)
@@ -3851,7 +3851,7 @@ Phase 130 expands `reference/` from a narrow pilot into the first maintainable A
 | [TASK-992](tasks/TASK-992-reference-slice-2-packet.md) | Create DESIGN-043/SPEC-075/PLAN-125/TASK packet and register Phase 130 | 5 | ✅ Complete |
 | [TASK-993](tasks/TASK-993-reference-maintenance-metadata-and-staleness.md) | Create the maintenance metadata/staleness procedure substrate before bulk pages | 10 | ✅ Complete |
 | [TASK-994](tasks/TASK-994-reference-getting-started-journey.md) | Add basic reader-journey pages for what Ash is, install, update, run, daemon, cleanup, and next steps | 10 | ✅ Complete |
-| [TASK-995](tasks/TASK-995-reference-ashgrove-and-cli-procedures.md) | Add `ash`/`ashgrove` toolchain and procedure reference pages | 14 | 📝 Planned |
+| [TASK-995](tasks/TASK-995-reference-ashgrove-and-cli-procedures.md) | Add `ash`/`ashgrove` toolchain and procedure reference pages | 14 | ✅ Complete |
 | [TASK-996](tasks/TASK-996-reference-runtime-kernel-pages.md) | Add RuntimeKernel concept and status pages | 12 | 📝 Planned |
 | [TASK-997](tasks/TASK-997-reference-stdlib-tower-pages.md) | Add stdlib tower reference pages for Act, Proc, Workflow, and Result | 12 | 📝 Planned |
 | [TASK-998](tasks/TASK-998-reference-agent-cards-and-context-pack.md) | Add/update agent cards, context-pack index, and common-confusion warnings | 8 | 📝 Planned |

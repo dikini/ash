@@ -12,12 +12,12 @@
 
 ## 1. Status
 
-**Status:** 🚧 In Progress; TASK-992 through TASK-994 complete
+**Status:** 🚧 In Progress; TASK-992 through TASK-995 complete
 **Spec:** [SPEC-075](../spec/SPEC-075-REFERENCE-SLICE-2-RUNTIME-TOOLCHAIN-MAINTENANCE.md)
 **Design:** [DESIGN-043](../design/DESIGN-043-REFERENCE-SLICE-2-RUNTIME-TOOLCHAIN-MAINTENANCE.md)
 **Task range:** [TASK-992](tasks/TASK-992-reference-slice-2-packet.md) through [TASK-999](tasks/TASK-999-reference-slice-2-closeout.md)
 
-TASK-992 created the design/spec/plan/task packet and registered Phase 130. TASK-993 defined the metadata/staleness maintenance model. TASK-994 added the thin getting-started reader journey and draft link targets for later subsystem pages.
+TASK-992 created the design/spec/plan/task packet and registered Phase 130. TASK-993 defined the metadata/staleness maintenance model. TASK-994 added the thin getting-started reader journey and draft link targets for later subsystem pages. TASK-995 expanded the Ash CLI/Ashgrove command and procedure reference pages.
 
 ## 2. Scope
 
@@ -48,7 +48,7 @@ TASK-992 created the design/spec/plan/task packet and registered Phase 130. TASK
 | [TASK-992](tasks/TASK-992-reference-slice-2-packet.md) | Create DESIGN-043/SPEC-075/PLAN-125/TASK packet and register Phase 130 | 5 | ✅ Complete |
 | [TASK-993](tasks/TASK-993-reference-maintenance-metadata-and-staleness.md) | Create the maintenance metadata/staleness procedure substrate before bulk pages | 10 | ✅ Complete |
 | [TASK-994](tasks/TASK-994-reference-getting-started-journey.md) | Add basic reader-journey pages for what Ash is, install, update, run, daemon, cleanup, and next steps | 10 | ✅ Complete |
-| [TASK-995](tasks/TASK-995-reference-ashgrove-and-cli-procedures.md) | Add `ash`/`ashgrove` toolchain and procedure reference pages | 14 | 📝 Planned |
+| [TASK-995](tasks/TASK-995-reference-ashgrove-and-cli-procedures.md) | Add `ash`/`ashgrove` toolchain and procedure reference pages | 14 | ✅ Complete |
 | [TASK-996](tasks/TASK-996-reference-runtime-kernel-pages.md) | Add RuntimeKernel concept and status pages | 12 | 📝 Planned |
 | [TASK-997](tasks/TASK-997-reference-stdlib-tower-pages.md) | Add stdlib tower reference pages for Act, Proc, Workflow, and Result | 12 | 📝 Planned |
 | [TASK-998](tasks/TASK-998-reference-agent-cards-and-context-pack.md) | Add/update agent cards, context-pack index, and common-confusion warnings | 8 | 📝 Planned |
@@ -208,5 +208,6 @@ The phase is complete only when:
 ### 2026-06-01
 
 - TASK-993 added the Reference Slice 2 maintenance pages, reference-maintenance status surface, cross-links, and stdlib-only path-based staleness checker while keeping later Slice 2 page tasks planned.
-- TASK-994 added the getting-started reader journey, surfaced it from the reference root/index, and created draft toolchain/runtime detail targets for later TASK-995/TASK-996 expansion.
+- TASK-994 added the getting-started reader journey, surfaced it from the reference root/index, and created draft toolchain/runtime detail targets for later subsystem expansion.
+- TASK-995 replaced the TASK-994 Ashgrove/CLI draft placeholders with command-map and procedure pages covering install, update, selectors, remove/cleanup, project dependencies, vendor/deploy, trust/signing, source-payload policy, and Ashgrove status while preserving SPEC-073/SPEC-074 non-goals and fail-closed boundaries.
 - TASK-992 created the Phase 130 Reference Slice 2 planning packet. The packet defines subsystem detail pages, reader-journey basics, maintenance metadata/staleness procedures, Ashgrove/RuntimeKernel/stdlib coverage, agent-card updates, and closeout validation requirements.

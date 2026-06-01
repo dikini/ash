@@ -16,7 +16,7 @@ Create or update derivative agent cards, context-pack index entries, and common-
 ## Dependencies
 
 - ✅ TASK-993: Reference maintenance metadata and staleness substrate
-- 📝 TASK-995: Ashgrove and CLI procedure pages
+- ✅ TASK-995: Ashgrove and CLI procedure pages
 - 📝 TASK-996: RuntimeKernel pages
 - 📝 TASK-997: Stdlib tower pages
 

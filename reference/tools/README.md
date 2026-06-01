@@ -3,13 +3,13 @@ id: ref.tools.index
 title: Tools Reference Index
 kind: index
 audience: [human, agent]
-authority: draft
-status: draft
+authority: canonical-adjacent
+status: current
 stability: alpha
 owner: toolchain
 last_verified: 2026-06-01
 verified_against:
-  git_commit: 598a8f6
+  git_commit: e06944a
   release_tag: null
   ash_version: unreleased-alpha
   specs:
@@ -22,6 +22,8 @@ verified_against:
     - crates/ash-cli/src/main.rs
     - crates/ashgrove/src/main.rs
   tests:
+    - cargo run -p ash-cli -- --help
+    - cargo run -p ashgrove -- --help
     - check_frontmatter full reference validation
   examples:
     []
@@ -44,16 +46,31 @@ refresh_trigger:
 
 # Tools Reference Index
 
-This is a draft detail-target index created so the getting-started journey can link to tool references. TASK-995 owns the complete `ash` and `ashgrove` tool pages.
+This section maps the current Alpha command-line tools. It is a reference surface, not a substitute for the implementation specs.
 
-## Current Targets
+Command surfaces were checked against live help on 2026-06-01:
 
-- [CLI tools](cli.md)
-- [Ashgrove](ashgrove.md)
-- [Ashgrove install](ashgrove/install.md)
-- [Ashgrove update](ashgrove/update.md)
-- [Ashgrove remove and cleanup](ashgrove/remove-cleanup.md)
+- `cargo run -p ash-cli -- --help`
+- `cargo run -p ashgrove -- --help`
 
-## Limitation
+Use `cargo run -p ... --` from a repository checkout. After installing an Ash toolchain and putting the user-local launcher directory on `PATH`, the same command shapes are available as `ash ...` and `ashgrove ...`.
 
-This page is not a full command manual yet. It must not be used as evidence for hosted registries, OS package-manager integration, global installs, or deployment advice beyond the linked specs and later TASK-995 work.
+## Tools
+
+- [Ash command map](cli.md): language CLI commands for checking, running, tracing, testing, REPL, graph output, and local daemon control.
+- [Ashgrove overview](ashgrove.md): user-local Ash toolchain and deployment manager.
+
+## Ashgrove Procedures
+
+- [Install](ashgrove/install.md)
+- [Update](ashgrove/update.md)
+- [List, current, and default](ashgrove/list-current-default.md)
+- [Remove and cleanup](ashgrove/remove-cleanup.md)
+- [Project dependencies](ashgrove/project-dependencies.md)
+- [Vendor and deploy](ashgrove/vendor-deploy.md)
+- [Trust and signing](ashgrove/trust-and-signing.md)
+- [Source payload and local state](ashgrove/source-payload.md)
+
+## Boundaries
+
+Ashgrove is local-first and fail-closed. These pages do not claim support for a hosted registry, global/system installs, OS package-manager integration, arbitrary SemVer dependency solving, broad source-ignore glob flags, or unsigned release-index lookup.

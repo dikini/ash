@@ -9,7 +9,7 @@ stability: alpha
 owner: reference-corpus
 last_verified: 2026-06-01
 verified_against:
-  git_commit: e06944a
+  git_commit: 9fd1b8f
   release_tag: null
   ash_version: unreleased-alpha
   specs:
@@ -20,6 +20,7 @@ verified_against:
     - docs/plan/tasks/TASK-993-reference-maintenance-metadata-and-staleness.md
     - docs/plan/tasks/TASK-994-reference-getting-started-journey.md
     - docs/plan/tasks/TASK-995-reference-ashgrove-and-cli-procedures.md
+    - docs/plan/tasks/TASK-996-reference-runtime-kernel-pages.md
   code:
     []
   tests:
@@ -95,8 +96,10 @@ refresh_trigger:
   - [Source payload and local state](tools/ashgrove/source-payload.md)
 - [Runtime index](runtime/README.md)
 - [RuntimeKernel](runtime/kernel.md)
+- [Runtime admission and authority](runtime/admission.md)
 - [Runtime artifacts](runtime/artifacts.md)
 - [Runtime daemon](runtime/daemon.md)
+- [Runtime policy profiles](runtime/policy-profiles.md)
 
 ## Agent derivatives
 
@@ -108,6 +111,7 @@ refresh_trigger:
 
 - [Status index](status/README.md)
 - [Ashgrove status](status/ashgrove.md)
+- [RuntimeKernel status](status/runtime-kernel.md)
 - [Reference maintenance status](status/reference-maintenance.md)
 - [Feature matrix](status/feature-matrix.md)
 - [Known limitations](status/known-limitations.md)

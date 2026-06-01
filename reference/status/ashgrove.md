@@ -9,7 +9,7 @@ stability: alpha
 owner: ashgrove
 last_verified: 2026-06-01
 verified_against:
-  git_commit: e06944a
+  git_commit: 9fd1b8f
   release_tag: null
   ash_version: unreleased-alpha
   specs:
@@ -18,6 +18,7 @@ verified_against:
     - docs/spec/SPEC-075-REFERENCE-SLICE-2-RUNTIME-TOOLCHAIN-MAINTENANCE.md
   tasks:
     - docs/plan/tasks/TASK-995-reference-ashgrove-and-cli-procedures.md
+    - docs/plan/tasks/TASK-996-reference-runtime-kernel-pages.md
   code:
     - crates/ashgrove/src/lib.rs
     - crates/ashgrove/src/main.rs
@@ -88,4 +89,4 @@ Ashgrove fails closed rather than guessing across trust/source boundaries: dirty
 
 ## Open Follow-Ups
 
-TASK-996 and TASK-997 remain future/draft for runtime and stdlib reference expansion. TASK-998 must derive agent cards from these canonical pages without forking Ashgrove semantics.
+TASK-997 remains future/draft for stdlib reference expansion. TASK-998 must derive agent cards from the canonical Ashgrove, CLI, and RuntimeKernel pages without forking their semantics.

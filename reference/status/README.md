@@ -9,7 +9,7 @@ stability: alpha
 owner: reference-corpus
 last_verified: 2026-06-01
 verified_against:
-  git_commit: e06944a
+  git_commit: 9fd1b8f
   release_tag: null
   ash_version: unreleased-alpha
   specs:
@@ -19,6 +19,7 @@ verified_against:
     - docs/plan/tasks/TASK-948-reference-skeleton-authority-methodology-style.md
     - docs/plan/tasks/TASK-993-reference-maintenance-metadata-and-staleness.md
     - docs/plan/tasks/TASK-995-reference-ashgrove-and-cli-procedures.md
+    - docs/plan/tasks/TASK-996-reference-runtime-kernel-pages.md
   code:
     []
   tests:
@@ -51,6 +52,7 @@ Status pages record what the pilot claims and what it does not claim.
 
 - [Feature matrix](feature-matrix.md): pilot concept status.
 - [Ashgrove status](ashgrove.md): current Alpha toolchain-manager claims, non-goals, and fail-closed boundaries.
+- [RuntimeKernel status](runtime-kernel.md): current Alpha runtime host-mode, artifact, admission, daemon, and policy-profile evidence.
 - [Known limitations](known-limitations.md): current alpha and reference-pilot limits.
 - [Drift report](drift-report.md): mismatches, caveats, and next-slice recommendations.
 - [Verification evidence](verification-evidence.md): R71 acceptance evidence and command results.

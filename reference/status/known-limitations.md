@@ -7,13 +7,16 @@ authority: canonical-adjacent
 status: current
 stability: alpha
 owner: reference-corpus
-last_verified: 2026-05-23
+last_verified: 2026-06-01
 verified_against:
-  git_commit: ff1f98f
+  git_commit: 9fd1b8f
   specs:
     - docs/spec/SPEC-071-REFERENCE-CORPUS-METADATA-AND-MAINTENANCE.md
+    - docs/spec/SPEC-070-ALPHA-RUNTIME-KERNEL-AND-OS-SURFACE.md
+    - docs/spec/SPEC-075-REFERENCE-SLICE-2-RUNTIME-TOOLCHAIN-MAINTENANCE.md
   tasks:
     - docs/plan/tasks/TASK-952-reference-examples-and-status-classification.md
+    - docs/plan/tasks/TASK-996-reference-runtime-kernel-pages.md
   code:
     []
   tests:
@@ -31,6 +34,8 @@ related:
     []
 refresh_trigger:
   - SPEC-071 changes
+  - SPEC-070 changes
+  - reference/runtime/** changes
   - Phase closeout changes reference policy
 ---
 
@@ -49,3 +54,11 @@ refresh_trigger:
 - Effectful operations go through CapabilityProvider/runtime provider machinery.
 - Generalized do does not provide blanket final-expression returns or automatic target inference.
 - Historical examples are not silently promoted to normative-pass.
+
+## RuntimeKernel Alpha limits
+
+- File presence is not execution; daemon indexing and source discovery do not start workflow bodies by themselves.
+- Provider/resource existence is not authority; RuntimeKernel admission must grant authority before user body execution.
+- Verified RuntimeKernel artifacts are source/check-summary based Alpha summaries, not production deployment packages.
+- Daemon reload affects future starts and does not hot-swap already admitted running instances.
+- The Alpha daemon is local-only: no remote/multi-user daemon API, distributed scheduling, or production init-system integration is claimed.

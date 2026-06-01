@@ -3839,12 +3839,12 @@ Phase 129 is a targeted amendment to the SPEC-073 Implemented MVP. It separates 
 ## Phase 130: Reference Slice 2 Runtime, Toolchain, and Maintenance Manual
 
 **Priority:** High (turns the Phase 124 reference pilot into a maintainable Alpha user/operator reference before more runtime/tooling changes accumulate)
-**Status:** 🚧 In Progress; TASK-992 through TASK-995 complete
+**Status:** 🚧 In Progress; TASK-992 through TASK-996 complete
 **Spec:** [SPEC-075](../spec/SPEC-075-REFERENCE-SLICE-2-RUNTIME-TOOLCHAIN-MAINTENANCE.md)
 **Design:** [DESIGN-043](../design/DESIGN-043-REFERENCE-SLICE-2-RUNTIME-TOOLCHAIN-MAINTENANCE.md)
 **Plan:** [PLAN-125](PLAN-125-REFERENCE-SLICE-2-RUNTIME-TOOLCHAIN-MAINTENANCE.md)
 
-Phase 130 expands `reference/` from a narrow pilot into the first maintainable Alpha manual. It uses subsystem detail pages for implementation-backed behavior, thin reader-journey pages for basic tasks, dedicated maintenance pages for metadata and staleness procedures, and agent cards derived from canonical pages. The phase keeps `docs/` historical, preserves SPEC-071 metadata governance, and makes `verified_against.git_commit` the pre-Alpha freshness anchor for diff-based staleness inspection.
+Phase 130 expands `reference/` from a narrow pilot into the first maintainable Alpha manual. It uses subsystem detail pages for implementation-backed behavior, thin reader-journey pages for basic tasks, dedicated maintenance pages for metadata and staleness procedures, and agent cards derived from canonical pages. The phase keeps `docs/` historical, preserves SPEC-071 metadata governance, and makes `verified_against.git_commit` the pre-Alpha freshness anchor for diff-based staleness inspection. TASK-996 replaced the runtime draft targets with RuntimeKernel pages that preserve SPEC-070 integrity, admission, artifact, daemon, policy-profile, and non-goal boundaries.
 
 | Task | Description | Est. Hours | Status |
 |------|-------------|------------|--------|
@@ -3852,7 +3852,7 @@ Phase 130 expands `reference/` from a narrow pilot into the first maintainable A
 | [TASK-993](tasks/TASK-993-reference-maintenance-metadata-and-staleness.md) | Create the maintenance metadata/staleness procedure substrate before bulk pages | 10 | ✅ Complete |
 | [TASK-994](tasks/TASK-994-reference-getting-started-journey.md) | Add basic reader-journey pages for what Ash is, install, update, run, daemon, cleanup, and next steps | 10 | ✅ Complete |
 | [TASK-995](tasks/TASK-995-reference-ashgrove-and-cli-procedures.md) | Add `ash`/`ashgrove` toolchain and procedure reference pages | 14 | ✅ Complete |
-| [TASK-996](tasks/TASK-996-reference-runtime-kernel-pages.md) | Add RuntimeKernel concept and status pages | 12 | 📝 Planned |
+| [TASK-996](tasks/TASK-996-reference-runtime-kernel-pages.md) | Add RuntimeKernel concept and status pages | 12 | ✅ Complete |
 | [TASK-997](tasks/TASK-997-reference-stdlib-tower-pages.md) | Add stdlib tower reference pages for Act, Proc, Workflow, and Result | 12 | 📝 Planned |
 | [TASK-998](tasks/TASK-998-reference-agent-cards-and-context-pack.md) | Add/update agent cards, context-pack index, and common-confusion warnings | 8 | 📝 Planned |
 | [TASK-999](tasks/TASK-999-reference-slice-2-closeout.md) | Run validator/checker hardening, drift/feature/status reconciliation, broad docs checks, and independent review | 8 | 📝 Planned |

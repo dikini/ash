@@ -7,13 +7,15 @@ authority: canonical-adjacent
 status: current
 stability: alpha
 owner: reference-corpus
-last_verified: 2026-05-23
+last_verified: 2026-06-01
 verified_against:
-  git_commit: ff1f98f
+  git_commit: 9fd1b8f
   specs:
     - docs/spec/SPEC-071-REFERENCE-CORPUS-METADATA-AND-MAINTENANCE.md
+    - docs/spec/SPEC-075-REFERENCE-SLICE-2-RUNTIME-TOOLCHAIN-MAINTENANCE.md
   tasks:
     - docs/plan/tasks/TASK-953-reference-corpus-closeout-and-drift-report.md
+    - docs/plan/tasks/TASK-996-reference-runtime-kernel-pages.md
   code:
     []
   tests:
@@ -32,6 +34,8 @@ related:
     []
 refresh_trigger:
   - SPEC-071 changes
+  - SPEC-075 changes
+  - reference/runtime/** changes
   - Phase closeout changes reference policy
 ---
 
@@ -57,4 +61,4 @@ refresh_trigger:
 
 ## Next-slice recommendation
 
-Build the next slice around stdlib/tooling pages that can be checked mechanically: `reference/stdlib/{act,proc,workflow,result}.md`, `reference/tools/cli.md`, and RuntimeKernel status pages. Do not bulk-migrate the full `docs/` tree.
+Continue Reference Slice 2 around the remaining stdlib pages, derivative agent cards, and closeout evidence. RuntimeKernel status pages now exist under TASK-996; do not bulk-migrate the full `docs/` tree.

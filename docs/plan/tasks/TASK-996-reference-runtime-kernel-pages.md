@@ -1,6 +1,6 @@
 # TASK-996: Reference RuntimeKernel pages
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -76,12 +76,16 @@ commands:
         assert phrase in text.lower(), phrase
     PY
 checklist:
-  - [ ] Runtime pages created.
-  - [ ] Integrity and authority caveats preserved.
-  - [ ] Status/evidence separated from learner-facing concept pages.
-  - [ ] Non-goals are explicit.
+  - [x] Runtime pages created.
+  - [x] Integrity and authority caveats preserved.
+  - [x] Status/evidence separated from learner-facing concept pages.
+  - [x] Non-goals are explicit.
 ```
 
 ## Dependencies for Next Task
 
 TASK-998 must create a RuntimeKernel agent card from these canonical pages after they exist.
+
+## Completion Notes
+
+Completed on 2026-06-01. Replaced the TASK-994 draft runtime placeholders with substantive RuntimeKernel pages under `reference/runtime/` and added `reference/status/runtime-kernel.md`. The pages preserve SPEC-070 boundaries: file presence does not execute code, provider/resource existence is not authority, admission grants authority before user body execution, verified artifacts are source/check-summary based, reload affects future starts, and remote/multi-user daemon, distributed scheduling, production init integration, and hot-swapping running instances remain non-goals.

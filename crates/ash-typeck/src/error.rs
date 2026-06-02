@@ -97,6 +97,32 @@ pub enum ConstructorError {
         span: Span,
     },
 
+    /// `with_error` handler arms do not cover all known failure payload cases.
+    #[error(
+        "non-exhaustive with_error handler on failure payload type '{payload_type}': missing {missing}"
+    )]
+    NonExhaustiveWithErrorHandler {
+        /// Failure payload type being handled.
+        payload_type: String,
+        /// Human-readable list of missing cases.
+        missing: String,
+        /// Source span.
+        span: Span,
+    },
+
+    /// `with_error` handler coverage cannot be proven because payload type information is unavailable.
+    #[error(
+        "with_error handler coverage deferred for failure payload type '{payload_type}': {reason}"
+    )]
+    WithErrorHandlerCoverageDeferred {
+        /// Failure payload type boundary, or `<unavailable>` when no static payload channel exists.
+        payload_type: String,
+        /// Human-facing reason and guidance.
+        reason: String,
+        /// Source span.
+        span: Span,
+    },
+
     /// Unbound variable - variable not found in environment
     #[error("unbound variable: {name}")]
     UnboundVariable {

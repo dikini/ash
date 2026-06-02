@@ -4047,14 +4047,34 @@ fn pattern_type_env_from(env: &TypeEnv) -> crate::check_pattern::TypeEnv {
 fn check_with_error(env: &TypeEnv, body: &Expr, arms: &[MatchArm], span: Span) -> CheckResult {
     let body_result = check_expr(env, body);
     let body_ty = body_result.substitution.apply(&body_result.ty);
+    let failure_payload_ty = direct_failure_payload_type(env, body);
     let mut substitution = body_result.substitution.clone();
     let mut errors = body_result.errors;
 
+    check_with_error_handler_coverage(env, arms, failure_payload_ty.as_ref(), span, &mut errors);
+
     let pattern_env = pattern_type_env_from(env);
+    let payload_canonicalization = failure_payload_ty
+        .as_ref()
+        .map(|payload_ty| env.canonicalize_type_for_pattern(payload_ty));
     for arm in arms {
         let mut arm_env = env.clone();
-        let failure_payload_ty = Type::Var(TypeVar::fresh());
-        match crate::check_pattern::check_pattern(&pattern_env, &arm.pattern, &failure_payload_ty) {
+        let bindings = match payload_canonicalization.as_ref() {
+            Some(PatternCanonicalization::Matchable(canonical)) => {
+                crate::check_pattern::check_pattern_with_canonical_type(
+                    &pattern_env,
+                    &arm.pattern,
+                    canonical,
+                )
+            }
+            _ => {
+                let payload_ty = failure_payload_ty
+                    .clone()
+                    .unwrap_or_else(|| Type::Var(TypeVar::fresh()));
+                crate::check_pattern::check_pattern(&pattern_env, &arm.pattern, &payload_ty)
+            }
+        };
+        match bindings {
             Ok(bindings) => {
                 for (name, ty) in bindings {
                     arm_env.bind_variable(&name, ty);
@@ -4089,6 +4109,88 @@ fn check_with_error(env: &TypeEnv, body: &Expr, arms: &[MatchArm], span: Span) -
         substitution,
         errors,
     }
+}
+
+fn direct_failure_payload_type(env: &TypeEnv, body: &Expr) -> Option<Type> {
+    let Expr::Fail { payload, .. } = body else {
+        return None;
+    };
+
+    let payload_result = check_expr(env, payload);
+    payload_result
+        .is_ok()
+        .then(|| payload_result.substitution.apply(&payload_result.ty))
+}
+
+fn check_with_error_handler_coverage(
+    env: &TypeEnv,
+    arms: &[MatchArm],
+    failure_payload_ty: Option<&Type>,
+    span: Span,
+    errors: &mut Vec<ConstructorError>,
+) {
+    let patterns = arms
+        .iter()
+        .filter_map(|arm| lower_pattern(&arm.pattern).ok())
+        .collect::<Vec<_>>();
+
+    if patterns.iter().any(is_universal_core_pattern) {
+        return;
+    }
+
+    if patterns.is_empty() && arms.is_empty() && failure_payload_ty.is_none() {
+        errors.push(ConstructorError::WithErrorHandlerCoverageDeferred {
+            payload_type: "<unavailable>".to_string(),
+            reason: "handler has no arms; add a wildcard/default arm or provide a known closed failure payload type".to_string(),
+            span,
+        });
+        return;
+    }
+
+    let Some(payload_ty) = failure_payload_ty else {
+        if !patterns.is_empty() {
+            errors.push(ConstructorError::WithErrorHandlerCoverageDeferred {
+                payload_type: "<unavailable>".to_string(),
+                reason: "failure payload type is not tracked for this with_error body; constructor-specific handler coverage cannot be proven in this phase, so add a wildcard/default arm or handle a directly typed fail payload".to_string(),
+                span,
+            });
+        }
+        return;
+    };
+
+    match check_match_exhaustive(env, &patterns, payload_ty) {
+        MatchCoverage::Covered => {}
+        MatchCoverage::Missing(witnesses) => {
+            errors.push(ConstructorError::NonExhaustiveWithErrorHandler {
+                payload_type: payload_ty.to_string(),
+                missing: format_missing_witnesses(&witnesses),
+                span,
+            });
+        }
+        MatchCoverage::Blocked { reason, .. } => {
+            errors.push(ConstructorError::WithErrorHandlerCoverageDeferred {
+                payload_type: payload_ty.to_string(),
+                reason: format!(
+                    "failure payload constructor universe is unavailable for with_error handler coverage: {reason:?}; add a wildcard/default arm"
+                ),
+                span,
+            });
+        }
+        MatchCoverage::Unsupported { reason, .. } => {
+            errors.push(ConstructorError::WithErrorHandlerCoverageDeferred {
+                payload_type: payload_ty.to_string(),
+                reason: format!("{reason}; add a wildcard/default arm"),
+                span,
+            });
+        }
+    }
+}
+
+fn is_universal_core_pattern(pattern: &CorePattern) -> bool {
+    matches!(
+        pattern,
+        CorePattern::Wildcard | CorePattern::Variable { .. }
+    )
 }
 
 fn format_missing_witnesses(witnesses: &[CorePattern]) -> String {

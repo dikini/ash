@@ -1,6 +1,6 @@
 # TASK-1006: with_error total handler diagnostics
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -57,9 +57,9 @@ commands:
   - cargo check --workspace
 checklist:
   - [x] TASK-1001 replaced the fail-closed guard
-  - [ ] RED tests fail before implementation and pass after implementation
-  - [ ] Scope did not expand beyond SPEC-076
-  - [ ] Diagnostics are asserted where required
+  - [x] RED tests fail before implementation and pass after implementation
+  - [x] Scope did not expand beyond SPEC-076
+  - [x] Diagnostics are asserted where required
 ```
 
 ## Dependencies for Next Task
@@ -68,4 +68,12 @@ This task produces its verified slice for later tasks in [PLAN-126](../PLAN-126-
 
 ## Notes
 
-Operational-bottom handler semantics
+TASK-1006 audited the live `with_error` checker and found no general failure-effect
+payload channel in `CheckResult`; ordinary handler bodies still infer only the
+protected body result type. The implemented slice therefore enforces total
+handler coverage only when the protected body is a direct `fail payload` whose
+payload type checks to a closed ADT constructor universe. Other constructor-
+specific handler sets receive a structured
+`WithErrorHandlerCoverageDeferred` diagnostic instead of silently claiming
+coverage. Wildcard/default handler arms remain universally accepted for open
+or unavailable payload universes. Handler body type unification is preserved.

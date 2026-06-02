@@ -114,6 +114,14 @@ This phase covers:
 - `with_error` handlers when the failure payload type has a known closed constructor universe;
 - any existing total handler/dispatch form identified by the audit.
 
+TASK-1006 evidence: `ash-typeck` currently has a closed failure payload type for
+direct `with_error { fail payload } handle { ... }` bodies only. That direct
+payload path enforces handler coverage with the same wildcard/default and
+blocked-universe rules as ordinary `match`. Other `with_error` bodies do not
+carry a static failure payload channel through `CheckResult`; constructor-
+specific handler coverage is therefore explicitly deferred with a structured
+diagnostic when no wildcard/default arm proves universal coverage.
+
 `match` already has a partial implementation through SPEC-068. This phase must preserve that implementation and improve gaps discovered by the audit, especially diagnostics and nested/product-pattern limitations that can make coverage look broader than it is.
 
 Required diagnostic shape:

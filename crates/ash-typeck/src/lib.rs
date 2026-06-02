@@ -53,7 +53,12 @@ pub use smt as policy;
 
 pub use ash_core::ast::{TypeDef, VariantDef};
 pub use capability_check::*;
-pub use check_pattern::{Bindings, check_pattern};
+pub use check_pattern::{
+    Bindings, Irrefutability, IrrefutabilityBlockedReason, IrrefutabilityImpossibleReason,
+    IrrefutabilityOutcome, IrrefutabilityWitness, check_irrefutable_pattern,
+    check_irrefutable_pattern_with_canonical_type, check_irrefutable_pattern_with_canonicalization,
+    check_pattern,
+};
 pub use constraint_checking::*;
 pub use constraints::*;
 pub use effect::*;

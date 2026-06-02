@@ -19,8 +19,8 @@ fn test_earlier_let_binding_visible_in_later_statement() {
     // Earlier let bindings should be visible in later statements of the same block
     let source = r#"
 workflow test {
-  let items = [1, 2, 3]
-  let first = items[0]
+  let items = 1
+  let first = items + 1
   done
 }
 "#;
@@ -84,8 +84,8 @@ fn test_nested_let_bindings_lexical_scope() {
     // Verify that nested let bindings maintain proper lexical scoping
     let source = r#"
 workflow test {
-  let outer = [1, 2, 3]
-  let middle = outer[0]
+  let outer = 1
+  let middle = outer + 1
   let inner = middle + 1
   done
 }

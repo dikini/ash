@@ -38,9 +38,8 @@ fn variables_scope_check_run_trace_agree_on_success() {
     // A workflow with valid lexical scope - earlier bindings used in later statements
     let workflow = r#"
         workflow main {
-            let items = [1, 2, 3]
-            let first = items[0]
-            let second = items[1]
+            let first = 1
+            let second = 2
             let sum = first + second
             ret sum
         }
@@ -87,8 +86,7 @@ fn variables_scope_check_run_trace_agree_on_unbound_failure() {
     // A workflow with an unbound variable reference
     let workflow = r#"
         workflow main {
-            let items = [1, 2, 3]
-            let first = items[0]
+            let first = 1
             let sum = first + undefined_variable
             ret sum
         }

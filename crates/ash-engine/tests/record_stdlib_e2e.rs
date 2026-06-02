@@ -10,14 +10,14 @@ async fn record_stdlib_keys_e2e() {
     let dir = tmp_dir.path();
     std::fs::write(
         dir.join("main.ash"),
-        record_main_source("keys", "let r = record(\"a\", 1, \"b\", 2)\nret keys(r)"),
+        record_main_source("keys", "ret keys(record(\"a\", 1, \"b\", 2))"),
     )
     .expect("write main.ash");
     let engine = ash_engine::Engine::new().build().expect("engine builds");
     let mut workflow = engine.parse_file(dir.join("main.ash")).expect("parse");
     engine.check(&mut workflow).expect("typecheck");
     let result = engine.execute(&workflow).await.expect("execute");
-    // keys() should return the field names as strings
+    // keys() should return the field names as strings.
     match result {
         ash_core::Value::List(items) => {
             let mut keys: Vec<String> = items
@@ -43,17 +43,14 @@ async fn record_stdlib_values_e2e() {
     let dir = tmp_dir.path();
     std::fs::write(
         dir.join("main.ash"),
-        record_main_source(
-            "values",
-            "let r = record(\"a\", 1, \"b\", 2)\nret values(r)",
-        ),
+        record_main_source("values", "ret values(record(\"a\", 1, \"b\", 2))"),
     )
     .expect("write main.ash");
     let engine = ash_engine::Engine::new().build().expect("engine builds");
     let mut workflow = engine.parse_file(dir.join("main.ash")).expect("parse");
     engine.check(&mut workflow).expect("typecheck");
     let result = engine.execute(&workflow).await.expect("execute");
-    // values() returns heterogeneous values; verify it's a non-empty list
+    // values() returns heterogeneous values; verify it's a non-empty list.
     assert!(
         matches!(&result, ash_core::Value::List(items) if !items.is_empty()),
         "values() should return a non-empty List, got: {result:?}"

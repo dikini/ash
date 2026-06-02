@@ -1,6 +1,6 @@
 # TASK-1008: Runtime defensive pattern error boundary and closeout
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -15,7 +15,7 @@ Verify runtime pattern-match failure remains defensive only, reconcile status su
 
 - ✅ TASK-1000 packet exists
 - ✅ TASK-1001 audit gate completed and patched this task with focused commands
-- 📝 TASK-1002 through TASK-1007 must be complete before closeout evidence is recorded
+- ✅ TASK-1002 through TASK-1007 complete before closeout evidence is recorded
 
 ## Requirements
 
@@ -63,11 +63,11 @@ commands:
   - bash -lc "cargo doc --workspace --no-deps 2>&1 | tee /tmp/ash-plan-126-doc.log && ! grep -i '^warning:' /tmp/ash-plan-126-doc.log"
 checklist:
   - [x] TASK-1001 replaced the fail-closed guard
-  - [ ] RED tests fail before implementation and pass after implementation
-  - [ ] Scope did not expand beyond SPEC-076
-  - [ ] Diagnostics are asserted where required
-  - [ ] Broad closeout gates pass on the final diff
-  - [ ] SPEC-076/PLAN-126/PLAN-INDEX/CHANGELOG status and evidence are reconciled
+  - [x] Focused tests were added first; they passed immediately as evidence of existing defensive behavior rather than a semantic runtime change
+  - [x] Scope did not expand beyond SPEC-076
+  - [x] Diagnostics are asserted where required
+  - [x] Required focused closeout gates pass on the final diff
+  - [x] SPEC-076/PLAN-126/PLAN-INDEX/CHANGELOG status and evidence are reconciled
 ```
 
 ## Dependencies for Next Task
@@ -76,4 +76,20 @@ This is the closeout task for [PLAN-126](../PLAN-126-EXPLICIT-REFUTABLE-MATCHING
 
 ## Notes
 
-Runtime/closeout
+Runtime/closeout evidence:
+
+- `crates/ash-interp/tests/task_1008_runtime_defensive_pattern_errors.rs`
+  asserts unchecked core expression `let`, workflow `let`, and ordinary match
+  fallback keep the live defensive variants `EvalError::LetPatternBindFailed`,
+  `ExecError::PatternMatchFailed`, and `EvalError::NonExhaustiveMatch`.
+- The same interpreter test proves checked source refutable workflow binders
+  fail in type checking before runtime.
+- `crates/ash-cli/tests/task_1008_matching_diagnostics_surface.rs` proves the
+  CLI JSON check surface includes the typechecker matching diagnostic.
+- `crates/ash-lsp-core/tests/task_1008_matching_diagnostics_lsp.rs` records the
+  honest current LSP-core limitation: typecheck diagnostics are still deferred,
+  so LSP does not invent a matching diagnostic before that path is wired.
+- Broad closeout gates were run after focused remediation:
+  `cargo test --workspace` passed, and `cargo doc --workspace --no-deps`
+  completed without rustdoc warnings. Focused TASK-1008 tests, `fmt`, diff
+  whitespace, workspace check, and workspace clippy also passed.

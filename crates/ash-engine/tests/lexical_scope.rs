@@ -14,8 +14,7 @@ async fn variables_example_scope() {
         .run(
             r"
             workflow main() {
-                let items = [1, 2, 3]
-                let first = items[0]
+                let first = 1
                 ret first
             }
         ",
@@ -104,8 +103,8 @@ async fn variables_example_if_scope() {
 }
 
 #[tokio::test]
-async fn variables_example_pattern_matching() {
-    // Test that pattern matching introduces bindings
+async fn variables_example_refutable_pattern_rejected_before_runtime() {
+    // Refutable pattern matching in workflow let is rejected by typechecking.
     let engine = Engine::new().build().expect("engine builds");
 
     let result = engine
@@ -119,12 +118,12 @@ async fn variables_example_pattern_matching() {
         )
         .await;
 
+    assert!(result.is_err(), "refutable workflow let should be rejected");
+    let err_msg = result.unwrap_err().to_string();
     assert!(
-        result.is_ok(),
-        "workflow should execute: {:?}",
-        result.err()
+        err_msg.contains("non-irrefutable pattern in workflow let"),
+        "{err_msg}"
     );
-    assert_eq!(result.unwrap(), ash_core::Value::Int(3));
 }
 
 #[tokio::test]

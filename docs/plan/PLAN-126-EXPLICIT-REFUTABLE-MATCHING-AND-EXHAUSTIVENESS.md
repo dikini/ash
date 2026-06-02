@@ -10,7 +10,7 @@
 
 ---
 
-**Status:** 📝 Planned
+**Status:** ✅ Complete
 **Spec:** [SPEC-076](../spec/SPEC-076-EXPLICIT-REFUTABLE-MATCHING-AND-EXHAUSTIVENESS.md)
 **Design:** [DESIGN-044](../design/DESIGN-044-EXPLICIT-REFUTABLE-MATCHING-AND-EXHAUSTIVENESS.md)
 **Depends on:** SPEC-068 implemented MVP
@@ -28,7 +28,7 @@
 | [TASK-1005](tasks/TASK-1005-deep-exhaustiveness-and-match-error-diagnostics.md) | Harden match exhaustiveness and missing-witness diagnostics | Typeck/Exhaustiveness | 10 | ✅ Complete |
 | [TASK-1006](tasks/TASK-1006-with-error-total-handler-diagnostics.md) | Define and enforce or explicitly defer total `with_error` handler coverage | Typeck/Failure | 8 | ✅ Complete |
 | [TASK-1007](tasks/TASK-1007-if-let-and-selective-receive-explicit-refutable-contract.md) | Refine `if let ... else` as total by implicit complement and preserve selective `receive` | Typeck/Semantic | 8 | ✅ Complete |
-| [TASK-1008](tasks/TASK-1008-runtime-defensive-pattern-error-cleanup-closeout.md) | Verify runtime defensive error boundary, status surfaces, broad gates, and independent review | Runtime/Closeout | 8 | 📝 Planned |
+| [TASK-1008](tasks/TASK-1008-runtime-defensive-pattern-error-cleanup-closeout.md) | Verify runtime defensive error boundary, status surfaces, broad gates, and independent review | Runtime/Closeout | 8 | ✅ Complete |
 
 Total estimate: 70h.
 
@@ -79,7 +79,27 @@ TASK-1001 must replace all downstream fail-closed placeholder commands before TA
 - [x] Phase 131 is registered in `docs/plan/PLAN-INDEX.md`.
 - [x] CHANGELOG records the docs packet.
 - [x] TASK-1001 audit artifact exists and downstream verification guards are patched.
-- [ ] Irrefutable binder enforcement is implemented and verified.
+- [x] Irrefutable binder enforcement is implemented and verified.
 - [x] Exhaustive eliminator checks and diagnostics are implemented and verified.
 - [x] Explicit refutable forms are preserved and documented.
-- [ ] Runtime defensive pattern error boundary is verified.
+- [x] Runtime defensive pattern error boundary is verified.
+
+## Closeout evidence
+
+TASK-1008 added focused runtime-boundary and diagnostics-surface tests:
+
+- `crates/ash-interp/tests/task_1008_runtime_defensive_pattern_errors.rs`
+  asserts unchecked IR still yields `EvalError::LetPatternBindFailed`,
+  `ExecError::PatternMatchFailed`, and `EvalError::NonExhaustiveMatch` by
+  structured variant, and proves checked source refutable binders fail in
+  type checking before runtime.
+- `crates/ash-cli/tests/task_1008_matching_diagnostics_surface.rs` proves
+  `ash check --format json` surfaces the matching typechecker diagnostic.
+- `crates/ash-lsp-core/tests/task_1008_matching_diagnostics_lsp.rs` records
+  the current LSP-core typecheck diagnostic deferral while proving the direct
+  typechecker path is available.
+
+The broad closeout gates have now passed: `cargo test --workspace` completed
+successfully, and `cargo doc --workspace --no-deps` completed without rustdoc
+warnings. Focused TASK-1008 tests, `fmt`, diff whitespace, workspace check, and
+workspace clippy also passed for the final handoff.

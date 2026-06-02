@@ -97,8 +97,9 @@ workflow main {
 }
 
 #[test]
-fn test_unique_pattern_bindings_allowed() {
-    // Unique bindings in a pattern should be allowed
+fn test_unique_refutable_list_pattern_rejected_for_irrefutability_not_duplicates() {
+    // Unique bindings are not a duplicate-binding error, but list-pattern
+    // workflow lets are still refutable and must be rejected statically.
     let source = r#"
 workflow main {
   let [x, y] = [1, 2]
@@ -108,10 +109,12 @@ workflow main {
 
     let result = parse_and_check(source);
     assert!(
-        result.is_ok(),
-        "Unique bindings in pattern should be allowed: {:?}",
-        result.err()
+        result.is_err(),
+        "Refutable list let should be rejected before runtime"
     );
+    let err_msg = result.unwrap_err().to_string();
+    assert!(err_msg.contains("non-irrefutable pattern in workflow let"));
+    assert!(!err_msg.contains("duplicate"));
 }
 
 #[test]
@@ -133,8 +136,9 @@ workflow main {
 }
 
 #[test]
-fn test_nested_pattern_unique_allowed() {
-    // Unique bindings in nested patterns should be allowed
+fn test_nested_unique_refutable_list_pattern_rejected_for_irrefutability_not_duplicates() {
+    // Unique nested bindings are not duplicate-binding errors, but nested
+    // list-pattern workflow lets are still refutable and must be rejected.
     let source = r#"
 workflow main {
   let [[x, y], [z, w]] = [[1, 2], [3, 4]]
@@ -144,8 +148,10 @@ workflow main {
 
     let result = parse_and_check(source);
     assert!(
-        result.is_ok(),
-        "Unique bindings in nested pattern should be allowed: {:?}",
-        result.err()
+        result.is_err(),
+        "Nested refutable list let should be rejected before runtime"
     );
+    let err_msg = result.unwrap_err().to_string();
+    assert!(err_msg.contains("non-irrefutable pattern in workflow let"));
+    assert!(!err_msg.contains("duplicate"));
 }

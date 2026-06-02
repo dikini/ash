@@ -143,7 +143,12 @@ fn variant_patterns_reject_fields_for_unit_variants() {
     let error = check_pattern(&env, &pattern, &Type::Var(TypeVar::fresh())).unwrap_err();
     let message = error.to_string();
 
-    assert!(message.contains("unknown field"));
+    assert!(
+        message.contains("does not have record payload")
+            || message.contains("unknown field")
+            || message.contains("payload shape mismatch"),
+        "expected unit-variant payload rejection, got: {message}"
+    );
 }
 
 #[test]

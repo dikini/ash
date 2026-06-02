@@ -1,6 +1,6 @@
 # SPEC-076: Explicit Refutable Matching and Exhaustiveness
 
-**Status:** Draft
+**Status:** Implemented MVP
 **Date:** 2026-06-02
 **Promotes:** [DESIGN-044](../design/DESIGN-044-EXPLICIT-REFUTABLE-MATCHING-AND-EXHAUSTIVENESS.md)
 **Builds on:** [SPEC-068](SPEC-068-PATTERN-EXHAUSTIVENESS-CANONICALIZATION.md)
@@ -187,6 +187,17 @@ Errors must include:
 
 Runtime pattern errors must remain possible only for unchecked IR, host-created values, or defensive interpreter boundaries. A checked Ash source program must not normally reach expression-level let binding failures such as `EvalError::LetPatternBindFailed`, workflow execution failures such as `ExecError::PatternMatchFailed`, or match fallback failures such as `EvalError::NonExhaustiveMatch` for cases that the source type checker is responsible for rejecting or proving exhaustive. TASK-1001 must refresh these exact variant names against live code before TASK-1008 records evidence.
 
+TASK-1008 evidence keeps those runtime errors as defensive interpreter boundaries:
+`crates/ash-interp/tests/task_1008_runtime_defensive_pattern_errors.rs`
+constructs unchecked core IR and asserts `EvalError::LetPatternBindFailed`,
+`ExecError::PatternMatchFailed`, and `EvalError::NonExhaustiveMatch` by
+structured variant. The same test proves checked source refutable binders fail
+in type checking before runtime. `crates/ash-cli/tests/task_1008_matching_diagnostics_surface.rs`
+proves `ash check --format json` surfaces the matching typechecker diagnostic.
+`crates/ash-lsp-core/tests/task_1008_matching_diagnostics_lsp.rs` records that
+`ash-lsp-core` still has typecheck diagnostics deferred while the direct
+typechecker path is available; this does not expand LSP behavior in this phase.
+
 ## 7. Cross-crate ownership
 
 | Crate | Ownership |
@@ -222,6 +233,15 @@ Runtime pattern errors must remain possible only for unchecked IR, host-created 
 | A76-8g | `if let ... else` complement branch relies on negative type refinement | no negative refinement is required or exposed in this phase; else checks under original environment | TASK-1007 |
 | A76-9 | selective `receive` with non-covering arms | accepted under current selective semantics, with an audit note and tests proving no accidental total-receive tightening | TASK-1007 |
 | A76-10 | checked source no longer reaches runtime binder failures such as `EvalError::LetPatternBindFailed` or workflow `ExecError::PatternMatchFailed` for covered binder cases | verified by defensive runtime tests and typecheck rejections | TASK-1008 |
+
+### Acceptance evidence
+
+- A76-1 through A76-3a: `crates/ash-typeck/tests/task_1002_irrefutable_pattern_api.rs` and `crates/ash-typeck/tests/task_1003_let_irrefutability.rs`.
+- A76-4 and selective-source binder boundaries: `crates/ash-typeck/tests/task_1004_workflow_binder_irrefutability.rs`.
+- A76-5 through A76-6b: `crates/ash-typeck/tests/task_1005_match_exhaustiveness.rs`.
+- A76-7: `crates/ash-typeck/tests/task_1006_with_error_total_handlers.rs`.
+- A76-8 through A76-9: `crates/ash-parser/tests/task_1007_if_let_parser_entrypoints.rs`, `crates/ash-typeck/tests/task_1007_if_let_receive_contract.rs`, and `crates/ash-interp/tests/task_1007_selective_receive_contract.rs`.
+- A76-10 and the defensive runtime boundary: `crates/ash-interp/tests/task_1008_runtime_defensive_pattern_errors.rs`, `crates/ash-cli/tests/task_1008_matching_diagnostics_surface.rs`, and `crates/ash-lsp-core/tests/task_1008_matching_diagnostics_lsp.rs`.
 
 ## 9. Implementation tasks
 

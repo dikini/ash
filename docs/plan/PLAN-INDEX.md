@@ -306,7 +306,7 @@ Update this section as tasks complete:
 | 128 | 12 | 12 | ✅ Complete; SPEC-073 Implemented MVP |
 | 129 | 5 | 5 | ✅ Complete; SPEC-074 Accepted/Implemented; TASK-991 follow-up fixed |
 | 130 | 8 | 8 | ✅ Complete; SPEC-075 Implemented MVP |
-| 131 | 9 | 1 | 📝 Planned |
+| 131 | 9 | 9 | ✅ Complete |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -3870,7 +3870,7 @@ Phase 130 expands `reference/` from a narrow pilot into the first maintainable A
 ## Phase 131: Explicit Refutable Matching and Exhaustiveness
 
 **Priority:** High (static-first correctness: implicit pattern failure must not survive checked source)
-**Status:** 📝 Planned
+**Status:** ✅ Complete
 **Spec:** [SPEC-076](../spec/SPEC-076-EXPLICIT-REFUTABLE-MATCHING-AND-EXHAUSTIVENESS.md)
 **Design:** [DESIGN-044](../design/DESIGN-044-EXPLICIT-REFUTABLE-MATCHING-AND-EXHAUSTIVENESS.md)
 **Plan:** [PLAN-126](PLAN-126-EXPLICIT-REFUTABLE-MATCHING-AND-EXHAUSTIVENESS.md)
@@ -3887,7 +3887,7 @@ Phase 131 bans implicit refutable matching. It requires type-aware irrefutable p
 | [TASK-1005](tasks/TASK-1005-deep-exhaustiveness-and-match-error-diagnostics.md) | Harden match exhaustiveness and missing-witness diagnostics | 10 | ✅ Complete |
 | [TASK-1006](tasks/TASK-1006-with-error-total-handler-diagnostics.md) | Define and enforce or explicitly defer total `with_error` handler coverage | 8 | ✅ Complete |
 | [TASK-1007](tasks/TASK-1007-if-let-and-selective-receive-explicit-refutable-contract.md) | Refine `if let ... else` as total by implicit complement and preserve selective `receive` | 8 | ✅ Complete |
-| [TASK-1008](tasks/TASK-1008-runtime-defensive-pattern-error-cleanup-closeout.md) | Verify runtime defensive pattern boundary, status surfaces, broad gates, and independent review | 8 | 📝 Planned |
+| [TASK-1008](tasks/TASK-1008-runtime-defensive-pattern-error-cleanup-closeout.md) | Verify runtime defensive pattern boundary, status surfaces, broad gates, and independent review | 8 | ✅ Complete |
 
 **Decision gates:**
 - D1: TASK-1001 is a hard audit gate and must replace downstream fail-closed placeholder verification before Rust implementation starts.

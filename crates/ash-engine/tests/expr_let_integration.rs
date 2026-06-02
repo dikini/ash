@@ -164,11 +164,15 @@ async fn task652_fn_let_list_pattern() {
         .await;
 
     assert!(
-        result.is_ok(),
-        "list pattern in fn let should work: {:?}",
-        result.err()
+        result.is_err(),
+        "refutable list pattern in fn let should be rejected before runtime"
     );
-    assert_eq!(result.unwrap(), ash_core::Value::Int(42));
+    let err_msg = result.unwrap_err().to_string();
+    assert!(
+        err_msg.contains("non-irrefutable pattern in let"),
+        "{err_msg}"
+    );
+    assert!(err_msg.contains("use match or if let"), "{err_msg}");
 }
 
 // ── 5. Let binding shadowing in fn body ──────────────────────────────
@@ -208,7 +212,7 @@ async fn task652_fn_let_shadowing_in_fn_body() {
 async fn task652_fn_let_pattern_bind_failure() {
     let engine = Engine::new().build().expect("engine builds");
 
-    // `let [a, b] = 99` — list pattern vs int value → LetPatternBindFailed
+    // `let [a, b] = 99` is rejected by source typechecking before runtime.
     let result = engine
         .run(
             r"
@@ -230,8 +234,8 @@ async fn task652_fn_let_pattern_bind_failure() {
     );
     let err_msg = format!("{}", result.unwrap_err());
     assert!(
-        err_msg.contains("pattern bind failed"),
-        "error should mention pattern bind failure: {err_msg}"
+        err_msg.contains("non-irrefutable pattern in let"),
+        "error should mention static irrefutability rejection: {err_msg}"
     );
 }
 

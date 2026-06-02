@@ -106,10 +106,19 @@ impl CheckResult {
         }
     }
 
-    /// Check if the result is successful (no errors)
+    /// Check if the result has no fatal errors.
     pub fn is_ok(&self) -> bool {
-        self.errors.is_empty()
+        self.errors.iter().all(ConstructorError::is_non_fatal)
     }
+
+    /// Check if the result contains diagnostics that should stop type propagation.
+    pub fn has_fatal_errors(&self) -> bool {
+        !self.is_ok()
+    }
+}
+
+fn has_fatal_diagnostics(errors: &[ConstructorError]) -> bool {
+    !errors.iter().all(ConstructorError::is_non_fatal)
 }
 
 fn pattern_type_env_from_type_env(env: &TypeEnv) -> PatternTypeEnv {
@@ -897,7 +906,7 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
             expr,
             then_branch,
             else_branch,
-            ..
+            span,
         } => {
             let matched_result = check_expr(env, expr);
             if !matched_result.is_ok() {
@@ -905,20 +914,86 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
             }
 
             let matched_ty = matched_result.substitution.apply(&matched_result.ty);
-            let mut then_env = env.clone();
-            if let Ok(bindings) = crate::check_pattern::check_pattern(
-                &crate::check_pattern::TypeEnv::new(),
+            let pattern_env = pattern_type_env_from_type_env(env);
+            let canonicalization = env.canonicalize_type_for_pattern(&matched_ty);
+            let irrefutability = check_irrefutable_pattern_with_canonicalization(
+                &pattern_env,
                 pattern,
                 &matched_ty,
-            ) {
-                for (name, ty) in bindings {
-                    then_env.bind_variable(&name, ty);
+                &canonicalization,
+            );
+
+            let mut diagnostics = Vec::new();
+            match &irrefutability.outcome {
+                IrrefutabilityOutcome::Irrefutable => {
+                    diagnostics.push(ConstructorError::UnreachableIfLetElse {
+                        reason: format!(
+                            "pattern {} is irrefutable for {}; else branch is unreachable",
+                            format_surface_pattern(pattern),
+                            matched_ty
+                        ),
+                        span: surface_pattern_span(pattern, *span),
+                    });
                 }
+                IrrefutabilityOutcome::Refutable { .. } => {}
+                IrrefutabilityOutcome::Impossible { .. } => {
+                    return CheckResult::error(ConstructorError::UnsupportedExpression {
+                        kind: format!(
+                            "if let pattern {} over type {} is impossible: {}",
+                            format_surface_pattern(pattern),
+                            matched_ty,
+                            format_irrefutable_let_error(
+                                "if let",
+                                pattern,
+                                &matched_ty,
+                                &irrefutability.outcome
+                            )
+                        ),
+                        span: surface_pattern_span(pattern, *span),
+                    });
+                }
+                IrrefutabilityOutcome::Blocked { .. } => {
+                    if let Err(error) =
+                        crate::check_pattern::check_pattern(&pattern_env, pattern, &matched_ty)
+                    {
+                        return CheckResult::error(ConstructorError::UnsupportedExpression {
+                            kind: format!(
+                                "if let pattern {} over type {} is impossible: {}",
+                                format_surface_pattern(pattern),
+                                matched_ty,
+                                error
+                            ),
+                            span: surface_pattern_span(pattern, *span),
+                        });
+                    }
+
+                    return CheckResult::error(ConstructorError::UnsupportedExpression {
+                        kind: format!(
+                            "if let pattern {} over type {} is blocked: {}",
+                            format_surface_pattern(pattern),
+                            matched_ty,
+                            format_irrefutable_let_error(
+                                "if let",
+                                pattern,
+                                &matched_ty,
+                                &irrefutability.outcome
+                            )
+                        ),
+                        span: surface_pattern_span(pattern, *span),
+                    });
+                }
+            }
+
+            let mut then_env = env.clone();
+            for (name, ty) in irrefutability.bindings {
+                then_env.bind_variable(&name, ty);
             }
 
             let then_result = check_expr(&then_env, then_branch);
             let else_result = check_expr(env, else_branch);
-            merge_branch_results(then_result, else_result)
+            let mut merged = merge_if_let_branch_results(then_result, else_result, *span);
+            merged.errors.extend(diagnostics);
+            merged
         }
         Expr::Match {
             scrutinee, arms, ..
@@ -944,14 +1019,12 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
             let index_result = check_expr(env, index);
 
             let mut errors: Vec<ConstructorError> = Vec::new();
-            if !base_result.is_ok() {
-                errors.extend(base_result.errors);
-            }
-            if !index_result.is_ok() {
-                errors.extend(index_result.errors);
-            }
+            let base_has_fatal = base_result.has_fatal_errors();
+            let index_has_fatal = index_result.has_fatal_errors();
+            errors.extend(base_result.errors);
+            errors.extend(index_result.errors);
 
-            if !errors.is_empty() {
+            if base_has_fatal || index_has_fatal {
                 return CheckResult {
                     ty: Type::Var(TypeVar::fresh()),
                     substitution: base_result.substitution.compose(&index_result.substitution),
@@ -1045,14 +1118,12 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
 
             for arg in args {
                 let arg_result = check_expr(env, arg);
-                if !arg_result.is_ok() {
-                    errors.extend(arg_result.errors);
-                }
+                errors.extend(arg_result.errors);
                 substitution = substitution.compose(&arg_result.substitution);
                 arg_types.push(substitution.apply(&arg_result.ty));
             }
 
-            if !errors.is_empty() {
+            if has_fatal_diagnostics(&errors) {
                 return CheckResult {
                     ty: Type::Var(TypeVar::fresh()),
                     substitution,
@@ -1120,11 +1191,15 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
                     }
                 }
 
-                return CheckResult::success(Type::Constructor {
-                    name: crate::QualifiedName::root("Act"),
-                    args: vec![value_ty],
-                    kind: crate::Kind::Type,
-                });
+                return CheckResult {
+                    ty: Type::Constructor {
+                        name: crate::QualifiedName::root("Act"),
+                        args: vec![value_ty],
+                        kind: crate::Kind::Type,
+                    },
+                    substitution,
+                    errors,
+                };
             }
 
             match env.lookup_call_target(module.as_deref(), func.as_ref()) {
@@ -1136,7 +1211,7 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
                                 Some(Ok(ret_ty)) => CheckResult {
                                     ty: ret_ty,
                                     substitution,
-                                    errors: Vec::new(),
+                                    errors,
                                 },
                                 Some(Err(_unify_err)) => {
                                     CheckResult::error(ConstructorError::UnsupportedExpression {
@@ -1190,7 +1265,7 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
                                 Ok(return_type) => CheckResult {
                                     ty: return_type,
                                     substitution,
-                                    errors: Vec::new(),
+                                    errors,
                                 },
                                 Err(err) => CheckResult::error(
                                     ConstructorError::InvalidInterfaceMethodCall {
@@ -1248,7 +1323,7 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
                     let combined_sub = combined_sub.compose(&else_result.substitution);
                     errors.extend(else_result.errors.clone());
 
-                    if !errors.is_empty() {
+                    if has_fatal_diagnostics(&errors) {
                         return CheckResult {
                             ty: Type::Var(TypeVar::fresh()),
                             substitution: combined_sub,
@@ -1262,19 +1337,26 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
                         Ok(sub) => CheckResult {
                             ty: sub.apply(&then_ty),
                             substitution: combined_sub.compose(&sub),
-                            errors: Vec::new(),
+                            errors,
                         },
-                        Err(_) => CheckResult::error(ConstructorError::UnsupportedExpression {
-                            kind: format!(
-                                "If expression: branch types differ ({} vs {})",
-                                then_ty, else_ty
-                            ),
-                            span: *span,
-                        }),
+                        Err(_) => {
+                            errors.push(ConstructorError::UnsupportedExpression {
+                                kind: format!(
+                                    "If expression: branch types differ ({} vs {})",
+                                    then_ty, else_ty
+                                ),
+                                span: *span,
+                            });
+                            CheckResult {
+                                ty: Type::Var(TypeVar::fresh()),
+                                substitution: combined_sub,
+                                errors,
+                            }
+                        }
                     }
                 }
                 None => {
-                    if !errors.is_empty() {
+                    if has_fatal_diagnostics(&errors) {
                         return CheckResult {
                             ty: Type::Null,
                             substitution: combined_sub,
@@ -1287,15 +1369,22 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
                         Ok(sub) => CheckResult {
                             ty: Type::Null,
                             substitution: combined_sub.compose(&sub),
-                            errors: Vec::new(),
+                            errors,
                         },
-                        Err(_) => CheckResult::error(ConstructorError::UnsupportedExpression {
-                            kind: format!(
-                                "If expression without else requires then branch to have type Null, found {}",
-                                then_ty
-                            ),
-                            span: *span,
-                        }),
+                        Err(_) => {
+                            errors.push(ConstructorError::UnsupportedExpression {
+                                kind: format!(
+                                    "If expression without else requires then branch to have type Null, found {}",
+                                    then_ty
+                                ),
+                                span: *span,
+                            });
+                            CheckResult {
+                                ty: Type::Var(TypeVar::fresh()),
+                                substitution: combined_sub,
+                                errors,
+                            }
+                        }
                     }
                 }
             }
@@ -1324,8 +1413,9 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
                     } => {
                         let expr_result = check_expr(&block_env, expr);
                         substitution = substitution.compose(&expr_result.substitution);
-                        if !expr_result.is_ok() {
-                            errors.extend(expr_result.errors);
+                        let expr_has_fatal = expr_result.has_fatal_errors();
+                        errors.extend(expr_result.errors);
+                        if expr_has_fatal {
                             continue;
                         }
                         let expr_ty = substitution.apply(&expr_result.ty);
@@ -1346,7 +1436,7 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
                 }
             }
 
-            if !errors.is_empty() {
+            if has_fatal_diagnostics(&errors) {
                 return CheckResult {
                     ty: Type::Var(TypeVar::fresh()),
                     substitution,
@@ -1359,23 +1449,24 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
                 Some(tail) => {
                     let tail_result = check_expr(&block_env, tail);
                     let combined_sub = substitution.compose(&tail_result.substitution);
-                    if !tail_result.is_ok() {
+                    if tail_result.has_fatal_errors() {
                         return CheckResult {
                             ty: Type::Var(TypeVar::fresh()),
                             substitution: combined_sub,
                             errors: tail_result.errors,
                         };
                     }
+                    errors.extend(tail_result.errors);
                     CheckResult {
                         ty: combined_sub.apply(&tail_result.ty),
                         substitution: combined_sub,
-                        errors: Vec::new(),
+                        errors,
                     }
                 }
                 None => CheckResult {
                     ty: Type::Null,
                     substitution,
-                    errors: Vec::new(),
+                    errors,
                 },
             }
         }
@@ -1469,7 +1560,7 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
                 arg_types.push(substitution.apply(&arg_result.ty));
             }
 
-            if !errors.is_empty() {
+            if has_fatal_diagnostics(&errors) {
                 return CheckResult {
                     ty: Type::Var(TypeVar::fresh()),
                     substitution,
@@ -1482,7 +1573,7 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
                 Some(Ok(ret_ty)) => CheckResult {
                     ty: ret_ty,
                     substitution,
-                    errors: Vec::new(),
+                    errors,
                 },
                 Some(Err(e)) => CheckResult::error(ConstructorError::UnsupportedExpression {
                     kind: format!("FnApply: type mismatch applying args to {func_ty}: {e}"),
@@ -3825,8 +3916,9 @@ fn check_capability_binding_operation_call(
     for (idx, (arg, expected_ty)) in args.iter().zip(operation.params.iter()).enumerate() {
         let arg_result = check_expr(env, arg);
         substitution = substitution.compose(&arg_result.substitution);
+        let arg_has_fatal = arg_result.has_fatal_errors();
         errors.extend(arg_result.errors);
-        if !errors.is_empty() {
+        if arg_has_fatal {
             continue;
         }
         let actual_ty = substitution.apply(&arg_result.ty);
@@ -3846,7 +3938,7 @@ fn check_capability_binding_operation_call(
         }
     }
 
-    if !errors.is_empty() {
+    if has_fatal_diagnostics(&errors) {
         return Some(CheckResult {
             ty: Type::Var(TypeVar::fresh()),
             substitution,
@@ -3857,7 +3949,7 @@ fn check_capability_binding_operation_call(
     Some(CheckResult {
         ty: substitution.apply(&operation.return_type),
         substitution,
-        errors: Vec::new(),
+        errors,
     })
 }
 
@@ -3893,7 +3985,7 @@ fn get_expr_span(expr: &Expr) -> Span {
 /// Check a field-access expression against record types.
 fn check_field_access(env: &TypeEnv, base: &Expr, field: &str, span: Span) -> CheckResult {
     let base_result = check_expr(env, base);
-    if !base_result.is_ok() {
+    if base_result.has_fatal_errors() {
         return base_result;
     }
 
@@ -3903,7 +3995,7 @@ fn check_field_access(env: &TypeEnv, base: &Expr, field: &str, span: Span) -> Ch
             Some((_, field_ty)) => CheckResult {
                 ty: base_result.substitution.apply(field_ty),
                 substitution: base_result.substitution,
-                errors: Vec::new(),
+                errors: base_result.errors,
             },
             None => CheckResult::error(ConstructorError::MissingRecordField {
                 field: field.to_string(),
@@ -3947,7 +4039,7 @@ fn infer_list_literal_type(items: &[Literal]) -> Type {
 
 fn check_unary(env: &TypeEnv, op: UnaryOp, operand: &Expr) -> CheckResult {
     let operand_result = check_expr(env, operand);
-    if !operand_result.is_ok() {
+    if operand_result.has_fatal_errors() {
         return operand_result;
     }
 
@@ -3968,15 +4060,18 @@ fn check_binary(env: &TypeEnv, op: BinaryOp, left: &Expr, right: &Expr) -> Check
     let left_result = check_expr(env, left);
     let right_result = check_expr(env, right);
 
-    if !left_result.is_ok() || !right_result.is_ok() {
+    let errors: Vec<ConstructorError> = left_result
+        .errors
+        .clone()
+        .into_iter()
+        .chain(right_result.errors.clone())
+        .collect();
+
+    if has_fatal_diagnostics(&errors) {
         return CheckResult {
             ty: Type::Var(TypeVar::fresh()),
             substitution: left_result.substitution.compose(&right_result.substitution),
-            errors: left_result
-                .errors
-                .into_iter()
-                .chain(right_result.errors)
-                .collect(),
+            errors,
         };
     }
 
@@ -4009,15 +4104,15 @@ fn check_binary(env: &TypeEnv, op: BinaryOp, left: &Expr, right: &Expr) -> Check
     CheckResult {
         ty,
         substitution: left_result.substitution.compose(&right_result.substitution),
-        errors: Vec::new(),
+        errors,
     }
 }
 
 fn merge_branch_results(left: CheckResult, right: CheckResult) -> CheckResult {
     let substitution = left.substitution.compose(&right.substitution);
-    let errors: Vec<ConstructorError> = left.errors.into_iter().chain(right.errors).collect();
+    let mut errors: Vec<ConstructorError> = left.errors.into_iter().chain(right.errors).collect();
 
-    if !errors.is_empty() {
+    if has_fatal_diagnostics(&errors) {
         return CheckResult {
             ty: Type::Var(TypeVar::fresh()),
             substitution,
@@ -4025,14 +4120,61 @@ fn merge_branch_results(left: CheckResult, right: CheckResult) -> CheckResult {
         };
     }
 
-    let ty = unify(&left.ty, &right.ty)
-        .map(|subst| subst.apply(&left.ty))
-        .unwrap_or(Type::Var(TypeVar::fresh()));
+    match unify(&left.ty, &right.ty) {
+        Ok(subst) => CheckResult {
+            ty: subst.apply(&left.ty),
+            substitution: substitution.compose(&subst),
+            errors,
+        },
+        Err(_) => {
+            errors.push(ConstructorError::UnsupportedExpression {
+                kind: format!(
+                    "branch type mismatch: expected {}, got {}",
+                    left.ty, right.ty
+                ),
+                span: Span::default(),
+            });
+            CheckResult {
+                ty: Type::Var(TypeVar::fresh()),
+                substitution,
+                errors,
+            }
+        }
+    }
+}
 
-    CheckResult {
-        ty,
-        substitution,
-        errors: Vec::new(),
+fn merge_if_let_branch_results(left: CheckResult, right: CheckResult, span: Span) -> CheckResult {
+    let substitution = left.substitution.compose(&right.substitution);
+    let mut errors: Vec<ConstructorError> = left.errors.into_iter().chain(right.errors).collect();
+
+    if !errors.iter().all(ConstructorError::is_non_fatal) {
+        return CheckResult {
+            ty: Type::Var(TypeVar::fresh()),
+            substitution,
+            errors,
+        };
+    }
+
+    match unify(&left.ty, &right.ty) {
+        Ok(subst) => CheckResult {
+            ty: subst.apply(&left.ty),
+            substitution: substitution.compose(&subst),
+            errors,
+        },
+        Err(_) => {
+            errors.push(ConstructorError::UnsupportedExpression {
+                kind: format!(
+                    "if let branch type mismatch: expected {}, got {}",
+                    left.ty, right.ty
+                ),
+                span,
+            });
+            CheckResult {
+                ty: Type::Var(TypeVar::fresh()),
+                substitution,
+                errors,
+            }
+        }
     }
 }
 

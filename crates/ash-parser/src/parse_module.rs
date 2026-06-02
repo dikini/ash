@@ -10,7 +10,7 @@ use winnow::stream::Stream;
 use crate::combinators::keyword;
 use crate::input::ParseInput;
 use crate::module::{ModuleDecl, ModuleSource};
-use crate::parse_expr::{expr, parse_fn_expr_body_pub};
+use crate::parse_expr::{expr, parse_fn_expr_body_pub, parse_if_let_expr};
 use crate::parse_utils::{
     parse_kind_annotation, skip_whitespace_and_comments, starts_with_kind_syntax,
 };
@@ -3202,6 +3202,17 @@ fn parse_fn_block_expr(input: &mut ParseInput) -> ModalResult<Expr> {
 /// (which handles act blocks, closures, and all other expression forms).
 fn parse_fn_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     skip_whitespace_and_comments(input);
+
+    // `if let` is its own value-producing expression. Dispatch it before the
+    // ordinary `if` parser so the `let` keyword is not parsed as a condition.
+    if starts_with_keyword(input, "if") {
+        let mut lookahead = input.clone();
+        let _ = keyword("if").parse_next(&mut lookahead)?;
+        skip_whitespace_and_comments(&mut lookahead);
+        if starts_with_keyword(&lookahead, "let") {
+            return parse_if_let_expr(input);
+        }
+    }
 
     // Try if expression
     if starts_with_keyword(input, "if") {

@@ -1,6 +1,6 @@
 # TASK-1007: If-let implicit-complement and selective receive contract
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -15,7 +15,7 @@ Treat `if let ... else` as a total implicit-complement eliminator while preservi
 
 - ✅ TASK-1000 packet exists
 - ✅ TASK-1001 audit gate completed and patched this task with focused commands
-- 📝 TASK-1002 through TASK-1006 must complete before this task finalizes explicit-complement/refutable-form behavior
+- ✅ TASK-1002 through TASK-1006 complete before this task finalizes explicit-complement/refutable-form behavior
 
 ## Requirements
 
@@ -64,9 +64,9 @@ commands:
   - cargo check --workspace
 checklist:
   - [x] TASK-1001 replaced the fail-closed guard
-  - [ ] RED tests fail before implementation and pass after implementation
-  - [ ] Scope did not expand beyond SPEC-076
-  - [ ] Diagnostics are asserted where required
+  - [x] RED tests fail before implementation and pass after implementation
+  - [x] Scope did not expand beyond SPEC-076
+  - [x] Diagnostics are asserted where required
 ```
 
 ## Dependencies for Next Task

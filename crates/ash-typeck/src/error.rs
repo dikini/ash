@@ -123,6 +123,15 @@ pub enum ConstructorError {
         span: Span,
     },
 
+    /// Non-fatal diagnostic for an accepted `if let` whose else branch cannot be reached.
+    #[error("unreachable if let else branch: {reason}")]
+    UnreachableIfLetElse {
+        /// Human-readable reason and rewrite guidance.
+        reason: String,
+        /// Source span.
+        span: Span,
+    },
+
     /// Unbound variable - variable not found in environment
     #[error("unbound variable: {name}")]
     UnboundVariable {
@@ -193,6 +202,13 @@ pub enum ConstructorError {
         /// Source span
         span: Span,
     },
+}
+
+impl ConstructorError {
+    /// Returns true for diagnostics that should not make a check result fail.
+    pub fn is_non_fatal(&self) -> bool {
+        matches!(self, Self::UnreachableIfLetElse { .. })
+    }
 }
 
 /// Structured proposition diagnostic families from SPEC-064 §11.

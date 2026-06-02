@@ -27,7 +27,7 @@
 | [TASK-1004](tasks/TASK-1004-workflow-and-operational-binder-irrefutable-enforcement.md) | Enforce irrefutable patterns for workflow/observe/spawn/split/loop binders | Typeck/Workflow | 10 | ✅ Complete |
 | [TASK-1005](tasks/TASK-1005-deep-exhaustiveness-and-match-error-diagnostics.md) | Harden match exhaustiveness and missing-witness diagnostics | Typeck/Exhaustiveness | 10 | ✅ Complete |
 | [TASK-1006](tasks/TASK-1006-with-error-total-handler-diagnostics.md) | Define and enforce or explicitly defer total `with_error` handler coverage | Typeck/Failure | 8 | ✅ Complete |
-| [TASK-1007](tasks/TASK-1007-if-let-and-selective-receive-explicit-refutable-contract.md) | Refine `if let ... else` as total by implicit complement and preserve selective `receive` | Typeck/Semantic | 8 | 📝 Planned |
+| [TASK-1007](tasks/TASK-1007-if-let-and-selective-receive-explicit-refutable-contract.md) | Refine `if let ... else` as total by implicit complement and preserve selective `receive` | Typeck/Semantic | 8 | ✅ Complete |
 | [TASK-1008](tasks/TASK-1008-runtime-defensive-pattern-error-cleanup-closeout.md) | Verify runtime defensive error boundary, status surfaces, broad gates, and independent review | Runtime/Closeout | 8 | 📝 Planned |
 
 Total estimate: 70h.
@@ -81,5 +81,5 @@ TASK-1001 must replace all downstream fail-closed placeholder commands before TA
 - [x] TASK-1001 audit artifact exists and downstream verification guards are patched.
 - [ ] Irrefutable binder enforcement is implemented and verified.
 - [x] Exhaustive eliminator checks and diagnostics are implemented and verified.
-- [ ] Explicit refutable forms are preserved and documented.
+- [x] Explicit refutable forms are preserved and documented.
 - [ ] Runtime defensive pattern error boundary is verified.

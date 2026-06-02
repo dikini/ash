@@ -15,6 +15,7 @@ impl AshLspError for crate::error::ConstructorError {
                 Self::NonExhaustiveMatch { span, .. } => span,
                 Self::NonExhaustiveWithErrorHandler { span, .. } => span,
                 Self::WithErrorHandlerCoverageDeferred { span, .. } => span,
+                Self::UnreachableIfLetElse { span, .. } => span,
                 Self::UnboundVariable { span, .. } => span,
                 Self::NotIterable { span, .. } => span,
                 Self::MissingRecordField { span, .. } => span,
@@ -28,7 +29,11 @@ impl AshLspError for crate::error::ConstructorError {
     }
 
     fn severity(&self) -> Severity {
-        Severity::Error
+        if self.is_non_fatal() {
+            Severity::Warning
+        } else {
+            Severity::Error
+        }
     }
 
     fn code(&self) -> Option<DiagnosticCode> {
@@ -43,6 +48,7 @@ impl AshLspError for crate::error::ConstructorError {
                 Self::NonExhaustiveMatch { .. } => "E106",
                 Self::NonExhaustiveWithErrorHandler { .. } => "E114",
                 Self::WithErrorHandlerCoverageDeferred { .. } => "E115",
+                Self::UnreachableIfLetElse { .. } => "W116",
                 Self::UnboundVariable { .. } => "E107",
                 Self::NotIterable { .. } => "E108",
                 Self::MissingRecordField { .. } => "E109",

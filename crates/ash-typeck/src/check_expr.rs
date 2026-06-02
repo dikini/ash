@@ -10,7 +10,7 @@ use crate::check_pattern::{
     check_irrefutable_pattern_with_canonicalization,
 };
 use crate::error::ConstructorError;
-use crate::exhaustiveness::{Coverage, check_exhaustive, check_exhaustive_canonical};
+use crate::exhaustiveness::{MatchCoverage, check_match_exhaustive};
 use crate::type_env::{
     PatternCanonicalization, PatternCanonicalizationBlockedReason, TypeEnv, TypeInfo, VariantIndex,
     VariantInfo, WorkflowIntrinsic,
@@ -4168,43 +4168,6 @@ fn collect_top_level_variant_pattern_names(arms: &[MatchArm]) -> Vec<String> {
     names
 }
 
-#[allow(clippy::collapsible_if)]
-fn resolve_enum_type_def_for_match<'a>(
-    env: &'a TypeEnv,
-    scrutinee: &Expr,
-    arms: &[MatchArm],
-) -> Option<&'a TypeDef> {
-    if let Expr::Constructor { name, .. } = scrutinee {
-        if let Some((type_name, _)) = env.lookup_constructor(name.as_ref()) {
-            if let Some(def) = env.lookup_type(type_name.as_str()) {
-                if matches!(&def.body, TypeBody::Enum(_)) {
-                    return Some(def);
-                }
-            }
-        }
-    }
-    for arm in arms {
-        if let Pattern::Variant { name, .. } = &arm.pattern {
-            if let Some((type_name, _)) = env.lookup_constructor(name.as_ref()) {
-                if let Some(def) = env.lookup_type(type_name.as_str()) {
-                    if matches!(&def.body, TypeBody::Enum(_)) {
-                        return Some(def);
-                    }
-                }
-            }
-        }
-    }
-    None
-}
-
-fn should_block_legacy_pattern_fallback(reason: &PatternCanonicalizationBlockedReason) -> bool {
-    !matches!(
-        reason,
-        PatternCanonicalizationBlockedReason::NonAdt
-            | PatternCanonicalizationBlockedReason::NonConcreteTypeArgument
-    )
-}
-
 fn format_pattern_canonicalization_blocked(
     source_type: &Type,
     reason: &PatternCanonicalizationBlockedReason,
@@ -4250,58 +4213,49 @@ fn check_match(env: &TypeEnv, scrutinee: &Expr, arms: &[MatchArm]) -> CheckResul
     let scrutinee_ty = scrutinee_result.substitution.apply(&scrutinee_result.ty);
     let visible_variant_patterns = collect_top_level_variant_pattern_names(arms);
     let mut pattern_canonicalization_blocked = false;
-    let canonical_scrutinee = match env.canonicalize_type_for_pattern(&scrutinee_ty) {
+    let pattern_canonicalization = env.canonicalize_type_for_pattern(&scrutinee_ty);
+    let canonical_scrutinee = match &pattern_canonicalization {
         PatternCanonicalization::Matchable(canonical) => Some(canonical),
-        PatternCanonicalization::Blocked {
-            source_type,
-            reason,
-        } => {
-            if !visible_variant_patterns.is_empty() && should_block_legacy_pattern_fallback(&reason)
-            {
-                pattern_canonicalization_blocked = true;
-                errors.push(ConstructorError::UnsupportedExpression {
-                    kind: format_pattern_canonicalization_blocked(
-                        &source_type,
-                        &reason,
-                        &visible_variant_patterns,
-                    ),
-                    span: Span::default(),
-                });
-            }
-            None
-        }
+        PatternCanonicalization::Blocked { .. } => None,
     };
 
-    if let Some(canonical) = canonical_scrutinee.as_ref() {
-        let patterns: Vec<CorePattern> = arms
-            .iter()
-            .filter_map(|arm| lower_pattern(&arm.pattern).ok())
-            .collect();
-        if let Coverage::Missing(witnesses) = check_exhaustive_canonical(&patterns, canonical) {
+    let patterns: Vec<CorePattern> = arms
+        .iter()
+        .filter_map(|arm| lower_pattern(&arm.pattern).ok())
+        .collect();
+    match check_match_exhaustive(env, &patterns, &scrutinee_ty) {
+        MatchCoverage::Covered => {}
+        MatchCoverage::Missing(witnesses) => {
             errors.push(ConstructorError::NonExhaustiveMatch {
-                scrutinee_type: canonical.canonical_name.name.clone(),
+                scrutinee_type: match canonical_scrutinee {
+                    Some(canonical) => canonical.canonical_name.name.clone(),
+                    None => scrutinee_ty.to_string(),
+                },
                 missing: format_missing_witnesses(&witnesses),
                 span: Span::default(),
             });
         }
-    } else if !pattern_canonicalization_blocked
-        && !matches!(
-            env.canonicalize_type_for_pattern(&scrutinee_ty),
-            PatternCanonicalization::Blocked {
-                reason: PatternCanonicalizationBlockedReason::NonAdt,
-                ..
-            }
-        )
-        && let Some(type_def) = resolve_enum_type_def_for_match(env, scrutinee, arms)
-    {
-        let patterns: Vec<CorePattern> = arms
-            .iter()
-            .filter_map(|arm| lower_pattern(&arm.pattern).ok())
-            .collect();
-        if let Coverage::Missing(witnesses) = check_exhaustive(&patterns, type_def) {
+        MatchCoverage::Blocked {
+            source_type,
+            reason,
+        } => {
+            pattern_canonicalization_blocked = true;
+            errors.push(ConstructorError::UnsupportedExpression {
+                kind: format_pattern_canonicalization_blocked(
+                    &source_type,
+                    &reason,
+                    &visible_variant_patterns,
+                ),
+                span: Span::default(),
+            });
+        }
+        MatchCoverage::Unsupported {
+            scrutinee_type,
+            reason,
+        } => {
             errors.push(ConstructorError::NonExhaustiveMatch {
-                scrutinee_type: type_def.name.clone(),
-                missing: format_missing_witnesses(&witnesses),
+                scrutinee_type: scrutinee_type.to_string(),
+                missing: reason,
                 span: Span::default(),
             });
         }
@@ -4879,12 +4833,15 @@ mod tests {
     fn test_match_non_exhaustive_option_reports_error() {
         let env = TypeEnv::with_builtin_types();
 
-        // match None { Some { value: x } => x }
+        // match Some { value: 0 } { Some { value: x } => x }
         let expr = Expr::Match {
             scrutinee: Box::new(Expr::Constructor {
-                name: "None".into(),
-                fields: vec![],
-                payload: ConstructorPayload::Unit,
+                name: "Some".into(),
+                fields: vec![("value".into(), Expr::Literal(Literal::Int(0)))],
+                payload: ConstructorPayload::Record(vec![(
+                    "value".into(),
+                    Expr::Literal(Literal::Int(0)),
+                )]),
                 span: Span::default(),
             }),
             arms: vec![ash_parser::surface::MatchArm {
@@ -4934,7 +4891,7 @@ mod tests {
     fn test_match_exhaustive_option_is_accepted() {
         let env = TypeEnv::with_builtin_types();
 
-        // match None {
+        // match Some { value: 0 } {
         //   Some { value: _ } => 42,
         //   None => 0
         // }
@@ -4942,9 +4899,12 @@ mod tests {
         // pattern variable binding in type environment (separate feature)
         let expr = Expr::Match {
             scrutinee: Box::new(Expr::Constructor {
-                name: "None".into(),
-                fields: vec![],
-                payload: ConstructorPayload::Unit,
+                name: "Some".into(),
+                fields: vec![("value".into(), Expr::Literal(Literal::Int(0)))],
+                payload: ConstructorPayload::Record(vec![(
+                    "value".into(),
+                    Expr::Literal(Literal::Int(0)),
+                )]),
                 span: Span::default(),
             }),
             arms: vec![

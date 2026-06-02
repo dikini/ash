@@ -3884,7 +3884,7 @@ Phase 131 bans implicit refutable matching. It requires type-aware irrefutable p
 | [TASK-1002](tasks/TASK-1002-type-aware-irrefutable-pattern-api.md) | Add shared type-aware irrefutable pattern API | 8 | ✅ Complete |
 | [TASK-1003](tasks/TASK-1003-let-and-block-let-irrefutable-enforcement.md) | Enforce irrefutable patterns for pure block/core let binders | 8 | ✅ Complete |
 | [TASK-1004](tasks/TASK-1004-workflow-and-operational-binder-irrefutable-enforcement.md) | Enforce irrefutable patterns for workflow/observe/spawn/split/loop binders | 10 | ✅ Complete |
-| [TASK-1005](tasks/TASK-1005-deep-exhaustiveness-and-match-error-diagnostics.md) | Harden match exhaustiveness and missing-witness diagnostics | 10 | 📝 Planned |
+| [TASK-1005](tasks/TASK-1005-deep-exhaustiveness-and-match-error-diagnostics.md) | Harden match exhaustiveness and missing-witness diagnostics | 10 | ✅ Complete |
 | [TASK-1006](tasks/TASK-1006-with-error-total-handler-diagnostics.md) | Define and enforce or explicitly defer total `with_error` handler coverage | 8 | 📝 Planned |
 | [TASK-1007](tasks/TASK-1007-if-let-and-selective-receive-explicit-refutable-contract.md) | Refine `if let ... else` as total by implicit complement and preserve selective `receive` | 8 | 📝 Planned |
 | [TASK-1008](tasks/TASK-1008-runtime-defensive-pattern-error-cleanup-closeout.md) | Verify runtime defensive pattern boundary, status surfaces, broad gates, and independent review | 8 | 📝 Planned |

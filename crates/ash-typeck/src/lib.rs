@@ -537,6 +537,230 @@ fn infer_for_pattern_binding_type(
     }
 }
 
+fn bind_irrefutable_workflow_pattern(
+    env: &mut TypeEnv,
+    construct_kind: &str,
+    pattern: &ash_parser::surface::Pattern,
+    scrutinee_type: &Type,
+    fallback_span: ash_parser::token::Span,
+) -> Result<(), TypeCheckError> {
+    let span = crate::check_expr::surface_pattern_span(pattern, fallback_span);
+    let bindings = crate::check_expr::check_irrefutable_let_pattern(
+        env,
+        construct_kind,
+        pattern,
+        scrutinee_type,
+        span,
+    )
+    .map_err(|error| TypeCheckError::TypeError(error.to_string()))?;
+    crate::check_expr::bind_irrefutable_pattern_bindings(env, bindings);
+    Ok(())
+}
+
+fn validate_irrefutable_workflow_binders(
+    env: &mut TypeEnv,
+    workflow: &ash_parser::surface::Workflow,
+) -> Result<(), TypeCheckError> {
+    match workflow {
+        ash_parser::surface::Workflow::Observe {
+            binding,
+            continuation,
+            span,
+            ..
+        } => {
+            let mut next_env = env.clone();
+            if let Some(binding) = binding {
+                bind_irrefutable_workflow_pattern(
+                    &mut next_env,
+                    "workflow observe binding",
+                    binding,
+                    &Type::Var(TypeVar::fresh()),
+                    *span,
+                )?;
+            }
+            if let Some(continuation) = continuation {
+                validate_irrefutable_workflow_binders(&mut next_env, continuation)?;
+            }
+            Ok(())
+        }
+        ash_parser::surface::Workflow::Orient {
+            expr,
+            binding,
+            continuation,
+            span,
+            ..
+        } => {
+            validate_interface_calls_in_expr(env, expr)?;
+            let mut next_env = env.clone();
+            if let Some(binding) = binding {
+                let binding_ty =
+                    infer_checked_expr_type(env, expr, "failed to typecheck orient binding")?;
+                bind_irrefutable_workflow_pattern(
+                    &mut next_env,
+                    "workflow orient binding",
+                    binding,
+                    &binding_ty,
+                    *span,
+                )?;
+            }
+            if let Some(continuation) = continuation {
+                validate_irrefutable_workflow_binders(&mut next_env, continuation)?;
+            }
+            Ok(())
+        }
+        ash_parser::surface::Workflow::Let {
+            pattern,
+            expr,
+            continuation,
+            span,
+        } => {
+            validate_interface_calls_in_expr(env, expr)?;
+            let binding_ty =
+                infer_checked_expr_type(env, expr, "failed to typecheck workflow let binding")?;
+            let mut next_env = env.clone();
+            bind_irrefutable_workflow_pattern(
+                &mut next_env,
+                "workflow let",
+                pattern,
+                &binding_ty,
+                *span,
+            )?;
+            if let Some(continuation) = continuation {
+                validate_irrefutable_workflow_binders(&mut next_env, continuation)?;
+            }
+            Ok(())
+        }
+        ash_parser::surface::Workflow::For {
+            pattern,
+            collection,
+            body,
+            span,
+        } => {
+            validate_interface_calls_in_expr(env, collection)?;
+            let item_ty = infer_for_pattern_binding_type(env, collection)?;
+            let mut body_env = env.clone();
+            bind_irrefutable_workflow_pattern(
+                &mut body_env,
+                "workflow for binder",
+                pattern,
+                &item_ty,
+                *span,
+            )?;
+            validate_irrefutable_workflow_binders(&mut body_env, body)
+        }
+        ash_parser::surface::Workflow::Yield {
+            expr,
+            resume_type,
+            arms,
+            ..
+        } => {
+            validate_interface_calls_in_expr(env, expr)?;
+            let resume_ty =
+                workflow_surface_type_to_type(env, resume_type, &std::collections::HashMap::new())
+                    .unwrap_or_else(|_| Type::Var(TypeVar::fresh()));
+            for arm in arms {
+                let mut arm_env = env.clone();
+                bind_irrefutable_workflow_pattern(
+                    &mut arm_env,
+                    "workflow yield arm",
+                    &arm.pattern,
+                    &resume_ty,
+                    arm.span,
+                )?;
+                validate_irrefutable_workflow_binders(&mut arm_env, &arm.body)?;
+            }
+            Ok(())
+        }
+        ash_parser::surface::Workflow::Receive { arms, .. } => {
+            for arm in arms {
+                let mut arm_env = env.clone();
+                if let ash_parser::surface::StreamPattern::Binding { pattern, .. } = &arm.pattern {
+                    // Receive arms are selective mailbox filters, not total binders. Preserve
+                    // current semantics here; TASK-1007 hardens the implicit complement path.
+                    bind_pattern_variables(&mut arm_env, pattern, &Type::Var(TypeVar::fresh()));
+                }
+                validate_irrefutable_workflow_binders(&mut arm_env, &arm.body)?;
+            }
+            Ok(())
+        }
+        ash_parser::surface::Workflow::Propose {
+            action,
+            continuation,
+            ..
+        } => {
+            validate_interface_calls_in_action(env, action)?;
+            if let Some(continuation) = continuation {
+                validate_irrefutable_workflow_binders(&mut env.clone(), continuation)?;
+            }
+            Ok(())
+        }
+        ash_parser::surface::Workflow::Check { continuation, .. }
+        | ash_parser::surface::Workflow::Set { continuation, .. }
+        | ash_parser::surface::Workflow::Send { continuation, .. } => {
+            if let Some(continuation) = continuation {
+                validate_irrefutable_workflow_binders(env, continuation)?;
+            }
+            Ok(())
+        }
+        ash_parser::surface::Workflow::Decide {
+            then_branch,
+            else_branch,
+            ..
+        }
+        | ash_parser::surface::Workflow::If {
+            then_branch,
+            else_branch,
+            ..
+        } => {
+            validate_irrefutable_workflow_binders(&mut env.clone(), then_branch)?;
+            if let Some(else_branch) = else_branch {
+                validate_irrefutable_workflow_binders(&mut env.clone(), else_branch)?;
+            }
+            Ok(())
+        }
+        ash_parser::surface::Workflow::With { body, .. }
+        | ash_parser::surface::Workflow::Must { body, .. } => {
+            validate_irrefutable_workflow_binders(env, body)
+        }
+        ash_parser::surface::Workflow::Maybe {
+            primary, fallback, ..
+        } => {
+            validate_irrefutable_workflow_binders(&mut env.clone(), primary)?;
+            validate_irrefutable_workflow_binders(&mut env.clone(), fallback)
+        }
+        ash_parser::surface::Workflow::Seq { first, second, .. } => {
+            validate_irrefutable_workflow_binders(env, first)?;
+            validate_irrefutable_workflow_binders(env, second)
+        }
+        ash_parser::surface::Workflow::Ret { expr, .. }
+        | ash_parser::surface::Workflow::Resume { expr, .. } => {
+            validate_interface_calls_in_expr(env, expr)
+        }
+        ash_parser::surface::Workflow::Act {
+            action,
+            guard,
+            result_name,
+            continuation,
+            ..
+        } => {
+            validate_interface_calls_in_action(env, action)?;
+            if let Some(guard) = guard {
+                validate_interface_calls_in_guard(env, guard)?;
+            }
+            if let Some(continuation) = continuation {
+                let mut next_env = env.clone();
+                if let Some(result_name) = result_name {
+                    next_env.bind_variable(result_name.as_ref(), Type::Var(TypeVar::fresh()));
+                }
+                validate_irrefutable_workflow_binders(&mut next_env, continuation)?;
+            }
+            Ok(())
+        }
+        ash_parser::surface::Workflow::Done { .. }
+        | ash_parser::surface::Workflow::Oblige { .. } => Ok(()),
+    }
+}
+
 fn infer_surface_expr_type(
     env: &TypeEnv,
     expr: &ash_parser::surface::Expr,
@@ -2553,6 +2777,9 @@ pub fn type_check_workflow_def_in_env(
     // so the explicit escape check is a defense-in-depth for the declared case.
     workflow_env.set_workflow_effect(ash_core::Effect::Operational);
 
+    let mut binder_env = workflow_env.clone();
+    validate_irrefutable_workflow_binders(&mut binder_env, &workflow.body)?;
+
     validate_interface_calls_in_workflow(&mut workflow_env, &workflow.body)?;
     validate_fn_call_preconditions_workflow(
         &workflow_env,
@@ -2714,6 +2941,16 @@ pub fn type_check_workflow_in_env(
     param_bindings: Option<&[(String, Type)]>,
 ) -> Result<TypeCheckResult, TypeCheckError> {
     reject_unsupported_mvp_workflow_features(workflow)?;
+
+    let mut binder_env = type_env
+        .cloned()
+        .unwrap_or_else(TypeEnv::with_builtin_types);
+    if let Some(params) = param_bindings {
+        for (name, ty) in params {
+            binder_env.bind_variable(name, ty.clone());
+        }
+    }
+    validate_irrefutable_workflow_binders(&mut binder_env, workflow)?;
 
     // Step 1: Name resolution
     let mut resolver = NameResolver::new();

@@ -210,7 +210,7 @@ fn collect_type_expr_dependencies(type_expr: &TypeExpr, dependencies: &mut HashS
     }
 }
 
-fn check_irrefutable_let_pattern(
+pub(crate) fn check_irrefutable_let_pattern(
     env: &TypeEnv,
     construct_kind: &str,
     pattern: &Pattern,
@@ -235,13 +235,13 @@ fn check_irrefutable_let_pattern(
     }
 }
 
-fn bind_irrefutable_pattern_bindings(env: &mut TypeEnv, bindings: Bindings) {
+pub(crate) fn bind_irrefutable_pattern_bindings(env: &mut TypeEnv, bindings: Bindings) {
     for (name, ty) in bindings {
         env.bind_variable(&name, ty);
     }
 }
 
-fn surface_pattern_span(pattern: &Pattern, fallback: Span) -> Span {
+pub(crate) fn surface_pattern_span(pattern: &Pattern, fallback: Span) -> Span {
     match pattern {
         Pattern::Variable { span, .. } => *span,
         Pattern::Tuple(items) => items

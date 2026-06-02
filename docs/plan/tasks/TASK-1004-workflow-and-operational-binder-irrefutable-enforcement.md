@@ -1,6 +1,6 @@
 # TASK-1004: Workflow and operational binder irrefutability enforcement
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -58,9 +58,9 @@ commands:
   - cargo check --workspace
 checklist:
   - [x] TASK-1001 replaced the fail-closed guard
-  - [ ] RED tests fail before implementation and pass after implementation
-  - [ ] Scope did not expand beyond SPEC-076
-  - [ ] Diagnostics are asserted where required
+  - [x] RED tests fail before implementation and pass after implementation
+  - [x] Scope did not expand beyond SPEC-076
+  - [x] Diagnostics are asserted where required
 ```
 
 ## Dependencies for Next Task
@@ -69,4 +69,9 @@ This task produces its verified slice for later tasks in [PLAN-126](../PLAN-126-
 
 ## Notes
 
-Workflow/typeck binder semantics
+Workflow/typeck binder semantics implemented in `ash-typeck` via `validate_irrefutable_workflow_binders` before workflow body typechecking:
+
+- `workflow let`, `orient` bindings, and `for` element binders use the inferred scrutinee/item type and reject refutable, impossible, blocked, and duplicate-binder patterns through the shared TASK-1002 irrefutability checker.
+- `observe` binders currently lack a precise semantic result type at this boundary, so non-universal patterns are rejected against an open type with the shared diagnostic rather than guessed; `yield` arms use the declared resume type when it resolves and otherwise fall back to the same open-type rejection path.
+- `receive` stream patterns remain selective filters, not total binders, and are explicitly left for TASK-1007 implicit-complement/selective-receive work.
+- Core-only `Workflow::Spawn` and `Workflow::Split` binders are not reachable through the surface workflow typechecker in this slice; tests document the deferral, and TASK-1008 owns the defensive runtime boundary evidence.

@@ -14,7 +14,7 @@ Wire the irrefutability API into pure surface block `let` and lowered/core `Expr
 ## Dependencies
 
 - ✅ TASK-1000 packet exists
-- 📝 TASK-1001 audit gate must complete and patch this task before implementation starts
+- ✅ TASK-1001 audit gate completed and patched this task with focused commands
 - 📝 TASK-1002 shared irrefutability API must be implemented before this task wires pure/core let binders
 
 ## Requirements
@@ -27,8 +27,8 @@ Wire the irrefutability API into pure surface block `let` and lowered/core `Expr
 
 ## File Targets
 
-- Modify: exact files to be patched by TASK-1001 audit
-- Test: exact focused test target to be patched by TASK-1001 audit
+- Modify candidates: `crates/ash-typeck/src/check_expr.rs`, `crates/ash-typeck/src/names.rs`, `crates/ash-typeck/src/error.rs`
+- Test: `crates/ash-typeck/tests/task_1003_let_irrefutability.rs`
 
 ## TDD / Execution Steps
 
@@ -52,12 +52,12 @@ toolsets: [terminal, file]
 ```yaml
 strictness: clean
 commands:
-  - false # TASK-1001 must replace this guard with exact focused non-zero commands before TASK-1003 implementation starts
+  - bash -lc "cargo test -p ash-typeck --test task_1003_let_irrefutability -- --list | rg 'pure_block_let_rejects_some_over_option|pure_block_let_rejects_nested_refutable_binders|pure_block_let_rejects_list_patterns|core_expr_let_rejects_refutable_host_ir|pure_block_let_accepts_variable_wildcard_and_single_variant|pure_block_let_duplicate_binders_rejected' && cargo test -p ash-typeck --test task_1003_let_irrefutability"
   - cargo fmt --check
   - git diff --check
   - cargo check --workspace
 checklist:
-  - [ ] TASK-1001 replaced the fail-closed guard
+  - [x] TASK-1001 replaced the fail-closed guard
   - [ ] RED tests fail before implementation and pass after implementation
   - [ ] Scope did not expand beyond SPEC-076
   - [ ] Diagnostics are asserted where required

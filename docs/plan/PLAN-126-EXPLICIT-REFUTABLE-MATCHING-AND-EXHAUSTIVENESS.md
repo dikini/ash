@@ -21,7 +21,7 @@
 | Task | Description | Type | Est. Hours | Status |
 |------|-------------|------|------------|--------|
 | [TASK-1000](tasks/TASK-1000-explicit-refutable-matching-packet.md) | Create DESIGN-044/SPEC-076/PLAN-126 packet and register Phase 131 | Docs/Planning | 4 | ✅ Complete |
-| [TASK-1001](tasks/TASK-1001-matching-semantics-audit-gate.md) | Audit all pattern-use callsites and replace fail-closed downstream verification guards | Docs/Substrate | 6 | 📝 Planned |
+| [TASK-1001](tasks/TASK-1001-matching-semantics-audit-gate.md) | Audit all pattern-use callsites and replace fail-closed downstream verification guards | Docs/Substrate | 6 | ✅ Complete |
 | [TASK-1002](tasks/TASK-1002-type-aware-irrefutable-pattern-api.md) | Add shared type-aware irrefutability API over canonical pattern types | Typeck/Substrate | 8 | 📝 Planned |
 | [TASK-1003](tasks/TASK-1003-let-and-block-let-irrefutable-enforcement.md) | Enforce irrefutable patterns for pure block/core let binders | Typeck/Semantic | 8 | 📝 Planned |
 | [TASK-1004](tasks/TASK-1004-workflow-and-operational-binder-irrefutable-enforcement.md) | Enforce irrefutable patterns for workflow/observe/spawn/split/loop binders | Typeck/Workflow | 10 | 📝 Planned |
@@ -78,7 +78,7 @@ TASK-1001 must replace all downstream fail-closed placeholder commands before TA
 - [x] SPEC-076 is indexed in `docs/spec/README.md`.
 - [x] Phase 131 is registered in `docs/plan/PLAN-INDEX.md`.
 - [x] CHANGELOG records the docs packet.
-- [ ] TASK-1001 audit artifact exists and downstream verification guards are patched.
+- [x] TASK-1001 audit artifact exists and downstream verification guards are patched.
 - [ ] Irrefutable binder enforcement is implemented and verified.
 - [ ] Exhaustive eliminator checks and diagnostics are implemented and verified.
 - [ ] Explicit refutable forms are preserved and documented.

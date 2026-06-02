@@ -14,7 +14,7 @@ Treat `if let ... else` as a total implicit-complement eliminator while preservi
 ## Dependencies
 
 - ✅ TASK-1000 packet exists
-- 📝 TASK-1001 audit gate must complete and patch this task before implementation starts
+- ✅ TASK-1001 audit gate completed and patched this task with focused commands
 - 📝 TASK-1002 through TASK-1006 must complete before this task finalizes explicit-complement/refutable-form behavior
 
 ## Requirements
@@ -31,8 +31,8 @@ Treat `if let ... else` as a total implicit-complement eliminator while preservi
 
 ## File Targets
 
-- Modify: exact files to be patched by TASK-1001 audit
-- Test: exact focused test target to be patched by TASK-1001 audit
+- Modify candidates: `crates/ash-parser/src/parse_expr.rs`, `crates/ash-parser/src/parse_module.rs`, `crates/ash-typeck/src/check_expr.rs`, `crates/ash-typeck/src/names.rs`, `crates/ash-interp/src/execute_stream.rs`
+- Test: `crates/ash-parser/tests/task_1007_if_let_parser_entrypoints.rs`, `crates/ash-typeck/tests/task_1007_if_let_receive_contract.rs`, `crates/ash-interp/tests/task_1007_selective_receive_contract.rs`
 
 ## TDD / Execution Steps
 
@@ -56,12 +56,14 @@ toolsets: [terminal, file]
 ```yaml
 strictness: clean
 commands:
-  - false # TASK-1001 must replace this guard with exact focused non-zero commands before TASK-1007 implementation starts
+  - bash -lc "cargo test -p ash-parser --test task_1007_if_let_parser_entrypoints -- --list | rg 'if_let_parser_entrypoints_accept_raw_expression_and_real_function_context_or_pin_rejection|if_let_without_else_rejected' && cargo test -p ash-parser --test task_1007_if_let_parser_entrypoints"
+  - bash -lc "cargo test -p ash-typeck --test task_1007_if_let_receive_contract -- --list | rg 'if_let_check_pattern_errors_are_propagated_not_silent|if_let_then_binding_scope_does_not_escape|if_let_shadowing_then_uses_inner_else_uses_outer|if_let_branch_type_mismatch_is_reported|if_let_duplicate_binders_rejected|if_let_irrefutable_pattern_emits_unreachable_else_warning|if_let_impossible_pattern_is_hard_error' && cargo test -p ash-typeck --test task_1007_if_let_receive_contract"
+  - bash -lc "cargo test -p ash-interp --test task_1007_selective_receive_contract -- --list | rg 'selective_receive_guard_order_no_match_behavior_preserved' && cargo test -p ash-interp --test task_1007_selective_receive_contract"
   - cargo fmt --check
   - git diff --check
   - cargo check --workspace
 checklist:
-  - [ ] TASK-1001 replaced the fail-closed guard
+  - [x] TASK-1001 replaced the fail-closed guard
   - [ ] RED tests fail before implementation and pass after implementation
   - [ ] Scope did not expand beyond SPEC-076
   - [ ] Diagnostics are asserted where required

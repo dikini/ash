@@ -14,7 +14,7 @@ Decide and implement the first totality rule for `with_error` handlers over know
 ## Dependencies
 
 - ✅ TASK-1000 packet exists
-- 📝 TASK-1001 audit gate must complete and patch this task before implementation starts
+- ✅ TASK-1001 audit gate completed and patched this task with focused commands
 
 ## Requirements
 
@@ -26,8 +26,8 @@ Decide and implement the first totality rule for `with_error` handlers over know
 
 ## File Targets
 
-- Modify: exact files to be patched by TASK-1001 audit
-- Test: exact focused test target to be patched by TASK-1001 audit
+- Modify candidates: `crates/ash-typeck/src/check_expr.rs`, `crates/ash-typeck/src/exhaustiveness.rs`, `crates/ash-typeck/src/error.rs`
+- Test: `crates/ash-typeck/tests/task_1006_with_error_total_handlers.rs`
 
 ## TDD / Execution Steps
 
@@ -51,12 +51,12 @@ toolsets: [terminal, file]
 ```yaml
 strictness: clean
 commands:
-  - false # TASK-1001 must replace this guard with exact focused non-zero commands before TASK-1006 implementation starts
+  - bash -lc "cargo test -p ash-typeck --test task_1006_with_error_total_handlers -- --list | rg 'with_error_total_handler_reports_or_defers_closed_payload_missing_case|with_error_handler_pattern_type_error_is_structured|with_error_wildcard_accepts_open_payload|with_error_branch_type_mismatch_reports_handler_context' && cargo test -p ash-typeck --test task_1006_with_error_total_handlers"
   - cargo fmt --check
   - git diff --check
   - cargo check --workspace
 checklist:
-  - [ ] TASK-1001 replaced the fail-closed guard
+  - [x] TASK-1001 replaced the fail-closed guard
   - [ ] RED tests fail before implementation and pass after implementation
   - [ ] Scope did not expand beyond SPEC-076
   - [ ] Diagnostics are asserted where required

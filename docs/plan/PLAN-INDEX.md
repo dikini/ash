@@ -3880,7 +3880,7 @@ Phase 131 bans implicit refutable matching. It requires type-aware irrefutable p
 | Task | Description | Est. Hours | Status |
 |------|-------------|------------|--------|
 | [TASK-1000](tasks/TASK-1000-explicit-refutable-matching-packet.md) | Create DESIGN-044/SPEC-076/PLAN-126 packet and register Phase 131 | 4 | ✅ Complete |
-| [TASK-1001](tasks/TASK-1001-matching-semantics-audit-gate.md) | Audit all pattern-use callsites and replace fail-closed downstream verification guards | 6 | 📝 Planned |
+| [TASK-1001](tasks/TASK-1001-matching-semantics-audit-gate.md) | Audit all pattern-use callsites and replace fail-closed downstream verification guards | 6 | ✅ Complete |
 | [TASK-1002](tasks/TASK-1002-type-aware-irrefutable-pattern-api.md) | Add shared type-aware irrefutable pattern API | 8 | 📝 Planned |
 | [TASK-1003](tasks/TASK-1003-let-and-block-let-irrefutable-enforcement.md) | Enforce irrefutable patterns for pure block/core let binders | 8 | 📝 Planned |
 | [TASK-1004](tasks/TASK-1004-workflow-and-operational-binder-irrefutable-enforcement.md) | Enforce irrefutable patterns for workflow/observe/spawn/split/loop binders | 10 | 📝 Planned |

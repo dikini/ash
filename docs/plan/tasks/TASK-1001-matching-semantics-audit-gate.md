@@ -1,6 +1,6 @@
 # TASK-1001: Matching semantics audit gate
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -60,11 +60,11 @@ commands:
   - cargo fmt --check
   - git diff --check
 checklist:
-  - [ ] Audit artifact exists and names exact live callsites
-  - [ ] Audit classifies source-level, lowered-only, and core-only binders
-  - [ ] Audit records exact runtime error variants and current if-let parser/typecheck behavior
-  - [ ] Downstream fail-closed guards are replaced with non-zero commands
-  - [ ] No downstream task remains implementation-ready without audit evidence
+  - [x] Audit artifact exists and names exact live callsites
+  - [x] Audit classifies source-level, lowered-only, and core-only binders
+  - [x] Audit records exact runtime error variants and current if-let parser/typecheck behavior
+  - [x] Downstream fail-closed guards are replaced with non-zero commands
+  - [x] No downstream task remains implementation-ready without audit evidence
 ```
 
 ## Dependencies for Next Task

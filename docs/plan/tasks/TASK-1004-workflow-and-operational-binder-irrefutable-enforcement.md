@@ -14,7 +14,7 @@ Enforce irrefutable patterns for workflow-level binders such as workflow `let`, 
 ## Dependencies
 
 - ✅ TASK-1000 packet exists
-- 📝 TASK-1001 audit gate must complete and patch this task before implementation starts
+- ✅ TASK-1001 audit gate completed and patched this task with focused commands
 - 📝 TASK-1002 shared irrefutability API must be implemented before this task wires workflow/operational binders
 
 ## Requirements
@@ -27,8 +27,8 @@ Enforce irrefutable patterns for workflow-level binders such as workflow `let`, 
 
 ## File Targets
 
-- Modify: exact files to be patched by TASK-1001 audit
-- Test: exact focused test target to be patched by TASK-1001 audit
+- Modify candidates: `crates/ash-typeck/src/lib.rs`, `crates/ash-typeck/src/check_expr.rs`, `crates/ash-typeck/src/error.rs`, `crates/ash-parser/src/lower.rs`
+- Test: `crates/ash-typeck/tests/task_1004_workflow_binder_irrefutability.rs`
 
 ## TDD / Execution Steps
 
@@ -52,12 +52,12 @@ toolsets: [terminal, file]
 ```yaml
 strictness: clean
 commands:
-  - false # TASK-1001 must replace this guard with exact focused non-zero commands before TASK-1004 implementation starts
+  - bash -lc "cargo test -p ash-typeck --test task_1004_workflow_binder_irrefutability -- --list | rg 'workflow_let_rejects_refutable_sum_literal_and_list_patterns|observe_binding_rejects_refutable_pattern|orient_binding_either_rejects_or_documents_lowering_defer|for_binder_rejects_refutable_item_pattern|yield_arms_reject_or_document_current_lowered_binder_semantics|core_spawn_pattern_rejects_refutable_instance_pattern|core_split_pattern_rejects_refutable_tuple_pattern|receive_stream_pattern_remains_selective_not_irrefutable' && cargo test -p ash-typeck --test task_1004_workflow_binder_irrefutability"
   - cargo fmt --check
   - git diff --check
   - cargo check --workspace
 checklist:
-  - [ ] TASK-1001 replaced the fail-closed guard
+  - [x] TASK-1001 replaced the fail-closed guard
   - [ ] RED tests fail before implementation and pass after implementation
   - [ ] Scope did not expand beyond SPEC-076
   - [ ] Diagnostics are asserted where required

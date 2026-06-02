@@ -14,7 +14,7 @@ Verify runtime pattern-match failure remains defensive only, reconcile status su
 ## Dependencies
 
 - ✅ TASK-1000 packet exists
-- 📝 TASK-1001 audit gate must complete and patch this task before implementation starts
+- ✅ TASK-1001 audit gate completed and patched this task with focused commands
 - 📝 TASK-1002 through TASK-1007 must be complete before closeout evidence is recorded
 
 ## Requirements
@@ -27,8 +27,8 @@ Verify runtime pattern-match failure remains defensive only, reconcile status su
 
 ## File Targets
 
-- Modify: exact files to be patched by TASK-1001 audit
-- Test: exact focused test target to be patched by TASK-1001 audit
+- Modify candidates: `crates/ash-interp/src/eval.rs`, `crates/ash-interp/src/execute.rs`, `crates/ash-interp/src/execute_observe.rs`, `crates/ash-interp/src/small_step.rs`, `crates/ash-cli/src/commands/check.rs`, `crates/ash-lsp-core/src/diagnostics.rs`
+- Test: `crates/ash-interp/tests/task_1008_runtime_defensive_pattern_errors.rs`, `crates/ash-cli/tests/task_1008_matching_diagnostics_surface.rs`, `crates/ash-lsp-core/tests/task_1008_matching_diagnostics_lsp.rs`
 
 ## TDD / Execution Steps
 
@@ -52,7 +52,9 @@ toolsets: [terminal, file]
 ```yaml
 strictness: clean
 commands:
-  - false # TASK-1001 must replace this guard with exact focused non-zero commands before TASK-1008 implementation starts
+  - bash -lc "cargo test -p ash-interp --test task_1008_runtime_defensive_pattern_errors -- --list | rg 'runtime_defensive_expr_let_still_yields_LetPatternBindFailed_for_unchecked_ir|runtime_defensive_workflow_binder_still_yields_PatternMatchFailed_for_unchecked_ir|runtime_defensive_match_still_yields_NonExhaustiveMatch_for_unchecked_ir|checked_source_refutable_binders_fail_in_typeck_not_runtime' && cargo test -p ash-interp --test task_1008_runtime_defensive_pattern_errors"
+  - bash -lc "cargo test -p ash-cli --test task_1008_matching_diagnostics_surface -- --list | rg 'cli_and_lsp_surface_matching_diagnostics_from_typeck_when_available' && cargo test -p ash-cli --test task_1008_matching_diagnostics_surface"
+  - bash -lc "cargo test -p ash-lsp-core --test task_1008_matching_diagnostics_lsp -- --list | rg 'cli_and_lsp_surface_matching_diagnostics_from_typeck_when_available' && cargo test -p ash-lsp-core --test task_1008_matching_diagnostics_lsp"
   - cargo fmt --check
   - git diff --check
   - cargo check --workspace
@@ -60,7 +62,7 @@ commands:
   - cargo test --workspace
   - bash -lc "cargo doc --workspace --no-deps 2>&1 | tee /tmp/ash-plan-126-doc.log && ! grep -i '^warning:' /tmp/ash-plan-126-doc.log"
 checklist:
-  - [ ] TASK-1001 replaced the fail-closed guard
+  - [x] TASK-1001 replaced the fail-closed guard
   - [ ] RED tests fail before implementation and pass after implementation
   - [ ] Scope did not expand beyond SPEC-076
   - [ ] Diagnostics are asserted where required

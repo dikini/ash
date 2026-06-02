@@ -4,6 +4,11 @@
 
 #![allow(clippy::result_large_err)]
 
+use crate::check_pattern::{
+    Bindings, IrrefutabilityBlockedReason, IrrefutabilityImpossibleReason, IrrefutabilityOutcome,
+    IrrefutabilityWitness, TypeEnv as PatternTypeEnv,
+    check_irrefutable_pattern_with_canonicalization,
+};
 use crate::error::ConstructorError;
 use crate::exhaustiveness::{Coverage, check_exhaustive, check_exhaustive_canonical};
 use crate::type_env::{
@@ -13,7 +18,7 @@ use crate::type_env::{
 use crate::types::{Substitution, Type, TypeVar, unify};
 use ash_core::adt::{VariantPayloadShape, tuple_field_name};
 use ash_core::ast::{
-    Expr as CoreExpr, Pattern as CorePattern, Span as CoreSpan, TypeBody, TypeDef,
+    Expr as CoreExpr, Pattern as CorePattern, Span as CoreSpan, TypeBody, TypeDef, TypeExpr,
 };
 use ash_core::module_graph::ModuleId;
 use ash_core::runtime::TowerLevel;
@@ -104,6 +109,742 @@ impl CheckResult {
     /// Check if the result is successful (no errors)
     pub fn is_ok(&self) -> bool {
         self.errors.is_empty()
+    }
+}
+
+fn pattern_type_env_from_type_env(env: &TypeEnv) -> PatternTypeEnv {
+    let mut pattern_env = PatternTypeEnv::new();
+    let mut type_defs = env
+        .ast_type_defs()
+        .map(|(_, type_def)| type_def.clone())
+        .collect::<Vec<_>>();
+    type_defs.sort_by(|left, right| left.name.cmp(&right.name));
+    for type_def in order_pattern_type_defs(type_defs) {
+        pattern_env.add_type_def(type_def.name.clone(), type_def.clone());
+    }
+    pattern_env
+}
+
+fn order_pattern_type_defs(mut type_defs: Vec<TypeDef>) -> Vec<TypeDef> {
+    let all_names = type_defs
+        .iter()
+        .map(|type_def| type_def.name.to_string())
+        .collect::<HashSet<_>>();
+    let mut ordered = Vec::with_capacity(type_defs.len());
+    let mut ordered_names = HashSet::new();
+
+    while !type_defs.is_empty() {
+        let Some(index) = type_defs.iter().position(|type_def| {
+            let mut dependencies = HashSet::new();
+            collect_type_def_dependencies(type_def, &mut dependencies);
+            dependencies
+                .iter()
+                .filter(|name| all_names.contains(*name))
+                .all(|name| ordered_names.contains(name))
+        }) else {
+            ordered.extend(type_defs);
+            break;
+        };
+
+        let type_def = type_defs.remove(index);
+        ordered_names.insert(type_def.name.to_string());
+        ordered.push(type_def);
+    }
+
+    ordered
+}
+
+fn collect_type_def_dependencies(type_def: &TypeDef, dependencies: &mut HashSet<String>) {
+    match &type_def.body {
+        TypeBody::Struct(fields) => {
+            for (_, field_type) in fields {
+                collect_type_expr_dependencies(field_type, dependencies);
+            }
+        }
+        TypeBody::Enum(variants) => {
+            for variant in variants {
+                for (_, field_type) in &variant.fields {
+                    collect_type_expr_dependencies(field_type, dependencies);
+                }
+                match &variant.payload {
+                    ash_core::ast::VariantPayload::Unit => {}
+                    ash_core::ast::VariantPayload::Record(fields) => {
+                        for (_, field_type) in fields {
+                            collect_type_expr_dependencies(field_type, dependencies);
+                        }
+                    }
+                    ash_core::ast::VariantPayload::Tuple(items) => {
+                        for item in items {
+                            collect_type_expr_dependencies(item, dependencies);
+                        }
+                    }
+                }
+            }
+        }
+        TypeBody::Alias(target) => collect_type_expr_dependencies(target, dependencies),
+    }
+}
+
+fn collect_type_expr_dependencies(type_expr: &TypeExpr, dependencies: &mut HashSet<String>) {
+    match type_expr {
+        TypeExpr::Named(name) => {
+            dependencies.insert(name.to_string());
+        }
+        TypeExpr::Constructor { name, args } => {
+            dependencies.insert(name.to_string());
+            for arg in args {
+                collect_type_expr_dependencies(arg, dependencies);
+            }
+        }
+        TypeExpr::Tuple(items) => {
+            for item in items {
+                collect_type_expr_dependencies(item, dependencies);
+            }
+        }
+        TypeExpr::Record(fields) => {
+            for (_, field_type) in fields {
+                collect_type_expr_dependencies(field_type, dependencies);
+            }
+        }
+        TypeExpr::Associated { base, .. } => collect_type_expr_dependencies(base, dependencies),
+    }
+}
+
+fn check_irrefutable_let_pattern(
+    env: &TypeEnv,
+    construct_kind: &str,
+    pattern: &Pattern,
+    scrutinee_type: &Type,
+    span: Span,
+) -> Result<Bindings, ConstructorError> {
+    let pattern_env = pattern_type_env_from_type_env(env);
+    let canonicalization = env.canonicalize_type_for_pattern(scrutinee_type);
+    let irrefutability = check_irrefutable_pattern_with_canonicalization(
+        &pattern_env,
+        pattern,
+        scrutinee_type,
+        &canonicalization,
+    );
+
+    match irrefutability.outcome {
+        IrrefutabilityOutcome::Irrefutable => Ok(irrefutability.bindings),
+        outcome => Err(ConstructorError::UnsupportedExpression {
+            kind: format_irrefutable_let_error(construct_kind, pattern, scrutinee_type, &outcome),
+            span,
+        }),
+    }
+}
+
+fn bind_irrefutable_pattern_bindings(env: &mut TypeEnv, bindings: Bindings) {
+    for (name, ty) in bindings {
+        env.bind_variable(&name, ty);
+    }
+}
+
+fn surface_pattern_span(pattern: &Pattern, fallback: Span) -> Span {
+    match pattern {
+        Pattern::Variable { span, .. } => *span,
+        Pattern::Tuple(items) => items
+            .iter()
+            .map(|item| surface_pattern_span(item, fallback))
+            .find(|span| *span != Span::default())
+            .unwrap_or(fallback),
+        Pattern::Record(fields) => fields
+            .iter()
+            .map(|(_, pattern)| surface_pattern_span(pattern, fallback))
+            .find(|span| *span != Span::default())
+            .unwrap_or(fallback),
+        Pattern::List { elements, .. } => elements
+            .iter()
+            .map(|item| surface_pattern_span(item, fallback))
+            .find(|span| *span != Span::default())
+            .unwrap_or(fallback),
+        Pattern::Variant {
+            payload, fields, ..
+        } => match payload {
+            ash_parser::surface::VariantPatternPayload::Record(fields) => fields
+                .iter()
+                .map(|(_, pattern)| surface_pattern_span(pattern, fallback))
+                .find(|span| *span != Span::default())
+                .unwrap_or(fallback),
+            ash_parser::surface::VariantPatternPayload::Tuple(items) => items
+                .iter()
+                .map(|pattern| surface_pattern_span(pattern, fallback))
+                .find(|span| *span != Span::default())
+                .unwrap_or(fallback),
+            ash_parser::surface::VariantPatternPayload::Unit => fields
+                .as_deref()
+                .unwrap_or(&[])
+                .iter()
+                .map(|(_, pattern)| surface_pattern_span(pattern, fallback))
+                .find(|span| *span != Span::default())
+                .unwrap_or(fallback),
+        },
+        Pattern::Wildcard | Pattern::Literal(_) => fallback,
+    }
+}
+
+fn core_span_to_surface_span(span: CoreSpan) -> Span {
+    Span {
+        start: span.start,
+        end: span.end,
+        line: 0,
+        column: 0,
+    }
+}
+
+fn format_irrefutable_let_error(
+    construct_kind: &str,
+    pattern: &Pattern,
+    scrutinee_type: &Type,
+    outcome: &IrrefutabilityOutcome,
+) -> String {
+    match outcome {
+        IrrefutabilityOutcome::Irrefutable => format!(
+            "non-irrefutable pattern in {construct_kind}: pattern {} over type {} unexpectedly classified as irrefutable; use match or if let ... else",
+            format_surface_pattern(pattern),
+            scrutinee_type
+        ),
+        IrrefutabilityOutcome::Refutable { witness } => format!(
+            "non-irrefutable pattern in {construct_kind}: pattern {} over type {} is refutable; missing {}; use match or if let ... else",
+            format_surface_pattern(pattern),
+            scrutinee_type,
+            format_irrefutability_witness(witness)
+        ),
+        IrrefutabilityOutcome::Impossible { reason } => format!(
+            "non-irrefutable pattern in {construct_kind}: pattern {} over type {} is impossible; reason {}; use match or if let ... else",
+            format_surface_pattern(pattern),
+            scrutinee_type,
+            format_irrefutability_impossible_reason(reason)
+        ),
+        IrrefutabilityOutcome::Blocked { reason } => format!(
+            "non-irrefutable pattern in {construct_kind}: pattern {} over type {} is blocked; reason {}; use match or if let ... else",
+            format_surface_pattern(pattern),
+            scrutinee_type,
+            format_irrefutability_blocked_reason(reason)
+        ),
+    }
+}
+
+fn format_irrefutability_witness(witness: &IrrefutabilityWitness) -> String {
+    match witness {
+        IrrefutabilityWitness::Pattern(pattern) => {
+            format!("witness {}", format_surface_pattern(pattern))
+        }
+        IrrefutabilityWitness::ShortList { minimum_len } => {
+            format!("short list with fewer than {minimum_len} elements")
+        }
+        IrrefutabilityWitness::NonLiteralValue { literal } => {
+            format!("non-literal value different from {literal:?}")
+        }
+        IrrefutabilityWitness::Description(description) => description.clone(),
+    }
+}
+
+fn format_irrefutability_impossible_reason(reason: &IrrefutabilityImpossibleReason) -> String {
+    match reason {
+        IrrefutabilityImpossibleReason::DuplicateBinder { name } => {
+            format!("duplicate binder `{name}`")
+        }
+        IrrefutabilityImpossibleReason::PatternTypeError(error) => error.to_string(),
+        IrrefutabilityImpossibleReason::UnknownConstructor {
+            name,
+            scrutinee_type,
+        } => format!("unknown constructor `{name}` for scrutinee type {scrutinee_type}"),
+    }
+}
+
+fn format_irrefutability_blocked_reason(reason: &IrrefutabilityBlockedReason) -> String {
+    match reason {
+        IrrefutabilityBlockedReason::Canonicalization {
+            source_type,
+            reason,
+        } => format!("canonicalization of {source_type} blocked: {reason:?}"),
+        IrrefutabilityBlockedReason::ProductShapeUnavailable {
+            scrutinee_type,
+            pattern_shape,
+        } => format!("product shape `{pattern_shape}` unavailable for {scrutinee_type}"),
+        IrrefutabilityBlockedReason::ConstructorUniverseUnavailable { scrutinee_type } => {
+            format!("constructor universe unavailable for {scrutinee_type}")
+        }
+    }
+}
+
+fn format_surface_pattern(pattern: &Pattern) -> String {
+    match pattern {
+        Pattern::Variable { name, .. } => name.to_string(),
+        Pattern::Wildcard => "_".to_string(),
+        Pattern::Tuple(items) => format!(
+            "({})",
+            items
+                .iter()
+                .map(format_surface_pattern)
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
+        Pattern::Record(fields) => format!(
+            "{{{}}}",
+            fields
+                .iter()
+                .map(|(name, pattern)| format!("{name}: {}", format_surface_pattern(pattern)))
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
+        Pattern::List { elements, rest } => {
+            let mut parts = elements
+                .iter()
+                .map(format_surface_pattern)
+                .collect::<Vec<_>>();
+            if let Some(rest) = rest {
+                parts.push(format!("..{rest}"));
+            }
+            format!("[{}]", parts.join(", "))
+        }
+        Pattern::Literal(literal) => format!("{literal:?}"),
+        Pattern::Variant { name, payload, .. } => match payload {
+            ash_parser::surface::VariantPatternPayload::Unit => name.to_string(),
+            ash_parser::surface::VariantPatternPayload::Record(fields) => format!(
+                "{name} {{{}}}",
+                fields
+                    .iter()
+                    .map(|(field, pattern)| {
+                        format!("{field}: {}", format_surface_pattern(pattern))
+                    })
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ),
+            ash_parser::surface::VariantPatternPayload::Tuple(items) => format!(
+                "{name}({})",
+                items
+                    .iter()
+                    .map(format_surface_pattern)
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ),
+        },
+    }
+}
+
+/// Type check a host/lowered core expression.
+///
+/// This intentionally supports only the pure core expression subset needed by
+/// typeck-owned lowered code and host-IR validation. Unsupported core forms
+/// remain explicit errors rather than being guessed.
+pub fn check_core_expr(env: &TypeEnv, expr: &CoreExpr) -> CheckResult {
+    match expr {
+        CoreExpr::Literal(value) => check_core_literal(env, value),
+        CoreExpr::Variable { name, .. } => match env.lookup_variable(name.as_ref()) {
+            Some(ty) => CheckResult::success(ty),
+            None => match env.get_variant(name.as_ref()) {
+                Some((type_info, variant_idx, variant_info))
+                    if matches!(variant_info.payload_shape, VariantPayloadShape::Unit) =>
+                {
+                    CheckResult::success(build_constructor_type(type_info, variant_idx))
+                }
+                _ => CheckResult::error(ConstructorError::UnboundVariable {
+                    name: name.to_string(),
+                    span: Span::default(),
+                }),
+            },
+        },
+        CoreExpr::Constructor { name, fields } => check_core_constructor(env, name, fields),
+        CoreExpr::Let {
+            pattern,
+            expr,
+            body,
+            span,
+        } => {
+            let expr_result = check_core_expr(env, expr);
+            if !expr_result.is_ok() {
+                return expr_result;
+            }
+
+            let expr_ty = expr_result.substitution.apply(&expr_result.ty);
+            let surface_pattern = match core_pattern_to_surface(env, pattern) {
+                Ok(pattern) => pattern,
+                Err(error) => return CheckResult::error(error),
+            };
+            let bindings = match check_irrefutable_let_pattern(
+                env,
+                "core let",
+                &surface_pattern,
+                &expr_ty,
+                core_span_to_surface_span(*span),
+            ) {
+                Ok(bindings) => bindings,
+                Err(error) => return CheckResult::error(error),
+            };
+
+            let mut body_env = env.clone();
+            bind_irrefutable_pattern_bindings(&mut body_env, bindings);
+            let body_result = check_core_expr(&body_env, body);
+            let combined_sub = expr_result.substitution.compose(&body_result.substitution);
+            if !body_result.is_ok() {
+                return CheckResult {
+                    ty: Type::Var(TypeVar::fresh()),
+                    substitution: combined_sub,
+                    errors: body_result.errors,
+                };
+            }
+            CheckResult {
+                ty: combined_sub.apply(&body_result.ty),
+                substitution: combined_sub,
+                errors: Vec::new(),
+            }
+        }
+        other => CheckResult::error(ConstructorError::UnsupportedExpression {
+            kind: format!("core expression not supported by type checker: {other:?}"),
+            span: Span::default(),
+        }),
+    }
+}
+
+fn check_core_literal(env: &TypeEnv, value: &ash_core::Value) -> CheckResult {
+    match value {
+        ash_core::Value::Variant { name, fields } => {
+            let fields = fields
+                .iter()
+                .map(|(field, value)| (field.clone(), CoreExpr::Literal(value.clone())))
+                .collect::<Vec<_>>();
+            check_core_constructor(env, name, &fields)
+        }
+        _ => CheckResult::success(core_value_type(env, value)),
+    }
+}
+
+fn core_value_type(env: &TypeEnv, value: &ash_core::Value) -> Type {
+    match value {
+        ash_core::Value::Int(_) => Type::Int,
+        ash_core::Value::Float(_) => Type::Float,
+        ash_core::Value::String(_) => Type::String,
+        ash_core::Value::Bool(_) => Type::Bool,
+        ash_core::Value::Null => Type::Null,
+        ash_core::Value::List(_) => Type::List(Box::new(Type::Var(TypeVar::fresh()))),
+        ash_core::Value::Record(fields) => Type::Record(
+            fields
+                .keys()
+                .map(|name| (name.clone().into_boxed_str(), Type::Var(TypeVar::fresh())))
+                .collect(),
+        ),
+        ash_core::Value::Variant { name, .. } => env
+            .get_variant(name)
+            .map(|(type_info, variant_idx, _)| build_constructor_type(type_info, variant_idx))
+            .unwrap_or_else(|| Type::Var(TypeVar::fresh())),
+        ash_core::Value::Cap(_) => Type::Cap {
+            name: "Capability".into(),
+            effect: ash_core::Effect::Operational,
+        },
+        ash_core::Value::Time(_)
+        | ash_core::Value::Ref(_)
+        | ash_core::Value::Instance(_)
+        | ash_core::Value::InstanceAddr(_)
+        | ash_core::Value::ControlLink(_)
+        | ash_core::Value::Stream(_)
+        | ash_core::Value::ProcessHandle(_)
+        | ash_core::Value::ProcAwaitCapture(_)
+        | ash_core::Value::ProcYieldCapture
+        | ash_core::Value::ProcParCapture { .. }
+        | ash_core::Value::ProcScatterCapture { .. }
+        | ash_core::Value::ProcJoinCapture { .. }
+        | ash_core::Value::ProcGatherCapture { .. }
+        | ash_core::Value::Closure { .. }
+        | ash_core::Value::ActEnvToken => Type::Var(TypeVar::fresh()),
+    }
+}
+
+fn check_core_constructor(env: &TypeEnv, name: &str, fields: &[(String, CoreExpr)]) -> CheckResult {
+    let (type_info, variant_idx, variant_info) = match env.get_variant(name) {
+        Some(result) => result,
+        None => {
+            return CheckResult::error(ConstructorError::UnknownConstructor(
+                name.to_string(),
+                Span::default(),
+            ));
+        }
+    };
+
+    let mut errors = Vec::new();
+    let mut substitution = Substitution::new();
+    match variant_info.payload_shape {
+        VariantPayloadShape::Tuple => check_core_tuple_constructor_fields(
+            env,
+            name,
+            variant_info,
+            fields,
+            &mut substitution,
+            &mut errors,
+        ),
+        VariantPayloadShape::Unit | VariantPayloadShape::Record => {
+            check_core_named_constructor_fields(
+                env,
+                name,
+                variant_info,
+                fields,
+                &mut substitution,
+                &mut errors,
+            )
+        }
+    }
+
+    CheckResult {
+        ty: substitution.apply(&build_constructor_type(type_info, variant_idx)),
+        substitution,
+        errors,
+    }
+}
+
+fn check_core_tuple_constructor_fields(
+    env: &TypeEnv,
+    constructor_name: &str,
+    variant_info: &VariantInfo,
+    fields: &[(String, CoreExpr)],
+    substitution: &mut Substitution,
+    errors: &mut Vec<ConstructorError>,
+) {
+    if fields.len() != variant_info.fields.len() {
+        errors.push(ConstructorError::TupleArityMismatch {
+            constructor: constructor_name.to_string(),
+            expected: variant_info.fields.len(),
+            actual: fields.len(),
+            span: Span::default(),
+        });
+    }
+
+    for (index, ((expected_name, expected_ty), (field_name, field_expr))) in
+        variant_info.fields.iter().zip(fields.iter()).enumerate()
+    {
+        if expected_name != &tuple_field_name(index) || field_name != expected_name {
+            errors.push(ConstructorError::TupleArityMismatch {
+                constructor: constructor_name.to_string(),
+                expected: variant_info.fields.len(),
+                actual: fields.len(),
+                span: Span::default(),
+            });
+            continue;
+        }
+
+        check_core_constructor_field_type(
+            env,
+            constructor_name,
+            CoreConstructorField::Tuple(index),
+            expected_ty,
+            field_expr,
+            substitution,
+            errors,
+        );
+    }
+}
+
+fn check_core_named_constructor_fields(
+    env: &TypeEnv,
+    constructor_name: &str,
+    variant_info: &VariantInfo,
+    fields: &[(String, CoreExpr)],
+    substitution: &mut Substitution,
+    errors: &mut Vec<ConstructorError>,
+) {
+    let mut seen_fields = HashSet::new();
+    for (field_name, _) in fields {
+        if !seen_fields.insert(field_name.as_str()) {
+            errors.push(ConstructorError::UnsupportedExpression {
+                kind: format!(
+                    "duplicate field `{field_name}` in core constructor `{constructor_name}`"
+                ),
+                span: Span::default(),
+            });
+        }
+    }
+
+    let expected_fields = variant_info
+        .fields
+        .iter()
+        .map(|(name, _)| name.as_str())
+        .collect::<HashSet<_>>();
+    let provided_fields = fields
+        .iter()
+        .map(|(name, _)| name.as_str())
+        .collect::<HashSet<_>>();
+
+    for expected in &expected_fields {
+        if !provided_fields.contains(expected) {
+            errors.push(ConstructorError::MissingField {
+                constructor: constructor_name.to_string(),
+                field: (*expected).to_string(),
+                span: Span::default(),
+            });
+        }
+    }
+
+    for provided in &provided_fields {
+        if !expected_fields.contains(provided) {
+            errors.push(ConstructorError::UnknownField {
+                constructor: constructor_name.to_string(),
+                field: (*provided).to_string(),
+                span: Span::default(),
+            });
+        }
+    }
+
+    let expected_types = variant_info
+        .fields
+        .iter()
+        .map(|(name, ty)| (name.as_str(), ty))
+        .collect::<HashMap<_, _>>();
+    for (field_name, field_expr) in fields {
+        if let Some(expected_ty) = expected_types.get(field_name.as_str()) {
+            check_core_constructor_field_type(
+                env,
+                constructor_name,
+                CoreConstructorField::Record(field_name),
+                expected_ty,
+                field_expr,
+                substitution,
+                errors,
+            );
+        }
+    }
+}
+
+enum CoreConstructorField<'a> {
+    Record(&'a str),
+    Tuple(usize),
+}
+
+fn check_core_constructor_field_type(
+    env: &TypeEnv,
+    constructor_name: &str,
+    field: CoreConstructorField<'_>,
+    expected_ty: &Type,
+    field_expr: &CoreExpr,
+    substitution: &mut Substitution,
+    errors: &mut Vec<ConstructorError>,
+) {
+    let field_result = check_core_expr(env, field_expr);
+    let field_ty = field_result.substitution.apply(&field_result.ty);
+    errors.extend(field_result.errors);
+
+    let expected_ty_subst = substitution.apply(expected_ty);
+    match unify(&expected_ty_subst, &field_ty) {
+        Ok(sub) => *substitution = substitution.compose(&sub),
+        Err(_) => match field {
+            CoreConstructorField::Record(field_name) => {
+                errors.push(ConstructorError::FieldTypeMismatch {
+                    constructor: constructor_name.to_string(),
+                    field: field_name.to_string(),
+                    expected: expected_ty.to_string(),
+                    actual: field_ty.to_string(),
+                    span: Span::default(),
+                })
+            }
+            CoreConstructorField::Tuple(position) => {
+                errors.push(ConstructorError::TupleFieldTypeMismatch {
+                    constructor: constructor_name.to_string(),
+                    position,
+                    expected: expected_ty.to_string(),
+                    actual: field_ty.to_string(),
+                    span: Span::default(),
+                });
+            }
+        },
+    }
+}
+
+fn core_pattern_to_surface(
+    env: &TypeEnv,
+    pattern: &CorePattern,
+) -> Result<Pattern, ConstructorError> {
+    match pattern {
+        CorePattern::Variable { name, .. } => Ok(Pattern::Variable {
+            name: name.clone().into(),
+            span: Span::default(),
+        }),
+        CorePattern::Tuple(items) => items
+            .iter()
+            .map(|item| core_pattern_to_surface(env, item))
+            .collect::<Result<Vec<_>, _>>()
+            .map(Pattern::Tuple),
+        CorePattern::Record(fields) => fields
+            .iter()
+            .map(|(name, pattern)| {
+                core_pattern_to_surface(env, pattern).map(|pattern| (name.clone().into(), pattern))
+            })
+            .collect::<Result<Vec<_>, _>>()
+            .map(Pattern::Record),
+        CorePattern::List(items, rest) => Ok(Pattern::List {
+            elements: items
+                .iter()
+                .map(|item| core_pattern_to_surface(env, item))
+                .collect::<Result<Vec<_>, _>>()?,
+            rest: rest.clone().map(Into::into),
+        }),
+        CorePattern::Wildcard => Ok(Pattern::Wildcard),
+        CorePattern::Literal(value) => core_value_to_surface_literal(value)
+            .map(Pattern::Literal)
+            .ok_or_else(|| ConstructorError::UnsupportedExpression {
+                kind: format!("core let literal pattern cannot be converted: {value:?}"),
+                span: Span::default(),
+            }),
+        CorePattern::Variant { name, fields } => match fields {
+            None => Ok(Pattern::Variant {
+                name: name.clone().into(),
+                fields: None,
+                payload: ash_parser::surface::VariantPatternPayload::Unit,
+            }),
+            Some(fields) => core_variant_pattern_to_surface(env, name, fields),
+        },
+    }
+}
+
+fn core_variant_pattern_to_surface(
+    env: &TypeEnv,
+    name: &str,
+    fields: &[(String, CorePattern)],
+) -> Result<Pattern, ConstructorError> {
+    let surface_fields = fields
+        .iter()
+        .map(|(field, pattern)| {
+            core_pattern_to_surface(env, pattern).map(|pattern| (field.clone().into(), pattern))
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+
+    if let Some((_, _, variant)) = env.get_variant(name)
+        && variant.payload_shape == VariantPayloadShape::Tuple
+        && fields
+            .iter()
+            .enumerate()
+            .all(|(index, (field, _))| field == &tuple_field_name(index))
+    {
+        let tuple_items = surface_fields
+            .iter()
+            .map(|(_, pattern)| pattern.clone())
+            .collect::<Vec<_>>();
+        return Ok(Pattern::Variant {
+            name: name.into(),
+            fields: Some(surface_fields),
+            payload: ash_parser::surface::VariantPatternPayload::Tuple(tuple_items),
+        });
+    }
+
+    Ok(Pattern::Variant {
+        name: name.into(),
+        fields: Some(surface_fields.clone()),
+        payload: ash_parser::surface::VariantPatternPayload::Record(surface_fields),
+    })
+}
+
+fn core_value_to_surface_literal(value: &ash_core::Value) -> Option<Literal> {
+    match value {
+        ash_core::Value::Int(value) => Some(Literal::Int(*value)),
+        ash_core::Value::Float(value) => Some(Literal::Float(*value)),
+        ash_core::Value::String(value) => Some(Literal::String(value.clone().into_boxed_str())),
+        ash_core::Value::Bool(value) => Some(Literal::Bool(*value)),
+        ash_core::Value::Null => Some(Literal::Null),
+        ash_core::Value::List(values) => values
+            .iter()
+            .map(core_value_to_surface_literal)
+            .collect::<Option<Vec<_>>>()
+            .map(Literal::List),
+        _ => None,
     }
 }
 
@@ -576,7 +1317,11 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
             // Process statements (let-bindings)
             for stmt in statements {
                 match stmt {
-                    ash_parser::surface::BlockStmt::Let { pattern, expr, .. } => {
+                    ash_parser::surface::BlockStmt::Let {
+                        pattern,
+                        expr,
+                        span,
+                    } => {
                         let expr_result = check_expr(&block_env, expr);
                         substitution = substitution.compose(&expr_result.substitution);
                         if !expr_result.is_ok() {
@@ -584,8 +1329,19 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
                             continue;
                         }
                         let expr_ty = substitution.apply(&expr_result.ty);
-                        // Bind pattern variables in the block environment
-                        crate::bind_pattern_variables(&mut block_env, pattern, &expr_ty);
+                        let pattern_span = surface_pattern_span(pattern, *span);
+                        match check_irrefutable_let_pattern(
+                            &block_env,
+                            "let",
+                            pattern,
+                            &expr_ty,
+                            pattern_span,
+                        ) {
+                            Ok(bindings) => {
+                                bind_irrefutable_pattern_bindings(&mut block_env, bindings);
+                            }
+                            Err(error) => errors.push(error),
+                        }
                     }
                 }
             }

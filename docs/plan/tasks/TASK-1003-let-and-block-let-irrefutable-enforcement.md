@@ -1,6 +1,6 @@
 # TASK-1003: Pure let irrefutability enforcement
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -15,7 +15,7 @@ Wire the irrefutability API into pure surface block `let` and lowered/core `Expr
 
 - ✅ TASK-1000 packet exists
 - ✅ TASK-1001 audit gate completed and patched this task with focused commands
-- 📝 TASK-1002 shared irrefutability API must be implemented before this task wires pure/core let binders
+- ✅ TASK-1002 shared irrefutability API implemented before this task wires pure/core let binders
 
 ## Requirements
 
@@ -52,15 +52,16 @@ toolsets: [terminal, file]
 ```yaml
 strictness: clean
 commands:
-  - bash -lc "cargo test -p ash-typeck --test task_1003_let_irrefutability -- --list | rg 'pure_block_let_rejects_some_over_option|pure_block_let_rejects_nested_refutable_binders|pure_block_let_rejects_list_patterns|core_expr_let_rejects_refutable_host_ir|pure_block_let_accepts_variable_wildcard_and_single_variant|pure_block_let_duplicate_binders_rejected' && cargo test -p ash-typeck --test task_1003_let_irrefutability"
+  - bash -lc "cargo test -p ash-typeck --test task_1003_let_irrefutability -- --list | rg 'pure_block_let_rejects_some_over_option|pure_block_let_diagnostic_uses_pattern_span|pure_block_let_rejects_nested_refutable_binders|pure_block_let_rejects_list_patterns|pure_block_let_reports_blocked_product_and_variant_cases|core_expr_let_rejects_refutable_host_ir|core_expr_let_diagnostic_uses_core_let_span|core_expr_constructor_rejects_malformed_payload_before_binding|core_expr_variant_literal_rejects_malformed_payload_before_binding|core_expr_variant_literal_rejects_unknown_constructor|core_expr_constructor_rejects_duplicate_record_fields|core_expr_let_accepts_tuple_variant_payload_shape|pure_block_let_accepts_variable_wildcard_and_single_variant|pure_block_let_duplicate_binders_rejected' && cargo test -p ash-typeck --test task_1003_let_irrefutability"
   - cargo fmt --check
   - git diff --check
   - cargo check --workspace
+  - RUSTC_WRAPPER= cargo clippy -p ash-typeck --all-targets --all-features -- -D warnings
 checklist:
   - [x] TASK-1001 replaced the fail-closed guard
-  - [ ] RED tests fail before implementation and pass after implementation
-  - [ ] Scope did not expand beyond SPEC-076
-  - [ ] Diagnostics are asserted where required
+  - [x] RED tests fail before implementation and pass after implementation
+  - [x] Scope did not expand beyond SPEC-076
+  - [x] Diagnostics are asserted where required
 ```
 
 ## Dependencies for Next Task

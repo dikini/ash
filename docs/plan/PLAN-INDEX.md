@@ -306,6 +306,7 @@ Update this section as tasks complete:
 | 128 | 12 | 12 | ✅ Complete; SPEC-073 Implemented MVP |
 | 129 | 5 | 5 | ✅ Complete; SPEC-074 Accepted/Implemented; TASK-991 follow-up fixed |
 | 130 | 8 | 8 | ✅ Complete; SPEC-075 Implemented MVP |
+| 131 | 9 | 1 | 📝 Planned |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -3865,3 +3866,34 @@ Phase 130 expands `reference/` from a narrow pilot into the first maintainable A
 - D5: `reference/language/` concept pages and `reference/stdlib/` API pages remain distinct and cross-linked.
 - D6: Ashgrove and RuntimeKernel pages must preserve SPEC-073/SPEC-074/SPEC-070 non-goals and fail-closed authority/integrity boundaries.
 - D7: TASK-993 is a hard gate; bulk page tasks must not start until maintenance metadata/staleness semantics are documented.
+
+## Phase 131: Explicit Refutable Matching and Exhaustiveness
+
+**Priority:** High (static-first correctness: implicit pattern failure must not survive checked source)
+**Status:** 📝 Planned
+**Spec:** [SPEC-076](../spec/SPEC-076-EXPLICIT-REFUTABLE-MATCHING-AND-EXHAUSTIVENESS.md)
+**Design:** [DESIGN-044](../design/DESIGN-044-EXPLICIT-REFUTABLE-MATCHING-AND-EXHAUSTIVENESS.md)
+**Plan:** [PLAN-126](PLAN-126-EXPLICIT-REFUTABLE-MATCHING-AND-EXHAUSTIVENESS.md)
+
+Phase 131 bans implicit refutable matching. It requires type-aware irrefutable patterns in binder positions such as pure block `let`, workflow `let`, observe/spawn/split/loop binders, and requires exhaustive arm sets for ordinary eliminators such as `match` and total `with_error` where the failure payload type is known. The phase treats `if let ... else` as a total two-branch eliminator over `P | not P` with mandatory `else`, non-fatal unreachable-else diagnostics for irrefutable patterns, hard errors for impossible patterns, and no negative refinement; preserves current selective `receive` as an explicit refutable filtering form; and adds structured diagnostics for non-irrefutable binders, non-exhaustive eliminators, and blocked constructor-universe cases.
+
+| Task | Description | Est. Hours | Status |
+|------|-------------|------------|--------|
+| [TASK-1000](tasks/TASK-1000-explicit-refutable-matching-packet.md) | Create DESIGN-044/SPEC-076/PLAN-126 packet and register Phase 131 | 4 | ✅ Complete |
+| [TASK-1001](tasks/TASK-1001-matching-semantics-audit-gate.md) | Audit all pattern-use callsites and replace fail-closed downstream verification guards | 6 | 📝 Planned |
+| [TASK-1002](tasks/TASK-1002-type-aware-irrefutable-pattern-api.md) | Add shared type-aware irrefutable pattern API | 8 | 📝 Planned |
+| [TASK-1003](tasks/TASK-1003-let-and-block-let-irrefutable-enforcement.md) | Enforce irrefutable patterns for pure block/core let binders | 8 | 📝 Planned |
+| [TASK-1004](tasks/TASK-1004-workflow-and-operational-binder-irrefutable-enforcement.md) | Enforce irrefutable patterns for workflow/observe/spawn/split/loop binders | 10 | 📝 Planned |
+| [TASK-1005](tasks/TASK-1005-deep-exhaustiveness-and-match-error-diagnostics.md) | Harden match exhaustiveness and missing-witness diagnostics | 10 | 📝 Planned |
+| [TASK-1006](tasks/TASK-1006-with-error-total-handler-diagnostics.md) | Define and enforce or explicitly defer total `with_error` handler coverage | 8 | 📝 Planned |
+| [TASK-1007](tasks/TASK-1007-if-let-and-selective-receive-explicit-refutable-contract.md) | Refine `if let ... else` as total by implicit complement and preserve selective `receive` | 8 | 📝 Planned |
+| [TASK-1008](tasks/TASK-1008-runtime-defensive-pattern-error-cleanup-closeout.md) | Verify runtime defensive pattern boundary, status surfaces, broad gates, and independent review | 8 | 📝 Planned |
+
+**Decision gates:**
+- D1: TASK-1001 is a hard audit gate and must replace downstream fail-closed placeholder verification before Rust implementation starts.
+- D2: Binding positions reject refutable patterns; they do not lower pattern failure into operational `fail`, `None`, `Err`, workflow rejection, or skipped execution.
+- D3: Exhaustive eliminators share the SPEC-068 canonical constructor universe and blocked-canonicalization behavior.
+- D4: `if let ... else` is a total two-branch eliminator over `P | not P`; `else` is mandatory, then/else result types must unify, irrefutable patterns are accepted with non-fatal unreachable-else diagnostics, impossible patterns are hard errors, and complement branches do not gain negative type refinement in this phase.
+- D5: Current selective `receive` remains an explicit refutable filtering form in this phase; total protocol receive is deferred unless a later spec reclassifies it.
+- D6: Runtime pattern errors such as expression `LetPatternBindFailed`, workflow `PatternMatchFailed`, and `NonExhaustiveMatch` remain defensive for unchecked IR/host values, not the ordinary outcome of checked source.
+- D7: Diagnostics are semantic acceptance criteria and must include construct kind, type/witness, span, and likely rewrite where feasible.

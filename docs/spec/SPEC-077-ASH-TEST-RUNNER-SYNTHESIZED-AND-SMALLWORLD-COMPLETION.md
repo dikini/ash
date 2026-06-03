@@ -1,13 +1,13 @@
 # SPEC-077: Ash Test Runner Synthesized and Small-World Completion
 
-**Status:** Draft
+**Status:** Implemented MVP
 **Related:** DESIGN-022, DESIGN-023, PLAN-024, PLAN-127
 
 ## Summary
 
 This specification defines the follow-on work required to complete DESIGN-022 and DESIGN-023 after the narrow Phase 76B structured-snapshot slice. Phase 76B implemented runner-injected structured snapshots, narrow contract `requires` boundary cases, policy `TerminalEquals` allow/deny cases, explicit finite obligation lifecycle world-state oracles, exact finite generated property values, explicit finite small-world states, repro artifacts, synthesized filters/fail-fast, and bounded-int cap safety.
 
-Full completion remains open. Ordinary `ash test` CLI source files still do not produce live checked/lowered `RunnerIntrospectionSnapshot` values, contract postconditions do not yet execute real targets end to end, and policy/obligation/small-world execution is limited to narrow metadata-backed finite cases.
+Phase 132 implements the bounded MVP for this specification. Ordinary `ash test` CLI source files can produce live checked/lowered `RunnerIntrospectionSnapshot` values for supported pure-function contract metadata; supported contract postconditions, policy terminals, obligation lifecycle transitions, and small-world target-output oracles execute over explicit finite metadata; richer finite domains are bounded and fail closed; raw-source compatibility scans, open domains, unsupported setup, and arbitrary Ash/runtime semantics remain deferred-skip only.
 
 ## Requirements
 
@@ -86,3 +86,4 @@ Verification must include focused RED/GREEN tests for each new slice plus broad 
 ### 2026-06-03
 
 - Initial draft created after Phase 76B final remediation to define the remaining DESIGN-022 and DESIGN-023 completion work.
+- Phase 132 closeout promoted SPEC-077 to Implemented MVP after TASK-1012 through TASK-1018 landed and the closeout verification gate passed.

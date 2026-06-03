@@ -1,15 +1,20 @@
 # DESIGN-023: Small-World Exploration Substrate
 
-## Status: Draft (Phase 76B narrow slice implemented; broader design open)
+## Status: Implemented MVP (Phase 132 complete)
 
-Phase 76B implemented the narrow structured-snapshot subset for this design:
-explicit `SmallWorldState` / `SmallWorldDomain` metadata, deterministic
-enumeration for explicit states/values, bool, and safely capped bounded
-integers, world repro snapshots, `--max-worlds` truncation over actual metadata
-worlds, and deferred skips for uncapped bounded integers or unsupported domains.
-Full design acceptance remains open and is planned by
-[SPEC-077](../spec/SPEC-077-ASH-TEST-RUNNER-SYNTHESIZED-AND-SMALLWORLD-COMPLETION.md)
-and [PLAN-127](../plan/PLAN-127-DESIGN-022-023-SYNTHESIZED-SMALLWORLD-COMPLETION.md).
+Phase 132 completes the executable MVP for this design beyond the Phase 76B
+narrow structured-snapshot subset. Small-world rows now materialize
+deterministic finite worlds, execute supported pure-expression/literal Ash
+targets against each world, evaluate target-output oracles rather than claimed
+snapshot state, honor `--max-worlds` over actual worlds, and emit concrete
+world/output/replay repro artifacts. Explicit finite domains now include
+explicit states/values, bool, safely capped bounded integers, bounded products,
+bounded lists, role/capability inclusion sets, policy-context descriptors, and
+obligation-lifecycle descriptors.
+
+Residual non-goals remain explicit: arbitrary Ash execution, open or inferred
+domains, full runtime policy/capability semantics, symbolic execution, and
+unbounded model checking are not claimed by the MVP.
 
 ## Overview
 
@@ -22,12 +27,12 @@ This note is a follow-up to Phase 76. The current runner supports:
 - explicit finite structured snapshot worlds injected through runner internals/tests
 
 The authored compatibility path can still rerun the same authored body in a
-bounded loop, and ordinary CLI source files do not yet produce live checked
-small-world snapshots. The current structured-snapshot path explores explicit
-finite worlds, but full small-world target execution against Ash roles,
-capabilities, policies, obligations, and richer domains remains future work.
-This note defines the full world model, enumeration model, execution model, and
-oracle model required for genuine small-world exploration.
+bounded loop. Phase 132 adds the bounded MVP for live checked/structured
+small-world metadata from ordinary CLI source files: explicit finite worlds,
+supported pure-expression/literal target execution, target-output oracles, and
+richer finite domains. This note defines the world model, enumeration model,
+execution model, and oracle model required for genuine bounded small-world
+exploration.
 
 ## Problem Statement
 
@@ -38,13 +43,9 @@ Many Ash behaviors are naturally finite-state or bounded-interaction problems:
 - control-link lifecycle paths
 - bounded message/receive/send protocols
 
-These are exactly the sorts of problems where exhaustive or near-exhaustive exploration over small domains is more valuable than random generation. However, the current small-world path does not model worlds explicitly and therefore cannot explore them meaningfully.
+These are exactly the sorts of problems where exhaustive or near-exhaustive exploration over small domains is more valuable than random generation. Before Phase 132, the small-world path did not model worlds explicitly and therefore could not explore them meaningfully.
 
-What is missing:
-1. no canonical representation of an Ash test world
-2. no stable enumeration semantics for bounded worlds/states
-3. no way to derive worlds from structured metadata
-4. no way to report counterexamples as concrete worlds rather than loop counters
+Phase 132 closes the bounded MVP gap by adding canonical world metadata, stable deterministic enumeration for explicit finite domains, structured metadata-derived worlds, and concrete world repro reporting.
 
 ## Goals
 
@@ -385,9 +386,11 @@ This design note is realized when:
 5. richer finite domains such as products/lists/state machines are safe-capped or explicitly deferred
 6. failing small-world cases report the actual world, not merely a loop counter
 
-Phase 76B satisfies only the narrow explicit-world subset for injected
-structured snapshots. Full acceptance remains future work tracked by
-SPEC-077/PLAN-127.
+Phase 76B satisfied only the narrow explicit-world subset for injected
+structured snapshots. Phase 132 / SPEC-077 / PLAN-127 complete the bounded MVP
+acceptance criteria above while preserving the non-goals for arbitrary Ash
+execution, inferred/open domains, symbolic exploration, and full runtime
+policy/capability semantics.
 
 ## Recommendation
 

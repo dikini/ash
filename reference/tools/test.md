@@ -62,7 +62,7 @@ refresh_trigger:
 
 # Ash Test
 
-`ash test` runs Ash-authored test files and, when explicitly requested, reports synthesized compatibility rows from contract, policy, or obligation sources.
+`ash test` runs Ash-authored test files and, when explicitly requested, runs bounded synthesized rows from contract, policy, obligation, generated-property, and small-world metadata. Unsupported raw-source or open-domain cases are reported as deferred skips rather than passes.
 
 Live help checked:
 
@@ -180,7 +180,7 @@ ash test tests/ash/smallworld --max-worlds 20
 
 For authored property tests, `--seed` is recorded for reproducibility and `--max-cases` bounds repeated execution. The current authored property path reruns the `.ash` body; it does not yet generate arbitrary input values from ordinary source.
 
-For authored small-world tests, `--max-worlds` bounds repeated execution and reports the failing world index. True world enumeration is currently available only through the structured snapshot path described below.
+For authored small-world tests, `--max-worlds` bounds repeated execution and reports the failing world index. For synthesized small-world rows, `--max-worlds` bounds actual materialized finite worlds from the checked/structured metadata path described below.
 
 ## Synthesized Controls
 
@@ -198,17 +198,16 @@ Sources are a comma-separated list of `contracts`, `policies`, and `obligations`
 
 ### Current Execution Boundary
 
-Phase 76B supports executable synthesized rows only for the runner-internal structured snapshot slice:
+Phase 132 supports a bounded executable MVP for structured synthesized rows:
 
-- contract `requires` boundary cases over exact finite representatives;
-- policy `TerminalEquals` allow/deny metadata;
-- obligation lifecycle rows with explicit finite lifecycle world state;
+- live checked/lowered `RunnerIntrospectionSnapshot` production from ordinary CLI source files for supported pure-function contract metadata;
+- contract `requires` boundary cases and supported pure `Int` function postconditions over checked/lowered target and `ensures` expressions;
+- policy terminal-oracle rows over exact finite metadata, with unsupported approval/transform slices deferred unless a stable oracle is available;
+- obligation lifecycle rows over narrow typed transition metadata;
 - metadata-backed generated property rows with exact finite values;
-- explicit finite small-world states, explicit values, bool, and safely capped bounded integers.
+- deterministic small-world execution over explicit finite worlds, including explicit states/values, bool, safely capped bounded integers, bounded products/lists, role/capability inclusion sets, policy-context descriptors, and obligation-lifecycle descriptors.
 
-Ordinary raw source files passed to the CLI do not yet produce live checked/lowered `RunnerIntrospectionSnapshot` values. Raw-source synthesized compatibility rows are deferred skips with messages such as missing lowered executable metadata; they are not live lowered synthesized executions and must not be treated as full contract, policy, obligation, property, or small-world passes.
-
-Broader live snapshot production, contract postcondition target execution, richer policy and obligation execution, richer finite domains, and Ash target execution across materialized worlds are deferred to SPEC-077 / Phase 132 follow-up tasks.
+Raw-source compatibility scans, unsupported setup, open or uncapped domains, arbitrary capability/Act/workflow execution, symbolic exploration, and full runtime policy/capability semantics remain deferred skips rather than passes.
 
 ## Non-Goals
 

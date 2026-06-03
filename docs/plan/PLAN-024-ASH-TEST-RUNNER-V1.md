@@ -238,13 +238,11 @@ fail-fast apply to structured synthesized results.
 
 ## Explicit Deferred Follow-Up Items
 
-The following items are intentionally deferred until after the next round of spec work improvement and should not be treated as part of the current closed Phase 76 surface:
+The following items were intentionally deferred from the closed Phase 76 surface. SPEC-077 / Phase 132 later completed the bounded DESIGN-022/023 MVP for these items while keeping arbitrary/open-domain runtime semantics outside the MVP boundary:
 
 1. Live checked/lowered snapshot production from ordinary CLI source files
-   - `ash test path.ash --only-synthesized ...` still uses raw-source fallback/deferred rows
-     unless a structured snapshot is injected through runner internals/tests
-   - the CLI command does not yet produce live `RunnerIntrospectionSnapshot` values from ordinary
-     source files
+   - Phase 132 adds live checked/lowered `RunnerIntrospectionSnapshot` production for supported ordinary CLI source files
+   - unsupported raw-source/open-domain paths still defer rather than passing
 2. Broader synthesized contract/policy/obligation execution beyond the TASK-513 checkpoint
    - live wiring from lowered contracts, policies, and obligations into the runner snapshot
    - executable contract postcondition cases beyond the narrow structured contract `requires`
@@ -300,8 +298,8 @@ the first runner-side synthesized-case substrate, a `SuiteConfig` structured sna
 structured contract `requires` boundary oracles over exact generators, narrow policy
 `TerminalEquals` allow/deny oracles over exact finite domains, and narrow obligation lifecycle
 oracles over explicit finite lifecycle world-state metadata. Unsupported raw-source paths and incomplete
-metadata remain explicit deferred skips, and the user-facing CLI still does not synthesize live
-checked snapshots from source files. TASK-514 extends that seam with exact finite generated property
+metadata remain explicit deferred skips at the Phase 76B boundary. Phase 132 later adds user-facing
+live checked snapshots for supported ordinary CLI source files. TASK-514 extends that seam with exact finite generated property
 inputs and deterministic explicit small-world state enumeration, including generated input/world repro
 snapshots and `--max-worlds` truncation over actual metadata worlds.
 
@@ -327,16 +325,15 @@ implementation effort:
   related helper contracts are stable enough to avoid committing to the wrong long-term API
 
 In short: Phase 76 closes the execution substrate and explicit extension points, plus the narrow
-Phase 76B structured snapshot execution slice. The richer synthesized/generative/test-library
-layers are deferred until the next round of spec work can define those surfaces cleanly and prevent
-design debt. SPEC-077 and PLAN-127 now track the follow-on completion work for DESIGN-022 and
-DESIGN-023.
+Phase 76B structured snapshot execution slice. SPEC-077 and PLAN-127 subsequently track and close
+the bounded Phase 132 completion work for DESIGN-022 and DESIGN-023, while richer arbitrary
+open-domain/runtime-heavy semantics remain outside that MVP.
 
 ## Deliverable
 
 A practical Ash test runner v1: CLI-integrated, panic-contained, assertion-backed by a dedicated
 Ash test library surface, capable of executing authored unit/integration/e2e tests plus bounded
 property/small-world tests, and able to execute the narrow structured-snapshot synthesized and
-generated/small-world metadata slices only when explicitly requested. Ordinary CLI source files
-still do not produce live checked/lowered snapshots; raw-source synthesized paths remain explicit
-deferred compatibility rows.
+generated/small-world metadata slices only when explicitly requested. Phase 132 extends this with
+live checked/lowered snapshots for supported ordinary CLI source files; raw-source/open-domain
+unsupported paths remain explicit deferred compatibility rows.

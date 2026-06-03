@@ -307,7 +307,7 @@ Update this section as tasks complete:
 | 129 | 5 | 5 | ✅ Complete; SPEC-074 Accepted/Implemented; TASK-991 follow-up fixed |
 | 130 | 8 | 8 | ✅ Complete; SPEC-075 Implemented MVP |
 | 131 | 9 | 9 | ✅ Complete |
-| 132 | 7 | 0 | Planned |
+| 132 | 7 | 7 | ✅ Complete |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -3921,7 +3921,7 @@ Phase 131 bans implicit refutable matching. It requires type-aware irrefutable p
 ## Phase 132: DESIGN-022/023 Synthesized and Small-World Completion
 
 **Priority:** High
-**Status:** Planned
+**Status:** ✅ Complete
 **Spec:** [SPEC-077](../spec/SPEC-077-ASH-TEST-RUNNER-SYNTHESIZED-AND-SMALLWORLD-COMPLETION.md)
 **Designs:** [DESIGN-022](../design/DESIGN-022-SYNTHESIZED-CONTRACT-POLICY-OBLIGATION-CASES.md), [DESIGN-023](../design/DESIGN-023-SMALL-WORLD-EXPLORATION-SUBSTRATE.md)
 **Plan:** [PLAN-127](PLAN-127-DESIGN-022-023-SYNTHESIZED-SMALLWORLD-COMPLETION.md)
@@ -3936,7 +3936,7 @@ Phase 132 completes the broader DESIGN-022 and DESIGN-023 work deferred after th
 | [TASK-1015](tasks/TASK-1015-runtime-backed-obligation-lifecycle-execution.md) | Execute obligation lifecycle transitions through narrow typed transition metadata | 14 | ✅ Complete |
 | [TASK-1016](tasks/TASK-1016-smallworld-target-execution.md) | Materialize deterministic worlds and execute Ash targets against each world | 16 | ✅ Complete |
 | [TASK-1017](tasks/TASK-1017-richer-domains-and-cli-integration-hardening.md) | Add richer finite domains and harden synthesized/small-world CLI controls | 12 | ✅ Complete |
-| [TASK-1018](tasks/TASK-1018-design022-023-completion-closeout.md) | Run broad verification and promote DESIGN-022/DESIGN-023 completion status only when acceptance is met | 8 | Planned |
+| [TASK-1018](tasks/TASK-1018-design022-023-completion-closeout.md) | Run broad verification and promote DESIGN-022/DESIGN-023 completion status only when acceptance is met | 8 | ✅ Complete |
 
 **Decision gates:**
 - D1: Raw-source compatibility scans never produce pass rows.

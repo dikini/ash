@@ -1,6 +1,6 @@
 # PLAN-127: DESIGN-022/023 Synthesized and Small-World Completion
 
-**Status:** Draft
+**Status:** ✅ Complete
 **Spec:** [SPEC-077](../spec/SPEC-077-ASH-TEST-RUNNER-SYNTHESIZED-AND-SMALLWORLD-COMPLETION.md)
 **Designs:** [DESIGN-022](../design/DESIGN-022-SYNTHESIZED-CONTRACT-POLICY-OBLIGATION-CASES.md), [DESIGN-023](../design/DESIGN-023-SMALL-WORLD-EXPLORATION-SUBSTRATE.md)
 **Depends on:** Phase 76B narrow structured-snapshot runner substrate
@@ -16,10 +16,11 @@ Phase 76B is complete only for the narrow structured-snapshot slice: injected `R
 
 TASK-1012 and TASK-1013 extend that baseline so ordinary `ash test` source files can produce live checked runner snapshots, and supported pure `Int` function contract postconditions execute checked/lowered core target and `ensures` expressions through `ash_interp`. String-only raw-source or display metadata remains deferred-skip only.
 
-The following remain future work:
-- policy execution is limited to exact `TerminalEquals` metadata
-- obligation execution is limited to finite lifecycle metadata equality
-- small-world execution runs narrow pure-expression/literal target-output oracles across explicit finite worlds, including richer product, list, role/capability inclusion-set, policy-context, and obligation-lifecycle descriptors; arbitrary Ash execution, inferred open domains, and full runtime policy/capability semantics remain future work
+Phase 132 completes the planned bounded MVP. Remaining future work is outside the MVP boundary:
+- policy approval/transform execution beyond stable exact terminal-oracle slices
+- arbitrary Act/workflow/capability setup for synthesized contract targets
+- broader runtime-backed obligation semantics beyond typed transition metadata
+- arbitrary Ash small-world execution, inferred/open domains, symbolic exploration, and full runtime policy/capability semantics
 
 ## Task Breakdown
 
@@ -31,7 +32,7 @@ The following remain future work:
 | [TASK-1015](tasks/TASK-1015-runtime-backed-obligation-lifecycle-execution.md) | Execute obligation lifecycle transitions through narrow typed transition metadata | Runner/Runtime | 14 | Complete |
 | [TASK-1016](tasks/TASK-1016-smallworld-target-execution.md) | Materialize deterministic worlds and execute Ash targets against each world | Runner/SmallWorld | 16 | Complete |
 | [TASK-1017](tasks/TASK-1017-richer-domains-and-cli-integration-hardening.md) | Add richer finite domains and harden synthesized/small-world CLI controls | Runner/CLI | 12 | Complete |
-| [TASK-1018](tasks/TASK-1018-design022-023-completion-closeout.md) | Run broad verification and promote DESIGN-022/DESIGN-023 completion status | Closeout | 8 | Planned |
+| [TASK-1018](tasks/TASK-1018-design022-023-completion-closeout.md) | Run broad verification and promote DESIGN-022/DESIGN-023 completion status | Closeout | 8 | Complete |
 
 Total estimate: 88h.
 
@@ -73,10 +74,10 @@ CARGO_BUILD_RUSTC_WRAPPER= cargo test --workspace
 
 ## Completion Checklist
 
-- [ ] Ordinary CLI files produce checked/lowered runner snapshots.
+- [x] Ordinary CLI files produce checked/lowered runner snapshots.
 - [x] Contract target/postcondition synthesized execution is implemented for supported cases.
 - [x] Policy domain and terminal oracle execution is implemented for supported cases.
 - [x] Obligation lifecycle execution uses a narrow typed transition substrate for supported cases.
 - [x] Small-world execution runs Ash targets against deterministic worlds.
 - [x] Richer finite domains and CLI controls are hardened.
-- [ ] DESIGN-022 and DESIGN-023 status and acceptance criteria are promoted only after broad verification.
+- [x] DESIGN-022 and DESIGN-023 status and acceptance criteria are promoted after broad verification.

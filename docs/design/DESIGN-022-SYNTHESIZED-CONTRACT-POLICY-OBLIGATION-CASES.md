@@ -1,15 +1,18 @@
 # DESIGN-022: Synthesized Contract / Policy / Obligation Cases
 
-## Status: Draft (Phase 76B narrow slice implemented; broader design open)
+## Status: Implemented MVP (Phase 132 complete)
 
-Phase 76B implemented the narrow structured-snapshot substrate for this design:
-runner-injected `RunnerIntrospectionSnapshot` values, an executable
-`SynthesizedCase` path, exact-generator contract `requires` boundary cases,
-policy `TerminalEquals` allow/deny cases, finite obligation lifecycle world
-oracles, repro artifacts, raw-source deferred compatibility rows, and
-synthesized filter/fail-fast behavior. Full design acceptance remains open and
-is planned by [SPEC-077](../spec/SPEC-077-ASH-TEST-RUNNER-SYNTHESIZED-AND-SMALLWORLD-COMPLETION.md)
-and [PLAN-127](../plan/PLAN-127-DESIGN-022-023-SYNTHESIZED-SMALLWORLD-COMPLETION.md).
+Phase 132 completes the executable MVP for this design beyond the Phase 76B
+narrow structured-snapshot substrate. Ordinary `ash test` CLI source files can
+produce live checked runner snapshots, supported pure `Int` function contract
+postconditions execute checked/lowered targets and `ensures` expressions,
+policy and obligation rows execute through narrow stable metadata slices,
+unsupported or string-only metadata stays deferred-skip only, and every executed
+row carries reproducible source/check, input/world, oracle, and replay metadata.
+
+Residual non-goals remain explicit: arbitrary open-domain generation, full
+capability/Act/workflow setup, broad approval/transform policy semantics, and
+unbounded or symbolic synthesis are not claimed by the MVP.
 
 ## Overview
 
@@ -22,29 +25,18 @@ This note is a follow-up to Phase 76. The current `ash test` runner can:
 - execute a narrow structured-snapshot slice when snapshots are injected through
   runner internals/tests
 
-However, ordinary CLI source files still do not produce live checked/lowered
-snapshots, and the current executable slice does not yet provide full
-end-to-end contract target/postcondition execution, broad policy domain/oracle
-execution, or runtime-backed obligation lifecycle execution. This note defines
-the full execution model, metadata extraction model, and oracle model needed to
-close that gap.
+Before Phase 132, ordinary CLI source files did not produce live
+checked/lowered snapshots, and the executable slice did not yet provide
+end-to-end contract target/postcondition execution, policy domain/oracle
+execution, or obligation lifecycle execution beyond narrow metadata checks. This
+note defines the execution model, metadata extraction model, and oracle model
+that Phase 132 implements for the bounded MVP.
 
 ## Problem Statement
 
-The current synthesized-test implementation is intentionally conservative. It can identify that a file contains contract-, policy-, or obligation-relevant material, but it cannot yet produce truthful executable cases grounded in stable structured metadata.
+The pre-Phase 132 synthesized-test implementation was intentionally conservative. It could identify that a file contained contract-, policy-, or obligation-relevant material, but it could not yet produce truthful executable cases grounded in stable structured metadata.
 
-Today, the main missing pieces are:
-1. no stable runner-facing introspection API for lowered contracts, policy definitions, or obligation lifecycle metadata
-2. no canonical internal representation for synthesized executable cases
-3. no principled way to generate inputs or worlds from the extracted metadata
-4. no stable set of oracles for judging synthesized outcomes as pass/fail/error rather than mere planned cases
-
-Without those pieces, the runner can only produce labels such as:
-- synthesized/contract/...
-- synthesized/policy/...
-- synthesized/obligation/...
-
-but not actually execute trustworthy synthesized tests.
+Phase 132 closes that bounded MVP gap by adding stable runner-facing snapshots, executable synthesized case carriers, exact finite metadata/domain descriptors, and oracles that classify pass/fail/error from evaluated target/oracle results. Unsupported metadata still reports deferred skips rather than synthesized pass rows.
 
 ## Goals
 
@@ -459,10 +451,11 @@ This design note is realized when:
 5. synthesized `pass` means an executed oracle passed, not merely that planning succeeded
 6. synthesized output remains explicit, labeled, reproducible, and opt-in
 
-Phase 76B satisfies only the narrow structured-snapshot subset: injected
-snapshots can execute finite metadata-backed contract `requires`, policy
-terminal, and obligation lifecycle world-oracle cases. Full acceptance remains
-future work tracked by SPEC-077/PLAN-127.
+Phase 76B satisfied only the narrow structured-snapshot subset: injected
+snapshots could execute finite metadata-backed contract `requires`, policy
+terminal, and obligation lifecycle world-oracle cases. Phase 132 / SPEC-077 /
+PLAN-127 complete the bounded MVP acceptance criteria above while preserving the
+non-goals for arbitrary/open-domain generation and full runtime-heavy semantics.
 
 ## Recommendation
 

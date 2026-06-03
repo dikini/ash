@@ -1,6 +1,6 @@
 # TASK-1018: DESIGN-022/023 Completion Closeout
 
-## Status: Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -31,17 +31,24 @@ Use direct implementation or sub-agents according to the active controller instr
 
 ## Verification
 
-- `cargo fmt --check`
-- `CARGO_BUILD_RUSTC_WRAPPER= cargo test -p ash-cli test_runner -- --nocapture`
-- `CARGO_BUILD_RUSTC_WRAPPER= cargo test -p ash-cli --test test_command -- --nocapture`
-- `CARGO_BUILD_RUSTC_WRAPPER= cargo clippy -p ash-cli --all-targets -- -D warnings`
-- `CARGO_BUILD_RUSTC_WRAPPER= cargo clippy --workspace --all-targets --all-features -- -D warnings`
-- `CARGO_BUILD_RUSTC_WRAPPER= cargo test --workspace`
-- `git diff --check`
+- `cargo fmt --check`: passed.
+- `CARGO_BUILD_RUSTC_WRAPPER= cargo test -p ash-cli test_runner -- --nocapture`: 88 passed, 0 failed.
+- `CARGO_BUILD_RUSTC_WRAPPER= cargo test -p ash-cli --test test_command -- --nocapture`: 29 passed, 0 failed.
+- `CARGO_BUILD_RUSTC_WRAPPER= cargo clippy -p ash-cli --all-targets -- -D warnings`: passed.
+- `CARGO_BUILD_RUSTC_WRAPPER= cargo clippy --workspace --all-targets --all-features -- -D warnings`: passed.
+- `CARGO_BUILD_RUSTC_WRAPPER= cargo test --workspace`: passed.
+- `git diff --check`: passed.
+- Scoped docs link/trailing-whitespace check over the edited changelog, design, plan, spec, and reference files: passed.
+
+## Closeout Notes
+
+- DESIGN-022 and DESIGN-023 are promoted to Implemented MVP with explicit residual non-goals for arbitrary/open-domain generation, arbitrary Ash/runtime execution, and full capability/policy semantics.
+- SPEC-077 is promoted to Implemented MVP after TASK-1012 through TASK-1018 landed.
+- PLAN-127 and PLAN-INDEX are reconciled to mark Phase 132 complete.
 
 ## Completion Checklist
 
-- [ ] DESIGN-022 and DESIGN-023 completion criteria verified.
-- [ ] Docs/status surfaces reconciled.
-- [ ] CHANGELOG updated.
-- [ ] Broad verification recorded.
+- [x] DESIGN-022 and DESIGN-023 completion criteria verified.
+- [x] Docs/status surfaces reconciled.
+- [x] CHANGELOG updated.
+- [x] Broad verification recorded.

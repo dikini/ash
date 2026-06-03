@@ -275,7 +275,7 @@ Update this section as tasks complete:
 | 69 | 12 | 12 | ✅ Complete |
 | 70 | 8 | 8 | ✅ Complete |
 | 76A | 4 | 4 | ✅ Complete |
-| 76B | 3 | 0 | 📝 Planned |
+| 76B | 4 | 1 | 📝 Planned |
 | 74 | 8 | 8 | ✅ Complete |
 | 77 | 23 | 23 | ✅ Complete |
 | 78 | 5 | 5 | ✅ Complete |
@@ -403,7 +403,7 @@ This table is retained near the original early-phase section for historical cont
 | 41-42 | 2 | 2 | ✅ Complete |
 | 74 | 8 | 8 | ✅ Complete |
 | 76A | 4 | 4 | ✅ Complete |
-| 76B | 3 | 0 | 📝 Planned |
+| 76B | 4 | 1 | 📝 Planned |
 | 77 | 23 | 23 | ✅ Complete |
 | 78 | 5 | 5 | ✅ Complete |
 | 79 | 6 | 6 | ✅ Complete |
@@ -2296,14 +2296,17 @@ finite-world enumeration substrate.
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
+| [TASK-1010](tasks/TASK-1010-phase-76b-rescope-spec-hardening-packet.md) | Define the Phase 76B rescope/spec-hardening packet and stable runner-facing introspection APIs for contracts, policies, obligations, generated inputs, small-world models, and reproducible artifacts before implementation resumes | [PLAN-024](PLAN-024-ASH-TEST-RUNNER-V1.md), DESIGN-022/023 | 4-6 | ✅ Complete |
 | [TASK-513](tasks/TASK-513-synthesized-tests-from-contracts-policies-and-obligations.md) | Add explicit, opt-in synthesized tests from contracts, policies, and obligations with clear authored-vs-synthesized labeling | [PLAN-024](PLAN-024-ASH-TEST-RUNNER-V1.md), DESIGN-022 | 10-14 | 📝 Planned |
 | [TASK-514](tasks/TASK-514-property-and-smallworld-execution.md) | Add seeded property execution and true small-world exploration with reproducible failure reporting and runner controls | [PLAN-024](PLAN-024-ASH-TEST-RUNNER-V1.md), DESIGN-023 | 8-12 | 📝 Planned |
 | [TASK-515](tasks/TASK-515-ash-test-runner-docs-and-phase-verification.md) | Finalize docs/bookkeeping and run the final verification/smoke gate once 76B implementation is complete | [PLAN-024](PLAN-024-ASH-TEST-RUNNER-V1.md), DESIGN-022/023 | 4-6 | 📝 Planned |
 
-**Blockers:** Synthesized tests require a stable runner-facing introspection API for
-lowered contracts (`StoredFnContract`), policy definitions, and obligation lifecycle
-metadata. Small-world exploration requires a `SmallWorld` model and finite-domain
-enumerator. Neither substrate exists yet. See DESIGN-022 and DESIGN-023.
+**Blockers:** TASK-1010 now freezes the required runner-facing introspection API shape,
+but implementation substrate still does not exist. Synthesized tests require live
+enumeration and execution over lowered contracts (`StoredFnContract` plus parameter/type
+metadata), policy definitions, and obligation lifecycle metadata. Small-world exploration
+requires a concrete `SmallWorldState` model and finite-domain enumerator. See DESIGN-022
+and DESIGN-023.
 
 **Deliverable target:** Executable synthesized tests from contracts, policies, and obligations;
 true small-world exploration with deterministic world enumeration; and final phase closeout.

@@ -74,6 +74,16 @@ This phase does not attempt to provide:
 
 ## Tracks
 
+### Track 0: Phase 76B Rescope / Spec-Hardening Gate
+
+Before the deferred Phase 76B implementation resumes, freeze the stable runner-facing
+introspection contracts that make executable synthesized tests and true small-world
+exploration honest.
+
+| Task | Description | Spec | Est. Hours | Dependencies |
+|------|-------------|------|------------|--------------|
+| [TASK-1010](tasks/TASK-1010-phase-76b-rescope-spec-hardening-packet.md) | Define stable runner-facing introspection APIs for contracts, policies, obligations, generated inputs, small-world state models, and reproducible artifacts | DESIGN-022, DESIGN-023 | 4-6 | 509-512 |
+
 ### Track 1: Runner Substrate
 
 Build the core runner execution model and CLI integration.
@@ -105,7 +115,7 @@ Use existing language metadata as an explicit, opt-in source of synthesized test
 
 | Task | Description | Spec | Est. Hours | Dependencies |
 |------|-------------|------|------------|--------------|
-| [TASK-513](tasks/TASK-513-synthesized-tests-from-contracts-policies-and-obligations.md) | Add synthesized test planning/execution for contracts, policies, and obligations with explicit labeling and opt-in CLI controls | PLAN-024, DESIGN-021 | 10-14 | 510, 511 |
+| [TASK-513](tasks/TASK-513-synthesized-tests-from-contracts-policies-and-obligations.md) | Add synthesized test planning/execution for contracts, policies, and obligations with explicit labeling and opt-in CLI controls | PLAN-024, DESIGN-021, DESIGN-022 | 10-14 | 510, 511, 1010 |
 
 ### Track 5: Property and Small-World Execution
 
@@ -113,13 +123,13 @@ Add bounded generative execution modes on the runner substrate.
 
 | Task | Description | Spec | Est. Hours | Dependencies |
 |------|-------------|------|------------|--------------|
-| [TASK-514](tasks/TASK-514-property-and-smallworld-execution.md) | Add seeded property-test execution and bounded small-world execution, including reproducible failure reporting and runner controls (`--seed`, `--max-cases`, `--max-worlds`) | PLAN-024, DESIGN-021 | 8-12 | 510, 511, 512 |
+| [TASK-514](tasks/TASK-514-property-and-smallworld-execution.md) | Add seeded property-test execution and bounded small-world execution, including reproducible failure reporting and runner controls (`--seed`, `--max-cases`, `--max-worlds`) | PLAN-024, DESIGN-021, DESIGN-023 | 8-12 | 510, 511, 512, 1010 |
 
 ### Track 6: Phase Finalization
 
 | Task | Description | Spec | Est. Hours | Dependencies |
 |------|-------------|------|------------|--------------|
-| [TASK-515](tasks/TASK-515-ash-test-runner-docs-and-phase-verification.md) | Finalize docs/bookkeeping, update PLAN-INDEX/CHANGELOG, and run the v1 verification gate for the Ash test runner phase | PLAN-024, DESIGN-021 | 4-6 | 509-514 |
+| [TASK-515](tasks/TASK-515-ash-test-runner-docs-and-phase-verification.md) | Finalize docs/bookkeeping, update PLAN-INDEX/CHANGELOG, and run the v1 verification gate for the Ash test runner phase | PLAN-024, DESIGN-021, DESIGN-022/023 | 4-6 | 509-514, 1010 |
 
 ## Recommended File/Code Organization
 
@@ -232,6 +242,42 @@ The following items are intentionally deferred until after the next round of spe
    - bounded world/state enumeration rather than bounded reruns of the same authored body
 4. Richer `std::test` surface
    - panic-aware helpers and runtime-facing helpers that depend on stronger stable runtime/spec support
+
+## Phase 76B Rescope / Spec-Hardening Packet
+
+TASK-1010 adds the required hardening layer before TASK-513, TASK-514, and TASK-515 may
+continue as implementation work. The hardening packet defines these stable runner-facing
+surfaces:
+
+1. `RunnerIntrospectionSnapshot`
+   - one checked/lowered read-only snapshot per module or suite root
+   - carries contracts, policies, obligations, type-generator descriptors,
+     small-world model references, source artifact identity, check summary identity,
+     schema version, and unsupported/deferred rows
+2. Contract metadata
+   - callable identity, parameter names/types, return type, lowered `requires`, lowered
+     `ensures`, runtime postconditions, generation hints, source span, and executable-case
+     eligibility
+3. Policy metadata
+   - policy identity, bounded input domain, lowered policy reference, supported terminal
+     outcomes, oracle shape, authority requirements, and materialization limits
+4. Obligation metadata
+   - obligation identity, scope, lifecycle model, introduction/discharge/check sites,
+     terminal expectations, and small-world derivation hints
+5. Type/contract-derived generated input descriptors
+   - authored examples, exact finite domains, valid contract-domain representatives,
+     invalid-nearby contract-domain representatives, and explicit unsupported cases
+6. Small-world state model
+   - deterministic finite-domain enumeration over `SmallWorldState` values, stable
+     `world_index`, stable `world_id`, transition traces, and world-specific oracles
+7. Reproducible artifacts
+   - runner schema version, source artifact identity, check summary identity, seed,
+     case/world index, generated input or world snapshot, oracle snapshot, and replay
+     command
+
+The implementation boundary is intentionally strict: raw-source pattern scans and bounded
+reruns may remain as planning-level compatibility paths, but they must not produce
+executed `pass` outcomes for true synthesized or true small-world cases.
 
 ## Summary of Reasoning for Deferral
 

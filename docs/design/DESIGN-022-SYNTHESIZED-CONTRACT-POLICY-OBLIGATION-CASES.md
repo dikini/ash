@@ -149,55 +149,172 @@ Supported oracle kinds should include:
 
 The runner needs structured metadata, not ad hoc source strings.
 
+TASK-1010 freezes the runner-facing API shape before implementation continues. The
+first implementation task may choose Rust names that fit the crate boundaries, but it
+must preserve the semantic contract in this section. Raw source scanning may remain as
+a compatibility fallback only for planning-level `skip` results; it must not produce
+executed `pass` outcomes.
+
+### 2.0 Introspection snapshot
+
+The runner should consume one stable snapshot per checked module or suite root:
+
+```text
+RunnerIntrospectionSnapshot {
+  schema_version,
+  module_identity,
+  source_artifact_id,
+  check_summary_id,
+  contracts: Vec<RunnerContractMetadata>,
+  policies: Vec<RunnerPolicyMetadata>,
+  obligations: Vec<RunnerObligationMetadata>,
+  generators: Vec<TypeGeneratorDescriptor>,
+  small_world_models: Vec<SmallWorldModelRef>,
+  unsupported: Vec<IntrospectionUnsupportedReason>,
+}
+```
+
+The snapshot is a read-only handoff from parse/check/lowering infrastructure to the
+runner. It must not expose parser-private raw syntax as the runner contract, and it
+must not require the runner to re-parse source text to discover executable cases.
+
+Required snapshot invariants:
+
+- `schema_version` changes when the JSON/output or internal case-building contract
+  changes in a replay-affecting way.
+- `source_artifact_id` identifies the exact source artifact or file set used to build
+  the snapshot.
+- `check_summary_id` identifies the checked/lowered semantic summary consumed by the
+  runner.
+- `unsupported` records metadata that was recognized but cannot yet be materialized
+  into executable synthesized cases. Unsupported rows may plan `skip` results with an
+  explicit deferred reason; they must not be reported as successful execution.
+
 ### 2.1 Contracts
 
 Required API surface:
 
 ```text
-SynthesizableContractTarget {
+RunnerContractMetadata {
+  id,
   callable_name,
-  callable_kind,      // function | workflow-callable
-  params,
+  callable_kind,             // pure_function | act_function | workflow_callable
+  param_names,
+  param_types,
+  return_type,
   lowered_requires,
   lowered_ensures,
+  runtime_postconditions,
+  generation_hints,
+  executable_case_kinds,
   source_span,
 }
 ```
 
 The runner should be able to enumerate all callable items with lowered contract boundaries that are already accepted by the typechecker/runtime boundary.
 
+`StoredFnContract` is the current live grounding point for function contracts, but it
+is not yet enough by itself. The runner-facing metadata also needs parameter and return
+type shape, stable target identity, generation hints, and an explicit list of case kinds
+that are executable with the current substrate.
+
 ### 2.2 Policies
 
 Required API surface:
 
 ```text
-SynthesizablePolicyTarget {
+RunnerPolicyMetadata {
+  id,
   policy_name,
-  input_shape,
-  lowered_policy,
+  input_domain,
+  lowered_policy_ref,
   supported_terminal_outcomes,
+  oracle_shape,
+  required_authority,
+  materialization_limits,
   source_span,
 }
 ```
 
 The key missing contract here is the input shape/domain description. The runner needs a bounded way to construct representative policy inputs.
 
+Policy metadata must be explicit about which terminals can be tested: allow, deny,
+approval, transform, or unsupported. A policy case is executable only when the runner
+can materialize both a bounded input and an oracle for the expected terminal outcome.
+
 ### 2.3 Obligations
 
 Required API surface:
 
 ```text
-SynthesizableObligationTarget {
+RunnerObligationMetadata {
+  id,
   obligation_name,
-  lifecycle_kind,
+  scope,                    // workflow | role | local | runtime_resource
+  lifecycle_model,
   introduction_sites,
   discharge_sites,
+  check_sites,
   required_closeout_behavior,
+  terminal_expectations,
+  small_world_derivation_hints,
   source_span,
 }
 ```
 
 For obligation synthesis, the runner needs explicit lifecycle metadata rather than simple text matches for `oblige` and `check`.
+
+Obligation metadata should describe the finite lifecycle that can be tested. The first
+slice should cover introduced, discharged, missing-discharge, and double-discharge
+cases only when those transitions are represented by stable lowered metadata.
+
+### 2.4 Type and contract input descriptors
+
+Executable synthesized tests need bounded values. The runner must not infer arbitrary
+Ash values from strings or debug output.
+
+```text
+TypeGeneratorDescriptor {
+  id,
+  target_type,
+  source,              // authored_examples | finite_domain | contract_valid | contract_invalid_nearby
+  values_or_strategy,
+  seed_policy,
+  max_cases,
+  unsupported_reason,
+}
+```
+
+The first implementation slice should support only descriptors that are exact and
+bounded: booleans, small integer ranges, known enum/variant representatives, explicitly
+authored examples, and simple contract boundary representatives. Open types, resource
+values, capabilities, functions, processes, and unconstrained generics remain
+unsupported unless a later task defines a finite domain for them.
+
+### 2.5 Reproducible artifacts
+
+Every executed synthesized case must carry enough data to replay or diagnose the same
+case after a failure:
+
+```text
+ReproArtifact {
+  runner_schema_version,
+  source_artifact_id,
+  check_summary_id,
+  case_id,
+  seed,
+  case_index,
+  world_index,
+  generated_input_snapshot,
+  world_snapshot,
+  oracle_snapshot,
+  replay_command,
+}
+```
+
+For generated inputs and worlds, the snapshot should be canonical and stable enough for
+JSON output. If a value cannot be rendered faithfully, the case must either include a
+digest plus a local artifact path or remain planning-only.
 
 ## 3. Source-Specific Case Synthesis
 
@@ -264,18 +381,10 @@ Execution steps:
 
 ## 5. Reproducibility
 
-Every synthesized case must emit repro data.
-
-```text
-SynthesizedRepro {
-  target_name,
-  source_kind,
-  seed,
-  bindings,
-  world,
-  oracle,
-}
-```
+Every executed synthesized case must emit a `ReproArtifact` from section 2.5. Older
+`SynthesizedRepro`-style fields such as target name, source kind, bindings, world, and
+oracle are not a separate schema; they are represented inside `case_id`,
+`generated_input_snapshot`, `world_snapshot`, and `oracle_snapshot`.
 
 This is especially important once generated contract cases and finite policy/obligation domains are introduced.
 

@@ -10,20 +10,24 @@ Add bounded seeded property-test execution and bounded small-world execution to 
 
 - [PLAN-024: Ash Test Runner V1](../PLAN-024-ASH-TEST-RUNNER-V1.md)
 - [DESIGN-021: Ash Test Runner V1](../../design/DESIGN-021-ASH-TEST-RUNNER-V1.md)
+- [DESIGN-023: Small-World Exploration Substrate](../../design/DESIGN-023-SMALL-WORLD-EXPLORATION-SUBSTRATE.md)
+- [TASK-1010: Phase 76B Rescope and Spec-Hardening Packet](TASK-1010-phase-76b-rescope-spec-hardening-packet.md)
 
 ## Dependencies
 
 - [TASK-510](TASK-510-test-execution-isolation-and-panic-capture.md)
 - [TASK-511](TASK-511-ash-test-library-surface.md)
 - [TASK-512](TASK-512-authored-test-metadata-and-execution-model.md)
+- [TASK-1010](TASK-1010-phase-76b-rescope-spec-hardening-packet.md)
 
 ## Requirements
 
-1. Add seeded property-test execution with bounded case counts.
-2. Add bounded small-world execution with bounded world counts/depth.
+1. Add seeded property-test execution with bounded case counts over TASK-1010 `TypeGeneratorDescriptor` inputs where descriptors are finite and supported.
+2. Add bounded small-world execution over TASK-1010 `SmallWorldState` / `SmallWorldDomain` models with deterministic enumeration.
 3. Expose runner controls for seed/case/world limits.
-4. Emit reproducible failure metadata (seed, case index, world index, repro info).
+4. Emit reproducible failure metadata (seed, case index, world index, generated input or world snapshot, source/check summary identity, replay command).
 5. Keep panic/failure containment consistent with the rest of the runner.
+6. Preserve honest reporting: bounded reruns of one authored body are not true generated property inputs or true small-world exploration.
 
 ## Likely Files
 
@@ -51,13 +55,20 @@ body in bounded loops rather than exploring true generated inputs or true small-
 ## Explicit Deferred Follow-Up Items
 
 Deferred until after spec work improvement:
-- true generated property inputs derived from stable type/contract metadata
-- true small-world state/world exploration rather than bounded reruns
+- implemented type/contract-derived generated property inputs following TASK-1010
+- implemented small-world state/world exploration following TASK-1010 rather than bounded reruns
 - richer repro artifacts tied to generated inputs/world states rather than only runner-level counters
 
-## Completion Checklist
+## Baseline Already Satisfied by Phase 76A
 
 - [x] seeded property execution implemented and verified at the bounded runner level
 - [x] bounded small-world execution implemented and verified at the bounded runner level
 - [x] `--seed` / `--max-cases` / `--max-worlds` controls implemented
-- [x] reproducible failure output implemented and verified at the bounded runner level
+- [x] reproducible failure output implemented and verified at the bounded runner-counter level
+
+## Phase 76B Completion Checklist
+
+- [ ] type/contract-derived generated property inputs implemented through TASK-1010 descriptors
+- [ ] `SmallWorldState` / `SmallWorldDomain` deterministic enumeration implemented
+- [ ] `--max-worlds` bounds actual explored worlds, not bounded reruns
+- [ ] repro artifacts include generated input or world snapshots, source/check summary identity, and replay commands

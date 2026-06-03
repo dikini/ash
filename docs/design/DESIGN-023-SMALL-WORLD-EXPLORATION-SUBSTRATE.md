@@ -32,7 +32,7 @@ What is missing:
 
 ## Goals
 
-1. Define one canonical `SmallWorld` model for runner execution.
+1. Define one canonical `SmallWorldState` model for runner execution.
 2. Support bounded, deterministic enumeration over explicit world domains.
 3. Make small-world tests executable and reproducible.
 4. Preserve explicit runner controls (`--max-worlds`) while making them refer to real explored worlds.
@@ -74,13 +74,14 @@ Not every Ash subsystem needs to be world-explored at once. Start with the domai
 
 ## Core Design
 
-## 1. Canonical SmallWorld Model
+## 1. Canonical small-world state model
 
 Introduce a runner-internal world model:
 
 ```text
-SmallWorld {
+SmallWorldState {
   id,
+  schema_version,
   world_kind,
   bindings,
   capabilities,
@@ -89,9 +90,15 @@ SmallWorld {
   obligations,
   mailbox,
   control_state,
-  notes,
+  resource_state,
+  transition_trace,
+  oracle_refs,
 }
 ```
+
+TASK-1010 freezes this as the semantic contract for Phase 76B. Implementation may
+choose Rust-specific names, but `--max-worlds` must eventually bound enumeration over
+real `SmallWorldState` values rather than bounded reruns of one authored body.
 
 ### World kinds
 
@@ -129,12 +136,31 @@ FiniteDomain<T> =
 5. Obligation lifecycle states
 6. Role/capability inclusion sets
 
+### Stable domain descriptor
+
+The runner-facing domain descriptor should be explicit and deterministic:
+
+```text
+SmallWorldDomain {
+  id,
+  domain_kind,          // explicit_values | bounded_int | bool | list | product | state_machine
+  value_type,
+  bounds,
+  ordering_policy,
+  source,               // authored | obligation_metadata | policy_metadata | contract_metadata
+  unsupported_reason,
+}
+```
+
+If a domain has no finite descriptor, the runner may record an unsupported planning row
+but must not claim true small-world execution for that source.
+
 ## 3. Enumeration Substrate
 
 The runner needs one explicit world enumerator:
 
 ```text
-enumerate_worlds(domain_spec, max_worlds) -> Vec<SmallWorld>
+enumerate_worlds(domain_spec, max_worlds) -> Vec<SmallWorldState>
 ```
 
 ### Requirements
@@ -142,6 +168,12 @@ enumerate_worlds(domain_spec, max_worlds) -> Vec<SmallWorld>
 - deterministic ordering
 - stable truncation when `max_worlds` is hit
 - enough metadata to reconstruct which domain choices produced the world
+- stable `world_index` assignment starting at 1 for reported results
+- stable `world_id` or digest derived from the canonical world snapshot
+
+The enumerator must be pure with respect to the same domain descriptor and seed. If a
+future strategy uses random sampling, that belongs to property testing unless the sampled
+set is first materialized as an explicit finite world list.
 
 ### Reporting
 
@@ -240,15 +272,48 @@ Every failing small-world case should emit:
 
 ```text
 SmallWorldRepro {
+  runner_schema_version,
+  source_artifact_id,
+  check_summary_id,
+  case_id,
+  seed,
+  case_index,
   world_kind,
   world_index,
-  world_data,
-  oracle,
+  world_id,
+  world_snapshot,
+  transition_trace,
+  oracle_snapshot,
   target,
+  replay_command,
 }
 ```
 
 This is stronger than today’s runner-level counter because it records the explored world itself.
+
+The repro artifact should use the same `ReproArtifact` family as synthesized contract,
+policy, and obligation cases from DESIGN-022. A failure report that contains only a loop
+counter is not sufficient for Phase 76B completion.
+
+## 8.1 Stable small-world model references
+
+The cross-design handoff from DESIGN-022 uses `SmallWorldModelRef`:
+
+```text
+SmallWorldModelRef {
+  id,
+  model_kind,           // obligation_lifecycle | role_capability | policy_context | protocol_message
+  domain_refs,
+  transition_refs,
+  oracle_refs,
+  max_depth,
+  max_worlds_default,
+}
+```
+
+For the first implementation slice, an obligation lifecycle model is the preferred
+target because it has a naturally finite transition space and a clear terminal oracle.
+Policy-context models must wait until policy metadata exposes bounded input domains.
 
 ## 9. Relationship to Property Testing
 
@@ -271,7 +336,7 @@ They may share infrastructure, but they should not be collapsed into one concept
 ### Stage A: World model + explicit finite domains
 
 Land:
-- `SmallWorld` representation
+- `SmallWorldState` representation
 - deterministic enumerator for explicit finite domains
 - result/repro metadata
 

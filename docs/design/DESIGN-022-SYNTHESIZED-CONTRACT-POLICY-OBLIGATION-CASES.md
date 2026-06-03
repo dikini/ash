@@ -1,6 +1,15 @@
 # DESIGN-022: Synthesized Contract / Policy / Obligation Cases
 
-## Status: Draft
+## Status: Draft (Phase 76B narrow slice implemented; broader design open)
+
+Phase 76B implemented the narrow structured-snapshot substrate for this design:
+runner-injected `RunnerIntrospectionSnapshot` values, an executable
+`SynthesizedCase` path, exact-generator contract `requires` boundary cases,
+policy `TerminalEquals` allow/deny cases, finite obligation lifecycle world
+oracles, repro artifacts, raw-source deferred compatibility rows, and
+synthesized filter/fail-fast behavior. Full design acceptance remains open and
+is planned by [SPEC-077](../spec/SPEC-077-ASH-TEST-RUNNER-SYNTHESIZED-AND-SMALLWORLD-COMPLETION.md)
+and [PLAN-127](../plan/PLAN-127-DESIGN-022-023-SYNTHESIZED-SMALLWORLD-COMPLETION.md).
 
 ## Overview
 
@@ -10,8 +19,15 @@ This note is a follow-up to Phase 76. The current `ash test` runner can:
 - select synthesized sources explicitly (`contracts`, `policies`, `obligations`)
 - label synthesized results distinctly from authored tests
 - report synthesized cases in human and JSON output
+- execute a narrow structured-snapshot slice when snapshots are injected through
+  runner internals/tests
 
-However, the current implementation still produces planning-level synthesized records rather than true end-to-end executable cases. This note defines the missing execution model, metadata extraction model, and oracle model needed to close that gap.
+However, ordinary CLI source files still do not produce live checked/lowered
+snapshots, and the current executable slice does not yet provide full
+end-to-end contract target/postcondition execution, broad policy domain/oracle
+execution, or runtime-backed obligation lifecycle execution. This note defines
+the full execution model, metadata extraction model, and oracle model needed to
+close that gap.
 
 ## Problem Statement
 
@@ -437,10 +453,16 @@ This order is recommended because:
 
 This design note is realized when:
 1. the runner can enumerate structured synthesizable targets for contracts, policies, and obligations
-2. at least contract-derived synthesized cases are executable end-to-end
-3. synthesized `pass` means an executed oracle passed, not merely that planning succeeded
-4. policy/obligation synthesized cases stop being planning-only placeholders as their required metadata APIs land
-5. synthesized output remains explicit, labeled, reproducible, and opt-in
+2. ordinary CLI source files produce live checked/lowered snapshots without relying on raw-source pass rows
+3. contract-derived synthesized target and postcondition cases are executable end-to-end for supported metadata
+4. policy and obligation synthesized cases execute supported domains/lifecycles rather than remaining metadata-only placeholders
+5. synthesized `pass` means an executed oracle passed, not merely that planning succeeded
+6. synthesized output remains explicit, labeled, reproducible, and opt-in
+
+Phase 76B satisfies only the narrow structured-snapshot subset: injected
+snapshots can execute finite metadata-backed contract `requires`, policy
+terminal, and obligation lifecycle world-oracle cases. Full acceptance remains
+future work tracked by SPEC-077/PLAN-127.
 
 ## Recommendation
 

@@ -64,6 +64,12 @@ This closeout does not claim that ordinary CLI source files produce live checked
 fallbacks that report explicit deferred `skip` rows unless structured snapshots are
 injected through runner internals/tests.
 
+TASK-1011 later remediated final review blockers after this closeout evidence: structured
+obligation lifecycle rows now pass only after evaluating explicit finite lifecycle world state,
+uncapped bounded-int small-world domains defer before materialization, and synthesized kind/tag
+filters plus fail-fast apply to structured synthesized rows. The TASK-515 evidence below remains
+historical closeout evidence, while TASK-1011 records the fresh final remediation gate.
+
 ## Explicit Deferred Follow-Up Items
 
 Deferred until later spec and metadata integration work:
@@ -76,6 +82,7 @@ Deferred until later spec and metadata integration work:
 - richer small-world domain families such as product, list, role/capability, protocol,
   and state-machine descriptors
 - broader synthesized execution beyond the narrow TASK-513/TASK-514 metadata slices
+- completion of DESIGN-022 and DESIGN-023, now planned by SPEC-077 / PLAN-127
 
 ## Baseline Already Satisfied by Phase 76A
 

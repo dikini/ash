@@ -117,6 +117,12 @@ pub struct RunnerObligationMetadata {
     pub terminal_expectations: Vec<ObligationTerminalExpectation>,
     /// Small-world derivation hints.
     pub small_world_derivation_hints: Vec<String>,
+    /// Explicit finite lifecycle world states ordered to `terminal_expectations`.
+    ///
+    /// Phase 76B may execute the narrow obligation lifecycle oracle only when
+    /// checked/lowered metadata supplies these concrete states. The runner must
+    /// not synthesize a passing world from the expectation itself.
+    pub lifecycle_worlds: Vec<SmallWorldState>,
     /// Optional source span display.
     pub source_span: Option<String>,
 }
@@ -459,13 +465,9 @@ pub fn execute_synthesized_case(case: &SynthesizedCase) -> TestResult {
                 ),
             }
         }
-        SynthesizedOracle::ObligationLifecycle { expectation } => (
-            Outcome::Pass,
-            Some(format!(
-                "executed synthesized obligation lifecycle oracle: {:?}",
-                expectation
-            )),
-        ),
+        SynthesizedOracle::ObligationLifecycle { expectation } => {
+            evaluate_obligation_lifecycle_oracle(case, expectation)
+        }
     };
 
     let mut result = TestResult::new(&case.id, case.file_path.clone())
@@ -477,8 +479,61 @@ pub fn execute_synthesized_case(case: &SynthesizedCase) -> TestResult {
     if let Some(message) = message {
         result = result.with_message(message);
     }
+    result.world_index = case.inputs.world_index;
     result.tags = case.tags.clone();
     result
+}
+
+fn evaluate_obligation_lifecycle_oracle(
+    case: &SynthesizedCase,
+    expectation: &ObligationTerminalExpectation,
+) -> (Outcome, Option<String>) {
+    let Some(expected_control_state) = obligation_expected_control_state(expectation) else {
+        return (
+            Outcome::Skip,
+            Some("deferred: unsupported synthesized obligation lifecycle expectation".to_string()),
+        );
+    };
+    let actual_control_state = case
+        .repro
+        .world_snapshot
+        .as_ref()
+        .and_then(|world| world.get("control_state"))
+        .and_then(Value::as_str);
+    let binding_control_state = case
+        .inputs
+        .bindings
+        .get("lifecycle_control_state")
+        .and_then(Value::as_str);
+
+    match (actual_control_state, binding_control_state) {
+        (Some(actual), Some(binding)) if actual != binding => (
+            Outcome::Fail,
+            Some(format!(
+                "synthesized obligation lifecycle oracle failed: binding control_state {binding:?} disagrees with world_snapshot control_state {actual:?}"
+            )),
+        ),
+        (Some(actual), _) if actual == expected_control_state => (
+            Outcome::Pass,
+            Some(format!(
+                "executed synthesized obligation lifecycle oracle: {:?}",
+                expectation
+            )),
+        ),
+        (Some(actual), _) => (
+            Outcome::Fail,
+            Some(format!(
+                "synthesized obligation lifecycle oracle failed: control_state {actual:?}, expected {expected_control_state:?}"
+            )),
+        ),
+        (None, _) => (
+            Outcome::Skip,
+            Some(
+                "deferred: synthesized obligation lifecycle oracle lacks finite world state"
+                    .to_string(),
+            ),
+        ),
+    }
 }
 
 /// Generate executable synthesized results from structured runner metadata.
@@ -835,6 +890,12 @@ fn smallworld_results(
 
     for domain in &snapshot.small_world_domains {
         let limit = max_worlds.or(domain.max_worlds_default);
+        if domain.domain_kind == SmallWorldDomainKind::BoundedInt && limit.is_none() {
+            results.push(deferred_uncapped_bounded_int_result(
+                path, snapshot, domain, seed,
+            ));
+            continue;
+        }
         let worlds = enumerate_worlds(domain, limit);
         if domain.unsupported_reason.is_some()
             || domain.domain_kind == SmallWorldDomainKind::Unsupported
@@ -884,7 +945,11 @@ fn smallworld_results(
 }
 
 fn enumerate_worlds(domain: &SmallWorldDomain, max_worlds: Option<usize>) -> Vec<SmallWorldState> {
-    let limit = max_worlds.unwrap_or(usize::MAX);
+    let limit = match (domain.domain_kind.clone(), max_worlds) {
+        (SmallWorldDomainKind::BoundedInt, None) => return Vec::new(),
+        (_, Some(limit)) => limit,
+        (_, None) => usize::MAX,
+    };
     let mut worlds: Vec<SmallWorldState> = match domain.domain_kind {
         SmallWorldDomainKind::ExplicitStates => {
             domain.explicit_states.iter().take(limit).cloned().collect()
@@ -1029,6 +1094,46 @@ fn deferred_smallworld_result(
                     "supported": false,
                     "reason": reason,
                     "domain_kind": domain.domain_kind,
+                }),
+                None,
+            )
+        },
+    )
+}
+
+fn deferred_uncapped_bounded_int_result(
+    path: &Path,
+    snapshot: &RunnerIntrospectionSnapshot,
+    domain: &SmallWorldDomain,
+    seed: u64,
+) -> TestResult {
+    let case_id = format!("synthesized/smallworld/{}/deferred", domain.id);
+    deferred_result_with_kind(
+        path,
+        domain.source,
+        TestKind::SmallWorld,
+        case_id,
+        "deferred: bounded-int small-world domain requires explicit max_worlds or metadata max_worlds_default",
+        ReproArtifact {
+            replay_command: format!(
+                "ash test {} --only-synthesized contracts,policies,obligations --seed {} --max-worlds <n>",
+                path.display(),
+                seed
+            ),
+            ..repro_artifact(
+                path,
+                snapshot.source_artifact_id.clone(),
+                snapshot.check_summary_id.clone(),
+                format!("smallworld:{}:bounded-int-uncapped", domain.id),
+                seed,
+                1,
+                None,
+                json!({
+                    "kind": "small_world",
+                    "supported": false,
+                    "reason": "bounded-int domain requires explicit max_worlds or max_worlds_default",
+                    "domain_kind": domain.domain_kind,
+                    "bounds": domain.bounds,
                 }),
                 None,
             )
@@ -1343,21 +1448,39 @@ fn obligation_lifecycle_cases(
         ObligationTerminalExpectation::MissingDischargeRejected,
         ObligationTerminalExpectation::DoubleDischargeRejected,
     ];
-    let mut cases = Vec::new();
-    for expectation in obligation
+    let supported_expectation_count = obligation
         .terminal_expectations
         .iter()
         .filter(|expectation| supported.contains(expectation))
+        .count();
+    if obligation.lifecycle_worlds.len() < supported_expectation_count {
+        return Vec::new();
+    }
+
+    let mut cases = Vec::new();
+    for (expectation, world) in obligation
+        .terminal_expectations
+        .iter()
         .cloned()
+        .zip(obligation.lifecycle_worlds.iter().cloned())
+        .filter(|(expectation, _)| supported.contains(expectation))
     {
+        let expected_control_state = obligation_expected_control_state(&expectation)
+            .map(str::to_string)
+            .or_else(|| world.control_state.clone());
         let case_index = cases.len() + 1;
         let case_id = format!(
             "synthesized/obligation/{}/lifecycle-{:?}-{}",
             obligation.obligation_name, expectation, case_index
         )
         .to_lowercase();
-        let bindings = BTreeMap::new();
-        let repro = repro_artifact(
+        let mut bindings = BTreeMap::new();
+        if let Some(control_state) = &world.control_state {
+            bindings.insert("lifecycle_control_state".to_string(), json!(control_state));
+        }
+        let world_snapshot =
+            serde_json::to_value(&world).expect("obligation lifecycle world should serialize");
+        let mut repro = repro_artifact(
             path,
             snapshot.source_artifact_id.clone(),
             snapshot.check_summary_id.clone(),
@@ -1372,13 +1495,11 @@ fn obligation_lifecycle_cases(
                 "discharge_sites": obligation.discharge_sites,
                 "check_sites": obligation.check_sites,
                 "expectation": expectation,
+                "expected_control_state": expected_control_state,
             }),
-            Some(json!({
-                "obligation": obligation.obligation_name,
-                "expectation": expectation,
-                "model": obligation.lifecycle_model,
-            })),
+            Some(world_snapshot),
         );
+        repro.world_index = Some(case_index);
 
         cases.push(SynthesizedCase {
             id: case_id,
@@ -1400,6 +1521,18 @@ fn obligation_lifecycle_cases(
     }
 
     cases
+}
+
+fn obligation_expected_control_state(
+    expectation: &ObligationTerminalExpectation,
+) -> Option<&'static str> {
+    match expectation {
+        ObligationTerminalExpectation::Introduced => Some("introduced"),
+        ObligationTerminalExpectation::Discharged => Some("discharged"),
+        ObligationTerminalExpectation::MissingDischargeRejected
+        | ObligationTerminalExpectation::DoubleDischargeRejected => Some("rejected"),
+        ObligationTerminalExpectation::Unsupported => None,
+    }
 }
 
 fn evaluate_simple_bool_expression(
@@ -1621,12 +1754,10 @@ pub fn synthesize_contract_tests(path: &Path, source: &str) -> Vec<TestResult> {
     tests
 }
 
-/// Generate synthesized test results from policy metadata.
+/// Generate raw-source compatibility rows for policy-like syntax.
 ///
-/// Policy-derived tests verify that:
-/// - `allow` policies are correctly evaluated
-/// - `deny` policies are correctly evaluated
-/// - Approve/transform flows work
+/// These fallback rows are deferred skips. Executable policy synthesized tests
+/// require structured runner metadata and bounded oracle inputs.
 ///
 /// These tests are labeled `source: synthesized:policy`.
 pub fn synthesize_policy_tests(path: &Path, source: &str) -> Vec<TestResult> {
@@ -1700,12 +1831,11 @@ pub fn synthesize_policy_tests(path: &Path, source: &str) -> Vec<TestResult> {
     tests
 }
 
-/// Generate synthesized test results from obligation metadata.
+/// Generate raw-source compatibility rows for obligation-like syntax.
 ///
-/// Obligation-derived tests verify the finite-state lifecycle:
-/// - Introduced obligations can be discharged
-/// - Double-discharge is detected
-/// - Missing-discharge is detected
+/// These fallback rows are deferred skips. Executable obligation lifecycle rows
+/// require explicit finite lifecycle world metadata from a structured runner
+/// snapshot.
 ///
 /// These tests are labeled `source: synthesized:obligation`.
 pub fn synthesize_obligation_tests(path: &Path, source: &str) -> Vec<TestResult> {
@@ -2151,6 +2281,50 @@ workflow test_workflow
     }
 
     #[test]
+    fn uncapped_bounded_int_world_enumeration_defers_instead_of_materializing_range() {
+        let snapshot = RunnerIntrospectionSnapshot {
+            source_artifact_id: "source:uncapped-bounded-worlds.ash".to_string(),
+            check_summary_id: "check:uncapped-bounded-world-summary".to_string(),
+            small_world_domains: vec![SmallWorldDomain {
+                id: "uncapped-int-worlds".to_string(),
+                domain_kind: SmallWorldDomainKind::BoundedInt,
+                source: TestSource::Policy,
+                value_type: Some("Int".to_string()),
+                bounds: BTreeMap::from([("min".to_string(), 0), ("max".to_string(), 50_000)]),
+                oracle: Some(SmallWorldOracle {
+                    kind: SmallWorldOracleKind::BindingEquals,
+                    expected: json!({ "value": 0 }),
+                }),
+                ..SmallWorldDomain::default()
+            }],
+            ..RunnerIntrospectionSnapshot::default()
+        };
+
+        let results = synthesize_from_snapshot_with_limits(
+            Path::new("uncapped-bounded-worlds.ash"),
+            &snapshot,
+            None,
+            None,
+            None,
+        );
+
+        assert_eq!(
+            results.len(),
+            1,
+            "uncapped bounded-int domains must not materialize every value"
+        );
+        assert_eq!(results[0].outcome, Outcome::Skip);
+        assert!(
+            results[0]
+                .message
+                .as_deref()
+                .unwrap_or_default()
+                .contains("deferred"),
+            "uncapped bounded-int domains should defer with an explicit reason: {results:#?}"
+        );
+    }
+
+    #[test]
     fn smallworld_results_include_world_index_and_repro_world_snapshot_for_pass_and_fail() {
         let snapshot = RunnerIntrospectionSnapshot {
             source_artifact_id: "source:worlds.ash".to_string(),
@@ -2376,6 +2550,57 @@ workflow test_workflow
                     ObligationTerminalExpectation::MissingDischargeRejected,
                     ObligationTerminalExpectation::DoubleDischargeRejected,
                 ],
+                lifecycle_worlds: vec![
+                    SmallWorldState {
+                        id: "ticket:introduced".to_string(),
+                        schema_version: RUNNER_SYNTHESIS_SCHEMA_VERSION.to_string(),
+                        world_kind: "obligation_lifecycle".to_string(),
+                        obligations: vec!["Ticket".to_string()],
+                        control_state: Some("introduced".to_string()),
+                        transition_trace: vec!["introduce:open_ticket".to_string()],
+                        ..SmallWorldState::default()
+                    },
+                    SmallWorldState {
+                        id: "ticket:discharged".to_string(),
+                        schema_version: RUNNER_SYNTHESIS_SCHEMA_VERSION.to_string(),
+                        world_kind: "obligation_lifecycle".to_string(),
+                        obligations: vec!["Ticket".to_string()],
+                        control_state: Some("discharged".to_string()),
+                        transition_trace: vec![
+                            "introduce:open_ticket".to_string(),
+                            "discharge:close_ticket".to_string(),
+                            "check:finish".to_string(),
+                        ],
+                        ..SmallWorldState::default()
+                    },
+                    SmallWorldState {
+                        id: "ticket:missing-discharge".to_string(),
+                        schema_version: RUNNER_SYNTHESIS_SCHEMA_VERSION.to_string(),
+                        world_kind: "obligation_lifecycle".to_string(),
+                        obligations: vec!["Ticket".to_string()],
+                        control_state: Some("rejected".to_string()),
+                        transition_trace: vec![
+                            "introduce:open_ticket".to_string(),
+                            "check:finish".to_string(),
+                            "reject:missing_discharge".to_string(),
+                        ],
+                        ..SmallWorldState::default()
+                    },
+                    SmallWorldState {
+                        id: "ticket:double-discharge".to_string(),
+                        schema_version: RUNNER_SYNTHESIS_SCHEMA_VERSION.to_string(),
+                        world_kind: "obligation_lifecycle".to_string(),
+                        obligations: vec!["Ticket".to_string()],
+                        control_state: Some("rejected".to_string()),
+                        transition_trace: vec![
+                            "introduce:open_ticket".to_string(),
+                            "discharge:close_ticket".to_string(),
+                            "discharge:close_ticket".to_string(),
+                            "reject:double_discharge".to_string(),
+                        ],
+                        ..SmallWorldState::default()
+                    },
+                ],
                 ..RunnerObligationMetadata::default()
             }],
             ..RunnerIntrospectionSnapshot::default()
@@ -2389,6 +2614,242 @@ workflow test_workflow
                 result.source == TestSource::Obligation && result.outcome == Outcome::Pass
             }),
             "finite obligation lifecycle metadata should execute supported terminal expectations: {results:#?}"
+        );
+    }
+
+    #[test]
+    fn obligation_lifecycle_without_explicit_world_metadata_defers() {
+        let snapshot = RunnerIntrospectionSnapshot {
+            source_artifact_id: "source:obligation.ash".to_string(),
+            check_summary_id: "check:summary".to_string(),
+            obligations: vec![RunnerObligationMetadata {
+                id: "obligation:ticket".to_string(),
+                obligation_name: "Ticket".to_string(),
+                scope: "workflow".to_string(),
+                lifecycle_model: Some("finite:introduced-discharged".to_string()),
+                introduction_sites: vec!["open_ticket".to_string()],
+                discharge_sites: vec!["close_ticket".to_string()],
+                check_sites: vec!["finish".to_string()],
+                terminal_expectations: vec![ObligationTerminalExpectation::Discharged],
+                ..RunnerObligationMetadata::default()
+            }],
+            ..RunnerIntrospectionSnapshot::default()
+        };
+
+        let results = synthesize_from_snapshot(Path::new("obligation.ash"), &snapshot);
+
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].outcome, Outcome::Skip);
+        assert!(
+            results[0]
+                .message
+                .as_deref()
+                .unwrap_or_default()
+                .contains("deferred"),
+            "obligation lifecycle metadata without explicit finite worlds must defer: {results:#?}"
+        );
+    }
+
+    #[test]
+    fn obligation_lifecycle_snapshot_world_state_disagreement_fails_on_normal_path() {
+        let snapshot = RunnerIntrospectionSnapshot {
+            source_artifact_id: "source:obligation.ash".to_string(),
+            check_summary_id: "check:summary".to_string(),
+            obligations: vec![RunnerObligationMetadata {
+                id: "obligation:ticket".to_string(),
+                obligation_name: "Ticket".to_string(),
+                scope: "workflow".to_string(),
+                lifecycle_model: Some("finite:introduced-discharged".to_string()),
+                introduction_sites: vec!["open_ticket".to_string()],
+                discharge_sites: vec!["close_ticket".to_string()],
+                check_sites: vec!["finish".to_string()],
+                terminal_expectations: vec![ObligationTerminalExpectation::Discharged],
+                lifecycle_worlds: vec![SmallWorldState {
+                    id: "ticket:introduced".to_string(),
+                    schema_version: RUNNER_SYNTHESIS_SCHEMA_VERSION.to_string(),
+                    world_kind: "obligation_lifecycle".to_string(),
+                    obligations: vec!["Ticket".to_string()],
+                    control_state: Some("introduced".to_string()),
+                    transition_trace: vec!["introduce:open_ticket".to_string()],
+                    ..SmallWorldState::default()
+                }],
+                ..RunnerObligationMetadata::default()
+            }],
+            ..RunnerIntrospectionSnapshot::default()
+        };
+
+        let results = synthesize_from_snapshot(Path::new("obligation.ash"), &snapshot);
+
+        assert_eq!(results.len(), 1);
+        assert_eq!(
+            results[0].outcome,
+            Outcome::Fail,
+            "normal snapshot obligation generation must evaluate supplied finite worlds rather than manufacturing a matching pass row"
+        );
+    }
+
+    #[test]
+    fn obligation_lifecycle_unsupported_expectations_do_not_shift_world_alignment() {
+        let snapshot = RunnerIntrospectionSnapshot {
+            source_artifact_id: "source:obligation.ash".to_string(),
+            check_summary_id: "check:summary".to_string(),
+            obligations: vec![RunnerObligationMetadata {
+                id: "obligation:ticket".to_string(),
+                obligation_name: "Ticket".to_string(),
+                scope: "workflow".to_string(),
+                lifecycle_model: Some("finite:introduced-discharged".to_string()),
+                introduction_sites: vec!["open_ticket".to_string()],
+                discharge_sites: vec!["close_ticket".to_string()],
+                check_sites: vec!["finish".to_string()],
+                terminal_expectations: vec![
+                    ObligationTerminalExpectation::Unsupported,
+                    ObligationTerminalExpectation::Discharged,
+                ],
+                lifecycle_worlds: vec![
+                    SmallWorldState {
+                        id: "ticket:unsupported".to_string(),
+                        schema_version: RUNNER_SYNTHESIS_SCHEMA_VERSION.to_string(),
+                        world_kind: "obligation_lifecycle".to_string(),
+                        control_state: Some("unsupported".to_string()),
+                        ..SmallWorldState::default()
+                    },
+                    SmallWorldState {
+                        id: "ticket:discharged".to_string(),
+                        schema_version: RUNNER_SYNTHESIS_SCHEMA_VERSION.to_string(),
+                        world_kind: "obligation_lifecycle".to_string(),
+                        obligations: vec!["Ticket".to_string()],
+                        control_state: Some("discharged".to_string()),
+                        transition_trace: vec![
+                            "introduce:open_ticket".to_string(),
+                            "discharge:close_ticket".to_string(),
+                            "check:finish".to_string(),
+                        ],
+                        ..SmallWorldState::default()
+                    },
+                ],
+                ..RunnerObligationMetadata::default()
+            }],
+            ..RunnerIntrospectionSnapshot::default()
+        };
+
+        let results = synthesize_from_snapshot(Path::new("obligation.ash"), &snapshot);
+
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].outcome, Outcome::Pass);
+        let world_id = results[0]
+            .repro_artifact
+            .as_ref()
+            .and_then(|repro| repro.world_snapshot.as_ref())
+            .and_then(|world| world.get("id"))
+            .and_then(Value::as_str);
+        assert_eq!(world_id, Some("ticket:discharged"));
+    }
+
+    #[test]
+    fn obligation_lifecycle_binding_world_snapshot_disagreement_fails() {
+        let mut bindings = BTreeMap::new();
+        bindings.insert("lifecycle_control_state".to_string(), json!("introduced"));
+        let case = SynthesizedCase {
+            id: "synthesized/obligation/ticket/lifecycle-discharged-1".to_string(),
+            source: TestSource::Obligation,
+            target_kind: "obligation".to_string(),
+            target_name: "Ticket".to_string(),
+            file_path: PathBuf::from("obligation.ash"),
+            tags: vec!["synthesized".to_string(), "obligation".to_string()],
+            seed: 0,
+            inputs: SynthesizedInputs {
+                bindings,
+                generated_from: "finite_obligation_lifecycle_metadata".to_string(),
+                case_index: 1,
+                world_index: Some(1),
+            },
+            oracle: SynthesizedOracle::ObligationLifecycle {
+                expectation: ObligationTerminalExpectation::Discharged,
+            },
+            repro: repro_artifact(
+                Path::new("obligation.ash"),
+                "source:obligation.ash".to_string(),
+                "check:summary".to_string(),
+                "synthesized/obligation/ticket/lifecycle-discharged-1".to_string(),
+                0,
+                1,
+                None,
+                json!({
+                    "kind": "obligation_lifecycle",
+                    "expectation": ObligationTerminalExpectation::Discharged,
+                    "expected_control_state": "discharged",
+                }),
+                Some(json!({
+                    "id": "ticket:discharged",
+                    "control_state": "discharged",
+                })),
+            ),
+        };
+
+        let result = execute_synthesized_case(&case);
+
+        assert_eq!(
+            result.outcome,
+            Outcome::Fail,
+            "binding/world_snapshot disagreement must fail instead of masking an inconsistent finite lifecycle world"
+        );
+    }
+
+    #[test]
+    fn obligation_lifecycle_oracle_fails_when_world_state_disagrees_with_expectation() {
+        let mut bindings = BTreeMap::new();
+        bindings.insert("lifecycle_control_state".to_string(), json!("introduced"));
+        let case = SynthesizedCase {
+            id: "synthesized/obligation/ticket/lifecycle-discharged-1".to_string(),
+            source: TestSource::Obligation,
+            target_kind: "obligation".to_string(),
+            target_name: "Ticket".to_string(),
+            file_path: PathBuf::from("obligation.ash"),
+            tags: vec!["synthesized".to_string(), "obligation".to_string()],
+            seed: 0,
+            inputs: SynthesizedInputs {
+                bindings,
+                generated_from: "finite_obligation_lifecycle_metadata".to_string(),
+                case_index: 1,
+                world_index: Some(1),
+            },
+            oracle: SynthesizedOracle::ObligationLifecycle {
+                expectation: ObligationTerminalExpectation::Discharged,
+            },
+            repro: repro_artifact(
+                Path::new("obligation.ash"),
+                "source:obligation.ash".to_string(),
+                "check:summary".to_string(),
+                "synthesized/obligation/ticket/lifecycle-discharged-1".to_string(),
+                0,
+                1,
+                None,
+                json!({
+                    "kind": "obligation_lifecycle",
+                    "expectation": ObligationTerminalExpectation::Discharged,
+                    "expected_control_state": "discharged",
+                }),
+                Some(json!({
+                    "id": "ticket:introduced",
+                    "control_state": "introduced",
+                })),
+            ),
+        };
+
+        let result = execute_synthesized_case(&case);
+
+        assert_eq!(
+            result.outcome,
+            Outcome::Fail,
+            "obligation lifecycle pass must be backed by evaluated finite world state"
+        );
+        assert!(
+            result
+                .message
+                .as_deref()
+                .unwrap_or_default()
+                .contains("failed"),
+            "wrong lifecycle metadata should explain the oracle failure: {result:#?}"
         );
     }
 

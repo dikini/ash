@@ -65,9 +65,11 @@ generator descriptors. Structured policy metadata can execute `TerminalEquals` a
 lowered policy identity, exact finite input-domain values, and supported `Allow`/`Deny` terminals are
 present. Structured obligation metadata can execute finite lifecycle expectations for
 introduced/discharged/missing-discharge/double-discharge when lifecycle model plus
-introduction/discharge/check sites are present. Raw-source contract/policy/obligation pattern
-recognition remains a compatibility fallback and reports explicit `skip`/`deferred` rows with repro
-context instead of successful execution.
+introduction/discharge/check sites are present. TASK-1011 tightened this slice so obligation
+lifecycle pass rows require evaluated explicit finite lifecycle world state; wrong lifecycle state
+fails and missing/unsupported lifecycle metadata defers. Raw-source contract/policy/obligation
+pattern recognition remains a compatibility fallback and reports explicit `skip`/`deferred` rows
+with repro context instead of successful execution.
 
 ## Explicit Deferred Follow-Up Items
 
@@ -75,13 +77,13 @@ Deferred until later implementation tasks or metadata integration:
 - wiring live lowered typechecker/runtime snapshots into the CLI command instead of raw-source fallback scans
 - executable contract postcondition cases that call real runtime targets and check lowered `ensures`
 - broader policy execution beyond exact `TerminalEquals` allow/deny metadata
-- broader obligation execution beyond explicit finite lifecycle metadata
+- broader obligation execution beyond explicit finite lifecycle world metadata and future runtime-backed lifecycle execution
 
 ## Completion Checklist
 
 - [x] narrow contract-derived synthesized `requires` boundary cases implemented and verified over structured metadata
 - [x] runner-facing structured snapshot seam wired through `SuiteConfig`/`run_suite`
 - [x] narrow policy-derived `TerminalEquals` allow/deny cases implemented over exact metadata; unavailable metadata defers with repro context
-- [x] narrow obligation lifecycle cases implemented over exact finite lifecycle metadata; unavailable metadata defers with repro context
+- [x] narrow obligation lifecycle cases implemented over exact finite lifecycle world metadata; wrong lifecycle state fails and unavailable metadata defers with repro context
 - [x] explicit CLI opt-in implemented
 - [x] output preserves authored vs synthesized distinction under verified smoke coverage

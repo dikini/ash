@@ -487,8 +487,8 @@ fn run_synthesized_tests(
                 config.max_cases,
                 config.max_worlds,
             ) {
-                if synthesized_source_enabled(config, result.source) {
-                    suite.add(result);
+                if !add_synthesized_result(config, suite, result) {
+                    return;
                 }
             }
         }
@@ -507,7 +507,9 @@ fn run_synthesized_tests(
         if config.synthesized_sources.contracts {
             let contract_tests = synthesized::synthesize_contract_tests(path, &source);
             for result in contract_tests {
-                suite.add(result);
+                if !add_synthesized_result(config, suite, result) {
+                    return;
+                }
             }
         }
 
@@ -515,7 +517,9 @@ fn run_synthesized_tests(
         if config.synthesized_sources.policies {
             let policy_tests = synthesized::synthesize_policy_tests(path, &source);
             for result in policy_tests {
-                suite.add(result);
+                if !add_synthesized_result(config, suite, result) {
+                    return;
+                }
             }
         }
 
@@ -523,10 +527,46 @@ fn run_synthesized_tests(
         if config.synthesized_sources.obligations {
             let obligation_tests = synthesized::synthesize_obligation_tests(path, &source);
             for result in obligation_tests {
-                suite.add(result);
+                if !add_synthesized_result(config, suite, result) {
+                    return;
+                }
             }
         }
     }
+}
+
+fn add_synthesized_result(
+    config: &SuiteConfig,
+    suite: &mut crate::test_runner::types::TestSuiteResult,
+    result: TestResult,
+) -> bool {
+    if !synthesized_result_selected(config, &result) {
+        return true;
+    }
+
+    let stop = config.fail_fast && result.outcome.is_failure();
+    suite.add(result);
+    !stop
+}
+
+fn synthesized_result_selected(config: &SuiteConfig, result: &TestResult) -> bool {
+    if !synthesized_source_enabled(config, result.source) {
+        return false;
+    }
+
+    if let Some(ref tag) = config.tag_filter
+        && !result.tags.iter().any(|candidate| candidate == tag)
+    {
+        return false;
+    }
+
+    if let Some(ref kind) = config.kind_filter
+        && parse_kind(kind) != result.kind
+    {
+        return false;
+    }
+
+    true
 }
 
 fn synthesized_source_enabled(config: &SuiteConfig, source: TestSource) -> bool {
@@ -790,5 +830,159 @@ workflow contract_case
                 .all(|test| test.source == TestSource::Contract && test.outcome == Outcome::Pass),
             "structured snapshot contract cases should execute through run_suite: {result:#?}"
         );
+    }
+
+    #[test]
+    fn synthesized_snapshot_results_honor_kind_filter() {
+        let dir = tempfile::tempdir().unwrap();
+        let snapshot_path = dir.path().join("checked-summary.ash");
+        let config = SuiteConfig {
+            root: dir.path().to_path_buf(),
+            include_synthesized: true,
+            only_synthesized: true,
+            synthesized_sources: SynthesizedSources {
+                contracts: true,
+                policies: false,
+                obligations: false,
+            },
+            kind_filter: Some("property".to_string()),
+            synthesized_snapshots: vec![(snapshot_path, mixed_contract_and_property_snapshot())],
+            ..Default::default()
+        };
+
+        let result = run_suite(&config);
+
+        assert!(
+            !result.tests.is_empty(),
+            "property filter should retain matching synthesized property rows"
+        );
+        assert!(
+            result
+                .tests
+                .iter()
+                .all(|test| test.kind == TestKind::Property),
+            "kind_filter should apply to synthesized rows as well as authored rows: {result:#?}"
+        );
+    }
+
+    #[test]
+    fn synthesized_snapshot_results_honor_tag_filter() {
+        let dir = tempfile::tempdir().unwrap();
+        let snapshot_path = dir.path().join("checked-summary.ash");
+        let config = SuiteConfig {
+            root: dir.path().to_path_buf(),
+            include_synthesized: true,
+            only_synthesized: true,
+            synthesized_sources: SynthesizedSources {
+                contracts: true,
+                policies: false,
+                obligations: false,
+            },
+            tag_filter: Some("property".to_string()),
+            synthesized_snapshots: vec![(snapshot_path, mixed_contract_and_property_snapshot())],
+            ..Default::default()
+        };
+
+        let result = run_suite(&config);
+
+        assert!(
+            !result.tests.is_empty(),
+            "property tag filter should retain matching synthesized property rows"
+        );
+        assert!(
+            result
+                .tests
+                .iter()
+                .all(|test| test.tags.iter().any(|tag| tag == "property")),
+            "tag_filter should apply to synthesized rows as well as authored rows: {result:#?}"
+        );
+    }
+
+    #[test]
+    fn synthesized_snapshot_results_honor_fail_fast() {
+        let dir = tempfile::tempdir().unwrap();
+        let snapshot_path = dir.path().join("checked-summary.ash");
+        let config = SuiteConfig {
+            root: dir.path().to_path_buf(),
+            include_synthesized: true,
+            only_synthesized: true,
+            synthesized_sources: SynthesizedSources {
+                contracts: true,
+                policies: false,
+                obligations: false,
+            },
+            fail_fast: true,
+            synthesized_snapshots: vec![(
+                snapshot_path,
+                RunnerIntrospectionSnapshot {
+                    source_artifact_id: "source:checked-summary.ash".to_string(),
+                    check_summary_id: "check:summary".to_string(),
+                    generators: vec![TypeGeneratorDescriptor {
+                        id: "failing-then-passing-property".to_string(),
+                        target_type: "Int".to_string(),
+                        source: TypeGeneratorSource::FiniteDomain,
+                        exact_values: vec![
+                            json!({ "input": 0, "property_holds": false }),
+                            json!({ "input": 1, "property_holds": true }),
+                        ],
+                        ..TypeGeneratorDescriptor::default()
+                    }],
+                    ..RunnerIntrospectionSnapshot::default()
+                },
+            )],
+            ..Default::default()
+        };
+
+        let result = run_suite(&config);
+
+        assert_eq!(
+            result.tests.len(),
+            1,
+            "fail_fast should stop adding synthesized rows after the first failure: {result:#?}"
+        );
+        assert_eq!(result.tests[0].outcome, Outcome::Fail);
+    }
+
+    fn mixed_contract_and_property_snapshot() -> RunnerIntrospectionSnapshot {
+        RunnerIntrospectionSnapshot {
+            schema_version: RUNNER_SYNTHESIS_SCHEMA_VERSION.to_string(),
+            module_identity: "test-module".to_string(),
+            source_artifact_id: "source:checked-summary.ash".to_string(),
+            check_summary_id: "check:summary".to_string(),
+            contracts: vec![RunnerContractMetadata {
+                id: "contract:positive".to_string(),
+                callable_name: "positive".to_string(),
+                callable_kind: "pure_function".to_string(),
+                param_names: vec!["x".to_string()],
+                param_types: vec!["Int".to_string()],
+                lowered_requires: vec!["x > 0".to_string()],
+                generation_hints: vec![
+                    TypeGeneratorDescriptor {
+                        id: "x-valid".to_string(),
+                        target_type: "Int".to_string(),
+                        source: TypeGeneratorSource::ContractValid,
+                        exact_values: vec![json!(1)],
+                        ..TypeGeneratorDescriptor::default()
+                    },
+                    TypeGeneratorDescriptor {
+                        id: "x-invalid".to_string(),
+                        target_type: "Int".to_string(),
+                        source: TypeGeneratorSource::ContractInvalidNearby,
+                        exact_values: vec![json!(0)],
+                        ..TypeGeneratorDescriptor::default()
+                    },
+                ],
+                executable_case_kinds: vec![SynthesizedOracleKind::PreconditionBoundary],
+                ..RunnerContractMetadata::default()
+            }],
+            generators: vec![TypeGeneratorDescriptor {
+                id: "property-cases".to_string(),
+                target_type: "Int".to_string(),
+                source: TypeGeneratorSource::FiniteDomain,
+                exact_values: vec![json!({ "input": 1, "property_holds": true })],
+                ..TypeGeneratorDescriptor::default()
+            }],
+            ..RunnerIntrospectionSnapshot::default()
+        }
     }
 }

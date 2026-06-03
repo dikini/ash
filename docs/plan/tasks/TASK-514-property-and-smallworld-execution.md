@@ -57,8 +57,10 @@ The runner now has two distinct execution paths:
 The generated property slice supports exact finite descriptor values with a narrow metadata oracle
 (`property_holds`) and skips unsupported/empty descriptors instead of reporting success. The small-world
 slice supports explicit states plus bool, bounded-int, and explicit-value worlds with narrow
-control-state/binding oracles. `--max-worlds` now truncates enumerated metadata worlds in the structured
-snapshot path rather than rerunning one authored body, and repro artifacts include source/check summary
+control-state/binding oracles. TASK-1011 tightened bounded-int safety so bounded-int domains require
+an explicit CLI `max_worlds` or metadata `max_worlds_default` and otherwise defer before range
+materialization. `--max-worlds` now truncates enumerated metadata worlds in the structured snapshot
+path rather than rerunning one authored body, and repro artifacts include source/check summary
 identity, seed, case/world indexes, generated input or world snapshots, oracle snapshots, and replay
 commands.
 
@@ -69,6 +71,7 @@ Deferred after this completion slice:
 - richer property oracles beyond the narrow metadata-backed `property_holds` shape
 - richer small-world domain families such as product, list, and state-machine descriptors
 - broader synthesized contract/policy/obligation execution beyond the TASK-513 narrow metadata cases
+- live Ash target execution against materialized worlds
 
 ## Baseline Already Satisfied by Phase 76A
 
@@ -82,4 +85,5 @@ Deferred after this completion slice:
 - [x] type/contract-derived generated property inputs implemented through TASK-1010 descriptors
 - [x] `SmallWorldState` / `SmallWorldDomain` deterministic enumeration implemented
 - [x] `--max-worlds` bounds actual explored worlds, not bounded reruns
+- [x] uncapped bounded-int domains defer before materialization
 - [x] repro artifacts include generated input or world snapshots, source/check summary identity, and replay commands

@@ -1,6 +1,15 @@
 # DESIGN-023: Small-World Exploration Substrate
 
-## Status: Draft
+## Status: Draft (Phase 76B narrow slice implemented; broader design open)
+
+Phase 76B implemented the narrow structured-snapshot subset for this design:
+explicit `SmallWorldState` / `SmallWorldDomain` metadata, deterministic
+enumeration for explicit states/values, bool, and safely capped bounded
+integers, world repro snapshots, `--max-worlds` truncation over actual metadata
+worlds, and deferred skips for uncapped bounded integers or unsupported domains.
+Full design acceptance remains open and is planned by
+[SPEC-077](../spec/SPEC-077-ASH-TEST-RUNNER-SYNTHESIZED-AND-SMALLWORLD-COMPLETION.md)
+and [PLAN-127](../plan/PLAN-127-DESIGN-022-023-SYNTHESIZED-SMALLWORLD-COMPLETION.md).
 
 ## Overview
 
@@ -10,8 +19,15 @@ This note is a follow-up to Phase 76. The current runner supports:
 - `smallworld` as an explicit test kind
 - `--max-worlds` runner controls
 - small-world-specific result labeling and reporting
+- explicit finite structured snapshot worlds injected through runner internals/tests
 
-But the current implementation does not yet explore true worlds. It simply reruns the same authored body in a bounded loop. This note defines the missing world model, enumeration model, and oracle model required for genuine small-world exploration.
+The authored compatibility path can still rerun the same authored body in a
+bounded loop, and ordinary CLI source files do not yet produce live checked
+small-world snapshots. The current structured-snapshot path explores explicit
+finite worlds, but full small-world target execution against Ash roles,
+capabilities, policies, obligations, and richer domains remains future work.
+This note defines the full world model, enumeration model, execution model, and
+oracle model required for genuine small-world exploration.
 
 ## Problem Statement
 
@@ -364,8 +380,14 @@ Land bounded policy worlds once policy-domain shape is stabilized.
 This design note is realized when:
 1. the runner has a real world model and deterministic enumerator
 2. `--max-worlds` bounds actual explored worlds, not just reruns
-3. at least one real obligation or role/capability exploration slice is implemented end-to-end
-4. failing small-world cases report the actual world, not merely a loop counter
+3. ordinary CLI source files can produce checked/lowered small-world domains
+4. at least one real obligation or role/capability exploration slice executes Ash targets end-to-end
+5. richer finite domains such as products/lists/state machines are safe-capped or explicitly deferred
+6. failing small-world cases report the actual world, not merely a loop counter
+
+Phase 76B satisfies only the narrow explicit-world subset for injected
+structured snapshots. Full acceptance remains future work tracked by
+SPEC-077/PLAN-127.
 
 ## Recommendation
 

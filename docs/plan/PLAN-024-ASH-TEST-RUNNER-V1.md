@@ -1,6 +1,6 @@
 # PLAN-024: Ash Test Runner V1
 
-## Status: Complete (V1 / Phase 76B closeout; residuals deferred)
+## Status: Complete (V1 / Phase 76B final remediation complete; residuals deferred)
 
 ## Overview
 
@@ -130,6 +130,7 @@ Add bounded generative execution modes on the runner substrate.
 | Task | Description | Spec | Est. Hours | Dependencies |
 |------|-------------|------|------------|--------------|
 | [TASK-515](tasks/TASK-515-ash-test-runner-docs-and-phase-verification.md) | Finalize docs/bookkeeping, update PLAN-INDEX/CHANGELOG, and run the v1 verification gate for the Ash test runner phase | PLAN-024, DESIGN-021, DESIGN-022/023 | 4-6 | 509-514, 1010 |
+| [TASK-1011](tasks/TASK-1011-phase-76b-final-remediation-and-design022-023-planning.md) | Remediate final Phase 76B review blockers, reconcile narrow-slice status, and plan DESIGN-022/023 completion follow-on work | PLAN-024, DESIGN-022/023, SPEC-077, PLAN-127 | 6-8 | 513-515 |
 
 ## Recommended File/Code Organization
 
@@ -230,7 +231,10 @@ metadata parsing, minimal `std::test` authored usage, and targeted verification/
 consistent with the v1 phase contract. TASK-513/TASK-514 close the Phase 76B structured metadata
 execution slice for narrow synthesized contract/policy/obligation cases, exact finite generated
 property inputs, and deterministic explicit small-world states. TASK-515 records final phase
-documentation, verification, and smoke evidence.
+documentation, verification, and smoke evidence. TASK-1011 remediates the final review blockers:
+obligation lifecycle pass rows now evaluate explicit finite lifecycle world state, uncapped
+bounded-int domains defer before range materialization, and synthesized kind/tag filters plus
+fail-fast apply to structured synthesized results.
 
 ## Explicit Deferred Follow-Up Items
 
@@ -276,7 +280,8 @@ surfaces:
      outcomes, oracle shape, authority requirements, and materialization limits
 4. Obligation metadata
    - obligation identity, scope, lifecycle model, introduction/discharge/check sites,
-     terminal expectations, and small-world derivation hints
+     terminal expectations, explicit finite lifecycle world states, and small-world
+     derivation hints
 5. Type/contract-derived generated input descriptors
    - authored examples, exact finite domains, valid contract-domain representatives,
      invalid-nearby contract-domain representatives, and explicit unsupported cases
@@ -294,7 +299,7 @@ executed `pass` outcomes for true synthesized or true small-world cases. TASK-51
 the first runner-side synthesized-case substrate, a `SuiteConfig` structured snapshot seam, narrow
 structured contract `requires` boundary oracles over exact generators, narrow policy
 `TerminalEquals` allow/deny oracles over exact finite domains, and narrow obligation lifecycle
-oracles over explicit finite lifecycle metadata. Unsupported raw-source paths and incomplete
+oracles over explicit finite lifecycle world-state metadata. Unsupported raw-source paths and incomplete
 metadata remain explicit deferred skips, and the user-facing CLI still does not synthesize live
 checked snapshots from source files. TASK-514 extends that seam with exact finite generated property
 inputs and deterministic explicit small-world state enumeration, including generated input/world repro
@@ -324,7 +329,8 @@ implementation effort:
 In short: Phase 76 closes the execution substrate and explicit extension points, plus the narrow
 Phase 76B structured snapshot execution slice. The richer synthesized/generative/test-library
 layers are deferred until the next round of spec work can define those surfaces cleanly and prevent
-design debt.
+design debt. SPEC-077 and PLAN-127 now track the follow-on completion work for DESIGN-022 and
+DESIGN-023.
 
 ## Deliverable
 

@@ -138,7 +138,7 @@ ash dot --format dot PATH
 ash dot --colors --name NAME PATH
 ```
 
-The `test` command supports `human` and `json` output plus synthesized-test controls. The `dot` command emits DOT by default; SVG output requires Graphviz according to help text.
+The `test` command supports `human` and `json` output plus synthesized-test controls. Current synthesized execution is limited to the Phase 76B structured-snapshot slice used by runner internals/tests; ordinary CLI source files still report raw-source synthesized compatibility rows as deferred skips rather than live checked/lowered synthesized passes. The `dot` command emits DOT by default; SVG output requires Graphviz according to help text.
 
 ## Daemon
 

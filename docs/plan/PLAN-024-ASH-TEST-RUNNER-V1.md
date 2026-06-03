@@ -1,6 +1,6 @@
 # PLAN-024: Ash Test Runner V1
 
-## Status: Draft
+## Status: Complete (V1 / Phase 76B closeout; residuals deferred)
 
 ## Overview
 
@@ -224,31 +224,36 @@ Before phase closeout:
 - targeted `ash test` smoke runs for authored tests
 - targeted synthesized test smoke runs for contracts/policies/obligations
 
-Current bookkeeping note: the current implementation now supports explicit synthesized-source
-selection, direct kind-directory discovery, real per-test timeout containment via isolated execution,
-`-- @test` metadata parsing, minimal `std::test` authored usage, and targeted verification/smoke
-coverage consistent with the v1 phase contract. TASK-514 adds the Phase 76B structured metadata
-execution slice for exact finite generated property inputs and deterministic explicit small-world
-states, while TASK-515 remains planned for final phase documentation and verification closeout.
+Closeout note: the current implementation supports explicit synthesized-source selection, direct
+kind-directory discovery, real per-test timeout containment via isolated execution, `-- @test`
+metadata parsing, minimal `std::test` authored usage, and targeted verification/smoke coverage
+consistent with the v1 phase contract. TASK-513/TASK-514 close the Phase 76B structured metadata
+execution slice for narrow synthesized contract/policy/obligation cases, exact finite generated
+property inputs, and deterministic explicit small-world states. TASK-515 records final phase
+documentation, verification, and smoke evidence.
 
 ## Explicit Deferred Follow-Up Items
 
 The following items are intentionally deferred until after the next round of spec work improvement and should not be treated as part of the current closed Phase 76 surface:
 
-1. Broader synthesized contract/policy/obligation execution beyond the TASK-513 checkpoint
+1. Live checked/lowered snapshot production from ordinary CLI source files
+   - `ash test path.ash --only-synthesized ...` still uses raw-source fallback/deferred rows
+     unless a structured snapshot is injected through runner internals/tests
+   - the CLI command does not yet produce live `RunnerIntrospectionSnapshot` values from ordinary
+     source files
+2. Broader synthesized contract/policy/obligation execution beyond the TASK-513 checkpoint
    - live wiring from lowered contracts, policies, and obligations into the runner snapshot
    - executable contract postcondition cases beyond the narrow structured contract `requires`
      boundary slice
    - policy execution beyond exact `TerminalEquals` allow/deny metadata and obligation execution
      beyond exact finite lifecycle metadata
-2. Rich generative property testing beyond TASK-514
-   - live checked-snapshot production from ordinary source files
+3. Rich generative property testing beyond TASK-514
    - property oracles beyond the current exact finite descriptor values with narrow metadata
      `property_holds` expectations
-3. Rich small-world exploration beyond TASK-514
+4. Rich small-world exploration beyond TASK-514
    - broader product/list/state-machine domain descriptors
    - live wiring from lowered policy/obligation/role metadata into runner snapshots
-4. Richer `std::test` surface
+5. Richer `std::test` surface
    - panic-aware helpers and runtime-facing helpers that depend on stronger stable runtime/spec support
 
 ## Phase 76B Rescope / Spec-Hardening Packet
@@ -316,10 +321,16 @@ implementation effort:
 - a broader `std::test` surface should wait until panic semantics, runtime-facing assertions, and
   related helper contracts are stable enough to avoid committing to the wrong long-term API
 
-In short: Phase 76 closes the execution substrate and explicit extension points, while the richer
-synthesized/generative/test-library layers are deferred until the next round of spec work can define
-those surfaces cleanly and prevent design debt.
+In short: Phase 76 closes the execution substrate and explicit extension points, plus the narrow
+Phase 76B structured snapshot execution slice. The richer synthesized/generative/test-library
+layers are deferred until the next round of spec work can define those surfaces cleanly and prevent
+design debt.
 
 ## Deliverable
 
-A practical Ash test runner v1: CLI-integrated, panic-contained, assertion-backed by a dedicated Ash test library surface, capable of executing authored unit/integration/e2e tests plus bounded property/small-world tests, and able to plan/source synthesized tests from contracts, policies, and obligations only when explicitly requested.
+A practical Ash test runner v1: CLI-integrated, panic-contained, assertion-backed by a dedicated
+Ash test library surface, capable of executing authored unit/integration/e2e tests plus bounded
+property/small-world tests, and able to execute the narrow structured-snapshot synthesized and
+generated/small-world metadata slices only when explicitly requested. Ordinary CLI source files
+still do not produce live checked/lowered snapshots; raw-source synthesized paths remain explicit
+deferred compatibility rows.

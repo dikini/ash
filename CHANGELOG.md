@@ -16,6 +16,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Changed
 - [TASK-1008](docs/plan/tasks/TASK-1008-runtime-defensive-pattern-error-cleanup-closeout.md): Refreshed reference documentation after SPEC-076 closeout so parser, lowering, type-to-runtime, formalization, canonical IR corpus, and daily-use function reference pages record mandatory `if let ... else`, source binder irrefutability, exhaustive total handlers, and runtime pattern errors as unchecked-IR defensive boundaries.
+- [TASK-515](docs/plan/tasks/TASK-515-ash-test-runner-docs-and-phase-verification.md): Closed Phase 76B documentation and verification for the narrow structured snapshot runner substrate, recording focused runner and CLI smoke evidence while preserving deferred limitations for live checked snapshot production from ordinary CLI source files, richer oracles, richer domains, and broader synthesized execution.
 
 ### Added
 - [TASK-514](docs/plan/tasks/TASK-514-property-and-smallworld-execution.md): Added metadata-backed generated property execution over exact finite `TypeGeneratorDescriptor` values and explicit finite small-world execution over `SmallWorldDomain` / `SmallWorldState` snapshots, including deterministic world truncation through `--max-worlds`, generated input/world repro snapshots, seed/case/world identities, replay commands, and deferred skips for unsupported or empty metadata.

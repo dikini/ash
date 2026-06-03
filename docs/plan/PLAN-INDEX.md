@@ -275,7 +275,7 @@ Update this section as tasks complete:
 | 69 | 12 | 12 | ✅ Complete |
 | 70 | 8 | 8 | ✅ Complete |
 | 76A | 4 | 4 | ✅ Complete |
-| 76B | 4 | 2 | 📝 Planned |
+| 76B | 4 | 4 | ✅ Complete |
 | 74 | 8 | 8 | ✅ Complete |
 | 77 | 23 | 23 | ✅ Complete |
 | 78 | 5 | 5 | ✅ Complete |
@@ -403,7 +403,7 @@ This table is retained near the original early-phase section for historical cont
 | 41-42 | 2 | 2 | ✅ Complete |
 | 74 | 8 | 8 | ✅ Complete |
 | 76A | 4 | 4 | ✅ Complete |
-| 76B | 4 | 2 | 📝 Planned |
+| 76B | 4 | 4 | ✅ Complete |
 | 77 | 23 | 23 | ✅ Complete |
 | 78 | 5 | 5 | ✅ Complete |
 | 79 | 6 | 6 | ✅ Complete |
@@ -2292,28 +2292,32 @@ finite-world enumeration substrate.
 - [DESIGN-022: Synthesized Contract / Policy / Obligation Cases](../design/DESIGN-022-SYNTHESIZED-CONTRACT-POLICY-OBLIGATION-CASES.md)
 - [DESIGN-023: Small-World Exploration Substrate](../design/DESIGN-023-SMALL-WORLD-EXPLORATION-SUBSTRATE.md)
 **Priority:** High
-**Status:** 🚧 In Progress
+**Status:** ✅ Complete
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
 | [TASK-1010](tasks/TASK-1010-phase-76b-rescope-spec-hardening-packet.md) | Define the Phase 76B rescope/spec-hardening packet and stable runner-facing introspection APIs for contracts, policies, obligations, generated inputs, small-world models, and reproducible artifacts before implementation resumes | [PLAN-024](PLAN-024-ASH-TEST-RUNNER-V1.md), DESIGN-022/023 | 4-6 | ✅ Complete |
 | [TASK-513](tasks/TASK-513-synthesized-tests-from-contracts-policies-and-obligations.md) | Add explicit, opt-in synthesized tests from contracts, policies, and obligations with clear authored-vs-synthesized labeling | [PLAN-024](PLAN-024-ASH-TEST-RUNNER-V1.md), DESIGN-022 | 10-14 | ✅ Complete |
 | [TASK-514](tasks/TASK-514-property-and-smallworld-execution.md) | Add seeded property execution and true small-world exploration with reproducible failure reporting and runner controls | [PLAN-024](PLAN-024-ASH-TEST-RUNNER-V1.md), DESIGN-023 | 8-12 | ✅ Complete |
-| [TASK-515](tasks/TASK-515-ash-test-runner-docs-and-phase-verification.md) | Finalize docs/bookkeeping and run the final verification/smoke gate once 76B implementation is complete | [PLAN-024](PLAN-024-ASH-TEST-RUNNER-V1.md), DESIGN-022/023 | 4-6 | 📝 Planned |
+| [TASK-515](tasks/TASK-515-ash-test-runner-docs-and-phase-verification.md) | Finalize docs/bookkeeping and run the final verification/smoke gate once 76B implementation is complete | [PLAN-024](PLAN-024-ASH-TEST-RUNNER-V1.md), DESIGN-022/023 | 4-6 | ✅ Complete |
 
-**Remaining work:** TASK-513 adds the runner-side synthesized-case substrate, repro
-artifacts, a `SuiteConfig` structured snapshot seam, narrow executable contract `requires`
-boundary oracles over exact generators, narrow policy `TerminalEquals` allow/deny oracles
-over exact finite domains, and narrow obligation lifecycle oracles over explicit finite
-lifecycle metadata. TASK-514 adds exact finite generated property execution and deterministic
-explicit small-world state enumeration over structured snapshots, with generated input/world
-repro snapshots and `--max-worlds` truncation over actual metadata worlds. Raw-source recognition
-and incomplete metadata now defer with explicit skip output instead of reporting success; the
-user-facing CLI still lacks a live checked-snapshot producer. TASK-515 remains planned for final
-documentation and phase verification closeout. See DESIGN-022 and DESIGN-023.
+**Closeout summary:** Phase 76B is complete for the documented narrow structured snapshot
+substrate. TASK-513 added the runner-side synthesized-case substrate, repro artifacts, a
+`SuiteConfig` structured snapshot seam, narrow executable contract `requires` boundary
+oracles over exact generators, narrow policy `TerminalEquals` allow/deny oracles over exact
+finite domains, and narrow obligation lifecycle oracles over explicit finite lifecycle
+metadata. TASK-514 added exact finite generated property execution and deterministic explicit
+small-world state enumeration over structured snapshots, with generated input/world repro
+snapshots and `--max-worlds` truncation over actual metadata worlds. TASK-515 recorded final
+verification, smoke evidence, and residual limitations. Raw-source recognition and incomplete
+metadata defer with explicit skip output instead of reporting success; the user-facing CLI still
+lacks a live checked/lowered snapshot producer for ordinary source files.
 
-**Deliverable target:** Executable synthesized tests from contracts, policies, and obligations;
-true small-world exploration with deterministic world enumeration; and final phase closeout.
+**Deliverable:** Runner-facing executable synthesized tests from structured contract, policy,
+and obligation metadata; exact finite generated property execution; explicit small-world
+exploration with deterministic world enumeration; reproducible artifacts; and final phase
+closeout. Live checked-snapshot production from ordinary CLI source files, richer oracles,
+richer domain families, and broader synthesized execution remain deferred.
 
 ## Phase 77: LLM Standard Library
 

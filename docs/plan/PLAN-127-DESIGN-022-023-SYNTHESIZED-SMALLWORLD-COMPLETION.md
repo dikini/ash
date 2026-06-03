@@ -14,9 +14,9 @@ Complete DESIGN-022 and DESIGN-023 beyond Phase 76B by adding live checked/lower
 
 Phase 76B is complete only for the narrow structured-snapshot slice: injected `RunnerIntrospectionSnapshot` values can produce executable finite metadata-backed cases, raw-source scans defer, obligation lifecycle pass rows evaluate explicit finite lifecycle world-state metadata, uncapped bounded-int worlds defer, and synthesized filters/fail-fast apply to structured results.
 
+TASK-1012 and TASK-1013 extend that baseline so ordinary `ash test` source files can produce live checked runner snapshots, and supported pure `Int` function contract postconditions execute checked/lowered core target and `ensures` expressions through `ash_interp`. String-only raw-source or display metadata remains deferred-skip only.
+
 The following remain future work:
-- ordinary `ash test` source files do not yet produce live checked/lowered snapshots
-- contract postcondition cases do not yet call real targets
 - policy execution is limited to exact `TerminalEquals` metadata
 - obligation execution is limited to finite lifecycle metadata equality
 - small-world execution does not yet run Ash targets across richer role/capability/policy/obligation worlds
@@ -26,7 +26,7 @@ The following remain future work:
 | Task | Description | Type | Est. Hours | Status |
 |------|-------------|------|------------|--------|
 | [TASK-1012](tasks/TASK-1012-live-runner-introspection-snapshot-production.md) | Produce checked/lowered runner snapshots from ordinary CLI source files and suite roots | CLI/Typeck/Substrate | 12 | Complete |
-| [TASK-1013](tasks/TASK-1013-contract-target-and-postcondition-synthesized-execution.md) | Execute synthesized contract targets and postcondition oracles end to end for supported metadata | Runner/Runtime | 14 | Planned |
+| [TASK-1013](tasks/TASK-1013-contract-target-and-postcondition-synthesized-execution.md) | Execute synthesized contract targets and postcondition oracles end to end for supported metadata | Runner/Runtime | 14 | Complete |
 | [TASK-1014](tasks/TASK-1014-policy-domain-and-terminal-oracle-execution.md) | Execute policy domains and terminal oracles beyond the narrow metadata equality slice | Runner/Policy | 12 | Planned |
 | [TASK-1015](tasks/TASK-1015-runtime-backed-obligation-lifecycle-execution.md) | Execute obligation lifecycle transitions through lowered/runtime-backed semantics | Runner/Runtime | 14 | Planned |
 | [TASK-1016](tasks/TASK-1016-smallworld-target-execution.md) | Materialize deterministic worlds and execute Ash targets against each world | Runner/SmallWorld | 16 | Planned |
@@ -74,7 +74,7 @@ CARGO_BUILD_RUSTC_WRAPPER= cargo test --workspace
 ## Completion Checklist
 
 - [ ] Ordinary CLI files produce checked/lowered runner snapshots.
-- [ ] Contract target/postcondition synthesized execution is implemented for supported cases.
+- [x] Contract target/postcondition synthesized execution is implemented for supported cases.
 - [ ] Policy domain and terminal oracle execution is implemented for supported cases.
 - [ ] Obligation lifecycle execution is runtime-backed for supported cases.
 - [ ] Small-world execution runs Ash targets against deterministic worlds.

@@ -597,9 +597,12 @@ fn synthesized_source_enabled(config: &SuiteConfig, source: TestSource) -> bool 
 mod tests {
     use super::*;
     use crate::test_runner::synthesized::{
-        RUNNER_SYNTHESIS_SCHEMA_VERSION, RunnerContractMetadata, RunnerIntrospectionSnapshot,
-        SynthesizedOracleKind, TypeGeneratorDescriptor, TypeGeneratorSource,
+        ContractExecutableTarget, ContractExecutableTargetKind, ContractExecutionSetup,
+        ContractPostconditionOracle, ContractTargetBody, RUNNER_SYNTHESIS_SCHEMA_VERSION,
+        RunnerContractMetadata, RunnerIntrospectionSnapshot, SynthesizedOracleKind,
+        TypeGeneratorDescriptor, TypeGeneratorSource,
     };
+    use ash_core::{Expr as CoreExpr, Span as CoreSpan};
     use serde_json::json;
     use std::fs;
     use std::sync::{
@@ -844,6 +847,101 @@ workflow contract_case
                 .iter()
                 .all(|test| test.source == TestSource::Contract && test.outcome == Outcome::Pass),
             "structured snapshot contract cases should execute through run_suite: {result:#?}"
+        );
+    }
+
+    #[test]
+    fn run_suite_executes_structured_snapshot_contract_postconditions_against_target_output() {
+        let dir = tempfile::tempdir().unwrap();
+        let snapshot_path = dir.path().join("checked-summary.ash");
+        let config = SuiteConfig {
+            root: dir.path().to_path_buf(),
+            include_synthesized: true,
+            only_synthesized: true,
+            synthesized_sources: SynthesizedSources {
+                contracts: true,
+                policies: false,
+                obligations: false,
+            },
+            synthesized_snapshots: vec![(
+                snapshot_path.clone(),
+                RunnerIntrospectionSnapshot {
+                    schema_version: RUNNER_SYNTHESIS_SCHEMA_VERSION.to_string(),
+                    module_identity: "test-module".to_string(),
+                    source_artifact_id: "source:checked-summary.ash".to_string(),
+                    check_summary_id: "check:summary".to_string(),
+                    contracts: vec![RunnerContractMetadata {
+                        id: "contract:identity".to_string(),
+                        callable_name: "identity".to_string(),
+                        callable_kind: "pure_function".to_string(),
+                        param_names: vec!["x".to_string()],
+                        param_types: vec!["Int".to_string()],
+                        return_type: Some("Int".to_string()),
+                        lowered_requires: vec!["x >= 0".to_string()],
+                        lowered_ensures: vec!["result == x".to_string()],
+                        executable_postconditions: vec![ContractPostconditionOracle {
+                            display: "result == x".to_string(),
+                            expression: CoreExpr::Binary {
+                                op: ash_core::BinaryOp::Eq,
+                                left: Box::new(CoreExpr::Variable {
+                                    name: "result".to_string(),
+                                    span: CoreSpan::default(),
+                                }),
+                                right: Box::new(CoreExpr::Variable {
+                                    name: "x".to_string(),
+                                    span: CoreSpan::default(),
+                                }),
+                            },
+                        }],
+                        executable_target: Some(ContractExecutableTarget {
+                            kind: ContractExecutableTargetKind::PureFunction,
+                            target_ref: "identity".to_string(),
+                            setup: ContractExecutionSetup::PureNoSetup,
+                            body: ContractTargetBody::ReturnExpression {
+                                expression: CoreExpr::Variable {
+                                    name: "x".to_string(),
+                                    span: CoreSpan::default(),
+                                },
+                            },
+                        }),
+                        generation_hints: vec![TypeGeneratorDescriptor {
+                            id: "x-valid".to_string(),
+                            target_type: "Int".to_string(),
+                            source: TypeGeneratorSource::ContractValid,
+                            exact_values: vec![json!(7)],
+                            ..TypeGeneratorDescriptor::default()
+                        }],
+                        executable_case_kinds: vec![SynthesizedOracleKind::PostconditionHolds],
+                        ..RunnerContractMetadata::default()
+                    }],
+                    ..RunnerIntrospectionSnapshot::default()
+                },
+            )],
+            ..Default::default()
+        };
+
+        let result = run_suite(&config);
+
+        let test = result
+            .tests
+            .iter()
+            .find(|test| test.name.contains("ensures"))
+            .unwrap_or_else(|| panic!("runner should execute a postcondition case: {result:#?}"));
+        assert_eq!(test.source, TestSource::Contract);
+        assert_eq!(test.outcome, Outcome::Pass);
+        let repro = test
+            .repro_artifact
+            .as_ref()
+            .expect("executed contract postcondition should include repro artifact");
+        assert_eq!(
+            repro.generated_input_snapshot.as_ref().unwrap()["bindings"]["x"],
+            7
+        );
+        assert_eq!(repro.oracle_snapshot["target_output"], 7);
+        assert_eq!(repro.oracle_snapshot["ensures"], "result == x");
+        assert_eq!(
+            repro.oracle_snapshot["target_execution"]["substrate"],
+            "ash_interp_core_expr"
         );
     }
 

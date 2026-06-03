@@ -353,6 +353,56 @@ fn only_synthesized_function_contract_module_uses_live_checked_snapshot() {
 }
 
 #[test]
+fn only_synthesized_contract_postcondition_executes_supported_pure_function_metadata() {
+    let dir = make_test_dir();
+    write_authored_test(
+        &dir,
+        "unit",
+        "checked_fn_postcondition_target",
+        "fn identity(n: Int) -> Int\n    requires: n >= 0\n    ensures: result == n\n{\n    n\n}\n",
+    );
+
+    let assert = ash()
+        .arg("test")
+        .arg(dir.path())
+        .arg("--only-synthesized")
+        .arg("contracts")
+        .arg("--format")
+        .arg("json")
+        .assert();
+    let output = parse_json_output(&assert.success());
+    let tests = output["tests"].as_array().unwrap();
+
+    assert!(
+        tests.iter().any(|test| {
+            test["source"] == "synthesized:contract"
+                && test["outcome"] == "pass"
+                && test["name"]
+                    .as_str()
+                    .is_some_and(|name| name.contains("/identity/ensures"))
+                && test["repro_artifact"]["source_artifact_id"]
+                    .as_str()
+                    .is_some_and(|id| id.starts_with("source-file:"))
+                && test["repro_artifact"]["check_summary_id"]
+                    .as_str()
+                    .is_some_and(|id| id.starts_with("checked:"))
+                && test["repro_artifact"]["generated_input_snapshot"]["bindings"]["n"].is_i64()
+                && test["repro_artifact"]["oracle_snapshot"]["target_output"].is_i64()
+                && test["repro_artifact"]["oracle_snapshot"]["ensures"] == "result == n"
+                && test["repro_artifact"]["oracle_snapshot"]["target_execution"]["substrate"]
+                    == "ash_interp_core_expr"
+        }),
+        "supported pure function postconditions should execute with input/output repro context: {output:#}"
+    );
+    assert!(
+        tests.iter().all(|test| {
+            test["repro_artifact"]["check_summary_id"] != "raw-source-fallback:no-lowered-summary"
+        }),
+        "supported checked metadata must not use raw-source fallback rows: {output:#}"
+    );
+}
+
+#[test]
 fn only_synthesized_unsupported_live_snapshot_metadata_defers_without_pass_rows() {
     let dir = make_test_dir();
     write_authored_test(

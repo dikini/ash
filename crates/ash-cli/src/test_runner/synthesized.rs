@@ -405,8 +405,10 @@ pub struct SmallWorldDomain {
     pub explicit_values: Vec<Value>,
     /// Explicit canonical world states.
     pub explicit_states: Vec<SmallWorldState>,
-    /// World oracle to evaluate for each enumerated state.
+    /// World oracle to evaluate for each enumerated state after target execution.
     pub oracle: Option<SmallWorldOracle>,
+    /// Explicit executable target metadata for supported small-world execution.
+    pub executable_target: Option<SmallWorldExecutableTarget>,
     /// Default world limit from metadata.
     pub max_worlds_default: Option<usize>,
 }
@@ -424,9 +426,34 @@ impl Default for SmallWorldDomain {
             explicit_values: Vec::new(),
             explicit_states: Vec::new(),
             oracle: None,
+            executable_target: None,
             max_worlds_default: None,
         }
     }
+}
+
+/// Explicit executable small-world target metadata.
+#[derive(Debug, Clone, Serialize, Default, PartialEq)]
+pub struct SmallWorldExecutableTarget {
+    /// Target kind.
+    pub kind: SmallWorldExecutableTargetKind,
+    /// Stable target reference.
+    pub target_ref: String,
+    /// Explicit setup supported by this target.
+    pub setup: ContractExecutionSetup,
+    /// Narrow executable target body model.
+    pub body: ContractTargetBody,
+}
+
+/// Supported small-world target kinds.
+#[derive(Debug, Clone, Serialize, Default, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum SmallWorldExecutableTargetKind {
+    /// Pure target executed by evaluating a checked/lowered core expression over world bindings.
+    PureExpression,
+    /// Unsupported target kind.
+    #[default]
+    Unsupported,
 }
 
 /// Supported finite small-world domain kinds.
@@ -496,6 +523,8 @@ pub enum SmallWorldOracleKind {
     ControlStateIn,
     /// The world bindings must contain all expected object fields.
     BindingEquals,
+    /// The executed target output must equal the expected value.
+    TargetOutputEquals,
 }
 
 /// Source for generated representatives.
@@ -1826,6 +1855,7 @@ fn smallworld_results(
             || domain.domain_kind == SmallWorldDomainKind::Unsupported
             || worlds.is_empty()
             || domain.oracle.is_none()
+            || domain.executable_target.is_none()
         {
             results.push(deferred_smallworld_result(path, snapshot, domain, seed));
             continue;
@@ -1835,16 +1865,44 @@ fn smallworld_results(
             .oracle
             .as_ref()
             .expect("checked Some above before executing worlds");
+        let target = domain
+            .executable_target
+            .as_ref()
+            .expect("checked Some above before executing worlds");
+        if !smallworld_target_metadata_is_supported(target)
+            || !smallworld_oracle_is_supported_after_target_execution(oracle)
+            || !smallworld_worlds_are_supported_for_target(&worlds)
+        {
+            results.push(deferred_smallworld_result(path, snapshot, domain, seed));
+            continue;
+        }
         for (index, world) in worlds.iter().enumerate() {
             let world_index = index + 1;
             let case_id = format!("synthesized/smallworld/{}/world-{}", domain.id, world_index);
-            let (outcome, message) = evaluate_smallworld_oracle(world, oracle);
+            let (target_output, execution_error) = match execute_smallworld_target(target, world) {
+                Ok(output) => (Some(output), None),
+                Err(reason) => (None, Some(reason)),
+            };
+            let (outcome, message) = match (&target_output, &execution_error) {
+                (Some(output), None) => evaluate_smallworld_oracle(world, oracle, output),
+                (None, Some(reason)) => (
+                    Outcome::Skip,
+                    Some(format!(
+                        "deferred: unsupported small-world target execution for world {}: {reason}",
+                        world.id
+                    )),
+                ),
+                _ => unreachable!("target output and execution error are mutually exclusive"),
+            };
             let repro = smallworld_repro_artifact(
                 path,
                 snapshot,
                 domain,
                 world,
                 oracle,
+                target,
+                target_output.as_ref(),
+                execution_error.as_deref(),
                 seed,
                 world_index,
                 max_worlds.unwrap_or(worlds.len()),
@@ -1950,6 +2008,7 @@ fn bounded_int_worlds(domain: &SmallWorldDomain, limit: usize) -> Vec<SmallWorld
 fn evaluate_smallworld_oracle(
     world: &SmallWorldState,
     oracle: &SmallWorldOracle,
+    target_output: &Value,
 ) -> (Outcome, Option<String>) {
     let passed = match oracle.kind {
         SmallWorldOracleKind::ControlStateEquals => oracle
@@ -1971,6 +2030,7 @@ fn evaluate_smallworld_oracle(
                     .all(|(key, value)| world.bindings.get(key) == Some(value))
             })
         }
+        SmallWorldOracleKind::TargetOutputEquals => target_output == &oracle.expected,
     };
 
     if passed {
@@ -1978,8 +2038,51 @@ fn evaluate_smallworld_oracle(
     } else {
         (
             Outcome::Fail,
-            Some(format!("small-world oracle failed for world {}", world.id)),
+            Some(format!(
+                "small-world oracle failed for world {} with target output {}",
+                world.id, target_output
+            )),
         )
+    }
+}
+
+fn smallworld_target_metadata_is_supported(target: &SmallWorldExecutableTarget) -> bool {
+    matches!(target.kind, SmallWorldExecutableTargetKind::PureExpression)
+        && matches!(target.setup, ContractExecutionSetup::PureNoSetup)
+        && !matches!(target.body, ContractTargetBody::Unsupported)
+        && !target.target_ref.is_empty()
+}
+
+fn smallworld_oracle_is_supported_after_target_execution(oracle: &SmallWorldOracle) -> bool {
+    matches!(oracle.kind, SmallWorldOracleKind::TargetOutputEquals)
+}
+
+fn smallworld_worlds_are_supported_for_target(worlds: &[SmallWorldState]) -> bool {
+    worlds.iter().all(|world| {
+        world.capabilities.is_empty()
+            && world.roles.is_empty()
+            && world.policies.is_empty()
+            && world.obligations.is_empty()
+            && world.mailbox.is_empty()
+            && world.resource_state.is_empty()
+    })
+}
+
+fn execute_smallworld_target(
+    target: &SmallWorldExecutableTarget,
+    world: &SmallWorldState,
+) -> Result<Value, String> {
+    if !smallworld_target_metadata_is_supported(target) {
+        return Err("small-world executable target metadata is unsupported".to_string());
+    }
+    match &target.body {
+        ContractTargetBody::ReturnExpression { expression } => {
+            evaluate_core_expression(expression, &world.bindings, None)
+        }
+        ContractTargetBody::ReturnLiteral { value } => Ok(value.clone()),
+        ContractTargetBody::Unsupported => {
+            Err("small-world target body is not executable".to_string())
+        }
     }
 }
 
@@ -1989,10 +2092,7 @@ fn deferred_smallworld_result(
     domain: &SmallWorldDomain,
     seed: u64,
 ) -> TestResult {
-    let reason = domain
-        .unsupported_reason
-        .clone()
-        .unwrap_or_else(|| "domain is not an explicit supported finite world model".to_string());
+    let reason = smallworld_deferred_reason(domain);
     let case_id = format!("synthesized/smallworld/{}/deferred", domain.id);
     deferred_result_with_kind(
         path,
@@ -2024,6 +2124,30 @@ fn deferred_smallworld_result(
             )
         },
     )
+}
+
+fn smallworld_deferred_reason(domain: &SmallWorldDomain) -> String {
+    if let Some(reason) = &domain.unsupported_reason {
+        return reason.clone();
+    }
+    if domain.domain_kind == SmallWorldDomainKind::Unsupported {
+        return "domain is not an explicit supported finite world model".to_string();
+    }
+    if domain.oracle.is_none() {
+        return "small-world domain lacks executable oracle metadata".to_string();
+    }
+    let Some(target) = &domain.executable_target else {
+        return "small-world domain lacks executable target metadata".to_string();
+    };
+    if !smallworld_target_metadata_is_supported(target) {
+        return "small-world executable target metadata is unsupported".to_string();
+    }
+    if let Some(oracle) = &domain.oracle
+        && !smallworld_oracle_is_supported_after_target_execution(oracle)
+    {
+        return "small-world oracle is not executable target-output metadata".to_string();
+    }
+    "small-world domain lacks supported finite worlds for target execution".to_string()
 }
 
 fn deferred_uncapped_bounded_int_result(
@@ -2073,6 +2197,9 @@ fn smallworld_repro_artifact(
     domain: &SmallWorldDomain,
     world: &SmallWorldState,
     oracle: &SmallWorldOracle,
+    target: &SmallWorldExecutableTarget,
+    target_output: Option<&Value>,
+    execution_error: Option<&str>,
     seed: u64,
     world_index: usize,
     replay_max_worlds: usize,
@@ -2091,6 +2218,12 @@ fn smallworld_repro_artifact(
             "kind": "small_world",
             "domain_id": domain.id,
             "domain_kind": domain.domain_kind,
+            "target_execution": {
+                "substrate": "ash_interp_core_expr",
+                "target": target,
+                "target_output": target_output,
+                "execution_error": execution_error,
+            },
             "oracle": oracle,
         }),
         Some(world_snapshot),
@@ -3820,9 +3953,10 @@ workflow test_workflow
                     },
                 ],
                 oracle: Some(SmallWorldOracle {
-                    kind: SmallWorldOracleKind::ControlStateIn,
-                    expected: json!(["introduced", "discharged", "rejected"]),
+                    kind: SmallWorldOracleKind::TargetOutputEquals,
+                    expected: json!(true),
                 }),
+                executable_target: Some(smallworld_literal_target(json!(true))),
                 ..SmallWorldDomain::default()
             }],
             ..RunnerIntrospectionSnapshot::default()
@@ -3859,6 +3993,133 @@ workflow test_workflow
     }
 
     #[test]
+    fn smallworld_target_output_drives_oracle_not_claimed_control_state() {
+        let snapshot = RunnerIntrospectionSnapshot {
+            source_artifact_id: "source:worlds.ash".to_string(),
+            check_summary_id: "check:world-summary".to_string(),
+            small_world_domains: vec![SmallWorldDomain {
+                id: "target-output-worlds".to_string(),
+                domain_kind: SmallWorldDomainKind::ExplicitStates,
+                source: TestSource::Obligation,
+                explicit_states: vec![SmallWorldState {
+                    id: "claimed-allowed".to_string(),
+                    world_kind: "policy_context".to_string(),
+                    control_state: Some("allowed".to_string()),
+                    bindings: BTreeMap::from([("smallworld_ok".to_string(), json!(false))]),
+                    ..SmallWorldState::default()
+                }],
+                oracle: Some(SmallWorldOracle {
+                    kind: SmallWorldOracleKind::TargetOutputEquals,
+                    expected: json!(true),
+                }),
+                executable_target: Some(smallworld_expr_target(core_var("smallworld_ok"))),
+                ..SmallWorldDomain::default()
+            }],
+            ..RunnerIntrospectionSnapshot::default()
+        };
+
+        let results = synthesize_from_snapshot(Path::new("worlds.ash"), &snapshot);
+
+        assert_eq!(results.len(), 1);
+        assert_eq!(
+            results[0].outcome,
+            Outcome::Fail,
+            "small-world pass/fail must come from executed target output, not claimed control_state: {results:#?}"
+        );
+        let oracle_snapshot = &results[0]
+            .repro_artifact
+            .as_ref()
+            .expect("smallworld result should include repro")
+            .oracle_snapshot;
+        assert_eq!(
+            oracle_snapshot["target_execution"]["target_output"],
+            json!(false)
+        );
+    }
+
+    #[test]
+    fn smallworld_metadata_only_oracle_with_executable_target_defers() {
+        let snapshot = RunnerIntrospectionSnapshot {
+            source_artifact_id: "source:worlds.ash".to_string(),
+            check_summary_id: "check:world-summary".to_string(),
+            small_world_domains: vec![SmallWorldDomain {
+                id: "metadata-only-oracle-worlds".to_string(),
+                domain_kind: SmallWorldDomainKind::ExplicitStates,
+                source: TestSource::Policy,
+                explicit_states: vec![SmallWorldState {
+                    id: "claimed-allowed".to_string(),
+                    world_kind: "policy_context".to_string(),
+                    control_state: Some("allowed".to_string()),
+                    bindings: BTreeMap::from([("smallworld_ok".to_string(), json!(false))]),
+                    ..SmallWorldState::default()
+                }],
+                oracle: Some(SmallWorldOracle {
+                    kind: SmallWorldOracleKind::ControlStateEquals,
+                    expected: json!("allowed"),
+                }),
+                executable_target: Some(smallworld_expr_target(core_var("smallworld_ok"))),
+                ..SmallWorldDomain::default()
+            }],
+            ..RunnerIntrospectionSnapshot::default()
+        };
+
+        let results = synthesize_from_snapshot(Path::new("worlds.ash"), &snapshot);
+
+        assert_eq!(results.len(), 1);
+        assert_eq!(
+            results[0].outcome,
+            Outcome::Skip,
+            "TASK-1016 must not allow legacy metadata-only small-world oracles to pass after decorative target execution: {results:#?}"
+        );
+        assert!(
+            results[0]
+                .message
+                .as_deref()
+                .unwrap_or_default()
+                .contains("deferred"),
+            "metadata-only oracle must defer with an honest reason: {results:#?}"
+        );
+    }
+
+    #[test]
+    fn smallworld_without_executable_target_defers() {
+        let snapshot = RunnerIntrospectionSnapshot {
+            source_artifact_id: "source:worlds.ash".to_string(),
+            check_summary_id: "check:world-summary".to_string(),
+            small_world_domains: vec![SmallWorldDomain {
+                id: "missing-target-worlds".to_string(),
+                domain_kind: SmallWorldDomainKind::ExplicitStates,
+                source: TestSource::Policy,
+                explicit_states: vec![SmallWorldState {
+                    id: "allowed".to_string(),
+                    world_kind: "policy_context".to_string(),
+                    control_state: Some("allowed".to_string()),
+                    ..SmallWorldState::default()
+                }],
+                oracle: Some(SmallWorldOracle {
+                    kind: SmallWorldOracleKind::ControlStateEquals,
+                    expected: json!("allowed"),
+                }),
+                ..SmallWorldDomain::default()
+            }],
+            ..RunnerIntrospectionSnapshot::default()
+        };
+
+        let results = synthesize_from_snapshot(Path::new("worlds.ash"), &snapshot);
+
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].outcome, Outcome::Skip);
+        assert!(
+            results[0]
+                .message
+                .as_deref()
+                .unwrap_or_default()
+                .contains("deferred"),
+            "missing executable target metadata must defer instead of passing: {results:#?}"
+        );
+    }
+
+    #[test]
     fn bounded_int_world_enumeration_applies_limit_before_materialization() {
         let snapshot = RunnerIntrospectionSnapshot {
             source_artifact_id: "source:bounded-worlds.ash".to_string(),
@@ -3870,9 +4131,10 @@ workflow test_workflow
                 value_type: Some("Int".to_string()),
                 bounds: BTreeMap::from([("min".to_string(), 0), ("max".to_string(), i64::MAX)]),
                 oracle: Some(SmallWorldOracle {
-                    kind: SmallWorldOracleKind::BindingEquals,
-                    expected: json!({ "value": 0 }),
+                    kind: SmallWorldOracleKind::TargetOutputEquals,
+                    expected: json!(0),
                 }),
+                executable_target: Some(smallworld_expr_target(core_var("value"))),
                 ..SmallWorldDomain::default()
             }],
             ..RunnerIntrospectionSnapshot::default()
@@ -3963,19 +4225,22 @@ workflow test_workflow
                         id: "allowed".to_string(),
                         world_kind: "policy_context".to_string(),
                         control_state: Some("allowed".to_string()),
+                        bindings: BTreeMap::from([("smallworld_ok".to_string(), json!(true))]),
                         ..SmallWorldState::default()
                     },
                     SmallWorldState {
                         id: "denied".to_string(),
                         world_kind: "policy_context".to_string(),
                         control_state: Some("denied".to_string()),
+                        bindings: BTreeMap::from([("smallworld_ok".to_string(), json!(false))]),
                         ..SmallWorldState::default()
                     },
                 ],
                 oracle: Some(SmallWorldOracle {
-                    kind: SmallWorldOracleKind::ControlStateEquals,
-                    expected: json!("allowed"),
+                    kind: SmallWorldOracleKind::TargetOutputEquals,
+                    expected: json!(true),
                 }),
+                executable_target: Some(smallworld_expr_target(core_var("smallworld_ok"))),
                 ..SmallWorldDomain::default()
             }],
             ..RunnerIntrospectionSnapshot::default()
@@ -5472,6 +5737,24 @@ workflow test {
                 ..RunnerContractMetadata::default()
             }],
             ..RunnerIntrospectionSnapshot::default()
+        }
+    }
+
+    fn smallworld_expr_target(expression: CoreExpr) -> SmallWorldExecutableTarget {
+        SmallWorldExecutableTarget {
+            kind: SmallWorldExecutableTargetKind::PureExpression,
+            target_ref: "smallworld:target".to_string(),
+            setup: ContractExecutionSetup::PureNoSetup,
+            body: ContractTargetBody::ReturnExpression { expression },
+        }
+    }
+
+    fn smallworld_literal_target(value: Value) -> SmallWorldExecutableTarget {
+        SmallWorldExecutableTarget {
+            kind: SmallWorldExecutableTargetKind::PureExpression,
+            target_ref: "smallworld:target".to_string(),
+            setup: ContractExecutionSetup::PureNoSetup,
+            body: ContractTargetBody::ReturnLiteral { value },
         }
     }
 

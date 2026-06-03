@@ -266,14 +266,103 @@ pub struct RunnerObligationMetadata {
     pub terminal_expectations: Vec<ObligationTerminalExpectation>,
     /// Small-world derivation hints.
     pub small_world_derivation_hints: Vec<String>,
+    /// Explicit typed lifecycle transition plan for the supported runner slice.
+    pub lifecycle_transition_plan: Option<ObligationLifecycleTransitionPlan>,
+    /// Explicit typed lifecycle transition traces ordered to `terminal_expectations`.
+    pub lifecycle_transition_traces: Vec<ObligationLifecycleTransitionTrace>,
     /// Explicit finite lifecycle world states ordered to `terminal_expectations`.
     ///
-    /// Phase 76B may execute the narrow obligation lifecycle oracle only when
-    /// checked/lowered metadata supplies these concrete states. The runner must
-    /// not synthesize a passing world from the expectation itself.
+    /// These states are preserved as reproducible world snapshots. TASK-1015
+    /// requires pass/fail to come from typed transition execution rather than
+    /// trusting this state's claimed `control_state`.
     pub lifecycle_worlds: Vec<SmallWorldState>,
     /// Optional source span display.
     pub source_span: Option<String>,
+}
+
+/// Narrow explicit obligation lifecycle transition plan.
+#[derive(Debug, Clone, Serialize, Default, PartialEq, Eq)]
+pub struct ObligationLifecycleTransitionPlan {
+    /// Supported lifecycle model.
+    pub model: ObligationLifecycleModelKind,
+    /// Introduction sites accepted by this plan.
+    pub introduction_sites: Vec<String>,
+    /// Discharge sites accepted by this plan.
+    pub discharge_sites: Vec<String>,
+    /// Closeout/check sites accepted by this plan.
+    pub check_sites: Vec<String>,
+    /// Required closeout behavior.
+    pub required_closeout: ObligationCloseoutBehavior,
+}
+
+/// Supported typed obligation lifecycle models.
+#[derive(Debug, Clone, Serialize, Default, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum ObligationLifecycleModelKind {
+    /// Introduce, discharge, and closeout-check finite state model.
+    IntroduceDischargeCheck,
+    /// Unsupported lifecycle model.
+    #[default]
+    Unsupported,
+}
+
+/// Supported obligation closeout behavior.
+#[derive(Debug, Clone, Serialize, Default, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum ObligationCloseoutBehavior {
+    /// Reject an introduced obligation that remains open at closeout.
+    RejectIfOpen,
+    /// Unsupported closeout behavior.
+    #[default]
+    Unsupported,
+}
+
+/// Explicit typed lifecycle transition trace for one synthesized row.
+#[derive(Debug, Clone, Serialize, Default, PartialEq, Eq)]
+pub struct ObligationLifecycleTransitionTrace {
+    /// Stable trace id.
+    pub id: String,
+    /// Ordered typed transitions to execute.
+    pub transitions: Vec<ObligationLifecycleTransition>,
+}
+
+/// Typed lifecycle transition event.
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum ObligationLifecycleTransition {
+    /// Introduce an obligation at a lowered introduction site.
+    Introduce {
+        /// Introduction site id.
+        site: String,
+    },
+    /// Discharge an obligation at a lowered discharge site.
+    Discharge {
+        /// Discharge site id.
+        site: String,
+    },
+    /// Check/close out an obligation at a lowered check site.
+    Check {
+        /// Check site id.
+        site: String,
+    },
+    /// Explicit rejection observation. The executor validates that previous
+    /// transitions already justify this rejection reason.
+    Reject {
+        /// Rejection reason.
+        reason: ObligationLifecycleRejection,
+    },
+}
+
+/// Supported lifecycle rejection reasons.
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum ObligationLifecycleRejection {
+    /// Required discharge was missing at closeout.
+    MissingDischarge,
+    /// A discharge was attempted after the obligation was already discharged.
+    DoubleDischarge,
+    /// Unsupported rejection reason.
+    Unsupported,
 }
 
 /// Exact bounded type generator descriptor for runner materialization.
@@ -1056,6 +1145,10 @@ pub enum SynthesizedOracle {
     ObligationLifecycle {
         /// Expected lifecycle terminal.
         expectation: ObligationTerminalExpectation,
+        /// Typed lifecycle transition plan to execute.
+        transition_plan: ObligationLifecycleTransitionPlan,
+        /// Typed lifecycle transition trace to execute.
+        transition_trace: ObligationLifecycleTransitionTrace,
     },
 }
 
@@ -1139,9 +1232,15 @@ pub fn execute_synthesized_case(case: &SynthesizedCase) -> TestResult {
                 ),
             }
         }
-        SynthesizedOracle::ObligationLifecycle { expectation } => {
-            evaluate_obligation_lifecycle_oracle(case, expectation)
-        }
+        SynthesizedOracle::ObligationLifecycle {
+            expectation,
+            transition_plan,
+            transition_trace,
+        } => evaluate_obligation_lifecycle_oracle(
+            expectation,
+            transition_plan,
+            transition_trace,
+        ),
     };
 
     let mut result = TestResult::new(&case.id, case.file_path.clone())
@@ -1159,55 +1258,196 @@ pub fn execute_synthesized_case(case: &SynthesizedCase) -> TestResult {
 }
 
 fn evaluate_obligation_lifecycle_oracle(
-    case: &SynthesizedCase,
     expectation: &ObligationTerminalExpectation,
+    transition_plan: &ObligationLifecycleTransitionPlan,
+    transition_trace: &ObligationLifecycleTransitionTrace,
 ) -> (Outcome, Option<String>) {
-    let Some(expected_control_state) = obligation_expected_control_state(expectation) else {
+    let Some(expected_terminal) = expected_obligation_lifecycle_terminal(expectation) else {
         return (
             Outcome::Skip,
             Some("deferred: unsupported synthesized obligation lifecycle expectation".to_string()),
         );
     };
-    let actual_control_state = case
-        .repro
-        .world_snapshot
-        .as_ref()
-        .and_then(|world| world.get("control_state"))
-        .and_then(Value::as_str);
-    let binding_control_state = case
-        .inputs
-        .bindings
-        .get("lifecycle_control_state")
-        .and_then(Value::as_str);
-
-    match (actual_control_state, binding_control_state) {
-        (Some(actual), Some(binding)) if actual != binding => (
-            Outcome::Fail,
-            Some(format!(
-                "synthesized obligation lifecycle oracle failed: binding control_state {binding:?} disagrees with world_snapshot control_state {actual:?}"
-            )),
-        ),
-        (Some(actual), _) if actual == expected_control_state => (
+    match execute_obligation_lifecycle_trace(transition_plan, transition_trace) {
+        Ok(actual_terminal) if actual_terminal == expected_terminal => (
             Outcome::Pass,
             Some(format!(
-                "executed synthesized obligation lifecycle oracle: {:?}",
+                "executed synthesized obligation lifecycle transition oracle: {:?}",
                 expectation
             )),
         ),
-        (Some(actual), _) => (
+        Ok(actual_terminal) => (
             Outcome::Fail,
             Some(format!(
-                "synthesized obligation lifecycle oracle failed: control_state {actual:?}, expected {expected_control_state:?}"
+                "synthesized obligation lifecycle oracle failed: executed terminal {:?}, expected {:?}",
+                actual_terminal, expected_terminal,
             )),
         ),
-        (None, _) => (
+        Err(reason) => (
             Outcome::Skip,
-            Some(
-                "deferred: synthesized obligation lifecycle oracle lacks finite world state"
-                    .to_string(),
-            ),
+            Some(format!(
+                "deferred: unsupported synthesized obligation lifecycle execution: {reason}"
+            )),
         ),
     }
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(tag = "terminal", rename_all = "snake_case")]
+enum ExecutedObligationLifecycleTerminal {
+    NotIntroduced,
+    Introduced,
+    Discharged,
+    Rejected {
+        reason: ObligationLifecycleRejection,
+    },
+}
+
+impl ExecutedObligationLifecycleTerminal {
+    fn control_state(&self) -> &'static str {
+        match self {
+            Self::NotIntroduced => "not_introduced",
+            Self::Introduced => "introduced",
+            Self::Discharged => "discharged",
+            Self::Rejected { .. } => "rejected",
+        }
+    }
+}
+
+fn expected_obligation_lifecycle_terminal(
+    expectation: &ObligationTerminalExpectation,
+) -> Option<ExecutedObligationLifecycleTerminal> {
+    match expectation {
+        ObligationTerminalExpectation::Introduced => {
+            Some(ExecutedObligationLifecycleTerminal::Introduced)
+        }
+        ObligationTerminalExpectation::Discharged => {
+            Some(ExecutedObligationLifecycleTerminal::Discharged)
+        }
+        ObligationTerminalExpectation::MissingDischargeRejected => {
+            Some(ExecutedObligationLifecycleTerminal::Rejected {
+                reason: ObligationLifecycleRejection::MissingDischarge,
+            })
+        }
+        ObligationTerminalExpectation::DoubleDischargeRejected => {
+            Some(ExecutedObligationLifecycleTerminal::Rejected {
+                reason: ObligationLifecycleRejection::DoubleDischarge,
+            })
+        }
+        ObligationTerminalExpectation::Unsupported => None,
+    }
+}
+
+fn execute_obligation_lifecycle_trace(
+    plan: &ObligationLifecycleTransitionPlan,
+    trace: &ObligationLifecycleTransitionTrace,
+) -> Result<ExecutedObligationLifecycleTerminal, String> {
+    if plan.model != ObligationLifecycleModelKind::IntroduceDischargeCheck {
+        return Err("unsupported lifecycle model".to_string());
+    }
+    if plan.required_closeout != ObligationCloseoutBehavior::RejectIfOpen {
+        return Err("unsupported closeout behavior".to_string());
+    }
+    if plan.introduction_sites.is_empty()
+        || plan.discharge_sites.is_empty()
+        || plan.check_sites.is_empty()
+    {
+        return Err("transition plan lacks introduction, discharge, or check sites".to_string());
+    }
+    if trace.transitions.is_empty() {
+        return Err("transition trace is empty".to_string());
+    }
+
+    let mut terminal = ExecutedObligationLifecycleTerminal::NotIntroduced;
+    for transition in &trace.transitions {
+        match transition {
+            ObligationLifecycleTransition::Introduce { site } => {
+                if !plan.introduction_sites.contains(site) {
+                    return Err(format!("unknown introduction site {site:?}"));
+                }
+                terminal = match terminal {
+                    ExecutedObligationLifecycleTerminal::NotIntroduced => {
+                        ExecutedObligationLifecycleTerminal::Introduced
+                    }
+                    ExecutedObligationLifecycleTerminal::Introduced
+                    | ExecutedObligationLifecycleTerminal::Discharged => {
+                        return Err("duplicate introduction is outside supported slice".to_string());
+                    }
+                    ExecutedObligationLifecycleTerminal::Rejected { .. } => {
+                        return Err(
+                            "transition after rejection is outside supported slice".to_string()
+                        );
+                    }
+                };
+            }
+            ObligationLifecycleTransition::Discharge { site } => {
+                if !plan.discharge_sites.contains(site) {
+                    return Err(format!("unknown discharge site {site:?}"));
+                }
+                terminal = match terminal {
+                    ExecutedObligationLifecycleTerminal::Introduced => {
+                        ExecutedObligationLifecycleTerminal::Discharged
+                    }
+                    ExecutedObligationLifecycleTerminal::Discharged => {
+                        ExecutedObligationLifecycleTerminal::Rejected {
+                            reason: ObligationLifecycleRejection::DoubleDischarge,
+                        }
+                    }
+                    ExecutedObligationLifecycleTerminal::NotIntroduced => {
+                        return Err(
+                            "discharge before introduction is outside supported slice".to_string()
+                        );
+                    }
+                    ExecutedObligationLifecycleTerminal::Rejected { .. } => {
+                        return Err(
+                            "transition after rejection is outside supported slice".to_string()
+                        );
+                    }
+                };
+            }
+            ObligationLifecycleTransition::Check { site } => {
+                if !plan.check_sites.contains(site) {
+                    return Err(format!("unknown check site {site:?}"));
+                }
+                terminal = match terminal {
+                    ExecutedObligationLifecycleTerminal::Introduced => {
+                        ExecutedObligationLifecycleTerminal::Rejected {
+                            reason: ObligationLifecycleRejection::MissingDischarge,
+                        }
+                    }
+                    ExecutedObligationLifecycleTerminal::Discharged => {
+                        ExecutedObligationLifecycleTerminal::Discharged
+                    }
+                    ExecutedObligationLifecycleTerminal::NotIntroduced => {
+                        return Err(
+                            "check before introduction is outside supported slice".to_string()
+                        );
+                    }
+                    ExecutedObligationLifecycleTerminal::Rejected { .. } => terminal,
+                };
+            }
+            ObligationLifecycleTransition::Reject { reason } => match &terminal {
+                ExecutedObligationLifecycleTerminal::Rejected {
+                    reason: actual_reason,
+                } if actual_reason == reason => {}
+                ExecutedObligationLifecycleTerminal::Rejected {
+                    reason: actual_reason,
+                } => {
+                    return Err(format!(
+                        "explicit rejection reason {reason:?} disagrees with executed reason {actual_reason:?}"
+                    ));
+                }
+                _ => {
+                    return Err(
+                        "explicit rejection is not justified by prior lifecycle transitions"
+                            .to_string(),
+                    );
+                }
+            },
+        }
+    }
+
+    Ok(terminal)
 }
 
 /// Generate executable synthesized results from structured runner metadata.
@@ -2493,11 +2733,18 @@ fn obligation_lifecycle_cases(
     snapshot: &RunnerIntrospectionSnapshot,
     obligation: &RunnerObligationMetadata,
 ) -> Vec<SynthesizedCase> {
+    let Some(transition_plan) = &obligation.lifecycle_transition_plan else {
+        return Vec::new();
+    };
     if obligation.lifecycle_model.is_none()
         || obligation.introduction_sites.is_empty()
         || obligation.discharge_sites.is_empty()
         || obligation.check_sites.is_empty()
+        || obligation.required_closeout_behavior.is_none()
     {
+        return Vec::new();
+    }
+    if !obligation_lifecycle_plan_is_supported(obligation, transition_plan) {
         return Vec::new();
     }
 
@@ -2512,21 +2759,48 @@ fn obligation_lifecycle_cases(
         .iter()
         .filter(|expectation| supported.contains(expectation))
         .count();
-    if obligation.lifecycle_worlds.len() < supported_expectation_count {
+    if obligation.lifecycle_worlds.len() < supported_expectation_count
+        || obligation.lifecycle_transition_traces.len() < supported_expectation_count
+    {
+        return Vec::new();
+    }
+    let supported_worlds = obligation
+        .terminal_expectations
+        .iter()
+        .zip(obligation.lifecycle_worlds.iter())
+        .filter(|(expectation, _)| supported.contains(expectation))
+        .map(|(_, world)| world)
+        .collect::<Vec<_>>();
+    if supported_worlds
+        .iter()
+        .any(|world| !obligation_lifecycle_world_is_supported(obligation, world))
+    {
         return Vec::new();
     }
 
     let mut cases = Vec::new();
-    for (expectation, world) in obligation
+    for ((expectation, world), transition_trace) in obligation
         .terminal_expectations
         .iter()
         .cloned()
         .zip(obligation.lifecycle_worlds.iter().cloned())
-        .filter(|(expectation, _)| supported.contains(expectation))
+        .zip(obligation.lifecycle_transition_traces.iter().cloned())
+        .filter(|((expectation, _), _)| supported.contains(expectation))
     {
-        let expected_control_state = obligation_expected_control_state(&expectation)
-            .map(str::to_string)
-            .or_else(|| world.control_state.clone());
+        let Some(expected_terminal) = expected_obligation_lifecycle_terminal(&expectation) else {
+            continue;
+        };
+        let actual_execution =
+            execute_obligation_lifecycle_trace(transition_plan, &transition_trace);
+        let actual_executed_terminal = match &actual_execution {
+            Ok(actual_terminal) => json!({
+                "control_state": actual_terminal.control_state(),
+                "terminal": actual_terminal,
+            }),
+            Err(reason) => json!({
+                "execution_error": reason,
+            }),
+        };
         let case_index = cases.len() + 1;
         let case_id = format!(
             "synthesized/obligation/{}/lifecycle-{:?}-{}",
@@ -2553,8 +2827,14 @@ fn obligation_lifecycle_cases(
                 "introduction_sites": obligation.introduction_sites,
                 "discharge_sites": obligation.discharge_sites,
                 "check_sites": obligation.check_sites,
+                "required_closeout_behavior": obligation.required_closeout_behavior,
                 "expectation": expectation,
-                "expected_control_state": expected_control_state,
+                "execution_substrate": "typed_lifecycle_transition_plan",
+                "expected_terminal": expected_terminal,
+                "expected_control_state": expected_terminal.control_state(),
+                "actual_executed_terminal": actual_executed_terminal,
+                "transition_plan": transition_plan,
+                "transition_trace": transition_trace,
             }),
             Some(world_snapshot),
         );
@@ -2570,11 +2850,15 @@ fn obligation_lifecycle_cases(
             seed: 0,
             inputs: SynthesizedInputs {
                 bindings,
-                generated_from: "finite_obligation_lifecycle_metadata".to_string(),
+                generated_from: "typed_obligation_lifecycle_transition_trace".to_string(),
                 case_index,
                 world_index: Some(case_index),
             },
-            oracle: SynthesizedOracle::ObligationLifecycle { expectation },
+            oracle: SynthesizedOracle::ObligationLifecycle {
+                expectation,
+                transition_plan: transition_plan.clone(),
+                transition_trace,
+            },
             repro,
         });
     }
@@ -2582,16 +2866,30 @@ fn obligation_lifecycle_cases(
     cases
 }
 
-fn obligation_expected_control_state(
-    expectation: &ObligationTerminalExpectation,
-) -> Option<&'static str> {
-    match expectation {
-        ObligationTerminalExpectation::Introduced => Some("introduced"),
-        ObligationTerminalExpectation::Discharged => Some("discharged"),
-        ObligationTerminalExpectation::MissingDischargeRejected
-        | ObligationTerminalExpectation::DoubleDischargeRejected => Some("rejected"),
-        ObligationTerminalExpectation::Unsupported => None,
-    }
+fn obligation_lifecycle_plan_is_supported(
+    obligation: &RunnerObligationMetadata,
+    plan: &ObligationLifecycleTransitionPlan,
+) -> bool {
+    obligation.lifecycle_model.as_deref() == Some("finite:introduced-discharged")
+        && obligation.required_closeout_behavior.as_deref() == Some("reject_if_open")
+        && plan.model == ObligationLifecycleModelKind::IntroduceDischargeCheck
+        && plan.required_closeout == ObligationCloseoutBehavior::RejectIfOpen
+        && !plan.introduction_sites.is_empty()
+        && !plan.discharge_sites.is_empty()
+        && !plan.check_sites.is_empty()
+}
+
+fn obligation_lifecycle_world_is_supported(
+    obligation: &RunnerObligationMetadata,
+    world: &SmallWorldState,
+) -> bool {
+    world.schema_version == RUNNER_SYNTHESIS_SCHEMA_VERSION
+        && world.world_kind == "obligation_lifecycle"
+        && !world.id.is_empty()
+        && world
+            .obligations
+            .iter()
+            .any(|name| name == &obligation.obligation_name)
 }
 
 fn evaluate_simple_bool_expression(
@@ -4285,11 +4583,72 @@ workflow test_workflow
                 introduction_sites: vec!["open_ticket".to_string()],
                 discharge_sites: vec!["close_ticket".to_string()],
                 check_sites: vec!["finish".to_string()],
+                required_closeout_behavior: Some("reject_if_open".to_string()),
                 terminal_expectations: vec![
                     ObligationTerminalExpectation::Introduced,
                     ObligationTerminalExpectation::Discharged,
                     ObligationTerminalExpectation::MissingDischargeRejected,
                     ObligationTerminalExpectation::DoubleDischargeRejected,
+                ],
+                lifecycle_transition_plan: Some(ObligationLifecycleTransitionPlan {
+                    model: ObligationLifecycleModelKind::IntroduceDischargeCheck,
+                    introduction_sites: vec!["open_ticket".to_string()],
+                    discharge_sites: vec!["close_ticket".to_string()],
+                    check_sites: vec!["finish".to_string()],
+                    required_closeout: ObligationCloseoutBehavior::RejectIfOpen,
+                }),
+                lifecycle_transition_traces: vec![
+                    ObligationLifecycleTransitionTrace {
+                        id: "ticket:introduced".to_string(),
+                        transitions: vec![ObligationLifecycleTransition::Introduce {
+                            site: "open_ticket".to_string(),
+                        }],
+                    },
+                    ObligationLifecycleTransitionTrace {
+                        id: "ticket:discharged".to_string(),
+                        transitions: vec![
+                            ObligationLifecycleTransition::Introduce {
+                                site: "open_ticket".to_string(),
+                            },
+                            ObligationLifecycleTransition::Discharge {
+                                site: "close_ticket".to_string(),
+                            },
+                            ObligationLifecycleTransition::Check {
+                                site: "finish".to_string(),
+                            },
+                        ],
+                    },
+                    ObligationLifecycleTransitionTrace {
+                        id: "ticket:missing-discharge".to_string(),
+                        transitions: vec![
+                            ObligationLifecycleTransition::Introduce {
+                                site: "open_ticket".to_string(),
+                            },
+                            ObligationLifecycleTransition::Check {
+                                site: "finish".to_string(),
+                            },
+                            ObligationLifecycleTransition::Reject {
+                                reason: ObligationLifecycleRejection::MissingDischarge,
+                            },
+                        ],
+                    },
+                    ObligationLifecycleTransitionTrace {
+                        id: "ticket:double-discharge".to_string(),
+                        transitions: vec![
+                            ObligationLifecycleTransition::Introduce {
+                                site: "open_ticket".to_string(),
+                            },
+                            ObligationLifecycleTransition::Discharge {
+                                site: "close_ticket".to_string(),
+                            },
+                            ObligationLifecycleTransition::Discharge {
+                                site: "close_ticket".to_string(),
+                            },
+                            ObligationLifecycleTransition::Reject {
+                                reason: ObligationLifecycleRejection::DoubleDischarge,
+                            },
+                        ],
+                    },
                 ],
                 lifecycle_worlds: vec![
                     SmallWorldState {
@@ -4359,6 +4718,320 @@ workflow test_workflow
     }
 
     #[test]
+    fn obligation_lifecycle_requires_typed_transition_execution_not_claimed_world_state() {
+        let snapshot = RunnerIntrospectionSnapshot {
+            source_artifact_id: "source:obligation.ash".to_string(),
+            check_summary_id: "check:summary".to_string(),
+            obligations: vec![RunnerObligationMetadata {
+                id: "obligation:ticket".to_string(),
+                obligation_name: "Ticket".to_string(),
+                scope: "workflow".to_string(),
+                lifecycle_model: Some("finite:introduced-discharged".to_string()),
+                introduction_sites: vec!["open_ticket".to_string()],
+                discharge_sites: vec!["close_ticket".to_string()],
+                check_sites: vec!["finish".to_string()],
+                required_closeout_behavior: Some("reject_if_open".to_string()),
+                terminal_expectations: vec![ObligationTerminalExpectation::Discharged],
+                lifecycle_transition_plan: Some(ObligationLifecycleTransitionPlan {
+                    model: ObligationLifecycleModelKind::IntroduceDischargeCheck,
+                    introduction_sites: vec!["open_ticket".to_string()],
+                    discharge_sites: vec!["close_ticket".to_string()],
+                    check_sites: vec!["finish".to_string()],
+                    required_closeout: ObligationCloseoutBehavior::RejectIfOpen,
+                }),
+                lifecycle_transition_traces: vec![ObligationLifecycleTransitionTrace {
+                    id: "ticket:claimed-discharged-but-only-introduced".to_string(),
+                    transitions: vec![ObligationLifecycleTransition::Introduce {
+                        site: "open_ticket".to_string(),
+                    }],
+                }],
+                lifecycle_worlds: vec![SmallWorldState {
+                    id: "ticket:claimed-discharged".to_string(),
+                    schema_version: RUNNER_SYNTHESIS_SCHEMA_VERSION.to_string(),
+                    world_kind: "obligation_lifecycle".to_string(),
+                    obligations: vec!["Ticket".to_string()],
+                    control_state: Some("discharged".to_string()),
+                    transition_trace: vec!["introduce:open_ticket".to_string()],
+                    ..SmallWorldState::default()
+                }],
+                ..RunnerObligationMetadata::default()
+            }],
+            ..RunnerIntrospectionSnapshot::default()
+        };
+
+        let results = synthesize_from_snapshot(Path::new("obligation.ash"), &snapshot);
+
+        assert_eq!(results.len(), 1);
+        assert_eq!(
+            results[0].outcome,
+            Outcome::Fail,
+            "claimed lifecycle_worlds.control_state must not pass without matching typed transition execution: {results:#?}"
+        );
+        let oracle_snapshot = results[0]
+            .repro_artifact
+            .as_ref()
+            .and_then(|repro| repro.oracle_snapshot.as_object())
+            .expect("obligation execution repro should include oracle snapshot");
+        assert_eq!(
+            oracle_snapshot
+                .get("execution_substrate")
+                .and_then(Value::as_str),
+            Some("typed_lifecycle_transition_plan")
+        );
+        assert_eq!(
+            oracle_snapshot
+                .get("actual_executed_terminal")
+                .and_then(|terminal| terminal.get("control_state"))
+                .and_then(Value::as_str),
+            Some("introduced")
+        );
+    }
+
+    #[test]
+    fn obligation_lifecycle_missing_typed_transition_trace_defers_even_when_world_state_matches() {
+        let snapshot = RunnerIntrospectionSnapshot {
+            source_artifact_id: "source:obligation.ash".to_string(),
+            check_summary_id: "check:summary".to_string(),
+            obligations: vec![RunnerObligationMetadata {
+                id: "obligation:ticket".to_string(),
+                obligation_name: "Ticket".to_string(),
+                scope: "workflow".to_string(),
+                lifecycle_model: Some("finite:introduced-discharged".to_string()),
+                introduction_sites: vec!["open_ticket".to_string()],
+                discharge_sites: vec!["close_ticket".to_string()],
+                check_sites: vec!["finish".to_string()],
+                required_closeout_behavior: Some("reject_if_open".to_string()),
+                terminal_expectations: vec![ObligationTerminalExpectation::Discharged],
+                lifecycle_transition_plan: Some(ObligationLifecycleTransitionPlan {
+                    model: ObligationLifecycleModelKind::IntroduceDischargeCheck,
+                    introduction_sites: vec!["open_ticket".to_string()],
+                    discharge_sites: vec!["close_ticket".to_string()],
+                    check_sites: vec!["finish".to_string()],
+                    required_closeout: ObligationCloseoutBehavior::RejectIfOpen,
+                }),
+                lifecycle_worlds: vec![SmallWorldState {
+                    id: "ticket:discharged".to_string(),
+                    schema_version: RUNNER_SYNTHESIS_SCHEMA_VERSION.to_string(),
+                    world_kind: "obligation_lifecycle".to_string(),
+                    obligations: vec!["Ticket".to_string()],
+                    control_state: Some("discharged".to_string()),
+                    transition_trace: vec![
+                        "introduce:open_ticket".to_string(),
+                        "discharge:close_ticket".to_string(),
+                        "check:finish".to_string(),
+                    ],
+                    ..SmallWorldState::default()
+                }],
+                ..RunnerObligationMetadata::default()
+            }],
+            ..RunnerIntrospectionSnapshot::default()
+        };
+
+        let results = synthesize_from_snapshot(Path::new("obligation.ash"), &snapshot);
+
+        assert_eq!(results.len(), 1);
+        assert_eq!(
+            results[0].outcome,
+            Outcome::Skip,
+            "typed transition traces are required; matching world control_state alone must defer: {results:#?}"
+        );
+    }
+
+    #[test]
+    fn obligation_lifecycle_missing_required_closeout_behavior_defers() {
+        let snapshot = RunnerIntrospectionSnapshot {
+            source_artifact_id: "source:obligation.ash".to_string(),
+            check_summary_id: "check:summary".to_string(),
+            obligations: vec![RunnerObligationMetadata {
+                id: "obligation:ticket".to_string(),
+                obligation_name: "Ticket".to_string(),
+                scope: "workflow".to_string(),
+                lifecycle_model: Some("finite:introduced-discharged".to_string()),
+                introduction_sites: vec!["open_ticket".to_string()],
+                discharge_sites: vec!["close_ticket".to_string()],
+                check_sites: vec!["finish".to_string()],
+                terminal_expectations: vec![ObligationTerminalExpectation::Discharged],
+                lifecycle_transition_plan: Some(ObligationLifecycleTransitionPlan {
+                    model: ObligationLifecycleModelKind::IntroduceDischargeCheck,
+                    introduction_sites: vec!["open_ticket".to_string()],
+                    discharge_sites: vec!["close_ticket".to_string()],
+                    check_sites: vec!["finish".to_string()],
+                    required_closeout: ObligationCloseoutBehavior::RejectIfOpen,
+                }),
+                lifecycle_transition_traces: vec![ObligationLifecycleTransitionTrace {
+                    id: "ticket:discharged".to_string(),
+                    transitions: vec![
+                        ObligationLifecycleTransition::Introduce {
+                            site: "open_ticket".to_string(),
+                        },
+                        ObligationLifecycleTransition::Discharge {
+                            site: "close_ticket".to_string(),
+                        },
+                    ],
+                }],
+                lifecycle_worlds: vec![SmallWorldState {
+                    id: "ticket:discharged".to_string(),
+                    schema_version: RUNNER_SYNTHESIS_SCHEMA_VERSION.to_string(),
+                    world_kind: "obligation_lifecycle".to_string(),
+                    obligations: vec!["Ticket".to_string()],
+                    control_state: Some("discharged".to_string()),
+                    transition_trace: vec![
+                        "introduce:open_ticket".to_string(),
+                        "discharge:close_ticket".to_string(),
+                    ],
+                    ..SmallWorldState::default()
+                }],
+                ..RunnerObligationMetadata::default()
+            }],
+            ..RunnerIntrospectionSnapshot::default()
+        };
+
+        let results = synthesize_from_snapshot(Path::new("obligation.ash"), &snapshot);
+
+        assert_eq!(results.len(), 1);
+        assert_eq!(
+            results[0].outcome,
+            Outcome::Skip,
+            "required closeout behavior is mandatory for runtime-backed obligation lifecycle execution: {results:#?}"
+        );
+    }
+
+    #[test]
+    fn obligation_lifecycle_unsupported_model_defers() {
+        let snapshot = RunnerIntrospectionSnapshot {
+            source_artifact_id: "source:obligation.ash".to_string(),
+            check_summary_id: "check:summary".to_string(),
+            obligations: vec![RunnerObligationMetadata {
+                id: "obligation:ticket".to_string(),
+                obligation_name: "Ticket".to_string(),
+                scope: "workflow".to_string(),
+                lifecycle_model: Some("unsupported-model".to_string()),
+                introduction_sites: vec!["open_ticket".to_string()],
+                discharge_sites: vec!["close_ticket".to_string()],
+                check_sites: vec!["finish".to_string()],
+                required_closeout_behavior: Some("reject_if_open".to_string()),
+                terminal_expectations: vec![ObligationTerminalExpectation::Discharged],
+                lifecycle_transition_plan: Some(ObligationLifecycleTransitionPlan {
+                    model: ObligationLifecycleModelKind::IntroduceDischargeCheck,
+                    introduction_sites: vec!["open_ticket".to_string()],
+                    discharge_sites: vec!["close_ticket".to_string()],
+                    check_sites: vec!["finish".to_string()],
+                    required_closeout: ObligationCloseoutBehavior::RejectIfOpen,
+                }),
+                lifecycle_transition_traces: vec![ObligationLifecycleTransitionTrace {
+                    id: "ticket:discharged".to_string(),
+                    transitions: vec![
+                        ObligationLifecycleTransition::Introduce {
+                            site: "open_ticket".to_string(),
+                        },
+                        ObligationLifecycleTransition::Discharge {
+                            site: "close_ticket".to_string(),
+                        },
+                        ObligationLifecycleTransition::Check {
+                            site: "finish".to_string(),
+                        },
+                    ],
+                }],
+                lifecycle_worlds: vec![SmallWorldState {
+                    id: "ticket:discharged".to_string(),
+                    schema_version: RUNNER_SYNTHESIS_SCHEMA_VERSION.to_string(),
+                    world_kind: "obligation_lifecycle".to_string(),
+                    obligations: vec!["Ticket".to_string()],
+                    control_state: Some("discharged".to_string()),
+                    transition_trace: vec![
+                        "introduce:open_ticket".to_string(),
+                        "discharge:close_ticket".to_string(),
+                        "check:finish".to_string(),
+                    ],
+                    ..SmallWorldState::default()
+                }],
+                ..RunnerObligationMetadata::default()
+            }],
+            ..RunnerIntrospectionSnapshot::default()
+        };
+
+        let results = synthesize_from_snapshot(Path::new("obligation.ash"), &snapshot);
+
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].outcome, Outcome::Skip);
+        assert!(
+            results[0]
+                .message
+                .as_deref()
+                .unwrap_or_default()
+                .contains("deferred"),
+            "unsupported lifecycle_model must defer instead of passing: {results:#?}"
+        );
+    }
+
+    #[test]
+    fn obligation_lifecycle_non_lifecycle_world_defers() {
+        let snapshot = RunnerIntrospectionSnapshot {
+            source_artifact_id: "source:obligation.ash".to_string(),
+            check_summary_id: "check:summary".to_string(),
+            obligations: vec![RunnerObligationMetadata {
+                id: "obligation:ticket".to_string(),
+                obligation_name: "Ticket".to_string(),
+                scope: "workflow".to_string(),
+                lifecycle_model: Some("finite:introduced-discharged".to_string()),
+                introduction_sites: vec!["open_ticket".to_string()],
+                discharge_sites: vec!["close_ticket".to_string()],
+                check_sites: vec!["finish".to_string()],
+                required_closeout_behavior: Some("reject_if_open".to_string()),
+                terminal_expectations: vec![ObligationTerminalExpectation::Discharged],
+                lifecycle_transition_plan: Some(ObligationLifecycleTransitionPlan {
+                    model: ObligationLifecycleModelKind::IntroduceDischargeCheck,
+                    introduction_sites: vec!["open_ticket".to_string()],
+                    discharge_sites: vec!["close_ticket".to_string()],
+                    check_sites: vec!["finish".to_string()],
+                    required_closeout: ObligationCloseoutBehavior::RejectIfOpen,
+                }),
+                lifecycle_transition_traces: vec![ObligationLifecycleTransitionTrace {
+                    id: "ticket:discharged".to_string(),
+                    transitions: vec![
+                        ObligationLifecycleTransition::Introduce {
+                            site: "open_ticket".to_string(),
+                        },
+                        ObligationLifecycleTransition::Discharge {
+                            site: "close_ticket".to_string(),
+                        },
+                        ObligationLifecycleTransition::Check {
+                            site: "finish".to_string(),
+                        },
+                    ],
+                }],
+                lifecycle_worlds: vec![SmallWorldState {
+                    id: "not-a-lifecycle-world".to_string(),
+                    schema_version: RUNNER_SYNTHESIS_SCHEMA_VERSION.to_string(),
+                    world_kind: "generic".to_string(),
+                    control_state: Some("discharged".to_string()),
+                    transition_trace: vec![
+                        "introduce:open_ticket".to_string(),
+                        "discharge:close_ticket".to_string(),
+                        "check:finish".to_string(),
+                    ],
+                    ..SmallWorldState::default()
+                }],
+                ..RunnerObligationMetadata::default()
+            }],
+            ..RunnerIntrospectionSnapshot::default()
+        };
+
+        let results = synthesize_from_snapshot(Path::new("obligation.ash"), &snapshot);
+
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].outcome, Outcome::Skip);
+        assert!(
+            results[0]
+                .message
+                .as_deref()
+                .unwrap_or_default()
+                .contains("deferred"),
+            "non-lifecycle world metadata must defer instead of passing: {results:#?}"
+        );
+    }
+
+    #[test]
     fn obligation_lifecycle_without_explicit_world_metadata_defers() {
         let snapshot = RunnerIntrospectionSnapshot {
             source_artifact_id: "source:obligation.ash".to_string(),
@@ -4404,7 +5077,21 @@ workflow test_workflow
                 introduction_sites: vec!["open_ticket".to_string()],
                 discharge_sites: vec!["close_ticket".to_string()],
                 check_sites: vec!["finish".to_string()],
+                required_closeout_behavior: Some("reject_if_open".to_string()),
                 terminal_expectations: vec![ObligationTerminalExpectation::Discharged],
+                lifecycle_transition_plan: Some(ObligationLifecycleTransitionPlan {
+                    model: ObligationLifecycleModelKind::IntroduceDischargeCheck,
+                    introduction_sites: vec!["open_ticket".to_string()],
+                    discharge_sites: vec!["close_ticket".to_string()],
+                    check_sites: vec!["finish".to_string()],
+                    required_closeout: ObligationCloseoutBehavior::RejectIfOpen,
+                }),
+                lifecycle_transition_traces: vec![ObligationLifecycleTransitionTrace {
+                    id: "ticket:introduced".to_string(),
+                    transitions: vec![ObligationLifecycleTransition::Introduce {
+                        site: "open_ticket".to_string(),
+                    }],
+                }],
                 lifecycle_worlds: vec![SmallWorldState {
                     id: "ticket:introduced".to_string(),
                     schema_version: RUNNER_SYNTHESIS_SCHEMA_VERSION.to_string(),
@@ -4442,9 +5129,39 @@ workflow test_workflow
                 introduction_sites: vec!["open_ticket".to_string()],
                 discharge_sites: vec!["close_ticket".to_string()],
                 check_sites: vec!["finish".to_string()],
+                required_closeout_behavior: Some("reject_if_open".to_string()),
                 terminal_expectations: vec![
                     ObligationTerminalExpectation::Unsupported,
                     ObligationTerminalExpectation::Discharged,
+                ],
+                lifecycle_transition_plan: Some(ObligationLifecycleTransitionPlan {
+                    model: ObligationLifecycleModelKind::IntroduceDischargeCheck,
+                    introduction_sites: vec!["open_ticket".to_string()],
+                    discharge_sites: vec!["close_ticket".to_string()],
+                    check_sites: vec!["finish".to_string()],
+                    required_closeout: ObligationCloseoutBehavior::RejectIfOpen,
+                }),
+                lifecycle_transition_traces: vec![
+                    ObligationLifecycleTransitionTrace {
+                        id: "ticket:unsupported".to_string(),
+                        transitions: vec![ObligationLifecycleTransition::Introduce {
+                            site: "open_ticket".to_string(),
+                        }],
+                    },
+                    ObligationLifecycleTransitionTrace {
+                        id: "ticket:discharged".to_string(),
+                        transitions: vec![
+                            ObligationLifecycleTransition::Introduce {
+                                site: "open_ticket".to_string(),
+                            },
+                            ObligationLifecycleTransition::Discharge {
+                                site: "close_ticket".to_string(),
+                            },
+                            ObligationLifecycleTransition::Check {
+                                site: "finish".to_string(),
+                            },
+                        ],
+                    },
                 ],
                 lifecycle_worlds: vec![
                     SmallWorldState {
@@ -4487,7 +5204,7 @@ workflow test_workflow
     }
 
     #[test]
-    fn obligation_lifecycle_binding_world_snapshot_disagreement_fails() {
+    fn obligation_lifecycle_oracle_fails_when_executed_trace_disagrees_with_expectation() {
         let mut bindings = BTreeMap::new();
         bindings.insert("lifecycle_control_state".to_string(), json!("introduced"));
         let case = SynthesizedCase {
@@ -4506,6 +5223,19 @@ workflow test_workflow
             },
             oracle: SynthesizedOracle::ObligationLifecycle {
                 expectation: ObligationTerminalExpectation::Discharged,
+                transition_plan: ObligationLifecycleTransitionPlan {
+                    model: ObligationLifecycleModelKind::IntroduceDischargeCheck,
+                    introduction_sites: vec!["open_ticket".to_string()],
+                    discharge_sites: vec!["close_ticket".to_string()],
+                    check_sites: vec!["finish".to_string()],
+                    required_closeout: ObligationCloseoutBehavior::RejectIfOpen,
+                },
+                transition_trace: ObligationLifecycleTransitionTrace {
+                    id: "ticket:introduced".to_string(),
+                    transitions: vec![ObligationLifecycleTransition::Introduce {
+                        site: "open_ticket".to_string(),
+                    }],
+                },
             },
             repro: repro_artifact(
                 Path::new("obligation.ash"),
@@ -4532,7 +5262,7 @@ workflow test_workflow
         assert_eq!(
             result.outcome,
             Outcome::Fail,
-            "binding/world_snapshot disagreement must fail instead of masking an inconsistent finite lifecycle world"
+            "typed transition execution must fail when the executed terminal disagrees with the expected terminal"
         );
     }
 
@@ -4556,6 +5286,19 @@ workflow test_workflow
             },
             oracle: SynthesizedOracle::ObligationLifecycle {
                 expectation: ObligationTerminalExpectation::Discharged,
+                transition_plan: ObligationLifecycleTransitionPlan {
+                    model: ObligationLifecycleModelKind::IntroduceDischargeCheck,
+                    introduction_sites: vec!["open_ticket".to_string()],
+                    discharge_sites: vec!["close_ticket".to_string()],
+                    check_sites: vec!["finish".to_string()],
+                    required_closeout: ObligationCloseoutBehavior::RejectIfOpen,
+                },
+                transition_trace: ObligationLifecycleTransitionTrace {
+                    id: "ticket:introduced".to_string(),
+                    transitions: vec![ObligationLifecycleTransition::Introduce {
+                        site: "open_ticket".to_string(),
+                    }],
+                },
             },
             repro: repro_artifact(
                 Path::new("obligation.ash"),

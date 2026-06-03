@@ -3926,14 +3926,14 @@ Phase 131 bans implicit refutable matching. It requires type-aware irrefutable p
 **Designs:** [DESIGN-022](../design/DESIGN-022-SYNTHESIZED-CONTRACT-POLICY-OBLIGATION-CASES.md), [DESIGN-023](../design/DESIGN-023-SMALL-WORLD-EXPLORATION-SUBSTRATE.md)
 **Plan:** [PLAN-127](PLAN-127-DESIGN-022-023-SYNTHESIZED-SMALLWORLD-COMPLETION.md)
 
-Phase 132 completes the broader DESIGN-022 and DESIGN-023 work deferred after the Phase 76B narrow structured-snapshot slice. It adds live checked/lowered snapshot production from ordinary CLI source files, end-to-end synthesized contract target/postcondition execution, policy domain/oracle execution, runtime-backed obligation lifecycle execution, small-world world materialization and Ash target execution, richer finite domains, and broad closeout verification.
+Phase 132 completes the broader DESIGN-022 and DESIGN-023 work deferred after the Phase 76B narrow structured-snapshot slice. It adds live checked/lowered snapshot production from ordinary CLI source files, end-to-end synthesized contract target/postcondition execution, policy domain/oracle execution, narrow typed obligation lifecycle transition execution, small-world world materialization and Ash target execution, richer finite domains, and broad closeout verification.
 
 | Task | Description | Est. Hours | Status |
 |------|-------------|------------|--------|
 | [TASK-1012](tasks/TASK-1012-live-runner-introspection-snapshot-production.md) | Produce checked/lowered runner snapshots from ordinary CLI source files and suite roots | 12 | ✅ Complete |
 | [TASK-1013](tasks/TASK-1013-contract-target-and-postcondition-synthesized-execution.md) | Execute synthesized contract targets and postcondition oracles end to end for supported metadata | 14 | ✅ Complete |
 | [TASK-1014](tasks/TASK-1014-policy-domain-and-terminal-oracle-execution.md) | Execute policy domains and terminal oracles beyond the narrow metadata equality slice | 12 | ✅ Complete |
-| [TASK-1015](tasks/TASK-1015-runtime-backed-obligation-lifecycle-execution.md) | Execute obligation lifecycle transitions through lowered/runtime-backed semantics | 14 | Planned |
+| [TASK-1015](tasks/TASK-1015-runtime-backed-obligation-lifecycle-execution.md) | Execute obligation lifecycle transitions through narrow typed transition metadata | 14 | ✅ Complete |
 | [TASK-1016](tasks/TASK-1016-smallworld-target-execution.md) | Materialize deterministic worlds and execute Ash targets against each world | 16 | Planned |
 | [TASK-1017](tasks/TASK-1017-richer-domains-and-cli-integration-hardening.md) | Add richer finite domains and harden synthesized/small-world CLI controls | 12 | Planned |
 | [TASK-1018](tasks/TASK-1018-design022-023-completion-closeout.md) | Run broad verification and promote DESIGN-022/DESIGN-023 completion status only when acceptance is met | 8 | Planned |

@@ -2292,23 +2292,25 @@ finite-world enumeration substrate.
 - [DESIGN-022: Synthesized Contract / Policy / Obligation Cases](../design/DESIGN-022-SYNTHESIZED-CONTRACT-POLICY-OBLIGATION-CASES.md)
 - [DESIGN-023: Small-World Exploration Substrate](../design/DESIGN-023-SMALL-WORLD-EXPLORATION-SUBSTRATE.md)
 **Priority:** High
-**Status:** 📝 Planned
+**Status:** 🚧 In Progress
 
 | Task | Description | Spec | Est. Hours | Status |
 |------|-------------|------|------------|--------|
 | [TASK-1010](tasks/TASK-1010-phase-76b-rescope-spec-hardening-packet.md) | Define the Phase 76B rescope/spec-hardening packet and stable runner-facing introspection APIs for contracts, policies, obligations, generated inputs, small-world models, and reproducible artifacts before implementation resumes | [PLAN-024](PLAN-024-ASH-TEST-RUNNER-V1.md), DESIGN-022/023 | 4-6 | ✅ Complete |
 | [TASK-513](tasks/TASK-513-synthesized-tests-from-contracts-policies-and-obligations.md) | Add explicit, opt-in synthesized tests from contracts, policies, and obligations with clear authored-vs-synthesized labeling | [PLAN-024](PLAN-024-ASH-TEST-RUNNER-V1.md), DESIGN-022 | 10-14 | ✅ Complete |
-| [TASK-514](tasks/TASK-514-property-and-smallworld-execution.md) | Add seeded property execution and true small-world exploration with reproducible failure reporting and runner controls | [PLAN-024](PLAN-024-ASH-TEST-RUNNER-V1.md), DESIGN-023 | 8-12 | 📝 Planned |
+| [TASK-514](tasks/TASK-514-property-and-smallworld-execution.md) | Add seeded property execution and true small-world exploration with reproducible failure reporting and runner controls | [PLAN-024](PLAN-024-ASH-TEST-RUNNER-V1.md), DESIGN-023 | 8-12 | ✅ Complete |
 | [TASK-515](tasks/TASK-515-ash-test-runner-docs-and-phase-verification.md) | Finalize docs/bookkeeping and run the final verification/smoke gate once 76B implementation is complete | [PLAN-024](PLAN-024-ASH-TEST-RUNNER-V1.md), DESIGN-022/023 | 4-6 | 📝 Planned |
 
 **Remaining work:** TASK-513 adds the runner-side synthesized-case substrate, repro
 artifacts, a `SuiteConfig` structured snapshot seam, narrow executable contract `requires`
 boundary oracles over exact generators, narrow policy `TerminalEquals` allow/deny oracles
 over exact finite domains, and narrow obligation lifecycle oracles over explicit finite
-lifecycle metadata. Raw-source recognition and incomplete metadata now defer with explicit
-skip output instead of reporting success; the user-facing CLI still lacks a live checked-snapshot
-producer. TASK-514 and TASK-515 remain planned; true small-world exploration still requires a
-concrete `SmallWorldState` model and finite-domain enumerator. See DESIGN-022 and DESIGN-023.
+lifecycle metadata. TASK-514 adds exact finite generated property execution and deterministic
+explicit small-world state enumeration over structured snapshots, with generated input/world
+repro snapshots and `--max-worlds` truncation over actual metadata worlds. Raw-source recognition
+and incomplete metadata now defer with explicit skip output instead of reporting success; the
+user-facing CLI still lacks a live checked-snapshot producer. TASK-515 remains planned for final
+documentation and phase verification closeout. See DESIGN-022 and DESIGN-023.
 
 **Deliverable target:** Executable synthesized tests from contracts, policies, and obligations;
 true small-world exploration with deterministic world enumeration; and final phase closeout.

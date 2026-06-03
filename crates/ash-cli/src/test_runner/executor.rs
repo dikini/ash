@@ -480,7 +480,13 @@ fn run_synthesized_tests(
 
     if !config.synthesized_snapshots.is_empty() {
         for (path, snapshot) in &config.synthesized_snapshots {
-            for result in synthesized::synthesize_from_snapshot(path, snapshot) {
+            for result in synthesized::synthesize_from_snapshot_with_limits(
+                path,
+                snapshot,
+                config.seed,
+                config.max_cases,
+                config.max_worlds,
+            ) {
                 if synthesized_source_enabled(config, result.source) {
                     suite.add(result);
                 }

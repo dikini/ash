@@ -418,6 +418,10 @@ fn smallworld_kind_file_executes_successfully() {
         Value::String("pass".to_string())
     );
     assert_eq!(output["tests"][0]["world_index"], Value::Null);
+    assert!(
+        output["tests"][0].get("repro_artifact").is_none(),
+        "authored smallworld compatibility path must not claim metadata world snapshots"
+    );
 }
 
 #[test]

@@ -36,6 +36,8 @@ pub struct RunnerIntrospectionSnapshot {
     pub obligations: Vec<RunnerObligationMetadata>,
     /// Available bounded generators.
     pub generators: Vec<TypeGeneratorDescriptor>,
+    /// Available finite small-world domains.
+    pub small_world_domains: Vec<SmallWorldDomain>,
     /// Unsupported metadata rows that may only produce deferred skip output.
     pub unsupported: Vec<IntrospectionUnsupportedReason>,
 }
@@ -136,6 +138,120 @@ pub struct TypeGeneratorDescriptor {
     pub max_cases: Option<usize>,
     /// Reason this descriptor cannot materialize values.
     pub unsupported_reason: Option<String>,
+}
+
+/// Explicit finite small-world domain descriptor.
+#[derive(Debug, Clone, Serialize)]
+pub struct SmallWorldDomain {
+    /// Stable domain id.
+    pub id: String,
+    /// Domain enumeration strategy.
+    pub domain_kind: SmallWorldDomainKind,
+    /// Value type summary for generated value worlds.
+    pub value_type: Option<String>,
+    /// Numeric bounds for bounded integer worlds.
+    pub bounds: BTreeMap<String, i64>,
+    /// Stable ordering policy summary.
+    pub ordering_policy: Option<String>,
+    /// Metadata source that produced this domain.
+    pub source: TestSource,
+    /// Reason this domain cannot be enumerated.
+    pub unsupported_reason: Option<String>,
+    /// Explicit values for value-domain worlds.
+    pub explicit_values: Vec<Value>,
+    /// Explicit canonical world states.
+    pub explicit_states: Vec<SmallWorldState>,
+    /// World oracle to evaluate for each enumerated state.
+    pub oracle: Option<SmallWorldOracle>,
+    /// Default world limit from metadata.
+    pub max_worlds_default: Option<usize>,
+}
+
+impl Default for SmallWorldDomain {
+    fn default() -> Self {
+        Self {
+            id: String::new(),
+            domain_kind: SmallWorldDomainKind::Unsupported,
+            value_type: None,
+            bounds: BTreeMap::new(),
+            ordering_policy: None,
+            source: TestSource::Authored,
+            unsupported_reason: None,
+            explicit_values: Vec::new(),
+            explicit_states: Vec::new(),
+            oracle: None,
+            max_worlds_default: None,
+        }
+    }
+}
+
+/// Supported finite small-world domain kinds.
+#[derive(Debug, Clone, Serialize, Default, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum SmallWorldDomainKind {
+    /// Explicit canonical states.
+    ExplicitStates,
+    /// Explicit values materialized as value-domain states.
+    ExplicitValues,
+    /// Boolean values in deterministic false/true order.
+    Bool,
+    /// Inclusive bounded integer range.
+    BoundedInt,
+    /// Unsupported/deferred domain.
+    #[default]
+    Unsupported,
+}
+
+/// Canonical runner-facing small-world state.
+#[derive(Debug, Clone, Serialize, Default, PartialEq)]
+pub struct SmallWorldState {
+    /// Stable world id.
+    pub id: String,
+    /// World schema version.
+    pub schema_version: String,
+    /// World kind.
+    pub world_kind: String,
+    /// Value or symbolic bindings.
+    pub bindings: BTreeMap<String, Value>,
+    /// Capability names present in the world.
+    pub capabilities: Vec<String>,
+    /// Role names present in the world.
+    pub roles: Vec<String>,
+    /// Policy names or refs present in the world.
+    pub policies: Vec<String>,
+    /// Obligation names or refs present in the world.
+    pub obligations: Vec<String>,
+    /// Mailbox/messages present in the world.
+    pub mailbox: Vec<Value>,
+    /// Optional control state.
+    pub control_state: Option<String>,
+    /// Resource state snapshot.
+    pub resource_state: BTreeMap<String, Value>,
+    /// Transition trace used to reach the state.
+    pub transition_trace: Vec<String>,
+    /// Oracle refs attached to this world.
+    pub oracle_refs: Vec<String>,
+}
+
+/// Small-world oracle descriptor.
+#[derive(Debug, Clone, Serialize, PartialEq)]
+pub struct SmallWorldOracle {
+    /// Supported oracle kind.
+    pub kind: SmallWorldOracleKind,
+    /// Expected value.
+    pub expected: Value,
+}
+
+/// Supported small-world oracle kinds.
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum SmallWorldOracleKind {
+    /// The world `control_state` must equal the expected string.
+    ControlStateEquals,
+    /// The world `control_state` must be one of the expected strings.
+    ControlStateIn,
+    /// The world bindings must contain all expected object fields.
+    BindingEquals,
 }
 
 /// Source for generated representatives.
@@ -370,7 +486,20 @@ pub fn synthesize_from_snapshot(
     path: &Path,
     snapshot: &RunnerIntrospectionSnapshot,
 ) -> Vec<TestResult> {
+    synthesize_from_snapshot_with_limits(path, snapshot, None, None, None)
+}
+
+/// Generate executable synthesized results with runner generation limits.
+pub fn synthesize_from_snapshot_with_limits(
+    path: &Path,
+    snapshot: &RunnerIntrospectionSnapshot,
+    seed: Option<u64>,
+    max_cases: Option<usize>,
+    max_worlds: Option<usize>,
+) -> Vec<TestResult> {
     let mut results = Vec::new();
+
+    results.extend(generated_property_results(path, snapshot, seed, max_cases));
 
     for contract in &snapshot.contracts {
         let cases = contract_requires_cases(path, snapshot, contract);
@@ -460,6 +589,8 @@ pub fn synthesize_from_snapshot(
         results.extend(cases.iter().map(execute_synthesized_case));
     }
 
+    results.extend(smallworld_results(path, snapshot, seed, max_worlds));
+
     for unsupported in &snapshot.unsupported {
         results.push(deferred_result(
             path,
@@ -491,6 +622,457 @@ pub fn synthesize_from_snapshot(
     }
 
     results
+}
+
+fn generated_property_results(
+    path: &Path,
+    snapshot: &RunnerIntrospectionSnapshot,
+    seed: Option<u64>,
+    max_cases: Option<usize>,
+) -> Vec<TestResult> {
+    let seed = seed.unwrap_or(0);
+    let mut results = Vec::new();
+    let mut generated_count = 0;
+
+    for descriptor in &snapshot.generators {
+        if descriptor.unsupported_reason.is_some()
+            || descriptor.source == TypeGeneratorSource::Unsupported
+            || descriptor.exact_values.is_empty()
+        {
+            results.push(deferred_property_result(path, snapshot, descriptor, seed));
+            continue;
+        }
+
+        if !is_supported_property_generator(descriptor) {
+            results.push(deferred_property_result(path, snapshot, descriptor, seed));
+            continue;
+        }
+
+        for value in descriptor.exact_values.iter().take(
+            max_cases
+                .map(|limit| limit.saturating_sub(generated_count))
+                .unwrap_or(usize::MAX),
+        ) {
+            generated_count += 1;
+            let case_index = generated_count;
+            let case_id = format!("synthesized/property/{}/case-{}", descriptor.id, case_index);
+            let Some(property_holds) = property_holds_from_generated_value(value) else {
+                results.push(deferred_result_with_kind(
+                    path,
+                    TestSource::Contract,
+                    TestKind::Property,
+                    case_id,
+                    "deferred: generated property value lacks supported metadata oracle",
+                    property_repro_artifact(
+                        path,
+                        snapshot,
+                        descriptor,
+                        seed,
+                        case_index,
+                        value,
+                        json!({
+                            "kind": "metadata_property_holds",
+                            "supported": false,
+                        }),
+                        max_cases.unwrap_or(descriptor.exact_values.len()),
+                    ),
+                ));
+                continue;
+            };
+
+            let outcome = if property_holds {
+                Outcome::Pass
+            } else {
+                Outcome::Fail
+            };
+            let mut result = TestResult::new(&case_id, path.to_path_buf())
+                .with_outcome(outcome)
+                .with_source(TestSource::Contract)
+                .with_kind(TestKind::Property)
+                .with_duration(Duration::ZERO)
+                .with_seed(seed)
+                .with_repro_artifact(property_repro_artifact(
+                    path,
+                    snapshot,
+                    descriptor,
+                    seed,
+                    case_index,
+                    value,
+                    json!({
+                        "kind": "metadata_property_holds",
+                        "expected": true,
+                        "actual": property_holds,
+                    }),
+                    max_cases.unwrap_or(descriptor.exact_values.len()),
+                ));
+            if !property_holds {
+                result = result
+                    .with_failing_case(case_index)
+                    .with_message("generated property oracle failed");
+            }
+            result.tags = vec!["synthesized".to_string(), "property".to_string()];
+            results.push(result);
+
+            if max_cases == Some(generated_count) {
+                break;
+            }
+        }
+
+        if max_cases == Some(generated_count) {
+            break;
+        }
+    }
+
+    results
+}
+
+fn is_supported_property_generator(descriptor: &TypeGeneratorDescriptor) -> bool {
+    matches!(
+        descriptor.source,
+        TypeGeneratorSource::AuthoredExamples
+            | TypeGeneratorSource::FiniteDomain
+            | TypeGeneratorSource::ContractValid
+            | TypeGeneratorSource::ContractInvalidNearby
+    )
+}
+
+fn property_holds_from_generated_value(value: &Value) -> Option<bool> {
+    value.get("property_holds").and_then(Value::as_bool)
+}
+
+fn deferred_property_result(
+    path: &Path,
+    snapshot: &RunnerIntrospectionSnapshot,
+    descriptor: &TypeGeneratorDescriptor,
+    seed: u64,
+) -> TestResult {
+    let reason = descriptor
+        .unsupported_reason
+        .clone()
+        .unwrap_or_else(|| "generator is not an exact supported finite descriptor".to_string());
+    let case_id = format!("synthesized/property/{}/deferred", descriptor.id);
+    deferred_result_with_kind(
+        path,
+        TestSource::Contract,
+        TestKind::Property,
+        case_id,
+        format!("deferred: {reason}"),
+        ReproArtifact {
+            replay_command: format!(
+                "ash test {} --only-synthesized contracts --seed {}",
+                path.display(),
+                seed
+            ),
+            ..repro_artifact(
+                path,
+                snapshot.source_artifact_id.clone(),
+                snapshot.check_summary_id.clone(),
+                format!("property:{}:deferred", descriptor.id),
+                seed,
+                1,
+                Some(json!({
+                    "descriptor_id": descriptor.id,
+                    "target_type": descriptor.target_type,
+                    "source": descriptor.source,
+                    "exact_value_count": descriptor.exact_values.len(),
+                })),
+                json!({
+                    "kind": "metadata_property_holds",
+                    "supported": false,
+                    "reason": reason,
+                }),
+                None,
+            )
+        },
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn property_repro_artifact(
+    path: &Path,
+    snapshot: &RunnerIntrospectionSnapshot,
+    descriptor: &TypeGeneratorDescriptor,
+    seed: u64,
+    case_index: usize,
+    value: &Value,
+    oracle_snapshot: Value,
+    replay_max_cases: usize,
+) -> ReproArtifact {
+    ReproArtifact {
+        replay_command: format!(
+            "ash test {} --only-synthesized contracts --seed {} --max-cases {}",
+            path.display(),
+            seed,
+            replay_max_cases
+        ),
+        ..repro_artifact(
+            path,
+            snapshot.source_artifact_id.clone(),
+            snapshot.check_summary_id.clone(),
+            format!("synthesized/property/{}/case-{}", descriptor.id, case_index),
+            seed,
+            case_index,
+            Some(json!({
+                "descriptor_id": descriptor.id,
+                "target_type": descriptor.target_type,
+                "source": descriptor.source,
+                "value": value,
+            })),
+            oracle_snapshot,
+            None,
+        )
+    }
+}
+
+fn smallworld_results(
+    path: &Path,
+    snapshot: &RunnerIntrospectionSnapshot,
+    seed: Option<u64>,
+    max_worlds: Option<usize>,
+) -> Vec<TestResult> {
+    let seed = seed.unwrap_or(0);
+    let mut results = Vec::new();
+
+    for domain in &snapshot.small_world_domains {
+        let limit = max_worlds.or(domain.max_worlds_default);
+        let worlds = enumerate_worlds(domain, limit);
+        if domain.unsupported_reason.is_some()
+            || domain.domain_kind == SmallWorldDomainKind::Unsupported
+            || worlds.is_empty()
+            || domain.oracle.is_none()
+        {
+            results.push(deferred_smallworld_result(path, snapshot, domain, seed));
+            continue;
+        }
+
+        let oracle = domain
+            .oracle
+            .as_ref()
+            .expect("checked Some above before executing worlds");
+        for (index, world) in worlds.iter().enumerate() {
+            let world_index = index + 1;
+            let case_id = format!("synthesized/smallworld/{}/world-{}", domain.id, world_index);
+            let (outcome, message) = evaluate_smallworld_oracle(world, oracle);
+            let repro = smallworld_repro_artifact(
+                path,
+                snapshot,
+                domain,
+                world,
+                oracle,
+                seed,
+                world_index,
+                max_worlds.unwrap_or(worlds.len()),
+            );
+            let mut result = TestResult::new(&case_id, path.to_path_buf())
+                .with_outcome(outcome)
+                .with_source(domain.source)
+                .with_kind(TestKind::SmallWorld)
+                .with_duration(Duration::ZERO)
+                .with_seed(seed)
+                .with_repro_artifact(repro);
+            result.world_index = Some(world_index);
+            result.failing_case = outcome.is_failure().then_some(world_index);
+            if let Some(message) = message {
+                result = result.with_message(message);
+            }
+            result.tags = vec!["synthesized".to_string(), "smallworld".to_string()];
+            results.push(result);
+        }
+    }
+
+    results
+}
+
+fn enumerate_worlds(domain: &SmallWorldDomain, max_worlds: Option<usize>) -> Vec<SmallWorldState> {
+    let limit = max_worlds.unwrap_or(usize::MAX);
+    let mut worlds: Vec<SmallWorldState> = match domain.domain_kind {
+        SmallWorldDomainKind::ExplicitStates => {
+            domain.explicit_states.iter().take(limit).cloned().collect()
+        }
+        SmallWorldDomainKind::ExplicitValues => domain
+            .explicit_values
+            .iter()
+            .take(limit)
+            .enumerate()
+            .map(|(index, value)| value_world(domain, index + 1, value.clone()))
+            .collect(),
+        SmallWorldDomainKind::Bool => [false, true]
+            .into_iter()
+            .take(limit)
+            .enumerate()
+            .map(|(index, value)| value_world(domain, index + 1, json!(value)))
+            .collect(),
+        SmallWorldDomainKind::BoundedInt => bounded_int_worlds(domain, limit),
+        SmallWorldDomainKind::Unsupported => Vec::new(),
+    };
+
+    for (index, world) in worlds.iter_mut().enumerate() {
+        if world.schema_version.is_empty() {
+            world.schema_version = RUNNER_SYNTHESIS_SCHEMA_VERSION.to_string();
+        }
+        if world.id.is_empty() {
+            world.id = format!("{}:world-{}", domain.id, index + 1);
+        }
+        if world.world_kind.is_empty() {
+            world.world_kind = domain
+                .value_type
+                .clone()
+                .unwrap_or_else(|| "value_domain".to_string());
+        }
+    }
+
+    worlds
+}
+
+fn value_world(domain: &SmallWorldDomain, index: usize, value: Value) -> SmallWorldState {
+    let mut bindings = BTreeMap::new();
+    bindings.insert("value".to_string(), value);
+    SmallWorldState {
+        id: format!("{}:value-{}", domain.id, index),
+        schema_version: RUNNER_SYNTHESIS_SCHEMA_VERSION.to_string(),
+        world_kind: domain
+            .value_type
+            .clone()
+            .unwrap_or_else(|| "value_domain".to_string()),
+        bindings,
+        ..SmallWorldState::default()
+    }
+}
+
+fn bounded_int_worlds(domain: &SmallWorldDomain, limit: usize) -> Vec<SmallWorldState> {
+    let Some(min) = domain.bounds.get("min").copied() else {
+        return Vec::new();
+    };
+    let Some(max) = domain.bounds.get("max").copied() else {
+        return Vec::new();
+    };
+    if min > max || limit == 0 {
+        return Vec::new();
+    }
+
+    (min..=max)
+        .take(limit)
+        .enumerate()
+        .map(|(index, value)| value_world(domain, index + 1, json!(value)))
+        .collect()
+}
+
+fn evaluate_smallworld_oracle(
+    world: &SmallWorldState,
+    oracle: &SmallWorldOracle,
+) -> (Outcome, Option<String>) {
+    let passed = match oracle.kind {
+        SmallWorldOracleKind::ControlStateEquals => oracle
+            .expected
+            .as_str()
+            .is_some_and(|expected| world.control_state.as_deref() == Some(expected)),
+        SmallWorldOracleKind::ControlStateIn => {
+            oracle.expected.as_array().is_some_and(|expected| {
+                expected
+                    .iter()
+                    .filter_map(Value::as_str)
+                    .any(|expected| world.control_state.as_deref() == Some(expected))
+            })
+        }
+        SmallWorldOracleKind::BindingEquals => {
+            oracle.expected.as_object().is_some_and(|expected| {
+                expected
+                    .iter()
+                    .all(|(key, value)| world.bindings.get(key) == Some(value))
+            })
+        }
+    };
+
+    if passed {
+        (Outcome::Pass, None)
+    } else {
+        (
+            Outcome::Fail,
+            Some(format!("small-world oracle failed for world {}", world.id)),
+        )
+    }
+}
+
+fn deferred_smallworld_result(
+    path: &Path,
+    snapshot: &RunnerIntrospectionSnapshot,
+    domain: &SmallWorldDomain,
+    seed: u64,
+) -> TestResult {
+    let reason = domain
+        .unsupported_reason
+        .clone()
+        .unwrap_or_else(|| "domain is not an explicit supported finite world model".to_string());
+    let case_id = format!("synthesized/smallworld/{}/deferred", domain.id);
+    deferred_result_with_kind(
+        path,
+        domain.source,
+        TestKind::SmallWorld,
+        case_id,
+        format!("deferred: {reason}"),
+        ReproArtifact {
+            replay_command: format!(
+                "ash test {} --only-synthesized contracts,policies,obligations --seed {}",
+                path.display(),
+                seed
+            ),
+            ..repro_artifact(
+                path,
+                snapshot.source_artifact_id.clone(),
+                snapshot.check_summary_id.clone(),
+                format!("smallworld:{}:deferred", domain.id),
+                seed,
+                1,
+                None,
+                json!({
+                    "kind": "small_world",
+                    "supported": false,
+                    "reason": reason,
+                    "domain_kind": domain.domain_kind,
+                }),
+                None,
+            )
+        },
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn smallworld_repro_artifact(
+    path: &Path,
+    snapshot: &RunnerIntrospectionSnapshot,
+    domain: &SmallWorldDomain,
+    world: &SmallWorldState,
+    oracle: &SmallWorldOracle,
+    seed: u64,
+    world_index: usize,
+    replay_max_worlds: usize,
+) -> ReproArtifact {
+    let world_snapshot =
+        serde_json::to_value(world).expect("small-world state should serialize to JSON");
+    let mut artifact = repro_artifact(
+        path,
+        snapshot.source_artifact_id.clone(),
+        snapshot.check_summary_id.clone(),
+        format!("synthesized/smallworld/{}/world-{}", domain.id, world_index),
+        seed,
+        world_index,
+        None,
+        json!({
+            "kind": "small_world",
+            "domain_id": domain.id,
+            "domain_kind": domain.domain_kind,
+            "oracle": oracle,
+        }),
+        Some(world_snapshot),
+    );
+    artifact.world_index = Some(world_index);
+    artifact.replay_command = format!(
+        "ash test {} --only-synthesized contracts,policies,obligations --seed {} --max-worlds {}",
+        path.display(),
+        seed,
+        replay_max_worlds
+    );
+    artifact
 }
 
 fn contract_requires_cases(
@@ -862,6 +1444,25 @@ fn deferred_result(
         .with_source(source)
         .with_kind(TestKind::Unit)
         .with_duration(Duration::ZERO)
+        .with_message(message)
+        .with_repro_artifact(repro)
+}
+
+fn deferred_result_with_kind(
+    path: &Path,
+    source: TestSource,
+    kind: TestKind,
+    name: impl Into<String>,
+    message: impl Into<String>,
+    repro: ReproArtifact,
+) -> TestResult {
+    let seed = repro.seed;
+    TestResult::new(name, path.to_path_buf())
+        .with_outcome(Outcome::Skip)
+        .with_source(source)
+        .with_kind(kind)
+        .with_duration(Duration::ZERO)
+        .with_seed(seed)
         .with_message(message)
         .with_repro_artifact(repro)
 }
@@ -1329,6 +1930,283 @@ workflow test_workflow
             results.iter().all(|result| result.repro_artifact.is_some()),
             "executed synthesized contract cases should include repro artifacts"
         );
+    }
+
+    #[test]
+    fn generated_property_metadata_executes_one_case_per_exact_value_with_repro_input() {
+        let snapshot = RunnerIntrospectionSnapshot {
+            source_artifact_id: "source:property.ash".to_string(),
+            check_summary_id: "check:property-summary".to_string(),
+            generators: vec![TypeGeneratorDescriptor {
+                id: "int-examples".to_string(),
+                target_type: "Int".to_string(),
+                source: TypeGeneratorSource::FiniteDomain,
+                exact_values: vec![
+                    json!({ "input": 1, "property_holds": true }),
+                    json!({ "input": 0, "property_holds": false }),
+                    json!({ "input": 2, "property_holds": true }),
+                ],
+                ..TypeGeneratorDescriptor::default()
+            }],
+            ..RunnerIntrospectionSnapshot::default()
+        };
+
+        let results = synthesize_from_snapshot_with_limits(
+            Path::new("property.ash"),
+            &snapshot,
+            Some(9001),
+            None,
+            None,
+        );
+
+        assert_eq!(results.len(), 3);
+        assert!(
+            results
+                .iter()
+                .all(|result| result.kind == TestKind::Property && result.seed == Some(9001)),
+            "generated property rows should be real property results with the configured seed: {results:#?}"
+        );
+        let failing = results
+            .iter()
+            .find(|result| result.outcome == Outcome::Fail)
+            .expect("one generated property case should fail from metadata oracle");
+        assert_eq!(failing.failing_case, Some(2));
+        let repro = failing
+            .repro_artifact
+            .as_ref()
+            .expect("generated property failure should carry repro data");
+        assert_eq!(repro.seed, 9001);
+        assert_eq!(repro.case_index, 2);
+        assert_eq!(repro.source_artifact_id, "source:property.ash");
+        assert_eq!(repro.check_summary_id, "check:property-summary");
+        assert!(
+            repro.generated_input_snapshot.is_some(),
+            "property repro must include the generated input snapshot: {repro:#?}"
+        );
+        assert!(
+            repro.replay_command.contains("--seed 9001")
+                && repro.replay_command.contains("--max-cases 3"),
+            "property replay command should include generation controls: {repro:#?}"
+        );
+    }
+
+    #[test]
+    fn unsupported_or_empty_property_generators_defer_instead_of_pass() {
+        let snapshot = RunnerIntrospectionSnapshot {
+            source_artifact_id: "source:property.ash".to_string(),
+            check_summary_id: "check:property-summary".to_string(),
+            generators: vec![
+                TypeGeneratorDescriptor {
+                    id: "open-resource".to_string(),
+                    target_type: "Resource".to_string(),
+                    source: TypeGeneratorSource::Unsupported,
+                    unsupported_reason: Some("resource values are not finite".to_string()),
+                    ..TypeGeneratorDescriptor::default()
+                },
+                TypeGeneratorDescriptor {
+                    id: "empty-int-domain".to_string(),
+                    target_type: "Int".to_string(),
+                    source: TypeGeneratorSource::FiniteDomain,
+                    exact_values: Vec::new(),
+                    ..TypeGeneratorDescriptor::default()
+                },
+            ],
+            ..RunnerIntrospectionSnapshot::default()
+        };
+
+        let results = synthesize_from_snapshot_with_limits(
+            Path::new("property.ash"),
+            &snapshot,
+            None,
+            None,
+            None,
+        );
+
+        assert_eq!(results.len(), 2);
+        assert!(
+            results.iter().all(|result| result.outcome == Outcome::Skip),
+            "unsupported or empty property generators must defer, never pass: {results:#?}"
+        );
+    }
+
+    #[test]
+    fn smallworld_metadata_enumerates_distinct_world_snapshots_and_truncates_by_limit() {
+        let snapshot = RunnerIntrospectionSnapshot {
+            source_artifact_id: "source:worlds.ash".to_string(),
+            check_summary_id: "check:world-summary".to_string(),
+            small_world_domains: vec![SmallWorldDomain {
+                id: "lifecycle-worlds".to_string(),
+                domain_kind: SmallWorldDomainKind::ExplicitStates,
+                source: TestSource::Obligation,
+                explicit_states: vec![
+                    SmallWorldState {
+                        id: "introduced".to_string(),
+                        world_kind: "obligation_lifecycle".to_string(),
+                        control_state: Some("introduced".to_string()),
+                        ..SmallWorldState::default()
+                    },
+                    SmallWorldState {
+                        id: "discharged".to_string(),
+                        world_kind: "obligation_lifecycle".to_string(),
+                        control_state: Some("discharged".to_string()),
+                        transition_trace: vec!["introduce".to_string(), "discharge".to_string()],
+                        ..SmallWorldState::default()
+                    },
+                    SmallWorldState {
+                        id: "double-discharge".to_string(),
+                        world_kind: "obligation_lifecycle".to_string(),
+                        control_state: Some("rejected".to_string()),
+                        transition_trace: vec![
+                            "introduce".to_string(),
+                            "discharge".to_string(),
+                            "discharge".to_string(),
+                        ],
+                        ..SmallWorldState::default()
+                    },
+                ],
+                oracle: Some(SmallWorldOracle {
+                    kind: SmallWorldOracleKind::ControlStateIn,
+                    expected: json!(["introduced", "discharged", "rejected"]),
+                }),
+                ..SmallWorldDomain::default()
+            }],
+            ..RunnerIntrospectionSnapshot::default()
+        };
+
+        let results = synthesize_from_snapshot_with_limits(
+            Path::new("worlds.ash"),
+            &snapshot,
+            None,
+            None,
+            Some(2),
+        );
+
+        assert_eq!(
+            results.len(),
+            2,
+            "--max-worlds should truncate actual worlds"
+        );
+        let world_ids: Vec<_> = results
+            .iter()
+            .map(|result| {
+                result
+                    .repro_artifact
+                    .as_ref()
+                    .and_then(|repro| repro.world_snapshot.as_ref())
+                    .and_then(|snapshot| snapshot["id"].as_str())
+                    .unwrap_or_default()
+                    .to_string()
+            })
+            .collect();
+        assert_eq!(world_ids, vec!["introduced", "discharged"]);
+        assert_eq!(results[0].world_index, Some(1));
+        assert_eq!(results[1].world_index, Some(2));
+    }
+
+    #[test]
+    fn bounded_int_world_enumeration_applies_limit_before_materialization() {
+        let snapshot = RunnerIntrospectionSnapshot {
+            source_artifact_id: "source:bounded-worlds.ash".to_string(),
+            check_summary_id: "check:bounded-world-summary".to_string(),
+            small_world_domains: vec![SmallWorldDomain {
+                id: "huge-int-worlds".to_string(),
+                domain_kind: SmallWorldDomainKind::BoundedInt,
+                source: TestSource::Policy,
+                value_type: Some("Int".to_string()),
+                bounds: BTreeMap::from([("min".to_string(), 0), ("max".to_string(), i64::MAX)]),
+                oracle: Some(SmallWorldOracle {
+                    kind: SmallWorldOracleKind::BindingEquals,
+                    expected: json!({ "value": 0 }),
+                }),
+                ..SmallWorldDomain::default()
+            }],
+            ..RunnerIntrospectionSnapshot::default()
+        };
+
+        let results = synthesize_from_snapshot_with_limits(
+            Path::new("bounded-worlds.ash"),
+            &snapshot,
+            None,
+            None,
+            Some(2),
+        );
+
+        assert_eq!(
+            results.len(),
+            2,
+            "bounded-int enumeration must honor max_worlds without materializing the full range"
+        );
+        let values: Vec<_> = results
+            .iter()
+            .map(|result| {
+                result
+                    .repro_artifact
+                    .as_ref()
+                    .and_then(|repro| repro.world_snapshot.as_ref())
+                    .and_then(|snapshot| snapshot["bindings"]["value"].as_i64())
+                    .expect("bounded-int worlds should carry integer value bindings")
+            })
+            .collect();
+        assert_eq!(values, vec![0, 1]);
+    }
+
+    #[test]
+    fn smallworld_results_include_world_index_and_repro_world_snapshot_for_pass_and_fail() {
+        let snapshot = RunnerIntrospectionSnapshot {
+            source_artifact_id: "source:worlds.ash".to_string(),
+            check_summary_id: "check:world-summary".to_string(),
+            small_world_domains: vec![SmallWorldDomain {
+                id: "control-worlds".to_string(),
+                domain_kind: SmallWorldDomainKind::ExplicitStates,
+                source: TestSource::Policy,
+                explicit_states: vec![
+                    SmallWorldState {
+                        id: "allowed".to_string(),
+                        world_kind: "policy_context".to_string(),
+                        control_state: Some("allowed".to_string()),
+                        ..SmallWorldState::default()
+                    },
+                    SmallWorldState {
+                        id: "denied".to_string(),
+                        world_kind: "policy_context".to_string(),
+                        control_state: Some("denied".to_string()),
+                        ..SmallWorldState::default()
+                    },
+                ],
+                oracle: Some(SmallWorldOracle {
+                    kind: SmallWorldOracleKind::ControlStateEquals,
+                    expected: json!("allowed"),
+                }),
+                ..SmallWorldDomain::default()
+            }],
+            ..RunnerIntrospectionSnapshot::default()
+        };
+
+        let results = synthesize_from_snapshot_with_limits(
+            Path::new("worlds.ash"),
+            &snapshot,
+            Some(7),
+            None,
+            None,
+        );
+
+        assert_eq!(results.len(), 2);
+        assert_eq!(results[0].outcome, Outcome::Pass);
+        assert_eq!(results[1].outcome, Outcome::Fail);
+        for (index, result) in results.iter().enumerate() {
+            assert_eq!(result.kind, TestKind::SmallWorld);
+            assert_eq!(result.world_index, Some(index + 1));
+            let repro = result
+                .repro_artifact
+                .as_ref()
+                .expect("smallworld result should include repro artifact");
+            assert_eq!(repro.seed, 7);
+            assert_eq!(repro.world_index, Some(index + 1));
+            assert!(
+                repro.world_snapshot.is_some(),
+                "smallworld repro must include world snapshot: {repro:#?}"
+            );
+        }
     }
 
     #[test]

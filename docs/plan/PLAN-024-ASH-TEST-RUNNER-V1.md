@@ -227,7 +227,9 @@ Before phase closeout:
 Current bookkeeping note: the current implementation now supports explicit synthesized-source
 selection, direct kind-directory discovery, real per-test timeout containment via isolated execution,
 `-- @test` metadata parsing, minimal `std::test` authored usage, and targeted verification/smoke
-coverage consistent with the v1 phase contract.
+coverage consistent with the v1 phase contract. TASK-514 adds the Phase 76B structured metadata
+execution slice for exact finite generated property inputs and deterministic explicit small-world
+states, while TASK-515 remains planned for final phase documentation and verification closeout.
 
 ## Explicit Deferred Follow-Up Items
 
@@ -239,10 +241,13 @@ The following items are intentionally deferred until after the next round of spe
      boundary slice
    - policy execution beyond exact `TerminalEquals` allow/deny metadata and obligation execution
      beyond exact finite lifecycle metadata
-2. Rich generative property testing
-   - generated inputs from type/contract metadata rather than bounded reruns of the same authored body
-3. True small-world exploration
-   - bounded world/state enumeration rather than bounded reruns of the same authored body
+2. Rich generative property testing beyond TASK-514
+   - live checked-snapshot production from ordinary source files
+   - property oracles beyond the current exact finite descriptor values with narrow metadata
+     `property_holds` expectations
+3. Rich small-world exploration beyond TASK-514
+   - broader product/list/state-machine domain descriptors
+   - live wiring from lowered policy/obligation/role metadata into runner snapshots
 4. Richer `std::test` surface
    - panic-aware helpers and runtime-facing helpers that depend on stronger stable runtime/spec support
 
@@ -286,14 +291,17 @@ structured contract `requires` boundary oracles over exact generators, narrow po
 `TerminalEquals` allow/deny oracles over exact finite domains, and narrow obligation lifecycle
 oracles over explicit finite lifecycle metadata. Unsupported raw-source paths and incomplete
 metadata remain explicit deferred skips, and the user-facing CLI still does not synthesize live
-checked snapshots from source files.
+checked snapshots from source files. TASK-514 extends that seam with exact finite generated property
+inputs and deterministic explicit small-world state enumeration, including generated input/world repro
+snapshots and `--max-worlds` truncation over actual metadata worlds.
 
 ## Summary of Reasoning for Deferral
 
 These items are deferred intentionally, not forgotten. The current Phase 76 landing establishes the
 runner substrate, authored test metadata/discovery path, minimal `std::test` surface, bounded
-property/small-world execution hooks, and explicit synthesized-source selection. That is the smallest
-coherent v1 slice that can be verified honestly today.
+authored property/small-world compatibility hooks, metadata-backed generated property execution,
+explicit small-world state enumeration, and explicit synthesized-source selection. That is the
+smallest coherent v1 slice that can be verified honestly today before TASK-515 closeout.
 
 The deferred items all depend on upstream spec and metadata-shape improvement rather than mere local
 implementation effort:
@@ -301,10 +309,10 @@ implementation effort:
   contract targets, policy domains/oracles, and obligation lifecycle semantics; without that, the
   runner must keep unsupported paths as explicit deferred skips rather than truthful executable
   synthesized tests
-- richer property generation needs a stable contract/type-driven input-generation story; bounded reruns
-  of authored bodies are acceptable for v1, but not a substitute for true generated cases
-- richer small-world execution needs a spec-backed state/world enumeration model instead of ad hoc
-  bounded repetition
+- richer property generation still needs live checked metadata and richer oracle shapes beyond the
+  TASK-514 exact finite descriptor slice
+- richer small-world execution still needs broader domain families and live lowered metadata wiring
+  beyond the TASK-514 explicit finite world slice
 - a broader `std::test` surface should wait until panic semantics, runtime-facing assertions, and
   related helper contracts are stable enough to avoid committing to the wrong long-term API
 

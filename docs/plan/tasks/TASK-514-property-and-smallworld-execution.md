@@ -1,6 +1,6 @@
 # TASK-514: Property and Small-World Execution
 
-## Status: Planned (Phase 76B)
+## Status: Complete (Phase 76B)
 
 ## Description
 
@@ -40,24 +40,35 @@ Add bounded seeded property-test execution and bounded small-world execution to 
 ### Red
 
 - Add failing tests showing missing seeded property execution, missing bounded small-world execution, or missing reproducibility metadata.
+- RED evidence collected: `cargo test -p ash-cli test_runner -- --nocapture` failed before implementation because `SmallWorldDomain`, `SmallWorldState`, `SmallWorldOracle`, `small_world_domains`, and `synthesize_from_snapshot_with_limits` did not exist.
 
 ### Green
 
 - Implement bounded seeded property and small-world execution with stable reproduction metadata and runner controls.
+- GREEN evidence collected: `cargo test -p ash-cli test_runner -- --nocapture` passed with 46 runner tests after implementation.
 
 ## Implementation Reality Check
 
-The runner now routes property and small-world kinds through dedicated bounded execution paths, uses
-seed/case/world controls honestly in runner output, and avoids leaking generative metadata onto ordinary
-unit/integration/e2e tests. However, the current v1 implementation still reruns the same authored test
-body in bounded loops rather than exploring true generated inputs or true small-world state spaces.
+The runner now has two distinct execution paths:
+
+- authored `property` / `smallworld` tests retain the Phase 76A compatibility behavior and do not claim generated input or world snapshots unless explicit metadata exists
+- structured Phase 76B snapshots execute exact finite `TypeGeneratorDescriptor` values as generated property cases and explicit finite `SmallWorldDomain` / `SmallWorldState` models as deterministic small-world cases
+
+The generated property slice supports exact finite descriptor values with a narrow metadata oracle
+(`property_holds`) and skips unsupported/empty descriptors instead of reporting success. The small-world
+slice supports explicit states plus bool, bounded-int, and explicit-value worlds with narrow
+control-state/binding oracles. `--max-worlds` now truncates enumerated metadata worlds in the structured
+snapshot path rather than rerunning one authored body, and repro artifacts include source/check summary
+identity, seed, case/world indexes, generated input or world snapshots, oracle snapshots, and replay
+commands.
 
 ## Explicit Deferred Follow-Up Items
 
-Deferred until after spec work improvement:
-- implemented type/contract-derived generated property inputs following TASK-1010
-- implemented small-world state/world exploration following TASK-1010 rather than bounded reruns
-- richer repro artifacts tied to generated inputs/world states rather than only runner-level counters
+Deferred after this completion slice:
+- live checked/lowered snapshot production from ordinary CLI source files; tests inject `SuiteConfig::synthesized_snapshots`
+- richer property oracles beyond the narrow metadata-backed `property_holds` shape
+- richer small-world domain families such as product, list, and state-machine descriptors
+- broader synthesized contract/policy/obligation execution beyond the TASK-513 narrow metadata cases
 
 ## Baseline Already Satisfied by Phase 76A
 
@@ -68,7 +79,7 @@ Deferred until after spec work improvement:
 
 ## Phase 76B Completion Checklist
 
-- [ ] type/contract-derived generated property inputs implemented through TASK-1010 descriptors
-- [ ] `SmallWorldState` / `SmallWorldDomain` deterministic enumeration implemented
-- [ ] `--max-worlds` bounds actual explored worlds, not bounded reruns
-- [ ] repro artifacts include generated input or world snapshots, source/check summary identity, and replay commands
+- [x] type/contract-derived generated property inputs implemented through TASK-1010 descriptors
+- [x] `SmallWorldState` / `SmallWorldDomain` deterministic enumeration implemented
+- [x] `--max-worlds` bounds actual explored worlds, not bounded reruns
+- [x] repro artifacts include generated input or world snapshots, source/check summary identity, and replay commands

@@ -472,7 +472,7 @@ fn execute_test_by_kind(
 /// Run synthesized tests from configured sources.
 fn run_synthesized_tests(
     config: &SuiteConfig,
-    _engine: &ash_engine::Engine,
+    engine: &ash_engine::Engine,
     suite: &mut crate::test_runner::types::TestSuiteResult,
 ) {
     use crate::test_runner::discovery::discover_tests;
@@ -495,40 +495,55 @@ fn run_synthesized_tests(
         return;
     }
 
-    let files = discover_tests(&config.root);
-
-    for path in &files {
-        let source = match std::fs::read_to_string(path) {
-            Ok(s) => s,
-            Err(_) => continue,
-        };
-
-        // Contract-derived tests
-        if config.synthesized_sources.contracts {
-            let contract_tests = synthesized::synthesize_contract_tests(path, &source);
-            for result in contract_tests {
-                if !add_synthesized_result(config, suite, result) {
-                    return;
+    for path in discover_tests(&config.root) {
+        match synthesized::build_runner_introspection_snapshot(&path, engine) {
+            Ok(snapshot) => {
+                for result in synthesized::synthesize_from_snapshot_with_limits(
+                    &path,
+                    &snapshot,
+                    config.seed,
+                    config.max_cases,
+                    config.max_worlds,
+                ) {
+                    if !add_synthesized_result(config, suite, result) {
+                        return;
+                    }
                 }
             }
-        }
+            Err(_) => {
+                let source = match std::fs::read_to_string(&path) {
+                    Ok(s) => s,
+                    Err(_) => continue,
+                };
 
-        // Policy-derived tests
-        if config.synthesized_sources.policies {
-            let policy_tests = synthesized::synthesize_policy_tests(path, &source);
-            for result in policy_tests {
-                if !add_synthesized_result(config, suite, result) {
-                    return;
+                // Contract-derived tests
+                if config.synthesized_sources.contracts {
+                    let contract_tests = synthesized::synthesize_contract_tests(&path, &source);
+                    for result in contract_tests {
+                        if !add_synthesized_result(config, suite, result) {
+                            return;
+                        }
+                    }
                 }
-            }
-        }
 
-        // Obligation-derived tests
-        if config.synthesized_sources.obligations {
-            let obligation_tests = synthesized::synthesize_obligation_tests(path, &source);
-            for result in obligation_tests {
-                if !add_synthesized_result(config, suite, result) {
-                    return;
+                // Policy-derived tests
+                if config.synthesized_sources.policies {
+                    let policy_tests = synthesized::synthesize_policy_tests(&path, &source);
+                    for result in policy_tests {
+                        if !add_synthesized_result(config, suite, result) {
+                            return;
+                        }
+                    }
+                }
+
+                // Obligation-derived tests
+                if config.synthesized_sources.obligations {
+                    let obligation_tests = synthesized::synthesize_obligation_tests(&path, &source);
+                    for result in obligation_tests {
+                        if !add_synthesized_result(config, suite, result) {
+                            return;
+                        }
+                    }
                 }
             }
         }

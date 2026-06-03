@@ -25,7 +25,7 @@ The following remain future work:
 
 | Task | Description | Type | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-1012](tasks/TASK-1012-live-runner-introspection-snapshot-production.md) | Produce checked/lowered runner snapshots from ordinary CLI source files and suite roots | CLI/Typeck/Substrate | 12 | Planned |
+| [TASK-1012](tasks/TASK-1012-live-runner-introspection-snapshot-production.md) | Produce checked/lowered runner snapshots from ordinary CLI source files and suite roots | CLI/Typeck/Substrate | 12 | Complete |
 | [TASK-1013](tasks/TASK-1013-contract-target-and-postcondition-synthesized-execution.md) | Execute synthesized contract targets and postcondition oracles end to end for supported metadata | Runner/Runtime | 14 | Planned |
 | [TASK-1014](tasks/TASK-1014-policy-domain-and-terminal-oracle-execution.md) | Execute policy domains and terminal oracles beyond the narrow metadata equality slice | Runner/Policy | 12 | Planned |
 | [TASK-1015](tasks/TASK-1015-runtime-backed-obligation-lifecycle-execution.md) | Execute obligation lifecycle transitions through lowered/runtime-backed semantics | Runner/Runtime | 14 | Planned |

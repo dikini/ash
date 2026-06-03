@@ -257,6 +257,206 @@ fn test_include_synthesized_policies_only() {
 }
 
 #[test]
+fn only_synthesized_contract_source_uses_live_checked_snapshot_when_available() {
+    let dir = make_test_dir();
+    write_authored_test(
+        &dir,
+        "unit",
+        "checked_contract_target",
+        "workflow checked_contract_target requires: true { ret 0 }\n",
+    );
+
+    let assert = ash()
+        .arg("test")
+        .arg(dir.path())
+        .arg("--only-synthesized")
+        .arg("contracts")
+        .arg("--format")
+        .arg("json")
+        .assert();
+    let output = parse_json_output(&assert.success());
+    let tests = output["tests"].as_array().unwrap();
+
+    assert!(
+        tests
+            .iter()
+            .any(|test| test["source"] == "synthesized:contract"),
+        "contract synthesis should emit a selected structured row: {output:#}"
+    );
+    assert!(
+        tests.iter().all(|test| test["outcome"] == "skip"),
+        "TASK-1012 must not invent executable contract passes from ordinary source: {output:#}"
+    );
+    assert!(
+        tests.iter().any(|test| {
+            let repro = &test["repro_artifact"];
+            repro["check_summary_id"]
+                .as_str()
+                .is_some_and(|id| id.starts_with("checked:"))
+                && repro["check_summary_id"] != "raw-source-fallback:no-lowered-summary"
+                && repro["source_artifact_id"]
+                    .as_str()
+                    .is_some_and(|id| id.starts_with("source-file:"))
+                && repro["oracle_snapshot"]["snapshot_source"] == "live_checked_snapshot"
+        }),
+        "ordinary CLI source should use live checked snapshot evidence instead of raw-source fallback: {output:#}"
+    );
+}
+
+#[test]
+fn only_synthesized_function_contract_module_uses_live_checked_snapshot() {
+    let dir = make_test_dir();
+    write_authored_test(
+        &dir,
+        "unit",
+        "checked_fn_contract_target",
+        "fn bounded(n: Int) -> Int requires: n >= 0 { n }\n",
+    );
+
+    let assert = ash()
+        .arg("test")
+        .arg(dir.path())
+        .arg("--only-synthesized")
+        .arg("contracts")
+        .arg("--format")
+        .arg("json")
+        .assert();
+    let output = parse_json_output(&assert.success());
+    let tests = output["tests"].as_array().unwrap();
+
+    assert!(
+        tests
+            .iter()
+            .any(|test| test["source"] == "synthesized:contract"),
+        "function contract source should emit a selected synthesized row: {output:#}"
+    );
+    assert!(
+        tests.iter().all(|test| test["outcome"] == "skip"),
+        "TASK-1012 must defer function contract execution until TASK-1013: {output:#}"
+    );
+    assert!(
+        tests.iter().any(|test| {
+            let repro = &test["repro_artifact"];
+            test["name"]
+                .as_str()
+                .is_some_and(|name| name.contains("/bounded/"))
+                && repro["check_summary_id"]
+                    .as_str()
+                    .is_some_and(|id| id.starts_with("checked:"))
+                && repro["source_artifact_id"]
+                    .as_str()
+                    .is_some_and(|id| id.starts_with("source-file:"))
+                && repro["oracle_snapshot"]["snapshot_source"] == "live_checked_snapshot"
+        }),
+        "ordinary function contract modules should use parsed checked snapshot evidence instead of raw-source fallback: {output:#}"
+    );
+}
+
+#[test]
+fn only_synthesized_unsupported_live_snapshot_metadata_defers_without_pass_rows() {
+    let dir = make_test_dir();
+    write_authored_test(
+        &dir,
+        "unit",
+        "unsupported_contract_target",
+        "workflow unsupported_contract_target { ret 0 }\n",
+    );
+
+    let assert = ash()
+        .arg("test")
+        .arg(dir.path())
+        .arg("--only-synthesized")
+        .arg("contracts")
+        .arg("--format")
+        .arg("json")
+        .assert();
+    let output = parse_json_output(&assert.success());
+    let tests = output["tests"].as_array().unwrap();
+
+    assert!(
+        tests
+            .iter()
+            .any(|test| test["source"] == "synthesized:contract"),
+        "contract synthesis should emit explicit unsupported metadata rows: {output:#}"
+    );
+    assert!(
+        tests.iter().all(|test| test["outcome"] == "skip"),
+        "unsupported live metadata must defer instead of passing: {output:#}"
+    );
+    assert!(
+        tests.iter().any(|test| {
+            test["message"]
+                .as_str()
+                .is_some_and(|message| message.contains("deferred"))
+                && test["repro_artifact"]["oracle_snapshot"]["snapshot_source"]
+                    == "live_checked_snapshot"
+        }),
+        "unsupported structured rows should carry explicit deferred live-snapshot evidence: {output:#}"
+    );
+}
+
+#[test]
+fn raw_fallback_is_applied_per_file_in_mixed_live_snapshot_suite() {
+    let dir = make_test_dir();
+    write_authored_test(
+        &dir,
+        "unit",
+        "checked_fn_contract_target",
+        "fn bounded(n: Int) -> Int requires: n >= 0 { n }\n",
+    );
+    write_authored_test(
+        &dir,
+        "unit",
+        "raw_fallback_only",
+        "workflow raw_fallback_only requires: true { !!! }\n",
+    );
+
+    let assert = ash()
+        .arg("test")
+        .arg(dir.path())
+        .arg("--only-synthesized")
+        .arg("contracts")
+        .arg("--format")
+        .arg("json")
+        .assert();
+    let output = parse_json_output(&assert.success());
+    let tests = output["tests"].as_array().unwrap();
+
+    assert!(
+        tests.iter().any(|test| {
+            let repro = &test["repro_artifact"];
+            test["source"] == "synthesized:contract"
+                && test["outcome"] == "skip"
+                && repro["source_artifact_id"]
+                    .as_str()
+                    .is_some_and(|id| id.contains("checked_fn_contract_target.ash"))
+                && repro["check_summary_id"]
+                    .as_str()
+                    .is_some_and(|id| id.starts_with("checked:"))
+                && repro["oracle_snapshot"]["snapshot_source"] == "live_checked_snapshot"
+        }),
+        "mixed suite should retain the live checked snapshot row for the good file: {output:#}"
+    );
+    assert!(
+        tests.iter().any(|test| {
+            let repro = &test["repro_artifact"];
+            test["source"] == "synthesized:contract"
+                && test["outcome"] == "skip"
+                && repro["source_artifact_id"]
+                    .as_str()
+                    .is_some_and(|id| id.contains("raw_fallback_only.ash"))
+                && repro["check_summary_id"] == "raw-source-fallback:no-lowered-summary"
+                && repro["oracle_snapshot"]["fallback"] == "raw_source_pattern"
+        }),
+        "mixed suite should use raw-source fallback for only the file whose live snapshot failed: {output:#}"
+    );
+    assert!(
+        tests.iter().all(|test| test["outcome"] != "pass"),
+        "raw-source fallback rows must stay deferred and never pass: {output:#}"
+    );
+}
+
+#[test]
 fn test_include_synthesized_obligations_only() {
     let dir = make_test_dir();
     ash()

@@ -9,8 +9,10 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
+use ash_parser::surface::{Definition, ModuleFile};
 use serde::Serialize;
 use serde_json::{Value, json};
+use sha2::{Digest, Sha256};
 
 use crate::test_runner::types::{Outcome, ReproArtifact, TestKind, TestResult, TestSource};
 
@@ -352,6 +354,240 @@ pub struct IntrospectionUnsupportedReason {
     pub reason: String,
 }
 
+/// Build a runner introspection snapshot from an ordinary CLI source file.
+///
+/// This is the live TASK-1012 source path: the file must parse and type check
+/// before the runner emits checked snapshot-backed synthesized rows. Until
+/// richer lowered metadata is exposed, recognized or missing synthesized
+/// metadata is recorded as explicit unsupported rows.
+///
+/// # Errors
+///
+/// Returns a diagnostic string when the source cannot be read, parsed, or
+/// checked. Callers may use raw-source fallback discovery only in that case.
+pub fn build_runner_introspection_snapshot(
+    path: &Path,
+    engine: &ash_engine::Engine,
+) -> Result<RunnerIntrospectionSnapshot, String> {
+    let source = std::fs::read_to_string(path)
+        .map_err(|error| format!("failed to read source for live snapshot: {error}"))?;
+    let module =
+        ash_parser::parse_surface_file_with_path(&source, Some(path)).map_err(|errors| {
+            let diagnostics = errors
+                .iter()
+                .map(ToString::to_string)
+                .collect::<Vec<_>>()
+                .join("; ");
+            format!("parse error during live snapshot module production: {diagnostics}")
+        })?;
+    let check_source = checked_source_kind(path, &source, engine)?;
+
+    Ok(snapshot_from_checked_module(
+        path,
+        &source,
+        &module,
+        check_source,
+    ))
+}
+
+fn checked_source_kind(
+    path: &Path,
+    source: &str,
+    engine: &ash_engine::Engine,
+) -> Result<&'static str, String> {
+    match engine.parse_file_source(path, source) {
+        Ok(mut workflow) => {
+            engine
+                .check(&mut workflow)
+                .map_err(|error| format!("type error during live snapshot production: {error}"))?;
+            Ok("workflow")
+        }
+        Err(workflow_error) => {
+            let module_check = engine.check_module_file(path).map_err(|module_error| {
+                format!(
+                    "parse/check error during live snapshot production: workflow parse failed ({workflow_error}); module check failed ({module_error})"
+                )
+            })?;
+            if module_check.errors.is_empty() {
+                Ok("module-file")
+            } else {
+                Err(format!(
+                    "module check error during live snapshot production: {}",
+                    module_check.errors.join("; ")
+                ))
+            }
+        }
+    }
+}
+
+fn snapshot_from_checked_module(
+    path: &Path,
+    source: &str,
+    module: &ModuleFile,
+    check_source: &str,
+) -> RunnerIntrospectionSnapshot {
+    let source_hash = stable_sha256(&["source", source]);
+    let module_identity = module_identity_for_path(path);
+    let source_artifact_id = format!("source-file:{}#{source_hash}", path.display());
+    let check_summary_id = stable_sha256(&[
+        "checked-runner-introspection",
+        RUNNER_SYNTHESIS_SCHEMA_VERSION,
+        &module_identity,
+        &source_hash,
+        check_source,
+    ]);
+
+    RunnerIntrospectionSnapshot {
+        schema_version: RUNNER_SYNTHESIS_SCHEMA_VERSION.to_string(),
+        module_identity,
+        source_artifact_id,
+        check_summary_id: format!("checked:{check_summary_id}"),
+        unsupported: unsupported_rows_from_checked_module(path, module),
+        ..RunnerIntrospectionSnapshot::default()
+    }
+}
+
+fn module_identity_for_path(path: &Path) -> String {
+    path.file_stem().and_then(|stem| stem.to_str()).map_or_else(
+        || path.display().to_string(),
+        |stem| format!("module:{stem}"),
+    )
+}
+
+fn unsupported_rows_from_checked_module(
+    path: &Path,
+    module: &ModuleFile,
+) -> Vec<IntrospectionUnsupportedReason> {
+    let mut rows = Vec::new();
+
+    let contract_targets = contract_targets_from_module(path, module);
+    if contract_targets.is_empty() {
+        rows.push(IntrospectionUnsupportedReason {
+            source_kind: "contract".to_string(),
+            target_name: path_stem(path),
+            reason: "live checked snapshot has no lowered executable contract metadata exposed"
+                .to_string(),
+        });
+    } else {
+        rows.extend(
+            contract_targets
+                .into_iter()
+                .map(|target_name| IntrospectionUnsupportedReason {
+                    source_kind: "contract".to_string(),
+                    target_name,
+                    reason: "live checked snapshot identified contract-like source metadata, but executable lowered contract metadata is not exposed for TASK-1012".to_string(),
+                }),
+        );
+    }
+
+    let policy_targets = policy_targets_from_module(module);
+    if policy_targets.is_empty() {
+        rows.push(IntrospectionUnsupportedReason {
+            source_kind: "policy".to_string(),
+            target_name: path_stem(path),
+            reason: "live checked snapshot has no lowered executable policy metadata exposed"
+                .to_string(),
+        });
+    } else {
+        rows.extend(
+            policy_targets
+                .into_iter()
+                .map(|target_name| IntrospectionUnsupportedReason {
+                    source_kind: "policy".to_string(),
+                    target_name,
+                    reason: "live checked snapshot identified policy-like source metadata, but executable lowered policy metadata is not exposed for TASK-1012".to_string(),
+                }),
+        );
+    }
+
+    let obligation_targets = obligation_targets_from_module(module);
+    if obligation_targets.is_empty() {
+        rows.push(IntrospectionUnsupportedReason {
+            source_kind: "obligation".to_string(),
+            target_name: path_stem(path),
+            reason: "live checked snapshot has no lowered executable obligation lifecycle metadata exposed"
+                .to_string(),
+        });
+    } else {
+        rows.extend(
+            obligation_targets
+                .into_iter()
+                .map(|target_name| IntrospectionUnsupportedReason {
+                    source_kind: "obligation".to_string(),
+                    target_name,
+                    reason: "live checked snapshot identified obligation-like source metadata, but executable lowered lifecycle metadata is not exposed for TASK-1012".to_string(),
+                }),
+        );
+    }
+
+    rows
+}
+
+fn contract_targets_from_module(path: &Path, module: &ModuleFile) -> Vec<String> {
+    let mut targets = Vec::new();
+
+    if let Some(workflow) = &module.workflow
+        && contract_has_rows(&workflow.contract)
+    {
+        targets.push(workflow.name.to_string());
+    }
+
+    for definition in &module.definitions {
+        if let Definition::Function(function) = definition
+            && contract_has_rows(&function.contract)
+        {
+            targets.push(function.name.to_string());
+        }
+    }
+
+    if targets.is_empty() && module.workflow.is_some() {
+        targets.push(path_stem(path));
+    }
+    targets.sort();
+    targets.dedup();
+    targets
+}
+
+fn contract_has_rows(contract: &Option<ash_parser::surface::Contract>) -> bool {
+    contract
+        .as_ref()
+        .is_some_and(|contract| !contract.requires.is_empty() || !contract.ensures.is_empty())
+}
+
+fn policy_targets_from_module(module: &ModuleFile) -> Vec<String> {
+    let mut targets = module
+        .definitions
+        .iter()
+        .filter_map(|definition| match definition {
+            Definition::Policy(policy) => Some(policy.name.to_string()),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    targets.sort();
+    targets.dedup();
+    targets
+}
+
+fn obligation_targets_from_module(_module: &ModuleFile) -> Vec<String> {
+    Vec::new()
+}
+
+fn path_stem(path: &Path) -> String {
+    path.file_stem()
+        .and_then(|stem| stem.to_str())
+        .unwrap_or("unknown")
+        .to_string()
+}
+
+fn stable_sha256(parts: &[&str]) -> String {
+    let mut hasher = Sha256::new();
+    for part in parts {
+        hasher.update(part.len().to_le_bytes());
+        hasher.update(part.as_bytes());
+    }
+    format!("sha256:{:x}", hasher.finalize())
+}
+
 /// Executable synthesized case model.
 #[derive(Debug, Clone, Serialize)]
 pub struct SynthesizedCase {
@@ -670,6 +906,7 @@ pub fn synthesize_from_snapshot_with_limits(
                     "source": unsupported.source_kind,
                     "target": unsupported.target_name,
                     "reason": unsupported.reason,
+                    "snapshot_source": snapshot_source_label(snapshot),
                 }),
                 None,
             ),
@@ -1655,6 +1892,14 @@ fn source_from_label(source_kind: &str) -> TestSource {
         "policy" | "policies" => TestSource::Policy,
         "obligation" | "obligations" => TestSource::Obligation,
         _ => TestSource::Authored,
+    }
+}
+
+fn snapshot_source_label(snapshot: &RunnerIntrospectionSnapshot) -> &'static str {
+    if snapshot.check_summary_id.starts_with("checked:") {
+        "live_checked_snapshot"
+    } else {
+        "structured_snapshot"
     }
 }
 

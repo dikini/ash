@@ -1,6 +1,6 @@
 # TASK-1012: Live Runner Introspection Snapshot Production
 
-## Status: Planned
+## Status: Complete
 
 ## Description
 
@@ -36,9 +36,37 @@ Use direct implementation or sub-agents according to the active controller instr
 - `CARGO_BUILD_RUSTC_WRAPPER= cargo check --workspace`
 - `git diff --check`
 
+## Evidence
+
+### RED
+
+- `CARGO_BUILD_RUSTC_WRAPPER= cargo test -p ash-cli --test test_command live_checked_snapshot -- --nocapture`
+  - Failed before implementation on `only_synthesized_function_contract_module_uses_live_checked_snapshot`.
+  - The CLI emitted `check_summary_id: "raw-source-fallback:no-lowered-summary"` and `oracle_snapshot.fallback: "raw_source_pattern"` for `fn bounded(n: Int) -> Int requires: n >= 0 { n }`.
+- `CARGO_BUILD_RUSTC_WRAPPER= cargo test -p ash-cli --test test_command raw_fallback_is_applied_per_file_in_mixed_live_snapshot_suite -- --nocapture`
+  - Failed before review-blocker remediation on `raw_fallback_is_applied_per_file_in_mixed_live_snapshot_suite`.
+  - The mixed suite emitted only the live checked snapshot row for `checked_fn_contract_target.ash`; the raw-source fallback row for `raw_fallback_only.ash` was missing.
+
+### GREEN
+
+- `CARGO_BUILD_RUSTC_WRAPPER= cargo test -p ash-cli --test test_command live_checked_snapshot -- --nocapture`
+  - Passed: 2 passed, 0 failed.
+- `CARGO_BUILD_RUSTC_WRAPPER= cargo test -p ash-cli --test test_command raw_fallback -- --nocapture`
+  - Passed: 1 passed, 0 failed.
+- `CARGO_BUILD_RUSTC_WRAPPER= cargo test -p ash-cli synthesized -- --nocapture`
+  - Passed: synthesized-focused `ash-cli` tests passed, including 29 library tests and 10 `test_command` synthesized tests.
+- `CARGO_BUILD_RUSTC_WRAPPER= cargo test -p ash-cli --test test_command -- --nocapture`
+  - Passed: 26 passed, 0 failed.
+- `cargo fmt --check`
+  - Passed.
+- `CARGO_BUILD_RUSTC_WRAPPER= cargo check --workspace`
+  - Passed.
+- `git diff --check`
+  - Passed.
+
 ## Completion Checklist
 
-- [ ] CLI source files produce structured snapshots.
-- [ ] Unsupported rows defer explicitly.
-- [ ] Raw-source pass rows remain impossible.
-- [ ] RED/GREEN evidence recorded.
+- [x] CLI source files produce structured snapshots.
+- [x] Unsupported rows defer explicitly.
+- [x] Raw-source pass rows remain impossible.
+- [x] RED/GREEN evidence recorded.

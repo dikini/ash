@@ -96,7 +96,7 @@ for lowering. Binding-to-core meaning belongs to the lowering contract in TASK-1
 | `RuntimeError(code, msg)` in pattern position | `surface::Pattern::Variant` or equivalent parser payload node for a tuple variant | Tuple-variant patterns preserve positional payload order. |
 | `None` in pattern position | `surface::Pattern::Variant` or equivalent parser payload node for a unit variant | Unit variants remain variants, not plain identifiers. |
 | `match expr { ... }` | `surface::Expr::Match { scrutinee, arms, .. }` | Exhaustiveness is not decided by parsing. |
-| `if let pat = expr then a else b` | `surface::Expr::IfLet { pattern, expr, then_branch, else_branch, .. }` | Sugar is preserved through parsing. |
+| `if let pat = expr then a else b` | `surface::Expr::IfLet { pattern, expr, then_branch, else_branch, .. }` | The `else` branch is required. Sugar is preserved through parsing. |
 
 ## Legal Parser Rejections
 
@@ -113,6 +113,7 @@ The parser must reject malformed syntax, including:
 - malformed ADT declarations: missing `=`, malformed variant field lists, malformed generic
   parameter syntax, or missing trailing `;`
 - malformed `match` or `if let` delimiters and arm separators
+- `if let pat = expr then body` without an `else` branch
 
 Parser rejection is about syntax and unambiguous syntactic category selection. It is not about
 semantic validity.
@@ -135,7 +136,7 @@ The following are not parser failures:
 - lowering whether a parsed `receive` form can map into canonical core IR
 - type-checking whether a `decide` expression has the required subject type
 - type-checking whether a `receive` guard has type `Bool`
-- type-checking constructor resolution, field-type compatibility, pattern exhaustiveness, or
-  `if let` branch compatibility
+- type-checking constructor resolution, field-type compatibility, pattern irrefutability,
+  pattern exhaustiveness, or `if let` branch compatibility
 - runtime or verification behavior for mailbox selection, policy evaluation, REPL display, or
   variant execution

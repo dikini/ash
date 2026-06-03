@@ -7,20 +7,24 @@ authority: canonical-adjacent
 status: current
 stability: alpha
 owner: language
-last_verified: 2026-05-23
+last_verified: 2026-06-02
 verified_against:
-  git_commit: 414549f
+  git_commit: 2b35ab6
   specs:
     - docs/spec/SPEC-027-PURE-FUNCTIONS.md
     - docs/spec/SPEC-031-FIRST-CLASS-FUNCTIONS.md
     - docs/spec/SPEC-071-REFERENCE-CORPUS-METADATA-AND-MAINTENANCE.md
+    - docs/spec/SPEC-076-EXPLICIT-REFUTABLE-MATCHING-AND-EXHAUSTIVENESS.md
   tasks:
     - docs/plan/tasks/TASK-954-functions-reference-chapter.md
+    - docs/plan/tasks/TASK-1008-runtime-defensive-pattern-error-cleanup-closeout.md
   code:
     - crates/ash-parser/src/parse_module.rs
     - crates/ash-parser/src/parse_expr.rs
+    - crates/ash-typeck/src/check_expr.rs
   tests:
-    []
+    - crates/ash-typeck/tests/task_1003_let_irrefutability.rs
+    - crates/ash-typeck/tests/task_1005_match_exhaustiveness.rs
   examples:
     []
 related:
@@ -35,6 +39,7 @@ related:
 refresh_trigger:
   - SPEC-027 changes
   - SPEC-031 changes
+  - SPEC-076 changes
   - function parser or typechecker changes
 ---
 # Function Bodies and Expressions
@@ -67,16 +72,16 @@ pub fn area(width: Int, height: Int) -> Int {
 }
 ```
 
-`let` may use patterns when the expression being bound has a matching shape.
+`let` may use patterns only when the type checker can prove the pattern is irrefutable for the value being bound.
 
 ```ash
-pub fn unwrap_ok(res: Result<Int, String>) -> Int {
-    let Ok { value: n } = res;
+pub fn second(pair: (String, Int)) -> Int {
+    let (_, n) = pair;
     n
 }
 ```
 
-Pattern-binding behavior follows the same pattern rules described in the pattern page; use exhaustive `match` when a value can have multiple constructors.
+Pattern-binding behavior follows the same pattern rules described in the pattern page. Use exhaustive `match` or explicit `if let ... else` when a value can have multiple constructors.
 
 ## Blocks
 

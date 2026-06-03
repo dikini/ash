@@ -84,7 +84,7 @@ workflow-level core form.
 | parser constructor-shaped expression node | core constructor expression preserving constructor name plus lowered payload metadata | Constructor resolution happens against the canonical enum metadata; tuple payload positions may be elaborated internally. |
 | parser variant-pattern node | core variant pattern preserving constructor name plus lowered payload patterns | No synthetic `__variant` tags are introduced at the contract level, and tuple payload order must be preserved. |
 | `surface::Expr::Match { scrutinee, arms, .. }` | core `Expr::Match` with lowered scrutinee, patterns, and bodies | Arm order is preserved. |
-| `surface::Expr::IfLet { pattern, expr, then_branch, else_branch, .. }` | core `Expr::Match` with the pattern lowered as the first arm and the `else_branch` lowered as the wildcard fallback arm | `if let` has no separate canonical runtime form. |
+| `surface::Expr::IfLet { pattern, expr, then_branch, else_branch, .. }` | core `Expr::IfLet` with lowered pattern, scrutinee, then branch, and else branch | The parser/type contract requires an explicit `else` branch; the form is semantically total over `P | not P`. |
 
 ## Lowering-Time Rejections
 
@@ -112,12 +112,12 @@ Lowering must preserve:
 - control-vs-stream receive selection
 - ADT constructor names and source payload contracts (named fields for record variants, positional order for tuple variants)
 - `match` arm order and `if let` branch meaning
+- the explicit complement branch of `if let`; lowering must not invent a hidden non-match path
 
 Lowering may normalize:
 
 - policy combinator trees into one `PolicyGraph`
 - source type declarations into internal metadata derived from canonical `TypeDef`
-- `if let` into canonical `match` with a wildcard fallback arm
 
 ## Lowering vs Later-Phase Boundary
 
@@ -137,6 +137,7 @@ The following are not lowering failures:
 - ADT constructor-to-variant and pattern-to-enum relation failures; those are enforced by the type
   layer against the resolved enum metadata
 - exhaustiveness checking for `match`
+- irrefutability checking for binder patterns and the branch/type rules for `if let`
 - source scheduling modifier behavior and mailbox probe order; those are runtime concerns defined
   by the receive contract, not lowering targets
 - runtime evaluation of `CorePolicy`

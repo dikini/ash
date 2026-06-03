@@ -180,7 +180,12 @@ The table below freezes the minimum canonical v1 case families and initial case 
 | `spawn-control-kill-tombstone` | runtime-observable | deterministic | control tombstone remains distinct from child-owned completion payload |
 | `completion-observation-wait` | small-step, runtime-observable | allowed_set | completion observation wait remains blocked/helper-owned |
 | `runtime-boundary-missing-provider` | runtime-observable | deterministic | representative runtime failure path |
-| `pattern-failure-owned-rejection` | big-step | deterministic | pattern/control failure keeps the correct owning rejection boundary |
+| `pattern-failure-owned-rejection` | big-step | deterministic | unchecked-IR defensive pattern/control failure keeps the correct owning rejection boundary |
+
+Checked source examples that contain refutable binder patterns or non-exhaustive total eliminators
+belong in source/type-checking conformance suites, not in this canonical IR-first corpus. The IR
+case above exists to preserve the runtime defensive boundary for host-created or unchecked IR terms;
+it must not be used to justify source-level `let` pattern failures reaching runtime.
 
 This is the minimum corpus, not the maximum corpus. Later tasks may add more cases without changing
 this document's authority split.

@@ -40,6 +40,7 @@ Lean should treat the following documents as the canonical semantic and observab
 - [SPEC-021: Runtime Observable Behavior](../spec/SPEC-021-RUNTIME-OBSERVABLE-BEHAVIOR.md)
 - [SPEC-022: Workflow Typing](../spec/SPEC-022-WORKFLOW-TYPING.md)
 - [SPEC-025: Small-Step Operational Semantics](../spec/SPEC-025-SMALL-STEP-OPERATIONAL-SEMANTICS.md)
+- [SPEC-076: Explicit Refutable Matching and Exhaustiveness](../spec/SPEC-076-EXPLICIT-REFUTABLE-MATCHING-AND-EXHAUSTIVENESS.md)
 - [Semantic Execution Record Contract](semantic-execution-record-contract.md)
 - [Canonical IR Semantics Corpus](canonical-ir-semantics-corpus.md)
 - [Canonical Semantics Result Format](canonical-semantics-result-format.md)
@@ -66,9 +67,11 @@ Within that corpus, the authority roles are split explicitly:
   shape for those canonical cases.
 - [SPEC-021: Runtime Observable Behavior](../spec/SPEC-021-RUNTIME-OBSERVABLE-BEHAVIOR.md) is the
   normative owner of user-visible and tooling-visible projections of runtime behavior.
-- [SPEC-003: Type System](../spec/SPEC-003-TYPE-SYSTEM.md) and
-  [SPEC-022: Workflow Typing](../spec/SPEC-022-WORKFLOW-TYPING.md) own the typing judgments and
-  typed-fragment assumptions needed by later preservation or progress-style theorems.
+- [SPEC-003: Type System](../spec/SPEC-003-TYPE-SYSTEM.md),
+  [SPEC-022: Workflow Typing](../spec/SPEC-022-WORKFLOW-TYPING.md), and
+  [SPEC-076: Explicit Refutable Matching and Exhaustiveness](../spec/SPEC-076-EXPLICIT-REFUTABLE-MATCHING-AND-EXHAUSTIVENESS.md)
+  own the typing judgments, source-level pattern totality rules, and typed-fragment assumptions
+  needed by later preservation or progress-style theorems.
 - [SPEC-001: Intermediate Representation](../spec/SPEC-001-IR.md) and
   [SPEC-020: Algebraic Data Types](../spec/SPEC-020-ADT-TYPES.md) own the canonical workflow,
   expression, value, constructor, and pattern forms referenced by both the big-step and small-step

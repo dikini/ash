@@ -57,6 +57,7 @@ The type layer must establish, directly or indirectly, the following runtime-rel
 | `receive` guard well-typed as `Bool` | runtime must not execute untyped guard logic |
 | ADT constructor and variant-pattern resolution against canonical enum metadata | runtime pattern matching and constructor evaluation need one shared enum model |
 | `match` exhaustiveness success for required exhaustive sites | runtime must not rely on impossible fallback semantics for exhaustive ADT matches |
+| binder-pattern irrefutability for every source binder that continues after binding | runtime must not be the normal owner of source `let` or workflow-binder non-match paths |
 
 Current coarse workflow-form classification summary consumed across the type/runtime boundary:
 
@@ -106,6 +107,7 @@ The workflow runtime consumes the following already-typed assumptions:
 - constructor expressions have payloads compatible with the resolved constructor
 - variant patterns refer to real constructors on the resolved enum type
 - exhaustive `match` sites do not need synthetic runtime fallback behavior
+- source binder patterns have already been proven irrefutable for their scrutinee types
 
 ## Rejected States at the Type-to-Runtime Boundary
 
@@ -116,7 +118,10 @@ The following states must be rejected before runtime execution:
 - non-boolean `receive` guards
 - unknown ADT constructors or variant patterns
 - constructor payload mismatches against resolved enum metadata
+- refutable patterns in source binder positions, including ordinary variable-length list patterns
+  such as `let [x, y] = xs`
 - non-exhaustive ADT `match` where the contract requires exhaustiveness
+- `with_error` handler sets that are non-exhaustive over a statically known closed failure payload
 - workflow effect requirements above the declared or verified maximum permitted effect
 
 These are boundary failures: runtime must not be asked to “figure them out” from raw surface
@@ -134,6 +139,10 @@ The following remain runtime or verification-time concerns, not type-checking fa
 
 Type checking proves or constrains shapes; runtime enforces availability, environment, and actual
 execution outcomes.
+
+Runtime pattern-failure variants remain defensive boundaries for unchecked IR, host-created values,
+or interpreter-internal mismatch cases. Checked Ash source should reach them only if a previous
+static boundary failed to run or a later phase explicitly broadens the source contract.
 
 Receive timeout expiry and fallthrough remain runtime control flow, not boundary failures; the
 remaining timeout budget is consumed by the whole receive operation, not reset per retry.
@@ -169,8 +178,17 @@ The type-to-runtime boundary for ADTs is:
 4. exhaustiveness reasoning is done over constructors of the resolved enum type, not synthetic
    tags.
 
-`if let` is typed and lowered as the same match construct with a wildcard fallback branch; it does
-not introduce a separate runtime path or separate recoverable-failure semantics.
+Binder positions that continue after binding are statically stricter than ordinary pattern syntax.
+Variable and wildcard patterns are universally irrefutable, record and tuple patterns require known
+matching product shapes with irrefutable nested fields, fixed-length list patterns over ordinary
+variable-length lists are refutable, and variant patterns are irrefutable only for a one-constructor
+closed universe with irrefutable payload patterns. Refutable binder patterns are rejected before
+runtime execution with a type-checking diagnostic.
+
+`if let` is typed and lowered as a distinct core expression form in the current implementation, but
+its source-level totality contract is match-like: the pattern branch covers `P`, and the mandatory
+`else` branch covers `not P`. It does not introduce a separate recoverable-failure runtime path.
+Bindings from the pattern are scoped only to the then branch.
 
 The runtime therefore consumes resolved enum metadata and constructor payload contracts, not ad hoc
 record-tag encodings as a contract surface. If an implementation elaborates tuple payloads into

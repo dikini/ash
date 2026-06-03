@@ -300,10 +300,10 @@ Update this section as tasks complete:
 | 121 | 6 | 6 | ✅ Complete |
 | 122 | 14 | 14 | ✅ Complete |
 | 123 | 13 | 13 | ✅ Complete |
-| 124 | 8 | 1 | 📝 Planned after packet creation |
+| 124 | 8 | 8 | ✅ Complete; SPEC-071 Implemented MVP |
 | 126 | 9 | 9 | ✅ Complete |
-| 127 | 11 | 4 + partial | ⚠️ Partial first slice |
-| 128 | 12 | 12 | ✅ Complete; SPEC-073 Implemented MVP |
+| 127 | 11 | 11 | ⚠️ Historical partial at TASK-974; deferred SPEC-073 rows closed by Phase 128 |
+| 128 | 12 | 12 | ✅ Complete; closes Phase 127 deferred SPEC-073 rows; SPEC-073 Implemented MVP |
 | 129 | 5 | 5 | ✅ Complete; SPEC-074 Accepted/Implemented; TASK-991 follow-up fixed |
 | 130 | 8 | 8 | ✅ Complete; SPEC-075 Implemented MVP |
 | 131 | 9 | 9 | ✅ Complete |

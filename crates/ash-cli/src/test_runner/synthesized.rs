@@ -166,12 +166,81 @@ pub struct RunnerPolicyMetadata {
     pub supported_terminal_outcomes: Vec<PolicyTerminalOutcome>,
     /// Oracle shape.
     pub oracle_shape: Option<PolicyOracleShape>,
+    /// Explicit executable target/oracle metadata for supported policy execution.
+    pub executable_target: Option<PolicyExecutableTarget>,
     /// Required authority summary.
     pub required_authority: Option<String>,
     /// Materialization limits summary.
     pub materialization_limits: Option<String>,
     /// Optional source span display.
     pub source_span: Option<String>,
+}
+
+/// Narrow executable policy target metadata.
+#[derive(Debug, Clone, Serialize, Default, PartialEq)]
+pub struct PolicyExecutableTarget {
+    /// Target kind.
+    pub kind: PolicyExecutableTargetKind,
+    /// Stable lowered policy target reference.
+    pub target_ref: String,
+    /// Explicit authority setup for the policy execution.
+    pub authority_setup: PolicyAuthoritySetup,
+    /// Stable terminal oracle evaluated against finite inputs.
+    pub terminal_oracle: PolicyTerminalOracle,
+}
+
+/// Supported policy executable target kinds.
+#[derive(Debug, Clone, Serialize, Default, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum PolicyExecutableTargetKind {
+    /// Evaluate an explicit finite terminal oracle.
+    TerminalOracle,
+    /// Unsupported policy target kind.
+    #[default]
+    Unsupported,
+}
+
+/// Explicit authority setup for policy execution.
+#[derive(Debug, Clone, Serialize, Default, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum PolicyAuthoritySetup {
+    /// Policy metadata declares no required authority.
+    NoAuthorityRequired,
+    /// Required authority is explicitly present for this finite case.
+    ExplicitAuthority {
+        /// Authority granted for policy execution.
+        authority: String,
+    },
+    /// Required authority setup is missing.
+    #[default]
+    Missing,
+    /// Authority setup exists but is unsupported by this runner slice.
+    Unsupported,
+}
+
+/// Stable terminal oracle evaluated by the policy runner.
+#[derive(Debug, Clone, Serialize, Default, PartialEq)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum PolicyTerminalOracle {
+    /// Exact field-match table over a finite input binding.
+    ExactMatchTable {
+        /// Binding name containing the policy input object.
+        input_binding: String,
+        /// Ordered rows; the first row whose fields match supplies the terminal.
+        rows: Vec<PolicyTerminalOracleRow>,
+    },
+    /// Unsupported policy terminal oracle.
+    #[default]
+    Unsupported,
+}
+
+/// One exact terminal-oracle row.
+#[derive(Debug, Clone, Serialize, PartialEq)]
+pub struct PolicyTerminalOracleRow {
+    /// Required input-object field values.
+    pub when: BTreeMap<String, Value>,
+    /// Terminal outcome produced when `when` matches.
+    pub terminal: PolicyTerminalOutcome,
 }
 
 /// Runner-facing obligation metadata.
@@ -978,6 +1047,10 @@ pub enum SynthesizedOracle {
     PolicyTerminalEquals {
         /// Expected terminal outcome.
         expected: PolicyTerminalOutcome,
+        /// Lowered policy reference used by the target metadata.
+        policy_ref: String,
+        /// Terminal oracle evaluated against finite policy inputs.
+        terminal_oracle: PolicyTerminalOracle,
     },
     /// Obligation lifecycle expectation over explicit finite lifecycle metadata.
     ObligationLifecycle {
@@ -1037,31 +1110,30 @@ pub fn execute_synthesized_case(case: &SynthesizedCase) -> TestResult {
                 )),
             ),
         },
-        SynthesizedOracle::PolicyTerminalEquals { expected } => {
-            match case
-                .inputs
-                .bindings
-                .get("policy_input")
-                .and_then(policy_terminal_from_value)
-            {
+        SynthesizedOracle::PolicyTerminalEquals {
+            expected,
+            policy_ref,
+            terminal_oracle,
+        } => {
+            match evaluate_policy_terminal_oracle(terminal_oracle, &case.inputs.bindings) {
                 Some(actual) if actual == *expected => (
                     Outcome::Pass,
                     Some(format!(
-                        "executed synthesized policy terminal oracle: {:?}",
-                        expected
+                        "executed synthesized policy terminal oracle {policy_ref}: {:?}",
+                        expected,
                     )),
                 ),
                 Some(actual) => (
                     Outcome::Fail,
                     Some(format!(
-                        "synthesized policy oracle failed: terminal {:?}, expected {:?}",
-                        actual, expected
+                        "synthesized policy oracle {policy_ref} failed: terminal {:?}, expected {:?}",
+                        actual, expected,
                     )),
                 ),
                 None => (
                     Outcome::Skip,
                     Some(
-                        "deferred: unsupported synthesized policy oracle: missing terminal"
+                        "deferred: unsupported synthesized policy oracle: no terminal matched finite input"
                             .to_string(),
                     ),
                 ),
@@ -1197,11 +1269,12 @@ pub fn synthesize_from_snapshot_with_limits(
     for policy in &snapshot.policies {
         let cases = policy_terminal_cases(path, snapshot, policy);
         if cases.is_empty() {
+            let reason = policy_terminal_deferred_reason(policy);
             results.push(deferred_result(
                 path,
                 TestSource::Policy,
                 format!("synthesized/policy/{}/deferred", policy.policy_name),
-                "deferred: policy metadata lacks exact bounded terminal-equals allow/deny oracle",
+                format!("deferred: {reason}"),
                 repro_artifact(
                     path,
                     snapshot.source_artifact_id.clone(),
@@ -1215,6 +1288,7 @@ pub fn synthesize_from_snapshot_with_limits(
                         "target": policy.policy_name,
                         "terminals": policy.supported_terminal_outcomes,
                         "oracle_shape": policy.oracle_shape,
+                        "reason": reason,
                     }),
                     None,
                 ),
@@ -2204,9 +2278,17 @@ fn policy_terminal_cases(
     policy: &RunnerPolicyMetadata,
 ) -> Vec<SynthesizedCase> {
     if policy.oracle_shape != Some(PolicyOracleShape::TerminalEquals)
-        || policy.lowered_policy_ref.is_none()
         || policy.input_domain.is_empty()
     {
+        return Vec::new();
+    }
+    let Some(policy_ref) = policy.lowered_policy_ref.clone() else {
+        return Vec::new();
+    };
+    let Some(target) = &policy.executable_target else {
+        return Vec::new();
+    };
+    if policy_target_metadata_is_supported(policy, target).is_err() {
         return Vec::new();
     }
 
@@ -2215,20 +2297,13 @@ fn policy_terminal_cases(
         if !policy.supported_terminal_outcomes.contains(&expected) {
             continue;
         }
-        let Some(input) = policy
-            .input_domain
-            .iter()
-            .filter(|descriptor| {
-                descriptor.unsupported_reason.is_none()
-                    && matches!(
-                        descriptor.source,
-                        TypeGeneratorSource::FiniteDomain | TypeGeneratorSource::AuthoredExamples
-                    )
-            })
-            .flat_map(|descriptor| descriptor.exact_values.iter())
-            .find(|value| policy_terminal_from_value(value) == Some(expected.clone()))
-            .cloned()
-        else {
+        let Some((input, actual)) = exact_policy_input_values(policy).find_map(|input| {
+            let mut candidate_bindings = BTreeMap::new();
+            candidate_bindings.insert("policy_input".to_string(), input.clone());
+            let actual =
+                evaluate_policy_terminal_oracle(&target.terminal_oracle, &candidate_bindings)?;
+            (actual == expected).then_some((input.clone(), actual))
+        }) else {
             continue;
         };
 
@@ -2253,8 +2328,19 @@ fn policy_terminal_cases(
             })),
             json!({
                 "kind": "policy_terminal_equals",
-                "policy_ref": policy.lowered_policy_ref,
-                "expected": expected,
+                "policy_ref": policy_ref,
+                "target": {
+                    "kind": target.kind,
+                    "target_ref": target.target_ref,
+                    "authority_setup": target.authority_setup,
+                    "required_authority": policy.required_authority,
+                },
+                "target_execution": {
+                    "substrate": "finite_policy_terminal_oracle",
+                },
+                "expected_terminal": expected,
+                "actual_terminal": actual,
+                "terminal_oracle": target.terminal_oracle,
             }),
             None,
         );
@@ -2273,7 +2359,11 @@ fn policy_terminal_cases(
                 case_index,
                 world_index: None,
             },
-            oracle: SynthesizedOracle::PolicyTerminalEquals { expected },
+            oracle: SynthesizedOracle::PolicyTerminalEquals {
+                expected,
+                policy_ref: policy_ref.clone(),
+                terminal_oracle: target.terminal_oracle.clone(),
+            },
             repro,
         });
     }
@@ -2281,16 +2371,121 @@ fn policy_terminal_cases(
     cases
 }
 
-fn policy_terminal_from_value(value: &Value) -> Option<PolicyTerminalOutcome> {
-    let terminal = value
-        .get("terminal")
-        .and_then(Value::as_str)
-        .or_else(|| value.as_str())?;
-    match terminal {
-        "allow" | "Allow" => Some(PolicyTerminalOutcome::Allow),
-        "deny" | "Deny" => Some(PolicyTerminalOutcome::Deny),
-        _ => None,
+fn exact_policy_input_values(policy: &RunnerPolicyMetadata) -> impl Iterator<Item = &Value> {
+    policy
+        .input_domain
+        .iter()
+        .filter(|descriptor| {
+            descriptor.unsupported_reason.is_none()
+                && matches!(
+                    descriptor.source,
+                    TypeGeneratorSource::FiniteDomain | TypeGeneratorSource::AuthoredExamples
+                )
+        })
+        .flat_map(|descriptor| descriptor.exact_values.iter())
+}
+
+fn policy_target_metadata_is_supported(
+    policy: &RunnerPolicyMetadata,
+    target: &PolicyExecutableTarget,
+) -> Result<(), String> {
+    if !matches!(target.kind, PolicyExecutableTargetKind::TerminalOracle) {
+        return Err("policy target kind is not a supported terminal oracle".to_string());
     }
+    if !matches!(
+        target.terminal_oracle,
+        PolicyTerminalOracle::ExactMatchTable { .. }
+    ) {
+        return Err("policy terminal oracle is not a supported exact-match table".to_string());
+    }
+    let Some(lowered_policy_ref) = policy.lowered_policy_ref.as_deref() else {
+        return Err("policy metadata lacks lowered policy reference".to_string());
+    };
+    if target.target_ref.is_empty() {
+        return Err("policy executable target metadata lacks target_ref".to_string());
+    }
+    if target.target_ref != lowered_policy_ref {
+        return Err(format!(
+            "policy executable target_ref {:?} does not match lowered policy ref {:?}",
+            target.target_ref, lowered_policy_ref
+        ));
+    }
+
+    match (&policy.required_authority, &target.authority_setup) {
+        (Some(required), PolicyAuthoritySetup::ExplicitAuthority { authority })
+            if authority == required =>
+        {
+            Ok(())
+        }
+        (Some(required), PolicyAuthoritySetup::ExplicitAuthority { authority }) => Err(format!(
+            "policy required authority {required:?} does not match explicit authority setup {authority:?}"
+        )),
+        (Some(_), PolicyAuthoritySetup::NoAuthorityRequired | PolicyAuthoritySetup::Missing) => {
+            Err("policy required authority lacks explicit supported authority setup".to_string())
+        }
+        (Some(_), PolicyAuthoritySetup::Unsupported) => {
+            Err("policy required authority setup is unsupported".to_string())
+        }
+        (None, PolicyAuthoritySetup::NoAuthorityRequired) => Ok(()),
+        (None, PolicyAuthoritySetup::ExplicitAuthority { .. }) => Ok(()),
+        (None, PolicyAuthoritySetup::Missing) => {
+            Err("policy authority setup metadata is missing".to_string())
+        }
+        (None, PolicyAuthoritySetup::Unsupported) => {
+            Err("policy authority setup metadata is unsupported".to_string())
+        }
+    }
+}
+
+fn policy_terminal_deferred_reason(policy: &RunnerPolicyMetadata) -> String {
+    if policy.oracle_shape != Some(PolicyOracleShape::TerminalEquals) {
+        return "policy metadata lacks supported terminal-equals oracle shape".to_string();
+    }
+    if policy.lowered_policy_ref.is_none() {
+        return "policy metadata lacks lowered policy reference".to_string();
+    }
+    if policy.input_domain.is_empty() {
+        return "policy metadata lacks exact bounded input domain".to_string();
+    }
+    let Some(target) = &policy.executable_target else {
+        return "policy metadata lacks executable target/oracle metadata".to_string();
+    };
+    if let Err(reason) = policy_target_metadata_is_supported(policy, target) {
+        return reason;
+    }
+    if !policy.supported_terminal_outcomes.iter().any(|terminal| {
+        matches!(
+            terminal,
+            PolicyTerminalOutcome::Allow | PolicyTerminalOutcome::Deny
+        )
+    }) {
+        return "policy metadata lacks supported allow/deny terminal outcomes".to_string();
+    }
+    "policy metadata lacks finite inputs that evaluate to supported allow/deny terminals"
+        .to_string()
+}
+
+fn evaluate_policy_terminal_oracle(
+    terminal_oracle: &PolicyTerminalOracle,
+    bindings: &BTreeMap<String, Value>,
+) -> Option<PolicyTerminalOutcome> {
+    let PolicyTerminalOracle::ExactMatchTable {
+        input_binding,
+        rows,
+    } = terminal_oracle
+    else {
+        return None;
+    };
+    let input = bindings.get(input_binding)?;
+    rows.iter()
+        .find(|row| policy_terminal_oracle_row_matches(input, row))
+        .map(|row| row.terminal.clone())
+}
+
+fn policy_terminal_oracle_row_matches(input: &Value, row: &PolicyTerminalOracleRow) -> bool {
+    row.when
+        .iter()
+        .all(|(field, expected)| input.get(field) == Some(expected))
 }
 
 fn obligation_lifecycle_cases(
@@ -3636,8 +3831,8 @@ workflow test_workflow
                     target_type: "Action".to_string(),
                     source: TypeGeneratorSource::FiniteDomain,
                     exact_values: vec![
-                        json!({ "terminal": "allow" }),
-                        json!({ "terminal": "deny" }),
+                        json!({ "decision": "allow" }),
+                        json!({ "decision": "deny" }),
                     ],
                     ..TypeGeneratorDescriptor::default()
                 }],
@@ -3647,6 +3842,24 @@ workflow test_workflow
                     PolicyTerminalOutcome::Deny,
                 ],
                 oracle_shape: Some(PolicyOracleShape::TerminalEquals),
+                executable_target: Some(PolicyExecutableTarget {
+                    kind: PolicyExecutableTargetKind::TerminalOracle,
+                    target_ref: "policy:review:terminal".to_string(),
+                    authority_setup: PolicyAuthoritySetup::NoAuthorityRequired,
+                    terminal_oracle: PolicyTerminalOracle::ExactMatchTable {
+                        input_binding: "policy_input".to_string(),
+                        rows: vec![
+                            PolicyTerminalOracleRow {
+                                when: BTreeMap::from([("decision".to_string(), json!("allow"))]),
+                                terminal: PolicyTerminalOutcome::Allow,
+                            },
+                            PolicyTerminalOracleRow {
+                                when: BTreeMap::from([("decision".to_string(), json!("deny"))]),
+                                terminal: PolicyTerminalOutcome::Deny,
+                            },
+                        ],
+                    },
+                }),
                 ..RunnerPolicyMetadata::default()
             }],
             ..RunnerIntrospectionSnapshot::default()
@@ -3660,6 +3873,402 @@ workflow test_workflow
                 |result| result.source == TestSource::Policy && result.outcome == Outcome::Pass
             ),
             "terminal-equals policy metadata should execute narrow allow/deny cases: {results:#?}"
+        );
+    }
+
+    #[test]
+    fn structured_policy_terminal_oracle_evaluates_input_fields_instead_of_terminal_metadata() {
+        let snapshot = RunnerIntrospectionSnapshot {
+            source_artifact_id: "source:policy.ash".to_string(),
+            check_summary_id: "check:summary".to_string(),
+            policies: vec![RunnerPolicyMetadata {
+                id: "policy:review".to_string(),
+                policy_name: "ReviewPolicy".to_string(),
+                input_domain: vec![TypeGeneratorDescriptor {
+                    id: "action-domain".to_string(),
+                    target_type: "Action".to_string(),
+                    source: TypeGeneratorSource::FiniteDomain,
+                    exact_values: vec![
+                        json!({ "subject": "admin", "terminal": "deny" }),
+                        json!({ "subject": "guest", "terminal": "allow" }),
+                    ],
+                    ..TypeGeneratorDescriptor::default()
+                }],
+                lowered_policy_ref: Some("policy:review:terminal".to_string()),
+                supported_terminal_outcomes: vec![
+                    PolicyTerminalOutcome::Allow,
+                    PolicyTerminalOutcome::Deny,
+                ],
+                oracle_shape: Some(PolicyOracleShape::TerminalEquals),
+                executable_target: Some(PolicyExecutableTarget {
+                    kind: PolicyExecutableTargetKind::TerminalOracle,
+                    target_ref: "policy:review:terminal".to_string(),
+                    authority_setup: PolicyAuthoritySetup::NoAuthorityRequired,
+                    terminal_oracle: PolicyTerminalOracle::ExactMatchTable {
+                        input_binding: "policy_input".to_string(),
+                        rows: vec![
+                            PolicyTerminalOracleRow {
+                                when: BTreeMap::from([("subject".to_string(), json!("admin"))]),
+                                terminal: PolicyTerminalOutcome::Allow,
+                            },
+                            PolicyTerminalOracleRow {
+                                when: BTreeMap::from([("subject".to_string(), json!("guest"))]),
+                                terminal: PolicyTerminalOutcome::Deny,
+                            },
+                        ],
+                    },
+                }),
+                ..RunnerPolicyMetadata::default()
+            }],
+            ..RunnerIntrospectionSnapshot::default()
+        };
+
+        let results = synthesize_from_snapshot(Path::new("policy.ash"), &snapshot);
+
+        assert_eq!(results.len(), 2);
+        assert!(
+            results.iter().all(
+                |result| result.source == TestSource::Policy && result.outcome == Outcome::Pass
+            ),
+            "exact-match policy oracle should execute supported allow/deny cases: {results:#?}"
+        );
+        let allow = results
+            .iter()
+            .find(|result| result.name.contains("terminal-allow"))
+            .expect("allow case should be generated from evaluated oracle");
+        let repro = allow
+            .repro_artifact
+            .as_ref()
+            .expect("executed policy case should include repro artifact");
+        assert_eq!(
+            repro.generated_input_snapshot.as_ref().unwrap()["bindings"]["policy_input"]["subject"],
+            json!("admin"),
+            "allow case must come from evaluated oracle metadata, not the input terminal field"
+        );
+        assert_eq!(
+            repro.oracle_snapshot["target_execution"]["substrate"],
+            json!("finite_policy_terminal_oracle")
+        );
+        assert_eq!(repro.oracle_snapshot["expected_terminal"], json!("allow"));
+        assert_eq!(repro.oracle_snapshot["actual_terminal"], json!("allow"));
+    }
+
+    #[test]
+    fn policy_terminal_expected_mismatch_fails_even_if_input_terminal_matches_expected() {
+        let mut bindings = BTreeMap::new();
+        bindings.insert(
+            "policy_input".to_string(),
+            json!({ "subject": "guest", "terminal": "allow" }),
+        );
+        let case = SynthesizedCase {
+            id: "synthesized/policy/review/terminal-allow-mismatch".to_string(),
+            source: TestSource::Policy,
+            target_kind: "policy".to_string(),
+            target_name: "ReviewPolicy".to_string(),
+            file_path: Path::new("policy.ash").to_path_buf(),
+            tags: vec!["synthesized".to_string(), "policy".to_string()],
+            seed: 0,
+            inputs: SynthesizedInputs {
+                bindings,
+                generated_from: "exact_policy_input_domain".to_string(),
+                case_index: 1,
+                world_index: None,
+            },
+            oracle: SynthesizedOracle::PolicyTerminalEquals {
+                expected: PolicyTerminalOutcome::Allow,
+                policy_ref: "policy:review:terminal".to_string(),
+                terminal_oracle: PolicyTerminalOracle::ExactMatchTable {
+                    input_binding: "policy_input".to_string(),
+                    rows: vec![PolicyTerminalOracleRow {
+                        when: BTreeMap::from([("subject".to_string(), json!("guest"))]),
+                        terminal: PolicyTerminalOutcome::Deny,
+                    }],
+                },
+            },
+            repro: repro_artifact(
+                Path::new("policy.ash"),
+                "source:policy.ash".to_string(),
+                "check:summary".to_string(),
+                "synthesized/policy/review/terminal-allow-mismatch".to_string(),
+                0,
+                1,
+                Some(json!({
+                    "bindings": {
+                        "policy_input": { "subject": "guest", "terminal": "allow" }
+                    },
+                    "generated_from": "exact_policy_input_domain",
+                })),
+                json!({
+                    "kind": "policy_terminal_equals",
+                    "policy_ref": "policy:review:terminal",
+                    "expected_terminal": "allow",
+                    "actual_terminal": "deny",
+                    "target_execution": {
+                        "substrate": "finite_policy_terminal_oracle",
+                    },
+                }),
+                None,
+            ),
+        };
+
+        let result = execute_synthesized_case(&case);
+
+        assert_eq!(
+            result.outcome,
+            Outcome::Fail,
+            "policy execution must fail on evaluated terminal mismatch, even when input terminal metadata matches the expectation"
+        );
+    }
+
+    #[test]
+    fn policy_with_empty_executable_target_ref_defers() {
+        let snapshot = RunnerIntrospectionSnapshot {
+            source_artifact_id: "source:policy.ash".to_string(),
+            check_summary_id: "check:summary".to_string(),
+            policies: vec![RunnerPolicyMetadata {
+                id: "policy:review".to_string(),
+                policy_name: "ReviewPolicy".to_string(),
+                input_domain: vec![TypeGeneratorDescriptor {
+                    id: "action-domain".to_string(),
+                    target_type: "Action".to_string(),
+                    source: TypeGeneratorSource::FiniteDomain,
+                    exact_values: vec![json!({ "subject": "admin" })],
+                    ..TypeGeneratorDescriptor::default()
+                }],
+                lowered_policy_ref: Some("policy:review:terminal".to_string()),
+                supported_terminal_outcomes: vec![PolicyTerminalOutcome::Allow],
+                oracle_shape: Some(PolicyOracleShape::TerminalEquals),
+                executable_target: Some(PolicyExecutableTarget {
+                    kind: PolicyExecutableTargetKind::TerminalOracle,
+                    target_ref: String::new(),
+                    authority_setup: PolicyAuthoritySetup::NoAuthorityRequired,
+                    terminal_oracle: PolicyTerminalOracle::ExactMatchTable {
+                        input_binding: "policy_input".to_string(),
+                        rows: vec![PolicyTerminalOracleRow {
+                            when: BTreeMap::from([("subject".to_string(), json!("admin"))]),
+                            terminal: PolicyTerminalOutcome::Allow,
+                        }],
+                    },
+                }),
+                ..RunnerPolicyMetadata::default()
+            }],
+            ..RunnerIntrospectionSnapshot::default()
+        };
+
+        let results = synthesize_from_snapshot(Path::new("policy.ash"), &snapshot);
+
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].outcome, Outcome::Skip);
+        assert!(
+            results[0]
+                .message
+                .as_deref()
+                .unwrap_or_default()
+                .contains("target_ref"),
+            "missing executable target_ref must defer instead of passing: {results:#?}"
+        );
+    }
+
+    #[test]
+    fn policy_with_mismatched_executable_target_ref_defers() {
+        let snapshot = RunnerIntrospectionSnapshot {
+            source_artifact_id: "source:policy.ash".to_string(),
+            check_summary_id: "check:summary".to_string(),
+            policies: vec![RunnerPolicyMetadata {
+                id: "policy:review".to_string(),
+                policy_name: "ReviewPolicy".to_string(),
+                input_domain: vec![TypeGeneratorDescriptor {
+                    id: "action-domain".to_string(),
+                    target_type: "Action".to_string(),
+                    source: TypeGeneratorSource::FiniteDomain,
+                    exact_values: vec![json!({ "subject": "admin" })],
+                    ..TypeGeneratorDescriptor::default()
+                }],
+                lowered_policy_ref: Some("policy:review:terminal".to_string()),
+                supported_terminal_outcomes: vec![PolicyTerminalOutcome::Allow],
+                oracle_shape: Some(PolicyOracleShape::TerminalEquals),
+                executable_target: Some(PolicyExecutableTarget {
+                    kind: PolicyExecutableTargetKind::TerminalOracle,
+                    target_ref: "policy:other:terminal".to_string(),
+                    authority_setup: PolicyAuthoritySetup::NoAuthorityRequired,
+                    terminal_oracle: PolicyTerminalOracle::ExactMatchTable {
+                        input_binding: "policy_input".to_string(),
+                        rows: vec![PolicyTerminalOracleRow {
+                            when: BTreeMap::from([("subject".to_string(), json!("admin"))]),
+                            terminal: PolicyTerminalOutcome::Allow,
+                        }],
+                    },
+                }),
+                ..RunnerPolicyMetadata::default()
+            }],
+            ..RunnerIntrospectionSnapshot::default()
+        };
+
+        let results = synthesize_from_snapshot(Path::new("policy.ash"), &snapshot);
+
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].outcome, Outcome::Skip);
+        assert!(
+            results[0]
+                .message
+                .as_deref()
+                .unwrap_or_default()
+                .contains("does not match lowered policy ref"),
+            "mismatched executable target_ref must defer instead of passing: {results:#?}"
+        );
+    }
+
+    #[test]
+    fn policy_with_required_authority_without_explicit_setup_defers() {
+        let snapshot = RunnerIntrospectionSnapshot {
+            source_artifact_id: "source:policy.ash".to_string(),
+            check_summary_id: "check:summary".to_string(),
+            policies: vec![RunnerPolicyMetadata {
+                id: "policy:review".to_string(),
+                policy_name: "ReviewPolicy".to_string(),
+                input_domain: vec![TypeGeneratorDescriptor {
+                    id: "action-domain".to_string(),
+                    target_type: "Action".to_string(),
+                    source: TypeGeneratorSource::FiniteDomain,
+                    exact_values: vec![json!({ "subject": "admin" })],
+                    ..TypeGeneratorDescriptor::default()
+                }],
+                lowered_policy_ref: Some("policy:review:terminal".to_string()),
+                supported_terminal_outcomes: vec![PolicyTerminalOutcome::Allow],
+                oracle_shape: Some(PolicyOracleShape::TerminalEquals),
+                required_authority: Some("role:reviewer".to_string()),
+                executable_target: Some(PolicyExecutableTarget {
+                    kind: PolicyExecutableTargetKind::TerminalOracle,
+                    target_ref: "policy:review:terminal".to_string(),
+                    authority_setup: PolicyAuthoritySetup::Missing,
+                    terminal_oracle: PolicyTerminalOracle::ExactMatchTable {
+                        input_binding: "policy_input".to_string(),
+                        rows: vec![PolicyTerminalOracleRow {
+                            when: BTreeMap::from([("subject".to_string(), json!("admin"))]),
+                            terminal: PolicyTerminalOutcome::Allow,
+                        }],
+                    },
+                }),
+                ..RunnerPolicyMetadata::default()
+            }],
+            ..RunnerIntrospectionSnapshot::default()
+        };
+
+        let results = synthesize_from_snapshot(Path::new("policy.ash"), &snapshot);
+
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].outcome, Outcome::Skip);
+        assert!(
+            results[0]
+                .message
+                .as_deref()
+                .unwrap_or_default()
+                .contains("authority"),
+            "missing explicit authority setup must defer instead of passing: {results:#?}"
+        );
+    }
+
+    #[test]
+    fn policy_with_required_authority_and_matching_explicit_setup_executes() {
+        let snapshot = RunnerIntrospectionSnapshot {
+            source_artifact_id: "source:policy.ash".to_string(),
+            check_summary_id: "check:summary".to_string(),
+            policies: vec![RunnerPolicyMetadata {
+                id: "policy:review".to_string(),
+                policy_name: "ReviewPolicy".to_string(),
+                input_domain: vec![TypeGeneratorDescriptor {
+                    id: "action-domain".to_string(),
+                    target_type: "Action".to_string(),
+                    source: TypeGeneratorSource::FiniteDomain,
+                    exact_values: vec![json!({ "subject": "admin" })],
+                    ..TypeGeneratorDescriptor::default()
+                }],
+                lowered_policy_ref: Some("policy:review:terminal".to_string()),
+                supported_terminal_outcomes: vec![PolicyTerminalOutcome::Allow],
+                oracle_shape: Some(PolicyOracleShape::TerminalEquals),
+                required_authority: Some("role:reviewer".to_string()),
+                executable_target: Some(PolicyExecutableTarget {
+                    kind: PolicyExecutableTargetKind::TerminalOracle,
+                    target_ref: "policy:review:terminal".to_string(),
+                    authority_setup: PolicyAuthoritySetup::ExplicitAuthority {
+                        authority: "role:reviewer".to_string(),
+                    },
+                    terminal_oracle: PolicyTerminalOracle::ExactMatchTable {
+                        input_binding: "policy_input".to_string(),
+                        rows: vec![PolicyTerminalOracleRow {
+                            when: BTreeMap::from([("subject".to_string(), json!("admin"))]),
+                            terminal: PolicyTerminalOutcome::Allow,
+                        }],
+                    },
+                }),
+                ..RunnerPolicyMetadata::default()
+            }],
+            ..RunnerIntrospectionSnapshot::default()
+        };
+
+        let results = synthesize_from_snapshot(Path::new("policy.ash"), &snapshot);
+
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].outcome, Outcome::Pass);
+        let repro = results[0]
+            .repro_artifact
+            .as_ref()
+            .expect("executed authority-backed policy should include repro");
+        assert_eq!(
+            repro.oracle_snapshot["target"]["authority_setup"]["explicit_authority"]["authority"],
+            json!("role:reviewer")
+        );
+    }
+
+    #[test]
+    fn policy_approval_and_transform_terminals_defer_without_stable_exact_oracle_slice() {
+        let snapshot = RunnerIntrospectionSnapshot {
+            source_artifact_id: "source:policy.ash".to_string(),
+            check_summary_id: "check:summary".to_string(),
+            policies: vec![RunnerPolicyMetadata {
+                id: "policy:review".to_string(),
+                policy_name: "ReviewPolicy".to_string(),
+                input_domain: vec![TypeGeneratorDescriptor {
+                    id: "action-domain".to_string(),
+                    target_type: "Action".to_string(),
+                    source: TypeGeneratorSource::FiniteDomain,
+                    exact_values: vec![json!({ "subject": "manager" })],
+                    ..TypeGeneratorDescriptor::default()
+                }],
+                lowered_policy_ref: Some("policy:review:terminal".to_string()),
+                supported_terminal_outcomes: vec![
+                    PolicyTerminalOutcome::Approval,
+                    PolicyTerminalOutcome::Transform,
+                ],
+                oracle_shape: Some(PolicyOracleShape::TerminalEquals),
+                executable_target: Some(PolicyExecutableTarget {
+                    kind: PolicyExecutableTargetKind::TerminalOracle,
+                    target_ref: "policy:review:terminal".to_string(),
+                    authority_setup: PolicyAuthoritySetup::NoAuthorityRequired,
+                    terminal_oracle: PolicyTerminalOracle::ExactMatchTable {
+                        input_binding: "policy_input".to_string(),
+                        rows: vec![PolicyTerminalOracleRow {
+                            when: BTreeMap::from([("subject".to_string(), json!("manager"))]),
+                            terminal: PolicyTerminalOutcome::Approval,
+                        }],
+                    },
+                }),
+                ..RunnerPolicyMetadata::default()
+            }],
+            ..RunnerIntrospectionSnapshot::default()
+        };
+
+        let results = synthesize_from_snapshot(Path::new("policy.ash"), &snapshot);
+
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].outcome, Outcome::Skip);
+        assert!(
+            results[0]
+                .message
+                .as_deref()
+                .unwrap_or_default()
+                .contains("allow/deny"),
+            "approval/transform terminals should defer until a stable exact oracle slice exists: {results:#?}"
         );
     }
 

@@ -22,6 +22,12 @@ use crate::test_runner::types::{Outcome, ReproArtifact, TestKind, TestResult, Te
 /// Runner-facing synthesized-case schema version.
 pub const RUNNER_SYNTHESIS_SCHEMA_VERSION: &str = "ash-synthesized-v1.0";
 
+/// Maximum explicitly materialized small-world product axes.
+const SMALLWORLD_MAX_PRODUCT_AXES: usize = 16;
+
+/// Maximum explicitly materialized small-world list length.
+const SMALLWORLD_MAX_LIST_LEN: usize = 16;
+
 /// Read-only runner-facing introspection snapshot for synthesized tests.
 #[derive(Debug, Clone, Serialize, Default)]
 pub struct RunnerIntrospectionSnapshot {
@@ -405,6 +411,16 @@ pub struct SmallWorldDomain {
     pub explicit_values: Vec<Value>,
     /// Explicit canonical world states.
     pub explicit_states: Vec<SmallWorldState>,
+    /// Explicit finite axes for bounded product worlds.
+    pub product_axes: Vec<SmallWorldProductAxis>,
+    /// Explicit finite element descriptor for bounded list worlds.
+    pub list_descriptor: Option<SmallWorldListDescriptor>,
+    /// Explicit finite role/capability inclusion-set descriptor.
+    pub inclusion_descriptor: Option<SmallWorldInclusionSetDescriptor>,
+    /// Explicit stable obligation lifecycle state-machine descriptor.
+    pub lifecycle_descriptor: Option<SmallWorldLifecycleDescriptor>,
+    /// Explicit stable policy-context descriptor.
+    pub policy_context_descriptor: Option<SmallWorldPolicyContextDescriptor>,
     /// World oracle to evaluate for each enumerated state after target execution.
     pub oracle: Option<SmallWorldOracle>,
     /// Explicit executable target metadata for supported small-world execution.
@@ -425,11 +441,91 @@ impl Default for SmallWorldDomain {
             unsupported_reason: None,
             explicit_values: Vec::new(),
             explicit_states: Vec::new(),
+            product_axes: Vec::new(),
+            list_descriptor: None,
+            inclusion_descriptor: None,
+            lifecycle_descriptor: None,
+            policy_context_descriptor: None,
             oracle: None,
             executable_target: None,
             max_worlds_default: None,
         }
     }
+}
+
+/// One axis of an explicit bounded product world domain.
+#[derive(Debug, Clone, Serialize, Default, PartialEq)]
+pub struct SmallWorldProductAxis {
+    /// Binding name populated by this axis.
+    pub binding: String,
+    /// Exact finite values for this axis, in deterministic order.
+    pub values: Vec<Value>,
+}
+
+/// Explicit bounded list world descriptor.
+#[derive(Debug, Clone, Serialize, Default, PartialEq)]
+pub struct SmallWorldListDescriptor {
+    /// Binding name populated with each materialized list.
+    pub binding: String,
+    /// Exact finite element representatives, in deterministic order.
+    pub elements: Vec<Value>,
+    /// Minimum list length to enumerate.
+    pub min_len: usize,
+    /// Maximum list length. Missing means open and must defer.
+    pub max_len: Option<usize>,
+}
+
+/// Explicit finite role/capability inclusion-set descriptor.
+#[derive(Debug, Clone, Serialize, Default, PartialEq, Eq)]
+pub struct SmallWorldInclusionSetDescriptor {
+    /// Finite role names, in deterministic order.
+    pub roles: Vec<String>,
+    /// Finite capability names, in deterministic order.
+    pub capabilities: Vec<String>,
+}
+
+/// Explicit stable obligation lifecycle state-machine descriptor.
+#[derive(Debug, Clone, Serialize, Default, PartialEq, Eq)]
+pub struct SmallWorldLifecycleDescriptor {
+    /// Obligation name or stable reference.
+    pub obligation: String,
+    /// Finite stable lifecycle states to materialize.
+    pub states: Vec<SmallWorldLifecycleStateDescriptor>,
+}
+
+/// One stable obligation lifecycle state descriptor.
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+pub struct SmallWorldLifecycleStateDescriptor {
+    /// Stable lifecycle world id.
+    pub id: String,
+    /// Executed terminal represented by this state.
+    pub terminal: ObligationTerminalExpectation,
+    /// Transition trace used to reach this state.
+    pub transition_trace: Vec<String>,
+}
+
+/// Explicit stable policy-context descriptor.
+#[derive(Debug, Clone, Serialize, Default, PartialEq)]
+pub struct SmallWorldPolicyContextDescriptor {
+    /// Policy refs present in every materialized context.
+    pub policies: Vec<String>,
+    /// Finite stable contexts to materialize.
+    pub contexts: Vec<SmallWorldPolicyContext>,
+}
+
+/// One stable policy context world.
+#[derive(Debug, Clone, Serialize, Default, PartialEq)]
+pub struct SmallWorldPolicyContext {
+    /// Stable context id.
+    pub id: String,
+    /// Roles present in this context.
+    pub roles: Vec<String>,
+    /// Capabilities present in this context.
+    pub capabilities: Vec<String>,
+    /// Finite bindings exposed to the executable target.
+    pub bindings: BTreeMap<String, Value>,
+    /// Optional evaluated policy control state.
+    pub control_state: Option<String>,
 }
 
 /// Explicit executable small-world target metadata.
@@ -468,6 +564,16 @@ pub enum SmallWorldDomainKind {
     Bool,
     /// Inclusive bounded integer range.
     BoundedInt,
+    /// Bounded cartesian product of explicit finite axes.
+    Product,
+    /// Bounded finite list domain with explicit element representatives.
+    List,
+    /// Explicit finite role/capability inclusion-set worlds.
+    RoleCapabilityInclusionSet,
+    /// Explicit stable obligation lifecycle state-machine worlds.
+    ObligationLifecycle,
+    /// Explicit stable policy-context worlds.
+    PolicyContext,
     /// Unsupported/deferred domain.
     #[default]
     Unsupported,
@@ -1844,8 +1950,8 @@ fn smallworld_results(
 
     for domain in &snapshot.small_world_domains {
         let limit = max_worlds.or(domain.max_worlds_default);
-        if domain.domain_kind == SmallWorldDomainKind::BoundedInt && limit.is_none() {
-            results.push(deferred_uncapped_bounded_int_result(
+        if domain_requires_explicit_world_cap(domain) && limit.is_none() {
+            results.push(deferred_uncapped_smallworld_domain_result(
                 path, snapshot, domain, seed,
             ));
             continue;
@@ -1929,7 +2035,7 @@ fn smallworld_results(
 
 fn enumerate_worlds(domain: &SmallWorldDomain, max_worlds: Option<usize>) -> Vec<SmallWorldState> {
     let limit = match (domain.domain_kind.clone(), max_worlds) {
-        (SmallWorldDomainKind::BoundedInt, None) => return Vec::new(),
+        (kind, None) if domain_kind_requires_explicit_world_cap(&kind) => return Vec::new(),
         (_, Some(limit)) => limit,
         (_, None) => usize::MAX,
     };
@@ -1951,6 +2057,11 @@ fn enumerate_worlds(domain: &SmallWorldDomain, max_worlds: Option<usize>) -> Vec
             .map(|(index, value)| value_world(domain, index + 1, json!(value)))
             .collect(),
         SmallWorldDomainKind::BoundedInt => bounded_int_worlds(domain, limit),
+        SmallWorldDomainKind::Product => product_worlds(domain, limit),
+        SmallWorldDomainKind::List => list_worlds(domain, limit),
+        SmallWorldDomainKind::RoleCapabilityInclusionSet => inclusion_set_worlds(domain, limit),
+        SmallWorldDomainKind::ObligationLifecycle => lifecycle_worlds(domain, limit),
+        SmallWorldDomainKind::PolicyContext => policy_context_worlds(domain, limit),
         SmallWorldDomainKind::Unsupported => Vec::new(),
     };
 
@@ -1970,6 +2081,22 @@ fn enumerate_worlds(domain: &SmallWorldDomain, max_worlds: Option<usize>) -> Vec
     }
 
     worlds
+}
+
+fn domain_requires_explicit_world_cap(domain: &SmallWorldDomain) -> bool {
+    domain_kind_requires_explicit_world_cap(&domain.domain_kind)
+}
+
+fn domain_kind_requires_explicit_world_cap(kind: &SmallWorldDomainKind) -> bool {
+    matches!(
+        kind,
+        SmallWorldDomainKind::BoundedInt
+            | SmallWorldDomainKind::Product
+            | SmallWorldDomainKind::List
+            | SmallWorldDomainKind::RoleCapabilityInclusionSet
+            | SmallWorldDomainKind::ObligationLifecycle
+            | SmallWorldDomainKind::PolicyContext
+    )
 }
 
 fn value_world(domain: &SmallWorldDomain, index: usize, value: Value) -> SmallWorldState {
@@ -2002,6 +2129,234 @@ fn bounded_int_worlds(domain: &SmallWorldDomain, limit: usize) -> Vec<SmallWorld
         .take(limit)
         .enumerate()
         .map(|(index, value)| value_world(domain, index + 1, json!(value)))
+        .collect()
+}
+
+fn product_worlds(domain: &SmallWorldDomain, limit: usize) -> Vec<SmallWorldState> {
+    if limit == 0
+        || domain.product_axes.is_empty()
+        || domain.product_axes.len() > SMALLWORLD_MAX_PRODUCT_AXES
+        || domain
+            .product_axes
+            .iter()
+            .any(|axis| axis.binding.is_empty() || axis.values.is_empty())
+    {
+        return Vec::new();
+    }
+
+    let mut worlds = Vec::new();
+    let mut bindings = BTreeMap::new();
+    append_product_worlds(domain, limit, 0, &mut bindings, &mut worlds);
+    worlds
+}
+
+fn append_product_worlds(
+    domain: &SmallWorldDomain,
+    limit: usize,
+    axis_index: usize,
+    bindings: &mut BTreeMap<String, Value>,
+    worlds: &mut Vec<SmallWorldState>,
+) {
+    if worlds.len() >= limit {
+        return;
+    }
+    if axis_index == domain.product_axes.len() {
+        let world_index = worlds.len() + 1;
+        worlds.push(SmallWorldState {
+            id: format!("{}:product-{world_index}", domain.id),
+            schema_version: RUNNER_SYNTHESIS_SCHEMA_VERSION.to_string(),
+            world_kind: "product_domain".to_string(),
+            bindings: bindings.clone(),
+            ..SmallWorldState::default()
+        });
+        return;
+    }
+
+    let axis = &domain.product_axes[axis_index];
+    for value in &axis.values {
+        bindings.insert(axis.binding.clone(), value.clone());
+        append_product_worlds(domain, limit, axis_index + 1, bindings, worlds);
+        if worlds.len() >= limit {
+            break;
+        }
+    }
+    bindings.remove(&axis.binding);
+}
+
+fn list_worlds(domain: &SmallWorldDomain, limit: usize) -> Vec<SmallWorldState> {
+    let Some(descriptor) = &domain.list_descriptor else {
+        return Vec::new();
+    };
+    let Some(max_len) = descriptor.max_len else {
+        return Vec::new();
+    };
+    if limit == 0
+        || descriptor.binding.is_empty()
+        || descriptor.elements.is_empty()
+        || descriptor.min_len > max_len
+        || max_len > SMALLWORLD_MAX_LIST_LEN
+    {
+        return Vec::new();
+    }
+
+    let mut worlds = Vec::new();
+    for len in descriptor.min_len..=max_len {
+        let mut current = Vec::with_capacity(len);
+        append_list_worlds(domain, descriptor, limit, len, &mut current, &mut worlds);
+        if worlds.len() >= limit {
+            break;
+        }
+    }
+    worlds
+}
+
+fn append_list_worlds(
+    domain: &SmallWorldDomain,
+    descriptor: &SmallWorldListDescriptor,
+    limit: usize,
+    target_len: usize,
+    current: &mut Vec<Value>,
+    worlds: &mut Vec<SmallWorldState>,
+) {
+    if worlds.len() >= limit {
+        return;
+    }
+    if current.len() == target_len {
+        let world_index = worlds.len() + 1;
+        let mut bindings = BTreeMap::new();
+        bindings.insert(descriptor.binding.clone(), Value::Array(current.clone()));
+        worlds.push(SmallWorldState {
+            id: format!("{}:list-{world_index}", domain.id),
+            schema_version: RUNNER_SYNTHESIS_SCHEMA_VERSION.to_string(),
+            world_kind: "list_domain".to_string(),
+            bindings,
+            ..SmallWorldState::default()
+        });
+        return;
+    }
+
+    for value in &descriptor.elements {
+        current.push(value.clone());
+        append_list_worlds(domain, descriptor, limit, target_len, current, worlds);
+        current.pop();
+        if worlds.len() >= limit {
+            break;
+        }
+    }
+}
+
+fn inclusion_set_worlds(domain: &SmallWorldDomain, limit: usize) -> Vec<SmallWorldState> {
+    let Some(descriptor) = &domain.inclusion_descriptor else {
+        return Vec::new();
+    };
+    let item_count = descriptor.roles.len() + descriptor.capabilities.len();
+    if limit == 0 || item_count == 0 || item_count >= usize::BITS as usize {
+        return Vec::new();
+    }
+
+    let total_sets = 1usize << item_count;
+    (0..total_sets)
+        .take(limit)
+        .enumerate()
+        .map(|(index, mask)| {
+            let roles = descriptor
+                .roles
+                .iter()
+                .enumerate()
+                .filter(|(role_index, _role)| (mask & (1usize << role_index)) != 0)
+                .map(|(_role_index, role)| role.clone())
+                .collect::<Vec<_>>();
+            let role_count = descriptor.roles.len();
+            let capabilities = descriptor
+                .capabilities
+                .iter()
+                .enumerate()
+                .filter(|(capability_index, _capability)| {
+                    let bit_index = role_count + capability_index;
+                    (mask & (1usize << bit_index)) != 0
+                })
+                .map(|(_capability_index, capability)| capability.clone())
+                .collect::<Vec<_>>();
+            SmallWorldState {
+                id: format!("{}:inclusion-{}", domain.id, index + 1),
+                schema_version: RUNNER_SYNTHESIS_SCHEMA_VERSION.to_string(),
+                world_kind: "role_capability_inclusion_set".to_string(),
+                roles,
+                capabilities,
+                ..SmallWorldState::default()
+            }
+        })
+        .collect()
+}
+
+fn lifecycle_worlds(domain: &SmallWorldDomain, limit: usize) -> Vec<SmallWorldState> {
+    let Some(descriptor) = &domain.lifecycle_descriptor else {
+        return Vec::new();
+    };
+    if limit == 0
+        || descriptor.obligation.is_empty()
+        || descriptor.states.is_empty()
+        || descriptor.states.iter().any(|state| state.id.is_empty())
+    {
+        return Vec::new();
+    }
+
+    descriptor
+        .states
+        .iter()
+        .take(limit)
+        .map(|state| SmallWorldState {
+            id: state.id.clone(),
+            schema_version: RUNNER_SYNTHESIS_SCHEMA_VERSION.to_string(),
+            world_kind: "obligation_lifecycle".to_string(),
+            obligations: vec![descriptor.obligation.clone()],
+            control_state: Some(lifecycle_control_state(&state.terminal).to_string()),
+            transition_trace: state.transition_trace.clone(),
+            ..SmallWorldState::default()
+        })
+        .collect()
+}
+
+fn lifecycle_control_state(terminal: &ObligationTerminalExpectation) -> &'static str {
+    match terminal {
+        ObligationTerminalExpectation::Introduced => "introduced",
+        ObligationTerminalExpectation::Discharged => "discharged",
+        ObligationTerminalExpectation::MissingDischargeRejected => "missing_discharge_rejected",
+        ObligationTerminalExpectation::DoubleDischargeRejected => "double_discharge_rejected",
+        ObligationTerminalExpectation::Unsupported => "unsupported",
+    }
+}
+
+fn policy_context_worlds(domain: &SmallWorldDomain, limit: usize) -> Vec<SmallWorldState> {
+    let Some(descriptor) = &domain.policy_context_descriptor else {
+        return Vec::new();
+    };
+    if limit == 0
+        || descriptor.policies.is_empty()
+        || descriptor.contexts.is_empty()
+        || descriptor
+            .contexts
+            .iter()
+            .any(|context| context.id.is_empty())
+    {
+        return Vec::new();
+    }
+
+    descriptor
+        .contexts
+        .iter()
+        .take(limit)
+        .map(|context| SmallWorldState {
+            id: context.id.clone(),
+            schema_version: RUNNER_SYNTHESIS_SCHEMA_VERSION.to_string(),
+            world_kind: "policy_context".to_string(),
+            bindings: context.bindings.clone(),
+            capabilities: context.capabilities.clone(),
+            roles: context.roles.clone(),
+            policies: descriptor.policies.clone(),
+            control_state: context.control_state.clone(),
+            ..SmallWorldState::default()
+        })
         .collect()
 }
 
@@ -2058,14 +2413,9 @@ fn smallworld_oracle_is_supported_after_target_execution(oracle: &SmallWorldOrac
 }
 
 fn smallworld_worlds_are_supported_for_target(worlds: &[SmallWorldState]) -> bool {
-    worlds.iter().all(|world| {
-        world.capabilities.is_empty()
-            && world.roles.is_empty()
-            && world.policies.is_empty()
-            && world.obligations.is_empty()
-            && world.mailbox.is_empty()
-            && world.resource_state.is_empty()
-    })
+    worlds
+        .iter()
+        .all(|world| world.mailbox.is_empty() && world.resource_state.is_empty())
 }
 
 fn execute_smallworld_target(
@@ -2147,10 +2497,28 @@ fn smallworld_deferred_reason(domain: &SmallWorldDomain) -> String {
     {
         return "small-world oracle is not executable target-output metadata".to_string();
     }
-    "small-world domain lacks supported finite worlds for target execution".to_string()
+    match domain.domain_kind {
+        SmallWorldDomainKind::Product => {
+            "bounded product domain lacks non-empty explicit finite axes".to_string()
+        }
+        SmallWorldDomainKind::List => {
+            "bounded list domain lacks explicit finite elements or max_len".to_string()
+        }
+        SmallWorldDomainKind::RoleCapabilityInclusionSet => {
+            "role/capability inclusion-set domain lacks explicit finite roles or capabilities"
+                .to_string()
+        }
+        SmallWorldDomainKind::ObligationLifecycle => {
+            "obligation lifecycle domain lacks stable finite state-machine descriptor".to_string()
+        }
+        SmallWorldDomainKind::PolicyContext => {
+            "policy-context domain lacks stable finite context descriptor".to_string()
+        }
+        _ => "small-world domain lacks supported finite worlds for target execution".to_string(),
+    }
 }
 
-fn deferred_uncapped_bounded_int_result(
+fn deferred_uncapped_smallworld_domain_result(
     path: &Path,
     snapshot: &RunnerIntrospectionSnapshot,
     domain: &SmallWorldDomain,
@@ -2162,7 +2530,7 @@ fn deferred_uncapped_bounded_int_result(
         domain.source,
         TestKind::SmallWorld,
         case_id,
-        "deferred: bounded-int small-world domain requires explicit max_worlds or metadata max_worlds_default",
+        "deferred: small-world domain requires explicit max_worlds or metadata max_worlds_default",
         ReproArtifact {
             replay_command: format!(
                 "ash test {} --only-synthesized contracts,policies,obligations --seed {} --max-worlds <n>",
@@ -2180,7 +2548,7 @@ fn deferred_uncapped_bounded_int_result(
                 json!({
                     "kind": "small_world",
                     "supported": false,
-                    "reason": "bounded-int domain requires explicit max_worlds or max_worlds_default",
+                    "reason": "domain requires explicit max_worlds or max_worlds_default before materialization",
                     "domain_kind": domain.domain_kind,
                     "bounds": domain.bounds,
                 }),
@@ -4208,6 +4576,480 @@ workflow test_workflow
                 .unwrap_or_default()
                 .contains("deferred"),
             "uncapped bounded-int domains should defer with an explicit reason: {results:#?}"
+        );
+    }
+
+    #[test]
+    fn bounded_product_domain_materializes_cartesian_world_bindings() {
+        let snapshot = RunnerIntrospectionSnapshot {
+            source_artifact_id: "source:product-worlds.ash".to_string(),
+            check_summary_id: "check:product-world-summary".to_string(),
+            small_world_domains: vec![SmallWorldDomain {
+                id: "product-worlds".to_string(),
+                domain_kind: SmallWorldDomainKind::Product,
+                source: TestSource::Contract,
+                product_axes: vec![
+                    SmallWorldProductAxis {
+                        binding: "flag".to_string(),
+                        values: vec![json!(false), json!(true)],
+                    },
+                    SmallWorldProductAxis {
+                        binding: "level".to_string(),
+                        values: vec![json!(1), json!(2)],
+                    },
+                ],
+                max_worlds_default: Some(4),
+                oracle: Some(SmallWorldOracle {
+                    kind: SmallWorldOracleKind::TargetOutputEquals,
+                    expected: json!(true),
+                }),
+                executable_target: Some(smallworld_literal_target(json!(true))),
+                ..SmallWorldDomain::default()
+            }],
+            ..RunnerIntrospectionSnapshot::default()
+        };
+
+        let results = synthesize_from_snapshot(Path::new("product-worlds.ash"), &snapshot);
+
+        assert_eq!(results.len(), 4);
+        let bindings: Vec<_> = results
+            .iter()
+            .map(|result| {
+                result
+                    .repro_artifact
+                    .as_ref()
+                    .and_then(|repro| repro.world_snapshot.as_ref())
+                    .map(|snapshot| snapshot["bindings"].clone())
+                    .expect("product worlds should include materialized bindings")
+            })
+            .collect();
+        assert_eq!(
+            bindings,
+            vec![
+                json!({ "flag": false, "level": 1 }),
+                json!({ "flag": false, "level": 2 }),
+                json!({ "flag": true, "level": 1 }),
+                json!({ "flag": true, "level": 2 }),
+            ]
+        );
+        assert!(results.iter().all(|result| result.outcome == Outcome::Pass));
+    }
+
+    #[test]
+    fn oversized_product_domain_defers_before_deep_axis_recursion() {
+        let snapshot = RunnerIntrospectionSnapshot {
+            source_artifact_id: "source:oversized-product-worlds.ash".to_string(),
+            check_summary_id: "check:oversized-product-world-summary".to_string(),
+            small_world_domains: vec![SmallWorldDomain {
+                id: "oversized-product-worlds".to_string(),
+                domain_kind: SmallWorldDomainKind::Product,
+                source: TestSource::Contract,
+                product_axes: (0..65)
+                    .map(|index| SmallWorldProductAxis {
+                        binding: format!("axis_{index}"),
+                        values: vec![json!(index)],
+                    })
+                    .collect(),
+                max_worlds_default: Some(1),
+                oracle: Some(SmallWorldOracle {
+                    kind: SmallWorldOracleKind::TargetOutputEquals,
+                    expected: json!(true),
+                }),
+                executable_target: Some(smallworld_literal_target(json!(true))),
+                ..SmallWorldDomain::default()
+            }],
+            ..RunnerIntrospectionSnapshot::default()
+        };
+
+        let results =
+            synthesize_from_snapshot(Path::new("oversized-product-worlds.ash"), &snapshot);
+
+        assert_eq!(results.len(), 1);
+        assert_eq!(
+            results[0].outcome,
+            Outcome::Skip,
+            "oversized product descriptors must defer before recursively walking every axis: {results:#?}"
+        );
+    }
+
+    #[test]
+    fn bounded_list_domain_materializes_length_capped_lists() {
+        let snapshot = RunnerIntrospectionSnapshot {
+            source_artifact_id: "source:list-worlds.ash".to_string(),
+            check_summary_id: "check:list-world-summary".to_string(),
+            small_world_domains: vec![SmallWorldDomain {
+                id: "list-worlds".to_string(),
+                domain_kind: SmallWorldDomainKind::List,
+                source: TestSource::Contract,
+                list_descriptor: Some(SmallWorldListDescriptor {
+                    binding: "items".to_string(),
+                    elements: vec![json!(0), json!(1)],
+                    min_len: 0,
+                    max_len: Some(2),
+                }),
+                max_worlds_default: Some(4),
+                oracle: Some(SmallWorldOracle {
+                    kind: SmallWorldOracleKind::TargetOutputEquals,
+                    expected: json!(true),
+                }),
+                executable_target: Some(smallworld_literal_target(json!(true))),
+                ..SmallWorldDomain::default()
+            }],
+            ..RunnerIntrospectionSnapshot::default()
+        };
+
+        let results = synthesize_from_snapshot(Path::new("list-worlds.ash"), &snapshot);
+
+        assert_eq!(results.len(), 4);
+        let lists: Vec<_> = results
+            .iter()
+            .map(|result| {
+                result
+                    .repro_artifact
+                    .as_ref()
+                    .and_then(|repro| repro.world_snapshot.as_ref())
+                    .map(|snapshot| snapshot["bindings"]["items"].clone())
+                    .expect("list worlds should include materialized list binding")
+            })
+            .collect();
+        assert_eq!(
+            lists,
+            vec![json!([]), json!([0]), json!([1]), json!([0, 0])]
+        );
+    }
+
+    #[test]
+    fn oversized_bounded_list_domain_defers_before_deep_materialization() {
+        let snapshot = RunnerIntrospectionSnapshot {
+            source_artifact_id: "source:oversized-list-worlds.ash".to_string(),
+            check_summary_id: "check:oversized-list-world-summary".to_string(),
+            small_world_domains: vec![SmallWorldDomain {
+                id: "oversized-list-worlds".to_string(),
+                domain_kind: SmallWorldDomainKind::List,
+                source: TestSource::Contract,
+                list_descriptor: Some(SmallWorldListDescriptor {
+                    binding: "items".to_string(),
+                    elements: vec![json!(0)],
+                    min_len: 65,
+                    max_len: Some(65),
+                }),
+                max_worlds_default: Some(1),
+                oracle: Some(SmallWorldOracle {
+                    kind: SmallWorldOracleKind::TargetOutputEquals,
+                    expected: json!(true),
+                }),
+                executable_target: Some(smallworld_literal_target(json!(true))),
+                ..SmallWorldDomain::default()
+            }],
+            ..RunnerIntrospectionSnapshot::default()
+        };
+
+        let results = synthesize_from_snapshot(Path::new("oversized-list-worlds.ash"), &snapshot);
+
+        assert_eq!(results.len(), 1);
+        assert_eq!(
+            results[0].outcome,
+            Outcome::Skip,
+            "oversized list descriptors must defer before allocating or recursively materializing: {results:#?}"
+        );
+    }
+
+    #[test]
+    fn policy_and_lifecycle_worlds_require_stable_explicit_ids() {
+        let snapshot = RunnerIntrospectionSnapshot {
+            source_artifact_id: "source:missing-id-worlds.ash".to_string(),
+            check_summary_id: "check:missing-id-world-summary".to_string(),
+            small_world_domains: vec![
+                SmallWorldDomain {
+                    id: "policy-context-missing-id".to_string(),
+                    domain_kind: SmallWorldDomainKind::PolicyContext,
+                    source: TestSource::Policy,
+                    policy_context_descriptor: Some(SmallWorldPolicyContextDescriptor {
+                        policies: vec!["review_policy".to_string()],
+                        contexts: vec![SmallWorldPolicyContext {
+                            id: String::new(),
+                            roles: vec!["reviewer".to_string()],
+                            capabilities: Vec::new(),
+                            bindings: BTreeMap::from([("smallworld_ok".to_string(), json!(true))]),
+                            control_state: Some("allow".to_string()),
+                        }],
+                    }),
+                    max_worlds_default: Some(1),
+                    oracle: Some(SmallWorldOracle {
+                        kind: SmallWorldOracleKind::TargetOutputEquals,
+                        expected: json!(true),
+                    }),
+                    executable_target: Some(smallworld_expr_target(core_var("smallworld_ok"))),
+                    ..SmallWorldDomain::default()
+                },
+                SmallWorldDomain {
+                    id: "lifecycle-missing-id".to_string(),
+                    domain_kind: SmallWorldDomainKind::ObligationLifecycle,
+                    source: TestSource::Obligation,
+                    lifecycle_descriptor: Some(SmallWorldLifecycleDescriptor {
+                        obligation: "Ticket".to_string(),
+                        states: vec![SmallWorldLifecycleStateDescriptor {
+                            id: String::new(),
+                            terminal: ObligationTerminalExpectation::Discharged,
+                            transition_trace: vec!["introduce:Ticket".to_string()],
+                        }],
+                    }),
+                    max_worlds_default: Some(1),
+                    oracle: Some(SmallWorldOracle {
+                        kind: SmallWorldOracleKind::TargetOutputEquals,
+                        expected: json!(true),
+                    }),
+                    executable_target: Some(smallworld_literal_target(json!(true))),
+                    ..SmallWorldDomain::default()
+                },
+            ],
+            ..RunnerIntrospectionSnapshot::default()
+        };
+
+        let results = synthesize_from_snapshot(Path::new("missing-id-worlds.ash"), &snapshot);
+
+        assert_eq!(results.len(), 2);
+        assert!(
+            results.iter().all(|result| result.outcome == Outcome::Skip),
+            "policy/lifecycle worlds without stable explicit IDs must defer instead of receiving fallback IDs: {results:#?}"
+        );
+    }
+
+    #[test]
+    fn role_capability_inclusion_domain_materializes_explicit_finite_sets() {
+        let snapshot = RunnerIntrospectionSnapshot {
+            source_artifact_id: "source:inclusion-worlds.ash".to_string(),
+            check_summary_id: "check:inclusion-world-summary".to_string(),
+            small_world_domains: vec![SmallWorldDomain {
+                id: "role-capability-worlds".to_string(),
+                domain_kind: SmallWorldDomainKind::RoleCapabilityInclusionSet,
+                source: TestSource::Policy,
+                inclusion_descriptor: Some(SmallWorldInclusionSetDescriptor {
+                    roles: vec!["author".to_string(), "reviewer".to_string()],
+                    capabilities: vec!["read".to_string()],
+                }),
+                max_worlds_default: Some(5),
+                oracle: Some(SmallWorldOracle {
+                    kind: SmallWorldOracleKind::TargetOutputEquals,
+                    expected: json!(true),
+                }),
+                executable_target: Some(smallworld_literal_target(json!(true))),
+                ..SmallWorldDomain::default()
+            }],
+            ..RunnerIntrospectionSnapshot::default()
+        };
+
+        let results = synthesize_from_snapshot(Path::new("inclusion-worlds.ash"), &snapshot);
+
+        assert_eq!(results.len(), 5);
+        let snapshots: Vec<_> = results
+            .iter()
+            .map(|result| {
+                result
+                    .repro_artifact
+                    .as_ref()
+                    .and_then(|repro| repro.world_snapshot.as_ref())
+                    .cloned()
+                    .expect("inclusion worlds should include world snapshots")
+            })
+            .collect();
+        assert_eq!(snapshots[0]["roles"], json!([]));
+        assert_eq!(snapshots[0]["capabilities"], json!([]));
+        assert_eq!(snapshots[1]["roles"], json!(["author"]));
+        assert_eq!(snapshots[4]["capabilities"], json!(["read"]));
+        assert!(results.iter().all(|result| result.outcome == Outcome::Pass));
+    }
+
+    #[test]
+    fn policy_context_domain_materializes_stable_context_descriptors() {
+        let snapshot = RunnerIntrospectionSnapshot {
+            source_artifact_id: "source:policy-context-worlds.ash".to_string(),
+            check_summary_id: "check:policy-context-world-summary".to_string(),
+            small_world_domains: vec![SmallWorldDomain {
+                id: "policy-context-worlds".to_string(),
+                domain_kind: SmallWorldDomainKind::PolicyContext,
+                source: TestSource::Policy,
+                policy_context_descriptor: Some(SmallWorldPolicyContextDescriptor {
+                    policies: vec!["review_policy".to_string()],
+                    contexts: vec![
+                        SmallWorldPolicyContext {
+                            id: "allowed-reviewer".to_string(),
+                            roles: vec!["reviewer".to_string()],
+                            capabilities: vec!["review".to_string()],
+                            bindings: BTreeMap::from([("smallworld_ok".to_string(), json!(true))]),
+                            control_state: Some("allow".to_string()),
+                        },
+                        SmallWorldPolicyContext {
+                            id: "denied-author".to_string(),
+                            roles: vec!["author".to_string()],
+                            capabilities: Vec::new(),
+                            bindings: BTreeMap::from([("smallworld_ok".to_string(), json!(false))]),
+                            control_state: Some("deny".to_string()),
+                        },
+                    ],
+                }),
+                max_worlds_default: Some(2),
+                oracle: Some(SmallWorldOracle {
+                    kind: SmallWorldOracleKind::TargetOutputEquals,
+                    expected: json!(true),
+                }),
+                executable_target: Some(smallworld_expr_target(core_var("smallworld_ok"))),
+                ..SmallWorldDomain::default()
+            }],
+            ..RunnerIntrospectionSnapshot::default()
+        };
+
+        let results = synthesize_from_snapshot(Path::new("policy-context-worlds.ash"), &snapshot);
+
+        assert_eq!(results.len(), 2);
+        assert_eq!(results[0].outcome, Outcome::Pass);
+        assert_eq!(results[1].outcome, Outcome::Fail);
+        let repro = results[0]
+            .repro_artifact
+            .as_ref()
+            .and_then(|repro| repro.world_snapshot.as_ref())
+            .expect("policy-context worlds should include materialized context snapshots");
+        assert_eq!(repro["policies"], json!(["review_policy"]));
+        assert_eq!(repro["roles"], json!(["reviewer"]));
+        assert_eq!(repro["capabilities"], json!(["review"]));
+    }
+
+    #[test]
+    fn obligation_lifecycle_domain_materializes_stable_state_machine_descriptors() {
+        let snapshot = RunnerIntrospectionSnapshot {
+            source_artifact_id: "source:lifecycle-worlds.ash".to_string(),
+            check_summary_id: "check:lifecycle-world-summary".to_string(),
+            small_world_domains: vec![SmallWorldDomain {
+                id: "obligation-lifecycle-worlds".to_string(),
+                domain_kind: SmallWorldDomainKind::ObligationLifecycle,
+                source: TestSource::Obligation,
+                lifecycle_descriptor: Some(SmallWorldLifecycleDescriptor {
+                    obligation: "Ticket".to_string(),
+                    states: vec![
+                        SmallWorldLifecycleStateDescriptor {
+                            id: "introduced".to_string(),
+                            terminal: ObligationTerminalExpectation::Introduced,
+                            transition_trace: vec!["introduce:Ticket".to_string()],
+                        },
+                        SmallWorldLifecycleStateDescriptor {
+                            id: "discharged".to_string(),
+                            terminal: ObligationTerminalExpectation::Discharged,
+                            transition_trace: vec![
+                                "introduce:Ticket".to_string(),
+                                "discharge:Ticket".to_string(),
+                            ],
+                        },
+                    ],
+                }),
+                max_worlds_default: Some(2),
+                oracle: Some(SmallWorldOracle {
+                    kind: SmallWorldOracleKind::TargetOutputEquals,
+                    expected: json!(true),
+                }),
+                executable_target: Some(smallworld_literal_target(json!(true))),
+                ..SmallWorldDomain::default()
+            }],
+            ..RunnerIntrospectionSnapshot::default()
+        };
+
+        let results = synthesize_from_snapshot(Path::new("lifecycle-worlds.ash"), &snapshot);
+
+        assert_eq!(results.len(), 2);
+        assert!(results.iter().all(|result| result.outcome == Outcome::Pass));
+        let discharged = results[1]
+            .repro_artifact
+            .as_ref()
+            .and_then(|repro| repro.world_snapshot.as_ref())
+            .expect("lifecycle worlds should include materialized state snapshots");
+        assert_eq!(discharged["control_state"], json!("discharged"));
+        assert_eq!(discharged["obligations"], json!(["Ticket"]));
+        assert_eq!(
+            discharged["transition_trace"],
+            json!(["introduce:Ticket", "discharge:Ticket"])
+        );
+    }
+
+    #[test]
+    fn uncapped_or_open_richer_domains_defer_before_materialization() {
+        let snapshot = RunnerIntrospectionSnapshot {
+            source_artifact_id: "source:open-worlds.ash".to_string(),
+            check_summary_id: "check:open-world-summary".to_string(),
+            small_world_domains: vec![
+                SmallWorldDomain {
+                    id: "uncapped-product".to_string(),
+                    domain_kind: SmallWorldDomainKind::Product,
+                    source: TestSource::Contract,
+                    product_axes: vec![SmallWorldProductAxis {
+                        binding: "value".to_string(),
+                        values: vec![json!(1), json!(2)],
+                    }],
+                    oracle: Some(SmallWorldOracle {
+                        kind: SmallWorldOracleKind::TargetOutputEquals,
+                        expected: json!(true),
+                    }),
+                    executable_target: Some(smallworld_literal_target(json!(true))),
+                    ..SmallWorldDomain::default()
+                },
+                SmallWorldDomain {
+                    id: "open-list".to_string(),
+                    domain_kind: SmallWorldDomainKind::List,
+                    source: TestSource::Contract,
+                    list_descriptor: Some(SmallWorldListDescriptor {
+                        binding: "items".to_string(),
+                        elements: vec![json!(1)],
+                        min_len: 0,
+                        max_len: None,
+                    }),
+                    max_worlds_default: Some(4),
+                    oracle: Some(SmallWorldOracle {
+                        kind: SmallWorldOracleKind::TargetOutputEquals,
+                        expected: json!(true),
+                    }),
+                    executable_target: Some(smallworld_literal_target(json!(true))),
+                    ..SmallWorldDomain::default()
+                },
+                SmallWorldDomain {
+                    id: "open-inclusion".to_string(),
+                    domain_kind: SmallWorldDomainKind::RoleCapabilityInclusionSet,
+                    source: TestSource::Policy,
+                    inclusion_descriptor: Some(SmallWorldInclusionSetDescriptor {
+                        roles: Vec::new(),
+                        capabilities: Vec::new(),
+                    }),
+                    max_worlds_default: Some(4),
+                    oracle: Some(SmallWorldOracle {
+                        kind: SmallWorldOracleKind::TargetOutputEquals,
+                        expected: json!(true),
+                    }),
+                    executable_target: Some(smallworld_literal_target(json!(true))),
+                    ..SmallWorldDomain::default()
+                },
+            ],
+            ..RunnerIntrospectionSnapshot::default()
+        };
+
+        let results = synthesize_from_snapshot_with_limits(
+            Path::new("open-worlds.ash"),
+            &snapshot,
+            None,
+            None,
+            None,
+        );
+
+        assert_eq!(results.len(), 3);
+        assert!(
+            results.iter().all(|result| result.outcome == Outcome::Skip),
+            "uncapped/open richer domains should defer instead of materializing worlds: {results:#?}"
+        );
+        assert!(
+            results.iter().all(|result| {
+                result
+                    .message
+                    .as_deref()
+                    .unwrap_or_default()
+                    .contains("deferred")
+            }),
+            "deferred richer domains should report fail-closed reasons: {results:#?}"
         );
     }
 

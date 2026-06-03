@@ -403,6 +403,83 @@ fn only_synthesized_contract_postcondition_executes_supported_pure_function_meta
 }
 
 #[test]
+fn only_synthesized_contract_fail_fast_and_timeout_apply_to_json_synthesized_rows() {
+    let dir = make_test_dir();
+    write_authored_test(
+        &dir,
+        "unit",
+        "fail_fast_synthesized_contracts",
+        "fn bad(n: Int) -> Int\n    requires: n >= 0\n    ensures: result == n\n{\n    1\n}\nfn good(n: Int) -> Int\n    requires: n >= 0\n    ensures: result == n\n{\n    n\n}\n",
+    );
+
+    let assert = ash()
+        .arg("test")
+        .arg(dir.path())
+        .arg("--only-synthesized")
+        .arg("contracts")
+        .arg("--fail-fast")
+        .arg("--timeout")
+        .arg("30000")
+        .arg("--format")
+        .arg("json")
+        .assert();
+    let output = parse_json_output(&assert.code(1));
+    let tests = output["tests"].as_array().unwrap();
+
+    assert_eq!(output["failed"], Value::from(1));
+    assert_eq!(
+        tests.len(),
+        3,
+        "--fail-fast should stop synthesized JSON output after the first failing synthesized case: {output:#}"
+    );
+    assert!(
+        tests
+            .iter()
+            .all(|test| test["source"] == "synthesized:contract"),
+        "--only-synthesized should keep authored rows out of the fail-fast JSON result: {output:#}"
+    );
+    assert_eq!(tests[2]["outcome"], Value::String("fail".to_string()));
+    assert!(
+        tests[2]["message"]
+            .as_str()
+            .is_some_and(|message| message.contains("postcondition failed")),
+        "the stopped row should be the synthesized postcondition failure: {output:#}"
+    );
+}
+
+#[test]
+fn only_synthesized_contract_human_output_accepts_generation_and_world_controls() {
+    let dir = make_test_dir();
+    write_authored_test(
+        &dir,
+        "unit",
+        "human_synthesized_contracts",
+        "fn identity(n: Int) -> Int\n    requires: n >= 0\n    ensures: result == n\n{\n    n\n}\n",
+    );
+
+    ash()
+        .arg("test")
+        .arg(dir.path())
+        .arg("--only-synthesized")
+        .arg("contracts")
+        .arg("--seed")
+        .arg("123")
+        .arg("--max-cases")
+        .arg("2")
+        .arg("--max-worlds")
+        .arg("2")
+        .arg("--timeout")
+        .arg("30000")
+        .arg("--format")
+        .arg("human")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("synthesized/contract/identity"))
+        .stdout(predicate::str::contains("[synthesized:contract]"))
+        .stdout(predicate::str::contains("PASSED 3 tests"));
+}
+
+#[test]
 fn only_synthesized_unsupported_live_snapshot_metadata_defers_without_pass_rows() {
     let dir = make_test_dir();
     write_authored_test(

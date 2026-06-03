@@ -3935,7 +3935,7 @@ Phase 132 completes the broader DESIGN-022 and DESIGN-023 work deferred after th
 | [TASK-1014](tasks/TASK-1014-policy-domain-and-terminal-oracle-execution.md) | Execute policy domains and terminal oracles beyond the narrow metadata equality slice | 12 | ✅ Complete |
 | [TASK-1015](tasks/TASK-1015-runtime-backed-obligation-lifecycle-execution.md) | Execute obligation lifecycle transitions through narrow typed transition metadata | 14 | ✅ Complete |
 | [TASK-1016](tasks/TASK-1016-smallworld-target-execution.md) | Materialize deterministic worlds and execute Ash targets against each world | 16 | ✅ Complete |
-| [TASK-1017](tasks/TASK-1017-richer-domains-and-cli-integration-hardening.md) | Add richer finite domains and harden synthesized/small-world CLI controls | 12 | Planned |
+| [TASK-1017](tasks/TASK-1017-richer-domains-and-cli-integration-hardening.md) | Add richer finite domains and harden synthesized/small-world CLI controls | 12 | ✅ Complete |
 | [TASK-1018](tasks/TASK-1018-design022-023-completion-closeout.md) | Run broad verification and promote DESIGN-022/DESIGN-023 completion status only when acceptance is met | 8 | Planned |
 
 **Decision gates:**

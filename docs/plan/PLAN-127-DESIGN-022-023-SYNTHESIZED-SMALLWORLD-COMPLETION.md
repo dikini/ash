@@ -19,7 +19,7 @@ TASK-1012 and TASK-1013 extend that baseline so ordinary `ash test` source files
 The following remain future work:
 - policy execution is limited to exact `TerminalEquals` metadata
 - obligation execution is limited to finite lifecycle metadata equality
-- small-world execution does not yet run Ash targets across richer role/capability/policy/obligation worlds
+- small-world execution runs narrow pure-expression/literal target-output oracles across explicit finite worlds, including richer product, list, role/capability inclusion-set, policy-context, and obligation-lifecycle descriptors; arbitrary Ash execution, inferred open domains, and full runtime policy/capability semantics remain future work
 
 ## Task Breakdown
 
@@ -30,7 +30,7 @@ The following remain future work:
 | [TASK-1014](tasks/TASK-1014-policy-domain-and-terminal-oracle-execution.md) | Execute policy domains and terminal oracles beyond the narrow metadata equality slice | Runner/Policy | 12 | Complete |
 | [TASK-1015](tasks/TASK-1015-runtime-backed-obligation-lifecycle-execution.md) | Execute obligation lifecycle transitions through narrow typed transition metadata | Runner/Runtime | 14 | Complete |
 | [TASK-1016](tasks/TASK-1016-smallworld-target-execution.md) | Materialize deterministic worlds and execute Ash targets against each world | Runner/SmallWorld | 16 | Complete |
-| [TASK-1017](tasks/TASK-1017-richer-domains-and-cli-integration-hardening.md) | Add richer finite domains and harden synthesized/small-world CLI controls | Runner/CLI | 12 | Planned |
+| [TASK-1017](tasks/TASK-1017-richer-domains-and-cli-integration-hardening.md) | Add richer finite domains and harden synthesized/small-world CLI controls | Runner/CLI | 12 | Complete |
 | [TASK-1018](tasks/TASK-1018-design022-023-completion-closeout.md) | Run broad verification and promote DESIGN-022/DESIGN-023 completion status | Closeout | 8 | Planned |
 
 Total estimate: 88h.
@@ -78,5 +78,5 @@ CARGO_BUILD_RUSTC_WRAPPER= cargo test --workspace
 - [x] Policy domain and terminal oracle execution is implemented for supported cases.
 - [x] Obligation lifecycle execution uses a narrow typed transition substrate for supported cases.
 - [x] Small-world execution runs Ash targets against deterministic worlds.
-- [ ] Richer finite domains and CLI controls are hardened.
+- [x] Richer finite domains and CLI controls are hardened.
 - [ ] DESIGN-022 and DESIGN-023 status and acceptance criteria are promoted only after broad verification.

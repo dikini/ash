@@ -553,15 +553,29 @@ fn run_synthesized_tests(
 fn add_synthesized_result(
     config: &SuiteConfig,
     suite: &mut crate::test_runner::types::TestSuiteResult,
-    result: TestResult,
+    mut result: TestResult,
 ) -> bool {
     if !synthesized_result_selected(config, &result) {
         return true;
     }
 
+    apply_synthesized_timeout(config, &mut result);
     let stop = config.fail_fast && result.outcome.is_failure();
     suite.add(result);
     !stop
+}
+
+fn apply_synthesized_timeout(config: &SuiteConfig, result: &mut TestResult) {
+    let timeout = if config.timeout_ms > 0 {
+        Duration::from_millis(config.timeout_ms)
+    } else {
+        Duration::from_secs(DEFAULT_TIMEOUT_SECS)
+    };
+    if result.duration > timeout {
+        let (outcome, message) = timeout_result(timeout);
+        result.outcome = outcome;
+        result.message = message;
+    }
 }
 
 fn synthesized_result_selected(config: &SuiteConfig, result: &TestResult) -> bool {
@@ -1008,6 +1022,40 @@ workflow contract_case
                 .iter()
                 .all(|test| test.tags.iter().any(|tag| tag == "property")),
             "tag_filter should apply to synthesized rows as well as authored rows: {result:#?}"
+        );
+    }
+
+    #[test]
+    fn synthesized_result_exceeding_timeout_is_reported_as_timeout() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut suite = crate::test_runner::types::TestSuiteResult::new(dir.path().to_path_buf());
+        let config = SuiteConfig {
+            root: dir.path().to_path_buf(),
+            include_synthesized: true,
+            only_synthesized: true,
+            synthesized_sources: SynthesizedSources {
+                contracts: true,
+                policies: false,
+                obligations: false,
+            },
+            timeout_ms: 1,
+            ..Default::default()
+        };
+        let result = TestResult::new("synthesized/slow", dir.path().join("slow.ash"))
+            .with_source(TestSource::Contract)
+            .with_kind(TestKind::Unit)
+            .with_duration(Duration::from_millis(2))
+            .with_outcome(Outcome::Pass);
+
+        assert!(add_synthesized_result(&config, &mut suite, result));
+        assert_eq!(suite.tests.len(), 1);
+        assert_eq!(suite.tests[0].outcome, Outcome::Error);
+        assert!(
+            suite.tests[0]
+                .message
+                .as_deref()
+                .is_some_and(|message| message.contains("timed out after 1ms")),
+            "synthesized rows that exceed the configured timeout must be classified as timeouts: {suite:#?}"
         );
     }
 

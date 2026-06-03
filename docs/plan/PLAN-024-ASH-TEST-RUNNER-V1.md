@@ -233,9 +233,12 @@ coverage consistent with the v1 phase contract.
 
 The following items are intentionally deferred until after the next round of spec work improvement and should not be treated as part of the current closed Phase 76 surface:
 
-1. True synthesized contract/policy/obligation execution
-   - stable runner-facing introspection APIs for lowered contracts, policies, and obligations
-   - executable synthesized cases rather than planning-level labeled records
+1. Broader synthesized contract/policy/obligation execution beyond the TASK-513 checkpoint
+   - live wiring from lowered contracts, policies, and obligations into the runner snapshot
+   - executable contract postcondition cases beyond the narrow structured contract `requires`
+     boundary slice
+   - policy execution beyond exact `TerminalEquals` allow/deny metadata and obligation execution
+     beyond exact finite lifecycle metadata
 2. Rich generative property testing
    - generated inputs from type/contract metadata rather than bounded reruns of the same authored body
 3. True small-world exploration
@@ -277,7 +280,13 @@ surfaces:
 
 The implementation boundary is intentionally strict: raw-source pattern scans and bounded
 reruns may remain as planning-level compatibility paths, but they must not produce
-executed `pass` outcomes for true synthesized or true small-world cases.
+executed `pass` outcomes for true synthesized or true small-world cases. TASK-513 adds
+the first runner-side synthesized-case substrate, a `SuiteConfig` structured snapshot seam, narrow
+structured contract `requires` boundary oracles over exact generators, narrow policy
+`TerminalEquals` allow/deny oracles over exact finite domains, and narrow obligation lifecycle
+oracles over explicit finite lifecycle metadata. Unsupported raw-source paths and incomplete
+metadata remain explicit deferred skips, and the user-facing CLI still does not synthesize live
+checked snapshots from source files.
 
 ## Summary of Reasoning for Deferral
 
@@ -288,9 +297,10 @@ coherent v1 slice that can be verified honestly today.
 
 The deferred items all depend on upstream spec and metadata-shape improvement rather than mere local
 implementation effort:
-- synthesized contract/policy/obligation execution needs stable runner-facing introspection APIs for
-  lowered contracts, policies, and obligation lifecycle semantics; without that, the runner can only
-  produce planning-level labeled cases rather than truthful executable synthesized tests
+- broader synthesized contract/policy/obligation execution needs live lowered metadata for runtime
+  contract targets, policy domains/oracles, and obligation lifecycle semantics; without that, the
+  runner must keep unsupported paths as explicit deferred skips rather than truthful executable
+  synthesized tests
 - richer property generation needs a stable contract/type-driven input-generation story; bounded reruns
   of authored bodies are acceptable for v1, but not a substitute for true generated cases
 - richer small-world execution needs a spec-backed state/world enumeration model instead of ad hoc

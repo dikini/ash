@@ -2,7 +2,7 @@
 //!
 //! TASK-509: Human and JSON output for test results.
 
-use crate::test_runner::types::{Outcome, TestSource, TestSuiteResult};
+use crate::test_runner::types::{Outcome, ReproArtifact, TestSource, TestSuiteResult};
 use colored::Colorize;
 
 /// Format a test suite result as human-readable output.
@@ -110,11 +110,18 @@ pub fn format_json(suite: &TestSuiteResult) -> Result<String, serde_json::Error>
         source: String,
         kind: String,
         duration_ms: f64,
+        #[serde(skip_serializing_if = "Option::is_none")]
         message: Option<String>,
+        #[serde(skip_serializing_if = "Vec::is_empty")]
         tags: Vec<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
         seed: Option<u64>,
+        #[serde(skip_serializing_if = "Option::is_none")]
         failing_case: Option<usize>,
+        #[serde(skip_serializing_if = "Option::is_none")]
         world_index: Option<usize>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        repro_artifact: Option<ReproArtifact>,
     }
 
     let tests: Vec<JsonTest> = suite
@@ -132,6 +139,7 @@ pub fn format_json(suite: &TestSuiteResult) -> Result<String, serde_json::Error>
             seed: t.seed,
             failing_case: t.failing_case,
             world_index: t.world_index,
+            repro_artifact: t.repro_artifact.clone(),
         })
         .collect();
 
@@ -153,7 +161,7 @@ pub fn format_json(suite: &TestSuiteResult) -> Result<String, serde_json::Error>
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_runner::types::{TestKind, TestResult};
+    use crate::test_runner::types::{ReproArtifact, TestKind, TestResult, TestSource};
     use std::path::PathBuf;
     use std::time::Duration;
 
@@ -195,5 +203,54 @@ mod tests {
         assert_eq!(parsed["total"], 2);
         assert_eq!(parsed["passed"], 1);
         assert_eq!(parsed["failed"], 1);
+    }
+
+    #[test]
+    fn json_output_omits_absent_repro_artifact() {
+        let suite = make_suite();
+        let output = format_json(&suite).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&output).unwrap();
+
+        assert!(
+            parsed["tests"][0].get("repro_artifact").is_none(),
+            "non-synthesized rows should omit absent repro artifacts instead of serializing null: {parsed:#}"
+        );
+    }
+
+    #[test]
+    fn json_output_includes_synthesized_repro_artifact() {
+        let mut suite = TestSuiteResult::new(PathBuf::from("."));
+        suite.add(
+            TestResult::new(
+                "synthesized/contract/example/requires-valid",
+                PathBuf::from("tests/example.ash"),
+            )
+            .with_outcome(Outcome::Pass)
+            .with_source(TestSource::Contract)
+            .with_kind(TestKind::Unit)
+            .with_repro_artifact(ReproArtifact {
+                runner_schema_version: "ash-synthesized-v1.0".to_string(),
+                source_artifact_id: "source:tests/example.ash".to_string(),
+                check_summary_id: "check:summary".to_string(),
+                case_id: "case:1".to_string(),
+                seed: 0,
+                case_index: 1,
+                world_index: None,
+                generated_input_snapshot: Some(serde_json::json!({ "x": 1 })),
+                world_snapshot: None,
+                oracle_snapshot: serde_json::json!({ "kind": "precondition_boundary" }),
+                replay_command: "ash test tests/example.ash --only-synthesized contracts"
+                    .to_string(),
+            }),
+        );
+
+        let output = format_json(&suite).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&output).unwrap();
+
+        assert_eq!(
+            parsed["tests"][0]["repro_artifact"]["runner_schema_version"],
+            "ash-synthesized-v1.0"
+        );
+        assert_eq!(parsed["tests"][0]["repro_artifact"]["case_index"], 1);
     }
 }

@@ -11,6 +11,7 @@ use std::time::{Duration, Instant};
 
 use crate::test_runner::discovery::infer_kind_from_path;
 use crate::test_runner::metadata::TestMetadata;
+use crate::test_runner::synthesized::RunnerIntrospectionSnapshot;
 use crate::test_runner::types::{Outcome, TestKind, TestResult, TestSource};
 
 /// Default test timeout in seconds.
@@ -267,6 +268,8 @@ pub struct SuiteConfig {
     pub only_synthesized: bool,
     /// Which synthesized sources to include.
     pub synthesized_sources: SynthesizedSources,
+    /// Structured checked/lowered snapshots available to the runner for synthesized execution.
+    pub synthesized_snapshots: Vec<(std::path::PathBuf, RunnerIntrospectionSnapshot)>,
     /// Fail fast (stop on first failure).
     pub fail_fast: bool,
     /// Default timeout in milliseconds.
@@ -289,6 +292,7 @@ impl Default for SuiteConfig {
             include_synthesized: false,
             only_synthesized: false,
             synthesized_sources: SynthesizedSources::default(),
+            synthesized_snapshots: Vec::new(),
             fail_fast: false,
             timeout_ms: DEFAULT_TIMEOUT_SECS * 1000,
             seed: None,
@@ -474,6 +478,17 @@ fn run_synthesized_tests(
     use crate::test_runner::discovery::discover_tests;
     use crate::test_runner::synthesized;
 
+    if !config.synthesized_snapshots.is_empty() {
+        for (path, snapshot) in &config.synthesized_snapshots {
+            for result in synthesized::synthesize_from_snapshot(path, snapshot) {
+                if synthesized_source_enabled(config, result.source) {
+                    suite.add(result);
+                }
+            }
+        }
+        return;
+    }
+
     let files = discover_tests(&config.root);
 
     for path in &files {
@@ -508,9 +523,23 @@ fn run_synthesized_tests(
     }
 }
 
+fn synthesized_source_enabled(config: &SuiteConfig, source: TestSource) -> bool {
+    match source {
+        TestSource::Contract => config.synthesized_sources.contracts,
+        TestSource::Policy => config.synthesized_sources.policies,
+        TestSource::Obligation => config.synthesized_sources.obligations,
+        TestSource::Authored => false,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_runner::synthesized::{
+        RUNNER_SYNTHESIS_SCHEMA_VERSION, RunnerContractMetadata, RunnerIntrospectionSnapshot,
+        SynthesizedOracleKind, TypeGeneratorDescriptor, TypeGeneratorSource,
+    };
+    use serde_json::json;
     use std::fs;
     use std::sync::{
         Arc,
@@ -636,5 +665,124 @@ mod tests {
         }
 
         assert_eq!(executed, 1);
+    }
+
+    #[test]
+    fn synthesized_cases_remain_opt_in_and_separate_from_authored_discovery() {
+        let dir = tempfile::tempdir().unwrap();
+        let test_dir = dir.path().join("tests/ash/unit");
+        fs::create_dir_all(&test_dir).unwrap();
+        fs::write(
+            test_dir.join("contract_case.ash"),
+            r#"
+workflow contract_case
+    requires x > 0
+{
+    done
+}
+"#,
+        )
+        .unwrap();
+
+        let authored_config = SuiteConfig {
+            root: dir.path().to_path_buf(),
+            ..Default::default()
+        };
+        let authored_result = run_suite(&authored_config);
+        assert!(
+            authored_result
+                .tests
+                .iter()
+                .all(|result| matches!(result.source, TestSource::Authored)),
+            "default discovery must not mix synthesized rows into authored results: {authored_result:#?}"
+        );
+
+        let synthesized_config = SuiteConfig {
+            root: dir.path().to_path_buf(),
+            include_synthesized: true,
+            only_synthesized: true,
+            synthesized_sources: SynthesizedSources {
+                contracts: true,
+                policies: false,
+                obligations: false,
+            },
+            ..Default::default()
+        };
+        let synthesized_result = run_suite(&synthesized_config);
+        assert!(
+            !synthesized_result.tests.is_empty(),
+            "explicit synthesized opt-in should produce synthesized rows"
+        );
+        assert!(
+            synthesized_result
+                .tests
+                .iter()
+                .all(|result| matches!(result.source, TestSource::Contract)),
+            "only-synthesized contract mode should not include authored rows: {synthesized_result:#?}"
+        );
+    }
+
+    #[test]
+    fn run_suite_executes_structured_snapshot_contract_cases_without_raw_source_scan() {
+        let dir = tempfile::tempdir().unwrap();
+        let snapshot_path = dir.path().join("checked-summary.ash");
+        let config = SuiteConfig {
+            root: dir.path().to_path_buf(),
+            include_synthesized: true,
+            only_synthesized: true,
+            synthesized_sources: SynthesizedSources {
+                contracts: true,
+                policies: false,
+                obligations: false,
+            },
+            synthesized_snapshots: vec![(
+                snapshot_path.clone(),
+                RunnerIntrospectionSnapshot {
+                    schema_version: RUNNER_SYNTHESIS_SCHEMA_VERSION.to_string(),
+                    module_identity: "test-module".to_string(),
+                    source_artifact_id: "source:checked-summary.ash".to_string(),
+                    check_summary_id: "check:summary".to_string(),
+                    contracts: vec![RunnerContractMetadata {
+                        id: "contract:positive".to_string(),
+                        callable_name: "positive".to_string(),
+                        callable_kind: "pure_function".to_string(),
+                        param_names: vec!["x".to_string()],
+                        param_types: vec!["Int".to_string()],
+                        lowered_requires: vec!["x > 0".to_string()],
+                        generation_hints: vec![
+                            TypeGeneratorDescriptor {
+                                id: "x-valid".to_string(),
+                                target_type: "Int".to_string(),
+                                source: TypeGeneratorSource::ContractValid,
+                                exact_values: vec![json!(1)],
+                                ..TypeGeneratorDescriptor::default()
+                            },
+                            TypeGeneratorDescriptor {
+                                id: "x-invalid".to_string(),
+                                target_type: "Int".to_string(),
+                                source: TypeGeneratorSource::ContractInvalidNearby,
+                                exact_values: vec![json!(0)],
+                                ..TypeGeneratorDescriptor::default()
+                            },
+                        ],
+                        executable_case_kinds: vec![SynthesizedOracleKind::PreconditionBoundary],
+                        ..RunnerContractMetadata::default()
+                    }],
+                    ..RunnerIntrospectionSnapshot::default()
+                },
+            )],
+            ..Default::default()
+        };
+
+        let result = run_suite(&config);
+
+        assert_eq!(result.total(), 2, "runner should use the snapshot seam");
+        assert!(
+            result
+                .tests
+                .iter()
+                .all(|test| test.source == TestSource::Contract && test.outcome == Outcome::Pass),
+            "structured snapshot contract cases should execute through run_suite: {result:#?}"
+        );
     }
 }

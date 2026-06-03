@@ -1,6 +1,6 @@
 # TASK-513: Synthesized Tests from Contracts, Policies, and Obligations
 
-## Status: Planned (Phase 76B)
+## Status: Complete (Phase 76B checkpoint; Phase 76B remains incomplete)
 
 ## Description
 
@@ -49,23 +49,39 @@ Add explicit, opt-in synthesized test planning and execution for contracts, poli
 
 ## Implementation Reality Check
 
-The runner now supports explicit source-scoped synthesized selection and clearly labels synthesized
-results in JSON/human output. However, current contract/policy/obligation synthesis still produces
-planning-level labeled records rather than executable end-to-end cases. In particular, policy and
-obligation synthesis should not be treated as passing execution when nothing was actually run.
+The runner now has a TASK-1010-shaped synthesized-case substrate at the CLI-runner layer:
+`RunnerIntrospectionSnapshot`, source-specific metadata records, exact bounded type-generator
+descriptors, executable `SynthesizedCase` records, and `ReproArtifact` output on generated and
+executed synthesized rows. `SuiteConfig::synthesized_snapshots` is the current runner-facing
+integration seam: tests and future checked-summary producers can pass structured snapshots directly
+to `run_suite`, and that path executes before raw-source compatibility scans. The user-facing CLI
+flags are wired for opt-in source selection, but the CLI command does not yet produce live checked
+snapshots from source files.
+
+The executable slice is intentionally narrow. Structured contract metadata can execute simple
+integer `requires` boundary cases such as `x > 0` only when metadata explicitly declares
+`PreconditionBoundary` and provides exact valid and invalid representatives via contract or snapshot
+generator descriptors. Structured policy metadata can execute `TerminalEquals` allow/deny cases when
+lowered policy identity, exact finite input-domain values, and supported `Allow`/`Deny` terminals are
+present. Structured obligation metadata can execute finite lifecycle expectations for
+introduced/discharged/missing-discharge/double-discharge when lifecycle model plus
+introduction/discharge/check sites are present. Raw-source contract/policy/obligation pattern
+recognition remains a compatibility fallback and reports explicit `skip`/`deferred` rows with repro
+context instead of successful execution.
 
 ## Explicit Deferred Follow-Up Items
 
-Deferred until after spec work improvement:
-- implemented runner-facing introspection APIs for lowered contracts, policies, and obligations, following TASK-1010
-- executable synthesized contract cases instead of planning-level scans
-- executable synthesized policy cases instead of labeled allow/deny placeholders
-- executable synthesized obligation lifecycle cases instead of labeled planning records
+Deferred until later implementation tasks or metadata integration:
+- wiring live lowered typechecker/runtime snapshots into the CLI command instead of raw-source fallback scans
+- executable contract postcondition cases that call real runtime targets and check lowered `ensures`
+- broader policy execution beyond exact `TerminalEquals` allow/deny metadata
+- broader obligation execution beyond explicit finite lifecycle metadata
 
 ## Completion Checklist
 
-- [ ] contract-derived synthesized tests implemented and verified end-to-end
-- [ ] policy-derived synthesized tests implemented and verified end-to-end
-- [ ] obligation-derived synthesized tests implemented and verified end-to-end
+- [x] narrow contract-derived synthesized `requires` boundary cases implemented and verified over structured metadata
+- [x] runner-facing structured snapshot seam wired through `SuiteConfig`/`run_suite`
+- [x] narrow policy-derived `TerminalEquals` allow/deny cases implemented over exact metadata; unavailable metadata defers with repro context
+- [x] narrow obligation lifecycle cases implemented over exact finite lifecycle metadata; unavailable metadata defers with repro context
 - [x] explicit CLI opt-in implemented
 - [x] output preserves authored vs synthesized distinction under verified smoke coverage

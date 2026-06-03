@@ -131,6 +131,7 @@ pub fn test(args: &TestArgs) -> CliResult<()> {
         include_synthesized,
         only_synthesized,
         synthesized_sources,
+        synthesized_snapshots: Vec::new(),
         fail_fast: args.fail_fast,
         timeout_ms: args.timeout,
         seed: args.seed,

@@ -122,6 +122,36 @@ impl fmt::Display for TestKind {
 // Single test result
 // ---------------------------------------------------------------------------
 
+/// Reproducible context for a generated or executed synthesized case.
+#[derive(Debug, Clone, Serialize, PartialEq)]
+pub struct ReproArtifact {
+    /// Runner schema version used for this case.
+    pub runner_schema_version: String,
+    /// Stable identity for the source artifact used to build the case.
+    pub source_artifact_id: String,
+    /// Stable identity for the checked/lowered summary consumed by the runner.
+    pub check_summary_id: String,
+    /// Stable synthesized case id.
+    pub case_id: String,
+    /// Seed used for deterministic generation.
+    pub seed: u64,
+    /// Generated case index, starting at 1.
+    pub case_index: usize,
+    /// Small-world index, starting at 1, when applicable.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub world_index: Option<usize>,
+    /// Canonical generated input snapshot.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub generated_input_snapshot: Option<serde_json::Value>,
+    /// Canonical world snapshot.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub world_snapshot: Option<serde_json::Value>,
+    /// Canonical oracle snapshot.
+    pub oracle_snapshot: serde_json::Value,
+    /// Command hint for replaying or reselecting this synthesized source.
+    pub replay_command: String,
+}
+
 /// Canonical result record for a single test.
 #[derive(Debug, Clone, Serialize)]
 pub struct TestResult {
@@ -153,6 +183,9 @@ pub struct TestResult {
     /// For small-world tests: the world index (1-based).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub world_index: Option<usize>,
+    /// Reproducible context for generated or executed synthesized rows.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub repro_artifact: Option<ReproArtifact>,
 }
 
 mod duration_ms {
@@ -179,6 +212,7 @@ impl TestResult {
             seed: None,
             failing_case: None,
             world_index: None,
+            repro_artifact: None,
         }
     }
 
@@ -221,6 +255,12 @@ impl TestResult {
     /// Set the failing case index.
     pub fn with_failing_case(mut self, case: usize) -> Self {
         self.failing_case = Some(case);
+        self
+    }
+
+    /// Set the reproducible artifact context.
+    pub fn with_repro_artifact(mut self, artifact: ReproArtifact) -> Self {
+        self.repro_artifact = Some(artifact);
         self
     }
 }

@@ -3873,6 +3873,10 @@ Phase 130 expands `reference/` from a narrow pilot into the first maintainable A
 | [TASK-997](tasks/TASK-997-reference-stdlib-tower-pages.md) | Add stdlib tower reference pages for Act, Proc, Workflow, and Result | 12 | ✅ Complete |
 | [TASK-998](tasks/TASK-998-reference-agent-cards-and-context-pack.md) | Add/update agent cards, context-pack index, and common-confusion warnings | 8 | ✅ Complete |
 | [TASK-999](tasks/TASK-999-reference-slice-2-closeout.md) | Run validator/checker hardening, drift/feature/status reconciliation, broad docs checks, and independent review | 8 | ✅ Complete |
+| [TASK-1019](tasks/TASK-1019-reference-ash-test-daily-use.md) | Add a daily-use `ash test` reference page and link it from tool indexes | 2 | ✅ Complete |
+
+**Post-closeout addendum:** TASK-1019 adds a focused `ash test` daily-use page under
+`reference/tools/` without changing runtime, parser, typechecker, or runner semantics.
 
 **Decision gates:**
 - D1: Subsystem pages are the durable detail/reference surfaces; reader journeys are cross-linked entry paths.

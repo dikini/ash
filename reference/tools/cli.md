@@ -7,9 +7,9 @@ authority: canonical-adjacent
 status: current
 stability: alpha
 owner: cli
-last_verified: 2026-06-01
+last_verified: 2026-06-03
 verified_against:
-  git_commit: e06944a
+  git_commit: 7cf576d
   release_tag: null
   ash_version: unreleased-alpha
   specs:
@@ -19,10 +19,14 @@ verified_against:
   tasks:
     - docs/plan/tasks/TASK-994-reference-getting-started-journey.md
     - docs/plan/tasks/TASK-995-reference-ashgrove-and-cli-procedures.md
+    - docs/plan/tasks/TASK-1019-reference-ash-test-daily-use.md
   code:
     - crates/ash-cli/src/main.rs
+    - crates/ash-cli/src/commands/test.rs
     - crates/ash-cli/src/commands/run.rs
     - crates/ash-cli/src/commands/daemon.rs
+    - crates/ash-cli/src/test_runner/executor.rs
+    - crates/ash-cli/src/test_runner/synthesized.rs
   tests:
     - cargo run -p ash-cli -- --help
     - cargo run -p ash-cli -- check --help
@@ -41,6 +45,7 @@ related:
   explains:
     - ref.getting_started.run_a_program
     - ref.getting_started.run_as_daemon
+    - ref.tools.test
   supersedes: []
   superseded_by: null
   historical_rationale:
@@ -79,7 +84,7 @@ Global options currently include `--quiet`, `--color <auto|always|never>`, repea
 | `ash check <PATH>` | Type check workflow files | Validate one file or a directory, optionally recursively. |
 | `ash run <PATH> [-- <ARGS>...]` | Execute a workflow | One-shot local execution with output, trace, dry-run, timeout, capability/resource, and admission-profile options. |
 | `ash trace <PATH>` | Run workflow with provenance tracing | Produce trace data in JSON/NDJSON/CSV or export forms. |
-| `ash test [PATH]` | Run Ash tests | Run file/directory tests with filters and synthesized-test controls. |
+| `ash test [PATH]` | Run Ash tests | Run file/directory tests with filters and synthesized-test controls. See [Ash test](test.md). |
 | `ash repl` | Start interactive REPL | Start an interactive session with optional history, init, and config paths. |
 | `ash dot <PATH>` | Generate Graphviz DOT output | Emit DOT or SVG graph output for a workflow file. |
 | `ash daemon <COMMAND>` | Control the local RuntimeKernel daemon | Serve and inspect the local same-user daemon surface. |
@@ -132,6 +137,7 @@ Reference-only command forms:
 ```bash
 ash test PATH
 ash test --tag TAG --kind KIND PATH
+ash test --only-synthesized contracts,policies,obligations --format json PATH
 ash repl --history PATH
 ash repl --no-history
 ash dot --format dot PATH

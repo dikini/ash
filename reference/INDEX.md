@@ -7,9 +7,9 @@ authority: canonical-adjacent
 status: current
 stability: alpha
 owner: reference-corpus
-last_verified: 2026-06-01
+last_verified: 2026-06-03
 verified_against:
-  git_commit: 01bafb4
+  git_commit: 7cf576d
   release_tag: null
   ash_version: unreleased-alpha
   specs:
@@ -24,6 +24,7 @@ verified_against:
     - docs/plan/tasks/TASK-997-reference-stdlib-tower-pages.md
     - docs/plan/tasks/TASK-998-reference-agent-cards-and-context-pack.md
     - docs/plan/tasks/TASK-999-reference-slice-2-closeout.md
+    - docs/plan/tasks/TASK-1019-reference-ash-test-daily-use.md
   code:
     []
   tests:
@@ -97,6 +98,7 @@ refresh_trigger:
 
 - [Tools index](tools/README.md)
 - [CLI tools](tools/cli.md)
+- [Ash test](tools/test.md)
 - [Ashgrove](tools/ashgrove.md)
   - [Install](tools/ashgrove/install.md)
   - [Update](tools/ashgrove/update.md)

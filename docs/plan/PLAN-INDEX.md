@@ -308,6 +308,7 @@ Update this section as tasks complete:
 | 130 | 8 | 8 | ✅ Complete; SPEC-075 Implemented MVP |
 | 131 | 9 | 9 | ✅ Complete |
 | 132 | 7 | 7 | ✅ Complete |
+| 133 | 9 | 0 | 📝 Planned |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -3944,3 +3945,32 @@ Phase 132 completes the broader DESIGN-022 and DESIGN-023 work deferred after th
 - D3: Unbounded generated domains defer before materialization.
 - D4: Repro artifacts are mandatory for executed synthesized/generated/small-world rows.
 - D5: CLI controls stay consistent across authored and synthesized paths.
+
+## Phase 133: Standard Algebra Library and Monad Remediation
+
+**Priority:** High (stdlib usability and generalized-do final-surface closure)
+**Status:** 📝 Planned
+**Spec:** [SPEC-078](../spec/SPEC-078-STANDARD-ALGEBRA-LIBRARY-AND-MONAD-REMEDIATION.md)
+**Plan:** [PLAN-128](PLAN-128-STANDARD-ALGEBRA-LIBRARY-AND-MONAD-REMEDIATION.md)
+
+Phase 133 adds a source-visible `std::algebra` namespace for `Semigroup`, `Monoid`, `Functor`, `Applicative`, and `Monad`; implements usable ordinary-data and tower-carrier evidence where the current language supports it; rewires `do:K` and comprehension lowering to selected stdlib/prelude `Monad<K>` evidence; and retires obsolete hidden-dictionary deferrals without adding new syntax. Algebra law proof/checking and generated law-test execution are explicitly split into a follow-on generated-test phase.
+
+| Task | Description | Est. Hours | Status |
+|------|-------------|------------|--------|
+| [TASK-1020](tasks/TASK-1020-stdlib-algebra-audit-gate.md) | Audit live algebra/interface/do seams and freeze exact syntax, file targets, and evidence gates | 6 | 📝 Planned |
+| [TASK-1021](tasks/TASK-1021-std-algebra-namespace-and-interfaces.md) | Add `std::algebra` namespace and source-visible algebra interfaces | 10 | 📝 Planned |
+| [TASK-1022](tasks/TASK-1022-pure-algebra-instances.md) | Add pure data instances for `Option`, `Result`, `List`, and string/list semigroups/monoids | 14 | 📝 Planned |
+| [TASK-1023](tasks/TASK-1023-tower-algebra-instances-and-bridge-remediation.md) | Add `Act`/`Proc`/`Workflow` algebra evidence and remove/quarantine hidden bridge authority | 16 | 📝 Planned |
+| [TASK-1024](tasks/TASK-1024-do-and-comprehension-stdlib-evidence.md) | Rewire `do:K` and comprehensions to use stdlib/prelude Monad evidence | 16 | 📝 Planned |
+| [TASK-1025](tasks/TASK-1025-algebra-combinators-and-examples.md) | Add usable algebra combinators and executable examples | 10 | 📝 Planned |
+| [TASK-1026](tasks/TASK-1026-algebra-law-profile-generated-test-handoff.md) | Create law-profile and generated-test follow-up packet without implementing law runner support | 8 | 📝 Planned |
+| [TASK-1027](tasks/TASK-1027-algebra-reference-and-corpus-migration.md) | Update reference docs and reconcile stale Monad/stdlib deferral wording | 8 | 📝 Planned |
+| [TASK-1028](tasks/TASK-1028-stdlib-algebra-closeout.md) | Run broad verification, independent review, status reconciliation, and closeout | 8 | 📝 Planned |
+
+**Decision gates:**
+- D1: No new language syntax; implementation uses existing modules, interfaces, impls, functions, imports, `do:K`, and comprehensions.
+- D2: Canonical namespace is `std::algebra`; direct root `std` re-exports are not required in the first slice.
+- D3: Final-surface tests must import/check/use stdlib algebra modules; local fixture-only interfaces are not enough.
+- D4: Rust runtime specialization may implement opaque tower carriers, but runtime behavior must not exceed the public Ash algebra surface.
+- D5: Anonymous hidden Act/Proc/Workflow dictionaries must be removed or quarantined as named compiler-prelude evidence tied to public stdlib operations.
+- D6: Law proof/checking and law-test derivation are follow-on implementation phases integrated with generated tests, not documentation-only notes and not part of Phase 133 completion.

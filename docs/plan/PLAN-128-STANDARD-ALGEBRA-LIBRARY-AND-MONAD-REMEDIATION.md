@@ -29,7 +29,7 @@ The phase is library-first. Interfaces and helper functions live in Ash source u
 | [TASK-1020](tasks/TASK-1020-stdlib-algebra-audit-gate.md) | Audit live algebra/interface/do seams and freeze exact syntax, file targets, and evidence gates | Audit/Planning | 6 | ✅ Complete |
 | [TASK-1021](tasks/TASK-1021-std-algebra-namespace-and-interfaces.md) | Add `std::algebra` namespace and source-visible algebra interfaces | Stdlib/Typeck | 10 | ✅ Complete |
 | [TASK-1022](tasks/TASK-1022-pure-algebra-instances.md) | Add pure data instances for `Option`, `Result`, `List`, and string/list semigroups/monoids | Stdlib/Typeck | 14 | ✅ Complete |
-| [TASK-1023](tasks/TASK-1023-tower-algebra-instances-and-bridge-remediation.md) | Add `Act`/`Proc`/`Workflow` algebra evidence and remove/quarantine hidden bridge authority | Typeck/Runtime Boundary | 16 | Planned |
+| [TASK-1023](tasks/TASK-1023-tower-algebra-instances-and-bridge-remediation.md) | Add `Act`/`Proc`/`Workflow` algebra evidence and remove/quarantine hidden bridge authority | Typeck/Runtime Boundary | 16 | ✅ Complete |
 | [TASK-1024](tasks/TASK-1024-do-and-comprehension-stdlib-evidence.md) | Rewire `do:K` and comprehensions to use stdlib/prelude Monad evidence | Typeck/Engine | 16 | Planned |
 | [TASK-1025](tasks/TASK-1025-algebra-combinators-and-examples.md) | Add usable algebra combinators and executable examples | Stdlib/Examples | 10 | Planned |
 | [TASK-1026](tasks/TASK-1026-algebra-law-profile-generated-test-handoff.md) | Create law-profile and generated-test follow-up packet without implementing law runner support | Docs/Test Runner Planning | 8 | Planned |

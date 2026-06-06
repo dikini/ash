@@ -155,9 +155,10 @@ impl DoEvidenceIdentity {
 
 /// Resolve a surface `do:K` target to a sequencing dictionary.
 ///
-/// Compiler-known `Act`, `Proc`, and `Workflow` targets keep their hidden bridge
-/// dictionaries during the migration. Other well-shaped unary targets must have
-/// explicit `Monad<K>` evidence in the [`TypeEnv`].
+/// Compiler-known `Act`, `Proc`, and `Workflow` targets prefer named `Monad<K>`
+/// evidence tied to public tower shims, with legacy fallback dictionaries only
+/// when the `Monad` interface is not registered yet. Other well-shaped unary
+/// targets must have explicit `Monad<K>` evidence in the [`TypeEnv`].
 pub(crate) fn resolve_do_target(
     env: &TypeEnv,
     target: &DoTarget,
@@ -208,42 +209,57 @@ pub(crate) fn resolve_do_target(
     }
 
     match qualified.name.as_str() {
-        "Act" => Ok(DoDictionary {
-            target: qualified.clone(),
-            value_constructor: qualified,
-            target_args: target.args.clone(),
-            return_op: DoDictionaryOp::HiddenActReturn,
-            bind_op: DoDictionaryOp::HiddenActBind,
-            tower_level: DoTowerLevel::Effectful,
-        }),
-        "Proc" => Ok(DoDictionary {
-            target: qualified.clone(),
-            value_constructor: qualified,
-            target_args: target.args.clone(),
-            return_op: DoDictionaryOp::Ordinary(QualifiedName::qualified(
-                vec!["proc".to_string()],
-                "unit",
-            )),
-            bind_op: DoDictionaryOp::Ordinary(QualifiedName::qualified(
-                vec!["proc".to_string()],
-                "bind",
-            )),
-            tower_level: DoTowerLevel::Proc,
-        }),
-        "Workflow" => Ok(DoDictionary {
-            target: qualified.clone(),
-            value_constructor: qualified,
-            target_args: target.args.clone(),
-            return_op: DoDictionaryOp::Ordinary(QualifiedName::qualified(
-                vec!["workflow".to_string()],
-                "unit",
-            )),
-            bind_op: DoDictionaryOp::Ordinary(QualifiedName::qualified(
-                vec!["workflow".to_string()],
-                "bind",
-            )),
-            tower_level: DoTowerLevel::Workflow,
-        }),
+        "Act" => resolve_tower_monad_evidence_dictionary(
+            env,
+            target,
+            &surface_target,
+            qualified,
+            DoTowerLevel::Effectful,
+            || {
+                (
+                    DoDictionaryOp::HiddenActReturn,
+                    DoDictionaryOp::HiddenActBind,
+                )
+            },
+        ),
+        "Proc" => resolve_tower_monad_evidence_dictionary(
+            env,
+            target,
+            &surface_target,
+            qualified,
+            DoTowerLevel::Proc,
+            || {
+                (
+                    DoDictionaryOp::Ordinary(QualifiedName::qualified(
+                        vec!["proc".to_string()],
+                        "unit",
+                    )),
+                    DoDictionaryOp::Ordinary(QualifiedName::qualified(
+                        vec!["proc".to_string()],
+                        "bind",
+                    )),
+                )
+            },
+        ),
+        "Workflow" => resolve_tower_monad_evidence_dictionary(
+            env,
+            target,
+            &surface_target,
+            qualified,
+            DoTowerLevel::Workflow,
+            || {
+                (
+                    DoDictionaryOp::Ordinary(QualifiedName::qualified(
+                        vec!["workflow".to_string()],
+                        "unit",
+                    )),
+                    DoDictionaryOp::Ordinary(QualifiedName::qualified(
+                        vec!["workflow".to_string()],
+                        "bind",
+                    )),
+                )
+            },
+        ),
         "Result" => unreachable!("Result is rejected before MVP dictionary selection"),
         _ => resolve_monad_evidence_dictionary(env, target, &surface_target),
     }
@@ -280,6 +296,42 @@ fn resolve_monad_evidence_dictionary(
         return_op: selected_monad_op(evidence, &evidence_identity, "return", target.span)?,
         bind_op: selected_monad_op(evidence, &evidence_identity, "bind", target.span)?,
         tower_level: DoTowerLevel::Effectful,
+    })
+}
+
+fn resolve_tower_monad_evidence_dictionary<F>(
+    env: &TypeEnv,
+    target: &DoTarget,
+    surface_target: &SurfaceType,
+    qualified: QualifiedName,
+    tower_level: DoTowerLevel,
+    fallback_ops: F,
+) -> Result<DoDictionary, ConstructorError>
+where
+    F: FnOnce() -> (DoDictionaryOp, DoDictionaryOp),
+{
+    if let Ok(evidence) =
+        env.resolve_interface_evidence("Monad", std::slice::from_ref(surface_target))
+    {
+        let evidence_identity = DoEvidenceIdentity::from_impl(evidence);
+        return Ok(DoDictionary {
+            target: qualified.clone(),
+            value_constructor: qualified,
+            target_args: target.args.clone(),
+            return_op: selected_monad_op(evidence, &evidence_identity, "unit", target.span)?,
+            bind_op: selected_monad_op(evidence, &evidence_identity, "bind", target.span)?,
+            tower_level,
+        });
+    }
+
+    let (return_op, bind_op) = fallback_ops();
+    Ok(DoDictionary {
+        target: qualified.clone(),
+        value_constructor: qualified,
+        target_args: target.args.clone(),
+        return_op,
+        bind_op,
+        tower_level,
     })
 }
 
@@ -422,6 +474,38 @@ fn selected_monad_op(
 }
 
 fn intrinsic_monad_shim(evidence: &ImplScheme, method: &str) -> Option<QualifiedName> {
+    let evidence_head = evidence
+        .head_args
+        .iter()
+        .find_map(evidence_constructor_name);
+    match (evidence_head, method) {
+        (Some("Act"), "unit") => {
+            return Some(QualifiedName::qualified(vec!["act".to_string()], "unit"));
+        }
+        (Some("Act"), "bind") => {
+            return Some(QualifiedName::qualified(vec!["act".to_string()], "bind"));
+        }
+        (Some("Proc"), "unit") => {
+            return Some(QualifiedName::qualified(vec!["proc".to_string()], "unit"));
+        }
+        (Some("Proc"), "bind") => {
+            return Some(QualifiedName::qualified(vec!["proc".to_string()], "bind"));
+        }
+        (Some("Workflow"), "unit") => {
+            return Some(QualifiedName::qualified(
+                vec!["workflow".to_string()],
+                "unit",
+            ));
+        }
+        (Some("Workflow"), "bind") => {
+            return Some(QualifiedName::qualified(
+                vec!["workflow".to_string()],
+                "bind",
+            ));
+        }
+        _ => {}
+    }
+
     let is_result = evidence
         .head_args
         .iter()
@@ -433,6 +517,16 @@ fn intrinsic_monad_shim(evidence: &ImplScheme, method: &str) -> Option<Qualified
             "and_then",
         )),
         _ => None,
+    }
+}
+
+fn evidence_constructor_name(arg: &InterfaceEvidenceArg) -> Option<&str> {
+    match arg {
+        InterfaceEvidenceArg::Constructor(expr) => type_constructor_expr_head_name(expr),
+        InterfaceEvidenceArg::Proper(crate::types::Type::Constructor { name, .. }) => {
+            Some(name.name.as_str())
+        }
+        InterfaceEvidenceArg::Proper(_) => None,
     }
 }
 

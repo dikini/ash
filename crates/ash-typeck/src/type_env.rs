@@ -15016,6 +15016,61 @@ impl TypeEnv {
                     .insert(interface_id, def.type_params.len());
             }
         }
+        if interface_name == "Monad" {
+            self.register_compiler_prelude_tower_monad_evidence()?;
+        }
+        Ok(())
+    }
+
+    fn register_compiler_prelude_tower_monad_evidence(&mut self) -> Result<(), TypeEnvError> {
+        let interface =
+            self.interfaces.get("Monad").cloned().ok_or_else(|| {
+                TypeEnvError::MissingInterface("Monad".to_string(), Span::default())
+            })?;
+        let expected_methods = ["unit", "bind"];
+        if !expected_methods
+            .iter()
+            .all(|method| interface.methods.contains_key(*method))
+        {
+            return Ok(());
+        }
+
+        for carrier in ["Act", "Proc", "Workflow"] {
+            if !self.has_type(carrier) {
+                continue;
+            }
+            let surface_args = [SurfaceType::Name(carrier.into())];
+            let head_args = self.lower_interface_evidence_args(
+                "Monad",
+                &interface,
+                &surface_args,
+                &HashMap::new(),
+            )?;
+            if self.impls.iter().any(|scheme| {
+                scheme.interface == "Monad"
+                    && interface_evidence_args_match(&scheme.head_args, &head_args, false)
+            }) {
+                continue;
+            }
+            let lowered_type_args: Vec<Type> = head_args
+                .iter()
+                .map(interface_evidence_arg_as_legacy_type)
+                .collect();
+            self.impls.push(ImplScheme {
+                interface: "Monad".to_string(),
+                type_params: Vec::new(),
+                head: Type::Constructor {
+                    name: QualifiedName::root("Monad"),
+                    args: lowered_type_args,
+                    kind: Kind::Type,
+                },
+                head_args,
+                where_bounds: Vec::new(),
+                associated_type_bindings: HashMap::new(),
+                methods: Vec::new(),
+            });
+        }
+
         Ok(())
     }
 

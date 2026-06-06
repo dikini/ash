@@ -717,6 +717,22 @@ pub fn builtin_dispatch_table() -> &'static HashMap<&'static str, BuiltinEntry> 
 
         // ── Act module bridge builtins (qualified) ──
         m.insert(
+            "act::unit",
+            BuiltinEntry {
+                arity: 1,
+                variadic: false,
+                implemented: true,
+            },
+        );
+        m.insert(
+            "act::bind",
+            BuiltinEntry {
+                arity: 2,
+                variadic: false,
+                implemented: true,
+            },
+        );
+        m.insert(
             "act::__guard",
             BuiltinEntry {
                 arity: 2,
@@ -3267,6 +3283,8 @@ pub fn eval_function_call(
     ctx: &Context,
 ) -> EvalResult<Value> {
     match (module, func) {
+        (Some("act"), "unit") => runtime_unit(args, ctx),
+        (Some("act"), "bind") => runtime_bind(args, ctx),
         (Some("proc"), "unit") => runtime_proc_unit(args, ctx),
         (Some("proc"), "from_act") => runtime_proc_from_act(args, ctx),
         (Some("proc"), "bind") => runtime_proc_bind(args, ctx),

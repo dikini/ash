@@ -1,6 +1,6 @@
 # TASK-1023: Tower Algebra Instances and Bridge Remediation
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -24,6 +24,13 @@ Depends on TASK-1020 and TASK-1021 completion; may run after or alongside TASK-1
 | Pure `Option`/`Result`/`List` dictionaries deferred | SPEC-055/SPEC-067 | pure container evidence and partial constructor targets incomplete | `Option`, `Result`, `List`, and `Result<_, E>` substrate exist | implement now where source syntax supports it | stdlib evidence tests for pure carriers |
 | Law proof/test derivation | SPEC-054/SPEC-067 | no law runner/proof substrate | generated runner exists but law profiles unspecified | concrete follow-up phase/task seed | TASK-1026 owned generated-test handoff |
 | Fully self-hosted tower runtime representation | SPEC-047..SPEC-051/SPEC-069 | opaque Act/Proc/Workflow runtime state remains Rust-backed | still true | keep deferred explicitly | opacity/fail-closed tests continue |
+
+## Completion Notes
+
+`Act`, `Proc`, and `Workflow` tower `Monad` evidence is installed as named compiler-prelude evidence because honest source-level impls cannot currently express the opaque Rust-backed carrier boundaries without exposing hidden runtime authority. The evidence is tied to public operations: `act::unit`/`act::bind`, `proc::unit`/`proc::bind`, and `workflow::unit`/`workflow::bind`.
+
+`Functor` and `Applicative` tower evidence remains deferred because no honest public `map`/`pure`/`apply` tower surface exists yet for all three opaque carriers. TASK-1024+ owns broad `do:K`/comprehension rewiring; this task only redirects selected tower evidence to named public shims when `Monad` evidence is registered and preserves compatibility fallback when it is not.
+
 ## Requirements
 
 1. Install `Monad<Act>`, `Monad<Proc>`, and `Monad<Workflow>` evidence through source-level impls if possible, otherwise through named compiler-prelude evidence tied to `act::unit/bind`, `proc::unit/bind`, and `workflow::unit/bind`.
@@ -92,12 +99,28 @@ commands:
   - cargo fmt --check
   - git diff --check
 checklist:
-  - [ ] RED evidence recorded
-  - [ ] GREEN evidence recorded
-  - [ ] Focused test commands have recorded non-zero test counts or an explicit artifact-check proof
-  - [ ] Final-surface or negative-leakage gates satisfied where applicable
-  - [ ] Docs/status/changelog updated if public behavior changed
+  - [x] RED evidence recorded
+  - [x] GREEN evidence recorded
+  - [x] Focused test commands have recorded non-zero test counts or an explicit artifact-check proof
+  - [x] Final-surface or negative-leakage gates satisfied where applicable
+  - [x] Docs/status/changelog updated if public behavior changed
 ```
+
+### RED Evidence
+
+- `ash-typeck task1023_tower_algebra_instances`: 2 matching tests initially failed because `Monad<Act>`, `Monad<Proc>`, and `Monad<Workflow>` evidence was missing and `do:Act` still selected anonymous `HiddenActBind`.
+- `ash-typeck task1023_hidden_bridge_leakage`: 2 matching tests initially failed because registered `Monad<Act>` still allowed hidden `HiddenActReturn`/`HiddenActBind` selection instead of named public tower shims.
+- `ash-interp task1023_act_tower_runtime`: 2 matching tests initially failed because public `act::unit` and `act::bind` were not runtime-dispatchable public operations.
+
+### GREEN Evidence
+
+- `ash-typeck task1023_tower_algebra_instances`: 2 matching tests pass.
+- `ash-typeck task1023_hidden_bridge_leakage`: 2 matching tests pass.
+- `ash-interp task1023_act_tower_runtime`: 2 matching tests pass.
+- `ash-interp task1023_proc_tower_runtime`: 1 matching test passes.
+- `ash-interp task1023_workflow_tower_runtime`: 1 matching test passes.
+- `cargo fmt --check`: pass.
+- `git diff --check`: pass.
 
 ## Dependencies for Next Task
 

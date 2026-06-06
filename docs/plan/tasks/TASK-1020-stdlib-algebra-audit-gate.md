@@ -1,6 +1,6 @@
 # TASK-1020: Stdlib Algebra Audit Gate
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -103,13 +103,30 @@ PY
   - cargo fmt --check
   - git diff --check
 checklist:
-  - [ ] RED evidence recorded
-  - [ ] GREEN evidence recorded
-  - [ ] Focused test commands have recorded non-zero test counts or an explicit artifact-check proof
-  - [ ] Final-surface or negative-leakage gates satisfied where applicable
-  - [ ] Docs/status/changelog updated if public behavior changed
+  - [x] RED evidence recorded
+  - [x] GREEN evidence recorded
+  - [x] Focused test commands have recorded non-zero test counts or an explicit artifact-check proof
+  - [x] Final-surface or negative-leakage gates satisfied where applicable
+  - [x] Docs/status/changelog updated if public behavior changed
 ```
+
+## Evidence
+
+### RED
+
+- `python3` audit-artifact guard failed before implementation with `AssertionError: docs/plan/audits/TASK-1020-stdlib-algebra-audit-gate.md`, proving the required audit artifact was missing.
+
+### GREEN
+
+- `python3` audit-artifact/downstream non-zero guard: exit 0, printed `TASK-1020 audit artifact and downstream non-zero command guards exist`.
+- `RUSTC_WRAPPER= cargo test -p ash-typeck do_target`: exit 0, ran 9 matching `do_target` unit tests in `ash-typeck` with 9 passed and 0 failed.
+- `cargo fmt --check`: exit 0.
+- `git diff --check`: exit 0.
+
+### Scope Confirmation
+
+- No `std::algebra` source modules, algebra interfaces, algebra instances, `do:K` evidence rewiring, helper combinators, law-test runner behavior, or reference migration behavior were implemented. TASK-1021 through TASK-1028 remain planned downstream work.
 
 ## Dependencies for Next Task
 
-This task outputs the verified slice required by downstream TASK-1020..TASK-1028 work. Downstream tasks must not silently expand or preserve old deferrals without updating SPEC-078/PLAN-128.
+This task outputs the verified audit gate required by downstream TASK-1021 through TASK-1028 work. Downstream tasks must not silently expand or preserve old deferrals without updating SPEC-078/PLAN-128.

@@ -37,7 +37,8 @@ Depends on TASK-1020 and TASK-1021 completion; may run after or alongside TASK-1
 - Modify: `crates/ash-typeck/src/type_env.rs`
 - Modify: `std/src/act.ash`, `std/src/proc.ash`, `std/src/workflow.ash` as needed
 - Modify/create: `std/src/algebra/*` tower instance surfaces
-- Add focused tests named by TASK-1020
+- Add: `crates/ash-typeck/tests/task_1023_tower_algebra_instances_and_bridge_remediation.rs`
+- Add: `crates/ash-interp/tests/task_1023_tower_runtime_algebra.rs`
 
 ## TDD / Execution Steps
 
@@ -52,7 +53,7 @@ Depends on TASK-1020 and TASK-1021 completion; may run after or alongside TASK-1
 ### Implementer
 
 ```text
-Repository: /home/dikini/Projects/ash. Read this task file, docs/spec/SPEC-078-STANDARD-ALGEBRA-LIBRARY-AND-MONAD-REMEDIATION.md, docs/plan/PLAN-128-STANDARD-ALGEBRA-LIBRARY-AND-MONAD-REMEDIATION.md, and the TASK-1020 audit artifact if it exists. Constraints: no new Ash syntax; use final-surface std::algebra/import tests rather than local fixture-only evidence; do not preserve obsolete deferrals unless this task records a concrete current blocker and follow-up.
+Repository: /home/dikini/Projects/ash. Read this task file, docs/spec/SPEC-078-STANDARD-ALGEBRA-LIBRARY-AND-MONAD-REMEDIATION.md, docs/plan/PLAN-128-STANDARD-ALGEBRA-LIBRARY-AND-MONAD-REMEDIATION.md, and docs/plan/audits/TASK-1020-stdlib-algebra-audit-gate.md; fail if the audit is missing. Constraints: no new Ash syntax; use final-surface std::algebra/import tests rather than local fixture-only evidence; do not preserve obsolete deferrals unless this task records a concrete current blocker and follow-up.
 
 Implement TASK-1023. Start with RED tests showing tower do/evidence still depends on hidden bridge authority. Then add named stdlib/prelude evidence tied to public tower operations. Do not expose ActEnv or invent new runtime syntax.
 ```
@@ -83,11 +84,11 @@ toolsets: [terminal, file]
 ```yaml
 strictness: clean
 commands:
-  - bash -lc 'set -euo pipefail; RUSTC_WRAPPER= cargo test -p ash-typeck tower_algebra_instances -- --list | tee /tmp/task1023-tower-algebra-instances.list; grep -E "tower_algebra_instances" /tmp/task1023-tower-algebra-instances.list; RUSTC_WRAPPER= cargo test -p ash-typeck tower_algebra_instances -- --nocapture'
-  - bash -lc 'set -euo pipefail; RUSTC_WRAPPER= cargo test -p ash-typeck hidden_bridge_leakage -- --list | tee /tmp/task1023-hidden-bridge-leakage.list; grep -E "hidden_bridge_leakage" /tmp/task1023-hidden-bridge-leakage.list; RUSTC_WRAPPER= cargo test -p ash-typeck hidden_bridge_leakage -- --nocapture'
-  - bash -lc 'set -euo pipefail; RUSTC_WRAPPER= cargo test -p ash-interp act -- --list | tee /tmp/task1023-ash-interp-act.list; grep -E "act" /tmp/task1023-ash-interp-act.list; RUSTC_WRAPPER= cargo test -p ash-interp act -- --nocapture'
-  - bash -lc 'set -euo pipefail; RUSTC_WRAPPER= cargo test -p ash-interp proc -- --list | tee /tmp/task1023-ash-interp-proc.list; grep -E "proc" /tmp/task1023-ash-interp-proc.list; RUSTC_WRAPPER= cargo test -p ash-interp proc -- --nocapture'
-  - bash -lc 'set -euo pipefail; RUSTC_WRAPPER= cargo test -p ash-interp workflow -- --list | tee /tmp/task1023-ash-interp-workflow.list; grep -E "workflow" /tmp/task1023-ash-interp-workflow.list; RUSTC_WRAPPER= cargo test -p ash-interp workflow -- --nocapture'
+  - bash -lc 'set -euo pipefail; RUSTC_WRAPPER= cargo test -p ash-typeck task1023_tower_algebra_instances -- --list | tee /tmp/task1023-tower-algebra-instances.list; matches=$(grep -E "(^|::)task1023_tower_algebra_instances[^[:space:]]*: test$" /tmp/task1023-tower-algebra-instances.list | wc -l); test "$matches" -gt 0; printf "non-zero ash-typeck task1023_tower_algebra_instances tests: %s\n" "$matches"; RUSTC_WRAPPER= cargo test -p ash-typeck task1023_tower_algebra_instances -- --nocapture'
+  - bash -lc 'set -euo pipefail; RUSTC_WRAPPER= cargo test -p ash-typeck task1023_hidden_bridge_leakage -- --list | tee /tmp/task1023-hidden-bridge-leakage.list; matches=$(grep -E "(^|::)task1023_hidden_bridge_leakage[^[:space:]]*: test$" /tmp/task1023-hidden-bridge-leakage.list | wc -l); test "$matches" -gt 0; printf "non-zero ash-typeck task1023_hidden_bridge_leakage tests: %s\n" "$matches"; RUSTC_WRAPPER= cargo test -p ash-typeck task1023_hidden_bridge_leakage -- --nocapture'
+  - bash -lc 'set -euo pipefail; RUSTC_WRAPPER= cargo test -p ash-interp task1023_act_tower_runtime -- --list | tee /tmp/task1023-ash-interp-act.list; matches=$(grep -E "(^|::)task1023_act_tower_runtime[^[:space:]]*: test$" /tmp/task1023-ash-interp-act.list | wc -l); test "$matches" -gt 0; printf "non-zero ash-interp task1023_act_tower_runtime tests: %s\n" "$matches"; RUSTC_WRAPPER= cargo test -p ash-interp task1023_act_tower_runtime -- --nocapture'
+  - bash -lc 'set -euo pipefail; RUSTC_WRAPPER= cargo test -p ash-interp task1023_proc_tower_runtime -- --list | tee /tmp/task1023-ash-interp-proc.list; matches=$(grep -E "(^|::)task1023_proc_tower_runtime[^[:space:]]*: test$" /tmp/task1023-ash-interp-proc.list | wc -l); test "$matches" -gt 0; printf "non-zero ash-interp task1023_proc_tower_runtime tests: %s\n" "$matches"; RUSTC_WRAPPER= cargo test -p ash-interp task1023_proc_tower_runtime -- --nocapture'
+  - bash -lc 'set -euo pipefail; RUSTC_WRAPPER= cargo test -p ash-interp task1023_workflow_tower_runtime -- --list | tee /tmp/task1023-ash-interp-workflow.list; matches=$(grep -E "(^|::)task1023_workflow_tower_runtime[^[:space:]]*: test$" /tmp/task1023-ash-interp-workflow.list | wc -l); test "$matches" -gt 0; printf "non-zero ash-interp task1023_workflow_tower_runtime tests: %s\n" "$matches"; RUSTC_WRAPPER= cargo test -p ash-interp task1023_workflow_tower_runtime -- --nocapture'
   - cargo fmt --check
   - git diff --check
 checklist:
@@ -100,4 +101,4 @@ checklist:
 
 ## Dependencies for Next Task
 
-This task outputs the verified slice required by downstream TASK-1020..TASK-1028 work. Downstream tasks must not silently expand or preserve old deferrals without updating SPEC-078/PLAN-128.
+This task outputs tower algebra evidence and hidden-bridge remediation required by TASK-1024 through TASK-1028. Downstream tasks must not silently expand or preserve old deferrals without updating SPEC-078/PLAN-128.

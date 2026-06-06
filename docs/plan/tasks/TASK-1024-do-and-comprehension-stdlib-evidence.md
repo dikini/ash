@@ -36,7 +36,8 @@ Depends on TASK-1022 and TASK-1023 completion.
 - Modify: `crates/ash-typeck/src/do_target.rs`
 - Modify: `crates/ash-typeck/src/check_expr.rs`
 - Modify as needed: `crates/ash-engine/src/monomorphize.rs`
-- Modify tests named by TASK-1020, especially generalized-do and comprehension tests
+- Add/modify: `crates/ash-typeck/tests/task_1024_do_and_comprehension_stdlib_evidence.rs`
+- Add/modify: `crates/ash-engine/tests/task_1024_stdlib_do_evidence.rs`
 
 ## TDD / Execution Steps
 
@@ -51,7 +52,7 @@ Depends on TASK-1022 and TASK-1023 completion.
 ### Implementer
 
 ```text
-Repository: /home/dikini/Projects/ash. Read this task file, docs/spec/SPEC-078-STANDARD-ALGEBRA-LIBRARY-AND-MONAD-REMEDIATION.md, docs/plan/PLAN-128-STANDARD-ALGEBRA-LIBRARY-AND-MONAD-REMEDIATION.md, and the TASK-1020 audit artifact if it exists. Constraints: no new Ash syntax; use final-surface std::algebra/import tests rather than local fixture-only evidence; do not preserve obsolete deferrals unless this task records a concrete current blocker and follow-up.
+Repository: /home/dikini/Projects/ash. Read this task file, docs/spec/SPEC-078-STANDARD-ALGEBRA-LIBRARY-AND-MONAD-REMEDIATION.md, docs/plan/PLAN-128-STANDARD-ALGEBRA-LIBRARY-AND-MONAD-REMEDIATION.md, and docs/plan/audits/TASK-1020-stdlib-algebra-audit-gate.md; fail if the audit is missing. Constraints: no new Ash syntax; use final-surface std::algebra/import tests rather than local fixture-only evidence; do not preserve obsolete deferrals unless this task records a concrete current blocker and follow-up.
 
 Implement TASK-1024 after TASK-1022 and TASK-1023. Write RED tests for final-surface do/comprehension examples. Rewire lowering to selected evidence and preserve fail-closed diagnostics. Do not invent target inference or new syntax.
 ```
@@ -82,9 +83,9 @@ toolsets: [terminal, file]
 ```yaml
 strictness: clean
 commands:
-  - bash -lc 'set -euo pipefail; RUSTC_WRAPPER= cargo test -p ash-typeck stdlib_do_evidence -- --list | tee /tmp/task1024-stdlib-do-evidence.list; grep -E "stdlib_do_evidence" /tmp/task1024-stdlib-do-evidence.list; RUSTC_WRAPPER= cargo test -p ash-typeck stdlib_do_evidence -- --nocapture'
-  - bash -lc 'set -euo pipefail; RUSTC_WRAPPER= cargo test -p ash-typeck stdlib_comprehension_evidence -- --list | tee /tmp/task1024-stdlib-comprehension-evidence.list; grep -E "stdlib_comprehension_evidence" /tmp/task1024-stdlib-comprehension-evidence.list; RUSTC_WRAPPER= cargo test -p ash-typeck stdlib_comprehension_evidence -- --nocapture'
-  - bash -lc 'set -euo pipefail; RUSTC_WRAPPER= cargo test -p ash-engine stdlib_do_evidence -- --list | tee /tmp/task1024-engine-stdlib-do-evidence.list; grep -E "stdlib_do_evidence" /tmp/task1024-engine-stdlib-do-evidence.list; RUSTC_WRAPPER= cargo test -p ash-engine stdlib_do_evidence -- --nocapture'
+  - bash -lc 'set -euo pipefail; RUSTC_WRAPPER= cargo test -p ash-typeck stdlib_do_evidence -- --list | tee /tmp/task1024-stdlib-do-evidence.list; matches=$(grep -E "(^|::)stdlib_do_evidence[^[:space:]]*: test$" /tmp/task1024-stdlib-do-evidence.list | wc -l); test "$matches" -gt 0; printf "non-zero ash-typeck stdlib_do_evidence tests: %s\n" "$matches"; RUSTC_WRAPPER= cargo test -p ash-typeck stdlib_do_evidence -- --nocapture'
+  - bash -lc 'set -euo pipefail; RUSTC_WRAPPER= cargo test -p ash-typeck stdlib_comprehension_evidence -- --list | tee /tmp/task1024-stdlib-comprehension-evidence.list; matches=$(grep -E "(^|::)stdlib_comprehension_evidence[^[:space:]]*: test$" /tmp/task1024-stdlib-comprehension-evidence.list | wc -l); test "$matches" -gt 0; printf "non-zero ash-typeck stdlib_comprehension_evidence tests: %s\n" "$matches"; RUSTC_WRAPPER= cargo test -p ash-typeck stdlib_comprehension_evidence -- --nocapture'
+  - bash -lc 'set -euo pipefail; RUSTC_WRAPPER= cargo test -p ash-engine stdlib_do_evidence -- --list | tee /tmp/task1024-engine-stdlib-do-evidence.list; matches=$(grep -E "(^|::)stdlib_do_evidence[^[:space:]]*: test$" /tmp/task1024-engine-stdlib-do-evidence.list | wc -l); test "$matches" -gt 0; printf "non-zero ash-engine stdlib_do_evidence tests: %s\n" "$matches"; RUSTC_WRAPPER= cargo test -p ash-engine stdlib_do_evidence -- --nocapture'
   - cargo fmt --check
   - git diff --check
 checklist:
@@ -97,4 +98,4 @@ checklist:
 
 ## Dependencies for Next Task
 
-This task outputs the verified slice required by downstream TASK-1020..TASK-1028 work. Downstream tasks must not silently expand or preserve old deferrals without updating SPEC-078/PLAN-128.
+This task outputs stdlib/prelude evidence rewiring required by TASK-1025 through TASK-1028. Downstream tasks must not silently expand or preserve old deferrals without updating SPEC-078/PLAN-128.

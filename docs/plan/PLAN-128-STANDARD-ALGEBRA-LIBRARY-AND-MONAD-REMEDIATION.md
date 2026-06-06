@@ -1,6 +1,6 @@
 # PLAN-128: Standard Algebra Library and Monad Remediation
 
-**Status:** 📝 Planned
+**Status:** 🚧 In Progress
 **Spec:** [SPEC-078](../spec/SPEC-078-STANDARD-ALGEBRA-LIBRARY-AND-MONAD-REMEDIATION.md)
 **Depends on:** [SPEC-067](../spec/SPEC-067-CONSTRUCTOR-KINDED-PARAMETERS-AND-HKT.md), [SPEC-069](../spec/SPEC-069-ALPHA-VISIBLE-TOWER-ALGEBRA-AND-DO-LOWERING.md), [SPEC-077](../spec/SPEC-077-ASH-TEST-RUNNER-SYNTHESIZED-AND-SMALLWORLD-COMPLETION.md)
 **Task range:** TASK-1020 through TASK-1028
@@ -26,7 +26,7 @@ The phase is library-first. Interfaces and helper functions live in Ash source u
 
 | Task | Description | Type | Est. Hours | Status |
 |------|-------------|------|------------|--------|
-| [TASK-1020](tasks/TASK-1020-stdlib-algebra-audit-gate.md) | Audit live algebra/interface/do seams and freeze exact syntax, file targets, and evidence gates | Audit/Planning | 6 | Planned |
+| [TASK-1020](tasks/TASK-1020-stdlib-algebra-audit-gate.md) | Audit live algebra/interface/do seams and freeze exact syntax, file targets, and evidence gates | Audit/Planning | 6 | ✅ Complete |
 | [TASK-1021](tasks/TASK-1021-std-algebra-namespace-and-interfaces.md) | Add `std::algebra` namespace and source-visible algebra interfaces | Stdlib/Typeck | 10 | Planned |
 | [TASK-1022](tasks/TASK-1022-pure-algebra-instances.md) | Add pure data instances for `Option`, `Result`, `List`, and string/list semigroups/monoids | Stdlib/Typeck | 14 | Planned |
 | [TASK-1023](tasks/TASK-1023-tower-algebra-instances-and-bridge-remediation.md) | Add `Act`/`Proc`/`Workflow` algebra evidence and remove/quarantine hidden bridge authority | Typeck/Runtime Boundary | 16 | Planned |

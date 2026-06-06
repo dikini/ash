@@ -37,7 +37,8 @@ Depends on TASK-1024 completion.
 - Modify: `std/src/algebra/applicative.ash`
 - Modify: `std/src/algebra/monad.ash`
 - Modify: `std/src/algebra/monoid.ash`
-- Create examples/tests named by TASK-1020
+- Add: `crates/ash-engine/tests/task_1025_algebra_combinators.rs`
+- Add: `crates/ash-cli/tests/task_1025_algebra_examples.rs`
 
 ## TDD / Execution Steps
 
@@ -52,7 +53,7 @@ Depends on TASK-1024 completion.
 ### Implementer
 
 ```text
-Repository: /home/dikini/Projects/ash. Read this task file, docs/spec/SPEC-078-STANDARD-ALGEBRA-LIBRARY-AND-MONAD-REMEDIATION.md, docs/plan/PLAN-128-STANDARD-ALGEBRA-LIBRARY-AND-MONAD-REMEDIATION.md, and the TASK-1020 audit artifact if it exists. Constraints: no new Ash syntax; use final-surface std::algebra/import tests rather than local fixture-only evidence; do not preserve obsolete deferrals unless this task records a concrete current blocker and follow-up.
+Repository: /home/dikini/Projects/ash. Read this task file, docs/spec/SPEC-078-STANDARD-ALGEBRA-LIBRARY-AND-MONAD-REMEDIATION.md, docs/plan/PLAN-128-STANDARD-ALGEBRA-LIBRARY-AND-MONAD-REMEDIATION.md, and docs/plan/audits/TASK-1020-stdlib-algebra-audit-gate.md; fail if the audit is missing. Constraints: no new Ash syntax; use final-surface std::algebra/import tests rather than local fixture-only evidence; do not preserve obsolete deferrals unless this task records a concrete current blocker and follow-up.
 
 Implement TASK-1025. Add only helpers that can be expressed using current Ash. Write examples first and keep them final-surface: imports from std::algebra, real Option/Result/tower usage, no local fixture interfaces.
 ```
@@ -83,8 +84,8 @@ toolsets: [terminal, file]
 ```yaml
 strictness: clean
 commands:
-  - bash -lc 'set -euo pipefail; RUSTC_WRAPPER= cargo test -p ash-engine algebra_combinators -- --list | tee /tmp/task1025-algebra-combinators.list; grep -E "algebra_combinators" /tmp/task1025-algebra-combinators.list; RUSTC_WRAPPER= cargo test -p ash-engine algebra_combinators -- --nocapture'
-  - bash -lc 'set -euo pipefail; RUSTC_WRAPPER= cargo test -p ash-cli algebra_examples -- --list | tee /tmp/task1025-algebra-examples.list; grep -E "algebra_examples" /tmp/task1025-algebra-examples.list; RUSTC_WRAPPER= cargo test -p ash-cli algebra_examples -- --nocapture'
+  - bash -lc 'set -euo pipefail; RUSTC_WRAPPER= cargo test -p ash-engine algebra_combinators -- --list | tee /tmp/task1025-algebra-combinators.list; matches=$(grep -E "(^|::)algebra_combinators[^[:space:]]*: test$" /tmp/task1025-algebra-combinators.list | wc -l); test "$matches" -gt 0; printf "non-zero ash-engine algebra_combinators tests: %s\n" "$matches"; RUSTC_WRAPPER= cargo test -p ash-engine algebra_combinators -- --nocapture'
+  - bash -lc 'set -euo pipefail; RUSTC_WRAPPER= cargo test -p ash-cli algebra_examples -- --list | tee /tmp/task1025-algebra-examples.list; matches=$(grep -E "(^|::)algebra_examples[^[:space:]]*: test$" /tmp/task1025-algebra-examples.list | wc -l); test "$matches" -gt 0; printf "non-zero ash-cli algebra_examples tests: %s\n" "$matches"; RUSTC_WRAPPER= cargo test -p ash-cli algebra_examples -- --nocapture'
   - cargo fmt --check
   - git diff --check
 checklist:
@@ -97,4 +98,4 @@ checklist:
 
 ## Dependencies for Next Task
 
-This task outputs the verified slice required by downstream TASK-1020..TASK-1028 work. Downstream tasks must not silently expand or preserve old deferrals without updating SPEC-078/PLAN-128.
+This task outputs algebra helper functions and examples required by TASK-1026 through TASK-1028. Downstream tasks must not silently expand or preserve old deferrals without updating SPEC-078/PLAN-128.

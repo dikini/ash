@@ -39,6 +39,7 @@ Depends on TASK-1020 through TASK-1027 completion.
 - Modify: `docs/spec/README.md`
 - Modify: `CHANGELOG.md`
 - Modify: `docs/plan/tasks/TASK-102[0-8]-*.md`
+- Create: `docs/plan/audits/TASK-1028-stdlib-algebra-closeout-evidence.md`
 
 ## TDD / Execution Steps
 
@@ -53,7 +54,7 @@ Depends on TASK-1020 through TASK-1027 completion.
 ### Implementer
 
 ```text
-Repository: /home/dikini/Projects/ash. Read this task file, docs/spec/SPEC-078-STANDARD-ALGEBRA-LIBRARY-AND-MONAD-REMEDIATION.md, docs/plan/PLAN-128-STANDARD-ALGEBRA-LIBRARY-AND-MONAD-REMEDIATION.md, and the TASK-1020 audit artifact if it exists. Constraints: no new Ash syntax; use final-surface std::algebra/import tests rather than local fixture-only evidence; do not preserve obsolete deferrals unless this task records a concrete current blocker and follow-up.
+Repository: /home/dikini/Projects/ash. Read this task file, docs/spec/SPEC-078-STANDARD-ALGEBRA-LIBRARY-AND-MONAD-REMEDIATION.md, docs/plan/PLAN-128-STANDARD-ALGEBRA-LIBRARY-AND-MONAD-REMEDIATION.md, and docs/plan/audits/TASK-1020-stdlib-algebra-audit-gate.md; fail if the audit is missing. Constraints: no new Ash syntax; use final-surface std::algebra/import tests rather than local fixture-only evidence; do not preserve obsolete deferrals unless this task records a concrete current blocker and follow-up.
 
 Implement TASK-1028 closeout only after TASK-1020 through TASK-1027 are complete. Re-run all focused and broad gates, dispatch independent review, reconcile all status surfaces, and record exact evidence. Do not promote status if any final-surface or negative-leakage gate is missing.
 ```
@@ -84,6 +85,17 @@ toolsets: [terminal, file]
 ```yaml
 strictness: clean
 commands:
+  - python3 - <<'PY'
+from pathlib import Path
+p=Path('docs/plan/audits/TASK-1028-stdlib-algebra-closeout-evidence.md')
+assert p.is_file(), p
+text=p.read_text()
+for task in ['TASK-1021','TASK-1022','TASK-1023','TASK-1024','TASK-1025','TASK-1026','TASK-1027']:
+    assert task in text, task
+for s in ['command','package','filter','test_count','test_count > 0','artifact assertion','hidden bridge leakage','stale deferral sweep']:
+    assert s in text, s
+print('closeout focused evidence artifact records guarded focused gates')
+PY
   - cargo fmt --check
   - RUSTC_WRAPPER= cargo check --workspace
   - RUSTC_WRAPPER= cargo test -p ash-typeck --all-targets
@@ -96,11 +108,11 @@ commands:
 checklist:
   - [ ] RED evidence recorded
   - [ ] GREEN evidence recorded
-  - [ ] Focused test commands have recorded non-zero test counts or an explicit artifact-check proof
+  - [ ] Closeout evidence artifact records per-task focused commands with `test_count > 0` or exact artifact assertions
   - [ ] Final-surface or negative-leakage gates satisfied where applicable
   - [ ] Docs/status/changelog updated if public behavior changed
 ```
 
 ## Dependencies for Next Task
 
-This task outputs the verified slice required by downstream TASK-1020..TASK-1028 work. Downstream tasks must not silently expand or preserve old deferrals without updating SPEC-078/PLAN-128.
+This task closes SPEC-078/PLAN-128 only after all focused and broad gates pass. It must not promote status if any final-surface, hidden bridge leakage, law handoff, or stale deferral sweep evidence is missing.

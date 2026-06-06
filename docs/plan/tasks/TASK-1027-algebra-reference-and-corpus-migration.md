@@ -33,7 +33,7 @@ Depends on TASK-1025 and TASK-1026 completion.
 
 ## File Targets
 
-- Create/modify: `reference/stdlib/algebra.md` or equivalent selected by TASK-1020
+- Create/modify: `reference/stdlib/algebra.md`
 - Modify: `reference/language/generalized-do.md`
 - Modify: `docs/spec/SPEC-054-GENERALIZED-TYPED-DO-NOTATION.md` as needed
 - Modify: `docs/spec/SPEC-055-MONAD-COMPREHENSION-SYNTAX.md` as needed
@@ -53,7 +53,7 @@ Depends on TASK-1025 and TASK-1026 completion.
 ### Implementer
 
 ```text
-Repository: /home/dikini/Projects/ash. Read this task file, docs/spec/SPEC-078-STANDARD-ALGEBRA-LIBRARY-AND-MONAD-REMEDIATION.md, docs/plan/PLAN-128-STANDARD-ALGEBRA-LIBRARY-AND-MONAD-REMEDIATION.md, and the TASK-1020 audit artifact if it exists. Constraints: no new Ash syntax; use final-surface std::algebra/import tests rather than local fixture-only evidence; do not preserve obsolete deferrals unless this task records a concrete current blocker and follow-up.
+Repository: /home/dikini/Projects/ash. Read this task file, docs/spec/SPEC-078-STANDARD-ALGEBRA-LIBRARY-AND-MONAD-REMEDIATION.md, docs/plan/PLAN-128-STANDARD-ALGEBRA-LIBRARY-AND-MONAD-REMEDIATION.md, and docs/plan/audits/TASK-1020-stdlib-algebra-audit-gate.md; fail if the audit is missing. Constraints: no new Ash syntax; use final-surface std::algebra/import tests rather than local fixture-only evidence; do not preserve obsolete deferrals unless this task records a concrete current blocker and follow-up.
 
 Implement TASK-1027 after the public surface exists. Update user/reference docs and stale spec wording. Keep the sweep scoped to current normative/reference surfaces; do not rewrite history unless it misleads future implementation.
 ```
@@ -86,6 +86,11 @@ strictness: clean
 commands:
   - python3 - <<'PY'
 from pathlib import Path
+page=Path('reference/stdlib/algebra.md')
+assert page.is_file(), page
+page_text=page.read_text(errors='ignore')
+for s in ['std::algebra','Semigroup','Monoid','Functor','Applicative','Monad','instances','examples','do:','comprehension']:
+    assert s in page_text, s
 paths=[Path('reference'),Path('docs/spec'),Path('docs/plan')]
 terms=['stdlib Monad deferred','future Monad evidence only','hidden Act dictionary','Monad dictionaries deferred','pure List/Option/Result dictionaries remain deferred','Option/Result/List dictionaries deferred','stdlib Monad unavailable','bridge dictionaries','hidden dictionaries','Generalized runtime lowering through arbitrary user-defined Monad']
 for root in paths:
@@ -101,11 +106,11 @@ PY
 checklist:
   - [ ] RED evidence recorded
   - [ ] GREEN evidence recorded
-  - [ ] Focused test commands have recorded non-zero test counts or an explicit artifact-check proof
+  - [ ] Reference page artifact assertion passes and stale wording sweep reports no unqualified current deferrals
   - [ ] Final-surface or negative-leakage gates satisfied where applicable
   - [ ] Docs/status/changelog updated if public behavior changed
 ```
 
 ## Dependencies for Next Task
 
-This task outputs the verified slice required by downstream TASK-1020..TASK-1028 work. Downstream tasks must not silently expand or preserve old deferrals without updating SPEC-078/PLAN-128.
+This task outputs current reference and stale-deferral reconciliation required by TASK-1028. Downstream tasks must not silently expand or preserve old deferrals without updating SPEC-078/PLAN-128.

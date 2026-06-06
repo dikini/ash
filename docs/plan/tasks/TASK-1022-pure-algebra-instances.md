@@ -33,9 +33,14 @@ Depends on TASK-1020 and TASK-1021 completion.
 
 ## File Targets
 
-- Modify or create: `std/src/algebra/*.ash` instance sections or companion files chosen by TASK-1020
+- Modify: `std/src/algebra/semigroup.ash`
+- Modify: `std/src/algebra/monoid.ash`
+- Modify: `std/src/algebra/functor.ash`
+- Modify: `std/src/algebra/applicative.ash`
+- Modify: `std/src/algebra/monad.ash`
 - Modify as needed: `std/src/option.ash`, `std/src/result.ash`, `std/src/list.ash`, `std/src/string.ash`
-- Add focused tests named by TASK-1020
+- Add: `crates/ash-typeck/tests/task_1022_pure_algebra_instances.rs`
+- Add: `crates/ash-engine/tests/task_1022_pure_algebra_instances.rs`
 
 ## TDD / Execution Steps
 
@@ -50,7 +55,7 @@ Depends on TASK-1020 and TASK-1021 completion.
 ### Implementer
 
 ```text
-Repository: /home/dikini/Projects/ash. Read this task file, docs/spec/SPEC-078-STANDARD-ALGEBRA-LIBRARY-AND-MONAD-REMEDIATION.md, docs/plan/PLAN-128-STANDARD-ALGEBRA-LIBRARY-AND-MONAD-REMEDIATION.md, and the TASK-1020 audit artifact if it exists. Constraints: no new Ash syntax; use final-surface std::algebra/import tests rather than local fixture-only evidence; do not preserve obsolete deferrals unless this task records a concrete current blocker and follow-up.
+Repository: /home/dikini/Projects/ash. Read this task file, docs/spec/SPEC-078-STANDARD-ALGEBRA-LIBRARY-AND-MONAD-REMEDIATION.md, docs/plan/PLAN-128-STANDARD-ALGEBRA-LIBRARY-AND-MONAD-REMEDIATION.md, and docs/plan/audits/TASK-1020-stdlib-algebra-audit-gate.md; fail if the audit is missing. Constraints: no new Ash syntax; use final-surface std::algebra/import tests rather than local fixture-only evidence; do not preserve obsolete deferrals unless this task records a concrete current blocker and follow-up.
 
 Implement TASK-1022. Use TDD with final-surface stdlib imports. Add pure instances only; do not touch Act/Proc/Workflow or do-target special cases except where tests expose a necessary interface registration hook owned by this task.
 ```
@@ -81,8 +86,8 @@ toolsets: [terminal, file]
 ```yaml
 strictness: clean
 commands:
-  - bash -lc 'set -euo pipefail; RUSTC_WRAPPER= cargo test -p ash-typeck pure_algebra_instances -- --list | tee /tmp/task1022-ash-typeck-pure-algebra-instances.list; grep -E "pure_algebra_instances" /tmp/task1022-ash-typeck-pure-algebra-instances.list; RUSTC_WRAPPER= cargo test -p ash-typeck pure_algebra_instances -- --nocapture'
-  - bash -lc 'set -euo pipefail; RUSTC_WRAPPER= cargo test -p ash-engine pure_algebra_instances -- --list | tee /tmp/task1022-ash-engine-pure-algebra-instances.list; grep -E "pure_algebra_instances" /tmp/task1022-ash-engine-pure-algebra-instances.list; RUSTC_WRAPPER= cargo test -p ash-engine pure_algebra_instances -- --nocapture'
+  - bash -lc 'set -euo pipefail; RUSTC_WRAPPER= cargo test -p ash-typeck pure_algebra_instances -- --list | tee /tmp/task1022-ash-typeck-pure-algebra-instances.list; matches=$(grep -E "(^|::)pure_algebra_instances[^[:space:]]*: test$" /tmp/task1022-ash-typeck-pure-algebra-instances.list | wc -l); test "$matches" -gt 0; printf "non-zero ash-typeck pure_algebra_instances tests: %s\n" "$matches"; RUSTC_WRAPPER= cargo test -p ash-typeck pure_algebra_instances -- --nocapture'
+  - bash -lc 'set -euo pipefail; RUSTC_WRAPPER= cargo test -p ash-engine pure_algebra_instances -- --list | tee /tmp/task1022-ash-engine-pure-algebra-instances.list; matches=$(grep -E "(^|::)pure_algebra_instances[^[:space:]]*: test$" /tmp/task1022-ash-engine-pure-algebra-instances.list | wc -l); test "$matches" -gt 0; printf "non-zero ash-engine pure_algebra_instances tests: %s\n" "$matches"; RUSTC_WRAPPER= cargo test -p ash-engine pure_algebra_instances -- --nocapture'
   - cargo fmt --check
   - git diff --check
 checklist:
@@ -95,4 +100,4 @@ checklist:
 
 ## Dependencies for Next Task
 
-This task outputs the verified slice required by downstream TASK-1020..TASK-1028 work. Downstream tasks must not silently expand or preserve old deferrals without updating SPEC-078/PLAN-128.
+This task outputs pure carrier algebra evidence required by TASK-1024 through TASK-1028. Downstream tasks must not silently expand or preserve old deferrals without updating SPEC-078/PLAN-128.

@@ -36,7 +36,7 @@ Depends on TASK-1021 through TASK-1025 completion or explicit TASK-1020 audit ap
 
 - Create: `docs/plan/audits/TASK-1026-algebra-law-test-handoff.md`
 - Modify: `docs/spec/SPEC-078-STANDARD-ALGEBRA-LIBRARY-AND-MONAD-REMEDIATION.md` if audit finds missing law-profile requirements
-- Create: `docs/plan/tasks/TASK-XXXX-generated-algebra-law-tests.md` or a reserved PLAN-INDEX phase row named Generated Algebra Law Tests, with acceptance rows and ownership recorded in the audit artifact
+- Create: `docs/plan/tasks/TASK-1029-generated-algebra-law-tests.md` or a reserved PLAN-INDEX phase row named Generated Algebra Law Tests, with acceptance rows and ownership recorded in the audit artifact
 
 ## TDD / Execution Steps
 
@@ -51,7 +51,7 @@ Depends on TASK-1021 through TASK-1025 completion or explicit TASK-1020 audit ap
 ### Implementer
 
 ```text
-Repository: /home/dikini/Projects/ash. Read this task file, docs/spec/SPEC-078-STANDARD-ALGEBRA-LIBRARY-AND-MONAD-REMEDIATION.md, docs/plan/PLAN-128-STANDARD-ALGEBRA-LIBRARY-AND-MONAD-REMEDIATION.md, and the TASK-1020 audit artifact if it exists. Constraints: no new Ash syntax; use final-surface std::algebra/import tests rather than local fixture-only evidence; do not preserve obsolete deferrals unless this task records a concrete current blocker and follow-up.
+Repository: /home/dikini/Projects/ash. Read this task file, docs/spec/SPEC-078-STANDARD-ALGEBRA-LIBRARY-AND-MONAD-REMEDIATION.md, docs/plan/PLAN-128-STANDARD-ALGEBRA-LIBRARY-AND-MONAD-REMEDIATION.md, and docs/plan/audits/TASK-1020-stdlib-algebra-audit-gate.md; fail if the audit is missing. Constraints: no new Ash syntax; use final-surface std::algebra/import tests rather than local fixture-only evidence; do not preserve obsolete deferrals unless this task records a concrete current blocker and follow-up.
 
 Implement TASK-1026 as docs/planning only. Create a law-profile handoff artifact plus a concrete follow-up task/phase seed for a later generated-test phase. Do not add law proof syntax, do not implement runner law generation, and do not describe laws as documentation-only.
 ```
@@ -84,12 +84,16 @@ strictness: clean
 commands:
   - python3 - <<'PY'
 from pathlib import Path
+import re
 p=Path('docs/plan/audits/TASK-1026-algebra-law-test-handoff.md')
 assert p.is_file(), p
 text=p.read_text()
 for s in ['Semigroup','Monoid','Functor','Applicative','Monad','generated test','SPEC-077','follow-up task','acceptance rows','owner','pure instances','tower carriers']:
     assert s in text, s
-assert any(Path('docs/plan/tasks').glob('TASK-*-generated-algebra-law-tests.md')) or 'Generated Algebra Law Tests' in Path('docs/plan/PLAN-INDEX.md').read_text()
+assert Path('docs/plan/tasks/TASK-1029-generated-algebra-law-tests.md').is_file() or (
+    'Generated Algebra Law Tests' in Path('docs/plan/PLAN-INDEX.md').read_text()
+    and re.search(r'owner|acceptance rows', Path('docs/plan/PLAN-INDEX.md').read_text(), re.I)
+)
 print('law-test handoff artifact and concrete follow-up owner exist')
 PY
   - cargo fmt --check
@@ -104,4 +108,4 @@ checklist:
 
 ## Dependencies for Next Task
 
-This task outputs the verified slice required by downstream TASK-1020..TASK-1028 work. Downstream tasks must not silently expand or preserve old deferrals without updating SPEC-078/PLAN-128.
+This task outputs the generated-law-test follow-up owner required by TASK-1028. Downstream tasks must not silently expand or preserve old deferrals without updating SPEC-078/PLAN-128.

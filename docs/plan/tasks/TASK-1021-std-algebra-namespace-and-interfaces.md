@@ -40,8 +40,9 @@ Depends on TASK-1020 completion and its focused command handoff.
 - Create: `std/src/algebra/applicative.ash`
 - Create: `std/src/algebra/monad.ash`
 - Modify: `std/src/lib.ash`
-- Modify if required by TASK-1020: `crates/ash-parser/src/lower.rs`
-- Add tests named by TASK-1020
+- Modify if required by the audit: `crates/ash-parser/src/lower.rs` to stop rejecting constructor-kinded interface parameters on the final stdlib path.
+- Add: `crates/ash-engine/tests/task_1021_std_algebra_namespace_and_interfaces.rs`
+- Add: `crates/ash-typeck/tests/task_1021_algebra_interface_registration.rs`
 
 ## TDD / Execution Steps
 
@@ -56,7 +57,7 @@ Depends on TASK-1020 completion and its focused command handoff.
 ### Implementer
 
 ```text
-Repository: /home/dikini/Projects/ash. Read this task file, docs/spec/SPEC-078-STANDARD-ALGEBRA-LIBRARY-AND-MONAD-REMEDIATION.md, docs/plan/PLAN-128-STANDARD-ALGEBRA-LIBRARY-AND-MONAD-REMEDIATION.md, and the TASK-1020 audit artifact if it exists. Constraints: no new Ash syntax; use final-surface std::algebra/import tests rather than local fixture-only evidence; do not preserve obsolete deferrals unless this task records a concrete current blocker and follow-up.
+Repository: /home/dikini/Projects/ash. Read this task file, docs/spec/SPEC-078-STANDARD-ALGEBRA-LIBRARY-AND-MONAD-REMEDIATION.md, docs/plan/PLAN-128-STANDARD-ALGEBRA-LIBRARY-AND-MONAD-REMEDIATION.md, and docs/plan/audits/TASK-1020-stdlib-algebra-audit-gate.md; fail if the audit is missing. Constraints: no new Ash syntax; use final-surface std::algebra/import tests rather than local fixture-only evidence; do not preserve obsolete deferrals unless this task records a concrete current blocker and follow-up.
 
 Implement TASK-1021 after reading the TASK-1020 audit artifact. Add only the namespace and interfaces. Write failing import/check tests first, then create the std::algebra files and lib export. Do not add instances or change do lowering.
 ```
@@ -92,11 +93,22 @@ from pathlib import Path
 for rel in ['std/src/algebra/mod.ash','std/src/algebra/semigroup.ash','std/src/algebra/monoid.ash','std/src/algebra/functor.ash','std/src/algebra/applicative.ash','std/src/algebra/monad.ash']:
     assert Path(rel).is_file(), rel
 lib=Path('std/src/lib.ash').read_text()
-assert 'pub mod algebra' in lib
+assert any(line.strip() == 'pub mod algebra;' for line in lib.splitlines()), 'non-comment pub mod algebra;'
+mod=Path('std/src/algebra/mod.ash').read_text()
+for module in ['semigroup','monoid','functor','applicative','monad']:
+    assert f'pub mod {module};' in mod, module
+for rel, iface in [
+    ('std/src/algebra/semigroup.ash','Semigroup'),
+    ('std/src/algebra/monoid.ash','Monoid'),
+    ('std/src/algebra/functor.ash','Functor'),
+    ('std/src/algebra/applicative.ash','Applicative'),
+    ('std/src/algebra/monad.ash','Monad'),
+]:
+    assert f'interface {iface}' in Path(rel).read_text(), rel
 print('std::algebra files and lib export exist')
 PY
-  - bash -lc 'set -euo pipefail; RUSTC_WRAPPER= cargo test -p ash-engine algebra_interface -- --list | tee /tmp/task1021-ash-engine-algebra-interface.list; grep -E "algebra_interface" /tmp/task1021-ash-engine-algebra-interface.list; RUSTC_WRAPPER= cargo test -p ash-engine algebra_interface -- --nocapture'
-  - bash -lc 'set -euo pipefail; RUSTC_WRAPPER= cargo test -p ash-typeck algebra_interface -- --list | tee /tmp/task1021-ash-typeck-algebra-interface.list; grep -E "algebra_interface" /tmp/task1021-ash-typeck-algebra-interface.list; RUSTC_WRAPPER= cargo test -p ash-typeck algebra_interface -- --nocapture'
+  - bash -lc 'set -euo pipefail; RUSTC_WRAPPER= cargo test -p ash-engine algebra_interface -- --list | tee /tmp/task1021-ash-engine-algebra-interface.list; matches=$(grep -E "(^|::)algebra_interface[^[:space:]]*: test$" /tmp/task1021-ash-engine-algebra-interface.list | wc -l); test "$matches" -gt 0; printf "non-zero ash-engine algebra_interface tests: %s\n" "$matches"; RUSTC_WRAPPER= cargo test -p ash-engine algebra_interface -- --nocapture'
+  - bash -lc 'set -euo pipefail; RUSTC_WRAPPER= cargo test -p ash-typeck algebra_interface -- --list | tee /tmp/task1021-ash-typeck-algebra-interface.list; matches=$(grep -E "(^|::)algebra_interface[^[:space:]]*: test$" /tmp/task1021-ash-typeck-algebra-interface.list | wc -l); test "$matches" -gt 0; printf "non-zero ash-typeck algebra_interface tests: %s\n" "$matches"; RUSTC_WRAPPER= cargo test -p ash-typeck algebra_interface -- --nocapture'
   - cargo fmt --check
   - git diff --check
 checklist:
@@ -109,4 +121,4 @@ checklist:
 
 ## Dependencies for Next Task
 
-This task outputs the verified slice required by downstream TASK-1020..TASK-1028 work. Downstream tasks must not silently expand or preserve old deferrals without updating SPEC-078/PLAN-128.
+This task outputs the importable `std::algebra` namespace required by TASK-1022 through TASK-1028. Downstream tasks must not silently expand or preserve old deferrals without updating SPEC-078/PLAN-128.

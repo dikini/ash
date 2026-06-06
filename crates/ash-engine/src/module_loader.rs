@@ -517,6 +517,17 @@ pub fn load_ordinary_source(path: &Path, source: &str) -> Result<LoadedOrdinaryF
                             &name,
                             &exported_name,
                         );
+                    } else if semantic_summary_has_interface(
+                        exports.semantic_summary.as_ref(),
+                        &name,
+                    ) {
+                        push_selected_interface_semantic_summary(
+                            &mut imported_semantic_summaries,
+                            &mut imported_summary_keys,
+                            exports.semantic_summary.as_ref(),
+                            &name,
+                            &exported_name,
+                        );
                     } else {
                         return Err(EngineError::Parse(format!(
                             "item '{name}' not found in module '{}'",
@@ -1088,6 +1099,28 @@ fn push_selected_associated_family_semantic_summary(
     };
     let Some(selected) =
         selected_associated_family_semantic_summary(summary, family_name, imported_name)
+    else {
+        return;
+    };
+    merge_or_push_imported_semantic_summary(
+        imported_semantic_summaries,
+        imported_summary_keys,
+        selected,
+    );
+}
+
+fn push_selected_interface_semantic_summary(
+    imported_semantic_summaries: &mut Vec<ModuleSemanticSummary>,
+    imported_summary_keys: &mut HashSet<ImportedSummaryKey>,
+    summary: Option<&ModuleSemanticSummary>,
+    interface_name: &str,
+    imported_name: &str,
+) {
+    let Some(summary) = summary else {
+        return;
+    };
+    let Some(selected) =
+        selected_interface_semantic_summary(summary, interface_name, imported_name)
     else {
         return;
     };
@@ -2737,6 +2770,15 @@ fn merge_use_exports(
                 {
                     merge_selected_summary_export(exports, summary, selected_summary)?;
                 }
+                for interface in &summary.interface_identities {
+                    if let Some(selected_summary) = selected_interface_semantic_summary(
+                        summary,
+                        &interface.name,
+                        &interface.name,
+                    ) {
+                        merge_selected_summary_export(exports, summary, selected_summary)?;
+                    }
+                }
                 for type_function in &summary.exported_type_functions {
                     if let Some(selected_summary) = selected_type_function_semantic_summary(
                         summary,
@@ -2823,6 +2865,13 @@ fn merge_use_exports(
                 let mut family = family.clone();
                 family.visible_name.clone_from(&exported_name);
                 insert_associated_family_export(exports, &exported_name, family)?;
+            } else if let Some((summary, selected_summary)) =
+                target_semantic_summary.as_ref().and_then(|summary| {
+                    selected_interface_semantic_summary(summary, &name, &exported_name)
+                        .map(|selected| (summary, selected))
+                })
+            {
+                merge_selected_summary_export(exports, summary, selected_summary)?;
             } else {
                 return Err(missing_pub_use_target_error(&name));
             }
@@ -2882,6 +2931,10 @@ fn merge_use_exports(
                     && !target_exports
                         .associated_family_summaries
                         .contains_key(item.name.as_ref())
+                    && !semantic_summary_has_interface(
+                        target_semantic_summary.as_ref(),
+                        item.name.as_ref(),
+                    )
                 {
                     return Err(missing_pub_use_target_error(item.name.as_ref()));
                 }
@@ -2953,6 +3006,17 @@ fn merge_use_exports(
                     let mut family = family.clone();
                     family.visible_name.clone_from(&exported_name);
                     insert_associated_family_export(exports, &exported_name, family)?;
+                } else if let Some((summary, selected_summary)) =
+                    target_semantic_summary.as_ref().and_then(|summary| {
+                        selected_interface_semantic_summary(
+                            summary,
+                            item.name.as_ref(),
+                            &exported_name,
+                        )
+                        .map(|selected| (summary, selected))
+                    })
+                {
+                    merge_selected_summary_export(exports, summary, selected_summary)?;
                 }
             }
         }
@@ -3858,6 +3922,33 @@ fn selected_type_function_semantic_summary(
         .collect();
     copy_type_function_summary_side_metadata(summary, &mut selected_summary, &dependencies);
     Some(selected_summary)
+}
+
+fn semantic_summary_has_interface(summary: Option<&ModuleSemanticSummary>, name: &str) -> bool {
+    summary.is_some_and(|summary| {
+        summary
+            .interface_identities
+            .iter()
+            .any(|identity| identity.name == name)
+    })
+}
+
+fn selected_interface_semantic_summary(
+    summary: &ModuleSemanticSummary,
+    interface_name: &str,
+    imported_name: &str,
+) -> Option<ModuleSemanticSummary> {
+    let identity = summary
+        .interface_identities
+        .iter()
+        .find(|identity| identity.name == interface_name)?;
+    let mut selected = ModuleSemanticSummary::new(summary.module.clone());
+    selected.version = summary.version;
+    let mut identity = identity.clone();
+    identity.name = imported_name.to_string();
+    identity.path = vec![imported_name.to_string()];
+    selected.interface_identities.push(identity);
+    Some(selected)
 }
 
 fn selected_associated_family_semantic_summary(

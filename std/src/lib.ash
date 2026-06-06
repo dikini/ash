@@ -47,6 +47,9 @@ pub use regex::{find, matches, replace};
 -- Process functions
 pub use process::{run};
 
+-- Standard algebra interfaces
+pub mod algebra;
+
 -- Act monad helpers
 pub use act::{unit, bind, then, guard};
 

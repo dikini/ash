@@ -1,6 +1,6 @@
 # TASK-1021: std::algebra Namespace and Interfaces
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -112,12 +112,32 @@ PY
   - cargo fmt --check
   - git diff --check
 checklist:
-  - [ ] RED evidence recorded
-  - [ ] GREEN evidence recorded
-  - [ ] Focused test commands have recorded non-zero test counts or an explicit artifact-check proof
-  - [ ] Final-surface or negative-leakage gates satisfied where applicable
-  - [ ] Docs/status/changelog updated if public behavior changed
+  - [x] RED evidence recorded
+  - [x] GREEN evidence recorded
+  - [x] Focused test commands have recorded non-zero test counts or an explicit artifact-check proof
+  - [x] Final-surface or negative-leakage gates satisfied where applicable
+  - [x] Docs/status/changelog updated if public behavior changed
 ```
+
+## Evidence
+
+### RED
+
+- `bash -lc 'RUSTC_WRAPPER= cargo test -p ash-engine algebra_interface -- --list ...'` initially had zero matching tests before `crates/ash-engine/tests/task_1021_std_algebra_namespace_and_interfaces.rs` existed.
+- `bash -lc 'RUSTC_WRAPPER= cargo test -p ash-typeck algebra_interface -- --list ...'` initially had zero matching tests before `crates/ash-typeck/tests/task_1021_algebra_interface_registration.rs` existed.
+
+### GREEN
+
+- Artifact assertion for `std/src/algebra/*.ash` files and `std/src/lib.ash` `pub mod algebra;`: exit 0, printed `std::algebra files and lib export exist`.
+- `RUSTC_WRAPPER= cargo test -p ash-engine algebra_interface -- --list` recorded 2 matching tests, then `RUSTC_WRAPPER= cargo test -p ash-engine algebra_interface -- --nocapture` passed 2/2.
+- `RUSTC_WRAPPER= cargo test -p ash-typeck algebra_interface -- --list` recorded 2 matching tests, then `RUSTC_WRAPPER= cargo test -p ash-typeck algebra_interface -- --nocapture` passed 2/2.
+- `RUSTC_WRAPPER= cargo clippy -p ash-engine -p ash-typeck --all-targets -- -D warnings`: exit 0 after fixing the new engine test's implicit clone warning.
+- `cargo fmt --check`: exit 0 after formatting the new Rust tests/module-loader edits.
+- `git diff --check`: exit 0.
+
+### Scope Confirmation
+
+- Added only namespace/interface source files, final-surface import/registration tests, and the minimal module-loader semantic-summary selection needed for interface imports. No pure instances, tower evidence, `do:K`/comprehension rewiring, combinators, law-test support, or reference migration behavior were implemented.
 
 ## Dependencies for Next Task
 

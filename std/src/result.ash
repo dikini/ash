@@ -52,6 +52,22 @@ pub fn map<T, E, U>(res: Result<T, E>, f: (T) -> U) -> Result<U, E> {
     }
 }
 
+-- Constructs an Ok result from a value
+pub fn pure<T, E>(value: T) -> Result<T, E> {
+    Ok { value: value }
+}
+
+-- Applies an Ok function to an Ok value, preserving the first Err
+pub fn apply<T, E, U>(functions: Result<(T) -> U, E>, value: Result<T, E>) -> Result<U, E> {
+    match functions {
+        Ok { value: f } => match value {
+            Ok { value: v } => Ok { value: f(v) },
+            Err { error: e } => Err { error: e }
+        },
+        Err { error: e } => Err { error: e }
+    }
+}
+
 -- Maps Result<T, E> to Result<T, F> by applying a function to Err
 pub fn map_err<T, E, F>(res: Result<T, E>, f: (E) -> F) -> Result<T, F> {
     match res {

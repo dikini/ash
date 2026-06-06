@@ -3959,7 +3959,7 @@ Phase 133 adds a source-visible `std::algebra` namespace for `Semigroup`, `Monoi
 |------|-------------|------------|--------|
 | [TASK-1020](tasks/TASK-1020-stdlib-algebra-audit-gate.md) | Audit live algebra/interface/do seams and freeze exact syntax, file targets, and evidence gates | 6 | ✅ Complete |
 | [TASK-1021](tasks/TASK-1021-std-algebra-namespace-and-interfaces.md) | Add `std::algebra` namespace and source-visible algebra interfaces | 10 | ✅ Complete |
-| [TASK-1022](tasks/TASK-1022-pure-algebra-instances.md) | Add pure data instances for `Option`, `Result`, `List`, and string/list semigroups/monoids | 14 | 📝 Planned |
+| [TASK-1022](tasks/TASK-1022-pure-algebra-instances.md) | Add pure data instances for `Option`, `Result`, `List`, and string/list semigroups/monoids | 14 | ✅ Complete |
 | [TASK-1023](tasks/TASK-1023-tower-algebra-instances-and-bridge-remediation.md) | Add `Act`/`Proc`/`Workflow` algebra evidence and remove/quarantine hidden bridge authority | 16 | 📝 Planned |
 | [TASK-1024](tasks/TASK-1024-do-and-comprehension-stdlib-evidence.md) | Rewire `do:K` and comprehensions to use stdlib/prelude Monad evidence | 16 | 📝 Planned |
 | [TASK-1025](tasks/TASK-1025-algebra-combinators-and-examples.md) | Add usable algebra combinators and executable examples | 10 | 📝 Planned |

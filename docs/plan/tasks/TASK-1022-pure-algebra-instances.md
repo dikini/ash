@@ -1,6 +1,6 @@
 # TASK-1022: Pure Algebra Instances
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -50,6 +50,13 @@ Depends on TASK-1020 and TASK-1021 completion.
 4. Run focused non-zero verification.
 5. Record RED/GREEN evidence and update task/plan/changelog only when the slice is actually complete.
 
+## RED/GREEN Evidence
+
+- RED: `RUSTC_WRAPPER= cargo test -p ash-typeck --test task_1022_pure_algebra_instances -- --nocapture` failed with 4 failing tests while registering `Functor<Result<_, E>>`; the impl body call to `result::map` reported an argument type mismatch because `Result<_, E>` partial constructor evidence was not applied to the monomorphic `F<Int>` method surface.
+- GREEN: `RUSTC_WRAPPER= cargo test -p ash-typeck --test task_1022_pure_algebra_instances -- --nocapture` passed 5 tests after partial constructor evidence application, generic impl-head matching, and fail-closed ambiguous evidence coverage were added for source stdlib evidence.
+- GREEN: `RUSTC_WRAPPER= cargo test -p ash-engine --test task_1022_pure_algebra_instances -- --nocapture` passed 3 tests proving importable stdlib algebra surfaces and public pure impl heads parse/check through the real stdlib path.
+- FOCUSED: the required non-zero `ash-typeck pure_algebra_instances` gate recorded 5 matching tests and passed; the required non-zero `ash-engine pure_algebra_instances` gate recorded 3 matching tests and passed.
+
 ## Sub-Agent Prompts
 
 ### Implementer
@@ -91,11 +98,11 @@ commands:
   - cargo fmt --check
   - git diff --check
 checklist:
-  - [ ] RED evidence recorded
-  - [ ] GREEN evidence recorded
-  - [ ] Focused test commands have recorded non-zero test counts or an explicit artifact-check proof
-  - [ ] Final-surface or negative-leakage gates satisfied where applicable
-  - [ ] Docs/status/changelog updated if public behavior changed
+  - [x] RED evidence recorded
+  - [x] GREEN evidence recorded
+  - [x] Focused test commands have recorded non-zero test counts or an explicit artifact-check proof
+  - [x] Final-surface or negative-leakage gates satisfied where applicable
+  - [x] Docs/status/changelog updated if public behavior changed
 ```
 
 ## Dependencies for Next Task

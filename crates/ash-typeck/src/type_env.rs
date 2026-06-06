@@ -2912,6 +2912,7 @@ fn type_contains_constructor_variable_app(ty: &Type) -> bool {
 fn apply_constructor_evidence_arg(
     arg: &InterfaceEvidenceArg,
     applied_args: &[Type],
+    param_mapping: &HashMap<String, TypeVar>,
 ) -> Option<Type> {
     match arg {
         InterfaceEvidenceArg::Constructor(expr) => match expr.as_ref() {
@@ -2923,8 +2924,80 @@ fn apply_constructor_evidence_arg(
                 args: applied_args.to_vec(),
                 kind: Kind::Type,
             }),
+            TypeConstructorExpr::PartialApplication(app) => {
+                let TypeConstructorHeadId::Nominal { visible_name, .. } = &app.head else {
+                    return None;
+                };
+                let mut applied = applied_args.iter();
+                let mut args = Vec::with_capacity(app.args.len());
+                for arg in &app.args {
+                    match arg {
+                        PartialTypeArg::Hole(_) => args.push(applied.next()?.clone()),
+                        PartialTypeArg::Applied(canonical) => {
+                            args.push(canonical_type_expr_to_type(canonical, param_mapping)?);
+                        }
+                        _ => return None,
+                    }
+                }
+                if applied.next().is_some() {
+                    return None;
+                }
+                Some(Type::Constructor {
+                    name: QualifiedName::root(visible_name.clone()),
+                    args,
+                    kind: Kind::Type,
+                })
+            }
             _ => None,
         },
+        _ => None,
+    }
+}
+
+fn canonical_type_expr_to_type(
+    expr: &CanonicalTypeExpr,
+    param_mapping: &HashMap<String, TypeVar>,
+) -> Option<Type> {
+    match expr {
+        CanonicalTypeExpr::Primitive(name) => match name.as_str() {
+            "Int" => Some(Type::Int),
+            "String" => Some(Type::String),
+            "Bool" => Some(Type::Bool),
+            "Float" => Some(Type::Float),
+            "Null" | "Unit" => Some(Type::Null),
+            "Time" => Some(Type::Time),
+            "Ref" => Some(Type::Ref),
+            _ => None,
+        },
+        CanonicalTypeExpr::Var(name) => param_mapping.get(name).copied().map(Type::Var),
+        CanonicalTypeExpr::NominalApp {
+            visible_name,
+            args,
+            kind,
+            ..
+        } => {
+            let args = args
+                .iter()
+                .map(|arg| canonical_type_expr_to_type(arg, param_mapping))
+                .collect::<Option<Vec<_>>>()?;
+            Some(Type::Constructor {
+                name: QualifiedName::root(visible_name.clone()),
+                args,
+                kind: kind.clone(),
+            })
+        }
+        CanonicalTypeExpr::ConstructorVariableApp(app) => {
+            let args = app
+                .args
+                .iter()
+                .map(|arg| canonical_type_expr_to_type(arg, param_mapping))
+                .collect::<Option<Vec<_>>>()?;
+            Some(Type::ConstructorVariableApp {
+                constructor: app.constructor.name.clone(),
+                args,
+                kind: app.kind.clone(),
+            })
+        }
         _ => None,
     }
 }
@@ -2932,6 +3005,7 @@ fn apply_constructor_evidence_arg(
 fn substitute_constructor_variable_apps(
     ty: &Type,
     constructor_args: &HashMap<String, InterfaceEvidenceArg>,
+    param_mapping: &HashMap<String, TypeVar>,
 ) -> Type {
     match ty {
         Type::ConstructorVariableApp {
@@ -2941,11 +3015,13 @@ fn substitute_constructor_variable_apps(
         } => {
             let args = args
                 .iter()
-                .map(|arg| substitute_constructor_variable_apps(arg, constructor_args))
+                .map(|arg| {
+                    substitute_constructor_variable_apps(arg, constructor_args, param_mapping)
+                })
                 .collect::<Vec<_>>();
             constructor_args
                 .get(constructor)
-                .and_then(|arg| apply_constructor_evidence_arg(arg, &args))
+                .and_then(|arg| apply_constructor_evidence_arg(arg, &args, param_mapping))
                 .unwrap_or_else(|| Type::ConstructorVariableApp {
                     constructor: constructor.clone(),
                     args,
@@ -2955,6 +3031,7 @@ fn substitute_constructor_variable_apps(
         Type::List(inner) => Type::List(Box::new(substitute_constructor_variable_apps(
             inner,
             constructor_args,
+            param_mapping,
         ))),
         Type::Record(fields) => Type::Record(
             fields
@@ -2962,7 +3039,7 @@ fn substitute_constructor_variable_apps(
                 .map(|(name, ty)| {
                     (
                         name.clone(),
-                        substitute_constructor_variable_apps(ty, constructor_args),
+                        substitute_constructor_variable_apps(ty, constructor_args, param_mapping),
                     )
                 })
                 .collect(),
@@ -2970,23 +3047,31 @@ fn substitute_constructor_variable_apps(
         Type::Fun(params, ret, effect) => Type::Fun(
             params
                 .iter()
-                .map(|ty| substitute_constructor_variable_apps(ty, constructor_args))
+                .map(|ty| substitute_constructor_variable_apps(ty, constructor_args, param_mapping))
                 .collect(),
-            Box::new(substitute_constructor_variable_apps(ret, constructor_args)),
+            Box::new(substitute_constructor_variable_apps(
+                ret,
+                constructor_args,
+                param_mapping,
+            )),
             *effect,
         ),
         Type::Fn(params, ret) => Type::Fn(
             params
                 .iter()
-                .map(|ty| substitute_constructor_variable_apps(ty, constructor_args))
+                .map(|ty| substitute_constructor_variable_apps(ty, constructor_args, param_mapping))
                 .collect(),
-            Box::new(substitute_constructor_variable_apps(ret, constructor_args)),
+            Box::new(substitute_constructor_variable_apps(
+                ret,
+                constructor_args,
+                param_mapping,
+            )),
         ),
         Type::Constructor { name, args, kind } => Type::Constructor {
             name: name.clone(),
             args: args
                 .iter()
-                .map(|ty| substitute_constructor_variable_apps(ty, constructor_args))
+                .map(|ty| substitute_constructor_variable_apps(ty, constructor_args, param_mapping))
                 .collect(),
             kind: kind.clone(),
         },
@@ -2996,7 +3081,11 @@ fn substitute_constructor_variable_apps(
             name,
         } => Type::Associated {
             interface: interface.clone(),
-            base: Box::new(substitute_constructor_variable_apps(base, constructor_args)),
+            base: Box::new(substitute_constructor_variable_apps(
+                base,
+                constructor_args,
+                param_mapping,
+            )),
             name: name.clone(),
         },
         other => other.clone(),
@@ -3017,6 +3106,172 @@ fn render_interface_evidence_key(interface: &str, args: &[InterfaceEvidenceArg])
         .collect::<Vec<_>>()
         .join(", ");
     format!("{interface}<{args}>")
+}
+
+fn interface_evidence_args_match(
+    scheme_args: &[InterfaceEvidenceArg],
+    requested_args: &[InterfaceEvidenceArg],
+    allow_generic_match: bool,
+) -> bool {
+    scheme_args.len() == requested_args.len()
+        && scheme_args
+            .iter()
+            .zip(requested_args)
+            .all(|(scheme, requested)| {
+                interface_evidence_arg_matches(scheme, requested, allow_generic_match)
+            })
+}
+
+fn interface_evidence_arg_matches(
+    scheme_arg: &InterfaceEvidenceArg,
+    requested_arg: &InterfaceEvidenceArg,
+    allow_generic_match: bool,
+) -> bool {
+    if !allow_generic_match {
+        return scheme_arg == requested_arg;
+    }
+
+    match (scheme_arg, requested_arg) {
+        (InterfaceEvidenceArg::Proper(scheme), InterfaceEvidenceArg::Proper(requested)) => {
+            unify(scheme, requested).is_ok()
+        }
+        (
+            InterfaceEvidenceArg::Constructor(scheme),
+            InterfaceEvidenceArg::Constructor(requested),
+        ) => type_constructor_expr_matches_pattern(scheme, requested),
+        _ => false,
+    }
+}
+
+fn type_constructor_expr_matches_pattern(
+    pattern: &TypeConstructorExpr,
+    requested: &TypeConstructorExpr,
+) -> bool {
+    let mut bindings = HashMap::new();
+    type_constructor_expr_matches_pattern_inner(pattern, requested, &mut bindings)
+}
+
+fn type_constructor_expr_matches_pattern_inner(
+    pattern: &TypeConstructorExpr,
+    requested: &TypeConstructorExpr,
+    bindings: &mut HashMap<String, CanonicalTypeExpr>,
+) -> bool {
+    match (pattern, requested) {
+        (TypeConstructorExpr::ProperType(pattern), TypeConstructorExpr::ProperType(requested)) => {
+            canonical_type_expr_matches_pattern(pattern, requested, bindings)
+        }
+        (
+            TypeConstructorExpr::ConstructorHead(pattern),
+            TypeConstructorExpr::ConstructorHead(requested),
+        ) => type_constructor_heads_match(pattern, requested),
+        (
+            TypeConstructorExpr::PartialApplication(pattern),
+            TypeConstructorExpr::PartialApplication(requested),
+        ) => {
+            type_constructor_heads_match(&pattern.head, &requested.head)
+                && pattern.args.len() == requested.args.len()
+                && pattern
+                    .args
+                    .iter()
+                    .zip(&requested.args)
+                    .all(|(pattern, requested)| {
+                        partial_type_arg_matches_pattern(pattern, requested, bindings)
+                    })
+        }
+        _ => false,
+    }
+}
+
+fn type_constructor_heads_match(
+    pattern: &TypeConstructorHeadId,
+    requested: &TypeConstructorHeadId,
+) -> bool {
+    match (pattern, requested) {
+        (
+            TypeConstructorHeadId::Nominal {
+                visible_name: pattern,
+                ..
+            },
+            TypeConstructorHeadId::Nominal {
+                visible_name: requested,
+                ..
+            },
+        ) => pattern == requested,
+        (
+            TypeConstructorHeadId::Computation(pattern),
+            TypeConstructorHeadId::Computation(requested),
+        ) => pattern == requested,
+        _ => false,
+    }
+}
+
+fn partial_type_arg_matches_pattern(
+    pattern: &PartialTypeArg,
+    requested: &PartialTypeArg,
+    bindings: &mut HashMap<String, CanonicalTypeExpr>,
+) -> bool {
+    match (pattern, requested) {
+        (PartialTypeArg::Hole(_), PartialTypeArg::Hole(_)) => true,
+        (PartialTypeArg::Applied(pattern), PartialTypeArg::Applied(requested)) => {
+            canonical_type_expr_matches_pattern(pattern, requested, bindings)
+        }
+        _ => false,
+    }
+}
+
+fn canonical_type_expr_matches_pattern(
+    pattern: &CanonicalTypeExpr,
+    requested: &CanonicalTypeExpr,
+    bindings: &mut HashMap<String, CanonicalTypeExpr>,
+) -> bool {
+    match pattern {
+        CanonicalTypeExpr::Var(name) => match bindings.get(name) {
+            Some(bound) => bound == requested,
+            None => {
+                bindings.insert(name.clone(), requested.clone());
+                true
+            }
+        },
+        CanonicalTypeExpr::Primitive(pattern) => {
+            matches!(requested, CanonicalTypeExpr::Primitive(requested) if pattern == requested)
+        }
+        CanonicalTypeExpr::NominalApp {
+            visible_name: pattern_name,
+            args: pattern_args,
+            ..
+        } => match requested {
+            CanonicalTypeExpr::NominalApp {
+                visible_name: requested_name,
+                args: requested_args,
+                ..
+            } => {
+                pattern_name == requested_name
+                    && pattern_args.len() == requested_args.len()
+                    && pattern_args
+                        .iter()
+                        .zip(requested_args)
+                        .all(|(pattern, requested)| {
+                            canonical_type_expr_matches_pattern(pattern, requested, bindings)
+                        })
+            }
+            _ => false,
+        },
+        CanonicalTypeExpr::ConstructorVariableApp(pattern) => match requested {
+            CanonicalTypeExpr::ConstructorVariableApp(requested) => {
+                pattern.constructor.name == requested.constructor.name
+                    && pattern.args.len() == requested.args.len()
+                    && pattern
+                        .args
+                        .iter()
+                        .zip(&requested.args)
+                        .all(|(pattern, requested)| {
+                            canonical_type_expr_matches_pattern(pattern, requested, bindings)
+                        })
+            }
+            _ => false,
+        },
+        _ => pattern == requested,
+    }
 }
 
 fn interface_evidence_arg_as_legacy_type(arg: &InterfaceEvidenceArg) -> Type {
@@ -16309,6 +16564,7 @@ impl TypeEnv {
                 let param_ty = substitute_constructor_variable_apps(
                     &subst.apply(param_type),
                     &constructor_arg_mapping,
+                    &param_mapping,
                 );
                 method_env.bind_variable(param_name.as_ref(), param_ty);
             }
@@ -16316,6 +16572,7 @@ impl TypeEnv {
             let expected_return_ty = substitute_constructor_variable_apps(
                 &subst.apply(&method_info.return_type),
                 &constructor_arg_mapping,
+                &param_mapping,
             );
             let expected_return_ty =
                 self.normalize_associated_types(&expected_return_ty, &temp_scheme, &subst)?;
@@ -16374,6 +16631,7 @@ impl TypeEnv {
                         substitute_constructor_variable_apps(
                             &subst.apply(t),
                             &constructor_arg_mapping,
+                            &param_mapping,
                         )
                     })
                     .collect(),
@@ -17231,14 +17489,29 @@ impl TypeEnv {
 
         let evidence_args =
             self.lower_interface_evidence_args(interface, interface_info, args, &HashMap::new())?;
-        self.impls
-            .iter()
-            .find(|scheme| scheme.interface == interface && scheme.head_args == evidence_args)
-            .ok_or_else(|| TypeEnvError::MissingImpl {
-                interface: interface.to_string(),
-                ty: render_interface_evidence_key(interface, &evidence_args),
-                span: Span::default(),
-            })
+        let mut matches = self.impls.iter().filter(|scheme| {
+            scheme.interface == interface
+                && interface_evidence_args_match(
+                    &scheme.head_args,
+                    &evidence_args,
+                    !scheme.type_params.is_empty(),
+                )
+        });
+        let first = matches.next().ok_or_else(|| TypeEnvError::MissingImpl {
+            interface: interface.to_string(),
+            ty: render_interface_evidence_key(interface, &evidence_args),
+            span: Span::default(),
+        })?;
+        if matches.next().is_some() {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "ambiguous evidence for {}",
+                    render_interface_evidence_key(interface, &evidence_args)
+                ),
+                Span::default(),
+            ));
+        }
+        Ok(first)
     }
 
     /// Check if a capability interface is registered.

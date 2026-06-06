@@ -44,6 +44,30 @@ pub fn map<T, U>(opt: Option<T>, f: (T) -> U) -> Option<U> {
     }
 }
 
+-- Constructs an Option<T> from a value
+pub fn pure<T>(value: T) -> Option<T> {
+    Some { value: value }
+}
+
+-- Applies an optional function to an optional value
+pub fn apply<T, U>(functions: Option<(T) -> U>, value: Option<T>) -> Option<U> {
+    match functions {
+        Some { value: f } => match value {
+            Some { value: v } => Some { value: f(v) },
+            None => None
+        },
+        None => None
+    }
+}
+
+-- Chains operations that return Option
+pub fn and_then<T, U>(opt: Option<T>, f: (T) -> Option<U>) -> Option<U> {
+    match opt {
+        Some { value: v } => f(v),
+        None => None
+    }
+}
+
 -- Returns None if the option is None, otherwise returns optb
 pub fn and_opt<T>(opt: Option<T>, optb: Option<T>) -> Option<T> {
     match opt {

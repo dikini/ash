@@ -1,6 +1,6 @@
 # TASK-1041: Carry interface constraints through lowering/core summaries or prove no summary change is needed
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -28,6 +28,16 @@ Core/Engine
 3. Keep interface-level constraints distinct from generic impl `where` constraints.
 4. Add focused non-zero tests or an explicit audit artifact matching this task type.
 5. Avoid broadening generalized proposition syntax, proof search, implementation derivation, or overlap/specialization semantics.
+
+## TASK-1041 Decision
+
+Interface evidence constraints must cross the core/module-summary boundary. TASK-1041 therefore adds an explicit transport carrier instead of proving no summary change is needed:
+
+- `ash_core::ast::InterfaceDef` owns `evidence_constraints: Vec<InterfaceEvidenceConstraint>` for core lowering.
+- `ash_core::semantic_summary::InterfaceIdentitySummary` owns `evidence_constraints: Vec<InterfaceEvidenceConstraintSummary>` for imported interface summaries.
+- `ash-engine` lowers public interface-owned constraints into interface identity summaries so named and glob imports carry required evidence metadata for later TypeEnv enforcement.
+
+This task does not add required-evidence verification, entailment lookup, automatic derivation, proof search, blanket impl synthesis, or stdlib algebra migrations. Those remain owned by TASK-1042 through TASK-1046.
 
 ## File Targets
 
@@ -60,13 +70,14 @@ strictness: clean
 commands:
   - cargo fmt --check
   - git diff --check
-  - RUSTC_WRAPPER= cargo test -p ash-engine --test task_1041_interface_constraint_summary_transport -- --nocapture # if summary transport is added
+  - RUSTC_WRAPPER= cargo test -p ash-engine --test task_1041_interface_constraint_summary_transport -- --list
+  - RUSTC_WRAPPER= cargo test -p ash-engine --test task_1041_interface_constraint_summary_transport -- --nocapture
   - RUSTC_WRAPPER= cargo check --workspace
 checklist:
-- [ ] Focused tests/artifact are non-zero and pass
-- [ ] `cargo fmt --check` passes for touched Rust files or is not applicable
-- [ ] `git diff --check` passes
-- [ ] Status surfaces and CHANGELOG are reconciled if this task completes
+- [x] Focused tests/artifact are non-zero and pass
+- [x] `cargo fmt --check` passes for touched Rust files or is not applicable
+- [x] `git diff --check` passes
+- [x] Status surfaces and CHANGELOG are reconciled if this task completes
 ```
 
 ## Audit-gate implementation seams
@@ -85,3 +96,10 @@ interface Monad<M : * -> *> where M: Applicative {
     bind(M<Int>, (Int) -> M<Int>) -> M<Int>
 }
 ```
+
+## Completion notes
+
+- Added core `InterfaceEvidenceConstraint` metadata and lowered parser-owned interface evidence constraints into core interface definitions.
+- Added summary `InterfaceEvidenceConstraintSummary` metadata on `InterfaceIdentitySummary` so imported public interfaces can carry required evidence metadata.
+- Added focused engine coverage for core lowering, named-import transport, and glob-import transport that stays distinct from impl `where` bounds.
+- Verification: `cargo fmt --check`; `git diff --check`; `RUSTC_WRAPPER= cargo test -p ash-engine --test task_1041_interface_constraint_summary_transport -- --list` (3 tests); `RUSTC_WRAPPER= cargo test -p ash-engine --test task_1041_interface_constraint_summary_transport -- --nocapture` (3 passed); `RUSTC_WRAPPER= cargo check --workspace`.

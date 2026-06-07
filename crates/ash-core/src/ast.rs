@@ -827,11 +827,19 @@ pub struct WhereBound {
     pub bound: Name,
 }
 
+/// Interface-owned evidence constraint preserved from an interface `where` tail.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct InterfaceEvidenceConstraint {
+    pub subject: TypeExpr,
+    pub required_evidence: TypeExpr,
+}
+
 /// Interface definition in source/core metadata.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct InterfaceDef {
     pub name: Name,
     pub type_params: Vec<TypeVar>,
+    pub evidence_constraints: Vec<InterfaceEvidenceConstraint>,
     pub associated_types: Vec<AssociatedType>,
     pub methods: Vec<InterfaceMethodSig>,
     pub visibility: Visibility,
@@ -916,6 +924,7 @@ mod tests {
         let _module_interface = ModuleItem::Interface(InterfaceDef {
             name: "Explain".to_string(),
             type_params: vec!["T".to_string()],
+            evidence_constraints: vec![],
             associated_types: vec![],
             methods: vec![InterfaceMethodSig {
                 name: "explain".to_string(),

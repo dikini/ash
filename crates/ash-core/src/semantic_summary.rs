@@ -9,7 +9,7 @@
 //! carriers. Sealed-domain identities are distinct from ordinary `TypeDeclId` /
 //! `ConstructorId` because marker constructors are type-level only.
 
-use crate::ast::{Name, Span, TypeBody, TypeVar, Visibility};
+use crate::ast::{Name, Span, TypeBody, TypeExpr, TypeVar, Visibility};
 use crate::kind::Kind;
 use crate::module_graph::{CrateId, ModuleId};
 use crate::type_ir::{
@@ -998,6 +998,9 @@ pub struct InterfaceIdentitySummary {
     pub id: InterfaceIdentityId,
     pub name: Name,
     pub path: Vec<String>,
+    /// Interface-owned required evidence constraints transported with this identity.
+    #[serde(default)]
+    pub evidence_constraints: Vec<InterfaceEvidenceConstraintSummary>,
     pub source_anchor: SourceAnchor,
 }
 
@@ -1013,7 +1016,34 @@ impl InterfaceIdentitySummary {
             id,
             name: name.into(),
             path,
+            evidence_constraints: Vec::new(),
             source_anchor,
+        }
+    }
+
+    #[must_use]
+    pub fn with_evidence_constraints(
+        mut self,
+        constraints: Vec<InterfaceEvidenceConstraintSummary>,
+    ) -> Self {
+        self.evidence_constraints = constraints;
+        self
+    }
+}
+
+/// Summary payload for one interface-owned required evidence constraint.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct InterfaceEvidenceConstraintSummary {
+    pub subject: TypeExpr,
+    pub required_evidence: TypeExpr,
+}
+
+impl InterfaceEvidenceConstraintSummary {
+    #[must_use]
+    pub fn new(subject: TypeExpr, required_evidence: TypeExpr) -> Self {
+        Self {
+            subject,
+            required_evidence,
         }
     }
 }

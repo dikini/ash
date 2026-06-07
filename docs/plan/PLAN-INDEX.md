@@ -4020,7 +4020,7 @@ Phase 135 adds interface-level evidence constraints. The motivating final syntax
 | [TASK-1038](tasks/TASK-1038-interface-evidence-constraints-packet.md) | Create the SPEC-080/PLAN-130 packet, task files, index rows, and changelog entry | 6 | ✅ Complete |
 | [TASK-1039](tasks/TASK-1039-interface-evidence-constraints-audit-gate.md) | Audit live parser/typechecker/stdlib evidence seams and freeze exact implementation commands | 8 | ✅ Complete |
 | [TASK-1040](tasks/TASK-1040-interface-constraint-parser-surface.md) | Parse and preserve interface-level `where` evidence constraints with positive/negative tests | 10 | ✅ Complete |
-| [TASK-1041](tasks/TASK-1041-interface-constraint-core-lowering-and-summaries.md) | Carry interface constraints through lowering/core summaries or prove no summary change is needed | 10 | 📝 Planned |
+| [TASK-1041](tasks/TASK-1041-interface-constraint-core-lowering-and-summaries.md) | Carry interface constraints through lowering/core summaries or prove no summary change is needed | 10 | ✅ Complete |
 | [TASK-1042](tasks/TASK-1042-typeenv-interface-constraint-registration.md) | Store interface constraints in TypeEnv and enforce required evidence for concrete impl registration | 14 | 📝 Planned |
 | [TASK-1043](tasks/TASK-1043-generic-entailment-and-evidence-lookup.md) | Make constrained evidence entail required evidence in generic contexts without reverse derivation | 14 | 📝 Planned |
 | [TASK-1044](tasks/TASK-1044-stdlib-monad-applicative-constraint.md) | Migrate stdlib `Monad` to `where M: Applicative` and reconcile examples/reference wording | 10 | 📝 Planned |

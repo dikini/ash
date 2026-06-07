@@ -15,10 +15,11 @@ use ash_core::ast::{
 };
 use ash_core::module_graph::ModuleId;
 use ash_core::semantic_summary::{
-    AssociatedFamilySummary, AssociatedMemberIdentityId, ConstructorSummary, InterfaceIdentityId,
-    InterfaceIdentitySummary, ModuleIdentity, ModuleSemanticSummary, ModuleSourceOrigin,
-    PromotedConstructorId, PromotedDataKindId, SealedDomainId, SummaryVersion, TypeDeclId,
-    TypeDeclSummary, TypeFunctionSummary, TypeRepresentationSummary,
+    AssociatedFamilySummary, AssociatedMemberIdentityId, ConstructorSummary,
+    InterfaceEvidenceConstraintSummary, InterfaceIdentityId, InterfaceIdentitySummary,
+    ModuleIdentity, ModuleSemanticSummary, ModuleSourceOrigin, PromotedConstructorId,
+    PromotedDataKindId, SealedDomainId, SummaryVersion, TypeDeclId, TypeDeclSummary,
+    TypeFunctionSummary, TypeRepresentationSummary,
 };
 use ash_core::type_ir::{
     CanonicalTypeExpr, TypeComputationHeadId, TypeFunctionPattern, TypeFunctionPatternConstraint,
@@ -3626,16 +3627,29 @@ fn public_interface_identity_summary(
     let id = type_env
         .interface_identity_for_name(interface.name.as_ref())
         .cloned()?;
-    Some(InterfaceIdentitySummary::new(
-        id,
-        interface.name.to_string(),
-        vec![interface.name.to_string()],
-        ash_core::semantic_summary::SourceAnchor::new(
-            source_origin,
-            None,
-            format!("interface {}", interface.name),
-        ),
-    ))
+    let evidence_constraints = interface
+        .evidence_constraints
+        .iter()
+        .map(|constraint| {
+            InterfaceEvidenceConstraintSummary::new(
+                ash_parser::lower::lower_surface_type(&constraint.subject),
+                ash_parser::lower::lower_surface_type(&constraint.interface),
+            )
+        })
+        .collect();
+    Some(
+        InterfaceIdentitySummary::new(
+            id,
+            interface.name.to_string(),
+            vec![interface.name.to_string()],
+            ash_core::semantic_summary::SourceAnchor::new(
+                source_origin,
+                None,
+                format!("interface {}", interface.name),
+            ),
+        )
+        .with_evidence_constraints(evidence_constraints),
+    )
 }
 
 fn attach_exported_proposition_payload(

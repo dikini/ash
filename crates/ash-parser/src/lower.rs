@@ -1649,7 +1649,9 @@ fn to_core_span(span: crate::token::Span) -> ash_core::ast::Span {
 pub fn lower_interface_def(
     iface: &crate::surface::InterfaceDef,
 ) -> Result<ash_core::ast::InterfaceDef, LoweringError> {
-    use ash_core::ast::{AssociatedType, InterfaceDef, InterfaceMethodSig, Visibility};
+    use ash_core::ast::{
+        AssociatedType, InterfaceDef, InterfaceEvidenceConstraint, InterfaceMethodSig, Visibility,
+    };
     reject_kinded_interface_type_params(
         &iface.type_params,
         "kinded interface parameters are parsed by TASK-906 but lowered by TASK-907",
@@ -1657,6 +1659,14 @@ pub fn lower_interface_def(
     Ok(InterfaceDef {
         name: iface.name.to_string(),
         type_params: iface.type_params.iter().map(|n| n.to_string()).collect(),
+        evidence_constraints: iface
+            .evidence_constraints
+            .iter()
+            .map(|constraint| InterfaceEvidenceConstraint {
+                subject: lower_surface_type(&constraint.subject),
+                required_evidence: lower_surface_type(&constraint.interface),
+            })
+            .collect(),
         associated_types: iface
             .associated_types
             .iter()

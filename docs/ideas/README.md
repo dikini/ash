@@ -69,6 +69,7 @@ Research and design explorations for OTP-like supervision, fault tolerance, and 
 | FUTURE-003 | [Agentic Workflow Exemplars](future/AGENTIC-WORKFLOW-EXEMPLARS.md) | `drafting` | 2026-04-20 | Companion live note tracking ReAct/RM/RLM-like families as concrete benchmark targets, implementation targets, and substrate gap-finders |
 | FUTURE-004 | [Ash Wiki as Human/AI Shared Knowledge Substrate](future/ASH-WIKI-HUMAN-AI-KNOWLEDGE-SUBSTRATE.md) | `drafting` | 2026-04-20 | Explores a static-first wiki layer as shared human/AI project memory, audit substrate, onboarding surface, and queryable knowledge service over the Ash corpus |
 | FUTURE-005 | [Compiled Execution Substrate](future/COMPILED-EXECUTION-SUBSTRATE.md) | `drafting` | 2026-05-12 | Captures the future TCIR → AMIR → bytecode → JIT direction, traceable sectioned bytecode artifacts, semi-stable AMIR text, and non-blocking Ash-in-Ash design pressure |
+| FUTURE-006 | [Observable State and Authorized Contexts](future/OBSERVABLE-STATE-AND-AUTHORIZED-CONTEXTS.md) | `drafting` | 2026-06-07 | Explores observable state as a value dimension, explicit observer-subject-view grants, policy-governed runtime views, and comonadic contexts over authorized observations rather than raw `Act`/`Proc`/`Workflow`/mailbox carriers |
 
 ## Adding a New Exploration
 

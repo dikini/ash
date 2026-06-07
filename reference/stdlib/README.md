@@ -108,6 +108,7 @@ Use the explicit public operations when crossing the tower:
 - [Proc stdlib](proc.md): `Proc<A>`, public process handles `P<A>`, explicit Act lifts, child admission, await/join/gather operations, and scheduling limits.
 - [Workflow stdlib](workflow.md): `Workflow<A>`, value-level algebra, explicit lower-tower lifts, and current contract-operation limits.
 - [Result stdlib](result.md): `Result<T, E>`, `Ok`/`Err`, helper functions, and the domain-failure versus operational-bottom boundary.
+- [Standard algebra](algebra.md): current `std::algebra` Semigroup/Monoid/Functor/Applicative/Monad surfaces, Phase 134 Comonad/Kleisli additions, and deferred Cokleisli/Coapplicative/category boundaries.
 
 ## Evidence Baseline
 

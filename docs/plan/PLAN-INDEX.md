@@ -3974,3 +3974,32 @@ Phase 133 adds a source-visible `std::algebra` namespace for `Semigroup`, `Monoi
 - D4: Rust runtime specialization may implement opaque tower carriers, but runtime behavior must not exceed the public Ash algebra surface.
 - D5: Anonymous hidden Act/Proc/Workflow dictionaries must be removed or quarantined as named compiler-prelude evidence tied to public stdlib operations.
 - D6: Law proof/checking and law-test derivation are follow-on implementation phases integrated with generated tests, not documentation-only notes and not part of Phase 133 completion.
+
+## Phase 134: Standard Algebra Comonad and Kleisli Helper Surfaces
+
+**Priority:** Medium (stdlib algebra extension and category-boundary clarity)
+**Status:** ✅ Complete
+**Spec:** [SPEC-079](../spec/SPEC-079-STANDARD-ALGEBRA-COMONAD-AND-KLEISLI-HELPERS.md)
+**Plan:** [PLAN-129](PLAN-129-STANDARD-ALGEBRA-COMONAD-AND-KLEISLI-HELPERS.md)
+
+Phase 134 implements the next current-MVP `std::algebra` extension after Phase 133: a source-visible `Comonad` interface and concrete Option/Result Kleisli helpers over existing Monad evidence. It explicitly defers Cokleisli helpers until a lawful Comonad carrier or evidence-method dispatch exists, defers Coapplicative pending accepted laws and a lawful carrier, and keeps `std::category`, broad category abstractions, and unsound partial/opaque Comonad instances absent.
+
+| Task | Description | Est. Hours | Status |
+|------|-------------|------------|--------|
+| [TASK-1030](tasks/TASK-1030-comonad-kleisli-packet.md) | Create the SPEC-079/PLAN-129 packet, task files, index rows, and changelog entry | 6 | ✅ Complete |
+| [TASK-1031](tasks/TASK-1031-comonad-kleisli-audit-gate.md) | Audit live algebra/interface/module/evidence seams and freeze exact syntax plus verification commands | 8 | ✅ Complete |
+| [TASK-1032](tasks/TASK-1032-std-algebra-comonad-interface.md) | Add `std::algebra::comonad` interface/module if audit validates exact syntax | 10 | ✅ Complete |
+| [TASK-1033](tasks/TASK-1033-std-algebra-kleisli-helpers.md) | Add Kleisli helper surface over existing Monad evidence or defer exact helpers honestly | 8 | ✅ Complete |
+| [TASK-1034](tasks/TASK-1034-std-algebra-cokleisli-helpers.md) | Add Cokleisli helper surface over Comonad evidence or defer exact helpers honestly | 8 | ✅ Complete (deferred source) |
+| [TASK-1035](tasks/TASK-1035-coapplicative-decision-gate.md) | Define a precise Coapplicative first slice with laws and a lawful carrier, or defer it explicitly | 6 | ✅ Complete (deferred source) |
+| [TASK-1036](tasks/TASK-1036-comonad-law-profile-and-reference.md) | Extend law-profile handoff and update reference/corpus docs for implemented/planned surfaces | 8 | ✅ Complete |
+| [TASK-1037](tasks/TASK-1037-comonad-kleisli-closeout.md) | Run broad verification, independent review, status reconciliation, and closeout | 8 | ✅ Complete |
+
+**Decision gates:**
+- D1: No new syntax; implementation uses existing modules, interfaces, impls, ordinary functions, imports, and function types.
+- D2: `std::algebra` remains canonical; `std::category` is not introduced in this phase.
+- D3: `Comonad` requires total extraction; partial or opaque carriers do not receive instances by symmetry.
+- D4: Kleisli helpers reuse existing `Monad<M>` evidence and do not alter `do:K` lowering.
+- D5: Cokleisli helpers reuse `Comonad<W>` evidence and do not claim a general category implementation.
+- D6: Coapplicative must be lawed and instance-backed or deferred.
+- D7: New laws must receive concrete generated-test handoff ownership rather than prose-only deferral.

@@ -46,7 +46,7 @@ use algebra::monad::{Monad};
 use algebra::functor::{Functor};
 ```
 
-`std::category` is intentionally not introduced in this phase. Category-level abstractions such as category, bifunctor, profunctor, comonad, or arrows remain future library work once the algebra namespace is stable.
+`std::category` is intentionally not introduced in this phase. Category-level abstractions such as category, bifunctor, profunctor, or arrows remain future library work once the algebra namespace is stable. Comonad and Kleisli/Cokleisli helper planning is now owned by [SPEC-079](SPEC-079-STANDARD-ALGEBRA-COMONAD-AND-KLEISLI-HELPERS.md), which keeps the broader `std::category` hierarchy deferred.
 
 ## Deferral and Planned-Feature Reconciliation
 

@@ -42,12 +42,12 @@ fn monad_option_module() -> ash_parser::surface::ModuleFile {
     parse(
         r#"
         interface Monad<M : * -> *> {
-            return(Int) -> M<Int>
+            unit(Int) -> M<Int>
             bind(M<Int>, Fn(Int) -> M<Int>) -> M<Int>
         }
 
         impl Monad<Option> {
-            return(value) = Some { value: value }
+            unit(value) = Some { value: value }
             bind(value, _f) = value
         }
         "#,
@@ -112,7 +112,7 @@ fn do_return_option_int(value: i64) -> ash_parser::surface::Expr {
 }
 
 #[test]
-fn monad_evidence_records_return_and_bind_method_bodies() {
+fn monad_evidence_records_unit_and_bind_method_bodies() {
     let env = env_with_monad_option_methods();
     let expr = do_return_option_int(1);
 
@@ -130,14 +130,14 @@ fn monad_evidence_records_return_and_bind_method_bodies() {
         body,
     } = evidence.return_op
     else {
-        panic!("return op should carry the selected method body");
+        panic!("unit op should carry the selected method body");
     };
     assert_eq!(evidence_key, "Monad<Option>");
-    assert_eq!(method, "return");
+    assert_eq!(method, "unit");
     assert_eq!(params, vec!["value".to_string()]);
     assert!(
         matches!(body, CoreExpr::Constructor { ref name, .. } if name == "Some"),
-        "return body should be the selected Option implementation body, got {body:?}"
+        "unit body should be the selected Option implementation body, got {body:?}"
     );
 
     let SelectedDoOperation::EvidenceMethod {
@@ -172,7 +172,7 @@ fn do_option_return_only_lowers_through_selected_evidence_body() {
             .map(|e| e.return_op.clone()),
         Some(SelectedDoOperation::EvidenceMethod {
             evidence_key: "Monad<Option>".to_string(),
-            method: "return".to_string(),
+            method: "unit".to_string(),
             params: vec!["value".to_string()],
             body: CoreExpr::Constructor {
                 name: "Some".into(),
@@ -206,17 +206,17 @@ fn ambiguous_monad_evidence_rejected_before_lowering() {
     let module = parse(
         r#"
         interface Monad<M : * -> *> {
-            return(Int) -> M<Int>
+            unit(Int) -> M<Int>
             bind(M<Int>, Fn(Int) -> M<Int>) -> M<Int>
         }
 
         impl Monad<Option> {
-            return(value) = Some { value: value }
+            unit(value) = Some { value: value }
             bind(value, _f) = value
         }
 
         impl Monad<Option> {
-            return(value) = Some { value: value }
+            unit(value) = Some { value: value }
             bind(value, _f) = value
         }
         "#,
@@ -252,6 +252,6 @@ fn malformed_monad_evidence_without_return_or_bind_fails_closed() {
     let message = format!("{err:?}");
 
     assert!(message.contains("Monad<Option>"), "{message}");
-    assert!(message.contains("return"), "{message}");
+    assert!(message.contains("unit"), "{message}");
     assert!(message.contains("selected"), "{message}");
 }

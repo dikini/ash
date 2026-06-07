@@ -43,12 +43,12 @@ fn env_with_executable_option_monad() -> TypeEnv {
     let module = parse(
         r"
         interface Monad<M : * -> *> {
-            return(Int) -> M<Int>
+            unit(Int) -> M<Int>
             bind(M<Int>, Fn(Int) -> M<Int>) -> M<Int>
         }
 
         impl Monad<Option> {
-            return(value) = Some { value: value }
+            unit(value) = Some { value: value }
             bind(_value, _f) = _f(1)
         }
         ",

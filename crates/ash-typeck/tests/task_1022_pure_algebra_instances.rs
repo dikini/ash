@@ -133,6 +133,10 @@ fn env_with_task1022_stdlib_algebra() -> TypeEnv {
         parse_std_module("algebra/functor.ash"),
         parse_std_module("algebra/applicative.ash"),
         parse_std_module("algebra/monad.ash"),
+        parse_std_module("option.ash"),
+        parse_std_module("result.ash"),
+        parse_std_module("list.ash"),
+        parse_std_module("string.ash"),
     ];
     let mut env = TypeEnv::with_builtin_types();
     bind_stdlib_pure_helper_signatures(&mut env);

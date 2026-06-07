@@ -2,14 +2,14 @@ pub interface Functor<F : * -> *> {
     map(F<Int>, Int -> Int) -> F<Int>
 }
 
-pub impl Functor<Option> {
-    map(value, f) = option::map(value, f)
+pub fn map_option(value: Option<Int>, f: (Int) -> Int) -> Option<Int> {
+    option::map(value, f)
 }
 
-pub impl <E : *> Functor<Result<_, E>> {
-    map(value, f) = result::map(value, f)
+pub fn map_result<E>(value: Result<Int, E>, f: (Int) -> Int) -> Result<Int, E> {
+    result::map(value, f)
 }
 
-pub impl Functor<List> {
-    map(value, f) = list::map(value, f)
+pub fn map_list(value: List<Int>, f: (Int) -> Int) -> List<Int> {
+    list::map(value, f)
 }

@@ -308,7 +308,7 @@ Update this section as tasks complete:
 | 130 | 8 | 8 | ✅ Complete; SPEC-075 Implemented MVP |
 | 131 | 9 | 9 | ✅ Complete |
 | 132 | 7 | 7 | ✅ Complete |
-| 133 | 9 | 2 | 🚧 In Progress |
+| 133 | 9 | 9 | ✅ Complete |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -3949,7 +3949,7 @@ Phase 132 completes the broader DESIGN-022 and DESIGN-023 work deferred after th
 ## Phase 133: Standard Algebra Library and Monad Remediation
 
 **Priority:** High (stdlib usability and generalized-do final-surface closure)
-**Status:** 🚧 In Progress
+**Status:** ✅ Complete
 **Spec:** [SPEC-078](../spec/SPEC-078-STANDARD-ALGEBRA-LIBRARY-AND-MONAD-REMEDIATION.md)
 **Plan:** [PLAN-128](PLAN-128-STANDARD-ALGEBRA-LIBRARY-AND-MONAD-REMEDIATION.md)
 
@@ -3961,11 +3961,11 @@ Phase 133 adds a source-visible `std::algebra` namespace for `Semigroup`, `Monoi
 | [TASK-1021](tasks/TASK-1021-std-algebra-namespace-and-interfaces.md) | Add `std::algebra` namespace and source-visible algebra interfaces | 10 | ✅ Complete |
 | [TASK-1022](tasks/TASK-1022-pure-algebra-instances.md) | Add pure data instances for `Option`, `Result`, `List`, and string/list semigroups/monoids | 14 | ✅ Complete |
 | [TASK-1023](tasks/TASK-1023-tower-algebra-instances-and-bridge-remediation.md) | Add `Act`/`Proc`/`Workflow` algebra evidence and remove/quarantine hidden bridge authority | 16 | ✅ Complete |
-| [TASK-1024](tasks/TASK-1024-do-and-comprehension-stdlib-evidence.md) | Rewire `do:K` and comprehensions to use stdlib/prelude Monad evidence | 16 | 📝 Planned |
-| [TASK-1025](tasks/TASK-1025-algebra-combinators-and-examples.md) | Add usable algebra combinators and executable examples | 10 | 📝 Planned |
-| [TASK-1026](tasks/TASK-1026-algebra-law-profile-generated-test-handoff.md) | Create law-profile and generated-test follow-up packet without implementing law runner support | 8 | 📝 Planned |
-| [TASK-1027](tasks/TASK-1027-algebra-reference-and-corpus-migration.md) | Update reference docs and reconcile stale Monad/stdlib deferral wording | 8 | 📝 Planned |
-| [TASK-1028](tasks/TASK-1028-stdlib-algebra-closeout.md) | Run broad verification, independent review, status reconciliation, and closeout | 8 | 📝 Planned |
+| [TASK-1024](tasks/TASK-1024-do-and-comprehension-stdlib-evidence.md) | Rewire `do:K` and comprehensions to use stdlib/prelude Monad evidence | 16 | ✅ Complete |
+| [TASK-1025](tasks/TASK-1025-algebra-combinators-and-examples.md) | Add usable algebra combinators and executable examples | 10 | ✅ Complete |
+| [TASK-1026](tasks/TASK-1026-algebra-law-profile-generated-test-handoff.md) | Create law-profile and generated-test follow-up packet without implementing law runner support | 8 | ✅ Complete |
+| [TASK-1027](tasks/TASK-1027-algebra-reference-and-corpus-migration.md) | Update reference docs and reconcile stale Monad/stdlib deferral wording | 8 | ✅ Complete |
+| [TASK-1028](tasks/TASK-1028-stdlib-algebra-closeout.md) | Run broad verification, independent review, status reconciliation, and closeout | 8 | ✅ Complete |
 
 **Decision gates:**
 - D1: No new language syntax; implementation uses existing modules, interfaces, impls, functions, imports, `do:K`, and comprehensions.

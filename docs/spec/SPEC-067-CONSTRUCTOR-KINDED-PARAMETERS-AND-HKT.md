@@ -21,7 +21,7 @@ TASK-904 audited the live substrate before Phase 120 implementation:
 
 - `ash-core::Kind` can represent arrow kinds such as `* -> *`;
 - source type parameters and interface parameters were effectively proper-type parameters;
-- do targets used compiler-known hidden dictionaries for `Act`, `Proc`, and `Workflow`;
+- do targets historically used compiler-known hidden dictionaries for `Act`, `Proc`, and `Workflow`;
 - `do:Result<_, E>` was deferred pending SPEC-066 partial application and Monad evidence;
 - higher-kinded interface declarations, constructor-variable application, and impl heads were not source-supported.
 
@@ -99,9 +99,9 @@ Full `do:K` evidence behavior resolves in this order:
 3. elaborate `return` and `<-` through the selected evidence;
 4. keep tower-specific effects for `Act`, `Proc`, and `Workflow` explicit.
 
-The Phase 120 MVP implements the target-resolution and return-only type boundary for explicit `Monad<K>` evidence. Generalized runtime lowering through arbitrary user-defined Monad `return`/`bind` method bodies remains deferred.
+The Phase 120 MVP implemented the target-resolution and return-only type boundary for explicit `Monad<K>` evidence. Phase 133 supersedes the unqualified runtime-lowering deferral for stdlib/prelude evidence by selecting public `Monad<K>` `unit`/`bind` entries where available; arbitrary user-defined Monad bodies outside the supported stdlib/prelude surface remain a future extension.
 
-The hidden Act/Proc/Workflow dictionaries may remain as compiler-prelude evidence during migration, but they must be shaped as ordinary `Monad<K>` entries at the TypeEnv boundary.
+The hidden Act/Proc/Workflow dictionaries described by the MVP were migration scaffolding. Phase 133 requires public/quarantined evidence at the TypeEnv boundary rather than unqualified compiler authority.
 
 ## 8. Diagnostics
 
@@ -134,7 +134,7 @@ Phase 120 implements the SPEC-067 MVP through TASK-904 through TASK-911. The clo
 
 The MVP covers constructor-kinded binders, constructor-variable application, higher-kinded interface/impl evidence shape and overlap rejection, explicit `Monad<K>` do-target evidence lookup, public summary non-interference, and the diagnostics listed above. It preserves the non-goals in §3: higher-rank polymorphism, unrestricted source type lambdas, automatic do-target inference, law proving or automatic law assumption, arbitrary associated-type-family inversion, and broad multi-parameter constructor classes remain deferred.
 
-`impl Monad<Result<_, E>>` is implemented as SPEC-066-shaped partial-constructor evidence shape. Generalized runtime lowering through arbitrary user-defined Monad `return`/`bind` method bodies remains outside this MVP; the accepted do-target evidence boundary is covered for target resolution and return-only typing.
+`impl Monad<Result<_, E>>` is implemented as SPEC-066-shaped partial-constructor evidence shape. Phase 133 uses `unit`/`bind` method names for public `std::algebra::Monad` evidence and keeps only unsupported arbitrary user-defined Monad bodies outside the current MVP.
 
 ## 11. Implementation Tasks
 

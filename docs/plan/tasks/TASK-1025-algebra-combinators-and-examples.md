@@ -1,6 +1,6 @@
 # TASK-1025: Algebra Combinators and Examples
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -48,6 +48,13 @@ Depends on TASK-1024 completion.
 4. Run focused non-zero verification.
 5. Record RED/GREEN evidence and update task/plan/changelog only when the slice is actually complete.
 
+## Evidence
+
+- RED: `std::algebra` exposed interfaces and carrier impls, but no practical helper function surface or CLI-checked example importing the algebra helpers with Option/Result/monoid/tower modules.
+- GREEN: Added honest helper wrappers for currently expressible Option, Result, List, and String operations, plus non-zero engine and CLI coverage, including executable final-surface `concat_string` and `concat_list` helper examples.
+- Scope correction: carrier impls now live with the carrier modules (`option.ash`, `result.ash`, `list.ash`, `string.ash`) instead of in `std/src/algebra/*.ash`; the algebra modules own interfaces and helper surfaces. More general higher-rank helpers such as `then`, `join`, `compose`, and `lift2` remain follow-up material until the current surface can express them without fake builtins.
+- Codex delegation: TASK-1025 was delegated to `codex exec`, but the spawned process was killed after it surfaced an unrelated hard-gate prompt instead of implementing; the work was completed manually in the phase worktree.
+
 ## Sub-Agent Prompts
 
 ### Implementer
@@ -89,11 +96,11 @@ commands:
   - cargo fmt --check
   - git diff --check
 checklist:
-  - [ ] RED evidence recorded
-  - [ ] GREEN evidence recorded
-  - [ ] Focused test commands have recorded non-zero test counts or an explicit artifact-check proof
-  - [ ] Final-surface or negative-leakage gates satisfied where applicable
-  - [ ] Docs/status/changelog updated if public behavior changed
+  - [x] RED evidence recorded
+  - [x] GREEN evidence recorded
+  - [x] Focused test commands have recorded non-zero test counts or an explicit artifact-check proof
+  - [x] Final-surface or negative-leakage gates satisfied where applicable
+  - [x] Docs/status/changelog updated if public behavior changed
 ```
 
 ## Dependencies for Next Task

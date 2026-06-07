@@ -1,6 +1,6 @@
 # TASK-1028: Stdlib Algebra Closeout
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -106,11 +106,11 @@ PY
   - RUSTC_WRAPPER= cargo doc --workspace --no-deps
   - git diff --check
 checklist:
-  - [ ] RED evidence recorded
-  - [ ] GREEN evidence recorded
-  - [ ] Closeout evidence artifact records per-task focused commands with `test_count > 0` or exact artifact assertions
-  - [ ] Final-surface or negative-leakage gates satisfied where applicable
-  - [ ] Docs/status/changelog updated if public behavior changed
+  - [x] RED evidence recorded
+  - [x] GREEN evidence recorded
+  - [x] Closeout evidence artifact records per-task focused commands with `test_count > 0` or exact artifact assertions
+  - [x] Final-surface or negative-leakage gates satisfied where applicable
+  - [x] Docs/status/changelog updated if public behavior changed
 ```
 
 ## Dependencies for Next Task

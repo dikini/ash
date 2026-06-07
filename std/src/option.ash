@@ -2,7 +2,25 @@
 --
 -- Option<T> represents an optional value: either Some(T) or None.
 
+use algebra::functor::{Functor}
+use algebra::applicative::{Applicative}
+use algebra::monad::{Monad}
+
 pub type Option<T> = Some { value: T } | None;
+
+pub impl Functor<Option> {
+    map(value, f) = option::map(value, f)
+}
+
+pub impl Applicative<Option> {
+    pure(value) = option::pure(value)
+    apply(functions, value) = option::apply(functions, value)
+}
+
+pub impl Monad<Option> {
+    unit(value) = option::pure(value)
+    bind(value, f) = option::and_then(value, f)
+}
 
 -- Returns true if the option is Some
 pub fn is_some<T>(opt: Option<T>) -> Bool {

@@ -1,6 +1,6 @@
 # PLAN-128: Standard Algebra Library and Monad Remediation
 
-**Status:** 🚧 In Progress
+**Status:** ✅ Complete
 **Spec:** [SPEC-078](../spec/SPEC-078-STANDARD-ALGEBRA-LIBRARY-AND-MONAD-REMEDIATION.md)
 **Depends on:** [SPEC-067](../spec/SPEC-067-CONSTRUCTOR-KINDED-PARAMETERS-AND-HKT.md), [SPEC-069](../spec/SPEC-069-ALPHA-VISIBLE-TOWER-ALGEBRA-AND-DO-LOWERING.md), [SPEC-077](../spec/SPEC-077-ASH-TEST-RUNNER-SYNTHESIZED-AND-SMALLWORLD-COMPLETION.md)
 **Task range:** TASK-1020 through TASK-1028
@@ -30,11 +30,11 @@ The phase is library-first. Interfaces and helper functions live in Ash source u
 | [TASK-1021](tasks/TASK-1021-std-algebra-namespace-and-interfaces.md) | Add `std::algebra` namespace and source-visible algebra interfaces | Stdlib/Typeck | 10 | ✅ Complete |
 | [TASK-1022](tasks/TASK-1022-pure-algebra-instances.md) | Add pure data instances for `Option`, `Result`, `List`, and string/list semigroups/monoids | Stdlib/Typeck | 14 | ✅ Complete |
 | [TASK-1023](tasks/TASK-1023-tower-algebra-instances-and-bridge-remediation.md) | Add `Act`/`Proc`/`Workflow` algebra evidence and remove/quarantine hidden bridge authority | Typeck/Runtime Boundary | 16 | ✅ Complete |
-| [TASK-1024](tasks/TASK-1024-do-and-comprehension-stdlib-evidence.md) | Rewire `do:K` and comprehensions to use stdlib/prelude Monad evidence | Typeck/Engine | 16 | Planned |
-| [TASK-1025](tasks/TASK-1025-algebra-combinators-and-examples.md) | Add usable algebra combinators and executable examples | Stdlib/Examples | 10 | Planned |
-| [TASK-1026](tasks/TASK-1026-algebra-law-profile-generated-test-handoff.md) | Create law-profile and generated-test follow-up packet without implementing law runner support | Docs/Test Runner Planning | 8 | Planned |
-| [TASK-1027](tasks/TASK-1027-algebra-reference-and-corpus-migration.md) | Update reference docs and reconcile stale Monad/stdlib deferral wording | Docs/Reference | 8 | Planned |
-| [TASK-1028](tasks/TASK-1028-stdlib-algebra-closeout.md) | Broad verification, independent review, status reconciliation, and closeout | Closeout | 8 | Planned |
+| [TASK-1024](tasks/TASK-1024-do-and-comprehension-stdlib-evidence.md) | Rewire `do:K` and comprehensions to use stdlib/prelude Monad evidence | Typeck/Engine | 16 | ✅ Complete |
+| [TASK-1025](tasks/TASK-1025-algebra-combinators-and-examples.md) | Add usable algebra combinators and executable examples | Stdlib/Examples | 10 | ✅ Complete |
+| [TASK-1026](tasks/TASK-1026-algebra-law-profile-generated-test-handoff.md) | Create law-profile and generated-test follow-up packet without implementing law runner support | Docs/Test Runner Planning | 8 | ✅ Complete |
+| [TASK-1027](tasks/TASK-1027-algebra-reference-and-corpus-migration.md) | Update reference docs and reconcile stale Monad/stdlib deferral wording | Docs/Reference | 8 | ✅ Complete |
+| [TASK-1028](tasks/TASK-1028-stdlib-algebra-closeout.md) | Broad verification, independent review, status reconciliation, and closeout | Closeout | 8 | ✅ Complete |
 
 Total estimate: 96h.
 
@@ -92,13 +92,13 @@ TASK-1028 also runs documentation/link/status checks for edited markdown and ver
 
 ## Completion Checklist
 
-- [ ] `std::algebra` namespace exists and is importable.
-- [ ] Standard algebra interfaces parse/check through the real stdlib path.
-- [ ] Pure data instances resolve from stdlib evidence.
-- [ ] Tower carrier evidence is tied to public stdlib/prelude operations.
-- [ ] `do:Option`, `do:Result<_, E>`, `do:Act`, `do:Proc`, and `do:Workflow` use selected Monad evidence.
-- [ ] Comprehensions reuse the same evidence path.
-- [ ] Anonymous hidden bridge authority is removed or quarantined with negative leakage tests.
-- [ ] Usable combinators and examples compile/run.
-- [ ] Law-test/proof work is explicitly scheduled as a generated-test follow-up.
-- [ ] Reference docs, spec index, PLAN-INDEX, task files, and CHANGELOG are reconciled.
+- [x] `std::algebra` namespace exists and is importable.
+- [x] Standard algebra interfaces parse/check through the real stdlib path.
+- [x] Pure data instances resolve from stdlib evidence.
+- [x] Tower carrier evidence is tied to public stdlib/prelude operations.
+- [x] `do:Option`, `do:Result<_, E>`, `do:Act`, `do:Proc`, and `do:Workflow` use selected Monad evidence.
+- [x] Comprehensions reuse the same evidence path.
+- [x] Anonymous hidden bridge authority is removed or quarantined with negative leakage tests.
+- [x] Usable combinators and examples compile/run.
+- [x] Law-test/proof work is explicitly scheduled as a generated-test follow-up.
+- [x] Reference docs, spec index, PLAN-INDEX, task files, and CHANGELOG are reconciled.

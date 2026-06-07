@@ -1,6 +1,6 @@
 # TASK-1024: Do and Comprehension Stdlib Evidence
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -47,6 +47,12 @@ Depends on TASK-1022 and TASK-1023 completion.
 4. Run focused non-zero verification.
 5. Record RED/GREEN evidence and update task/plan/changelog only when the slice is actually complete.
 
+## Evidence
+
+- RED: TASK-1020 audit recorded that selected Monad evidence still looked for `return` while the canonical public stdlib Monad method is `unit`.
+- GREEN: `do:Option` now selects stdlib `Monad<Option>::unit` and `bind` bodies, `do:Result<_, E>` intrinsic shims use `unit`/`bind`, and explicit-target comprehensions compare equal to equivalent `do:Option` elaboration through the same selected evidence.
+- Codex delegation: `codex exec --full-auto` was launched for TASK-1024, but exited with usage-limit errors after producing partial tests; the live diff was inspected and remediated manually in the phase worktree.
+
 ## Sub-Agent Prompts
 
 ### Implementer
@@ -89,11 +95,11 @@ commands:
   - cargo fmt --check
   - git diff --check
 checklist:
-  - [ ] RED evidence recorded
-  - [ ] GREEN evidence recorded
-  - [ ] Focused test commands have recorded non-zero test counts or an explicit artifact-check proof
-  - [ ] Final-surface or negative-leakage gates satisfied where applicable
-  - [ ] Docs/status/changelog updated if public behavior changed
+  - [x] RED evidence recorded
+  - [x] GREEN evidence recorded
+  - [x] Focused test commands have recorded non-zero test counts or an explicit artifact-check proof
+  - [x] Final-surface or negative-leakage gates satisfied where applicable
+  - [x] Docs/status/changelog updated if public behavior changed
 ```
 
 ## Dependencies for Next Task

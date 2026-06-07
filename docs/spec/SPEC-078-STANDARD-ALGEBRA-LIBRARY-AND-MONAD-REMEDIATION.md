@@ -1,6 +1,6 @@
 # SPEC-078: Standard Algebra Library and Monad Remediation
 
-**Status:** Draft
+**Status:** Implemented MVP
 **Date:** 2026-06-06
 **Plan:** [PLAN-128](../plan/PLAN-128-STANDARD-ALGEBRA-LIBRARY-AND-MONAD-REMEDIATION.md)
 **Implementation Tasks:** [TASK-1020](../plan/tasks/TASK-1020-stdlib-algebra-audit-gate.md) through [TASK-1028](../plan/tasks/TASK-1028-stdlib-algebra-closeout.md)
@@ -225,6 +225,10 @@ Filtered focused tests must prove non-zero execution or be replaced by explicit 
 - TASK-1028: Closeout, broad verification, and stale-deferral cleanup.
 
 ## Changelog
+
+### 2026-06-07
+
+- Promoted to Implemented MVP after TASK-1028 closeout. Phase 133 implemented the `std::algebra` namespace, source-visible interfaces, supported pure and tower evidence, `do:K`/comprehension evidence reconciliation, helper/examples coverage, law-profile generated-test follow-up ownership, reference docs, stale-deferral cleanup, and broad verification. Automatic generated law-test execution remains follow-up TASK-1029.
 
 ### 2026-06-06
 

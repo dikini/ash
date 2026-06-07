@@ -19,7 +19,7 @@ do:K {
 }
 ```
 
-The target `K` is an explicit computation constructor. The block synthesizes `K<A>`, where `A` is the type of the final `return` expression after type checking. In the MVP implementation track, `K` is limited to compiler-known builtin dictionaries for `Act` and `Proc`; the normative design is intentionally shaped so the temporary bridge can later be replaced by a canonical `Monad<K>`-like interface over unary computation constructors.
+The target `K` is an explicit computation constructor. The block synthesizes `K<A>`, where `A` is the type of the final `return` expression after type checking. The original MVP implementation track was limited to compiler-known Act/Proc bridges; Phase 133 supersedes that present-tense boundary with selected `Monad<K>` evidence for implemented targets (`Act`, `Proc`, `Workflow`, `Option`, and supported `Result<_, E>` shapes), with any legacy bridge retained only as quarantined fallback when public evidence is unavailable.
 
 This spec owns generalized do-notation syntax, target resolution, statement typing, typed elaboration, diagnostics, compatibility with legacy `act { ... }`, tower/purity behavior, and the rule that operational `fail` remains operational bottom rather than domain failure.
 
@@ -29,7 +29,7 @@ Ash now has multiple computation-like layers:
 
 - `Act<A>`: sequential effectful computation with hidden runtime-managed `ActEnv`.
 - `Proc<A>`: process-capable computation over process identities, split/join policies, and explicit process handles.
-- Pure data constructors such as `Option<A>`, `List<A>`, and `Result<A, E>` that may eventually have lawful monadic structure.
+- Pure data constructors such as `Option<A>` and supported `Result<A, E>` shapes that now have selected Phase 133 `Monad` evidence; `List<A>` has Functor/Monoid helper surfaces while full List Monad/comprehension semantics remain follow-up work.
 
 SPEC-047 introduced Act-specific block syntax:
 
@@ -63,11 +63,11 @@ Implemented Phase-105 MVP slices:
 4. The type checker resolves MVP `Act` and `Proc` targets through hidden/builtin dictionary evidence, checks `let`/`<-`/`return` statements left-to-right, and exposes `elaborate_typed_do_block` for dictionary-directed core lowering.
 5. Legacy `Expr::ActBlock` typechecking remains supported for compatibility and exposes a standalone migration-diagnostic carrier until a general warning pipeline is wired in.
 6. Focused parser/typechecker tests cover the diagnostic families in §13, including target resolution errors, bind/return shape errors, migration hints, and the expression/workflow `act` ambiguity boundary.
-Remaining constraints:
+Historical Phase-105 constraints:
 
-1. The current kind system has `Kind::Type` and `Kind::Arrow`, but interface/type-parameter syntax and impl heads do not yet support constructor-kinded parameters such as `M : * -> *`.
-2. `Act`, `Proc`, and `P` are registered as builtin public type definitions in `TypeEnv`, and `proc::unit`, `proc::bind`, `proc::from_act`, `proc::par`, `proc::await`, `proc::join`, and related operations exist as ordinary library/builtin values.
-3. Phase 105 does not redefine Phase 104 capability implementation execution, authority admission, CLI binding configuration, or resource split/join work.
+1. Phase 105 was implemented before constructor-kinded interface/type-parameter syntax and impl-head support matured. Phase 133 adds the source-visible `std::algebra::Monad<M : * -> *>` surface and selected evidence for implemented targets, while arbitrary user Monad execution remains follow-up work.
+2. `Act`, `Proc`, and `Workflow` remain builtin public carrier definitions in `TypeEnv`, and `act::unit`, `proc::unit`, `proc::bind`, `proc::from_act`, `proc::par`, `proc::await`, `proc::join`, and related operations exist as ordinary library/builtin values.
+3. Phase 105 did not redefine Phase 104 capability implementation execution, authority admission, CLI binding configuration, or resource split/join work; Phase 133 likewise reuses those runtime substrates.
 
 ## 4. Scope
 
@@ -76,22 +76,21 @@ In scope for SPEC-054:
 - `do:K { ... }` expression syntax.
 - Statement forms: `let x = expr;`, `x <- expr;`, and final `return expr`.
 - `act { ... }` compatibility as sugar or migration surface for `do:Act`.
-- MVP builtin dictionaries for `Act` and `Proc` shaped like future `Monad<K>` evidence.
+- selected `Monad<K>` evidence for implemented targets, with the original Act/Proc builtin bridges treated as historical/quarantined fallback rather than ordinary hidden authority.
 - Typed elaboration into target-specific `return`/`bind` operations.
 - Tower/purity classification for `do:Act` and `do:Proc`.
 - Diagnostics for target, kind, bind, return, migration, and tower mismatch errors.
 - Explicit non-lifting between `Act`, `Proc`, `Result`, `Option`, `List`, and workflow contexts.
 
-Out of scope for the MVP implementation phase:
+Out of scope or follow-up after Phase 133:
 
-- Full user-defined constructor-kinded `Monad<M>` implementations.
-- General higher-kinded type lambdas.
-- `do:Result<_, E>` hole targets in the first implementation slice.
+- Arbitrary user-defined `Monad<M>` execution beyond the selected stdlib/prelude evidence implemented for Act, Proc, Workflow, Option, and supported Result targets.
+- General higher-kinded type lambdas beyond the current constructor-kinded interface surface.
 - Pattern binding in `let` or `<-`.
 - `Alternative`, `MonadFail`, `MonadPlus`, guard/empty syntax, or domain-failure sugar.
 - Law declaration syntax and generated law-test tooling.
-- Workflow as a do target.
-- Runtime scheduler, mailbox, resource, authority, or workflow-boundary changes beyond reusing existing `Act`/`Proc` operations.
+- Full List Monad/comprehension semantics until list bind semantics are chosen explicitly.
+- Runtime scheduler, mailbox, resource, authority, or workflow-boundary changes beyond reusing existing Act/Proc/Workflow operations.
 
 ## 5. Surface Grammar
 
@@ -108,9 +107,9 @@ bind_stmt    ::= IDENTIFIER "<-" expr ";"
 do_return    ::= "return" expr
 ```
 
-MVP restrictions:
+Original Phase-105 MVP restrictions, superseded where noted by Phase 133:
 
-- The target must be a simple named unary constructor: `Act` or `Proc`.
+- Phase 105 accepted simple named unary constructors `Act` and `Proc`; Phase 133 adds selected evidence for `Workflow`, `Option`, and supported `Result<_, E>` targets.
 - Binders are simple identifiers only.
 - Non-final statements require semicolons.
 - The final `return expr` has no trailing semicolon in the new grammar.
@@ -135,9 +134,9 @@ do:Proc {
 }
 ```
 
-### 5.2 Future hole targets
+### 5.2 Supported value-position hole targets
 
-A later extension may support one explicit value-position hole for higher-arity constructors:
+Phase 133 supports the single explicit value-position hole needed to view supported higher-arity constructors such as `Result<_, E>` as unary computation constructors:
 
 ```ash
 do:Result<_, ParseError> {
@@ -146,7 +145,7 @@ do:Result<_, ParseError> {
 }
 ```
 
-The hole target elaborates to an effective unary constructor `λA. Result<A, ParseError>`. The MVP reserves this shape but does not require parsing or elaborating it. If parsed before implementation, it must produce a clear deferred-feature diagnostic rather than silently choosing an arbitrary partial application.
+The hole target elaborates to an effective unary constructor `λA. Result<A, ParseError>` and resolves through selected `Monad<Result<_, ParseError>>` evidence when that evidence is available. Unsupported hole shapes, extra holes, or ambiguous partial applications still fail closed with a targeted diagnostic rather than silently choosing an arbitrary partial application.
 
 ### 5.3 `act { ... }` compatibility
 
@@ -180,11 +179,21 @@ Phase 105 chooses mode 1 unless implementation review finds dual parsing creates
 
 A do target denotes a computation constructor, not a module name.
 
-MVP accepted targets:
+Historical Phase-105 MVP accepted targets:
 
 ```text
 Act  : * -> *
 Proc : * -> *
+```
+
+Phase 133 selected-evidence targets include:
+
+```text
+Act            : * -> *
+Proc           : * -> *
+Workflow       : * -> *
+Option         : * -> *
+Result<_, E>   : * -> * for supported one-hole targets
 ```
 
 The target `K` is resolved by the type checker. The parser preserves the syntactic target as surface data; it must not lower `do:K` to `bind` calls before type checking.
@@ -193,7 +202,7 @@ Target requirements:
 
 1. `K` must resolve to a known type constructor.
 2. `K` must have effective kind `* -> *`.
-3. The compiler must resolve `Monad<K>` evidence or an MVP builtin dictionary for `K`.
+3. The compiler must resolve selected `Monad<K>` evidence for `K`, with only quarantined legacy Act/Proc bridge fallback where public evidence is unavailable.
 4. The resulting block type is `K<A>`, where `A` is the checked result type of the final `return` expression.
 5. Expected type constraints may constrain `A`, but they must not change the selected target constructor.
 
@@ -214,35 +223,29 @@ hint: use a computation constructor such as Act or Proc
 
 ## 7. Monad Contract
 
-The intended long-term mechanism is a compiler/prelude-known interface equivalent to:
+Phase 133 uses a compiler/prelude-known interface equivalent to:
 
 ```text
 Monad<M> where M : * -> *
-return : A -> M<A>
-bind   : M<A> -> (A -> M<B>) -> M<B>
+unit : A -> M<A>
+bind : M<A> -> (A -> M<B>) -> M<B>
 ```
 
-The MVP implementation may use hidden Rust dictionaries for `Act` and `Proc`, but those dictionaries must have this shape:
+Selected evidence carries a target constructor, value constructor, `unit` operation, and `bind` operation. For source-visible stdlib evidence, those operations come from `std::algebra::Monad` impls or named prelude/tower shims. Any original Phase-105 Act/Proc hidden bridge is quarantined fallback for compatibility when public evidence is unavailable, not ordinary user authority and not imported into lexical scope.
+
+Current selected evidence bindings include:
 
 ```text
-DoDictionary<K> {
-    target_name: K,
-    return_op: A -> K<A>,
-    bind_op: K<A> -> (A -> K<B>) -> K<B>,
-    tower_level: Pure | Effectful | Proc | Workflow,
-}
+Act      => act::unit / act::bind or named Act prelude shim evidence
+Proc     => proc::unit / proc::bind
+Workflow => workflow::unit / workflow::bind
+Option   => stdlib/prelude Monad<Option> evidence
+Result   => stdlib/prelude Monad<Result<_, E>> evidence for supported one-hole targets
 ```
 
-MVP dictionary bindings:
+Ordinary operations such as `proc::par`, `proc::await`, `proc::from_act`, `act::guard`, `Result::Err`, and Option/Result constructors remain ordinary names and must be in lexical scope or called qualified.
 
-```text
-Act  => act::unit / act::bind or the existing hidden Act bridge operations
-Proc => proc::unit / proc::bind
-```
-
-These are not ordinary imports into user scope. They are compiler-known sequencing evidence. Ordinary operations such as `proc::par`, `proc::await`, `proc::from_act`, `act::guard`, and `Result::Err` remain ordinary names and must be in lexical scope or called qualified.
-
-Monad laws are semantic obligations, not checker obligations in Phase 105:
+Monad laws are semantic obligations, not checker obligations in Phase 133:
 
 ```text
 bind(return(a), f)  == f(a)
@@ -374,8 +377,10 @@ Target tower classification:
 | --- | --- | --- |
 | `Act` | Effectful | `do:Act { return 1 }` is an effectful computation value of type `Act<Int>`. |
 | `Proc` | Proc | `do:Proc { return 1 }` is a process-capable computation value of type `Proc<Int>`. |
-| `Option`/`List`/`Result<_, E>` | Pure data, deferred | Reserved for later after general dictionaries. |
-| `Workflow` | Workflow, deferred | Not an MVP do target. |
+| `Option` | Pure data | Phase 133 implements selected stdlib `Monad<Option>` evidence for explicit `do:Option`. |
+| `Result<_, E>` | Pure data | Phase 133 implements selected stdlib/prelude `Monad<Result<_, E>>` evidence for explicit result do targets. |
+| `List` | Pure data, partial follow-up | Phase 133 adds Functor/Monoid/List helper surfaces, but full List Applicative/Monad/comprehension execution remains follow-up work until list bind semantics are chosen explicitly. |
+| `Workflow` | Workflow | Later phases added explicit `do:Workflow` selected evidence; fully self-hosted workflow runtime representation remains opaque. |
 
 No implicit lifting occurs between computation constructors or tower levels.
 
@@ -436,7 +441,7 @@ do:Proc {
 
 raises a process/tower operational failure.
 
-A future `do:Result<_, E>` must not interpret `fail e` as `Err(e)`. Domain failure syntax belongs to explicit constructors or future Alternative/MonadFail-like features.
+For `do:Result<_, E>`, `fail e` must not be interpreted as `Err(e)`. Domain failure syntax belongs to explicit constructors or future Alternative/MonadFail-like features.
 
 ## 13. Diagnostics
 
@@ -444,7 +449,7 @@ Diagnostics are part of the normative feature. Phase 105 must provide focused te
 
 1. unknown do target;
 2. wrong target kind (`*` where `* -> *` is expected);
-3. target has no `Monad` evidence or builtin dictionary;
+3. target has no selected `Monad<K>` evidence and no applicable quarantined bridge fallback;
 4. `<-` RHS has the wrong constructor;
 5. `<-` RHS is pure and should be `let`;
 6. `let` binds a monadic value and does not sequence it;
@@ -509,22 +514,20 @@ Task summary:
 
 ## 16. Deferred Extensions
 
-Deferred extensions include:
+Deferred extensions after Phase 133 include:
 
-- `interface Monad<M : * -> *>` in surface Ash;
-- applying constructor parameters in user type syntax, e.g. `M<A>`;
-- `impl Monad<Act>` and user-defined unary constructors;
-- `do:Result<_, E>` with exactly one explicit value hole;
-- pure `do:Option`/`do:List`;
+- arbitrary user-defined unary constructor Monad execution beyond the implemented selected stdlib/prelude evidence paths;
+- general type-lambda syntax beyond supported one-hole constructor targets;
+- full `do:List` / List comprehension semantics;
 - pattern binds;
 - typed law declarations;
 - generated property tests for law-bearing interfaces;
 - `with`/reader-style environment do targets;
-- workflow do targets.
+- additional workflow/runtime algebra beyond the current opaque Workflow evidence surface.
 
 ## 17. Changelog
 
 ### 2026-04-28
 
 - Initial normative draft promoted from DESIGN-031.
-- Schedules Phase 105 after active Phase 104 and limits the MVP to Act/Proc builtin dictionaries before full constructor-kinded user-defined `Monad` support.
+- Historical Phase 105 scheduling limited the original MVP to Act/Proc builtin bridges; Phase 133 supersedes that with selected public/prelude `Monad<K>` evidence for implemented targets while leaving full arbitrary user Monad execution to follow-up work.

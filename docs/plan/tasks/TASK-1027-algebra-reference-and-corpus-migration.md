@@ -1,6 +1,6 @@
 # TASK-1027: Algebra Reference and Corpus Migration
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -47,6 +47,11 @@ Depends on TASK-1025 and TASK-1026 completion.
 3. Implement only this task's slice without pulling later tasks forward.
 4. Run focused non-zero verification.
 5. Record RED/GREEN evidence and update task/plan/changelog only when the slice is actually complete.
+
+## Evidence
+
+- RED: Reference docs had no dedicated current `std::algebra` page and generalized-do wording did not mention public `Monad<K>` evidence's canonical `unit` method.
+- GREEN: Added `reference/stdlib/algebra.md`, refreshed `reference/language/generalized-do.md`, and ran the scoped stale-wording assertion from this task.
 
 ## Sub-Agent Prompts
 
@@ -104,11 +109,11 @@ PY
   - cargo fmt --check
   - git diff --check
 checklist:
-  - [ ] RED evidence recorded
-  - [ ] GREEN evidence recorded
-  - [ ] Reference page artifact assertion passes and stale wording sweep reports no unqualified current deferrals
-  - [ ] Final-surface or negative-leakage gates satisfied where applicable
-  - [ ] Docs/status/changelog updated if public behavior changed
+  - [x] RED evidence recorded
+  - [x] GREEN evidence recorded
+  - [x] Reference page artifact assertion passes and stale wording sweep reports no unqualified current deferrals
+  - [x] Final-surface or negative-leakage gates satisfied where applicable
+  - [x] Docs/status/changelog updated if public behavior changed
 ```
 
 ## Dependencies for Next Task

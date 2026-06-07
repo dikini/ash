@@ -3,12 +3,10 @@ pub interface Monoid<A> {
     append(A, A) -> A
 }
 
-pub impl Monoid<String> {
-    empty() = ""
-    append(left, right) = string::concat(left, right)
+pub fn concat_string(left: String, right: String) -> String {
+    string::concat(left, right)
 }
 
-pub impl <A : *> Monoid<List<A>> {
-    empty() = []
-    append(left, right) = list::concat(left, right)
+pub fn concat_list<A>(left: List<A>, right: List<A>) -> List<A> {
+    list::concat(left, right)
 }

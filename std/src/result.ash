@@ -2,7 +2,25 @@
 --
 -- Result<T, E> represents either success (Ok) or failure (Err).
 
+use algebra::functor::{Functor}
+use algebra::applicative::{Applicative}
+use algebra::monad::{Monad}
+
 pub type Result<T, E> = Ok { value: T } | Err { error: E };
+
+pub impl <E : *> Functor<Result<_, E>> {
+    map(value, f) = result::map(value, f)
+}
+
+pub impl <E : *> Applicative<Result<_, E>> {
+    pure(value) = result::pure(value)
+    apply(functions, value) = result::apply(functions, value)
+}
+
+pub impl <E : *> Monad<Result<_, E>> {
+    unit(value) = result::pure(value)
+    bind(value, f) = result::and_then(value, f)
+}
 
 -- Returns true if the result is Ok
 pub fn is_ok<T, E>(res: Result<T, E>) -> Bool {

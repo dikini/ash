@@ -60,12 +60,12 @@ fn env_with_monad_option_methods() -> TypeEnv {
     let module = parse(
         r#"
         interface Monad<M : * -> *> {
-            return(Int) -> M<Int>
+            unit(Int) -> M<Int>
             bind(M<Int>, Fn(Int) -> M<Int>) -> M<Int>
         }
 
         impl Monad<Option> {
-            return(value) = Some { value: value }
+            unit(value) = Some { value: value }
             bind(value, _f) = value
         }
         "#,
@@ -150,7 +150,7 @@ fn typeck_attaches_tcir_without_collapsing_user_constructor_to_runtime_bridge() 
     assert!(matches!(
         tcir.evidence.return_op.kind,
         TcirOperationKind::EvidenceMethod { ref evidence_key, ref method, .. }
-            if evidence_key == "Monad<Option>" && method == "return"
+            if evidence_key == "Monad<Option>" && method == "unit"
     ));
     assert!(!matches!(
         tcir.evidence.return_op.kind,

@@ -55,10 +55,10 @@ fn task_985_cli_uses_locked_authenticated_dependency_with_selected_toolchain_run
     let roots = XdgFixture::new();
     let output = tempfile::tempdir().expect("output");
     let toolchain_id = "ash-0.1.0+tarball.cli985";
-    let archive = cli_toolchain_tarball(toolchain_id, output.path());
+    let ashgrove = workspace_binary("ashgrove");
+    let archive = cli_toolchain_tarball(toolchain_id, output.path(), &ashgrove);
 
-    Command::cargo_bin("ashgrove")
-        .expect("ashgrove")
+    Command::new(&ashgrove)
         .args([
             "install",
             "--from",
@@ -73,8 +73,7 @@ fn task_985_cli_uses_locked_authenticated_dependency_with_selected_toolchain_run
 
     let project = locked_authenticated_project(&roots);
 
-    Command::cargo_bin("ashgrove")
-        .expect("ashgrove")
+    Command::new(&ashgrove)
         .args([
             "lock",
             "--project",
@@ -159,7 +158,7 @@ fn locked_authenticated_project(roots: &XdgFixture) -> LockedProject {
     }
 }
 
-fn cli_toolchain_tarball(id: &str, output: &Path) -> PathBuf {
+fn cli_toolchain_tarball(id: &str, output: &Path, ashgrove: &Path) -> PathBuf {
     let script = workspace_root().join("scripts/package-ash-toolchain.sh");
     let wrapper_dir = tempfile::tempdir().expect("ash wrapper dir");
     let wrapper = wrapper_dir.path().join("ash");
@@ -172,10 +171,7 @@ fn cli_toolchain_tarball(id: &str, output: &Path) -> PathBuf {
             output.to_str().expect("utf8 output"),
         ])
         .env("ASH_PACKAGE_ASH_BIN", &wrapper)
-        .env(
-            "ASH_PACKAGE_ASHGROVE_BIN",
-            assert_cmd::cargo::cargo_bin("ashgrove"),
-        )
+        .env("ASH_PACKAGE_ASHGROVE_BIN", ashgrove)
         .output()
         .expect("run package producer");
     assert!(
@@ -190,6 +186,68 @@ fn cli_toolchain_tarball(id: &str, output: &Path) -> PathBuf {
         .find_map(|line| line.strip_prefix("archive="))
         .map(PathBuf::from)
         .expect("archive output")
+}
+
+fn workspace_binary(name: &str) -> PathBuf {
+    let cargo_env = format!("CARGO_BIN_EXE_{name}");
+    if let Some(binary) = std::env::var_os(&cargo_env).map(PathBuf::from)
+        && binary.is_file()
+    {
+        return binary;
+    }
+
+    let cargo = std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
+    let output = std::process::Command::new(cargo)
+        .args(["build", "--message-format=json-render-diagnostics"])
+        .args(["-p", name, "--bin", name])
+        .current_dir(workspace_root())
+        .output()
+        .expect("build workspace binary");
+    assert!(
+        output.status.success(),
+        "cargo build -p {name} --bin {name} failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    if let Some(binary) = cargo_json_executable(&output.stdout, name) {
+        return binary;
+    }
+
+    let target_dir = std::env::var_os("CARGO_TARGET_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| workspace_root().join("target"));
+    let target_dir = if target_dir.is_absolute() {
+        target_dir
+    } else {
+        workspace_root().join(target_dir)
+    };
+    let binary = target_dir
+        .join("debug")
+        .join(format!("{name}{}", std::env::consts::EXE_SUFFIX));
+    assert!(
+        binary.is_file(),
+        "workspace binary {name} should exist at {}",
+        binary.display()
+    );
+    binary
+}
+
+fn cargo_json_executable(output: &[u8], name: &str) -> Option<PathBuf> {
+    output.split(|byte| *byte == b'\n').find_map(|line| {
+        let message = serde_json::from_slice::<serde_json::Value>(line).ok()?;
+        if message.get("reason")?.as_str()? != "compiler-artifact" {
+            return None;
+        }
+        if message.get("target")?.get("name")?.as_str()? != name {
+            return None;
+        }
+        message
+            .get("executable")?
+            .as_str()
+            .map(PathBuf::from)
+            .filter(|path| path.is_file())
+    })
 }
 
 fn write_ash_env_capture_wrapper(path: &Path) {

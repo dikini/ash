@@ -55,12 +55,12 @@ fn env_with_monad_option_methods() -> TypeEnv {
         &mut env,
         r#"
         interface Monad<M : * -> *> {
-            return(Int) -> M<Int>
+            unit(Int) -> M<Int>
             bind(M<Int>, Fn(Int) -> M<Int>) -> M<Int>
         }
 
         impl Monad<Option> {
-            return(value) = Some { value: value }
+            unit(value) = Some { value: value }
             bind(value, _f) = value
         }
         "#,

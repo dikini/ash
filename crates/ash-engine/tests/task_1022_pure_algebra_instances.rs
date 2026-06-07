@@ -104,17 +104,17 @@ workflow main { ret 0 }
 #[test]
 fn pure_algebra_instances_engine_stdlib_files_contain_public_pure_impl_heads() {
     let expected = [
-        ("algebra/semigroup.ash", "Semigroup<String>"),
-        ("algebra/semigroup.ash", "Semigroup<List<A>>"),
-        ("algebra/monoid.ash", "Monoid<String>"),
-        ("algebra/monoid.ash", "Monoid<List<A>>"),
-        ("algebra/functor.ash", "Functor<Option>"),
-        ("algebra/functor.ash", "Functor<Result<_, E>>"),
-        ("algebra/functor.ash", "Functor<List>"),
-        ("algebra/applicative.ash", "Applicative<Option>"),
-        ("algebra/applicative.ash", "Applicative<Result<_, E>>"),
-        ("algebra/monad.ash", "Monad<Option>"),
-        ("algebra/monad.ash", "Monad<Result<_, E>>"),
+        ("string.ash", "Semigroup<String>"),
+        ("list.ash", "Semigroup<List<A>>"),
+        ("string.ash", "Monoid<String>"),
+        ("list.ash", "Monoid<List<A>>"),
+        ("option.ash", "Functor<Option>"),
+        ("result.ash", "Functor<Result<_, E>>"),
+        ("list.ash", "Functor<List>"),
+        ("option.ash", "Applicative<Option>"),
+        ("result.ash", "Applicative<Result<_, E>>"),
+        ("option.ash", "Monad<Option>"),
+        ("result.ash", "Monad<Result<_, E>>"),
     ];
 
     for (relative, expected_head) in expected {
@@ -138,6 +138,10 @@ fn pure_algebra_instances_engine_stdlib_files_parse_and_check_after_impls() {
         "algebra/functor.ash",
         "algebra/applicative.ash",
         "algebra/monad.ash",
+        "option.ash",
+        "result.ash",
+        "list.ash",
+        "string.ash",
     ] {
         let result = engine
             .check_module_file(&std_src_path(relative))

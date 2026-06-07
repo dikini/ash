@@ -16,7 +16,7 @@ Ash comprehension syntax is a container-view spelling of generalized typed do-no
 [result | qualifiers]: K
 ```
 
-It has no independent runtime semantics. It parses to a source-fidelity comprehension surface form, then type-directed elaboration normalizes it through the same target resolution, statement checking, dictionary evidence, tower rules, and nested `bind` / `return` lowering as SPEC-054 `do:K { ... }`.
+It has no independent runtime semantics. It parses to a source-fidelity comprehension surface form, then type-directed elaboration normalizes it through the same target resolution, statement checking, selected `Monad<K>` evidence, tower rules, and nested `bind` / `unit` lowering as SPEC-054 `do:K { ... }`.
 
 The core equivalence is:
 
@@ -24,17 +24,9 @@ The core equivalence is:
 [f(x, y) | x <- xs, y <- ys]: List
 ```
 
-is semantically the same as:
+is the intended full-List shape. Phase 133 implements the shared comprehension evidence path for supported targets such as `Option` and `Result<_, E>`; full List Monad/comprehension execution remains follow-up until List bind semantics are chosen explicitly.
 
-```ash
-do:List {
-    x <- xs;
-    y <- ys;
-    return f(x, y)
-}
-```
-
-Modulo span/origin metadata, both forms must elaborate to the same nested bind/return artifact.
+Modulo span/origin metadata, implemented comprehension targets must elaborate to the same nested bind/unit artifact as their corresponding `do:K` block.
 
 ## 2. Motivation
 
@@ -53,8 +45,8 @@ The feature is intentionally conservative:
 
 1. `do:K` remains the canonical semantic substrate.
 2. Comprehensions do not add implicit target imports, tower lifts, guards, filtering, collection builders, or applicative lowering.
-3. The first implementation slice may be blocked by missing user-definable `Monad<K>`, pure `List` / `Option` / `Result` dictionaries, and constructor-hole support.
-4. Act and Proc remain valid targets if their existing SPEC-054 dictionaries accept the qualifier shapes; the bracket syntax is visual, not semantic.
+3. The first Phase-106 implementation slice was blocked by missing user-definable `Monad<K>`, pure data dictionaries, and constructor-hole support; Phase 133 supersedes that for selected Option/Result evidence and supported one-hole Result targets. Target inference, guards, full List semantics, and arbitrary user Monad execution remain follow-up work.
+4. Act, Proc, Workflow, Option, and supported Result targets are valid when SPEC-054 selected evidence accepts the qualifier shapes; the bracket syntax is visual, not semantic.
 
 ## 3. Scope
 
@@ -67,15 +59,16 @@ In scope:
 - Typed normalization through the generalized do elaboration path.
 - Diagnostics that reuse do-notation families with comprehension-specific wording.
 
-Out of scope for the MVP:
+Original Phase-106 MVP scope / remaining follow-ups after Phase 133:
 
 - Bare boolean guards.
 - Pattern binders.
 - Applicative, zip, parallel, or functor-only lowering.
 - Monoid collection-builder semantics.
+- Full List Monad/comprehension execution semantics.
 - Implicit imports of `guard`, `empty`, `filter`, `par`, `zip`, or related helpers.
 - Implicit lifting between `Act`, `Proc`, `Option`, `Result`, `List`, or workflow layers.
-- Workflow as a comprehension target.
+- Additional workflow/runtime algebra beyond current selected Workflow evidence.
 - General law declaration syntax or generated law tests.
 
 ## 4. Surface Grammar
@@ -90,13 +83,13 @@ comp_bind          ::= IDENTIFIER "<-" expr
 comp_let           ::= "let" IDENTIFIER "=" expr
 ```
 
-MVP restrictions:
+Original Phase-106 MVP restrictions, with Phase-133 supersessions noted:
 
 1. Binders are simple identifiers only.
 2. At least one qualifier is required.
 3. Qualifiers are comma-separated inside brackets.
 4. The result expression appears before `|` and becomes the final `return` expression of the normalized do block.
-5. A target annotation is required for the first implementation slice unless target inference is explicitly implemented and tested. The annotation is comprehension-specific postfix target syntax; it must not rely on a nonexistent general expression-level type-ascription parser.
+5. A target annotation is still required unless target inference is explicitly implemented and tested. The annotation is comprehension-specific postfix target syntax; it must not rely on a nonexistent general expression-level type-ascription parser.
 6. The explicit target uses the same `DoTarget` representation and target-resolution rules as SPEC-054.
 
 Examples:
@@ -159,10 +152,10 @@ uses the explicit `K` target. The target must satisfy the same requirements as S
 
 1. resolve to a known type constructor;
 2. have effective kind `* -> *`;
-3. provide `Monad<K>` evidence, or an MVP builtin dictionary shaped like that evidence;
+3. provide selected `Monad<K>` evidence for the implemented target, with any Phase-105 builtin bridge treated only as historical/quarantined fallback;
 4. synthesize the result type `K<A>`, where `A` is the checked type of the result expression.
 
-Target inference without an annotation is reserved but not required for the first implementation slice:
+Target inference without an annotation remains reserved follow-up work:
 
 ```ash
 [result | qualifiers]
@@ -316,32 +309,32 @@ Shared rules:
 - same `DoTarget` target representation where possible;
 - same target/kind/dictionary resolution;
 - same statement typing after qualifier normalization;
-- same Act/Proc MVP dictionaries while user-defined `Monad<K>` is deferred;
+- same selected `Monad<K>` evidence path as SPEC-054 for implemented targets, including Phase 133 Option/Result evidence;
 - same parser-only lowering prohibition;
 - same tower/no-implicit-lift/fail behavior;
 - same diagnostics, with comprehension-specific wording.
 
-If SPEC-054 evolves from builtin dictionaries to a canonical `Monad<K>` interface, SPEC-055 should consume that interface without adding comprehension-specific dictionary machinery.
+SPEC-055 consumes SPEC-054 selected `Monad<K>` evidence without adding comprehension-specific dictionary machinery. Remaining follow-ups are scoped to target inference, guards, full List semantics, and arbitrary user Monad execution.
 
 ## 14. Implementation Status
 
-As of Phase 106 closeout:
+Historical Phase 106 closeout state and Phase 133 supersessions:
 
 - DESIGN-032 is implemented as an MVP over SPEC-054.
 - Parser/surface support exists for bracket comprehensions with source-fidelity qualifiers and comprehension-specific postfix targets.
 - Parser-only lowering rejects comprehension nodes; typed checking owns semantic normalization.
-- Type checking and typed elaboration normalize comprehensions through the existing SPEC-054 generalized typed-do path for MVP `Act` and `Proc` targets.
-- Diagnostics cover missing explicit targets, wrong-kind targets, missing MVP dictionaries, pure RHS values used with `<-`, wrong-constructor RHS values, suspicious `let` bindings of monadic values, and bare boolean qualifier rejection/non-acceptance.
+- Phase 106 type checking and typed elaboration normalized comprehensions through the existing SPEC-054 generalized typed-do path for MVP `Act` and `Proc` targets; Phase 133 extends that same selected evidence path to Option/Result and current tower evidence targets.
+- Diagnostics cover missing explicit targets, wrong-kind targets, missing selected evidence or quarantined bridge fallback, pure RHS values used with `<-`, wrong-constructor RHS values, suspicious `let` bindings of monadic values, and bare boolean qualifier rejection/non-acceptance.
 - Phase 106 still requires explicit targets. Target inference is deferred.
-- Pure `List`, `Option`, and `Result<_, E>` comprehension examples remain future semantic targets, not implementation claims, until their dictionaries and constructor-hole support exist.
+- Phase 133 supersedes the original pure-data deferral for `Option` and `Result<_, E>` by adding selected stdlib/prelude evidence and explicit-target coverage. Pure `List` Monad/comprehension execution, target inference, guards, and arbitrary user Monad execution remain follow-up semantic targets rather than Phase 106 implementation claims.
 
 ## 15. Deferred Extensions
 
-Deferred extensions include:
+Deferred extensions after Phase 133 include:
 
 1. target inference for unannotated comprehensions;
-2. one-hole constructor targets such as `Result<_, ParseError>`;
-3. user-defined `Monad<K>` implementations;
+2. full List Monad/comprehension semantics;
+3. arbitrary user-defined `Monad<K>` execution beyond implemented selected stdlib/prelude evidence paths;
 4. pattern binders;
 5. boolean guards through an explicitly chosen guard/empty algebra;
 6. applicative or zip/parallel comprehensions with distinct syntax and interface requirements;

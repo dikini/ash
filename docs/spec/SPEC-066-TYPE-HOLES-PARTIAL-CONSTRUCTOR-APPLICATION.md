@@ -80,7 +80,7 @@ Kinding proceeds left to right over the constructor's declared kind.
 
 ## 6. Do-Notation Integration
 
-SPEC-054 currently uses MVP hidden dictionaries for `Act`, `Proc`, and `Workflow`, and rejects explicit type arguments. SPEC-066 changes only the target-shape elaboration boundary. Dictionary/evidence resolution for arbitrary `Monad<K>` remains SPEC-067.
+SPEC-054 historically used MVP hidden dictionaries for `Act`, `Proc`, and `Workflow`, and rejected explicit type arguments. SPEC-066 changes only the target-shape elaboration boundary. Dictionary/evidence resolution for arbitrary `Monad<K>` remains SPEC-067, while Phase 133 supersedes the unqualified hidden-dictionary wording with public `std::algebra::Monad` evidence where available.
 
 Required behavior:
 

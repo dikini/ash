@@ -496,6 +496,9 @@ fn test_option_public_functions_parse_as_real_fn_definitions() {
             "unwrap",
             "unwrap_or",
             "map",
+            "pure",
+            "apply",
+            "and_then",
             "and_opt",
             "or_opt",
             "ok_or"
@@ -538,6 +541,8 @@ fn test_result_public_functions_parse_as_real_fn_definitions() {
             "unwrap_err",
             "unwrap_or",
             "map",
+            "pure",
+            "apply",
             "map_err",
             "and_then",
             "ok",

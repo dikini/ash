@@ -293,7 +293,7 @@ fn resolve_monad_evidence_dictionary(
         target: QualifiedName::root(target.name.to_string()),
         value_constructor: QualifiedName::root(target.name.to_string()),
         target_args: target.args.clone(),
-        return_op: selected_monad_op(evidence, &evidence_identity, "return", target.span)?,
+        return_op: selected_monad_op(evidence, &evidence_identity, "unit", target.span)?,
         bind_op: selected_monad_op(evidence, &evidence_identity, "bind", target.span)?,
         tower_level: DoTowerLevel::Effectful,
     })
@@ -511,7 +511,7 @@ fn intrinsic_monad_shim(evidence: &ImplScheme, method: &str) -> Option<Qualified
         .iter()
         .any(is_result_constructor_evidence);
     match (is_result, method) {
-        (true, "return") => Some(QualifiedName::root("Ok".to_string())),
+        (true, "unit") => Some(QualifiedName::root("Ok".to_string())),
         (true, "bind") => Some(QualifiedName::qualified(
             vec!["result".to_string()],
             "and_then",

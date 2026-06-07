@@ -56,7 +56,7 @@ refresh_trigger:
 
 ## Summary
 
-Generalized `do:K` lowering uses selected `Monad<K>` evidence where the current alpha implementation supports it. Built-in Act, Proc, and Workflow paths remain explicit tower surfaces. There are no implicit tower lifts, and a final expression in a do block is not an implicit return for arbitrary targets.
+Generalized `do:K` lowering uses selected public `Monad<K>` evidence where the current alpha implementation supports it. The canonical public Monad unit method is `unit`; older `return`-named fixture evidence is superseded. Built-in Act, Proc, and Workflow paths remain explicit tower surfaces. There are no implicit tower lifts, and a final expression in a do block is not an implicit return for arbitrary targets.
 
 ## Concept
 

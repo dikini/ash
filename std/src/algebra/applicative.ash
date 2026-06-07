@@ -3,12 +3,18 @@ pub interface Applicative<F : * -> *> {
     apply(F<Int -> Int>, F<Int>) -> F<Int>
 }
 
-pub impl Applicative<Option> {
-    pure(value) = option::pure(value)
-    apply(functions, value) = option::apply(functions, value)
+pub fn pure_option(value: Int) -> Option<Int> {
+    option::pure(value)
 }
 
-pub impl <E : *> Applicative<Result<_, E>> {
-    pure(value) = result::pure(value)
-    apply(functions, value) = result::apply(functions, value)
+pub fn apply_option(functions: Option<Int -> Int>, value: Option<Int>) -> Option<Int> {
+    option::apply(functions, value)
+}
+
+pub fn pure_result<E>(value: Int) -> Result<Int, E> {
+    result::pure(value)
+}
+
+pub fn apply_result<E>(functions: Result<Int -> Int, E>, value: Result<Int, E>) -> Result<Int, E> {
+    result::apply(functions, value)
 }

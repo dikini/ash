@@ -1,21 +1,22 @@
 // Phase 106 deferred semantic targets.
 //
 // These examples document the intended future shape for pure data monads. They
-// are NOT implementation claims for Phase 106: List, Option, and Result
-// comprehensions remain deferred until Ash has user-defined Monad dictionaries,
-// pure data dictionaries, and constructor-hole support such as Result<_, E>.
+// are NOT implementation claims for Phase 106. Phase 133 later implemented
+// explicit-target Option and Result evidence; List Monad/comprehension execution,
+// target inference, guards, and arbitrary user Monad execution remain follow-up work.
 
 // Future shape only:
 // pub fn list_pairs(xs: List<Int>, ys: List<Int>) -> List<Int> {
 //     [x + y | x <- xs, y <- ys]: List
 // }
 
-// Future shape only:
+// Phase 133 implemented explicit-target Option and Result evidence; these
+// shapes are no longer pure-data deferrals, though arbitrary user Monad
+// execution, guards, inference, and full List Monad semantics remain follow-up.
 // pub fn maybe_increment(x: Option<Int>) -> Option<Int> {
 //     [y + 1 | y <- x]: Option
 // }
-
-// Future shape only; requires one-hole target syntax support:
+//
 // pub fn parse_two(a: Result<Int, ParseError>, b: Result<Int, ParseError>) -> Result<Int, ParseError> {
 //     [x + y | x <- a, y <- b]: Result<_, ParseError>
 // }

@@ -125,6 +125,7 @@ fn register_marker_interface(env: &mut TypeEnv, name: &str) {
         visibility: Visibility::Public,
         name: name.into(),
         type_params: vec![],
+        evidence_constraints: vec![],
         associated_types: vec![],
         methods: vec![],
         span: Default::default(),

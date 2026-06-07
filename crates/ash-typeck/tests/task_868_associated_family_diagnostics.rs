@@ -512,6 +512,7 @@ fn append_interface() -> InterfaceDef {
         visibility: Visibility::Inherited,
         name: "Append".into(),
         type_params: vec![param("Xs"), param("Ys")],
+        evidence_constraints: vec![],
         associated_types: vec![AssociatedTypeDecl {
             name: "Out".into(),
             kind: AssociatedTypeKind::SealedFamily {
@@ -618,6 +619,7 @@ fn task_868_negative_leakage_boundaries_keep_prior_specs_non_regressed() {
         visibility: Visibility::Inherited,
         name: "Serializer".into(),
         type_params: vec![param("S")],
+        evidence_constraints: vec![],
         associated_types: vec![AssociatedTypeDecl {
             name: "Ok".into(),
             kind: AssociatedTypeKind::Ordinary,

@@ -43,6 +43,7 @@ fn explain_interface_def() -> InterfaceDef {
         visibility: SurfaceVisibility::Inherited,
         name: "Explain".into(),
         type_params: vec!["T".into()],
+        evidence_constraints: vec![],
         associated_types: vec![],
         methods: vec![InterfaceMethodSig {
             name: "explain".into(),
@@ -501,6 +502,7 @@ fn pair_interface_def() -> InterfaceDef {
         visibility: SurfaceVisibility::Inherited,
         name: "Pair".into(),
         type_params: vec!["A".into(), "B".into()],
+        evidence_constraints: vec![],
         associated_types: vec![],
         methods: vec![InterfaceMethodSig {
             name: "first".into(),
@@ -622,6 +624,7 @@ fn task563_from_underdetermined_param_errors() {
         visibility: SurfaceVisibility::Inherited,
         name: "From".into(),
         type_params: vec!["A".into(), "B".into()],
+        evidence_constraints: vec![],
         associated_types: vec![],
         methods: vec![InterfaceMethodSig {
             name: "from".into(),
@@ -695,6 +698,7 @@ fn serialize_interface_def() -> InterfaceDef {
         visibility: SurfaceVisibility::Inherited,
         name: "Serialize".into(),
         type_params: vec!["T".into()],
+        evidence_constraints: vec![],
         associated_types: vec![],
         methods: vec![InterfaceMethodSig {
             name: "serialize".into(),
@@ -806,6 +810,7 @@ fn cyclic_interface_def() -> InterfaceDef {
         visibility: SurfaceVisibility::Inherited,
         name: "Cyclic".into(),
         type_params: vec!["T".into()],
+        evidence_constraints: vec![],
         associated_types: vec![],
         methods: vec![InterfaceMethodSig {
             name: "m".into(),
@@ -867,6 +872,7 @@ fn serializer_interface_def() -> InterfaceDef {
         visibility: SurfaceVisibility::Inherited,
         name: "Serializer".into(),
         type_params: vec!["S".into()],
+        evidence_constraints: vec![],
         associated_types: vec![AssociatedTypeDecl {
             name: "Ok".into(),
             kind: ash_parser::surface::AssociatedTypeKind::Ordinary,

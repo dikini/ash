@@ -275,6 +275,7 @@ mod tests {
                 visibility: Visibility::Inherited,
                 name: "Reader".into(),
                 type_params: vec![],
+                evidence_constraints: vec![],
                 associated_types: vec![],
                 methods: vec![InterfaceMethodSig {
                     name: "read".into(),

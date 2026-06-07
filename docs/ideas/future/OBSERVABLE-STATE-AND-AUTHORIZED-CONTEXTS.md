@@ -451,6 +451,44 @@ Observable<ProcessTreeView>
 Comonadic/contextual projections could then derive rendered views without gaining mutation authority.
 Event handling would still cross back into `Act`, `Proc`, or `Workflow` through capabilities and mailboxes.
 
+### Embedded Ash plugins and scripts
+
+The same split may be especially useful when Ash is embedded inside a Rust application.
+A Rust host usually wants to keep its core data structures, scheduler, resources, and invariants private.
+At the same time, it may want Ash plugins or scripts to inspect enough state to make decisions and request enough effects to be useful.
+
+Observable views and effectful capabilities give the host two explicit membranes:
+
+```text
+Rust host state
+  -> authorized observable views
+  -> Ash contextual/projection logic
+  -> effectful capability requests
+  -> Rust host validation and mutation
+```
+
+In this model, Ash code does not receive direct pointers into host internals.
+It receives declared views such as `DocumentSelectionView`, `WorkflowProgressView`, `GameWorldPublicView`, or `BuildGraphStatusView`.
+Ash code can interpret those views with pure/contextual logic, possibly through comonadic context carriers, and then request changes through `Act`, `Proc`, or `Workflow` capabilities that the Rust host validates.
+
+This makes the monadic/comonadic split a plugin boundary:
+
+```text
+Comonadic/contextual side:
+  What may the script observe, and under which observer-subject-view grant?
+
+Monadic/effectful side:
+  What may the script request the host to do, and under which capability/policy grant?
+```
+
+The host stays decoupled because it exports stable view and capability contracts rather than its internal representation.
+The Ash plugin stays decoupled because it targets those contracts rather than a specific Rust module layout.
+The policy system becomes the join point: it governs both observation authority and effect authority.
+
+This is a stronger version of ordinary scripting APIs.
+Instead of exposing a bag of callbacks, the host declares which state is observable, which actions are effectful, and which observers may use each view/action.
+That could make Ash a good embedded language for applications that need plugin power without giving plugins ambient introspection or mutation authority.
+
 ## Design dimensions
 
 | Dimension | Option A | Option B | Option C |

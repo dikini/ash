@@ -783,6 +783,24 @@ pub struct WhereBound {
     pub span: Span,
 }
 
+/// An interface-level evidence constraint declared after an interface `where`.
+///
+/// This preserves the surface shape `subject: InterfaceApplication` without
+/// assigning impl-scheme semantics to the declaration. Downstream type checking
+/// validates that the subject names an interface parameter and that the target
+/// names available required evidence.
+#[derive(Debug, Clone, PartialEq)]
+pub struct InterfaceEvidenceConstraint {
+    /// Raw constraint subject before `:`.
+    pub subject: Type,
+    /// Raw required interface evidence application after `:`.
+    pub interface: Type,
+    /// Source span covering the `:` separator.
+    pub colon_span: Span,
+    /// Source span covering the complete constraint.
+    pub span: Span,
+}
+
 /// An interface definition.
 #[derive(Debug, Clone, PartialEq)]
 pub struct InterfaceDef {
@@ -792,6 +810,8 @@ pub struct InterfaceDef {
     pub name: Name,
     /// Interface type parameters
     pub type_params: Vec<InterfaceTypeParam>,
+    /// Interface-level required evidence constraints.
+    pub evidence_constraints: Vec<InterfaceEvidenceConstraint>,
     /// Associated type declarations
     pub associated_types: Vec<AssociatedTypeDecl>,
     /// Declared method signatures

@@ -91,6 +91,7 @@ fn register_pair_projection_metadata(env: &mut TypeEnv, module: &ModuleIdentity)
         visibility: SurfaceVisibility::Inherited,
         name: "Pair".into(),
         type_params: vec!["A".into(), "B".into()],
+        evidence_constraints: vec![],
         associated_types: vec![AssociatedTypeDecl {
             name: "Item".into(),
             kind: ash_parser::surface::AssociatedTypeKind::Ordinary,
@@ -131,6 +132,7 @@ fn register_serializer_projection_metadata(env: &mut TypeEnv, module: &ModuleIde
         visibility: SurfaceVisibility::Inherited,
         name: name.into(),
         type_params: vec!["T".into()],
+        evidence_constraints: vec![],
         associated_types: vec![AssociatedTypeDecl {
             name: "Ok".into(),
             kind: ash_parser::surface::AssociatedTypeKind::Ordinary,

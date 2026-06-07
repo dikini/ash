@@ -120,6 +120,7 @@ fn register_projection_metadata(
         visibility,
         name: "Pair".into(),
         type_params: vec!["A".into(), "B".into()],
+        evidence_constraints: vec![],
         associated_types: vec![AssociatedTypeDecl {
             name: "Item".into(),
             kind: ash_parser::surface::AssociatedTypeKind::Ordinary,

@@ -79,6 +79,7 @@ fn pair_interface_def() -> SurfaceInterfaceDef {
         visibility: SurfaceVisibility::Inherited,
         name: "Pair".into(),
         type_params: vec!["A".into(), "B".into()],
+        evidence_constraints: vec![],
         associated_types: vec![AssociatedTypeDecl {
             name: "Item".into(),
             kind: ash_parser::surface::AssociatedTypeKind::Ordinary,
@@ -124,6 +125,7 @@ fn serializer_interface_def() -> SurfaceInterfaceDef {
         visibility: SurfaceVisibility::Inherited,
         name: "Serializer".into(),
         type_params: vec!["S".into()],
+        evidence_constraints: vec![],
         associated_types: vec![AssociatedTypeDecl {
             name: "Ok".into(),
             kind: ash_parser::surface::AssociatedTypeKind::Ordinary,
@@ -139,6 +141,7 @@ fn formatter_interface_def() -> SurfaceInterfaceDef {
         visibility: SurfaceVisibility::Inherited,
         name: "Formatter".into(),
         type_params: vec!["S".into()],
+        evidence_constraints: vec![],
         associated_types: vec![AssociatedTypeDecl {
             name: "Ok".into(),
             kind: ash_parser::surface::AssociatedTypeKind::Ordinary,
@@ -329,6 +332,7 @@ fn serializer_interface_with_projection_method() -> SurfaceInterfaceDef {
         visibility: SurfaceVisibility::Inherited,
         name: "Serializer".into(),
         type_params: vec!["S".into()],
+        evidence_constraints: vec![],
         associated_types: vec![AssociatedTypeDecl {
             name: "Ok".into(),
             kind: ash_parser::surface::AssociatedTypeKind::Ordinary,
@@ -352,6 +356,7 @@ fn serializer_interface_with_unknown_projection_method() -> SurfaceInterfaceDef 
         visibility: SurfaceVisibility::Inherited,
         name: "Serializer".into(),
         type_params: vec!["S".into()],
+        evidence_constraints: vec![],
         associated_types: vec![AssociatedTypeDecl {
             name: "Ok".into(),
             kind: ash_parser::surface::AssociatedTypeKind::Ordinary,

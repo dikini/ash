@@ -116,6 +116,7 @@ fn family_interface(
         visibility: Visibility::Inherited,
         name: "AppendFamily".into(),
         type_params: vec![param("Xs", param_domain), param("Ys", Some("TypeList"))],
+        evidence_constraints: vec![],
         associated_types: vec![AssociatedTypeDecl {
             name: "Out".into(),
             kind: AssociatedTypeKind::SealedFamily {

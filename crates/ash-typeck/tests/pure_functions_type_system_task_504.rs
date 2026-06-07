@@ -53,6 +53,7 @@ fn explain_interface() -> InterfaceDef {
         visibility: Visibility::Inherited,
         name: "Explain".into(),
         type_params: vec!["T".into()],
+        evidence_constraints: vec![],
         associated_types: vec![],
         methods: vec![InterfaceMethodSig {
             name: "explain".into(),
@@ -90,6 +91,7 @@ fn option_explain_interface() -> InterfaceDef {
         visibility: Visibility::Inherited,
         name: "OptionExplain".into(),
         type_params: vec!["T".into()],
+        evidence_constraints: vec![],
         associated_types: vec![],
         methods: vec![InterfaceMethodSig {
             name: "explain".into(),

@@ -14,6 +14,7 @@ fn explain_interface_def() -> InterfaceDef {
         visibility: SurfaceVisibility::Inherited,
         name: "Explain".into(),
         type_params: vec!["T".into()],
+        evidence_constraints: vec![],
         associated_types: vec![],
         methods: vec![InterfaceMethodSig {
             name: "explain".into(),

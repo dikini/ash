@@ -16,6 +16,7 @@ fn serialize_interface_def() -> InterfaceDef {
         visibility: Visibility::Public,
         name: "Serialize".into(),
         type_params: vec!["T".into()],
+        evidence_constraints: vec![],
         associated_types: vec![],
         methods: vec![InterfaceMethodSig {
             name: "serialize".into(),

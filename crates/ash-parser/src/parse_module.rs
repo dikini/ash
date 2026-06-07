@@ -23,12 +23,12 @@ use crate::surface::{
     CapabilityImplementationOperation, CapabilityInterfaceDef, CapabilityOperationMode,
     CapabilityOperationSig, CapabilityRef, Constraint, Contract, DataKindDef, Definition,
     DomainConstructor, DomainField, DomainSlot, EffectType, Expr, FnDef, ImplDef, ImplMethodDef,
-    InterfaceDef, InterfaceMethodSig, InterfaceTypeParam, MatchArm, Name, Param, Pattern,
-    Predicate, PropositionClause, PropositionClauseKind, PropositionPredicateDecl,
-    PropositionPredicateParam, PropositionTail, ProxyDef, ResourceField, ResourceTypeDef, RoleDef,
-    SealedDomainDef, Type, TypeBody, TypeDef, TypeField, TypeFnDecreases, TypeFnDef,
-    TypeFnEquation, TypeFnParam, TypeParam, TypePattern, VariantDef, VariantPayload, Visibility,
-    WhereBound, Workflow, YieldArm,
+    InterfaceDef, InterfaceEvidenceConstraint, InterfaceMethodSig, InterfaceTypeParam, MatchArm,
+    Name, Param, Pattern, Predicate, PropositionClause, PropositionClauseKind,
+    PropositionPredicateDecl, PropositionPredicateParam, PropositionTail, ProxyDef, ResourceField,
+    ResourceTypeDef, RoleDef, SealedDomainDef, Type, TypeBody, TypeDef, TypeField, TypeFnDecreases,
+    TypeFnDef, TypeFnEquation, TypeFnParam, TypeParam, TypePattern, VariantDef, VariantPayload,
+    Visibility, WhereBound, Workflow, YieldArm,
 };
 use crate::token::Span;
 
@@ -1339,6 +1339,12 @@ fn parse_interface_definition(input: &mut ParseInput) -> ModalResult<Definition>
     skip_whitespace_and_comments(input);
     let type_params = parse_optional_interface_type_params(input)?;
     skip_whitespace_and_comments(input);
+    let evidence_constraints = if starts_with_keyword(input, "where") {
+        parse_interface_evidence_constraints(input)?
+    } else {
+        Vec::new()
+    };
+    skip_whitespace_and_comments(input);
     let _ = literal_str("{").parse_next(input)?;
     skip_whitespace_and_comments(input);
 
@@ -1361,10 +1367,43 @@ fn parse_interface_definition(input: &mut ParseInput) -> ModalResult<Definition>
         visibility,
         name: name.into(),
         type_params,
+        evidence_constraints,
         associated_types,
         methods,
         span: crate::input::span_from(&start_pos, &input.state.pos),
     }))
+}
+
+fn parse_interface_evidence_constraints(
+    input: &mut ParseInput,
+) -> ModalResult<Vec<InterfaceEvidenceConstraint>> {
+    let _ = keyword("where").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    let mut constraints = Vec::new();
+    loop {
+        let start = input.state.pos;
+        let subject = parse_surface_type(input)?;
+        skip_whitespace_and_comments(input);
+        let colon_start = input.state.pos;
+        let _ = literal_str(":").parse_next(input)?;
+        let colon_span = crate::input::span_from(&colon_start, &input.state.pos);
+        skip_whitespace_and_comments(input);
+        let interface = parse_surface_type(input)?;
+        constraints.push(InterfaceEvidenceConstraint {
+            subject,
+            interface,
+            colon_span,
+            span: crate::input::span_from(&start, &input.state.pos),
+        });
+        skip_whitespace_and_comments(input);
+        if consume_comma_separator(input) {
+            continue;
+        }
+        break;
+    }
+
+    Ok(constraints)
 }
 
 fn parse_associated_type_decl(input: &mut ParseInput) -> ModalResult<AssociatedTypeDecl> {

@@ -73,6 +73,7 @@ fn iterator_interface_def() -> InterfaceDef {
         visibility: Visibility::Inherited,
         name: "Iterator".into(),
         type_params: vec![param("Self", None)],
+        evidence_constraints: vec![],
         associated_types: vec![AssociatedTypeDecl {
             name: "Item".into(),
             kind: AssociatedTypeKind::SealedFamily {
@@ -230,6 +231,7 @@ fn append_interface() -> InterfaceDef {
         visibility: Visibility::Inherited,
         name: "AppendFamily".into(),
         type_params: vec![param("Xs", Some("TypeList")), param("Ys", Some("TypeList"))],
+        evidence_constraints: vec![],
         associated_types: vec![AssociatedTypeDecl {
             name: "Out".into(),
             kind: AssociatedTypeKind::SealedFamily {
@@ -608,6 +610,7 @@ fn ordinary_interface_def() -> InterfaceDef {
         visibility: Visibility::Inherited,
         name: "Plain".into(),
         type_params: vec![param("Self", None)],
+        evidence_constraints: vec![],
         associated_types: vec![AssociatedTypeDecl {
             name: "Item".into(),
             kind: AssociatedTypeKind::Ordinary,

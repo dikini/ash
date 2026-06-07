@@ -64,6 +64,7 @@ fn task_859_typeenv_still_rejects_unknown_domain_annotated_interface_params() {
             visibility: Visibility::Inherited,
             name: "Append".into(),
             type_params: vec![param("Xs", Some("TypeList"))],
+            evidence_constraints: vec![],
             associated_types: vec![],
             methods: vec![],
             span: span(),
@@ -91,6 +92,7 @@ fn task_859_typeenv_accepts_registered_domain_annotated_interface_params_after_t
         visibility: Visibility::Inherited,
         name: "Append".into(),
         type_params: vec![param("Xs", Some("TypeList"))],
+        evidence_constraints: vec![],
         associated_types: vec![AssociatedTypeDecl {
             name: "Out".into(),
             kind: AssociatedTypeKind::SealedFamily {
@@ -128,6 +130,7 @@ fn task_859_typeenv_accepts_registered_domain_annotated_impl_params_after_task_8
         visibility: Visibility::Inherited,
         name: "Iterator".into(),
         type_params: vec!["T".into()],
+        evidence_constraints: vec![],
         associated_types: vec![],
         methods: vec![],
         span: span(),

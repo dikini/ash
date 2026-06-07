@@ -173,6 +173,7 @@ fn iterator_interface_def() -> InterfaceDef {
         visibility: Visibility::Inherited,
         name: "Iterator".into(),
         type_params: vec![interface_param("Self")],
+        evidence_constraints: vec![],
         associated_types: vec![AssociatedTypeDecl {
             name: "Item".into(),
             kind: AssociatedTypeKind::SealedFamily {

@@ -309,6 +309,8 @@ Update this section as tasks complete:
 | 131 | 9 | 9 | ✅ Complete |
 | 132 | 7 | 7 | ✅ Complete |
 | 133 | 9 | 9 | ✅ Complete |
+| 134 | 8 | 8 | ✅ Complete |
+| 135 | 11 | 1 | 📝 Planned |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -4003,3 +4005,33 @@ Phase 134 implements the next current-MVP `std::algebra` extension after Phase 1
 - D5: Cokleisli helpers reuse `Comonad<W>` evidence and do not claim a general category implementation.
 - D6: Coapplicative must be lawed and instance-backed or deferred.
 - D7: New laws must receive concrete generated-test handoff ownership rather than prose-only deferral.
+
+## Phase 135: Interface Evidence Constraints
+
+**Priority:** High (type-system correctness and algebra interface readability)
+**Status:** 📝 Planned
+**Spec:** [SPEC-080](../spec/SPEC-080-INTERFACE-EVIDENCE-CONSTRAINTS.md)
+**Plan:** [PLAN-130](PLAN-130-INTERFACE-EVIDENCE-CONSTRAINTS.md)
+
+Phase 135 adds interface-level evidence constraints. The motivating final syntax is `interface Monad<M : * -> *> where M: Applicative { ... }`, meaning `M: Monad` entails `M: Applicative` through typechecker-verified required evidence. The phase also plans accepted standard algebra constraints `Applicative<F>` requiring `Functor<F>` and `Monoid<A>` requiring `Semigroup<A>`. No separate `Functor`/`Monoid` evidence constraint is planned; the monoid-in-endofunctors reading belongs to `Monad`. The phase explicitly avoids object hierarchy semantics, automatic implementation derivation, and blanket impl synthesis.
+
+| Task | Description | Est. Hours | Status |
+|------|-------------|------------|--------|
+| [TASK-1038](tasks/TASK-1038-interface-evidence-constraints-packet.md) | Create the SPEC-080/PLAN-130 packet, task files, index rows, and changelog entry | 6 | ✅ Complete |
+| [TASK-1039](tasks/TASK-1039-interface-evidence-constraints-audit-gate.md) | Audit live parser/typechecker/stdlib evidence seams and freeze exact implementation commands | 8 | ✅ Complete |
+| [TASK-1040](tasks/TASK-1040-interface-constraint-parser-surface.md) | Parse and preserve interface-level `where` evidence constraints with positive/negative tests | 10 | ✅ Complete |
+| [TASK-1041](tasks/TASK-1041-interface-constraint-core-lowering-and-summaries.md) | Carry interface constraints through lowering/core summaries or prove no summary change is needed | 10 | 📝 Planned |
+| [TASK-1042](tasks/TASK-1042-typeenv-interface-constraint-registration.md) | Store interface constraints in TypeEnv and enforce required evidence for concrete impl registration | 14 | 📝 Planned |
+| [TASK-1043](tasks/TASK-1043-generic-entailment-and-evidence-lookup.md) | Make constrained evidence entail required evidence in generic contexts without reverse derivation | 14 | 📝 Planned |
+| [TASK-1044](tasks/TASK-1044-stdlib-monad-applicative-constraint.md) | Migrate stdlib `Monad` to `where M: Applicative` and reconcile examples/reference wording | 10 | 📝 Planned |
+| [TASK-1045](tasks/TASK-1045-stdlib-applicative-functor-constraint.md) | Migrate stdlib `Applicative` to `where F: Functor` and reconcile examples/reference wording | 8 | 📝 Planned |
+| [TASK-1046](tasks/TASK-1046-stdlib-monoid-semigroup-constraint.md) | Migrate stdlib `Monoid` to `where A: Semigroup` and reconcile examples/reference wording | 8 | 📝 Planned |
+| [TASK-1048](tasks/TASK-1048-interface-evidence-constraints-closeout.md) | Run diagnostics, broad verification, independent review, and status reconciliation | 8 | 📝 Planned |
+
+**Decision gates:**
+- D1: Interface-level constraints express required evidence; generic blanket impls are not used to encode this relationship.
+- D2: The type checker verifies constraints and never derives implementations automatically.
+- D3: Entailment is directional: `M: Monad` entails `M: Applicative`; not the reverse.
+- D4: Final parser/typechecker tests must prove the surface syntax parses and unsupported forms are rejected.
+- D5: Final stdlib tests must use real `std::algebra` import paths, not fixture-only local interfaces.
+- D6: Accepted algebra constraints include `Monad -> Applicative`, `Applicative -> Functor`, and `Monoid -> Semigroup`. No separate `Functor`/`Monoid` constraint is planned because the monoid-in-endofunctors interpretation is covered by `Monad`.

@@ -73,6 +73,7 @@ fn iterator_interface_def() -> InterfaceDef {
         visibility: Visibility::Inherited,
         name: "Iterator".into(),
         type_params: vec![param("Self")],
+        evidence_constraints: vec![],
         associated_types: vec![AssociatedTypeDecl {
             name: "Item".into(),
             kind: AssociatedTypeKind::SealedFamily {
@@ -170,6 +171,7 @@ fn task_870_explicit_family_projection_is_accepted_in_type_env_surface_type_posi
         visibility: Visibility::Public,
         name: "Provider".into(),
         type_params: vec![],
+        evidence_constraints: vec![],
         associated_types: vec![],
         methods: vec![ash_parser::surface::InterfaceMethodSig {
             name: "next".into(),

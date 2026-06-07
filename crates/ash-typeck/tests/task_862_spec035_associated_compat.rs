@@ -68,6 +68,7 @@ fn sealed_family_interface() -> InterfaceDef {
         visibility: Visibility::Inherited,
         name: "Append".into(),
         type_params: vec![param("Xs", Some("TypeList")), param("Ys", Some("TypeList"))],
+        evidence_constraints: vec![],
         associated_types: vec![AssociatedTypeDecl {
             name: "Out".into(),
             kind: AssociatedTypeKind::SealedFamily {
@@ -103,6 +104,7 @@ fn serializer_interface_def() -> InterfaceDef {
         visibility: Visibility::Inherited,
         name: "Serializer".into(),
         type_params: vec![param("S", None)],
+        evidence_constraints: vec![],
         associated_types: vec![AssociatedTypeDecl {
             name: "Ok".into(),
             kind: AssociatedTypeKind::Ordinary,
@@ -129,6 +131,7 @@ fn formatter_interface_def() -> InterfaceDef {
         visibility: Visibility::Inherited,
         name: "Formatter".into(),
         type_params: vec![param("F", None)],
+        evidence_constraints: vec![],
         associated_types: vec![AssociatedTypeDecl {
             name: "Ok".into(),
             kind: AssociatedTypeKind::Ordinary,
@@ -202,6 +205,7 @@ fn type_kind_family_interface_def() -> InterfaceDef {
         visibility: Visibility::Inherited,
         name: "Compute".into(),
         type_params: vec![param("X", None)],
+        evidence_constraints: vec![],
         associated_types: vec![AssociatedTypeDecl {
             name: "Out".into(),
             kind: AssociatedTypeKind::SealedFamily {

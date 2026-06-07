@@ -68,6 +68,7 @@ fn sealed_family_interface() -> InterfaceDef {
         visibility: Visibility::Inherited,
         name: "Append".into(),
         type_params: vec![param("Xs", Some("TypeList")), param("Ys", Some("TypeList"))],
+        evidence_constraints: vec![],
         associated_types: vec![AssociatedTypeDecl {
             name: "Out".into(),
             kind: AssociatedTypeKind::SealedFamily {
@@ -239,6 +240,7 @@ fn task_861_accepts_kind_type_result_domain_for_common_associated_family_shape()
         visibility: Visibility::Inherited,
         name: "Iterator".into(),
         type_params: vec![param("I", None)],
+        evidence_constraints: vec![],
         associated_types: vec![AssociatedTypeDecl {
             name: "Item".into(),
             kind: AssociatedTypeKind::SealedFamily {
@@ -331,6 +333,7 @@ fn task_861_validates_decreases_parameter_and_malformed_direct_scheme_shapes() {
             visibility: Visibility::Inherited,
             name: "BadAppend".into(),
             type_params: vec![param("Xs", None)],
+            evidence_constraints: vec![],
             associated_types: vec![AssociatedTypeDecl {
                 name: "Out".into(),
                 kind: AssociatedTypeKind::SealedFamily {

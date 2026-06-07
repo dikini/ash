@@ -17,6 +17,7 @@ fn serializer_interface_def() -> InterfaceDef {
         visibility: Visibility::Public,
         name: "Serializer".into(),
         type_params: vec!["S".into()],
+        evidence_constraints: vec![],
         associated_types: vec![AssociatedTypeDecl {
             name: "Ok".into(),
             kind: ash_parser::surface::AssociatedTypeKind::Ordinary,

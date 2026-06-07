@@ -343,6 +343,7 @@ fn task_879_export_rejects_private_interface_bound_dependencies_fail_closed() {
         visibility: Visibility::Inherited,
         name: "HiddenInterface".into(),
         type_params: Vec::new(),
+        evidence_constraints: vec![],
         associated_types: Vec::new(),
         methods: Vec::new(),
         span: Default::default(),

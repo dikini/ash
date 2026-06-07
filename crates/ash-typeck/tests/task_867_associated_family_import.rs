@@ -191,6 +191,7 @@ fn public_family_interface(interface: &str, member: &str) -> InterfaceDef {
             kind: None,
             span: Span::default(),
         }],
+        evidence_constraints: vec![],
         associated_types: vec![AssociatedTypeDecl {
             name: member.into(),
             kind: AssociatedTypeKind::SealedFamily {

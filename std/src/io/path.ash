@@ -55,3 +55,9 @@ pub fn is_absolute(path: PathBuf) -> Bool {
         PathBuf { inner: p } => string::starts_with(p, "/")
     }
 }
+
+pub fn preserves_absolute_after_join(base: PathBuf, child: String) -> Bool {
+    if is_absolute(base) then is_absolute(join(base, child)) else true
+}
+
+law join_preserves_absolute(base: PathBuf, child: String): preserves_absolute_after_join(base, child)

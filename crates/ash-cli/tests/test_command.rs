@@ -814,3 +814,48 @@ fn only_synthesized_keeps_authored_and_selected_sources_distinct() {
     );
     assert!(!tests.iter().any(|test| test["source"] == "authored"));
 }
+
+#[test]
+fn only_synthesized_laws_generates_std_io_path_join_law_row() {
+    let path =
+        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../std/src/io/path.ash");
+
+    let assert = ash()
+        .arg("test")
+        .arg(path)
+        .arg("--only-synthesized")
+        .arg("laws")
+        .arg("--format")
+        .arg("json")
+        .assert();
+    let output = parse_json_output(&assert.success());
+    let tests = output["tests"].as_array().unwrap();
+
+    let law = tests
+        .iter()
+        .find(|test| {
+            test["source"] == "synthesized:law"
+                && test["name"].as_str().is_some_and(|name| {
+                    name.starts_with("synthesized/law/join_preserves_absolute/")
+                })
+        })
+        .expect("std/src/io/path.ash should generate a synthesized law row");
+
+    let oracle = &law["repro_artifact"]["oracle_snapshot"];
+    assert_eq!(oracle["law"], "join_preserves_absolute");
+    assert_eq!(
+        oracle["params"],
+        serde_json::json!(["base: PathBuf", "child: String"])
+    );
+    assert_eq!(
+        oracle["proposition"],
+        "preserves_absolute_after_join(base, child)"
+    );
+    assert!(
+        law["repro_artifact"]["replay_command"]
+            .as_str()
+            .is_some_and(|command| command.contains("--only-synthesized laws")),
+        "law replay command should re-select synthesized law rows, got {:?}",
+        law["repro_artifact"]["replay_command"]
+    );
+}

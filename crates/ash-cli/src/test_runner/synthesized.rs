@@ -2395,29 +2395,36 @@ fn deferred_law_result(
     law: &RunnerLawMetadata,
     seed: u64,
 ) -> TestResult {
+    let mut repro = repro_artifact(
+        path,
+        snapshot.source_artifact_id.clone(),
+        snapshot.check_summary_id.clone(),
+        format!("law:{}:deferred", law.id),
+        seed,
+        1,
+        None,
+        json!({
+            "source": "law",
+            "law": law.name,
+            "delegated_test": law.delegated_test,
+            "proposition": law.proposition,
+            "params": law.params,
+        }),
+        None,
+    );
+    repro.replay_command = format!(
+        "ash test {} --only-synthesized laws --seed {}",
+        path.display(),
+        seed
+    );
+
     deferred_result_with_kind(
         path,
         TestSource::Law,
         TestKind::SmallWorld,
         format!("synthesized/law/{}/deferred", law.name),
         "deferred: law metadata lacks supported finite parameter domains or executable proposition",
-        repro_artifact(
-            path,
-            snapshot.source_artifact_id.clone(),
-            snapshot.check_summary_id.clone(),
-            format!("law:{}:deferred", law.id),
-            seed,
-            1,
-            None,
-            json!({
-                "source": "law",
-                "law": law.name,
-                "delegated_test": law.delegated_test,
-                "proposition": law.proposition,
-                "params": law.params,
-            }),
-            None,
-        ),
+        repro,
     )
 }
 

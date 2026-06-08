@@ -114,6 +114,36 @@ fn parse_public_functions(filename: &str) -> Vec<FnDef> {
 }
 
 #[test]
+fn test_io_path_join_preserves_absolute_law_parses() {
+    let source = read_stdlib_file("io/path.ash");
+    let module = ash_parser::parse_surface_file(&source)
+        .unwrap_or_else(|errors| panic!("io/path.ash should parse: {errors:?}\n{source}"));
+
+    let law = module
+        .definitions
+        .iter()
+        .find_map(|definition| match definition {
+            Definition::Law(law) if law.name.as_ref() == "join_preserves_absolute" => Some(law),
+            _ => None,
+        })
+        .expect("io/path.ash should declare module law join_preserves_absolute");
+
+    assert_eq!(law.params.len(), 2);
+    assert_eq!(law.params[0].name.as_ref(), "base");
+    assert!(
+        matches!(&law.params[0].ty, SurfaceType::Name(name) if name.as_ref() == "PathBuf"),
+        "base parameter should have PathBuf type, got {:?}",
+        law.params[0].ty
+    );
+    assert_eq!(law.params[1].name.as_ref(), "child");
+    assert!(
+        matches!(&law.params[1].ty, SurfaceType::Name(name) if name.as_ref() == "String"),
+        "child parameter should have String type, got {:?}",
+        law.params[1].ty
+    );
+}
+
+#[test]
 fn test_option_file_exists() {
     let path = stdlib_src_path().join("option.ash");
     assert!(path.exists(), "option.ash should exist");

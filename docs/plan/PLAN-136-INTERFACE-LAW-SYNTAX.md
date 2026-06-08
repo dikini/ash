@@ -529,7 +529,11 @@ git commit -m "feat(stdlib): add law declarations to std::algebra (TASK-1373)"
 
 **Files:**
 - Modify: `std/src/io/path.ash`
-- Test: `tests/module_law_integration.rs`
+- Test: `crates/ash-parser/tests/stdlib_parsing.rs`
+- Test: `crates/ash-engine/tests/task_1374_stdlib_path_law.rs`
+- Test: `crates/ash-cli/tests/test_command.rs`
+
+**Status:** Complete. `std::io::path` now declares module law `join_preserves_absolute` over pure helper `preserves_absolute_after_join`, with parser, engine check, CLI `ash check`, and synthesized law-row coverage against the real stdlib file.
 
 **Step 6: Commit**
 

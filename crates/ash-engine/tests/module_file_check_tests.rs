@@ -104,6 +104,118 @@ fn malformed_type_without_semicolon_fails_modulefile_parse_instead_of_snippet_sk
     );
 }
 
+#[test]
+fn constrained_public_interface_cannot_use_private_imported_interface() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let hidden_path = dir.path().join("hidden.ash");
+    let public_path = dir.path().join("public.ash");
+    std::fs::write(&hidden_path, "interface Hidden<T> {}\n").expect("write hidden module");
+    std::fs::write(
+        &public_path,
+        "use hidden::{Hidden}\n\npub interface Public<T> where T: Hidden {}\n",
+    )
+    .expect("write public module");
+
+    let err = ash_engine::module_loader::check_importable_module_file(&public_path)
+        .expect_err("private imported interface must not satisfy public constraint validation");
+    let message = err.to_string();
+    assert!(message.contains("Hidden"), "{message}");
+    assert!(
+        message.contains("not locally declared or directly imported")
+            || message.contains("unknown"),
+        "{message}"
+    );
+}
+
+#[test]
+fn constrained_public_interface_cannot_use_private_local_interface() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let module_path = dir.path().join("local.ash");
+    std::fs::write(
+        &module_path,
+        "interface Hidden<T> {}\n\npub interface Public<T> where T: Hidden {}\n",
+    )
+    .expect("write local module");
+
+    let err = ash_engine::module_loader::check_importable_module_file(&module_path).expect_err(
+        "private local interface must not be exported as a public constraint dependency",
+    );
+    let message = err.to_string();
+    assert!(message.contains("Hidden"), "{message}");
+    assert!(
+        message.contains("not locally declared or directly imported"),
+        "{message}"
+    );
+}
+
+#[test]
+fn constrained_public_interface_cannot_use_transitively_imported_interface() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let a_path = dir.path().join("a.ash");
+    let b_path = dir.path().join("b.ash");
+    let c_path = dir.path().join("c.ash");
+    std::fs::write(&a_path, "pub interface A<T> {}\n").expect("write a module");
+    std::fs::write(&b_path, "use a::{A}\n\npub interface B<T> where T: A {}\n")
+        .expect("write b module");
+    std::fs::write(&c_path, "use b::{B}\n\npub interface C<T> where T: A {}\n")
+        .expect("write c module");
+
+    let err = ash_engine::module_loader::check_importable_module_file(&c_path)
+        .expect_err("transitively imported interface must not be visible in local constraints");
+    let message = err.to_string();
+    assert!(message.contains('A'), "{message}");
+    assert!(
+        message.contains("not locally declared or directly imported"),
+        "{message}"
+    );
+}
+
+#[test]
+fn constrained_public_interface_can_use_direct_import_alias() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let a_path = dir.path().join("a.ash");
+    let c_path = dir.path().join("c.ash");
+    std::fs::write(&a_path, "pub interface A<T> {}\n").expect("write a module");
+    std::fs::write(
+        &c_path,
+        "use a::{A as X}\n\npub interface C<T> where T: X {}\n",
+    )
+    .expect("write c module");
+
+    ash_engine::module_loader::check_importable_module_file(&c_path)
+        .expect("directly imported interface alias should satisfy local constraint visibility and validation");
+}
+
+#[test]
+fn constrained_public_interface_with_associated_family_can_use_direct_import() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let dep_path = dir.path().join("dep.ash");
+    let provider_path = dir.path().join("provider.ash");
+    std::fs::write(&dep_path, "pub interface Eq<T> {}\n").expect("write dep module");
+    std::fs::write(
+        &provider_path,
+        "use dep::{Eq}\n\npub interface Iterator<I> where I: Eq { sealed type family Item: Type }\n",
+    )
+    .expect("write provider module");
+
+    ash_engine::module_loader::check_importable_module_file(&provider_path)
+        .expect("associated-family export validation should seed imported interface constraints");
+}
+
+#[test]
+fn constrained_public_interface_import_seeding_does_not_recurse_forever_on_cycles() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let a_path = dir.path().join("a.ash");
+    let b_path = dir.path().join("b.ash");
+    std::fs::write(&a_path, "use b::{B}\n\npub interface A<T> {}\n").expect("write a module");
+    std::fs::write(&b_path, "use a::{A}\n\npub interface B<T> {}\n").expect("write b module");
+
+    let err = ash_engine::module_loader::check_importable_module_file(&a_path)
+        .expect_err("cyclic imports should still fail closed instead of recursing forever");
+    let message = err.to_string();
+    assert!(message.contains("cyclic import"), "{message}");
+}
+
 /// Test 3: An empty file should succeed with 0 types and 0 fns.
 #[test]
 fn test_check_module_file_empty() {

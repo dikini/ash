@@ -21,13 +21,19 @@ fn parse_std_module(relative: &str) -> ash_parser::surface::ModuleFile {
 }
 
 fn env_with_stdlib_monad_interface() -> TypeEnv {
-    let module = parse_std_module("algebra/monad.ash");
+    let modules = [
+        parse_std_module("algebra/functor.ash"),
+        parse_std_module("algebra/applicative.ash"),
+        parse_std_module("algebra/monad.ash"),
+    ];
     let mut env = TypeEnv::with_builtin_types();
 
-    for definition in &module.definitions {
-        if let Definition::Interface(interface) = definition {
-            env.register_interface(interface)
-                .unwrap_or_else(|error| panic!("register Monad interface: {error}"));
+    for module in &modules {
+        for definition in &module.definitions {
+            if let Definition::Interface(interface) = definition {
+                env.register_interface(interface)
+                    .unwrap_or_else(|error| panic!("register algebra interface: {error}"));
+            }
         }
     }
 

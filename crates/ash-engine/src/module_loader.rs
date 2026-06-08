@@ -39,7 +39,7 @@ use ash_parser::parse_type_def::{
 };
 use ash_parser::parse_use::parse_use;
 use ash_parser::parse_workflow::workflow_def;
-use ash_parser::surface::{Definition, Expr, Type, Workflow, WorkflowDef};
+use ash_parser::surface::{Definition, Expr, InterfaceDef, Type, Workflow, WorkflowDef};
 use sha2::{Digest, Sha256};
 use std::cell::Cell;
 use std::collections::{HashMap, HashSet};
@@ -2654,7 +2654,14 @@ pub(crate) fn collect_module_exports(
     for name in extract_pub_mod_declarations(&source) {
         let child_path = resolve_child_module(module_root, &name)?;
         visiting.insert(canonical.clone());
-        let child_exports = collect_module_exports(&child_path, cache, visiting)?;
+        let child_exports =
+            collect_module_exports(&child_path, cache, visiting).map_err(|error| {
+                EngineError::Parse(format!(
+                    "in '{}': failed to load public child module '{}': {error}",
+                    path.display(),
+                    child_path.display()
+                ))
+            })?;
         visiting.remove(&canonical);
         // Store child exports under the child module name (for qualified access)
         exports.child_modules.insert(name, child_exports);
@@ -3195,14 +3202,8 @@ fn attach_public_type_function_summaries(
     Ok(())
 }
 
-fn attach_public_associated_family_summaries(
-    exports: &mut ModuleExports,
-    type_metadata: &ash_parser::lower::LoweredTypeMetadata,
-    path: &Path,
-    source: &str,
-) -> Result<(), EngineError> {
-    let module = parse_module_file_for_type_metadata(path, source)?;
-    let has_public_associated_family = module.definitions.iter().any(|definition| {
+fn module_has_public_associated_family(module: &ash_parser::surface::ModuleFile) -> bool {
+    module.definitions.iter().any(|definition| {
         let Definition::Interface(interface) = definition else {
             return false;
         };
@@ -3215,15 +3216,35 @@ fn attach_public_associated_family_summaries(
                 ash_parser::surface::AssociatedTypeKind::SealedFamily { .. }
             )
         })
-    });
-    if !has_public_associated_family {
+    })
+}
+
+fn attach_public_associated_family_summaries(
+    exports: &mut ModuleExports,
+    type_metadata: &ash_parser::lower::LoweredTypeMetadata,
+    path: &Path,
+    source: &str,
+) -> Result<(), EngineError> {
+    let module = parse_module_file_for_type_metadata(path, source)?;
+    if !module_has_public_associated_family(&module) {
         return Ok(());
     }
     let Some(summary) = exports.semantic_summary.as_mut() else {
         return Ok(());
     };
 
+    let local_public_interface_names = local_public_interface_names(&module);
+    let directly_visible_imported_interfaces =
+        directly_visible_imported_interface_names(path, source)?;
+    validate_local_interface_constraint_visibility(
+        path,
+        &module,
+        &local_public_interface_names,
+        &directly_visible_imported_interfaces,
+    )?;
+
     let mut type_env = ash_typeck::TypeEnv::with_builtin_types();
+    register_imported_interface_definitions_for_constraints(&mut type_env, path, source)?;
     type_env.set_current_module_identity(summary.module.clone());
     for definition in &module.definitions {
         if let Definition::Interface(interface) = definition {
@@ -3299,6 +3320,258 @@ fn attach_public_associated_family_summaries(
     Ok(())
 }
 
+fn register_imported_interface_definitions_for_constraints(
+    type_env: &mut ash_typeck::TypeEnv,
+    path: &Path,
+    source: &str,
+) -> Result<(), EngineError> {
+    let mut visiting = HashSet::new();
+    register_imported_interface_definitions_for_constraints_inner(
+        type_env,
+        path,
+        source,
+        &mut visiting,
+    )
+}
+
+fn register_imported_interface_definitions_for_constraints_inner(
+    type_env: &mut ash_typeck::TypeEnv,
+    path: &Path,
+    source: &str,
+    visiting: &mut HashSet<PathBuf>,
+) -> Result<(), EngineError> {
+    let canonical = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
+    if !visiting.insert(canonical.clone()) {
+        return Ok(());
+    }
+
+    let module_root = path.parent().ok_or_else(|| {
+        EngineError::Configuration(format!("module path '{}' has no parent", path.display()))
+    })?;
+    let crate_root = discover_crate_root(module_root);
+    for snippet in extract_import_snippets(source) {
+        let import_spec = parse_ordinary_import(snippet.trim())?;
+        let (module_segments, search_roots) = import_resolution_roots(
+            &import_spec.module_segments,
+            module_root,
+            crate_root.as_deref(),
+        )?;
+        let Some(target_path) = resolve_module_path(&module_segments, &search_roots)? else {
+            continue;
+        };
+        let target_canonical = target_path
+            .canonicalize()
+            .unwrap_or_else(|_| target_path.clone());
+        if visiting.contains(&target_canonical) {
+            return Err(EngineError::Parse(format!(
+                "cyclic import detected while loading '{}'",
+                target_path.display()
+            )));
+        }
+        let target_source = std::fs::read_to_string(&target_path)?;
+        register_imported_interface_definitions_for_constraints_inner(
+            type_env,
+            &target_path,
+            &target_source,
+            visiting,
+        )?;
+        let target_module = parse_module_file_for_type_metadata(&target_path, &target_source)?;
+        type_env.set_current_module_identity(module_identity_for_path(&target_path));
+        for selection in &import_spec.selections {
+            match selection {
+                ImportSelection::Glob => {
+                    for definition in &target_module.definitions {
+                        let Definition::Interface(interface) = definition else {
+                            continue;
+                        };
+                        register_public_imported_interface_for_constraints(
+                            type_env,
+                            path,
+                            &target_path,
+                            interface,
+                        )?;
+                    }
+                }
+                ImportSelection::Named { name, alias } => {
+                    for definition in &target_module.definitions {
+                        let Definition::Interface(interface) = definition else {
+                            continue;
+                        };
+                        if interface.name.as_ref() != name {
+                            continue;
+                        }
+                        if let Some(alias) = alias {
+                            let mut interface = interface.clone();
+                            interface.name = alias.as_str().into();
+                            register_public_imported_interface_for_constraints(
+                                type_env,
+                                path,
+                                &target_path,
+                                &interface,
+                            )?;
+                        } else {
+                            register_public_imported_interface_for_constraints(
+                                type_env,
+                                path,
+                                &target_path,
+                                interface,
+                            )?;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    visiting.remove(&canonical);
+    Ok(())
+}
+
+fn register_public_imported_interface_for_constraints(
+    type_env: &mut ash_typeck::TypeEnv,
+    importing_path: &Path,
+    target_path: &Path,
+    interface: &InterfaceDef,
+) -> Result<(), EngineError> {
+    if !matches!(
+        interface.visibility,
+        ash_parser::surface::Visibility::Public
+    ) || type_env.lookup_interface(interface.name.as_ref()).is_some()
+    {
+        return Ok(());
+    }
+    type_env.register_interface(interface).map_err(|error| {
+        EngineError::Parse(format!(
+            "in '{}': public interface imported constraint substrate registration failed for '{}': {error}; span {:?}",
+            importing_path.display(),
+            target_path.display(),
+            type_env_error_span(&error)
+        ))
+    })
+}
+
+fn local_public_interface_names(module: &ash_parser::surface::ModuleFile) -> HashSet<String> {
+    module
+        .definitions
+        .iter()
+        .filter_map(|definition| match definition {
+            Definition::Interface(interface)
+                if matches!(
+                    interface.visibility,
+                    ash_parser::surface::Visibility::Public
+                ) =>
+            {
+                Some(interface.name.to_string())
+            }
+            _ => None,
+        })
+        .collect()
+}
+
+fn validate_local_interface_constraint_visibility(
+    path: &Path,
+    module: &ash_parser::surface::ModuleFile,
+    local_public_interface_names: &HashSet<String>,
+    directly_visible_imported_interfaces: &HashSet<String>,
+) -> Result<(), EngineError> {
+    for definition in &module.definitions {
+        let Definition::Interface(interface) = definition else {
+            continue;
+        };
+        if !matches!(
+            interface.visibility,
+            ash_parser::surface::Visibility::Public
+        ) {
+            continue;
+        }
+        for constraint in &interface.evidence_constraints {
+            let Some(required_interface) =
+                interface_constraint_required_name_for_loader(&constraint.interface)
+            else {
+                continue;
+            };
+            if local_public_interface_names.contains(required_interface)
+                || directly_visible_imported_interfaces.contains(required_interface)
+            {
+                continue;
+            }
+            return Err(EngineError::Parse(format!(
+                "in '{}': interface '{}' evidence constraint requires interface '{}' that is not locally declared or directly imported",
+                path.display(),
+                interface.name,
+                required_interface
+            )));
+        }
+    }
+    Ok(())
+}
+
+fn directly_visible_imported_interface_names(
+    path: &Path,
+    source: &str,
+) -> Result<HashSet<String>, EngineError> {
+    let module_root = path.parent().ok_or_else(|| {
+        EngineError::Configuration(format!("module path '{}' has no parent", path.display()))
+    })?;
+    let crate_root = discover_crate_root(module_root);
+    let mut names = HashSet::new();
+    for snippet in extract_import_snippets(source) {
+        let import_spec = parse_ordinary_import(snippet.trim())?;
+        let (module_segments, search_roots) = import_resolution_roots(
+            &import_spec.module_segments,
+            module_root,
+            crate_root.as_deref(),
+        )?;
+        let Some(target_path) = resolve_module_path(&module_segments, &search_roots)? else {
+            continue;
+        };
+        let target_source = std::fs::read_to_string(&target_path)?;
+        let target_module = parse_module_file_for_type_metadata(&target_path, &target_source)?;
+        for selection in &import_spec.selections {
+            match selection {
+                ImportSelection::Glob => {
+                    for definition in &target_module.definitions {
+                        let Definition::Interface(interface) = definition else {
+                            continue;
+                        };
+                        if matches!(
+                            interface.visibility,
+                            ash_parser::surface::Visibility::Public
+                        ) {
+                            names.insert(interface.name.to_string());
+                        }
+                    }
+                }
+                ImportSelection::Named { name, alias } => {
+                    for definition in &target_module.definitions {
+                        let Definition::Interface(interface) = definition else {
+                            continue;
+                        };
+                        if interface.name.as_ref() == name
+                            && matches!(
+                                interface.visibility,
+                                ash_parser::surface::Visibility::Public
+                            )
+                        {
+                            names.insert(alias.clone().unwrap_or_else(|| name.clone()));
+                        }
+                    }
+                }
+            }
+        }
+    }
+    Ok(names)
+}
+
+fn interface_constraint_required_name_for_loader(ty: &ash_parser::surface::Type) -> Option<&str> {
+    match ty {
+        ash_parser::surface::Type::Name(name) => Some(name.as_ref()),
+        ash_parser::surface::Type::Constructor { name, args } if args.is_empty() => {
+            Some(name.as_ref())
+        }
+        _ => None,
+    }
+}
+
 fn attach_public_interface_identity_summaries(
     exports: &mut ModuleExports,
     path: &Path,
@@ -3320,7 +3593,17 @@ fn attach_public_interface_identity_summaries(
     };
 
     let source_origin = ash_core::semantic_summary::SourceOrigin::File(path.display().to_string());
+    let local_public_interface_names = local_public_interface_names(&module);
+    let directly_visible_imported_interfaces =
+        directly_visible_imported_interface_names(path, source)?;
+    validate_local_interface_constraint_visibility(
+        path,
+        &module,
+        &local_public_interface_names,
+        &directly_visible_imported_interfaces,
+    )?;
     let mut type_env = ash_typeck::TypeEnv::with_builtin_types();
+    register_imported_interface_definitions_for_constraints(&mut type_env, path, source)?;
     type_env.set_current_module_identity(summary.module.clone());
     for definition in &module.definitions {
         if let Definition::Interface(interface) = definition {

@@ -123,7 +123,6 @@ fn env_with_stdlib_monad_evidence() -> TypeEnv {
         parse_std_module("algebra/applicative.ash"),
         parse_std_module("algebra/monad.ash"),
         parse_std_module("option.ash"),
-        parse_std_module("result.ash"),
     ];
     let mut env = TypeEnv::with_builtin_types();
     bind_stdlib_monad_helper_signatures(&mut env);

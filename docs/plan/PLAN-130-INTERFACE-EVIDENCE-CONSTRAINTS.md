@@ -1,6 +1,6 @@
 # PLAN-130: Interface Evidence Constraints
 
-**Status:** Planned
+**Status:** Complete
 **Spec:** [SPEC-080](../spec/SPEC-080-INTERFACE-EVIDENCE-CONSTRAINTS.md)
 **Depends on:** [SPEC-034](../spec/SPEC-034-WHERE-BOUNDED-GENERIC-INTERFACE-IMPLEMENTATIONS.md), [SPEC-064](../spec/SPEC-064-CONSTRAINT-PROPOSITION-LAYER.md), [SPEC-067](../spec/SPEC-067-CONSTRUCTOR-KINDED-PARAMETERS-AND-HKT.md), [SPEC-078](../spec/SPEC-078-STANDARD-ALGEBRA-LIBRARY-AND-MONAD-REMEDIATION.md)
 **Task range:** TASK-1038 through TASK-1048
@@ -26,7 +26,7 @@ This phase is parser/typechecker-first. The parser preserves interface `where` c
 | [TASK-1044](tasks/TASK-1044-stdlib-monad-applicative-constraint.md) | Migrate stdlib `Monad` to `where M: Applicative` and reconcile examples/reference wording | Stdlib/Docs | 10 | ✅ Complete |
 | [TASK-1045](tasks/TASK-1045-stdlib-applicative-functor-constraint.md) | Migrate stdlib `Applicative` to `where F: Functor` and reconcile examples/reference wording | Stdlib/Docs | 8 | ✅ Complete |
 | [TASK-1046](tasks/TASK-1046-stdlib-monoid-semigroup-constraint.md) | Migrate stdlib `Monoid` to `where A: Semigroup` and reconcile examples/reference wording | Stdlib/Docs | 8 | ✅ Complete |
-| [TASK-1048](tasks/TASK-1048-interface-evidence-constraints-closeout.md) | Run diagnostics, broad verification, independent review, and status reconciliation | Closeout | 8 | 📝 Planned |
+| [TASK-1048](tasks/TASK-1048-interface-evidence-constraints-closeout.md) | Run diagnostics, broad verification, independent review, and status reconciliation | Closeout | 8 | ✅ Complete |
 
 Total estimate: 90h.
 
@@ -98,4 +98,4 @@ Filtered cargo commands must be paired with `-- --list`, a test-count assertion,
 - [x] `std::algebra::Monad` declares the `Applicative` constraint through final stdlib source.
 - [x] `std::algebra::Applicative` declares the `Functor` constraint through final stdlib source.
 - [x] `std::algebra::Monoid` declares the `Semigroup` constraint through final stdlib source.
-- [ ] Broad verification and independent review pass before status promotion.
+- [x] Broad verification and independent review pass before status promotion.

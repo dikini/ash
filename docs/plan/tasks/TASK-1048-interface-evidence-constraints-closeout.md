@@ -1,6 +1,6 @@
 # TASK-1048: Run diagnostics, broad verification, independent review, and status reconciliation
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -62,10 +62,10 @@ commands:
   - git diff --check
   - RUSTC_WRAPPER= cargo check --workspace
 checklist:
-- [ ] Focused tests/artifact are non-zero and pass
-- [ ] `cargo fmt --check` passes for touched Rust files or is not applicable
-- [ ] `git diff --check` passes
-- [ ] Status surfaces and CHANGELOG are reconciled if this task completes
+- [x] Focused tests/artifact are non-zero and pass
+- [x] `cargo fmt --check` passes for touched Rust files or is not applicable
+- [x] `git diff --check` passes
+- [x] Status surfaces and CHANGELOG are reconciled if this task completes
 ```
 
 ## Notes
@@ -78,3 +78,30 @@ interface Monad<M : * -> *> where M: Applicative {
     bind(M<Int>, (Int) -> M<Int>) -> M<Int>
 }
 ```
+
+## Completion notes
+
+- Reconciled final stdlib algebra source imports for constrained interfaces:
+  `monad.ash` imports `Applicative`, `applicative.ash` imports `Functor`, and
+  `monoid.ash` imports `Semigroup` through final stdlib paths.
+- Fixed final module export checking for constrained public interfaces by seeding
+  imported interface definitions before validating interface-owned evidence
+  constraints during `collect_module_exports`, including the public interface
+  identity and public associated-family summary paths.
+- Preserved compiler-prelude tower Monad evidence after `Monad` gained an
+  `Applicative` prerequisite by synthesizing matching tower `Functor` and
+  `Applicative` evidence before registering tower `Monad` evidence.
+- Updated legacy focused fixtures affected by the new stdlib constraints without
+  weakening the asserted behavior.
+- Focused verification passed:
+  - `RUSTC_WRAPPER= cargo test -p ash-engine --test task_1024_stdlib_do_evidence -- --nocapture`
+  - `RUSTC_WRAPPER= cargo test -p ash-typeck --test task_1022_pure_algebra_instances -- --nocapture`
+  - `RUSTC_WRAPPER= cargo test -p ash-typeck --test task_1023_tower_algebra_instances_and_bridge_remediation -- --nocapture`
+  - `RUSTC_WRAPPER= cargo run -q -p ash-cli -- check std/src/algebra/mod.ash --format human`
+  - `RUSTC_WRAPPER= cargo test -p ash-cli --test stdlib_corpus_check stdlib_corpus_cli_check_baseline_is_classified_and_honest -- --nocapture`
+- Broad verification passed:
+  - `cargo fmt --check`
+  - `git diff --check`
+  - `RUSTC_WRAPPER= cargo check --workspace`
+  - `RUSTC_WRAPPER= cargo clippy --workspace --all-targets --all-features -- -D warnings`
+  - `RUSTC_WRAPPER= cargo test --workspace`

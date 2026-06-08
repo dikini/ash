@@ -4026,7 +4026,7 @@ Phase 135 adds interface-level evidence constraints. The motivating final syntax
 | [TASK-1044](tasks/TASK-1044-stdlib-monad-applicative-constraint.md) | Migrate stdlib `Monad` to `where M: Applicative` and reconcile examples/reference wording | 10 | ✅ Complete |
 | [TASK-1045](tasks/TASK-1045-stdlib-applicative-functor-constraint.md) | Migrate stdlib `Applicative` to `where F: Functor` and reconcile examples/reference wording | 8 | ✅ Complete |
 | [TASK-1046](tasks/TASK-1046-stdlib-monoid-semigroup-constraint.md) | Migrate stdlib `Monoid` to `where A: Semigroup` and reconcile examples/reference wording | 8 | ✅ Complete |
-| [TASK-1048](tasks/TASK-1048-interface-evidence-constraints-closeout.md) | Run diagnostics, broad verification, independent review, and status reconciliation | 8 | 📝 Planned |
+| [TASK-1048](tasks/TASK-1048-interface-evidence-constraints-closeout.md) | Run diagnostics, broad verification, independent review, and status reconciliation | 8 | ✅ Complete |
 
 **Decision gates:**
 - D1: Interface-level constraints express required evidence; generic blanket impls are not used to encode this relationship.

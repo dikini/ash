@@ -394,6 +394,89 @@ fn generic_impl_must_discharge_required_evidence_with_where_bound() {
     assert_eq!(discharged_env.impl_schemes().len(), 1);
 }
 
+#[test]
+fn conditional_generic_impl_does_not_unconditionally_discharge_required_evidence() {
+    let module = parse(
+        r#"
+        interface Weak<T> {}
+        interface Strong<T> where T: Weak {}
+        interface Uses<T> where T: Strong {}
+        impl <T> Strong<T> where T: Weak {}
+        impl <T> Uses<T> {}
+        "#,
+    );
+    let mut env = TypeEnv::with_builtin_types();
+    env.set_current_module_identity(module_identity(1_043_007));
+    for interface in ["Weak", "Strong", "Uses"] {
+        env.register_interface(&interface_named(&module, interface))
+            .unwrap_or_else(|error| panic!("{interface} interface should register: {error}"));
+    }
+
+    let mut implementations = module
+        .definitions
+        .iter()
+        .filter_map(|definition| match definition {
+            Definition::Impl(implementation) => Some(implementation.clone()),
+            _ => None,
+        });
+    let strong_impl = implementations
+        .next()
+        .expect("conditional Strong<T> impl should be present");
+    let uses_impl = implementations
+        .next()
+        .expect("unbounded Uses<T> impl should be present");
+
+    env.register_impl(&strong_impl)
+        .expect("where T: Weak should discharge Strong<T>'s required evidence");
+    let err = env
+        .register_impl(&uses_impl)
+        .expect_err("conditional Strong<T> evidence must not discharge Uses<T> unconditionally");
+    let message = err.to_string();
+    assert!(message.contains("Uses"), "{message}");
+    assert!(message.contains("Strong"), "{message}");
+}
+
+#[test]
+fn concrete_impl_does_not_discharge_generic_required_evidence() {
+    let module = parse(
+        r#"
+        interface Weak<T> {}
+        interface Strong<T> where T: Weak {}
+        impl Weak<Int> {}
+        impl <T> Strong<T> {}
+        "#,
+    );
+    let mut env = TypeEnv::with_builtin_types();
+    env.set_current_module_identity(module_identity(1_043_008));
+    env.register_interface(&interface_named(&module, "Weak"))
+        .expect("Weak interface should register");
+    env.register_interface(&interface_named(&module, "Strong"))
+        .expect("Strong interface should register");
+
+    let mut implementations = module
+        .definitions
+        .iter()
+        .filter_map(|definition| match definition {
+            Definition::Impl(implementation) => Some(implementation.clone()),
+            _ => None,
+        });
+    let weak_int_impl = implementations
+        .next()
+        .expect("concrete Weak<Int> impl should be present");
+    let strong_impl = implementations
+        .next()
+        .expect("generic Strong<T> impl should be present");
+
+    env.register_impl(&weak_int_impl)
+        .expect("concrete Weak<Int> evidence should register");
+    let err = env
+        .register_impl(&strong_impl)
+        .expect_err("Weak<Int> must not discharge generic Strong<T>'s required Weak<T> evidence");
+    let message = err.to_string();
+    assert!(message.contains("Strong"), "{message}");
+    assert!(message.contains("Weak"), "{message}");
+}
+
 fn env_with_strong_requires_weak_method() -> TypeEnv {
     let module = parse(
         r#"

@@ -1,3 +1,5 @@
+use algebra::functor::{Functor}
+
 pub interface Applicative<F : * -> *> where F: Functor {
     pure(Int) -> F<Int>
     apply(F<Int -> Int>, F<Int>) -> F<Int>

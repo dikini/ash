@@ -4768,8 +4768,12 @@ impl TypeEnv {
     ) -> bool {
         self.impls.iter().any(|scheme| {
             scheme.interface == interface
-                && scheme.type_params.is_empty()
-                && interface_evidence_args_match(&scheme.head_args, args, false)
+                && scheme.where_bounds.is_empty()
+                && if scheme.type_params.is_empty() {
+                    interface_evidence_args_match(&scheme.head_args, args, false)
+                } else {
+                    interface_evidence_args_match(&scheme.head_args, args, true)
+                }
         })
     }
 
@@ -15371,13 +15375,26 @@ impl TypeEnv {
             return Ok(());
         }
 
+        self.register_compiler_prelude_tower_evidence("Functor")?;
+        self.register_compiler_prelude_tower_evidence("Applicative")?;
+        self.register_compiler_prelude_tower_evidence("Monad")
+    }
+
+    fn register_compiler_prelude_tower_evidence(
+        &mut self,
+        interface_name: &str,
+    ) -> Result<(), TypeEnvError> {
+        let Some(interface) = self.interfaces.get(interface_name).cloned() else {
+            return Ok(());
+        };
+
         for carrier in ["Act", "Proc", "Workflow"] {
             if !self.has_type(carrier) {
                 continue;
             }
             let surface_args = [SurfaceType::Name(carrier.into())];
             let head_args = self.lower_interface_evidence_args(
-                "Monad",
+                interface_name,
                 &interface,
                 &surface_args,
                 &HashMap::new(),
@@ -15389,7 +15406,7 @@ impl TypeEnv {
                 continue;
             }
             if self.impls.iter().any(|scheme| {
-                scheme.interface == "Monad"
+                scheme.interface == interface_name
                     && interface_evidence_args_match(&scheme.head_args, &head_args, false)
             }) {
                 continue;
@@ -15399,10 +15416,10 @@ impl TypeEnv {
                 .map(interface_evidence_arg_as_legacy_type)
                 .collect();
             self.impls.push(ImplScheme {
-                interface: "Monad".to_string(),
+                interface: interface_name.to_string(),
                 type_params: Vec::new(),
                 head: Type::Constructor {
-                    name: QualifiedName::root("Monad"),
+                    name: QualifiedName::root(interface_name),
                     args: lowered_type_args,
                     kind: Kind::Type,
                 },

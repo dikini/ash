@@ -2583,4 +2583,6 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Fixed
 
-### Security
+### Security- [Phase 136](docs/plan/PLAN-136-INTERFACE-LAW-SYNTAX.md): Planned implementation of `law` and `proof` syntax for interfaces and modules. Stages 1–3 cover parser extension, typechecker verification, synthetic test generation, totality checking, and `Prop` kind promotion. Tasks TASK-1360 through TASK-1377.
+
+

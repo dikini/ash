@@ -5,6 +5,7 @@ pub mod applicative;
 pub mod monad;
 pub mod comonad;
 pub mod kleisli;
+pub mod eq;
 
 pub use semigroup::{Semigroup};
 pub use monoid::{Monoid};
@@ -12,3 +13,4 @@ pub use functor::{Functor};
 pub use applicative::{Applicative};
 pub use monad::{Monad};
 pub use comonad::{Comonad};
+pub use eq::{Eq};

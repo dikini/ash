@@ -4036,3 +4036,35 @@ Phase 135 adds interface-level evidence constraints. The motivating final syntax
 - D4: Final parser/typechecker tests must prove the surface syntax parses and unsupported forms are rejected.
 - D5: Final stdlib tests must use real `std::algebra` import paths, not fixture-only local interfaces.
 - D6: Accepted algebra constraints include `Monad -> Applicative`, `Applicative -> Functor`, and `Monoid -> Semigroup`. No separate `Functor`/`Monoid` constraint is planned because the monoid-in-endofunctors interpretation is covered by `Monad`.
+
+## Phase 136: Interface and Module Law Syntax
+
+**Status:** Planned
+**Design Note:** [DESIGN-NOTE-INTERFACE-LAWS](../design/DESIGN-NOTE-INTERFACE-LAWS.md)
+**Plan:** [PLAN-136](PLAN-136-INTERFACE-LAW-SYNTAX.md)
+**Spec:** [SPEC-078](../spec/SPEC-078-STANDARD-ALGEBRA-LIBRARY-AND-MONAD-REMEDIATION.md), [SPEC-079](../spec/SPEC-079-STANDARD-ALGEBRA-COMONAD-AND-KLEISLI-HELPERS.md)
+
+Adds `law` and `proof` syntax to Ash interfaces and modules, enabling declarative algebraic laws with synthetic test generation and optional totality checking.
+
+| Task | Description | Status |
+|---|---|---|
+| [TASK-1359](tasks/TASK-1359-add-eq-interface.md) | Add `Eq` interface to `std::algebra` | Planned |
+| [TASK-1360](tasks/TASK-1360-parser-law-in-interfaces.md) | Parser: `law` keyword in interfaces | Planned |
+| [TASK-1361](tasks/TASK-1361-parser-law-module-scope.md) | Parser: `law` keyword at module scope | Planned |
+| [TASK-1362](tasks/TASK-1362-parser-proof-in-impls.md) | Parser: `proof` keyword in impl blocks | Planned |
+| [TASK-1363](tasks/TASK-1363-parser-proof-module-scope.md) | Parser: `proof` keyword at module scope | Planned |
+| [TASK-1364](tasks/TASK-1364-typeck-law-name-checking.md) | Typechecker: verify law proposition names exist | Planned |
+| [TASK-1365](tasks/TASK-1365-typeck-proof-name-checking.md) | Typechecker: verify proof names match declared laws | Planned |
+| [TASK-1366](tasks/TASK-1366-typeck-law-purity-restriction.md) | Typechecker: restrict law propositions to Pure functions | Planned |
+| [TASK-1367](tasks/TASK-1367-typeck-proof-totality-stub.md) | Typechecker: proof body totality check stub (Stage 3 prep) | Planned |
+| [TASK-1368](tasks/TASK-1368-runner-law-extraction.md) | Synthetic tests: extract law nodes from AST | Planned |
+| [TASK-1369](tasks/TASK-1369-runner-synthetic-test-generation.md) | Synthetic tests: generate small-world tests from laws | Planned |
+| [TASK-1370](tasks/TASK-1370-runner-by-test-delegation.md) | Synthetic tests: `by test` delegation syntax | Planned |
+| [TASK-1371](tasks/TASK-1371-cli-law-opt-out.md) | CLI: `--skip-law-tests` and `#[no_test]` | Planned |
+| [TASK-1372](tasks/TASK-1372-law-cache-implementation.md) | Cache: `.ash/law-cache.toml` implementation | Planned |
+| [TASK-1373](tasks/TASK-1373-integration-stdlib-algebra-laws.md) | Integration: end-to-end law syntax in `std::algebra` | Planned |
+| [TASK-1374](tasks/TASK-1374-integration-stdlib-path-law.md) | Integration: module-scoped law in `std::io::path` | Planned |
+| [TASK-1375](tasks/TASK-1375-stage3-totality-checking.md) | Stage 3: proof totality checking | Planned |
+| [TASK-1376](tasks/TASK-1376-stage3-prop-kind.md) | Stage 3: `Prop` kind promotion | Planned |
+| [TASK-1377](tasks/TASK-1377-closeout-docs-status.md) | Closeout: docs, status, CHANGELOG | Planned |
+

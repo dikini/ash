@@ -1,6 +1,6 @@
 # TASK-1363: Parser — `proof` keyword at module scope
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -21,10 +21,23 @@ Extend parser to accept module-scoped `proof` blocks.
 
 ## Acceptance Criteria
 
-- [ ] `proof` parses at module scope
-- [ ] Module file contains proofs alongside laws, types, functions
-- [ ] Parser test passes
-- [ ] No regressions
+- [x] `proof` parses at module scope
+- [x] Module file contains proofs alongside laws, types, functions
+- [x] Parser test passes
+- [x] No regressions
+
+## Verification
+
+- `cargo test -p ash-parser --test task_1363_proof_keyword_module_scope -- --nocapture` — 3 passed
+- `cargo test -p ash-lsp-core` — 49 unit tests, 1 integration test, and doctests passed
+- `cargo clippy -p ash-parser -p ash-lsp-core --all-targets --all-features -- -D warnings` — passed
+- `cargo check --workspace` — passed
+
+## Completion Notes
+
+- Added `Definition::Proof(ProofDef)` for module-scoped proof declarations.
+- Reused the TASK-1362 proof parser at top-level and inline-module definition dispatch points.
+- Updated LSP exhaustive matches for proof completion, hover, goto, and symbol traversal compatibility.
 
 ## Related
 

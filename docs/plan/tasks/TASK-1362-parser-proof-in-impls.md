@@ -34,7 +34,7 @@ Extend parser to accept `proof` blocks inside `impl` declarations.
 
 ## Verification
 
-- `cargo test -p ash-parser --test task_1362_proof_keyword_impl -- --nocapture` — 6 passed
+- `cargo test -p ash-parser --test task_1362_proof_keyword_impl -- --nocapture` — 5 passed
 - `cargo test -p ash-parser lexer::tests::test_all_keywords -- --nocapture` — 1 passed
 - `cargo test -p ash-engine --test task_568_monomorphize --no-run` — passed
 - `cargo test --workspace --no-run` — passed

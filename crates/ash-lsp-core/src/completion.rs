@@ -87,7 +87,9 @@ fn definition_name(current_token: Option<&str>, def: &Definition) -> Option<Stri
         Definition::TypeFn(t) => Some(t.name.as_ref().to_string()),
         Definition::PropositionPredicate(p) if Some(p.name.as_ref()) == current_token => None,
         Definition::PropositionPredicate(p) => Some(p.name.as_ref().to_string()),
-        Definition::Impl(_) | Definition::Law(_) => None, // impl blocks don't have a useful single name
+        Definition::Impl(_) | Definition::Law(_) => None, // impl blocks and laws don't have a useful completion name
+        Definition::Proof(p) if Some(p.name.as_ref()) == current_token => None,
+        Definition::Proof(p) => Some(p.name.as_ref().to_string()),
         Definition::BuiltinFn(b) if Some(b.name.as_ref()) == current_token => None,
         Definition::BuiltinFn(b) => Some(b.name.as_ref().to_string()),
         Definition::SealedDomain(d) if Some(d.name.as_ref()) == current_token => None,
@@ -112,7 +114,7 @@ const fn definition_kind(def: &Definition) -> CompletionItemKind {
         }
         Definition::CapabilityImplementation(_) | Definition::Impl(_) => CompletionItemKind::CLASS,
         Definition::SealedDomain(_) | Definition::DataKind(_) => CompletionItemKind::ENUM,
-        Definition::Law(_) => CompletionItemKind::PROPERTY,
+        Definition::Law(_) | Definition::Proof(_) => CompletionItemKind::PROPERTY,
     }
 }
 

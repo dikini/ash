@@ -127,20 +127,6 @@ fn parses_expression_body_inside_impl_proof() {
 }
 
 #[test]
-fn module_scoped_proof_remains_rejected_until_task_1363() {
-    let source = r#"
-        proof orphan_reflexivity(x: String) {
-            by_definition
-        }
-        "#;
-
-    assert!(
-        ash_parser::parse_surface_file(source).is_err(),
-        "module-scoped proof is TASK-1363 and must not be silently recovered in TASK-1362"
-    );
-}
-
-#[test]
 fn parses_proof_without_constraints() {
     let impl_def = first_impl(
         r#"

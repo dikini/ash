@@ -121,6 +121,8 @@ pub enum Definition {
     SealedDomain(SealedDomainDef),
     /// Law definition
     Law(LawDef),
+    /// Proof definition
+    Proof(ProofDef),
 }
 
 /// Explicit named data-kind promotion declaration parsed as surface syntax.
@@ -818,7 +820,7 @@ pub struct LawDef {
     pub span: Span,
 }
 
-/// A proof declaration inside an impl block.
+/// A proof declaration inside an impl block or at module scope.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ProofDef {
     /// Proof name

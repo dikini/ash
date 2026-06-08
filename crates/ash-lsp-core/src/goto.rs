@@ -51,6 +51,7 @@ fn find_definition_span<'a>(token: &str, definitions: &'a [Definition]) -> Optio
             Definition::BuiltinFn(b) => b.name.as_ref() == token,
             Definition::SealedDomain(d) => d.name.as_ref() == token,
             Definition::Law(_) => false,
+            Definition::Proof(p) => p.name.as_ref() == token,
         };
         if name_matches {
             return Some(match def {
@@ -71,6 +72,7 @@ fn find_definition_span<'a>(token: &str, definitions: &'a [Definition]) -> Optio
                 Definition::BuiltinFn(b) => &b.span,
                 Definition::SealedDomain(d) => &d.span,
                 Definition::Law(l) => &l.span,
+                Definition::Proof(p) => &p.span,
             });
         }
         // Check interface/impl method names.

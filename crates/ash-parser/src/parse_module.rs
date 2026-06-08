@@ -246,9 +246,8 @@ fn parse_definitions(input: &mut ParseInput) -> ModalResult<Vec<Definition>> {
         }
 
         if starts_with_keyword(input, "proof") {
-            return Err(winnow::error::ErrMode::Cut(
-                winnow::error::ContextError::new(),
-            ));
+            definitions.push(parse_proof_definition_as_definition(input)?);
+            continue;
         }
 
         if starts_with_unsupported_inline_definition(input) {
@@ -1544,6 +1543,11 @@ fn parse_law_definition(input: &mut ParseInput) -> ModalResult<LawDef> {
 fn parse_law_definition_as_definition(input: &mut ParseInput) -> ModalResult<Definition> {
     let law = parse_law_definition(input)?;
     Ok(Definition::Law(law))
+}
+
+fn parse_proof_definition_as_definition(input: &mut ParseInput) -> ModalResult<Definition> {
+    let proof = parse_proof_definition(input)?;
+    Ok(Definition::Proof(proof))
 }
 
 fn parse_impl_definition(input: &mut ParseInput) -> ModalResult<Definition> {
@@ -3739,9 +3743,8 @@ pub fn module_file(input: &mut ParseInput) -> ModalResult<crate::surface::Module
         }
 
         if starts_with_keyword(input, "proof") {
-            return Err(winnow::error::ErrMode::Cut(
-                winnow::error::ContextError::new(),
-            ));
+            definitions.push(parse_proof_definition_as_definition(input)?);
+            continue;
         }
 
         if starts_with_unsupported_proposition_surface(input) {

@@ -4052,7 +4052,7 @@ Adds `law` and `proof` syntax to Ash interfaces and modules, enabling declarativ
 | [TASK-1360](tasks/TASK-1360-parser-law-in-interfaces.md) | Parser: `law` keyword in interfaces | Complete |
 | [TASK-1361](tasks/TASK-1361-parser-law-module-scope.md) | Parser: `law` keyword at module scope | Complete |
 | [TASK-1362](tasks/TASK-1362-parser-proof-in-impls.md) | Parser: `proof` keyword in impl blocks | Complete |
-| [TASK-1363](tasks/TASK-1363-parser-proof-module-scope.md) | Parser: `proof` keyword at module scope | Planned |
+| [TASK-1363](tasks/TASK-1363-parser-proof-module-scope.md) | Parser: `proof` keyword at module scope | Complete |
 | [TASK-1364](tasks/TASK-1364-typeck-law-name-checking.md) | Typechecker: verify law proposition names exist | Planned |
 | [TASK-1365](tasks/TASK-1365-typeck-proof-name-checking.md) | Typechecker: verify proof names match declared laws | Planned |
 | [TASK-1366](tasks/TASK-1366-typeck-law-purity-restriction.md) | Typechecker: restrict law propositions to Pure functions | Planned |

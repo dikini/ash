@@ -186,7 +186,7 @@ fn definition_symbol(definition: &Definition) -> Option<DocumentSymbol> {
             &def.span,
             None,
         )),
-        Definition::Law(_) => None,
+        Definition::Law(_) | Definition::Proof(_) => None,
     }
 }
 
@@ -235,6 +235,7 @@ pub fn document_symbols(module: &ModuleFile) -> Vec<DocumentSymbol> {
             Definition::BuiltinFn(def) => def.span.start,
             Definition::SealedDomain(def) => def.span.start,
             Definition::Law(def) => def.span.start,
+            Definition::Proof(def) => def.span.start,
         };
         if let Some(sym) = definition_symbol(definition) {
             entries.push((start, sym));

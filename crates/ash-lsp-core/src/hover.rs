@@ -348,6 +348,10 @@ fn definition_hover(definition: &Definition) -> Hover {
             Some(format!("Constructors: {}", def.constructors.len())),
         ),
         Definition::Law(_) => markdown("law".to_string(), Some("Law declaration".to_string())),
+        Definition::Proof(def) => markdown(
+            format!("proof {}", def.name),
+            Some(format!("Parameters: {}", def.params.len())),
+        ),
     }
 }
 
@@ -406,6 +410,7 @@ fn top_level_hover(token: &str, module: &ModuleFile) -> Option<Hover> {
                             Definition::Role(def) => def.name.as_ref() == token,
                             Definition::Proxy(def) => def.name.as_ref() == token,
                             Definition::Function(def) => def.name.as_ref() == token,
+                            Definition::Proof(def) => def.name.as_ref() == token,
                             Definition::Interface(_) | Definition::Impl(_) | Definition::Law(_) => {
                                 false
                             }
@@ -450,6 +455,7 @@ fn top_level_hover(token: &str, module: &ModuleFile) -> Option<Hover> {
                     Definition::Role(def) => def.name.as_ref() == token,
                     Definition::Proxy(def) => def.name.as_ref() == token,
                     Definition::Function(def) => def.name.as_ref() == token,
+                    Definition::Proof(def) => def.name.as_ref() == token,
                     Definition::Interface(_) | Definition::Impl(_) | Definition::Law(_) => false,
                     Definition::BuiltinFn(b) => b.name.as_ref() == token,
                     Definition::SealedDomain(d) => d.name.as_ref() == token,

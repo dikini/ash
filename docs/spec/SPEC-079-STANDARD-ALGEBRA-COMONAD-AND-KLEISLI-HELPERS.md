@@ -8,7 +8,7 @@
 
 ## Summary
 
-This specification extends the `std::algebra` roadmap beyond the Phase 133 `Semigroup`, `Monoid`, `Functor`, `Applicative`, and `Monad` MVP. Phase 134 implements the current source-visible `Comonad` interface and concrete Option/Result Kleisli helper module, while recording explicit Cokleisli and Coapplicative deferrals. Ash must not add vague or mathematically unstable interfaces merely because names are dual to existing algebra names.
+This specification extends the `std::algebra` roadmap beyond the Phase 133 `Semigroup`, `Monoid`, `Functor`, `Applicative`, and `Monad` MVP. Phase 134 initially implemented a source-visible `Comonad` interface and temporary concrete Option/Result Kleisli helper module while recording explicit Cokleisli and Coapplicative deferrals. Phase 135 supersedes the temporary monomorphic/helper surfaces with generic interface methods and no concrete carrier wrappers in `std::algebra`. Ash must not add vague or mathematically unstable interfaces merely because names are dual to existing algebra names.
 
 The phase does not add syntax. It must use existing modules, imports, interfaces, impls, ordinary functions, function types, constructor-kinded parameters, and current standard-library evidence. If the live language cannot express a logical signature directly, the audit gate must translate it into the exact accepted Ash surface or defer that row.
 
@@ -24,7 +24,7 @@ The same stability creates a risk. `Comonad<Option>`, `Comonad<Result<_, E>>`, o
 
 SPEC-078 remains the authority for the implemented Phase 133 algebra MVP. It introduced `std::algebra` and deliberately deferred category-level abstractions. SPEC-079 partially retires only the `comonad` portion of that future-work sentence by implementing the current `Comonad` interface and recording Cokleisli helper blockers. It does not retire the broader category, arrow, bifunctor, or profunctor deferrals.
 
-The current source implementation of Phase 133 is an MVP surface, not the fully polymorphic logical target. In particular, current `Functor`, `Applicative`, and `Monad` source interfaces use constructor-kinded parameters but monomorphic `Int` method payloads where method-level generics and higher-rank helpers are not yet accepted. SPEC-079 follows the same discipline: logical signatures describe the intended contract, while TASK-1031 must freeze exact live Ash syntax before any source implementation task starts.
+Phase 135 supersedes the earlier MVP limitation: live interface method signatures now use free method-level type variables such as `map(F<A>, A -> B) -> F<B>` and `bind(M<A>, A -> M<B>) -> M<B>`. `std::algebra` modules remain interface/evidence surfaces; concrete carrier operations live in carrier modules rather than algebra wrapper modules.
 
 ## Namespace decision
 
@@ -67,16 +67,16 @@ duplicate(wa) = extend(wa, identity)
 
 If the implementation chooses `extract + duplicate` as primitives instead, it must still expose `extend` where the language can express it, because Cokleisli composition is clearest in terms of `extend`.
 
-Current-MVP source may need to be narrower, for example:
+Live Phase 135 source uses the generic interface shape directly:
 
 ```ash
 pub interface Comonad<W : * -> *> {
-    extract(W<Int>) -> Int
-    extend(W<Int>, W<Int> -> Int) -> W<Int>
+    extract(W<A>) -> A
+    extend(W<A>, W<A> -> B) -> W<B>
 }
 ```
 
-The exact accepted spelling is owned by TASK-1031.
+The earlier monomorphic `Int` spelling is historical only and must not be reintroduced into `std/src/algebra/comonad.ash`.
 
 ### Cokleisli helpers
 
@@ -104,7 +104,7 @@ compose<M,A,B,C> : (A -> M<B>) -> (B -> M<C>) -> A -> M<C>
 compose(f, g)(a) = bind(f(a), g)
 ```
 
-These helpers do not change `do:K` or comprehension lowering. They reuse the selected `Monad<M>` evidence path already implemented by Phase 133. If current Ash cannot express generic function-returning helpers, the task must either add concrete Option/Result wrappers or defer the helper with a named follow-up.
+These helpers do not change `do:K` or comprehension lowering. They reuse the selected `Monad<M>` evidence path already implemented by Phase 133. Until Ash source can call arbitrary selected interface methods for a generic carrier, `std::algebra::kleisli` must defer rather than publish concrete Option/Result wrappers; carrier-specific operations belong in `std::option` and `std::result`.
 
 ### `Coapplicative` decision gate
 
@@ -217,4 +217,4 @@ Filtered cargo commands must prove non-zero execution or be paired with artifact
 
 ### 2026-06-07
 
-- Promoted to Implemented MVP after Phase 134 landed the current `std::algebra::comonad` interface, concrete Option/Result Kleisli helpers, explicit Cokleisli/Coapplicative deferrals, generated-law handoff ownership, and closeout evidence without adding new syntax or a general category hierarchy.
+- Promoted to Implemented MVP after Phase 134 landed the current `std::algebra::comonad` interface, explicit Cokleisli/Coapplicative deferrals, generated-law handoff ownership, and closeout evidence without adding new syntax or a general category hierarchy. Phase 135 later removed the temporary concrete Option/Result Kleisli wrappers and made the Comonad method payloads generic.

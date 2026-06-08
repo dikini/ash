@@ -3984,7 +3984,7 @@ Phase 133 adds a source-visible `std::algebra` namespace for `Semigroup`, `Monoi
 **Spec:** [SPEC-079](../spec/SPEC-079-STANDARD-ALGEBRA-COMONAD-AND-KLEISLI-HELPERS.md)
 **Plan:** [PLAN-129](PLAN-129-STANDARD-ALGEBRA-COMONAD-AND-KLEISLI-HELPERS.md)
 
-Phase 134 implements the next current-MVP `std::algebra` extension after Phase 133: a source-visible `Comonad` interface and concrete Option/Result Kleisli helpers over existing Monad evidence. It explicitly defers Cokleisli helpers until a lawful Comonad carrier or evidence-method dispatch exists, defers Coapplicative pending accepted laws and a lawful carrier, and keeps `std::category`, broad category abstractions, and unsound partial/opaque Comonad instances absent.
+Phase 134 introduced the next current-MVP `std::algebra` extension after Phase 133: a source-visible `Comonad` interface and an initial Kleisli module. Phase 135 supersedes the temporary concrete Option/Result Kleisli wrappers and monomorphic Comonad payloads: the live surface keeps generic `Comonad` methods, publishes no concrete carrier wrappers from `std::algebra::kleisli`, explicitly defers generic Kleisli/Cokleisli helpers until lawful selected evidence-method dispatch exists, defers Coapplicative pending accepted laws and a lawful carrier, and keeps `std::category`, broad category abstractions, and unsound partial/opaque Comonad instances absent.
 
 | Task | Description | Est. Hours | Status |
 |------|-------------|------------|--------|
@@ -4009,7 +4009,7 @@ Phase 134 implements the next current-MVP `std::algebra` extension after Phase 1
 ## Phase 135: Interface Evidence Constraints
 
 **Priority:** High (type-system correctness and algebra interface readability)
-**Status:** 📝 Planned
+**Status:** ✅ Complete
 **Spec:** [SPEC-080](../spec/SPEC-080-INTERFACE-EVIDENCE-CONSTRAINTS.md)
 **Plan:** [PLAN-130](PLAN-130-INTERFACE-EVIDENCE-CONSTRAINTS.md)
 
@@ -4027,6 +4027,7 @@ Phase 135 adds interface-level evidence constraints. The motivating final syntax
 | [TASK-1045](tasks/TASK-1045-stdlib-applicative-functor-constraint.md) | Migrate stdlib `Applicative` to `where F: Functor` and reconcile examples/reference wording | 8 | ✅ Complete |
 | [TASK-1046](tasks/TASK-1046-stdlib-monoid-semigroup-constraint.md) | Migrate stdlib `Monoid` to `where A: Semigroup` and reconcile examples/reference wording | 8 | ✅ Complete |
 | [TASK-1048](tasks/TASK-1048-interface-evidence-constraints-closeout.md) | Run diagnostics, broad verification, independent review, and status reconciliation | 8 | ✅ Complete |
+| [TASK-1049](tasks/TASK-1049-algebra-generic-interface-cleanup.md) | Replace monomorphic algebra method payloads with generic signatures and remove misplaced concrete carrier wrappers from `std::algebra` | 6 | ✅ Complete |
 
 **Decision gates:**
 - D1: Interface-level constraints express required evidence; generic blanket impls are not used to encode this relationship.

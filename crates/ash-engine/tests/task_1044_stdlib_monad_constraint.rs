@@ -37,6 +37,8 @@ fn stdlib_monad_surface_requires_applicative_evidence() {
     assert!(
         matches!(&constraint.interface, ash_parser::surface::Type::Name(name) if name.as_ref() == "Applicative")
     );
+    assert!(source.contains("unit(A) -> M<A>"), "{source}");
+    assert!(source.contains("bind(M<A>, A -> M<B>) -> M<B>"), "{source}");
 }
 
 #[test]

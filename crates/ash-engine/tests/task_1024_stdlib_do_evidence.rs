@@ -21,98 +21,95 @@ fn parse_std_module(relative: &str) -> ash_parser::surface::ModuleFile {
         .unwrap_or_else(|errors| panic!("{relative} should parse: {errors:?}"))
 }
 
-fn option_int() -> Type {
-    Type::Constructor {
-        name: QualifiedName::root("Option"),
-        args: vec![Type::Int],
-        kind: Kind::Type,
-    }
-}
-
-fn result_int() -> Type {
-    Type::Constructor {
-        name: QualifiedName::root("Result"),
-        args: vec![Type::Int, Type::Var(TypeVar::fresh())],
-        kind: Kind::Type,
-    }
-}
-
 fn bind_stdlib_monad_helper_signatures(env: &mut TypeEnv) {
-    let option_int = option_int();
-    let result_int = result_int();
+    let a = Type::Var(TypeVar::fresh());
+    let b = Type::Var(TypeVar::fresh());
+    let e = Type::Var(TypeVar::fresh());
+    let option_a = Type::Constructor {
+        name: QualifiedName::root("Option"),
+        args: vec![a.clone()],
+        kind: Kind::Type,
+    };
+    let option_b = Type::Constructor {
+        name: QualifiedName::root("Option"),
+        args: vec![b.clone()],
+        kind: Kind::Type,
+    };
     let option_fn = Type::Constructor {
         name: QualifiedName::root("Option"),
-        args: vec![Type::Fn(vec![Type::Int], Box::new(Type::Int))],
+        args: vec![Type::Fn(vec![a.clone()], Box::new(b.clone()))],
+        kind: Kind::Type,
+    };
+    let result_a = Type::Constructor {
+        name: QualifiedName::root("Result"),
+        args: vec![a.clone(), e.clone()],
+        kind: Kind::Type,
+    };
+    let result_b = Type::Constructor {
+        name: QualifiedName::root("Result"),
+        args: vec![b.clone(), e.clone()],
         kind: Kind::Type,
     };
     let result_fn = Type::Constructor {
         name: QualifiedName::root("Result"),
-        args: vec![
-            Type::Fn(vec![Type::Int], Box::new(Type::Int)),
-            Type::Var(TypeVar::fresh()),
-        ],
+        args: vec![Type::Fn(vec![a.clone()], Box::new(b.clone())), e],
         kind: Kind::Type,
     };
+
     env.bind_variable(
         "option::map",
         Type::Fn(
             vec![
-                option_int.clone(),
-                Type::Fn(vec![Type::Int], Box::new(Type::Int)),
+                option_a.clone(),
+                Type::Fn(vec![a.clone()], Box::new(b.clone())),
             ],
-            Box::new(option_int.clone()),
+            Box::new(option_b.clone()),
         ),
     );
     env.bind_variable(
         "option::pure",
-        Type::Fn(vec![Type::Int], Box::new(option_int.clone())),
+        Type::Fn(vec![a.clone()], Box::new(option_a.clone())),
     );
     env.bind_variable(
         "option::apply",
         Type::Fn(
-            vec![option_fn, option_int.clone()],
-            Box::new(option_int.clone()),
+            vec![option_fn, option_a.clone()],
+            Box::new(option_b.clone()),
         ),
     );
     env.bind_variable(
         "option::and_then",
         Type::Fn(
             vec![
-                option_int.clone(),
-                Type::Fn(vec![Type::Int], Box::new(option_int.clone())),
+                option_a,
+                Type::Fn(vec![a.clone()], Box::new(option_b.clone())),
             ],
-            Box::new(option_int),
+            Box::new(option_b),
         ),
     );
     env.bind_variable(
         "result::map",
         Type::Fn(
-            vec![
-                result_int.clone(),
-                Type::Fn(vec![Type::Int], Box::new(Type::Int)),
-            ],
-            Box::new(result_int.clone()),
+            vec![result_a.clone(), Type::Fn(vec![a.clone()], Box::new(b))],
+            Box::new(result_b.clone()),
         ),
     );
     env.bind_variable(
         "result::pure",
-        Type::Fn(vec![Type::Int], Box::new(result_int.clone())),
+        Type::Fn(vec![a.clone()], Box::new(result_a.clone())),
     );
     env.bind_variable(
         "result::apply",
         Type::Fn(
-            vec![result_fn, result_int.clone()],
-            Box::new(result_int.clone()),
+            vec![result_fn, result_a.clone()],
+            Box::new(result_b.clone()),
         ),
     );
     env.bind_variable(
         "result::and_then",
         Type::Fn(
-            vec![
-                result_int.clone(),
-                Type::Fn(vec![Type::Int], Box::new(result_int.clone())),
-            ],
-            Box::new(result_int),
+            vec![result_a, Type::Fn(vec![a], Box::new(result_b.clone()))],
+            Box::new(result_b),
         ),
     );
 }

@@ -8,9 +8,11 @@ algebra law-test owner and deliberately does not implement law-test execution.
 ## Implemented Surface Inputs
 
 - `std::algebra::comonad::Comonad` is a source-visible interface with
-  monomorphic `Int` payload methods: `extract` and `extend`.
-- `std::algebra::kleisli` exposes concrete Option/Result helper wrappers:
-  `id_option`, `compose_option`, `id_result`, and `compose_result`.
+  generic payload methods: `extract(W<A>) -> A` and
+  `extend(W<A>, W<A> -> B) -> W<B>`.
+- `std::algebra::kleisli` exposes no concrete Option/Result helper wrappers;
+  concrete operations remain carrier-owned and generic Kleisli helpers remain
+  deferred until selected `Monad<M>` method dispatch is source-visible.
 - No `Comonad` instances are registered for `Option`, `Result`, ordinary
   `List`, `Act`, `Proc`, or `Workflow`.
 
@@ -40,9 +42,11 @@ algebra law-test owner and deliberately does not implement law-test execution.
 - Right identity: `compose(f, unit) == f`.
 - Associativity:
   `compose(compose(f, g), h) == compose(f, compose(g, h))`.
-- Current executable helper candidates: Option and Result concrete wrappers.
-- Required metadata: Monad law metadata, generator for `Int`, generator set for
-  total `Int -> M<Int>` fixtures, and equivalence for `M<Int>`.
+- Current executable helper candidates: none from `std::algebra::kleisli`.
+  Carrier-owned Option/Result operations can inform future law metadata, but
+  `std::algebra` must not publish concrete wrappers.
+- Required metadata: Monad law metadata, generators for `A`/`B` payloads,
+  generator sets for total `A -> M<B>` fixtures, and equivalence for `M<B>`.
 
 ### Cokleisli
 

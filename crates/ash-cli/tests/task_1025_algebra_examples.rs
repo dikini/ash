@@ -4,18 +4,16 @@ use assert_cmd::Command;
 use tempfile::tempdir;
 
 #[test]
-fn algebra_examples_cli_checks_option_result_monoid_and_tower_imports() {
+fn algebra_examples_cli_checks_interfaces_and_carrier_owned_helpers() {
     let project = tempdir().expect("project");
     let main = project.path().join("algebra_examples.ash");
     std::fs::write(
         &main,
-        r#"use algebra::functor::{map_option, map_result, map_list}
-use algebra::applicative::{pure_option, apply_option, pure_result, apply_result}
-use algebra::monad::{unit_option, bind_option, unit_result, bind_result}
-use algebra::monoid::{concat_string, concat_list}
-use act::{unit, then}
+        r#"use algebra::{Functor, Applicative, Monad, Monoid}
+use algebra::comonad::{Comonad}
+use string::{concat}
 
-workflow main { ret 0 }
+workflow main { ret concat("ok", "!") }
 "#,
     )
     .expect("write example");

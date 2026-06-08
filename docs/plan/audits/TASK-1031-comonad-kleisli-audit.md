@@ -3,49 +3,32 @@
 ## Live syntax findings
 
 Current `std::algebra` source uses ordinary file-backed modules under
-`std/src/algebra/`, public interfaces, public helper functions, and carrier-local
-`pub impl` blocks. Constructor-kinded interface parameters are accepted in the
-Phase 133 form:
+`std/src/algebra/`, public interfaces, and carrier-local `pub impl` blocks.
+Constructor-kinded interface parameters are accepted, and Phase 135 later
+superseded the Phase 133/134 monomorphic payload placeholders with generic
+interface method payloads:
 
 ```ash
 pub interface Monad<M : * -> *> {
-    unit(Int) -> M<Int>
-    bind(M<Int>, Int -> M<Int>) -> M<Int>
+    unit(A) -> M<A>
+    bind(M<A>, A -> M<B>) -> M<B>
 }
 ```
 
-The accepted Comonad first slice therefore uses the same monomorphic payload
-shape:
+The live Comonad surface now uses the same generic payload shape:
 
 ```ash
 pub interface Comonad<W : * -> *> {
-    extract(W<Int>) -> Int
-    extend(W<Int>, W<Int> -> Int) -> W<Int>
+    extract(W<A>) -> A
+    extend(W<A>, W<A> -> B) -> W<B>
 }
 ```
 
-The logical fully generic signatures from SPEC-079 remain unimplemented because
-the live Phase 133 algebra files intentionally use `Int` method payloads where
-method-level polymorphism and higher-rank helper signatures are not yet
-available.
-
-Kleisli helpers are expressible only as concrete final-surface wrappers over
-the public Phase 133 Monad helper functions. The accepted first slice is:
-
-```ash
-pub fn id_option(value: Int) -> Option<Int> { unit_option(value) }
-pub fn compose_option(
-    value: Int,
-    f: (Int) -> Option<Int>,
-    g: (Int) -> Option<Int>
-) -> Option<Int> {
-    bind_option(f(value), g)
-}
-```
-
-and the equivalent `Result<Int, E>` shape. A fully generic curried
-`compose<M,A,B,C>` helper is blocked by the current source surface and remains a
-named deferral.
+Kleisli helper functions are not published from `std::algebra`. The earlier
+Phase 134 concrete Option/Result wrapper sketch was a temporary first-slice
+surface and is now superseded: concrete operations belong to carrier modules,
+and a lawful carrier-polymorphic Kleisli helper remains deferred until source
+can dispatch selected `Monad<M>` methods honestly.
 
 Cokleisli helpers are not source-implemented in this phase. The interface can be
 imported, but there is no lawful first-slice Comonad carrier and no current
@@ -105,14 +88,15 @@ only if the helper source checks. TASK-1034 and TASK-1035 must leave
 
 ## Evidence selection and helper-function seams
 
-Source helper functions can call public module functions such as
-`option::and_then`, `result::and_then`, and `algebra::monad::bind_option`.
-Existing `std/src/algebra/monad.ash` proves this helper style for
-`unit_option`, `bind_option`, `unit_result`, and `bind_result`.
+Carrier modules can call public module functions such as `option::and_then`,
+`result::and_then`, `option::pure`, and `result::pure` when implementing their
+own evidence. `std::algebra` itself should not publish carrier-specific wrapper
+functions such as `bind_option`, `unit_option`, `id_option`, or
+`compose_option`.
 
 Current `do:K` lowering resolves selected `Monad<K>` evidence in Rust
-typechecker code. This phase must not alter that lowering. Kleisli helpers
-should reuse the public source wrappers and stay ordinary functions.
+typechecker code. This phase must not alter that lowering. Generic Kleisli
+helpers remain deferred until selected evidence-method dispatch is source-visible.
 
 There is no source syntax in the existing algebra modules for calling arbitrary
 interface methods from selected evidence. That blocks a generic Cokleisli

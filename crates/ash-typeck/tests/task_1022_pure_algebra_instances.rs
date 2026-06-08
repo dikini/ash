@@ -26,24 +26,34 @@ fn bind_stdlib_pure_helper_signatures(env: &mut TypeEnv) {
     let e = Type::Var(TypeVar::fresh());
     let list_a = Type::List(Box::new(a.clone()));
     let list_b = Type::List(Box::new(b.clone()));
-    let option_int = Type::Constructor {
+    let option_a = Type::Constructor {
         name: QualifiedName::root("Option"),
-        args: vec![Type::Int],
+        args: vec![a.clone()],
+        kind: Kind::Type,
+    };
+    let option_b = Type::Constructor {
+        name: QualifiedName::root("Option"),
+        args: vec![b.clone()],
         kind: Kind::Type,
     };
     let option_fn = Type::Constructor {
         name: QualifiedName::root("Option"),
-        args: vec![Type::Fn(vec![Type::Int], Box::new(Type::Int))],
+        args: vec![Type::Fn(vec![a.clone()], Box::new(b.clone()))],
         kind: Kind::Type,
     };
-    let string_error_result_int = Type::Constructor {
+    let result_a = Type::Constructor {
         name: QualifiedName::root("Result"),
-        args: vec![Type::Int, e.clone()],
+        args: vec![a.clone(), e.clone()],
         kind: Kind::Type,
     };
-    let string_error_result_fn = Type::Constructor {
+    let result_b = Type::Constructor {
         name: QualifiedName::root("Result"),
-        args: vec![Type::Fn(vec![Type::Int], Box::new(Type::Int)), e],
+        args: vec![b.clone(), e.clone()],
+        kind: Kind::Type,
+    };
+    let result_fn = Type::Constructor {
+        name: QualifiedName::root("Result"),
+        args: vec![Type::Fn(vec![a.clone()], Box::new(b.clone())), e],
         kind: Kind::Type,
     };
 
@@ -53,75 +63,81 @@ fn bind_stdlib_pure_helper_signatures(env: &mut TypeEnv) {
     );
     env.bind_variable(
         "list::concat",
-        Type::Fn(vec![list_a.clone(), list_a.clone()], Box::new(list_a)),
+        Type::Fn(
+            vec![list_a.clone(), list_a.clone()],
+            Box::new(list_a.clone()),
+        ),
     );
     env.bind_variable(
         "list::map",
         Type::Fn(
-            vec![list_b, Type::Fn(vec![b], Box::new(a.clone()))],
-            Box::new(Type::List(Box::new(a))),
+            vec![
+                list_a.clone(),
+                Type::Fn(vec![a.clone()], Box::new(b.clone())),
+            ],
+            Box::new(list_b),
         ),
     );
     env.bind_variable(
         "option::map",
         Type::Fn(
             vec![
-                option_int.clone(),
-                Type::Fn(vec![Type::Int], Box::new(Type::Int)),
+                option_a.clone(),
+                Type::Fn(vec![a.clone()], Box::new(b.clone())),
             ],
-            Box::new(option_int.clone()),
+            Box::new(option_b.clone()),
         ),
     );
     env.bind_variable(
         "option::pure",
-        Type::Fn(vec![Type::Int], Box::new(option_int.clone())),
+        Type::Fn(vec![a.clone()], Box::new(option_a.clone())),
     );
     env.bind_variable(
         "option::apply",
         Type::Fn(
-            vec![option_fn, option_int.clone()],
-            Box::new(option_int.clone()),
+            vec![option_fn, option_a.clone()],
+            Box::new(option_b.clone()),
         ),
     );
     env.bind_variable(
         "option::and_then",
         Type::Fn(
             vec![
-                option_int.clone(),
-                Type::Fn(vec![Type::Int], Box::new(option_int.clone())),
+                option_a.clone(),
+                Type::Fn(vec![a.clone()], Box::new(option_b.clone())),
             ],
-            Box::new(option_int),
+            Box::new(option_b),
         ),
     );
     env.bind_variable(
         "result::map",
         Type::Fn(
             vec![
-                string_error_result_int.clone(),
-                Type::Fn(vec![Type::Int], Box::new(Type::Int)),
+                result_a.clone(),
+                Type::Fn(vec![a.clone()], Box::new(b.clone())),
             ],
-            Box::new(string_error_result_int.clone()),
+            Box::new(result_b.clone()),
         ),
     );
     env.bind_variable(
         "result::pure",
-        Type::Fn(vec![Type::Int], Box::new(string_error_result_int.clone())),
+        Type::Fn(vec![a.clone()], Box::new(result_a.clone())),
     );
     env.bind_variable(
         "result::apply",
         Type::Fn(
-            vec![string_error_result_fn, string_error_result_int.clone()],
-            Box::new(string_error_result_int.clone()),
+            vec![result_fn, result_a.clone()],
+            Box::new(result_b.clone()),
         ),
     );
     env.bind_variable(
         "result::and_then",
         Type::Fn(
             vec![
-                string_error_result_int.clone(),
-                Type::Fn(vec![Type::Int], Box::new(string_error_result_int.clone())),
+                result_a.clone(),
+                Type::Fn(vec![a], Box::new(result_b.clone())),
             ],
-            Box::new(string_error_result_int),
+            Box::new(result_b),
         ),
     );
 }
@@ -159,6 +175,19 @@ fn env_with_task1022_stdlib_algebra() -> TypeEnv {
     }
 
     env
+}
+
+fn interface_from_source(source: &str) -> ash_parser::surface::InterfaceDef {
+    let module = ash_parser::parse_surface_file(source)
+        .unwrap_or_else(|errors| panic!("interface source should parse: {source}\n{errors:?}"));
+    module
+        .definitions
+        .into_iter()
+        .find_map(|definition| match definition {
+            Definition::Interface(interface) => Some(interface),
+            _ => None,
+        })
+        .unwrap_or_else(|| panic!("interface source should contain an interface: {source}"))
 }
 
 fn impl_from_source(source: &str) -> ash_parser::surface::ImplDef {
@@ -287,7 +316,7 @@ fn pure_algebra_instances_typeck_ambiguous_result_evidence_fails_closed() {
 }
 
 #[test]
-fn pure_algebra_instances_typeck_uses_task1021_monomorphic_method_surface() {
+fn pure_algebra_instances_typeck_uses_generic_method_payload_surface() {
     let env = env_with_task1022_stdlib_algebra();
     let evidence = env
         .resolve_interface_evidence("Monad", &[SurfaceType::Name("Option".into())])
@@ -318,5 +347,121 @@ fn pure_algebra_instances_typeck_uses_task1021_monomorphic_method_surface() {
             .iter()
             .any(|method| method.name == "bind" && method.params.len() == 2),
         "Monad<Option> should provide the canonical bind method"
+    );
+}
+
+#[test]
+fn pure_algebra_instances_monomorphize_generic_functor_method_payloads_at_call_site() {
+    let env = env_with_task1022_stdlib_algebra();
+    let option_string = Type::Constructor {
+        name: QualifiedName::root("Option"),
+        args: vec![Type::String],
+        kind: Kind::Type,
+    };
+    let string_to_bool = Type::Fn(vec![Type::String], Box::new(Type::Bool));
+
+    let option_return_type = env
+        .resolve_interface_method_call("Functor", "map", &[option_string, string_to_bool])
+        .expect("Functor<Option>::map should monomorphize method payload vars from call args");
+
+    assert_eq!(
+        option_return_type,
+        Type::Constructor {
+            name: QualifiedName::root("Option"),
+            args: vec![Type::Bool],
+            kind: Kind::Type,
+        }
+    );
+
+    let result_string_error = Type::Constructor {
+        name: QualifiedName::root("Result"),
+        args: vec![Type::String, Type::Int],
+        kind: Kind::Type,
+    };
+    let string_to_bool = Type::Fn(vec![Type::String], Box::new(Type::Bool));
+    let result_return_type = env
+        .resolve_interface_method_call("Functor", "map", &[result_string_error, string_to_bool])
+        .expect("Functor<Result<_, E>>::map should monomorphize value payload without losing E");
+
+    assert_eq!(
+        result_return_type,
+        Type::Constructor {
+            name: QualifiedName::root("Result"),
+            args: vec![Type::Bool, Type::Int],
+            kind: Kind::Type,
+        }
+    );
+}
+
+#[test]
+fn generic_interface_impl_method_body_must_not_specialize_payload_vars() {
+    let mut env = TypeEnv::with_builtin_types();
+    let interface = interface_from_source(
+        r#"
+            interface Functor<F : * -> *> {
+                map(F<A>, A -> B) -> F<B>
+            }
+            "#,
+    );
+    env.register_interface(&interface)
+        .expect("generic Functor interface should register");
+    env.bind_variable(
+        "option::pure",
+        Type::Fn(
+            vec![Type::Int],
+            Box::new(Type::Constructor {
+                name: QualifiedName::root("Option"),
+                args: vec![Type::Int],
+                kind: Kind::Type,
+            }),
+        ),
+    );
+    let implementation = impl_from_source(
+        r#"
+            impl Functor<Option> {
+                map(value, f) = option::pure(1)
+            }
+            "#,
+    );
+
+    let err = env
+        .register_impl(&implementation)
+        .expect_err("impl body that specializes generic payload vars must be rejected");
+    let message = err.to_string();
+    assert!(
+        message.contains("must keep method payload type variable")
+            && message.contains("constrains"),
+        "expected generic payload specialization diagnostic, got: {message}"
+    );
+}
+
+#[test]
+fn generic_interface_impl_method_body_must_not_collapse_payload_vars() {
+    let mut env = TypeEnv::with_builtin_types();
+    let interface = interface_from_source(
+        r#"
+            interface Functor<F : * -> *> {
+                map(F<A>, A -> B) -> F<B>
+            }
+            "#,
+    );
+    env.register_interface(&interface)
+        .expect("generic Functor interface should register");
+    let implementation = impl_from_source(
+        r#"
+            impl Functor<Option> {
+                map(value, f) = value
+            }
+            "#,
+    );
+
+    let err = env
+        .register_impl(&implementation)
+        .expect_err("impl body that collapses A and B must be rejected");
+    let message = err.to_string();
+    assert!(
+        message.contains("must keep method payload type variable")
+            && message.contains("constrains"),
+        "expected independent payload diagnostic, got: {message}"
     );
 }

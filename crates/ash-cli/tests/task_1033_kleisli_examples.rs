@@ -4,12 +4,12 @@ use assert_cmd::Command;
 use tempfile::tempdir;
 
 #[test]
-fn kleisli_examples_cli_checks_final_surface_imports() {
+fn kleisli_examples_cli_rejects_removed_concrete_wrappers() {
     let project = tempdir().expect("project");
     let main = project.path().join("kleisli_examples.ash");
     std::fs::write(
         &main,
-        r#"use algebra::kleisli::{id_option, compose_option, id_result, compose_result}
+        r#"use algebra::kleisli::{id_option}
 
 workflow main { ret 0 }
 "#,
@@ -24,9 +24,15 @@ workflow main { ret 0 }
         .expect("run ash check");
 
     assert!(
-        output.status.success(),
-        "ash check failed\nstdout:\n{}\nstderr:\n{}",
+        !output.status.success(),
+        "ash check unexpectedly succeeded\nstdout:\n{}\nstderr:\n{}",
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );
+    let combined = format!(
+        "{}\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(combined.contains("id_option"), "{combined}");
 }

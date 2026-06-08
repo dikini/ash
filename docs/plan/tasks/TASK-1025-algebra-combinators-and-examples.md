@@ -51,8 +51,8 @@ Depends on TASK-1024 completion.
 ## Evidence
 
 - RED: `std::algebra` exposed interfaces and carrier impls, but no practical helper function surface or CLI-checked example importing the algebra helpers with Option/Result/monoid/tower modules.
-- GREEN: Added honest helper wrappers for currently expressible Option, Result, List, and String operations, plus non-zero engine and CLI coverage, including executable final-surface `concat_string` and `concat_list` helper examples.
-- Scope correction: carrier impls now live with the carrier modules (`option.ash`, `result.ash`, `list.ash`, `string.ash`) instead of in `std/src/algebra/*.ash`; the algebra modules own interfaces and helper surfaces. More general higher-rank helpers such as `then`, `join`, `compose`, and `lift2` remain follow-up material until the current surface can express them without fake builtins.
+- GREEN: Added honest carrier-owned helper wrappers for currently expressible Option, Result, List, and String operations, plus non-zero engine and CLI coverage using final stdlib imports.
+- Phase 135 cleanup correction: carrier impls and concrete helper wrappers now live only with the carrier modules (`option.ash`, `result.ash`, `list.ash`, `string.ash`) instead of in `std/src/algebra/*.ash`; the algebra modules own interface surfaces only. Removed prior `std::algebra`-owned `concat_string`/`concat_list` examples from the final surface. More general higher-rank helpers such as `then`, `join`, `compose`, and `lift2` remain follow-up material until the current surface can express them without fake builtins.
 - Codex delegation: TASK-1025 was delegated to `codex exec`, but the spawned process was killed after it surfaced an unrelated hard-gate prompt instead of implementing; the work was completed manually in the phase worktree.
 
 ## Sub-Agent Prompts

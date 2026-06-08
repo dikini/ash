@@ -38,7 +38,7 @@ Add a Kleisli helper surface over existing Phase 133 `Monad<M>` evidence without
 2. Reuse existing `Monad<M>` evidence and public `unit`/`bind` surfaces.
 3. Do not alter generalized `do:K` or comprehension lowering.
 4. Do not introduce `Category` or `std::category`.
-5. If generic composition cannot be expressed, add concrete Option/Result helpers or record a named deferral.
+5. If generic composition cannot be expressed honestly, record a named deferral; do not add concrete Option/Result wrappers to `std::algebra`.
 
 ## TDD / Execution Steps
 

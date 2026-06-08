@@ -110,4 +110,4 @@ This task closes Phase 134 and reconciles SPEC-079, PLAN-129, PLAN-INDEX, task s
 
 ## Completion Notes
 
-Completed on 2026-06-07. Closeout evidence is recorded in `docs/plan/audits/TASK-1037-comonad-kleisli-closeout.md`. Phase 134 is complete for the current source slice: `Comonad` interface and concrete Option/Result Kleisli helpers are implemented; Cokleisli, Coapplicative, generated law execution, and broad category hierarchy work remain explicit deferrals.
+Completed on 2026-06-07, with final surface superseded by Phase 135 cleanup. Closeout evidence is recorded in `docs/plan/audits/TASK-1037-comonad-kleisli-closeout.md`. The current source slice keeps the `Comonad` interface, now with generic payload methods, and removes temporary concrete Option/Result Kleisli wrappers from `std::algebra`; Cokleisli, Coapplicative, generic Kleisli helpers, generated law execution, and broad category hierarchy work remain explicit deferrals.

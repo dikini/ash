@@ -634,6 +634,8 @@ pub enum PartialConstructorElaborationError {
 pub struct InterfaceMethodInfo {
     /// Interface-level type variables corresponding to the interface head.
     pub type_params: Vec<TypeVar>,
+    /// Implicit method-level type variables appearing in the method signature.
+    pub method_type_params: Vec<TypeVar>,
     /// Canonical single-argument parameter types.
     pub params: Vec<Type>,
     /// Declared return type.
@@ -866,6 +868,7 @@ pub struct ImplMethodInfo {
     pub name: String,
     pub param_names: Vec<String>,
     pub type_params: Vec<TypeVar>,
+    pub method_type_params: Vec<TypeVar>,
     pub params: Vec<Type>,
     pub return_type: Type,
     pub body: ash_core::ast::Expr,
@@ -1433,6 +1436,309 @@ fn surface_type_name(ty: &SurfaceType) -> Option<String> {
         SurfaceType::Name(name) => Some(name.to_string()),
         SurfaceType::Capability(name) => Some(name.to_string()),
         _ => None,
+    }
+}
+
+fn is_primitive_surface_type_name(name: &str) -> bool {
+    matches!(
+        name,
+        "Int" | "String" | "Bool" | "Float" | "Null" | "Unit" | "Time" | "Ref" | "()"
+    )
+}
+
+fn collect_implicit_interface_method_type_params(
+    ty: &SurfaceType,
+    param_mapping: &HashMap<String, TypeVar>,
+    type_env: &TypeEnv,
+    implicit_params: &mut BTreeMap<String, TypeVar>,
+) {
+    match ty {
+        SurfaceType::Name(name) => {
+            let name = name.as_ref();
+            if !param_mapping.contains_key(name)
+                && !is_primitive_surface_type_name(name)
+                && type_env.type_parameter_kind(name).is_none()
+                && type_env.resolve_type(name).is_err()
+            {
+                implicit_params
+                    .entry(name.to_string())
+                    .or_insert_with(TypeVar::fresh);
+            }
+        }
+        SurfaceType::Constructor { name, args } => {
+            let name = name.as_ref();
+            if param_mapping.contains_key(name)
+                || type_env.type_parameter_kind(name).is_some()
+                || name == "List"
+                || type_env.resolve_type(name).is_ok()
+            {
+                for arg in args {
+                    collect_implicit_interface_method_type_params(
+                        arg,
+                        param_mapping,
+                        type_env,
+                        implicit_params,
+                    );
+                }
+            }
+        }
+        SurfaceType::List(item) => collect_implicit_interface_method_type_params(
+            item,
+            param_mapping,
+            type_env,
+            implicit_params,
+        ),
+        SurfaceType::Tuple(items) => {
+            for item in items {
+                collect_implicit_interface_method_type_params(
+                    item,
+                    param_mapping,
+                    type_env,
+                    implicit_params,
+                );
+            }
+        }
+        SurfaceType::Record(fields) => {
+            for (_, field_ty) in fields {
+                collect_implicit_interface_method_type_params(
+                    field_ty,
+                    param_mapping,
+                    type_env,
+                    implicit_params,
+                );
+            }
+        }
+        SurfaceType::Fn(params, ret) => {
+            for param in params {
+                collect_implicit_interface_method_type_params(
+                    param,
+                    param_mapping,
+                    type_env,
+                    implicit_params,
+                );
+            }
+            collect_implicit_interface_method_type_params(
+                ret,
+                param_mapping,
+                type_env,
+                implicit_params,
+            );
+        }
+        SurfaceType::Associated { base, .. } => collect_implicit_interface_method_type_params(
+            base,
+            param_mapping,
+            type_env,
+            implicit_params,
+        ),
+        SurfaceType::AssociatedFamilyProjection { args, .. } => {
+            for arg in args {
+                collect_implicit_interface_method_type_params(
+                    arg,
+                    param_mapping,
+                    type_env,
+                    implicit_params,
+                );
+            }
+        }
+        SurfaceType::Hole { .. } | SurfaceType::Capability(_) => {}
+    }
+}
+
+fn bind_constructor_variable_for_method_call(
+    constructor: &str,
+    applied_arity: usize,
+    actual_constructor: Type,
+    constructor_bindings: &mut HashMap<String, Type>,
+) -> Result<(), TypeEnvError> {
+    if let Some(existing) = constructor_bindings.get(constructor) {
+        if existing != &actual_constructor {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "constructor variable '{constructor}' was inferred as both {existing} and {actual_constructor}"
+                ),
+                Span::default(),
+            ));
+        }
+        return Ok(());
+    }
+
+    let mut constructor_ty = actual_constructor;
+    if let Type::Constructor { kind, .. } = &mut constructor_ty {
+        *kind = Kind::n_ary(applied_arity);
+    }
+    constructor_bindings.insert(constructor.to_string(), constructor_ty);
+    Ok(())
+}
+
+fn match_interface_method_call_pattern(
+    type_env: &TypeEnv,
+    expected: &Type,
+    actual: &Type,
+    substitution: &mut Substitution,
+    constructor_bindings: &mut HashMap<String, Type>,
+) -> Result<(), TypeEnvError> {
+    match substitution.apply(expected) {
+        Type::ConstructorVariableApp {
+            constructor, args, ..
+        } => {
+            let actual_args = match actual {
+                Type::Constructor {
+                    name,
+                    args: actual_args,
+                    ..
+                } => {
+                    if actual_args.len() < args.len() {
+                        return Err(TypeEnvError::InvalidDefinition(
+                            format!(
+                                "constructor-variable application '{constructor}<...>' expected at least {} arguments, found {}",
+                                args.len(),
+                                actual_args.len()
+                            ),
+                            Span::default(),
+                        ));
+                    }
+                    bind_constructor_variable_for_method_call(
+                        &constructor,
+                        args.len(),
+                        Type::Constructor {
+                            name: name.clone(),
+                            args: actual_args[args.len()..].to_vec(),
+                            kind: Kind::n_ary(args.len()),
+                        },
+                        constructor_bindings,
+                    )?;
+                    actual_args[..args.len()].to_vec()
+                }
+                Type::List(item) if args.len() == 1 => {
+                    bind_constructor_variable_for_method_call(
+                        &constructor,
+                        1,
+                        Type::Constructor {
+                            name: QualifiedName::root("List"),
+                            args: Vec::new(),
+                            kind: Kind::n_ary(1),
+                        },
+                        constructor_bindings,
+                    )?;
+                    vec![item.as_ref().clone()]
+                }
+                _ => {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "constructor-variable application '{constructor}<...>' cannot match argument type {actual}"
+                        ),
+                        Span::default(),
+                    ));
+                }
+            };
+
+            if args.len() != actual_args.len() {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "constructor-variable application '{constructor}<...>' expected {} arguments, found {}",
+                        args.len(),
+                        actual_args.len()
+                    ),
+                    Span::default(),
+                ));
+            }
+            for (expected_arg, actual_arg) in args.iter().zip(actual_args.iter()) {
+                match_interface_method_call_pattern(
+                    type_env,
+                    expected_arg,
+                    actual_arg,
+                    substitution,
+                    constructor_bindings,
+                )?;
+            }
+            Ok(())
+        }
+        Type::Fn(expected_params, expected_ret) => {
+            let Type::Fn(actual_params, actual_ret) = actual else {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!("expected function type, found {actual}"),
+                    Span::default(),
+                ));
+            };
+            if expected_params.len() != actual_params.len() {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "function arity mismatch: expected {}, found {}",
+                        expected_params.len(),
+                        actual_params.len()
+                    ),
+                    Span::default(),
+                ));
+            }
+            for (expected_param, actual_param) in expected_params.iter().zip(actual_params.iter()) {
+                match_interface_method_call_pattern(
+                    type_env,
+                    expected_param,
+                    actual_param,
+                    substitution,
+                    constructor_bindings,
+                )?;
+            }
+            match_interface_method_call_pattern(
+                type_env,
+                &expected_ret,
+                actual_ret,
+                substitution,
+                constructor_bindings,
+            )
+        }
+        Type::Fun(expected_params, expected_ret, expected_effect) => {
+            let Type::Fun(actual_params, actual_ret, actual_effect) = actual else {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!("expected effectful function type, found {actual}"),
+                    Span::default(),
+                ));
+            };
+            if expected_effect != *actual_effect || expected_params.len() != actual_params.len() {
+                return Err(TypeEnvError::InvalidDefinition(
+                    "effectful function type mismatch".to_string(),
+                    Span::default(),
+                ));
+            }
+            for (expected_param, actual_param) in expected_params.iter().zip(actual_params.iter()) {
+                match_interface_method_call_pattern(
+                    type_env,
+                    expected_param,
+                    actual_param,
+                    substitution,
+                    constructor_bindings,
+                )?;
+            }
+            match_interface_method_call_pattern(
+                type_env,
+                &expected_ret,
+                actual_ret,
+                substitution,
+                constructor_bindings,
+            )
+        }
+        Type::List(expected_item) => {
+            let Type::List(actual_item) = actual else {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!("expected list type, found {actual}"),
+                    Span::default(),
+                ));
+            };
+            match_interface_method_call_pattern(
+                type_env,
+                &expected_item,
+                actual_item,
+                substitution,
+                constructor_bindings,
+            )
+        }
+        expected => {
+            let sub = type_env
+                .unify_types(&expected, actual)
+                .map_err(|e| TypeEnvError::InvalidDefinition(format!("{e}"), Span::default()))?;
+            *substitution = substitution.compose(&sub);
+            Ok(())
+        }
     }
 }
 
@@ -2934,6 +3240,77 @@ fn type_contains_constructor_variable_app(ty: &Type) -> bool {
     }
 }
 
+fn type_contains_any_var(ty: &Type, vars: &HashSet<TypeVar>) -> bool {
+    match ty {
+        Type::Var(var) => vars.contains(var),
+        Type::List(inner) => type_contains_any_var(inner, vars),
+        Type::Record(fields) => fields.iter().any(|(_, ty)| type_contains_any_var(ty, vars)),
+        Type::Fun(params, ret, _) | Type::Fn(params, ret) => {
+            params.iter().any(|ty| type_contains_any_var(ty, vars))
+                || type_contains_any_var(ret, vars)
+        }
+        Type::Constructor { args, .. } => args.iter().any(|ty| type_contains_any_var(ty, vars)),
+        Type::ConstructorVariableApp { args, .. } => {
+            args.iter().any(|ty| type_contains_any_var(ty, vars))
+        }
+        Type::Associated { base, .. } => type_contains_any_var(base, vars),
+        Type::Int
+        | Type::String
+        | Type::Bool
+        | Type::Float
+        | Type::Null
+        | Type::Time
+        | Type::Ref
+        | Type::Cap { .. }
+        | Type::Instance { .. }
+        | Type::InstanceAddr { .. }
+        | Type::ControlLink { .. } => false,
+    }
+}
+
+fn constructor_variable_apps_are_payload_anchored(
+    ty: &Type,
+    method_vars: &HashSet<TypeVar>,
+) -> bool {
+    match ty {
+        Type::ConstructorVariableApp { args, .. } => {
+            args.iter()
+                .any(|arg| type_contains_any_var(arg, method_vars))
+                && args
+                    .iter()
+                    .all(|arg| constructor_variable_apps_are_payload_anchored(arg, method_vars))
+        }
+        Type::List(inner) => constructor_variable_apps_are_payload_anchored(inner, method_vars),
+        Type::Record(fields) => fields
+            .iter()
+            .all(|(_, ty)| constructor_variable_apps_are_payload_anchored(ty, method_vars)),
+        Type::Fun(params, ret, _) | Type::Fn(params, ret) => {
+            params
+                .iter()
+                .all(|ty| constructor_variable_apps_are_payload_anchored(ty, method_vars))
+                && constructor_variable_apps_are_payload_anchored(ret, method_vars)
+        }
+        Type::Constructor { args, .. } => args
+            .iter()
+            .all(|ty| constructor_variable_apps_are_payload_anchored(ty, method_vars)),
+        Type::Associated { base, .. } => {
+            constructor_variable_apps_are_payload_anchored(base, method_vars)
+        }
+        Type::Int
+        | Type::String
+        | Type::Bool
+        | Type::Float
+        | Type::Null
+        | Type::Time
+        | Type::Ref
+        | Type::Var(_)
+        | Type::Cap { .. }
+        | Type::Instance { .. }
+        | Type::InstanceAddr { .. }
+        | Type::ControlLink { .. } => true,
+    }
+}
+
 fn apply_constructor_evidence_arg(
     arg: &InterfaceEvidenceArg,
     applied_args: &[Type],
@@ -3314,6 +3691,13 @@ fn canonical_type_expr_matches_pattern(
 }
 
 fn interface_evidence_arg_as_legacy_type(arg: &InterfaceEvidenceArg) -> Type {
+    interface_evidence_arg_as_legacy_type_with_params(arg, &HashMap::new())
+}
+
+fn interface_evidence_arg_as_legacy_type_with_params(
+    arg: &InterfaceEvidenceArg,
+    param_mapping: &HashMap<String, TypeVar>,
+) -> Type {
     match arg {
         InterfaceEvidenceArg::Proper(ty) => ty.clone(),
         InterfaceEvidenceArg::Constructor(expr) => match expr.as_ref() {
@@ -3325,6 +3709,28 @@ fn interface_evidence_arg_as_legacy_type(arg: &InterfaceEvidenceArg) -> Type {
                 args: Vec::new(),
                 kind: Kind::n_ary(1),
             },
+            TypeConstructorExpr::PartialApplication(app) => {
+                let name = match &app.head {
+                    TypeConstructorHeadId::Nominal { visible_name, .. } => visible_name.clone(),
+                    _ => render_type_constructor_expr(expr),
+                };
+                let args = app
+                    .args
+                    .iter()
+                    .filter_map(|arg| match arg {
+                        PartialTypeArg::Applied(canonical) => {
+                            canonical_type_expr_to_type(canonical, param_mapping)
+                        }
+                        PartialTypeArg::Hole(_) => None,
+                        _ => None,
+                    })
+                    .collect();
+                Type::Constructor {
+                    name: QualifiedName::root(name),
+                    args,
+                    kind: Kind::n_ary(1),
+                }
+            }
             other => Type::Constructor {
                 name: QualifiedName::root(render_type_constructor_expr(other)),
                 args: Vec::new(),
@@ -4839,23 +5245,45 @@ impl TypeEnv {
                 .insert(interface_name.to_string());
         }
 
+        let mut method_param_mapping = param_mapping.clone();
+        let mut implicit_method_type_params = BTreeMap::new();
+        for ty in method
+            .params
+            .iter()
+            .chain(std::iter::once(&method.return_type))
+        {
+            collect_implicit_interface_method_type_params(
+                ty,
+                param_mapping,
+                &method_env,
+                &mut implicit_method_type_params,
+            );
+        }
+        for (name, var) in &implicit_method_type_params {
+            method_param_mapping.insert(name.clone(), *var);
+            method_env.register_type_parameter_kind(name, Kind::Type)?;
+        }
+
         let params: Vec<Type> = method
             .params
             .iter()
-            .map(|ty| surface_type_to_type(ty, param_mapping, &method_env))
+            .map(|ty| surface_type_to_type(ty, &method_param_mapping, &method_env))
             .collect::<Result<Vec<_>, _>>()?;
 
-        let return_type = surface_type_to_type(&method.return_type, param_mapping, &method_env)?;
+        let return_type =
+            surface_type_to_type(&method.return_type, &method_param_mapping, &method_env)?;
 
         let type_params: Vec<TypeVar> = ordered_param_names
             .iter()
             .map(|name| param_mapping[name])
             .collect();
+        let method_type_params = implicit_method_type_params.values().copied().collect();
 
         Ok((
             method.name.to_string(),
             InterfaceMethodInfo {
                 type_params,
+                method_type_params,
                 params,
                 return_type,
             },
@@ -16631,7 +17059,7 @@ impl TypeEnv {
 
         let lowered_type_args: Vec<Type> = head_args
             .iter()
-            .map(interface_evidence_arg_as_legacy_type)
+            .map(|arg| interface_evidence_arg_as_legacy_type_with_params(arg, &param_mapping))
             .collect();
 
         if def.type_params.is_empty()
@@ -17017,7 +17445,8 @@ impl TypeEnv {
             }
 
             let actual_return_ty = body_result.substitution.apply(&body_result.ty);
-            self.unify_types(&expected_return_ty, &actual_return_ty)
+            let return_substitution = self
+                .unify_types(&expected_return_ty, &actual_return_ty)
                 .map_err(|_| {
                     TypeEnvError::InvalidDefinition(
                         format!(
@@ -17027,6 +17456,19 @@ impl TypeEnv {
                         Span::default(),
                     )
                 })?;
+            for method_var in &method_info.method_type_params {
+                let inferred = return_substitution
+                    .apply(&body_result.substitution.apply(&Type::Var(*method_var)));
+                if inferred != Type::Var(*method_var) {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!(
+                            "impl method '{}::{}' must keep method payload type variable {} independent, but body constrains it to {}",
+                            interface.name, method_name, method_var.0, inferred
+                        ),
+                        Span::default(),
+                    ));
+                }
+            }
 
             let core_body = ash_parser::lower_expr(&method.body).map_err(|e| {
                 TypeEnvError::InvalidDefinition(format!("lowering error: {e}"), Span::default())
@@ -17040,6 +17482,7 @@ impl TypeEnv {
                     .map(|param| param.to_string())
                     .collect(),
                 type_params: method_info.type_params.clone(),
+                method_type_params: method_info.method_type_params.clone(),
                 params: method_info
                     .params
                     .iter()
@@ -18108,8 +18551,15 @@ impl TypeEnv {
                 method: method.to_string(),
                 span: Span::default(),
             })?;
-        let raw_return = selected.substitution.apply(&method_info.return_type);
-        self.normalize_associated_types(&raw_return, scheme, &selected.substitution)
+        let mut call_substitution = selected.substitution.clone();
+        for (expected, actual) in method_info.params.iter().zip(arg_types.iter()) {
+            let sub = self
+                .unify_types(&call_substitution.apply(expected), actual)
+                .map_err(|e| TypeEnvError::InvalidDefinition(format!("{e}"), Span::default()))?;
+            call_substitution = call_substitution.compose(&sub);
+        }
+        let raw_return = call_substitution.apply(&method_info.return_type);
+        self.normalize_associated_types(&raw_return, scheme, &call_substitution)
     }
 
     fn resolve_interface_method_call_from_generic_bound(
@@ -18194,11 +18644,12 @@ impl TypeEnv {
             ));
         }
 
-        if method_info
-            .params
-            .iter()
-            .any(type_contains_constructor_variable_app)
-        {
+        let method_type_params: HashSet<TypeVar> =
+            method_info.method_type_params.iter().copied().collect();
+        if method_info.params.iter().any(|param| {
+            type_contains_constructor_variable_app(param)
+                && !constructor_variable_apps_are_payload_anchored(param, &method_type_params)
+        }) {
             return Err(TypeEnvError::InvalidDefinition(
                 format!(
                     "interface '{}' type parameters could not be fully determined from arguments; evidence lookup does not invert constructor-variable applications",
@@ -18209,17 +18660,32 @@ impl TypeEnv {
         }
 
         let mut subst = Substitution::new();
+        let mut constructor_bindings = HashMap::new();
         for (expected, actual) in method_info.params.iter().zip(arg_types.iter()) {
-            let sub = self
-                .unify_types(&subst.apply(expected), actual)
-                .map_err(|e| TypeEnvError::InvalidDefinition(format!("{e}"), Span::default()))?;
-            subst = subst.compose(&sub);
+            match_interface_method_call_pattern(
+                self,
+                expected,
+                actual,
+                &mut subst,
+                &mut constructor_bindings,
+            )?;
         }
 
-        let head_args: Vec<Type> = method_info
+        let head_args: Vec<Type> = interface_info
             .type_params
             .iter()
-            .map(|tp| subst.apply(&Type::Var(*tp)))
+            .zip(method_info.type_params.iter())
+            .zip(interface_info.type_param_kinds.iter())
+            .map(|((param_name, tp), kind)| {
+                if kind.is_type() {
+                    subst.apply(&Type::Var(*tp))
+                } else {
+                    constructor_bindings
+                        .get(param_name)
+                        .cloned()
+                        .unwrap_or_else(|| subst.apply(&Type::Var(*tp)))
+                }
+            })
             .collect();
 
         if head_args.iter().any(|t| {

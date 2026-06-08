@@ -1,4 +1,4 @@
 pub interface Comonad<W : * -> *> {
-    extract(W<Int>) -> Int
-    extend(W<Int>, W<Int> -> Int) -> W<Int>
+    extract(W<A>) -> A
+    extend(W<A>, W<A> -> B) -> W<B>
 }

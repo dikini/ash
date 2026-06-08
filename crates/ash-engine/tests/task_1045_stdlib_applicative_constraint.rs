@@ -68,6 +68,11 @@ fn stdlib_applicative_surface_requires_functor_evidence() {
     assert!(
         matches!(&constraint.interface, ash_parser::surface::Type::Name(name) if name.as_ref() == "Functor")
     );
+    assert!(source.contains("pure(A) -> F<A>"), "{source}");
+    assert!(
+        source.contains("apply(F<A -> B>, F<A>) -> F<B>"),
+        "{source}"
+    );
 }
 
 #[test]

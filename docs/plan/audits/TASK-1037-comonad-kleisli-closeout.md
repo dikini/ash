@@ -6,8 +6,8 @@ Complete. Phase 134 implemented the honest current-MVP source slice and recorded
 
 ## Implemented Surfaces
 
-- `std/src/algebra/comonad.ash` defines the source-visible `Comonad<W : * -> *>` interface with `extract` and `extend` in the current monomorphic `Int` MVP style.
-- `std/src/algebra/kleisli.ash` defines concrete Option/Result Kleisli helper wrappers over public Phase 133 Monad helpers.
+- `std/src/algebra/comonad.ash` defines the source-visible `Comonad<W : * -> *>` interface with generic `extract(W<A>) -> A` and `extend(W<A>, W<A> -> B) -> W<B>` methods after Phase 135 cleanup.
+- `std/src/algebra/kleisli.ash` intentionally publishes no concrete Option/Result Kleisli helper wrappers; concrete operations remain carrier-owned, and generic Kleisli helpers remain deferred until selected evidence-method dispatch is source-visible.
 - `std/src/algebra/mod.ash` exports `comonad` and `kleisli`, and re-exports `Comonad`.
 
 ## Explicit Deferrals

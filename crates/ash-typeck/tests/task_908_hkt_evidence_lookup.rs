@@ -73,6 +73,29 @@ fn register_monad_option_env() -> TypeEnv {
     env
 }
 
+fn register_unrelated_generic_monad_option_env() -> TypeEnv {
+    let module = parse(
+        r#"
+        interface Monad<M : * -> *> {
+            extract(M<Int>, A) -> A
+        }
+
+        impl Monad<Option> {
+            extract(value, fallback) = fallback
+        }
+        "#,
+    );
+    let interface = interface_named(&module, "Monad");
+    let implementation = impl_named(&module, "Monad");
+
+    let mut env = TypeEnv::with_builtin_types();
+    env.register_interface(&interface)
+        .expect("Monad<M : * -> *> should register with unrelated method type var");
+    env.register_impl(&implementation)
+        .expect("impl Monad<Option> should register explicit Option evidence");
+    env
+}
+
 #[test]
 fn method_lookup_with_option_input_does_not_invert_m_to_find_monad_option() {
     let env = register_monad_option_env();
@@ -131,5 +154,27 @@ fn method_lookup_with_constructor_variable_argument_does_not_select_registered_o
                 || message.contains("Missing")
                 || message.contains("missing")),
         "expected no constructor-variable inversion during evidence lookup, got: {message}"
+    );
+}
+
+#[test]
+fn unrelated_method_generic_does_not_enable_constructor_variable_inversion() {
+    let env = register_unrelated_generic_monad_option_env();
+
+    let err = env
+        .resolve_interface_method_call("Monad", "extract", &[option(Type::Int), Type::String])
+        .expect_err(
+            "unrelated generic A must not allow selecting Monad<Option> by inverting M<Int>",
+        );
+    let message = err.to_string();
+
+    assert!(
+        message.contains("Monad")
+            && (message.contains("constructor-variable")
+                || message.contains("does not invert")
+                || message.contains("could not be fully determined")
+                || message.contains("Missing")
+                || message.contains("missing")),
+        "expected unrelated method generic to preserve no-inversion boundary, got: {message}"
     );
 }

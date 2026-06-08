@@ -3,7 +3,7 @@
 **Status:** Complete
 **Spec:** [SPEC-080](../spec/SPEC-080-INTERFACE-EVIDENCE-CONSTRAINTS.md)
 **Depends on:** [SPEC-034](../spec/SPEC-034-WHERE-BOUNDED-GENERIC-INTERFACE-IMPLEMENTATIONS.md), [SPEC-064](../spec/SPEC-064-CONSTRAINT-PROPOSITION-LAYER.md), [SPEC-067](../spec/SPEC-067-CONSTRUCTOR-KINDED-PARAMETERS-AND-HKT.md), [SPEC-078](../spec/SPEC-078-STANDARD-ALGEBRA-LIBRARY-AND-MONAD-REMEDIATION.md)
-**Task range:** TASK-1038 through TASK-1048
+**Task range:** TASK-1038 through TASK-1049
 
 ## Goal
 
@@ -27,8 +27,9 @@ This phase is parser/typechecker-first. The parser preserves interface `where` c
 | [TASK-1045](tasks/TASK-1045-stdlib-applicative-functor-constraint.md) | Migrate stdlib `Applicative` to `where F: Functor` and reconcile examples/reference wording | Stdlib/Docs | 8 | ✅ Complete |
 | [TASK-1046](tasks/TASK-1046-stdlib-monoid-semigroup-constraint.md) | Migrate stdlib `Monoid` to `where A: Semigroup` and reconcile examples/reference wording | Stdlib/Docs | 8 | ✅ Complete |
 | [TASK-1048](tasks/TASK-1048-interface-evidence-constraints-closeout.md) | Run diagnostics, broad verification, independent review, and status reconciliation | Closeout | 8 | ✅ Complete |
+| [TASK-1049](tasks/TASK-1049-algebra-generic-interface-cleanup.md) | Replace monomorphic algebra method payloads with generic signatures and remove misplaced concrete carrier wrappers from `std::algebra` | Stdlib/Docs | 6 | ✅ Complete |
 
-Total estimate: 90h.
+Total estimate: 96h.
 
 ## Execution order
 
@@ -42,6 +43,7 @@ Total estimate: 90h.
 8. TASK-1045 depends on TASK-1043. It migrates `std::algebra::Applicative` only after `Applicative<F> where F: Functor` can be enforced through final stdlib import paths.
 9. TASK-1046 depends on TASK-1043. It migrates `std::algebra::Monoid` only after `Monoid<A> where A: Semigroup` can be enforced through final stdlib import paths.
 10. TASK-1048 closes the phase only after all focused and broad gates pass, stale wording is reconciled, and independent review approves.
+11. TASK-1049 remediates the post-closeout algebra surface bug: interface methods are generic over payload types, and concrete carrier wrappers are removed from algebra modules.
 
 ## Decision gates
 
@@ -98,4 +100,6 @@ Filtered cargo commands must be paired with `-- --list`, a test-count assertion,
 - [x] `std::algebra::Monad` declares the `Applicative` constraint through final stdlib source.
 - [x] `std::algebra::Applicative` declares the `Functor` constraint through final stdlib source.
 - [x] `std::algebra::Monoid` declares the `Semigroup` constraint through final stdlib source.
+- [x] `std::algebra` method signatures use generic payloads (`A`/`B`) rather than monomorphic `Int` placeholders.
+- [x] Concrete carrier helper wrappers are not exported from `std::algebra` interface modules.
 - [x] Broad verification and independent review pass before status promotion.

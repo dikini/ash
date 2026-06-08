@@ -1,10 +1,10 @@
 # SPEC-080: Interface Evidence Constraints
 
-**Status:** Draft
+**Status:** Implemented MVP
 **Date:** 2026-06-08
 **Builds on:** [SPEC-033](SPEC-033-MULTI-PARAMETER-INTERFACES.md), [SPEC-034](SPEC-034-WHERE-BOUNDED-GENERIC-INTERFACE-IMPLEMENTATIONS.md), [SPEC-064](SPEC-064-CONSTRAINT-PROPOSITION-LAYER.md), [SPEC-067](SPEC-067-CONSTRUCTOR-KINDED-PARAMETERS-AND-HKT.md), [SPEC-078](SPEC-078-STANDARD-ALGEBRA-LIBRARY-AND-MONAD-REMEDIATION.md)
 **Plan:** [PLAN-130](../plan/PLAN-130-INTERFACE-EVIDENCE-CONSTRAINTS.md)
-**Implementation Tasks:** [TASK-1038](../plan/tasks/TASK-1038-interface-evidence-constraints-packet.md) through [TASK-1048](../plan/tasks/TASK-1048-interface-evidence-constraints-closeout.md)
+**Implementation Tasks:** [TASK-1038](../plan/tasks/TASK-1038-interface-evidence-constraints-packet.md) through [TASK-1049](../plan/tasks/TASK-1049-algebra-generic-interface-cleanup.md)
 
 ## 1. Summary
 
@@ -14,8 +14,8 @@ The motivating example is the algebra relation between `Monad` and `Applicative`
 
 ```ash
 interface Monad<M : * -> *> where M: Applicative {
-    unit(Int) -> M<Int>
-    bind(M<Int>, (Int) -> M<Int>) -> M<Int>
+    unit(A) -> M<A>
+    bind(M<A>, A -> M<B>) -> M<B>
 }
 ```
 
@@ -64,8 +64,8 @@ Accepted examples:
 
 ```ash
 interface Monad<M : * -> *> where M: Applicative {
-    unit(Int) -> M<Int>
-    bind(M<Int>, (Int) -> M<Int>) -> M<Int>
+    unit(A) -> M<A>
+    bind(M<A>, A -> M<B>) -> M<B>
 }
 
 interface Traversable<T : * -> *> where T: Functor, T: Foldable {
@@ -233,12 +233,13 @@ The parser must accept final surface examples such as:
 
 ```ash
 interface Applicative<F : * -> *> {
-    pure(Int) -> F<Int>
+    pure(A) -> F<A>
+    apply(F<A -> B>, F<A>) -> F<B>
 }
 
 interface Monad<M : * -> *> where M: Applicative {
-    unit(Int) -> M<Int>
-    bind(M<Int>, (Int) -> M<Int>) -> M<Int>
+    unit(A) -> M<A>
+    bind(M<A>, A -> M<B>) -> M<B>
 }
 ```
 
@@ -255,8 +256,8 @@ After this feature lands, standard algebra interfaces must use interface-level e
 
 ```ash
 interface Monad<M : * -> *> where M: Applicative {
-    unit(Int) -> M<Int>
-    bind(M<Int>, (Int) -> M<Int>) -> M<Int>
+    unit(A) -> M<A>
+    bind(M<A>, A -> M<B>) -> M<B>
 }
 ```
 
@@ -264,8 +265,8 @@ Additional accepted algebra requirements in this phase are:
 
 ```ash
 interface Applicative<F : * -> *> where F: Functor {
-    pure(Int) -> F<Int>
-    apply(F<(Int) -> Int>, F<Int>) -> F<Int>
+    pure(A) -> F<A>
+    apply(F<A -> B>, F<A>) -> F<B>
 }
 
 interface Monoid<A> where A: Semigroup {

@@ -38,7 +38,7 @@ Future generated-test/law-profile phase owner. This is explicitly out of scope f
 | Applicative | Generated identity/homomorphism/interchange/composition tests run for Option/Result instances. |
 | Monad | Generated left identity/right identity/associativity tests run for Option/Result instances. |
 | Comonad | Generated extend/extract law tests run for lawful Comonad instances once a lawful carrier exists. |
-| Kleisli | Generated identity/associativity tests run for concrete Option/Result helper surfaces. |
+| Kleisli | Generated identity/associativity tests remain deferred until a lawful generic Kleisli helper surface exists; carrier-owned Option/Result operations can inform future metadata but are not `std::algebra` wrappers. |
 | Cokleisli | Generated identity/associativity tests are explicitly gated until lawful Comonad carrier metadata exists. |
 | Tower | Act/Proc/Workflow law tests are either executable with bounded equivalence metadata or explicitly gated with fail-closed diagnostics. |
 | Runner | SPEC-077 runner discovers algebra law families and reports non-zero generated test counts. |

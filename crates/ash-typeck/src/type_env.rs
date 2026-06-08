@@ -640,6 +640,17 @@ pub struct InterfaceMethodInfo {
     pub return_type: Type,
 }
 
+/// Interface-owned required evidence constraint.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct InterfaceEvidenceConstraintInfo {
+    /// Interface parameter named to the left of `:`.
+    pub subject_param: String,
+    /// Position of the subject parameter in the constrained interface head.
+    pub subject_param_index: usize,
+    /// Required evidence interface named to the right of `:`.
+    pub required_interface: String,
+}
+
 /// Internal representation of an interface definition.
 #[derive(Debug, Clone, PartialEq)]
 pub struct InterfaceInfo {
@@ -653,6 +664,8 @@ pub struct InterfaceInfo {
     pub type_param_kinds: Vec<Kind>,
     /// Associated types declared by the interface.
     pub associated_types: Vec<String>,
+    /// Interface-owned required evidence constraints.
+    pub evidence_constraints: Vec<InterfaceEvidenceConstraintInfo>,
     /// Methods declared by the interface.
     pub methods: HashMap<String, InterfaceMethodInfo>,
 }
@@ -3108,6 +3121,20 @@ fn render_interface_evidence_key(interface: &str, args: &[InterfaceEvidenceArg])
     format!("{interface}<{args}>")
 }
 
+fn interface_constraint_subject_name(subject: &SurfaceType) -> Option<&str> {
+    match subject {
+        SurfaceType::Name(name) => Some(name.as_ref()),
+        _ => None,
+    }
+}
+
+fn interface_constraint_required_name(required: &SurfaceType) -> Option<&str> {
+    match required {
+        SurfaceType::Name(name) => Some(name.as_ref()),
+        _ => None,
+    }
+}
+
 fn interface_evidence_args_match(
     scheme_args: &[InterfaceEvidenceArg],
     requested_args: &[InterfaceEvidenceArg],
@@ -4580,6 +4607,157 @@ fn imported_type_function_def(summary: &TypeFunctionSummary) -> TypeFunctionDef 
 }
 
 impl TypeEnv {
+    fn validate_interface_evidence_constraints(
+        &self,
+        interface_name: &str,
+        interface_type_params: &[String],
+        type_param_kinds: &[Kind],
+        constraints: &[ash_parser::surface::InterfaceEvidenceConstraint],
+    ) -> Result<Vec<InterfaceEvidenceConstraintInfo>, TypeEnvError> {
+        let param_positions = interface_type_params
+            .iter()
+            .enumerate()
+            .map(|(index, name)| (name.as_str(), index))
+            .collect::<HashMap<_, _>>();
+        let mut lowered = Vec::with_capacity(constraints.len());
+
+        for constraint in constraints {
+            let Some(subject_param) = interface_constraint_subject_name(&constraint.subject) else {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "interface evidence constraint on '{interface_name}' must use an interface parameter as its subject"
+                    ),
+                    constraint.span,
+                ));
+            };
+            let Some(&subject_param_index) = param_positions.get(subject_param) else {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "interface evidence constraint subject '{subject_param}' is not an interface parameter of '{interface_name}'"
+                    ),
+                    constraint.span,
+                ));
+            };
+            let Some(required_interface) =
+                interface_constraint_required_name(&constraint.interface)
+            else {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "interface evidence constraint '{subject_param}: ...' on '{interface_name}' must use the MVP required evidence shape T: Interface"
+                    ),
+                    constraint.span,
+                ));
+            };
+            if required_interface == interface_name {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "interface evidence constraint cycle: '{interface_name}' requires itself"
+                    ),
+                    constraint.span,
+                ));
+            }
+            let required_info = self.interfaces.get(required_interface).ok_or_else(|| {
+                TypeEnvError::InvalidDefinition(
+                    format!(
+                        "unknown required evidence interface '{required_interface}' in evidence constraint on '{interface_name}'"
+                    ),
+                    constraint.span,
+                )
+            })?;
+            if required_info.type_params.len() != 1 {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "required evidence interface '{required_interface}' in evidence constraint on '{interface_name}' must have arity 1 for the MVP T: Interface shape, found {}",
+                        required_info.type_params.len()
+                    ),
+                    constraint.span,
+                ));
+            }
+            let subject_kind = &type_param_kinds[subject_param_index];
+            let required_kind = &required_info.type_param_kinds[0];
+            if subject_kind != required_kind {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "required evidence interface '{required_interface}' expects subject kind {required_kind}, but interface parameter '{subject_param}' on '{interface_name}' has kind {subject_kind}"
+                    ),
+                    constraint.span,
+                ));
+            }
+            if self.interface_constraint_graph_reaches(required_interface, interface_name) {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "interface evidence constraint cycle: '{interface_name}' requires '{required_interface}' which requires '{interface_name}'"
+                    ),
+                    constraint.span,
+                ));
+            }
+
+            lowered.push(InterfaceEvidenceConstraintInfo {
+                subject_param: subject_param.to_string(),
+                subject_param_index,
+                required_interface: required_interface.to_string(),
+            });
+        }
+
+        Ok(lowered)
+    }
+
+    fn interface_constraint_graph_reaches(&self, start: &str, target: &str) -> bool {
+        let mut visited = HashSet::new();
+        let mut stack = vec![start];
+        while let Some(interface_name) = stack.pop() {
+            if !visited.insert(interface_name) {
+                continue;
+            }
+            let Some(info) = self.interfaces.get(interface_name) else {
+                continue;
+            };
+            for constraint in &info.evidence_constraints {
+                if constraint.required_interface == target {
+                    return true;
+                }
+                stack.push(constraint.required_interface.as_str());
+            }
+        }
+        false
+    }
+
+    fn has_concrete_interface_evidence(
+        &self,
+        interface: &str,
+        args: &[InterfaceEvidenceArg],
+    ) -> bool {
+        self.impls.iter().any(|scheme| {
+            scheme.interface == interface
+                && scheme.type_params.is_empty()
+                && interface_evidence_args_match(&scheme.head_args, args, false)
+        })
+    }
+
+    fn validate_concrete_impl_required_evidence(
+        &self,
+        interface: &InterfaceInfo,
+        head_args: &[InterfaceEvidenceArg],
+        error_span: Span,
+    ) -> Result<(), TypeEnvError> {
+        for constraint in &interface.evidence_constraints {
+            let required_args = [head_args[constraint.subject_param_index].clone()];
+            if self.has_concrete_interface_evidence(&constraint.required_interface, &required_args)
+            {
+                continue;
+            }
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "concrete impl evidence {} requires missing required evidence {}",
+                    render_interface_evidence_key(&interface.name, head_args),
+                    render_interface_evidence_key(&constraint.required_interface, &required_args)
+                ),
+                error_span,
+            ));
+        }
+        Ok(())
+    }
+
     fn convert_interface_method(
         &self,
         method: &InterfaceMethodSig,
@@ -14849,6 +15027,12 @@ impl TypeEnv {
             .iter()
             .map(ToString::to_string)
             .collect::<Vec<_>>();
+        let evidence_constraints = self.validate_interface_evidence_constraints(
+            &interface_name,
+            &interface_type_params,
+            &type_param_kinds,
+            &def.evidence_constraints,
+        )?;
         let associated_types = def
             .associated_types
             .iter()
@@ -14867,6 +15051,7 @@ impl TypeEnv {
                 type_params: interface_type_params.clone(),
                 type_param_kinds: type_param_kinds.clone(),
                 associated_types: associated_types.clone(),
+                evidence_constraints: evidence_constraints.clone(),
                 methods: HashMap::new(),
             },
         );
@@ -14904,6 +15089,7 @@ impl TypeEnv {
                 type_params: interface_type_params.clone(),
                 type_param_kinds: type_param_kinds.clone(),
                 associated_types: associated_types.clone(),
+                evidence_constraints,
                 methods: methods.clone(),
             },
         );
@@ -15046,6 +15232,12 @@ impl TypeEnv {
                 &surface_args,
                 &HashMap::new(),
             )?;
+            if self
+                .validate_concrete_impl_required_evidence(&interface, &head_args, Span::default())
+                .is_err()
+            {
+                continue;
+            }
             if self.impls.iter().any(|scheme| {
                 scheme.interface == "Monad"
                     && interface_evidence_args_match(&scheme.head_args, &head_args, false)
@@ -16556,6 +16748,10 @@ impl TypeEnv {
                     Span::default(),
                 ));
             }
+        }
+
+        if def.type_params.is_empty() {
+            self.validate_concrete_impl_required_evidence(&interface, &head_args, def.span)?;
         }
 
         let temp_scheme = ImplScheme {

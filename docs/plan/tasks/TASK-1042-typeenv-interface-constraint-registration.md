@@ -1,6 +1,6 @@
 # TASK-1042: Store interface constraints in TypeEnv and enforce required evidence for concrete impl registration
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -60,13 +60,14 @@ strictness: clean
 commands:
   - cargo fmt --check
   - git diff --check
+  - RUSTC_WRAPPER= cargo test -p ash-typeck --test task_1042_interface_constraint_registration -- --list
   - RUSTC_WRAPPER= cargo test -p ash-typeck --test task_1042_interface_constraint_registration -- --nocapture
   - RUSTC_WRAPPER= cargo check --workspace
 checklist:
-- [ ] Focused tests/artifact are non-zero and pass
-- [ ] `cargo fmt --check` passes for touched Rust files or is not applicable
-- [ ] `git diff --check` passes
-- [ ] Status surfaces and CHANGELOG are reconciled if this task completes
+- [x] Focused tests/artifact are non-zero and pass
+- [x] `cargo fmt --check` passes for touched Rust files or is not applicable
+- [x] `git diff --check` passes
+- [x] Status surfaces and CHANGELOG are reconciled if this task completes
 ```
 
 ## Audit-gate implementation seams
@@ -86,3 +87,11 @@ interface Monad<M : * -> *> where M: Applicative {
     bind(M<Int>, (Int) -> M<Int>) -> M<Int>
 }
 ```
+
+## Completion notes
+
+- Added `InterfaceEvidenceConstraintInfo` to `InterfaceInfo` so TypeEnv stores interface-owned required evidence constraints separately from impl `where` bounds.
+- Validated constraint subjects, required evidence interface existence, arity, kind compatibility, and direct/known cycles during interface registration.
+- Enforced required evidence before concrete impl registration records any impl scheme or concrete evidence assumption.
+- Added focused typechecker coverage for storage, subject validation, unknown/wrong-kind required interfaces, missing required evidence, successful constrained impl registration, impl `where` non-interference, and direct cycle rejection.
+- Verification: `cargo fmt --check`; `git diff --check`; `RUSTC_WRAPPER= cargo test -p ash-typeck --test task_1042_interface_constraint_registration -- --list` (7 tests); `RUSTC_WRAPPER= cargo test -p ash-typeck --test task_1042_interface_constraint_registration -- --nocapture` (7 passed); `RUSTC_WRAPPER= cargo check --workspace`.

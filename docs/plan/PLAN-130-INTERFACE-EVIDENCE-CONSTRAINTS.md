@@ -21,7 +21,7 @@ This phase is parser/typechecker-first. The parser preserves interface `where` c
 | [TASK-1039](tasks/TASK-1039-interface-evidence-constraints-audit-gate.md) | Audit live parser/typechecker/stdlib evidence seams and freeze exact implementation commands | Audit/Planning | 8 | ✅ Complete |
 | [TASK-1040](tasks/TASK-1040-interface-constraint-parser-surface.md) | Parse and preserve interface-level `where` evidence constraints with positive/negative tests | Parser | 10 | ✅ Complete |
 | [TASK-1041](tasks/TASK-1041-interface-constraint-core-lowering-and-summaries.md) | Carry interface constraints through lowering/core summaries or prove no summary change is needed | Core/Engine | 10 | ✅ Complete |
-| [TASK-1042](tasks/TASK-1042-typeenv-interface-constraint-registration.md) | Store interface constraints in TypeEnv and enforce required evidence for concrete impl registration | Typeck | 14 | 📝 Planned |
+| [TASK-1042](tasks/TASK-1042-typeenv-interface-constraint-registration.md) | Store interface constraints in TypeEnv and enforce required evidence for concrete impl registration | Typeck | 14 | ✅ Complete |
 | [TASK-1043](tasks/TASK-1043-generic-entailment-and-evidence-lookup.md) | Make constrained evidence entail required evidence in generic contexts without reverse derivation | Typeck | 14 | 📝 Planned |
 | [TASK-1044](tasks/TASK-1044-stdlib-monad-applicative-constraint.md) | Migrate stdlib `Monad` to `where M: Applicative` and reconcile examples/reference wording | Stdlib/Docs | 10 | 📝 Planned |
 | [TASK-1045](tasks/TASK-1045-stdlib-applicative-functor-constraint.md) | Migrate stdlib `Applicative` to `where F: Functor` and reconcile examples/reference wording | Stdlib/Docs | 8 | 📝 Planned |
@@ -91,8 +91,8 @@ Filtered cargo commands must be paired with `-- --list`, a test-count assertion,
 - [x] Surface syntax parses for `interface ... where M: Applicative { ... }`.
 - [x] Unsupported interface constraint forms are rejected with focused tests.
 - [x] Interface constraints are carried through core lowering and imported module summaries.
-- [ ] TypeEnv stores and validates interface evidence constraints.
-- [ ] Concrete `impl Monad<K>` is rejected unless `Applicative<K>` evidence is available.
+- [x] TypeEnv stores and validates interface evidence constraints.
+- [x] Concrete `impl Monad<K>` is rejected unless `Applicative<K>` evidence is available.
 - [ ] Generic `M: Monad` contexts may use `M: Applicative` evidence.
 - [ ] Reverse entailment and automatic derivation are rejected/proven absent.
 - [ ] `std::algebra::Monad` declares the `Applicative` constraint through final stdlib source.

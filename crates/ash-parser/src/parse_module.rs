@@ -239,6 +239,11 @@ fn parse_definitions(input: &mut ParseInput) -> ModalResult<Vec<Definition>> {
             continue;
         }
 
+        if starts_with_keyword(input, "law") {
+            definitions.push(parse_law_definition_as_definition(input)?);
+            continue;
+        }
+
         if starts_with_unsupported_inline_definition(input) {
             return Err(winnow::error::ErrMode::Backtrack(
                 winnow::error::ContextError::new(),
@@ -1527,6 +1532,11 @@ fn parse_law_definition(input: &mut ParseInput) -> ModalResult<LawDef> {
         proposition,
         span: crate::input::span_from(&start, &input.state.pos),
     })
+}
+
+fn parse_law_definition_as_definition(input: &mut ParseInput) -> ModalResult<Definition> {
+    let law = parse_law_definition(input)?;
+    Ok(Definition::Law(law))
 }
 
 fn parse_impl_definition(input: &mut ParseInput) -> ModalResult<Definition> {
@@ -3653,6 +3663,11 @@ pub fn module_file(input: &mut ParseInput) -> ModalResult<crate::surface::Module
 
         if starts_with_visible_keyword(input, "fn") {
             definitions.push(parse_fn_definition(input)?);
+            continue;
+        }
+
+        if starts_with_keyword(input, "law") {
+            definitions.push(parse_law_definition_as_definition(input)?);
             continue;
         }
 

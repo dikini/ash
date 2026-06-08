@@ -103,44 +103,90 @@ fn impl_symbol(def: &ImplDef) -> DocumentSymbol {
     )
 }
 
-fn definition_symbol(definition: &Definition) -> DocumentSymbol {
+fn definition_symbol(definition: &Definition) -> Option<DocumentSymbol> {
     match definition {
-        Definition::Capability(def) => {
-            symbol(def.name.to_string(), SymbolKind::FUNCTION, &def.span, None)
-        }
-        Definition::Policy(def) => {
-            symbol(def.name.to_string(), SymbolKind::STRUCT, &def.span, None)
-        }
-        Definition::Role(def) => symbol(def.name.to_string(), SymbolKind::CLASS, &def.span, None),
-        Definition::Proxy(def) => symbol(def.name.to_string(), SymbolKind::OBJECT, &def.span, None),
-        Definition::Interface(def) => interface_symbol(def),
-        Definition::CapabilityInterface(def) => {
-            symbol(def.name.to_string(), SymbolKind::INTERFACE, &def.span, None)
-        }
-        Definition::CapabilityImplementation(def) => {
-            symbol(def.name.to_string(), SymbolKind::CLASS, &def.span, None)
-        }
-        Definition::ResourceType(def) => {
-            symbol(def.name.to_string(), SymbolKind::STRUCT, &def.span, None)
-        }
-        Definition::Type(def) => symbol(def.name.to_string(), SymbolKind::STRUCT, &def.span, None),
-        Definition::DataKind(def) => {
-            symbol(def.name.to_string(), SymbolKind::ENUM, &def.span, None)
-        }
-        Definition::TypeFn(def) => {
-            symbol(def.name.to_string(), SymbolKind::FUNCTION, &def.span, None)
-        }
-        Definition::PropositionPredicate(def) => {
-            symbol(def.name.to_string(), SymbolKind::FUNCTION, &def.span, None)
-        }
-        Definition::Impl(def) => impl_symbol(def),
-        Definition::Function(def) => fn_symbol(def),
-        Definition::BuiltinFn(def) => {
-            symbol(def.name.to_string(), SymbolKind::FUNCTION, &def.span, None)
-        }
-        Definition::SealedDomain(def) => {
-            symbol(def.name.to_string(), SymbolKind::ENUM, &def.span, None)
-        }
+        Definition::Capability(def) => Some(symbol(
+            def.name.to_string(),
+            SymbolKind::FUNCTION,
+            &def.span,
+            None,
+        )),
+        Definition::Policy(def) => Some(symbol(
+            def.name.to_string(),
+            SymbolKind::STRUCT,
+            &def.span,
+            None,
+        )),
+        Definition::Role(def) => Some(symbol(
+            def.name.to_string(),
+            SymbolKind::CLASS,
+            &def.span,
+            None,
+        )),
+        Definition::Proxy(def) => Some(symbol(
+            def.name.to_string(),
+            SymbolKind::OBJECT,
+            &def.span,
+            None,
+        )),
+        Definition::Interface(def) => Some(interface_symbol(def)),
+        Definition::CapabilityInterface(def) => Some(symbol(
+            def.name.to_string(),
+            SymbolKind::INTERFACE,
+            &def.span,
+            None,
+        )),
+        Definition::CapabilityImplementation(def) => Some(symbol(
+            def.name.to_string(),
+            SymbolKind::CLASS,
+            &def.span,
+            None,
+        )),
+        Definition::ResourceType(def) => Some(symbol(
+            def.name.to_string(),
+            SymbolKind::STRUCT,
+            &def.span,
+            None,
+        )),
+        Definition::Type(def) => Some(symbol(
+            def.name.to_string(),
+            SymbolKind::STRUCT,
+            &def.span,
+            None,
+        )),
+        Definition::DataKind(def) => Some(symbol(
+            def.name.to_string(),
+            SymbolKind::ENUM,
+            &def.span,
+            None,
+        )),
+        Definition::TypeFn(def) => Some(symbol(
+            def.name.to_string(),
+            SymbolKind::FUNCTION,
+            &def.span,
+            None,
+        )),
+        Definition::PropositionPredicate(def) => Some(symbol(
+            def.name.to_string(),
+            SymbolKind::FUNCTION,
+            &def.span,
+            None,
+        )),
+        Definition::Impl(def) => Some(impl_symbol(def)),
+        Definition::Function(def) => Some(fn_symbol(def)),
+        Definition::BuiltinFn(def) => Some(symbol(
+            def.name.to_string(),
+            SymbolKind::FUNCTION,
+            &def.span,
+            None,
+        )),
+        Definition::SealedDomain(def) => Some(symbol(
+            def.name.to_string(),
+            SymbolKind::ENUM,
+            &def.span,
+            None,
+        )),
+        Definition::Law(_) => None,
     }
 }
 
@@ -148,10 +194,8 @@ fn module_decl_symbol(module: &ModuleDecl) -> DocumentSymbol {
     let children = match &module.source {
         ModuleSource::File => None,
         ModuleSource::Inline(definitions) => {
-            let children = definitions
-                .iter()
-                .map(definition_symbol)
-                .collect::<Vec<_>>();
+            let children: Vec<DocumentSymbol> =
+                definitions.iter().filter_map(definition_symbol).collect();
             (!children.is_empty()).then_some(children)
         }
     };
@@ -190,8 +234,11 @@ pub fn document_symbols(module: &ModuleFile) -> Vec<DocumentSymbol> {
             Definition::Function(def) => def.span.start,
             Definition::BuiltinFn(def) => def.span.start,
             Definition::SealedDomain(def) => def.span.start,
+            Definition::Law(def) => def.span.start,
         };
-        entries.push((start, definition_symbol(definition)));
+        if let Some(sym) = definition_symbol(definition) {
+            entries.push((start, sym));
+        }
     }
 
     if let Some(workflow) = &module.workflow {

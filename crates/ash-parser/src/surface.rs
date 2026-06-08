@@ -119,6 +119,8 @@ pub enum Definition {
     BuiltinFn(BuiltinFnDef),
     /// Sealed type-level domain declaration
     SealedDomain(SealedDomainDef),
+    /// Law definition
+    Law(LawDef),
 }
 
 /// Explicit named data-kind promotion declaration parsed as surface syntax.

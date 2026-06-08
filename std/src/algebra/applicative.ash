@@ -1,4 +1,4 @@
-pub interface Applicative<F : * -> *> {
+pub interface Applicative<F : * -> *> where F: Functor {
     pure(Int) -> F<Int>
     apply(F<Int -> Int>, F<Int>) -> F<Int>
 }

@@ -1,6 +1,6 @@
 # TASK-1045: Migrate stdlib `Applicative` to `where F: Functor` and reconcile examples/reference wording
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -61,12 +61,19 @@ commands:
   - git diff --check
   - RUSTC_WRAPPER= cargo check --workspace
 checklist:
-  - [ ] Focused final-path tests are non-zero and pass
-  - [ ] Missing required evidence has a negative test
-  - [ ] Reverse entailment has a negative test or is covered by TASK-1043
-  - [ ] Status surfaces and CHANGELOG are reconciled if this task completes
+  - [x] Focused final-path tests are non-zero and pass
+  - [x] Missing required evidence has a negative test
+  - [x] Reverse entailment has a negative test or is covered by TASK-1043
+  - [x] Status surfaces and CHANGELOG are reconciled if this task completes
 ```
 
 ## Notes
 
 This task must not create a blanket generic impl to encode the relation. The interface declaration itself owns the required evidence.
+
+## Completion notes
+
+- Updated `std/src/algebra/applicative.ash` so `Applicative<F>` declares `where F: Functor` through the final stdlib source.
+- Added `crates/ash-engine/tests/task_1045_stdlib_applicative_constraint.rs` to prove the stdlib surface preserves the constraint, final `option.ash`/`result.ash` Applicative implementations discharge it via Functor evidence, and missing `Functor<Option>` evidence rejects a local `Applicative<Option>` impl.
+- Reverse entailment remains covered by TASK-1043's directional evidence tests; this task does not add derivation, blanket impls, or proof search.
+- Verification: `cargo fmt --check`; `RUSTC_WRAPPER= cargo test -p ash-engine --test task_1045_stdlib_applicative_constraint -- --nocapture` (3 passed); `RUSTC_WRAPPER= cargo check --workspace`; `git diff --check`.

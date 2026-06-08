@@ -47,7 +47,7 @@ use ash_parser::surface::{
     AssociatedTypeKind, CapabilityImplementationDef, CapabilityImplementationDependency,
     CapabilityImplementationDependencyKind, CapabilityImplementationOperation,
     CapabilityInterfaceDef, CapabilityOperationMode, CapabilityOperationSig, Definition, ImplDef,
-    InterfaceDef, InterfaceMethodSig, InterfaceTypeParam, LawDef, PropositionClause,
+    InterfaceDef, InterfaceMethodSig, InterfaceTypeParam, LawDef, ProofDef, PropositionClause,
     PropositionClauseKind, PropositionPredicateDecl, PropositionPredicateParam, PropositionTail,
     ResourceTypeDef, Type as SurfaceType, TypeFnDef as SurfaceTypeFnDef,
     TypePattern as SurfaceTypePattern, Visibility as SurfaceVisibility,
@@ -668,6 +668,8 @@ pub struct InterfaceInfo {
     pub associated_types: Vec<String>,
     /// Interface-owned required evidence constraints.
     pub evidence_constraints: Vec<InterfaceEvidenceConstraintInfo>,
+    /// Law names declared by the interface.
+    pub law_names: Vec<String>,
     /// Methods declared by the interface.
     pub methods: HashMap<String, InterfaceMethodInfo>,
 }
@@ -15620,6 +15622,11 @@ impl TypeEnv {
             .iter()
             .map(|a| a.name.to_string())
             .collect::<Vec<_>>();
+        let law_names = def
+            .laws
+            .iter()
+            .map(|law| law.name.to_string())
+            .collect::<Vec<_>>();
 
         // Make the interface's own arity visible while converting method
         // signatures. Existing interface syntax uses the interface name as the
@@ -15634,6 +15641,7 @@ impl TypeEnv {
                 type_param_kinds: type_param_kinds.clone(),
                 associated_types: associated_types.clone(),
                 evidence_constraints: evidence_constraints.clone(),
+                law_names: law_names.clone(),
                 methods: HashMap::new(),
             },
         );
@@ -15672,6 +15680,7 @@ impl TypeEnv {
                 type_param_kinds: type_param_kinds.clone(),
                 associated_types: associated_types.clone(),
                 evidence_constraints,
+                law_names,
                 methods: methods.clone(),
             },
         );
@@ -15844,6 +15853,77 @@ impl TypeEnv {
         }
 
         Ok(())
+    }
+
+    /// Validate proofs declared at module scope against module-scope laws.
+    pub fn register_module_proofs(
+        &mut self,
+        definitions: &[Definition],
+    ) -> Result<(), TypeEnvError> {
+        let module_law_names = definitions
+            .iter()
+            .filter_map(|definition| match definition {
+                Definition::Law(law) => Some(law.name.to_string()),
+                _ => None,
+            })
+            .collect::<HashSet<_>>();
+
+        for proof in definitions
+            .iter()
+            .filter_map(|definition| match definition {
+                Definition::Proof(proof) => Some(proof),
+                _ => None,
+            })
+        {
+            self.check_proof_matches_law(proof, &module_law_names, "module")?;
+        }
+
+        Ok(())
+    }
+
+    /// Validate proofs declared in an impl block against laws of the implemented interface.
+    pub fn register_impl_proofs(&self, implementation: &ImplDef) -> Result<(), TypeEnvError> {
+        if implementation.proofs.is_empty() {
+            return Ok(());
+        }
+
+        let interface_name = implementation.interface.to_string();
+        let interface = self.interfaces.get(&interface_name).ok_or_else(|| {
+            TypeEnvError::InvalidDefinition(
+                format!(
+                    "proof declarations for impl {} cannot be checked because interface '{}' is unknown",
+                    implementation.interface, interface_name
+                ),
+                implementation.span,
+            )
+        })?;
+
+        let interface_law_names = interface.law_names.iter().cloned().collect::<HashSet<_>>();
+        let scope = format!("interface {interface_name}");
+        for proof in &implementation.proofs {
+            self.check_proof_matches_law(proof, &interface_law_names, &scope)?;
+        }
+
+        Ok(())
+    }
+
+    fn check_proof_matches_law(
+        &self,
+        proof: &ProofDef,
+        law_names: &HashSet<String>,
+        scope: &str,
+    ) -> Result<(), TypeEnvError> {
+        if law_names.contains(proof.name.as_ref()) {
+            return Ok(());
+        }
+
+        Err(TypeEnvError::InvalidDefinition(
+            format!(
+                "proof {} does not match any declared law in {scope} scope",
+                proof.name
+            ),
+            proof.span,
+        ))
     }
 
     fn bind_law_params(

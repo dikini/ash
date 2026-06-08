@@ -7,7 +7,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 |## [Unreleased]
 |
 |### Added
-|- [Phase 136](docs/plan/PLAN-136-INTERFACE-LAW-SYNTAX.md): Parser support for `law` declarations inside interfaces (TASK-1360) and at module scope (TASK-1361), plus `proof` declarations inside impl blocks (TASK-1362) and at module scope (TASK-1363), with typechecker validation that law proposition names and expression shapes resolve (TASK-1364). The parser now accepts `law` keyword with parameters and proposition expressions both inside `interface { ... }` blocks and as top-level module items, stores impl-scoped and module-scoped proof bodies for later verification stages, and rejects unknown law proposition references during program typechecking.
+|- [Phase 136](docs/plan/PLAN-136-INTERFACE-LAW-SYNTAX.md): Parser support for `law` declarations inside interfaces (TASK-1360) and at module scope (TASK-1361), plus `proof` declarations inside impl blocks (TASK-1362) and at module scope (TASK-1363), with typechecker validation that law proposition names and expression shapes resolve (TASK-1364) and that proof declarations match laws in scope (TASK-1365). The parser now accepts `law` keyword with parameters and proposition expressions both inside `interface { ... }` blocks and as top-level module items, stores impl-scoped and module-scoped proof bodies for later verification stages, rejects unknown law proposition references during program typechecking, and rejects proofs whose names do not match module-scope laws or laws on the implemented interface.
 |- [TASK-1359](docs/plan/tasks/TASK-1359-add-eq-interface.md): Added `Eq` interface to `std::algebra` for explicit equivalence relations in law propositions.
 |
 |### Fixed

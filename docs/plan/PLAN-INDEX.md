@@ -4054,7 +4054,7 @@ Adds `law` and `proof` syntax to Ash interfaces and modules, enabling declarativ
 | [TASK-1362](tasks/TASK-1362-parser-proof-in-impls.md) | Parser: `proof` keyword in impl blocks | Complete |
 | [TASK-1363](tasks/TASK-1363-parser-proof-module-scope.md) | Parser: `proof` keyword at module scope | Complete |
 | [TASK-1364](tasks/TASK-1364-typeck-law-name-checking.md) | Typechecker: verify law proposition names exist | Complete |
-| [TASK-1365](tasks/TASK-1365-typeck-proof-name-checking.md) | Typechecker: verify proof names match declared laws | Planned |
+| [TASK-1365](tasks/TASK-1365-typeck-proof-name-checking.md) | Typechecker: verify proof names match declared laws | Complete |
 | [TASK-1366](tasks/TASK-1366-typeck-law-purity-restriction.md) | Typechecker: restrict law propositions to Pure functions | Planned |
 | [TASK-1367](tasks/TASK-1367-typeck-proof-totality-stub.md) | Typechecker: proof body totality check stub (Stage 3 prep) | Planned |
 | [TASK-1368](tasks/TASK-1368-runner-law-extraction.md) | Synthetic tests: extract law nodes from AST | Planned |

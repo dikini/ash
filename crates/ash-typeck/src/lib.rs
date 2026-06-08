@@ -2899,6 +2899,14 @@ pub fn type_check_program_in_env_for_module(
     }
     env.register_module_laws(&program.definitions)
         .map_err(TypeCheckError::from)?;
+    for definition in &program.definitions {
+        if let ash_parser::surface::Definition::Impl(implementation) = definition {
+            env.register_impl_proofs(implementation)
+                .map_err(TypeCheckError::from)?;
+        }
+    }
+    env.register_module_proofs(&program.definitions)
+        .map_err(TypeCheckError::from)?;
 
     type_check_workflow_def_in_env(&env, &program.workflow)
 }

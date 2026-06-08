@@ -463,9 +463,9 @@ git commit -m "feat(test-runner): support by test delegation syntax (TASK-1370)"
 **Objective:** Add opt-out flags for law testing.
 
 **Files:**
-- Modify: `crates/ash-cli/src/main.rs`
-- Modify: `crates/ash-cli/src/commands/check.rs`
-- Test: `crates/ash-cli/tests/law_opt_out.rs`
+- Modify: `crates/ash-cli/src/commands/test.rs`
+- Modify: `crates/ash-cli/src/test_runner/executor.rs`
+- Test: `crates/ash-cli/tests/test_command.rs`
 
 **Step 6: Commit**
 

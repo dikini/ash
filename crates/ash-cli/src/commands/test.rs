@@ -82,6 +82,14 @@ pub struct TestArgs {
     #[arg(long, value_name = "SOURCES")]
     pub only_synthesized: Option<SynthesizedSourceList>,
 
+    /// Skip all law-derived synthesized tests
+    #[arg(long)]
+    pub skip_law_tests: bool,
+
+    /// Skip a specific law-derived synthesized test by declared law name
+    #[arg(long = "skip-law-test", value_name = "NAME")]
+    pub skip_law_test_names: Vec<String>,
+
     /// Stop on first failure
     #[arg(long)]
     pub fail_fast: bool,
@@ -136,6 +144,8 @@ pub fn test(args: &TestArgs) -> CliResult<()> {
         only_synthesized,
         synthesized_sources,
         synthesized_snapshots: Vec::new(),
+        skip_law_tests: args.skip_law_tests,
+        skip_law_test_names: args.skip_law_test_names.clone(),
         fail_fast: args.fail_fast,
         timeout_ms: args.timeout,
         seed: args.seed,

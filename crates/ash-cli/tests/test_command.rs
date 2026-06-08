@@ -39,7 +39,9 @@ fn test_help_output() {
         .arg("--help")
         .assert()
         .success()
-        .stdout(predicate::str::contains("Run Ash tests"));
+        .stdout(predicate::str::contains("Run Ash tests"))
+        .stdout(predicate::str::contains("--skip-law-tests"))
+        .stdout(predicate::str::contains("--skip-law-test"));
 }
 
 #[test]

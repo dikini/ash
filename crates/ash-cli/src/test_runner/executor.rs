@@ -272,6 +272,10 @@ pub struct SuiteConfig {
     pub synthesized_sources: SynthesizedSources,
     /// Structured checked/lowered snapshots available to the runner for synthesized execution.
     pub synthesized_snapshots: Vec<(std::path::PathBuf, RunnerIntrospectionSnapshot)>,
+    /// Skip all law-derived synthesized tests.
+    pub skip_law_tests: bool,
+    /// Declared law names or generated law test names to skip.
+    pub skip_law_test_names: Vec<String>,
     /// Fail fast (stop on first failure).
     pub fail_fast: bool,
     /// Default timeout in milliseconds.
@@ -295,6 +299,8 @@ impl Default for SuiteConfig {
             only_synthesized: false,
             synthesized_sources: SynthesizedSources::default(),
             synthesized_snapshots: Vec::new(),
+            skip_law_tests: false,
+            skip_law_test_names: Vec::new(),
             fail_fast: false,
             timeout_ms: DEFAULT_TIMEOUT_SECS * 1000,
             seed: None,
@@ -585,6 +591,10 @@ fn synthesized_result_selected(config: &SuiteConfig, result: &TestResult) -> boo
         return false;
     }
 
+    if law_result_skipped(config, result) {
+        return false;
+    }
+
     if let Some(ref tag) = config.tag_filter
         && !result.tags.iter().any(|candidate| candidate == tag)
     {
@@ -598,6 +608,28 @@ fn synthesized_result_selected(config: &SuiteConfig, result: &TestResult) -> boo
     }
 
     true
+}
+
+fn law_result_skipped(config: &SuiteConfig, result: &TestResult) -> bool {
+    if result.source != TestSource::Law {
+        return false;
+    }
+    if config.skip_law_tests {
+        return true;
+    }
+    if config.skip_law_test_names.is_empty() {
+        return false;
+    }
+
+    let declared_law_name = result
+        .repro_artifact
+        .as_ref()
+        .and_then(|artifact| artifact.oracle_snapshot.get("law"))
+        .and_then(serde_json::Value::as_str);
+
+    config.skip_law_test_names.iter().any(|name| {
+        name == &result.name || declared_law_name.is_some_and(|law_name| name == law_name)
+    })
 }
 
 fn synthesized_source_enabled(config: &SuiteConfig, source: TestSource) -> bool {
@@ -871,6 +903,76 @@ workflow contract_case
         );
     }
 
+    #[test]
+    fn run_suite_skip_law_tests_omits_all_law_rows() {
+        let dir = tempfile::tempdir().unwrap();
+        let snapshot_path = dir.path().join("checked-summary.ash");
+        let config = SuiteConfig {
+            root: dir.path().to_path_buf(),
+            include_synthesized: true,
+            only_synthesized: true,
+            synthesized_sources: SynthesizedSources {
+                contracts: true,
+                policies: false,
+                obligations: false,
+                laws: true,
+            },
+            synthesized_snapshots: vec![
+                (snapshot_path.clone(), contract_snapshot()),
+                (snapshot_path, law_snapshot()),
+            ],
+            skip_law_tests: true,
+            ..Default::default()
+        };
+
+        let result = run_suite(&config);
+
+        assert_eq!(result.total(), 2, "contract rows should remain selected");
+        assert!(
+            result
+                .tests
+                .iter()
+                .all(|test| test.source != TestSource::Law),
+            "--skip-law-tests should omit all law-derived rows: {result:#?}"
+        );
+    }
+
+    #[test]
+    fn run_suite_skip_law_test_name_omits_only_matching_law_rows() {
+        let dir = tempfile::tempdir().unwrap();
+        let snapshot_path = dir.path().join("checked-summary.ash");
+        let config = SuiteConfig {
+            root: dir.path().to_path_buf(),
+            include_synthesized: true,
+            only_synthesized: true,
+            synthesized_sources: SynthesizedSources {
+                contracts: false,
+                policies: false,
+                obligations: false,
+                laws: true,
+            },
+            synthesized_snapshots: vec![(snapshot_path, two_law_snapshot())],
+            skip_law_tests: false,
+            skip_law_test_names: vec!["reflexive".to_string()],
+            ..Default::default()
+        };
+
+        let result = run_suite(&config);
+
+        assert_eq!(
+            result.total(),
+            3,
+            "only the unskipped second law should run"
+        );
+        assert!(
+            result
+                .tests
+                .iter()
+                .all(|test| test.name.starts_with("synthesized/law/identity/")),
+            "--skip-law-test=reflexive should omit reflexive law rows only: {result:#?}"
+        );
+    }
+
     fn contract_snapshot() -> RunnerIntrospectionSnapshot {
         RunnerIntrospectionSnapshot {
             schema_version: RUNNER_SYNTHESIS_SCHEMA_VERSION.to_string(),
@@ -924,6 +1026,20 @@ workflow contract_case
             }],
             ..RunnerIntrospectionSnapshot::default()
         }
+    }
+
+    fn two_law_snapshot() -> RunnerIntrospectionSnapshot {
+        let mut snapshot = law_snapshot();
+        snapshot.laws.push(RunnerLawMetadata {
+            id: "law:module:identity".to_string(),
+            name: "identity".to_string(),
+            scope: LawScope::Module,
+            owner: None,
+            params: vec!["x: Int".to_string()],
+            proposition: "x == x".to_string(),
+            delegated_test: None,
+        });
+        snapshot
     }
 
     #[test]

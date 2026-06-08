@@ -27,12 +27,13 @@ pub enum TestOutputFormat {
 }
 
 /// Synthesized test source selection.
-/// Comma-separated list of: contracts, policies, obligations
+/// Comma-separated list of: contracts, policies, obligations, laws
 #[derive(Debug, Clone, Default)]
 pub struct SynthesizedSourceList {
     pub contracts: bool,
     pub policies: bool,
     pub obligations: bool,
+    pub laws: bool,
 }
 
 impl std::str::FromStr for SynthesizedSourceList {
@@ -45,6 +46,7 @@ impl std::str::FromStr for SynthesizedSourceList {
                 "contracts" => result.contracts = true,
                 "policies" => result.policies = true,
                 "obligations" => result.obligations = true,
+                "laws" => result.laws = true,
                 "" => {}
                 other => return Err(format!("unknown synthesized source: {other}")),
             }
@@ -72,7 +74,7 @@ pub struct TestArgs {
     #[arg(long)]
     pub kind: Option<String>,
 
-    /// Include synthesized tests from specified sources (contracts,policies,obligations)
+    /// Include synthesized tests from specified sources (contracts,policies,obligations,laws)
     #[arg(long, value_name = "SOURCES")]
     pub include_synthesized: Option<SynthesizedSourceList>,
 
@@ -109,12 +111,14 @@ pub fn test(args: &TestArgs) -> CliResult<()> {
             contracts: only.contracts,
             policies: only.policies,
             obligations: only.obligations,
+            laws: only.laws,
         }
     } else if let Some(ref include) = args.include_synthesized {
         SynthesizedSources {
             contracts: include.contracts,
             policies: include.policies,
             obligations: include.obligations,
+            laws: include.laws,
         }
     } else {
         SynthesizedSources::default()

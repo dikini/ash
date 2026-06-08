@@ -73,6 +73,8 @@ pub enum TestSource {
     Policy,
     /// Synthesized from obligation metadata.
     Obligation,
+    /// Synthesized from law metadata.
+    Law,
 }
 
 impl fmt::Display for TestSource {
@@ -82,6 +84,7 @@ impl fmt::Display for TestSource {
             TestSource::Contract => write!(f, "synthesized:contract"),
             TestSource::Policy => write!(f, "synthesized:policy"),
             TestSource::Obligation => write!(f, "synthesized:obligation"),
+            TestSource::Law => write!(f, "synthesized:law"),
         }
     }
 }

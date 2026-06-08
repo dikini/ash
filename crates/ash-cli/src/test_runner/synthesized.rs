@@ -1,11 +1,11 @@
-//! Synthesized test generation from contracts, policies, and obligations.
+//! Synthesized test generation from contracts, policies, obligations, and laws.
 //!
 //! TASK-513: Opt-in synthesized test planning. These are NOT run by default.
 //! They must be explicitly requested via `--include-synthesized` or `--only-synthesized`.
 //!
 //! Synthesized tests complement authored tests but are never a substitute.
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
@@ -26,6 +26,9 @@ pub const RUNNER_SYNTHESIS_SCHEMA_VERSION: &str = "ash-synthesized-v1.0";
 
 /// Maximum explicitly materialized small-world product axes.
 const SMALLWORLD_MAX_PRODUCT_AXES: usize = 16;
+
+/// Default generated worlds for law-derived small-world checks when no runner cap is supplied.
+const LAW_SMALLWORLD_DEFAULT_MAX_WORLDS: usize = 8;
 
 /// Maximum explicitly materialized small-world list length.
 const SMALLWORLD_MAX_LIST_LEN: usize = 16;
@@ -972,27 +975,67 @@ fn contract_targets_from_module(path: &Path, module: &ModuleFile) -> Vec<String>
 
 /// Extract runner-facing law metadata from a parsed module.
 pub fn extract_laws(module: &ModuleFile) -> Vec<RunnerLawMetadata> {
+    let proof_scopes = proof_scopes(module);
     let mut laws = Vec::new();
 
     for definition in &module.definitions {
         match definition {
             Definition::Interface(interface) => {
+                let interface_name = interface.name.to_string();
+                let proved_interface_law_names = proof_scopes
+                    .interface
+                    .get(&interface_name)
+                    .cloned()
+                    .unwrap_or_default();
                 for law in &interface.laws {
+                    if proved_interface_law_names.contains(&*law.name) {
+                        continue;
+                    }
                     laws.push(law_metadata(
                         law,
                         LawScope::Interface,
-                        Some(interface.name.to_string()),
+                        Some(interface_name.clone()),
                     ));
                 }
             }
             Definition::Law(law) => {
-                laws.push(law_metadata(law, LawScope::Module, None));
+                if !proof_scopes.module.contains(&*law.name) {
+                    laws.push(law_metadata(law, LawScope::Module, None));
+                }
             }
             _ => {}
         }
     }
 
     laws
+}
+
+struct ProofScopes {
+    module: BTreeSet<String>,
+    interface: BTreeMap<String, BTreeSet<String>>,
+}
+
+fn proof_scopes(module: &ModuleFile) -> ProofScopes {
+    let mut scopes = ProofScopes {
+        module: BTreeSet::new(),
+        interface: BTreeMap::new(),
+    };
+    for definition in &module.definitions {
+        match definition {
+            Definition::Proof(proof) => {
+                scopes.module.insert(proof.name.to_string());
+            }
+            Definition::Impl(impl_def) => {
+                scopes
+                    .interface
+                    .entry(impl_def.interface.to_string())
+                    .or_default()
+                    .extend(impl_def.proofs.iter().map(|proof| proof.name.to_string()));
+            }
+            _ => {}
+        }
+    }
+    scopes
 }
 
 fn law_metadata(law: &LawDef, scope: LawScope, owner: Option<String>) -> RunnerLawMetadata {
@@ -1916,6 +1959,7 @@ pub fn synthesize_from_snapshot_with_limits(
     }
 
     results.extend(smallworld_results(path, snapshot, seed, max_worlds));
+    results.extend(law_smallworld_results(path, snapshot, seed, max_worlds));
 
     for unsupported in &snapshot.unsupported {
         results.push(deferred_result(
@@ -2149,6 +2193,185 @@ fn property_repro_artifact(
             None,
         )
     }
+}
+
+fn law_smallworld_results(
+    path: &Path,
+    snapshot: &RunnerIntrospectionSnapshot,
+    seed: Option<u64>,
+    max_worlds: Option<usize>,
+) -> Vec<TestResult> {
+    let seed = seed.unwrap_or(0);
+    let mut results = Vec::new();
+
+    for law in &snapshot.laws {
+        let Some(param_domains) = law_param_domains(law) else {
+            results.push(deferred_law_result(path, snapshot, law, seed));
+            continue;
+        };
+        let worlds = law_binding_worlds(
+            &param_domains,
+            max_worlds.unwrap_or(LAW_SMALLWORLD_DEFAULT_MAX_WORLDS),
+        );
+        if worlds.is_empty() {
+            results.push(deferred_law_result(path, snapshot, law, seed));
+            continue;
+        }
+
+        for (index, bindings) in worlds.into_iter().enumerate() {
+            let world_index = index + 1;
+            let case_id = format!("synthesized/law/{}/world-{}", law.name, world_index);
+            let outcome = match evaluate_simple_bool_expression(&law.proposition, &bindings) {
+                Ok(true) => Outcome::Pass,
+                Ok(false) => Outcome::Fail,
+                Err(_) => Outcome::Skip,
+            };
+            let message = match outcome {
+                Outcome::Pass => format!(
+                    "law {} held for generated small-world binding {}",
+                    law.name,
+                    Value::Object(bindings.clone().into_iter().collect())
+                ),
+                Outcome::Fail => format!(
+                    "law {} counterexample at seed {seed}, world {world_index}: {}",
+                    law.name,
+                    Value::Object(bindings.clone().into_iter().collect())
+                ),
+                Outcome::Skip => format!(
+                    "deferred: unsupported law proposition {:?} for generated binding {}",
+                    law.proposition,
+                    Value::Object(bindings.clone().into_iter().collect())
+                ),
+                _ => unreachable!("law small-world generation only emits pass/fail/skip"),
+            };
+            let generated_input_snapshot = Value::Object(bindings.clone().into_iter().collect());
+            let mut repro = repro_artifact(
+                path,
+                snapshot.source_artifact_id.clone(),
+                snapshot.check_summary_id.clone(),
+                format!("law:{}:world-{world_index}", law.id),
+                seed,
+                world_index,
+                Some(generated_input_snapshot.clone()),
+                json!({
+                    "source": "law",
+                    "law": law.name,
+                    "proposition": law.proposition,
+                    "expected": true,
+                    "world_index": world_index,
+                }),
+                Some(generated_input_snapshot.clone()),
+            );
+            repro.world_index = Some(world_index);
+
+            let mut result = TestResult::new(&case_id, path.to_path_buf())
+                .with_outcome(outcome)
+                .with_source(TestSource::Law)
+                .with_kind(TestKind::SmallWorld)
+                .with_duration(Duration::ZERO)
+                .with_seed(seed)
+                .with_message(message)
+                .with_repro_artifact(repro);
+            result.world_index = Some(world_index);
+            result.failing_case = outcome.is_failure().then_some(world_index);
+            result.tags = vec!["synthesized".to_string(), "law".to_string()];
+            results.push(result);
+        }
+    }
+
+    results
+}
+
+fn law_param_domains(law: &RunnerLawMetadata) -> Option<Vec<(String, Vec<Value>)>> {
+    law.params
+        .iter()
+        .map(|param| law_param_domain(param))
+        .collect()
+}
+
+fn law_param_domain(param: &str) -> Option<(String, Vec<Value>)> {
+    let (name, ty) = param.split_once(':')?;
+    let name = name.trim().to_string();
+    let ty = ty.trim();
+    let values = match ty {
+        "Int" => vec![json!(-1), json!(0), json!(1)],
+        "Bool" => vec![json!(false), json!(true)],
+        "String" => vec![json!(""), json!("ash")],
+        _ => return None,
+    };
+    Some((name, values))
+}
+
+fn law_binding_worlds(
+    param_domains: &[(String, Vec<Value>)],
+    limit: usize,
+) -> Vec<BTreeMap<String, Value>> {
+    if limit == 0 {
+        return Vec::new();
+    }
+    if param_domains.is_empty() {
+        return vec![BTreeMap::new()];
+    }
+    let mut worlds = Vec::new();
+    let mut bindings = BTreeMap::new();
+    append_law_binding_worlds(param_domains, limit, 0, &mut bindings, &mut worlds);
+    worlds
+}
+
+fn append_law_binding_worlds(
+    param_domains: &[(String, Vec<Value>)],
+    limit: usize,
+    axis_index: usize,
+    bindings: &mut BTreeMap<String, Value>,
+    worlds: &mut Vec<BTreeMap<String, Value>>,
+) {
+    if worlds.len() >= limit {
+        return;
+    }
+    if axis_index == param_domains.len() {
+        worlds.push(bindings.clone());
+        return;
+    }
+    let (name, values) = &param_domains[axis_index];
+    for value in values {
+        if worlds.len() >= limit {
+            return;
+        }
+        bindings.insert(name.clone(), value.clone());
+        append_law_binding_worlds(param_domains, limit, axis_index + 1, bindings, worlds);
+        bindings.remove(name);
+    }
+}
+
+fn deferred_law_result(
+    path: &Path,
+    snapshot: &RunnerIntrospectionSnapshot,
+    law: &RunnerLawMetadata,
+    seed: u64,
+) -> TestResult {
+    deferred_result_with_kind(
+        path,
+        TestSource::Law,
+        TestKind::SmallWorld,
+        format!("synthesized/law/{}/deferred", law.name),
+        "deferred: law metadata lacks supported finite parameter domains or executable proposition",
+        repro_artifact(
+            path,
+            snapshot.source_artifact_id.clone(),
+            snapshot.check_summary_id.clone(),
+            format!("law:{}:deferred", law.id),
+            seed,
+            1,
+            None,
+            json!({
+                "source": "law",
+                "law": law.name,
+                "proposition": law.proposition,
+                "params": law.params,
+            }),
+            None,
+        ),
+    )
 }
 
 fn smallworld_results(
@@ -3611,28 +3834,53 @@ fn evaluate_simple_bool_expression(
 ) -> Result<bool, String> {
     let tokens: Vec<&str> = expression.split_whitespace().collect();
     if tokens.len() != 3 {
-        return Err(format!(
-            "expected '<name> <op> <integer>', got {expression:?}"
-        ));
+        return Err(format!("expected '<term> <op> <term>', got {expression:?}"));
     }
 
-    let left = bindings
-        .get(tokens[0])
-        .and_then(Value::as_i64)
-        .ok_or_else(|| format!("missing integer binding for {}", tokens[0]))?;
-    let right = tokens[2]
-        .parse::<i64>()
-        .map_err(|_| format!("right operand is not an integer: {}", tokens[2]))?;
+    let left = resolve_simple_value(tokens[0], bindings)?;
+    let right = resolve_simple_value(tokens[2], bindings)?;
 
     match tokens[1] {
-        ">" => Ok(left > right),
-        ">=" => Ok(left >= right),
-        "<" => Ok(left < right),
-        "<=" => Ok(left <= right),
         "==" => Ok(left == right),
         "!=" => Ok(left != right),
+        ">" => compare_i64(&left, &right, |left, right| left > right),
+        ">=" => compare_i64(&left, &right, |left, right| left >= right),
+        "<" => compare_i64(&left, &right, |left, right| left < right),
+        "<=" => compare_i64(&left, &right, |left, right| left <= right),
         other => Err(format!("unsupported operator {other}")),
     }
+}
+
+fn resolve_simple_value(term: &str, bindings: &BTreeMap<String, Value>) -> Result<Value, String> {
+    if let Some(value) = bindings.get(term) {
+        return Ok(value.clone());
+    }
+    if let Ok(value) = term.parse::<i64>() {
+        return Ok(json!(value));
+    }
+    match term {
+        "true" => Ok(json!(true)),
+        "false" => Ok(json!(false)),
+        "null" => Ok(Value::Null),
+        _ if term.starts_with('"') && term.ends_with('"') && term.len() >= 2 => {
+            Ok(json!(term.trim_matches('"')))
+        }
+        _ => Err(format!("missing binding or unsupported literal for {term}")),
+    }
+}
+
+fn compare_i64(
+    left: &Value,
+    right: &Value,
+    compare: impl FnOnce(i64, i64) -> bool,
+) -> Result<bool, String> {
+    let left = left
+        .as_i64()
+        .ok_or_else(|| format!("left operand is not an integer: {left}"))?;
+    let right = right
+        .as_i64()
+        .ok_or_else(|| format!("right operand is not an integer: {right}"))?;
+    Ok(compare(left, right))
 }
 
 fn evaluate_contract_postcondition(
@@ -3805,6 +4053,7 @@ fn source_from_label(source_kind: &str) -> TestSource {
         "contract" | "contracts" => TestSource::Contract,
         "policy" | "policies" => TestSource::Policy,
         "obligation" | "obligations" => TestSource::Obligation,
+        "law" | "laws" => TestSource::Law,
         _ => TestSource::Authored,
     }
 }
@@ -4134,6 +4383,216 @@ mod tests {
         assert_eq!(laws[0].owner, None);
         assert_eq!(laws[0].params, vec!["x: Int"]);
         assert_eq!(laws[0].proposition, "id(x) == x");
+    }
+
+    #[test]
+    fn extract_laws_omits_module_law_with_matching_proof() {
+        let module = parse_module_for_law_extraction(
+            r#"
+            law id_reflexive(x: Int): x == x
+            proof id_reflexive(x: Int) {
+                by_definition
+            }
+            "#,
+        );
+
+        let laws = extract_laws(&module);
+
+        assert!(
+            laws.is_empty(),
+            "proof-backed module laws should not synthesize fallback tests: {laws:#?}"
+        );
+    }
+
+    #[test]
+    fn extract_laws_keeps_interface_law_when_only_module_proof_name_matches() {
+        let module = parse_module_for_law_extraction(
+            r#"
+            interface Eq<A> {
+                law reflexive(x: A): x == x
+            }
+            law reflexive(x: Int): x == x
+            proof reflexive(x: Int) {
+                by_definition
+            }
+            "#,
+        );
+
+        let laws = extract_laws(&module);
+
+        assert_eq!(laws.len(), 1);
+        assert_eq!(laws[0].id, "law:interface:Eq:reflexive");
+        assert_eq!(laws[0].scope, LawScope::Interface);
+    }
+
+    #[test]
+    fn extract_laws_keeps_module_law_when_only_impl_proof_name_matches() {
+        let module = parse_module_for_law_extraction(
+            r#"
+            interface Eq<A> {
+                law reflexive(x: A): x == x
+            }
+            impl Eq<Int> {
+                proof reflexive(x: Int) {
+                    by_definition
+                }
+            }
+            law reflexive(x: Int): x == x
+            "#,
+        );
+
+        let laws = extract_laws(&module);
+
+        assert_eq!(laws.len(), 1);
+        assert_eq!(laws[0].id, "law:module:reflexive");
+        assert_eq!(laws[0].scope, LawScope::Module);
+    }
+
+    fn law_snapshot(law: RunnerLawMetadata) -> RunnerIntrospectionSnapshot {
+        RunnerIntrospectionSnapshot {
+            schema_version: RUNNER_SYNTHESIS_SCHEMA_VERSION.to_string(),
+            module_identity: "module:laws".to_string(),
+            source_artifact_id: "source:laws.ash".to_string(),
+            check_summary_id: "checked:laws".to_string(),
+            laws: vec![law],
+            ..RunnerIntrospectionSnapshot::default()
+        }
+    }
+
+    fn module_law(name: &str, params: Vec<&str>, proposition: &str) -> RunnerLawMetadata {
+        RunnerLawMetadata {
+            id: format!("law:module:{name}"),
+            name: name.to_string(),
+            scope: LawScope::Module,
+            owner: None,
+            params: params.into_iter().map(str::to_string).collect(),
+            proposition: proposition.to_string(),
+        }
+    }
+
+    #[test]
+    fn law_smallworld_generation_passes_valid_unproven_law() {
+        let snapshot = law_snapshot(module_law("reflexive", vec!["x: Int"], "x == x"));
+
+        let results = synthesize_from_snapshot_with_limits(
+            Path::new("laws.ash"),
+            &snapshot,
+            Some(42),
+            None,
+            Some(3),
+        );
+
+        let law_results = results
+            .iter()
+            .filter(|result| result.name.starts_with("synthesized/law/reflexive/"))
+            .collect::<Vec<_>>();
+        assert_eq!(law_results.len(), 3);
+        assert!(
+            law_results
+                .iter()
+                .all(|result| result.outcome == Outcome::Pass)
+        );
+        assert!(
+            law_results
+                .iter()
+                .all(|result| result.source == TestSource::Law)
+        );
+        assert!(
+            law_results
+                .iter()
+                .all(|result| result.kind == TestKind::SmallWorld)
+        );
+        assert!(law_results.iter().all(|result| result.seed == Some(42)));
+    }
+
+    #[test]
+    fn law_smallworld_generation_reports_counterexample_for_broken_law() {
+        let snapshot = law_snapshot(module_law("not_reflexive", vec!["x: Int"], "x != x"));
+
+        let results = synthesize_from_snapshot_with_limits(
+            Path::new("laws.ash"),
+            &snapshot,
+            Some(7),
+            None,
+            Some(3),
+        );
+
+        let failing = results
+            .iter()
+            .find(|result| result.name == "synthesized/law/not_reflexive/world-1")
+            .expect("broken law should generate a first small-world case");
+        assert_eq!(failing.outcome, Outcome::Fail);
+        assert_eq!(failing.source, TestSource::Law);
+        assert_eq!(failing.kind, TestKind::SmallWorld);
+        assert_eq!(failing.seed, Some(7));
+        assert_eq!(failing.failing_case, Some(1));
+        assert!(
+            failing
+                .message
+                .as_deref()
+                .is_some_and(|message| message.contains("counterexample")),
+            "failure should report counterexample, got {:?}",
+            failing.message
+        );
+        let repro = failing
+            .repro_artifact
+            .as_ref()
+            .expect("law failures should include repro metadata");
+        assert_eq!(repro.seed, 7);
+        assert_eq!(repro.world_index, Some(1));
+        assert_eq!(repro.generated_input_snapshot, Some(json!({ "x": -1 })));
+    }
+
+    #[test]
+    fn law_smallworld_generation_uses_default_cap_for_parameter_products() {
+        let snapshot = law_snapshot(module_law(
+            "bounded_product",
+            vec!["x: Int", "y: Bool", "z: String"],
+            "x == x",
+        ));
+
+        let results = synthesize_from_snapshot_with_limits(
+            Path::new("laws.ash"),
+            &snapshot,
+            Some(11),
+            None,
+            None,
+        );
+
+        assert_eq!(
+            results.len(),
+            8,
+            "uncapped law products should use the small default cap rather than materializing the full product"
+        );
+        assert_eq!(
+            results.last().and_then(|result| result.world_index),
+            Some(8)
+        );
+    }
+
+    #[test]
+    fn law_smallworld_generation_runs_zero_parameter_law_once() {
+        let snapshot = law_snapshot(module_law("zero_arg", vec![], "true == true"));
+
+        let results = synthesize_from_snapshot_with_limits(
+            Path::new("laws.ash"),
+            &snapshot,
+            Some(13),
+            None,
+            None,
+        );
+
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].name, "synthesized/law/zero_arg/world-1");
+        assert_eq!(results[0].outcome, Outcome::Pass);
+        assert_eq!(
+            results[0]
+                .repro_artifact
+                .as_ref()
+                .unwrap()
+                .generated_input_snapshot,
+            Some(json!({}))
+        );
     }
 
     #[test]

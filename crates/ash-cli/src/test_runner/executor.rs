@@ -249,6 +249,8 @@ pub struct SynthesizedSources {
     pub policies: bool,
     /// Include obligation-derived tests.
     pub obligations: bool,
+    /// Include law-derived tests.
+    pub laws: bool,
 }
 
 /// Configuration for a test suite run.
@@ -603,6 +605,7 @@ fn synthesized_source_enabled(config: &SuiteConfig, source: TestSource) -> bool 
         TestSource::Contract => config.synthesized_sources.contracts,
         TestSource::Policy => config.synthesized_sources.policies,
         TestSource::Obligation => config.synthesized_sources.obligations,
+        TestSource::Law => config.synthesized_sources.laws,
         TestSource::Authored => false,
     }
 }
@@ -612,9 +615,9 @@ mod tests {
     use super::*;
     use crate::test_runner::synthesized::{
         ContractExecutableTarget, ContractExecutableTargetKind, ContractExecutionSetup,
-        ContractPostconditionOracle, ContractTargetBody, RUNNER_SYNTHESIS_SCHEMA_VERSION,
-        RunnerContractMetadata, RunnerIntrospectionSnapshot, SynthesizedOracleKind,
-        TypeGeneratorDescriptor, TypeGeneratorSource,
+        ContractPostconditionOracle, ContractTargetBody, LawScope, RUNNER_SYNTHESIS_SCHEMA_VERSION,
+        RunnerContractMetadata, RunnerIntrospectionSnapshot, RunnerLawMetadata,
+        SynthesizedOracleKind, TypeGeneratorDescriptor, TypeGeneratorSource,
     };
     use ash_core::{Expr as CoreExpr, Span as CoreSpan};
     use serde_json::json;
@@ -783,6 +786,7 @@ workflow contract_case
                 contracts: true,
                 policies: false,
                 obligations: false,
+                laws: false,
             },
             ..Default::default()
         };
@@ -812,43 +816,12 @@ workflow contract_case
                 contracts: true,
                 policies: false,
                 obligations: false,
+                laws: false,
             },
-            synthesized_snapshots: vec![(
-                snapshot_path.clone(),
-                RunnerIntrospectionSnapshot {
-                    schema_version: RUNNER_SYNTHESIS_SCHEMA_VERSION.to_string(),
-                    module_identity: "test-module".to_string(),
-                    source_artifact_id: "source:checked-summary.ash".to_string(),
-                    check_summary_id: "check:summary".to_string(),
-                    contracts: vec![RunnerContractMetadata {
-                        id: "contract:positive".to_string(),
-                        callable_name: "positive".to_string(),
-                        callable_kind: "pure_function".to_string(),
-                        param_names: vec!["x".to_string()],
-                        param_types: vec!["Int".to_string()],
-                        lowered_requires: vec!["x > 0".to_string()],
-                        generation_hints: vec![
-                            TypeGeneratorDescriptor {
-                                id: "x-valid".to_string(),
-                                target_type: "Int".to_string(),
-                                source: TypeGeneratorSource::ContractValid,
-                                exact_values: vec![json!(1)],
-                                ..TypeGeneratorDescriptor::default()
-                            },
-                            TypeGeneratorDescriptor {
-                                id: "x-invalid".to_string(),
-                                target_type: "Int".to_string(),
-                                source: TypeGeneratorSource::ContractInvalidNearby,
-                                exact_values: vec![json!(0)],
-                                ..TypeGeneratorDescriptor::default()
-                            },
-                        ],
-                        executable_case_kinds: vec![SynthesizedOracleKind::PreconditionBoundary],
-                        ..RunnerContractMetadata::default()
-                    }],
-                    ..RunnerIntrospectionSnapshot::default()
-                },
-            )],
+            synthesized_snapshots: vec![
+                (snapshot_path.clone(), contract_snapshot()),
+                (snapshot_path.clone(), law_snapshot()),
+            ],
             ..Default::default()
         };
 
@@ -860,8 +833,96 @@ workflow contract_case
                 .tests
                 .iter()
                 .all(|test| test.source == TestSource::Contract && test.outcome == Outcome::Pass),
-            "structured snapshot contract cases should execute through run_suite: {result:#?}"
+            "only-synthesized contract mode should not include law rows: {result:#?}"
         );
+    }
+
+    #[test]
+    fn run_suite_executes_structured_snapshot_law_cases_when_laws_selected() {
+        let dir = tempfile::tempdir().unwrap();
+        let snapshot_path = dir.path().join("checked-summary.ash");
+        let config = SuiteConfig {
+            root: dir.path().to_path_buf(),
+            include_synthesized: true,
+            only_synthesized: true,
+            synthesized_sources: SynthesizedSources {
+                contracts: false,
+                policies: false,
+                obligations: false,
+                laws: true,
+            },
+            synthesized_snapshots: vec![(snapshot_path, law_snapshot())],
+            ..Default::default()
+        };
+
+        let result = run_suite(&config);
+
+        assert_eq!(
+            result.total(),
+            3,
+            "Int law should generate capped primitive worlds"
+        );
+        assert!(
+            result
+                .tests
+                .iter()
+                .all(|test| test.source == TestSource::Law && test.outcome == Outcome::Pass),
+            "laws source selection should include only law rows: {result:#?}"
+        );
+    }
+
+    fn contract_snapshot() -> RunnerIntrospectionSnapshot {
+        RunnerIntrospectionSnapshot {
+            schema_version: RUNNER_SYNTHESIS_SCHEMA_VERSION.to_string(),
+            module_identity: "test-module".to_string(),
+            source_artifact_id: "source:checked-summary.ash".to_string(),
+            check_summary_id: "check:summary".to_string(),
+            contracts: vec![RunnerContractMetadata {
+                id: "contract:positive".to_string(),
+                callable_name: "positive".to_string(),
+                callable_kind: "pure_function".to_string(),
+                param_names: vec!["x".to_string()],
+                param_types: vec!["Int".to_string()],
+                lowered_requires: vec!["x > 0".to_string()],
+                generation_hints: vec![
+                    TypeGeneratorDescriptor {
+                        id: "x-valid".to_string(),
+                        target_type: "Int".to_string(),
+                        source: TypeGeneratorSource::ContractValid,
+                        exact_values: vec![json!(1)],
+                        ..TypeGeneratorDescriptor::default()
+                    },
+                    TypeGeneratorDescriptor {
+                        id: "x-invalid".to_string(),
+                        target_type: "Int".to_string(),
+                        source: TypeGeneratorSource::ContractInvalidNearby,
+                        exact_values: vec![json!(0)],
+                        ..TypeGeneratorDescriptor::default()
+                    },
+                ],
+                executable_case_kinds: vec![SynthesizedOracleKind::PreconditionBoundary],
+                ..RunnerContractMetadata::default()
+            }],
+            ..RunnerIntrospectionSnapshot::default()
+        }
+    }
+
+    fn law_snapshot() -> RunnerIntrospectionSnapshot {
+        RunnerIntrospectionSnapshot {
+            schema_version: RUNNER_SYNTHESIS_SCHEMA_VERSION.to_string(),
+            module_identity: "test-module".to_string(),
+            source_artifact_id: "source:checked-summary.ash".to_string(),
+            check_summary_id: "check:summary".to_string(),
+            laws: vec![RunnerLawMetadata {
+                id: "law:module:reflexive".to_string(),
+                name: "reflexive".to_string(),
+                scope: LawScope::Module,
+                owner: None,
+                params: vec!["x: Int".to_string()],
+                proposition: "x == x".to_string(),
+            }],
+            ..RunnerIntrospectionSnapshot::default()
+        }
     }
 
     #[test]
@@ -876,6 +937,7 @@ workflow contract_case
                 contracts: true,
                 policies: false,
                 obligations: false,
+                laws: false,
             },
             synthesized_snapshots: vec![(
                 snapshot_path.clone(),
@@ -971,6 +1033,7 @@ workflow contract_case
                 contracts: true,
                 policies: false,
                 obligations: false,
+                laws: false,
             },
             kind_filter: Some("property".to_string()),
             synthesized_snapshots: vec![(snapshot_path, mixed_contract_and_property_snapshot())],
@@ -1004,6 +1067,7 @@ workflow contract_case
                 contracts: true,
                 policies: false,
                 obligations: false,
+                laws: false,
             },
             tag_filter: Some("property".to_string()),
             synthesized_snapshots: vec![(snapshot_path, mixed_contract_and_property_snapshot())],
@@ -1037,6 +1101,7 @@ workflow contract_case
                 contracts: true,
                 policies: false,
                 obligations: false,
+                laws: false,
             },
             timeout_ms: 1,
             ..Default::default()
@@ -1071,6 +1136,7 @@ workflow contract_case
                 contracts: true,
                 policies: false,
                 obligations: false,
+                laws: false,
             },
             fail_fast: true,
             synthesized_snapshots: vec![(

@@ -470,6 +470,7 @@ fn task_875_impl_where_bounds_are_preserved_as_proposition_assumptions() {
         }],
         associated_type_bindings: vec![],
         methods: vec![],
+        proofs: Vec::new(),
         span: span(22, 50),
     })
     .expect("generic impl with a where-bound should register");
@@ -533,6 +534,7 @@ fn task_875_concrete_impls_are_preserved_as_interface_bound_assumptions() {
         where_bounds: vec![],
         associated_type_bindings: vec![],
         methods: vec![],
+        proofs: Vec::new(),
         span: span(40, 58),
     })
     .expect("concrete impl should register");

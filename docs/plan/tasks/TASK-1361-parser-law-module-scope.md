@@ -1,6 +1,6 @@
 # TASK-1361: Parser — `law` keyword at module scope
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -22,10 +22,16 @@ Extend parser to accept `law` declarations at module top level.
 
 ## Acceptance Criteria
 
-- [ ] `law` parses at module scope
-- [ ] Module file contains laws alongside types, functions, impls
-- [ ] Parser test passes
-- [ ] No regressions
+- [x] `law` parses at module scope
+- [x] Module file contains laws alongside types, functions, impls
+- [x] Parser test passes
+- [x] No regressions
+
+## Completion Notes
+
+- Added `Definition::Law(LawDef)` and module-definition dispatch for `law`.
+- Parser accepts module-scoped laws at top level and in inline modules.
+- LSP exhaustive-match fallout from the new definition variant was repaired before TASK-1362.
 
 ## Related
 

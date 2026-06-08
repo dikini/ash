@@ -41,6 +41,7 @@ fn explain_string_impl() -> ImplDef {
             body: Expr::Literal(Literal::String("policy".into())),
             span: test_span(),
         }],
+        proofs: Vec::new(),
         span: test_span(),
     }
 }

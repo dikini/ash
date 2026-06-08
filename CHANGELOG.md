@@ -7,7 +7,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 |## [Unreleased]
 |
 |### Added
-|- [Phase 136](docs/plan/PLAN-136-INTERFACE-LAW-SYNTAX.md): Parser support for `law` declarations inside interfaces (TASK-1360) and at module scope (TASK-1361). The parser now accepts `law` keyword with parameters and proposition expressions both inside `interface { ... }` blocks and as top-level module items.
+|- [Phase 136](docs/plan/PLAN-136-INTERFACE-LAW-SYNTAX.md): Parser support for `law` declarations inside interfaces (TASK-1360) and at module scope (TASK-1361), plus `proof` declarations inside impl blocks (TASK-1362). The parser now accepts `law` keyword with parameters and proposition expressions both inside `interface { ... }` blocks and as top-level module items, and stores impl-scoped proof bodies for later verification stages.
 |- [TASK-1359](docs/plan/tasks/TASK-1359-add-eq-interface.md): Added `Eq` interface to `std::algebra` for explicit equivalence relations in law propositions.
 |
 |### Fixed

@@ -1,6 +1,6 @@
 # TASK-1360: Parser — `law` keyword in interfaces
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -27,12 +27,12 @@ Extend `ash-parser` to accept `law` declarations inside interface bodies.
 
 ## Acceptance Criteria
 
-- [ ] `law` parses inside `interface { ... }`
-- [ ] Law has name, params, constraints, proposition
-- [ ] Parser test passes
-- [ ] No regressions in `cargo test -p ash-parser`
-- [ ] `cargo fmt --check` clean
-- [ ] `cargo clippy -p ash-parser --all-targets -- -D warnings` clean
+- [x] `law` parses inside `interface { ... }`
+- [x] Law has name, params, constraints, proposition
+- [x] Parser test passes
+- [x] No regressions in `cargo test -p ash-parser`
+- [x] `cargo fmt --check` clean
+- [x] `cargo clippy -p ash-parser --all-targets -- -D warnings` clean
 
 ## Verification
 
@@ -42,6 +42,12 @@ cargo test -p ash-parser
 cargo fmt --check
 cargo clippy -p ash-parser --all-targets -- -D warnings
 ```
+
+## Completion Notes
+
+- Added `LawDef` and `InterfaceDef.laws`.
+- Parser accepts law declarations inside interface bodies with params, constraints, and proposition expressions.
+- Downstream `InterfaceDef` fixture fallout was repaired before TASK-1361.
 
 ## Related
 

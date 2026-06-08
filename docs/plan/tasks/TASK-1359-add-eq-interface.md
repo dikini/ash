@@ -1,6 +1,6 @@
 # TASK-1359: Add `Eq` Interface to `std::algebra`
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -21,10 +21,16 @@ pub interface Eq<A> {
 
 ## Acceptance Criteria
 
-- [ ] `Eq` interface file exists
-- [ ] `Eq` is exported from `std::algebra`
-- [ ] Parser test passes
-- [ ] No regressions
+- [x] `Eq` interface file exists
+- [x] `Eq` is exported from `std::algebra`
+- [x] Parser test passes
+- [x] No regressions
+
+## Completion Notes
+
+- Added `std/src/algebra/eq.ash` with `Eq<A>.equiv(A, A) -> Bool`.
+- Exported `Eq` through the `std::algebra` module surface.
+- Verified as part of the Phase 136 parser/stdlib checkpoint before TASK-1360.
 
 ## Related
 

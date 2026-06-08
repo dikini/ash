@@ -818,6 +818,32 @@ pub struct LawDef {
     pub span: Span,
 }
 
+/// A proof declaration inside an impl block.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ProofDef {
+    /// Proof name
+    pub name: Name,
+    /// Proof parameters (name: type pairs)
+    pub params: Vec<Param>,
+    /// Optional constraints
+    pub constraints: Vec<Constraint>,
+    /// Proof body
+    pub body: ProofBody,
+    /// Source span
+    pub span: Span,
+}
+
+/// Body of a proof declaration.
+#[derive(Debug, Clone, PartialEq)]
+pub enum ProofBody {
+    /// `by_definition`
+    ByDefinition,
+    /// `by test "test_name"`
+    ByTest { test_name: String },
+    /// Explicit proof term (future)
+    Expr(Expr),
+}
+
 /// An interface definition.
 #[derive(Debug, Clone, PartialEq)]
 pub struct InterfaceDef {
@@ -916,6 +942,8 @@ pub struct ImplDef {
     pub associated_type_bindings: Vec<AssociatedTypeBinding>,
     /// Implemented methods
     pub methods: Vec<ImplMethodDef>,
+    /// Proof declarations
+    pub proofs: Vec<ProofDef>,
     /// Source span
     pub span: Span,
 }

@@ -6,6 +6,7 @@
 use winnow::combinator::delimited;
 use winnow::prelude::*;
 use winnow::stream::Stream;
+use winnow::token::take_while;
 
 use crate::combinators::keyword;
 use crate::input::ParseInput;
@@ -24,11 +25,11 @@ use crate::surface::{
     CapabilityOperationSig, CapabilityRef, Constraint, Contract, DataKindDef, Definition,
     DomainConstructor, DomainField, DomainSlot, EffectType, Expr, FnDef, ImplDef, ImplMethodDef,
     InterfaceDef, InterfaceEvidenceConstraint, InterfaceMethodSig, InterfaceTypeParam, LawDef,
-    MatchArm, Name, Param, Pattern, Predicate, PropositionClause, PropositionClauseKind,
-    PropositionPredicateDecl, PropositionPredicateParam, PropositionTail, ProxyDef, ResourceField,
-    ResourceTypeDef, RoleDef, SealedDomainDef, Type, TypeBody, TypeDef, TypeField, TypeFnDecreases,
-    TypeFnDef, TypeFnEquation, TypeFnParam, TypeParam, TypePattern, VariantDef, VariantPayload,
-    Visibility, WhereBound, Workflow, YieldArm,
+    MatchArm, Name, Param, Pattern, Predicate, ProofBody, ProofDef, PropositionClause,
+    PropositionClauseKind, PropositionPredicateDecl, PropositionPredicateParam, PropositionTail,
+    ProxyDef, ResourceField, ResourceTypeDef, RoleDef, SealedDomainDef, Type, TypeBody, TypeDef,
+    TypeField, TypeFnDecreases, TypeFnDef, TypeFnEquation, TypeFnParam, TypeParam, TypePattern,
+    VariantDef, VariantPayload, Visibility, WhereBound, Workflow, YieldArm,
 };
 use crate::token::Span;
 
@@ -242,6 +243,12 @@ fn parse_definitions(input: &mut ParseInput) -> ModalResult<Vec<Definition>> {
         if starts_with_keyword(input, "law") {
             definitions.push(parse_law_definition_as_definition(input)?);
             continue;
+        }
+
+        if starts_with_keyword(input, "proof") {
+            return Err(winnow::error::ErrMode::Cut(
+                winnow::error::ContextError::new(),
+            ));
         }
 
         if starts_with_unsupported_inline_definition(input) {
@@ -1562,9 +1569,12 @@ fn parse_impl_definition(input: &mut ParseInput) -> ModalResult<Definition> {
 
     let mut associated_type_bindings = Vec::new();
     let mut methods = Vec::new();
+    let mut proofs = Vec::new();
     while !input.input.starts_with("}") {
         if starts_with_keyword(input, "type") {
             associated_type_bindings.push(parse_associated_type_binding(input)?);
+        } else if starts_with_keyword(input, "proof") {
+            proofs.push(parse_proof_definition(input)?);
         } else {
             methods.push(parse_impl_method_definition(input)?);
         }
@@ -1583,6 +1593,7 @@ fn parse_impl_definition(input: &mut ParseInput) -> ModalResult<Definition> {
         where_bounds,
         associated_type_bindings,
         methods,
+        proofs,
         span: crate::input::span_from(&start_pos, &input.state.pos),
     }))
 }
@@ -1661,6 +1672,61 @@ fn parse_impl_method_definition(input: &mut ParseInput) -> ModalResult<ImplMetho
         body,
         span: crate::input::span_from(&start, &input.state.pos),
     })
+}
+
+fn parse_proof_definition(input: &mut ParseInput) -> ModalResult<ProofDef> {
+    let start = input.state.pos;
+    let _ = keyword("proof").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let name = identifier(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str("(").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let params = parse_parameter_list(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str(")").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let constraints = if starts_with_keyword(input, "where") {
+        parse_constraint_list(input)?
+    } else {
+        Vec::new()
+    };
+    skip_whitespace_and_comments(input);
+    let _ = literal_str("{").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    let body = if starts_with_keyword(input, "by_definition") {
+        let _ = keyword("by_definition").parse_next(input)?;
+        ProofBody::ByDefinition
+    } else if starts_with_keyword(input, "by") {
+        let _ = keyword("by").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        let _ = keyword("test").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        let test_name = parse_string_literal_content(input)?;
+        ProofBody::ByTest { test_name }
+    } else {
+        let e = expr(input)?;
+        ProofBody::Expr(e)
+    };
+
+    skip_whitespace_and_comments(input);
+    let _ = literal_str("}").parse_next(input)?;
+
+    Ok(ProofDef {
+        name: name.into(),
+        params,
+        constraints,
+        body,
+        span: crate::input::span_from(&start, &input.state.pos),
+    })
+}
+
+fn parse_string_literal_content(input: &mut ParseInput) -> ModalResult<String> {
+    let _ = literal_str("\"").parse_next(input)?;
+    let content: &str = take_while(0.., |c: char| c != '"').parse_next(input)?;
+    let _ = literal_str("\"").parse_next(input)?;
+    Ok(content.to_string())
 }
 
 fn parse_optional_interface_type_params(
@@ -2415,6 +2481,7 @@ fn starts_with_unsupported_inline_definition(input: &ParseInput) -> bool {
         "mod",
         "interface",
         "impl",
+        "proof",
         "sealed",
     ]
     .into_iter()
@@ -3669,6 +3736,12 @@ pub fn module_file(input: &mut ParseInput) -> ModalResult<crate::surface::Module
         if starts_with_keyword(input, "law") {
             definitions.push(parse_law_definition_as_definition(input)?);
             continue;
+        }
+
+        if starts_with_keyword(input, "proof") {
+            return Err(winnow::error::ErrMode::Cut(
+                winnow::error::ContextError::new(),
+            ));
         }
 
         if starts_with_unsupported_proposition_surface(input) {

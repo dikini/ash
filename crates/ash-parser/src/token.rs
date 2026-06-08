@@ -87,6 +87,12 @@ pub enum TokenKind {
     Returns,
     /// `where` - Where clause
     Where,
+    /// `law` - Law declaration
+    Law,
+    /// `proof` - Proof declaration
+    Proof,
+    /// `by_definition` - Proof by definition body
+    ByDefinition,
 
     // Policy keywords
     /// `permit` - Permit decision

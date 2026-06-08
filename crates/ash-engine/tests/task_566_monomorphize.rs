@@ -43,6 +43,7 @@ fn serialize_int_impl() -> ImplDef {
             body: SurfaceExpr::Literal(Literal::String("int".into())),
             span: test_span(),
         }],
+        proofs: Vec::new(),
         span: test_span(),
     }
 }
@@ -68,6 +69,7 @@ fn serialize_list_generic_impl() -> ImplDef {
             body: SurfaceExpr::Literal(Literal::String("list".into())),
             span: test_span(),
         }],
+        proofs: Vec::new(),
         span: test_span(),
     }
 }

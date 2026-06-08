@@ -202,6 +202,7 @@ fn iterator_list_impl(param_name: &str) -> ImplDef {
             span: surface_span(),
         }],
         methods: vec![],
+        proofs: Vec::new(),
         span: surface_span(),
     }
 }

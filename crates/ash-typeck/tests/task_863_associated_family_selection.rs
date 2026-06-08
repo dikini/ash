@@ -116,6 +116,7 @@ fn iterator_list_impl(param_name: &str) -> ImplDef {
             span: span(),
         }],
         methods: vec![],
+        proofs: Vec::new(),
         span: span(),
     }
 }
@@ -133,6 +134,7 @@ fn iterator_surface_list_impl(param_name: &str) -> ImplDef {
             span: span(),
         }],
         methods: vec![],
+        proofs: Vec::new(),
         span: span(),
     }
 }
@@ -150,6 +152,7 @@ fn identity_impl(param_name: &str) -> ImplDef {
             span: span(),
         }],
         methods: vec![],
+        proofs: Vec::new(),
         span: span(),
     }
 }

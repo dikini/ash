@@ -120,6 +120,7 @@ fn task_877_satisfies_interface_bound_from_exact_concrete_impl_assumption() {
         where_bounds: vec![],
         associated_type_bindings: vec![],
         methods: vec![],
+        proofs: Vec::new(),
         span: span(),
     })
     .expect("concrete impl evidence should register");
@@ -191,6 +192,7 @@ fn task_877_satisfies_interface_bound_from_exact_impl_where_bound_assumption() {
         }],
         associated_type_bindings: vec![],
         methods: vec![],
+        proofs: Vec::new(),
         span: span(),
     })
     .expect("generic impl where-bound evidence should register");
@@ -267,6 +269,7 @@ fn task_877_requires_exact_subject_and_interface_arguments_for_existing_evidence
         where_bounds: vec![],
         associated_type_bindings: vec![],
         methods: vec![],
+        proofs: Vec::new(),
         span: span(),
     })
     .expect("concrete impl evidence should register");
@@ -331,6 +334,7 @@ fn iterator_list_impl(param_name: &str) -> ImplDef {
             span: span(),
         }],
         methods: vec![],
+        proofs: Vec::new(),
         span: span(),
     }
 }

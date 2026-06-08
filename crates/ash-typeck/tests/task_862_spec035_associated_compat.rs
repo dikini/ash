@@ -163,6 +163,7 @@ fn serializer_string_impl() -> ImplDef {
             body: Expr::Literal(Literal::String("serialized".into())),
             span: span(),
         }],
+        proofs: Vec::new(),
         span: span(),
     }
 }
@@ -199,6 +200,7 @@ fn ambiguous_serializer_impl() -> ImplDef {
             body: Expr::Literal(Literal::String("ambiguous".into())),
             span: span(),
         }],
+        proofs: Vec::new(),
         span: span(),
     }
 }
@@ -359,6 +361,7 @@ fn task_862_family_impl_rhs_explicit_projection_publishes_family_projection_iden
             },
         ],
         methods: vec![],
+        proofs: Vec::new(),
         span: span(),
     };
     env.register_impl(&impl_def)
@@ -501,6 +504,7 @@ fn task_862_ordinary_associated_type_does_not_publish_family_scheme_in_mixed_int
             },
         ],
         methods: vec![],
+        proofs: Vec::new(),
         span: span(),
     };
     env.register_impl(&impl_def)
@@ -574,6 +578,7 @@ fn task_862_type_kind_family_projection_preserves_concrete_type_arguments() {
             span: span(),
         }],
         methods: vec![],
+        proofs: Vec::new(),
         span: span(),
     };
     env.register_impl(&impl_def)

@@ -58,6 +58,7 @@ fn serializer_string_impl() -> ImplDef {
             body: SurfaceExpr::Literal(Literal::String("serialized".into())),
             span: test_span(),
         }],
+        proofs: Vec::new(),
         span: test_span(),
     }
 }

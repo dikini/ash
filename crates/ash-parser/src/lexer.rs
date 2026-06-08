@@ -432,6 +432,9 @@ fn lookup_keyword(ident: &str) -> TokenKind {
         "when" => TokenKind::When,
         "returns" => TokenKind::Returns,
         "where" => TokenKind::Where,
+        "law" => TokenKind::Law,
+        "proof" => TokenKind::Proof,
+        "by_definition" => TokenKind::ByDefinition,
 
         // Policy keywords
         "permit" => TokenKind::Permit,
@@ -618,7 +621,7 @@ mod tests {
             maybe must attempt retry timeout done
             epistemic deliberative evaluative operational
             authority obligations
-            when returns where
+            when returns where law proof by_definition
             permit deny require_approval escalate
             in not and or
             true false null
@@ -641,6 +644,13 @@ mod tests {
         assert!(keyword_tokens.iter().any(|t| t.kind == TokenKind::Propose));
         assert!(keyword_tokens.iter().any(|t| t.kind == TokenKind::Decide));
         assert!(keyword_tokens.iter().any(|t| t.kind == TokenKind::Act));
+        assert!(keyword_tokens.iter().any(|t| t.kind == TokenKind::Law));
+        assert!(keyword_tokens.iter().any(|t| t.kind == TokenKind::Proof));
+        assert!(
+            keyword_tokens
+                .iter()
+                .any(|t| t.kind == TokenKind::ByDefinition)
+        );
         assert!(keyword_tokens.iter().any(|t| t.kind == TokenKind::True));
         assert!(keyword_tokens.iter().any(|t| t.kind == TokenKind::False));
         assert!(keyword_tokens.iter().any(|t| t.kind == TokenKind::Null));

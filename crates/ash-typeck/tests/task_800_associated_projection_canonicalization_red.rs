@@ -267,6 +267,7 @@ fn serializer_impl_with_associated_projection_binding(member_name: &str) -> Impl
             span: span(),
         }],
         methods: vec![],
+        proofs: Vec::new(),
         span: span(),
     }
 }
@@ -295,6 +296,7 @@ fn serializer_impl_with_where_bound_projection_binding(bound: &str, member_name:
             span: span(),
         }],
         methods: vec![],
+        proofs: Vec::new(),
         span: span(),
     }
 }
@@ -326,6 +328,7 @@ fn serializer_impl_with_ambiguous_in_bounds_projection_binding() -> ImplDef {
             span: span(),
         }],
         methods: vec![],
+        proofs: Vec::new(),
         span: span(),
     }
 }

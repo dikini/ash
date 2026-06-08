@@ -68,6 +68,9 @@ pub(crate) fn is_keyword(s: &str) -> bool {
         | "when"
         | "returns"
         | "where"
+        | "law"
+        | "proof"
+        | "by_definition"
         // Policy
         | "permit"
         | "deny"

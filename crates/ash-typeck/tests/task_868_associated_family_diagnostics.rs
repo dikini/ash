@@ -661,6 +661,7 @@ fn task_868_negative_leakage_boundaries_keep_prior_specs_non_regressed() {
             body: Expr::Literal(Literal::String("serialized".into())),
             span: s,
         }],
+        proofs: Vec::new(),
         span: s,
     };
     spec035_env

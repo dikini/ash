@@ -1,4 +1,4 @@
-pub interface Monad<M : * -> *> {
+pub interface Monad<M : * -> *> where M: Applicative {
     unit(Int) -> M<Int>
     bind(M<Int>, Int -> M<Int>) -> M<Int>
 }

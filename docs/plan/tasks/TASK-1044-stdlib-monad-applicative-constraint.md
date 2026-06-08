@@ -1,6 +1,6 @@
 # TASK-1044: Migrate stdlib `Monad` to `where M: Applicative` and reconcile examples/reference wording
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -63,10 +63,10 @@ commands:
   - RUSTC_WRAPPER= cargo test -p ash-engine --test task_1044_stdlib_monad_constraint -- --nocapture
   - RUSTC_WRAPPER= cargo check --workspace
 checklist:
-- [ ] Focused tests/artifact are non-zero and pass
-- [ ] `cargo fmt --check` passes for touched Rust files or is not applicable
-- [ ] `git diff --check` passes
-- [ ] Status surfaces and CHANGELOG are reconciled if this task completes
+- [x] Focused tests/artifact are non-zero and pass
+- [x] `cargo fmt --check` passes for touched Rust files or is not applicable
+- [x] `git diff --check` passes
+- [x] Status surfaces and CHANGELOG are reconciled if this task completes
 ```
 
 ## Audit-gate implementation seams
@@ -86,3 +86,9 @@ interface Monad<M : * -> *> where M: Applicative {
     bind(M<Int>, (Int) -> M<Int>) -> M<Int>
 }
 ```
+
+## Completion notes
+
+- Updated `std/src/algebra/monad.ash` so `Monad<M>` declares `where M: Applicative` through the final stdlib source.
+- Added `crates/ash-engine/tests/task_1044_stdlib_monad_constraint.rs` to prove the stdlib surface preserves the constraint and that `algebra/monad.ash`, `option.ash`, and `result.ash` still parse/check with their existing Applicative evidence.
+- Verification: `cargo fmt --check`; `RUSTC_WRAPPER= cargo test -p ash-engine --test task_1044_stdlib_monad_constraint -- --nocapture` (2 passed).

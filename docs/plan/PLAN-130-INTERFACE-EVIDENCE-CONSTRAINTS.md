@@ -23,7 +23,7 @@ This phase is parser/typechecker-first. The parser preserves interface `where` c
 | [TASK-1041](tasks/TASK-1041-interface-constraint-core-lowering-and-summaries.md) | Carry interface constraints through lowering/core summaries or prove no summary change is needed | Core/Engine | 10 | ✅ Complete |
 | [TASK-1042](tasks/TASK-1042-typeenv-interface-constraint-registration.md) | Store interface constraints in TypeEnv and enforce required evidence for concrete impl registration | Typeck | 14 | ✅ Complete |
 | [TASK-1043](tasks/TASK-1043-generic-entailment-and-evidence-lookup.md) | Make constrained evidence entail required evidence in generic contexts without reverse derivation | Typeck | 14 | ✅ Complete |
-| [TASK-1044](tasks/TASK-1044-stdlib-monad-applicative-constraint.md) | Migrate stdlib `Monad` to `where M: Applicative` and reconcile examples/reference wording | Stdlib/Docs | 10 | 📝 Planned |
+| [TASK-1044](tasks/TASK-1044-stdlib-monad-applicative-constraint.md) | Migrate stdlib `Monad` to `where M: Applicative` and reconcile examples/reference wording | Stdlib/Docs | 10 | ✅ Complete |
 | [TASK-1045](tasks/TASK-1045-stdlib-applicative-functor-constraint.md) | Migrate stdlib `Applicative` to `where F: Functor` and reconcile examples/reference wording | Stdlib/Docs | 8 | 📝 Planned |
 | [TASK-1046](tasks/TASK-1046-stdlib-monoid-semigroup-constraint.md) | Migrate stdlib `Monoid` to `where A: Semigroup` and reconcile examples/reference wording | Stdlib/Docs | 8 | 📝 Planned |
 | [TASK-1048](tasks/TASK-1048-interface-evidence-constraints-closeout.md) | Run diagnostics, broad verification, independent review, and status reconciliation | Closeout | 8 | 📝 Planned |
@@ -95,7 +95,7 @@ Filtered cargo commands must be paired with `-- --list`, a test-count assertion,
 - [x] Concrete `impl Monad<K>` is rejected unless `Applicative<K>` evidence is available.
 - [x] Generic `M: Monad` contexts may use `M: Applicative` evidence.
 - [x] Reverse entailment and automatic derivation are rejected/proven absent.
-- [ ] `std::algebra::Monad` declares the `Applicative` constraint through final stdlib source.
+- [x] `std::algebra::Monad` declares the `Applicative` constraint through final stdlib source.
 - [ ] `std::algebra::Applicative` declares the `Functor` constraint through final stdlib source.
 - [ ] `std::algebra::Monoid` declares the `Semigroup` constraint through final stdlib source.
 - [ ] Broad verification and independent review pass before status promotion.

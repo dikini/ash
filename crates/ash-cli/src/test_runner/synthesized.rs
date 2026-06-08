@@ -12,7 +12,8 @@ use std::time::{Duration, Instant};
 use ash_core::{Expr as CoreExpr, Value as CoreValue};
 use ash_interp::{Context as InterpContext, eval_expr};
 use ash_parser::surface::{
-    BinaryOp, Definition, Expr, LawDef, Literal, ModuleFile, Param, Requirement, Type, UnaryOp,
+    BinaryOp, Definition, Expr, LawDef, Literal, ModuleFile, Param, ProofBody, Requirement, Type,
+    UnaryOp,
 };
 use ash_parser::{LoweringContext, effectful_names_from_definitions, lower_expr_with_context};
 use serde::Serialize;
@@ -319,6 +320,9 @@ pub struct RunnerLawMetadata {
     pub params: Vec<String>,
     /// Source-level proposition summary.
     pub proposition: String,
+    /// Explicit `by test "..."` delegation target, when this law is backed by a test proof.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub delegated_test: Option<String>,
 }
 
 /// Narrow explicit obligation lifecycle transition plan.
@@ -982,25 +986,36 @@ pub fn extract_laws(module: &ModuleFile) -> Vec<RunnerLawMetadata> {
         match definition {
             Definition::Interface(interface) => {
                 let interface_name = interface.name.to_string();
-                let proved_interface_law_names = proof_scopes
+                let hand_proved_interface_law_names = proof_scopes
                     .interface
                     .get(&interface_name)
                     .cloned()
                     .unwrap_or_default();
+                let delegated_interface_law_names = proof_scopes
+                    .interface_by_test
+                    .get(&interface_name)
+                    .cloned()
+                    .unwrap_or_default();
                 for law in &interface.laws {
-                    if proved_interface_law_names.contains(&*law.name) {
+                    if hand_proved_interface_law_names.contains(&*law.name) {
                         continue;
                     }
                     laws.push(law_metadata(
                         law,
                         LawScope::Interface,
                         Some(interface_name.clone()),
+                        delegated_interface_law_names.get(&*law.name).cloned(),
                     ));
                 }
             }
             Definition::Law(law) => {
                 if !proof_scopes.module.contains(&*law.name) {
-                    laws.push(law_metadata(law, LawScope::Module, None));
+                    laws.push(law_metadata(
+                        law,
+                        LawScope::Module,
+                        None,
+                        proof_scopes.module_by_test.get(&*law.name).cloned(),
+                    ));
                 }
             }
             _ => {}
@@ -1012,25 +1027,49 @@ pub fn extract_laws(module: &ModuleFile) -> Vec<RunnerLawMetadata> {
 
 struct ProofScopes {
     module: BTreeSet<String>,
+    module_by_test: BTreeMap<String, String>,
     interface: BTreeMap<String, BTreeSet<String>>,
+    interface_by_test: BTreeMap<String, BTreeMap<String, String>>,
 }
 
 fn proof_scopes(module: &ModuleFile) -> ProofScopes {
     let mut scopes = ProofScopes {
         module: BTreeSet::new(),
+        module_by_test: BTreeMap::new(),
         interface: BTreeMap::new(),
+        interface_by_test: BTreeMap::new(),
     };
     for definition in &module.definitions {
         match definition {
-            Definition::Proof(proof) => {
-                scopes.module.insert(proof.name.to_string());
-            }
+            Definition::Proof(proof) => match &proof.body {
+                ProofBody::ByTest { test_name } => {
+                    scopes
+                        .module_by_test
+                        .insert(proof.name.to_string(), test_name.clone());
+                }
+                _ => {
+                    scopes.module.insert(proof.name.to_string());
+                }
+            },
             Definition::Impl(impl_def) => {
-                scopes
-                    .interface
-                    .entry(impl_def.interface.to_string())
-                    .or_default()
-                    .extend(impl_def.proofs.iter().map(|proof| proof.name.to_string()));
+                for proof in &impl_def.proofs {
+                    match &proof.body {
+                        ProofBody::ByTest { test_name } => {
+                            scopes
+                                .interface_by_test
+                                .entry(impl_def.interface.to_string())
+                                .or_default()
+                                .insert(proof.name.to_string(), test_name.clone());
+                        }
+                        _ => {
+                            scopes
+                                .interface
+                                .entry(impl_def.interface.to_string())
+                                .or_default()
+                                .insert(proof.name.to_string());
+                        }
+                    }
+                }
             }
             _ => {}
         }
@@ -1038,7 +1077,12 @@ fn proof_scopes(module: &ModuleFile) -> ProofScopes {
     scopes
 }
 
-fn law_metadata(law: &LawDef, scope: LawScope, owner: Option<String>) -> RunnerLawMetadata {
+fn law_metadata(
+    law: &LawDef,
+    scope: LawScope,
+    owner: Option<String>,
+    delegated_test: Option<String>,
+) -> RunnerLawMetadata {
     let scope_segment = match scope {
         LawScope::Module => "module".to_string(),
         LawScope::Interface => format!(
@@ -1056,6 +1100,7 @@ fn law_metadata(law: &LawDef, scope: LawScope, owner: Option<String>) -> RunnerL
         owner,
         params: law.params.iter().map(format_param).collect(),
         proposition: format_expr(&law.proposition),
+        delegated_test,
     }
 }
 
@@ -2256,6 +2301,7 @@ fn law_smallworld_results(
                 json!({
                     "source": "law",
                     "law": law.name,
+                    "delegated_test": law.delegated_test,
                     "proposition": law.proposition,
                     "expected": true,
                     "world_index": world_index,
@@ -2366,6 +2412,7 @@ fn deferred_law_result(
             json!({
                 "source": "law",
                 "law": law.name,
+                "delegated_test": law.delegated_test,
                 "proposition": law.proposition,
                 "params": law.params,
             }),
@@ -4448,6 +4495,52 @@ mod tests {
         assert_eq!(laws[0].scope, LawScope::Module);
     }
 
+    #[test]
+    fn extract_laws_delegates_module_law_with_by_test_proof() {
+        let module = parse_module_for_law_extraction(
+            r#"
+            law id_reflexive(x: Int): x == x
+            proof id_reflexive(x: Int) {
+                by test "id_reflexive_smallworld"
+            }
+            "#,
+        );
+
+        let laws = extract_laws(&module);
+
+        assert_eq!(laws.len(), 1);
+        assert_eq!(laws[0].id, "law:module:id_reflexive");
+        assert_eq!(
+            laws[0].delegated_test.as_deref(),
+            Some("id_reflexive_smallworld")
+        );
+    }
+
+    #[test]
+    fn extract_laws_delegates_interface_law_with_impl_by_test_proof() {
+        let module = parse_module_for_law_extraction(
+            r#"
+            interface Eq<A> {
+                law reflexive(x: A): x == x
+            }
+            impl Eq<Int> {
+                proof reflexive(x: Int) {
+                    by test "eq_int_reflexive_smallworld"
+                }
+            }
+            "#,
+        );
+
+        let laws = extract_laws(&module);
+
+        assert_eq!(laws.len(), 1);
+        assert_eq!(laws[0].id, "law:interface:Eq:reflexive");
+        assert_eq!(
+            laws[0].delegated_test.as_deref(),
+            Some("eq_int_reflexive_smallworld")
+        );
+    }
+
     fn law_snapshot(law: RunnerLawMetadata) -> RunnerIntrospectionSnapshot {
         RunnerIntrospectionSnapshot {
             schema_version: RUNNER_SYNTHESIS_SCHEMA_VERSION.to_string(),
@@ -4467,6 +4560,7 @@ mod tests {
             owner: None,
             params: params.into_iter().map(str::to_string).collect(),
             proposition: proposition.to_string(),
+            delegated_test: None,
         }
     }
 
@@ -4503,6 +4597,31 @@ mod tests {
                 .all(|result| result.kind == TestKind::SmallWorld)
         );
         assert!(law_results.iter().all(|result| result.seed == Some(42)));
+    }
+
+    #[test]
+    fn law_smallworld_generation_carries_by_test_delegation_metadata() {
+        let mut law = module_law("reflexive", vec!["x: Int"], "x == x");
+        law.delegated_test = Some("reflexive_smallworld".to_string());
+        let snapshot = law_snapshot(law);
+
+        let results = synthesize_from_snapshot_with_limits(
+            Path::new("laws.ash"),
+            &snapshot,
+            Some(42),
+            None,
+            Some(1),
+        );
+
+        assert_eq!(results.len(), 1);
+        let repro = results[0]
+            .repro_artifact
+            .as_ref()
+            .expect("delegated law result should include repro metadata");
+        assert_eq!(
+            repro.oracle_snapshot["delegated_test"],
+            json!("reflexive_smallworld")
+        );
     }
 
     #[test]

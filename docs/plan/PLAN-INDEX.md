@@ -4059,7 +4059,7 @@ Adds `law` and `proof` syntax to Ash interfaces and modules, enabling declarativ
 | [TASK-1367](tasks/TASK-1367-typeck-proof-totality-stub.md) | Typechecker: proof body totality check stub (Stage 3 prep) | Complete |
 | [TASK-1368](tasks/TASK-1368-runner-law-extraction.md) | Synthetic tests: extract law nodes from AST | Complete |
 | [TASK-1369](tasks/TASK-1369-runner-synthetic-test-generation.md) | Synthetic tests: generate small-world tests from laws | Complete |
-| [TASK-1370](tasks/TASK-1370-runner-by-test-delegation.md) | Synthetic tests: `by test` delegation syntax | Planned |
+| [TASK-1370](tasks/TASK-1370-runner-by-test-delegation.md) | Synthetic tests: `by test` delegation syntax | Complete |
 | [TASK-1371](tasks/TASK-1371-cli-law-opt-out.md) | CLI: `--skip-law-tests` and `#[no_test]` | Planned |
 | [TASK-1372](tasks/TASK-1372-law-cache-implementation.md) | Cache: `.ash/law-cache.toml` implementation | Planned |
 | [TASK-1373](tasks/TASK-1373-integration-stdlib-algebra-laws.md) | Integration: end-to-end law syntax in `std::algebra` | Planned |

@@ -920,6 +920,7 @@ workflow contract_case
                 owner: None,
                 params: vec!["x: Int".to_string()],
                 proposition: "x == x".to_string(),
+                delegated_test: None,
             }],
             ..RunnerIntrospectionSnapshot::default()
         }

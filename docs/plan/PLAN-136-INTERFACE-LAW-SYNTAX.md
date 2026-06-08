@@ -443,7 +443,7 @@ git commit -m "feat(test-runner): generate synthetic tests from laws (TASK-1369)
 
 ### TASK-1370: Synthetic tests — `by test` delegation syntax
 
-**Objective:** Support `proof ... by test { ... }` syntax for explicit synthetic test delegation.
+**Objective:** Support `proof ... { by test "test_name" }` syntax for explicit synthetic test delegation.
 
 **Files:**
 - Modify: `crates/ash-parser/src/surface.rs` — `ProofBody::ByTest`

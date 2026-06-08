@@ -1,6 +1,6 @@
 # TASK-1043: Make constrained evidence entail required evidence in generic contexts without reverse derivation
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -60,13 +60,14 @@ strictness: clean
 commands:
   - cargo fmt --check
   - git diff --check
+  - RUSTC_WRAPPER= cargo test -p ash-typeck --test task_1043_interface_constraint_entailment -- --list
   - RUSTC_WRAPPER= cargo test -p ash-typeck --test task_1043_interface_constraint_entailment -- --nocapture
   - RUSTC_WRAPPER= cargo check --workspace
 checklist:
-- [ ] Focused tests/artifact are non-zero and pass
-- [ ] `cargo fmt --check` passes for touched Rust files or is not applicable
-- [ ] `git diff --check` passes
-- [ ] Status surfaces and CHANGELOG are reconciled if this task completes
+- [x] Focused tests/artifact are non-zero and pass
+- [x] `cargo fmt --check` passes for touched Rust files or is not applicable
+- [x] `git diff --check` passes
+- [x] Status surfaces and CHANGELOG are reconciled if this task completes
 ```
 
 ## Audit-gate implementation seams
@@ -86,3 +87,10 @@ interface Monad<M : * -> *> where M: Applicative {
     bind(M<Int>, (Int) -> M<Int>) -> M<Int>
 }
 ```
+
+## Completion notes
+
+- Added directional generic entailment over interface-owned required evidence constraints for in-scope type-variable bounds and impl `where`-bound proposition assumptions.
+- Integrated the same directional check into generic method lookup so `M: Strong` can call required-interface methods such as `Weak::weak_id` when `Strong<M> where M: Weak` is registered.
+- Preserved the no-reverse/no-derivation boundary: `M: Weak` does not satisfy `M: Strong`, and concrete `Applicative<Option>` does not synthesize concrete `Monad<Option>` evidence.
+- Verification: `cargo fmt --check`; `git diff --check`; `RUSTC_WRAPPER= cargo test -p ash-typeck --test task_1043_interface_constraint_entailment -- --list` (10 tests); `RUSTC_WRAPPER= cargo test -p ash-typeck --test task_1043_interface_constraint_entailment -- --nocapture` (10 passed); `RUSTC_WRAPPER= cargo check --workspace`; `RUSTC_WRAPPER= cargo clippy -p ash-typeck --all-targets -- -D warnings`.

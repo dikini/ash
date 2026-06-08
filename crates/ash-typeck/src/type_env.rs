@@ -1552,6 +1552,18 @@ fn type_var_proposition_term(var: TypeVar) -> TypePropositionTerm {
     TypePropositionTerm::Canonical(CanonicalTypeExpr::Var(format!("type_var_{}", var.0)))
 }
 
+fn interface_constraint_subject_term(
+    subject: &TypePropositionTerm,
+    interface_args: &[TypePropositionTerm],
+    subject_param_index: usize,
+) -> Option<TypePropositionTerm> {
+    if subject_param_index == 0 {
+        Some(subject.clone())
+    } else {
+        interface_args.get(subject_param_index - 1).cloned()
+    }
+}
+
 fn proposition_term_from_canonical(expr: CanonicalTypeExpr) -> TypePropositionTerm {
     TypePropositionTerm::Canonical(expr)
 }
@@ -4722,6 +4734,33 @@ impl TypeEnv {
         false
     }
 
+    fn interface_entails_interface(&self, available: &str, required: &str) -> bool {
+        if available == required {
+            return true;
+        }
+
+        let mut visited = HashSet::new();
+        let mut stack = vec![available];
+        while let Some(interface_name) = stack.pop() {
+            if !visited.insert(interface_name) {
+                continue;
+            }
+            let Some(info) = self.interfaces.get(interface_name) else {
+                continue;
+            };
+            for constraint in &info.evidence_constraints {
+                if constraint.subject_param_index != 0 {
+                    continue;
+                }
+                if constraint.required_interface == required {
+                    return true;
+                }
+                stack.push(constraint.required_interface.as_str());
+            }
+        }
+        false
+    }
+
     fn has_concrete_interface_evidence(
         &self,
         interface: &str,
@@ -4740,15 +4779,36 @@ impl TypeEnv {
         head_args: &[InterfaceEvidenceArg],
         error_span: Span,
     ) -> Result<(), TypeEnvError> {
+        self.validate_impl_required_evidence(interface, head_args, &[], error_span)
+    }
+
+    fn validate_impl_required_evidence(
+        &self,
+        interface: &InterfaceInfo,
+        head_args: &[InterfaceEvidenceArg],
+        where_bounds: &[WhereBound],
+        error_span: Span,
+    ) -> Result<(), TypeEnvError> {
         for constraint in &interface.evidence_constraints {
             let required_args = [head_args[constraint.subject_param_index].clone()];
             if self.has_concrete_interface_evidence(&constraint.required_interface, &required_args)
             {
                 continue;
             }
+            if let InterfaceEvidenceArg::Proper(Type::Var(var)) = &required_args[0]
+                && where_bounds.iter().any(|bound| {
+                    bound.type_var == *var
+                        && self.interface_entails_interface(
+                            &bound.interface,
+                            &constraint.required_interface,
+                        )
+                })
+            {
+                continue;
+            }
             return Err(TypeEnvError::InvalidDefinition(
                 format!(
-                    "concrete impl evidence {} requires missing required evidence {}",
+                    "impl evidence {} requires missing required evidence {}",
                     render_interface_evidence_key(&interface.name, head_args),
                     render_interface_evidence_key(&constraint.required_interface, &required_args)
                 ),
@@ -12968,6 +13028,14 @@ impl TypeEnv {
         });
 
         let Some((record, rule)) = exact_evidence else {
+            if let Some(record) = self.interface_bound_assumption_entails(bound) {
+                return proposition_satisfaction(
+                    proposition,
+                    None,
+                    PropositionEvidenceRule::InScopeInterfaceBound,
+                    source_anchor.or_else(|| Some(record.source_anchor.clone())),
+                );
+            }
             return proposition_deferral(
                 proposition,
                 PropositionDeferredKind::MissingInterfaceEvidence,
@@ -12982,6 +13050,88 @@ impl TypeEnv {
             rule,
             source_anchor.or_else(|| Some(record.source_anchor.clone())),
         )
+    }
+
+    fn interface_bound_assumption_entails(
+        &self,
+        required: &InterfaceBoundProposition,
+    ) -> Option<&PropositionFactRecord> {
+        self.proposition_assumptions.iter().find(|record| {
+            if !matches!(
+                record.role,
+                PropositionFactRole::Assumption | PropositionFactRole::Evidence
+            ) {
+                return false;
+            }
+            if !matches!(
+                record.owner_site.kind,
+                PropositionCheckingSiteKind::TypeVariableInterfaceBound
+                    | PropositionCheckingSiteKind::ImplWhereBound
+            ) {
+                return false;
+            }
+            let TypeProposition::InterfaceBound(available) = &record.proposition else {
+                return false;
+            };
+            self.interface_bound_entails_required(available, required)
+        })
+    }
+
+    fn interface_bound_entails_required(
+        &self,
+        available: &InterfaceBoundProposition,
+        required: &InterfaceBoundProposition,
+    ) -> bool {
+        let Some(available_interface) = self.canonical_interface_names.get(&available.interface)
+        else {
+            return false;
+        };
+        let Some(required_interface) = self.canonical_interface_names.get(&required.interface)
+        else {
+            return false;
+        };
+
+        let mut visited = HashSet::new();
+        let mut stack = vec![(
+            available_interface.clone(),
+            available.subject.clone(),
+            available.interface_args.clone(),
+        )];
+        while let Some((interface_name, subject, interface_args)) = stack.pop() {
+            if !visited.insert((
+                interface_name.clone(),
+                subject.clone(),
+                interface_args.clone(),
+            )) {
+                continue;
+            }
+            if interface_name == *required_interface
+                && subject == required.subject
+                && interface_args == required.interface_args
+            {
+                return true;
+            }
+
+            let Some(info) = self.interfaces.get(&interface_name) else {
+                continue;
+            };
+            for constraint in &info.evidence_constraints {
+                let Some(required_subject) = interface_constraint_subject_term(
+                    &subject,
+                    &interface_args,
+                    constraint.subject_param_index,
+                ) else {
+                    continue;
+                };
+                stack.push((
+                    constraint.required_interface.clone(),
+                    required_subject,
+                    Vec::new(),
+                ));
+            }
+        }
+
+        false
     }
 
     fn solve_named_predicate_proposition(
@@ -16750,9 +16900,7 @@ impl TypeEnv {
             }
         }
 
-        if def.type_params.is_empty() {
-            self.validate_concrete_impl_required_evidence(&interface, &head_args, def.span)?;
-        }
+        self.validate_impl_required_evidence(&interface, &head_args, &where_bounds, def.span)?;
 
         let temp_scheme = ImplScheme {
             interface: interface.name.clone(),
@@ -17830,7 +17978,11 @@ impl TypeEnv {
     fn type_var_has_interface_bound(&self, var: TypeVar, interface: &str) -> bool {
         self.type_var_interface_bounds
             .get(&var)
-            .is_some_and(|bounds| bounds.contains(interface))
+            .is_some_and(|bounds| {
+                bounds
+                    .iter()
+                    .any(|bound| self.interface_entails_interface(bound, interface))
+            })
             || self
                 .parent
                 .as_ref()
@@ -17919,7 +18071,17 @@ impl TypeEnv {
         method: &str,
         arg_types: &[Type],
     ) -> Result<Type, TypeEnvError> {
-        let (selected, scheme) = self.select_impl_scheme(interface, method, arg_types)?;
+        let (selected, scheme) = match self.select_impl_scheme(interface, method, arg_types) {
+            Ok(selected) => selected,
+            Err(err) => {
+                if let Some(return_ty) = self
+                    .resolve_interface_method_call_from_generic_bound(interface, method, arg_types)
+                {
+                    return Ok(return_ty);
+                }
+                return Err(err);
+            }
+        };
         let method_info = scheme
             .methods
             .iter()
@@ -17931,6 +18093,57 @@ impl TypeEnv {
             })?;
         let raw_return = selected.substitution.apply(&method_info.return_type);
         self.normalize_associated_types(&raw_return, scheme, &selected.substitution)
+    }
+
+    fn resolve_interface_method_call_from_generic_bound(
+        &self,
+        interface: &str,
+        method: &str,
+        arg_types: &[Type],
+    ) -> Option<Type> {
+        let interface_info = self.interfaces.get(interface)?;
+        let method_info = interface_info.methods.get(method)?;
+        if method_info.params.len() != arg_types.len() {
+            return None;
+        }
+        if method_info
+            .params
+            .iter()
+            .any(type_contains_constructor_variable_app)
+        {
+            return None;
+        }
+
+        let mut subst = Substitution::new();
+        for (expected, actual) in method_info.params.iter().zip(arg_types.iter()) {
+            let sub = self.unify_types(&subst.apply(expected), actual).ok()?;
+            subst = subst.compose(&sub);
+        }
+
+        if method_info.type_params.is_empty() {
+            return None;
+        }
+
+        let interface_id = self.interface_identity_for_name(interface).cloned()?;
+        let all_generic_args_have_evidence = method_info.type_params.iter().all(|tp| {
+            let Type::Var(var) = subst.apply(&Type::Var(*tp)) else {
+                return false;
+            };
+            let proposition = TypeProposition::InterfaceBound(InterfaceBoundProposition {
+                subject: type_var_proposition_term(var),
+                interface: interface_id.clone(),
+                interface_args: Vec::new(),
+            });
+            matches!(
+                self.solve_proposition(&proposition, None),
+                Ok(PropositionOutcome::Satisfied(_))
+            )
+        });
+        if !all_generic_args_have_evidence {
+            return None;
+        }
+
+        Some(subst.apply(&method_info.return_type))
     }
 
     pub fn select_impl_scheme(

@@ -15876,6 +15876,7 @@ impl TypeEnv {
             })
         {
             self.check_proof_matches_law(proof, &module_law_names, "module")?;
+            self.check_proof_totality(proof)?;
         }
 
         Ok(())
@@ -15902,8 +15903,21 @@ impl TypeEnv {
         let scope = format!("interface {interface_name}");
         for proof in &implementation.proofs {
             self.check_proof_matches_law(proof, &interface_law_names, &scope)?;
+            self.check_proof_totality(proof)?;
         }
 
+        Ok(())
+    }
+
+    /// Stage-3 preparation hook for proof body totality validation.
+    ///
+    /// The Phase 136 syntax/typechecker MVP records proof bodies and validates
+    /// proof names, but does not yet enforce proof totality, termination,
+    /// partial-match safety, or circular-proof constraints. Later Stage 3 work
+    /// should replace this accepting stub with the real proof checker.
+    pub fn check_proof_totality(&self, proof: &ProofDef) -> Result<(), TypeEnvError> {
+        // TODO(Stage 3): implement proof totality/termination checking.
+        let _ = proof;
         Ok(())
     }
 

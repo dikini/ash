@@ -2891,6 +2891,15 @@ pub fn type_check_program_in_env_for_module(
     register_function_signatures(&mut env, &program.definitions)?;
     refine_function_signatures(&mut env, &program.definitions)?;
 
+    for definition in &program.definitions {
+        if let ash_parser::surface::Definition::Interface(interface) = definition {
+            env.register_interface_laws(interface)
+                .map_err(TypeCheckError::from)?;
+        }
+    }
+    env.register_module_laws(&program.definitions)
+        .map_err(TypeCheckError::from)?;
+
     type_check_workflow_def_in_env(&env, &program.workflow)
 }
 

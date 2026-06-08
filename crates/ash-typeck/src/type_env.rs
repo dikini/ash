@@ -46,11 +46,11 @@ use ash_core::workflow_contract::{Contract as WorkflowContract, RuntimePostcondi
 use ash_parser::surface::{
     AssociatedTypeKind, CapabilityImplementationDef, CapabilityImplementationDependency,
     CapabilityImplementationDependencyKind, CapabilityImplementationOperation,
-    CapabilityInterfaceDef, CapabilityOperationMode, CapabilityOperationSig, ImplDef, InterfaceDef,
-    InterfaceMethodSig, InterfaceTypeParam, PropositionClause, PropositionClauseKind,
-    PropositionPredicateDecl, PropositionPredicateParam, PropositionTail, ResourceTypeDef,
-    Type as SurfaceType, TypeFnDef as SurfaceTypeFnDef, TypePattern as SurfaceTypePattern,
-    Visibility as SurfaceVisibility,
+    CapabilityInterfaceDef, CapabilityOperationMode, CapabilityOperationSig, Definition, ImplDef,
+    InterfaceDef, InterfaceMethodSig, InterfaceTypeParam, LawDef, PropositionClause,
+    PropositionClauseKind, PropositionPredicateDecl, PropositionPredicateParam, PropositionTail,
+    ResourceTypeDef, Type as SurfaceType, TypeFnDef as SurfaceTypeFnDef,
+    TypePattern as SurfaceTypePattern, Visibility as SurfaceVisibility,
 };
 use ash_parser::token::Span;
 use std::collections::{BTreeMap, HashMap, HashSet};
@@ -15788,6 +15788,104 @@ impl TypeEnv {
             self.register_compiler_prelude_tower_monad_evidence()?;
         }
         Ok(())
+    }
+
+    /// Validate law propositions declared inside an interface.
+    pub fn register_interface_laws(
+        &mut self,
+        interface: &InterfaceDef,
+    ) -> Result<(), TypeEnvError> {
+        let interface_name = interface.name.to_string();
+        let interface_info = self
+            .interfaces
+            .get(&interface_name)
+            .ok_or_else(|| {
+                TypeEnvError::InvalidDefinition(
+                    format!("unknown interface '{interface_name}' while checking laws"),
+                    interface.span,
+                )
+            })?
+            .clone();
+
+        let param_mapping = interface
+            .type_params
+            .iter()
+            .map(|param| (param.to_string(), TypeVar::fresh()))
+            .collect::<HashMap<_, _>>();
+
+        for law in &interface.laws {
+            let mut law_env = self.clone();
+            for (method_name, method) in &interface_info.methods {
+                law_env.bind_variable(
+                    method_name,
+                    Type::Fn(method.params.clone(), Box::new(method.return_type.clone())),
+                );
+            }
+            law_env.bind_law_params(law, &param_mapping)?;
+            law_env.check_law_proposition(law)?;
+        }
+
+        Ok(())
+    }
+
+    /// Validate laws declared at module scope.
+    pub fn register_module_laws(&mut self, definitions: &[Definition]) -> Result<(), TypeEnvError> {
+        let param_mapping = HashMap::new();
+        for law in definitions
+            .iter()
+            .filter_map(|definition| match definition {
+                Definition::Law(law) => Some(law),
+                _ => None,
+            })
+        {
+            let mut law_env = self.clone();
+            law_env.bind_law_params(law, &param_mapping)?;
+            law_env.check_law_proposition(law)?;
+        }
+
+        Ok(())
+    }
+
+    fn bind_law_params(
+        &mut self,
+        law: &LawDef,
+        param_mapping: &HashMap<String, TypeVar>,
+    ) -> Result<(), TypeEnvError> {
+        for param in &law.params {
+            let ty = surface_type_to_type(&param.ty, param_mapping, self).map_err(|error| {
+                TypeEnvError::InvalidDefinition(
+                    format!(
+                        "law {} parameter '{}' type error: {error}",
+                        law.name, param.name
+                    ),
+                    law.span,
+                )
+            })?;
+            self.bind_variable(param.name.as_ref(), ty);
+        }
+
+        Ok(())
+    }
+
+    fn check_law_proposition(&self, law: &LawDef) -> Result<(), TypeEnvError> {
+        let result = crate::check_expr::check_expr(self, &law.proposition);
+        if result.is_ok() {
+            return Ok(());
+        }
+
+        let diagnostics = result
+            .errors
+            .iter()
+            .map(ToString::to_string)
+            .collect::<Vec<_>>()
+            .join("; ");
+        Err(TypeEnvError::InvalidDefinition(
+            format!(
+                "law {} proposition failed to typecheck: {diagnostics}",
+                law.name
+            ),
+            law.span,
+        ))
     }
 
     fn register_compiler_prelude_tower_monad_evidence(&mut self) -> Result<(), TypeEnvError> {

@@ -1,6 +1,6 @@
 # TASK-1364: Typechecker — verify law proposition names exist
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -15,10 +15,24 @@ Typechecker verifies that all names referenced in a law proposition exist and ar
 
 ## Acceptance Criteria
 
-- [ ] Unknown names in law proposition produce error
-- [ ] Well-formed law propositions pass
-- [ ] Typechecker test passes
-- [ ] No regressions
+- [x] Unknown names in law proposition produce error
+- [x] Well-formed law propositions pass
+- [x] Typechecker test passes
+- [x] No regressions
+
+## Verification
+
+- `cargo test -p ash-typeck --test task_1364_law_name_checking -- --nocapture` — 3 passed
+- `cargo clippy -p ash-typeck --all-targets --all-features -- -D warnings` — passed
+- `cargo check --workspace` — passed
+- `git diff --check` — passed
+
+## Completion Notes
+
+- Added `TypeEnv::register_interface_laws` and `TypeEnv::register_module_laws`.
+- Law proposition checking now runs through the program typecheck pipeline after interface/function registration.
+- Law scopes bind declared law parameters; interface law scopes also bind the interface's own methods for unqualified law propositions.
+- This task only checks expression name/type resolution; proof matching, Pure-only restrictions, totality, runner integration, and synthetic tests remain later Phase 136 tasks.
 
 ## Related
 

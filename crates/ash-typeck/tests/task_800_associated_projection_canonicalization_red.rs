@@ -86,6 +86,7 @@ fn pair_interface_def() -> SurfaceInterfaceDef {
             span: ash_parser::token::Span::default(),
         }],
         methods: vec![],
+        laws: Vec::new(),
         span: ash_parser::token::Span::default(),
     }
 }
@@ -132,6 +133,7 @@ fn serializer_interface_def() -> SurfaceInterfaceDef {
             span: span(),
         }],
         methods: vec![],
+        laws: Vec::new(),
         span: span(),
     }
 }
@@ -148,6 +150,7 @@ fn formatter_interface_def() -> SurfaceInterfaceDef {
             span: span(),
         }],
         methods: vec![],
+        laws: Vec::new(),
         span: span(),
     }
 }
@@ -347,6 +350,7 @@ fn serializer_interface_with_projection_method() -> SurfaceInterfaceDef {
             },
             span: span(),
         }],
+        laws: Vec::new(),
         span: span(),
     }
 }
@@ -371,6 +375,7 @@ fn serializer_interface_with_unknown_projection_method() -> SurfaceInterfaceDef 
             },
             span: span(),
         }],
+        laws: Vec::new(),
         span: span(),
     }
 }

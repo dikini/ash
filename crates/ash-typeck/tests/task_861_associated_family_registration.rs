@@ -82,6 +82,7 @@ fn sealed_family_interface() -> InterfaceDef {
             span: span(),
         }],
         methods: vec![],
+        laws: Vec::new(),
         span: span(),
     }
 }
@@ -251,6 +252,7 @@ fn task_861_accepts_kind_type_result_domain_for_common_associated_family_shape()
             span: span(),
         }],
         methods: vec![],
+        laws: Vec::new(),
         span: span(),
     })
     .expect("sealed associated family result domain ': Type' should register");
@@ -347,6 +349,7 @@ fn task_861_validates_decreases_parameter_and_malformed_direct_scheme_shapes() {
                 span: span(),
             }],
             methods: vec![],
+            laws: Vec::new(),
             span: span(),
         })
         .expect_err("decreases must name a sealed-domain-constrained interface parameter");

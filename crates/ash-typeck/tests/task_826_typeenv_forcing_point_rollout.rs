@@ -323,6 +323,7 @@ fn task_826_fp6_impl_overlap_sees_defeq_compatible_canonical_heads() {
         evidence_constraints: vec![],
         associated_types: vec![],
         methods: vec![],
+        laws: Vec::new(),
         span: Span::default(),
     })
     .expect("register interface");
@@ -381,6 +382,7 @@ fn task_826_fp7_impl_method_return_check_uses_defeq_for_declared_return() {
             return_type: SurfaceType::Name("IntAlias".into()),
             span: Span::default(),
         }],
+        laws: Vec::new(),
         span: Span::default(),
     })
     .expect("register interface");

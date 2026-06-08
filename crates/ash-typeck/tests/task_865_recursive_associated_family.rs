@@ -130,6 +130,7 @@ fn family_interface(
             span: span(),
         }],
         methods: vec![],
+        laws: Vec::new(),
         span: span(),
     }
 }

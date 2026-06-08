@@ -346,6 +346,7 @@ fn task_879_export_rejects_private_interface_bound_dependencies_fail_closed() {
         evidence_constraints: vec![],
         associated_types: Vec::new(),
         methods: Vec::new(),
+        laws: Vec::new(),
         span: Default::default(),
     })
     .expect("private interface registers locally");

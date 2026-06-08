@@ -74,6 +74,7 @@ fn pair_interface_def() -> SurfaceInterfaceDef {
             span: ash_parser::token::Span::default(),
         }],
         methods: vec![],
+        laws: Vec::new(),
         span: ash_parser::token::Span::default(),
     }
 }

@@ -127,6 +127,7 @@ fn register_projection_metadata(
             span: ash_parser::token::Span::default(),
         }],
         methods: vec![],
+        laws: Vec::new(),
         span: ash_parser::token::Span::default(),
     })
     .expect("projection interface registers");

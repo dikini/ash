@@ -128,6 +128,7 @@ fn register_marker_interface(env: &mut TypeEnv, name: &str) {
         evidence_constraints: vec![],
         associated_types: vec![],
         methods: vec![],
+        laws: Vec::new(),
         span: Default::default(),
     })
     .expect("marker interface registers");

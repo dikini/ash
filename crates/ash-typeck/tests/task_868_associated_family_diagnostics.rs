@@ -523,6 +523,7 @@ fn append_interface() -> InterfaceDef {
             span: span(),
         }],
         methods: vec![],
+        laws: Vec::new(),
         span: span(),
     }
 }
@@ -637,6 +638,7 @@ fn task_868_negative_leakage_boundaries_keep_prior_specs_non_regressed() {
             },
             span: s,
         }],
+        laws: Vec::new(),
         span: s,
     };
     spec035_env

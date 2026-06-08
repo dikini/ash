@@ -84,6 +84,7 @@ fn iterator_interface_def() -> InterfaceDef {
             span: span(),
         }],
         methods: vec![],
+        laws: Vec::new(),
         span: span(),
     }
 }
@@ -179,6 +180,7 @@ fn task_870_explicit_family_projection_is_accepted_in_type_env_surface_type_posi
             return_type: explicit_iterator_item(list_ty(name_ty("String"))),
             span: span(),
         }],
+        laws: Vec::new(),
         span: span(),
     };
 

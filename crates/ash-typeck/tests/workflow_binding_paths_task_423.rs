@@ -22,6 +22,7 @@ fn explain_interface_def() -> InterfaceDef {
             return_type: SurfaceType::Name("String".into()),
             span: test_span(),
         }],
+        laws: Vec::new(),
         span: test_span(),
     }
 }

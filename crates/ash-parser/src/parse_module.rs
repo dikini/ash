@@ -23,8 +23,8 @@ use crate::surface::{
     CapabilityImplementationOperation, CapabilityInterfaceDef, CapabilityOperationMode,
     CapabilityOperationSig, CapabilityRef, Constraint, Contract, DataKindDef, Definition,
     DomainConstructor, DomainField, DomainSlot, EffectType, Expr, FnDef, ImplDef, ImplMethodDef,
-    InterfaceDef, InterfaceEvidenceConstraint, InterfaceMethodSig, InterfaceTypeParam, MatchArm,
-    Name, Param, Pattern, Predicate, PropositionClause, PropositionClauseKind,
+    InterfaceDef, InterfaceEvidenceConstraint, InterfaceMethodSig, InterfaceTypeParam, LawDef,
+    MatchArm, Name, Param, Pattern, Predicate, PropositionClause, PropositionClauseKind,
     PropositionPredicateDecl, PropositionPredicateParam, PropositionTail, ProxyDef, ResourceField,
     ResourceTypeDef, RoleDef, SealedDomainDef, Type, TypeBody, TypeDef, TypeField, TypeFnDecreases,
     TypeFnDef, TypeFnEquation, TypeFnParam, TypeParam, TypePattern, VariantDef, VariantPayload,
@@ -1350,9 +1350,12 @@ fn parse_interface_definition(input: &mut ParseInput) -> ModalResult<Definition>
 
     let mut associated_types = Vec::new();
     let mut methods = Vec::new();
+    let mut laws = Vec::new();
     while !input.input.starts_with("}") {
         if starts_with_keyword(input, "sealed") || starts_with_keyword(input, "type") {
             associated_types.push(parse_associated_type_decl(input)?);
+        } else if starts_with_keyword(input, "law") {
+            laws.push(parse_law_definition(input)?);
         } else {
             methods.push(parse_interface_method_signature(input)?);
         }
@@ -1370,6 +1373,7 @@ fn parse_interface_definition(input: &mut ParseInput) -> ModalResult<Definition>
         evidence_constraints,
         associated_types,
         methods,
+        laws,
         span: crate::input::span_from(&start_pos, &input.state.pos),
     }))
 }
@@ -1491,6 +1495,36 @@ fn parse_interface_method_signature(input: &mut ParseInput) -> ModalResult<Inter
         name: name.into(),
         params,
         return_type,
+        span: crate::input::span_from(&start, &input.state.pos),
+    })
+}
+
+fn parse_law_definition(input: &mut ParseInput) -> ModalResult<LawDef> {
+    let start = input.state.pos;
+    let _ = keyword("law").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let name = identifier(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str("(").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let params = parse_parameter_list(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str(")").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let constraints = if starts_with_keyword(input, "where") {
+        parse_constraint_list(input)?
+    } else {
+        Vec::new()
+    };
+    skip_whitespace_and_comments(input);
+    let _ = literal_str(":").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let proposition = expr(input)?;
+    Ok(LawDef {
+        name: name.into(),
+        params,
+        constraints,
+        proposition,
         span: crate::input::span_from(&start, &input.state.pos),
     })
 }

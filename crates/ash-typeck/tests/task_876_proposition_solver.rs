@@ -184,6 +184,7 @@ fn iterator_interface_def() -> InterfaceDef {
             span: surface_span(),
         }],
         methods: vec![],
+        laws: Vec::new(),
         span: surface_span(),
     }
 }

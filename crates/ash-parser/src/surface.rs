@@ -801,6 +801,21 @@ pub struct InterfaceEvidenceConstraint {
     pub span: Span,
 }
 
+/// A law declaration inside an interface.
+#[derive(Debug, Clone, PartialEq)]
+pub struct LawDef {
+    /// Law name
+    pub name: Name,
+    /// Law parameters (name: type pairs)
+    pub params: Vec<Param>,
+    /// Optional constraints
+    pub constraints: Vec<Constraint>,
+    /// Proposition expression
+    pub proposition: Expr,
+    /// Source span
+    pub span: Span,
+}
+
 /// An interface definition.
 #[derive(Debug, Clone, PartialEq)]
 pub struct InterfaceDef {
@@ -816,6 +831,8 @@ pub struct InterfaceDef {
     pub associated_types: Vec<AssociatedTypeDecl>,
     /// Declared method signatures
     pub methods: Vec<InterfaceMethodSig>,
+    /// Law declarations
+    pub laws: Vec<LawDef>,
     /// Source span
     pub span: Span,
 }

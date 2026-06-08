@@ -82,6 +82,7 @@ fn sealed_family_interface() -> InterfaceDef {
             span: span(),
         }],
         methods: vec![],
+        laws: Vec::new(),
         span: span(),
     }
 }
@@ -122,6 +123,7 @@ fn serializer_interface_def() -> InterfaceDef {
             },
             span: span(),
         }],
+        laws: Vec::new(),
         span: span(),
     }
 }
@@ -138,6 +140,7 @@ fn formatter_interface_def() -> InterfaceDef {
             span: span(),
         }],
         methods: vec![],
+        laws: Vec::new(),
         span: span(),
     }
 }
@@ -216,6 +219,7 @@ fn type_kind_family_interface_def() -> InterfaceDef {
             span: span(),
         }],
         methods: vec![],
+        laws: Vec::new(),
         span: span(),
     }
 }

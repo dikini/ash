@@ -283,6 +283,7 @@ mod tests {
                     return_type: Type::Name("String".into()),
                     span: span(15, 25, 2, 5),
                 }],
+                laws: Vec::new(),
                 span: span(10, 40, 2, 1),
             })],
             ..empty_module()

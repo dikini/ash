@@ -35,6 +35,7 @@ fn serializer_interface_def() -> InterfaceDef {
             },
             span: test_span(),
         }],
+        laws: Vec::new(),
         span: test_span(),
     }
 }

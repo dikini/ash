@@ -4,9 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Common Changelog](https://common-changelog.org/).
 
-## [Unreleased]
-
-### Fixed
+|## [Unreleased]
+|
+|### Added
+|- [Phase 136](docs/plan/PLAN-136-INTERFACE-LAW-SYNTAX.md): Parser support for `law` declarations inside interfaces (TASK-1360). The parser now accepts `law` keyword with parameters and proposition expressions inside `interface { ... }` blocks.
+|- [TASK-1359](docs/plan/tasks/TASK-1359-add-eq-interface.md): Added `Eq` interface to `std::algebra` for explicit equivalence relations in law propositions.
+|
+|### Fixed
 - [TASK-1012](docs/plan/tasks/TASK-1012-live-runner-introspection-snapshot-production.md): Fixed synthesized suite-root execution so live checked snapshot production falls back to raw-source compatibility per discovered file, preserving live checked rows for successful files while failed live snapshot files still emit deferred raw-source fallback rows.
 - [TASK-1011](docs/plan/tasks/TASK-1011-phase-76b-final-remediation-and-design022-023-planning.md): Remediated final Phase 76B runner review blockers so obligation lifecycle pass rows require evaluated finite lifecycle world state, uncapped bounded-int small-world domains defer before range materialization, and synthesized kind/tag filters plus fail-fast apply to structured synthesized results.
 - [TASK-1009](docs/plan/tasks/TASK-1009-phase-124-127-progress-summary-reconciliation.md): Reconciled PLAN-INDEX Phase 124 progress-table status drift and clarified Phase 127/128 summaries so Phase 127 remains the historical partial SPEC-073 closeout while Phase 128 owns the deferred-row closure and Implemented MVP promotion.

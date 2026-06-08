@@ -98,6 +98,7 @@ fn register_pair_projection_metadata(env: &mut TypeEnv, module: &ModuleIdentity)
             span: span(),
         }],
         methods: vec![],
+        laws: Vec::new(),
         span: span(),
     })
     .expect("test precondition: Pair interface definition should register");
@@ -139,6 +140,7 @@ fn register_serializer_projection_metadata(env: &mut TypeEnv, module: &ModuleIde
             span: span(),
         }],
         methods: vec![],
+        laws: Vec::new(),
         span: span(),
     })
     .expect("test precondition: interface definition should register");

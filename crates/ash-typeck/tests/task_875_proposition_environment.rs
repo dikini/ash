@@ -439,6 +439,7 @@ fn task_875_impl_where_bounds_are_preserved_as_proposition_assumptions() {
         evidence_constraints: vec![],
         associated_types: vec![],
         methods: vec![],
+        laws: Vec::new(),
         span: span(0, 11),
     })
     .expect("bound interface should register");
@@ -450,6 +451,7 @@ fn task_875_impl_where_bounds_are_preserved_as_proposition_assumptions() {
         evidence_constraints: vec![],
         associated_types: vec![],
         methods: vec![],
+        laws: Vec::new(),
         span: span(12, 21),
     })
     .expect("generic impl target interface should register");
@@ -518,6 +520,7 @@ fn task_875_concrete_impls_are_preserved_as_interface_bound_assumptions() {
         evidence_constraints: vec![],
         associated_types: vec![],
         methods: vec![],
+        laws: Vec::new(),
         span: span(0, 11),
     })
     .expect("interface should register");

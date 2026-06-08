@@ -51,6 +51,7 @@ fn explain_interface_def() -> InterfaceDef {
             return_type: SurfaceType::Name("String".into()),
             span: test_span(),
         }],
+        laws: Vec::new(),
         span: test_span(),
     }
 }
@@ -513,6 +514,7 @@ fn pair_interface_def() -> InterfaceDef {
             return_type: SurfaceType::Name("A".into()),
             span: test_span(),
         }],
+        laws: Vec::new(),
         span: test_span(),
     }
 }
@@ -632,6 +634,7 @@ fn task563_from_underdetermined_param_errors() {
             return_type: SurfaceType::Name("B".into()),
             span: test_span(),
         }],
+        laws: Vec::new(),
         span: test_span(),
     };
     env.register_interface(&from_iface).unwrap();
@@ -706,6 +709,7 @@ fn serialize_interface_def() -> InterfaceDef {
             return_type: SurfaceType::Name("String".into()),
             span: test_span(),
         }],
+        laws: Vec::new(),
         span: test_span(),
     }
 }
@@ -818,6 +822,7 @@ fn cyclic_interface_def() -> InterfaceDef {
             return_type: SurfaceType::Name("T".into()),
             span: test_span(),
         }],
+        laws: Vec::new(),
         span: test_span(),
     }
 }
@@ -890,6 +895,7 @@ fn serializer_interface_def() -> InterfaceDef {
             },
             span: test_span(),
         }],
+        laws: Vec::new(),
         span: test_span(),
     }
 }

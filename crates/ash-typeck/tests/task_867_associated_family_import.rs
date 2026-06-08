@@ -202,6 +202,7 @@ fn public_family_interface(interface: &str, member: &str) -> InterfaceDef {
             span: Span::default(),
         }],
         methods: vec![],
+        laws: Vec::new(),
         span: Span::default(),
     }
 }

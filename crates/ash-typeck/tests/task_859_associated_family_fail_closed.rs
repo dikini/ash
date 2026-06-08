@@ -67,6 +67,7 @@ fn task_859_typeenv_still_rejects_unknown_domain_annotated_interface_params() {
             evidence_constraints: vec![],
             associated_types: vec![],
             methods: vec![],
+            laws: Vec::new(),
             span: span(),
         })
         .expect_err("domain annotations must name a registered sealed domain");
@@ -106,6 +107,7 @@ fn task_859_typeenv_accepts_registered_domain_annotated_interface_params_after_t
             span: span(),
         }],
         methods: vec![],
+        laws: Vec::new(),
         span: span(),
     })
     .expect("TASK-861 registers sealed associated families instead of failing closed");
@@ -133,6 +135,7 @@ fn task_859_typeenv_accepts_registered_domain_annotated_impl_params_after_task_8
         evidence_constraints: vec![],
         associated_types: vec![],
         methods: vec![],
+        laws: Vec::new(),
         span: span(),
     })
     .expect("ordinary interface should register as test precondition");

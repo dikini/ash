@@ -61,6 +61,7 @@ fn explain_interface() -> InterfaceDef {
             return_type: SurfaceType::Name("String".into()),
             span: span(),
         }],
+        laws: Vec::new(),
         span: span(),
     }
 }
@@ -102,6 +103,7 @@ fn option_explain_interface() -> InterfaceDef {
             return_type: SurfaceType::Name("String".into()),
             span: span(),
         }],
+        laws: Vec::new(),
         span: span(),
     }
 }

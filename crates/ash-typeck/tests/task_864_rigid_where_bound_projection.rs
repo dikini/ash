@@ -72,6 +72,7 @@ fn iterator_interface_def() -> InterfaceDef {
             span: span(),
         }],
         methods: vec![],
+        laws: Vec::new(),
         span: span(),
     }
 }

@@ -65,6 +65,7 @@ fn interface_def(name: &str, params: &[&str]) -> InterfaceDef {
         evidence_constraints: vec![],
         associated_types: vec![],
         methods: vec![],
+        laws: Vec::new(),
         span: span(),
     }
 }
@@ -312,6 +313,7 @@ fn iterator_interface_def() -> InterfaceDef {
             span: span(),
         }],
         methods: vec![],
+        laws: Vec::new(),
         span: span(),
     }
 }

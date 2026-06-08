@@ -11,7 +11,9 @@ use std::time::{Duration, Instant};
 
 use ash_core::{Expr as CoreExpr, Value as CoreValue};
 use ash_interp::{Context as InterpContext, eval_expr};
-use ash_parser::surface::{BinaryOp, Definition, Expr, Literal, ModuleFile, Requirement, Type};
+use ash_parser::surface::{
+    BinaryOp, Definition, Expr, LawDef, Literal, ModuleFile, Param, Requirement, Type, UnaryOp,
+};
 use ash_parser::{LoweringContext, effectful_names_from_definitions, lower_expr_with_context};
 use serde::Serialize;
 use serde_json::{Value, json};
@@ -45,6 +47,8 @@ pub struct RunnerIntrospectionSnapshot {
     pub policies: Vec<RunnerPolicyMetadata>,
     /// Obligation metadata rows.
     pub obligations: Vec<RunnerObligationMetadata>,
+    /// Law metadata rows extracted from the parsed AST.
+    pub laws: Vec<RunnerLawMetadata>,
     /// Available bounded generators.
     pub generators: Vec<TypeGeneratorDescriptor>,
     /// Available finite small-world domains.
@@ -284,6 +288,34 @@ pub struct RunnerObligationMetadata {
     pub lifecycle_worlds: Vec<SmallWorldState>,
     /// Optional source span display.
     pub source_span: Option<String>,
+}
+
+/// Scope where a law declaration was found.
+#[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum LawScope {
+    /// Law declared directly at module scope.
+    Module,
+    /// Law declared inside an interface definition.
+    Interface,
+}
+
+/// Runner-facing law metadata extracted from the parsed surface AST.
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+pub struct RunnerLawMetadata {
+    /// Stable metadata id.
+    pub id: String,
+    /// Law name.
+    pub name: String,
+    /// Declaration scope.
+    pub scope: LawScope,
+    /// Owning interface name for interface laws.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub owner: Option<String>,
+    /// Source-level parameter summaries in declaration order.
+    pub params: Vec<String>,
+    /// Source-level proposition summary.
+    pub proposition: String,
 }
 
 /// Narrow explicit obligation lifecycle transition plan.
@@ -809,6 +841,7 @@ fn snapshot_from_checked_module(
     ]);
 
     let contracts = executable_contracts_from_checked_module(module);
+    let laws = extract_laws(module);
     let supported_contract_names = contracts
         .iter()
         .map(|contract| contract.callable_name.clone())
@@ -820,6 +853,7 @@ fn snapshot_from_checked_module(
         source_artifact_id,
         check_summary_id: format!("checked:{check_summary_id}"),
         contracts,
+        laws,
         unsupported: unsupported_rows_from_checked_module(path, module, &supported_contract_names),
         ..RunnerIntrospectionSnapshot::default()
     }
@@ -934,6 +968,184 @@ fn contract_targets_from_module(path: &Path, module: &ModuleFile) -> Vec<String>
     targets.sort();
     targets.dedup();
     targets
+}
+
+/// Extract runner-facing law metadata from a parsed module.
+pub fn extract_laws(module: &ModuleFile) -> Vec<RunnerLawMetadata> {
+    let mut laws = Vec::new();
+
+    for definition in &module.definitions {
+        match definition {
+            Definition::Interface(interface) => {
+                for law in &interface.laws {
+                    laws.push(law_metadata(
+                        law,
+                        LawScope::Interface,
+                        Some(interface.name.to_string()),
+                    ));
+                }
+            }
+            Definition::Law(law) => {
+                laws.push(law_metadata(law, LawScope::Module, None));
+            }
+            _ => {}
+        }
+    }
+
+    laws
+}
+
+fn law_metadata(law: &LawDef, scope: LawScope, owner: Option<String>) -> RunnerLawMetadata {
+    let scope_segment = match scope {
+        LawScope::Module => "module".to_string(),
+        LawScope::Interface => format!(
+            "interface:{}",
+            owner
+                .as_deref()
+                .expect("interface law metadata should include an owner")
+        ),
+    };
+
+    RunnerLawMetadata {
+        id: format!("law:{scope_segment}:{}", law.name),
+        name: law.name.to_string(),
+        scope,
+        owner,
+        params: law.params.iter().map(format_param).collect(),
+        proposition: format_expr(&law.proposition),
+    }
+}
+
+fn format_param(param: &Param) -> String {
+    format!("{}: {}", param.name, format_type(&param.ty))
+}
+
+fn format_type(ty: &Type) -> String {
+    match ty {
+        Type::Name(name) => name.to_string(),
+        Type::Hole { .. } => "_".to_string(),
+        Type::List(inner) => format!("[{}]", format_type(inner)),
+        Type::Tuple(items) => {
+            let items = items.iter().map(format_type).collect::<Vec<_>>().join(", ");
+            format!("({items})")
+        }
+        Type::Record(fields) => {
+            let fields = fields
+                .iter()
+                .map(|(name, ty)| format!("{name}: {}", format_type(ty)))
+                .collect::<Vec<_>>()
+                .join(", ");
+            format!("{{ {fields} }}")
+        }
+        Type::Capability(name) => format!("Capability<{name}>"),
+        Type::Constructor { name, args } => {
+            let args = args.iter().map(format_type).collect::<Vec<_>>().join(", ");
+            format!("{name}<{args}>")
+        }
+        Type::Associated { base, name } => format!("{}::{name}", format_type(base)),
+        Type::AssociatedFamilyProjection {
+            interface,
+            args,
+            member,
+            ..
+        } => {
+            let args = args.iter().map(format_type).collect::<Vec<_>>().join(", ");
+            format!("<{interface}<{args}>>::{member}")
+        }
+        Type::Fn(params, ret) => {
+            let params = params
+                .iter()
+                .map(format_type)
+                .collect::<Vec<_>>()
+                .join(", ");
+            format!("({params}) -> {}", format_type(ret))
+        }
+    }
+}
+
+fn format_expr(expr: &Expr) -> String {
+    match expr {
+        Expr::Literal(literal) => format_literal(literal),
+        Expr::Variable { name, .. } => name.to_string(),
+        Expr::FieldAccess { base, field, .. } => format!("{}.{field}", format_expr(base)),
+        Expr::IndexAccess { base, index, .. } => {
+            format!("{}[{}]", format_expr(base), format_expr(index))
+        }
+        Expr::Unary { op, operand, .. } => {
+            format!("{}{}", unary_op_symbol(*op), format_expr(operand))
+        }
+        Expr::Binary {
+            op, left, right, ..
+        } => format!(
+            "{} {} {}",
+            format_expr(left),
+            binary_op_symbol(*op),
+            format_expr(right)
+        ),
+        Expr::Call {
+            func, module, args, ..
+        } => {
+            let args = args.iter().map(format_expr).collect::<Vec<_>>().join(", ");
+            match module {
+                Some(module) => format!("{module}::{func}({args})"),
+                None => format!("{func}({args})"),
+            }
+        }
+        Expr::FnApply { func, args, .. } => {
+            let args = args.iter().map(format_expr).collect::<Vec<_>>().join(", ");
+            format!("{}({args})", format_expr(func))
+        }
+        Expr::List { items, .. } => {
+            let items = items.iter().map(format_expr).collect::<Vec<_>>().join(", ");
+            format!("[{items}]")
+        }
+        unsupported => format!("<unsupported law expression: {unsupported:?}>"),
+    }
+}
+
+fn format_literal(literal: &Literal) -> String {
+    match literal {
+        Literal::Int(value) => value.to_string(),
+        Literal::Float(value) => value.to_string(),
+        Literal::String(value) => format!("\"{value}\""),
+        Literal::Bool(value) => value.to_string(),
+        Literal::Null => "null".to_string(),
+        Literal::List(items) => {
+            let items = items
+                .iter()
+                .map(format_literal)
+                .collect::<Vec<_>>()
+                .join(", ");
+            format!("[{items}]")
+        }
+    }
+}
+
+fn unary_op_symbol(op: UnaryOp) -> &'static str {
+    match op {
+        UnaryOp::Not => "!",
+        UnaryOp::Neg => "-",
+    }
+}
+
+fn binary_op_symbol(op: BinaryOp) -> &'static str {
+    match op {
+        BinaryOp::Add => "+",
+        BinaryOp::Sub => "-",
+        BinaryOp::Mul => "*",
+        BinaryOp::Div => "/",
+        BinaryOp::Mod => "%",
+        BinaryOp::And => "&&",
+        BinaryOp::Or => "||",
+        BinaryOp::Eq => "==",
+        BinaryOp::Neq => "!=",
+        BinaryOp::Lt => "<",
+        BinaryOp::Gt => ">",
+        BinaryOp::Leq => "<=",
+        BinaryOp::Geq => ">=",
+        BinaryOp::In => "in",
+        BinaryOp::Pipe => "|>",
+    }
 }
 
 fn executable_contracts_from_checked_module(module: &ModuleFile) -> Vec<RunnerContractMetadata> {
@@ -3876,6 +4088,53 @@ pub fn synthesize_obligation_tests(path: &Path, source: &str) -> Vec<TestResult>
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn parse_module_for_law_extraction(source: &str) -> ModuleFile {
+        ash_parser::parse_surface_file(source)
+            .unwrap_or_else(|errors| panic!("module should parse: {source}\nerrors: {errors:?}"))
+    }
+
+    #[test]
+    fn extract_laws_returns_interface_law_metadata() {
+        let module = parse_module_for_law_extraction(
+            r#"
+            interface Monad<M> {
+                bind(M<A>, (A) -> M<B>) -> M<B>
+                law left_identity(x: A, f: (A) -> M<B>): bind(unit(x), f) == f(x)
+            }
+            "#,
+        );
+
+        let laws = extract_laws(&module);
+
+        assert_eq!(laws.len(), 1);
+        assert_eq!(laws[0].id, "law:interface:Monad:left_identity");
+        assert_eq!(laws[0].name, "left_identity");
+        assert_eq!(laws[0].scope, LawScope::Interface);
+        assert_eq!(laws[0].owner.as_deref(), Some("Monad"));
+        assert_eq!(laws[0].params, vec!["x: A", "f: (A) -> M<B>"]);
+        assert_eq!(laws[0].proposition, "bind(unit(x), f) == f(x)");
+    }
+
+    #[test]
+    fn extract_laws_returns_module_law_metadata() {
+        let module = parse_module_for_law_extraction(
+            r#"
+            fn id(x: Int) -> Int { x }
+            law id_reflexive(x: Int): id(x) == x
+            "#,
+        );
+
+        let laws = extract_laws(&module);
+
+        assert_eq!(laws.len(), 1);
+        assert_eq!(laws[0].id, "law:module:id_reflexive");
+        assert_eq!(laws[0].name, "id_reflexive");
+        assert_eq!(laws[0].scope, LawScope::Module);
+        assert_eq!(laws[0].owner, None);
+        assert_eq!(laws[0].params, vec!["x: Int"]);
+        assert_eq!(laws[0].proposition, "id(x) == x");
+    }
 
     #[test]
     fn contract_synthesis_finds_requires() {

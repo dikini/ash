@@ -4413,6 +4413,69 @@ mod tests {
     }
 
     #[test]
+    fn extract_laws_returns_std_algebra_law_metadata() {
+        let semigroup = parse_module_for_law_extraction(include_str!(
+            "../../../../std/src/algebra/semigroup.ash"
+        ));
+        let monoid =
+            parse_module_for_law_extraction(include_str!("../../../../std/src/algebra/monoid.ash"));
+
+        let semigroup_laws = extract_laws(&semigroup);
+        let monoid_laws = extract_laws(&monoid);
+
+        assert_eq!(semigroup_laws.len(), 1);
+        assert_eq!(
+            semigroup_laws[0].id,
+            "law:interface:Semigroup:associativity"
+        );
+        assert_eq!(semigroup_laws[0].name, "associativity");
+        assert_eq!(semigroup_laws[0].scope, LawScope::Interface);
+        assert_eq!(semigroup_laws[0].owner.as_deref(), Some("Semigroup"));
+        assert_eq!(
+            semigroup_laws[0].params,
+            vec!["a: A", "b: A", "c: A", "eq: Eq<A>"]
+        );
+        assert_eq!(
+            semigroup_laws[0].proposition,
+            "eq.equiv(append(append(a, b), c), append(a, append(b, c)))"
+        );
+
+        let monoid_names: std::collections::BTreeSet<_> =
+            monoid_laws.iter().map(|law| law.name.as_str()).collect();
+        assert_eq!(
+            monoid_names,
+            std::collections::BTreeSet::from(["left_identity", "right_identity"])
+        );
+        assert!(
+            monoid_laws
+                .iter()
+                .all(|law| law.scope == LawScope::Interface)
+        );
+        assert!(
+            monoid_laws
+                .iter()
+                .all(|law| law.owner.as_deref() == Some("Monoid"))
+        );
+
+        let left_identity = monoid_laws
+            .iter()
+            .find(|law| law.name == "left_identity")
+            .expect("left_identity law should be extracted");
+        assert_eq!(left_identity.params, vec!["a: A", "eq: Eq<A>"]);
+        assert_eq!(left_identity.proposition, "eq.equiv(append(empty(), a), a)");
+
+        let right_identity = monoid_laws
+            .iter()
+            .find(|law| law.name == "right_identity")
+            .expect("right_identity law should be extracted");
+        assert_eq!(right_identity.params, vec!["a: A", "eq: Eq<A>"]);
+        assert_eq!(
+            right_identity.proposition,
+            "eq.equiv(append(a, empty()), a)"
+        );
+    }
+
+    #[test]
     fn extract_laws_returns_module_law_metadata() {
         let module = parse_module_for_law_extraction(
             r#"

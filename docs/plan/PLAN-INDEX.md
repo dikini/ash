@@ -4062,7 +4062,7 @@ Adds `law` and `proof` syntax to Ash interfaces and modules, enabling declarativ
 | [TASK-1370](tasks/TASK-1370-runner-by-test-delegation.md) | Synthetic tests: `by test` delegation syntax | Complete |
 | [TASK-1371](tasks/TASK-1371-cli-law-opt-out.md) | CLI: `--skip-law-tests` and `--skip-law-test=<name>` | Complete |
 | [TASK-1372](tasks/TASK-1372-law-cache-implementation.md) | Cache: `.ash/law-cache.toml` implementation | Complete |
-| [TASK-1373](tasks/TASK-1373-integration-stdlib-algebra-laws.md) | Integration: end-to-end law syntax in `std::algebra` | Planned |
+| [TASK-1373](tasks/TASK-1373-integration-stdlib-algebra-laws.md) | Integration: end-to-end law syntax in `std::algebra` | Complete |
 | [TASK-1374](tasks/TASK-1374-integration-stdlib-path-law.md) | Integration: module-scoped law in `std::io::path` | Planned |
 | [TASK-1375](tasks/TASK-1375-stage3-totality-checking.md) | Stage 3: proof totality checking | Planned |
 | [TASK-1376](tasks/TASK-1376-stage3-prop-kind.md) | Stage 3: `Prop` kind promotion | Planned |

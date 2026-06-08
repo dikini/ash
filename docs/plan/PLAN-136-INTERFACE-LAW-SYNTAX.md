@@ -499,7 +499,8 @@ git commit -m "feat(cache): implement .ash/law-cache.toml (TASK-1372)"
 **Files:**
 - Modify: `std/src/algebra/semigroup.ash`
 - Modify: `std/src/algebra/monoid.ash`
-- Test: `tests/law_integration.rs`
+- Test: `crates/ash-engine/tests/task_1021_std_algebra_namespace_and_interfaces.rs`
+- Test: `crates/ash-cli/src/test_runner/synthesized.rs`
 
 **Step 1: Add law to Semigroup**
 
@@ -511,6 +512,8 @@ pub interface Semigroup<A> {
       : eq.equiv(append(append(a, b), c), append(a, append(b, c)))
 }
 ```
+
+**Status:** Complete. `Semigroup` now declares `associativity`, `Monoid` declares `left_identity` and `right_identity`, and real stdlib parse/check plus runner extraction coverage is in place.
 
 **Step 6: Commit**
 

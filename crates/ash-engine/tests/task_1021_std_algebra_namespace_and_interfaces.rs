@@ -1,5 +1,6 @@
 //! TASK-1021 RED tests for importing `std::algebra` interfaces through stdlib modules.
 
+use ash_parser::surface::Definition;
 use std::collections::BTreeSet;
 use std::path::PathBuf;
 
@@ -28,6 +29,28 @@ fn imported_interface_names(
         .collect()
 }
 
+fn interface_law_names(relative: &str, interface_name: &str) -> BTreeSet<String> {
+    let source = std::fs::read_to_string(std_src_path(relative))
+        .unwrap_or_else(|error| panic!("read {relative}: {error}"));
+    let module = ash_parser::parse_surface_file(&source)
+        .unwrap_or_else(|errors| panic!("{relative} should parse: {errors:?}\n{source}"));
+
+    module
+        .definitions
+        .iter()
+        .find_map(|definition| match definition {
+            Definition::Interface(interface) if interface.name.as_ref() == interface_name => Some(
+                interface
+                    .laws
+                    .iter()
+                    .map(|law| law.name.to_string())
+                    .collect(),
+            ),
+            _ => None,
+        })
+        .unwrap_or_else(|| panic!("{relative} should define interface {interface_name}"))
+}
+
 #[test]
 fn algebra_interface_stdlib_files_parse_via_engine() {
     assert_stdlib_lib_exports_algebra_namespace();
@@ -54,6 +77,18 @@ fn algebra_interface_stdlib_files_parse_via_engine() {
             result.errors
         );
     }
+}
+
+#[test]
+fn algebra_interfaces_declare_expected_laws_in_stdlib_files() {
+    assert_eq!(
+        interface_law_names("algebra/semigroup.ash", "Semigroup"),
+        BTreeSet::from(["associativity".to_string()])
+    );
+    assert_eq!(
+        interface_law_names("algebra/monoid.ash", "Monoid"),
+        BTreeSet::from(["left_identity".to_string(), "right_identity".to_string()])
+    );
 }
 
 #[test]

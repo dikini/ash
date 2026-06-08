@@ -18,6 +18,7 @@ pub mod entry;
 pub mod error;
 pub mod execute;
 pub mod harness;
+pub mod law_cache;
 pub mod legacy_workflow_adapter;
 pub mod module_loader;
 pub mod monomorphize;

@@ -166,17 +166,26 @@ fn check_purity_recursive(
                     }
                 }
 
-                if env
-                    .resolve_interface_method_call(module_name, func.as_ref(), &arg_types)
-                    .is_err()
-                {
-                    errors.push(PurityError {
-                        kind: PurityViolation::InvalidInterfaceMethodCall {
-                            interface: module_name.to_string(),
-                            method: func.to_string(),
-                        },
-                        span: *span,
-                    });
+                match env.resolve_interface_method_call(module_name, func.as_ref(), &arg_types) {
+                    Ok(return_type) if !allow_effects && is_effect_carrier_type(&return_type) => {
+                        errors.push(PurityError {
+                            kind: PurityViolation::NonPureCall {
+                                callee: qualified_callee_name(module.as_deref(), func.as_ref()),
+                                found: return_type.to_string(),
+                            },
+                            span: *span,
+                        });
+                    }
+                    Ok(_) => {}
+                    Err(_) => {
+                        errors.push(PurityError {
+                            kind: PurityViolation::InvalidInterfaceMethodCall {
+                                interface: module_name.to_string(),
+                                method: func.to_string(),
+                            },
+                            span: *span,
+                        });
+                    }
                 }
                 return;
             }
@@ -190,14 +199,28 @@ fn check_purity_recursive(
                 return;
             };
 
-            if !matches!(callee_ty, Type::Fn(..)) {
-                errors.push(PurityError {
-                    kind: PurityViolation::NonPureCall {
-                        callee,
-                        found: callee_ty.to_string(),
-                    },
-                    span: *span,
-                });
+            match &callee_ty {
+                Type::Fn(_, return_type)
+                    if !allow_effects && is_effect_carrier_type(return_type) =>
+                {
+                    errors.push(PurityError {
+                        kind: PurityViolation::NonPureCall {
+                            callee,
+                            found: callee_ty.to_string(),
+                        },
+                        span: *span,
+                    });
+                }
+                Type::Fn(..) => {}
+                _ => {
+                    errors.push(PurityError {
+                        kind: PurityViolation::NonPureCall {
+                            callee,
+                            found: callee_ty.to_string(),
+                        },
+                        span: *span,
+                    });
+                }
             }
         }
         Expr::Match {
@@ -345,6 +368,13 @@ fn check_purity_recursive(
                 check_purity_recursive(env, item, allow_effects, errors);
             }
         }
+    }
+}
+
+fn is_effect_carrier_type(ty: &Type) -> bool {
+    match ty {
+        Type::Constructor { name, .. } => matches!(name.name.as_str(), "Act" | "Proc" | "Workflow"),
+        _ => false,
     }
 }
 

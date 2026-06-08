@@ -15948,6 +15948,18 @@ impl TypeEnv {
     }
 
     fn check_law_proposition(&self, law: &LawDef) -> Result<(), TypeEnvError> {
+        if let Err(errors) = crate::purity::check_purity(self, &law.proposition, false) {
+            let diagnostics = errors
+                .iter()
+                .map(ToString::to_string)
+                .collect::<Vec<_>>()
+                .join("; ");
+            return Err(TypeEnvError::InvalidDefinition(
+                format!("law {} proposition is not pure: {diagnostics}", law.name),
+                law.span,
+            ));
+        }
+
         let result = crate::check_expr::check_expr(self, &law.proposition);
         if result.is_ok() {
             return Ok(());

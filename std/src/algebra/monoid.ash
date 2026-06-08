@@ -1,4 +1,4 @@
-pub interface Monoid<A> {
+pub interface Monoid<A> where A: Semigroup {
     empty() -> A
     append(A, A) -> A
 }

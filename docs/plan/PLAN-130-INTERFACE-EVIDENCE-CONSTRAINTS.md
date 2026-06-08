@@ -25,7 +25,7 @@ This phase is parser/typechecker-first. The parser preserves interface `where` c
 | [TASK-1043](tasks/TASK-1043-generic-entailment-and-evidence-lookup.md) | Make constrained evidence entail required evidence in generic contexts without reverse derivation | Typeck | 14 | ✅ Complete |
 | [TASK-1044](tasks/TASK-1044-stdlib-monad-applicative-constraint.md) | Migrate stdlib `Monad` to `where M: Applicative` and reconcile examples/reference wording | Stdlib/Docs | 10 | ✅ Complete |
 | [TASK-1045](tasks/TASK-1045-stdlib-applicative-functor-constraint.md) | Migrate stdlib `Applicative` to `where F: Functor` and reconcile examples/reference wording | Stdlib/Docs | 8 | ✅ Complete |
-| [TASK-1046](tasks/TASK-1046-stdlib-monoid-semigroup-constraint.md) | Migrate stdlib `Monoid` to `where A: Semigroup` and reconcile examples/reference wording | Stdlib/Docs | 8 | 📝 Planned |
+| [TASK-1046](tasks/TASK-1046-stdlib-monoid-semigroup-constraint.md) | Migrate stdlib `Monoid` to `where A: Semigroup` and reconcile examples/reference wording | Stdlib/Docs | 8 | ✅ Complete |
 | [TASK-1048](tasks/TASK-1048-interface-evidence-constraints-closeout.md) | Run diagnostics, broad verification, independent review, and status reconciliation | Closeout | 8 | 📝 Planned |
 
 Total estimate: 90h.
@@ -97,5 +97,5 @@ Filtered cargo commands must be paired with `-- --list`, a test-count assertion,
 - [x] Reverse entailment and automatic derivation are rejected/proven absent.
 - [x] `std::algebra::Monad` declares the `Applicative` constraint through final stdlib source.
 - [x] `std::algebra::Applicative` declares the `Functor` constraint through final stdlib source.
-- [ ] `std::algebra::Monoid` declares the `Semigroup` constraint through final stdlib source.
+- [x] `std::algebra::Monoid` declares the `Semigroup` constraint through final stdlib source.
 - [ ] Broad verification and independent review pass before status promotion.

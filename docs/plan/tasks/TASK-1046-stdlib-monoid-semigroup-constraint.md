@@ -1,6 +1,6 @@
 # TASK-1046: Migrate stdlib `Monoid` to `where A: Semigroup` and reconcile examples/reference wording
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -61,12 +61,19 @@ commands:
   - git diff --check
   - RUSTC_WRAPPER= cargo check --workspace
 checklist:
-  - [ ] Focused final-path tests are non-zero and pass
-  - [ ] Missing required evidence has a negative test
-  - [ ] Reverse entailment has a negative test or is covered by TASK-1043
-  - [ ] Status surfaces and CHANGELOG are reconciled if this task completes
+  - [x] Focused final-path tests are non-zero and pass
+  - [x] Missing required evidence has a negative test
+  - [x] Reverse entailment has a negative test or is covered by TASK-1043
+  - [x] Status surfaces and CHANGELOG are reconciled if this task completes
 ```
 
 ## Notes
 
 This task must not create a blanket generic impl to encode the relation. The interface declaration itself owns the required evidence.
+
+## Completion notes
+
+- Updated `std/src/algebra/monoid.ash` so `Monoid<A>` declares `where A: Semigroup` through the final stdlib source.
+- Added `crates/ash-engine/tests/task_1046_stdlib_monoid_constraint.rs` to prove the stdlib surface preserves the constraint, final `string.ash`/`list.ash` Monoid implementations discharge it via Semigroup evidence, and missing `Semigroup<String>` evidence rejects a local `Monoid<String>` impl.
+- Reverse entailment remains covered by TASK-1043's directional evidence tests; this task does not add derivation, blanket impls, or proof search.
+- Verification: `cargo fmt --check`; `RUSTC_WRAPPER= cargo test -p ash-engine --test task_1046_stdlib_monoid_constraint -- --list` (3 tests); `RUSTC_WRAPPER= cargo test -p ash-engine --test task_1046_stdlib_monoid_constraint -- --nocapture` (3 passed); `RUSTC_WRAPPER= cargo check --workspace`; `RUSTC_WRAPPER= cargo clippy -p ash-engine --test task_1046_stdlib_monoid_constraint -- -D warnings`; `git diff --check`.

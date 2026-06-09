@@ -1,6 +1,6 @@
 # TASK-1384: Split interpreter eval/execute/runtime state modules
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -80,14 +80,14 @@ commands:
   - CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER= cargo clippy -p ash-interp --all-targets --all-features -- -D warnings
   - python3 tools/dev/rust_file_size_report.py --markdown > /tmp/phase137-task1384-size.md
 checklist:
-  - [ ] Refactor is behavior-preserving
-  - [ ] Runtime authority and async behavior are preserved
-  - [ ] ash-interp tests pass
-  - [ ] representative ash-engine runtime tests pass
-  - [ ] ash-interp clippy is clean
-  - [ ] Formatting and diff checks pass
-  - [ ] Size report shows intended reduction or documented exception
-  - [ ] Codex final review reports no blocking issues
+  - [x] Refactor is behavior-preserving
+  - [x] Runtime authority and async behavior are preserved
+  - [x] ash-interp tests pass
+  - [x] representative ash-engine runtime tests pass
+  - [x] ash-interp clippy is clean
+  - [x] Formatting and diff checks pass
+  - [x] Size report shows intended reduction or documented exception
+  - [x] Codex final review reports no blocking issues
 ```
 
 
@@ -105,3 +105,29 @@ Required by:
 - This task should be committed independently.
 - If any split exposes a genuine semantic bug, stop and create a follow-on bug task rather than hiding behavior changes in the refactor.
 - End with Codex review for code quality, semantic preservation, style, and size-budget compliance.
+## Implementation Evidence
+
+- Split `crates/ash-interp/src/eval.rs` into feature-owned sibling modules:
+  - `eval/builtins.rs` for builtin dispatch metadata/table lookup.
+  - `eval/operators.rs` for unary/binary/comparison helpers.
+  - `eval/failure.rs` for operational failure attribution helpers.
+  - `eval/control.rs` for spawn/split/match/if-let control-expression helpers.
+  - `eval/tests.rs` for extracted eval unit tests.
+- Split `crates/ash-interp/src/runtime_state.rs` data-model surfaces into:
+  - `runtime_state/implementation.rs` for implementation-binding and operation-body metadata.
+  - `runtime_state/resource_admission.rs` for resource split/join violation evidence.
+- Split `crates/ash-interp/src/execute.rs` terminal observation/failure conversion helpers into `execute/terminal.rs` while keeping authority-sensitive workflow execution and child-spawn orchestration in the parent shell.
+- Subagent boundary review advised extracting pure-ish eval helpers and data models first, and avoiding partial moves of `ActEnv`, proc authority, and runtime kernel clusters.
+- Size evidence from `/tmp/phase137-task1384-size.md`: no Phase 137 baseline regressions; `eval.rs` reduced to 3,308 lines, `runtime_state.rs` to 2,329 lines, and `execute.rs` to 3,331 lines, with remaining large inline tests/production shells deferred to TASK-1386/closeout exceptions.
+
+## Verification Evidence
+
+```bash
+CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER= cargo fmt --check
+git diff --check
+CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER= cargo clippy -p ash-interp --all-targets --all-features -- -D warnings
+CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER= cargo test -p ash-interp
+CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER= cargo test -p ash-engine
+python3 tools/dev/rust_file_size_report.py --markdown > /tmp/phase137-task1384-size.md
+python3 tools/dev/rust_file_size_report.py --fail-on-regression
+```

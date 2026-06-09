@@ -150,13 +150,13 @@ pub(crate) fn identifier<'a>(input: &mut ParseInput<'a>) -> ModalResult<&'a str>
 
 /// Returns true when the current position starts an explicit kind annotation.
 pub(crate) fn starts_with_kind_syntax(input: &ParseInput<'_>) -> bool {
-    input.input.starts_with('*')
+    input.input.starts_with('*') || starts_with_kind_prop_atom(input)
 }
 
 /// Parse an explicit source kind annotation.
 ///
-/// TASK-906 intentionally keeps this grammar small: `*` and right-associative
-/// arrows such as `* -> *` or `* -> * -> *`.
+/// TASK-906 intentionally kept this grammar small: `*`, `Prop`, and
+/// right-associative arrows such as `* -> *` or `Prop -> *`.
 pub(crate) fn parse_kind_annotation(input: &mut ParseInput<'_>) -> ModalResult<KindAnnotation> {
     skip_whitespace_and_comments(input);
     let start = input.state.pos;
@@ -180,11 +180,28 @@ fn parse_kind_atom(input: &mut ParseInput<'_>) -> ModalResult<Kind> {
     skip_whitespace_and_comments(input);
     if consume_literal(input, "*") {
         Ok(Kind::Type)
+    } else if consume_kind_prop_atom(input) {
+        Ok(Kind::Prop)
     } else {
         Err(winnow::error::ErrMode::Backtrack(
             winnow::error::ContextError::new(),
         ))
     }
+}
+
+fn starts_with_kind_prop_atom(input: &ParseInput<'_>) -> bool {
+    input.input.strip_prefix("Prop").is_some_and(|rest| {
+        rest.chars()
+            .next()
+            .is_none_or(|ch| !is_identifier_continue(ch))
+    })
+}
+
+fn consume_kind_prop_atom(input: &mut ParseInput<'_>) -> bool {
+    if !starts_with_kind_prop_atom(input) {
+        return false;
+    }
+    consume_literal(input, "Prop")
 }
 
 fn consume_literal(input: &mut ParseInput<'_>, literal: &str) -> bool {

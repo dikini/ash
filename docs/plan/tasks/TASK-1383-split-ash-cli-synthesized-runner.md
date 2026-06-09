@@ -1,6 +1,6 @@
 # TASK-1383: Split synthesized test runner modules
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -80,13 +80,13 @@ commands:
   - CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER= cargo clippy -p ash-cli --all-targets --all-features -- -D warnings
   - python3 tools/dev/rust_file_size_report.py --markdown > /tmp/phase137-task1383-size.md
 checklist:
-  - [ ] Refactor is behavior-preserving
-  - [ ] Public API paths preserved or deliberately documented
-  - [ ] ash-cli tests pass
-  - [ ] ash-cli clippy is clean
-  - [ ] Formatting and diff checks pass
-  - [ ] Size report shows intended reduction or documented exception
-  - [ ] Codex final review reports no blocking issues
+  - [x] Refactor is behavior-preserving
+  - [x] Public API paths preserved or deliberately documented
+  - [x] ash-cli tests pass
+  - [x] ash-cli clippy is clean
+  - [x] Formatting and diff checks pass
+  - [x] Size report shows intended reduction or documented exception
+  - [x] Codex final review reports no blocking issues
 ```
 
 
@@ -104,3 +104,31 @@ Required by:
 - This task should be committed independently.
 - If any split exposes a genuine semantic bug, stop and create a follow-on bug task rather than hiding behavior changes in the refactor.
 - End with Codex review for code quality, semantic preservation, style, and size-budget compliance.
+
+
+## Implementation Evidence
+
+- Split `crates/ash-cli/src/test_runner/synthesized.rs` into feature-owned sibling modules under `crates/ash-cli/src/test_runner/synthesized/`:
+  - `schema.rs` for runner-facing metadata/schema structs and compatibility reexports.
+  - `execution.rs` for structured `SynthesizedCase` execution and oracle evaluation.
+  - `repro.rs` for repro/deferred-result helpers.
+  - `eval.rs` for simple expression/core expression evaluation helpers.
+  - `property.rs`, `law.rs`, `smallworld.rs`, `contract.rs`, `policy.rs`, and `obligation.rs` for generated-row families.
+  - `tests.rs` for the existing synthesized-runner test module.
+- Preserved `test_runner::synthesized::*` public/internal API paths via the parent compatibility shell and schema/execution reexports.
+- Preserved raw-source fallback, filtering, fail-fast, repro artifact, and structured snapshot behavior; this task is behavior-preserving only.
+- Reduced `crates/ash-cli/src/test_runner/synthesized.rs` from 7,524 lines to 1,225 lines. The remaining 3,137-line `synthesized/tests.rs` is a tests-only follow-on owned by TASK-1386.
+- Verification run:
+  - `CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER= cargo fmt --check`
+  - `git diff --check`
+  - `CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER= cargo check -p ash-cli`
+  - `CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER= cargo test -p ash-cli test_runner::synthesized -- --nocapture`
+  - `CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER= cargo test -p ash-cli test_runner::executor -- --nocapture`
+  - `CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER= cargo test -p ash-cli`
+  - `CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER= cargo clippy -p ash-cli --all-targets --all-features -- -D warnings`
+  - `python3 tools/dev/rust_file_size_report.py --fail-on-regression`
+
+## Remaining Exception / Follow-on Ownership
+
+- `crates/ash-cli/src/test_runner/synthesized/tests.rs` remains above the preferred line budget as a tests-only module and is intentionally deferred to TASK-1386 (`Split oversized tests/fixtures`).
+- TASK-1387 owns the final audit and any remaining production-size exception documentation after subsequent crates are split.

@@ -93,7 +93,7 @@ By TASK-1387 closeout:
 | [TASK-1380](tasks/TASK-1380-split-ash-typeck-checking-modules.md) | Split `ash-typeck` expression/checking frontends | `ash-typeck` | 2 | Complete |
 | [TASK-1381](tasks/TASK-1381-split-ash-parser-surface-and-lowering.md) | Split parser surface/lowering/import resolver modules | `ash-parser` | 3 | Complete |
 | [TASK-1382](tasks/TASK-1382-split-ash-engine-module-loader.md) | Split engine module loading and public engine shell | `ash-engine` | 4 | Complete |
-| [TASK-1383](tasks/TASK-1383-split-ash-cli-synthesized-runner.md) | Split synthesized test runner modules | `ash-cli` | 5 | Planned |
+| [TASK-1383](tasks/TASK-1383-split-ash-cli-synthesized-runner.md) | Split synthesized test runner modules | `ash-cli` | 5 | Complete |
 | [TASK-1384](tasks/TASK-1384-split-ash-interp-runtime-modules.md) | Split interpreter eval/execute/runtime state modules | `ash-interp` | 6 | Planned |
 | [TASK-1385](tasks/TASK-1385-split-ashgrove-and-secondary-crates.md) | Split ashgrove and secondary oversized crates | `ashgrove`, small crates | 7 | Planned |
 | [TASK-1386](tasks/TASK-1386-split-oversized-tests-and-fixtures.md) | Split oversized test/support files by behavior | tests | 8 | Planned |

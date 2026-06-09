@@ -121,7 +121,7 @@ fn has_fatal_diagnostics(errors: &[ConstructorError]) -> bool {
     !errors.iter().all(ConstructorError::is_non_fatal)
 }
 
-fn pattern_type_env_from_type_env(env: &TypeEnv) -> PatternTypeEnv {
+pub(crate) fn pattern_type_env_from_type_env(env: &TypeEnv) -> crate::check_pattern::TypeEnv {
     let mut pattern_env = PatternTypeEnv::new();
     let mut type_defs = env
         .ast_type_defs()

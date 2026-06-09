@@ -60,6 +60,13 @@ This phase is not allowed to change Ash semantics. The measurable objective is s
 - No production `src/**/*.rs` file should remain above **2,500 lines** after its owning crate task completes, unless the task records a deliberate follow-on owner.
 - New files should start under **500 lines** unless generated or fixture-heavy.
 
+### Exception rules
+
+- The 500-line and 10KB thresholds are audit triggers, not automatic refactor mandates; split tasks should preserve semantics and avoid arbitrary extraction just to satisfy a number.
+- Generated, fixture-heavy, compatibility, or mechanically mirrored test files may exceed the preferred budget when the owning task records why splitting would reduce discoverability or increase semantic risk.
+- Any production file still above 2,500 lines after its crate task must name a follow-on owner or record why it is intentionally deferred beyond Phase 137.
+- Later tasks should compare against `docs/audit/RUST-FILE-SIZE-AUDIT.md` using `tools/dev/rust_file_size_report.py` and report whether the relevant crate improved, stayed flat for a documented reason, or regressed.
+
 ### Phase-level target
 
 By TASK-1387 closeout:
@@ -81,7 +88,7 @@ By TASK-1387 closeout:
 
 | Task | Title | Primary crate | Priority | Status |
 |---|---|---|---:|---|
-| [TASK-1378](tasks/TASK-1378-module-size-audit-and-policy.md) | Add module-size audit and split policy | workspace | 0 | Planned |
+| [TASK-1378](tasks/TASK-1378-module-size-audit-and-policy.md) | Add module-size audit and split policy | workspace | 0 | Complete |
 | [TASK-1379](tasks/TASK-1379-split-ash-typeck-type-env.md) | Split `ash-typeck::type_env` into feature modules | `ash-typeck` | 1 | Planned |
 | [TASK-1380](tasks/TASK-1380-split-ash-typeck-checking-modules.md) | Split `ash-typeck` expression/checking frontends | `ash-typeck` | 2 | Planned |
 | [TASK-1381](tasks/TASK-1381-split-ash-parser-surface-and-lowering.md) | Split parser surface/lowering/import resolver modules | `ash-parser` | 3 | Planned |

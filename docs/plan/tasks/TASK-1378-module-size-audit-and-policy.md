@@ -1,6 +1,6 @@
 # TASK-1378: Add module-size audit and split policy
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -87,17 +87,42 @@ strictness: clean
 commands:
   - python3 tools/dev/rust_file_size_report.py --markdown > /tmp/phase137-size-audit.md
   - python3 tools/dev/rust_file_size_report.py --json > /tmp/phase137-size-audit.json
+  - python3 tools/dev/rust_file_size_report.py --tests-only > /tmp/phase137-tests-only.md
+  - python3 tools/dev/rust_file_size_report.py --fail-on-regression
   - CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER= cargo fmt --check
   - git diff --check
 checklist:
-  - [ ] Audit script produces Markdown and JSON output
-  - [ ] Baseline audit document records current counts and top outliers
-  - [ ] PLAN-137 budget/policy is consistent with task files
-  - [ ] CHANGELOG.md records the planning/audit packet
-  - [ ] Formatting and diff checks pass
-  - [ ] Codex final review reports no blocking issues
+  - [x] Audit script produces Markdown and JSON output
+  - [x] Audit script supports tests-only and Phase 137 baseline regression guard output
+  - [x] Baseline audit document records current counts and top outliers
+  - [x] PLAN-137 budget/policy is consistent with task files
+  - [x] CHANGELOG.md records the planning/audit packet
+  - [x] Formatting and diff checks pass
+  - [x] Codex final review reports no blocking issues
 ```
 
+## Implementation Evidence
+
+- Added `tools/dev/rust_file_size_report.py` using `cargo metadata --format-version 1 --no-deps` for workspace package attribution, with Markdown/JSON output, tests-only filtering, and a Phase 137 regression guard that checks oversized-file counts plus largest line/byte outliers without failing merely because module splitting adds files.
+- Added `docs/audit/RUST-FILE-SIZE-AUDIT.md` with the Phase 137 baseline: 18 workspace crates, 663 Rust files, 165 files over 500 lines, and 284 files over 10KB.
+- Confirmed the largest baseline outlier is `crates/ash-typeck/src/type_env.rs` at 20,935 lines / 807.1KB.
+
+### Verification run
+
+```bash
+python3 tools/dev/rust_file_size_report.py --markdown > /tmp/phase137-size-audit.md
+python3 tools/dev/rust_file_size_report.py --json > /tmp/phase137-size-audit.json
+python3 tools/dev/rust_file_size_report.py --tests-only > /tmp/phase137-tests-only.md
+python3 tools/dev/rust_file_size_report.py --fail-on-regression
+CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER= cargo fmt --check
+git diff --check
+```
+
+Result: all six commands exited 0; the regression guard reported no Phase 137 baseline regressions and the remaining commands produced no errors.
+
+### Codex review
+
+Codex initially found two guard-quality blockers: raw Rust file count would fail valid module-splitting work, and byte regression was checked against the largest-by-lines file rather than the true largest-by-bytes file. Both were fixed and re-reviewed. Final Codex review reported no blocking issues: "The audit script, baseline document, plan updates, and changelog entry are consistent with the stated TASK-1378 requirements."
 
 ## Dependencies for Next Task
 

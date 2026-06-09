@@ -4071,15 +4071,17 @@ Adds `law` and `proof` syntax to Ash interfaces and modules, enabling declarativ
 
 ## Phase 137: Rust Module Size and Discoverability Refactor
 
-**Status:** 📝 Planned
-**Plan:** [PLAN-137](PLAN-137-RUST-MODULE-SIZE-REFACTOR.md)
+**Status:** 🟡 In Progress
+
+**Plan:** [PLAN-137: Rust Module Size and Discoverability Refactor](PLAN-137-RUST-MODULE-SIZE-REFACTOR.md)
+
 **Spec:** Refactor-only maintenance phase; no Ash language semantics changes.
 
 Phase 137 reduces oversized Rust source files and modules so the codebase is easier to read, navigate, review, and load into LLM contexts. The phase is behavior-preserving and crate-oriented: it starts with a repeatable size audit and policy, then splits the largest production files by feature-owned module boundaries, preserving public APIs through narrow reexports and requiring focused crate gates plus Codex review after each task.
 
 | Task | Description | Status |
 |---|---|---|
-| [TASK-1378](tasks/TASK-1378-module-size-audit-and-policy.md) | Add module-size audit and split policy | Planned |
+| [TASK-1378](tasks/TASK-1378-module-size-audit-and-policy.md) | Add module-size audit and split policy | Complete |
 | [TASK-1379](tasks/TASK-1379-split-ash-typeck-type-env.md) | Split `ash-typeck::type_env` into feature modules | Planned |
 | [TASK-1380](tasks/TASK-1380-split-ash-typeck-checking-modules.md) | Split `ash-typeck` expression/checking frontends | Planned |
 | [TASK-1381](tasks/TASK-1381-split-ash-parser-surface-and-lowering.md) | Split parser surface/lowering/import resolver modules | Planned |

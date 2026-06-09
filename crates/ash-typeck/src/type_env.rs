@@ -15913,13 +15913,16 @@ impl TypeEnv {
             })
             .collect::<HashSet<_>>();
 
-        for proof in definitions
+        let module_proofs = definitions
             .iter()
             .filter_map(|definition| match definition {
-                Definition::Proof(proof) => Some(proof),
+                Definition::Proof(proof) => Some(proof.clone()),
                 _ => None,
             })
-        {
+            .collect::<Vec<_>>();
+        self.check_proof_cycles(&module_proofs)?;
+
+        for proof in &module_proofs {
             self.check_proof_matches_law(proof, &module_law_names, "module")?;
             self.check_proof_totality_with_fuel(proof, proof_fuel)?;
         }
@@ -15955,6 +15958,7 @@ impl TypeEnv {
 
         let interface_law_names = interface.law_names.iter().cloned().collect::<HashSet<_>>();
         let scope = format!("interface {interface_name}");
+        self.check_proof_cycles(&implementation.proofs)?;
         for proof in &implementation.proofs {
             self.check_proof_matches_law(proof, &interface_law_names, &scope)?;
             self.check_proof_totality_with_fuel(proof, proof_fuel)?;
@@ -15963,12 +15967,12 @@ impl TypeEnv {
         Ok(())
     }
 
-    /// Stage-3 preparation hook for proof body totality validation.
+    /// Stage-3 proof body totality validation hook.
     ///
-    /// The Phase 136 syntax/typechecker MVP records proof bodies and validates
-    /// proof names. Stage 3 now tracks a conservative proof-body traversal fuel
-    /// budget, but still leaves theorem proving, partial-match safety, and
-    /// circular-proof constraints to follow-on tasks.
+    /// Phase 136 Stage 3 currently tracks a conservative proof-body traversal
+    /// fuel budget, rejects non-exhaustive AST-level proof matches, and rejects
+    /// circular proof dependencies in registration. It still leaves theorem
+    /// proving and full proof-term typechecking to follow-on tasks.
     pub fn check_proof_totality(
         &self,
         proof: &ProofDef,
@@ -15997,6 +16001,64 @@ impl TypeEnv {
             ProofBody::Expr(expr) => checker.visit_expr(expr),
         }
         checker.finish()
+    }
+
+    /// Reject circular dependencies among the supplied proof definitions.
+    ///
+    /// This Stage-3 direct checker builds a local proof call graph from surface
+    /// proof expression bodies and only records `Expr::Call` edges whose callee
+    /// name is another proof in the supplied slice. Calls to ordinary functions
+    /// or proofs outside the checked slice are ignored by this local API.
+    pub fn check_proof_cycles(&self, proofs: &[ProofDef]) -> Result<(), TypeEnvError> {
+        let mut proof_names = HashSet::<String>::new();
+        for proof in proofs {
+            let proof_name = proof.name.to_string();
+            if !proof_names.insert(proof_name.clone()) {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!("duplicate proof declaration: {proof_name}"),
+                    proof.span,
+                ));
+            }
+        }
+
+        let mut graph = BTreeMap::<String, Vec<String>>::new();
+        let mut spans = HashMap::<String, Span>::new();
+
+        for proof in proofs {
+            let proof_name = proof.name.to_string();
+            spans.insert(proof_name.clone(), proof.span);
+            let mut collector = ProofCallCollector::new(&proof_names);
+            if let ProofBody::Expr(expr) = &proof.body {
+                collector.visit_expr(expr);
+            }
+            let mut callees = collector.into_calls();
+            callees.sort();
+            graph.insert(proof_name, callees);
+        }
+
+        let mut visiting = HashSet::<String>::new();
+        let mut visited = HashSet::<String>::new();
+        let mut stack = Vec::<String>::new();
+        for proof_name in graph.keys() {
+            if visited.contains(proof_name) {
+                continue;
+            }
+            if let Some(cycle) =
+                detect_proof_cycle(proof_name, &graph, &mut visiting, &mut visited, &mut stack)
+            {
+                let span = cycle
+                    .first()
+                    .and_then(|name| spans.get(name))
+                    .copied()
+                    .unwrap_or_default();
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!("circular proof dependency: {}", cycle.join(" -> ")),
+                    span,
+                ));
+            }
+        }
+
+        Ok(())
     }
 
     fn check_proof_matches_law(
@@ -19264,6 +19326,259 @@ pub enum UnfoldedBody {
     Enum(Vec<VariantInfo>),
     /// Struct with fields
     Struct(Vec<(FieldName, Type)>),
+}
+
+fn detect_proof_cycle(
+    proof_name: &str,
+    graph: &BTreeMap<String, Vec<String>>,
+    visiting: &mut HashSet<String>,
+    visited: &mut HashSet<String>,
+    stack: &mut Vec<String>,
+) -> Option<Vec<String>> {
+    if let Some(cycle_start) = stack.iter().position(|name| name == proof_name) {
+        let mut cycle = stack[cycle_start..].to_vec();
+        cycle.push(proof_name.to_string());
+        return Some(cycle);
+    }
+    if visited.contains(proof_name) {
+        return None;
+    }
+
+    visiting.insert(proof_name.to_string());
+    stack.push(proof_name.to_string());
+    if let Some(callees) = graph.get(proof_name) {
+        for callee in callees {
+            if visiting.contains(callee)
+                && let Some(cycle_start) = stack.iter().position(|name| name == callee)
+            {
+                let mut cycle = stack[cycle_start..].to_vec();
+                cycle.push(callee.clone());
+                return Some(cycle);
+            }
+            if let Some(cycle) = detect_proof_cycle(callee, graph, visiting, visited, stack) {
+                return Some(cycle);
+            }
+        }
+    }
+    stack.pop();
+    visiting.remove(proof_name);
+    visited.insert(proof_name.to_string());
+    None
+}
+
+struct ProofCallCollector<'a> {
+    proof_names: &'a HashSet<String>,
+    calls: HashSet<String>,
+}
+
+impl<'a> ProofCallCollector<'a> {
+    fn new(proof_names: &'a HashSet<String>) -> Self {
+        Self {
+            proof_names,
+            calls: HashSet::new(),
+        }
+    }
+
+    fn into_calls(self) -> Vec<String> {
+        self.calls.into_iter().collect()
+    }
+
+    fn record_call(&mut self, module: Option<&Name>, func: &Name) {
+        if module.is_some() {
+            return;
+        }
+
+        let func = func.to_string();
+        if self.proof_names.contains(&func) {
+            self.calls.insert(func);
+        }
+    }
+
+    fn visit_expr(&mut self, expr: &Expr) {
+        match expr {
+            Expr::Literal(_)
+            | Expr::Variable { .. }
+            | Expr::CheckObligation { .. }
+            | Expr::Panic { .. } => {}
+            Expr::Policy(policy) => self.visit_policy_expr(policy),
+            Expr::FieldAccess { base, .. } | Expr::Unary { operand: base, .. } => {
+                self.visit_expr(base);
+            }
+            Expr::IndexAccess { base, index, .. } => {
+                self.visit_expr(base);
+                self.visit_expr(index);
+            }
+            Expr::Binary { left, right, .. } => {
+                self.visit_expr(left);
+                self.visit_expr(right);
+            }
+            Expr::Call {
+                func, module, args, ..
+            } => {
+                self.record_call(module.as_ref(), func);
+                for arg in args {
+                    self.visit_expr(arg);
+                }
+            }
+            Expr::List { items, .. } => {
+                for item in items {
+                    self.visit_expr(item);
+                }
+            }
+            Expr::Match {
+                scrutinee, arms, ..
+            } => {
+                self.visit_expr(scrutinee);
+                self.visit_match_arms(arms);
+            }
+            Expr::IfLet {
+                expr,
+                then_branch,
+                else_branch,
+                ..
+            } => {
+                self.visit_expr(expr);
+                self.visit_expr(then_branch);
+                self.visit_expr(else_branch);
+            }
+            Expr::Constructor {
+                fields, payload, ..
+            } => {
+                for (_, field_expr) in fields {
+                    self.visit_expr(field_expr);
+                }
+                match payload {
+                    ConstructorPayload::Unit => {}
+                    ConstructorPayload::Record(items) => {
+                        for (_, item) in items {
+                            self.visit_expr(item);
+                        }
+                    }
+                    ConstructorPayload::Tuple(items) => {
+                        for item in items {
+                            self.visit_expr(item);
+                        }
+                    }
+                }
+            }
+            Expr::If {
+                condition,
+                then_branch,
+                else_branch,
+                ..
+            } => {
+                self.visit_expr(condition);
+                self.visit_expr(then_branch);
+                if let Some(else_branch) = else_branch {
+                    self.visit_expr(else_branch);
+                }
+            }
+            Expr::Fail { payload, .. } => self.visit_expr(payload),
+            Expr::WithError { body, arms, .. } => {
+                self.visit_expr(body);
+                self.visit_match_arms(arms);
+            }
+            Expr::Block {
+                statements,
+                tail_expr,
+                ..
+            } => {
+                for statement in statements {
+                    match statement {
+                        BlockStmt::Let { expr, .. } => self.visit_expr(expr),
+                    }
+                }
+                if let Some(tail_expr) = tail_expr {
+                    self.visit_expr(tail_expr);
+                }
+            }
+            Expr::FnDef { body, .. } => self.visit_expr(body),
+            Expr::FnApply { func, args, .. } => {
+                self.visit_expr(func);
+                for arg in args {
+                    self.visit_expr(arg);
+                }
+            }
+            Expr::ActBlock { stmts, .. } => self.visit_act_stmts(stmts),
+            Expr::DoBlock { stmts, .. } => self.visit_do_stmts(stmts),
+            Expr::Comprehension {
+                result, qualifiers, ..
+            } => {
+                self.visit_expr(result);
+                for qualifier in qualifiers {
+                    match qualifier {
+                        ComprehensionQualifier::Bind { value, .. }
+                        | ComprehensionQualifier::DiscardBind { value, .. }
+                        | ComprehensionQualifier::Let { value, .. } => self.visit_expr(value),
+                    }
+                }
+            }
+        }
+    }
+
+    fn visit_match_arms(&mut self, arms: &[MatchArm]) {
+        for arm in arms {
+            self.visit_expr(&arm.body);
+        }
+    }
+
+    fn visit_policy_expr(&mut self, policy: &ash_parser::surface::PolicyExpr) {
+        match policy {
+            ash_parser::surface::PolicyExpr::Var { .. } => {}
+            ash_parser::surface::PolicyExpr::And(policies)
+            | ash_parser::surface::PolicyExpr::Or(policies)
+            | ash_parser::surface::PolicyExpr::Sequential(policies)
+            | ash_parser::surface::PolicyExpr::Concurrent(policies) => {
+                for policy in policies {
+                    self.visit_policy_expr(policy);
+                }
+            }
+            ash_parser::surface::PolicyExpr::Not(policy) => self.visit_policy_expr(policy),
+            ash_parser::surface::PolicyExpr::Implies(left, right) => {
+                self.visit_policy_expr(left);
+                self.visit_policy_expr(right);
+            }
+            ash_parser::surface::PolicyExpr::ForAll { items, body, .. }
+            | ash_parser::surface::PolicyExpr::Exists { items, body, .. } => {
+                self.visit_expr(items);
+                self.visit_policy_expr(body);
+            }
+            ash_parser::surface::PolicyExpr::MethodCall { receiver, args, .. } => {
+                self.visit_policy_expr(receiver);
+                for arg in args {
+                    self.visit_expr(arg);
+                }
+            }
+            ash_parser::surface::PolicyExpr::Call { args, .. } => {
+                for arg in args {
+                    self.visit_expr(arg);
+                }
+            }
+        }
+    }
+
+    fn visit_act_stmts(&mut self, stmts: &[ActStmt]) {
+        for stmt in stmts {
+            match stmt {
+                ActStmt::Bind { value, .. } | ActStmt::Return { value, .. } => {
+                    self.visit_expr(value);
+                }
+            }
+        }
+    }
+
+    fn visit_do_stmts(&mut self, stmts: &[DoStmt]) {
+        for stmt in stmts {
+            match stmt {
+                DoStmt::Let { value, .. }
+                | DoStmt::Bind { value, .. }
+                | DoStmt::Return { value, .. } => self.visit_expr(value),
+                DoStmt::WorkflowRequires { expr, .. } | DoStmt::WorkflowEnsures { expr, .. } => {
+                    self.visit_expr(expr);
+                }
+            }
+        }
+    }
 }
 
 struct ProofFuelChecker {

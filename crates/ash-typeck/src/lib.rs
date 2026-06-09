@@ -87,7 +87,7 @@ pub use runtime_verification::{
 pub use solver::{Solver, TypeError};
 pub use type_env::{
     AuthorityProvenanceKind, AuthorityProvenanceReport, BindingProvenanceSourceInfo,
-    CapabilityBindingInfo, CapabilityBindingProvenanceInfo, DEFAULT_PROOF_FUEL,
+    CapabilityBindingInfo, CapabilityBindingProvenanceInfo, DEFAULT_PROOF_FUEL, ErasedProof,
     ImplementationAuthoritySourceInfo, PartialConstructorElaborationError,
     PatternCanonicalConstructor, PatternCanonicalType, PatternCanonicalization,
     PatternCanonicalizationBlockedReason, ProofTotalityResult, ProofTotalityStatus,

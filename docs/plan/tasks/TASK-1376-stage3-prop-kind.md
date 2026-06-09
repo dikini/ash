@@ -10,7 +10,7 @@ Promote `Prop` from convention to distinct kind.
 
 This task is split into sub-tasks:
 - [TASK-1376a](TASK-1376a-prop-kind-variant.md): Add `Kind::Prop` variant — ✅ Complete
-- [TASK-1376b](TASK-1376b-proof-irrelevance.md): Proof irrelevance — 📝 Planned
+- [TASK-1376b](TASK-1376b-proof-irrelevance.md): Proof irrelevance — ✅ Complete
 - [TASK-1376c](TASK-1376c-runtime-escape-prevention.md): Runtime escape prevention — 📝 Planned
 
 ## Acceptance Criteria

@@ -93,6 +93,18 @@ pub struct ProofTotalityResult {
     pub fuel_remaining: usize,
 }
 
+/// Typechecker-owned erased proof token for Stage-3 proof irrelevance.
+///
+/// The carrier preserves the proposition being proved while intentionally
+/// discarding proof declaration identity, proof body, and witness identity. This
+/// is a local/static typechecker artifact only; runtime proof escape prevention
+/// remains a follow-on task.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ErasedProof {
+    /// Proposition retained as the equality boundary for erased proofs.
+    pub proposition: TypeProposition,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 struct TypeFunctionCoverageValue {
     constructor: ash_core::semantic_summary::DomainConstructorId,
@@ -16001,6 +16013,66 @@ impl TypeEnv {
             ProofBody::Expr(expr) => checker.visit_expr(expr),
         }
         checker.finish()
+    }
+
+    /// Erase a checked proof to its proposition boundary for Stage-3 proof
+    /// irrelevance.
+    ///
+    /// This API deliberately reuses the default proof totality checker before
+    /// constructing the erased carrier. The returned value keeps only the
+    /// proved proposition, so proof names, bodies, and witness identities are
+    /// definitionally irrelevant within this local/static Stage-3 slice.
+    pub fn erase_proof_for_proposition(
+        &self,
+        proposition: &TypeProposition,
+        proof: &ProofDef,
+    ) -> Result<ErasedProof, TypeEnvError> {
+        self.erase_proof_for_proposition_with_fuel(proposition, proof, DEFAULT_PROOF_FUEL)
+    }
+
+    /// Erase a checked proof using an explicit proof-totality fuel budget.
+    ///
+    /// This mirrors `check_proof_totality_with_fuel` for tests and callers that
+    /// need deterministic coverage of inconclusive proof checks. Inconclusive
+    /// proof totality is not erased, because proof irrelevance only applies to
+    /// checked proofs in this Stage-3 slice.
+    pub fn erase_proof_for_proposition_with_fuel(
+        &self,
+        proposition: &TypeProposition,
+        proof: &ProofDef,
+        fuel: usize,
+    ) -> Result<ErasedProof, TypeEnvError> {
+        let totality = self.check_proof_totality_with_fuel(proof, fuel)?;
+        if !matches!(totality.status, ProofTotalityStatus::Checked) {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "proof {} could not be erased because totality checking was inconclusive",
+                    proof.name
+                ),
+                proof.span,
+            ));
+        }
+
+        Ok(ErasedProof {
+            proposition: proposition.clone(),
+        })
+    }
+
+    /// Compare two proofs of the same proposition under Stage-3 proof
+    /// irrelevance.
+    ///
+    /// Both proofs are independently checked and erased. Equality then compares
+    /// only the retained proposition boundary, ensuring proofs of the same
+    /// proposition collapse while proofs of different propositions do not.
+    pub fn proofs_definitionally_equal_for_proposition(
+        &self,
+        proposition: &TypeProposition,
+        left: &ProofDef,
+        right: &ProofDef,
+    ) -> Result<bool, TypeEnvError> {
+        let left = self.erase_proof_for_proposition(proposition, left)?;
+        let right = self.erase_proof_for_proposition(proposition, right)?;
+        Ok(left == right)
     }
 
     /// Reject circular dependencies among the supplied proof definitions.

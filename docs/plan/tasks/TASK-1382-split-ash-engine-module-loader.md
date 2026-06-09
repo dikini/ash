@@ -1,6 +1,6 @@
 # TASK-1382: Split engine module loading and public engine shell
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -81,14 +81,14 @@ commands:
   - CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER= cargo clippy -p ash-engine --all-targets --all-features -- -D warnings
   - python3 tools/dev/rust_file_size_report.py --markdown > /tmp/phase137-task1382-size.md
 checklist:
-  - [ ] Refactor is behavior-preserving
-  - [ ] Public API paths preserved or deliberately documented
-  - [ ] ash-engine tests pass
-  - [ ] workspace check passes for downstream engine users
-  - [ ] ash-engine clippy is clean
-  - [ ] Formatting and diff checks pass
-  - [ ] Size report shows intended reduction or documented exception
-  - [ ] Codex final review reports no blocking issues
+  - [x] Refactor is behavior-preserving
+  - [x] Public API paths preserved or deliberately documented
+  - [x] ash-engine tests pass
+  - [x] workspace check passes for downstream engine users
+  - [x] ash-engine clippy is clean
+  - [x] Formatting and diff checks pass
+  - [x] Size report shows intended reduction or documented exception
+  - [x] Codex final review reports no blocking issues
 ```
 
 
@@ -106,3 +106,39 @@ Required by:
 - This task should be committed independently.
 - If any split exposes a genuine semantic bug, stop and create a follow-on bug task rather than hiding behavior changes in the refactor.
 - End with Codex review for code quality, semantic preservation, style, and size-budget compliance.
+## Implementation Evidence
+
+- Extracted `module_loader/source_scan.rs` for source scanning helpers.
+- Extracted `module_loader/import_resolution.rs` for dependency/stdlib/module-root resolution and lockfile identity checks.
+- Extracted `module_loader/callable_exports.rs` for public capability, type-snippet, workflow, builtin callable, and public workflow-summary export helpers.
+- Moved inline `module_loader` unit tests to `module_loader/tests.rs` and public engine-shell unit tests to `tests.rs`.
+- Preserved public seams including `Engine`, `EngineBuilder`, `with_module_roots`, module check/load helpers, and existing compatibility call paths.
+
+Verified:
+
+```bash
+CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER= cargo fmt --check
+git diff --check
+CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER= cargo test -p ash-engine
+CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER= cargo clippy -p ash-engine --all-targets --all-features -- -D warnings
+CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER= cargo check --workspace
+python3 tools/dev/rust_file_size_report.py --fail-on-regression
+```
+
+Post-split line counts:
+
+```text
+2640 crates/ash-engine/src/lib.rs
+ 777 crates/ash-engine/src/tests.rs
+5409 crates/ash-engine/src/module_loader.rs
+ 693 crates/ash-engine/src/module_loader/callable_exports.rs
+ 714 crates/ash-engine/src/module_loader/import_resolution.rs
+ 194 crates/ash-engine/src/module_loader/source_scan.rs
+1248 crates/ash-engine/src/module_loader/tests.rs
+```
+
+Remaining size exceptions / follow-on ownership:
+
+- `crates/ash-engine/src/module_loader.rs` remains a 5,409-line compatibility/orchestration shell because the next safe reductions require disentangling semantic-summary import/export registration from module-file checking; TASK-1387 must carry this as a Phase 138 follow-on candidate rather than forcing a risky semantic-summary move inside this behavior-preserving task.
+- `crates/ash-engine/src/lib.rs` remains a 2,640-line public API and builder shell because the remaining heavy logic is intertwined with public `Engine`/`EngineBuilder` docs, doctests, provider registration, and compatibility helpers; TASK-1387 must record this as a follow-on public-shell extraction candidate unless a later Phase 137 task safely removes it from the >2,500-line budget.
+- These exceptions preserve behavior and API stability while still reducing `module_loader.rs` from the Phase 137 baseline 8,248 lines and splitting public-shell tests out of `lib.rs`.

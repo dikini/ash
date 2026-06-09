@@ -7,6 +7,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Added
+- [TASK-1381](docs/plan/tasks/TASK-1381-split-ash-parser-surface-and-lowering.md): Split `ash-parser` parser surfaces by extracting import resolver carriers/tests, module function-definition parsing, and parser/lowering/lift/surface tail test modules into feature-owned sibling modules while preserving compatibility entrypoints and parser/lowering behavior.
 - [TASK-1380](docs/plan/tasks/TASK-1380-split-ash-typeck-checking-modules.md): Split `ash-typeck` checking-front-end surfaces by converting `check_expr` into a compatibility facade plus feature modules and extracting `lib.rs` surface-type-lowering helpers while preserving public typechecker entrypoints and crate-root compatibility paths.
 - [TASK-1379](docs/plan/tasks/TASK-1379-split-ash-typeck-type-env.md): Split `ash-typeck::type_env` from one 20,935-line Rust source file into a module directory with feature-named implementation slices, proof helpers, tests, and a compatibility reexport shell while preserving existing public API paths.
 - [TASK-1378](docs/plan/tasks/TASK-1378-module-size-audit-and-policy.md): Added the reusable `tools/dev/rust_file_size_report.py` Cargo-metadata-backed Rust file-size audit with Markdown/JSON output, froze the Phase 137 baseline in `docs/audit/RUST-FILE-SIZE-AUDIT.md`, and clarified module-size budget exception rules for downstream split tasks.

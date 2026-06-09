@@ -91,7 +91,7 @@ By TASK-1387 closeout:
 | [TASK-1378](tasks/TASK-1378-module-size-audit-and-policy.md) | Add module-size audit and split policy | workspace | 0 | Complete |
 | [TASK-1379](tasks/TASK-1379-split-ash-typeck-type-env.md) | Split `ash-typeck::type_env` into feature modules | `ash-typeck` | 1 | Complete |
 | [TASK-1380](tasks/TASK-1380-split-ash-typeck-checking-modules.md) | Split `ash-typeck` expression/checking frontends | `ash-typeck` | 2 | Complete |
-| [TASK-1381](tasks/TASK-1381-split-ash-parser-surface-and-lowering.md) | Split parser surface/lowering/import resolver modules | `ash-parser` | 3 | Planned |
+| [TASK-1381](tasks/TASK-1381-split-ash-parser-surface-and-lowering.md) | Split parser surface/lowering/import resolver modules | `ash-parser` | 3 | Complete |
 | [TASK-1382](tasks/TASK-1382-split-ash-engine-module-loader.md) | Split engine module loading and public engine shell | `ash-engine` | 4 | Planned |
 | [TASK-1383](tasks/TASK-1383-split-ash-cli-synthesized-runner.md) | Split synthesized test runner modules | `ash-cli` | 5 | Planned |
 | [TASK-1384](tasks/TASK-1384-split-ash-interp-runtime-modules.md) | Split interpreter eval/execute/runtime state modules | `ash-interp` | 6 | Planned |

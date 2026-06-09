@@ -1,6 +1,6 @@
 # TASK-1381: Split parser surface/lowering/import resolver modules
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -17,7 +17,13 @@ Split the largest parser files (`surface.rs`, `parse_module.rs`, `lower.rs`, `im
 
 ## Deferral / Planned-Feature Reconciliation
 
-None. This is a behavior-preserving refactor task; any discovered semantic redesign belongs in a separate future phase.
+This task was completed as a behavior-preserving module-size split. It intentionally did not redesign parser dispatch, AST ownership, import visibility semantics, lowering behavior, or public parser APIs. Remaining parser production outliers are explicitly narrowed and owned by TASK-1387/future size work:
+
+- `crates/ash-parser/src/parse_module.rs` remains 3,103 lines after extracting function-definition parsing and tests; the residual file is still the central module-item dispatch and mixed definition parser surface.
+- `crates/ash-parser/src/surface.rs` remains 2,459 lines after moving test/proptest modules; the residual file is the compatibility AST surface.
+- `crates/ash-parser/src/lower.rs` remains 2,443 lines after moving lowering tests; the residual file is the compatibility lowering facade and semantic lowering helpers.
+
+These residuals are documented exceptions for this task rather than hidden failures; TASK-1387 owns final audit/status reconciliation and any follow-on split owners.
 
 ## Requirements
 
@@ -41,15 +47,20 @@ None. This is a behavior-preserving refactor task; any discovered semantic redes
 
 ### Step 1: Create parser module map
 
-Document current parser file responsibilities in the task closeout before moving code.
+Completed. The verified parser split map is:
+
+- `import_resolver.rs` is now a production facade with binding/error carriers in `import_resolver/types.rs` and unit tests in `import_resolver/tests.rs`.
+- `parse_module.rs` keeps central module-item dispatch and compatibility entrypoints, with function/builtin-function parsing extracted to `parse_module/fn_defs.rs` and tests in `parse_module/tests.rs`.
+- `surface.rs` keeps the compatibility AST surface, with large test/proptest modules moved to `surface/tests.rs`, `surface/effect_tests.rs`, and `surface/visibility_tests.rs`.
+- `lower.rs`, `lift.rs`, `parse_expr.rs`, and `parse_workflow.rs` keep production compatibility facades while moving their tail test modules to sibling `tests.rs` files.
 
 ### Step 2: Extract surface AST groups with reexports
 
-Preserve `ash_parser::surface::*` import compatibility unless all callsites can be updated safely.
+Completed as a conservative compatibility split. Public AST definitions stayed in `surface.rs`; large surface test modules moved out. This avoids churn in the heavily used `ash_parser::surface::*` API while still reducing production context load.
 
 ### Step 3: Extract parser dispatch helpers carefully
 
-After each extraction, run focused parser tests:
+Completed for the safe contiguous function-definition parser family in `parse_module/fn_defs.rs`, preserving public `parse_fn_definition`, `parse_builtin_fn_definition`, and `parse_fn_body` reexports. After each extraction, focused/full parser tests were run:
 
 ```bash
 CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER= cargo test -p ash-parser
@@ -89,15 +100,26 @@ commands:
   - CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER= cargo clippy -p ash-parser --all-targets --all-features -- -D warnings
   - python3 tools/dev/rust_file_size_report.py --markdown > /tmp/phase137-task1381-size.md
 checklist:
-  - [ ] Refactor is behavior-preserving
-  - [ ] Public API paths preserved or deliberately documented
-  - [ ] ash-parser tests pass
-  - [ ] workspace check passes for downstream parser users
-  - [ ] ash-parser clippy is clean
-  - [ ] Formatting and diff checks pass
-  - [ ] Size report shows intended reduction or documented exception
-  - [ ] Codex final review reports no blocking issues
+  - [x] Refactor is behavior-preserving
+  - [x] Public API paths preserved or deliberately documented
+  - [x] ash-parser tests pass
+  - [x] workspace check passes for downstream parser users
+  - [x] ash-parser clippy is clean
+  - [x] Formatting and diff checks pass
+  - [x] Size report shows intended reduction or documented exception
+  - [x] Codex final review reports no blocking issues
 ```
+
+### Verification Evidence
+
+Commands run with `CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER=` where applicable:
+
+- `cargo fmt --check` plus `git diff --check` passed after final formatting.
+- `cargo test -p ash-parser` passed, including parser unit tests, integration tests, and parser doctests.
+- `cargo check --workspace` passed for downstream parser users.
+- `cargo clippy -p ash-parser --all-targets --all-features -- -D warnings` passed.
+- `python3 tools/dev/rust_file_size_report.py --fail-on-regression` passed with no Phase 137 baseline regressions.
+- Size spot-check after this task: `import_resolver.rs` 775 lines, `parse_module.rs` 3,103 lines, `parse_module/fn_defs.rs` 688 lines, `lower.rs` 2,443 lines, `surface.rs` 2,459 lines, `parse_expr.rs` 1,782 lines, `parse_workflow.rs` 1,851 lines, `lift.rs` 749 lines.
 
 
 ## Dependencies for Next Task

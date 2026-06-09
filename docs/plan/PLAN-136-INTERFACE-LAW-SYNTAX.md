@@ -548,8 +548,14 @@ git commit -m "feat(stdlib): add module-scoped law to std::io::path (TASK-1374)"
 **Objective:** Implement actual totality checking for proof bodies.
 
 **Files:**
-- Modify: `crates/ash-typeck/src/check.rs`
-- Test: `crates/ash-typeck/tests/proof_totality.rs`
+- Modify: `crates/ash-typeck/src/type_env.rs`
+- Modify: `crates/ash-typeck/src/lib.rs`
+- Modify: `crates/ash-engine/src/lib.rs`
+- Modify: `crates/ash-cli/src/commands/check.rs`
+- Test: `crates/ash-typeck/tests/task_1375a_proof_fuel.rs`
+- Test: `crates/ash-cli/tests/test_command.rs`
+
+**Status:** In progress via split subtasks. TASK-1375a is complete: proof expression bodies now consume configurable traversal fuel, default proof fuel is 1000, the direct proof checker returns an `Untested(FuelExhausted)` result rather than a type error on fuel exhaustion, and `ash check --proof-fuel <N>` threads the configured budget into program typechecking. Program registration currently treats untested proof checks as non-errors and does not persist or report them through the CLI. TASK-1375b and TASK-1375c still own partial-match and circular-proof detection.
 
 **Step 1: Write failing test**
 

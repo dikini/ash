@@ -87,10 +87,12 @@ pub use runtime_verification::{
 pub use solver::{Solver, TypeError};
 pub use type_env::{
     AuthorityProvenanceKind, AuthorityProvenanceReport, BindingProvenanceSourceInfo,
-    CapabilityBindingInfo, CapabilityBindingProvenanceInfo, ImplementationAuthoritySourceInfo,
-    PartialConstructorElaborationError, PatternCanonicalConstructor, PatternCanonicalType,
-    PatternCanonicalization, PatternCanonicalizationBlockedReason, ProvenanceSourceKind,
-    PublicTowerAlgebra, PublicTowerIntrinsicKind, PublicTowerIntrinsicMapping, PublicTowerManifest,
+    CapabilityBindingInfo, CapabilityBindingProvenanceInfo, DEFAULT_PROOF_FUEL,
+    ImplementationAuthoritySourceInfo, PartialConstructorElaborationError,
+    PatternCanonicalConstructor, PatternCanonicalType, PatternCanonicalization,
+    PatternCanonicalizationBlockedReason, ProofTotalityResult, ProofTotalityStatus,
+    ProofTotalityUntestedReason, ProvenanceSourceKind, PublicTowerAlgebra,
+    PublicTowerIntrinsicKind, PublicTowerIntrinsicMapping, PublicTowerManifest,
     PublicTowerManifestKind, PublicTowerOperation, PublicTowerOperationAuthority,
     PublicTowerOperationRole, ResourceBindingProvenanceInfo, ResourceTypeInfo, StoredFnContract,
     TypeEnv, WorkflowIntrinsicKind, WorkflowIntrinsicParameterClass,
@@ -2829,13 +2831,51 @@ pub fn type_check_program(
     type_check_program_in_env(&env, program)
 }
 
+/// Configuration for program type checking.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TypeCheckConfig {
+    /// Fuel budget for Stage-3 proof totality traversal.
+    pub proof_fuel: usize,
+}
+
+impl Default for TypeCheckConfig {
+    fn default() -> Self {
+        Self {
+            proof_fuel: DEFAULT_PROOF_FUEL,
+        }
+    }
+}
+
+/// Type check a program with explicit type-checking configuration.
+pub fn type_check_program_with_config(
+    program: &ash_parser::surface::Program,
+    config: &TypeCheckConfig,
+) -> Result<TypeCheckResult, TypeCheckError> {
+    let env = TypeEnv::with_builtin_types();
+    type_check_program_in_env_with_config(&env, program, config)
+}
+
 /// Type check a program with a pre-populated type environment.
 /// Used when imported callable signatures need to be available during checking.
 pub fn type_check_program_in_env(
     initial_env: &TypeEnv,
     program: &ash_parser::surface::Program,
 ) -> Result<TypeCheckResult, TypeCheckError> {
-    type_check_program_in_env_for_module(initial_env, program, synthetic_program_module_identity())
+    type_check_program_in_env_with_config(initial_env, program, &TypeCheckConfig::default())
+}
+
+/// Type check a program with a pre-populated type environment and explicit config.
+pub fn type_check_program_in_env_with_config(
+    initial_env: &TypeEnv,
+    program: &ash_parser::surface::Program,
+    config: &TypeCheckConfig,
+) -> Result<TypeCheckResult, TypeCheckError> {
+    type_check_program_in_env_for_module_with_config(
+        initial_env,
+        program,
+        synthetic_program_module_identity(),
+        config,
+    )
 }
 
 /// Type check a program with an explicit current-module identity for local declarations.
@@ -2847,6 +2887,21 @@ pub fn type_check_program_in_env_for_module(
     initial_env: &TypeEnv,
     program: &ash_parser::surface::Program,
     module_identity: ash_core::semantic_summary::ModuleIdentity,
+) -> Result<TypeCheckResult, TypeCheckError> {
+    type_check_program_in_env_for_module_with_config(
+        initial_env,
+        program,
+        module_identity,
+        &TypeCheckConfig::default(),
+    )
+}
+
+/// Type check a program with an explicit current-module identity and config.
+pub fn type_check_program_in_env_for_module_with_config(
+    initial_env: &TypeEnv,
+    program: &ash_parser::surface::Program,
+    module_identity: ash_core::semantic_summary::ModuleIdentity,
+    config: &TypeCheckConfig,
 ) -> Result<TypeCheckResult, TypeCheckError> {
     let mut env = initial_env.clone();
     env.set_current_module_identity(module_identity);
@@ -2901,11 +2956,11 @@ pub fn type_check_program_in_env_for_module(
         .map_err(TypeCheckError::from)?;
     for definition in &program.definitions {
         if let ash_parser::surface::Definition::Impl(implementation) = definition {
-            env.register_impl_proofs(implementation)
+            env.register_impl_proofs_with_fuel(implementation, config.proof_fuel)
                 .map_err(TypeCheckError::from)?;
         }
     }
-    env.register_module_proofs(&program.definitions)
+    env.register_module_proofs_with_fuel(&program.definitions, config.proof_fuel)
         .map_err(TypeCheckError::from)?;
 
     type_check_workflow_def_in_env(&env, &program.workflow)

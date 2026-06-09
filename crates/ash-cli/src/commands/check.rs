@@ -45,6 +45,10 @@ pub struct CheckArgs {
     /// Enable policy verification
     #[arg(long)]
     pub policy_check: bool,
+
+    /// Fuel budget for proof totality checking
+    #[arg(long, default_value_t = ash_typeck::DEFAULT_PROOF_FUEL)]
+    pub proof_fuel: usize,
 }
 
 /// Run type checking on workflow files
@@ -77,7 +81,10 @@ fn check_file(path: &Path, args: &CheckArgs) -> CliResult<()> {
     let check_result: CliResult<()> = match parse_result {
         Ok(mut workflow) => {
             let warnings = workflow.warnings.clone();
-            let type_result = engine.check(&mut workflow);
+            let typeck_config = ash_typeck::TypeCheckConfig {
+                proof_fuel: args.proof_fuel,
+            };
+            let type_result = engine.check_with_typeck_config(&mut workflow, &typeck_config);
             match type_result {
                 Ok(()) => {
                     let tc_time = tc_start.elapsed();
@@ -592,6 +599,7 @@ mod tests {
             strict: true,
             format: CheckOutputFormat::Human,
             policy_check: false,
+            proof_fuel: ash_typeck::DEFAULT_PROOF_FUEL,
         };
 
         assert_eq!(args.path, "test.ash");
@@ -608,6 +616,7 @@ mod tests {
             strict: false,
             format: CheckOutputFormat::Human,
             policy_check: false,
+            proof_fuel: ash_typeck::DEFAULT_PROOF_FUEL,
         };
         assert!(matches!(args.format, CheckOutputFormat::Human));
     }
@@ -620,6 +629,7 @@ mod tests {
             strict: false,
             format: CheckOutputFormat::Json,
             policy_check: true,
+            proof_fuel: ash_typeck::DEFAULT_PROOF_FUEL,
         };
         assert!(args.policy_check);
     }

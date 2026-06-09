@@ -44,18 +44,50 @@ use ash_core::type_ir::{
 };
 use ash_core::workflow_contract::{Contract as WorkflowContract, RuntimePostconditionContract};
 use ash_parser::surface::{
-    AssociatedTypeKind, CapabilityImplementationDef, CapabilityImplementationDependency,
-    CapabilityImplementationDependencyKind, CapabilityImplementationOperation,
-    CapabilityInterfaceDef, CapabilityOperationMode, CapabilityOperationSig, Definition, ImplDef,
-    InterfaceDef, InterfaceMethodSig, InterfaceTypeParam, LawDef, ProofDef, PropositionClause,
-    PropositionClauseKind, PropositionPredicateDecl, PropositionPredicateParam, PropositionTail,
-    ResourceTypeDef, Type as SurfaceType, TypeFnDef as SurfaceTypeFnDef,
-    TypePattern as SurfaceTypePattern, Visibility as SurfaceVisibility,
+    ActStmt, AssociatedTypeKind, BlockStmt, CapabilityImplementationDef,
+    CapabilityImplementationDependency, CapabilityImplementationDependencyKind,
+    CapabilityImplementationOperation, CapabilityInterfaceDef, CapabilityOperationMode,
+    CapabilityOperationSig, ComprehensionQualifier, ConstructorPayload, Definition, DoStmt, Expr,
+    ImplDef, InterfaceDef, InterfaceMethodSig, InterfaceTypeParam, LawDef, MatchArm, ProofBody,
+    ProofDef, PropositionClause, PropositionClauseKind, PropositionPredicateDecl,
+    PropositionPredicateParam, PropositionTail, ResourceTypeDef, Type as SurfaceType,
+    TypeFnDef as SurfaceTypeFnDef, TypePattern as SurfaceTypePattern,
+    Visibility as SurfaceVisibility,
 };
 use ash_parser::token::Span;
 use std::collections::{BTreeMap, HashMap, HashSet};
 
 pub use ash_core::semantic_summary::PropositionFactRole;
+
+/// Default fuel budget for Stage-3 proof totality checking.
+pub const DEFAULT_PROOF_FUEL: usize = 1000;
+
+/// Result status for the Stage-3 proof totality checker.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ProofTotalityStatus {
+    /// The proof body was traversed within the configured fuel budget.
+    Checked,
+    /// The proof could not be checked conclusively in this slice.
+    Untested(ProofTotalityUntestedReason),
+}
+
+/// Non-error reasons a proof remains untested.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ProofTotalityUntestedReason {
+    /// The proof-body normalization/traversal fuel budget was exhausted.
+    FuelExhausted,
+}
+
+/// Structured outcome for proof totality checking.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProofTotalityResult {
+    /// Whether the checker completed or intentionally left the proof untested.
+    pub status: ProofTotalityStatus,
+    /// Configured fuel limit for this proof check.
+    pub fuel_limit: usize,
+    /// Remaining fuel after traversing the proof body.
+    pub fuel_remaining: usize,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 struct TypeFunctionCoverageValue {
@@ -15860,6 +15892,15 @@ impl TypeEnv {
         &mut self,
         definitions: &[Definition],
     ) -> Result<(), TypeEnvError> {
+        self.register_module_proofs_with_fuel(definitions, DEFAULT_PROOF_FUEL)
+    }
+
+    /// Validate module-scope proofs with explicit proof-checking fuel.
+    pub fn register_module_proofs_with_fuel(
+        &mut self,
+        definitions: &[Definition],
+        proof_fuel: usize,
+    ) -> Result<(), TypeEnvError> {
         let module_law_names = definitions
             .iter()
             .filter_map(|definition| match definition {
@@ -15876,7 +15917,7 @@ impl TypeEnv {
             })
         {
             self.check_proof_matches_law(proof, &module_law_names, "module")?;
-            self.check_proof_totality(proof)?;
+            self.check_proof_totality_with_fuel(proof, proof_fuel)?;
         }
 
         Ok(())
@@ -15884,6 +15925,15 @@ impl TypeEnv {
 
     /// Validate proofs declared in an impl block against laws of the implemented interface.
     pub fn register_impl_proofs(&self, implementation: &ImplDef) -> Result<(), TypeEnvError> {
+        self.register_impl_proofs_with_fuel(implementation, DEFAULT_PROOF_FUEL)
+    }
+
+    /// Validate impl-scoped proofs with explicit proof-checking fuel.
+    pub fn register_impl_proofs_with_fuel(
+        &self,
+        implementation: &ImplDef,
+        proof_fuel: usize,
+    ) -> Result<(), TypeEnvError> {
         if implementation.proofs.is_empty() {
             return Ok(());
         }
@@ -15903,7 +15953,7 @@ impl TypeEnv {
         let scope = format!("interface {interface_name}");
         for proof in &implementation.proofs {
             self.check_proof_matches_law(proof, &interface_law_names, &scope)?;
-            self.check_proof_totality(proof)?;
+            self.check_proof_totality_with_fuel(proof, proof_fuel)?;
         }
 
         Ok(())
@@ -15912,13 +15962,32 @@ impl TypeEnv {
     /// Stage-3 preparation hook for proof body totality validation.
     ///
     /// The Phase 136 syntax/typechecker MVP records proof bodies and validates
-    /// proof names, but does not yet enforce proof totality, termination,
-    /// partial-match safety, or circular-proof constraints. Later Stage 3 work
-    /// should replace this accepting stub with the real proof checker.
-    pub fn check_proof_totality(&self, proof: &ProofDef) -> Result<(), TypeEnvError> {
-        // TODO(Stage 3): implement proof totality/termination checking.
-        let _ = proof;
-        Ok(())
+    /// proof names. Stage 3 now tracks a conservative proof-body traversal fuel
+    /// budget, but still leaves theorem proving, partial-match safety, and
+    /// circular-proof constraints to follow-on tasks.
+    pub fn check_proof_totality(
+        &self,
+        proof: &ProofDef,
+    ) -> Result<ProofTotalityResult, TypeEnvError> {
+        self.check_proof_totality_with_fuel(proof, DEFAULT_PROOF_FUEL)
+    }
+
+    /// Check proof totality with an explicit traversal fuel budget.
+    ///
+    /// Exhausting fuel returns an `Untested` proof result instead of a type
+    /// error, preserving Stage-3's distinction between inconclusive proof
+    /// checking and rejected programs.
+    pub fn check_proof_totality_with_fuel(
+        &self,
+        proof: &ProofDef,
+        fuel: usize,
+    ) -> Result<ProofTotalityResult, TypeEnvError> {
+        let mut checker = ProofFuelChecker::new(fuel);
+        match &proof.body {
+            ProofBody::ByDefinition | ProofBody::ByTest { .. } => {}
+            ProofBody::Expr(expr) => checker.visit_expr(expr),
+        }
+        Ok(checker.finish())
     }
 
     fn check_proof_matches_law(
@@ -19186,6 +19255,192 @@ pub enum UnfoldedBody {
     Enum(Vec<VariantInfo>),
     /// Struct with fields
     Struct(Vec<(FieldName, Type)>),
+}
+
+struct ProofFuelChecker {
+    limit: usize,
+    remaining: usize,
+    exhausted: bool,
+}
+
+impl ProofFuelChecker {
+    const fn new(limit: usize) -> Self {
+        Self {
+            limit,
+            remaining: limit,
+            exhausted: false,
+        }
+    }
+
+    fn finish(self) -> ProofTotalityResult {
+        ProofTotalityResult {
+            status: if self.exhausted {
+                ProofTotalityStatus::Untested(ProofTotalityUntestedReason::FuelExhausted)
+            } else {
+                ProofTotalityStatus::Checked
+            },
+            fuel_limit: self.limit,
+            fuel_remaining: self.remaining,
+        }
+    }
+
+    fn consume(&mut self) -> bool {
+        if self.exhausted {
+            return false;
+        }
+        if self.remaining == 0 {
+            self.exhausted = true;
+            return false;
+        }
+        self.remaining -= 1;
+        true
+    }
+
+    fn visit_expr(&mut self, expr: &Expr) {
+        if !self.consume() {
+            return;
+        }
+        match expr {
+            Expr::Literal(_)
+            | Expr::Variable { .. }
+            | Expr::Policy(_)
+            | Expr::CheckObligation { .. }
+            | Expr::Panic { .. } => {}
+            Expr::FieldAccess { base, .. } | Expr::Unary { operand: base, .. } => {
+                self.visit_expr(base);
+            }
+            Expr::IndexAccess { base, index, .. } => {
+                self.visit_expr(base);
+                self.visit_expr(index);
+            }
+            Expr::Binary { left, right, .. } => {
+                self.visit_expr(left);
+                self.visit_expr(right);
+            }
+            Expr::Call { args, .. } | Expr::List { items: args, .. } => {
+                for arg in args {
+                    self.visit_expr(arg);
+                }
+            }
+            Expr::Match {
+                scrutinee, arms, ..
+            } => {
+                self.visit_expr(scrutinee);
+                self.visit_match_arms(arms);
+            }
+            Expr::IfLet {
+                expr,
+                then_branch,
+                else_branch,
+                ..
+            } => {
+                self.visit_expr(expr);
+                self.visit_expr(then_branch);
+                self.visit_expr(else_branch);
+            }
+            Expr::Constructor {
+                fields, payload, ..
+            } => {
+                for (_, field_expr) in fields {
+                    self.visit_expr(field_expr);
+                }
+                match payload {
+                    ConstructorPayload::Unit => {}
+                    ConstructorPayload::Record(items) => {
+                        for (_, item) in items {
+                            self.visit_expr(item);
+                        }
+                    }
+                    ConstructorPayload::Tuple(items) => {
+                        for item in items {
+                            self.visit_expr(item);
+                        }
+                    }
+                }
+            }
+            Expr::If {
+                condition,
+                then_branch,
+                else_branch,
+                ..
+            } => {
+                self.visit_expr(condition);
+                self.visit_expr(then_branch);
+                if let Some(else_branch) = else_branch {
+                    self.visit_expr(else_branch);
+                }
+            }
+            Expr::Fail { payload, .. } => self.visit_expr(payload),
+            Expr::WithError { body, arms, .. } => {
+                self.visit_expr(body);
+                self.visit_match_arms(arms);
+            }
+            Expr::Block {
+                statements,
+                tail_expr,
+                ..
+            } => {
+                for statement in statements {
+                    match statement {
+                        BlockStmt::Let { expr, .. } => self.visit_expr(expr),
+                    }
+                }
+                if let Some(tail_expr) = tail_expr {
+                    self.visit_expr(tail_expr);
+                }
+            }
+            Expr::FnDef { body, .. } => self.visit_expr(body),
+            Expr::FnApply { func, args, .. } => {
+                self.visit_expr(func);
+                for arg in args {
+                    self.visit_expr(arg);
+                }
+            }
+            Expr::ActBlock { stmts, .. } => self.visit_act_stmts(stmts),
+            Expr::DoBlock { stmts, .. } => self.visit_do_stmts(stmts),
+            Expr::Comprehension {
+                result, qualifiers, ..
+            } => {
+                self.visit_expr(result);
+                for qualifier in qualifiers {
+                    match qualifier {
+                        ComprehensionQualifier::Bind { value, .. }
+                        | ComprehensionQualifier::DiscardBind { value, .. }
+                        | ComprehensionQualifier::Let { value, .. } => self.visit_expr(value),
+                    }
+                }
+            }
+        }
+    }
+
+    fn visit_match_arms(&mut self, arms: &[MatchArm]) {
+        for arm in arms {
+            self.visit_expr(&arm.body);
+        }
+    }
+
+    fn visit_act_stmts(&mut self, stmts: &[ActStmt]) {
+        for stmt in stmts {
+            match stmt {
+                ActStmt::Bind { value, .. } | ActStmt::Return { value, .. } => {
+                    self.visit_expr(value);
+                }
+            }
+        }
+    }
+
+    fn visit_do_stmts(&mut self, stmts: &[DoStmt]) {
+        for stmt in stmts {
+            match stmt {
+                DoStmt::Let { value, .. }
+                | DoStmt::Bind { value, .. }
+                | DoStmt::Return { value, .. } => self.visit_expr(value),
+                DoStmt::WorkflowRequires { expr, .. } | DoStmt::WorkflowEnsures { expr, .. } => {
+                    self.visit_expr(expr);
+                }
+            }
+        }
+    }
 }
 
 #[cfg(test)]

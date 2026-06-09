@@ -45,6 +45,31 @@ fn test_help_output() {
 }
 
 #[test]
+fn check_help_exposes_proof_fuel_flag() {
+    ash()
+        .arg("check")
+        .arg("--help")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("--proof-fuel"));
+}
+
+#[test]
+fn check_proof_fuel_flag_accepts_explicit_value() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("proof-fuel.ash");
+    fs::write(&file, "workflow main { ret 0 }\n").unwrap();
+
+    ash()
+        .arg("check")
+        .arg("--proof-fuel")
+        .arg("0")
+        .arg(&file)
+        .assert()
+        .success();
+}
+
+#[test]
 fn test_no_tests_found_is_success() {
     let dir = make_test_dir();
     ash().arg("test").arg(dir.path()).assert().success();

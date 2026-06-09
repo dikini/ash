@@ -1290,6 +1290,22 @@ impl Engine {
     /// Returns `EngineError::Type` if type checking or monomorphization fails.
     #[allow(clippy::too_many_lines)]
     pub fn check(&self, workflow: &mut Workflow) -> Result<(), EngineError> {
+        self.check_with_typeck_config(workflow, &ash_typeck::TypeCheckConfig::default())
+    }
+
+    /// Type check a parsed workflow using explicit typechecker configuration.
+    ///
+    /// # Errors
+    ///
+    /// Returns `EngineError::Type` if type checking or monomorphization fails,
+    /// and propagates imported-summary/type metadata errors from the existing
+    /// engine check path.
+    #[allow(clippy::too_many_lines)]
+    pub fn check_with_typeck_config(
+        &self,
+        workflow: &mut Workflow,
+        typeck_config: &ash_typeck::TypeCheckConfig,
+    ) -> Result<(), EngineError> {
         // Retrieve the surface workflow definition that was stored during parsing
         let def = self
             .get_surface_workflow_def(workflow.id)
@@ -1312,12 +1328,19 @@ impl Engine {
             let type_check_result = self
                 .get_surface_program_module_identity(workflow.id)
                 .map_or_else(
-                    || ash_typeck::type_check_program_in_env(&type_env, &program),
+                    || {
+                        ash_typeck::type_check_program_in_env_with_config(
+                            &type_env,
+                            &program,
+                            typeck_config,
+                        )
+                    },
                     |module_identity| {
-                        ash_typeck::type_check_program_in_env_for_module(
+                        ash_typeck::type_check_program_in_env_for_module_with_config(
                             &type_env,
                             &program,
                             module_identity,
+                            typeck_config,
                         )
                     },
                 );

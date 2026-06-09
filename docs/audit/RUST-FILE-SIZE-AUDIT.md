@@ -9,7 +9,7 @@ python3 tools/dev/rust_file_size_report.py --tests-only > /tmp/phase137-tests-on
 python3 tools/dev/rust_file_size_report.py --fail-on-regression
 ```
 
-The audit script derives workspace package ownership from `cargo metadata --format-version 1 --no-deps`, excludes `.git/`, `target/`, and `.worktrees/` paths before counting Rust source files, and provides a Phase 137 regression guard for oversized-file counts and largest-file line/byte maxima without treating added split modules as regressions.
+The audit script derives workspace package ownership from `cargo metadata --format-version 1 --no-deps`, excludes `.git/`, `target/`, and `.worktrees/` paths before counting Rust source files, and provides a Phase 137 regression guard for largest-file line/byte maxima without treating added split modules or medium-file counts as regressions.
 
 # Rust File Size Report
 

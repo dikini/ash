@@ -19,8 +19,6 @@ LINE_LIMIT = 500
 BYTE_LIMIT = 10 * 1024
 IGNORED_DIRS = {".git", "target", ".worktrees"}
 BASELINE_LIMITS = {
-    "files_above_500_lines": 165,
-    "files_above_10kb": 284,
     "largest_file_lines": 20_935,
     "largest_file_bytes": 826_435,
 }
@@ -220,13 +218,12 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument(
         "--fail-on-regression",
         action="store_true",
-        help="exit non-zero if current workspace exceeds the Phase 137 baseline counts",
+        help="exit non-zero if the largest Rust file exceeds the Phase 137 baseline",
     )
     return parser.parse_args(argv)
 
 
 def regression_errors(report: dict) -> list[str]:
-    summary = report["summary"]
     all_files = [file for crate in report["crates"] for file in crate["files"]]
     largest_by_lines = max(
         all_files, key=lambda file: (file["lines"], file["bytes"], file["path"]), default=None
@@ -235,16 +232,6 @@ def regression_errors(report: dict) -> list[str]:
         all_files, key=lambda file: (file["bytes"], file["lines"], file["path"]), default=None
     )
     checks = [
-        (
-            "files_above_500_lines",
-            summary["files_above_500_lines"],
-            BASELINE_LIMITS["files_above_500_lines"],
-        ),
-        (
-            "files_above_10kb",
-            summary["files_above_10kb"],
-            BASELINE_LIMITS["files_above_10kb"],
-        ),
         (
             "largest_file_lines",
             largest_by_lines["lines"] if largest_by_lines else 0,

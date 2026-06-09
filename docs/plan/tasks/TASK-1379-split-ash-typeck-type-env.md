@@ -1,6 +1,6 @@
 # TASK-1379: Split `ash-typeck::type_env` into feature modules
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -13,7 +13,7 @@ Split the 20,935-line `crates/ash-typeck/src/type_env.rs` into discoverable feat
 
 ## Dependencies
 
-- 📝 TASK-1378: Add module-size audit and split policy.
+- ✅ TASK-1378: Add module-size audit and split policy.
 
 ## Deferral / Planned-Feature Reconciliation
 
@@ -93,13 +93,13 @@ commands:
   - CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER= cargo clippy -p ash-typeck --all-targets --all-features -- -D warnings
   - python3 tools/dev/rust_file_size_report.py --markdown > /tmp/phase137-task1379-size.md
 checklist:
-  - [ ] Refactor is behavior-preserving
-  - [ ] Public API paths preserved or deliberately documented
-  - [ ] ash-typeck tests pass
-  - [ ] ash-typeck clippy is clean
-  - [ ] Formatting and diff checks pass
-  - [ ] Size report shows intended reduction or documented exception
-  - [ ] Codex final review reports no blocking issues
+  - [x] Refactor is behavior-preserving
+  - [x] Public API paths preserved or deliberately documented
+  - [x] ash-typeck tests pass
+  - [x] ash-typeck clippy is clean
+  - [x] Formatting and diff checks pass
+  - [x] Size report shows intended reduction or documented exception
+  - [x] Codex final review reports no blocking issues
 ```
 
 
@@ -117,3 +117,18 @@ Required by:
 - This task should be committed independently.
 - If any split exposes a genuine semantic bug, stop and create a follow-on bug task rather than hiding behavior changes in the refactor.
 - End with Codex review for code quality, semantic preservation, style, and size-budget compliance.
+
+
+## Completion Notes
+
+- Replaced the 20,935-line `crates/ash-typeck/src/type_env.rs` with `type_env/mod.rs` plus feature-named child modules for imported summaries/domains, interfaces and summary types, type functions, proposition/type-function lowering, surface/law/prelude support, associated families/capabilities, lookups/unfolding, proof totality helpers, shared support carriers, and tests.
+- Preserved `ash_typeck::type_env::*` public imports through the module root reexports.
+- Kept cross-module helper widening scoped to `pub(super)` so helpers remain internal to `type_env` unless they were already public.
+- Size audit after the split: the former 20,935-line file is gone; largest `type_env` child is `support.rs` at 4,358 lines. That remaining large shared-support module is a documented behavior-preserving exception for this first extraction pass because it centralizes shared carriers and helper functions used by multiple feature modules.
+- Fresh verification run:
+  - `CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER= cargo fmt --check`
+  - `git diff --check`
+  - `CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER= cargo test -p ash-typeck`
+  - `CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER= cargo clippy -p ash-typeck --all-targets --all-features -- -D warnings`
+  - `python3 tools/dev/rust_file_size_report.py --json > /tmp/phase137-task1379-size.json`
+- Codex review (`codex review --uncommitted`) reported no discrete correctness issues for the split.

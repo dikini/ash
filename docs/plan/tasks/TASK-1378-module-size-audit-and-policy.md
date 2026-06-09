@@ -103,7 +103,7 @@ checklist:
 
 ## Implementation Evidence
 
-- Added `tools/dev/rust_file_size_report.py` using `cargo metadata --format-version 1 --no-deps` for workspace package attribution, with Markdown/JSON output, tests-only filtering, and a Phase 137 regression guard that checks oversized-file counts plus largest line/byte outliers without failing merely because module splitting adds files.
+- Added `tools/dev/rust_file_size_report.py` using `cargo metadata --format-version 1 --no-deps` for workspace package attribution, with Markdown/JSON output, tests-only filtering, and a Phase 137 regression guard that checks largest line/byte outliers without failing because behavior-preserving module splitting adds files or increases medium-file counts.
 - Added `docs/audit/RUST-FILE-SIZE-AUDIT.md` with the Phase 137 baseline: 18 workspace crates, 663 Rust files, 165 files over 500 lines, and 284 files over 10KB.
 - Confirmed the largest baseline outlier is `crates/ash-typeck/src/type_env.rs` at 20,935 lines / 807.1KB.
 

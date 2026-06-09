@@ -9,14 +9,15 @@ struct ExpectedFailure {
     reason: &'static str,
 }
 
-const EXPECTED_STD_FILES: usize = 49;
-const EXPECTED_STD_PASSING: usize = 43;
+const EXPECTED_STD_FILES: usize = 50;
+const EXPECTED_STD_PASSING: usize = 44;
 const EXPECTED_STD_FAILING: usize = 6;
 
 const EXPECTED_PASS: &[&str] = &[
     "std/src/act.ash",
     "std/src/algebra/applicative.ash",
     "std/src/algebra/comonad.ash",
+    "std/src/algebra/eq.ash",
     "std/src/algebra/functor.ash",
     "std/src/algebra/kleisli.ash",
     "std/src/algebra/mod.ash",

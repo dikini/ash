@@ -1,6 +1,6 @@
 # Design Note: Interface Laws — Syntax, Semantics, and Curry-Howard Roadmap
 
-**Status:** Draft  
+**Status:** Implemented MVP (Phase 136); future extensions deferred
 **Scope:** Language Grammar, Type System, Synthetic Testing, Future Verification  
 **Related:** SPEC-078, SPEC-079, TASK-1026, TASK-1029, DESIGN-031, DESIGN-034  
 
@@ -63,7 +63,7 @@ law <Name>(<params>) [where <constraints>] : <proposition>
 - `Name` is an identifier, scoped to the interface.
 - `params` are universally quantified. They may include type variables (inferred from the interface signature) and value variables.
 - `constraints` are optional interface bounds (e.g., `where A: Ord`).
-- `proposition` is an expression of type `Prop` (uninhabited, no runtime value). In Stages 1–2, `Prop` is a convention (marker type). In Stage 3, it becomes a distinct kind with dedicated typing rules.
+- `proposition` is an expression of type `Prop` (uninhabited, no runtime value). Phase 136 promotes `Prop` to a distinct kind for local/static checking, proof irrelevance, and runtime escape prevention at typechecker boundaries; full codegen/runtime proof erasure and broad dependent-type semantics remain deferred.
 - The proposition may reference any function in scope, including imported items, just like an ordinary function body.
 - Callable types may be written `(A) -> B` or `A -> B`; both are valid Ash syntax for single-argument functions.
 
@@ -216,30 +216,30 @@ law act_associativity<A, B, C>(..., equiv: BoundedEquiv<Act<C>>)
 
 ## 5. Compiler and Tooling Behavior
 
-### Stage 1: Parse and Store (Now)
+### Stage 1: Parse and Store (Complete in Phase 136 MVP)
 
-- The parser accepts `law` declarations inside interface bodies.
-- The typechecker verifies that all names referenced in the proposition exist and are well-typed.
-- `law` nodes are stored in the AST with no runtime lowering.
-- `proof` blocks inside `impl` are parsed and stored; no totality checking.
+- The parser accepts `law` declarations inside interface bodies and at module scope.
+- The parser accepts `proof` blocks inside `impl` bodies and at module scope, including `by_definition` and `by test` forms supported by the Phase 136 syntax slice.
+- The typechecker verifies that law proposition references resolve, proof names match declared laws in scope, and law propositions remain within the Pure/local-static boundary.
+- `law` and `proof` nodes are stored in the AST with no runtime lowering.
 
-### Stage 2: Synthetic Test Generation (TASK-1029)
+### Stage 2: Synthetic Test Generation (Complete in Phase 136 MVP for local/static law rows)
 
 - The test runner extracts `law` nodes from the AST.
-- For each `impl` without a `proof` block, generate small-world tests:
+- For laws without accepted proof evidence, the runner can generate small-world synthetic law rows for supported finite/local domains:
   - Law parameters become generators.
   - The law proposition becomes an assertion.
   - The interface instance becomes the test subject.
-- Law failures report: interface name, instance key, law name, seed, minimized counterexample.
+- Law failures report law identity plus seed/reproduction and counterexample metadata where available.
 - **Synthetic tests are development-time only.** They do not run during production builds unless explicitly requested.
 - **Opt-out:** Developers may skip synthetic tests via `--skip-law-tests` (skips all laws) or `--skip-law-test=<name>` (skips specific law). Per-law opt-out via attributes is deferred to Phase 140+.
-- **Evidence caching:** Test results may be cached in a dedicated law cache file (e.g., `.ash/law-cache.toml`) with seed, timestamp, and source hash. Production builds trust pre-verified results without re-execution. The cache is separate from `ash.lock` (which is for dependency resolution only).
+- **Evidence caching:** Test results may be cached in a dedicated law cache file (e.g., `.ash/law-cache.toml`) with seed, timestamp, and source hash. The cache is separate from `ash.lock` (which is for dependency resolution only). Broader cross-package evidence semantics remain future work.
 
-### Stage 3: Totality Checking (Future)
+### Stage 3: Totality Checking and `Prop` Promotion (Phase 136 MVP complete; broader proof system deferred)
 
-- The compiler checks `proof` blocks for termination.
-- Rejects non-total proofs with a diagnostic.
-- `by_definition` is verified by normalization.
+- Phase 136 implements local/static proof checking substrate: configurable proof fuel, missing-constructor coverage rejection for proof-body matches, circular proof dependency detection, `Kind::Prop`, local proof irrelevance/erasure APIs, and typechecker rejection of `Prop` runtime escapes through ordinary/builtin function returns and aggregate payload fields.
+- Fuel exhaustion is reported as untested proof evidence in the direct checker rather than as a type error; program registration currently treats untested proof checks as non-errors.
+- Full normalization/definitional equality, codegen/runtime proof erasure, broad dependent types, and external proof assistant integration remain deferred.
 
 ### Stage 4: External Prover Integration (Deferred)
 
@@ -454,8 +454,7 @@ The following features are intentionally out of scope for Phase 136 and will be 
 | Feature | Reason | Planned Phase |
 |---|---|---|
 | Attribute syntax (`#[no_test]`, `#[trace]`) | Ash has no attribute parser. Use CLI flags instead. | Phase 140+ |
-| `by test { ... }` inline configuration | Complex parser extension. Use `by_test` keyword + `.ash/law-config.toml`. | Phase 140+ |
-| `Eq` interface in stdlib | Forward reference. Will be added as part of integration tasks. | Phase 136 |
+| `by test { ... }` inline configuration | Complex parser extension. Phase 136 implements `by test` delegation syntax and CLI law selection; inline configuration remains separate future syntax. | Phase 140+ |
 | Full `BoundedEquiv` implementation | Requires tower carrier semantic design (SPEC-002). | Phase 140+ |
 | Cross-module law inheritance | D3 decision: no automatic inheritance. | Not planned |
 | External prover integration (Lean/Coq) | D4 decision: deferred until needed. | Phase 150+ |

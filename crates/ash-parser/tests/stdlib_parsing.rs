@@ -839,6 +839,7 @@ fn test_io_path_public_functions_parse_as_real_fn_definitions() {
             "file_name",
             "extension",
             "is_absolute",
+            "preserves_absolute_after_join",
         ]
     );
 

@@ -311,6 +311,7 @@ Update this section as tasks complete:
 | 133 | 9 | 9 | ✅ Complete |
 | 134 | 8 | 8 | ✅ Complete |
 | 135 | 11 | 1 | 📝 Planned |
+| 136 | 19 | 19 | ✅ Complete; implemented MVP; full workspace gates passed |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -4039,12 +4040,12 @@ Phase 135 adds interface-level evidence constraints. The motivating final syntax
 
 ## Phase 136: Interface and Module Law Syntax
 
-**Status:** Planned
+**Status:** ✅ Complete (implemented MVP)
 **Design Note:** [DESIGN-NOTE-INTERFACE-LAWS](../design/DESIGN-NOTE-INTERFACE-LAWS.md)
 **Plan:** [PLAN-136](PLAN-136-INTERFACE-LAW-SYNTAX.md)
 **Spec:** [SPEC-078](../spec/SPEC-078-STANDARD-ALGEBRA-LIBRARY-AND-MONAD-REMEDIATION.md), [SPEC-079](../spec/SPEC-079-STANDARD-ALGEBRA-COMONAD-AND-KLEISLI-HELPERS.md)
 
-Adds `law` and `proof` syntax to Ash interfaces and modules, enabling declarative algebraic laws with synthetic test generation and optional totality checking.
+Adds `law` and `proof` syntax to Ash interfaces and modules, enabling declarative algebraic laws with local/static synthetic law test plumbing and Phase 136 MVP proof/`Prop` checking. Deferred boundaries remain for attributes, external provers, full codegen/runtime proof erasure, broad dependent types, `BoundedEquiv`, and effect/tower-carrier law semantics.
 
 | Task | Description | Status |
 |---|---|---|
@@ -4066,5 +4067,5 @@ Adds `law` and `proof` syntax to Ash interfaces and modules, enabling declarativ
 | [TASK-1374](tasks/TASK-1374-integration-stdlib-path-law.md) | Integration: module-scoped law in `std::io::path` | Complete |
 | [TASK-1375](tasks/TASK-1375-stage3-totality-checking.md) | Stage 3: proof totality checking | Complete |
 | [TASK-1376](tasks/TASK-1376-stage3-prop-kind.md) | Stage 3: `Prop` kind promotion | Complete |
-| [TASK-1377](tasks/TASK-1377-closeout-docs-status.md) | Closeout: docs, status, CHANGELOG | Planned |
+| [TASK-1377](tasks/TASK-1377-closeout-docs-status.md) | Closeout: docs, status, CHANGELOG | Complete |
 

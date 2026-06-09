@@ -7,6 +7,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Added
+- [TASK-1380](docs/plan/tasks/TASK-1380-split-ash-typeck-checking-modules.md): Split `ash-typeck` checking-front-end surfaces by converting `check_expr` into a compatibility facade plus feature modules and extracting `lib.rs` surface-type-lowering helpers while preserving public typechecker entrypoints and crate-root compatibility paths.
 - [TASK-1379](docs/plan/tasks/TASK-1379-split-ash-typeck-type-env.md): Split `ash-typeck::type_env` from one 20,935-line Rust source file into a module directory with feature-named implementation slices, proof helpers, tests, and a compatibility reexport shell while preserving existing public API paths.
 - [TASK-1378](docs/plan/tasks/TASK-1378-module-size-audit-and-policy.md): Added the reusable `tools/dev/rust_file_size_report.py` Cargo-metadata-backed Rust file-size audit with Markdown/JSON output, froze the Phase 137 baseline in `docs/audit/RUST-FILE-SIZE-AUDIT.md`, and clarified module-size budget exception rules for downstream split tasks.
 - [Phase 137](docs/plan/PLAN-137-RUST-MODULE-SIZE-REFACTOR.md): Added the Rust module size and discoverability refactor planning packet with TASK-1378 through TASK-1387, using the measured 663-file workspace baseline (165 files over 500 lines, 284 files over 10KB) to prioritize crate-by-crate behavior-preserving splits for `ash-typeck`, `ash-parser`, `ash-engine`, `ash-cli`, `ash-interp`, `ashgrove`, secondary crates, and oversized tests.

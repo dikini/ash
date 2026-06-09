@@ -4083,7 +4083,7 @@ Phase 137 reduces oversized Rust source files and modules so the codebase is eas
 |---|---|---|
 | [TASK-1378](tasks/TASK-1378-module-size-audit-and-policy.md) | Add module-size audit and split policy | Complete |
 | [TASK-1379](tasks/TASK-1379-split-ash-typeck-type-env.md) | Split `ash-typeck::type_env` into feature modules | Complete |
-| [TASK-1380](tasks/TASK-1380-split-ash-typeck-checking-modules.md) | Split `ash-typeck` expression/checking frontends | Planned |
+| [TASK-1380](tasks/TASK-1380-split-ash-typeck-checking-modules.md) | Split `ash-typeck` expression/checking frontends | Complete |
 | [TASK-1381](tasks/TASK-1381-split-ash-parser-surface-and-lowering.md) | Split parser surface/lowering/import resolver modules | Planned |
 | [TASK-1382](tasks/TASK-1382-split-ash-engine-module-loader.md) | Split engine module loading and public engine shell | Planned |
 | [TASK-1383](tasks/TASK-1383-split-ash-cli-synthesized-runner.md) | Split synthesized test runner modules | Planned |

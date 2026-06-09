@@ -1,6 +1,6 @@
 # TASK-1385: Split ashgrove and secondary oversized crates
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -81,13 +81,13 @@ commands:
   - CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER= cargo clippy -p ashgrove -p ash-provenance -p ash-repl -p ash-lint -p ash-lsp -p ash-lsp-core -p ash-mcp --all-targets --all-features -- -D warnings
   - python3 tools/dev/rust_file_size_report.py --markdown > /tmp/phase137-task1385-size.md
 checklist:
-  - [ ] Refactor is behavior-preserving
-  - [ ] Public API paths preserved or deliberately documented
-  - [ ] Listed crate tests pass
-  - [ ] Listed crate clippy is clean
-  - [ ] Formatting and diff checks pass
-  - [ ] Size report shows intended reduction or documented exception
-  - [ ] Codex final review reports no blocking issues
+  - [x] Refactor is behavior-preserving
+  - [x] Public API paths preserved or deliberately documented
+  - [x] Listed crate tests pass
+  - [x] Listed crate clippy is clean
+  - [x] Formatting and diff checks pass
+  - [x] Size report shows intended reduction or documented exception
+  - [x] Codex final review reports no blocking issues
 ```
 
 

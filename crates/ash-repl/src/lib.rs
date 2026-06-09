@@ -23,6 +23,8 @@
 
 mod ast;
 mod completer;
+mod display;
+mod editor;
 mod error;
 pub mod input;
 pub mod session;
@@ -32,15 +34,12 @@ pub use input::{InputDetector, InputStatus};
 pub use ash_core::Value;
 use ash_engine::Engine;
 use colored::Colorize;
-use completer::AshCompleter;
 use error::{format_error, suggest_fix};
 use rustyline::error::ReadlineError;
-use rustyline::{Config, Editor};
 pub use session::{EvalResult, Session};
 use std::io::Write;
 use std::path::PathBuf;
 use thiserror::Error;
-use winnow::prelude::*;
 
 /// Canonical normal REPL prompt.
 pub const NORMAL_PROMPT: &str = "ash> ";
@@ -167,43 +166,7 @@ pub const fn canonical_command_names() -> &'static [&'static str] {
     &CANONICAL_COMMANDS
 }
 
-/// Infer the canonical Ash type name for an expression.
-///
-/// # Errors
-///
-/// Returns an error when the expression cannot be parsed or does not yield a
-/// reportable canonical type.
-pub fn infer_type_display(expr: &str) -> Result<String, ReplError> {
-    Engine::default()
-        .infer_expression_type(expr)
-        .map_err(Into::into)
-}
-
-/// Format the surface AST for an expression or workflow definition.
-///
-/// Expressions are parsed directly as [`ash_parser::surface::Expr`]. If the
-/// input is not a complete expression, workflow parsing is attempted and the
-/// resulting [`ash_parser::surface::WorkflowDef`] is formatted instead.
-///
-/// # Errors
-///
-/// Returns an error when the input is neither a complete expression nor a
-/// complete workflow definition.
-pub fn ast_display(input: &str) -> Result<String, ReplError> {
-    match parse_expr_complete(input) {
-        Ok(expr) => Ok(ast::display_expr(&expr)),
-        Err(expr_error) => match parse_workflow_complete(input) {
-            Ok(def) => Ok(ast::display_workflow_def(&def)),
-            Err(workflow_error) => {
-                if trimmed_starts_with_workflow(input) {
-                    Err(workflow_error)
-                } else {
-                    Err(expr_error)
-                }
-            }
-        },
-    }
-}
+pub use display::{ast_display, infer_type_display};
 
 /// Run a REPL session with explicit session configuration.
 ///
@@ -215,54 +178,7 @@ pub async fn run_with_config(config: ReplConfig) -> Result<(), ReplError> {
     repl.run().await
 }
 
-/// Helper struct for managing the readline editor.
-#[derive(Debug)]
-struct ReplEditor {
-    editor: Editor<AshCompleter, rustyline::history::DefaultHistory>,
-    history_path: Option<PathBuf>,
-}
-
-impl ReplEditor {
-    fn new(history_path: Option<PathBuf>) -> Result<Self, ReplError> {
-        let config = Config::builder()
-            .completion_type(rustyline::CompletionType::List)
-            .build();
-
-        let mut editor = Editor::with_config(config)?;
-        editor.set_helper(Some(AshCompleter::new()));
-
-        // Load history if path exists
-        if let Some(path) = &history_path {
-            #[allow(clippy::collapsible_if)]
-            if path.exists() {
-                editor.load_history(path).ok();
-            }
-        }
-
-        Ok(Self {
-            editor,
-            history_path,
-        })
-    }
-
-    fn readline(&mut self, prompt: &str) -> Result<String, ReadlineError> {
-        self.editor.readline(prompt)
-    }
-
-    fn add_history_entry(&mut self, line: &str) {
-        self.editor.add_history_entry(line).ok();
-    }
-
-    fn save_history(&mut self) {
-        if let Some(path) = &self.history_path {
-            // Ensure parent directory exists
-            if let Some(parent) = path.parent() {
-                std::fs::create_dir_all(parent).ok();
-            }
-            self.editor.save_history(path).ok();
-        }
-    }
-}
+use editor::ReplEditor;
 
 /// Interactive REPL for Ash workflow language.
 #[derive(Debug)]
@@ -563,150 +479,5 @@ impl Repl {
     }
 }
 
-fn parse_expr_complete(input: &str) -> Result<ash_parser::surface::Expr, ReplError> {
-    let mut parser_input = ash_parser::new_input(input);
-    let expr = ash_parser::expr
-        .parse_next(&mut parser_input)
-        .map_err(|err| ReplError::ParseError(format!("{err}")))?;
-    let remaining = parser_input.input.to_string();
-    ensure_no_trailing_input(&remaining)?;
-    Ok(expr)
-}
-
-fn parse_workflow_complete(input: &str) -> Result<ash_parser::surface::WorkflowDef, ReplError> {
-    let mut parser_input = ash_parser::new_input(input);
-    let workflow = ash_parser::workflow_def
-        .parse_next(&mut parser_input)
-        .map_err(|err| ReplError::ParseError(format!("{err}")))?;
-    let remaining = parser_input.input.to_string();
-    ensure_no_trailing_input(&remaining)?;
-    Ok(workflow)
-}
-
-fn ensure_no_trailing_input(remaining: &str) -> Result<(), ReplError> {
-    let trailing = skip_trivia(remaining);
-    if trailing.is_empty() {
-        Ok(())
-    } else {
-        let snippet = trailing.lines().next().unwrap_or(trailing);
-        Err(ReplError::ParseError(format!(
-            "unexpected trailing input: {snippet}"
-        )))
-    }
-}
-
-fn trimmed_starts_with_workflow(input: &str) -> bool {
-    let trimmed = skip_trivia(input);
-    trimmed.strip_prefix("workflow").is_some_and(|rest| {
-        rest.is_empty() || !rest.chars().next().is_some_and(char::is_alphanumeric)
-    })
-}
-
-fn skip_trivia(mut input: &str) -> &str {
-    loop {
-        let trimmed = input.trim_start_matches(char::is_whitespace);
-        if let Some(rest) = trimmed.strip_prefix("--") {
-            input = rest.find('\n').map_or("", |index| &rest[index + 1..]);
-            continue;
-        }
-        if let Some(rest) = trimmed.strip_prefix("/*") {
-            input = skip_block_comment(rest);
-            continue;
-        }
-        return trimmed;
-    }
-}
-
-fn skip_block_comment(input: &str) -> &str {
-    let mut depth = 1usize;
-    let mut index = 0usize;
-
-    while index < input.len() {
-        let remaining = &input[index..];
-        if remaining.starts_with("/*") {
-            depth += 1;
-            index += 2;
-            continue;
-        }
-        if remaining.starts_with("*/") {
-            depth -= 1;
-            index += 2;
-            if depth == 0 {
-                return &input[index..];
-            }
-            continue;
-        }
-
-        if let Some(ch) = remaining.chars().next() {
-            index += ch.len_utf8();
-        } else {
-            break;
-        }
-    }
-
-    ""
-}
-
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_repl_creates() {
-        let repl = Repl::new(true);
-        assert!(repl.is_ok());
-    }
-
-    #[test]
-    fn test_history_path_when_disabled() {
-        let repl = Repl::new(true).unwrap();
-        assert!(repl.history_path.is_none());
-    }
-
-    #[tokio::test]
-    async fn test_repl_eval_expression() {
-        let mut repl = Repl::new(true).unwrap();
-        let result = repl.eval("42").await;
-        assert!(result.is_ok());
-    }
-
-    #[tokio::test]
-    async fn test_repl_eval_workflow() {
-        let mut repl = Repl::new(true).unwrap();
-        // Test parsing a workflow definition (no execution, just storage)
-        let result = repl.eval("workflow test { ret 42; }").await;
-        assert!(result.is_ok());
-    }
-
-    #[tokio::test]
-    async fn test_repl_eval_empty() {
-        let mut repl = Repl::new(true).unwrap();
-        let result = repl.eval("").await;
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), Value::Null);
-    }
-
-    #[test]
-    fn test_multiline_incomplete_brace() {
-        let _repl = Repl::new(true).unwrap();
-        // A workflow with unclosed brace may be incomplete depending on parser behavior
-        // Just verify the method runs without panic
-        let _ = Repl::is_incomplete("workflow test {");
-    }
-
-    #[test]
-    fn test_multiline_complete_expression() {
-        let _repl = Repl::new(true).unwrap();
-        // A complete expression should not be incomplete
-        assert!(!Repl::is_incomplete("42"));
-    }
-
-    #[test]
-    fn test_multiline_complete_workflow() {
-        let _repl = Repl::new(true).unwrap();
-        // A complete workflow should not be incomplete
-        assert!(!Repl::is_incomplete(
-            "\n            workflow test {\n                ret 42;\n            }\n        "
-        ));
-    }
-}
+mod tests;

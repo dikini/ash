@@ -1,6 +1,6 @@
 # TASK-1386: Split oversized test/support files by behavior
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -78,13 +78,13 @@ commands:
   - CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER= cargo clippy --workspace --all-targets --all-features -- -D warnings
   - python3 tools/dev/rust_file_size_report.py --markdown --tests-only > /tmp/phase137-task1386-tests-size.md
 checklist:
-  - [ ] Test refactor is behavior-preserving
-  - [ ] Existing test intent/names preserved or documented
-  - [ ] Workspace tests pass with non-zero affected test counts
-  - [ ] Workspace clippy is clean
-  - [ ] Formatting and diff checks pass
-  - [ ] Size report shows intended reduction or documented exception
-  - [ ] Codex final review reports no blocking issues
+  - [x] Test refactor is behavior-preserving
+  - [x] Existing test intent/names preserved or documented
+  - [x] Workspace tests pass with non-zero affected test counts
+  - [x] Workspace clippy is clean
+  - [x] Formatting and diff checks pass
+  - [x] Size report shows intended reduction or documented exception
+  - [x] Codex final review reports no blocking issues
 ```
 
 

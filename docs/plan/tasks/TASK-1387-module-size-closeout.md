@@ -1,6 +1,6 @@
 # TASK-1387: Closeout: final audit, status, changelog, review
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -89,13 +89,13 @@ commands:
   - python3 tools/dev/rust_file_size_report.py --markdown > /tmp/phase137-final-size.md
   - python3 tools/dev/rust_file_size_report.py --fail-on-regression
 checklist:
-  - [ ] Final size audit and deltas recorded
-  - [ ] All Phase 137 task statuses reconciled
-  - [ ] PLAN-137 and PLAN-INDEX statuses reconciled
-  - [ ] CHANGELOG.md updated
-  - [ ] Full workspace tests, clippy, fmt, docs pass
-  - [ ] Size guard passes or documents approved exceptions
-  - [ ] Codex phase audit reports no blocking issues
+  - [x] Final size audit and deltas recorded
+  - [x] All Phase 137 task statuses reconciled
+  - [x] PLAN-137 and PLAN-INDEX statuses reconciled
+  - [x] CHANGELOG.md updated
+  - [x] Full workspace tests, clippy, fmt, docs pass
+  - [x] Size guard passes or documents approved exceptions
+  - [x] Codex phase audit reports no blocking issues
 ```
 
 

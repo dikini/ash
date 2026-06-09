@@ -354,6 +354,35 @@ impl std::fmt::Display for Type {
 }
 
 impl Type {
+    /// Returns true when this type contains a Stage-3 `Prop`-kinded value.
+    #[must_use]
+    pub fn contains_prop_kind(&self) -> bool {
+        match self {
+            Type::Constructor { kind, args, .. }
+            | Type::ConstructorVariableApp { kind, args, .. } => {
+                matches!(kind, Kind::Prop) || args.iter().any(Type::contains_prop_kind)
+            }
+            Type::List(item) => item.contains_prop_kind(),
+            Type::Record(fields) => fields.iter().any(|(_, ty)| ty.contains_prop_kind()),
+            Type::Fun(params, ret, _) | Type::Fn(params, ret) => {
+                params.iter().any(Type::contains_prop_kind) || ret.contains_prop_kind()
+            }
+            Type::Associated { base, .. } => base.contains_prop_kind(),
+            Type::Int
+            | Type::String
+            | Type::Bool
+            | Type::Float
+            | Type::Null
+            | Type::Time
+            | Type::Ref
+            | Type::Cap { .. }
+            | Type::Var(_)
+            | Type::Instance { .. }
+            | Type::InstanceAddr { .. }
+            | Type::ControlLink { .. } => false,
+        }
+    }
+
     /// Check if a value matches this type schema
     pub fn matches(&self, value: &Value) -> bool {
         match (self, value) {

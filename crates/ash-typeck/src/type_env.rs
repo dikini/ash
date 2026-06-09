@@ -348,6 +348,11 @@ pub fn type_expr_to_type(
                 "String" => Ok(Type::String),
                 "Bool" => Ok(Type::Bool),
                 "Float" => Ok(Type::Float),
+                "Prop" => Ok(Type::Constructor {
+                    name: QualifiedName::root("Prop"),
+                    args: vec![],
+                    kind: Kind::Prop,
+                }),
                 "Null" | "Unit" => Ok(Type::Null),
                 "Time" => Ok(Type::Time),
                 "Ref" => Ok(Type::Ref),
@@ -355,11 +360,15 @@ pub fn type_expr_to_type(
                     // User-defined type with no args - look it up
                     let (qualified, _) = type_env.resolve_type(name)?;
                     type_env.check_type_constructor_arity(&qualified, 0)?;
-                    Ok(Type::Constructor {
-                        name: qualified,
-                        args: vec![],
-                        kind: Kind::Type,
-                    })
+                    if let Some(target) = type_env.transparent_alias_target(&qualified, &[]) {
+                        Ok(target)
+                    } else {
+                        Ok(Type::Constructor {
+                            name: qualified,
+                            args: vec![],
+                            kind: Kind::Type,
+                        })
+                    }
                 }
             }
         }
@@ -410,11 +419,16 @@ pub fn type_expr_to_type(
                     .map(|arg| type_expr_to_type(arg, param_mapping, type_env))
                     .collect();
 
-                Ok(Type::Constructor {
-                    name: qualified,
-                    args: arg_types?,
-                    kind: Kind::Type,
-                })
+                let arg_types = arg_types?;
+                if let Some(target) = type_env.transparent_alias_target(&qualified, &arg_types) {
+                    Ok(target)
+                } else {
+                    Ok(Type::Constructor {
+                        name: qualified,
+                        args: arg_types,
+                        kind: Kind::Type,
+                    })
+                }
             }
         }
 
@@ -1351,6 +1365,11 @@ fn surface_type_to_type(
                 "String" => Ok(Type::String),
                 "Bool" => Ok(Type::Bool),
                 "Float" => Ok(Type::Float),
+                "Prop" => Ok(Type::Constructor {
+                    name: QualifiedName::root("Prop"),
+                    args: vec![],
+                    kind: Kind::Prop,
+                }),
                 "Null" | "Unit" => Ok(Type::Null),
                 "Time" => Ok(Type::Time),
                 "Ref" => Ok(Type::Ref),
@@ -3871,10 +3890,25 @@ fn convert_type_def(type_def: &TypeDef, type_env: &TypeEnv) -> Result<TypeInfo, 
             let converted_variants: Result<Vec<_>, _> = variants
                 .iter()
                 .map(|v| {
-                    convert_variant_fields(v, &param_mapping, type_env).map(|fields| VariantInfo {
-                        name: v.name.clone(),
-                        fields,
-                        payload_shape: convert_variant_payload_shape(&v.payload),
+                    convert_variant_fields(v, &param_mapping, type_env).and_then(|fields| {
+                        if let Some((field_name, _)) =
+                            fields.iter().find(|(_, ty)| ty.contains_prop_kind())
+                        {
+                            return Err(TypeEnvError::InvalidDefinition(
+                                format!(
+                                    "Prop-typed values cannot escape into runtime enum variant '{}::{}' field '{}'",
+                                    type_def.name, v.name, field_name
+                                ),
+                                Span::default(),
+                            )
+                            .into());
+                        }
+
+                        Ok(VariantInfo {
+                            name: v.name.clone(),
+                            fields,
+                            payload_shape: convert_variant_payload_shape(&v.payload),
+                        })
                     })
                 })
                 .collect();
@@ -3893,10 +3927,25 @@ fn convert_type_def(type_def: &TypeDef, type_env: &TypeEnv) -> Result<TypeInfo, 
                 })
                 .collect();
 
+            let converted_fields = converted_fields?;
+            if let Some((field_name, _)) = converted_fields
+                .iter()
+                .find(|(_, ty)| ty.contains_prop_kind())
+            {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "Prop-typed values cannot escape into runtime struct field '{}::{}'",
+                        type_def.name, field_name
+                    ),
+                    Span::default(),
+                )
+                .into());
+            }
+
             Ok(TypeInfo::Struct {
                 name: type_def.name.clone(),
                 params,
-                fields: converted_fields?,
+                fields: converted_fields,
             })
         }
         TypeBody::Alias(target_expr) => {

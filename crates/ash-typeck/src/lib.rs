@@ -208,6 +208,11 @@ fn workflow_surface_type_to_type(
                 "Int" => Ok(Type::Int),
                 "String" => Ok(Type::String),
                 "Bool" => Ok(Type::Bool),
+                "Prop" => Ok(Type::Constructor {
+                    name: QualifiedName::root("Prop"),
+                    args: vec![],
+                    kind: Kind::Prop,
+                }),
                 "Null" => Ok(Type::Null),
                 "Time" => Ok(Type::Time),
                 "Ref" => Ok(Type::Ref),
@@ -1679,6 +1684,13 @@ pub fn fn_signature_type(
         None => Type::Var(TypeVar::fresh()),
     };
 
+    if ret.contains_prop_kind() {
+        return Err(TypeCheckError::TypeError(format!(
+            "Prop-typed values cannot escape into runtime function return '{} -> {}'",
+            function.name, ret
+        )));
+    }
+
     Ok(Type::Fn(params, Box::new(ret)))
 }
 
@@ -1710,6 +1722,13 @@ pub fn builtin_fn_signature_type(
         &builtin_fn.return_type,
         &type_param_bindings,
     )?;
+
+    if ret.contains_prop_kind() {
+        return Err(TypeCheckError::TypeError(format!(
+            "Prop-typed values cannot escape into runtime builtin function return '{} -> {}'",
+            builtin_fn.name, ret
+        )));
+    }
 
     Ok(Type::Fn(params, Box::new(ret)))
 }

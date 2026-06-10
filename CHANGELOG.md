@@ -7,6 +7,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Added
+- [Phase 138](docs/plan/PLAN-138-STDLIB-ALGEBRA-LAWS-AND-PURE-CARRIER-PROOFS.md): Added the stdlib algebra laws and pure-carrier proof planning packet for source-visible Semigroup, Monoid, Functor, Applicative, and Monad laws plus honest Option/Result proof staging.
 - [TASK-1387](docs/plan/tasks/TASK-1387-module-size-closeout.md): Closed Phase 137 with final Rust file-size audit deltas, remaining oversized-file follow-up ownership, reconciled task/plan/status surfaces, full workspace verification, documentation generation, size-regression guard evidence, and final independent review.
 - [TASK-1386](docs/plan/tasks/TASK-1386-split-oversized-tests-and-fixtures.md): Split high-impact oversized integration test binaries for parser stdlib parsing, parser function parsing, interpreter builtin dispatch, and engine import-visibility summaries into behavior-focused local modules with shared support files, preserving original Cargo test binaries, test function identifiers, non-zero discovery, and workspace verification.
 - [TASK-1385](docs/plan/tasks/TASK-1385-split-ashgrove-and-secondary-crates.md): Split `ashgrove` into command, launcher, manifest/staging, selector/cleanup, source-install, tarball, and lock/vendor modules, and split oversized secondary crate roots in `ash-lint`, `ash-repl`, `ash-lsp`, and `ash-mcp` while preserving public APIs, CLI behavior, fail-closed Ashgrove trust/path semantics, and focused crate verification.

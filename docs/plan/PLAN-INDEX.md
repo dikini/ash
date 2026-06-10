@@ -312,6 +312,8 @@ Update this section as tasks complete:
 | 134 | 8 | 8 | ✅ Complete |
 | 135 | 11 | 1 | 📝 Planned |
 | 136 | 19 | 19 | ✅ Complete; implemented MVP; full workspace gates passed |
+| 137 | 10 | 10 | ✅ Complete |
+| 138 | 7 | 0 | 📝 Planned |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -4092,3 +4094,23 @@ Phase 137 reduces oversized Rust source files and modules so the codebase is eas
 | [TASK-1386](tasks/TASK-1386-split-oversized-tests-and-fixtures.md) | Split oversized test/support files by behavior | Complete |
 | [TASK-1387](tasks/TASK-1387-module-size-closeout.md) | Closeout: final audit, status, changelog, review | Complete |
 
+
+## Phase 138: Stdlib Algebra Laws and Pure-Carrier Proofs
+
+**Status:** 📝 Planned
+
+**Plan:** [PLAN-138: Stdlib Algebra Laws and Pure-Carrier Proofs](PLAN-138-STDLIB-ALGEBRA-LAWS-AND-PURE-CARRIER-PROOFS.md)
+
+**Spec:** Follow-up to [SPEC-078](../spec/SPEC-078-STANDARD-ALGEBRA-LIBRARY-AND-MONAD-REMEDIATION.md), [SPEC-079](../spec/SPEC-079-STANDARD-ALGEBRA-COMONAD-AND-KLEISLI-HELPERS.md), and [DESIGN-NOTE-INTERFACE-LAWS](../design/DESIGN-NOTE-INTERFACE-LAWS.md).
+
+Phase 138 adds source-visible laws to the existing `std/src/algebra` Semigroup, Monoid, Functor, Applicative, and Monad definitions, then evaluates honest proof declarations for the pure `Option` and `Result<_, E>` carriers. The phase keeps generated-test execution and manual proof validation distinct: `by_definition` proofs are allowed only after a live audit proves the checker validates them against the law proposition; otherwise `by test` delegation remains the honest first surface.
+
+| Task | Description | Status |
+|---|---|---|
+| TASK-1388 | Audit law/proof stdlib readiness and freeze exact syntax/proof policy | Planned |
+| TASK-1389 | Add or normalize Semigroup and Monoid law declarations | Planned |
+| TASK-1390 | Add Functor identity and composition law declarations | Planned |
+| TASK-1391 | Add Applicative identity, homomorphism, interchange, and composition law declarations | Planned |
+| TASK-1392 | Add Monad left identity, right identity, and associativity law declarations | Planned |
+| TASK-1393 | Add honest Option and Result proof declarations without overclaiming proof-checker strength | Planned |
+| TASK-1394 | Update reference/generated-test handoff docs, CHANGELOG, and close out verification | Planned |

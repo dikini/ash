@@ -313,7 +313,7 @@ Update this section as tasks complete:
 | 135 | 11 | 1 | 📝 Planned |
 | 136 | 19 | 19 | ✅ Complete; implemented MVP; full workspace gates passed |
 | 137 | 10 | 10 | ✅ Complete |
-| 138 | 7 | 0 | 📝 Planned |
+| 138 | 7 | 7 | ✅ Complete |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -4097,7 +4097,7 @@ Phase 137 reduces oversized Rust source files and modules so the codebase is eas
 
 ## Phase 138: Stdlib Algebra Laws and Pure-Carrier Proofs
 
-**Status:** 📝 Planned
+**Status:** ✅ Complete
 
 **Plan:** [PLAN-138: Stdlib Algebra Laws and Pure-Carrier Proofs](PLAN-138-STDLIB-ALGEBRA-LAWS-AND-PURE-CARRIER-PROOFS.md)
 
@@ -4107,10 +4107,10 @@ Phase 138 adds source-visible laws to the existing `std/src/algebra` Semigroup, 
 
 | Task | Description | Status |
 |---|---|---|
-| TASK-1388 | Audit law/proof stdlib readiness and freeze exact syntax/proof policy | Planned |
-| TASK-1389 | Add or normalize Semigroup and Monoid law declarations | Planned |
-| TASK-1390 | Add Functor identity and composition law declarations | Planned |
-| TASK-1391 | Add Applicative identity, homomorphism, interchange, and composition law declarations | Planned |
-| TASK-1392 | Add Monad left identity, right identity, and associativity law declarations | Planned |
-| TASK-1393 | Add honest Option and Result proof declarations without overclaiming proof-checker strength | Planned |
+| TASK-1388 | Audit law/proof stdlib readiness and freeze exact syntax/proof policy | Complete |
+| TASK-1389 | Add or normalize Semigroup and Monoid law declarations | Complete |
+| TASK-1390 | Add Functor identity and composition law declarations | Complete |
+| TASK-1391 | Add Applicative identity, homomorphism, interchange, and composition law declarations | Complete |
+| TASK-1392 | Add Monad left identity, right identity, and associativity law declarations | Complete |
+| TASK-1393 | Add honest Option and Result proof declarations without overclaiming proof-checker strength | Complete |
 | TASK-1394 | Update reference/generated-test handoff docs, CHANGELOG, and close out verification | Planned |

@@ -7,6 +7,12 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Added
+- [TASK-1393](docs/plan/tasks/TASK-1393-option-result-proof-declarations.md): Added honest `by test` proof declarations to `std/src/option.ash` and `std/src/result.ash` for Functor, Applicative, and Monad laws, using explicit test delegation without overclaiming proof-checker strength.
+- [TASK-1392](docs/plan/tasks/TASK-1392-monad-law-declarations.md): Added left identity, right identity, and associativity law declarations to `std/src/algebra/monad.ash` with explicit `Eq` evidence.
+- [TASK-1391](docs/plan/tasks/TASK-1391-applicative-law-declarations.md): Added identity, homomorphism, interchange, and composition law declarations to `std/src/algebra/applicative.ash` with explicit `Eq` evidence.
+- [TASK-1390](docs/plan/tasks/TASK-1390-functor-law-declarations.md): Added identity and composition law declarations to `std/src/algebra/functor.ash` with explicit `Eq` evidence.
+- [TASK-1389](docs/plan/tasks/TASK-1389-semigroup-monoid-law-declarations.md): Preserved and normalized existing Semigroup associativity and Monoid left/right identity law declarations with explicit `Eq` evidence.
+- [TASK-1388](docs/plan/tasks/TASK-1388-stdlib-law-proof-readiness-audit.md): Audited law/proof stdlib readiness, confirmed all law-body forms parse, determined `by_definition` is syntactically accepted but not semantically validated, and froze the `by test` proof policy for Option/Result carriers.
 - [Phase 138](docs/plan/PLAN-138-STDLIB-ALGEBRA-LAWS-AND-PURE-CARRIER-PROOFS.md): Added the stdlib algebra laws and pure-carrier proof planning packet for source-visible Semigroup, Monoid, Functor, Applicative, and Monad laws plus honest Option/Result proof staging.
 - [TASK-1387](docs/plan/tasks/TASK-1387-module-size-closeout.md): Closed Phase 137 with final Rust file-size audit deltas, remaining oversized-file follow-up ownership, reconciled task/plan/status surfaces, full workspace verification, documentation generation, size-regression guard evidence, and final independent review.
 - [TASK-1386](docs/plan/tasks/TASK-1386-split-oversized-tests-and-fixtures.md): Split high-impact oversized integration test binaries for parser stdlib parsing, parser function parsing, interpreter builtin dispatch, and engine import-visibility summaries into behavior-focused local modules with shared support files, preserving original Cargo test binaries, test function identifiers, non-zero discovery, and workspace verification.

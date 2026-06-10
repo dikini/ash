@@ -10,16 +10,52 @@ pub type Result<T, E> = Ok { value: T } | Err { error: E };
 
 pub impl <E : *> Functor<Result<_, E>> {
     map(value, f) = result::map(value, f)
+
+    proof identity(value: Result<A, E>) {
+        by test "result_functor_identity"
+    }
+
+    proof composition(value: Result<A, E>, f: (A) -> B, g: (B) -> C) {
+        by test "result_functor_composition"
+    }
 }
 
 pub impl <E : *> Applicative<Result<_, E>> {
     pure(value) = result::pure(value)
     apply(functions, value) = result::apply(functions, value)
+
+    proof identity(value: Result<A, E>) {
+        by test "result_applicative_identity"
+    }
+
+    proof homomorphism(x: A, f: (A) -> B) {
+        by test "result_applicative_homomorphism"
+    }
+
+    proof interchange(functions: Result<(A) -> B, E>, y: A) {
+        by test "result_applicative_interchange"
+    }
+
+    proof composition(u: Result<(B) -> C, E>, v: Result<(A) -> B, E>, w: Result<A, E>) {
+        by test "result_applicative_composition"
+    }
 }
 
 pub impl <E : *> Monad<Result<_, E>> {
     unit(value) = result::pure(value)
     bind(value, f) = result::and_then(value, f)
+
+    proof left_identity(a: A, f: (A) -> Result<B, E>) {
+        by test "result_monad_left_identity"
+    }
+
+    proof right_identity(m: Result<A, E>) {
+        by test "result_monad_right_identity"
+    }
+
+    proof associativity(m: Result<A, E>, f: (A) -> Result<B, E>, g: (B) -> Result<C, E>) {
+        by test "result_monad_associativity"
+    }
 }
 
 -- Returns true if the result is Ok

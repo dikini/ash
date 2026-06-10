@@ -10,16 +10,52 @@ pub type Option<T> = Some { value: T } | None;
 
 pub impl Functor<Option> {
     map(value, f) = option::map(value, f)
+
+    proof identity(value: Option<A>) {
+        by test "option_functor_identity"
+    }
+
+    proof composition(value: Option<A>, f: (A) -> B, g: (B) -> C) {
+        by test "option_functor_composition"
+    }
 }
 
 pub impl Applicative<Option> {
     pure(value) = option::pure(value)
     apply(functions, value) = option::apply(functions, value)
+
+    proof identity(value: Option<A>) {
+        by test "option_applicative_identity"
+    }
+
+    proof homomorphism(x: A, f: (A) -> B) {
+        by test "option_applicative_homomorphism"
+    }
+
+    proof interchange(functions: Option<(A) -> B>, y: A) {
+        by test "option_applicative_interchange"
+    }
+
+    proof composition(u: Option<(B) -> C>, v: Option<(A) -> B>, w: Option<A>) {
+        by test "option_applicative_composition"
+    }
 }
 
 pub impl Monad<Option> {
     unit(value) = option::pure(value)
     bind(value, f) = option::and_then(value, f)
+
+    proof left_identity(a: A, f: (A) -> Option<B>) {
+        by test "option_monad_left_identity"
+    }
+
+    proof right_identity(m: Option<A>) {
+        by test "option_monad_right_identity"
+    }
+
+    proof associativity(m: Option<A>, f: (A) -> Option<B>, g: (B) -> Option<C>) {
+        by test "option_monad_associativity"
+    }
 }
 
 -- Returns true if the option is Some

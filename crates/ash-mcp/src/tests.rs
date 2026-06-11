@@ -144,6 +144,42 @@ fn test_completion_returns_items() {
     );
 }
 
+// -- ash_workspace_symbols --
+
+#[test]
+fn test_workspace_symbols_finds_match() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    std::fs::write(dir.path().join("lib.ash"), "fn helper() -> Int { 1 }\n").unwrap();
+
+    let s = server();
+    let result = s.ash_workspace_symbols(Parameters(WorkspaceSymbolParams {
+        root: dir.path().to_str().expect("path").to_string(),
+        query: "helper".to_string(),
+    }));
+    let text = extract_text(&result);
+    assert!(
+        text.contains("1 symbol(s) matching 'helper'"),
+        "expected workspace symbol summary, got: {text}"
+    );
+}
+
+#[test]
+fn test_workspace_symbols_empty_honest() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    std::fs::write(dir.path().join("lib.ash"), "fn helper() -> Int { 1 }\n").unwrap();
+
+    let s = server();
+    let result = s.ash_workspace_symbols(Parameters(WorkspaceSymbolParams {
+        root: dir.path().to_str().expect("path").to_string(),
+        query: "missing".to_string(),
+    }));
+    let text = extract_text(&result);
+    assert!(
+        text.contains("No symbols matching 'missing'"),
+        "expected empty summary, got: {text}"
+    );
+}
+
 // -- ash_find_references (placeholder) --
 
 #[test]

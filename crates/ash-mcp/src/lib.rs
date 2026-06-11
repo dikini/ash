@@ -37,6 +37,15 @@ pub struct PositionParams {
     pub column: u32,
 }
 
+/// Workspace symbol search parameters.
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+pub struct WorkspaceSymbolParams {
+    /// Absolute path to the workspace root to search.
+    pub root: String,
+    /// Case-insensitive substring to match against symbol names.
+    pub query: String,
+}
+
 /// File-only parameter.
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 pub struct FileParams {
@@ -383,18 +392,53 @@ impl AshMcpServer {
         )
     }
 
-    /// Workspace symbol search (placeholder — deferred).
-    #[tool(description = "Search workspace symbols by name (not yet implemented)")]
-    fn ash_workspace_symbols(&self) -> CallToolResult {
-        let _ = self;
-        Self::json_success(
-            "Workspace symbols not yet implemented (deferred to Phase 5)".into(),
-            serde_json::Value::Array(vec![]),
-        )
+    /// Workspace symbol search across `.ash` files under a directory.
+    #[tool(description = "Search workspace symbols by name across .ash files under a directory")]
+    #[allow(clippy::unused_self)]
+    fn ash_workspace_symbols(
+        &self,
+        Parameters(params): Parameters<WorkspaceSymbolParams>,
+    ) -> CallToolResult {
+        let root = std::path::Path::new(&params.root);
+        if !root.is_dir() {
+            return Self::json_error(format!("not a directory: {}", params.root));
+        }
+
+        let matches = symbols::workspace_symbols(root, &params.query);
+
+        let entries: Vec<serde_json::Value> = matches
+            .iter()
+            .map(|s| {
+                serde_json::json!({
+                    "name": s.name,
+                    "kind": format!("{:?}", s.kind).to_lowercase(),
+                    "file": s.file,
+                    "line": s.line,
+                    "column": s.column,
+                })
+            })
+            .collect();
+
+        let summary = if entries.is_empty() {
+            format!(
+                "No symbols matching '{}' under {}",
+                params.query, params.root
+            )
+        } else {
+            format!(
+                "{} symbol(s) matching '{}' under {}",
+                entries.len(),
+                params.query,
+                params.root
+            )
+        };
+
+        Self::json_success(summary, serde_json::Value::Array(entries))
     }
 
     /// Code actions (placeholder — deferred).
     #[tool(description = "Get code actions for a range (not yet implemented)")]
+    #[allow(clippy::unused_self)]
     fn ash_code_action(&self) -> CallToolResult {
         let _ = self;
         Self::json_success(

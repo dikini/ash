@@ -7,6 +7,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Added
+- [Phase 140](docs/plan/PLAN-140-MCP-AGENT-INTELLIGENCE-SPIKE.md): Planned the MCP Agent Intelligence Spike — harden `ash-mcp`, add workspace symbol search and single-file find-references, build an agent evaluation harness, and wire the server into Hermes MCP configuration.
 - [TASK-576](docs/plan/tasks/TASK-576-ash-lsp-salsa.md): Integrated Salsa 0.27 incremental analysis into `ash-lsp-core`. Added `AshLspDatabase` with `SourceFile` salsa input, `parse_summary` and `build_symbol_index` tracked queries, AST side-cache for `ModuleFile`, and `SalsaAnalysisCache` as an additive VFS-backed alternative to `AnalysisCache`. Migrated `Literal::Float` to `ordered_float::OrderedFloat` to unblock `Eq`+`Hash` derivability.
 - Fixed stdlib algebra law bodies to use valid pure closure syntax (`|x| -> x` instead of invalid `fn(x) => x`), resolving `ash-cli::stdlib_corpus_cli_check_baseline_is_classified_and_honest` failure.
 - [TASK-1392](docs/plan/tasks/TASK-1392-monad-law-declarations.md): Added left identity, right identity, and associativity law declarations to `std/src/algebra/monad.ash` with explicit `Eq` evidence.

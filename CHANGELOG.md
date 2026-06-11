@@ -7,6 +7,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Added
+- [TASK-1399](docs/plan/tasks/TASK-1399-mcp-server-hardening.md): Hardened `ash-mcp` for external agent launch — added `--version` and `--help` CLI flags, an `ash_mcp_health` tool reporting status/version/tool list, binary-level tests for CLI behavior and stdio cleanliness, and health-tool unit tests.
 - [Phase 140](docs/plan/PLAN-140-MCP-AGENT-INTELLIGENCE-SPIKE.md): Planned the MCP Agent Intelligence Spike — harden `ash-mcp`, add workspace symbol search and single-file find-references, build an agent evaluation harness, and wire the server into Hermes MCP configuration.
 - [TASK-576](docs/plan/tasks/TASK-576-ash-lsp-salsa.md): Integrated Salsa 0.27 incremental analysis into `ash-lsp-core`. Added `AshLspDatabase` with `SourceFile` salsa input, `parse_summary` and `build_symbol_index` tracked queries, AST side-cache for `ModuleFile`, and `SalsaAnalysisCache` as an additive VFS-backed alternative to `AnalysisCache`. Migrated `Literal::Float` to `ordered_float::OrderedFloat` to unblock `Eq`+`Hash` derivability.
 - Fixed stdlib algebra law bodies to use valid pure closure syntax (`|x| -> x` instead of invalid `fn(x) => x`), resolving `ash-cli::stdlib_corpus_cli_check_baseline_is_classified_and_honest` failure.

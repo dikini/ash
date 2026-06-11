@@ -9,8 +9,9 @@ fn write_temp_ash(content: &str) -> tempfile::NamedTempFile {
     let mut f = tempfile::Builder::new()
         .suffix(".ash")
         .tempfile()
-        .expect("temp file");
-    f.write_all(content.as_bytes()).expect("write");
+        .expect("create temp .ash file");
+    f.write_all(content.as_bytes())
+        .expect("write temp .ash content");
     f
 }
 
@@ -198,4 +199,51 @@ fn test_vfs_caches_across_calls() {
     // Second call should use cached version (same VFS entry version)
     let entry = s.vfs.get(&AshMcpServer::file_uri(path).unwrap()).unwrap();
     assert_eq!(entry.version, 0, "should be version 0 from initial open");
+}
+
+// -- ash_mcp_health --
+
+#[test]
+fn test_health_tool_returns_status() {
+    let s = server();
+    let result = s.ash_mcp_health();
+    assert!(
+        result.is_error.is_none() || result.is_error == Some(false),
+        "health tool should not return an error"
+    );
+}
+
+#[test]
+fn test_health_tool_contains_version() {
+    let s = server();
+    let result = s.ash_mcp_health();
+    let text = extract_text(&result);
+    let expected_version = env!("CARGO_PKG_VERSION");
+    assert!(
+        text.contains(expected_version),
+        "health tool should include workspace version {expected_version}, got: {text}"
+    );
+}
+
+#[test]
+fn test_health_tool_contains_tool_names() {
+    let s = server();
+    let result = s.ash_mcp_health();
+    let text = extract_text(&result);
+    // Should mention at least one known tool name
+    assert!(
+        text.contains("ash_get_diagnostics") || text.contains("ash_hover"),
+        "health tool should list available tool names, got: {text}"
+    );
+}
+
+#[test]
+fn test_health_tool_contains_ok() {
+    let s = server();
+    let result = s.ash_mcp_health();
+    let text = extract_text(&result);
+    assert!(
+        text.to_lowercase().contains("ok") || text.to_lowercase().contains("status"),
+        "health tool should report status, got: {text}"
+    );
 }

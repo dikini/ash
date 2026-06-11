@@ -402,6 +402,33 @@ impl AshMcpServer {
             serde_json::Value::Null,
         )
     }
+
+    /// Health check — report server status, version, and available tools.
+    #[tool(description = "Check Ash MCP server health and list available tools")]
+    #[allow(clippy::unused_self)]
+    fn ash_mcp_health(&self) -> CallToolResult {
+        let version = env!("CARGO_PKG_VERSION");
+        let tools = [
+            "ash_get_diagnostics",
+            "ash_hover",
+            "ash_goto_definition",
+            "ash_complete",
+            "ash_document_symbols",
+            "ash_find_references",
+            "ash_workspace_symbols",
+            "ash_code_action",
+            "ash_mcp_health",
+        ];
+        let payload = serde_json::json!({
+            "status": "ok",
+            "version": version,
+            "tools": tools,
+        });
+        Self::json_success(
+            format!("status: ok, version: {version}, tools: {}", tools.len()),
+            payload,
+        )
+    }
 }
 
 fn marked_string_value(ms: &lsp_types::MarkedString) -> String {

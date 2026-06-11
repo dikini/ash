@@ -2,7 +2,7 @@
 
 ## Phase: 141
 
-## Status: 📝 Planned
+## Status: ✅ Implemented
 
 ## Goal
 
@@ -49,11 +49,11 @@ a benchmark report with numbers, not new LSP capabilities.
 
 | Task | Description | Estimate | Status |
 |------|-------------|----------|--------|
-| [TASK-1405](tasks/TASK-1405-benchmark-harness.md) | Build benchmark harness and corpus | 4h | 📝 Planned |
-| [TASK-1406](tasks/TASK-1406-token-efficiency-benchmark.md) | Token-efficiency benchmark: MCP vs. baseline | 4h | 📝 Planned |
-| [TASK-1407](tasks/TASK-1407-precision-recall-benchmark.md) | Cross-reference precision/recall vs. grep | 3h | 📝 Planned |
-| [TASK-1408](tasks/TASK-1408-symbol-search-quality.md) | Workspace symbol search latency/relevance | 2h | 📝 Planned |
-| [TASK-1409](tasks/TASK-1409-benchmark-report.md) | Compile benchmark report and recommendation | 3h | 📝 Planned |
+| [TASK-1405](tasks/TASK-1405-benchmark-harness.md) | Build benchmark harness and corpus | 4h | ✅ Complete |
+| [TASK-1406](tasks/TASK-1406-token-efficiency-benchmark.md) | Token-efficiency benchmark: MCP vs. baseline | 4h | ✅ Complete |
+| [TASK-1407](tasks/TASK-1407-precision-recall-benchmark.md) | Cross-reference precision/recall vs. grep | 3h | ✅ Complete |
+| [TASK-1408](tasks/TASK-1408-symbol-search-quality.md) | Workspace symbol search latency/relevance | 2h | ✅ Complete |
+| [TASK-1409](tasks/TASK-1409-benchmark-report.md) | Compile benchmark report and recommendation | 3h | ✅ Complete |
 
 ## Deliverable
 
@@ -80,8 +80,10 @@ a benchmark report with numbers, not new LSP capabilities.
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
-| TBD | Use `crates/` as benchmark corpus | Real codebase, already present, no external deps. |
-| TBD | Measure tokens via Hermes session DB + OpenRouter proxy | Hermes logs token usage per session; if unavailable, proxy MCP traffic. |
+| 2026-06-11 | Use `crates/` as benchmark corpus | Real codebase, already present, no external deps. |
+| 2026-06-11 | Measure tokens via script simulation (not live LLM) | Live LLM benchmarking is expensive and noisy; script simulation gives reproducible, fast results. |
+| 2026-06-11 | Use `.ash` and `.rs` mixed corpus | Shows both MCP strength (`.ash`) and limitation (`.rs`). |
+| 2026-06-11 | Token estimate: ~4 chars/token | Simple, reproducible, no external tokenizer dependency. |
 
 ## Notes
 

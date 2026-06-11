@@ -116,6 +116,7 @@ Update this section as tasks complete:
 | [138](PLAN-INDEX-HISTORY.md#phase-138) | 7 | 7 | ✅ Complete |
 || [139](PLAN-INDEX-HISTORY.md#phase-139) | 4 | 4 | ✅ Complete |
 || [140](PLAN-140-MCP-AGENT-INTELLIGENCE-SPIKE.md) | 6 | 6 | ✅ Complete |
+|| [141](PLAN-141-MCP-BENCHMARK.md) | 5 | 0 | 📝 Planned |
 
 
 ---
@@ -124,4 +125,14 @@ Update this section as tasks complete:
 
 The following phases are not fully Complete. All Complete phase bodies are in [PLAN-INDEX-HISTORY.md](PLAN-INDEX-HISTORY.md).
 
-*No active phases at this time.*
+### Phase 141: MCP Agent Effectiveness Benchmark
+
+See [PLAN-141-MCP-BENCHMARK.md](PLAN-141-MCP-BENCHMARK.md).
+
+| Task | Description | Status |
+|------|-------------|--------|
+| [TASK-1405](tasks/TASK-1405-benchmark-harness.md) | Build benchmark harness and corpus | 📝 Planned |
+| [TASK-1406](tasks/TASK-1406-token-efficiency-benchmark.md) | Token-efficiency benchmark: MCP vs. baseline | 📝 Planned |
+| [TASK-1407](tasks/TASK-1407-precision-recall-benchmark.md) | Cross-reference precision/recall vs. grep | 📝 Planned |
+| [TASK-1408](tasks/TASK-1408-symbol-search-quality.md) | Workspace symbol search latency/relevance | 📝 Planned |
+| [TASK-1409](tasks/TASK-1409-benchmark-report.md) | Compile benchmark report and recommendation | 📝 Planned |

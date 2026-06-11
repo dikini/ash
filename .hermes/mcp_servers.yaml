@@ -1,0 +1,14 @@
+# Project-local MCP server configuration for Ash agent sessions.
+# Hermes loads this automatically when running inside the project directory.
+#
+# To use in non-project sessions, copy this block to:
+#   ~/.hermes/profiles/<profile>/mcp_servers.yaml
+#
+# NOTE: The command path must be absolute. Build the release binary first:
+#   cargo build -p ash-mcp --release
+
+servers:
+  ash-mcp:
+    command: /home/dikini/Projects/ash/target/release/ash-mcp
+    env:
+      RUST_LOG: warn

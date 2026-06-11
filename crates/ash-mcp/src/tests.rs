@@ -144,6 +144,46 @@ fn test_completion_returns_items() {
     );
 }
 
+// -- ash_find_references --
+
+#[test]
+fn test_find_references_finds_definition_and_call() {
+    let source = "fn helper() -> Int { 1 }\nworkflow main { let x = helper() done }\n";
+    let f = write_temp_ash(source);
+    let path = f.path().to_str().expect("path");
+    let s = server();
+    // "helper" on line 2 (1-indexed): "workflow main { let x = helper() done }"
+    // Count columns: "workflow main { let x = " = 24 chars, so helper starts at col 25
+    let result = s.ash_find_references(Parameters(PositionParams {
+        file: path.to_string(),
+        line: 2,
+        column: 25,
+    }));
+    let text = extract_text(&result);
+    assert!(
+        text.contains("2 reference(s)"),
+        "expected 2 references (def + call), got: {text}"
+    );
+}
+
+#[test]
+fn test_find_references_empty_honest() {
+    let f = write_temp_ash("workflow main { done }\n");
+    let path = f.path().to_str().expect("path");
+    let s = server();
+    // Position on whitespace — no identifier
+    let result = s.ash_find_references(Parameters(PositionParams {
+        file: path.to_string(),
+        line: 1,
+        column: 15, // space between "main" and "{"
+    }));
+    let text = extract_text(&result);
+    assert!(
+        text.contains("No references found"),
+        "expected empty honest summary, got: {text}"
+    );
+}
+
 // -- ash_workspace_symbols --
 
 #[test]
@@ -177,25 +217,6 @@ fn test_workspace_symbols_empty_honest() {
     assert!(
         text.contains("No symbols matching 'missing'"),
         "expected empty summary, got: {text}"
-    );
-}
-
-// -- ash_find_references (placeholder) --
-
-#[test]
-fn test_find_references_placeholder() {
-    let f = write_temp_ash(ash_source());
-    let path = f.path().to_str().expect("path");
-    let s = server();
-    let result = s.ash_find_references(Parameters(PositionParams {
-        file: path.to_string(),
-        line: 1,
-        column: 1,
-    }));
-    let text = extract_text(&result);
-    assert!(
-        text.contains("not yet implemented"),
-        "expected placeholder message, got: {text}"
     );
 }
 

@@ -379,17 +379,65 @@ impl AshMcpServer {
         Self::json_success(summary, serde_json::Value::Array(entries))
     }
 
-    /// Find references (placeholder — cross-file deferred to Phase 5).
-    #[tool(description = "Find references to the symbol at a position (single-file, placeholder)")]
+    /// Find references to the symbol at a position (single-file only).
+    #[tool(
+        description = "Find references to the symbol at a position in an Ash file (single-file only)"
+    )]
     fn ash_find_references(
         &self,
         Parameters(params): Parameters<PositionParams>,
     ) -> CallToolResult {
-        let _ = (self, params);
-        Self::json_success(
-            "Find references not yet implemented (deferred to Phase 5)".into(),
-            serde_json::Value::Array(vec![]),
-        )
+        let entry = match self.ensure_open(&params.file) {
+            Ok(e) => e,
+            Err(e) => return Self::json_error(e),
+        };
+        let module = match Self::parse_file(&entry) {
+            Ok(m) => m,
+            Err(e) => return Self::json_error(e),
+        };
+
+        let uri = match Self::file_uri(&params.file) {
+            Ok(u) => u,
+            Err(e) => return Self::json_error(e),
+        };
+
+        let refs = goto::find_references(
+            &module,
+            &entry.content,
+            &uri,
+            params.line - 1,
+            params.column - 1,
+        );
+
+        let entries: Vec<serde_json::Value> = refs
+            .iter()
+            .map(|r| {
+                serde_json::json!({
+                    "file": params.file,
+                    "start_line": r.range.start.line + 1,
+                    "start_column": r.range.start.character + 1,
+                    "end_line": r.range.end.line + 1,
+                    "end_column": r.range.end.character + 1,
+                })
+            })
+            .collect();
+
+        let summary = if entries.is_empty() {
+            format!(
+                "No references found at {}:{}:{}",
+                params.file, params.line, params.column
+            )
+        } else {
+            format!(
+                "{} reference(s) at {}:{}:{}",
+                entries.len(),
+                params.file,
+                params.line,
+                params.column
+            )
+        };
+
+        Self::json_success(summary, serde_json::Value::Array(entries))
     }
 
     /// Workspace symbol search across `.ash` files under a directory.

@@ -8,7 +8,7 @@ use ash_parser::surface::{Definition, ModuleFile};
 use ash_parser::token::Span;
 use lsp_types::{GotoDefinitionResponse, Location, Position, Range};
 
-use crate::position::{line_col_from_offset, offset_from_line_col, token_at_offset};
+use crate::position::{is_ident_char, line_col_from_offset, offset_from_line_col, token_at_offset};
 
 /// Convert a parser `Span` (1-indexed line/col, byte offsets) to an LSP `Range`
 /// (0-indexed line/character) using the source text for end-position resolution.
@@ -161,6 +161,70 @@ pub fn goto_definition(
     None
 }
 
+/// Perform same-file find-references at the given cursor position.
+///
+/// Returns every span in `source` where the identifier at the cursor appears,
+/// including the definition site. Results are sorted by source order.
+/// Cross-file references are deferred.
+#[must_use]
+pub fn find_references(
+    _module: &ModuleFile,
+    source: &str,
+    uri: &lsp_types::Uri,
+    line: u32,
+    col: u32,
+) -> Vec<Location> {
+    let offset = match offset_from_line_col(source, line, col) {
+        Some(o) => o,
+        None => return Vec::new(),
+    };
+    let token = match token_at_offset(source, offset) {
+        Some(t) => t,
+        None => return Vec::new(),
+    };
+
+    let mut locations = Vec::new();
+    let mut prev_was_ident = false;
+    for (idx, ch) in source.char_indices() {
+        let at_token_start = !prev_was_ident && is_ident_char(ch);
+        prev_was_ident = is_ident_char(ch);
+
+        if !at_token_start {
+            continue;
+        }
+
+        let mut end = idx + ch.len_utf8();
+        for (_next_rel, next_ch) in source[end..].char_indices() {
+            if is_ident_char(next_ch) {
+                end += next_ch.len_utf8();
+            } else {
+                break;
+            }
+        }
+
+        if source.get(idx..end) == Some(token)
+            && let Some((start_line, start_col)) = line_col_from_offset(source, idx)
+            && let Some((end_line, end_col)) = line_col_from_offset(source, end)
+        {
+            locations.push(Location {
+                uri: uri.clone(),
+                range: Range {
+                    start: Position {
+                        line: start_line,
+                        character: start_col,
+                    },
+                    end: Position {
+                        line: end_line,
+                        character: end_col,
+                    },
+                },
+            });
+        }
+    }
+
+    locations
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -226,5 +290,48 @@ mod tests {
         let col = u32::try_from(helper_offset - line1_start).unwrap();
         let result = goto_definition(&module, source, &parse_uri(), 1, col);
         assert!(result.is_some(), "should resolve reference to function");
+    }
+
+    #[test]
+    fn test_find_references_function_definition_and_call() {
+        let source = "fn helper() -> Int { 1 }\nworkflow main { let x = helper() done }";
+        let module = parse_surface_file(source).expect("parse ok");
+        let line1_start = source.find('\n').unwrap() + 1;
+        let helper_offset = source[line1_start..].find("helper").unwrap() + line1_start;
+        let col = u32::try_from(helper_offset - line1_start).unwrap();
+        let refs = find_references(&module, source, &parse_uri(), 1, col);
+        assert_eq!(refs.len(), 2, "should find definition and call site");
+    }
+
+    #[test]
+    fn test_find_references_no_substring_false_positives() {
+        let source = "fn helper() -> Int { 1 }\nworkflow main { done }";
+        let module = parse_surface_file(source).expect("parse ok");
+        // "help" is a substring of "helper" but not a standalone token.
+        let refs = find_references(&module, source, &parse_uri(), 0, 5);
+        assert_eq!(refs.len(), 1, "should only match the full identifier");
+    }
+
+    #[test]
+    fn test_find_references_capability_in_observe() {
+        let source = "capability sensor: epistemic()\nworkflow main { observe sensor done }";
+        let module = parse_surface_file(source).expect("parse ok");
+        let line1_start = source.find('\n').unwrap() + 1;
+        let sensor_offset = source[line1_start..].find("sensor").unwrap() + line1_start;
+        let col = u32::try_from(sensor_offset - line1_start).unwrap();
+        let refs = find_references(&module, source, &parse_uri(), 1, col);
+        assert_eq!(
+            refs.len(),
+            2,
+            "should find capability decl and observe usage"
+        );
+    }
+
+    #[test]
+    fn test_find_references_workflow_name() {
+        let source = "workflow main { done }";
+        let module = parse_surface_file(source).expect("parse ok");
+        let refs = find_references(&module, source, &parse_uri(), 0, 9);
+        assert_eq!(refs.len(), 1, "should find workflow declaration");
     }
 }

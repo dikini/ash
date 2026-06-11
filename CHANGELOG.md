@@ -7,6 +7,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Added
+- [TASK-1401](docs/plan/tasks/TASK-1401-single-file-find-references.md): Implemented single-file find-references in `ash-lsp-core` (`find_references`) and exposed it via the `ash_find_references` MCP tool; returns all occurrences of the identifier at the cursor within the same file, with honest empty responses when no identifier is present.
 - [TASK-1400](docs/plan/tasks/TASK-1400-workspace-symbol-search.md): Added workspace symbol search to `ash-lsp-core` (`workspace_symbols`) and exposed it via the `ash_workspace_symbols` MCP tool; scans `.ash` files recursively, matches names case-insensitively by substring, and returns symbol name/kind/file/line/column.
 - [TASK-1399](docs/plan/tasks/TASK-1399-mcp-server-hardening.md): Hardened `ash-mcp` for external agent launch — added `--version` and `--help` CLI flags, an `ash_mcp_health` tool reporting status/version/tool list, binary-level tests for CLI behavior and stdio cleanliness, and health-tool unit tests.
 - [Phase 140](docs/plan/PLAN-140-MCP-AGENT-INTELLIGENCE-SPIKE.md): Planned the MCP Agent Intelligence Spike — harden `ash-mcp`, add workspace symbol search and single-file find-references, build an agent evaluation harness, and wire the server into Hermes MCP configuration.

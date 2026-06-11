@@ -50,6 +50,22 @@ A `do:Option` block lowers through selected `Monad<Option>` evidence. A `do:Resu
 
 SPEC-079 / PLAN-129 own the design history for `Comonad`, Kleisli helpers, Cokleisli helpers, and the Coapplicative decision gate. Phase 135 supersedes the temporary concrete Option/Result Kleisli wrapper surface: Cokleisli helpers remain deferred because no lawful Comonad carrier exists in the current stdlib, Coapplicative is explicitly deferred with no source module, and the broader `std::category` hierarchy remains out of scope.
 
+## Source-visible law declarations
+
+Law declarations are source-visible in `std/src/algebra/*.ash`:
+
+- `std::algebra::semigroup` — `law associativity(a, b, c, eq)`
+- `std::algebra::monoid` — `law left_identity(a, eq)`, `law right_identity(a, eq)`
+- `std::algebra::functor` — `law identity(value, eq)`, `law composition(value, f, g, eq)`
+- `std::algebra::applicative` — `law identity(value, eq)`, `law homomorphism(x, f, eq)`, `law interchange(u, y, eq)`, `law composition(u, v, w, eq)`
+- `std::algebra::monad` — `law left_identity(a, f, eq)`, `law right_identity(m, eq)`, `law associativity(m, f, g, eq)`
+
+Each law takes explicit `Eq` evidence and states an equivalence between two expressions. Law declarations are checked by the parser and typechecker; they are distinct from proofs.
+
+## Proof declarations
+
+`std::option` and `std::result` carry `by test "..."` proof declarations inside their `impl Functor`, `impl Applicative`, and `impl Monad` blocks. These proofs delegate to generated/synthetic law tests rather than claiming manual proof-checker validation. This is the honest first surface: `by_definition` proofs are deferred until the proof checker can validate them semantically against the law proposition.
+
 ## Law profiles
 
 Normative law profiles for `Semigroup`, `Monoid`, `Functor`, `Applicative`, and `Monad` are recorded in `docs/plan/audits/TASK-1026-algebra-law-test-handoff.md`. Comonad, Kleisli, and Cokleisli law-profile ownership is recorded in `docs/plan/audits/TASK-1036-comonad-law-test-handoff.md` and extends `docs/plan/tasks/TASK-1029-generated-algebra-law-tests.md`. They are contracts for future generated tests, not proof obligations executed by Phase 134 or Phase 135.

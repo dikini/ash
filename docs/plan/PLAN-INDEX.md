@@ -4113,4 +4113,4 @@ Phase 138 adds source-visible laws to the existing `std/src/algebra` Semigroup, 
 | TASK-1391 | Add Applicative identity, homomorphism, interchange, and composition law declarations | Complete |
 | TASK-1392 | Add Monad left identity, right identity, and associativity law declarations | Complete |
 | TASK-1393 | Add honest Option and Result proof declarations without overclaiming proof-checker strength | Complete |
-| TASK-1394 | Update reference/generated-test handoff docs, CHANGELOG, and close out verification | Planned |
+| TASK-1394 | Update reference/generated-test handoff docs, CHANGELOG, and close out verification | Complete |

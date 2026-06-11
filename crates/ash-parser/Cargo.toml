@@ -12,6 +12,7 @@ ash-diagnostic = { path = "../ash-diagnostic" }
 thiserror.workspace = true
 winnow = { workspace = true }
 serde = { workspace = true, optional = true }
+ordered-float = "5.3.0"
 
 [dev-dependencies]
 proptest = { workspace = true }

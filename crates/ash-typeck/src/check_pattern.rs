@@ -1138,7 +1138,9 @@ fn witness_to_pattern(witness: IrrefutabilityWitness) -> Option<Pattern> {
 fn non_literal_witness_pattern(literal: Literal) -> Option<Pattern> {
     match literal {
         Literal::Int(value) => Some(Pattern::Literal(Literal::Int(value.saturating_add(1)))),
-        Literal::Float(value) => Some(Pattern::Literal(Literal::Float(value + 1.0))),
+        Literal::Float(value) => Some(Pattern::Literal(Literal::Float(
+            ordered_float::OrderedFloat(value.0 + 1.0),
+        ))),
         Literal::String(value) => Some(Pattern::Literal(Literal::String(
             format!("{value}#").into_boxed_str(),
         ))),

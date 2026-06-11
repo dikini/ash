@@ -452,7 +452,7 @@ fn format_expr(expr: &Expr) -> String {
 fn format_literal(literal: &Literal) -> String {
     match literal {
         Literal::Int(value) => value.to_string(),
-        Literal::Float(value) => value.to_string(),
+        Literal::Float(value) => value.0.to_string(),
         Literal::String(value) => format!("\"{value}\""),
         Literal::Bool(value) => value.to_string(),
         Literal::Null => "null".to_string(),

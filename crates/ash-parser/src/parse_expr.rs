@@ -1640,7 +1640,7 @@ fn parse_float(input: &mut ParseInput) -> ModalResult<Literal> {
 
     let full = format!("{}.{}", int_part, frac_part);
     match full.parse::<f64>() {
-        Ok(f) => Ok(Literal::Float(f)),
+        Ok(f) => Ok(Literal::Float(ordered_float::OrderedFloat(f))),
         Err(_) => Err(winnow::error::ErrMode::Backtrack(
             winnow::error::ContextError::new(),
         )),

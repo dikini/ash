@@ -1122,13 +1122,13 @@ fn test_pattern_literal() {
 #[test]
 fn test_literal_variants() {
     let int_lit = Literal::Int(42);
-    let float_lit = Literal::Float(1.5);
+    let float_lit = Literal::Float(ordered_float::OrderedFloat(1.5));
     let string_lit = Literal::String("hello".into());
     let bool_lit = Literal::Bool(true);
     let null_lit = Literal::Null;
 
     assert_eq!(int_lit, Literal::Int(42));
-    assert_eq!(float_lit, Literal::Float(1.5));
+    assert_eq!(float_lit, Literal::Float(ordered_float::OrderedFloat(1.5)));
     assert_eq!(string_lit, Literal::String("hello".into()));
     assert_eq!(bool_lit, Literal::Bool(true));
     assert_eq!(null_lit, Literal::Null);

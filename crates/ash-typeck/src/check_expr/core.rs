@@ -413,7 +413,7 @@ fn core_variant_pattern_to_surface(
 fn core_value_to_surface_literal(value: &ash_core::Value) -> Option<Literal> {
     match value {
         ash_core::Value::Int(value) => Some(Literal::Int(*value)),
-        ash_core::Value::Float(value) => Some(Literal::Float(*value)),
+        ash_core::Value::Float(value) => Some(Literal::Float(ordered_float::OrderedFloat(*value))),
         ash_core::Value::String(value) => Some(Literal::String(value.clone().into_boxed_str())),
         ash_core::Value::Bool(value) => Some(Literal::Bool(*value)),
         ash_core::Value::Null => Some(Literal::Null),

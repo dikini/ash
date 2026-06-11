@@ -68,7 +68,7 @@ pub struct Program {
 /// Every `.ash` source file parses as a `ModuleFile` containing a collection
 /// of module items (definitions, module declarations, and an optional workflow).
 /// `Program` is reserved for entry-point loading/validation only.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct ModuleFile {
     /// Top-level definitions in this file
     pub definitions: Vec<Definition>,
@@ -2019,13 +2019,15 @@ pub enum VariantPatternPayload {
     Tuple(Vec<Pattern>),
 }
 
+use ordered_float::OrderedFloat;
+
 /// Literal values.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Literal {
     /// Integer literal
     Int(i64),
-    /// Floating-point literal
-    Float(f64),
+    /// Floating-point literal (total ordering for Eq/Hash)
+    Float(OrderedFloat<f64>),
     /// String literal
     String(Box<str>),
     /// Boolean literal

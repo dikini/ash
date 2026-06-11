@@ -13,6 +13,7 @@ ash-diagnostic = { path = "../ash-diagnostic" }
 thiserror.workspace = true
 im = "15.1"  # Immutable data structures for substitutions
 z3 = "0.12"
+ordered-float = "5.3.0"
 
 [dev-dependencies]
 proptest = { workspace = true }

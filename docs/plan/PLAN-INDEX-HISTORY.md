@@ -263,6 +263,7 @@ Update this section as tasks complete:
 | 78 | 5 | 5 | ✅ Complete |
 | 79 | 6 | 6 | ✅ Complete |
 | 80 | 10 | 10 | ✅ Complete |
+| 89 | 1 | 1 | ✅ Complete |
 | 94 | 3 | 3 | ✅ Complete |
 | 106 | 6 | 6 | ✅ Complete |
 | 107 | 7 | 7 | ✅ Complete |
@@ -398,6 +399,7 @@ This table is retained near the original early-phase section for historical cont
 | 78 | 5 | 5 | ✅ Complete |
 | 79 | 6 | 6 | ✅ Complete |
 | 80 | 10 | 10 | ✅ Complete |
+| 89 | 1 | 1 | ✅ Complete |
 | 94 | 3 | 3 | ✅ Complete |
 | 106 | 6 | 6 | ✅ Complete |
 | 107 | 7 | 7 | ✅ Complete |
@@ -2570,6 +2572,21 @@ Provide a source formatter for Ash that pretty-prints any valid `ModuleFile` whi
 | [TASK-575](tasks/TASK-575-ash-source-formatter.md) | Implement Ash source formatter with comment preservation | [SPEC-042](../spec/SPEC-042-ASH-SOURCE-FORMATTER.md) | 48 | ✅ Done |
 
 **Deliverable:** `crates/ash-formatter` crate; `ash fmt` CLI subcommand; LSP `textDocument/formatting` handler.
+
+## Phase 89: Incremental Analysis Engine (Salsa)
+
+Replace the simple per-request cache in `ash-lsp-core` with a `salsa`-based incremental query engine so that editing one file does not invalidate the analysis of unchanged files.
+
+**Plan Reference:** [PLAN-089: Incremental Analysis Engine](PLAN-089-INCREMENTAL-ANALYSIS-ENGINE.md)
+**Spec:** [SPEC-043](../spec/SPEC-043-INCREMENTAL-ANALYSIS.md)
+**Priority:** High
+**Status:** ✅ Complete
+
+| Task | Description | Spec | Est. Hours | Status |
+|------|-------------|------|------------|--------|
+| [TASK-576](tasks/TASK-576-ash-lsp-salsa.md) | Integrate Salsa into `ash-lsp-core` with tracked parse/symbol queries and VFS-backed cache | [SPEC-043](../spec/SPEC-043-INCREMENTAL-ANALYSIS.md) | 48 | ✅ Complete |
+
+**Deliverable:** `AshLspDatabase`, `SourceFile` salsa input, `parse_summary`/`build_symbol_index` tracked queries, AST side-cache, `SalsaAnalysisCache` additive migration path.
 
 ## Phase 90: Spec Processor (Independent Application Track)
 

@@ -142,7 +142,7 @@ fn test_lower_expr_binary() {
 #[test]
 #[allow(clippy::approx_constant)]
 fn test_lower_expr_float_literal_error() {
-    let surface = SurfaceExpr::Literal(SurfaceLiteral::Float(3.14));
+    let surface = SurfaceExpr::Literal(SurfaceLiteral::Float(ordered_float::OrderedFloat(3.14)));
     let result = lower_expr(&surface);
     assert!(matches!(result, Err(LoweringError::FloatNotSupported)));
 }

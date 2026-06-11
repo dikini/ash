@@ -10,7 +10,7 @@ use std::fmt;
 ///
 /// `ParseError` carries information about where an error occurred in the source,
 /// what went wrong, and what was expected instead.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ParseError {
     /// The source location of the error.
     pub span: Span,

@@ -314,6 +314,7 @@ Update this section as tasks complete:
 | 136 | 19 | 19 | ✅ Complete; implemented MVP; full workspace gates passed |
 | 137 | 10 | 10 | ✅ Complete |
 | 138 | 7 | 7 | ✅ Complete |
+| 139 | 4 | 4 | ✅ Complete |
 
 ## Phase 10: Module System (Weeks 14-16)
 
@@ -4114,3 +4115,19 @@ Phase 138 adds source-visible laws to the existing `std/src/algebra` Semigroup, 
 | TASK-1392 | Add Monad left identity, right identity, and associativity law declarations | Complete |
 | TASK-1393 | Add honest Option and Result proof declarations without overclaiming proof-checker strength | Complete |
 | TASK-1394 | Update reference/generated-test handoff docs, CHANGELOG, and close out verification | Complete |
+
+
+## Phase 139: Reference Maintenance and Staleness Remediation
+
+**Status:** ✅ Complete
+
+**Plan:** [PLAN-139: Reference Maintenance and Staleness Remediation](PLAN-139-REFERENCE-MAINTENANCE-AND-STALENESS-REMEDIATION.md)
+
+Phase 139 remediates reference documentation staleness drift identified after Phase 138 closeout. It adds missing metadata frontmatter, creates missing agent cards, refreshes verification baselines, and documents a repeatable post-phase closeout reference refresh procedure.
+
+| Task | Description | Status |
+|---|---|---|
+| [TASK-1395](tasks/TASK-1395-add-algebra-metadata-frontmatter.md) | Add metadata frontmatter to `reference/stdlib/algebra.md` | Complete |
+| [TASK-1396](tasks/TASK-1396-add-stdlib-algebra-agent-card.md) | Add `stdlib-algebra.md` agent card | Complete |
+| [TASK-1397](tasks/TASK-1397-refresh-reference-verification-baselines.md) | Refresh verification baselines across reference corpus | Complete |
+| [TASK-1398](tasks/TASK-1398-reference-maintenance-procedure-closeout.md) | Document repeatable reference maintenance procedure and closeout | Complete |

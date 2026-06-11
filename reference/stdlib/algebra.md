@@ -1,3 +1,67 @@
+---
+id: ref.stdlib.algebra
+title: Standard Algebra
+kind: reference
+audience: [human, agent]
+authority: canonical-adjacent
+status: current
+stability: alpha
+owner: stdlib
+last_verified: 2026-06-11
+verified_against:
+  git_commit: 61efd59f
+  release_tag: null
+  ash_version: unreleased-alpha
+  specs:
+    - docs/spec/SPEC-078-STANDARD-ALGEBRA-LIBRARY-AND-MONAD-REMEDIATION.md
+    - docs/spec/SPEC-079-STANDARD-ALGEBRA-COMONAD-AND-KLEISLI-HELPERS.md
+    - docs/design/DESIGN-NOTE-INTERFACE-LAWS.md
+  tasks:
+    - docs/plan/tasks/TASK-1388-stdlib-law-proof-readiness-audit.md
+    - docs/plan/tasks/TASK-1389-semigroup-monoid-law-declarations.md
+    - docs/plan/tasks/TASK-1390-functor-law-declarations.md
+    - docs/plan/tasks/TASK-1391-applicative-law-declarations.md
+    - docs/plan/tasks/TASK-1392-monad-law-declarations.md
+    - docs/plan/tasks/TASK-1393-option-result-proof-declarations.md
+    - docs/plan/tasks/TASK-1394-reference-test-handoff-closeout.md
+  code:
+    - std/src/algebra/semigroup.ash
+    - std/src/algebra/monoid.ash
+    - std/src/algebra/functor.ash
+    - std/src/algebra/applicative.ash
+    - std/src/algebra/monad.ash
+    - std/src/algebra/comonad.ash
+    - std/src/option.ash
+    - std/src/result.ash
+  tests:
+    - crates/ash-parser/tests/task_1360_law_keyword_interface.rs
+    - crates/ash-parser/tests/task_1362_proof_keyword_impl.rs
+    - crates/ash-parser/tests/stdlib_parsing.rs
+  examples:
+    - std/src/algebra/functor.ash
+    - std/src/algebra/applicative.ash
+    - std/src/algebra/monad.ash
+related:
+  depends_on:
+    - ref.stdlib.index
+    - ref.stdlib.result
+    - ref.language.generalized_do
+  explains:
+    - ref.status.feature_matrix
+  supersedes: []
+  superseded_by: null
+  historical_rationale:
+    - docs/spec/SPEC-078-STANDARD-ALGEBRA-LIBRARY-AND-MONAD-REMEDIATION.md
+    - docs/spec/SPEC-079-STANDARD-ALGEBRA-COMONAD-AND-KLEISLI-HELPERS.md
+refresh_trigger:
+  - std/src/algebra/*.ash changes
+  - std/src/option.ash changes
+  - std/src/result.ash changes
+  - docs/spec/SPEC-078-STANDARD-ALGEBRA-LIBRARY-AND-MONAD-REMEDIATION.md changes
+  - docs/spec/SPEC-079-STANDARD-ALGEBRA-COMONAD-AND-KLEISLI-HELPERS.md changes
+  - docs/design/DESIGN-NOTE-INTERFACE-LAWS.md changes
+---
+
 # Standard Algebra
 
 Ash exposes algebra interfaces under `std::algebra`. These modules define source-visible interfaces and evidence requirements; carrier-specific helper functions and instances live with the carrier modules that own the data type or runtime carrier.

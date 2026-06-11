@@ -52,6 +52,8 @@ Refreshing a reference page means rechecking its evidence, updating content when
 
 ## Procedure
 
+### Full refresh (semantic evidence changed)
+
 1. Run staleness inspection for the page or page group.
 2. Re-read every changed evidence source and every applicable refresh trigger.
 3. Compare the page's user-facing claims, examples, limitations, and agent notes against current evidence.
@@ -59,6 +61,23 @@ Refreshing a reference page means rechecking its evidence, updating content when
 5. Update `verified_against` lists if evidence ownership changed.
 6. Set `last_verified` to the inspection date and `verified_against.git_commit` to the checked commit.
 7. Run the reference validators.
+
+### Post-phase closeout refresh (baseline update only)
+
+Use this lighter procedure after a phase closes when no semantic claims changed but verification baselines need advancing:
+
+1. Identify all reference pages affected by the closed phase.
+2. For pages that already have metadata frontmatter:
+   - Update `last_verified` to the closeout date.
+   - Update `verified_against.git_commit` to the phase closeout commit.
+3. For new pages added in the phase:
+   - Add full metadata frontmatter with `id`, `kind`, `authority`, `verified_against`, `refresh_trigger`.
+4. For new canonical pages:
+   - Create a matching agent card in `reference/agents/cards/`.
+5. Update `reference/INDEX.md` to link any new pages.
+6. Run the reference validators.
+7. Update CHANGELOG with the maintenance entry.
+8. Update PLAN-INDEX to mark the maintenance phase Complete.
 
 ## Metadata Rules
 

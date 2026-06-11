@@ -7,9 +7,9 @@ authority: canonical-adjacent
 status: current
 stability: alpha
 owner: reference-corpus
-last_verified: 2026-06-03
+last_verified: 2026-06-11
 verified_against:
-  git_commit: 7cf576d
+    git_commit: 61efd59f
   release_tag: null
   ash_version: unreleased-alpha
   specs:
@@ -93,6 +93,7 @@ refresh_trigger:
 - [Proc stdlib](stdlib/proc.md)
 - [Workflow stdlib](stdlib/workflow.md)
 - [Result stdlib](stdlib/result.md)
+- [Standard algebra](stdlib/algebra.md)
 
 ## Tools and runtime
 

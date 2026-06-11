@@ -7,6 +7,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Added
+- [TASK-1402](docs/plan/tasks/TASK-1402-agent-evaluation-harness.md): Added agent-style evaluation harness with fixture `.ash` files and integration tests in `crates/ash-mcp/tests/agent_queries.rs`; covers workspace symbol search, single-file find-references, and go-to-definition queries with metric summary output.
 - [TASK-1401](docs/plan/tasks/TASK-1401-single-file-find-references.md): Implemented single-file find-references in `ash-lsp-core` (`find_references`) and exposed it via the `ash_find_references` MCP tool; returns all occurrences of the identifier at the cursor within the same file, with honest empty responses when no identifier is present.
 - [TASK-1400](docs/plan/tasks/TASK-1400-workspace-symbol-search.md): Added workspace symbol search to `ash-lsp-core` (`workspace_symbols`) and exposed it via the `ash_workspace_symbols` MCP tool; scans `.ash` files recursively, matches names case-insensitively by substring, and returns symbol name/kind/file/line/column.
 - [TASK-1399](docs/plan/tasks/TASK-1399-mcp-server-hardening.md): Hardened `ash-mcp` for external agent launch — added `--version` and `--help` CLI flags, an `ash_mcp_health` tool reporting status/version/tool list, binary-level tests for CLI behavior and stdio cleanliness, and health-tool unit tests.

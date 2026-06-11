@@ -28,6 +28,7 @@ ash-lint = { path = "../ash-lint" }
 
 [dev-dependencies]
 tempfile = "3"
+tokio = { workspace = true, features = ["rt", "macros"] }
 
 [lints]
 workspace = true

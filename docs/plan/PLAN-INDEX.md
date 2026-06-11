@@ -115,7 +115,7 @@ Update this section as tasks complete:
 | [137](PLAN-INDEX-HISTORY.md#phase-137) | 10 | 10 | ✅ Complete |
 | [138](PLAN-INDEX-HISTORY.md#phase-138) | 7 | 7 | ✅ Complete |
 || [139](PLAN-INDEX-HISTORY.md#phase-139) | 4 | 4 | ✅ Complete |
-|| [140](PLAN-140-MCP-AGENT-INTELLIGENCE-SPIKE.md) | 6 | 0 | 📝 Planned |
+|| [140](PLAN-140-MCP-AGENT-INTELLIGENCE-SPIKE.md) | 6 | 6 | ✅ Complete |
 
 
 ---
@@ -124,15 +124,4 @@ Update this section as tasks complete:
 
 The following phases are not fully Complete. All Complete phase bodies are in [PLAN-INDEX-HISTORY.md](PLAN-INDEX-HISTORY.md).
 
-### Phase 140: MCP Agent Intelligence Spike
-
-See [PLAN-140-MCP-AGENT-INTELLIGENCE-SPIKE.md](PLAN-140-MCP-AGENT-INTELLIGENCE-SPIKE.md).
-
-| Task | Description | Status |
-|------|-------------|--------|
-| [TASK-1399](tasks/TASK-1399-mcp-server-hardening.md) | MCP server hardening and health check | 📝 Planned |
-| [TASK-1400](tasks/TASK-1400-workspace-symbol-search.md) | Workspace symbol search via MCP | 📝 Planned |
-| [TASK-1401](tasks/TASK-1401-single-file-find-references.md) | Single-file find-references via MCP | 📝 Planned |
-| [TASK-1402](tasks/TASK-1402-agent-evaluation-harness.md) | Agent evaluation harness for MCP tools | 📝 Planned |
-| [TASK-1403](tasks/TASK-1403-hermes-mcp-config.md) | Hermes MCP server configuration | 📝 Planned |
-| [TASK-1404](tasks/TASK-1404-mcp-spike-closeout.md) | Spike closeout and evaluation report | 📝 Planned |
+*No active phases at this time.*

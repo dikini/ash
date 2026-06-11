@@ -2,7 +2,7 @@
 
 ## Phase: 140
 
-## Status: 📝 Planned
+## Status: ✅ Implemented
 
 ## Goal
 
@@ -47,12 +47,12 @@ measurable, and wired into the agent loop.
 
 | Task | Description | Estimate | Status |
 |------|-------------|----------|--------|
-| [TASK-1399](tasks/TASK-1399-mcp-server-hardening.md) | MCP server hardening and health check | 3h | 📝 Planned |
-| [TASK-1400](tasks/TASK-1400-workspace-symbol-search.md) | Workspace symbol search via MCP | 6h | 📝 Planned |
-| [TASK-1401](tasks/TASK-1401-single-file-find-references.md) | Single-file find-references via MCP | 4h | 📝 Planned |
-| [TASK-1402](tasks/TASK-1402-agent-evaluation-harness.md) | Agent evaluation harness for MCP tools | 4h | 📝 Planned |
-| [TASK-1403](tasks/TASK-1403-hermes-mcp-config.md) | Hermes MCP server configuration | 2h | 📝 Planned |
-| [TASK-1404](tasks/TASK-1404-mcp-spike-closeout.md) | Spike closeout and evaluation report | 3h | 📝 Planned |
+| [TASK-1399](tasks/TASK-1399-mcp-server-hardening.md) | MCP server hardening and health check | 3h | ✅ Complete |
+| [TASK-1400](tasks/TASK-1400-workspace-symbol-search.md) | Workspace symbol search via MCP | 6h | ✅ Complete |
+| [TASK-1401](tasks/TASK-1401-single-file-find-references.md) | Single-file find-references via MCP | 4h | ✅ Complete |
+| [TASK-1402](tasks/TASK-1402-agent-evaluation-harness.md) | Agent evaluation harness for MCP tools | 4h | ✅ Complete |
+| [TASK-1403](tasks/TASK-1403-hermes-mcp-config.md) | Hermes MCP server configuration | 2h | ✅ Complete |
+| [TASK-1404](tasks/TASK-1404-mcp-spike-closeout.md) | Spike closeout and evaluation report | 3h | ✅ Complete |
 
 ## Deliverable
 
@@ -79,8 +79,10 @@ measurable, and wired into the agent loop.
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
-| TBD | Start with file-scanning workspace symbols instead of full salsa workspace index | Lower risk; defers module-graph work. |
-| TBD | Same-file references only | Cross-file resolution needs source roots and import graph. |
+| 2026-06-11 | Start with file-scanning workspace symbols instead of full salsa workspace index | Lower risk; defers module-graph work. |
+| 2026-06-11 | Same-file references only | Cross-file resolution needs source roots and import graph. |
+| 2026-06-11 | Use `#[doc(hidden)]` public wrappers for integration test access to private `#[tool_router]` methods | Macro-generated methods are private; wrappers keep API clean while enabling external tests. |
+| 2026-06-11 | Use release binary path in Hermes config instead of `cargo run` | Hermes MCP connection test times out on `cargo run` due to compilation delay. |
 
 ## Notes
 

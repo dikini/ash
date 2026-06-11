@@ -7,6 +7,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Added
+- [TASK-1404](docs/plan/tasks/TASK-1404-mcp-spike-closeout.md): Completed Phase 140 MCP Agent Intelligence Spike closeout — updated PLAN-140 and PLAN-INDEX statuses to complete, added `docs/notes/MCP-SPIKE-RESULTS.md` with measured query accuracy (7/7 pass), limitations, and recommended next phase (scale cross-file analysis).
 - [TASK-1403](docs/plan/tasks/TASK-1403-hermes-mcp-config.md): Added Hermes MCP server configuration — `.hermes/mcp_servers.yaml` for project-local discovery, `docs/notes/MCP-HERMES-INTEGRATION.md` troubleshooting guide, and verified all 9 ash-mcp tools are discovered and enabled via `hermes mcp`.
 - [TASK-1402](docs/plan/tasks/TASK-1402-agent-evaluation-harness.md): Added agent-style evaluation harness with fixture `.ash` files and integration tests in `crates/ash-mcp/tests/agent_queries.rs`; covers workspace symbol search, single-file find-references, and go-to-definition queries with metric summary output.
 - [TASK-1401](docs/plan/tasks/TASK-1401-single-file-find-references.md): Implemented single-file find-references in `ash-lsp-core` (`find_references`) and exposed it via the `ash_find_references` MCP tool; returns all occurrences of the identifier at the cursor within the same file, with honest empty responses when no identifier is present.

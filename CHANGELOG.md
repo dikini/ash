@@ -7,6 +7,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Added
+- [Phase 143](docs/plan/PLAN-143-MCP-CROSS-LANGUAGE-COMPLETION-REMEDIATION.md): Added remediation planning packet for Phase 142 cross-language completion gaps, including TASK-1427 through TASK-1432 for status/artifact hygiene, MCP tool wiring, real `syn` Rust symbol parsing, committed config fixtures, Phase 141 corpus re-evaluation, and closeout re-review.
 - [TASK-1420](docs/plan/tasks/TASK-1420-cross-lang-configuration.md): Implemented cross-language configuration schema (`cross_lang::CrossLangConfig`) with YAML loading, validation, and serde support for mapping Ash symbols to Rust implementations.
 - [TASK-1421](docs/plan/tasks/TASK-1421-ash-to-rust-mapping.md): Implemented `ash_find_rust_implementation` MCP tool that maps Ash symbols to their Rust implementations via cross-language configuration.
 - [TASK-1422](docs/plan/tasks/TASK-1422-rust-to-ash-mapping.md): Implemented `ash_find_ash_usage` MCP tool that finds Ash usages of a given Rust symbol by scanning reverse mappings.

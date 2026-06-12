@@ -114,10 +114,11 @@ Update this section as tasks complete:
 | [136](PLAN-INDEX-HISTORY.md#phase-136) | 19 | 19 | ✅ Complete; implemented MVP; full workspace gates passed |
 | [137](PLAN-INDEX-HISTORY.md#phase-137) | 10 | 10 | ✅ Complete |
 | [138](PLAN-INDEX-HISTORY.md#phase-138) | 7 | 7 | ✅ Complete |
-|| [139](PLAN-INDEX-HISTORY.md#phase-139) | 4 | 4 | ✅ Complete |
-|| [140](PLAN-140-MCP-AGENT-INTELLIGENCE-SPIKE.md) | 6 | 6 | ✅ Complete |
-|| [141](PLAN-141-MCP-BENCHMARK.md) | 5 | 5 | ✅ Complete |
-||| [142](PLAN-142-MCP-CROSS-LANGUAGE-INTEGRATION.md) | 7 | 7 | ✅ Complete |
+| [139](PLAN-INDEX-HISTORY.md#phase-139) | 4 | 4 | ✅ Complete |
+| [140](PLAN-140-MCP-AGENT-INTELLIGENCE-SPIKE.md) | 6 | 6 | ✅ Complete |
+| [141](PLAN-141-MCP-BENCHMARK.md) | 5 | 5 | ✅ Complete |
+| [142](PLAN-142-MCP-CROSS-LANGUAGE-INTEGRATION.md) | 7 | 7 | ✅ Complete; reopened evidence gaps remediated by Phase 143 |
+| [143](PLAN-143-MCP-CROSS-LANGUAGE-COMPLETION-REMEDIATION.md) | 6 | 0 | 📝 Planned |
 
 
 ---
@@ -126,4 +127,6 @@ Update this section as tasks complete:
 
 The following phases are not fully Complete. All Complete phase bodies are in [PLAN-INDEX-HISTORY.md](PLAN-INDEX-HISTORY.md).
 
-*No active phases at this time.*
+| Phase | Tasks | Completed | Status |
+|-------|-------|-----------|--------|
+| [143](PLAN-143-MCP-CROSS-LANGUAGE-COMPLETION-REMEDIATION.md) | 6 | 0 | 📝 Planned |

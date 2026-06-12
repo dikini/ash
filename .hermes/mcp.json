@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "ash-mcp": {
+      "command": "/home/dikini/Projects/ash/.worktrees/phase-141-mcp-benchmark/target/release/ash-mcp",
+      "enabled": true,
+      "description": "Ash language-native MCP server for .ash file intelligence"
+    },
+    "rust-analyzer": {
+      "command": "lsp-mcp",
+      "enabled": true,
+      "description": "Rust LSP via lsp-mcp bridge (requires persistent stdio connection)"
+    }
+  }
+}

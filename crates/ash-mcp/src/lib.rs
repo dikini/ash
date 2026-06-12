@@ -24,6 +24,7 @@ use ash_parser::parse_surface_file;
 
 // Cross-language configuration and symbol mapping
 pub mod cross_lang;
+pub mod rust_parser;
 
 // Daemon mode with persistent state and LRU caching
 pub mod daemon;

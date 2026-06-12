@@ -1,0 +1,25 @@
+[package]
+name = "ash-mcp-bench"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+publish = false
+
+[dependencies]
+ash-mcp = { path = "../ash-mcp" }
+ash-lsp-core = { path = "../ash-lsp-core" }
+ash-parser = { path = "../ash-parser" }
+tokio = { workspace = true, features = ["rt", "macros", "time"] }
+criterion = "0.5"
+tempfile = "3"
+rand = "0.8"
+
+[[bench]]
+name = "daemon_latency"
+harness = false
+
+[[bench]]
+name = "cache_performance"
+harness = false

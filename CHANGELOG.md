@@ -12,8 +12,18 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - [TASK-1422](docs/plan/tasks/TASK-1422-rust-to-ash-mapping.md): Implemented `ash_find_ash_usage` MCP tool that finds Ash usages of a given Rust symbol by scanning reverse mappings.
 - [TASK-1423](docs/plan/tasks/TASK-1423-latency-optimization.md): Implemented persistent daemon mode (`--daemon` CLI flag) with LRU AST cache (50 entries) and mtime-based invalidation for sub-50ms repeated lookups.
 - [TASK-1424](docs/plan/tasks/TASK-1424-enhanced-hover.md): Implemented `ash_hover_with_rust_context` MCP tool that enriches hover responses with Rust symbol mappings when available.
+- TASK-1421b: Real Rust source file parsing with `syn` crate (`rust_parser.rs`). Replaces placeholder synthetic paths with actual symbol location extraction from AST spans. Resolves `crate::module::symbol` paths to file locations and supports structs, enums, traits, functions, types, modules, and impl blocks.
+- TASK-1423b: Performance benchmarks with criterion (`crates/ash-mcp-bench/`). Includes daemon latency (cache hit/miss, cache scaling) and cache performance (hit rate, eviction, mtime invalidation, concurrent access) suites. Results exceed performance targets: cache hits 2.16 µs (5,000x better than <10ms target), cache misses 54.4 µs (1,800x better than <100ms target).
+- Benchmark report: `docs/notes/PHASE-142-PERFORMANCE-BENCHMARK.md`.
+- New workspace member: `crates/ash-mcp-bench`.
+- Added `syn = "2.0"` dependency to ash-mcp for Rust AST parsing.
 - [Phase 142](docs/plan/PLAN-142-MCP-CROSS-LANGUAGE-INTEGRATION.md): Implemented bounded cross-language integration between Ash and Rust — symbol mapping, usage finding, daemon mode with caching, and enhanced hover. All tools pass `cargo test`, `cargo clippy --workspace --all-targets -- -D warnings`, and `cargo fmt --check`.
 - Phase 142 planning artifacts committed: task files TASK-1420 through TASK-1426, benchmark reports, and Hermes MCP configuration.
+
+### Changed
+- ash-mcp/Cargo.toml: added syn dependency for real Rust source parsing
+- Cargo.toml (workspace): added ash-mcp-bench to workspace members
+- crates/ash-mcp/src/lib.rs: added `pub mod rust_parser;` for cross-language parsing module
 - [TASK-1405](docs/plan/tasks/TASK-1405-benchmark-harness.md): Added reproducible benchmark harness (`scripts/benchmark/`) with corpus of 9 codebase exploration tasks, baseline (grep+read) and MCP (ash_workspace_symbols + ash_find_references) modes, measuring wall time, tool calls, tokens, and accuracy.
 - [TASK-1406](docs/plan/tasks/TASK-1406-token-efficiency-benchmark.md): Ran token-efficiency benchmark — MCP uses ~97% fewer tokens than baseline (3,985 vs 134,747) but with lower accuracy on `.rs` files (MCP only indexes `.ash` files).
 - [TASK-1407](docs/plan/tasks/TASK-1407-precision-recall-benchmark.md): Per-task comparison shows MCP wins on `.ash` tasks (T9: perfect accuracy, 97% token reduction) but loses on `.rs` tasks due to parser limitation.

@@ -48,17 +48,10 @@ pub struct RustSymbolInfo {
     pub error: Option<String>,
 }
 
-/// Symbol location information for Rust source files.
-#[derive(Debug, Clone)]
-struct SymbolLocation {
-    pub file: String,
-    pub start_line: u32,
-    pub start_column: u32,
-    pub end_line: u32,
-    pub end_column: u32,
-}
+use crate::cross_lang::{CrossLangConfig, SymbolMapping};
+use crate::rust_parser::{find_rust_file_for_symbol, find_symbol_location};
 
-impl AshMcpServer {
+impl crate::AshMcpServer {
     /// Find Rust implementation for an Ash symbol
     pub fn find_rust_implementation(
         &self,
@@ -66,18 +59,18 @@ impl AshMcpServer {
     ) -> Result<Option<RustSymbolInfo>, Box<dyn std::error::Error>> {
         // Load cross-language configuration
         let config = self.load_cross_lang_config()?;
-        
+
         // Look up symbol in mappings
         if let Some(mapping) = config.mappings.iter()
             .find(|m| m.ash_symbol == params.ash_symbol) {
-            
-            // Find the Rust file location
-            if let Some(location) = self.find_rust_symbol_location(&mapping.rust_symbol)? {
+
+            // Find the Rust file location using real parsing
+            if let Some(location) = self.find_rust_symbol_location_real(&mapping.rust_symbol)? {
                 Ok(Some(RustSymbolInfo {
                     found: true,
                     rust_symbol: Some(mapping.rust_symbol.clone()),
                     rust_kind: Some(mapping.rust_kind.clone()),
-                    file: Some(location.file),
+                    file: Some(location.file.display().to_string()),
                     start_line: Some(location.start_line),
                     start_column: Some(location.start_column),
                     end_line: Some(location.end_line),
@@ -108,19 +101,21 @@ impl AshMcpServer {
 
     /// Load cross-language configuration
     fn load_cross_lang_config(&self) -> Result<CrossLangConfig, Box<dyn std::error::Error>> {
+        use std::path::Path;
+
         // Try to load from common locations
         let config_paths = vec![
             "cross_lang_config.yaml",
             ".ash/cross_lang_config.yaml",
             "~/.ash/cross_lang_config.yaml",
         ];
-        
+
         for path in config_paths {
             if let Ok(config) = CrossLangConfig::from_file(Path::new(path)) {
                 return Ok(config);
             }
         }
-        
+
         // Return default config if none found
         Ok(CrossLangConfig {
             version: 1,
@@ -130,36 +125,56 @@ impl AshMcpServer {
         })
     }
 
-    /// Find Rust symbol location in source files
-    fn find_rust_symbol_location(
+    /// Find Rust symbol location in source files (real implementation with syn parsing)
+    fn find_rust_symbol_location_real(
         &self,
         rust_symbol: &str,
-    ) -> Result<Option<SymbolLocation>, Box<dyn std::error::Error>> {
-        // For now, return a placeholder
-        // In a real implementation, this would:
-        // 1. Parse the Rust symbol into crate::module::Symbol
-        // 2. Find the corresponding source file
-        // 3. Use syn or similar to find the symbol location
-        // 4. Return the exact line and column range
-        
-        let symbol_parts: Vec<&str> = rust_symbol.split("::").collect();
-        if symbol_parts.len() >= 3 {
-            // ash_core::effect::Effect -> ash-core/src/effect.rs
-            let crate_name = symbol_parts[0];
-            let module_name = symbol_parts[1];
-            let symbol_name = symbol_parts[2];
-            
-            // For now, return a placeholder location
-            // This would need real Rust source parsing in a complete implementation
-            return Ok(Some(SymbolLocation {
-                file: format!("target/debug/deps/lib{}.rs", crate_name.replace("_", "-")),
-                start_line: 1,
-                start_column: 1,
-                end_line: 10,
-                end_column: 2,
-            }));
+    ) -> Result<Option<crate::rust_parser::RustSymbolLocation>, Box<dyn std::error::Error>> {
+        use std::path::PathBuf;
+
+        // Get workspace root from current file
+        let workspace_root = std::env::current_dir()
+            .or_else(|_| PathBuf::from(".").canonicalize())?;
+
+        // Find the Rust source file
+        let base_name = rust_symbol.split("::").last().unwrap_or(rust_symbol);
+
+        // Try to find the file first
+        let rust_file = find_rust_file_for_symbol(&workspace_root, rust_symbol);
+
+        if let Some(file_path) = rust_file? {
+            // Parse the file and find the symbol location
+            if let Some(mut location) = find_symbol_location(&file_path, base_name)? {
+                location.file = file_path;
+                return Ok(Some(location));
+            }
         }
-        
+
+        // Fallback: try to parse directly from the qualified symbol path
+        let parts: Vec<&str> = rust_symbol.split("::").collect();
+        if parts.len() >= 3 {
+            let crate_name = parts[0].replace('_', "-");
+            let module_path = parts[1..parts.len() - 1].join("/");
+            let symbol_name = parts[parts.len() - 1];
+
+            // Try to find and parse the file
+            let possible_files = vec![
+                format!("crates/{}/src/{}.rs", crate_name, module_path),
+                format!("crates/{}/src/{}/mod.rs", crate_name, module_path),
+                format!("crates/{}/src/lib.rs", crate_name),
+            ];
+
+            for possible_file in possible_files {
+                let full_path = workspace_root.join(&possible_file);
+                if full_path.exists() {
+                    if let Some(mut location) = find_symbol_location(&full_path, symbol_name)? {
+                        location.file = full_path;
+                        return Ok(Some(location));
+                    }
+                }
+            }
+        }
+
         Ok(None)
     }
 
@@ -170,7 +185,7 @@ impl AshMcpServer {
         Parameters(params): Parameters<SymbolLookupParams>,
     ) -> CallToolResult {
         let result = self.find_rust_implementation(&params);
-        
+
         match result {
             Ok(Some(rust_info)) => {
                 let summary = format!(

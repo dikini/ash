@@ -1,0 +1,16 @@
+# Test configuration for Ash-Rust symbol mapping
+version: 1
+rust_crates:
+  - name: ash_core
+    modules:
+      - effect
+    exclude: []
+ash_extensions:
+  - .ash
+mappings:
+  - ash_symbol: Effect
+    ash_kind: type
+    rust_symbol: ash_core::effect::Effect
+    rust_kind: enum
+    confidence: high
+    source: manual

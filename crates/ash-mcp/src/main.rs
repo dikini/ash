@@ -22,9 +22,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 println!("Options:");
                 println!("  --version    Print version and exit");
                 println!("  --help       Print this help message and exit");
+                println!(
+                    "  --daemon     Run in persistent daemon mode (line-delimited JSON-RPC on stdin)"
+                );
                 println!();
                 println!("When run without flags, the server starts in stdio MCP mode.");
                 return Ok(());
+            }
+            "--daemon" => {
+                // Daemon mode: no async runtime needed, process line-delimited JSON-RPC
+                tracing_subscriber::fmt()
+                    .with_writer(std::io::stderr)
+                    .with_target(false)
+                    .init();
+
+                let state = ash_mcp::daemon::DaemonState::new();
+                let stdin = std::io::stdin().lock();
+                let stdout = std::io::stdout().lock();
+                return ash_mcp::daemon::run_daemon_loop(&state, stdin, stdout);
             }
             _ => {}
         }

@@ -22,6 +22,12 @@ use ash_lsp_core::symbols;
 use ash_lsp_core::vfs::Vfs;
 use ash_parser::parse_surface_file;
 
+// Cross-language configuration and symbol mapping
+pub mod cross_lang;
+
+// Daemon mode with persistent state and LRU caching
+pub mod daemon;
+
 // ---------------------------------------------------------------------------
 // Shared parameter types
 // ---------------------------------------------------------------------------
@@ -93,6 +99,23 @@ impl AshMcpServer {
         Self {
             vfs: Arc::new(Vfs::new()),
             cache: Arc::new(AnalysisCache::new()),
+            config,
+            tool_router: Self::tool_router(),
+        }
+    }
+
+    /// Create a new MCP server with pre-built VFS and cache.
+    ///
+    /// Used by the daemon mode to share state across requests.
+    #[must_use]
+    pub fn with_vfs_and_cache(
+        vfs: Arc<Vfs>,
+        cache: Arc<AnalysisCache>,
+        config: LintConfig,
+    ) -> Self {
+        Self {
+            vfs,
+            cache,
             config,
             tool_router: Self::tool_router(),
         }
@@ -203,6 +226,114 @@ impl AshMcpServer {
         };
 
         Self::json_success(summary, serde_json::Value::Array(entries))
+    }
+
+    /// Get hover/type information at a position, enriched with Rust context when available.
+    ///
+    /// This tool extends the basic `ash_hover` by attempting to find the corresponding
+    /// Rust implementation for the Ash symbol under the cursor. If a cross-language
+    /// mapping exists, the response includes both Ash type information and Rust
+    /// symbol details.
+    #[tool(description = "Get enhanced hover with Rust context at a position in an Ash file")]
+    fn ash_hover_with_rust_context(
+        &self,
+        Parameters(params): Parameters<PositionParams>,
+    ) -> CallToolResult {
+        // 1. Get basic Ash hover info (existing functionality)
+        let entry = match self.ensure_open(&params.file) {
+            Ok(e) => e,
+            Err(e) => return Self::json_error(e),
+        };
+        let module = match Self::parse_file(&entry) {
+            Ok(m) => m,
+            Err(e) => return Self::json_error(e),
+        };
+
+        let ash_hover_result =
+            hover::hover_at(&module, &entry.content, params.line - 1, params.column - 1);
+
+        let ash_markdown = ash_hover_result.as_ref().map(|h| match &h.contents {
+            lsp_types::HoverContents::Markup(mc) => mc.value.clone(),
+            lsp_types::HoverContents::Scalar(ms) => marked_string_value(ms),
+            lsp_types::HoverContents::Array(arr) => arr
+                .iter()
+                .map(marked_string_value)
+                .collect::<Vec<_>>()
+                .join("\n\n"),
+        });
+
+        // 2. Try to find corresponding Rust symbol
+        let rust_context = Self::find_rust_context_for_hover(
+            &module,
+            &entry.content,
+            params.line - 1,
+            params.column - 1,
+        );
+
+        let summary = if ash_markdown.is_some() || rust_context.is_some() {
+            format!(
+                "Hover info at {}:{}:{}",
+                params.file, params.line, params.column
+            )
+        } else {
+            format!(
+                "No hover info at {}:{}:{}",
+                params.file, params.line, params.column
+            )
+        };
+
+        let payload = serde_json::json!({
+            "ash_hover": ash_markdown,
+            "rust_context": rust_context,
+        });
+
+        Self::json_success(summary, payload)
+    }
+
+    /// Find Rust context for a symbol at a hover position.
+    ///
+    /// Extracts the identifier at the given position and looks up its Rust
+    /// implementation via the cross-language configuration.
+    fn find_rust_context_for_hover(
+        _module: &ash_parser::surface::ModuleFile,
+        content: &str,
+        line: u32,
+        column: u32,
+    ) -> Option<serde_json::Value> {
+        // Extract the word at the cursor position
+        let lines: Vec<&str> = content.lines().collect();
+        let line_text = lines.get(line as usize)?;
+        let col = column as usize;
+
+        // Find word boundaries
+        let start = line_text[..col.min(line_text.len())]
+            .rfind(|c: char| !c.is_alphanumeric() && c != '_' && c != ':')
+            .map_or(0, |i| i + 1);
+        let end = line_text[col.min(line_text.len())..]
+            .find(|c: char| !c.is_alphanumeric() && c != '_' && c != ':')
+            .map_or(line_text.len(), |i| col + i);
+
+        let symbol = line_text[start..end].trim();
+        if symbol.is_empty() {
+            return None;
+        }
+
+        // Clean up qualified names (e.g., "Effect::Epistemic" -> "Effect")
+        let base_symbol = symbol.split("::").next()?;
+
+        // Load cross-language config and look up mapping
+        let config = Self::load_cross_lang_config();
+        let mapping = config
+            .mappings
+            .iter()
+            .find(|m| m.ash_symbol == base_symbol)?;
+
+        Some(serde_json::json!({
+            "ash_symbol": mapping.ash_symbol,
+            "rust_symbol": mapping.rust_symbol,
+            "rust_kind": mapping.rust_kind,
+            "confidence": format!("{:?}", mapping.confidence).to_lowercase(),
+        }))
     }
 
     /// Get hover/type information at a position.
@@ -503,6 +634,7 @@ impl AshMcpServer {
         let tools = [
             "ash_get_diagnostics",
             "ash_hover",
+            "ash_hover_with_rust_context",
             "ash_goto_definition",
             "ash_complete",
             "ash_document_symbols",
@@ -576,6 +708,27 @@ impl AshMcpServer {
             line,
             column,
         }))
+    }
+
+    /// Load cross-language configuration from common locations.
+    ///
+    /// Searches for `cross_lang_config.yaml` in the current directory,
+    /// `.ash/`, and `~/.ash/`.
+    #[must_use]
+    pub fn load_cross_lang_config() -> cross_lang::CrossLangConfig {
+        let config_paths = ["cross_lang_config.yaml", ".ash/cross_lang_config.yaml"];
+        for path in &config_paths {
+            if let Ok(config) = cross_lang::CrossLangConfig::from_file(std::path::Path::new(path)) {
+                return config;
+            }
+        }
+        // Return default empty config if none found
+        cross_lang::CrossLangConfig {
+            version: 1,
+            rust_crates: vec![],
+            ash_extensions: vec![".ash".to_string()],
+            mappings: vec![],
+        }
     }
 }
 

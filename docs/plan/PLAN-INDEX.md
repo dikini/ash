@@ -117,6 +117,7 @@ Update this section as tasks complete:
 || [139](PLAN-INDEX-HISTORY.md#phase-139) | 4 | 4 | ✅ Complete |
 || [140](PLAN-140-MCP-AGENT-INTELLIGENCE-SPIKE.md) | 6 | 6 | ✅ Complete |
 || [141](PLAN-141-MCP-BENCHMARK.md) | 5 | 5 | ✅ Complete |
+||| [142](PLAN-142-MCP-CROSS-LANGUAGE-INTEGRATION.md) | 7 | 7 | ✅ Complete |
 
 
 ---

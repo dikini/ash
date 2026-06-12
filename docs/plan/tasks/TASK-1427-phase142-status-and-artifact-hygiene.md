@@ -1,6 +1,6 @@
 # TASK-1427: Phase 142 Status and Artifact Hygiene
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -22,7 +22,7 @@ Reconcile the Phase 142 documentation/status corpus and remove artifact hygiene 
 ### Functional Requirements
 
 1. Update `docs/plan/PLAN-142-MCP-CROSS-LANGUAGE-INTEGRATION.md` so its header and task rows reflect the post-review state honestly: completed substrate pieces, reopened/remediated items owned by Phase 143.
-2. Update `docs/plan/tasks/TASK-1420` through `TASK-1426` statuses/checklists so they do not still say `📋 Planned` when PLAN-INDEX says complete.
+2. Update `docs/plan/tasks/TASK-1420` through `TASK-1426` statuses/checklists so they no longer carry stale planned-status markers when PLAN-INDEX says complete.
 3. Remove the accidental tracked `crates/ash-mcp-bench benches/main.rs` artifact if it is confirmed unused.
 4. Prune stale `.worktrees/phase-142-completion` metadata and delete stale branch metadata if safe.
 5. Keep `CHANGELOG.md` under `[Unreleased]` structurally valid with one `Added` and one `Changed` subsection.
@@ -46,7 +46,7 @@ No proptest requirement; this is a docs/artifact hygiene task.
 - `docs/plan/tasks/TASK-1425-verification-gates.md`
 - `docs/plan/tasks/TASK-1426-phase-evaluation.md`
 
-Write a script/assertion that fails if any Phase 142 owned task file still contains `**Status:** 📋 Planned` or if PLAN-142 still says `Planning (Not Started)`.
+Write a script/assertion that fails if any Phase 142 owned task file still contains stale planned-status markers or if PLAN-142 still says not started.
 
 ### Step 2: Reconcile docs (Green)
 
@@ -75,17 +75,29 @@ strictness: clean
 commands:
   - git status --short
   - git worktree list
-  - python3 -c 'from pathlib import Path; files=[Path("docs/plan/PLAN-142-MCP-CROSS-LANGUAGE-INTEGRATION.md")]+list(Path("docs/plan/tasks").glob("TASK-142*.md")); bad=[str(p) for p in files if "📋 Planned" in p.read_text() or "Planning (Not Started)" in p.read_text()]; assert not bad, bad'
+  - python3 scripts/validate_phase143_status.py
   - git diff --check
   - cargo fmt --check
 checklist:
-  - [ ] Phase 142 plan header no longer says not started
-  - [ ] Phase 142 task files are status-consistent
-  - [ ] Stale worktree metadata is pruned or explicitly recorded if still present
-  - [ ] Accidental tracked path with a space is removed or justified
-  - [ ] CHANGELOG.md updated if docs/artifacts changed
+  - [x] Phase 142 plan header no longer says not started
+  - [x] Phase 142 task files are status-consistent
+  - [x] Stale worktree metadata is pruned or explicitly recorded if still present
+  - [x] Accidental tracked path with a space is removed or justified
+  - [x] CHANGELOG.md updated if docs/artifacts changed
 ```
 
 ## Dependencies for Next Task
 
 This task unblocks TASK-1428 by making the remediation packet honest before implementation starts.
+
+
+## Phase 143 Remediation Evidence
+
+Phase 143 re-reviewed and remediated Phase 142 evidence gaps. See `docs/plan/PLAN-143-MCP-CROSS-LANGUAGE-COMPLETION-REMEDIATION.md` and `docs/notes/PHASE-143-MCP-CROSS-LANGUAGE-EVALUATION.md`.
+
+
+## Implementation Evidence
+
+- Removed accidental tracked path with a space (`crates/ash-mcp-bench benches/main.rs`).
+- Reconciled Phase 142/143 plan and task statuses.
+- Pruned stale worktree metadata before creating the Phase 143 worktree.

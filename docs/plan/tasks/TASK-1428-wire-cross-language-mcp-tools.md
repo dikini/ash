@@ -1,6 +1,6 @@
 # TASK-1428: Wire Cross-Language MCP Tools
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -73,12 +73,23 @@ commands:
   - cargo clippy -p ash-mcp --all-targets -- -D warnings
   - cargo fmt --check
 checklist:
-  - [ ] Both cross-language tools are compiled and registered
-  - [ ] Health output lists both tools
-  - [ ] Tests fail if tools are removed from registry
-  - [ ] No unreferenced implementation file remains for claimed tool surface
+  - [x] Both cross-language tools are compiled and registered
+  - [x] Health output lists both tools
+  - [x] Tests fail if tools are removed from registry
+  - [x] No unreferenced implementation file remains for claimed tool surface
 ```
 
 ## Dependencies for Next Task
 
 This task unblocks TASK-1430 positive tool fixtures and TASK-1431 corpus evaluation.
+
+
+## Phase 143 Remediation Evidence
+
+Phase 143 re-reviewed and remediated Phase 142 evidence gaps. See `docs/plan/PLAN-143-MCP-CROSS-LANGUAGE-COMPLETION-REMEDIATION.md` and `docs/notes/PHASE-143-MCP-CROSS-LANGUAGE-EVALUATION.md`.
+
+
+## Implementation Evidence
+
+- Registered `ash_find_rust_implementation` and `ash_find_ash_usage` in the active `#[tool_router]` implementation.
+- Added health/tool-list coverage and positive wrapper tests.

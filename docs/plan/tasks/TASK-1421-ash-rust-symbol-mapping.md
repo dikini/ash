@@ -1,8 +1,8 @@
 # TASK-1421: Ash → Rust Symbol Mapping Tools
 
-**Estimate:** 6 hours  
-**Status:** 📋 Planned  
-**Phase:** 142  
+**Estimate:** 6 hours
+**Status:** ✅ Complete
+**Phase:** 142
 
 ## Description
 
@@ -10,11 +10,11 @@ Implement the `ash_find_rust_implementation` MCP tool that allows users to find 
 
 ## Acceptance Criteria
 
-✅ **All tests pass** - Unit tests for symbol lookup and error handling  
-✅ **Property tests extensive** - Using proptest for various symbol patterns  
-✅ **Code review** - Self-review for performance and correctness  
-✅ **Rust tooling** - `cargo fmt`, `cargo clippy`, `cargo doc` all pass  
-✅ **Documentation** - Tool documentation with examples  
+✅ **All tests pass** - Unit tests for symbol lookup and error handling
+✅ **Property tests extensive** - Using proptest for various symbol patterns
+✅ **Code review** - Self-review for performance and correctness
+✅ **Rust tooling** - `cargo fmt`, `cargo clippy`, `cargo doc` all pass
+✅ **Documentation** - Tool documentation with examples
 
 ## Specifications
 
@@ -82,7 +82,7 @@ pub fn ash_find_rust_implementation(
     Parameters(params): Parameters<SymbolLookupParams>,
 ) -> CallToolResult {
     let result = self.find_rust_implementation(&params);
-    
+
     match result {
         Ok(Some(rust_info)) => {
             let summary = format!(
@@ -165,11 +165,11 @@ impl AshMcpServer {
     ) -> Result<Option<RustSymbolInfo>, Box<dyn std::error::Error>> {
         // Load cross-language configuration
         let config = self.load_cross_lang_config()?;
-        
+
         // Look up symbol in mappings
         if let Some(mapping) = config.mappings.iter()
             .find(|m| m.ash_symbol == params.ash_symbol) {
-            
+
             // Find the Rust file location
             if let Some(location) = self.find_rust_symbol_location(&mapping.rust_symbol)? {
                 Ok(Some(RustSymbolInfo {
@@ -204,7 +204,7 @@ impl AshMcpServer {
             Ok(None)
         }
     }
-    
+
     /// Load cross-language configuration
     fn load_cross_lang_config(&self) -> Result<CrossLangConfig, Box<dyn std::error::Error>> {
         // Try to load from common locations
@@ -213,13 +213,13 @@ impl AshMcpServer {
             ".ash/cross_lang_config.yaml",
             "~/.ash/cross_lang_config.yaml",
         ];
-        
+
         for path in config_paths {
             if let Ok(config) = CrossLangConfig::from_file(Path::new(path)) {
                 return Ok(config);
             }
         }
-        
+
         // Return default config if none found
         Ok(CrossLangConfig {
             version: 1,
@@ -228,7 +228,7 @@ impl AshMcpServer {
             mappings: vec![],
         })
     }
-    
+
     /// Find Rust symbol location in source files
     fn find_rust_symbol_location(
         &self,
@@ -240,18 +240,18 @@ impl AshMcpServer {
         // 2. Find the corresponding source file
         // 3. Use syn or similar to find the symbol location
         // 4. Return the exact line and column range
-        
+
         let symbol_parts: Vec<&str> = rust_symbol.split("::").collect();
         if symbol_parts.len() >= 3 {
             // ash_core::effect::Effect -> ash-core/src/effect.rs
             let crate_name = symbol_parts[0];
             let module_name = symbol_parts[1];
             let symbol_name = symbol_parts[2];
-            
+
             // Convert crate name to file name
             let crate_file = crate_name.replace('_', "-");
             let rust_file = format!("target/debug/deps/lib{}.rs", crate_file);
-            
+
             if Path::new(&rust_file).exists() {
                 // Placeholder - would parse the actual file
                 return Ok(Some(SymbolLocation {
@@ -263,7 +263,7 @@ impl AshMcpServer {
                 }));
             }
         }
-        
+
         Ok(None)
     }
 }
@@ -312,10 +312,10 @@ async fn test_find_effect_implementation() {
         line: 10,
         column: 1,
     };
-    
+
     let result = server.find_rust_implementation(&params).unwrap();
     assert!(result.is_some());
-    
+
     let rust_info = result.unwrap();
     assert_eq!(rust_info.rust_symbol, Some("ash_core::effect::Effect".to_string()));
     assert_eq!(rust_info.found, true);
@@ -330,7 +330,7 @@ fn test_unknown_symbol_returns_none() {
         line: 1,
         column: 1,
     };
-    
+
     let result = server.find_rust_implementation(&params).unwrap();
     assert!(result.is_none());
 }
@@ -348,7 +348,7 @@ fn test_symbol_lookup_properties(
         line,
         column,
     };
-    
+
     // Should not panic
     let _result = server.find_rust_implementation(&params);
 }
@@ -375,5 +375,9 @@ fn test_symbol_lookup_properties(
 
 ---
 
-**Task Authority**: [Phase 142](PLAN-142-MCP-CROSS-LANGUAGE-INTEGRATION.md)  
+**Task Authority**: [Phase 142](PLAN-142-MCP-CROSS-LANGUAGE-INTEGRATION.md)
 **Verification Baseline**: Will be updated with git commit when task starts
+
+## Phase 143 Remediation Evidence
+
+Phase 143 re-reviewed and remediated Phase 142 evidence gaps. See `docs/plan/PLAN-143-MCP-CROSS-LANGUAGE-COMPLETION-REMEDIATION.md` and `docs/notes/PHASE-143-MCP-CROSS-LANGUAGE-EVALUATION.md`.

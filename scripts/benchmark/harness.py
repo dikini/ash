@@ -67,6 +67,7 @@ class BenchmarkReport:
     ash_mcp_version: str = ""
     git_commit: str = ""
     results: List[TaskResult] = field(default_factory=list)
+    cross_language: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -75,6 +76,7 @@ class BenchmarkReport:
             "ash_mcp_version": self.ash_mcp_version,
             "git_commit": self.git_commit,
             "results": [asdict(r) for r in self.results],
+            "cross_language": self.cross_language,
         }
 
 
@@ -323,6 +325,147 @@ def _score_accuracy(task: Task, answer: str) -> float:
     return 0.0
 
 
+def _load_cross_language_mappings() -> List[tuple[str, str]]:
+    """Load `(ash_symbol, rust_symbol)` mappings from the committed project config."""
+    config = REPO_ROOT / ".ash" / "cross_lang_config.yaml"
+    mappings: List[tuple[str, str]] = []
+    current_ash: str | None = None
+    if not config.exists():
+        return mappings
+    for raw_line in config.read_text().splitlines():
+        line = raw_line.strip()
+        if line.startswith("ash_symbol:") or line.startswith("- ash_symbol:"):
+            current_ash = line.split(":", 1)[1].strip().strip('"')
+        elif line.startswith("rust_symbol:") and current_ash:
+            rust_symbol = line.split(":", 1)[1].strip().strip('"')
+            mappings.append((current_ash, rust_symbol))
+            current_ash = None
+    return mappings
+
+
+def _mcp_json_payload(tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
+    init_msg = (
+        '{"jsonrpc":"2.0","id":1,"method":"initialize",'
+        '"params":{"protocolVersion":"2024-11-05","capabilities":{},'
+        '"clientInfo":{"name":"phase143-benchmark","version":"1.0"}}}'
+    )
+    tool_msg = json.dumps({
+        "jsonrpc": "2.0",
+        "id": 2,
+        "method": "tools/call",
+        "params": {"name": tool_name, "arguments": arguments},
+    })
+    proc = subprocess.run(
+        [str(ASH_MCP_BINARY), "--quiet"],
+        cwd=REPO_ROOT,
+        input=init_msg + "\n" + tool_msg + "\n",
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    for line in proc.stdout.splitlines():
+        try:
+            message = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if message.get("id") != 2:
+            continue
+        content = message.get("result", {}).get("content", [])
+        for item in content:
+            if item.get("type") == "text":
+                try:
+                    return json.loads(item.get("text", "{}"))
+                except json.JSONDecodeError:
+                    continue
+    return {"error": proc.stderr or proc.stdout or "no MCP response"}
+
+
+def run_cross_language_evaluation() -> Dict[str, Any]:
+    """Evaluate configured Ash ↔ Rust mappings through the delivered MCP tools."""
+    mappings = _load_cross_language_mappings()
+    rows: List[Dict[str, Any]] = []
+    start = time.perf_counter()
+    rust_success = 0
+    ash_success = 0
+
+    for ash_symbol, rust_symbol in mappings:
+        item_start = time.perf_counter()
+        rust_payload = _mcp_json_payload(
+            "ash_find_rust_implementation",
+            {
+                "ash_symbol": ash_symbol,
+                "file": str(REPO_ROOT / "crates/ash-mcp/tests/fixtures/effect_usage.ash"),
+                "line": 1,
+                "column": 1,
+            },
+        )
+        ash_payload = _mcp_json_payload(
+            "ash_find_ash_usage",
+            {"rust_symbol": rust_symbol},
+        )
+        rust_found = bool(rust_payload.get("found"))
+        usage_count = len(ash_payload.get("usages", []))
+        ash_found = usage_count > 0
+        rust_success += int(rust_found)
+        ash_success += int(ash_found)
+        rows.append({
+            "ash_symbol": ash_symbol,
+            "rust_symbol": rust_symbol,
+            "rust_file": rust_payload.get("file"),
+            "ash_to_rust_found": rust_found,
+            "rust_to_ash_found": ash_found,
+            "ash_usage_count": usage_count,
+            "latency_ms": round((time.perf_counter() - item_start) * 1000, 3),
+            "tool_errors": [
+                payload.get("error")
+                for payload in [rust_payload, ash_payload]
+                if payload.get("error")
+            ],
+        })
+
+    negative_ash_payload = _mcp_json_payload(
+        "ash_find_rust_implementation",
+        {
+            "ash_symbol": "DefinitelyMissingPhase143Symbol",
+            "file": str(REPO_ROOT / "crates/ash-mcp/tests/fixtures/effect_usage.ash"),
+            "line": 1,
+            "column": 1,
+        },
+    )
+    negative_rust_payload = _mcp_json_payload(
+        "ash_find_ash_usage",
+        {"rust_symbol": "ash_core::effect::DefinitelyMissingPhase143Symbol"},
+    )
+    false_positives = int(bool(negative_ash_payload.get("found"))) + int(
+        bool(negative_rust_payload.get("usages"))
+    )
+    negative_probe_count = 2
+
+    latencies = [row["latency_ms"] for row in rows]
+    sorted_latencies = sorted(latencies)
+    p95_index = min(len(sorted_latencies) - 1, max(0, (len(sorted_latencies) * 95 + 99) // 100 - 1))
+    total = len(mappings)
+    return {
+        "total_mappings": total,
+        "ash_to_rust_accuracy": rust_success / total if total else 0.0,
+        "rust_to_ash_accuracy": ash_success / total if total else 0.0,
+        "false_positive_rate": false_positives / negative_probe_count,
+        "false_positive_probe_count": negative_probe_count,
+        "false_positive_count": false_positives,
+        "avg_lookup_latency_ms": round(sum(latencies) / total, 3) if total else 0.0,
+        "p95_lookup_latency_ms": sorted_latencies[p95_index] if sorted_latencies else 0.0,
+        "total_latency_ms": round((time.perf_counter() - start) * 1000, 3),
+        "memory_usage_mb": None,
+        "startup_time_ms": None,
+        "productivity_metrics": {
+            "token_reduction_percent": None,
+            "tool_call_reduction_percent": None,
+            "task_completion_improvement_percent": None,
+        },
+        "rows": rows,
+    }
+
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -348,7 +491,16 @@ def main() -> int:
         default=None,
         help="Specific task IDs to run (default: all)",
     )
+    parser.add_argument(
+        "--include-cross-language",
+        action="store_true",
+        help="Include configured Ash↔Rust cross-language mapping evaluation",
+    )
     args = parser.parse_args()
+
+    if args.include_cross_language and args.mode != "mcp":
+        print("ERROR: --include-cross-language requires --mode mcp")
+        return 1
 
     if args.mode == "mcp" and not ASH_MCP_BINARY.exists():
         print(f"ERROR: ash-mcp binary not found at {ASH_MCP_BINARY}")
@@ -382,6 +534,18 @@ def main() -> int:
         )
         if result.error:
             print(f"  ERROR: {result.error}")
+
+    if args.include_cross_language:
+        print("Running cross-language mapping evaluation...")
+        report.cross_language = run_cross_language_evaluation()
+        print(
+            "  -> ash_to_rust_accuracy="
+            f"{report.cross_language['ash_to_rust_accuracy']:.2f}, "
+            "rust_to_ash_accuracy="
+            f"{report.cross_language['rust_to_ash_accuracy']:.2f}, "
+            "avg_lookup_latency_ms="
+            f"{report.cross_language['avg_lookup_latency_ms']}"
+        )
 
     # Write report
     output_path = args.output

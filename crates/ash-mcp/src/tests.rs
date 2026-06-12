@@ -23,6 +23,14 @@ fn extract_text(result: &CallToolResult) -> String {
         .collect()
 }
 
+fn extract_json(result: &CallToolResult) -> Vec<serde_json::Value> {
+    result
+        .content
+        .iter()
+        .filter_map(|c| c.as_text().and_then(|t| serde_json::from_str(&t.text).ok()))
+        .collect()
+}
+
 fn server() -> AshMcpServer {
     AshMcpServer::new()
 }
@@ -287,11 +295,273 @@ fn test_health_tool_contains_tool_names() {
     let s = server();
     let result = s.ash_mcp_health();
     let text = extract_text(&result);
-    // Should mention at least one known tool name
-    assert!(
-        text.contains("ash_get_diagnostics") || text.contains("ash_hover"),
-        "health tool should list available tool names, got: {text}"
+    for tool in [
+        "ash_get_diagnostics",
+        "ash_hover",
+        "ash_goto_definition",
+        "ash_complete",
+        "ash_find_rust_implementation",
+        "ash_find_ash_usage",
+        "ash_mcp_health",
+    ] {
+        assert!(text.contains(tool), "health missing tool {tool}: {text}");
+    }
+}
+
+#[test]
+fn test_find_rust_implementation_effect_positive() {
+    let s = server();
+    let result = s.find_rust_implementation_tool(
+        "Effect".to_string(),
+        "std/src/types.ash".to_string(),
+        1,
+        1,
     );
+
+    assert!(result.is_error.is_none() || result.is_error == Some(false));
+    let payloads = extract_json(&result);
+    let payload = payloads.first().expect("json payload");
+    assert_eq!(payload["found"], true);
+    assert_eq!(payload["rust_symbol"], "ash_core::effect::Effect");
+    assert!(
+        payload["file"]
+            .as_str()
+            .is_some_and(|file| file.ends_with("crates/ash-core/src/effect.rs")),
+        "unexpected file payload: {payload}"
+    );
+    assert!(payload["start_line"].as_u64().unwrap_or_default() > 0);
+    assert!(payload["start_column"].as_u64().unwrap_or_default() > 0);
+}
+
+#[test]
+fn test_find_ash_usage_effect_positive() {
+    let s = server();
+    let result = s.find_ash_usage_tool("ash_core::effect::Effect".to_string());
+
+    assert!(result.is_error.is_none() || result.is_error == Some(false));
+    let payloads = extract_json(&result);
+    let payload = payloads.first().expect("json payload");
+    assert_eq!(payload["rust_symbol"], "ash_core::effect::Effect");
+    assert!(
+        payload["usages"]
+            .as_array()
+            .is_some_and(|usages| !usages.is_empty()),
+        "expected at least one Ash usage: {payload}"
+    );
+}
+
+#[test]
+fn test_find_rust_implementation_qualified_variant_normalizes_to_type() {
+    let s = server();
+    let result = s.find_rust_implementation_tool(
+        "Effect::Epistemic".to_string(),
+        "std/src/types.ash".to_string(),
+        1,
+        1,
+    );
+
+    let payloads = extract_json(&result);
+    let payload = payloads.first().expect("json payload");
+    assert_eq!(payload["found"], true, "qualified lookup failed: {payload}");
+    assert_eq!(payload["rust_symbol"], "ash_core::effect::Effect");
+}
+
+#[test]
+fn test_find_rust_implementation_namespace_qualified_symbol_uses_terminal_fallback() {
+    let s = server();
+    let result = s.find_rust_implementation_tool(
+        "std::types::Effect".to_string(),
+        "std/src/types.ash".to_string(),
+        1,
+        1,
+    );
+
+    let payloads = extract_json(&result);
+    let payload = payloads.first().expect("json payload");
+    assert_eq!(
+        payload["found"], true,
+        "namespace-qualified lookup failed: {payload}"
+    );
+    assert_eq!(payload["rust_symbol"], "ash_core::effect::Effect");
+}
+
+#[test]
+fn test_workspace_root_for_unrelated_absolute_file_does_not_fall_back_to_server_cwd() {
+    let temp = tempfile::tempdir().expect("temp dir");
+    let scratch = temp.path().join("scratch.ash");
+    std::fs::write(
+        &scratch,
+        "type Effect = String
+",
+    )
+    .expect("scratch file");
+
+    let root = AshMcpServer::workspace_root_for_file(scratch.to_str().expect("utf8 path"));
+    assert_eq!(root, temp.path());
+    assert!(
+        !root.join(".ash/cross_lang_config.yaml").exists(),
+        "scratch root should not inherit server cwd config"
+    );
+}
+
+#[test]
+fn test_find_ash_mapping_prefers_exact_and_parent_matches_before_segment_fallback() {
+    fn mapping(ash_symbol: &str, rust_symbol: &str) -> cross_lang::SymbolMapping {
+        cross_lang::SymbolMapping {
+            ash_symbol: ash_symbol.to_string(),
+            ash_kind: "type".to_string(),
+            rust_symbol: rust_symbol.to_string(),
+            rust_kind: "enum".to_string(),
+            confidence: cross_lang::ConfidenceLevel::High,
+            source: cross_lang::MappingSource::Manual,
+        }
+    }
+
+    let mappings = vec![
+        mapping("Effect", "ash_core::effect::Effect"),
+        mapping("std::types::Effect", "ash_std::types::Effect"),
+    ];
+
+    let exact =
+        AshMcpServer::find_ash_mapping(&mappings, "std::types::Effect").expect("exact mapping");
+    assert_eq!(exact.rust_symbol, "ash_std::types::Effect");
+
+    let parent = AshMcpServer::find_ash_mapping(&mappings, "std::types::Effect::Epistemic")
+        .expect("qualified parent mapping");
+    assert_eq!(parent.rust_symbol, "ash_std::types::Effect");
+
+    assert!(
+        AshMcpServer::find_ash_mapping(&mappings, "Effect::namespace::Thing").is_none(),
+        "fallback should not match arbitrary namespace/container segments"
+    );
+}
+
+#[test]
+fn test_mask_ash_non_code_regions_handles_escaped_quotes_in_strings() {
+    let mut in_block_comment = false;
+    let masked = AshMcpServer::mask_ash_non_code(
+        r#"let message = "quoted \" Effect remains a string"; type Effect = String"#,
+        &mut in_block_comment,
+    );
+
+    assert_eq!(masked.matches("Effect").count(), 1, "masked line: {masked}");
+}
+
+#[test]
+fn test_cross_lang_config_root_expands_from_crate_subdirectory() {
+    let crate_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    let root = AshMcpServer::cross_lang_config_root_for_root(crate_dir);
+    assert!(
+        root.join(".ash/cross_lang_config.yaml").exists(),
+        "expected workspace config root, got {}",
+        root.display()
+    );
+}
+
+#[test]
+fn test_associated_item_detection_distinguishes_nested_modules() {
+    let associated_parts = ["ash_core", "effect", "Effect", "join"];
+    assert!(AshMcpServer::should_search_associated_item(
+        std::path::Path::new("crates/ash-core/src/effect.rs"),
+        &associated_parts,
+    ));
+
+    let nested_parts = ["my_crate", "outer", "inner", "Widget"];
+    assert!(!AshMcpServer::should_search_associated_item(
+        std::path::Path::new("crates/my-crate/src/outer/inner.rs"),
+        &nested_parts,
+    ));
+}
+
+#[test]
+fn test_find_rust_symbol_location_resolves_associated_method_file() {
+    let workspace = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .and_then(std::path::Path::parent)
+        .expect("workspace root");
+    let location =
+        AshMcpServer::find_rust_symbol_location(workspace, "ash_core::effect::Effect::join")
+            .expect("lookup should not error")
+            .expect("join method should be found");
+
+    assert!(
+        location.file.ends_with("crates/ash-core/src/effect.rs"),
+        "unexpected file: {}",
+        location.file.display()
+    );
+}
+
+#[test]
+fn test_find_rust_implementation_namespace_qualified_variant_normalizes_to_type() {
+    let s = server();
+    let result = s.find_rust_implementation_tool(
+        "std::types::Effect::Epistemic".to_string(),
+        "std/src/types.ash".to_string(),
+        1,
+        1,
+    );
+
+    let payloads = extract_json(&result);
+    let payload = payloads.first().expect("json payload");
+    assert_eq!(
+        payload["found"], true,
+        "namespace-qualified variant lookup failed: {payload}"
+    );
+    assert_eq!(payload["rust_symbol"], "ash_core::effect::Effect");
+}
+
+#[test]
+fn test_find_ash_usage_reports_all_token_matches_without_substrings() {
+    let mut usages = Vec::new();
+    let workspace = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .and_then(std::path::Path::parent)
+        .expect("workspace root");
+    AshMcpServer::scan_ash_usages(
+        &workspace.join("crates/ash-mcp/tests/fixtures/effect_usage.ash"),
+        "Effect",
+        &mut usages,
+    );
+
+    assert!(
+        usages
+            .iter()
+            .any(|usage| usage.line == 14 && usage.column == 21),
+        "expected Effect return type usage: {usages:?}"
+    );
+    assert!(
+        usages
+            .iter()
+            .any(|usage| usage.line == 15 && usage.column == 22),
+        "expected second Effect same fixture usage: {usages:?}"
+    );
+    assert!(
+        usages.iter().all(|usage| usage.ash_symbol == "Effect"),
+        "unexpected usage symbols: {usages:?}"
+    );
+    assert!(
+        usages.iter().all(|usage| usage.line != 4
+            && usage.line != 5
+            && usage.line != 6
+            && usage.line != 9
+            && usage.line != 10),
+        "comments and strings must not be reported as usages: {usages:?}"
+    );
+}
+
+#[test]
+fn test_find_ash_usage_honors_configured_extensions() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    let source = temp.path().join("module.ashx");
+    std::fs::write(&source, "type Effect = String\n").expect("write fixture");
+
+    let usages =
+        AshMcpServer::find_ash_usages_for_symbol(temp.path(), "Effect", &[".ashx".to_string()]);
+
+    assert_eq!(usages.len(), 1, "expected .ashx usage: {usages:?}");
+    assert!(usages[0].file.ends_with("module.ashx"));
+    assert_eq!(usages[0].line, 1);
+    assert_eq!(usages[0].column, 6);
 }
 
 #[test]

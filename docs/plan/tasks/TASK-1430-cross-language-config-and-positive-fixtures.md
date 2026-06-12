@@ -1,6 +1,6 @@
 # TASK-1430: Cross-Language Config and Positive Fixtures
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -69,13 +69,19 @@ commands:
   - cargo clippy -p ash-mcp --all-targets -- -D warnings
   - cargo fmt --check
 checklist:
-  - [ ] Committed config is loaded by tests and/or server
-  - [ ] Known Ash symbol returns found Rust location
-  - [ ] Known Rust symbol returns Ash usage evidence
-  - [ ] Hover includes rust_context for mapped symbol
-  - [ ] No tests accept None for known positive mappings
+  - [x] Committed config is loaded by tests and/or server
+  - [x] Known Ash symbol returns found Rust location
+  - [x] Known Rust symbol returns Ash usage evidence
+  - [x] Hover includes rust_context for mapped symbol
+  - [x] No tests accept None for known positive mappings
 ```
 
 ## Dependencies for Next Task
 
 This task provides the positive data needed by TASK-1431 evaluation.
+
+
+## Implementation Evidence
+
+- Added `.ash/cross_lang_config.yaml` and Ash fixture coverage.
+- Added positive tests for `Effect` Ash→Rust and Rust→Ash lookup.

@@ -1,8 +1,8 @@
 # TASK-1424: Enhanced Hover with Rust Context
 
-**Estimate:** 3 hours  
-**Status:** 📋 Planned  
-**Phase:** 142  
+**Estimate:** 3 hours
+**Status:** ✅ Complete
+**Phase:** 142
 
 ## Description
 
@@ -10,11 +10,11 @@ Extend the existing `ash_hover` MCP tool to include Rust context when available.
 
 ## Acceptance Criteria
 
-✅ **All tests pass** - Hover tests with Rust context  
-✅ **Property tests extensive** - Various symbol types and locations  
-✅ **Code review** - Clean hover composition logic  
-✅ **Rust tooling** - Clean fmt, clippy, docs  
-✅ **Documentation** - Enhanced hover examples  
+✅ **All tests pass** - Hover tests with Rust context
+✅ **Property tests extensive** - Various symbol types and locations
+✅ **Code review** - Clean hover composition logic
+✅ **Rust tooling** - Clean fmt, clippy, docs
+✅ **Documentation** - Enhanced hover examples
 
 ## Specifications
 
@@ -65,17 +65,17 @@ pub async fn ash_hover_with_rust_context(
 ) -> Result<HoverInfo> {
     // 1. Get Ash hover info (existing functionality)
     let ash_info = ash_hover(&file, line, column).await?;
-    
+
     // 2. Try to find corresponding Rust symbol
     let rust_info = if let Some(ash_symbol) = ash_info.as_ref() {
         find_rust_context(&ash_symbol.name, &file).await?
     } else {
         None
     };
-    
+
     // 3. Determine relationship
     let relationship = determine_relationship(&ash_info, &rust_info);
-    
+
     Ok(HoverInfo {
         ash_info,
         rust_info,
@@ -136,11 +136,11 @@ async fn test_effect_hover_with_rust() {
         "std/src/types.ash".to_string(),
         10, 1,  // Effect definition
     ).await.unwrap();
-    
+
     assert!(hover_info.ash_info.is_some());
     assert!(hover_info.rust_info.is_some());
     assert_eq!(hover_info.relationship, SymbolRelationship::Equivalent);
-    
+
     let rust_info = hover_info.rust_info.unwrap();
     assert_eq!(rust_info.name, "ash_core::effect::Effect");
 }
@@ -152,7 +152,7 @@ async fn test_graceful_degradation() {
         "unknown.ash".to_string(),
         1, 1,
     ).await.unwrap();
-    
+
     assert!(hover_info.rust_info.is_none());
     assert_eq!(hover_info.relationship, SymbolRelationship::None);
 }
@@ -172,5 +172,9 @@ async fn test_graceful_degradation() {
 
 ---
 
-**Task Authority:** [Phase 142](PLAN-142-MCP-CROSS-LANGUAGE-INTEGRATION.md)  
+**Task Authority:** [Phase 142](PLAN-142-MCP-CROSS-LANGUAGE-INTEGRATION.md)
 **Verification Baseline**: Will be updated with git commit when task starts
+
+## Phase 143 Remediation Evidence
+
+Phase 143 re-reviewed and remediated Phase 142 evidence gaps. See `docs/plan/PLAN-143-MCP-CROSS-LANGUAGE-COMPLETION-REMEDIATION.md` and `docs/notes/PHASE-143-MCP-CROSS-LANGUAGE-EVALUATION.md`.

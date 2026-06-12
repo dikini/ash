@@ -2,7 +2,7 @@
 
 ## Phase: 142
 
-## Status: 🔄 Planning (Not Started)
+## Status: ✅ Complete (evidence gaps remediated by Phase 143)
 
 ## Goal
 
@@ -40,13 +40,13 @@ This phase follows the project's "progressive implementation" strategy, starting
 
 | Task | Description | Estimate | Status |
 |------|-------------|----------|--------|
-| [TASK-1420](tasks/TASK-1420-cross-lang-configuration.md) | Design cross-language configuration schema | 2h | 📋 Planned |
-| [TASK-1421](tasks/TASK-1421-ash-to-rust-mapping.md) | Build Ash → Rust symbol mapping tools | 6h | 📋 Planned |
-| [TASK-1422](tasks/TASK-1422-rust-to-ash-mapping.md) | Build Rust → Ash usage finder | 4h | 📋 Planned |
-| [TASK-1423](tasks/TASK-1423-latency-optimization.md) | Implement persistent daemon and caching | 4h | 📋 Planned |
-| [TASK-1424](tasks/TASK-1424-enhanced-hover.md) | Add Rust context to Ash hover | 3h | 📋 Planned |
-| [TASK-1425](tasks/TASK-1425-verification-gates.md) | Unit, integration, and performance tests | 4h | 📋 Planned |
-| [TASK-1426](tasks/TASK-1426-phase-evaluation.md) | Evaluate accuracy and latency improvements | 3h | 📋 Planned |
+| [TASK-1420](tasks/TASK-1420-cross-lang-configuration.md) | Design cross-language configuration schema | 2h | ✅ Complete |
+| [TASK-1421](tasks/TASK-1421-ash-to-rust-mapping.md) | Build Ash → Rust symbol mapping tools | 6h | ✅ Complete |
+| [TASK-1422](tasks/TASK-1422-rust-to-ash-mapping.md) | Build Rust → Ash usage finder | 4h | ✅ Complete |
+| [TASK-1423](tasks/TASK-1423-latency-optimization.md) | Implement persistent daemon and caching | 4h | ✅ Complete |
+| [TASK-1424](tasks/TASK-1424-enhanced-hover.md) | Add Rust context to Ash hover | 3h | ✅ Complete |
+| [TASK-1425](tasks/TASK-1425-verification-gates.md) | Unit, integration, and performance tests | 4h | ✅ Complete |
+| [TASK-1426](tasks/TASK-1426-phase-evaluation.md) | Evaluate accuracy and latency improvements | 3h | ✅ Complete |
 
 ## Deliverable
 
@@ -89,6 +89,10 @@ This phase follows the project's "progressive implementation" strategy, starting
 
 ---
 
-**Phase Authority**: [Ash Implementation Plan](PLAN-INDEX.md)  
-**Verification Baseline**: This document will be updated with git commit hash when phase starts  
+**Phase Authority**: [Ash Implementation Plan](PLAN-INDEX.md)
+**Verification Baseline**: This document will be updated with git commit hash when phase starts
 **Related Work**: [Phase 140](PLAN-140-MCP-AGENT-INTELLIGENCE-SPIKE.md), [Phase 141](PLAN-141-MCP-BENCHMARK.md)
+
+## Phase 143 Remediation Note
+
+Post-merge review found evidence and wiring gaps in the original Phase 142 closeout. Phase 143 remediated those gaps by wiring cross-language MCP tools, replacing textual Rust lookup with `syn` parsing, adding committed config/fixtures, and recording a cross-language evaluation report.

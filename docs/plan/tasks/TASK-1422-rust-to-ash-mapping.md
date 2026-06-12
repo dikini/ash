@@ -1,8 +1,8 @@
 # TASK-1422: Rust → Ash Usage Finder
 
-**Estimate:** 4 hours  
-**Status:** 📋 Planned  
-**Phase:** 142  
+**Estimate:** 4 hours
+**Status:** ✅ Complete
+**Phase:** 142
 
 ## Description
 
@@ -10,11 +10,11 @@ Implement the `ash_find_ash_usage` MCP tool that finds all Ash code that uses a 
 
 ## Acceptance Criteria
 
-✅ **All tests pass** - Unit tests, integration tests  
-✅ **Property tests extensive** - Test with various Rust symbol patterns  
-✅ **Code review** - Check for performance and clarity  
-✅ **Rust tooling** - Clean fmt, clippy, docs  
-✅ **Documentation** - Tool documentation with examples  
+✅ **All tests pass** - Unit tests, integration tests
+✅ **Property tests extensive** - Test with various Rust symbol patterns
+✅ **Code review** - Check for performance and clarity
+✅ **Rust tooling** - Clean fmt, clippy, docs
+✅ **Documentation** - Tool documentation with examples
 
 ## Specifications
 
@@ -62,10 +62,10 @@ pub enum UsageKind {
 impl CrossLanguageMapper {
     pub async fn find_ash_usage(&self, rust_symbol: String) -> Result<Vec<AshLocation>> {
         let mut usages = Vec::new();
-        
+
         // 1. Find all Ash files that import this Rust symbol
         let ash_files = self.find_ash_files_with_import(&rust_symbol).await?;
-        
+
         // 2. Scan each file for actual usages
         for file in ash_files {
             if let Ok(content) = fs::read_to_string(&file) {
@@ -73,7 +73,7 @@ impl CrossLanguageMapper {
                 usages.extend(file_usages);
             }
         }
-        
+
         Ok(usages)
     }
 }
@@ -123,5 +123,9 @@ impl CrossLanguageMapper {
 
 ---
 
-**Task Authority**: [Phase 142](PLAN-142-MCP-CROSS-LANGUAGE-INTEGRATION.md)  
+**Task Authority**: [Phase 142](PLAN-142-MCP-CROSS-LANGUAGE-INTEGRATION.md)
 **Verification Baseline**: Will be updated with git commit when task starts
+
+## Phase 143 Remediation Evidence
+
+Phase 143 re-reviewed and remediated Phase 142 evidence gaps. See `docs/plan/PLAN-143-MCP-CROSS-LANGUAGE-COMPLETION-REMEDIATION.md` and `docs/notes/PHASE-143-MCP-CROSS-LANGUAGE-EVALUATION.md`.

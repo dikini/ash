@@ -1,6 +1,6 @@
 # TASK-1429: Real syn Rust Symbol Parser
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -73,13 +73,24 @@ commands:
   - cargo clippy -p ash-mcp --all-targets -- -D warnings
   - cargo fmt --check
 checklist:
-  - [ ] Parser uses syn rather than line-pattern matching
-  - [ ] Comments/string literals do not create false positives
-  - [ ] Supported item kinds have tests
-  - [ ] Unknown symbols return Ok(None)
-  - [ ] CHANGELOG and task docs do not overclaim unsupported syntax
+  - [x] Parser uses syn rather than line-pattern matching
+  - [x] Comments/string literals do not create false positives
+  - [x] Supported item kinds have tests
+  - [x] Unknown symbols return Ok(None)
+  - [x] CHANGELOG and task docs do not overclaim unsupported syntax
 ```
 
 ## Dependencies for Next Task
 
 This task provides the parser reality needed by TASK-1430 and TASK-1431.
+
+
+## Phase 143 Remediation Evidence
+
+Phase 143 re-reviewed and remediated Phase 142 evidence gaps. See `docs/plan/PLAN-143-MCP-CROSS-LANGUAGE-COMPLETION-REMEDIATION.md` and `docs/notes/PHASE-143-MCP-CROSS-LANGUAGE-EVALUATION.md`.
+
+
+## Implementation Evidence
+
+- Replaced textual line matching with `syn::parse_file` traversal and `proc_macro2` span location extraction.
+- Added tests proving comments/strings do not create false positives and supported item kinds resolve.

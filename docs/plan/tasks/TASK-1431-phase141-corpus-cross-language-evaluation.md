@@ -1,6 +1,6 @@
 # TASK-1431: Phase 141 Corpus Cross-Language Evaluation
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -71,13 +71,19 @@ commands:
   - cargo clippy -p ash-mcp-bench --all-targets -- -D warnings
   - cargo fmt --check
 checklist:
-  - [ ] Phase 141 baseline comparison is recorded
-  - [ ] Cross-language accuracy is measured, not inferred
-  - [ ] Latency report includes average and p95 or explains why not
-  - [ ] Memory/startup metrics are measured or explicitly deferred with follow-up ownership
-  - [ ] Report command lines are reproducible
+  - [x] Phase 141 baseline comparison is recorded
+  - [x] Cross-language accuracy is measured, not inferred
+  - [x] Latency report includes average and p95 or explains why not
+  - [x] Memory/startup metrics are measured or explicitly deferred with follow-up ownership
+  - [x] Report command lines are reproducible
 ```
 
 ## Dependencies for Next Task
 
 This task provides closeout evidence for TASK-1432.
+
+
+## Implementation Evidence
+
+- Extended `scripts/benchmark/harness.py` with `--include-cross-language`.
+- Wrote `docs/notes/PHASE-143-MCP-CROSS-LANGUAGE-EVALUATION.md` with Phase 141 subset and cross-language metrics.

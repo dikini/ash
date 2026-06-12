@@ -1,8 +1,8 @@
 # TASK-1421: Ash → Rust Symbol Mapping Tools
 
-**Estimate:** 6 hours  
-**Status:** 📋 Planned  
-**Phase:** 142  
+**Estimate:** 6 hours
+**Status:** ✅ Complete
+**Phase:** 142
 
 ## Description
 
@@ -10,11 +10,11 @@ Implement the `ash_find_rust_implementation` MCP tool that maps Ash symbols to t
 
 ## Acceptance Criteria
 
-✅ **All tests pass** - Unit tests, integration tests, property tests  
-✅ **Property tests extensive** - Proptest for symbol resolution edge cases  
-✅ **Code review** - Simplify logic, check for performance issues  
-✅ **Rust tooling** - `cargo fmt`, `cargo clippy`, `cargo doc` clean  
-✅ **Documentation** - Tool documentation with examples  
+✅ **All tests pass** - Unit tests, integration tests, property tests
+✅ **Property tests extensive** - Proptest for symbol resolution edge cases
+✅ **Code review** - Simplify logic, check for performance issues
+✅ **Rust tooling** - `cargo fmt`, `cargo clippy`, `cargo doc` clean
+✅ **Documentation** - Tool documentation with examples
 
 ## Specifications
 
@@ -22,12 +22,12 @@ Implement the `ash_find_rust_implementation` MCP tool that maps Ash symbols to t
 
 ```rust
 /// Find the Rust implementation corresponding to an Ash symbol
-/// 
+///
 /// Input: Ash symbol with file location
 /// Output: Rust symbol location or error
-/// 
+///
 /// Example:
-///   ash_symbol = "Effect::Epistemic" 
+///   ash_symbol = "Effect::Epistemic"
 ///   → returns Rust location in "crates/ash-core/src/effect.rs:10:9"
 pub async fn ash_find_rust_implementation(
     ash_symbol: String,
@@ -76,11 +76,11 @@ impl CrossLanguageMapper {
     ) -> Result<Option<RustLocation>> {
         // 1. Resolve Ash symbol from file location
         let ash_symbol = self.resolve_ash_symbol(request).await?;
-            
+
         // 2. Look up in cross-language mappings
         if let Some(mapping) = self.config.mappings.iter()
             .find(|m| m.ash_symbol == ash_symbol.name) {
-            
+
             // 3. Verify Rust symbol exists and get location
             if let Some(rust_loc) = self.find_rust_symbol_location(&mapping.rust_symbol).await? {
                 return Ok(Some(RustLocation {
@@ -93,7 +93,7 @@ impl CrossLanguageMapper {
                 }));
             }
         }
-        
+
         // 4. Graceful degradation - return None if no mapping found
         Ok(None)
     }
@@ -147,10 +147,10 @@ async fn test_effect_mapping() {
         file_path: "std/src/types.ash".into(),
         position: Position { line: 10, column: 1 },
     };
-    
+
     let result = mapper.find_rust_implementation(request).await.unwrap();
     assert!(result.is_some());
-    
+
     let rust_loc = result.unwrap();
     assert_eq!(rust_loc.file, "crates/ash-core/src/effect.rs");
     assert_eq!(rust_loc.symbol, "ash_core::effect::Effect");
@@ -167,7 +167,7 @@ async fn test_graceful_degeneration(
         file_path: "nonexistent.ash".into(),
         position: Position { line: 1, column: 1 },
     };
-    
+
     let result = mapper.find_rust_implementation(request).await;
     assert!(result.is_ok()); // Should not error, just return None
 }
@@ -193,5 +193,9 @@ async fn test_graceful_degeneration(
 
 ---
 
-**Task Authority**: [Phase 142](PLAN-142-MCP-CROSS-LANGUAGE-INTEGRATION.md)  
+**Task Authority**: [Phase 142](PLAN-142-MCP-CROSS-LANGUAGE-INTEGRATION.md)
 **Verification Baseline**: Will be updated with git commit when task starts
+
+## Phase 143 Remediation Evidence
+
+Phase 143 re-reviewed and remediated Phase 142 evidence gaps. See `docs/plan/PLAN-143-MCP-CROSS-LANGUAGE-COMPLETION-REMEDIATION.md` and `docs/notes/PHASE-143-MCP-CROSS-LANGUAGE-EVALUATION.md`.

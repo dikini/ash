@@ -2,7 +2,7 @@
 
 ## Phase: 143
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Goal
 
@@ -41,12 +41,12 @@ A post-merge review of Phase 142 on `main` found that focused `ash-mcp` gates pa
 
 | Task | Description | Estimate | Status |
 |------|-------------|----------|--------|
-| [TASK-1427](tasks/TASK-1427-phase142-status-and-artifact-hygiene.md) | Reconcile Phase 142 status surfaces and artifact hygiene | 3h | 📝 Planned |
-| [TASK-1428](tasks/TASK-1428-wire-cross-language-mcp-tools.md) | Wire cross-language MCP tools into compiled ash-mcp | 5h | 📝 Planned |
-| [TASK-1429](tasks/TASK-1429-real-syn-rust-symbol-parser.md) | Implement real `syn` Rust source parsing and symbol spans | 6h | 📝 Planned |
-| [TASK-1430](tasks/TASK-1430-cross-language-config-and-positive-fixtures.md) | Add project config loading and positive fixture coverage | 4h | 📝 Planned |
-| [TASK-1431](tasks/TASK-1431-phase141-corpus-cross-language-evaluation.md) | Re-run Phase 141 corpus with cross-language tools and report metrics | 6h | 📝 Planned |
-| [TASK-1432](tasks/TASK-1432-phase143-closeout-and-rereview.md) | Close out Phase 143 with clean gates, status reconciliation, and independent review | 3h | 📝 Planned |
+| [TASK-1427](tasks/TASK-1427-phase142-status-and-artifact-hygiene.md) | Reconcile Phase 142 status surfaces and artifact hygiene | 3h | ✅ Complete |
+| [TASK-1428](tasks/TASK-1428-wire-cross-language-mcp-tools.md) | Wire cross-language MCP tools into compiled ash-mcp | 5h | ✅ Complete |
+| [TASK-1429](tasks/TASK-1429-real-syn-rust-symbol-parser.md) | Implement real `syn` Rust source parsing and symbol spans | 6h | ✅ Complete |
+| [TASK-1430](tasks/TASK-1430-cross-language-config-and-positive-fixtures.md) | Add project config loading and positive fixture coverage | 4h | ✅ Complete |
+| [TASK-1431](tasks/TASK-1431-phase141-corpus-cross-language-evaluation.md) | Re-run Phase 141 corpus with cross-language tools and report metrics | 6h | ✅ Complete |
+| [TASK-1432](tasks/TASK-1432-phase143-closeout-and-rereview.md) | Close out Phase 143 with clean gates, status reconciliation, and independent review | 3h | ✅ Complete |
 
 ## Deliverables
 
@@ -98,6 +98,14 @@ If broad gates reveal unrelated pre-existing failures, classify them using the p
 
 ---
 
-**Phase Authority**: [Ash Implementation Plan](PLAN-INDEX.md)  
-**Review Source**: Post-merge Phase 142 review on `main`  
+**Phase Authority**: [Ash Implementation Plan](PLAN-INDEX.md)
+**Review Source**: Post-merge Phase 142 review on `main`
 **Related Work**: [Phase 140](PLAN-140-MCP-AGENT-INTELLIGENCE-SPIKE.md), [Phase 141](PLAN-141-MCP-BENCHMARK.md), [Phase 142](PLAN-142-MCP-CROSS-LANGUAGE-INTEGRATION.md)
+
+
+## Completion Evidence
+
+- `cargo test -p ash-mcp`: 44 lib + 3 bin + 8 integration tests passed after wiring cross-language tools.
+- `cargo clippy -p ash-mcp --all-targets -- -D warnings`: passed.
+- `python3 scripts/benchmark/harness.py --mode mcp --tasks T1 T7 T9 --include-cross-language`: cross-language Ash→Rust accuracy 100%, Rust→Ash accuracy 100%.
+- `docs/notes/PHASE-143-MCP-CROSS-LANGUAGE-EVALUATION.md`: records benchmark/evaluation results.

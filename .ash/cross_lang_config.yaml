@@ -1,0 +1,28 @@
+version: 1
+rust_crates:
+  - name: "ash-core"
+    modules:
+      - "effect"
+      - "capability"
+    exclude: []
+ash_extensions:
+  - ".ash"
+mappings:
+  - ash_symbol: "Effect"
+    ash_kind: "type"
+    rust_symbol: "ash_core::effect::Effect"
+    rust_kind: "enum"
+    confidence: "high"
+    source: "manual"
+  - ash_symbol: "CapabilityProvider"
+    ash_kind: "trait"
+    rust_symbol: "ash_core::capability::CapabilityProvider"
+    rust_kind: "trait"
+    confidence: "high"
+    source: "manual"
+  - ash_symbol: "CapabilityError"
+    ash_kind: "type"
+    rust_symbol: "ash_core::capability::CapabilityError"
+    rust_kind: "enum"
+    confidence: "high"
+    source: "manual"

@@ -6,10 +6,11 @@ audience: [human, agent]
 authority: canonical-adjacent
 status: current
 stability: alpha
+slice: reference-slice-3
 owner: stdlib
 last_verified: 2026-06-11
 verified_against:
-  git_commit: 61efd59f
+  git_commit: c1f53d76
   release_tag: null
   ash_version: unreleased-alpha
   specs:

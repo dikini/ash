@@ -49,13 +49,13 @@ Create the derivative agent card `reference/agents/cards/stdlib-algebra.md` foll
 
 ## Completion Checklist
 
-- [ ] `reference/agents/cards/stdlib-algebra.md` created with SPEC-071 frontmatter
-- [ ] `canonical_page` links to `ref.stdlib.algebra`
-- [ ] `canonical_page_path` resolves to `../../stdlib/algebra.md`
-- [ ] Retrieval tags included
-- [ ] Stale-claim warnings included
-- [ ] Edit preflight steps included
-- [ ] `python3 tools/reference/check_frontmatter.py --root .` passes for the new card
-- [ ] All markdown links resolve
-- [ ] `reference/agents/common-confusions.md` or `reference/INDEX.md` links updated if needed
-- [ ] CHANGELOG.md updated
+- [x] `reference/agents/cards/stdlib-algebra.md` created with SPEC-071 frontmatter
+- [x] `canonical_page` links to `ref.stdlib.algebra`
+- [x] `canonical_page_path` resolves to `../../stdlib/algebra.md`
+- [x] Retrieval tags included
+- [x] Stale-claim warnings included
+- [x] Edit preflight steps included
+- [x] `python3 tools/reference/check_frontmatter.py --root .` passes for the new card
+- [x] All markdown links resolve
+- [x] `reference/agents/common-confusions.md` or `reference/INDEX.md` links updated if needed
+- [x] CHANGELOG.md updated

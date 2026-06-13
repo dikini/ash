@@ -902,6 +902,7 @@ pub fn synthesize_from_snapshot_with_limits(
         results.extend(cases.iter().map(execute_synthesized_case));
     }
 
+    results.extend(algebra_law_profile_results(path, snapshot, seed, max_cases));
     results.extend(smallworld_results(path, snapshot, seed, max_worlds));
     results.extend(law_smallworld_results(path, snapshot, seed, max_worlds));
 
@@ -943,7 +944,7 @@ mod property;
 use property::generated_property_results;
 
 mod law;
-use law::law_smallworld_results;
+use law::{algebra_law_profile_results, law_smallworld_results};
 
 mod smallworld;
 use smallworld::smallworld_results;

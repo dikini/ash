@@ -119,6 +119,7 @@ Update this section as tasks complete:
 | [141](PLAN-141-MCP-BENCHMARK.md) | 5 | 5 | ✅ Complete |
 | [142](PLAN-142-MCP-CROSS-LANGUAGE-INTEGRATION.md) | 7 | 7 | ✅ Complete; evidence gaps remediated by Phase 143 |
 | [143](PLAN-143-MCP-CROSS-LANGUAGE-COMPLETION-REMEDIATION.md) | 6 | 6 | ✅ Complete |
+| [144](PLAN-144-REFERENCE-SLICE-3-LAW-TEST-STALENESS.md) | 6 | 6 | ✅ Complete |
 
 
 ---

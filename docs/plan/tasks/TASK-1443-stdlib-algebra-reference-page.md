@@ -48,13 +48,13 @@ Create and validate the `reference/stdlib/algebra.md` reference page documenting
 
 ## Completion Checklist
 
-- [ ] `reference/stdlib/algebra.md` created with SPEC-071 frontmatter
-- [ ] All algebra interfaces documented (Semigroup, Monoid, Functor, Applicative, Monad, Comonad, Kleisli)
-- [ ] All instances documented (Option, Result, List, String)
-- [ ] Law declarations documented
-- [ ] Proof declarations documented
-- [ ] `reference/INDEX.md` links to `stdlib/algebra.md`
-- [ ] `reference/stdlib/README.md` links to `algebra.md`
-- [ ] `python3 tools/reference/check_frontmatter.py --root .` passes for the new page
-- [ ] All markdown links resolve
-- [ ] CHANGELOG.md updated
+- [x] `reference/stdlib/algebra.md` created with SPEC-071 frontmatter
+- [x] All algebra interfaces documented (Semigroup, Monoid, Functor, Applicative, Monad, Comonad, Kleisli)
+- [x] All instances documented (Option, Result, List, String)
+- [x] Law declarations documented
+- [x] Proof declarations documented
+- [x] `reference/INDEX.md` links to `stdlib/algebra.md`
+- [x] `reference/stdlib/README.md` links to `algebra.md`
+- [x] `python3 tools/reference/check_frontmatter.py --root .` passes for the new page
+- [x] All markdown links resolve
+- [x] CHANGELOG.md updated

@@ -10,9 +10,9 @@
 
 use serde_json::{Value, json};
 
-use crate::test_runner::synthesized::RunnerLawMetadata;
 #[cfg(test)]
 use crate::test_runner::synthesized::LawScope;
+use crate::test_runner::synthesized::RunnerLawMetadata;
 use crate::test_runner::types::{Outcome, TestKind, TestResult, TestSource};
 
 /// Algebra interface kinds supported for generated law tests.
@@ -330,16 +330,16 @@ pub fn generate_law_test_result(
         return result;
     }
 
-    // Generate property test cases (simplified: just report success for now).
-    // Full implementation would generate all combinations and check the law.
+    // This metadata helper is not the executor. The synthesized runner turns
+    // profiles into pass/fail property rows after evaluating generated cases.
     let mut result = TestResult::new(&case_id, path.to_path_buf())
-        .with_outcome(Outcome::Pass)
+        .with_outcome(Outcome::Skip)
         .with_source(TestSource::Law)
         .with_kind(TestKind::Property)
         .with_seed(seed);
 
     result.message = Some(format!(
-        "{} law '{}' for {} carrier: {} test values generated (full property check deferred to TASK-1441)",
+        "deferred: {} law '{}' for {} carrier generated {} representative values; runner execution requires checked law metadata",
         interface_name(&profile.interface),
         profile.law_name,
         carrier_name(&profile.carrier),
@@ -349,6 +349,7 @@ pub fn generate_law_test_result(
         "synthesized".to_string(),
         "law".to_string(),
         "algebra".to_string(),
+        "deferred".to_string(),
     ];
     result
 }
@@ -577,8 +578,14 @@ mod tests {
             delegated_test: None,
         };
         let result = generate_law_test_result(&profile, &law, std::path::Path::new("test.ash"), 42);
-        assert_eq!(result.outcome, Outcome::Pass);
-        assert!(result.message.as_ref().unwrap().contains("String"));
+        assert_eq!(result.outcome, Outcome::Skip);
+        assert!(
+            result
+                .message
+                .as_ref()
+                .unwrap()
+                .contains("runner execution")
+        );
     }
 
     #[test]

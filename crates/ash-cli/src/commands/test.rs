@@ -82,6 +82,10 @@ pub struct TestArgs {
     #[arg(long, value_name = "SOURCES")]
     pub only_synthesized: Option<SynthesizedSourceList>,
 
+    /// Include generated algebra law tests (alias for --include-synthesized laws)
+    #[arg(long)]
+    pub include_law_tests: bool,
+
     /// Skip all law-derived synthesized tests
     #[arg(long)]
     pub skip_law_tests: bool,
@@ -126,13 +130,22 @@ pub fn test(args: &TestArgs) -> CliResult<()> {
             contracts: include.contracts,
             policies: include.policies,
             obligations: include.obligations,
-            laws: include.laws,
+            laws: include.laws || args.include_law_tests,
+        }
+    } else if args.include_law_tests {
+        SynthesizedSources {
+            contracts: false,
+            policies: false,
+            obligations: false,
+            laws: true,
         }
     } else {
         SynthesizedSources::default()
     };
 
-    let include_synthesized = args.include_synthesized.is_some() || args.only_synthesized.is_some();
+    let include_synthesized = args.include_synthesized.is_some()
+        || args.only_synthesized.is_some()
+        || args.include_law_tests;
     let only_synthesized = args.only_synthesized.is_some();
 
     let config = SuiteConfig {

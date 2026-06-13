@@ -9,7 +9,7 @@ stability: alpha
 owner: stdlib
 last_verified: 2026-06-11
 verified_against:
-    git_commit: 61efd59f
+  git_commit: 61efd59f
   release_tag: null
   ash_version: unreleased-alpha
   specs:

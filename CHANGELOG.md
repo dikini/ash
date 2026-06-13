@@ -8,8 +8,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 - Algebra law profiles (`crates/ash-cli/src/test_runner/algebra_law_profile.rs`) for generated property tests (TASK-1440). Defines law profiles for Semigroup, Monoid, Functor, Applicative, Monad with pure carrier generators (String, List, Option, Result) and tower carrier gating (Act, Proc, Workflow).
-
-### Added
+- Staleness checker (`tools/reference/check_staleness.py`) for automated reference corpus drift detection (TASK-1442). Uses git diff against `verified_against.git_commit` to flag stale pages with `--slice` support for reference-slice-2 and reference-slice-3.
+- [TASK-1443](docs/plan/tasks/TASK-1443-stdlib-algebra-reference-page.md): Validated `reference/stdlib/algebra.md` stdlib algebra reference page with SPEC-071 frontmatter, documenting Semigroup, Monoid, Functor, Applicative, Monad, Comonad, and Kleisli interfaces, instances, law declarations, and proof declarations. Fixed frontmatter indentation on `reference/INDEX.md` and stdlib tower pages.
+- [TASK-1444](docs/plan/tasks/TASK-1444-stdlib-algebra-agent-card.md): Validated `reference/agents/cards/stdlib-algebra.md` derivative agent card with retrieval tags, stale-claim warnings, and edit preflight. Added card link to `reference/INDEX.md` agent derivatives section.
 - [Phase 143](docs/plan/PLAN-143-MCP-CROSS-LANGUAGE-COMPLETION-REMEDIATION.md): Completed MCP cross-language remediation by wiring `ash_find_rust_implementation` and `ash_find_ash_usage`, replacing textual Rust lookup with `syn` parsing, adding committed config/fixtures, removing stale artifacts, and recording cross-language evaluation evidence.
 - [Phase 143](docs/plan/PLAN-143-MCP-CROSS-LANGUAGE-COMPLETION-REMEDIATION.md): Added remediation planning packet for Phase 142 cross-language completion gaps, including TASK-1427 through TASK-1432 for status/artifact hygiene, MCP tool wiring, real `syn` Rust symbol parsing, committed config fixtures, Phase 141 corpus re-evaluation, and closeout re-review.
 - [TASK-1420](docs/plan/tasks/TASK-1420-cross-lang-configuration.md): Implemented cross-language configuration schema (`cross_lang::CrossLangConfig`) with YAML loading, validation, and serde support for mapping Ash symbols to Rust implementations.

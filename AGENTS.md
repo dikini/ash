@@ -443,6 +443,15 @@ Main Agent:
 - **Execution**: `Shell` for cargo commands, limited to 60s
 - **Sub-Agents**: `Task` for delegating work
 
+### MCP / LSP Usage Policy
+
+For Rust or Ash code work, use language-aware MCP/LSP tools before broad text search or large file reads.
+
+- **Rust code**: activate rust-analyzer for the active worktree, then prefer `workspace_symbols`, `goto_definition`, `find_references`, `hover`, and `diagnostics` before manual symbol tracing. Cargo remains the final verification authority.
+- **Ash code**: check `ash_mcp_health`, then prefer `ash_workspace_symbols`, `ash_document_symbols`, `ash_goto_definition`, `ash_find_references`, and `ash_get_diagnostics` before text-only inspection of `.ash` files.
+- **Reporting**: do not count health/list/activation calls as productive MCP usage. Report them separately from task-solving calls such as symbol search, definition/reference tracing, hover, diagnostics, or code actions.
+- **Sub-agents**: when a task is expected to be MCP-assisted, explicitly grant the relevant MCP/LSP tool access in the subagent prompt/toolset. If a subagent only has file/terminal access, classify that run as baseline-only.
+
 ### Avoid
 
 - Direct git mutations (commit, push, rebase) - ask user first

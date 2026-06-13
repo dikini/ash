@@ -23,6 +23,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Phase 142 planning artifacts committed: task files TASK-1420 through TASK-1426, benchmark reports, and Hermes MCP configuration.
 
 ### Changed
+- AGENTS.md and reusable skills now require MCP/LSP-first Rust/Ash code-intelligence workflows, distinguish setup calls from productive MCP usage, and require MCP-enabled subagent access when claiming MCP-assisted implementation/evaluation.
 - ash-mcp/Cargo.toml: added syn dependency for real Rust source parsing
 - Cargo.toml (workspace): added ash-mcp-bench to workspace members
 - crates/ash-mcp/src/lib.rs: added `pub mod rust_parser;` for cross-language parsing module

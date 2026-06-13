@@ -8,12 +8,12 @@
 //! - Tower carrier gating (Act, Proc, Workflow)
 //! - Runner integration for generating property tests from law declarations
 
-use std::collections::HashMap;
-
 use serde_json::{Value, json};
 
-use crate::test_runner::synthesized::{RunnerLawMetadata, LawScope};
-use crate::test_runner::types::{Outcome, TestResult, TestSource, TestKind};
+use crate::test_runner::synthesized::RunnerLawMetadata;
+#[cfg(test)]
+use crate::test_runner::synthesized::LawScope;
+use crate::test_runner::types::{Outcome, TestKind, TestResult, TestSource};
 
 /// Algebra interface kinds supported for generated law tests.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -50,9 +50,13 @@ impl AlgebraInterface {
             AlgebraInterface::Semigroup => &["associativity"],
             AlgebraInterface::Monoid => &["left_identity", "right_identity"],
             AlgebraInterface::Functor => &["identity", "composition"],
-            AlgebraInterface::Applicative => &["identity", "homomorphism", "interchange", "composition"],
+            AlgebraInterface::Applicative => {
+                &["identity", "homomorphism", "interchange", "composition"]
+            }
             AlgebraInterface::Monad => &["left_identity", "right_identity", "associativity"],
-            AlgebraInterface::Comonad => &["extend_extract", "extract_extend", "extend_associativity"],
+            AlgebraInterface::Comonad => {
+                &["extend_extract", "extract_extend", "extend_associativity"]
+            }
             AlgebraInterface::Kleisli => &["left_identity", "right_identity", "associativity"],
             AlgebraInterface::Cokleisli => &["left_identity", "right_identity", "associativity"],
         }
@@ -104,7 +108,10 @@ impl CarrierType {
 
     /// Whether this carrier is a tower carrier (requires bounded equivalence).
     pub fn is_tower(&self) -> bool {
-        matches!(self, CarrierType::Act | CarrierType::Proc | CarrierType::Workflow)
+        matches!(
+            self,
+            CarrierType::Act | CarrierType::Proc | CarrierType::Workflow
+        )
     }
 
     /// Whether this carrier is supported for generated law tests.
@@ -167,21 +174,12 @@ impl LawProfile {
 /// Uses deterministic generation (no RNG) for reproducibility.
 pub fn generate_carrier_values(carrier: &CarrierType, _seed: u64) -> Vec<Value> {
     match carrier {
-        CarrierType::String => vec![
-            json!(""),
-            json!("a"),
-            json!("ash"),
-            json!("hello world"),
-        ],
-        CarrierType::List => vec![
-            json!([]),
-            json!([1]),
-            json!([1, 2, 3]),
-        ],
+        CarrierType::String => vec![json!(""), json!("a"), json!("ash"), json!("hello world")],
+        CarrierType::List => vec![json!([]), json!([1]), json!([1, 2, 3])],
         CarrierType::Option => vec![
-            json!(null),  // None
-            json!(1),     // Some(1)
-            json!("x"),   // Some("x")
+            json!(null), // None
+            json!(1),    // Some(1)
+            json!("x"),  // Some("x")
         ],
         CarrierType::Result => vec![
             json!({"Ok": 1}),
@@ -272,7 +270,7 @@ pub fn build_all_tower_law_profiles() -> Vec<LawProfile> {
 /// For deferred profiles, emits a skip result with context.
 pub fn generate_law_test_result(
     profile: &LawProfile,
-    law: &RunnerLawMetadata,
+    _law: &RunnerLawMetadata,
     path: &std::path::Path,
     seed: u64,
 ) -> TestResult {
@@ -295,9 +293,16 @@ pub fn generate_law_test_result(
             interface_name(&profile.interface),
             profile.law_name,
             carrier_name(&profile.carrier),
-            profile.deferral_reason.as_deref().unwrap_or("unknown reason")
+            profile
+                .deferral_reason
+                .as_deref()
+                .unwrap_or("unknown reason")
         ));
-        result.tags = vec!["synthesized".to_string(), "law".to_string(), "deferred".to_string()];
+        result.tags = vec![
+            "synthesized".to_string(),
+            "law".to_string(),
+            "deferred".to_string(),
+        ];
         return result;
     }
 
@@ -317,7 +322,11 @@ pub fn generate_law_test_result(
             profile.law_name,
             carrier_name(&profile.carrier),
         ));
-        result.tags = vec!["synthesized".to_string(), "law".to_string(), "deferred".to_string()];
+        result.tags = vec![
+            "synthesized".to_string(),
+            "law".to_string(),
+            "deferred".to_string(),
+        ];
         return result;
     }
 
@@ -336,7 +345,11 @@ pub fn generate_law_test_result(
         carrier_name(&profile.carrier),
         values.len()
     ));
-    result.tags = vec!["synthesized".to_string(), "law".to_string(), "algebra".to_string()];
+    result.tags = vec![
+        "synthesized".to_string(),
+        "law".to_string(),
+        "algebra".to_string(),
+    ];
     result
 }
 
@@ -376,21 +389,13 @@ fn law_proposition_template(interface: &AlgebraInterface, law_name: &str) -> Str
         (AlgebraInterface::Semigroup, "associativity") => {
             "(a <> b) <> c == a <> (b <> c)".to_string()
         }
-        (AlgebraInterface::Monoid, "left_identity") => {
-            "empty <> a == a".to_string()
-        }
-        (AlgebraInterface::Monoid, "right_identity") => {
-            "a <> empty == a".to_string()
-        }
-        (AlgebraInterface::Functor, "identity") => {
-            "fmap id a == a".to_string()
-        }
+        (AlgebraInterface::Monoid, "left_identity") => "empty <> a == a".to_string(),
+        (AlgebraInterface::Monoid, "right_identity") => "a <> empty == a".to_string(),
+        (AlgebraInterface::Functor, "identity") => "fmap id a == a".to_string(),
         (AlgebraInterface::Functor, "composition") => {
             "fmap (f . g) a == (fmap f . fmap g) a".to_string()
         }
-        (AlgebraInterface::Applicative, "identity") => {
-            "pure id <*> a == a".to_string()
-        }
+        (AlgebraInterface::Applicative, "identity") => "pure id <*> a == a".to_string(),
         (AlgebraInterface::Applicative, "homomorphism") => {
             "pure f <*> pure x == pure (f x)".to_string()
         }
@@ -400,12 +405,8 @@ fn law_proposition_template(interface: &AlgebraInterface, law_name: &str) -> Str
         (AlgebraInterface::Applicative, "composition") => {
             "pure (.) <*> u <*> v <*> w == u <*> (v <*> w)".to_string()
         }
-        (AlgebraInterface::Monad, "left_identity") => {
-            "return a >>= f == f a".to_string()
-        }
-        (AlgebraInterface::Monad, "right_identity") => {
-            "m >>= return == m".to_string()
-        }
+        (AlgebraInterface::Monad, "left_identity") => "return a >>= f == f a".to_string(),
+        (AlgebraInterface::Monad, "right_identity") => "m >>= return == m".to_string(),
         (AlgebraInterface::Monad, "associativity") => {
             "(m >>= f) >>= g == m >>= (|x| f x >>= g)".to_string()
         }
@@ -448,8 +449,14 @@ mod tests {
 
     #[test]
     fn test_algebra_interface_from_name() {
-        assert_eq!(AlgebraInterface::from_name("Semigroup"), Some(AlgebraInterface::Semigroup));
-        assert_eq!(AlgebraInterface::from_name("Monad"), Some(AlgebraInterface::Monad));
+        assert_eq!(
+            AlgebraInterface::from_name("Semigroup"),
+            Some(AlgebraInterface::Semigroup)
+        );
+        assert_eq!(
+            AlgebraInterface::from_name("Monad"),
+            Some(AlgebraInterface::Monad)
+        );
         assert_eq!(AlgebraInterface::from_name("Unknown"), None);
     }
 
@@ -512,7 +519,11 @@ mod tests {
 
     #[test]
     fn test_law_profile_creation() {
-        let profile = LawProfile::new(AlgebraInterface::Semigroup, "associativity", CarrierType::String);
+        let profile = LawProfile::new(
+            AlgebraInterface::Semigroup,
+            "associativity",
+            CarrierType::String,
+        );
         assert!(profile.is_executable);
         assert_eq!(profile.arity, 3);
         assert!(profile.deferral_reason.is_none());
@@ -551,7 +562,11 @@ mod tests {
 
     #[test]
     fn test_generate_law_test_result_pure() {
-        let profile = LawProfile::new(AlgebraInterface::Monoid, "left_identity", CarrierType::String);
+        let profile = LawProfile::new(
+            AlgebraInterface::Monoid,
+            "left_identity",
+            CarrierType::String,
+        );
         let law = RunnerLawMetadata {
             id: "law:module:test".to_string(),
             name: "test".to_string(),

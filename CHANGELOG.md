@@ -7,6 +7,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Added
+- Algebra law profiles (`crates/ash-cli/src/test_runner/algebra_law_profile.rs`) for generated property tests (TASK-1440). Defines law profiles for Semigroup, Monoid, Functor, Applicative, Monad with pure carrier generators (String, List, Option, Result) and tower carrier gating (Act, Proc, Workflow).
+
+### Added
 - [Phase 143](docs/plan/PLAN-143-MCP-CROSS-LANGUAGE-COMPLETION-REMEDIATION.md): Completed MCP cross-language remediation by wiring `ash_find_rust_implementation` and `ash_find_ash_usage`, replacing textual Rust lookup with `syn` parsing, adding committed config/fixtures, removing stale artifacts, and recording cross-language evaluation evidence.
 - [Phase 143](docs/plan/PLAN-143-MCP-CROSS-LANGUAGE-COMPLETION-REMEDIATION.md): Added remediation planning packet for Phase 142 cross-language completion gaps, including TASK-1427 through TASK-1432 for status/artifact hygiene, MCP tool wiring, real `syn` Rust symbol parsing, committed config fixtures, Phase 141 corpus re-evaluation, and closeout re-review.
 - [TASK-1420](docs/plan/tasks/TASK-1420-cross-lang-configuration.md): Implemented cross-language configuration schema (`cross_lang::CrossLangConfig`) with YAML loading, validation, and serde support for mapping Ash symbols to Rust implementations.

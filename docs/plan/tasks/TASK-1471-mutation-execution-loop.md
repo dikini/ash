@@ -1,10 +1,10 @@
 # TASK-1471: Implement mutation execution loop
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
-Run bounded mutants through selected Ash tests/properties, classify killed/survived/equivalent/deferred, and enforce limits/timeouts.
+Run bounded mutants through the first law-proposition evaluator slice, classify killed/survived/deferred/errored, and enforce limits.
 
 ## Specification Reference
 

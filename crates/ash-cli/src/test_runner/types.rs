@@ -8,6 +8,8 @@ use std::fmt;
 use std::path::PathBuf;
 use std::time::Duration;
 
+use crate::test_runner::coverage_mutation::{LawCoverageReport, MutationReport};
+
 // ---------------------------------------------------------------------------
 // Outcome classification (TASK-510: sealed result classification)
 // ---------------------------------------------------------------------------
@@ -294,6 +296,12 @@ pub struct TestSuiteResult {
     /// Total suite duration.
     #[serde(with = "duration_ms")]
     pub duration: Duration,
+    /// Optional law/test coverage report.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub coverage: Option<LawCoverageReport>,
+    /// Optional bounded mutation report.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mutation: Option<MutationReport>,
 }
 
 impl TestSuiteResult {
@@ -303,6 +311,8 @@ impl TestSuiteResult {
             root,
             tests: Vec::new(),
             duration: Duration::ZERO,
+            coverage: None,
+            mutation: None,
         }
     }
 

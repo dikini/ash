@@ -38,6 +38,26 @@ pub fn format_human(suite: &TestSuiteResult) -> String {
         }
     }
 
+    if let Some(coverage) = &suite.coverage {
+        out.push_str(&format!(
+            "\n  Coverage: {} laws, {} covered, {} uncovered\n",
+            coverage.totals.laws,
+            coverage.totals.covered_laws.to_string().green(),
+            coverage.totals.uncovered_laws.to_string().yellow()
+        ));
+    }
+
+    if let Some(mutation) = &suite.mutation {
+        out.push_str(&format!(
+            "\n  Mutation: {} generated, {} killed, {} survived, {} deferred, {} errored\n",
+            mutation.totals.generated,
+            mutation.totals.killed.to_string().green(),
+            mutation.totals.survived.to_string().yellow(),
+            mutation.totals.deferred.to_string().yellow(),
+            mutation.totals.errored.to_string().red()
+        ));
+    }
+
     // Summary
     out.push_str(&format!("\n{}\n", "─".repeat(60).dimmed()));
     let passed = suite.passed();
@@ -100,6 +120,10 @@ pub fn format_json(suite: &TestSuiteResult) -> Result<String, serde_json::Error>
         skipped: usize,
         duration_ms: f64,
         tests: Vec<JsonTest>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        coverage: Option<crate::test_runner::coverage_mutation::LawCoverageReport>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        mutation: Option<crate::test_runner::coverage_mutation::MutationReport>,
     }
 
     #[derive(serde::Serialize)]
@@ -162,6 +186,8 @@ pub fn format_json(suite: &TestSuiteResult) -> Result<String, serde_json::Error>
         skipped: suite.skipped(),
         duration_ms: suite.duration.as_secs_f64() * 1000.0,
         tests,
+        coverage: suite.coverage.clone(),
+        mutation: suite.mutation.clone(),
     };
 
     serde_json::to_string_pretty(&output)

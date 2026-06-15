@@ -1,6 +1,6 @@
 # SPEC-083: Law Coverage and Mutation Testing
 
-**Status:** Planned
+**Status:** Implemented MVP
 **Date:** 2026-06-15
 **Builds on:** [SPEC-081](SPEC-081-LAW-TEST-EVIDENCE-SUBSTRATE.md)
 **Plan:** [PLAN-147: Law Coverage and Mutation Testing](../plan/PLAN-147-LAW-COVERAGE-AND-MUTATION-TESTING.md)
@@ -34,8 +34,8 @@ Implementation agents must distinguish three command classes:
 
 - Opt-in law/test coverage reporting.
 - Coverage JSON/human output and uncovered-law reporting.
-- Bounded pure-expression mutation operators.
-- Mutation execution/reporting with killed/survived/deferred statuses.
+- Bounded law-proposition mutation operators for runner-visible law metadata.
+- Mutation evaluation/reporting with killed/survived/deferred statuses for the first law-proposition slice.
 - No-Cargo coverage and mutation fixtures.
 
 ### Non-Goals
@@ -62,7 +62,7 @@ $ASH_UNDER_TEST test fixtures/phase147-coverage --coverage --format json
 $ASH_UNDER_TEST test fixtures/phase147-mutation --mutation --mutation-limit 20 --format json
 ```
 
-Coverage should report uncovered law/proof declarations. Mutation output should distinguish killed, survived, equivalent/deferred, and errored mutants.
+Coverage should report uncovered law/proof declarations. The implemented MVP mutation output distinguishes killed, survived, deferred, and errored mutants for bounded law-proposition mutations; unrestricted expression mutation remains deferred.
 
 ## Result and Reporting Requirements
 
@@ -78,7 +78,7 @@ Coverage should report uncovered law/proof declarations. Mutation output should 
 - [TASK-1468](../plan/tasks/TASK-1468-coverage-cli-json-output.md): Expose coverage in CLI/JSON output
 - [TASK-1469](../plan/tasks/TASK-1469-coverage-final-surface-fixtures.md): Add coverage final-surface fixtures
 - [TASK-1470](../plan/tasks/TASK-1470-mutation-operator-catalog.md): Define bounded mutation operator catalog
-- [TASK-1471](../plan/tasks/TASK-1471-mutation-execution-loop.md): Implement mutation execution loop
+- [TASK-1471](../plan/tasks/TASK-1471-mutation-execution-loop.md): Implement bounded law-proposition mutation evaluation loop
 - [TASK-1472](../plan/tasks/TASK-1472-mutation-reporting-fixtures.md): Add mutation reporting fixtures
 - [TASK-1473](../plan/tasks/TASK-1473-coverage-mutation-closeout.md): Close out coverage/mutation phase
 
@@ -86,4 +86,5 @@ Coverage should report uncovered law/proof declarations. Mutation output should 
 
 ### 2026-06-15
 
+- Implemented the MVP `ash test --coverage` and `--mutation` reporting slice with no-Cargo final-surface fixtures and bounded law-proposition mutation rows.
 - Created this planning specification and registered PLAN-147 / TASK-1466 through TASK-1473.

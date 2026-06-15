@@ -1,6 +1,6 @@
 # TASK-1473: Close out coverage/mutation phase
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -85,3 +85,12 @@ checklist:
 - Keep the task small; if implementation discovers a broader prerequisite, stop and create a prerequisite task instead of widening scope.
 - Do not use ordinary installed `ash` as the only proof while tooling is under development; record `$ASH_UNDER_TEST` provenance.
 - Rust tooling is required for implementers, but not accepted as the author/executor-facing proof path.
+
+## Completion Evidence
+
+- Implemented `ash test --coverage` / `--mutation` options, suite-level coverage/mutation reports, and `fixtures/phase147-coverage` no-Cargo final-surface fixtures.
+- Focused RED/GREEN evidence: `cargo test -p ash-cli --test phase147_coverage_mutation -- --nocapture` (2 passed).
+- Unit evidence: `cargo test -p ash-cli coverage_mutation -- --nocapture` (3 coverage/mutation unit tests passed; filtered targets reported zero selected tests outside the target filter).
+- Direct Ash-under-test evidence:
+  - `ASH_UNDER_TEST=$PWD/target/debug/ash; "$ASH_UNDER_TEST" test fixtures/phase147-coverage --coverage --format json` emitted `ash-law-coverage-v1.0` with 2 laws, 1 covered, 1 uncovered.
+  - `ASH_UNDER_TEST=$PWD/target/debug/ash; "$ASH_UNDER_TEST" test fixtures/phase147-coverage --mutation --mutation-limit 20 --format json` emitted `ash-mutation-v1.0` with 2 mutants, 1 killed, 1 survived.

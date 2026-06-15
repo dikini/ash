@@ -17,5 +17,6 @@ pub mod types;
 
 // Phase 144: Algebra law profiles for generated property tests
 pub mod algebra_law_profile;
+pub mod coverage_mutation;
 
 pub use types::{Outcome, TestKind, TestResult, TestSource, TestSuiteResult};

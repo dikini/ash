@@ -7,6 +7,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Added
+- [Phase 147](docs/plan/PLAN-147-LAW-COVERAGE-AND-MUTATION-TESTING.md): Implemented opt-in `ash test --coverage` and `--mutation` reporting with law/test coverage JSON, bounded law-proposition mutation rows, killed/survived/deferred/error mutation totals, no-Cargo final-surface fixtures, and reference docs (TASK-1466 through TASK-1473).
 - [Phase 150](docs/plan/PLAN-150-QUICKCHECK-ARBITRARY-STRATEGY.md): Implemented the QuickCheck-like `test::quickcheck` property-testing substrate with `Strategy<T>`, `Arbitrary<T>` surface laws, metadata strategy overrides, default bounded Arbitrary representatives, domain-preserving strategy shrinking, law-evidence cache schema, documentation examples, and no-Cargo fixtures (TASK-1485 through TASK-1496).
 - [Phase 150](docs/plan/PLAN-150-QUICKCHECK-ARBITRARY-STRATEGY.md): Planned QuickCheck-like `test::quickcheck` property testing with SPEC-086, `Strategy<T>`, `Arbitrary<T>`, strategy overrides, law/property enforcement boundaries, future-backend design note, and TASK-1485 through TASK-1496.
 - [Phase 146](docs/plan/PLAN-146-PROPERTY-GENERATION-AND-SHRINKING-SUBSTRATE.md): Implemented bounded property generation and shrinking for `ash test`, including primitive/container generated bindings, authored property metadata injection, generated law-property inputs, counterexample/shrink repro artifacts, and no-Cargo `$ASH_UNDER_TEST test ...` fixtures (TASK-1456 through TASK-1465).

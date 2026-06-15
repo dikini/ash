@@ -1,6 +1,6 @@
 # PLAN-147: Law Coverage and Mutation Testing
 
-**Status:** 📝 Planned
+**Status:** ✅ Complete
 **Spec:** [SPEC-083: Law Coverage and Mutation Testing](../spec/SPEC-083-LAW-COVERAGE-AND-MUTATION-TESTING.md)
 **Depends on:** [PLAN-145: Law Test Evidence Substrate](PLAN-145-LAW-TEST-EVIDENCE-SUBSTRATE.md)
 **Task range:** TASK-1466 through TASK-1473
@@ -12,9 +12,9 @@ Add `ash test` reporting for law/test coverage and bounded mutation testing so w
 
 ## Goals
 
-- [ ] Make law/test coverage visible.
-- [ ] Add bounded mutation testing for pure Ash expressions.
-- [ ] Report mutation survival honestly with no-Cargo fixtures.
+- [x] Make law/test coverage visible.
+- [x] Add bounded mutation testing for runner-visible law propositions.
+- [x] Report mutation survival honestly with no-Cargo fixtures.
 
 ## Non-Goals
 
@@ -36,14 +36,14 @@ Add `ash test` reporting for law/test coverage and bounded mutation testing so w
 
 | Task | Title | Estimate | Status |
 |---|---|---:|---|
-| [TASK-1466](tasks/TASK-1466-coverage-mutation-audit.md) | Audit coverage and mutation seams | 4h | 📝 Planned |
-| [TASK-1467](tasks/TASK-1467-law-test-coverage-schema.md) | Define law/test coverage schema | 4h | 📝 Planned |
-| [TASK-1468](tasks/TASK-1468-coverage-cli-json-output.md) | Expose coverage in CLI/JSON output | 4h | 📝 Planned |
-| [TASK-1469](tasks/TASK-1469-coverage-final-surface-fixtures.md) | Add coverage final-surface fixtures | 4h | 📝 Planned |
-| [TASK-1470](tasks/TASK-1470-mutation-operator-catalog.md) | Define bounded mutation operator catalog | 4h | 📝 Planned |
-| [TASK-1471](tasks/TASK-1471-mutation-execution-loop.md) | Implement mutation execution loop | 4h | 📝 Planned |
-| [TASK-1472](tasks/TASK-1472-mutation-reporting-fixtures.md) | Add mutation reporting fixtures | 4h | 📝 Planned |
-| [TASK-1473](tasks/TASK-1473-coverage-mutation-closeout.md) | Close out coverage/mutation phase | 4h | 📝 Planned |
+| [TASK-1466](tasks/TASK-1466-coverage-mutation-audit.md) | Audit coverage and mutation seams | 4h | ✅ Complete |
+| [TASK-1467](tasks/TASK-1467-law-test-coverage-schema.md) | Define law/test coverage schema | 4h | ✅ Complete |
+| [TASK-1468](tasks/TASK-1468-coverage-cli-json-output.md) | Expose coverage in CLI/JSON output | 4h | ✅ Complete |
+| [TASK-1469](tasks/TASK-1469-coverage-final-surface-fixtures.md) | Add coverage final-surface fixtures | 4h | ✅ Complete |
+| [TASK-1470](tasks/TASK-1470-mutation-operator-catalog.md) | Define bounded mutation operator catalog | 4h | ✅ Complete |
+| [TASK-1471](tasks/TASK-1471-mutation-execution-loop.md) | Implement mutation execution loop | 4h | ✅ Complete |
+| [TASK-1472](tasks/TASK-1472-mutation-reporting-fixtures.md) | Add mutation reporting fixtures | 4h | ✅ Complete |
+| [TASK-1473](tasks/TASK-1473-coverage-mutation-closeout.md) | Close out coverage/mutation phase | 4h | ✅ Complete |
 
 ## Decision Gates
 

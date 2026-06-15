@@ -287,6 +287,14 @@ pub struct SuiteConfig {
     pub max_cases: Option<usize>,
     /// Max worlds for small-world tests.
     pub max_worlds: Option<usize>,
+    /// Include law/test coverage report.
+    pub coverage: bool,
+    /// Include bounded mutation report.
+    pub mutation: bool,
+    /// Maximum mutants to generate.
+    pub mutation_limit: usize,
+    /// Optional exact mutant id to report/replay.
+    pub mutation_id: Option<String>,
 }
 
 impl Default for SuiteConfig {
@@ -307,6 +315,10 @@ impl Default for SuiteConfig {
             seed: None,
             max_cases: None,
             max_worlds: None,
+            coverage: false,
+            mutation: false,
+            mutation_limit: 20,
+            mutation_id: None,
         }
     }
 }
@@ -351,8 +363,75 @@ pub fn run_suite(config: &SuiteConfig) -> crate::test_runner::types::TestSuiteRe
         run_synthesized_tests(config, &engine, &mut suite, &authored_tests);
     }
 
+    if config.coverage || config.mutation {
+        if !config.root.exists() {
+            suite.add(
+                TestResult::new("coverage_root", config.root.clone())
+                    .with_outcome(Outcome::Error)
+                    .with_message(format!(
+                        "coverage/mutation root does not exist: {}",
+                        config.root.display()
+                    )),
+            );
+        }
+        let snapshots = collect_runner_snapshots(config, &engine, &mut suite);
+        let coverage =
+            crate::test_runner::coverage_mutation::coverage_report(&snapshots, &authored_tests);
+        if config.mutation {
+            suite.mutation = Some(crate::test_runner::coverage_mutation::mutation_report(
+                &config.root,
+                &coverage,
+                config.mutation_limit,
+                config.mutation_id.as_deref(),
+            ));
+        }
+        if config.coverage {
+            suite.coverage = Some(coverage);
+        }
+    }
+
     suite.duration = start.elapsed();
     suite
+}
+
+fn collect_runner_snapshots(
+    config: &SuiteConfig,
+    engine: &ash_engine::Engine,
+    suite: &mut crate::test_runner::types::TestSuiteResult,
+) -> Vec<(std::path::PathBuf, RunnerIntrospectionSnapshot)> {
+    use crate::test_runner::synthesized;
+
+    let mut snapshots = Vec::new();
+    for path in discover_coverage_sources(&config.root) {
+        match synthesized::build_runner_introspection_snapshot(&path, engine) {
+            Ok(snapshot) => snapshots.push((path, snapshot)),
+            Err(error) => suite.add(
+                TestResult::new("coverage_snapshot", path)
+                    .with_outcome(Outcome::Error)
+                    .with_message(format!("failed to collect law coverage snapshot: {error}")),
+            ),
+        }
+    }
+    snapshots
+}
+
+fn discover_coverage_sources(root: &Path) -> Vec<std::path::PathBuf> {
+    if root.is_file() && root.extension().is_some_and(|ext| ext == "ash") {
+        return vec![root.to_path_buf()];
+    }
+
+    let mut files = Vec::new();
+    if root.is_dir() {
+        for entry in walkdir::WalkDir::new(root).into_iter().flatten() {
+            let path = entry.path();
+            if path.is_file() && path.extension().is_some_and(|ext| ext == "ash") {
+                files.push(path.to_path_buf());
+            }
+        }
+    }
+    files.sort();
+    files.dedup();
+    files
 }
 
 /// Run authored tests from discovered test files.

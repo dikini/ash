@@ -107,14 +107,14 @@ fn execute_algebra_law_profile(
             algebra_repro(path, snapshot, law, profile, seed, 1, None, None),
         );
     }
-    if applicative_law_requires_runtime_function_metadata(profile) {
+    if law_requires_runtime_function_metadata(profile) {
         return deferred_result_with_kind(
             path,
             TestSource::Law,
             TestKind::Property,
             case_id,
             format!(
-                "deferred: {} law '{}' for {} carrier requires executable applicative function metadata",
+                "deferred: {} law '{}' for {} carrier requires executable function metadata",
                 algebra_interface_name(profile.interface),
                 profile.law_name,
                 carrier_name(&profile.carrier),
@@ -186,9 +186,10 @@ fn execute_algebra_law_profile(
     result
 }
 
-fn applicative_law_requires_runtime_function_metadata(profile: &LawProfile) -> bool {
-    matches!(profile.interface, AlgebraInterface::Applicative)
-        && !matches!(profile.law_name.as_str(), "identity")
+fn law_requires_runtime_function_metadata(profile: &LawProfile) -> bool {
+    matches!(profile.interface, AlgebraInterface::Monad)
+        || (matches!(profile.interface, AlgebraInterface::Applicative)
+            && !matches!(profile.law_name.as_str(), "identity"))
 }
 
 fn unknown_algebra_law_result(

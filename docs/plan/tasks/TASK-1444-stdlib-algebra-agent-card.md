@@ -1,5 +1,7 @@
 # TASK-1444: Stdlib Algebra Agent Card
 
+## Status: ✅ Complete
+
 ## Description
 
 Create the derivative agent card `reference/agents/cards/stdlib-algebra.md` following the pattern of existing agent cards (e.g., `stdlib-result.md`). This is a derivative agent card for the `std::algebra` reference page, providing AI-agent-specific context, retrieval tags, stale-claim warnings, and edit preflight guidance.

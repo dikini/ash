@@ -794,7 +794,7 @@ pub use execution::{
     SynthesizedCase, SynthesizedInputs, SynthesizedOracle, execute_synthesized_case,
 };
 
-mod eval;
+pub(crate) mod eval;
 
 mod repro;
 use repro::{
@@ -967,6 +967,8 @@ use law::{algebra_law_profile_results, law_property_results, law_smallworld_resu
 
 mod smallworld;
 use smallworld::smallworld_results;
+
+pub(crate) mod value_generation;
 
 mod contract;
 use contract::{

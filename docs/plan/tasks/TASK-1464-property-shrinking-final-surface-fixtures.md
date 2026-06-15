@@ -1,6 +1,6 @@
 # TASK-1464: Add no-Cargo property/shrinking fixtures
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 

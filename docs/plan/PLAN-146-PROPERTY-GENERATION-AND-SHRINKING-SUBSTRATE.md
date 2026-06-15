@@ -1,6 +1,6 @@
 # PLAN-146: Property Generation and Shrinking Substrate
 
-**Status:** 📝 Planned
+**Status:** ✅ Complete
 **Spec:** [SPEC-082: Property Generation and Shrinking Substrate](../spec/SPEC-082-PROPERTY-GENERATION-AND-SHRINKING-SUBSTRATE.md)
 **Depends on:** [PLAN-145: Law Test Evidence Substrate](PLAN-145-LAW-TEST-EVIDENCE-SUBSTRATE.md)
 **Task range:** TASK-1456 through TASK-1465

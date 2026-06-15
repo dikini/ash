@@ -1,6 +1,6 @@
 # TASK-1459: Implement ADT/container property generators
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 

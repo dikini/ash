@@ -1,6 +1,6 @@
 # TASK-1465: Close out property generation/shrinking phase
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 

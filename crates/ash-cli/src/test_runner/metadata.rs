@@ -23,6 +23,10 @@ pub struct TestMetadata {
     pub max_cases: Option<usize>,
     /// Max worlds for small-world tests.
     pub max_worlds: Option<usize>,
+    /// Generated property parameter declarations, e.g. `x: Int, xs: List<Int>`.
+    pub generated_params: Vec<String>,
+    /// Simple authored property oracle evaluated for each generated binding.
+    pub property: Option<String>,
     /// Whether this test is expected to fail.
     pub xfail: bool,
 }
@@ -146,11 +150,46 @@ fn parse_directive(directive: &str, meta: &mut TestMetadata) {
                 meta.max_worlds = Some(n);
             }
         }
+        "params" => {
+            if !value.is_empty() {
+                meta.generated_params = split_param_list(value);
+            }
+        }
+        "property" => {
+            if !value.is_empty() {
+                meta.property = Some(value.to_string());
+            }
+        }
         "xfail" => {
             meta.xfail = true;
         }
         _ => {} // Unknown directive, ignore
     }
+}
+
+fn split_param_list(value: &str) -> Vec<String> {
+    let mut params = Vec::new();
+    let mut depth = 0usize;
+    let mut start = 0usize;
+    for (index, ch) in value.char_indices() {
+        match ch {
+            '<' => depth += 1,
+            '>' => depth = depth.saturating_sub(1),
+            ',' if depth == 0 => {
+                let param = value[start..index].trim();
+                if !param.is_empty() {
+                    params.push(param.to_string());
+                }
+                start = index + 1;
+            }
+            _ => {}
+        }
+    }
+    let param = value[start..].trim();
+    if !param.is_empty() {
+        params.push(param.to_string());
+    }
+    params
 }
 
 #[cfg(test)]
@@ -201,6 +240,14 @@ mod tests {
         let meta = TestMetadata::parse_from_source(source);
         assert_eq!(meta.seed, Some(42));
         assert_eq!(meta.max_cases, Some(100));
+    }
+
+    #[test]
+    fn parse_generated_property_directives() {
+        let source = "// @test kind: property\n// @test params: x: Int, xs: List<Int>\n// @test property: x == x\n";
+        let meta = TestMetadata::parse_from_source(source);
+        assert_eq!(meta.generated_params, vec!["x: Int", "xs: List<Int>"]);
+        assert_eq!(meta.property.as_deref(), Some("x == x"));
     }
 
     #[test]

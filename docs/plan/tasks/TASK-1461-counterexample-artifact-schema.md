@@ -1,6 +1,6 @@
 # TASK-1461: Add counterexample artifact schema
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 

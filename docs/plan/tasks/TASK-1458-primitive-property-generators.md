@@ -1,6 +1,6 @@
 # TASK-1458: Implement primitive property generators
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 

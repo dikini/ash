@@ -220,7 +220,19 @@ proof p(x: Int) { by test property }
 proof p(x: Bool) { by test small_world }
 ```
 
-Authored evidence resolves the named Ash-authored test from the discovered test registry. Missing, duplicate, skipped, errored, or failing authored tests do not satisfy the proof; they report `invalid_evidence` or `broken` in JSON output. Property evidence treats the law proposition as the property oracle and evaluates supported primitive law parameters (`Int`, `Bool`, `String`) over bounded generated bindings. Small-world evidence evaluates the law proposition over finite primitive domains and reports `world_index`/world snapshots.
+Authored evidence resolves the named Ash-authored test from the discovered test registry. Missing, duplicate, skipped, errored, or failing authored tests do not satisfy the proof; they report `invalid_evidence` or `broken` in JSON output. Property evidence treats the law proposition as the property oracle and evaluates supported primitive and container law parameters (`Int`, `Bool`, `String`, `List<T>`, `Option<T>`, and `Result<T, E>` for supported nested `T`/`E`) over bounded generated bindings. Small-world evidence evaluates the law proposition over finite primitive domains and reports `world_index`/world snapshots.
+
+Phase 146 also supports generated bindings for Ash-authored property tests via metadata directives:
+
+```ash
+-- @test name: authored_generated_reflexive
+-- @test kind: property
+-- @test params: x: Int, xs: List<Int>, opt: Option<Int>
+-- @test property: x == x
+workflow main() -> Bool { ret true }
+```
+
+For generated property rows, JSON `repro_artifact.generated_input_snapshot` includes the original `bindings`, generator descriptors, and `shrunk_counterexample` / `shrink_trace` when a counterexample is found. Unsupported parameter domains or malformed property oracles fail closed as `error` for authored property tests, and defer rather than pass for synthesized law evidence.
 
 Law evidence rows include:
 
@@ -238,4 +250,4 @@ ${ASH_UNDER_TEST:?set Ash candidate binary} test fixtures/phase145-law-test-evid
 
 ## Non-Goals
 
-`ash test` does not currently provide coverage reporting, mutation testing, shrinking, flaky-test quarantine, distributed orchestration, proof-producing synthesis, or unrestricted automatic value/world generation from ordinary source files.
+`ash test` does not currently provide coverage reporting, mutation testing, flaky-test quarantine, distributed orchestration, proof-producing synthesis, or unrestricted automatic value/world generation from ordinary source files. Generation and shrinking are currently bounded to the Phase 146 supported primitive/container domains and simple property-oracle expressions.

@@ -1,6 +1,6 @@
 # TASK-1460: Inject generated bindings into Ash-authored property tests
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 

@@ -9,8 +9,14 @@
 use std::path::Path;
 use std::time::{Duration, Instant};
 
+use serde_json::{Value, json};
+
 use crate::test_runner::metadata::TestMetadata;
-use crate::test_runner::types::{Outcome, TestKind, TestResult, TestSource};
+use crate::test_runner::synthesized::eval::evaluate_simple_bool_expression;
+use crate::test_runner::synthesized::value_generation::{
+    generated_cases, generated_domain_for_param, shrink_bindings,
+};
+use crate::test_runner::types::{Outcome, ReproArtifact, TestKind, TestResult, TestSource};
 
 /// Default number of property test cases.
 pub const DEFAULT_MAX_CASES: usize = 100;
@@ -37,6 +43,10 @@ pub fn execute_property_test(
     let name = meta.effective_name(path);
     let start = Instant::now();
 
+    if meta.property.is_some() || !meta.generated_params.is_empty() {
+        return execute_generated_property_metadata(path, meta, seed, max_cases, start.elapsed());
+    }
+
     let (outcome, message, failing_case) =
         run_property_inner(path, _engine, seed, max_cases, timeout);
 
@@ -53,6 +63,149 @@ pub fn execute_property_test(
         result = result.with_message(message);
     }
     result
+}
+
+fn execute_generated_property_metadata(
+    path: &Path,
+    meta: &TestMetadata,
+    seed: u64,
+    max_cases: usize,
+    duration: Duration,
+) -> TestResult {
+    let name = meta.effective_name(path);
+    let Some(property) = meta.property.as_deref() else {
+        return generated_property_error(
+            name,
+            path,
+            seed,
+            "invalid generated property test: @test property is required when @test params is present",
+        );
+    };
+
+    let domains = match meta
+        .generated_params
+        .iter()
+        .map(|param| generated_domain_for_param(param))
+        .collect::<Option<Vec<_>>>()
+    {
+        Some(domains) => domains,
+        None => {
+            return generated_property_error(
+                name,
+                path,
+                seed,
+                "invalid generated property test: unsupported @test params type domain",
+            );
+        }
+    };
+    let cases = generated_cases(&domains, max_cases);
+    if cases.is_empty() {
+        return generated_property_error(
+            name,
+            path,
+            seed,
+            "invalid generated property test: max_cases produced no generated inputs",
+        );
+    }
+
+    for case in cases {
+        let outcome = match evaluate_simple_bool_expression(property, &case.bindings) {
+            Ok(true) => Outcome::Pass,
+            Ok(false) => Outcome::Fail,
+            Err(error) => {
+                return generated_property_error(
+                    name,
+                    path,
+                    seed,
+                    &format!("invalid generated property oracle: {error}"),
+                );
+            }
+        };
+        if outcome == Outcome::Fail {
+            let shrunk = shrink_bindings(&case.bindings, |candidate| {
+                evaluate_simple_bool_expression(property, candidate) == Ok(false)
+            });
+            let snapshot = json!({
+                "bindings": case.bindings,
+                "generators": case.generators,
+                "shrunk_counterexample": shrunk.bindings,
+                "shrink_trace": shrunk.trace,
+            });
+            let mut result = TestResult::new(name, path.to_path_buf())
+                .with_outcome(Outcome::Fail)
+                .with_source(TestSource::Authored)
+                .with_kind(TestKind::Property)
+                .with_duration(duration)
+                .with_seed(seed)
+                .with_failing_case(case.case_index)
+                .with_message(format!(
+                    "generated property counterexample at seed {seed}, case {}: {}; shrunk: {}",
+                    case.case_index, snapshot["bindings"], snapshot["shrunk_counterexample"]
+                ));
+            result.repro_artifact = Some(property_repro_artifact(
+                path,
+                seed,
+                case.case_index,
+                property,
+                Some(snapshot),
+            ));
+            return result;
+        }
+    }
+
+    let mut result = TestResult::new(name, path.to_path_buf())
+        .with_outcome(Outcome::Pass)
+        .with_source(TestSource::Authored)
+        .with_kind(TestKind::Property)
+        .with_duration(duration)
+        .with_seed(seed)
+        .with_message(format!(
+            "generated property passed {max_cases} bounded cases from @test params"
+        ));
+    result.repro_artifact = Some(property_repro_artifact(
+        path, seed, max_cases, property, None,
+    ));
+    result
+}
+
+fn generated_property_error(name: String, path: &Path, seed: u64, message: &str) -> TestResult {
+    let mut result = TestResult::new(name, path.to_path_buf())
+        .with_outcome(Outcome::Error)
+        .with_source(TestSource::Authored)
+        .with_kind(TestKind::Property)
+        .with_seed(seed)
+        .with_message(message.to_string());
+    result.repro_artifact = Some(property_repro_artifact(path, seed, 1, "<invalid>", None));
+    result
+}
+
+fn property_repro_artifact(
+    path: &Path,
+    seed: u64,
+    case_index: usize,
+    property: &str,
+    generated_input_snapshot: Option<Value>,
+) -> ReproArtifact {
+    ReproArtifact {
+        runner_schema_version: "ash-property-generation-v1.0".to_string(),
+        source_artifact_id: path.display().to_string(),
+        check_summary_id: "authored-property-metadata".to_string(),
+        case_id: format!("authored-property:{}:{case_index}", path.display()),
+        seed,
+        case_index,
+        world_index: None,
+        generated_input_snapshot,
+        world_snapshot: None,
+        oracle_snapshot: json!({
+            "source": "authored_property",
+            "property": property,
+            "expected": true,
+        }),
+        replay_command: format!(
+            "ASH_UNDER_TEST=${{ASH_UNDER_TEST:?set Ash candidate binary}}; \\\"$ASH_UNDER_TEST\\\" test {} --seed {seed} --max-cases {case_index}",
+            path.display()
+        ),
+    }
 }
 
 fn run_property_inner(

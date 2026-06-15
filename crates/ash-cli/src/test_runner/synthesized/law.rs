@@ -8,6 +8,7 @@ use serde_json::{Value, json};
 
 use super::eval::evaluate_simple_bool_expression;
 use super::repro::{deferred_result_with_kind, repro_artifact};
+use super::value_generation::{generated_cases, generated_domain_for_param, shrink_bindings};
 use super::{
     LAW_SMALLWORLD_DEFAULT_MAX_WORLDS, LawEvidenceStatus, LawTestEvidence,
     RunnerIntrospectionSnapshot, RunnerLawMetadata,
@@ -216,17 +217,18 @@ pub(super) fn law_property_results(
         .iter()
         .filter(|law| matches!(law.test_evidence, Some(LawTestEvidence::Property)))
     {
-        let Some(param_domains) = law_param_domains(law) else {
+        let Some(param_domains) = law_generated_domains(law) else {
             results.push(deferred_law_property_result(path, snapshot, law, seed));
             continue;
         };
-        let cases = law_binding_worlds(&param_domains, max_cases);
+        let cases = generated_cases(&param_domains, max_cases);
         if cases.is_empty() {
             results.push(deferred_law_property_result(path, snapshot, law, seed));
             continue;
         }
-        for (index, bindings) in cases.into_iter().enumerate() {
-            let case_index = index + 1;
+        for case in cases {
+            let case_index = case.case_index;
+            let bindings = case.bindings;
             let case_id = format!("synthesized/law/{}/property-case-{case_index}", law.name);
             let outcome = match evaluate_simple_bool_expression(&law.proposition, &bindings) {
                 Ok(true) => Outcome::Pass,
@@ -239,7 +241,24 @@ pub(super) fn law_property_results(
                 Outcome::Skip => LawEvidenceStatus::Deferred,
                 _ => LawEvidenceStatus::Untested,
             };
-            let generated_input_snapshot = Value::Object(bindings.clone().into_iter().collect());
+            let shrunk = (outcome == Outcome::Fail).then(|| {
+                shrink_bindings(&bindings, |candidate| {
+                    evaluate_simple_bool_expression(&law.proposition, candidate) == Ok(false)
+                })
+            });
+            let raw_bindings_snapshot = Value::Object(bindings.clone().into_iter().collect());
+            let shrunk_counterexample = shrunk
+                .as_ref()
+                .map(|shrunk| Value::Object(shrunk.bindings.clone().into_iter().collect()));
+            let shrink_trace = shrunk
+                .as_ref()
+                .map(|shrunk| Value::Array(shrunk.trace.clone()));
+            let generated_input_snapshot = json!({
+                "bindings": raw_bindings_snapshot,
+                "generators": case.generators,
+                "shrunk_counterexample": shrunk_counterexample,
+                "shrink_trace": shrink_trace,
+            });
             let mut repro = repro_artifact(
                 path,
                 snapshot.source_artifact_id.clone(),
@@ -257,6 +276,9 @@ pub(super) fn law_property_results(
                     "proposition": law.proposition,
                     "expected": true,
                     "case_index": case_index,
+                    "generator_schema_version": "ash-property-generation-v1.0",
+                    "shrunk_counterexample": generated_input_snapshot["shrunk_counterexample"],
+                    "shrink_trace": generated_input_snapshot["shrink_trace"],
                 }),
                 None,
             );
@@ -270,8 +292,10 @@ pub(super) fn law_property_results(
                     law.name
                 ),
                 Outcome::Fail => format!(
-                    "law {} counterexample at seed {seed}, case {case_index}: {}",
-                    law.name, generated_input_snapshot
+                    "law {} counterexample at seed {seed}, case {case_index}: {}; shrunk: {}",
+                    law.name,
+                    generated_input_snapshot["bindings"],
+                    generated_input_snapshot["shrunk_counterexample"]
                 ),
                 Outcome::Skip => format!(
                     "deferred: unsupported law proposition {:?} for generated property input {}",
@@ -906,6 +930,15 @@ fn law_param_domains(law: &RunnerLawMetadata) -> Option<Vec<(String, Vec<Value>)
     law.params
         .iter()
         .map(|param| law_param_domain(param))
+        .collect()
+}
+
+fn law_generated_domains(
+    law: &RunnerLawMetadata,
+) -> Option<Vec<super::value_generation::GeneratedValueDomain>> {
+    law.params
+        .iter()
+        .map(|param| generated_domain_for_param(param))
         .collect()
 }
 

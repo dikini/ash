@@ -1,6 +1,6 @@
 # TASK-1457: Define generator schema and binding model
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 

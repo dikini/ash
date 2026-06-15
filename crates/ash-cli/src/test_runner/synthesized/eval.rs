@@ -6,7 +6,7 @@ use ash_core::{Expr as CoreExpr, Value as CoreValue};
 use ash_interp::{Context as InterpContext, eval_expr};
 use serde_json::{Value, json};
 
-pub(super) fn evaluate_simple_bool_expression(
+pub(crate) fn evaluate_simple_bool_expression(
     expression: &str,
     bindings: &BTreeMap<String, Value>,
 ) -> Result<bool, String> {

@@ -7,7 +7,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Added
-- [Phase 146](docs/plan/PLAN-146-PROPERTY-GENERATION-AND-SHRINKING-SUBSTRATE.md): Planned property generation and shrinking substrate with SPEC-082 and TASK-1456 through TASK-1465.
+- [Phase 150](docs/plan/PLAN-150-QUICKCHECK-ARBITRARY-STRATEGY.md): Planned QuickCheck-like `test::quickcheck` property testing with SPEC-086, `Strategy<T>`, `Arbitrary<T>`, strategy overrides, law/property enforcement boundaries, future-backend design note, and TASK-1485 through TASK-1496.
+- [Phase 146](docs/plan/PLAN-146-PROPERTY-GENERATION-AND-SHRINKING-SUBSTRATE.md): Implemented bounded property generation and shrinking for `ash test`, including primitive/container generated bindings, authored property metadata injection, generated law-property inputs, counterexample/shrink repro artifacts, and no-Cargo `$ASH_UNDER_TEST test ...` fixtures (TASK-1456 through TASK-1465).
 - [Phase 147](docs/plan/PLAN-147-LAW-COVERAGE-AND-MUTATION-TESTING.md): Planned law coverage and bounded mutation testing with SPEC-083 and TASK-1466 through TASK-1473.
 - [Phase 148](docs/plan/PLAN-148-FLAKY-TEST-QUARANTINE-AND-DISTRIBUTED-ORCHESTRATION.md): Planned flaky-test quarantine and distributed orchestration with SPEC-084 and TASK-1474 through TASK-1481.
 - [Phase 149](docs/plan/PLAN-149-PROOF-PRODUCING-SYNTHESIS-TODO-SPEC.md): Added deferred proof-producing synthesis todo-spec packet with SPEC-085 and TASK-1482 through TASK-1484.

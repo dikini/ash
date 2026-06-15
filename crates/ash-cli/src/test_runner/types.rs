@@ -189,6 +189,15 @@ pub struct TestResult {
     /// Reproducible context for generated or executed synthesized rows.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub repro_artifact: Option<ReproArtifact>,
+    /// Proof evidence family, when this row reports law proof evidence.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub evidence_family: Option<String>,
+    /// Law test evidence mode (`authored`, `property`, `small_world`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub test_mode: Option<String>,
+    /// Law proof evidence status.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub evidence_status: Option<String>,
 }
 
 mod duration_ms {
@@ -216,6 +225,9 @@ impl TestResult {
             failing_case: None,
             world_index: None,
             repro_artifact: None,
+            evidence_family: None,
+            test_mode: None,
+            evidence_status: None,
         }
     }
 

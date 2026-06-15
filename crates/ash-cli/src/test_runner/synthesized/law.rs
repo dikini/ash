@@ -8,7 +8,10 @@ use serde_json::{Value, json};
 
 use super::eval::evaluate_simple_bool_expression;
 use super::repro::{deferred_result_with_kind, repro_artifact};
-use super::{LAW_SMALLWORLD_DEFAULT_MAX_WORLDS, RunnerIntrospectionSnapshot, RunnerLawMetadata};
+use super::{
+    LAW_SMALLWORLD_DEFAULT_MAX_WORLDS, LawEvidenceStatus, LawTestEvidence,
+    RunnerIntrospectionSnapshot, RunnerLawMetadata,
+};
 use crate::test_runner::algebra_law_profile::{AlgebraInterface, CarrierType, LawProfile};
 use crate::test_runner::types::{Outcome, TestKind, TestResult, TestSource};
 
@@ -25,6 +28,9 @@ pub(super) fn algebra_law_profile_results(
     let mut results = Vec::new();
 
     for law in &snapshot.laws {
+        if matches!(law.test_evidence, Some(LawTestEvidence::Authored { .. })) {
+            continue;
+        }
         let Some(owner) = law.owner.as_deref() else {
             continue;
         };
@@ -47,6 +53,133 @@ pub(super) fn algebra_law_profile_results(
     results
 }
 
+/// Resolve `by test "..."` authored evidence for laws against an executed authored-test registry.
+pub(crate) fn authored_law_test_results(
+    path: &Path,
+    snapshot: &RunnerIntrospectionSnapshot,
+    authored_tests: &BTreeMap<String, TestResult>,
+) -> Vec<TestResult> {
+    snapshot
+        .laws
+        .iter()
+        .filter_map(|law| match &law.test_evidence {
+            Some(LawTestEvidence::Authored { test_name }) => Some(authored_law_test_result(
+                path,
+                snapshot,
+                law,
+                test_name,
+                authored_tests.get(test_name),
+            )),
+            _ => None,
+        })
+        .collect()
+}
+
+fn authored_law_test_result(
+    path: &Path,
+    snapshot: &RunnerIntrospectionSnapshot,
+    law: &RunnerLawMetadata,
+    test_name: &str,
+    authored_result: Option<&TestResult>,
+) -> TestResult {
+    let case_id = format!("synthesized/law/{}/by-test-authored", law.name);
+    let (outcome, status, message) = match authored_result {
+        Some(result) if result.outcome == Outcome::Pass => (
+            Outcome::Pass,
+            LawEvidenceStatus::Satisfied,
+            format!(
+                "law {} satisfied by authored Ash test '{}'",
+                law.name, test_name
+            ),
+        ),
+        Some(result) if result.outcome == Outcome::Skip || result.outcome == Outcome::Xfail => (
+            Outcome::Error,
+            LawEvidenceStatus::InvalidEvidence,
+            format!(
+                "invalid law test evidence: authored Ash test '{}' did not run to pass ({})",
+                test_name, result.outcome
+            ),
+        ),
+        Some(result) => (
+            Outcome::Fail,
+            LawEvidenceStatus::Broken,
+            format!(
+                "law {} broken: authored Ash test '{}' reported {}{}",
+                law.name,
+                test_name,
+                result.outcome,
+                result
+                    .message
+                    .as_deref()
+                    .map(|message| format!(": {message}"))
+                    .unwrap_or_default()
+            ),
+        ),
+        None => (
+            Outcome::Error,
+            LawEvidenceStatus::InvalidEvidence,
+            format!(
+                "invalid law test evidence: by test target '{}' was not discovered as an Ash authored test",
+                test_name
+            ),
+        ),
+    };
+
+    let mut repro = repro_artifact(
+        path,
+        snapshot.source_artifact_id.clone(),
+        snapshot.check_summary_id.clone(),
+        format!("law:{}:by-test-authored", law.id),
+        0,
+        1,
+        None,
+        json!({
+            "source": "law",
+            "law": law.name,
+            "proof_evidence_family": "test",
+            "test_mode": "authored",
+            "evidence_status": evidence_status_name(status),
+            "delegated_test": test_name,
+            "proposition": law.proposition,
+            "authored_test_outcome": authored_result.map(|result| result.outcome.to_string()),
+            "authored_test_path": authored_result.map(|result| result.path.display().to_string()),
+        }),
+        None,
+    );
+    repro.replay_command = format!(
+        "ASH_UNDER_TEST=${{ASH_UNDER_TEST:?set Ash candidate binary}}; \"$ASH_UNDER_TEST\" test {} --include-synthesized laws",
+        path.display()
+    );
+
+    let mut result = TestResult::new(case_id, path.to_path_buf())
+        .with_outcome(outcome)
+        .with_source(TestSource::Law)
+        .with_kind(TestKind::Unit)
+        .with_duration(Duration::ZERO)
+        .with_message(message)
+        .with_repro_artifact(repro);
+    result.evidence_family = Some("test".to_string());
+    result.test_mode = Some("authored".to_string());
+    result.evidence_status = Some(evidence_status_name(status).to_string());
+    result.tags = vec![
+        "synthesized".to_string(),
+        "law".to_string(),
+        "by-test".to_string(),
+        "authored".to_string(),
+    ];
+    result
+}
+
+fn evidence_status_name(status: LawEvidenceStatus) -> &'static str {
+    match status {
+        LawEvidenceStatus::Satisfied => "satisfied",
+        LawEvidenceStatus::Broken => "broken",
+        LawEvidenceStatus::InvalidEvidence => "invalid_evidence",
+        LawEvidenceStatus::Deferred => "deferred",
+        LawEvidenceStatus::Untested => "untested",
+    }
+}
+
 fn carriers_for_interface(interface: AlgebraInterface) -> Vec<CarrierType> {
     match interface {
         AlgebraInterface::Semigroup | AlgebraInterface::Monoid => {
@@ -66,6 +199,121 @@ fn carriers_for_interface(interface: AlgebraInterface) -> Vec<CarrierType> {
             vec![CarrierType::Act, CarrierType::Proc, CarrierType::Workflow]
         }
     }
+}
+
+/// Execute `by test property` laws by treating the law proposition as the property oracle.
+pub(super) fn law_property_results(
+    path: &Path,
+    snapshot: &RunnerIntrospectionSnapshot,
+    seed: Option<u64>,
+    max_cases: Option<usize>,
+) -> Vec<TestResult> {
+    let seed = seed.unwrap_or(0);
+    let max_cases = max_cases.unwrap_or(ALGEBRA_LAW_DEFAULT_MAX_CASES);
+    let mut results = Vec::new();
+    for law in snapshot
+        .laws
+        .iter()
+        .filter(|law| matches!(law.test_evidence, Some(LawTestEvidence::Property)))
+    {
+        let Some(param_domains) = law_param_domains(law) else {
+            results.push(deferred_law_property_result(path, snapshot, law, seed));
+            continue;
+        };
+        let cases = law_binding_worlds(&param_domains, max_cases);
+        if cases.is_empty() {
+            results.push(deferred_law_property_result(path, snapshot, law, seed));
+            continue;
+        }
+        for (index, bindings) in cases.into_iter().enumerate() {
+            let case_index = index + 1;
+            let case_id = format!("synthesized/law/{}/property-case-{case_index}", law.name);
+            let outcome = match evaluate_simple_bool_expression(&law.proposition, &bindings) {
+                Ok(true) => Outcome::Pass,
+                Ok(false) => Outcome::Fail,
+                Err(_) => Outcome::Skip,
+            };
+            let status = match outcome {
+                Outcome::Pass => LawEvidenceStatus::Satisfied,
+                Outcome::Fail => LawEvidenceStatus::Broken,
+                Outcome::Skip => LawEvidenceStatus::Deferred,
+                _ => LawEvidenceStatus::Untested,
+            };
+            let generated_input_snapshot = Value::Object(bindings.clone().into_iter().collect());
+            let mut repro = repro_artifact(
+                path,
+                snapshot.source_artifact_id.clone(),
+                snapshot.check_summary_id.clone(),
+                format!("law:{}:property-case-{case_index}", law.id),
+                seed,
+                case_index,
+                Some(generated_input_snapshot.clone()),
+                json!({
+                    "source": "law",
+                    "law": law.name,
+                    "proof_evidence_family": "test",
+                    "test_mode": "property",
+                    "evidence_status": evidence_status_name(status),
+                    "proposition": law.proposition,
+                    "expected": true,
+                    "case_index": case_index,
+                }),
+                None,
+            );
+            repro.replay_command = format!(
+                "ASH_UNDER_TEST=${{ASH_UNDER_TEST:?set Ash candidate binary}}; \\\"$ASH_UNDER_TEST\\\" test {} --only-synthesized laws --seed {seed} --max-cases {max_cases}",
+                path.display()
+            );
+            let message = match outcome {
+                Outcome::Pass => format!(
+                    "law {} held for generated property case {case_index}",
+                    law.name
+                ),
+                Outcome::Fail => format!(
+                    "law {} counterexample at seed {seed}, case {case_index}: {}",
+                    law.name, generated_input_snapshot
+                ),
+                Outcome::Skip => format!(
+                    "deferred: unsupported law proposition {:?} for generated property input {}",
+                    law.proposition, generated_input_snapshot
+                ),
+                _ => unreachable!("law property generation only emits pass/fail/skip"),
+            };
+            let mut result = TestResult::new(case_id, path.to_path_buf())
+                .with_outcome(outcome)
+                .with_source(TestSource::Law)
+                .with_kind(TestKind::Property)
+                .with_duration(Duration::ZERO)
+                .with_seed(seed)
+                .with_message(message)
+                .with_repro_artifact(repro);
+            result.failing_case = outcome.is_failure().then_some(case_index);
+            result.evidence_family = Some("test".to_string());
+            result.test_mode = Some("property".to_string());
+            result.evidence_status = Some(evidence_status_name(status).to_string());
+            result.tags = vec![
+                "synthesized".to_string(),
+                "law".to_string(),
+                "property".to_string(),
+            ];
+            results.push(result);
+        }
+    }
+    results
+}
+
+fn deferred_law_property_result(
+    path: &Path,
+    snapshot: &RunnerIntrospectionSnapshot,
+    law: &RunnerLawMetadata,
+    seed: u64,
+) -> TestResult {
+    let mut result = deferred_law_result(path, snapshot, law, seed);
+    result.kind = TestKind::Property;
+    result.test_mode = Some("property".to_string());
+    result.evidence_family = Some("test".to_string());
+    result.evidence_status = Some("deferred".to_string());
+    result
 }
 
 fn execute_algebra_law_profile(
@@ -558,6 +806,12 @@ pub(super) fn law_smallworld_results(
     let mut results = Vec::new();
 
     for law in &snapshot.laws {
+        if matches!(
+            law.test_evidence,
+            Some(LawTestEvidence::Authored { .. } | LawTestEvidence::Property)
+        ) {
+            continue;
+        }
         let Some(param_domains) = law_param_domains(law) else {
             results.push(deferred_law_result(path, snapshot, law, seed));
             continue;
@@ -578,6 +832,12 @@ pub(super) fn law_smallworld_results(
                 Ok(true) => Outcome::Pass,
                 Ok(false) => Outcome::Fail,
                 Err(_) => Outcome::Skip,
+            };
+            let status = match outcome {
+                Outcome::Pass => LawEvidenceStatus::Satisfied,
+                Outcome::Fail => LawEvidenceStatus::Broken,
+                Outcome::Skip => LawEvidenceStatus::Deferred,
+                _ => LawEvidenceStatus::Untested,
             };
             let message = match outcome {
                 Outcome::Pass => format!(
@@ -610,6 +870,9 @@ pub(super) fn law_smallworld_results(
                     "source": "law",
                     "law": law.name,
                     "delegated_test": law.delegated_test,
+                    "proof_evidence_family": "test",
+                    "test_mode": "small_world",
+                    "evidence_status": evidence_status_name(status),
                     "proposition": law.proposition,
                     "expected": true,
                     "world_index": world_index,
@@ -628,6 +891,9 @@ pub(super) fn law_smallworld_results(
                 .with_repro_artifact(repro);
             result.world_index = Some(world_index);
             result.failing_case = outcome.is_failure().then_some(world_index);
+            result.evidence_family = Some("test".to_string());
+            result.test_mode = Some("small_world".to_string());
+            result.evidence_status = Some(evidence_status_name(status).to_string());
             result.tags = vec!["synthesized".to_string(), "law".to_string()];
             results.push(result);
         }

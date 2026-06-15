@@ -1925,7 +1925,10 @@ impl TypeEnv {
         }
         let mut checker = ProofFuelChecker::new(fuel, proof_env);
         match &proof.body {
-            ProofBody::ByDefinition | ProofBody::ByTest { .. } => {}
+            ProofBody::ByDefinition
+            | ProofBody::ByTest { .. }
+            | ProofBody::ByTestProperty
+            | ProofBody::ByTestSmallWorld => {}
             ProofBody::Expr(expr) => checker.visit_expr(expr),
         }
         checker.finish()

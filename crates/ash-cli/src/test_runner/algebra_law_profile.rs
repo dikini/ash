@@ -576,6 +576,7 @@ mod tests {
             params: vec!["a: String".to_string()],
             proposition: "empty <> a == a".to_string(),
             delegated_test: None,
+            test_evidence: None,
         };
         let result = generate_law_test_result(&profile, &law, std::path::Path::new("test.ash"), 42);
         assert_eq!(result.outcome, Outcome::Skip);
@@ -599,6 +600,7 @@ mod tests {
             params: vec!["a: Act".to_string()],
             proposition: "return a >>= f == f a".to_string(),
             delegated_test: None,
+            test_evidence: None,
         };
         let result = generate_law_test_result(&profile, &law, std::path::Path::new("test.ash"), 42);
         assert_eq!(result.outcome, Outcome::Skip);

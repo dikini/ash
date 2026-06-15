@@ -840,8 +840,12 @@ pub struct ProofDef {
 pub enum ProofBody {
     /// `by_definition`
     ByDefinition,
-    /// `by test "test_name"`
+    /// `by test "test_name"` or `by test authored "test_name"`
     ByTest { test_name: String },
+    /// `by test property` — law proposition is executed over generated bindings.
+    ByTestProperty,
+    /// `by test small_world` — law proposition is executed over finite worlds.
+    ByTestSmallWorld,
     /// Explicit proof term (future)
     Expr(Expr),
 }

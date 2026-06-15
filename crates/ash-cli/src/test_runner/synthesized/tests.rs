@@ -118,6 +118,31 @@ fn extract_laws_returns_module_law_metadata() {
 }
 
 #[test]
+fn extract_laws_records_property_and_small_world_test_evidence() {
+    let module = parse_module_for_law_extraction(
+        r#"
+            law id_property(x: Int): x == x
+            proof id_property(x: Int) { by test property }
+
+            law id_small_world(x: Bool): x == x
+            proof id_small_world(x: Bool) { by test small_world }
+            "#,
+    );
+
+    let laws = extract_laws(&module);
+
+    assert_eq!(laws.len(), 2);
+    assert!(matches!(
+        laws[0].test_evidence,
+        Some(LawTestEvidence::Property)
+    ));
+    assert!(matches!(
+        laws[1].test_evidence,
+        Some(LawTestEvidence::SmallWorld)
+    ));
+}
+
+#[test]
 fn extract_laws_omits_module_law_with_matching_proof() {
     let module = parse_module_for_law_extraction(
         r#"
@@ -246,6 +271,7 @@ fn module_law(name: &str, params: Vec<&str>, proposition: &str) -> RunnerLawMeta
         params: params.into_iter().map(str::to_string).collect(),
         proposition: proposition.to_string(),
         delegated_test: None,
+        test_evidence: None,
     }
 }
 

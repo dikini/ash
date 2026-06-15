@@ -1707,8 +1707,21 @@ fn parse_proof_definition(input: &mut ParseInput) -> ModalResult<ProofDef> {
         skip_whitespace_and_comments(input);
         let _ = keyword("test").parse_next(input)?;
         skip_whitespace_and_comments(input);
-        let test_name = parse_string_literal_content(input)?;
-        ProofBody::ByTest { test_name }
+        if starts_with_keyword(input, "authored") {
+            let _ = keyword("authored").parse_next(input)?;
+            skip_whitespace_and_comments(input);
+            let test_name = parse_string_literal_content(input)?;
+            ProofBody::ByTest { test_name }
+        } else if starts_with_keyword(input, "property") {
+            let _ = keyword("property").parse_next(input)?;
+            ProofBody::ByTestProperty
+        } else if starts_with_keyword(input, "small_world") {
+            let _ = keyword("small_world").parse_next(input)?;
+            ProofBody::ByTestSmallWorld
+        } else {
+            let test_name = parse_string_literal_content(input)?;
+            ProofBody::ByTest { test_name }
+        }
     } else {
         let e = expr(input)?;
         ProofBody::Expr(e)

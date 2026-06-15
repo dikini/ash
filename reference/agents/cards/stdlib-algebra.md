@@ -10,7 +10,7 @@ slice: reference-slice-3
 owner: reference-corpus
 last_verified: 2026-06-11
 verified_against:
-  git_commit: adf20e81
+  git_commit: fb685740
   release_tag: null
   ash_version: unreleased-alpha
   specs:

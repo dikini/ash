@@ -72,6 +72,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - [TASK-1359](docs/plan/tasks/TASK-1359-add-eq-interface.md): Added `Eq` interface to `std::algebra` for explicit equivalence relations in law propositions.
 
 ### Fixed
+- Refreshed post-merge Reference Slice 3 verification baselines for Phase 144 integration staleness closeout (TASK-1445).
 - Generated algebra law tests now defer function-valued Monad law rows without executable function metadata instead of reporting hardcoded model passes for unsupported function propositions (TASK-1441).
 - Phase 144 integration blockers: normalized staleness trigger matching for `"... changes"` refresh triggers, added frontmatter-backed Slice 3 filtering, made law-profile metadata helpers avoid reporting pass without execution, reconciled Phase 144 task/plan files into the integration branch, and fixed formatting/whitespace gates (TASK-1441, TASK-1442, TASK-1445).
 - [TASK-1377](docs/plan/tasks/TASK-1377-closeout-docs-status.md): Reconciled Phase 136 closeout status surfaces, marked the design note as implemented MVP for the completed local/static law/proof/`Prop` slices, preserved deferrals for attributes, external provers, full codegen/runtime proof erasure, broad dependent types, `BoundedEquiv`, and tower-carrier semantics, updated stale stdlib corpus/parser baselines exposed by full workspace tests, and recorded final full-gate verification.

@@ -297,6 +297,40 @@ pub struct RunnerLawMetadata {
     /// Explicit `by test "..."` delegation target, when this law is backed by a test proof.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub delegated_test: Option<String>,
+    /// Structured proof evidence mode for `by test` proofs.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub test_evidence: Option<LawTestEvidence>,
+}
+
+/// Structured test evidence for a law proof.
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(tag = "mode", rename_all = "snake_case")]
+pub enum LawTestEvidence {
+    /// A named Ash-authored test must be discovered and pass.
+    Authored {
+        /// Authored test name from `by test "..."`.
+        test_name: String,
+    },
+    /// The law proposition is evaluated over generated bindings.
+    Property,
+    /// The law proposition is evaluated over finite small-world bindings.
+    SmallWorld,
+}
+
+/// Internal law proof evidence status used in JSON/repro metadata.
+#[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum LawEvidenceStatus {
+    /// Evidence ran and supports the proof.
+    Satisfied,
+    /// Evidence ran and found a counterexample or failing delegated test.
+    Broken,
+    /// Evidence reference is missing, duplicate, or malformed.
+    InvalidEvidence,
+    /// Evidence mode is recognized but unsupported by the current substrate.
+    Deferred,
+    /// Evidence did not run.
+    Untested,
 }
 
 /// Narrow explicit obligation lifecycle transition plan.

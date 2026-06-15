@@ -192,7 +192,7 @@ ash test --include-synthesized contracts,policies,obligations
 ash test --only-synthesized policies --format json
 ```
 
-Sources are a comma-separated list of `contracts`, `policies`, and `obligations`.
+Sources are a comma-separated list of `contracts`, `policies`, `obligations`, and `laws`.
 
 `--include-synthesized` runs authored tests and then selected synthesized sources. `--only-synthesized` skips authored tests and implies synthesized inclusion.
 
@@ -208,6 +208,33 @@ Phase 132 supports a bounded executable MVP for structured synthesized rows:
 - deterministic small-world execution over explicit finite worlds, including explicit states/values, bool, safely capped bounded integers, bounded products/lists, role/capability inclusion sets, policy-context descriptors, and obligation-lifecycle descriptors.
 
 Raw-source compatibility scans, unsupported setup, open or uncapped domains, arbitrary capability/Act/workflow execution, symbolic exploration, and full runtime policy/capability semantics remain deferred skips rather than passes.
+
+## Law Test Evidence
+
+`proof ... { by test ... }` is empirical test evidence. Phase 145 classifies it into three submodes:
+
+```ash
+proof p(x: Int) { by test "authored_test_name" }       // authored/manual, legacy spelling
+proof p(x: Int) { by test authored "authored_test_name" }
+proof p(x: Int) { by test property }
+proof p(x: Bool) { by test small_world }
+```
+
+Authored evidence resolves the named Ash-authored test from the discovered test registry. Missing, duplicate, skipped, errored, or failing authored tests do not satisfy the proof; they report `invalid_evidence` or `broken` in JSON output. Property evidence treats the law proposition as the property oracle and evaluates supported primitive law parameters (`Int`, `Bool`, `String`) over bounded generated bindings. Small-world evidence evaluates the law proposition over finite primitive domains and reports `world_index`/world snapshots.
+
+Law evidence rows include:
+
+- `evidence_family: "test"`
+- `test_mode: "authored" | "property" | "small_world"`
+- `evidence_status: "satisfied" | "broken" | "invalid_evidence" | "deferred" | "untested"`
+
+The final user-facing command is an Ash executable invocation, for example:
+
+```bash
+${ASH_UNDER_TEST:?set Ash candidate binary} test fixtures/phase145-law-test-evidence --only-synthesized laws --format json
+```
+
+`cargo run -p ash-cli -- test ...` is not final-surface law/test/proof evidence.
 
 ## Non-Goals
 

@@ -3,6 +3,7 @@
 //! TASK-510: Per-test isolation, panic capture, timeout handling.
 //! TASK-512: Authored test execution model.
 
+use std::collections::BTreeMap;
 use std::panic::{self, AssertUnwindSafe};
 use std::path::Path;
 use std::sync::mpsc;
@@ -334,14 +335,20 @@ pub fn run_suite(config: &SuiteConfig) -> crate::test_runner::types::TestSuiteRe
         }
     };
 
-    // Run authored tests unless --only-synthesized was specified
-    if !config.only_synthesized {
-        run_authored_tests(config, &engine, &mut suite);
-    }
+    // Run authored tests unless --only-synthesized was specified. Law `by test`
+    // evidence still needs the authored-test registry even in only-synthesized
+    // runs, so build it without appending authored rows when laws are selected.
+    let authored_tests = if !config.only_synthesized {
+        run_authored_tests(config, &engine, &mut suite)
+    } else if config.include_synthesized && config.synthesized_sources.laws {
+        collect_authored_test_registry(config, &engine)
+    } else {
+        BTreeMap::new()
+    };
 
     // Run synthesized tests if requested
     if config.include_synthesized {
-        run_synthesized_tests(config, &engine, &mut suite);
+        run_synthesized_tests(config, &engine, &mut suite, &authored_tests);
     }
 
     suite.duration = start.elapsed();
@@ -353,7 +360,8 @@ fn run_authored_tests(
     config: &SuiteConfig,
     engine: &ash_engine::Engine,
     suite: &mut crate::test_runner::types::TestSuiteResult,
-) {
+) -> BTreeMap<String, TestResult> {
+    let mut registry = BTreeMap::new();
     let files = crate::test_runner::discovery::discover_tests(&config.root);
 
     for path in &files {
@@ -410,12 +418,51 @@ fn run_authored_tests(
         // Execute the test with proper kind dispatch
         let result = execute_test_by_kind(path, &meta, engine, config);
         let outcome = result.outcome;
+        insert_authored_registry_result(&mut registry, result.clone(), suite);
         suite.add(result);
 
         // Fail-fast: stop on first failure
         if config.fail_fast && outcome.is_failure() {
             break;
         }
+    }
+
+    registry
+}
+
+fn collect_authored_test_registry(
+    config: &SuiteConfig,
+    engine: &ash_engine::Engine,
+) -> BTreeMap<String, TestResult> {
+    let mut registry = BTreeMap::new();
+    let mut hidden_suite = crate::test_runner::types::TestSuiteResult::new(config.root.clone());
+    for path in crate::test_runner::discovery::discover_tests(&config.root) {
+        if let Ok(meta) = TestMetadata::parse_from_file(&path) {
+            let result = execute_test_by_kind(&path, &meta, engine, config);
+            insert_authored_registry_result(&mut registry, result, &mut hidden_suite);
+        }
+    }
+    registry
+}
+
+fn insert_authored_registry_result(
+    registry: &mut BTreeMap<String, TestResult>,
+    result: TestResult,
+    suite: &mut crate::test_runner::types::TestSuiteResult,
+) {
+    if registry.contains_key(&result.name) {
+        let duplicate = TestResult::new(result.name.clone(), result.path.clone())
+            .with_outcome(Outcome::Error)
+            .with_source(TestSource::Authored)
+            .with_kind(result.kind)
+            .with_message(format!(
+                "duplicate authored Ash test name '{}' in test registry",
+                result.name
+            ));
+        registry.insert(result.name.clone(), duplicate.clone());
+        suite.add(duplicate);
+    } else {
+        registry.insert(result.name.clone(), result);
     }
 }
 
@@ -482,12 +529,21 @@ fn run_synthesized_tests(
     config: &SuiteConfig,
     engine: &ash_engine::Engine,
     suite: &mut crate::test_runner::types::TestSuiteResult,
+    authored_tests: &BTreeMap<String, TestResult>,
 ) {
     use crate::test_runner::discovery::discover_tests;
     use crate::test_runner::synthesized;
 
     if !config.synthesized_snapshots.is_empty() {
         for (path, snapshot) in &config.synthesized_snapshots {
+            if config.synthesized_sources.laws {
+                for result in synthesized::authored_law_test_results(path, snapshot, authored_tests)
+                {
+                    if !add_synthesized_result(config, suite, result) {
+                        return;
+                    }
+                }
+            }
             for result in synthesized::synthesize_from_snapshot_with_limits(
                 path,
                 snapshot,
@@ -506,6 +562,15 @@ fn run_synthesized_tests(
     for path in discover_tests(&config.root) {
         match synthesized::build_runner_introspection_snapshot(&path, engine) {
             Ok(snapshot) => {
+                if config.synthesized_sources.laws {
+                    for result in
+                        synthesized::authored_law_test_results(&path, &snapshot, authored_tests)
+                    {
+                        if !add_synthesized_result(config, suite, result) {
+                            return;
+                        }
+                    }
+                }
                 for result in synthesized::synthesize_from_snapshot_with_limits(
                     &path,
                     &snapshot,
@@ -1023,6 +1088,7 @@ workflow contract_case
                 params: vec!["x: Int".to_string()],
                 proposition: "x == x".to_string(),
                 delegated_test: None,
+                test_evidence: None,
             }],
             ..RunnerIntrospectionSnapshot::default()
         }
@@ -1038,6 +1104,7 @@ workflow contract_case
             params: vec!["x: Int".to_string()],
             proposition: "x == x".to_string(),
             delegated_test: None,
+            test_evidence: None,
         });
         snapshot
     }

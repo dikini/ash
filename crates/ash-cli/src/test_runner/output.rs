@@ -122,6 +122,12 @@ pub fn format_json(suite: &TestSuiteResult) -> Result<String, serde_json::Error>
         world_index: Option<usize>,
         #[serde(skip_serializing_if = "Option::is_none")]
         repro_artifact: Option<ReproArtifact>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        evidence_family: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        test_mode: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        evidence_status: Option<String>,
     }
 
     let tests: Vec<JsonTest> = suite
@@ -140,6 +146,9 @@ pub fn format_json(suite: &TestSuiteResult) -> Result<String, serde_json::Error>
             failing_case: t.failing_case,
             world_index: t.world_index,
             repro_artifact: t.repro_artifact.clone(),
+            evidence_family: t.evidence_family.clone(),
+            test_mode: t.test_mode.clone(),
+            evidence_status: t.evidence_status.clone(),
         })
         .collect();
 

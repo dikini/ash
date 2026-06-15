@@ -285,9 +285,9 @@ pub fn extract_laws(module: &ModuleFile) -> Vec<RunnerLawMetadata> {
 
 struct ProofScopes {
     module: BTreeSet<String>,
-    module_by_test: BTreeMap<String, String>,
+    module_by_test: BTreeMap<String, LawTestEvidence>,
     interface: BTreeMap<String, BTreeSet<String>>,
-    interface_by_test: BTreeMap<String, BTreeMap<String, String>>,
+    interface_by_test: BTreeMap<String, BTreeMap<String, LawTestEvidence>>,
 }
 
 fn proof_scopes(module: &ModuleFile) -> ProofScopes {
@@ -299,11 +299,11 @@ fn proof_scopes(module: &ModuleFile) -> ProofScopes {
     };
     for definition in &module.definitions {
         match definition {
-            Definition::Proof(proof) => match &proof.body {
-                ProofBody::ByTest { test_name } => {
+            Definition::Proof(proof) => match law_test_evidence_from_proof_body(&proof.body) {
+                Some(evidence) => {
                     scopes
                         .module_by_test
-                        .insert(proof.name.to_string(), test_name.clone());
+                        .insert(proof.name.to_string(), evidence);
                 }
                 _ => {
                     scopes.module.insert(proof.name.to_string());
@@ -311,13 +311,13 @@ fn proof_scopes(module: &ModuleFile) -> ProofScopes {
             },
             Definition::Impl(impl_def) => {
                 for proof in &impl_def.proofs {
-                    match &proof.body {
-                        ProofBody::ByTest { test_name } => {
+                    match law_test_evidence_from_proof_body(&proof.body) {
+                        Some(evidence) => {
                             scopes
                                 .interface_by_test
                                 .entry(impl_def.interface.to_string())
                                 .or_default()
-                                .insert(proof.name.to_string(), test_name.clone());
+                                .insert(proof.name.to_string(), evidence);
                         }
                         _ => {
                             scopes
@@ -339,7 +339,7 @@ fn law_metadata(
     law: &LawDef,
     scope: LawScope,
     owner: Option<String>,
-    delegated_test: Option<String>,
+    test_evidence: Option<LawTestEvidence>,
 ) -> RunnerLawMetadata {
     let scope_segment = match scope {
         LawScope::Module => "module".to_string(),
@@ -351,6 +351,11 @@ fn law_metadata(
         ),
     };
 
+    let delegated_test = match &test_evidence {
+        Some(LawTestEvidence::Authored { test_name }) => Some(test_name.clone()),
+        _ => None,
+    };
+
     RunnerLawMetadata {
         id: format!("law:{scope_segment}:{}", law.name),
         name: law.name.to_string(),
@@ -359,6 +364,18 @@ fn law_metadata(
         params: law.params.iter().map(format_param).collect(),
         proposition: format_expr(&law.proposition),
         delegated_test,
+        test_evidence,
+    }
+}
+
+fn law_test_evidence_from_proof_body(body: &ProofBody) -> Option<LawTestEvidence> {
+    match body {
+        ProofBody::ByTest { test_name } => Some(LawTestEvidence::Authored {
+            test_name: test_name.clone(),
+        }),
+        ProofBody::ByTestProperty => Some(LawTestEvidence::Property),
+        ProofBody::ByTestSmallWorld => Some(LawTestEvidence::SmallWorld),
+        _ => None,
     }
 }
 
@@ -903,6 +920,7 @@ pub fn synthesize_from_snapshot_with_limits(
     }
 
     results.extend(algebra_law_profile_results(path, snapshot, seed, max_cases));
+    results.extend(law_property_results(path, snapshot, seed, max_cases));
     results.extend(smallworld_results(path, snapshot, seed, max_worlds));
     results.extend(law_smallworld_results(path, snapshot, seed, max_worlds));
 
@@ -944,7 +962,8 @@ mod property;
 use property::generated_property_results;
 
 mod law;
-use law::{algebra_law_profile_results, law_smallworld_results};
+pub(crate) use law::authored_law_test_results;
+use law::{algebra_law_profile_results, law_property_results, law_smallworld_results};
 
 mod smallworld;
 use smallworld::smallworld_results;

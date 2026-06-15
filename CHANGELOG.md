@@ -7,6 +7,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Added
+- [Phase 145](docs/plan/PLAN-145-LAW-TEST-EVIDENCE-SUBSTRATE.md): Implemented the Law Test Evidence Substrate with structured `by test` authored/property/small-world evidence metadata, fail-closed authored Ash test resolution, generated law-property bindings, finite small-world law evidence, and no-Cargo `$ASH_UNDER_TEST test ...` fixtures.
+- [Phase 145](docs/plan/PLAN-145-LAW-TEST-EVIDENCE-SUBSTRATE.md): Planned the Law Test Evidence Substrate with SPEC-081 and TASK-1446 through TASK-1455, splitting `by test` into authored/manual, property, and small-world empirical evidence modes with fail-closed no-Rust `ash test` acceptance gates.
 - Algebra law profiles (`crates/ash-cli/src/test_runner/algebra_law_profile.rs`) for generated property tests (TASK-1440). Defines law profiles for Semigroup, Monoid, Functor, Applicative, Monad with pure carrier generators (String, List, Option, Result) and tower carrier gating (Act, Proc, Workflow).
 - Runner execution for generated algebra law tests (TASK-1441). `ash test --only-synthesized laws` now emits non-zero generated algebra law rows with pass/fail/deferred evidence, and `--include-law-tests` is available as the opt-in CLI alias for law synthesis.
 - Staleness checker (`tools/reference/check_staleness.py`) for automated reference corpus drift detection (TASK-1442). Uses git diff against `verified_against.git_commit` to flag stale pages with `--slice` support for reference-slice-2 and reference-slice-3.
@@ -29,6 +31,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Phase 142 planning artifacts committed: task files TASK-1420 through TASK-1426, benchmark reports, and Hermes MCP configuration.
 
 ### Changed
+- Refined Phase 145 no-Rust acceptance wording to use an explicit `$ASH_UNDER_TEST` candidate executable while Ash tooling is under development, with closeout release/install parity required for the ordinary `ash` entrypoint.
 - AGENTS.md and reusable skills now require MCP/LSP-first Rust/Ash code-intelligence workflows, distinguish setup calls from productive MCP usage, and require MCP-enabled subagent access when claiming MCP-assisted implementation/evaluation.
 - ash-mcp/Cargo.toml: added syn dependency for real Rust source parsing
 - Cargo.toml (workspace): added ash-mcp-bench to workspace members

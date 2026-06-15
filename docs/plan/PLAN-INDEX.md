@@ -126,6 +126,7 @@ Update this section as tasks complete:
 | [148](PLAN-148-FLAKY-TEST-QUARANTINE-AND-DISTRIBUTED-ORCHESTRATION.md) | 8 | 8 | ✅ Complete |
 | [149](PLAN-149-PROOF-PRODUCING-SYNTHESIS-TODO-SPEC.md) | 3 | 0 | ⏸️ Deferred / To-Spec |
 | [150](PLAN-150-QUICKCHECK-ARBITRARY-STRATEGY.md) | 12 | 12 | ✅ Complete |
+| [151](PLAN-151-QUICKCHECK-V1-ORDINARY-STRATEGY-SEMANTICS.md) | 10 | 0 | 📝 Planned |
 
 ---
 
@@ -141,6 +142,7 @@ The following phases are active or recently completed and awaiting archival to [
 | [148](PLAN-148-FLAKY-TEST-QUARANTINE-AND-DISTRIBUTED-ORCHESTRATION.md) | 8 | 8 | ✅ Complete |
 | [149](PLAN-149-PROOF-PRODUCING-SYNTHESIS-TODO-SPEC.md) | 3 | 0 | ⏸️ Deferred / To-Spec |
 | [150](PLAN-150-QUICKCHECK-ARBITRARY-STRATEGY.md) | 12 | 12 | ✅ Complete |
+| [151](PLAN-151-QUICKCHECK-V1-ORDINARY-STRATEGY-SEMANTICS.md) | 10 | 0 | 📝 Planned |
 
 ## Phase 145: Law Test Evidence Substrate
 
@@ -264,3 +266,26 @@ Adds a standard-library `test::quickcheck` property-testing substrate with `Stra
 | [TASK-1494](tasks/TASK-1494-quickcheck-documentation-cookbook.md) | Write documentation/cookbook examples | ✅ Complete |
 | [TASK-1495](tasks/TASK-1495-quickcheck-future-backends-design-note.md) | Validate and link future-backend design note | ✅ Complete |
 | [TASK-1496](tasks/TASK-1496-quickcheck-closeout.md) | Close out QuickCheck phase | ✅ Complete |
+
+
+## Phase 151: QuickCheck v1 Ordinary Strategy Semantics
+
+**Status:** 📝 Planned
+**Plan:** [PLAN-151: QuickCheck v1 Ordinary Strategy Semantics](PLAN-151-QUICKCHECK-V1-ORDINARY-STRATEGY-SEMANTICS.md)
+**Spec:** [SPEC-087: QuickCheck v1 Ordinary Strategy Semantics](../spec/SPEC-087-QUICKCHECK-V1-ORDINARY-STRATEGY-SEMANTICS.md)
+**Design note:** [DESIGN-NOTE: QuickCheck v1 Ordinary Strategy Semantics](../design/DESIGN-NOTE-QUICKCHECK-V1-ORDINARY-STRATEGY-SEMANTICS.md)
+
+Hardens the Phase 150 QuickCheck MVP into the ordinary-Ash v1 model with pure `Strategy<A>` values, helper-first `GenContext`, ordinary in-scope `Arbitrary<A>` evidence, pure strategy overrides, stable RNG/split, bounded recursive/weighted combinators, explicit shrink semantics, random seed/replay policy, and aggregate empirical evidence history.
+
+| Task | Description | Status |
+|------|-------------|--------|
+| [TASK-1497](tasks/TASK-1497-quickcheck-v1-live-syntax-and-seam-audit.md) | Audit live syntax, callable/evidence seams, parser override seams, runner bridges, and cache identity before implementation | 📝 Planned |
+| [TASK-1498](tasks/TASK-1498-quickcheck-stdlib-module-split-and-prelude.md) | Split `test::quickcheck` into canonical submodules, prelude, and alpha root aliases | 📝 Planned |
+| [TASK-1499](tasks/TASK-1499-gencontext-rng-and-strategy-value-core.md) | Implement helper-first `GenContext`, ordinary strategy value core, stable RNG/split helpers, and golden vectors | 📝 Planned |
+| [TASK-1500](tasks/TASK-1500-arbitrary-evidence-resolution-no-bridges.md) | Resolve minimal `Arbitrary<A>` through ordinary in-scope evidence and remove/quarantine hidden fallback bridges | 📝 Planned |
+| [TASK-1501](tasks/TASK-1501-quickcheck-with-override-parser-typecheck.md) | Implement pure `Strategy<T>` `with { ... }` override parser/typechecker support | 📝 Planned |
+| [TASK-1502](tasks/TASK-1502-quickcheck-combinators-recursion-and-weights.md) | Implement choice, weighted choice, map/project helpers, shrink wrappers, and bounded recursive combinators | 📝 Planned |
+| [TASK-1503](tasks/TASK-1503-quickcheck-runner-generation-shrink-semantics.md) | Wire generation, per-parameter split paths, stop-first execution, failure-class shrink, and generator/shrinker errors | 📝 Planned |
+| [TASK-1504](tasks/TASK-1504-quickcheck-seed-replay-and-aggregate-evidence.md) | Implement random seed default, replay overrides, source-seed linting, run records, aggregate pass history, and sticky active findings | 📝 Planned |
+| [TASK-1505](tasks/TASK-1505-quickcheck-v1-final-surface-fixtures-and-docs.md) | Add no-Cargo fixtures and user docs for ordinary strategies, overrides, recursion, shrinking, seeds, and evidence history | 📝 Planned |
+| [TASK-1506](tasks/TASK-1506-quickcheck-v1-closeout-and-review.md) | Close out Phase 151 with broad verification, independent review, and status/changelog/reference reconciliation | 📝 Planned |

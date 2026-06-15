@@ -3,6 +3,7 @@
 **Status:** Design note / future reference
 **Date:** 2026-06-15
 **Related:** [SPEC-082](../spec/SPEC-082-PROPERTY-GENERATION-AND-SHRINKING-SUBSTRATE.md), [SPEC-086](../spec/SPEC-086-QUICKCHECK-ARBITRARY-STRATEGY.md), [SPEC-085](../spec/SPEC-085-PROOF-PRODUCING-SYNTHESIS-TODO-SPEC.md)
+**Superseded / hardened by:** [DESIGN-NOTE: QuickCheck v1 Ordinary Strategy Semantics](DESIGN-NOTE-QUICKCHECK-V1-ORDINARY-STRATEGY-SEMANTICS.md) and [SPEC-087](../spec/SPEC-087-QUICKCHECK-V1-ORDINARY-STRATEGY-SEMANTICS.md) for the ordinary `Strategy<A>` v1 target.
 
 ## Summary
 

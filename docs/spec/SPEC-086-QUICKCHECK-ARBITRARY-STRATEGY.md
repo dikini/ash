@@ -5,6 +5,7 @@
 **Builds on:** [SPEC-081](SPEC-081-LAW-TEST-EVIDENCE-SUBSTRATE.md), [SPEC-082](SPEC-082-PROPERTY-GENERATION-AND-SHRINKING-SUBSTRATE.md)
 **Design note:** [DESIGN-NOTE: QuickCheck-Style Property Testing and Future Evidence Families](../design/DESIGN-NOTE-QUICKCHECK-PROPERTY-TESTING.md)
 **Plan:** [PLAN-150: QuickCheck Arbitrary and Strategy Property Testing](../plan/PLAN-150-QUICKCHECK-ARBITRARY-STRATEGY.md)
+**Superseded / hardened by:** [SPEC-087: QuickCheck v1 Ordinary Strategy Semantics](SPEC-087-QUICKCHECK-V1-ORDINARY-STRATEGY-SEMANTICS.md)
 
 ## Summary
 

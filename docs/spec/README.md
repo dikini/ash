@@ -75,6 +75,7 @@ This directory contains the canonical specifications for the Ash workflow langua
 | [SPEC-084](SPEC-084-FLAKY-TEST-QUARANTINE-AND-DISTRIBUTED-ORCHESTRATION.md) | Flaky-Test Quarantine and Distributed Orchestration | Planned | Adds retry/flake classification, quarantine metadata, shard planning, local shard execution, and result merging. |
 | [SPEC-085](SPEC-085-PROOF-PRODUCING-SYNTHESIS-TODO-SPEC.md) | Proof-Producing Synthesis Todo Spec | Deferred / To-Spec | Documents future proof-producing synthesis as a deferred non-test proof evidence family. |
 | [SPEC-086](SPEC-086-QUICKCHECK-ARBITRARY-STRATEGY.md) | QuickCheck Arbitrary and Strategy Property Testing | Planned | Adds the `test::quickcheck` standard-library property-testing substrate with `Strategy<T>`, `Arbitrary<T>`, compositional strategy overrides, law/property enforcement distinction, and evidence-cache schema groundwork. |
+| [SPEC-087](SPEC-087-QUICKCHECK-V1-ORDINARY-STRATEGY-SEMANTICS.md) | QuickCheck v1 Ordinary Strategy Semantics | Planned | Hardens Phase 150 QuickCheck from metadata/runner bridge MVP into ordinary pure `Strategy<A>` values, helper-first `GenContext`, in-scope `Arbitrary<A>` evidence, pure strategy overrides, stable RNG/split, bounded recursive/weighted combinators, explicit shrink semantics, random seed/replay policy, and aggregate empirical evidence history. |
 
 ## Deprecated Specifications
 

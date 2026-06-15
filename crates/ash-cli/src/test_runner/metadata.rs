@@ -4,6 +4,8 @@
 
 use std::path::Path;
 
+use crate::test_runner::quickcheck::QuickCheckStrategyOverride;
+
 /// Parsed test metadata from a file-level comment block.
 #[derive(Debug, Clone, Default)]
 pub struct TestMetadata {
@@ -27,6 +29,8 @@ pub struct TestMetadata {
     pub generated_params: Vec<String>,
     /// Simple authored property oracle evaluated for each generated binding.
     pub property: Option<String>,
+    /// QuickCheck-style explicit strategy overrides keyed by binding name.
+    pub quickcheck_strategies: Vec<QuickCheckStrategyOverride>,
     /// Whether this test is expected to fail.
     pub xfail: bool,
 }
@@ -94,12 +98,30 @@ impl TestMetadata {
                 .to_string()
         })
     }
+
+    /// Return the explicit quickcheck strategy path for a generated binding.
+    pub fn quickcheck_strategy_for(&self, binding: &str) -> Option<&str> {
+        self.quickcheck_strategies
+            .iter()
+            .find(|strategy| strategy.binding == binding)
+            .map(|strategy| strategy.strategy_path.as_str())
+    }
 }
 
 fn parse_directive(directive: &str, meta: &mut TestMetadata) {
     let parts: Vec<&str> = directive.splitn(2, ':').collect();
     let key = parts[0].trim();
     let value = parts.get(1).map(|v| v.trim()).unwrap_or("");
+
+    if let Some(binding) = key.strip_prefix("strategy ") {
+        if !binding.trim().is_empty() && !value.is_empty() {
+            meta.quickcheck_strategies.push(QuickCheckStrategyOverride {
+                binding: binding.trim().to_string(),
+                strategy_path: value.to_string(),
+            });
+        }
+        return;
+    }
 
     match key {
         "name" => {
@@ -159,6 +181,9 @@ fn parse_directive(directive: &str, meta: &mut TestMetadata) {
             if !value.is_empty() {
                 meta.property = Some(value.to_string());
             }
+        }
+        "quickcheck" => {
+            meta.kind = Some("property".to_string());
         }
         "xfail" => {
             meta.xfail = true;
@@ -248,6 +273,17 @@ mod tests {
         let meta = TestMetadata::parse_from_source(source);
         assert_eq!(meta.generated_params, vec!["x: Int", "xs: List<Int>"]);
         assert_eq!(meta.property.as_deref(), Some("x == x"));
+    }
+
+    #[test]
+    fn parse_quickcheck_strategy_override() {
+        let source =
+            "-- @test kind: property\n-- @test strategy xs: test::quickcheck::sorted_int_lists\n";
+        let meta = TestMetadata::parse_from_source(source);
+        assert_eq!(
+            meta.quickcheck_strategy_for("xs"),
+            Some("test::quickcheck::sorted_int_lists")
+        );
     }
 
     #[test]

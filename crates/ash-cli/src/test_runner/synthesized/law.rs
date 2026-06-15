@@ -8,7 +8,9 @@ use serde_json::{Value, json};
 
 use super::eval::evaluate_simple_bool_expression;
 use super::repro::{deferred_result_with_kind, repro_artifact};
-use super::value_generation::{generated_cases, generated_domain_for_param, shrink_bindings};
+use super::value_generation::{
+    generated_cases, generated_domain_for_param, shrink_bindings_for_domains,
+};
 use super::{
     LAW_SMALLWORLD_DEFAULT_MAX_WORLDS, LawEvidenceStatus, LawTestEvidence,
     RunnerIntrospectionSnapshot, RunnerLawMetadata,
@@ -242,7 +244,7 @@ pub(super) fn law_property_results(
                 _ => LawEvidenceStatus::Untested,
             };
             let shrunk = (outcome == Outcome::Fail).then(|| {
-                shrink_bindings(&bindings, |candidate| {
+                shrink_bindings_for_domains(&bindings, &param_domains, |candidate| {
                     evaluate_simple_bool_expression(&law.proposition, candidate) == Ok(false)
                 })
             });

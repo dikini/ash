@@ -1,6 +1,6 @@
 # SPEC-084: Flaky-Test Quarantine and Distributed Orchestration
 
-**Status:** Planned
+**Status:** Implemented MVP
 **Date:** 2026-06-15
 **Builds on:** [SPEC-081](SPEC-081-LAW-TEST-EVIDENCE-SUBSTRATE.md)
 **Plan:** [PLAN-148: Flaky-Test Quarantine and Distributed Orchestration](../plan/PLAN-148-FLAKY-TEST-QUARANTINE-AND-DISTRIBUTED-ORCHESTRATION.md)
@@ -72,6 +72,15 @@ Quarantined flaky tests should be visible but not silently counted as ordinary p
 - Repro artifacts must include enough data for a direct `$ASH_UNDER_TEST test ...` replay when the phase owns execution behavior.
 - Human output should summarize the new capability without hiding caveats.
 
+## Implemented MVP Semantics
+
+- `--retries N` retries failing authored test rows up to `N` times and attaches per-attempt evidence. A row that fails before eventually passing is classified with `flake.status = "flaky"`; ordinary success is not hidden.
+- `--shard INDEX/TOTAL` uses one-based deterministic local shard selection over the sorted discovered authored-test list and emits `shard.schema_version = "ash-shard-v1.0"`.
+- `--merge-results FILE...` reads shard JSON files without rerunning tests, rejects invalid shard ranges, failed shard envelopes, missing tests arrays, duplicate shard IDs, missing shard IDs, and duplicate `(path, name)` test rows, and emits `merge.schema_version = "ash-merge-v1.0"`.
+- `-- @test quarantine: <reason>` metadata keeps a row visible while remapping it to `skip` with `quarantine.original_outcome`; an empty quarantine directive fails closed with an explicit error.
+
+The first slice is local orchestration only: no remote worker lifecycle, queue protocol, artifact upload, or release/install parity beyond the candidate `$ASH_UNDER_TEST` binary is claimed by this spec.
+
 ## Implementation Tasks
 
 - [TASK-1474](../plan/tasks/TASK-1474-flake-orchestration-audit.md): Audit runner orchestration seams
@@ -88,3 +97,4 @@ Quarantined flaky tests should be visible but not silently counted as ordinary p
 ### 2026-06-15
 
 - Created this planning specification and registered PLAN-148 / TASK-1474 through TASK-1481.
+- Implemented the Phase 148 MVP for retries/flakes, quarantine metadata, deterministic local shards, shard JSON merge, no-Cargo fixtures, and final-surface evidence.

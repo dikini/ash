@@ -124,6 +124,10 @@ pub fn format_json(suite: &TestSuiteResult) -> Result<String, serde_json::Error>
         coverage: Option<crate::test_runner::coverage_mutation::LawCoverageReport>,
         #[serde(skip_serializing_if = "Option::is_none")]
         mutation: Option<crate::test_runner::coverage_mutation::MutationReport>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        flake_summary: Option<crate::test_runner::orchestration::FlakeSummary>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        shard: Option<crate::test_runner::orchestration::ShardReport>,
     }
 
     #[derive(serde::Serialize)]
@@ -152,6 +156,14 @@ pub fn format_json(suite: &TestSuiteResult) -> Result<String, serde_json::Error>
         test_mode: Option<String>,
         #[serde(skip_serializing_if = "Option::is_none")]
         evidence_status: Option<String>,
+        #[serde(skip_serializing_if = "Vec::is_empty")]
+        attempts: Vec<crate::test_runner::orchestration::TestAttempt>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        flake: Option<crate::test_runner::orchestration::FlakeReport>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        quarantine: Option<crate::test_runner::orchestration::QuarantineReport>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        shard: Option<crate::test_runner::orchestration::ShardAssignment>,
     }
 
     let tests: Vec<JsonTest> = suite
@@ -173,6 +185,10 @@ pub fn format_json(suite: &TestSuiteResult) -> Result<String, serde_json::Error>
             evidence_family: t.evidence_family.clone(),
             test_mode: t.test_mode.clone(),
             evidence_status: t.evidence_status.clone(),
+            attempts: t.attempts.clone(),
+            flake: t.flake.clone(),
+            quarantine: t.quarantine.clone(),
+            shard: t.shard.clone(),
         })
         .collect();
 
@@ -188,6 +204,8 @@ pub fn format_json(suite: &TestSuiteResult) -> Result<String, serde_json::Error>
         tests,
         coverage: suite.coverage.clone(),
         mutation: suite.mutation.clone(),
+        flake_summary: suite.flake_summary.clone(),
+        shard: suite.shard.clone(),
     };
 
     serde_json::to_string_pretty(&output)

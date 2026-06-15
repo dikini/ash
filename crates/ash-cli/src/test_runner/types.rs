@@ -9,6 +9,9 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 use crate::test_runner::coverage_mutation::{LawCoverageReport, MutationReport};
+use crate::test_runner::orchestration::{
+    FlakeReport, FlakeSummary, QuarantineReport, ShardAssignment, ShardReport,
+};
 
 // ---------------------------------------------------------------------------
 // Outcome classification (TASK-510: sealed result classification)
@@ -200,6 +203,18 @@ pub struct TestResult {
     /// Law proof evidence status.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub evidence_status: Option<String>,
+    /// Execution attempts when retries were requested or used.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub attempts: Vec<crate::test_runner::orchestration::TestAttempt>,
+    /// Flake classification when retry evidence exists.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub flake: Option<FlakeReport>,
+    /// Quarantine metadata when the row is quarantined.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub quarantine: Option<QuarantineReport>,
+    /// Shard assignment when local sharding is requested.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub shard: Option<ShardAssignment>,
 }
 
 mod duration_ms {
@@ -230,6 +245,10 @@ impl TestResult {
             evidence_family: None,
             test_mode: None,
             evidence_status: None,
+            attempts: Vec::new(),
+            flake: None,
+            quarantine: None,
+            shard: None,
         }
     }
 
@@ -302,6 +321,12 @@ pub struct TestSuiteResult {
     /// Optional bounded mutation report.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mutation: Option<MutationReport>,
+    /// Optional retry/flake summary.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub flake_summary: Option<FlakeSummary>,
+    /// Optional shard execution report.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub shard: Option<ShardReport>,
 }
 
 impl TestSuiteResult {
@@ -313,6 +338,8 @@ impl TestSuiteResult {
             duration: Duration::ZERO,
             coverage: None,
             mutation: None,
+            flake_summary: None,
+            shard: None,
         }
     }
 

@@ -9,6 +9,7 @@ pub mod discovery;
 pub mod evidence_cache;
 pub mod executor;
 pub mod metadata;
+pub mod orchestration;
 pub mod output;
 pub mod property;
 pub mod quickcheck;

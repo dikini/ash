@@ -12,6 +12,7 @@
 
 use crate::error::{CliError, CliResult};
 use crate::test_runner::executor::{self, SuiteConfig, SynthesizedSources};
+use crate::test_runner::orchestration::ShardSpec;
 use crate::test_runner::output;
 use clap::Args;
 use std::path::PathBuf;
@@ -129,10 +130,44 @@ pub struct TestArgs {
     /// Report a single exact mutant id for replay
     #[arg(long)]
     pub mutation_id: Option<String>,
+
+    /// Retry failing tests up to N times and classify pass-after-failure rows as flaky
+    #[arg(long, default_value = "0")]
+    pub retries: usize,
+
+    /// Run one deterministic local shard, using one-based INDEX/TOTAL syntax
+    #[arg(long, value_name = "INDEX/TOTAL")]
+    pub shard: Option<ShardSpec>,
+
+    /// Merge shard JSON result files instead of running tests
+    #[arg(long, value_name = "JSON", num_args = 1..)]
+    pub merge_results: Vec<PathBuf>,
 }
 
 /// Run the test command.
 pub fn test(args: &TestArgs) -> CliResult<()> {
+    if !args.merge_results.is_empty() {
+        let merged =
+            match crate::test_runner::orchestration::merge_result_files(&args.merge_results) {
+                Ok(value) => value,
+                Err(message) => crate::test_runner::orchestration::merge_error_json(&message),
+            };
+        let success = merged
+            .get("success")
+            .and_then(serde_json::Value::as_bool)
+            .unwrap_or(false);
+        let output_str = match args.format {
+            TestOutputFormat::Human => format!("{merged}\n"),
+            TestOutputFormat::Json => serde_json::to_string_pretty(&merged)
+                .map_err(|e| CliError::general(format!("JSON serialization error: {e}")))?,
+        };
+        print!("{output_str}");
+        if !success {
+            return Err(CliError::general("failed to merge shard results"));
+        }
+        return Ok(());
+    }
+
     // Determine synthesized sources
     let synthesized_sources = if let Some(ref only) = args.only_synthesized {
         SynthesizedSources {
@@ -164,6 +199,12 @@ pub fn test(args: &TestArgs) -> CliResult<()> {
         || args.include_law_tests;
     let only_synthesized = args.only_synthesized.is_some();
 
+    if args.shard.is_some() && include_synthesized {
+        return Err(CliError::general(
+            "--shard currently applies only to authored test discovery; do not combine it with synthesized tests",
+        ));
+    }
+
     let config = SuiteConfig {
         root: args.path.clone(),
         format: args.format,
@@ -184,6 +225,8 @@ pub fn test(args: &TestArgs) -> CliResult<()> {
         mutation: args.mutation,
         mutation_limit: args.mutation_limit,
         mutation_id: args.mutation_id.clone(),
+        retries: args.retries,
+        shard: args.shard,
     };
 
     // Run the test suite (authored + synthesized based on config)

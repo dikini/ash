@@ -12,6 +12,9 @@ use std::time::{Duration, Instant};
 
 use crate::test_runner::discovery::infer_kind_from_path;
 use crate::test_runner::metadata::TestMetadata;
+use crate::test_runner::orchestration::{
+    self, FlakeReport, ShardAssignment, ShardReport, ShardSpec, TestAttempt,
+};
 use crate::test_runner::synthesized::RunnerIntrospectionSnapshot;
 use crate::test_runner::types::{Outcome, TestKind, TestResult, TestSource};
 
@@ -295,6 +298,10 @@ pub struct SuiteConfig {
     pub mutation_limit: usize,
     /// Optional exact mutant id to report/replay.
     pub mutation_id: Option<String>,
+    /// Retry failing tests up to this many times.
+    pub retries: usize,
+    /// Optional deterministic local shard selector.
+    pub shard: Option<ShardSpec>,
 }
 
 impl Default for SuiteConfig {
@@ -319,6 +326,8 @@ impl Default for SuiteConfig {
             mutation: false,
             mutation_limit: 20,
             mutation_id: None,
+            retries: 0,
+            shard: None,
         }
     }
 }
@@ -361,6 +370,10 @@ pub fn run_suite(config: &SuiteConfig) -> crate::test_runner::types::TestSuiteRe
     // Run synthesized tests if requested
     if config.include_synthesized {
         run_synthesized_tests(config, &engine, &mut suite, &authored_tests);
+    }
+
+    if config.retries > 0 {
+        suite.flake_summary = Some(orchestration::flake_summary(&suite.tests, config.retries));
     }
 
     if config.coverage || config.mutation {
@@ -442,8 +455,15 @@ fn run_authored_tests(
 ) -> BTreeMap<String, TestResult> {
     let mut registry = BTreeMap::new();
     let files = crate::test_runner::discovery::discover_tests(&config.root);
+    let mut selected_count = 0usize;
 
-    for path in &files {
+    for (ordinal, path) in files.iter().enumerate() {
+        if let Some(shard) = config.shard
+            && !orchestration::shard_contains(shard, ordinal)
+        {
+            continue;
+        }
+        selected_count += 1;
         // Parse metadata
         let meta = match TestMetadata::parse_from_file(path) {
             Ok(m) => m,
@@ -461,6 +481,18 @@ fn run_authored_tests(
                 continue;
             }
         };
+
+        if meta.quarantine_malformed {
+            suite.add(
+                TestResult::new(meta.effective_name(path), path.to_path_buf())
+                    .with_outcome(Outcome::Error)
+                    .with_message("malformed quarantine metadata: reason is required"),
+            );
+            if config.fail_fast {
+                break;
+            }
+            continue;
+        }
 
         // Apply filters
         #[allow(clippy::collapsible_if)]
@@ -495,7 +527,17 @@ fn run_authored_tests(
         }
 
         // Execute the test with proper kind dispatch
-        let result = execute_test_by_kind(path, &meta, engine, config);
+        let mut result = execute_test_with_retries(path, &meta, engine, config);
+        if let Some(shard) = config.shard {
+            result.shard = Some(ShardAssignment {
+                index: shard.index,
+                total: shard.total,
+                ordinal,
+            });
+        }
+        if let Some(reason) = meta.quarantine.clone() {
+            orchestration::apply_quarantine(&mut result, reason);
+        }
         let outcome = result.outcome;
         insert_authored_registry_result(&mut registry, result.clone(), suite);
         suite.add(result);
@@ -504,6 +546,10 @@ fn run_authored_tests(
         if config.fail_fast && outcome.is_failure() {
             break;
         }
+    }
+
+    if let Some(shard) = config.shard {
+        suite.shard = Some(ShardReport::new(shard, files.len(), selected_count));
     }
 
     registry
@@ -543,6 +589,60 @@ fn insert_authored_registry_result(
     } else {
         registry.insert(result.name.clone(), result);
     }
+}
+
+/// Execute a test, dispatching to the appropriate handler based on kind.
+fn execute_test_with_retries(
+    path: &Path,
+    meta: &TestMetadata,
+    engine: &ash_engine::Engine,
+    config: &SuiteConfig,
+) -> TestResult {
+    let max_attempts = config.retries.saturating_add(1);
+    let mut attempts = Vec::new();
+    let mut final_result = None;
+
+    for attempt in 1..=max_attempts {
+        let result = if meta
+            .flaky_until_attempt
+            .is_some_and(|passing_attempt| attempt < passing_attempt)
+        {
+            TestResult::new(meta.effective_name(path), path.to_path_buf())
+                .with_outcome(Outcome::Fail)
+                .with_message(format!("simulated flaky failure on attempt {attempt}"))
+        } else {
+            execute_test_by_kind(path, meta, engine, config)
+        };
+        attempts.push(TestAttempt::from_result(attempt, &result));
+        let should_stop = !result.outcome.is_failure() || attempt == max_attempts;
+        final_result = Some(result);
+        if should_stop {
+            break;
+        }
+    }
+
+    let mut result =
+        final_result.unwrap_or_else(|| execute_test_by_kind(path, meta, engine, config));
+    if attempts.len() > 1 {
+        let had_prior_failure = attempts[..attempts.len() - 1]
+            .iter()
+            .any(|attempt| matches!(attempt.outcome.as_str(), "fail" | "panic" | "error"));
+        let status = if result.outcome == Outcome::Pass && had_prior_failure {
+            "flaky"
+        } else if result.outcome.is_failure() {
+            "stable_failure"
+        } else {
+            "stable_pass"
+        };
+        result.flake = Some(FlakeReport {
+            schema_version: orchestration::FLAKE_SCHEMA_VERSION.to_string(),
+            status: status.to_string(),
+            attempts: attempts.len(),
+            retries: config.retries,
+        });
+        result.attempts = attempts;
+    }
+    result
 }
 
 /// Execute a test, dispatching to the appropriate handler based on kind.

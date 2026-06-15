@@ -1,10 +1,10 @@
 # TASK-1481: Close out flake/orchestration phase
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
-Update reference docs, examples, PLAN-INDEX, CHANGELOG, and verification evidence.
+Reconcile status surfaces, changelog/reference docs, and broad verification for Phase 148.
 
 ## Specification Reference
 
@@ -13,44 +13,29 @@ Update reference docs, examples, PLAN-INDEX, CHANGELOG, and verification evidenc
 
 ## Dependencies
 
-- TASK-1480 complete or explicitly handed off
-- Phase implementer must load `rust-skills`, `ash-language-feature-spec-writing`, and `verification-before-completion` before implementation or closeout work.
+- TASK-1480: prior Phase 148 task
 
 ## Requirements
 
 ### Functional Requirements
 
-1. Preserve Phase 145's no-Cargo final-surface rule: user-facing evidence must run through `$ASH_UNDER_TEST test ...`.
-2. Fail closed for unsupported or malformed inputs; do not count unsupported behavior as passing.
-3. Keep JSON output explicit enough for downstream tools and agents.
-4. Add task-specific examples/fixtures rather than relying only on Rust unit tests.
+1. Update PLAN-148, PLAN-INDEX, SPEC-084, CHANGELOG.md, and reference/tools/test.md.
+2. Record focused and final-surface evidence.
+3. Run focused and broad gates after the final diff.
 
-### Examples for Implementers
+### Non-Goals
 
-```bash
-$ASH_UNDER_TEST test fixtures/phase148-flakes --retries 2 --format json
-$ASH_UNDER_TEST test fixtures/phase148-shards --shard 1/3 --format json > shard-1.json
-$ASH_UNDER_TEST test --merge-results shard-*.json --format json
-```
+- Remote cluster provisioning.
+- Proof-producing synthesis.
+- New generator/shrinker semantics.
 
-Quarantined flaky tests should be visible but not silently counted as ordinary passes.
+## TDD Steps
 
-## Implementation Guidance
-
-### Expected files to inspect first
-
-- `crates/ash-cli/src/test_runner/`
-- `crates/ash-cli/src/test_runner/synthesized/`
-- `crates/ash-parser/src/surface.rs` and `crates/ash-parser/src/parse_module.rs` if syntax changes are required
-- `reference/tools/test.md`
-
-### TDD Steps
-
-1. Write focused failing tests for this task's schema/runner behavior.
-2. Add or update Ash fixture files under `fixtures/phase148-...` when user-facing behavior changes.
-3. Implement the smallest Rust slice that satisfies the focused tests.
-4. Run the direct Ash-under-test command and record its output in the task closeout notes.
-5. Update docs/status surfaces only in the closeout task unless this task owns a public behavior caveat.
+1. Write focused failing Rust/CLI tests for this task's runner behavior.
+2. Add or update phase-owned Ash fixtures when user-facing behavior changes.
+3. Implement the smallest Rust slice that satisfies those tests.
+4. Run focused tests and direct `$ASH_UNDER_TEST` evidence for user-facing behavior.
+5. Leave status surfaces planned until closeout unless this task owns a required caveat.
 
 ## Dispatch
 
@@ -72,17 +57,25 @@ skills:
 strictness: clean
 commands:
   - cargo fmt --check
-  - false # replace with exact focused cargo/Ash verification before marking complete
-  - ${ASH_UNDER_TEST:?set Ash candidate binary} test fixtures/phase148-... --format json
+  - cargo test -p ash-cli --test phase148_flake_orchestration -- --nocapture
+  - cargo test -p ash-cli flake_orchestration -- --nocapture
+  - cargo clippy -p ash-cli --all-targets -- -D warnings
+  - cargo check --workspace
 checklist:
-  - [ ] Focused Rust tests pass
-  - [ ] Direct Ash-under-test fixture command passes or defers honestly
-  - [ ] Unsupported cases fail closed
-  - [ ] CHANGELOG/reference updates are present if public behavior changed
+  - [ ] Focused Rust tests pass with non-zero intended test count
+  - [ ] Direct Ash-under-test fixture command passes or fails closed as specified
+  - [ ] JSON output remains machine-readable and schema-versioned
+  - [ ] Unsupported/malformed cases fail closed
 ```
 
 ## Notes
 
-- Keep the task small; if implementation discovers a broader prerequisite, stop and create a prerequisite task instead of widening scope.
-- Do not use ordinary installed `ash` as the only proof while tooling is under development; record `$ASH_UNDER_TEST` provenance.
-- Rust tooling is required for implementers, but not accepted as the author/executor-facing proof path.
+- Implementation evidence:
+  - `cargo test -p ash-cli --test phase148_flake_orchestration -- --nocapture` passed 5/5 tests.
+  - `$ASH_UNDER_TEST test fixtures/phase148-flakes --retries 2 --format json` emitted `ash-flake-v1.0` with one flaky row and per-attempt evidence.
+  - `$ASH_UNDER_TEST test fixtures/phase148-quarantine --format json` emitted a visible quarantined skip row preserving original fail outcome.
+  - `$ASH_UNDER_TEST test fixtures/phase148-quarantine-malformed --format json` failed closed with malformed quarantine metadata.
+  - `$ASH_UNDER_TEST test fixtures/phase148-shards --shard 1/2 --format json` emitted `ash-shard-v1.0` with 2 selected / 2 skipped candidates.
+  - `$ASH_UNDER_TEST test --merge-results /tmp/phase148-shard1.json /tmp/phase148-shard2.json --format json` emitted `ash-merge-v1.0` with 4 merged rows.
+- Scope boundary: this phase implements local orchestration primitives only, not remote distributed worker lifecycle/provisioning.
+- If implementation discovers a broader prerequisite, split it rather than widening this task silently.

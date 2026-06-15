@@ -327,6 +327,42 @@ ash test fixtures/phase147-coverage --mutation --mutation-limit 20 --format json
 
 Current Alpha boundary: mutation status is based on the Phase 145/146 empirical law-evidence substrate for the selected law proposition. Covered laws kill their bounded law-proposition mutants; laws without satisfied evidence report survived mutants rather than being counted as passing evidence. This is not unrestricted expression mutation, distributed execution, symbolic proof, or automatic open-domain generator synthesis.
 
+## Flaky Tests, Quarantine, Shards, and Merge
+
+Phase 148 adds local orchestration features for `ash test` while keeping evidence explicit and machine-readable.
+
+```bash
+ash test fixtures/phase148-flakes --retries 2 --format json
+ash test fixtures/phase148-shards --shard 1/2 --format json > shard-1.json
+ash test fixtures/phase148-shards --shard 2/2 --format json > shard-2.json
+ash test --merge-results shard-1.json shard-2.json --format json
+```
+
+`--retries N` retries failing authored test rows up to `N` times. A row that fails before eventually passing remains a visible pass row with:
+
+- `attempts`: one row per attempt, including outcome/message/duration
+- `flake.schema_version: "ash-flake-v1.0"`
+- `flake.status: "flaky"`
+- suite-level `flake_summary` totals
+
+Test metadata supports quarantine with a required reason:
+
+```ash
+-- @test quarantine: known flaky runtime fixture
+```
+
+A quarantined row is still emitted, but it is remapped to `skip` with `quarantine.original_outcome` and the human reason. Empty quarantine metadata fails closed as an `error` row.
+
+`--shard INDEX/TOTAL` uses one-based deterministic local shard selection over the sorted discovered authored-test list and emits:
+
+- `shard.schema_version: "ash-shard-v1.0"`
+- `shard.index`, `shard.total`, `candidate_count`, `selected_count`, `skipped_count`
+- per-row `shard.index`, `shard.total`, and sorted-list ordinal
+
+`--merge-results FILE...` reads shard JSON files without rerunning tests. It rejects invalid shard ranges, failed shard envelopes, missing tests arrays, duplicate shard IDs, missing shard IDs, and duplicate `(path, name)` test rows before producing aggregate success, then emits `merge.schema_version: "ash-merge-v1.0"`.
+
+Current Alpha boundary: these are local orchestration primitives, not remote worker lifecycle management, queueing, artifact upload, or hosted distributed execution. `--shard` currently applies only to authored test discovery and fails closed when combined with synthesized-test selection.
+
 ## Non-Goals
 
-`ash test` does not currently provide flaky-test quarantine, distributed orchestration, proof-producing synthesis, unrestricted mutation execution, or unrestricted automatic value/world generation from ordinary source files. Generation, shrinking, coverage, and mutation reporting are currently bounded to the implemented law/test/property metadata substrates and supported primitive/container domains.
+`ash test` does not currently provide remote distributed worker lifecycle management, queueing, artifact upload, proof-producing synthesis, unrestricted mutation execution, or unrestricted automatic value/world generation from ordinary source files. Local retries/flake classification, quarantine metadata, local deterministic sharding, shard JSON merge, generation, shrinking, coverage, and mutation reporting are bounded to the implemented law/test/property metadata substrates and supported primitive/container domains.

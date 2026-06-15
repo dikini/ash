@@ -33,6 +33,12 @@ pub struct TestMetadata {
     pub quickcheck_strategies: Vec<QuickCheckStrategyOverride>,
     /// Whether this test is expected to fail.
     pub xfail: bool,
+    /// Quarantine reason, when this test is quarantined.
+    pub quarantine: Option<String>,
+    /// Whether a quarantine directive was present but malformed.
+    pub quarantine_malformed: bool,
+    /// Deterministic fixture hook: fail attempts before this one.
+    pub flaky_until_attempt: Option<usize>,
 }
 
 impl TestMetadata {
@@ -188,6 +194,17 @@ fn parse_directive(directive: &str, meta: &mut TestMetadata) {
         "xfail" => {
             meta.xfail = true;
         }
+        "quarantine" => {
+            if value.is_empty() {
+                meta.quarantine_malformed = true;
+            } else {
+                meta.quarantine = Some(value.to_string());
+            }
+        }
+        "flaky_until_attempt" => match value.parse::<usize>() {
+            Ok(attempt) if attempt > 0 => meta.flaky_until_attempt = Some(attempt),
+            _ => {}
+        },
         _ => {} // Unknown directive, ignore
     }
 }

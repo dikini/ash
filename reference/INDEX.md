@@ -6,10 +6,11 @@ audience: [human, agent]
 authority: canonical-adjacent
 status: current
 stability: alpha
+slice: reference-slice-3
 owner: reference-corpus
 last_verified: 2026-06-11
 verified_against:
-    git_commit: 61efd59f
+  git_commit: adf20e81
   release_tag: null
   ash_version: unreleased-alpha
   specs:
@@ -125,6 +126,7 @@ refresh_trigger:
   - [Stdlib Proc card](agents/cards/stdlib-proc.md)
   - [Stdlib Workflow card](agents/cards/stdlib-workflow.md)
   - [Stdlib Result card](agents/cards/stdlib-result.md)
+  - [Stdlib Algebra card](agents/cards/stdlib-algebra.md)
   - [Ash CLI card](agents/cards/ash-cli.md)
   - [Ashgrove card](agents/cards/ashgrove.md)
   - [RuntimeKernel card](agents/cards/runtime-kernel.md)

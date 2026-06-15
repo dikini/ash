@@ -6,10 +6,11 @@ audience: [agent]
 authority: derivative
 status: current
 stability: alpha
+slice: reference-slice-3
 owner: reference-corpus
 last_verified: 2026-06-11
 verified_against:
-  git_commit: 61efd59f
+  git_commit: adf20e81
   release_tag: null
   ash_version: unreleased-alpha
   specs:
@@ -94,7 +95,7 @@ Retrieve the canonical page first, then use this card for search tags, stale-cla
 ## Stale-claim warnings
 
 - Do not claim `by_definition` proofs are semantically validated. The audit (TASK-1388) confirmed they are syntactically accepted only.
-- Do not claim generated law tests execute automatically. They are deferred to TASK-1029 / SPEC-077.
+- Do not claim generated law tests execute automatically. They are opt-in via `ash test --only-synthesized laws`, and function-valued/tower law families may still emit explicit deferred rows.
 - Do not claim `Comonad` has stdlib carrier instances. It does not.
 - Do not claim Kleisli helpers exist as concrete carrier wrappers. They are deferred.
 - Do not claim Coapplicative exists. It is explicitly deferred.

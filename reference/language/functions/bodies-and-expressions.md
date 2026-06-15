@@ -21,7 +21,7 @@ verified_against:
   code:
     - crates/ash-parser/src/parse_module.rs
     - crates/ash-parser/src/parse_expr.rs
-    - crates/ash-typeck/src/check_expr.rs
+    - crates/ash-typeck/src/check_expr/mod.rs
   tests:
     - crates/ash-typeck/tests/task_1003_let_irrefutability.rs
     - crates/ash-typeck/tests/task_1005_match_exhaustiveness.rs

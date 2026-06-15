@@ -6,10 +6,11 @@ audience: [human, agent]
 authority: canonical-adjacent
 status: current
 stability: alpha
+slice: reference-slice-3
 owner: stdlib
 last_verified: 2026-06-11
 verified_against:
-  git_commit: 61efd59f
+  git_commit: adf20e81
   release_tag: null
   ash_version: unreleased-alpha
   specs:
@@ -108,7 +109,7 @@ A `do:Option` block lowers through selected `Monad<Option>` evidence. A `do:Resu
 
 ## Helper scope
 
-`std::algebra` does not publish concrete Option/Result/List/String wrapper functions. More general higher-rank helpers such as fully generic `then`, `join`, `compose`, Kleisli composition, and generated algebra law checks are deferred to owned follow-up work until Ash has an honest selected-evidence method-dispatch surface for them.
+`std::algebra` does not publish concrete Option/Result/List/String wrapper functions. More general higher-rank helpers such as fully generic `then`, `join`, `compose`, and Kleisli composition are deferred to owned follow-up work until Ash has an honest selected-evidence method-dispatch surface for them. Generated algebra law checks are available as opt-in synthesized runner rows for bounded pure carrier profiles; function-valued and tower cases defer explicitly when executable metadata or bounded equivalence is unavailable.
 
 ## Dual/context helpers
 
@@ -132,4 +133,4 @@ Each law takes explicit `Eq` evidence and states an equivalence between two expr
 
 ## Law profiles
 
-Normative law profiles for `Semigroup`, `Monoid`, `Functor`, `Applicative`, and `Monad` are recorded in `docs/plan/audits/TASK-1026-algebra-law-test-handoff.md`. Comonad, Kleisli, and Cokleisli law-profile ownership is recorded in `docs/plan/audits/TASK-1036-comonad-law-test-handoff.md` and extends `docs/plan/tasks/TASK-1029-generated-algebra-law-tests.md`. They are contracts for future generated tests, not proof obligations executed by Phase 134 or Phase 135.
+Normative law profiles for `Semigroup`, `Monoid`, `Functor`, `Applicative`, and `Monad` are recorded in `docs/plan/audits/TASK-1026-algebra-law-test-handoff.md` and selected by the Phase 144 synthesized law-test runner. The current runner executes only bounded pure-carrier laws whose propositions do not require executable function metadata; function-valued Applicative/Monad laws and tower carriers emit explicit deferred rows. Comonad, Kleisli, and Cokleisli law-profile ownership is recorded in `docs/plan/audits/TASK-1036-comonad-law-test-handoff.md` and extends `docs/plan/tasks/TASK-1029-generated-algebra-law-tests.md`; those families remain contracts for future generated tests, not proof obligations executed by the current runner.

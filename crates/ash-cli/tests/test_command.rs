@@ -40,6 +40,7 @@ fn test_help_output() {
         .assert()
         .success()
         .stdout(predicate::str::contains("Run Ash tests"))
+        .stdout(predicate::str::contains("--include-law-tests"))
         .stdout(predicate::str::contains("--skip-law-tests"))
         .stdout(predicate::str::contains("--skip-law-test"));
 }
@@ -883,4 +884,149 @@ fn only_synthesized_laws_generates_std_io_path_join_law_row() {
         "law replay command should re-select synthesized law rows, got {:?}",
         law["repro_artifact"]["replay_command"]
     );
+}
+
+#[test]
+fn generated_algebra_laws_only_synthesized_executes_pure_carriers() {
+    let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../std/src/algebra/monoid.ash");
+
+    let assert = ash()
+        .arg("test")
+        .arg(path)
+        .arg("--only-synthesized")
+        .arg("laws")
+        .arg("--format")
+        .arg("json")
+        .assert();
+    let output = parse_json_output(&assert.success());
+    let tests = output["tests"].as_array().unwrap();
+
+    let algebra_rows = tests
+        .iter()
+        .filter(|test| {
+            test["source"] == "synthesized:law"
+                && test["name"]
+                    .as_str()
+                    .is_some_and(|name| name.starts_with("synthesized/algebra/"))
+        })
+        .collect::<Vec<_>>();
+    assert!(
+        !algebra_rows.is_empty(),
+        "--only-synthesized laws should execute generated algebra law rows: {output:#}"
+    );
+    assert!(
+        algebra_rows.iter().any(|test| {
+            test["outcome"] == "pass"
+                && test["repro_artifact"]["oracle_snapshot"]["carrier"] == "String"
+        }),
+        "String carrier law rows should pass with execution evidence: {output:#}"
+    );
+    assert!(
+        algebra_rows.iter().any(|test| {
+            test["outcome"] == "pass"
+                && test["repro_artifact"]["oracle_snapshot"]["carrier"] == "List"
+        }),
+        "List carrier law rows should pass with execution evidence: {output:#}"
+    );
+}
+
+#[test]
+fn generated_algebra_laws_max_cases_zero_defers_instead_of_passing() {
+    let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../std/src/algebra/monoid.ash");
+
+    let assert = ash()
+        .arg("test")
+        .arg(path)
+        .arg("--only-synthesized")
+        .arg("laws")
+        .arg("--max-cases")
+        .arg("0")
+        .arg("--format")
+        .arg("json")
+        .assert();
+    let output = parse_json_output(&assert.success());
+    let algebra_rows = output["tests"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|test| {
+            test["source"] == "synthesized:law"
+                && test["name"]
+                    .as_str()
+                    .is_some_and(|name| name.starts_with("synthesized/algebra/"))
+        })
+        .collect::<Vec<_>>();
+
+    assert!(
+        !algebra_rows.is_empty(),
+        "zero max-cases should still report selected algebra rows: {output:#}"
+    );
+    assert!(
+        algebra_rows.iter().all(|test| test["outcome"] == "skip"),
+        "zero executed cases must not be reported as pass: {output:#}"
+    );
+}
+
+#[test]
+fn generated_algebra_laws_applicative_function_laws_defer_without_metadata() {
+    let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../std/src/algebra/applicative.ash");
+
+    let assert = ash()
+        .arg("test")
+        .arg(path)
+        .arg("--only-synthesized")
+        .arg("laws")
+        .arg("--format")
+        .arg("json")
+        .assert();
+    let output = parse_json_output(&assert.success());
+    let rows = output["tests"].as_array().unwrap();
+
+    for law in ["homomorphism", "interchange", "composition"] {
+        assert!(
+            rows.iter().any(|test| {
+                test["name"].as_str().is_some_and(|name| {
+                    name.starts_with(&format!("synthesized/algebra/List/Applicative/{law}"))
+                }) && test["outcome"] == "skip"
+                    && test["message"]
+                        .as_str()
+                        .is_some_and(|message| message.contains("executable function metadata"))
+            }),
+            "applicative {law} should defer without hardcoded pass: {output:#}"
+        );
+    }
+}
+
+#[test]
+fn generated_algebra_laws_monad_function_laws_defer_without_metadata() {
+    let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../std/src/algebra/monad.ash");
+
+    let assert = ash()
+        .arg("test")
+        .arg(path)
+        .arg("--only-synthesized")
+        .arg("laws")
+        .arg("--format")
+        .arg("json")
+        .assert();
+    let output = parse_json_output(&assert.success());
+    let rows = output["tests"].as_array().unwrap();
+
+    for law in ["left_identity", "right_identity", "associativity"] {
+        assert!(
+            rows.iter().any(|test| {
+                test["name"].as_str().is_some_and(|name| {
+                    name.starts_with(&format!("synthesized/algebra/List/Monad/{law}"))
+                }) && test["outcome"] == "skip"
+                    && test["message"]
+                        .as_str()
+                        .is_some_and(|message| message.contains("executable function metadata"))
+            }),
+            "monad {law} should defer without hardcoded function-model pass: {output:#}"
+        );
+    }
 }

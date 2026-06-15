@@ -6,15 +6,17 @@
 //! - Property tests: seeded, bounded case count, reports failing case index
 //! - Small-world tests: bounded world count/depth, reports world index
 
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 use std::time::{Duration, Instant};
 
 use serde_json::{Value, json};
 
 use crate::test_runner::metadata::TestMetadata;
+use crate::test_runner::quickcheck::domain_for_param_with_strategy;
 use crate::test_runner::synthesized::eval::evaluate_simple_bool_expression;
 use crate::test_runner::synthesized::value_generation::{
-    generated_cases, generated_domain_for_param, shrink_bindings,
+    generated_cases, shrink_bindings_for_domains,
 };
 use crate::test_runner::types::{Outcome, ReproArtifact, TestKind, TestResult, TestSource};
 
@@ -82,10 +84,18 @@ fn execute_generated_property_metadata(
         );
     };
 
+    if let Err(error) = validate_quickcheck_strategy_overrides(meta) {
+        return generated_property_error(name, path, seed, &error);
+    }
+
     let domains = match meta
         .generated_params
         .iter()
-        .map(|param| generated_domain_for_param(param))
+        .map(|param| {
+            let binding = param.split_once(':').map(|(binding, _)| binding.trim());
+            let strategy = binding.and_then(|binding| meta.quickcheck_strategy_for(binding));
+            domain_for_param_with_strategy(param, strategy)
+        })
         .collect::<Option<Vec<_>>>()
     {
         Some(domains) => domains,
@@ -94,11 +104,12 @@ fn execute_generated_property_metadata(
                 name,
                 path,
                 seed,
-                "invalid generated property test: unsupported @test params type domain",
+                "invalid generated property test: unsupported @test params type domain or quickcheck strategy",
             );
         }
     };
     let cases = generated_cases(&domains, max_cases);
+    let actual_case_count = cases.len();
     if cases.is_empty() {
         return generated_property_error(
             name,
@@ -108,7 +119,7 @@ fn execute_generated_property_metadata(
         );
     }
 
-    for case in cases {
+    for case in &cases {
         let outcome = match evaluate_simple_bool_expression(property, &case.bindings) {
             Ok(true) => Outcome::Pass,
             Ok(false) => Outcome::Fail,
@@ -122,12 +133,12 @@ fn execute_generated_property_metadata(
             }
         };
         if outcome == Outcome::Fail {
-            let shrunk = shrink_bindings(&case.bindings, |candidate| {
+            let shrunk = shrink_bindings_for_domains(&case.bindings, &domains, |candidate| {
                 evaluate_simple_bool_expression(property, candidate) == Ok(false)
             });
             let snapshot = json!({
-                "bindings": case.bindings,
-                "generators": case.generators,
+                "bindings": case.bindings.clone(),
+                "generators": case.generators.clone(),
                 "shrunk_counterexample": shrunk.bindings,
                 "shrink_trace": shrunk.trace,
             });
@@ -160,12 +171,54 @@ fn execute_generated_property_metadata(
         .with_duration(duration)
         .with_seed(seed)
         .with_message(format!(
-            "generated property passed {max_cases} bounded cases from @test params"
+            "generated property passed {actual_case_count} bounded cases from @test params"
         ));
+    let pass_snapshot = json!({
+        "executed_cases": actual_case_count,
+        "generators": domains
+            .iter()
+            .map(|domain| domain.descriptor.clone())
+            .collect::<Vec<_>>(),
+    });
     result.repro_artifact = Some(property_repro_artifact(
-        path, seed, max_cases, property, None,
+        path,
+        seed,
+        actual_case_count,
+        property,
+        Some(pass_snapshot),
     ));
     result
+}
+
+fn validate_quickcheck_strategy_overrides(meta: &TestMetadata) -> Result<(), String> {
+    let mut declared_bindings = BTreeSet::new();
+    for param in &meta.generated_params {
+        let Some((binding, _)) = param.split_once(':') else {
+            continue;
+        };
+        declared_bindings.insert(binding.trim().to_string());
+    }
+
+    let mut seen = BTreeMap::new();
+    for strategy in &meta.quickcheck_strategies {
+        if !declared_bindings.contains(&strategy.binding) {
+            return Err(format!(
+                "invalid generated property test: quickcheck strategy override for unknown binding `{}`",
+                strategy.binding
+            ));
+        }
+        if seen
+            .insert(strategy.binding.as_str(), strategy.strategy_path.as_str())
+            .is_some()
+        {
+            return Err(format!(
+                "invalid generated property test: duplicate quickcheck strategy override for binding `{}`",
+                strategy.binding
+            ));
+        }
+    }
+
+    Ok(())
 }
 
 fn generated_property_error(name: String, path: &Path, seed: u64, message: &str) -> TestResult {

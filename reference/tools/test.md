@@ -234,6 +234,59 @@ workflow main() -> Bool { ret true }
 
 For generated property rows, JSON `repro_artifact.generated_input_snapshot` includes the original `bindings`, generator descriptors, and `shrunk_counterexample` / `shrink_trace` when a counterexample is found. Unsupported parameter domains or malformed property oracles fail closed as `error` for authored property tests, and defer rather than pass for synthesized law evidence.
 
+## QuickCheck Strategies and Arbitrary Defaults
+
+Phase 150 adds the first QuickCheck-like surface under the standard-library
+namespace `test::quickcheck`. Conceptually:
+
+```ash
+pub type Strategy<T> = Strategy { id: String }
+
+pub interface Arbitrary<T> {
+    arbitrary() -> Strategy<T>
+    gen(Int, Int) -> List<T>
+    shrink(T) -> List<T>
+}
+```
+
+`Arbitrary<T>` is the default generated-domain evidence for a type. `Strategy<T>`
+is a value-level override for a specific domain. The coherence law is:
+
+```text
+Arbitrary<T>::gen(seed, size) == strategy::gen(Arbitrary<T>::arbitrary(), seed, size)
+Arbitrary<T>::shrink(value)   == strategy::shrink(Arbitrary<T>::arbitrary(), value)
+```
+
+The first runner slice exposes strategy overrides through metadata while the
+parser-level `by test quickcheck with { ... }` syntax remains future work:
+
+```ash
+-- @test name: sorted_binary_search_domain
+-- @test kind: property
+-- @test params: xs: List<Int>, x: Int
+-- @test strategy xs: test::quickcheck::sorted_int_lists
+-- @test strategy x: test::quickcheck::positive_ints
+-- @test property: x >= 1
+fn main() -> Bool { true }
+```
+
+Supported first-slice strategies include `ints`, `small_ints`, `positive_ints`,
+`nonzero_ints`, `bools`, `strings`, `identifiers`, `sorted_int_lists`, and
+`nonempty_int_lists`. If no override is supplied, the runner uses the default
+bounded `Arbitrary<T>` strategy for supported primitive/container types. If an
+override's target type does not match the parameter type, the test fails closed
+as an `error`; it never counts as passing evidence.
+
+Strategy shrinking is domain-preserving: explicit strategy overrides shrink via
+the strategy's own representative domain before using generic structural
+shrinking. For example, `positive_ints` does not shrink a failing positive value
+to `0`, because `0` is outside that strategy domain.
+
+Law cache schema is version-moderated. A stale or missing empirical law cache
+entry is distinct from a refuted law: stale evidence may require rerun under the
+active policy, while broken evidence means the law/property itself produced a
+counterexample.
+
 Law evidence rows include:
 
 - `evidence_family: "test"`

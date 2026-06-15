@@ -118,8 +118,35 @@ fn append_cases(
 }
 
 /// Greedily shrink a failing binding set while `still_fails` remains true.
+#[cfg(test)]
 pub fn shrink_bindings(
     original: &BTreeMap<String, Value>,
+    still_fails: impl Fn(&BTreeMap<String, Value>) -> bool,
+) -> ShrunkCounterexample {
+    shrink_bindings_with_candidate_values(original, &BTreeMap::new(), still_fails)
+}
+
+/// Greedily shrink using strategy/domain candidate values when available.
+///
+/// This keeps explicit `Strategy<T>` overrides domain-preserving: a positive-int
+/// strategy never shrinks to `0`, and a sorted-list strategy only proposes
+/// sorted-list representatives from the strategy domain. Bindings without an
+/// explicit domain fall back to the generic structural shrinker.
+pub fn shrink_bindings_for_domains(
+    original: &BTreeMap<String, Value>,
+    domains: &[GeneratedValueDomain],
+    still_fails: impl Fn(&BTreeMap<String, Value>) -> bool,
+) -> ShrunkCounterexample {
+    let candidate_values = domains
+        .iter()
+        .map(|domain| (domain.binding.clone(), domain.values.clone()))
+        .collect::<BTreeMap<_, _>>();
+    shrink_bindings_with_candidate_values(original, &candidate_values, still_fails)
+}
+
+fn shrink_bindings_with_candidate_values(
+    original: &BTreeMap<String, Value>,
+    candidate_values: &BTreeMap<String, Vec<Value>>,
     still_fails: impl Fn(&BTreeMap<String, Value>) -> bool,
 ) -> ShrunkCounterexample {
     let mut current = original.clone();
@@ -129,7 +156,11 @@ pub fn shrink_bindings(
         let Some(value) = current.get(key).cloned() else {
             continue;
         };
-        for candidate in shrink_candidates(&value) {
+        let candidates = candidate_values
+            .get(key)
+            .map(|values| strategy_shrink_candidates(values, &value))
+            .unwrap_or_else(|| shrink_candidates(&value));
+        for candidate in candidates {
             if candidate == value {
                 continue;
             }
@@ -147,6 +178,14 @@ pub fn shrink_bindings(
         bindings: current,
         trace,
     }
+}
+
+fn strategy_shrink_candidates(values: &[Value], current: &Value) -> Vec<Value> {
+    values
+        .iter()
+        .take_while(|value| *value != current)
+        .cloned()
+        .collect()
 }
 
 fn values_for_type(type_name: &str) -> Option<Vec<Value>> {
@@ -320,5 +359,20 @@ mod tests {
         let shrunk = shrink_bindings(&original, |bindings| bindings["x"].as_i64().unwrap() <= 0);
         assert_eq!(shrunk.bindings["x"], json!(0));
         assert_eq!(shrunk.trace, vec![json!({"x": 0})]);
+    }
+
+    #[test]
+    fn shrink_bindings_for_domains_preserves_strategy_domain() {
+        let domain = generated_domain_for_param("x: Int").unwrap();
+        let domain = GeneratedValueDomain {
+            values: vec![json!(1), json!(2), json!(3)],
+            ..domain
+        };
+        let original = BTreeMap::from([("x".to_string(), json!(3))]);
+        let shrunk = shrink_bindings_for_domains(&original, &[domain], |bindings| {
+            bindings["x"].as_i64().unwrap() > 0
+        });
+        assert_eq!(shrunk.bindings["x"], json!(1));
+        assert_eq!(shrunk.trace, vec![json!({"x": 1})]);
     }
 }

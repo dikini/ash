@@ -1,6 +1,6 @@
 # TASK-1485: QuickCheck Design and Live Syntax Audit
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -100,10 +100,10 @@ commands:
   - cargo fmt --check
   - git diff --check
 checklist:
-  - [ ] Focused tests or docs checks pass
-  - [ ] Negative/fail-closed behavior covered when applicable
-  - [ ] No-Cargo final-surface evidence recorded when applicable
-  - [ ] CHANGELOG.md updated if implementation/docs policy changed
+  - [x] Focused tests or docs checks pass
+  - [x] Negative/fail-closed behavior covered when applicable
+  - [x] No-Cargo final-surface evidence recorded when applicable
+  - [x] CHANGELOG.md updated if implementation/docs policy changed
 ```
 
 ## Dependencies for Next Task
@@ -117,3 +117,17 @@ This task feeds:
 - Keep `property` and `law` enforcement distinct: properties fail tests; laws can invalidate evidence under policy.
 - Strategy overrides exist because `Arbitrary<T>` is only a default, not every useful domain for `T`.
 - Missing generators, strategies, or Arbitrary evidence must never count as passing evidence.
+
+
+## Completion Notes
+
+Phase 150 landed the first QuickCheck-like implementation slice:
+
+- `test::quickcheck` stdlib namespace with `Strategy<T>` and `Arbitrary<T>` surface docs/laws.
+- Metadata bridge for explicit strategy overrides: `-- @test strategy <binding>: <strategy-path>`.
+- Runner resolution order: explicit strategy override first, otherwise default bounded `Arbitrary<T>` representatives.
+- Domain-preserving shrink candidates for explicit strategies.
+- Version-moderated empirical law-evidence cache schema.
+- No-Cargo `$ASH_UNDER_TEST test ...` fixtures for default/override/failing/fail-closed cases.
+
+Parser-level `by test quickcheck with { ... }`, automatic `Arbitrary<T>` derivation, full SmallCheck, and solver/proof backends remain future work per SPEC-086 and the design note.

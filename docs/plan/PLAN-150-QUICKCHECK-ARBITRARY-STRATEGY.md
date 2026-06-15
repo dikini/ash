@@ -1,6 +1,6 @@
 # PLAN-150: QuickCheck Arbitrary and Strategy Property Testing
 
-**Status:** 📝 Planned
+**Status:** ✅ Complete
 **Spec:** [SPEC-086: QuickCheck Arbitrary and Strategy Property Testing](../spec/SPEC-086-QUICKCHECK-ARBITRARY-STRATEGY.md)
 **Design note:** [DESIGN-NOTE: QuickCheck-Style Property Testing and Future Evidence Families](../design/DESIGN-NOTE-QUICKCHECK-PROPERTY-TESTING.md)
 **Builds on:** [PLAN-146](PLAN-146-PROPERTY-GENERATION-AND-SHRINKING-SUBSTRATE.md)
@@ -33,18 +33,18 @@ Move Phase 146's runner-owned generated bindings toward a standard-library Quick
 
 | Task | Description | Status |
 |---|---|---|
-| [TASK-1485](tasks/TASK-1485-quickcheck-design-and-live-syntax-audit.md) | Audit live syntax, stdlib surfaces, interface evidence, runner seams, and cache seams. | 📝 Planned |
-| [TASK-1486](tasks/TASK-1486-quickcheck-stdlib-namespace.md) | Add `test::quickcheck` namespace skeleton and docs. | 📝 Planned |
-| [TASK-1487](tasks/TASK-1487-strategy-carrier-and-combinator-api.md) | Define `Strategy<T>` carrier and core combinator API. | 📝 Planned |
-| [TASK-1488](tasks/TASK-1488-arbitrary-interface-and-laws.md) | Define `Arbitrary<T>` interface and library law docs/tests. | 📝 Planned |
-| [TASK-1489](tasks/TASK-1489-primitive-container-arbitrary-impls.md) | Add primitive/container default strategies. | 📝 Planned |
-| [TASK-1490](tasks/TASK-1490-runner-strategy-resolution.md) | Resolve explicit strategies and `Arbitrary<T>` evidence in the runner. | 📝 Planned |
-| [TASK-1491](tasks/TASK-1491-quickcheck-generation-and-shrinking-execution.md) | Execute strategy generation/shrinking and record repro artifacts. | 📝 Planned |
-| [TASK-1492](tasks/TASK-1492-law-property-enforcement-and-cache-schema.md) | Split law/property outcomes and add evidence cache schema. | 📝 Planned |
-| [TASK-1493](tasks/TASK-1493-quickcheck-final-surface-fixtures.md) | Add no-Cargo fixtures for defaults, overrides, and failing shrink cases. | 📝 Planned |
-| [TASK-1494](tasks/TASK-1494-quickcheck-documentation-cookbook.md) | Write documentation/cookbook examples. | 📝 Planned |
-| [TASK-1495](tasks/TASK-1495-quickcheck-future-backends-design-note.md) | Validate and link the future-backend design note. | 📝 Planned |
-| [TASK-1496](tasks/TASK-1496-quickcheck-closeout.md) | Close out the phase and run broad verification. | 📝 Planned |
+| [TASK-1485](tasks/TASK-1485-quickcheck-design-and-live-syntax-audit.md) | Audit live syntax, stdlib surfaces, interface evidence, runner seams, and cache seams. | ✅ Complete |
+| [TASK-1486](tasks/TASK-1486-quickcheck-stdlib-namespace.md) | Add `test::quickcheck` namespace skeleton and docs. | ✅ Complete |
+| [TASK-1487](tasks/TASK-1487-strategy-carrier-and-combinator-api.md) | Define `Strategy<T>` carrier and core combinator API. | ✅ Complete |
+| [TASK-1488](tasks/TASK-1488-arbitrary-interface-and-laws.md) | Define `Arbitrary<T>` interface and library law docs/tests. | ✅ Complete |
+| [TASK-1489](tasks/TASK-1489-primitive-container-arbitrary-impls.md) | Add primitive/container default strategies. | ✅ Complete |
+| [TASK-1490](tasks/TASK-1490-runner-strategy-resolution.md) | Resolve explicit strategies and `Arbitrary<T>` evidence in the runner. | ✅ Complete |
+| [TASK-1491](tasks/TASK-1491-quickcheck-generation-and-shrinking-execution.md) | Execute strategy generation/shrinking and record repro artifacts. | ✅ Complete |
+| [TASK-1492](tasks/TASK-1492-law-property-enforcement-and-cache-schema.md) | Split law/property outcomes and add evidence cache schema. | ✅ Complete |
+| [TASK-1493](tasks/TASK-1493-quickcheck-final-surface-fixtures.md) | Add no-Cargo fixtures for defaults, overrides, and failing shrink cases. | ✅ Complete |
+| [TASK-1494](tasks/TASK-1494-quickcheck-documentation-cookbook.md) | Write documentation/cookbook examples. | ✅ Complete |
+| [TASK-1495](tasks/TASK-1495-quickcheck-future-backends-design-note.md) | Validate and link the future-backend design note. | ✅ Complete |
+| [TASK-1496](tasks/TASK-1496-quickcheck-closeout.md) | Close out the phase and run broad verification. | ✅ Complete |
 
 ## Implementation Order
 
@@ -98,3 +98,9 @@ Every implementation task must include:
 - `docs/spec/README.md` links SPEC-086.
 - Final-surface examples run through `$ASH_UNDER_TEST test ...` without `cargo run` as evidence.
 - The design note is linked from spec, plan, and documentation/cookbook surfaces.
+
+## Completion Notes
+
+Implemented Phase 150 as the first QuickCheck-like property-testing slice. The final implementation chose the metadata bridge for strategy overrides rather than parser-level `with` syntax, because TASK-1485 confirmed the existing authored property metadata seam could deliver no-Cargo behavior without widening parser scope. The stdlib now exposes `test::quickcheck` as the documented user namespace; the runner materializes default bounded `Arbitrary<T>` representatives and explicit `Strategy<T>` overrides for supported primitive/list domains.
+
+Verification evidence is recorded in TASK-1496.

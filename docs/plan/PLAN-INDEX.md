@@ -121,6 +121,10 @@ Update this section as tasks complete:
 | [143](PLAN-143-MCP-CROSS-LANGUAGE-COMPLETION-REMEDIATION.md) | 6 | 6 | ✅ Complete |
 | [144](PLAN-144-REFERENCE-SLICE-3-LAW-TEST-STALENESS.md) | 6 | 6 | ✅ Complete |
 | [145](PLAN-145-LAW-TEST-EVIDENCE-SUBSTRATE.md) | 10 | 10 | ✅ Complete |
+| [146](PLAN-146-PROPERTY-GENERATION-AND-SHRINKING-SUBSTRATE.md) | 10 | 0 | 📝 Planned |
+| [147](PLAN-147-LAW-COVERAGE-AND-MUTATION-TESTING.md) | 8 | 0 | 📝 Planned |
+| [148](PLAN-148-FLAKY-TEST-QUARANTINE-AND-DISTRIBUTED-ORCHESTRATION.md) | 8 | 0 | 📝 Planned |
+| [149](PLAN-149-PROOF-PRODUCING-SYNTHESIS-TODO-SPEC.md) | 3 | 0 | ⏸️ Deferred / To-Spec |
 
 ---
 
@@ -131,6 +135,10 @@ The following phases are active or recently completed and awaiting archival to [
 | Phase | Tasks | Completed | Status |
 |-------|-------|-----------|--------|
 | [145](PLAN-145-LAW-TEST-EVIDENCE-SUBSTRATE.md) | 10 | 10 | ✅ Complete |
+| [146](PLAN-146-PROPERTY-GENERATION-AND-SHRINKING-SUBSTRATE.md) | 10 | 0 | 📝 Planned |
+| [147](PLAN-147-LAW-COVERAGE-AND-MUTATION-TESTING.md) | 8 | 0 | 📝 Planned |
+| [148](PLAN-148-FLAKY-TEST-QUARANTINE-AND-DISTRIBUTED-ORCHESTRATION.md) | 8 | 0 | 📝 Planned |
+| [149](PLAN-149-PROOF-PRODUCING-SYNTHESIS-TODO-SPEC.md) | 3 | 0 | ⏸️ Deferred / To-Spec |
 
 ## Phase 145: Law Test Evidence Substrate
 
@@ -152,3 +160,80 @@ Phase 145 turns `proof ... { by test ... }` from string metadata into fail-close
 | [TASK-1453](tasks/TASK-1453-by-test-small-world-domains.md) | Implement minimal `by test small_world` finite domain enumeration | ✅ Complete |
 | [TASK-1454](tasks/TASK-1454-no-rust-final-surface-law-fixtures.md) | Add final-surface Ash law/test fixtures and no-Cargo smoke gates | ✅ Complete |
 | [TASK-1455](tasks/TASK-1455-law-test-evidence-closeout.md) | Closeout: docs, reference, PLAN-INDEX, changelog, broad verification | ✅ Complete |
+
+
+## Phase 146: Property Generation and Shrinking Substrate
+
+**Status:** 📝 Planned
+**Plan:** [PLAN-146: Property Generation and Shrinking Substrate](PLAN-146-PROPERTY-GENERATION-AND-SHRINKING-SUBSTRATE.md)
+**Spec:** [SPEC-082: Property Generation and Shrinking Substrate](../spec/SPEC-082-PROPERTY-GENERATION-AND-SHRINKING-SUBSTRATE.md)
+
+Builds generator, binding, counterexample, and shrinking substrate for `ash test` property evidence.
+
+| Task | Description | Status |
+|------|-------------|--------|
+| [TASK-1456](tasks/TASK-1456-property-generation-shrinking-audit.md) | Audit current property generation/shrinking gaps | 📝 Planned |
+| [TASK-1457](tasks/TASK-1457-generator-schema-and-binding-model.md) | Define generator schema and binding model | 📝 Planned |
+| [TASK-1458](tasks/TASK-1458-primitive-property-generators.md) | Implement primitive property generators | 📝 Planned |
+| [TASK-1459](tasks/TASK-1459-adt-container-property-generators.md) | Implement ADT/container property generators | 📝 Planned |
+| [TASK-1460](tasks/TASK-1460-authored-property-binding-injection.md) | Inject generated bindings into authored property tests | 📝 Planned |
+| [TASK-1461](tasks/TASK-1461-counterexample-artifact-schema.md) | Add counterexample artifact schema | 📝 Planned |
+| [TASK-1462](tasks/TASK-1462-primitive-shrinker-core.md) | Implement primitive shrinking core | 📝 Planned |
+| [TASK-1463](tasks/TASK-1463-adt-container-shrinking.md) | Implement ADT/container shrinking | 📝 Planned |
+| [TASK-1464](tasks/TASK-1464-property-shrinking-final-surface-fixtures.md) | Add no-Cargo property/shrinking fixtures | 📝 Planned |
+| [TASK-1465](tasks/TASK-1465-property-generation-shrinking-closeout.md) | Close out property generation/shrinking phase | 📝 Planned |
+
+
+## Phase 147: Law Coverage and Mutation Testing
+
+**Status:** 📝 Planned
+**Plan:** [PLAN-147: Law Coverage and Mutation Testing](PLAN-147-LAW-COVERAGE-AND-MUTATION-TESTING.md)
+**Spec:** [SPEC-083: Law Coverage and Mutation Testing](../spec/SPEC-083-LAW-COVERAGE-AND-MUTATION-TESTING.md)
+
+Adds law/test coverage reporting and bounded mutation testing for Ash tests/laws.
+
+| Task | Description | Status |
+|------|-------------|--------|
+| [TASK-1466](tasks/TASK-1466-coverage-mutation-audit.md) | Audit coverage and mutation seams | 📝 Planned |
+| [TASK-1467](tasks/TASK-1467-law-test-coverage-schema.md) | Define law/test coverage schema | 📝 Planned |
+| [TASK-1468](tasks/TASK-1468-coverage-cli-json-output.md) | Expose coverage in CLI/JSON output | 📝 Planned |
+| [TASK-1469](tasks/TASK-1469-coverage-final-surface-fixtures.md) | Add coverage final-surface fixtures | 📝 Planned |
+| [TASK-1470](tasks/TASK-1470-mutation-operator-catalog.md) | Define bounded mutation operator catalog | 📝 Planned |
+| [TASK-1471](tasks/TASK-1471-mutation-execution-loop.md) | Implement mutation execution loop | 📝 Planned |
+| [TASK-1472](tasks/TASK-1472-mutation-reporting-fixtures.md) | Add mutation reporting fixtures | 📝 Planned |
+| [TASK-1473](tasks/TASK-1473-coverage-mutation-closeout.md) | Close out coverage/mutation phase | 📝 Planned |
+
+
+## Phase 148: Flaky-Test Quarantine and Distributed Orchestration
+
+**Status:** 📝 Planned
+**Plan:** [PLAN-148: Flaky-Test Quarantine and Distributed Orchestration](PLAN-148-FLAKY-TEST-QUARANTINE-AND-DISTRIBUTED-ORCHESTRATION.md)
+**Spec:** [SPEC-084: Flaky-Test Quarantine and Distributed Orchestration](../spec/SPEC-084-FLAKY-TEST-QUARANTINE-AND-DISTRIBUTED-ORCHESTRATION.md)
+
+Adds retry/flake classification, quarantine metadata, shard planning, local shard execution, and result merging.
+
+| Task | Description | Status |
+|------|-------------|--------|
+| [TASK-1474](tasks/TASK-1474-flake-orchestration-audit.md) | Audit runner orchestration seams | 📝 Planned |
+| [TASK-1475](tasks/TASK-1475-retry-policy-and-flake-schema.md) | Define retry policy and flake schema | 📝 Planned |
+| [TASK-1476](tasks/TASK-1476-flaky-test-quarantine-metadata.md) | Implement quarantine metadata handling | 📝 Planned |
+| [TASK-1477](tasks/TASK-1477-flake-final-surface-fixtures.md) | Add flaky/quarantine final-surface fixtures | 📝 Planned |
+| [TASK-1478](tasks/TASK-1478-shard-plan-schema.md) | Define shard plan schema | 📝 Planned |
+| [TASK-1479](tasks/TASK-1479-local-shard-execution.md) | Implement local shard execution | 📝 Planned |
+| [TASK-1480](tasks/TASK-1480-distributed-result-merge.md) | Implement distributed result merge | 📝 Planned |
+| [TASK-1481](tasks/TASK-1481-flake-orchestration-closeout.md) | Close out flake/orchestration phase | 📝 Planned |
+
+
+## Phase 149: Proof-Producing Synthesis Todo Spec
+
+**Status:** ⏸️ Deferred / To-Spec
+**Plan:** [PLAN-149: Proof-Producing Synthesis Todo Spec](PLAN-149-PROOF-PRODUCING-SYNTHESIS-TODO-SPEC.md)
+**Spec:** [SPEC-085: Proof-Producing Synthesis Todo Spec](../spec/SPEC-085-PROOF-PRODUCING-SYNTHESIS-TODO-SPEC.md)
+
+Documents future proof-producing synthesis as a deferred non-test proof evidence family.
+
+| Task | Description | Status |
+|------|-------------|--------|
+| [TASK-1482](tasks/TASK-1482-proof-producing-synthesis-landscape.md) | Document proof-producing synthesis landscape | ⏸️ Deferred / To-Spec |
+| [TASK-1483](tasks/TASK-1483-proof-evidence-family-boundary.md) | Define future proof evidence family boundary | ⏸️ Deferred / To-Spec |
+| [TASK-1484](tasks/TASK-1484-proof-producing-synthesis-deferred-closeout.md) | Close deferred todo-spec packet | ⏸️ Deferred / To-Spec |

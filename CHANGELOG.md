@@ -7,6 +7,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Added
+- [Phase 146](docs/plan/PLAN-146-PROPERTY-GENERATION-AND-SHRINKING-SUBSTRATE.md): Planned property generation and shrinking substrate with SPEC-082 and TASK-1456 through TASK-1465.
+- [Phase 147](docs/plan/PLAN-147-LAW-COVERAGE-AND-MUTATION-TESTING.md): Planned law coverage and bounded mutation testing with SPEC-083 and TASK-1466 through TASK-1473.
+- [Phase 148](docs/plan/PLAN-148-FLAKY-TEST-QUARANTINE-AND-DISTRIBUTED-ORCHESTRATION.md): Planned flaky-test quarantine and distributed orchestration with SPEC-084 and TASK-1474 through TASK-1481.
+- [Phase 149](docs/plan/PLAN-149-PROOF-PRODUCING-SYNTHESIS-TODO-SPEC.md): Added deferred proof-producing synthesis todo-spec packet with SPEC-085 and TASK-1482 through TASK-1484.
 - [Phase 145](docs/plan/PLAN-145-LAW-TEST-EVIDENCE-SUBSTRATE.md): Implemented the Law Test Evidence Substrate with structured `by test` authored/property/small-world evidence metadata, fail-closed authored Ash test resolution, generated law-property bindings, finite small-world law evidence, and no-Cargo `$ASH_UNDER_TEST test ...` fixtures.
 - [Phase 145](docs/plan/PLAN-145-LAW-TEST-EVIDENCE-SUBSTRATE.md): Planned the Law Test Evidence Substrate with SPEC-081 and TASK-1446 through TASK-1455, splitting `by test` into authored/manual, property, and small-world empirical evidence modes with fail-closed no-Rust `ash test` acceptance gates.
 - Algebra law profiles (`crates/ash-cli/src/test_runner/algebra_law_profile.rs`) for generated property tests (TASK-1440). Defines law profiles for Semigroup, Monoid, Functor, Applicative, Monad with pure carrier generators (String, List, Option, Result) and tower carrier gating (Act, Proc, Workflow).

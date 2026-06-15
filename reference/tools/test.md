@@ -16,6 +16,7 @@ verified_against:
     - docs/spec/SPEC-005-CLI.md
     - docs/spec/SPEC-075-REFERENCE-SLICE-2-RUNTIME-TOOLCHAIN-MAINTENANCE.md
     - docs/spec/SPEC-077-ASH-TEST-RUNNER-SYNTHESIZED-AND-SMALLWORLD-COMPLETION.md
+    - docs/spec/SPEC-083-LAW-COVERAGE-AND-MUTATION-TESTING.md
   tasks:
     - docs/plan/tasks/TASK-509-ash-test-runner-substrate.md
     - docs/plan/tasks/TASK-512-authored-test-metadata-and-execution-model.md
@@ -32,6 +33,7 @@ verified_against:
     - crates/ash-cli/src/test_runner/executor.rs
     - crates/ash-cli/src/test_runner/metadata.rs
     - crates/ash-cli/src/test_runner/output.rs
+    - crates/ash-cli/src/test_runner/coverage_mutation.rs
     - crates/ash-cli/src/test_runner/property.rs
     - crates/ash-cli/src/test_runner/synthesized.rs
     - crates/ash-cli/src/test_runner/types.rs
@@ -301,6 +303,30 @@ ${ASH_UNDER_TEST:?set Ash candidate binary} test fixtures/phase145-law-test-evid
 
 `cargo run -p ash-cli -- test ...` is not final-surface law/test/proof evidence.
 
+## Law Coverage and Mutation Reports
+
+Phase 147 adds opt-in law/test coverage and bounded mutation reporting. These reports are suite-level additions to the existing `ash-test-v1.0` envelope; they do not change ordinary pass/fail classification and are not emitted unless requested.
+
+```bash
+ash test fixtures/phase147-coverage --coverage --format json
+ash test fixtures/phase147-coverage --mutation --mutation-limit 20 --format json
+```
+
+`--coverage` scans Ash source files under the requested path for runner-visible law metadata and reports:
+
+- `coverage.schema_version: "ash-law-coverage-v1.0"`
+- `coverage.totals.laws`, `covered_laws`, and `uncovered_laws`
+- per-law rows with `id`, `name`, `scope`, `proposition`, `evidence_kind`, `evidence_status`, and optional `evidence_target`
+- an `uncovered_laws` subset for downstream agents
+
+`--mutation` emits a bounded first-slice mutation report over discovered law propositions:
+
+- `mutation.schema_version: "ash-mutation-v1.0"`
+- `mutation.limit` and aggregate `generated`, `killed`, `survived`, `deferred`, and `errored` totals
+- per-mutant rows with source law, operator, original/replacement proposition summaries, status, and an Ash replay command hint
+
+Current Alpha boundary: mutation status is based on the Phase 145/146 empirical law-evidence substrate for the selected law proposition. Covered laws kill their bounded law-proposition mutants; laws without satisfied evidence report survived mutants rather than being counted as passing evidence. This is not unrestricted expression mutation, distributed execution, symbolic proof, or automatic open-domain generator synthesis.
+
 ## Non-Goals
 
-`ash test` does not currently provide coverage reporting, mutation testing, flaky-test quarantine, distributed orchestration, proof-producing synthesis, or unrestricted automatic value/world generation from ordinary source files. Generation and shrinking are currently bounded to the Phase 146 supported primitive/container domains and simple property-oracle expressions.
+`ash test` does not currently provide flaky-test quarantine, distributed orchestration, proof-producing synthesis, unrestricted mutation execution, or unrestricted automatic value/world generation from ordinary source files. Generation, shrinking, coverage, and mutation reporting are currently bounded to the implemented law/test/property metadata substrates and supported primitive/container domains.

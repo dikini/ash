@@ -113,6 +113,22 @@ pub struct TestArgs {
     /// Maximum number of worlds for small-world tests
     #[arg(long)]
     pub max_worlds: Option<usize>,
+
+    /// Include law/test coverage in output
+    #[arg(long)]
+    pub coverage: bool,
+
+    /// Include bounded mutation-testing report in output
+    #[arg(long)]
+    pub mutation: bool,
+
+    /// Maximum number of mutants to generate
+    #[arg(long, default_value = "20")]
+    pub mutation_limit: usize,
+
+    /// Report a single exact mutant id for replay
+    #[arg(long)]
+    pub mutation_id: Option<String>,
 }
 
 /// Run the test command.
@@ -164,6 +180,10 @@ pub fn test(args: &TestArgs) -> CliResult<()> {
         seed: args.seed,
         max_cases: args.max_cases,
         max_worlds: args.max_worlds,
+        coverage: args.coverage,
+        mutation: args.mutation,
+        mutation_limit: args.mutation_limit,
+        mutation_id: args.mutation_id.clone(),
     };
 
     // Run the test suite (authored + synthesized based on config)

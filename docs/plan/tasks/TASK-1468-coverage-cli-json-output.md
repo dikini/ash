@@ -1,6 +1,6 @@
 # TASK-1468: Expose coverage in CLI/JSON output
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 

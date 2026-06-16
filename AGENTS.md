@@ -447,9 +447,33 @@ Main Agent:
 
 For Rust or Ash code work, use language-aware MCP/LSP tools before broad text search or large file reads.
 
+**Hermes Configuration (persistent in `~/.hermes/config.yaml`):**
+```yaml
+mcp_servers:
+  ash-mcp:
+    command: /home/dikini/Projects/ash/.worktrees/phase-141-mcp-benchmark/target/release/ash-mcp
+    args: []
+    transport: stdio
+    enabled: true
+  rust-analyzer:
+    command: lsp-mcp
+    args: ["rust-analyzer"]
+    transport: stdio
+    enabled: true
+```
+
+**Per-project activation (run once per worktree):**
+```bash
+# Activate rust-analyzer for the current workspace
+lsp_activate_workspace {"workspace_path": "/home/dikini/Projects/ash"}
+```
+
+**Tool routing:**
 - **Rust code**: activate rust-analyzer for the active worktree, then prefer `workspace_symbols`, `goto_definition`, `find_references`, `hover`, and `diagnostics` before manual symbol tracing. Cargo remains the final verification authority.
 - **Ash code**: check `ash_mcp_health`, then prefer `ash_workspace_symbols`, `ash_document_symbols`, `ash_goto_definition`, `ash_find_references`, and `ash_get_diagnostics` before text-only inspection of `.ash` files.
-- **Reporting**: do not count health/list/activation calls as productive MCP usage. Report them separately from task-solving calls such as symbol search, definition/reference tracing, hover, diagnostics, or code actions.
+- **Cross-language**: use `ash_find_rust_implementation` and `ash_find_ash_usage` for Ash-Rust symbol bridging.
+
+**Reporting**: do not count health/list/activation calls as productive MCP usage. Report them separately from task-solving calls such as symbol search, definition/reference tracing, hover, diagnostics, or code actions.
 - **Sub-agents**: when a task is expected to be MCP-assisted, explicitly grant the relevant MCP/LSP tool access in the subagent prompt/toolset. If a subagent only has file/terminal access, classify that run as baseline-only.
 
 ### Avoid

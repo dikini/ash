@@ -7,6 +7,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Added
+### Changed
+- AGENTS.md: documented native MCP server configuration for ash-mcp and rust-analyzer with persistent stdio transport, per-project activation instructions, and cross-language tool routing. Added Hermes profile at `~/.hermes/profiles/ash/config.yaml` for portable Ash project MCP setup.
+
+### Added
 - [Phase 151](docs/plan/PLAN-151-QUICKCHECK-V1-ORDINARY-STRATEGY-SEMANTICS.md): Planned QuickCheck v1 ordinary strategy semantics with SPEC-087, pure `Strategy<A>` values, helper-first `GenContext`, ordinary `Arbitrary<A>` evidence, pure strategy overrides, stable RNG/split, bounded recursive/weighted combinators, explicit shrink semantics, random seed/replay policy, aggregate empirical evidence history, and TASK-1497 through TASK-1506.
 - [Phase 148](docs/plan/PLAN-148-FLAKY-TEST-QUARANTINE-AND-DISTRIBUTED-ORCHESTRATION.md): Implemented local `ash test` retries/flake classification, quarantine metadata, deterministic shard selection, shard JSON result merge, schema-versioned flake/shard/merge JSON, and no-Cargo fixtures (TASK-1474 through TASK-1481).
 - [Phase 147](docs/plan/PLAN-147-LAW-COVERAGE-AND-MUTATION-TESTING.md): Implemented opt-in `ash test --coverage` and `--mutation` reporting with law/test coverage JSON, bounded law-proposition mutation rows, killed/survived/deferred/error mutation totals, no-Cargo final-surface fixtures, and reference docs (TASK-1466 through TASK-1473).

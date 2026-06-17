@@ -1,8 +1,10 @@
 # PLAN-156: Parser Blocker Resolution for List Migration
 
-**Status:** 📝 Planned
+**Status:** ✅ Complete; Parser blockers resolved, Phase 153 unblocked
 **Spec:** [SPEC-092: Parser Blocker Resolution](../spec/SPEC-092-PARSER-BLOCKER-RESOLUTION.md)
-**Blocked Phase:** [PLAN-153](PLAN-153-LIST-BUILTIN-TO-STDLIB.md) (List Builtin to Stdlib)
+**Blocked Phase:** [PLAN-153: List Builtin to Stdlib](PLAN-153-LIST-BUILTIN-TO-STDLIB.md) (now unblocked)
+**Completion Date:** 2026-06-17
+**Commit:** `55d69387`
 **Task range:** TASK-1560 through TASK-1564
 
 ## Goal

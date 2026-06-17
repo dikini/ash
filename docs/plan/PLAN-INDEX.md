@@ -144,7 +144,7 @@ The following phases are active or recently completed and awaiting archival to [
 | [153](PLAN-153-LIST-BUILTIN-TO-STDLIB.md) | 10 | 1 | 🚧 Partial Implementation; Blocked on parser issues (Phase 156) |
 | [154](PLAN-154-TYPE-ANNOTATION-QUIRKS.md) | 5 | 5 | ✅ Complete; Type annotation quirks (already worked) |
 | [155](PLAN-155-LET-DESTRUCTORS.md) | 10 | 10 | ✅ Complete; Let destructors for records and tuples |
-| [156](PLAN-156-PARSER-BLOCKER-RESOLUTION.md) | 5 | 0 | 📝 Planned; Parser blocker resolution for Phase 153 |
+| [156](PLAN-156-PARSER-BLOCKER-RESOLUTION.md) | 5 | 5 | ✅ Complete; Parser blockers resolved, Phase 153 unblocked |
 
 ---
 
@@ -165,7 +165,7 @@ The following phases are active or recently completed and awaiting archival to [
 | [153](PLAN-153-LIST-BUILTIN-TO-STDLIB.md) | 10 | 1 | 🚧 Partial Implementation; Blocked on parser issues (Phase 156) |
 | [154](PLAN-154-TYPE-ANNOTATION-QUIRKS.md) | 5 | 5 | ✅ Complete; Type annotation quirks (already worked) |
 | [155](PLAN-155-LET-DESTRUCTORS.md) | 10 | 10 | ✅ Complete; Let destructors for records and tuples |
-| [156](PLAN-156-PARSER-BLOCKER-RESOLUTION.md) | 5 | 0 | 📝 Planned; Parser blocker resolution for Phase 153 |
+| [156](PLAN-156-PARSER-BLOCKER-RESOLUTION.md) | 5 | 5 | ✅ Complete; Parser blockers resolved, Phase 153 unblocked |
 
 ## Phase 145: Law Test Evidence Substrate
 

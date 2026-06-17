@@ -145,6 +145,7 @@ The following phases are active or recently completed and awaiting archival to [
 | [154](PLAN-154-TYPE-ANNOTATION-QUIRKS.md) | 5 | 5 | ✅ Complete; Type annotation quirks (already worked) |
 | [155](PLAN-155-LET-DESTRUCTORS.md) | 10 | 10 | ✅ Complete; Let destructors for records and tuples |
 | [156](PLAN-156-PARSER-BLOCKER-RESOLUTION.md) | 5 | 5 | ✅ Complete; Parser blockers resolved, Phase 153 unblocked |
+| [157](PLAN-157-LIST-MIGRATION-HARDENING.md) | 5 | 0 | 📝 Planned; List migration hardening and cleanup |
 
 ---
 
@@ -166,6 +167,7 @@ The following phases are active or recently completed and awaiting archival to [
 | [154](PLAN-154-TYPE-ANNOTATION-QUIRKS.md) | 5 | 5 | ✅ Complete; Type annotation quirks (already worked) |
 | [155](PLAN-155-LET-DESTRUCTORS.md) | 10 | 10 | ✅ Complete; Let destructors for records and tuples |
 | [156](PLAN-156-PARSER-BLOCKER-RESOLUTION.md) | 5 | 5 | ✅ Complete; Parser blockers resolved, Phase 153 unblocked |
+| [157](PLAN-157-LIST-MIGRATION-HARDENING.md) | 5 | 0 | 📝 Planned; List migration hardening and cleanup |
 
 ## Phase 145: Law Test Evidence Substrate
 

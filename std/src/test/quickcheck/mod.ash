@@ -42,17 +42,11 @@ pub use list::{list_of, nonempty_ints as nonempty_int_lists, sorted_ints as sort
 pub use combinator::{
     Weighted,
     weighted,
-    one_of,
-    one_of_weighted,
     map,
     map_with_shrink,
     map2,
     with_shrink,
-    append_shrink,
-    prepend_shrink,
     RecursiveConfig,
     recursive_config,
     default_recursive_config,
-    recursive,
-    recursive_with,
 };

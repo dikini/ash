@@ -755,14 +755,15 @@ fn validate_interface_calls_in_action(
     // Validate the operational target
     match &action.target {
         OperationalTarget::Symbolic { capability_name } => {
+            // Phase 158 fix: If the name is a local variable that's a function,
+            // allow it through. The lowering phase will convert it to a function call.
             if matches!(
                 env.lookup_variable(capability_name.as_ref()),
                 Some(Type::Fn(_, _) | Type::Fun(_, _, _))
             ) {
-                return Err(TypeCheckError::TypeError(format!(
-                    "'{}' is a function, not a capability; use `module::name()` syntax instead of `provider:action()`",
-                    capability_name.as_ref()
-                )));
+                // This is a function call, not a capability call
+                // The lowering phase will handle it
+                return Ok(());
             }
             // For symbolic targets, resolution happens during lowering.
             // The resolver maps symbolic names to (provider, action) via explicit metadata.

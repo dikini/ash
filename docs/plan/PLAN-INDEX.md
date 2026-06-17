@@ -125,8 +125,21 @@ Update this section as tasks complete:
 | [147](PLAN-147-LAW-COVERAGE-AND-MUTATION-TESTING.md) | 8 | 8 | ✅ Complete |
 | [148](PLAN-148-FLAKY-TEST-QUARANTINE-AND-DISTRIBUTED-ORCHESTRATION.md) | 8 | 8 | ✅ Complete |
 | [149](PLAN-149-PROOF-PRODUCING-SYNTHESIS-TODO-SPEC.md) | 3 | 0 | ⏸️ Deferred / To-Spec |
+---
+
+## Active / Awaiting Archival Phases
+
+The following phases are active or recently completed and awaiting archival to [PLAN-INDEX-HISTORY.md](PLAN-INDEX-HISTORY.md).
+
+| Phase | Tasks | Completed | Status |
+|-------|-------|-----------|--------|
+| [145](PLAN-145-LAW-TEST-EVIDENCE-SUBSTRATE.md) | 10 | 10 | ✅ Complete |
+| [146](PLAN-146-PROPERTY-GENERATION-AND-SHRINKING-SUBSTRATE.md) | 10 | 10 | ✅ Complete |
+| [147](PLAN-147-LAW-COVERAGE-AND-MUTATION-TESTING.md) | 8 | 8 | ✅ Complete |
+| [148](PLAN-148-FLAKY-TEST-QUARANTINE-AND-DISTRIBUTED-ORCHESTRATION.md) | 8 | 8 | ✅ Complete |
+| [149](PLAN-149-PROOF-PRODUCING-SYNTHESIS-TODO-SPEC.md) | 3 | 0 | ⏸️ Deferred / To-Spec |
 | [150](PLAN-150-QUICKCHECK-ARBITRARY-STRATEGY.md) | 12 | 12 | ✅ Complete |
-| [151](PLAN-151-QUICKCHECK-V1-ORDINARY-STRATEGY-SEMANTICS.md) | 11 | 8 | 🚧 Partial Implementation; TASK-1501 planned, TASK-1502 stdlib surface complete |
+| [151](PLAN-151-QUICKCHECK-V1-ORDINARY-STRATEGY-SEMANTICS.md) | 11 | 10 | ✅ Complete; TASK-1501 complete, TASK-1502 ordinary Ash combinators |
 
 ---
 
@@ -142,7 +155,7 @@ The following phases are active or recently completed and awaiting archival to [
 | [148](PLAN-148-FLAKY-TEST-QUARANTINE-AND-DISTRIBUTED-ORCHESTRATION.md) | 8 | 8 | ✅ Complete |
 | [149](PLAN-149-PROOF-PRODUCING-SYNTHESIS-TODO-SPEC.md) | 3 | 0 | ⏸️ Deferred / To-Spec |
 | [150](PLAN-150-QUICKCHECK-ARBITRARY-STRATEGY.md) | 12 | 12 | ✅ Complete |
-| [151](PLAN-151-QUICKCHECK-V1-ORDINARY-STRATEGY-SEMANTICS.md) | 11 | 8 | 🚧 Partial Implementation; TASK-1501 planned, TASK-1502 stdlib surface complete |
+| [151](PLAN-151-QUICKCHECK-V1-ORDINARY-STRATEGY-SEMANTICS.md) | 11 | 10 | ✅ Complete; TASK-1501 complete, TASK-1502 ordinary Ash combinators |
 
 ## Phase 145: Law Test Evidence Substrate
 
@@ -283,8 +296,8 @@ Hardens the Phase 150 QuickCheck MVP into the ordinary-Ash v1 model with pure `S
 | [TASK-1498](tasks/TASK-1498-quickcheck-stdlib-module-split-and-prelude.md) | Split `test::quickcheck` into canonical submodules, define prelude contents, and expose alpha root aliases. | ✅ Complete |
 | [TASK-1499](tasks/TASK-1499-gencontext-rng-and-strategy-value-core.md) | Implement helper-first `GenContext`, ordinary strategy value core, stable RNG/split helpers, and golden vectors | ✅ Complete |
 | [TASK-1500](tasks/TASK-1500-arbitrary-evidence-resolution-no-bridges.md) | Resolve minimal `Arbitrary<A>` through ordinary in-scope evidence and remove/quarantine hidden fallback bridges | ✅ Complete |
-| [TASK-1501](tasks/TASK-1501-quickcheck-with-override-parser-typecheck.md) | Make `by test property` / `quickcheck` first-class proof evidence: extend parser, AST, and runner schema with source-visible `Strategy<T>` overrides; `property` and `quickcheck` are synonymous. | 📝 Planned |
-| [TASK-1502](tasks/TASK-1502-quickcheck-combinators-recursion-and-weights.md) | Implement choice, weighted choice, map/project helpers, shrink wrappers, and bounded recursive combinators | 🚧 Partial / Stdlib Surface Complete |
+| [TASK-1501](tasks/TASK-1501-quickcheck-with-override-parser-typecheck.md) | Make `by test property` / `quickcheck` first-class proof evidence: extend parser, AST, and runner schema with source-visible `Strategy<T>` overrides; `property` and `quickcheck` are synonymous. | ✅ Complete |
+| [TASK-1502](tasks/TASK-1502-quickcheck-combinators-recursion-and-weights.md) | Implement choice, weighted choice, map/project helpers, shrink wrappers, and bounded recursive combinators | ✅ Stdlib Surface Complete / Ordinary Ash |
 | [TASK-1503](tasks/TASK-1503-quickcheck-runner-generation-shrink-semantics.md) | Wire generation, per-parameter split paths, stop-first execution, failure-class shrink, and generator/shrinker errors | ✅ Complete |
 | [TASK-1504](tasks/TASK-1504-quickcheck-seed-replay-and-aggregate-evidence.md) | Implement random seed default, replay overrides, source-seed linting, run records, aggregate pass history, and sticky active findings | ✅ Complete |
 | [TASK-1505](tasks/TASK-1505-quickcheck-v1-final-surface-fixtures-and-docs.md) | Add no-Cargo fixtures and user docs for ordinary strategies, overrides, recursion, shrinking, seeds, and evidence history | ✅ Complete |

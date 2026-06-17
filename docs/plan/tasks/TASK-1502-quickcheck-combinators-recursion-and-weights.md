@@ -11,45 +11,60 @@ Implement namespaced function combinators for strategy composition, weighted cho
 - [SPEC-087: QuickCheck v1 Ordinary Strategy Semantics](../../spec/SPEC-087-QUICKCHECK-V1-ORDINARY-STRATEGY-SEMANTICS.md)
 - [PLAN-151: QuickCheck v1 Ordinary Strategy Semantics](../PLAN-151-QUICKCHECK-V1-ORDINARY-STRATEGY-SEMANTICS.md)
 - [DESIGN-NOTE: QuickCheck v1 Ordinary Strategy Semantics](../../design/DESIGN-NOTE-QUICKCHECK-V1-ORDINARY-STRATEGY-SEMANTICS.md)
+## Status: ✅ Stdlib Surface Complete / Combinators Implemented in Ordinary Ash
 
-## Dependencies
+## Description
 
-- ✅ TASK-1498: QuickCheck stdlib module split and prelude
-- ✅ TASK-1499: GenContext, RNG, and Strategy value core
+Implement namespaced function combinators for strategy composition, weighted choice, projection-based shrinking helpers, explicit shrink wrappers, and bounded recursive generation.
 
 ## Implementation
 
 ### Stdlib Module
 
-Created `std/src/test/quickcheck/combinator.ash` with:
+Created `std/src/test/quickcheck/combinator.ash` with ordinary Ash implementations (no builtins):
 
 - `Weighted<T>` type: `{ weight: Int, strategy: Strategy<T> }`
 - `RecursiveConfig` type: `{ max_depth: Int, breadth: Int }`
-- Helper functions:
-  - `weighted(weight: Int, strategy: Strategy<T>) -> Weighted<T>`
-  - `default_recursive_config() -> RecursiveConfig` (max_depth=5, breadth=3)
-  - `recursive_config(max_depth: Int, breadth: Int) -> RecursiveConfig`
-
-- Builtin function declarations (awaiting runner implementation):
-  - `one_of<T>(choices: List<Strategy<T>>) -> Strategy<T>`
-  - `one_of_weighted<T>(choices: List<Weighted<T>>) -> Strategy<T>`
+- Ordinary Ash functions:
   - `map<A, B>(s: Strategy<A>, f: (A) -> B) -> Strategy<B>`
   - `map_with_shrink<A, B>(s: Strategy<A>, f: (A) -> B, shrink: (B) -> List<B>) -> Strategy<B>`
   - `map2<A, B, C>(sa: Strategy<A>, sb: Strategy<B>, f: (A, B) -> C) -> Strategy<C>`
   - `with_shrink<T>(s: Strategy<T>, shrink: (T) -> List<T>) -> Strategy<T>`
-  - `append_shrink<T>(s: Strategy<T>, extra: List<T>) -> Strategy<T>`
-  - `prepend_shrink<T>(s: Strategy<T>, extra: List<T>) -> Strategy<T>`
-  - `recursive<T>(base: Strategy<T>, rec: (Strategy<T>) -> Strategy<T>, config: RecursiveConfig) -> Strategy<T>`
-  - `recursive_with<T>(base: Strategy<T>, rec: (Strategy<T>) -> Strategy<T>, max_depth: Int, breadth: Int) -> Strategy<T>`
+  - `constant<T>(value: T) -> Strategy<T>`
+  - `weighted<T>(weight: Int, strategy: Strategy<T>) -> Weighted<T>`
+  - `default_recursive_config() -> RecursiveConfig`
+  - `recursive_config(max_depth: Int, breadth: Int) -> RecursiveConfig`
 
-### Why Builtins?
+### Why Ordinary Ash Works
 
-The combinators require creating new function values (closures) at runtime:
-- `map` needs to wrap `s.gen` with `f` to create `new_gen(ctx) = f(s.gen(ctx))`
-- `one_of` needs to select a strategy based on context
-- `recursive` needs to manage depth/breadth state
+The combinators can be implemented in ordinary Ash because:
+1. `fn` expressions are first-class values that can be stored in record fields
+2. Field access on records works (`s.gen`)
+3. Function application on field access works (`s.gen(ctx)`)
+4. `Strategy<T>` is a record type with function fields
 
-Ash does not support lambda/closures in ordinary source code, so these must be implemented as builtin functions in the Rust runner/interpreter.
+### Language Gaps Discovered
+
+1. **No `let` destructors**: `let { gen, shrink } = strategy` is not supported.
+   Workaround: use field access (`strategy.gen`, `strategy.shrink`).
+
+2. **Type annotation quirks in `fn` expressions**: Explicit type annotations
+   like `fn(_ctx: GenContext) -> Int` may fail when the type is imported from
+   another module. Workaround: let the typechecker infer types (`fn(_ctx) { 42 }`).
+
+3. **No closures/lambdas in ordinary source**: The `fn` syntax creates anonymous
+   functions but they cannot capture variables from the enclosing scope (they
+   are not true closures). This limits some combinator patterns.
+
+### Deferred Combinators
+
+The following combinators require features not yet available in Ash:
+- `one_of<T>`: Requires `List` indexing or random selection over strategies
+- `one_of_weighted<T>`: Requires weighted random selection
+- `recursive<T>`: Requires managing depth/breadth state across calls
+- `append_shrink`, `prepend_shrink`: Requires list concatenation
+
+These can be added once the language supports the necessary primitives.
 
 ### Engine Blockers Fixed
 

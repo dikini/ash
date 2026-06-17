@@ -143,6 +143,7 @@ The following phases are active or recently completed and awaiting archival to [
 | [152](PLAN-152-CLOSURE-REFINEMENT-AND-TOWER-DOCUMENTATION.md) | 10 | 0 | 📝 Planned; Closure refinement and tower documentation |
 | [153](PLAN-153-LIST-BUILTIN-TO-STDLIB.md) | 10 | 0 | 📝 Planned; List builtin to stdlib migration |
 | [154](PLAN-154-TYPE-ANNOTATION-QUIRKS.md) | 5 | 0 | 📝 Planned; Fix type annotation quirks with imported types |
+| [155](PLAN-155-LET-DESTRUCTORS.md) | 10 | 0 | 📝 Planned; Let destructors for records and tuples |
 
 ---
 
@@ -162,6 +163,7 @@ The following phases are active or recently completed and awaiting archival to [
 | [152](PLAN-152-CLOSURE-REFINEMENT-AND-TOWER-DOCUMENTATION.md) | 10 | 0 | 📝 Planned; Closure refinement and tower documentation |
 | [153](PLAN-153-LIST-BUILTIN-TO-STDLIB.md) | 10 | 0 | 📝 Planned; List builtin to stdlib migration |
 | [154](PLAN-154-TYPE-ANNOTATION-QUIRKS.md) | 5 | 0 | 📝 Planned; Fix type annotation quirks with imported types |
+| [155](PLAN-155-LET-DESTRUCTORS.md) | 10 | 0 | 📝 Planned; Let destructors for records and tuples |
 
 ## Phase 145: Law Test Evidence Substrate
 
@@ -372,3 +374,25 @@ Fix the type system limitation where imported types cannot be used in local type
 | [TASK-1542](tasks/TASK-1542-type-name-resolution-imported.md) | Update type name resolution to check imported types | 📝 Planned |
 | [TASK-1543](tasks/TASK-1543-type-inference-leakage-diagnostics.md) | Add diagnostics for type inference leakage | 📝 Planned |
 | [TASK-1544](tasks/TASK-1544-phase-154-closeout.md) | Close out Phase 154 with verification and documentation | 📝 Planned |
+
+
+## Phase 155: Let Destructors for Records and Tuples
+
+**Status:** 📝 Planned
+**Plan:** [PLAN-155: Let Destructors](PLAN-155-LET-DESTRUCTORS.md)
+**Spec:** [SPEC-091: Let Destructors](../spec/SPEC-091-LET-DESTRUCTORS.md)
+
+Add `let` destructor syntax for record and tuple types. This is group assignment — not pattern matching — providing a convenient way to bind multiple variables from a structured value.
+
+| Task | Description | Status |
+|------|-------------|--------|
+| [TASK-1550](tasks/TASK-1550-parser-let-destructors.md) | Add parser support for `let { ... } = ...` and `let ( ... ) = ...` | 📝 Planned |
+| [TASK-1551](tasks/TASK-1551-ast-destructure-representation.md) | Add AST representation for `let` destructuring | 📝 Planned |
+| [TASK-1552](tasks/TASK-1552-typecheck-destructors.md) | Typecheck destructuring: verify fields, types, duplicates | 📝 Planned |
+| [TASK-1553](tasks/TASK-1553-interpreter-destructors.md) | Evaluate destructuring in interpreter | 📝 Planned |
+| [TASK-1554](tasks/TASK-1554-destructor-diagnostics.md) | Add error messages for all destructor failure modes | 📝 Planned |
+| [TASK-1555](tasks/TASK-1555-reference-let-destructors.md) | Update `reference/language/functions/local-and-anonymous.md` | 📝 Planned |
+| [TASK-1556](tasks/TASK-1556-reference-record-destructors.md) | Update `reference/language/types/records.md` with destructor examples | 📝 Planned |
+| [TASK-1557](tasks/TASK-1557-reference-tuple-destructors.md) | Update `reference/language/types/tuples.md` with destructor examples | 📝 Planned |
+| [TASK-1558](tasks/TASK-1558-cookbook-destructor-patterns.md) | Add destructor examples to cookbook | 📝 Planned |
+| [TASK-1559](tasks/TASK-1559-phase-155-closeout.md) | Close out Phase 155 with verification and documentation | 📝 Planned |

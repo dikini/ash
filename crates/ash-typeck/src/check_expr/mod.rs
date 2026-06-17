@@ -822,10 +822,53 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
             qualifiers,
             span,
         } => check_comprehension(env, target.as_ref(), result, qualifiers, *span),
-        Expr::List { span, .. } => CheckResult::error(ConstructorError::UnsupportedExpression {
-            kind: "contract/list expression".to_string(),
-            span: *span,
-        }),
+        Expr::List { items, span } => {
+            if items.is_empty() {
+                // Empty list: return List<a> where a is a fresh type variable
+                let item_ty = Type::Var(TypeVar::fresh());
+                CheckResult {
+                    ty: Type::List(Box::new(item_ty)),
+                    substitution: Substitution::new(),
+                    errors: vec![],
+                }
+            } else {
+                // Non-empty list: check all elements and unify their types
+                let mut errors = Vec::new();
+                let mut substitution = Substitution::new();
+                let first_result = check_expr(env, &items[0]);
+                let mut item_ty = first_result.ty.clone();
+                substitution = substitution.compose(&first_result.substitution);
+                errors.extend(first_result.errors);
+                
+                for item in items.iter().skip(1) {
+                    let item_result = check_expr(env, item);
+                    let item_ty_applied = item_result.substitution.apply(&item_ty);
+                    let new_ty_applied = item_result.substitution.apply(&item_result.ty);
+                    match unify(&item_ty_applied, &new_ty_applied) {
+                        Ok(sub) => {
+                            substitution = substitution.compose(&sub);
+                            item_ty = sub.apply(&item_ty_applied);
+                        }
+                        Err(_) => {
+                            errors.push(ConstructorError::UnsupportedExpression {
+                                kind: format!(
+                                    "list element type mismatch: expected `{item_ty_applied}`, found `{new_ty_applied}`"
+                                ),
+                                span: *span,
+                            });
+                        }
+                    }
+                    substitution = substitution.compose(&item_result.substitution);
+                    errors.extend(item_result.errors);
+                }
+                
+                CheckResult {
+                    ty: Type::List(Box::new(item_ty)),
+                    substitution,
+                    errors,
+                }
+            }
+        }
     }
 }
 

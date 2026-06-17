@@ -9,6 +9,99 @@ fn test_input(s: &str) -> ParseInput<'_> {
     new_input(s)
 }
 
+// ========================================================================
+// Phase 156: Parser Blocker Resolution Tests
+// ========================================================================
+
+/// TASK-1560: if/else with match in else branch
+#[test]
+fn test_if_else_with_match_parses() {
+    let mut input = test_input("{ if n <= 0 then [] else match list { Nil => [] } }");
+    let result = parse_fn_body(&mut input);
+    assert!(result.is_ok(), "if/else with match should parse: {:?}", result.err());
+}
+
+/// TASK-1562: list literal in expression
+#[test]
+fn test_list_literal_expr_parses() {
+    let mut input = test_input("{ [h] }");
+    let result = parse_fn_body(&mut input);
+    assert!(result.is_ok(), "list literal expr should parse: {:?}", result.err());
+}
+
+/// TASK-1562: list literal in match arm body
+#[test]
+fn test_list_literal_in_match_arm_parses() {
+    let mut input = test_input("{ match list { Nil => [] } }");
+    let result = parse_fn_body(&mut input);
+    assert!(result.is_ok(), "list literal in match arm should parse: {:?}", result.err());
+}
+
+/// TASK-1561: variant pattern with record payload (baseline)
+#[test]
+fn test_variant_record_pattern_parses() {
+    let mut input = test_input("{ match list { Cons { head: h, tail: rest } => h } }");
+    let result = parse_fn_body(&mut input);
+    assert!(result.is_ok(), "variant record pattern should parse: {:?}", result.err());
+}
+
+/// TASK-1561: variant pattern with record payload and list body
+#[test]
+fn test_variant_record_pattern_list_body_parses() {
+    let mut input = test_input("{ match list { Cons { head: h, tail: rest } => [h] } }");
+    let result = parse_fn_body(&mut input);
+    assert!(result.is_ok(), "variant record pattern with list body should parse: {:?}", result.err());
+}
+
+/// TASK-1561: variant pattern with shorthand (NOT SUPPORTED - requires parser change)
+#[test]
+fn test_variant_shorthand_pattern_not_supported() {
+    let mut input = test_input("{ match list { Cons { head, tail } => [head] } }");
+    let result = parse_fn_body(&mut input);
+    // Shorthand patterns are not currently supported - they should fail
+    assert!(result.is_err(), "variant shorthand pattern should NOT parse (not supported)");
+}
+
+/// TASK-1562: list pattern
+#[test]
+fn test_list_pattern_parses() {
+    let mut input = test_input("{ match list { [h, ..rest] => [h] } }");
+    let result = parse_fn_body(&mut input);
+    assert!(result.is_ok(), "list pattern should parse: {:?}", result.err());
+}
+
+/// TASK-1562: empty list pattern
+#[test]
+fn test_empty_list_pattern_parses() {
+    let mut input = test_input("{ match list { [] => [] } }");
+    let result = parse_fn_body(&mut input);
+    assert!(result.is_ok(), "empty list pattern should parse: {:?}", result.err());
+}
+
+/// TASK-1560: match alone (baseline)
+#[test]
+fn test_match_alone_parses() {
+    let mut input = test_input("{ match list { Nil => [] } }");
+    let result = parse_fn_body(&mut input);
+    assert!(result.is_ok(), "match alone should parse: {:?}", result.err());
+}
+
+/// TASK-1560: Simple if/else (baseline)
+#[test]
+fn test_simple_if_else_parses() {
+    let mut input = test_input("{ if n == 0 then 1 else 2 }");
+    let result = parse_fn_body(&mut input);
+    assert!(result.is_ok(), "simple if/else should parse: {:?}", result.err());
+}
+
+/// TASK-1560: if with match in then branch
+#[test]
+fn test_if_then_match_parses() {
+    let mut input = test_input("{ if n == 0 then match list { Nil => [] } else [] }");
+    let result = parse_fn_body(&mut input);
+    assert!(result.is_ok(), "if with match in then branch should parse: {:?}", result.err());
+}
+
 fn inline_module_with_unknown_item(body_after_unknown: &str) -> String {
     format!("mod governance {{ extension custom {{ enabled: true }} {body_after_unknown} }}")
 }

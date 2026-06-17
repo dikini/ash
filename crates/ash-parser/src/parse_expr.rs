@@ -1191,6 +1191,15 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
         *input = saved;
     }
 
+    // Try list expression: [expr, expr, ...]
+    {
+        let saved = input.clone();
+        if let Ok(list_expr) = parse_list_expr(input) {
+            return Ok(list_expr);
+        }
+        *input = saved;
+    }
+
     // Try literal
     if let Ok(lit) = literal(input) {
         return Ok(Expr::Literal(lit));

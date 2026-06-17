@@ -2038,16 +2038,31 @@ pub fn lower_expr(expr: &Expr) -> Result<CoreExpr, LoweringError> {
 
         Expr::ActBlock { stmts, .. } => lower_act_block(stmts),
 
+        Expr::List { items, .. } => {
+            // Lower [a, b, c] to Cons { head: a, tail: Cons { head: b, tail: Cons { head: c, tail: Nil } } }
+            // by building from right to left
+            let mut result = CoreExpr::Constructor {
+                name: "Nil".to_string(),
+                fields: vec![],
+            };
+            for item in items.iter().rev() {
+                result = CoreExpr::Constructor {
+                    name: "Cons".to_string(),
+                    fields: vec![
+                        ("head".to_string(), lower_expr(item)?),
+                        ("tail".to_string(), result),
+                    ],
+                };
+            }
+            Ok(result)
+        }
+
         Expr::DoBlock { .. } => Err(LoweringError::ExprNotLowerable {
             kind: "generic do block requires typed do elaboration before lowering",
         }),
 
         Expr::Comprehension { .. } => Err(LoweringError::ExprNotLowerable {
             kind: "comprehension requires typed do elaboration before lowering",
-        }),
-
-        Expr::List { .. } => Err(LoweringError::ExprNotLowerable {
-            kind: "contract/list expression requires classifier before lowering",
         }),
     }
 }

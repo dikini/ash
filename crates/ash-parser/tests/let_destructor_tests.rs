@@ -151,11 +151,34 @@ fn record_accessor_on_fn_field_works() {
 }
 
 #[test]
-fn let_record_destructor_shorthand_fails() {
-    // Shorthand `let { x, y } = p` is NOT supported.
-    // The parser requires `field: pattern` pairs.
-    let result = std::panic::catch_unwind(|| {
-        parse_fn(r#"fn test() -> Int { let p = Point { x: 10, y: 20 }; let { x, y } = p; x + y }"#)
-    });
-    assert!(result.is_err(), "shorthand record destructor should fail to parse");
+fn let_record_destructor_shorthand_works() {
+    // Shorthand `let { x, y } = p` IS supported.
+    // Equivalent to `let { x: x, y: y } = p`
+    let def = parse_fn(r#"fn test() -> Int { let p = Point { x: 10, y: 20 }; let { x, y } = p; x + y }"#);
+    let Definition::Function(f) = def else {
+        panic!("expected Function");
+    };
+    match &f.body {
+        Expr::Block { statements, .. } => {
+            assert_eq!(statements.len(), 2);
+            match &statements[1] {
+                ash_parser::surface::BlockStmt::Let { pattern, .. } => {
+                    match pattern {
+                        Pattern::Record(fields) => {
+                            assert_eq!(fields.len(), 2);
+                            assert_eq!(fields[0].0.as_ref(), "x");
+                            assert!(matches!(
+                                &fields[0].1, Pattern::Variable { name, .. } if name.as_ref() == "x"));
+                            assert_eq!(fields[1].0.as_ref(), "y");
+                            assert!(matches!(
+                                &fields[1].1, Pattern::Variable { name, .. } if name.as_ref() == "y"));
+                        }
+                        _ => panic!("expected Record pattern, got: {:?}", pattern),
+                    }
+                }
+                _ => panic!("expected Let statement"),
+            }
+        }
+        _ => panic!("expected Block body"),
+    }
 }

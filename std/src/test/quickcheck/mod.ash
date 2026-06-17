@@ -46,6 +46,7 @@ pub use combinator::{
     map_with_shrink,
     map2,
     with_shrink,
+    one_of,
     RecursiveConfig,
     recursive_config,
     default_recursive_config,

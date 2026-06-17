@@ -57,6 +57,17 @@ pub fn weighted<T>(weight: Int, strategy: Strategy<T>) -> Weighted<T> {
     Weighted { weight: weight, strategy: strategy }
 }
 
+-- | Choose one strategy from a list uniformly at random.
+pub fn one_of<T>(strategies: List<Strategy<T>>) -> Strategy<T> {
+    Strategy {
+        gen: fn(ctx) {
+            let index = choose_int(ctx, 0, len(strategies) - 1)
+            index(strategies, index).gen(ctx)
+        },
+        shrink: fn(_t) { [] }
+    }
+}
+
 -- | Default recursive config: max_depth=5, breadth=3.
 pub fn default_recursive_config() -> RecursiveConfig {
     RecursiveConfig { max_depth: 5, breadth: 3 }

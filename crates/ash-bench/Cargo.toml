@@ -46,6 +46,6 @@ path = "benches/core.rs"
 harness = false
 
 [[bench]]
-name = "interp"
-path = "benches/interp.rs"
+name = "list_ops"
+path = "benches/list_ops.rs"
 harness = false

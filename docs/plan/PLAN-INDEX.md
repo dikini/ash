@@ -146,7 +146,7 @@ The following phases are active or recently completed and awaiting archival to [
 | [155](PLAN-155-LET-DESTRUCTORS.md) | 10 | 10 | ✅ Complete; Let destructors for records and tuples |
 | [156](PLAN-156-PARSER-BLOCKER-RESOLUTION.md) | 5 | 5 | ✅ Complete; Parser blockers resolved, Phase 153 unblocked |
 | [157](PLAN-157-LIST-MIGRATION-HARDENING.md) | 5 | 4 | ✅ Complete; List migration hardening and cleanup |
-| [158](PLAN-158-LANGUAGE-SURFACE-FIXES.md) | 5 | 0 | 📝 Planned; Language surface fixes for pure ADT usage |
+| [158](PLAN-158-LANGUAGE-SURFACE-FIXES.md) | 5 | 3 | ✅ Complete; Language surface fixes (2 implemented, 1 deferred) |
 
 ---
 
@@ -169,7 +169,7 @@ The following phases are active or recently completed and awaiting archival to [
 | [155](PLAN-155-LET-DESTRUCTORS.md) | 10 | 10 | ✅ Complete; Let destructors for records and tuples |
 | [156](PLAN-156-PARSER-BLOCKER-RESOLUTION.md) | 5 | 5 | ✅ Complete; Parser blockers resolved, Phase 153 unblocked |
 | [157](PLAN-157-LIST-MIGRATION-HARDENING.md) | 5 | 4 | ✅ Complete; List migration hardening and cleanup |
-| [158](PLAN-158-LANGUAGE-SURFACE-FIXES.md) | 5 | 0 | 📝 Planned; Language surface fixes for pure ADT usage |
+| [158](PLAN-158-LANGUAGE-SURFACE-FIXES.md) | 5 | 3 | ✅ Complete; Language surface fixes (2 implemented, 1 deferred) |
 
 ## Phase 145: Law Test Evidence Substrate
 

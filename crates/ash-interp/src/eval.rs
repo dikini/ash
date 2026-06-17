@@ -838,11 +838,20 @@ fn runtime_proc_scatter(args: &[Value], ctx: &Context) -> EvalResult<Value> {
             callee: Some("proc::scatter".to_string()),
         });
     }
-    let Value::List(items) = &args[0] else {
-        return Err(EvalError::TypeMismatch {
-            expected: "List<A>".to_string(),
-            actual: value_type_name(&args[0]).to_string(),
-        });
+    let items = match &args[0] {
+        Value::List(items) => (**items).clone(),
+        other => {
+            // Try to convert Cons/Nil variant to a Vec
+            match crate::list_helpers::list_to_vec(other) {
+                Some(items) => items,
+                None => {
+                    return Err(EvalError::TypeMismatch {
+                        expected: "List<A>".to_string(),
+                        actual: value_type_name(other).to_string(),
+                    });
+                }
+            }
+        }
     };
     if !matches!(&args[1], Value::Closure { .. }) {
         return Err(EvalError::TypeMismatch {
@@ -854,7 +863,7 @@ fn runtime_proc_scatter(args: &[Value], ctx: &Context) -> EvalResult<Value> {
     Ok(Value::Closure {
         params: vec![("__proc_env".to_string(), None)],
         body: Box::new(Expr::Literal(Value::ProcScatterCapture {
-            items: Box::new((**items).clone()),
+            items: Box::new(items),
             mapper: Box::new(args[1].clone()),
         })),
         env: ctx.to_env_frame(),
@@ -2764,10 +2773,16 @@ pub fn eval_function_call(
             match &args[0] {
                 Value::List(list) => Ok(Value::Int(list.len() as i64)),
                 Value::String(s) => Ok(Value::Int(s.len() as i64)),
-                _ => Err(EvalError::TypeMismatch {
-                    expected: "list or string".to_string(),
-                    actual: format!("{:?}", args[0]),
-                }),
+                other => {
+                    // Try Cons/Nil variant representation
+                    match crate::list_helpers::list_len(other) {
+                        Some(len) => Ok(Value::Int(len as i64)),
+                        None => Err(EvalError::TypeMismatch {
+                            expected: "list or string".to_string(),
+                            actual: format!("{:?}", args[0]),
+                        }),
+                    }
+                }
             }
         }
 
@@ -2783,10 +2798,16 @@ pub fn eval_function_call(
                         Ok(list[0].clone())
                     }
                 }
-                _ => Err(EvalError::TypeMismatch {
-                    expected: "list".to_string(),
-                    actual: format!("{:?}", args[0]),
-                }),
+                other => {
+                    // Try Cons/Nil variant representation
+                    match crate::list_helpers::list_head(other) {
+                        Some(head) => Ok(head.clone()),
+                        None => Err(EvalError::TypeMismatch {
+                            expected: "list".to_string(),
+                            actual: format!("{:?}", args[0]),
+                        }),
+                    }
+                }
             }
         }
 
@@ -2802,10 +2823,22 @@ pub fn eval_function_call(
                         Ok(Value::List(Box::new(list[1..].to_vec())))
                     }
                 }
-                _ => Err(EvalError::TypeMismatch {
-                    expected: "list".to_string(),
-                    actual: format!("{:?}", args[0]),
-                }),
+                other => {
+                    // Try Cons/Nil variant representation
+                    match crate::list_helpers::list_tail(other) {
+                        Some(tail) => {
+                            // Convert back to Value::List for backward compatibility
+                            match crate::list_helpers::list_to_vec(tail) {
+                                Some(vec) => Ok(Value::List(Box::new(vec))),
+                                None => Ok(tail.clone()),
+                            }
+                        }
+                        None => Err(EvalError::TypeMismatch {
+                            expected: "list".to_string(),
+                            actual: format!("{:?}", args[0]),
+                        }),
+                    }
+                }
             }
         }
 
@@ -2819,10 +2852,22 @@ pub fn eval_function_call(
                     new_list.push(elem.clone());
                     Ok(Value::List(Box::new(new_list)))
                 }
-                _ => Err(EvalError::TypeMismatch {
-                    expected: "list".to_string(),
-                    actual: format!("{:?}", args[0]),
-                }),
+                (other, elem) => {
+                    // Try Cons/Nil variant representation
+                    match crate::list_helpers::list_append(other, elem.clone()) {
+                        Some(result) => {
+                            // Convert back to Value::List for backward compatibility
+                            match crate::list_helpers::list_to_vec(&result) {
+                                Some(vec) => Ok(Value::List(Box::new(vec))),
+                                None => Ok(result),
+                            }
+                        }
+                        None => Err(EvalError::TypeMismatch {
+                            expected: "list".to_string(),
+                            actual: format!("{:?}", args[0]),
+                        }),
+                    }
+                }
             }
         }
 
@@ -2836,10 +2881,22 @@ pub fn eval_function_call(
                     new_list.extend(l2.iter().cloned());
                     Ok(Value::List(Box::new(new_list)))
                 }
-                _ => Err(EvalError::TypeMismatch {
-                    expected: "list, list".to_string(),
-                    actual: format!("{:?}, {:?}", args[0], args[1]),
-                }),
+                (other1, other2) => {
+                    // Try Cons/Nil variant representation
+                    match crate::list_helpers::list_concat(other1, other2) {
+                        Some(result) => {
+                            // Convert back to Value::List for backward compatibility
+                            match crate::list_helpers::list_to_vec(&result) {
+                                Some(vec) => Ok(Value::List(Box::new(vec))),
+                                None => Ok(result),
+                            }
+                        }
+                        None => Err(EvalError::TypeMismatch {
+                            expected: "list, list".to_string(),
+                            actual: format!("{:?}, {:?}", args[0], args[1]),
+                        }),
+                    }
+                }
             }
         }
 
@@ -2856,6 +2913,41 @@ pub fn eval_function_call(
                             callee: None,
                         });
                     }
+                    let mut result = Vec::new();
+                    for item in list.iter() {
+                        let mut call_env = ash_core::env_frame::EnvFrame::with_parent(env.clone());
+                        call_env.insert(params[0].0.clone(), item.clone());
+                        let call_ctx =
+                            call_context_from_env(std::sync::Arc::new(call_env), ctx, false);
+                        match eval_expr(body, &call_ctx)? {
+                            Value::Bool(true) => result.push(item.clone()),
+                            Value::Bool(false) => {}
+                            other => {
+                                return Err(EvalError::TypeMismatch {
+                                    expected: "bool".to_string(),
+                                    actual: format!("{other:?}"),
+                                });
+                            }
+                        }
+                    }
+                    Ok(Value::List(Box::new(result)))
+                }
+                (other, Value::Closure { params, body, env }) => {
+                    // Try Cons/Nil variant representation
+                    if params.len() != 1 {
+                        return Err(EvalError::WrongArity {
+                            expected: params.len(),
+                            actual: 1,
+                            callee: None,
+                        });
+                    }
+                    let list = match crate::list_helpers::list_to_vec(other) {
+                        Some(list) => list,
+                        None => return Err(EvalError::TypeMismatch {
+                            expected: "list, function".to_string(),
+                            actual: format!("{:?}, {:?}", args[0], args[1]),
+                        }),
+                    };
                     let mut result = Vec::new();
                     for item in list.iter() {
                         let mut call_env = ash_core::env_frame::EnvFrame::with_parent(env.clone());
@@ -2895,6 +2987,32 @@ pub fn eval_function_call(
                             callee: None,
                         });
                     }
+                    let mut result = Vec::new();
+                    for item in list.iter() {
+                        let mut call_env = ash_core::env_frame::EnvFrame::with_parent(env.clone());
+                        call_env.insert(params[0].0.clone(), item.clone());
+                        let call_ctx =
+                            call_context_from_env(std::sync::Arc::new(call_env), ctx, false);
+                        result.push(eval_expr(body, &call_ctx)?);
+                    }
+                    Ok(Value::List(Box::new(result)))
+                }
+                (other, Value::Closure { params, body, env }) => {
+                    // Try Cons/Nil variant representation
+                    if params.len() != 1 {
+                        return Err(EvalError::WrongArity {
+                            expected: params.len(),
+                            actual: 1,
+                            callee: None,
+                        });
+                    }
+                    let list = match crate::list_helpers::list_to_vec(other) {
+                        Some(list) => list,
+                        None => return Err(EvalError::TypeMismatch {
+                            expected: "list, function".to_string(),
+                            actual: format!("{:?}, {:?}", args[0], args[1]),
+                        }),
+                    };
                     let mut result = Vec::new();
                     for item in list.iter() {
                         let mut call_env = ash_core::env_frame::EnvFrame::with_parent(env.clone());

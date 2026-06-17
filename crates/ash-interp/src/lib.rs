@@ -33,6 +33,7 @@ pub mod execute_set;
 pub mod execute_stream;
 pub mod execution_record;
 pub mod guard;
+pub mod list_helpers;
 pub mod mailbox;
 pub mod pattern;
 pub mod policy;

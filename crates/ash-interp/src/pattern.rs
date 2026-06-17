@@ -87,10 +87,21 @@ fn match_pattern_recursive(
                     }
                     Ok(())
                 }
-                _ => Err(PatternError::MatchFailed {
-                    expected: format!("tuple of {} elements", patterns.len()),
-                    actual: format!("{:?}", value),
-                }),
+                _ => {
+                    // Try matching as Cons/Nil list representation
+                    if let Some(values) = crate::list_helpers::list_to_vec(value) {
+                        if values.len() == patterns.len() {
+                            for (p, v) in patterns.iter().zip(values.iter()) {
+                                match_pattern_recursive(p, v, bindings)?;
+                            }
+                            return Ok(());
+                        }
+                    }
+                    Err(PatternError::MatchFailed {
+                        expected: format!("tuple of {} elements", patterns.len()),
+                        actual: format!("{:?}", value),
+                    })
+                }
             }
         }
 
@@ -116,9 +127,17 @@ fn match_pattern_recursive(
 
         Pattern::List(prefix_patterns, rest_binding) => {
             // List pattern matches list with at least prefix_patterns.len() elements
+            // If no rest_binding and prefix is empty, this is [] which only matches empty lists
             match value {
                 Value::List(values) => {
                     if values.len() < prefix_patterns.len() {
+                        return Err(PatternError::ListLengthMismatch {
+                            expected: prefix_patterns.len(),
+                            actual: values.len(),
+                        });
+                    }
+                    // If no rest binding, the list must be exactly the prefix length
+                    if rest_binding.is_none() && values.len() != prefix_patterns.len() {
                         return Err(PatternError::ListLengthMismatch {
                             expected: prefix_patterns.len(),
                             actual: values.len(),
@@ -138,10 +157,41 @@ fn match_pattern_recursive(
 
                     Ok(())
                 }
-                _ => Err(PatternError::MatchFailed {
-                    expected: "list".to_string(),
-                    actual: format!("{:?}", value),
-                }),
+                _ => {
+                    // Try matching as Cons/Nil list representation
+                    if let Some(values) = crate::list_helpers::list_to_vec(value) {
+                        if values.len() < prefix_patterns.len() {
+                            return Err(PatternError::ListLengthMismatch {
+                                expected: prefix_patterns.len(),
+                                actual: values.len(),
+                            });
+                        }
+                        // If no rest binding, the list must be exactly the prefix length
+                        if rest_binding.is_none() && values.len() != prefix_patterns.len() {
+                            return Err(PatternError::ListLengthMismatch {
+                                expected: prefix_patterns.len(),
+                                actual: values.len(),
+                            });
+                        }
+
+                        // Match prefix elements
+                        for (p, v) in prefix_patterns.iter().zip(values.iter()) {
+                            match_pattern_recursive(p, v, bindings)?;
+                        }
+
+                        // Bind rest if specified
+                        if let Some(rest_name) = rest_binding {
+                            let rest_values: Vec<Value> = values[prefix_patterns.len()..].to_vec();
+                            bindings.insert(rest_name.clone(), crate::list_helpers::vec_to_list(rest_values));
+                        }
+
+                        return Ok(());
+                    }
+                    Err(PatternError::MatchFailed {
+                        expected: "list".to_string(),
+                        actual: format!("{:?}", value),
+                    })
+                }
             }
         }
 

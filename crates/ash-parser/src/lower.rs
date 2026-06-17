@@ -962,6 +962,34 @@ fn lower_workflow_body(
                 crate::surface::OperationalTarget::Symbolic { capability_name } => {
                     // Symbolic capability call - resolve through module-owned context
                     // Per Phase 71: use passed-in context, not built-in mappings
+                    // Phase 158 fix: First check if this is a function call (not a capability)
+                    // If the name is not in BUILTIN_FUNCTIONS and not an effectful name,
+                    // it's likely a user-defined function call, not a capability.
+                    if !BUILTIN_FUNCTIONS.contains(&capability_name.as_ref())
+                        && !active_effectful_names_contains(capability_name.as_ref())
+                    {
+                        // This is a function call, not a capability call
+                        // Lower it as an Orient wrapping a FnApply expression
+                        let cont = continuation
+                            .as_ref()
+                            .map(|c| lower_workflow_body(c, provenance, ctx))
+                            .transpose()?
+                            .unwrap_or(CoreWorkflow::Done);
+                        return Ok(CoreWorkflow::Orient {
+                            expr: CoreExpr::FnApply {
+                                func: Box::new(CoreExpr::Variable {
+                                    name: capability_name.to_string(),
+                                    span: ash_core::Span::default(),
+                                }),
+                                args: action
+                                    .args
+                                    .iter()
+                                    .map(lower_expr)
+                                    .collect::<Result<Vec<_>, _>>()?,
+                            },
+                            continuation: Box::new(cont),
+                        });
+                    }
                     match ctx.resolve_capability(capability_name.as_ref()) {
                         Some((provider, action)) => (provider, action),
                         None => {

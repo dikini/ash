@@ -373,7 +373,10 @@ mod tests {
     fn coverage_defers_property_and_small_world_without_execution_rows() {
         let snapshot = RunnerIntrospectionSnapshot {
             laws: vec![
-                law("property", Some(LawTestEvidence::Property { strategies: vec![] })),
+                law(
+                    "property",
+                    Some(LawTestEvidence::Property { strategies: vec![] }),
+                ),
                 law("small", Some(LawTestEvidence::SmallWorld)),
             ],
             ..RunnerIntrospectionSnapshot::default()

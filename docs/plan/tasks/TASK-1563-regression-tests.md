@@ -1,6 +1,6 @@
 # TASK-1563: Add regression tests for parser blockers
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 

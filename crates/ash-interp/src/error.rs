@@ -73,7 +73,9 @@ pub enum EvalError {
     #[error("closure crossed three-vertex boundary: {context}")]
     BoundaryViolation { value: Box<Value>, context: String },
 
-    #[error("capture effect violation: variable '{var}' has effect level {var_effect}, but closure is created in {context_effect} context ({context})")]
+    #[error(
+        "capture effect violation: variable '{var}' has effect level {var_effect}, but closure is created in {context_effect} context ({context})"
+    )]
     CaptureEffectViolation {
         var: String,
         var_effect: String,

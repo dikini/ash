@@ -1,10 +1,9 @@
+use ash_parser::new_input;
 use ash_parser::surface::{Definition, Expr, Pattern};
-use ash_parser::{new_input};
 
 fn parse_fn(source: &str) -> Definition {
     let mut input = new_input(source);
-    let result = ash_parser::parse_module::parse_fn_definition(
-        &mut input);
+    let result = ash_parser::parse_module::parse_fn_definition(&mut input);
     result.expect("parse_fn should succeed")
 }
 
@@ -19,7 +18,9 @@ fn let_single_identifier_works() {
             assert_eq!(statements.len(), 1);
             match &statements[0] {
                 ash_parser::surface::BlockStmt::Let { pattern, .. } => {
-                    assert!(matches!(pattern, Pattern::Variable { name, .. } if name.as_ref() == "x"));
+                    assert!(
+                        matches!(pattern, Pattern::Variable { name, .. } if name.as_ref() == "x")
+                    );
                 }
                 _ => panic!("expected Let statement"),
             }
@@ -32,7 +33,9 @@ fn let_single_identifier_works() {
 fn let_record_destructor_works() {
     // NOTE: Shorthand `let { x, y } = p` is NOT supported.
     // Must use explicit rename: `let { x: x, y: y } = p`
-    let def = parse_fn(r#"fn test() -> Int { let p = Point { x: 10, y: 20 }; let { x: x, y: y } = p; x + y }"#);
+    let def = parse_fn(
+        r#"fn test() -> Int { let p = Point { x: 10, y: 20 }; let { x: x, y: y } = p; x + y }"#,
+    );
     let Definition::Function(f) = def else {
         panic!("expected Function");
     };
@@ -40,20 +43,18 @@ fn let_record_destructor_works() {
         Expr::Block { statements, .. } => {
             assert_eq!(statements.len(), 2);
             match &statements[1] {
-                ash_parser::surface::BlockStmt::Let { pattern, .. } => {
-                    match pattern {
-                        Pattern::Record(fields) => {
-                            assert_eq!(fields.len(), 2);
-                            assert_eq!(fields[0].0.as_ref(), "x");
-                            assert!(matches!(
+                ash_parser::surface::BlockStmt::Let { pattern, .. } => match pattern {
+                    Pattern::Record(fields) => {
+                        assert_eq!(fields.len(), 2);
+                        assert_eq!(fields[0].0.as_ref(), "x");
+                        assert!(matches!(
                                 &fields[0].1, Pattern::Variable { name, .. } if name.as_ref() == "x"));
-                            assert_eq!(fields[1].0.as_ref(), "y");
-                            assert!(matches!(
+                        assert_eq!(fields[1].0.as_ref(), "y");
+                        assert!(matches!(
                                 &fields[1].1, Pattern::Variable { name, .. } if name.as_ref() == "y"));
-                        }
-                        _ => panic!("expected Record pattern, got: {:?}", pattern),
                     }
-                }
+                    _ => panic!("expected Record pattern, got: {:?}", pattern),
+                },
                 _ => panic!("expected Let statement"),
             }
         }
@@ -63,7 +64,9 @@ fn let_record_destructor_works() {
 
 #[test]
 fn let_record_destructor_with_rename_works() {
-    let def = parse_fn(r#"fn test() -> Int { let p = Point { x: 10, y: 20 }; let { x: a, y: b } = p; a + b }"#);
+    let def = parse_fn(
+        r#"fn test() -> Int { let p = Point { x: 10, y: 20 }; let { x: a, y: b } = p; a + b }"#,
+    );
     let Definition::Function(f) = def else {
         panic!("expected Function");
     };
@@ -71,20 +74,18 @@ fn let_record_destructor_with_rename_works() {
         Expr::Block { statements, .. } => {
             assert_eq!(statements.len(), 2);
             match &statements[1] {
-                ash_parser::surface::BlockStmt::Let { pattern, .. } => {
-                    match pattern {
-                        Pattern::Record(fields) => {
-                            assert_eq!(fields.len(), 2);
-                            assert_eq!(fields[0].0.as_ref(), "x");
-                            assert!(matches!(
+                ash_parser::surface::BlockStmt::Let { pattern, .. } => match pattern {
+                    Pattern::Record(fields) => {
+                        assert_eq!(fields.len(), 2);
+                        assert_eq!(fields[0].0.as_ref(), "x");
+                        assert!(matches!(
                                 &fields[0].1, Pattern::Variable { name, .. } if name.as_ref() == "a"));
-                            assert_eq!(fields[1].0.as_ref(), "y");
-                            assert!(matches!(
+                        assert_eq!(fields[1].0.as_ref(), "y");
+                        assert!(matches!(
                                 &fields[1].1, Pattern::Variable { name, .. } if name.as_ref() == "b"));
-                        }
-                        _ => panic!("expected Record pattern, got: {:?}", pattern),
                     }
-                }
+                    _ => panic!("expected Record pattern, got: {:?}", pattern),
+                },
                 _ => panic!("expected Let statement"),
             }
         }
@@ -99,7 +100,11 @@ fn record_accessor_works() {
         panic!("expected Function");
     };
     match &f.body {
-        Expr::Block { statements, tail_expr, .. } => {
+        Expr::Block {
+            statements,
+            tail_expr,
+            ..
+        } => {
             assert_eq!(statements.len(), 1);
             match tail_expr.as_ref().unwrap().as_ref() {
                 Expr::FieldAccess { base, field, .. } => {
@@ -119,12 +124,17 @@ fn record_accessor_works() {
 }
 #[test]
 fn record_accessor_on_fn_field_works() {
-    let def = parse_fn(r#"fn test() -> Int { let s = Strategy { gen: fn(_ctx) { 42 } }; s.gen(0) }"#);
+    let def =
+        parse_fn(r#"fn test() -> Int { let s = Strategy { gen: fn(_ctx) { 42 } }; s.gen(0) }"#);
     let Definition::Function(f) = def else {
         panic!("expected Function");
     };
     match &f.body {
-        Expr::Block { statements, tail_expr, .. } => {
+        Expr::Block {
+            statements,
+            tail_expr,
+            ..
+        } => {
             assert_eq!(statements.len(), 1);
             // Check that tail_expr is a function application on field access
             match tail_expr.as_ref().unwrap().as_ref() {
@@ -154,7 +164,8 @@ fn record_accessor_on_fn_field_works() {
 fn let_record_destructor_shorthand_works() {
     // Shorthand `let { x, y } = p` IS supported.
     // Equivalent to `let { x: x, y: y } = p`
-    let def = parse_fn(r#"fn test() -> Int { let p = Point { x: 10, y: 20 }; let { x, y } = p; x + y }"#);
+    let def =
+        parse_fn(r#"fn test() -> Int { let p = Point { x: 10, y: 20 }; let { x, y } = p; x + y }"#);
     let Definition::Function(f) = def else {
         panic!("expected Function");
     };
@@ -162,20 +173,18 @@ fn let_record_destructor_shorthand_works() {
         Expr::Block { statements, .. } => {
             assert_eq!(statements.len(), 2);
             match &statements[1] {
-                ash_parser::surface::BlockStmt::Let { pattern, .. } => {
-                    match pattern {
-                        Pattern::Record(fields) => {
-                            assert_eq!(fields.len(), 2);
-                            assert_eq!(fields[0].0.as_ref(), "x");
-                            assert!(matches!(
+                ash_parser::surface::BlockStmt::Let { pattern, .. } => match pattern {
+                    Pattern::Record(fields) => {
+                        assert_eq!(fields.len(), 2);
+                        assert_eq!(fields[0].0.as_ref(), "x");
+                        assert!(matches!(
                                 &fields[0].1, Pattern::Variable { name, .. } if name.as_ref() == "x"));
-                            assert_eq!(fields[1].0.as_ref(), "y");
-                            assert!(matches!(
+                        assert_eq!(fields[1].0.as_ref(), "y");
+                        assert!(matches!(
                                 &fields[1].1, Pattern::Variable { name, .. } if name.as_ref() == "y"));
-                        }
-                        _ => panic!("expected Record pattern, got: {:?}", pattern),
                     }
-                }
+                    _ => panic!("expected Record pattern, got: {:?}", pattern),
+                },
                 _ => panic!("expected Let statement"),
             }
         }

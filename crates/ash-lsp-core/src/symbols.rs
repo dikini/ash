@@ -476,14 +476,24 @@ mod tests {
     fn test_workspace_symbols_finds_top_level_names() {
         let dir = tempfile::tempdir().expect("tempdir");
         write_ash(dir.path(), "one.ash", "fn helper() -> Int { 1 }\n");
-        write_ash(dir.path(), "two.ash", "workflow main { observe helper done }\n");
+        write_ash(
+            dir.path(),
+            "two.ash",
+            "workflow main { observe helper done }\n",
+        );
 
         let result = workspace_symbols(dir.path(), "helper");
 
         assert_eq!(result.len(), 1, "expected one match for 'helper'");
         assert_eq!(result[0].name, "helper");
         assert_eq!(result[0].kind, SymbolKind::FUNCTION);
-        assert!(result[0].file.as_os_str().to_string_lossy().contains("one.ash"));
+        assert!(
+            result[0]
+                .file
+                .as_os_str()
+                .to_string_lossy()
+                .contains("one.ash")
+        );
         assert_eq!(result[0].line, 1);
         assert_eq!(result[0].column, 1);
     }
@@ -510,7 +520,13 @@ mod tests {
 
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].name, "sensor");
-        assert!(result[0].file.as_os_str().to_string_lossy().contains("deep.ash"));
+        assert!(
+            result[0]
+                .file
+                .as_os_str()
+                .to_string_lossy()
+                .contains("deep.ash")
+        );
     }
 
     #[test]
@@ -533,7 +549,10 @@ mod tests {
 
         let result = workspace_symbols(dir.path(), "missing");
 
-        assert!(result.is_empty(), "expected empty result for non-matching query");
+        assert!(
+            result.is_empty(),
+            "expected empty result for non-matching query"
+        );
     }
 
     #[test]
@@ -563,7 +582,10 @@ mod tests {
 
         assert_eq!(result.len(), 2);
         let names: Vec<_> = result.iter().map(|s| s.file.file_name().unwrap()).collect();
-        assert_eq!(names, vec![std::ffi::OsStr::new("a.ash"), std::ffi::OsStr::new("z.ash")]);
+        assert_eq!(
+            names,
+            vec![std::ffi::OsStr::new("a.ash"), std::ffi::OsStr::new("z.ash")]
+        );
     }
 
     #[test]

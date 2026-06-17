@@ -839,7 +839,7 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
                 let mut item_ty = first_result.ty.clone();
                 substitution = substitution.compose(&first_result.substitution);
                 errors.extend(first_result.errors);
-                
+
                 for item in items.iter().skip(1) {
                     let item_result = check_expr(env, item);
                     let item_ty_applied = item_result.substitution.apply(&item_ty);
@@ -861,7 +861,7 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
                     substitution = substitution.compose(&item_result.substitution);
                     errors.extend(item_result.errors);
                 }
-                
+
                 CheckResult {
                     ty: Type::List(Box::new(item_ty)),
                     substitution,

@@ -227,7 +227,12 @@ impl Value {
     /// Pure values: Int, Float, String, Bool, Null, Time, pure Record, pure Variant, pure Closure.
     pub fn is_pure(&self) -> bool {
         match self {
-            Value::Int(_) | Value::Float(_) | Value::String(_) | Value::Bool(_) | Value::Null | Value::Time(_) => true,
+            Value::Int(_)
+            | Value::Float(_)
+            | Value::String(_)
+            | Value::Bool(_)
+            | Value::Null
+            | Value::Time(_) => true,
             Value::Record(fields) => fields.values().all(|v| v.is_pure()),
             Value::Variant { fields, .. } => fields.iter().all(|(_, v)| v.is_pure()),
             Value::Closure { env, .. } => {
@@ -242,25 +247,51 @@ impl Value {
     /// Return the effect level of this value as a string.
     pub fn effect_level(&self) -> String {
         match self {
-            Value::Int(_) | Value::Float(_) | Value::String(_) | Value::Bool(_) | Value::Null | Value::Time(_) => "Pure".to_string(),
+            Value::Int(_)
+            | Value::Float(_)
+            | Value::String(_)
+            | Value::Bool(_)
+            | Value::Null
+            | Value::Time(_) => "Pure".to_string(),
             Value::Record(fields) => {
-                let max_effect = fields.values().map(|v| v.effect_level()).max_by_key(|e| crate::value::effect_level_rank(e));
+                let max_effect = fields
+                    .values()
+                    .map(|v| v.effect_level())
+                    .max_by_key(|e| crate::value::effect_level_rank(e));
                 max_effect.unwrap_or_else(|| "Pure".to_string())
             }
             Value::Variant { fields, .. } => {
-                let max_effect = fields.iter().map(|(_, v)| v.effect_level()).max_by_key(|e| crate::value::effect_level_rank(e));
+                let max_effect = fields
+                    .iter()
+                    .map(|(_, v)| v.effect_level())
+                    .max_by_key(|e| crate::value::effect_level_rank(e));
                 max_effect.unwrap_or_else(|| "Pure".to_string())
             }
             Value::List(items) => {
-                let max_effect = items.iter().map(|v| v.effect_level()).max_by_key(|e| crate::value::effect_level_rank(e));
+                let max_effect = items
+                    .iter()
+                    .map(|v| v.effect_level())
+                    .max_by_key(|e| crate::value::effect_level_rank(e));
                 max_effect.unwrap_or_else(|| "Pure".to_string())
             }
             Value::Cap(_) => "Act".to_string(),
             Value::Closure { .. } => {
-                if self.is_pure() { "Pure".to_string() } else { "Act".to_string() }
+                if self.is_pure() {
+                    "Pure".to_string()
+                } else {
+                    "Act".to_string()
+                }
             }
-            Value::ProcessHandle(_) | Value::ProcAwaitCapture(_) | Value::ProcYieldCapture | Value::ProcParCapture { .. } | Value::ProcScatterCapture { .. } | Value::ProcJoinCapture { .. } | Value::ProcGatherCapture { .. } => "Proc".to_string(),
-            Value::Instance(_) | Value::InstanceAddr(_) | Value::ControlLink(_) => "Workflow".to_string(),
+            Value::ProcessHandle(_)
+            | Value::ProcAwaitCapture(_)
+            | Value::ProcYieldCapture
+            | Value::ProcParCapture { .. }
+            | Value::ProcScatterCapture { .. }
+            | Value::ProcJoinCapture { .. }
+            | Value::ProcGatherCapture { .. } => "Proc".to_string(),
+            Value::Instance(_) | Value::InstanceAddr(_) | Value::ControlLink(_) => {
+                "Workflow".to_string()
+            }
             Value::Stream(_) => "Act".to_string(),
             Value::ActEnvToken => "Act".to_string(),
             Value::Ref(_) => "Pure".to_string(),

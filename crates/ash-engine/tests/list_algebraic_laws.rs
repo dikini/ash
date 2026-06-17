@@ -41,7 +41,11 @@ workflow main() -> Bool {
 
     let engine = build_engine();
     let result = engine.run_file(&source_path).await;
-    assert_eq!(result, Ok(ash_core::Value::Bool(true)), "Functor identity: map(id) == id");
+    assert_eq!(
+        result,
+        Ok(ash_core::Value::Bool(true)),
+        "Functor identity: map(id) == id"
+    );
 }
 
 // Note: Functor composition test is deferred due to language limitations:
@@ -76,7 +80,11 @@ workflow main() -> Bool {
 
     let engine = build_engine();
     let result = engine.run_file(&source_path).await;
-    assert_eq!(result, Ok(ash_core::Value::Bool(true)), "Semigroup associativity: concat(concat(a,b),c) == concat(a,concat(b,c))");
+    assert_eq!(
+        result,
+        Ok(ash_core::Value::Bool(true)),
+        "Semigroup associativity: concat(concat(a,b),c) == concat(a,concat(b,c))"
+    );
 }
 
 // ────────────────────────────────────────────────────────────────────
@@ -103,7 +111,11 @@ workflow main() -> Bool {
 
     let engine = build_engine();
     let result = engine.run_file(&source_path).await;
-    assert_eq!(result, Ok(ash_core::Value::Bool(true)), "Monoid left identity: concat([], list) == list");
+    assert_eq!(
+        result,
+        Ok(ash_core::Value::Bool(true)),
+        "Monoid left identity: concat([], list) == list"
+    );
 }
 
 #[tokio::test]
@@ -126,7 +138,11 @@ workflow main() -> Bool {
 
     let engine = build_engine();
     let result = engine.run_file(&source_path).await;
-    assert_eq!(result, Ok(ash_core::Value::Bool(true)), "Monoid right identity: concat(list, []) == list");
+    assert_eq!(
+        result,
+        Ok(ash_core::Value::Bool(true)),
+        "Monoid right identity: concat(list, []) == list"
+    );
 }
 
 // ────────────────────────────────────────────────────────────────────
@@ -172,7 +188,11 @@ workflow main() -> Bool {
 
     let engine = build_engine();
     let result = engine.run_file(&source_path).await;
-    assert_eq!(result, Ok(ash_core::Value::Bool(true)), "len([1,2,3,4,5]) == 5");
+    assert_eq!(
+        result,
+        Ok(ash_core::Value::Bool(true)),
+        "len([1,2,3,4,5]) == 5"
+    );
 }
 
 #[tokio::test]
@@ -195,7 +215,11 @@ workflow main() -> Bool {
 
     let engine = build_engine();
     let result = engine.run_file(&source_path).await;
-    assert_eq!(result, Ok(ash_core::Value::Bool(true)), "len(append([1,2,3], 4)) == 4");
+    assert_eq!(
+        result,
+        Ok(ash_core::Value::Bool(true)),
+        "len(append([1,2,3], 4)) == 4"
+    );
 }
 
 #[tokio::test]
@@ -219,7 +243,11 @@ workflow main() -> Bool {
 
     let engine = build_engine();
     let result = engine.run_file(&source_path).await;
-    assert_eq!(result, Ok(ash_core::Value::Bool(true)), "concat(take(n, list), drop(n, list)) == list");
+    assert_eq!(
+        result,
+        Ok(ash_core::Value::Bool(true)),
+        "concat(take(n, list), drop(n, list)) == list"
+    );
 }
 
 // Note: reverse and map composition tests are deferred due to language limitations:

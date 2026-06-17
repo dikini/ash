@@ -292,7 +292,7 @@ fn parse_record_pattern(input: &mut ParseInput) -> ModalResult<Pattern> {
                     span: span_from(&start_pos, &input.state.pos),
                 };
                 fields.push((field_name.into(), field_pattern));
-                
+
                 // Optional comma
                 if input.input.starts_with(",") {
                     let _ = input.input.next_slice(1);

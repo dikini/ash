@@ -182,7 +182,10 @@ fn match_pattern_recursive(
                         // Bind rest if specified
                         if let Some(rest_name) = rest_binding {
                             let rest_values: Vec<Value> = values[prefix_patterns.len()..].to_vec();
-                            bindings.insert(rest_name.clone(), crate::list_helpers::vec_to_list(rest_values));
+                            bindings.insert(
+                                rest_name.clone(),
+                                crate::list_helpers::vec_to_list(rest_values),
+                            );
                         }
 
                         return Ok(());

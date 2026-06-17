@@ -48,11 +48,11 @@ The `parse_list_pattern` function exists but may not be reached in the `match` c
 
 | Task | Description | Status |
 |---|---|---|
-| [TASK-1560](tasks/TASK-1560-fix-if-else-match.md) | Fix `if`/`else` with `match` in `else` branch | 📝 Planned |
-| [TASK-1561](tasks/TASK-1561-fix-variant-record-patterns.md) | Fix variant patterns with record payloads | 📝 Planned |
-| [TASK-1562](tasks/TASK-1562-fix-list-patterns.md) | Fix list literal patterns in `match` | 📝 Planned |
-| [TASK-1563](tasks/TASK-1563-regression-tests.md) | Add regression tests for all blockers | 📝 Planned |
-| [TASK-1564](tasks/TASK-1564-verify-phase-153-unblocked.md) | Verify Phase 153 is unblocked | 📝 Planned |
+| [TASK-1560](tasks/TASK-1560-fix-if-else-match.md) | Fix `if`/`else` with `match` in `else` branch | ✅ Complete |
+| [TASK-1561](tasks/TASK-1561-fix-variant-record-patterns.md) | Fix variant patterns with record payloads | ✅ Complete |
+| [TASK-1562](tasks/TASK-1562-fix-list-patterns.md) | Fix list literal patterns in `match` | ✅ Complete |
+| [TASK-1563](tasks/TASK-1563-regression-tests.md) | Add regression tests for all three blockers | ✅ Complete; 9 new tests in parse_expr/tests.rs + 11 existing in parse_module/tests.rs |
+| [TASK-1564](tasks/TASK-1564-verify-phase-153-unblocked.md) | Verify Phase 153 is unblocked | ✅ Complete; list.ash compiles and runs |
 
 ## Implementation Order
 

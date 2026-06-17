@@ -25,7 +25,7 @@ use crate::surface::{
     CapabilityOperationSig, CapabilityRef, Constraint, Contract, DataKindDef, Definition,
     DomainConstructor, DomainField, DomainSlot, EffectType, Expr, FnDef, ImplDef, ImplMethodDef,
     InterfaceDef, InterfaceEvidenceConstraint, InterfaceMethodSig, InterfaceTypeParam, LawDef,
-    MatchArm, Name, Param, Pattern, Predicate, PropertyStrategyBinding, ProofBody, ProofDef,
+    MatchArm, Name, Param, Pattern, Predicate, ProofBody, ProofDef, PropertyStrategyBinding,
     PropositionClause, PropositionClauseKind, PropositionPredicateDecl, PropositionPredicateParam,
     PropositionTail, ProxyDef, ResourceField, ResourceTypeDef, RoleDef, SealedDomainDef, Type,
     TypeBody, TypeDef, TypeField, TypeFnDecreases, TypeFnDef, TypeFnEquation, TypeFnParam,
@@ -1712,7 +1712,8 @@ fn parse_proof_definition(input: &mut ParseInput) -> ModalResult<ProofDef> {
             skip_whitespace_and_comments(input);
             let test_name = parse_string_literal_content(input)?;
             ProofBody::ByTest { test_name }
-        } else if starts_with_keyword(input, "property") || starts_with_keyword(input, "quickcheck") {
+        } else if starts_with_keyword(input, "property") || starts_with_keyword(input, "quickcheck")
+        {
             let _ = if starts_with_keyword(input, "property") {
                 keyword("property").parse_next(input)?
             } else {

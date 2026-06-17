@@ -21,10 +21,7 @@ pub fn nil() -> Value {
 pub fn cons(head: Value, tail: Value) -> Value {
     Value::Variant {
         name: "Cons".to_string(),
-        fields: Box::new(vec![
-            ("head".to_string(), head),
-            ("tail".to_string(), tail),
-        ]),
+        fields: Box::new(vec![("head".to_string(), head), ("tail".to_string(), tail)]),
     }
 }
 

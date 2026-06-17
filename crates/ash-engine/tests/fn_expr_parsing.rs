@@ -4,9 +4,7 @@ use ash_engine::Engine;
 use std::fs;
 
 fn build_engine() -> Engine {
-    Engine::new()
-        .build()
-        .expect("engine should build")
+    Engine::new().build().expect("engine should build")
 }
 
 #[tokio::test]
@@ -25,11 +23,16 @@ workflow main() -> Bool {
     ret mapped == [2, 3, 4]
 }
 "#,
-    ).expect("write main.ash");
+    )
+    .expect("write main.ash");
 
     let engine = build_engine();
     let result = engine.run_file(&main_path).await;
 
-    assert!(result.is_ok(), "fn expression in argument should execute: {:?}", result);
+    assert!(
+        result.is_ok(),
+        "fn expression in argument should execute: {:?}",
+        result
+    );
     assert_eq!(result.unwrap(), ash_core::Value::Bool(true));
 }

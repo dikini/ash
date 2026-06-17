@@ -2943,10 +2943,12 @@ pub fn eval_function_call(
                     }
                     let list = match crate::list_helpers::list_to_vec(other) {
                         Some(list) => list,
-                        None => return Err(EvalError::TypeMismatch {
-                            expected: "list, function".to_string(),
-                            actual: format!("{:?}, {:?}", args[0], args[1]),
-                        }),
+                        None => {
+                            return Err(EvalError::TypeMismatch {
+                                expected: "list, function".to_string(),
+                                actual: format!("{:?}, {:?}", args[0], args[1]),
+                            });
+                        }
                     };
                     let mut result = Vec::new();
                     for item in list.iter() {
@@ -3008,10 +3010,12 @@ pub fn eval_function_call(
                     }
                     let list = match crate::list_helpers::list_to_vec(other) {
                         Some(list) => list,
-                        None => return Err(EvalError::TypeMismatch {
-                            expected: "list, function".to_string(),
-                            actual: format!("{:?}, {:?}", args[0], args[1]),
-                        }),
+                        None => {
+                            return Err(EvalError::TypeMismatch {
+                                expected: "list, function".to_string(),
+                                actual: format!("{:?}, {:?}", args[0], args[1]),
+                            });
+                        }
                     };
                     let mut result = Vec::new();
                     for item in list.iter() {

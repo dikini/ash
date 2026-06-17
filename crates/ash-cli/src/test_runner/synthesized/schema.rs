@@ -311,7 +311,7 @@ pub enum LawTestEvidence {
         /// Authored test name from `by test "..."`.
         test_name: String,
     },
-/// The law proposition is evaluated over generated bindings.
+    /// The law proposition is evaluated over generated bindings.
     Property {
         /// Optional strategy overrides for parameters.
         #[serde(skip_serializing_if = "Vec::is_empty", default)]

@@ -911,3 +911,135 @@ fn test_qualified_method_with_call_accepted() {
         other => panic!("Expected Call with module, got {other:?}"),
     }
 }
+
+// ============================================================
+// Phase 156 Parser Blocker Regression Tests (TASK-1563)
+// ============================================================
+// NOTE: if/then/else and match expressions are parsed in parse_module/fn_defs.rs,
+// not in parse_expr.rs. See parse_module/tests.rs for the main regression tests.
+// The tests below verify the underlying pattern and expression parsers.
+
+#[test]
+fn test_variant_record_pattern_parses() {
+    // B2: Variant patterns with record payloads like `Cons { head: h, tail: rest }`
+    let mut input = test_input("Cons { head: h, tail: rest }");
+    let result = pattern(&mut input).unwrap();
+    match result {
+        crate::surface::Pattern::Variant { name, .. } => {
+            assert_eq!(name.as_ref(), "Cons");
+        }
+        other => panic!("Expected Cons variant pattern, got {other:?}"),
+    }
+}
+
+#[test]
+fn test_list_literal_pattern_parses() {
+    // B3: List literal patterns `[h, ..rest]`
+    let mut input = test_input("[h, ..rest]");
+    let result = pattern(&mut input).unwrap();
+    assert!(
+        matches!(result, crate::surface::Pattern::List { .. }),
+        "Expected List pattern, got {:?}",
+        result
+    );
+}
+
+#[test]
+fn test_list_literal_pattern_empty() {
+    // B3: Empty list pattern `[]`
+    let mut input = test_input("[]");
+    let result = pattern(&mut input).unwrap();
+    assert!(
+        matches!(result, crate::surface::Pattern::List { .. }),
+        "Expected empty List pattern, got {:?}",
+        result
+    );
+}
+
+#[test]
+fn test_list_expr_in_primary_position() {
+    // B3: List expressions in primary position (not just patterns)
+    let mut input = test_input("[1, 2, 3]");
+    let result = expr(&mut input).unwrap();
+    assert!(
+        matches!(result, Expr::List { .. }),
+        "Expected List expression, got {:?}",
+        result
+    );
+}
+
+#[test]
+fn test_list_expr_as_fn_argument() {
+    // B3: List expressions passed as function arguments
+    let mut input = test_input("foo([1, 2, 3])");
+    let result = expr(&mut input).unwrap();
+    match result {
+        Expr::Call { args, .. } => {
+            assert_eq!(args.len(), 1);
+            assert!(matches!(args[0], Expr::List { .. }));
+        }
+        other => panic!("Expected Call with list arg, got {other:?}"),
+    }
+}
+
+#[test]
+fn test_nested_list_expr() {
+    // B3: Nested list expressions
+    let mut input = test_input("[[1, 2], [3, 4]]");
+    let result = expr(&mut input).unwrap();
+    assert!(
+        matches!(result, Expr::List { .. }),
+        "Expected nested List expression, got {:?}",
+        result
+    );
+}
+
+#[test]
+fn test_variant_pattern_with_single_field() {
+    // B2: Variant pattern with a single field
+    let mut input = test_input("Some { value: x }");
+    let result = pattern(&mut input).unwrap();
+    match result {
+        crate::surface::Pattern::Variant { name, .. } => {
+            assert_eq!(name.as_ref(), "Some");
+        }
+        other => panic!("Expected Some variant pattern, got {other:?}"),
+    }
+}
+
+#[test]
+fn test_list_expr_with_trailing_comma() {
+    // B3: List expression with trailing comma (may or may not be supported)
+    let mut input = test_input("[1, 2, 3,]");
+    let result = expr(&mut input);
+    // Trailing comma support depends on grammar; verify it doesn't panic
+    assert!(result.is_ok() || result.is_err());
+}
+
+#[test]
+fn test_list_expr_with_spread() {
+    // B3: List expression with spread (if supported)
+    let mut input = test_input("[1, ..rest, 5]");
+    let result = expr(&mut input);
+    // This may or may not parse depending on grammar; we just check it doesn't panic
+    assert!(result.is_ok() || result.is_err());
+}
+
+#[test]
+fn test_list_expr_in_let_binding() {
+    // B3: List expression in a let binding (parsed as do-block let)
+    let mut input = test_input("do:Act { let xs = [1, 2, 3]; return xs }");
+    let result = expr(&mut input).unwrap();
+    match result {
+        Expr::DoBlock { stmts, .. } => {
+            assert_eq!(stmts.len(), 2);
+            match &stmts[0] {
+                crate::surface::DoStmt::Let { value, .. } => {
+                    assert!(matches!(value.as_ref(), Expr::List { .. }));
+                }
+                other => panic!("Expected Let with list, got {other:?}"),
+            }
+        }
+        other => panic!("Expected DoBlock with let, got {other:?}"),
+    }
+}

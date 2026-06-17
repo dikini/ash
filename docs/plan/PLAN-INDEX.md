@@ -131,7 +131,7 @@ Update this section as tasks complete:
 | [153](PLAN-153-LIST-BUILTIN-TO-STDLIB.md) | 10 | 10 | ✅ Complete; List builtins migrated to pure Ash stdlib |
 | [154](PLAN-154-TYPE-ANNOTATION-QUIRKS.md) | 5 | 0 | 📝 Planned; spec/plan only, no implementation |
 | [155](PLAN-155-LET-DESTRUCTORS.md) | 10 | 5 | 🚧 Partial; 5/10 core tasks complete, 5 docs/closeout deferred |
-| [156](PLAN-156-PARSER-BLOCKER-RESOLUTION.md) | 5 | 3 | 🚧 Partial; list expr parsing done, if/else+variant tests missing |
+| [156](PLAN-156-PARSER-BLOCKER-RESOLUTION.md) | 5 | 5 | ✅ Complete; all blockers resolved, regression tests added |
 | [157](PLAN-157-LIST-MIGRATION-HARDENING.md) | 5 | 4 | ⏸️ Deferred; TASK-1570 (Remove Value::List) remains open |
 | [158](PLAN-158-LANGUAGE-SURFACE-FIXES.md) | 5 | 3 | ⏸️ Deferred; TASK-1580 (Module-level function visibility) remains open |
 
@@ -372,7 +372,7 @@ Add `let` destructor syntax for record and tuple types. This is group assignment
 
 ## Phase 156: Parser Blocker Resolution for List Migration
 
-**Status:** 🚧 Partial; 3/5 tasks complete, 2 deferred
+**Status:** ✅ Complete; 5/5 tasks complete
 **Plan:** [PLAN-156: Parser Blocker Resolution](PLAN-156-PARSER-BLOCKER-RESOLUTION.md)
 **Spec:** [SPEC-092: Parser Blocker Resolution](../spec/SPEC-092-PARSER-BLOCKER-RESOLUTION.md)
 
@@ -383,7 +383,7 @@ Resolve parser blockers that prevent Phase 153 (List Builtin to Stdlib) from pro
 | [TASK-1560](tasks/TASK-1560-fix-if-else-match.md) | Fix `if`/`else` with `match` in `else` branch | ✅ Complete; already worked, no regression tests added |
 | [TASK-1561](tasks/TASK-1561-fix-variant-record-patterns.md) | Fix variant patterns with record payloads | ✅ Complete; already worked, no regression tests added |
 | [TASK-1562](tasks/TASK-1562-fix-list-patterns.md) | Fix list literal patterns in `match` | ✅ Complete; parse_list_expr added, Expr::List lowering to Cons/Nil |
-| [TASK-1563](tasks/TASK-1563-regression-tests.md) | Add regression tests for all three blockers | 📝 Planned; only list expr tests exist |
+| [TASK-1563](tasks/TASK-1563-regression-tests.md) | Add regression tests for all three blockers | ✅ Complete; 9 new tests in parse_expr/tests.rs + 11 existing in parse_module/tests.rs |
 | [TASK-1564](tasks/TASK-1564-verify-phase-153-unblocked.md) | Verify Phase 153 is unblocked | ✅ Complete; list.ash compiles and runs |
 
 

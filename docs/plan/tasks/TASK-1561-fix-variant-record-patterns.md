@@ -1,6 +1,6 @@
 # TASK-1561: Fix variant patterns with record payloads
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 

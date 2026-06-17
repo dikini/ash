@@ -1,6 +1,6 @@
 # TASK-1560: Fix `if`/`else` with `match` in `else` branch
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 

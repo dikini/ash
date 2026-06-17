@@ -1,6 +1,6 @@
 # TASK-1562: Fix list literal patterns in `match`
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 

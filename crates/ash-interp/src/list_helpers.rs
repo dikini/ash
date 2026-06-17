@@ -7,7 +7,7 @@
 //!
 //! This module provides helper functions to ease the transition.
 
-use ash_core::{Name, Value};
+use ash_core::Value;
 
 /// Create a Nil (empty list) value
 pub fn nil() -> Value {
@@ -137,10 +137,9 @@ pub fn list_nth(value: &Value, n: usize) -> Option<&Value> {
 
 /// Append an element to a list (returns a new list)
 pub fn list_append(list: &Value, item: Value) -> Option<Value> {
-    let mut result = nil();
+    let mut elements = Vec::new();
     let mut current = list;
     // First, collect all elements
-    let mut elements = Vec::new();
     loop {
         match current {
             Value::Variant { name, fields } if name == "Nil" => {

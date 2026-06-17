@@ -1,6 +1,6 @@
 # PLAN-157: List Migration Hardening and Cleanup
 
-**Status:** ✅ Complete; List migration hardening and cleanup
+**Status:** ⏸️ Deferred; TASK-1570 (Remove Value::List) remains open
 **Spec:** [SPEC-093: List Migration Hardening](../spec/SPEC-093-LIST-MIGRATION-HARDENING.md) (to be created)
 **Builds on:** [PLAN-153](PLAN-153-LIST-BUILTIN-TO-STDLIB.md) (List Builtin to Stdlib)
 **Task range:** TASK-1570 through TASK-1574

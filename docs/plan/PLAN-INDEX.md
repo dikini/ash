@@ -145,8 +145,8 @@ The following phases are active or recently completed and awaiting archival to [
 | [154](PLAN-154-TYPE-ANNOTATION-QUIRKS.md) | 5 | 5 | ✅ Complete; Type annotation quirks (already worked) |
 | [155](PLAN-155-LET-DESTRUCTORS.md) | 10 | 10 | ✅ Complete; Let destructors for records and tuples |
 | [156](PLAN-156-PARSER-BLOCKER-RESOLUTION.md) | 5 | 5 | ✅ Complete; Parser blockers resolved, Phase 153 unblocked |
-| [157](PLAN-157-LIST-MIGRATION-HARDENING.md) | 5 | 4 | ✅ Complete; List migration hardening and cleanup |
-| [158](PLAN-158-LANGUAGE-SURFACE-FIXES.md) | 5 | 3 | ✅ Complete; Language surface fixes (2 implemented, 1 deferred) |
+| [157](PLAN-157-LIST-MIGRATION-HARDENING.md) | 5 | 4 | ⏸️ Deferred; TASK-1570 (Remove Value::List) remains open |
+| [158](PLAN-158-LANGUAGE-SURFACE-FIXES.md) | 5 | 3 | ⏸️ Deferred; TASK-1580 (Module-level function visibility) remains open |
 
 ---
 
@@ -168,8 +168,8 @@ The following phases are active or recently completed and awaiting archival to [
 | [154](PLAN-154-TYPE-ANNOTATION-QUIRKS.md) | 5 | 5 | ✅ Complete; Type annotation quirks (already worked) |
 | [155](PLAN-155-LET-DESTRUCTORS.md) | 10 | 10 | ✅ Complete; Let destructors for records and tuples |
 | [156](PLAN-156-PARSER-BLOCKER-RESOLUTION.md) | 5 | 5 | ✅ Complete; Parser blockers resolved, Phase 153 unblocked |
-| [157](PLAN-157-LIST-MIGRATION-HARDENING.md) | 5 | 4 | ✅ Complete; List migration hardening and cleanup |
-| [158](PLAN-158-LANGUAGE-SURFACE-FIXES.md) | 5 | 3 | ✅ Complete; Language surface fixes (2 implemented, 1 deferred) |
+| [157](PLAN-157-LIST-MIGRATION-HARDENING.md) | 5 | 4 | ⏸️ Deferred; TASK-1570 (Remove Value::List) remains open |
+| [158](PLAN-158-LANGUAGE-SURFACE-FIXES.md) | 5 | 3 | ⏸️ Deferred; TASK-1580 (Module-level function visibility) remains open |
 
 ## Phase 145: Law Test Evidence Substrate
 

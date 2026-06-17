@@ -1,6 +1,6 @@
 # PLAN-158: Language Surface Fixes
 
-**Status:** ✅ Complete; Language surface fixes implemented
+**Status:** ⏸️ Deferred; TASK-1580 (Module-level function visibility) remains open
 **Spec:** [SPEC-094: Language Surface Fix Specification](../spec/SPEC-094-LANGUAGE-SURFACE-FIX.md)
 **Builds on:** [PLAN-157](PLAN-157-LIST-MIGRATION-HARDENING.md)
 **Task range:** TASK-1580 through TASK-1584

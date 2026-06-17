@@ -110,6 +110,18 @@ impl EnvFrame {
             .filter_map(|(name, slot)| slot.resolve().map(|v| (name.clone(), v)))
     }
 
+    /// Iterate over ALL bindings in this frame and all parent frames.
+    /// Only returns `Bound` slots, not `Late` slots that are still unfilled.
+    /// Parent bindings come after local bindings.
+    pub fn all_bindings(&self) -> Box<dyn Iterator<Item = (String, Value)> + '_> {
+        let local = self.iter_bindings();
+        if let Some(parent) = &self.parent {
+            Box::new(local.chain(parent.all_bindings()))
+        } else {
+            Box::new(local)
+        }
+    }
+
     /// Get the parent frame, if any.
     pub fn parent(&self) -> Option<&Arc<EnvFrame>> {
         self.parent.as_ref()

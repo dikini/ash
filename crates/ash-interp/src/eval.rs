@@ -1752,17 +1752,25 @@ fn eval_expr_force_async<'a>(expr: &'a Expr, ctx: &'a Context) -> EvalBoxFuture<
                 return_type: _,
                 body,
             } => {
+                let env_frame = ctx.to_env_frame();
+                // SPEC-088: Capture-based effect rule replaces blanket ban.
+                if ctx.is_pure() {
+                    for (name, value) in env_frame.all_bindings() {
+                        if !value.is_pure() {
+                            return Err(EvalError::CaptureEffectViolation {
+                                var: name.to_string(),
+                                var_effect: value.effect_level(),
+                                context_effect: "Pure".to_string(),
+                                context: "closure created inside pure-function boundary".into(),
+                            });
+                        }
+                    }
+                }
                 let closure = Value::Closure {
                     params: params.clone(),
                     body: body.clone(),
-                    env: ctx.to_env_frame(),
+                    env: env_frame,
                 };
-                if ctx.is_pure() {
-                    return Err(EvalError::BoundaryViolation {
-                        value: Box::new(closure),
-                        context: "closure created inside pure-function boundary".into(),
-                    });
-                }
                 Ok(closure)
             }
         }
@@ -2475,20 +2483,26 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
             return_type: _,
             body,
         } => {
+            let env_frame = ctx.to_env_frame();
+            // SPEC-088: Capture-based effect rule replaces blanket ban.
+            // A closure in a pure context may only capture values whose effect level ≤ Pure.
+            if ctx.is_pure() {
+                for (name, value) in env_frame.all_bindings() {
+                    if !value.is_pure() {
+                        return Err(EvalError::CaptureEffectViolation {
+                            var: name.to_string(),
+                            var_effect: value.effect_level(),
+                            context_effect: "Pure".to_string(),
+                            context: "closure created inside pure-function boundary".into(),
+                        });
+                    }
+                }
+            }
             let closure = Value::Closure {
                 params: params.clone(),
                 body: body.clone(),
-                env: ctx.to_env_frame(),
+                env: env_frame,
             };
-            // SPEC-031 §4.8 — runtime safety net: closures must not be created
-            // inside a pure context.  The type checker is the primary enforcer;
-            // this catches any values that slip through.
-            if ctx.is_pure() {
-                return Err(EvalError::BoundaryViolation {
-                    value: Box::new(closure),
-                    context: "closure created inside pure-function boundary".into(),
-                });
-            }
             Ok(closure)
         }
 

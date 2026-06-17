@@ -1465,17 +1465,17 @@ fn task559_boundary_violation_on_context_boundary_crossing() {
     );
 }
 
-/// SPEC-031 §4.8 – Runtime enforcement: Expr::FnDef inside a pure context
-/// raises BoundaryViolation.
+/// SPEC-088 – Runtime enforcement: Expr::FnDef inside a pure context
+/// with no effectful captures is allowed. Only effectful captures are rejected.
 #[test]
-fn task559_boundary_violation_in_pure_context() {
+fn task559_pure_closure_with_no_captures_allowed() {
     use crate::context::Context;
 
     // Create a pure context
     let base = Context::new();
     let pure_ctx = base.enter_pure();
 
-    // FnDef inside a pure context should be rejected
+    // FnDef with no captures inside a pure context should be ALLOWED
     let expr = Expr::FnDef {
         params: vec![("x".into(), None)],
         return_type: None,
@@ -1487,8 +1487,36 @@ fn task559_boundary_violation_in_pure_context() {
 
     let result = eval_expr(&expr, &pure_ctx);
     assert!(
-        matches!(result, Err(EvalError::BoundaryViolation { .. })),
-        "expected BoundaryViolation in pure context, got {result:?}"
+        matches!(result, Ok(Value::Closure { .. })),
+        "expected Closure in pure context with no captures, got {result:?}"
+    );
+}
+
+/// SPEC-088 – Runtime enforcement: Expr::FnDef inside a pure context
+/// with effectful captures raises CaptureEffectViolation.
+#[test]
+fn task559_capture_effect_violation_in_pure_context() {
+    use crate::context::Context;
+
+    // Create a pure context with an effectful binding (capability)
+    let mut base = Context::new();
+    base.set("fs".into(), Value::Cap("std::io::fs".into()));
+    let pure_ctx = base.enter_pure();
+
+    // FnDef that captures an effectful value in a pure context should be rejected
+    let expr = Expr::FnDef {
+        params: vec![("x".into(), None)],
+        return_type: None,
+        body: Box::new(Expr::Variable {
+            name: "fs".into(),
+            span: ash_core::ast::Span::default(),
+        }),
+    };
+
+    let result = eval_expr(&expr, &pure_ctx);
+    assert!(
+        matches!(result, Err(EvalError::CaptureEffectViolation { .. })),
+        "expected CaptureEffectViolation in pure context with effectful capture, got {result:?}"
     );
 }
 

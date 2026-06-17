@@ -86,6 +86,8 @@ refresh_trigger:
 - [Proc processes](language/processes-proc.md)
 - [Workflow boundaries](language/workflows.md)
 - [Generalized do](language/generalized-do.md)
+- [Record types](language/types/records.md)
+- [Tuple types](language/types/tuples.md)
 
 ## Standard library
 

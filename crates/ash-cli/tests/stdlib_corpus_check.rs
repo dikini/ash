@@ -9,8 +9,8 @@ struct ExpectedFailure {
     reason: &'static str,
 }
 
-const EXPECTED_STD_FILES: usize = 51;
-const EXPECTED_STD_PASSING: usize = 45;
+const EXPECTED_STD_FILES: usize = 60;
+const EXPECTED_STD_PASSING: usize = 54;
 const EXPECTED_STD_FAILING: usize = 6;
 
 const EXPECTED_PASS: &[&str] = &[
@@ -56,7 +56,16 @@ const EXPECTED_PASS: &[&str] = &[
     "std/src/runtime/mod.ash",
     "std/src/string.ash",
     "std/src/test.ash",
-    "std/src/test/quickcheck.ash",
+    "std/src/test/quickcheck/mod.ash",
+    "std/src/test/quickcheck/context.ash",
+    "std/src/test/quickcheck/strategy.ash",
+    "std/src/test/quickcheck/arbitrary.ash",
+    "std/src/test/quickcheck/int.ash",
+    "std/src/test/quickcheck/bool.ash",
+    "std/src/test/quickcheck/string.ash",
+    "std/src/test/quickcheck/list.ash",
+    "std/src/test/quickcheck/combinator.ash",
+    "std/src/test/quickcheck/prelude.ash",
     "std/src/time.ash",
     "std/src/workflow.ash",
 ];

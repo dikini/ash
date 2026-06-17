@@ -25,11 +25,11 @@ use crate::surface::{
     CapabilityOperationSig, CapabilityRef, Constraint, Contract, DataKindDef, Definition,
     DomainConstructor, DomainField, DomainSlot, EffectType, Expr, FnDef, ImplDef, ImplMethodDef,
     InterfaceDef, InterfaceEvidenceConstraint, InterfaceMethodSig, InterfaceTypeParam, LawDef,
-    MatchArm, Name, Param, Pattern, Predicate, ProofBody, ProofDef, PropositionClause,
-    PropositionClauseKind, PropositionPredicateDecl, PropositionPredicateParam, PropositionTail,
-    ProxyDef, ResourceField, ResourceTypeDef, RoleDef, SealedDomainDef, Type, TypeBody, TypeDef,
-    TypeField, TypeFnDecreases, TypeFnDef, TypeFnEquation, TypeFnParam, TypeParam, TypePattern,
-    VariantDef, VariantPayload, Visibility, WhereBound, Workflow, YieldArm,
+    MatchArm, Name, Param, Pattern, Predicate, ProofBody, ProofDef, PropertyStrategyBinding,
+    PropositionClause, PropositionClauseKind, PropositionPredicateDecl, PropositionPredicateParam,
+    PropositionTail, ProxyDef, ResourceField, ResourceTypeDef, RoleDef, SealedDomainDef, Type,
+    TypeBody, TypeDef, TypeField, TypeFnDecreases, TypeFnDef, TypeFnEquation, TypeFnParam,
+    TypeParam, TypePattern, VariantDef, VariantPayload, Visibility, WhereBound, Workflow, YieldArm,
 };
 use crate::token::Span;
 
@@ -1712,9 +1712,50 @@ fn parse_proof_definition(input: &mut ParseInput) -> ModalResult<ProofDef> {
             skip_whitespace_and_comments(input);
             let test_name = parse_string_literal_content(input)?;
             ProofBody::ByTest { test_name }
-        } else if starts_with_keyword(input, "property") {
-            let _ = keyword("property").parse_next(input)?;
-            ProofBody::ByTestProperty
+        } else if starts_with_keyword(input, "property") || starts_with_keyword(input, "quickcheck")
+        {
+            let _ = if starts_with_keyword(input, "property") {
+                keyword("property").parse_next(input)?
+            } else {
+                keyword("quickcheck").parse_next(input)?
+            };
+            skip_whitespace_and_comments(input);
+            let strategies = if starts_with_keyword(input, "with") {
+                let _ = keyword("with").parse_next(input)?;
+                skip_whitespace_and_comments(input);
+                let _ = literal_str("{").parse_next(input)?;
+                skip_whitespace_and_comments(input);
+                let mut bindings = Vec::new();
+                loop {
+                    skip_whitespace_and_comments(input);
+                    if input.input.starts_with('}') {
+                        break;
+                    }
+                    let (param_name, _) = identifier_with_span(input)?;
+                    let param_name = param_name.to_string();
+                    skip_whitespace_and_comments(input);
+                    let _ = literal_str("<-").parse_next(input)?;
+                    skip_whitespace_and_comments(input);
+                    let strategy_expr = expr(input)?;
+                    bindings.push(PropertyStrategyBinding {
+                        param_name,
+                        strategy_expr,
+                    });
+                    skip_whitespace_and_comments(input);
+                    if input.input.starts_with(',') {
+                        let _ = literal_str(",").parse_next(input)?;
+                        skip_whitespace_and_comments(input);
+                    }
+                    if input.input.starts_with('}') {
+                        break;
+                    }
+                }
+                let _ = literal_str("}").parse_next(input)?;
+                bindings
+            } else {
+                Vec::new()
+            };
+            ProofBody::ByTestProperty { strategies }
         } else if starts_with_keyword(input, "small_world") {
             let _ = keyword("small_world").parse_next(input)?;
             ProofBody::ByTestSmallWorld

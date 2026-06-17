@@ -1,6 +1,6 @@
 # TASK-1497: QuickCheck v1 live syntax and seam audit
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -87,3 +87,9 @@ checklist:
 ## Notes
 
 This is a hard gate. Do not start Rust implementation before this audit has concrete live-code evidence.
+
+## Implementation Evidence
+
+- Implemented in Phase 151 worktree `feat/phase-151-quickcheck-v1`.
+- Focused verification: `cargo test -p ash-cli quickcheck -- --nocapture`.
+- Broad scoped gates: `cargo check -p ash-cli`; `cargo clippy -p ash-cli --all-targets -- -D warnings`; `cargo fmt --check`; `git diff --check`.

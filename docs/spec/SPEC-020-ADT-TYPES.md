@@ -35,6 +35,8 @@ matching.
 
 ### 4.1 Canonical Source Definition Model
 
+> **Terminology note:** The Rust implementation uses `TypeBody::Struct` for what Ash calls **record types** (product types with named fields). The user-facing term is "record type" to avoid confusion with Rust structs. See [Record Types](../../reference/language/types/records.md) for the user-facing reference.
+
 ```rust
 pub struct TypeDef {
     pub name: Name,

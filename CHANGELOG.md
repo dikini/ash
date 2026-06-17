@@ -7,11 +7,12 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Added
+- [Phase 155](docs/plan/PLAN-155-LET-DESTRUCTORS.md): Completed let destructors for records and tuples with parser shorthand support (`let { x, y } = p`), AST representation, typechecker verification, interpreter evaluation, and diagnostics. Updated reference documentation for functions and record types (TASK-1550 through TASK-1559).
+- [Phase 152](docs/plan/PLAN-152-CLOSURE-REFINEMENT-AND-TOWER-DOCUMENTATION.md): Completed closure refinement with capture-based effect rule replacing the blanket "no closures in pure functions" ban. Added `Value::is_pure()`, `Value::effect_level()`, `EnvFrame::all_bindings()`, and `CaptureEffectViolation` error. Updated reference documentation for closures, tower strata, and record types with closure fields (TASK-1520 through TASK-1529).
+- [Phase 151](docs/plan/PLAN-151-QUICKCHECK-V1-ORDINARY-STRATEGY-SEMANTICS.md): Planned QuickCheck v1 ordinary strategy semantics with SPEC-087, pure `Strategy<A>` values, helper-first `GenContext`, ordinary `Arbitrary<A>` evidence, pure strategy overrides, stable RNG/split, bounded recursive/weighted combinators, explicit shrink semantics, random seed/replay policy, aggregate empirical evidence history, and TASK-1497 through TASK-1506).
+
 ### Changed
 - AGENTS.md: documented native MCP server configuration for ash-mcp and rust-analyzer with persistent stdio transport, per-project activation instructions, and cross-language tool routing. Added Hermes profile at `~/.hermes/profiles/ash/config.yaml` for portable Ash project MCP setup.
-
-### Added
-- [Phase 151](docs/plan/PLAN-151-QUICKCHECK-V1-ORDINARY-STRATEGY-SEMANTICS.md): Planned QuickCheck v1 ordinary strategy semantics with SPEC-087, pure `Strategy<A>` values, helper-first `GenContext`, ordinary `Arbitrary<A>` evidence, pure strategy overrides, stable RNG/split, bounded recursive/weighted combinators, explicit shrink semantics, random seed/replay policy, aggregate empirical evidence history, and TASK-1497 through TASK-1506.
 - [Phase 148](docs/plan/PLAN-148-FLAKY-TEST-QUARANTINE-AND-DISTRIBUTED-ORCHESTRATION.md): Implemented local `ash test` retries/flake classification, quarantine metadata, deterministic shard selection, shard JSON result merge, schema-versioned flake/shard/merge JSON, and no-Cargo fixtures (TASK-1474 through TASK-1481).
 - [Phase 147](docs/plan/PLAN-147-LAW-COVERAGE-AND-MUTATION-TESTING.md): Implemented opt-in `ash test --coverage` and `--mutation` reporting with law/test coverage JSON, bounded law-proposition mutation rows, killed/survived/deferred/error mutation totals, no-Cargo final-surface fixtures, and reference docs (TASK-1466 through TASK-1473).
 - [Phase 150](docs/plan/PLAN-150-QUICKCHECK-ARBITRARY-STRATEGY.md): Implemented the QuickCheck-like `test::quickcheck` property-testing substrate with `Strategy<T>`, `Arbitrary<T>` surface laws, metadata strategy overrides, default bounded Arbitrary representatives, domain-preserving strategy shrinking, law-evidence cache schema, documentation examples, and no-Cargo fixtures (TASK-1485 through TASK-1496).
@@ -88,6 +89,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - [TASK-1359](docs/plan/tasks/TASK-1359-add-eq-interface.md): Added `Eq` interface to `std::algebra` for explicit equivalence relations in law propositions.
 
 ### Fixed
+- [TASK-1510](docs/plan/tasks/TASK-1510-parser-fn-expressions-in-multi-field-struct-literals.md): Fixed parser support for anonymous `fn` expressions and closure shorthand in multi-field struct literals, including trailing-comma constructors and generic anonymous-function annotations such as `-> List<Int>`. Parser and engine TASK-1510 suites now pass all focused cases, unblocking ordinary Ash QuickCheck combinator patterns.
 - Refreshed post-merge Reference Slice 3 verification baselines for Phase 144 integration staleness closeout (TASK-1445).
 - Generated algebra law tests now defer function-valued Monad law rows without executable function metadata instead of reporting hardcoded model passes for unsupported function propositions (TASK-1441).
 - Phase 144 integration blockers: normalized staleness trigger matching for `"... changes"` refresh triggers, added frontmatter-backed Slice 3 filtering, made law-profile metadata helpers avoid reporting pass without execution, reconciled Phase 144 task/plan files into the integration branch, and fixed formatting/whitespace gates (TASK-1441, TASK-1442, TASK-1445).

@@ -13,7 +13,8 @@ use std::time::{Duration, Instant};
 use serde_json::{Value, json};
 
 use crate::test_runner::metadata::TestMetadata;
-use crate::test_runner::quickcheck::domain_for_param_with_strategy;
+use crate::test_runner::quickcheck::QUICKCHECK_RNG_ALGORITHM_V1;
+use crate::test_runner::quickcheck::resolve_domain_for_param_with_strategy;
 use crate::test_runner::synthesized::eval::evaluate_simple_bool_expression;
 use crate::test_runner::synthesized::value_generation::{
     generated_cases, shrink_bindings_for_domains,
@@ -39,6 +40,7 @@ pub fn execute_property_test(
     meta: &TestMetadata,
     _engine: &ash_engine::Engine,
     seed: u64,
+    seed_source: &str,
     max_cases: usize,
     timeout: Duration,
 ) -> TestResult {
@@ -46,7 +48,14 @@ pub fn execute_property_test(
     let start = Instant::now();
 
     if meta.property.is_some() || !meta.generated_params.is_empty() {
-        return execute_generated_property_metadata(path, meta, seed, max_cases, start.elapsed());
+        return execute_generated_property_metadata(
+            path,
+            meta,
+            seed,
+            seed_source,
+            max_cases,
+            start.elapsed(),
+        );
     }
 
     let (outcome, message, failing_case) =
@@ -71,6 +80,7 @@ fn execute_generated_property_metadata(
     path: &Path,
     meta: &TestMetadata,
     seed: u64,
+    seed_source: &str,
     max_cases: usize,
     duration: Duration,
 ) -> TestResult {
@@ -94,18 +104,17 @@ fn execute_generated_property_metadata(
         .map(|param| {
             let binding = param.split_once(':').map(|(binding, _)| binding.trim());
             let strategy = binding.and_then(|binding| meta.quickcheck_strategy_for(binding));
-            domain_for_param_with_strategy(param, strategy)
+            resolve_domain_for_param_with_strategy(
+                param,
+                strategy,
+                meta.quickcheck_arbitrary_evidence_in_scope,
+            )
         })
-        .collect::<Option<Vec<_>>>()
+        .collect::<Result<Vec<_>, _>>()
     {
-        Some(domains) => domains,
-        None => {
-            return generated_property_error(
-                name,
-                path,
-                seed,
-                "invalid generated property test: unsupported @test params type domain or quickcheck strategy",
-            );
+        Ok(domains) => domains,
+        Err(error) => {
+            return generated_property_error(name, path, seed, &error);
         }
     };
     let cases = generated_cases(&domains, max_cases);
@@ -139,8 +148,10 @@ fn execute_generated_property_metadata(
             let snapshot = json!({
                 "bindings": case.bindings.clone(),
                 "generators": case.generators.clone(),
+                "failure_class": "property_false",
                 "shrunk_counterexample": shrunk.bindings,
                 "shrink_trace": shrunk.trace,
+                "shrink_order_policy": "preserve_order_no_dedup",
             });
             let mut result = TestResult::new(name, path.to_path_buf())
                 .with_outcome(Outcome::Fail)
@@ -174,7 +185,13 @@ fn execute_generated_property_metadata(
             "generated property passed {actual_case_count} bounded cases from @test params"
         ));
     let pass_snapshot = json!({
+        "schema_version": "ash-quickcheck-run-v1",
         "executed_cases": actual_case_count,
+        "requested_cases": max_cases,
+        "seed": seed,
+        "seed_source": seed_source,
+        "rng_algorithm": QUICKCHECK_RNG_ALGORITHM_V1,
+        "aggregate_summary": "empirical_pass_history",
         "generators": domains
             .iter()
             .map(|domain| domain.descriptor.clone())

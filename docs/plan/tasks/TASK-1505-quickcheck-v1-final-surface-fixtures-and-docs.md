@@ -1,6 +1,6 @@
 # TASK-1505: QuickCheck v1 final-surface fixtures and docs
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -14,7 +14,7 @@ Add user-facing no-Cargo fixtures and documentation for ordinary strategies, exp
 
 ## Dependencies
 
-- 📝 TASK-1504: QuickCheck seed, replay, and aggregate evidence history (planned)
+- ✅ TASK-1504: QuickCheck seed, replay, and aggregate evidence history
 
 ## Deferral / Planned-Feature Reconciliation
 
@@ -72,10 +72,10 @@ commands:
   - cargo clippy -p ash-cli --all-targets -- -D warnings
   - git diff --check
 checklist:
-  - [ ] Focused tests pass and are non-zero
-  - [ ] No-Cargo final-surface fixture added where user-facing behavior changed
-  - [ ] Negative leakage/fail-closed cases covered where a bridge or error path is touched
-  - [ ] CHANGELOG.md updated under [Unreleased]
+  - [x] Focused tests pass and are non-zero
+  - [x] No-Cargo final-surface fixture added where user-facing behavior changed
+  - [x] Negative leakage/fail-closed cases covered where a bridge or error path is touched
+  - [x] CHANGELOG.md updated under [Unreleased]
 ```
 
 ## Dependencies for Next Task
@@ -86,3 +86,15 @@ checklist:
 ## Notes
 
 If an example uses illustrative future syntax, label it explicitly; do not mix it with runnable fixtures.
+
+## Implementation Evidence
+
+- Added final-surface fixtures under `fixtures/phase151-quickcheck-v1/tests/ash/property/` for canonical positive `Int` strategy overrides, canonical sorted-list strategy overrides, default `Arbitrary<Bool>` generation, and source-seed warning plus CLI replay override behavior.
+- Updated `reference/tools/test.md` to document the Phase 151 seed/case precedence, canonical strategy paths, shrink/failure-class evidence, aggregate evidence history, and the current deferred boundary for full source-visible recursive/weighted strategy expressions.
+- Fixed authored property case precedence so source `@test max_cases` is exact and CLI `--max-cases` only fills in when the source is silent.
+- RED/GREEN focused regression:
+  - RED: `cargo test -p ash-cli --test phase150_quickcheck_metadata quickcheck_v1_final_surface_canonical_paths_and_source_cases_are_no_cargo_visible -- --nocapture` failed with `left: Number(99) right: 2` before the precedence fix.
+  - GREEN: same command passed with `1 passed; 0 failed` after the fix.
+- No-Cargo final-surface evidence:
+  - `export ASH_UNDER_TEST="$PWD/target/debug/ash"; "$ASH_UNDER_TEST" test fixtures/phase151-quickcheck-v1/tests/ash/property --format json --seed 123 --max-cases 99`
+  - Result: `success: true`, `total: 4`, `passed: 4`, `failed: 0`; canonical positive source-cases fixture recorded `requested_cases: 2`, `executed_cases: 2`, `seed: 123`, `seed_source: "cli"`, `rng_algorithm: "ash-quickcheck-rng-v1"`.

@@ -373,7 +373,15 @@ fn law_test_evidence_from_proof_body(body: &ProofBody) -> Option<LawTestEvidence
         ProofBody::ByTest { test_name } => Some(LawTestEvidence::Authored {
             test_name: test_name.clone(),
         }),
-        ProofBody::ByTestProperty => Some(LawTestEvidence::Property),
+        ProofBody::ByTestProperty { strategies } => Some(LawTestEvidence::Property {
+            strategies: strategies
+                .iter()
+                .map(|binding| PropertyStrategyDescriptor {
+                    param_name: binding.param_name.clone(),
+                    strategy_expr: format_expr(&binding.strategy_expr),
+                })
+                .collect(),
+        }),
         ProofBody::ByTestSmallWorld => Some(LawTestEvidence::SmallWorld),
         _ => None,
     }

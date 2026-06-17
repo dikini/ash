@@ -742,7 +742,11 @@ fn property_kind_file_executes_successfully() {
         output["tests"][0]["outcome"],
         Value::String("pass".to_string())
     );
-    assert_eq!(output["tests"][0]["seed"], Value::from(42_u64));
+    assert!(
+        output["tests"][0]["seed"].as_u64().is_some(),
+        "property test seed should be recorded as a u64: {}",
+        output["tests"][0]["seed"]
+    );
 }
 
 #[test]

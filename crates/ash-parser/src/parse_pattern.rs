@@ -282,7 +282,33 @@ fn parse_record_pattern(input: &mut ParseInput) -> ModalResult<Pattern> {
 
         skip_whitespace_and_comments(input);
 
-        // Must have `:` for record pattern
+        // Check for shorthand syntax: `field` (no colon) means `field: field`
+        // This is only valid when followed by `,` or `}`
+        if !input.input.starts_with(':') {
+            // Shorthand: field name becomes both the field and the variable
+            if input.input.starts_with(",") || input.input.starts_with("}") {
+                let field_pattern = Pattern::Variable {
+                    name: field_name.into(),
+                    span: span_from(&start_pos, &input.state.pos),
+                };
+                fields.push((field_name.into(), field_pattern));
+
+                // Optional comma
+                if input.input.starts_with(",") {
+                    let _ = input.input.next_slice(1);
+                    input.state.advance(',');
+                }
+                continue;
+            } else {
+                // Not shorthand and not followed by colon — invalid
+                *input = checkpoint;
+                return Err(winnow::error::ErrMode::Backtrack(
+                    winnow::error::ContextError::new(),
+                ));
+            }
+        }
+
+        // Must have `:` for explicit record pattern
         if literal_str(":").parse_next(input).is_err() {
             *input = checkpoint;
             return Err(winnow::error::ErrMode::Backtrack(

@@ -217,7 +217,7 @@ pub(super) fn law_property_results(
     for law in snapshot
         .laws
         .iter()
-        .filter(|law| matches!(law.test_evidence, Some(LawTestEvidence::Property)))
+        .filter(|law| matches!(law.test_evidence, Some(LawTestEvidence::Property { .. })))
     {
         let Some(param_domains) = law_generated_domains(law) else {
             results.push(deferred_law_property_result(path, snapshot, law, seed));
@@ -834,7 +834,7 @@ pub(super) fn law_smallworld_results(
     for law in &snapshot.laws {
         if matches!(
             law.test_evidence,
-            Some(LawTestEvidence::Authored { .. } | LawTestEvidence::Property)
+            Some(LawTestEvidence::Authored { .. } | LawTestEvidence::Property { .. })
         ) {
             continue;
         }

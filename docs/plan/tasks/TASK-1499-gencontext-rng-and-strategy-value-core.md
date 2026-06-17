@@ -1,6 +1,6 @@
 # TASK-1499: GenContext, RNG, and Strategy value core
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -87,3 +87,9 @@ checklist:
 ## Notes
 
 Do not expose arbitrary seed arithmetic as the recommended authoring path.
+
+## Implementation Evidence
+
+- Implemented in Phase 151 worktree `feat/phase-151-quickcheck-v1`.
+- Focused verification: `cargo test -p ash-cli quickcheck -- --nocapture`.
+- Broad scoped gates: `cargo check -p ash-cli`; `cargo clippy -p ash-cli --all-targets -- -D warnings`; `cargo fmt --check`; `git diff --check`.

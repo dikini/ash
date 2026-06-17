@@ -15,6 +15,7 @@ use crate::test_runner::metadata::TestMetadata;
 use crate::test_runner::orchestration::{
     self, FlakeReport, ShardAssignment, ShardReport, ShardSpec, TestAttempt,
 };
+use crate::test_runner::quickcheck::{QuickCheckSeedPolicy, source_seed_warning};
 use crate::test_runner::synthesized::RunnerIntrospectionSnapshot;
 use crate::test_runner::types::{Outcome, TestKind, TestResult, TestSource};
 
@@ -660,16 +661,20 @@ fn execute_test_by_kind(
 
     match kind {
         TestKind::Property => {
-            let seed = config.seed.or(meta.seed).unwrap_or(42);
-            let max_cases = config
+            let seed_policy = QuickCheckSeedPolicy::resolve(config.seed, meta.seed);
+            if let Some(warning) = source_seed_warning(meta.seed, seed_policy) {
+                eprintln!("warning: {warning}");
+            }
+            let max_cases = meta
                 .max_cases
-                .or(meta.max_cases)
+                .or(config.max_cases)
                 .unwrap_or(crate::test_runner::property::DEFAULT_MAX_CASES);
             crate::test_runner::property::execute_property_test(
                 path,
                 meta,
                 engine,
-                seed,
+                seed_policy.seed,
+                seed_policy.seed_source.as_str(),
                 max_cases,
                 effective_timeout(meta, config.timeout_ms),
             )

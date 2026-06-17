@@ -842,12 +842,25 @@ pub enum ProofBody {
     ByDefinition,
     /// `by test "test_name"` or `by test authored "test_name"`
     ByTest { test_name: String },
-    /// `by test property` — law proposition is executed over generated bindings.
-    ByTestProperty,
+    /// `by test property` or `by test quickcheck` — law proposition is executed over generated bindings.
+    /// Optional strategy overrides for parameters.
+    ByTestProperty {
+        /// Source-visible strategy overrides: parameter name -> strategy expression.
+        strategies: Vec<PropertyStrategyBinding>,
+    },
     /// `by test small_world` — law proposition is executed over finite worlds.
     ByTestSmallWorld,
     /// Explicit proof term (future)
     Expr(Expr),
+}
+
+/// A strategy override binding in a `by test property` proof body.
+#[derive(Debug, Clone, PartialEq)]
+pub struct PropertyStrategyBinding {
+    /// Parameter name being overridden (e.g., `x` in `x <- expr`).
+    pub param_name: String,
+    /// Strategy expression (e.g., `qc::int::positive()`).
+    pub strategy_expr: Expr,
 }
 
 /// An interface definition.

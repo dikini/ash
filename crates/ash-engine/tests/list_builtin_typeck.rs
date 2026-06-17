@@ -365,9 +365,17 @@ fn std_list_ash_imports_correctly() {
     let engine = ash_engine::Engine::new().build().expect("engine builds");
     let mut workflow = engine.parse_file(&caller).expect("parse should succeed");
 
+    // Since Phase 153, list functions are pure Ash functions, not builtins
+    // They should be available as regular imports, not builtin signatures
     assert!(
-        workflow.imported_builtin_signatures.contains_key("len"),
-        "Expected 'len' in imported_builtin_signatures from std list.ash"
+        !workflow.imported_builtin_signatures.contains_key("len"),
+        "'len' should NOT be in imported_builtin_signatures - it's now a pure Ash function"
+    );
+
+    // Verify the function is available through the imported function signatures
+    assert!(
+        workflow.imported_fn_signatures.contains_key("len"),
+        "Expected 'len' to be available as an imported function signature"
     );
 
     engine

@@ -31,6 +31,9 @@ pub struct TestMetadata {
     pub property: Option<String>,
     /// QuickCheck-style explicit strategy overrides keyed by binding name.
     pub quickcheck_strategies: Vec<QuickCheckStrategyOverride>,
+    /// Whether ordinary QuickCheck `Arbitrary<A>` evidence was explicitly
+    /// imported into the source scope.
+    pub quickcheck_arbitrary_evidence_in_scope: bool,
     /// Whether this test is expected to fail.
     pub xfail: bool,
     /// Quarantine reason, when this test is quarantined.
@@ -86,6 +89,7 @@ impl TestMetadata {
             }
         }
 
+        meta.quickcheck_arbitrary_evidence_in_scope = source_imports_quickcheck_arbitrary(source);
         meta
     }
 
@@ -234,6 +238,27 @@ fn split_param_list(value: &str) -> Vec<String> {
     params
 }
 
+fn source_imports_quickcheck_arbitrary(source: &str) -> bool {
+    source.lines().any(|line| {
+        let trimmed = line.trim().trim_end_matches(';').trim();
+        let Some(rest) = trimmed.strip_prefix("use ").map(str::trim) else {
+            return false;
+        };
+
+        rest == "test::quickcheck::prelude"
+            || rest == "test::quickcheck::Arbitrary"
+            || rest
+                .strip_prefix("test::quickcheck::{")
+                .and_then(|items| items.strip_suffix('}'))
+                .is_some_and(|items| {
+                    items
+                        .split(',')
+                        .map(str::trim)
+                        .any(|item| item == "Arbitrary" || item == "prelude")
+                })
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -250,6 +275,23 @@ mod tests {
         let source = "// @test name: my_test\n// rest\nfn main() {}";
         let meta = TestMetadata::parse_from_source(source);
         assert_eq!(meta.name.as_deref(), Some("my_test"));
+    }
+
+    #[test]
+    fn parse_quickcheck_arbitrary_evidence_imports() {
+        let source = r#"
+-- @test name: imported_quickcheck
+-- @test kind: property
+-- @test params: b: Bool
+use test::quickcheck::{Arbitrary};
+fn main() -> Bool { true }
+"#;
+        let meta = TestMetadata::parse_from_source(source);
+        assert!(meta.quickcheck_arbitrary_evidence_in_scope);
+
+        let no_import =
+            TestMetadata::parse_from_source("-- @test params: b: Bool\nfn main() -> Bool { true }");
+        assert!(!no_import.quickcheck_arbitrary_evidence_in_scope);
     }
 
     #[test]

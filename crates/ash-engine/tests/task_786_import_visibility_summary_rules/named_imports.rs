@@ -61,11 +61,14 @@ fn constructor_only_import_does_not_expose_sibling_constructors() {
 #[test]
 fn duplicate_visible_named_imports_from_distinct_modules_keep_distinct_semantic_identities() {
     let dir = tempfile::tempdir().expect("tempdir");
-    std::fs::write(dir.path().join("left.ash"), "pub type Token = LeftToken;\n")
-        .expect("write left");
+    std::fs::write(
+        dir.path().join("left.ash"),
+        "pub type LeftToken = LeftToken { value: Int };\npub type Token = LeftToken;\n",
+    )
+    .expect("write left");
     std::fs::write(
         dir.path().join("right.ash"),
-        "pub type Token = RightToken;\n",
+        "pub type RightToken = RightToken { value: String };\npub type Token = RightToken;\n",
     )
     .expect("write right");
     let caller = dir.path().join("caller.ash");
@@ -76,7 +79,28 @@ fn duplicate_visible_named_imports_from_distinct_modules_keep_distinct_semantic_
     .expect("write caller");
 
     let loaded = load_ordinary_file(&caller).expect("both visible imports are collected");
-    assert_eq!(semantic_type_names(&loaded), vec!["Token", "Token"]);
+    let names = semantic_type_names(&loaded);
+    // Both Token aliases should be present, and the underlying types should also be imported
+    let mut token_count = 0;
+    let mut has_left = false;
+    let mut has_right = false;
+    for n in &names {
+        if *n == "Token" {
+            token_count += 1;
+        }
+        if *n == "$ash_dependency$LeftToken" || *n == "LeftToken" {
+            has_left = true;
+        }
+        if *n == "$ash_dependency$RightToken" || *n == "RightToken" {
+            has_right = true;
+        }
+    }
+    assert_eq!(
+        token_count, 2,
+        "should have two Token imports from different modules"
+    );
+    assert!(has_left, "LeftToken underlying type should be visible");
+    assert!(has_right, "RightToken underlying type should be visible");
 }
 
 #[test]

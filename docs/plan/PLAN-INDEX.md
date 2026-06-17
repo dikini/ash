@@ -141,9 +141,10 @@ The following phases are active or recently completed and awaiting archival to [
 | [150](PLAN-150-QUICKCHECK-ARBITRARY-STRATEGY.md) | 12 | 12 | ✅ Complete |
 | [151](PLAN-151-QUICKCHECK-V1-ORDINARY-STRATEGY-SEMANTICS.md) | 13 | 10 | 🚧 Partial Implementation; TASK-1511 deferred combinators planned, TASK-1512 docs planned |
 | [152](PLAN-152-CLOSURE-REFINEMENT-AND-TOWER-DOCUMENTATION.md) | 10 | 10 | ✅ Complete; Closure refinement and tower documentation |
-| [153](PLAN-153-LIST-BUILTIN-TO-STDLIB.md) | 10 | 0 | 📝 Planned; List builtin to stdlib migration |
-| [154](PLAN-154-TYPE-ANNOTATION-QUIRKS.md) | 5 | 0 | 📝 Planned; Fix type annotation quirks with imported types |
+| [153](PLAN-153-LIST-BUILTIN-TO-STDLIB.md) | 10 | 1 | 🚧 Partial Implementation; Blocked on parser issues (Phase 156) |
+| [154](PLAN-154-TYPE-ANNOTATION-QUIRKS.md) | 5 | 5 | ✅ Complete; Type annotation quirks (already worked) |
 | [155](PLAN-155-LET-DESTRUCTORS.md) | 10 | 10 | ✅ Complete; Let destructors for records and tuples |
+| [156](PLAN-156-PARSER-BLOCKER-RESOLUTION.md) | 5 | 0 | 📝 Planned; Parser blocker resolution for Phase 153 |
 
 ---
 
@@ -161,9 +162,10 @@ The following phases are active or recently completed and awaiting archival to [
 | [150](PLAN-150-QUICKCHECK-ARBITRARY-STRATEGY.md) | 12 | 12 | ✅ Complete |
 | [151](PLAN-151-QUICKCHECK-V1-ORDINARY-STRATEGY-SEMANTICS.md) | 13 | 10 | 🚧 Partial Implementation; TASK-1511 deferred combinators planned, TASK-1512 docs planned |
 | [152](PLAN-152-CLOSURE-REFINEMENT-AND-TOWER-DOCUMENTATION.md) | 10 | 10 | ✅ Complete; Closure refinement and tower documentation |
-| [153](PLAN-153-LIST-BUILTIN-TO-STDLIB.md) | 10 | 0 | 📝 Planned; List builtin to stdlib migration |
-| [154](PLAN-154-TYPE-ANNOTATION-QUIRKS.md) | 5 | 0 | 📝 Planned; Fix type annotation quirks with imported types |
+| [153](PLAN-153-LIST-BUILTIN-TO-STDLIB.md) | 10 | 1 | 🚧 Partial Implementation; Blocked on parser issues (Phase 156) |
+| [154](PLAN-154-TYPE-ANNOTATION-QUIRKS.md) | 5 | 5 | ✅ Complete; Type annotation quirks (already worked) |
 | [155](PLAN-155-LET-DESTRUCTORS.md) | 10 | 10 | ✅ Complete; Let destructors for records and tuples |
+| [156](PLAN-156-PARSER-BLOCKER-RESOLUTION.md) | 5 | 0 | 📝 Planned; Parser blocker resolution for Phase 153 |
 
 ## Phase 145: Law Test Evidence Substrate
 

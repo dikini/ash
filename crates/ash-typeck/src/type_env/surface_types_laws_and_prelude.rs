@@ -1927,7 +1927,7 @@ impl TypeEnv {
         match &proof.body {
             ProofBody::ByDefinition
             | ProofBody::ByTest { .. }
-            | ProofBody::ByTestProperty
+            | ProofBody::ByTestProperty { .. }
             | ProofBody::ByTestSmallWorld => {}
             ProofBody::Expr(expr) => checker.visit_expr(expr),
         }

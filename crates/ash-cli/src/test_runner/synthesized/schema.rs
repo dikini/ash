@@ -311,10 +311,23 @@ pub enum LawTestEvidence {
         /// Authored test name from `by test "..."`.
         test_name: String,
     },
-    /// The law proposition is evaluated over generated bindings.
-    Property,
+/// The law proposition is evaluated over generated bindings.
+    Property {
+        /// Optional strategy overrides for parameters.
+        #[serde(skip_serializing_if = "Vec::is_empty", default)]
+        strategies: Vec<PropertyStrategyDescriptor>,
+    },
     /// The law proposition is evaluated over finite small-world bindings.
     SmallWorld,
+}
+
+/// A strategy override descriptor for a property test parameter.
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+pub struct PropertyStrategyDescriptor {
+    /// Parameter name being overridden.
+    pub param_name: String,
+    /// Source-visible strategy expression as a string.
+    pub strategy_expr: String,
 }
 
 /// Internal law proof evidence status used in JSON/repro metadata.

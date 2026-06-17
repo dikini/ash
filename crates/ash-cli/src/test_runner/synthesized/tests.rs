@@ -134,7 +134,7 @@ fn extract_laws_records_property_and_small_world_test_evidence() {
     assert_eq!(laws.len(), 2);
     assert!(matches!(
         laws[0].test_evidence,
-        Some(LawTestEvidence::Property)
+        Some(LawTestEvidence::Property { strategies: _ }),
     ));
     assert!(matches!(
         laws[1].test_evidence,

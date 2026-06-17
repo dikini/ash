@@ -61,27 +61,69 @@ Pass 3: Expression Type Checking
 
 ### 3.3 Smart Constructor Support
 
-Distinguish between **type name visibility** and **constructor visibility**:
+Types that appear in public function signatures are **implicitly public** — their names can be used in other modules, but their constructors remain private. This enables the smart constructor pattern naturally:
 
 ```ash
 // internal.ash
-pub type Secret = Secret { value: Int };  -- Type public, constructor private
+pub type Secret = Secret { value: Int };  -- Type public, constructor public
 
-fn make_secret(v: Int) -> Secret {        -- Private smart constructor
+// OR: private type with public smart constructor
+fn make_secret(v: Int) -> Secret {        -- Private type, private constructor
     Secret { value: v }
 }
 
-// public.ash
-use internal::{Secret};  -- Imports type name, NOT constructor
-
-pub fn double_secret(s: Secret) -> Secret {
-    -- Can use Secret in signatures (type is imported)
-    -- Cannot construct Secret (constructor not imported)
-    make_secret(s.value * 2)  -- Must use smart constructor
+pub fn make_secret(v: Int) -> Secret {     -- Public function makes Secret nameable
+    Secret { value: v }
 }
 ```
 
-### 3.4 Type Inference Leakage Prevention
+When a private type appears in a `pub fn` signature, it becomes **publicly nameable** but **not constructable** from outside the module:
+
+```ash
+// public.ash
+use internal::{make_secret, get_value};  -- Import functions, NOT the type
+
+pub fn double_secret(v: Int) -> Secret {  -- ✅ Secret is public because it appears in pub fn
+    make_secret(get_value(make_secret(v)) * 2)  -- Use smart constructor
+}
+
+pub fn bad() -> Secret {
+    Secret { value: 42 }  -- ❌ Constructor is private (not exported)
+}
+```
+
+### 3.4 Opaque Values from Smart Constructors
+
+Values produced by smart constructors are **opaque** — they cannot be pattern matched, destructured, or have their fields accessed directly. Only valid public operations and functions are legal:
+
+```ash
+// public.ash
+use internal::{make_secret, get_value, is_valid};
+
+pub fn process(s: Secret) -> Secret {
+    -- ✅ Valid: use public functions
+    if is_valid(s) {
+        make_secret(get_value(s) * 2)
+    } else {
+        make_secret(0)
+    }
+    
+    -- ❌ Invalid: cannot pattern match on opaque value
+    -- match s {
+    --     Secret { value: v } => ...  -- ERROR: constructor not exported
+    -- }
+    
+    -- ❌ Invalid: cannot destructure
+    -- let Secret { value: v } = s;  -- ERROR: constructor not exported
+    
+    -- ❌ Invalid: cannot access fields directly
+    -- s.value  -- ERROR: field access on opaque value
+}
+```
+
+This ensures that the module defining the type maintains full control over how values are created and manipulated, preventing users from bypassing invariants enforced by smart constructors.
+
+### 3.5 Type Inference Leakage Prevention
 
 When type inference produces a type not in the current scope, the typechecker must:
 1. Report a clear error with the module path
@@ -126,21 +168,31 @@ pub fn origin() -> Point {
 }
 ```
 
-### C90-3: Smart constructors
+### C90-3: Smart constructors with opaque values
 
 ```ash
 // internal.ash
-pub type Secret = Secret { value: Int };
-
-fn make_secret(v: Int) -> Secret {  -- Private constructor
+fn make_secret(v: Int) -> Secret {  -- Private type, private constructor
     Secret { value: v }
 }
 
-// public.ash
-use internal::{Secret};
+pub fn make_secret(v: Int) -> Secret {  -- Public function makes Secret nameable
+    Secret { value: v }
+}
 
-pub fn double(s: Secret) -> Secret {
-    make_secret(s.value * 2)  -- Must work
+pub fn get_value(s: Secret) -> Int {  -- Public accessor
+    s.value
+}
+
+// public.ash
+use internal::{make_secret, get_value};
+
+pub fn double(v: Int) -> Secret {  -- ✅ Secret is public (appears in pub fn)
+    make_secret(get_value(make_secret(v)) * 2)  -- Must work
+}
+
+pub fn bad() -> Secret {
+    Secret { value: 42 }  -- ❌ Constructor is private (not exported)
 }
 ```
 

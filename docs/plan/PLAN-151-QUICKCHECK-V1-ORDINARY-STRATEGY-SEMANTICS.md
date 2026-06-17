@@ -50,6 +50,7 @@ Replace the Phase 150 metadata/runner-bridge QuickCheck MVP with the target ordi
 | [TASK-1506](tasks/TASK-1506-quickcheck-v1-closeout-and-review.md) | Close out Phase 151 with broad verification, independent review, status reconciliation, and changelog/reference updates. | 🚧 In Progress |
 | [TASK-1512](tasks/TASK-1512-record-types-reference-documentation.md) | Add reference documentation for Ash record types at `reference/language/types/records.md`, clarifying terminology and usage. | 📝 Planned |
 | [TASK-1511](tasks/TASK-1511-deferred-combinators-ordinary-ash.md) | Implement deferred QuickCheck combinators (`one_of`, `recursive`, `append_shrink`, etc.) in ordinary Ash. Blocked on language features: let destructors, imported type unification, list primitives, closures. | 📝 Planned / Blocked |
+**Update:** Phase 153 unblocked list primitives. Remaining blockers: let destructors (Phase 155 - complete), imported type unification (pending).
 
 ## Implementation Order
 

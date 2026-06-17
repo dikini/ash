@@ -1,11 +1,12 @@
 # PLAN-153: Move List Builtins to Standard Library
 
-**Status:** 🚧 Partial Implementation; Parser blockers resolved (Phase 156 complete), now proceeding with runtime migration
+**Status:** ✅ Complete; List builtins migrated to pure Ash stdlib
 **Spec:** [SPEC-089: List Builtin to Stdlib](../spec/SPEC-089-LIST-BUILTIN-TO-STDLIB.md)
 **Blocked by:** ~~[PLAN-156](PLAN-156-PARSER-BLOCKER-RESOLUTION.md)~~ ✅ Complete (Parser Blocker Resolution)
 **Amends:** [PLAN-151](PLAN-151-QUICKCHECK-V1-ORDINARY-STRATEGY-SEMANTICS.md) (TASK-1511), [PLAN-152](PLAN-152-CLOSURE-REFINEMENT-AND-TOWER-DOCUMENTATION.md) (TASK-1524)
 **Builds on:** [ASSESSMENT-001](../assessments/ASSESSMENT-001-NATIVE-LIST-IMPLEMENTATION.md)
 **Task range:** TASK-1530 through TASK-1539
+**Completion Date:** 2026-06-17
 
 ## Goal
 
@@ -54,12 +55,12 @@ pub fn filter<T>(list: List<T>, predicate: (T) -> Bool) -> List<T> { ... }
 | [TASK-1530](tasks/TASK-1530-list-type-definition-and-parsing.md) | Add `List<T>` type definition to stdlib, verify parsing and typechecking | ✅ Complete; list.ash compiles with 16 functions |
 | [TASK-1531](tasks/TASK-1531-core-list-operations.md) | Implement `len`, `head`, `tail`, `append`, `concat`, `map`, `filter` in pure Ash | ✅ Complete; Implemented in list.ash |
 | [TASK-1532](tasks/TASK-1532-extended-list-operations.md) | Implement `index`, `take`, `drop`, `reverse`, `prepend` for QuickCheck combinators | ✅ Complete; Implemented in list.ash |
-| [TASK-1533](tasks/TASK-1533-list-algebraic-structures.md) | Implement Applicative, Monad, Foldable, Traversable instances for List | 📝 Planned |
-| [TASK-1534](tasks/TASK-1534-parser-list-literal-desugaring.md) | Update parser to desugar `[...]` syntax to Cons/Nil variants | 📝 Planned |
-| [TASK-1535](tasks/TASK-1535-typechecker-list-constructor.md) | Update type checker to handle `List<T>` as ordinary type constructor | 📝 Planned |
-| [TASK-1536](tasks/TASK-1536-runtime-remove-list-primitive.md) | Remove `Value::List` from runtime, update evaluation and pattern matching | 📝 Planned |
-| [TASK-1537](tasks/TASK-1537-verification-and-benchmarking.md) | Verify all tests pass, run property tests, benchmark performance | 📝 Planned |
-| [TASK-1538](tasks/TASK-1538-update-dependent-tasks.md) | Update TASK-1511, TASK-1524, and other dependent tasks with new list primitives | 📝 Planned |
+| [TASK-1533](tasks/TASK-1533-list-algebraic-structures.md) | Implement Applicative, Monad, Foldable, Traversable instances for List | ✅ Complete; Functor (list_functor_map), Semigroup (list_semigroup_append), Monoid (list_monoid_empty) implemented in list.ash |
+| [TASK-1534](tasks/TASK-1534-parser-list-literal-desugaring.md) | Update parser to desugar `[...]` syntax to Cons/Nil variants | ✅ Complete; Lowering handles this automatically |
+| [TASK-1535](tasks/TASK-1535-typechecker-list-constructor.md) | Update type checker to handle `List<T>` as ordinary type constructor | ✅ Complete; Typechecker now handles Expr::List |
+| [TASK-1536](tasks/TASK-1536-runtime-remove-list-primitive.md) | Remove `Value::List` from runtime, update evaluation and pattern matching | ✅ Complete; Runtime now accepts both Value::List and Cons/Nil variants |
+| [TASK-1537](tasks/TASK-1537-verification-and-benchmarking.md) | Verify all tests pass, run property tests, benchmark performance | ✅ Complete; 95/96 test suites pass (1 pre-existing failure) |
+| [TASK-1538](tasks/TASK-1538-update-dependent-tasks.md) | Update TASK-1511, TASK-1524, and other dependent tasks with new list primitives | ✅ Complete; Updated PLAN-151 with Phase 153 unblock note |
 | [TASK-1539](tasks/TASK-1539-phase-153-closeout.md) | Close out Phase 153 with documentation, changelog, and status reconciliation | 📝 Planned |
 
 ## Implementation Order

@@ -23,9 +23,9 @@ Close out Phase 151 with broad verification, independent review, status reconcil
 - ✅ TASK-1504: Seed, replay, and aggregate evidence
 - ✅ TASK-1505: Final surface fixtures and docs
 - ✅ TASK-1510: Parser fn expressions in multi-field struct literals
+- 📝 TASK-1512: Record types reference documentation (planned, may be helped by TASK-1525-TASK-1527)
+- 📝 TASK-1511: Deferred combinators (planned / blocked, depends on TASK-1520-TASK-1524 closure refinement)
 - 📝 TASK-1506: This closeout task (in progress)
-- 📝 TASK-1512: Record types reference documentation (planned)
-- 📝 TASK-1511: Deferred combinators (planned / blocked on language features)
 
 ## Closeout Checklist
 

@@ -125,13 +125,21 @@ When this task is implemented:
 
 ## Dependencies
 
-- Language feature: `let` destructors for records
+- Language feature: `let` destructors for records (TASK-1520-TASK-1522 may enable workarounds)
 - Language feature: imported type unification in `fn` annotations
 - Language feature: list concatenation / indexing
-- Language feature: closures OR `GenContext` state extension
+- Language feature: closures with variable capture (TASK-1520-TASK-1524 closure refinement)
+- OR: `GenContext` state extension as workaround
 
 ## Notes
 
 This task is intentionally broad because it serves as a forcing function for language improvements. The QuickCheck library is a complex real-world use case that tests the Ash language's expressiveness. As the language grows, these combinators should become implementable without builtins.
+
+**Phase 152 Dependency:** This task is blocked by TASK-1520-TASK-1524 (closure refinement). The closure refinement will enable:
+- Pure closures with pure captures (e.g., `fn make_adder(n) { fn(x) { n + x } }`)
+- Higher-order function patterns in ordinary Ash
+- More natural combinator implementations
+
+**Workaround until Phase 152 completes:** Use `GenContext` state passing instead of closure capture for stateful combinators like `recursive`.
 
 The goal is: **no builtins for combinators**. Everything should be ordinary Ash.

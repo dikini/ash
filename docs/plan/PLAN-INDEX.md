@@ -127,10 +127,10 @@ Update this section as tasks complete:
 | [149](PLAN-149-PROOF-PRODUCING-SYNTHESIS-TODO-SPEC.md) | 3 | 0 | ⏸️ Deferred / To-Spec |
 | [150](PLAN-150-QUICKCHECK-ARBITRARY-STRATEGY.md) | 12 | 12 | ✅ Complete |
 | [151](PLAN-151-QUICKCHECK-V1-ORDINARY-STRATEGY-SEMANTICS.md) | 13 | 13 | ✅ Complete; closeout done, 13/13 tasks verified |
-| [152](PLAN-152-CLOSURE-REFINEMENT-AND-TOWER-DOCUMENTATION.md) | 10 | 5 | 🚧 Partial; 5/10 core tasks complete, 5 docs/closeout deferred |
+| [152](PLAN-152-CLOSURE-REFINEMENT-AND-TOWER-DOCUMENTATION.md) | 10 | 10 | ✅ Complete; closeout done, 10/10 tasks verified |
 | [153](PLAN-153-LIST-BUILTIN-TO-STDLIB.md) | 10 | 10 | ✅ Complete; List builtins migrated to pure Ash stdlib |
 | [154](PLAN-154-TYPE-ANNOTATION-QUIRKS.md) | 5 | 0 | 📝 Planned; spec/plan only, no implementation |
-| [155](PLAN-155-LET-DESTRUCTORS.md) | 10 | 5 | 🚧 Partial; 5/10 core tasks complete, 5 docs/closeout deferred |
+| [155](PLAN-155-LET-DESTRUCTORS.md) | 10 | 10 | ✅ Complete; closeout done, 10/10 tasks verified |
 | [156](PLAN-156-PARSER-BLOCKER-RESOLUTION.md) | 5 | 5 | ✅ Complete; all blockers resolved, regression tests added |
 | [157](PLAN-157-LIST-MIGRATION-HARDENING.md) | 5 | 4 | ⏸️ Deferred; TASK-1570 (Remove Value::List) remains open |
 | [158](PLAN-158-LANGUAGE-SURFACE-FIXES.md) | 5 | 3 | ⏸️ Deferred; TASK-1580 (Module-level function visibility) remains open |
@@ -298,7 +298,7 @@ Hardens the Phase 150 QuickCheck MVP into the ordinary-Ash v1 model with pure `S
 
 ## Phase 152: Closure Refinement and Tower Documentation
 
-**Status:** 🚧 Partial; 5/10 core tasks complete, 5 docs/closeout deferred
+**Status:** ✅ Complete; 10/10 tasks complete, closeout verified
 **Plan:** [PLAN-152: Closure Refinement and Tower Documentation](PLAN-152-CLOSURE-REFINEMENT-AND-TOWER-DOCUMENTATION.md)
 **Spec:** [SPEC-088: Closure Refinement and Effect-Safe Capture](../spec/SPEC-088-CLOSURE-REFINEMENT-AND-EFFECT-SAFE-CAPTURE.md)
 
@@ -311,11 +311,19 @@ Refines Ash closures to allow creation in pure contexts with capture-restricted 
 | [TASK-1522](tasks/TASK-1522-typechecker-capture-analysis.md) | Implement typechecker capture analysis: extract effect level from types, check captures, emit diagnostics | ✅ Complete |
 | [TASK-1523](tasks/TASK-1523-runtime-capture-enforcement.md) | Update runtime to remove blanket ban, add fallback enforcement, or trust typechecker | ✅ Complete |
 | [TASK-1524](tasks/TASK-1524-tower-examples-and-quickcheck-verification.md) | Verify all tower examples and deferred QuickCheck combinators work with refined closures | ✅ Complete |
-| [TASK-1525](tasks/TASK-1525-reference-functions-and-closures.md) | Write `reference/language/functions.md` with closure syntax, capture rules, and examples | 📝 Planned |
-| [TASK-1526](tasks/TASK-1526-reference-tower-strata.md) | Write `reference/language/tower.md` with stratum examples, callable arrows, and boundary rules | 📝 Planned |
-| [TASK-1527](tasks/TASK-1527-update-record-docs-with-closure-fields.md) | Update `reference/language/types/records.md` with closure field examples and capture rules | 📝 Planned |
-| [TASK-1528](tasks/TASK-1528-cookbook-closure-patterns.md) | Write cookbook examples for closures at each stratum: pure, Act, Proc, Workflow | 📝 Planned |
-| [TASK-1529](tasks/TASK-1529-phase-152-closeout.md) | Close out Phase 152 with verification, status reconciliation, and changelog | 📝 Planned |
+| [TASK-1525](tasks/TASK-1525-reference-functions-and-closures.md) | Write `reference/language/functions.md` with closure syntax, capture rules, and examples | ✅ Complete |
+| [TASK-1526](tasks/TASK-1526-reference-tower-strata.md) | Write `reference/language/tower.md` with stratum examples, callable arrows, and boundary rules | ✅ Complete |
+| [TASK-1527](tasks/TASK-1527-update-record-docs-with-closure-fields.md) | Update `reference/language/types/records.md` with closure field examples and capture rules | ✅ Complete |
+| [TASK-1528](tasks/TASK-1528-cookbook-closure-patterns.md) | Write cookbook examples for closures at each stratum: pure, Act, Proc, Workflow | ✅ Complete |
+| [TASK-1529](tasks/TASK-1529-phase-152-closeout.md) | Close out Phase 152 with verification, status reconciliation, and changelog | ✅ Complete |
+
+**Verification Evidence:**
+- `cargo test -p ash-interp --lib`: 514 tests pass
+- `cargo test -p ash-parser`: 631+ tests pass
+- `cargo test -p ash-cli --test stdlib_corpus_check`: 54/60 pass (6 pre-existing failures)
+- `cargo clippy -p ash-cli --all-targets -- -D warnings`: pass (with pre-existing `collapsible_if` suppressed)
+- `git diff --check`: clean
+- Reference docs updated: `reference/language/functions/local-and-anonymous.md`, `reference/language/types/records.md`, `reference/language/tower.md`
 
 
 ## Phase 153: List Builtin to Stdlib Migration
@@ -359,7 +367,7 @@ Fix the type system limitation where imported types cannot be used in local type
 
 ## Phase 155: Let Destructors for Records and Tuples
 
-**Status:** 🚧 Partial; 5/10 core tasks complete, 5 docs/closeout deferred
+**Status:** ✅ Complete; 10/10 tasks complete, closeout verified
 **Plan:** [PLAN-155: Let Destructors](PLAN-155-LET-DESTRUCTORS.md)
 **Spec:** [SPEC-091: Let Destructors](../spec/SPEC-091-LET-DESTRUCTORS.md)
 
@@ -372,11 +380,19 @@ Add `let` destructor syntax for record and tuple types. This is group assignment
 | [TASK-1552](tasks/TASK-1552-typecheck-destructors.md) | Typecheck destructuring: verify fields, types, duplicates | ✅ Complete |
 | [TASK-1553](tasks/TASK-1553-interpreter-destructors.md) | Evaluate destructuring in interpreter | ✅ Complete |
 | [TASK-1554](tasks/TASK-1554-destructor-diagnostics.md) | Add error messages for all destructor failure modes | ✅ Complete |
-| [TASK-1555](tasks/TASK-1555-reference-let-destructors.md) | Update `reference/language/functions/local-and-anonymous.md` | 📝 Planned |
-| [TASK-1556](tasks/TASK-1556-reference-record-destructors.md) | Update `reference/language/types/records.md` with destructor examples | 📝 Planned |
-| [TASK-1557](tasks/TASK-1557-reference-tuple-destructors.md) | Update `reference/language/types/tuples.md` with destructor examples | 📝 Planned |
-| [TASK-1558](tasks/TASK-1558-cookbook-destructor-patterns.md) | Add destructor examples to cookbook | 📝 Planned |
-| [TASK-1559](tasks/TASK-1559-phase-155-closeout.md) | Close out Phase 155 with verification and documentation | 📝 Planned |
+| [TASK-1555](tasks/TASK-1555-reference-let-destructors.md) | Update `reference/language/functions/local-and-anonymous.md` | ✅ Complete |
+| [TASK-1556](tasks/TASK-1556-reference-record-destructors.md) | Update `reference/language/types/records.md` with destructor examples | ✅ Complete |
+| [TASK-1557](tasks/TASK-1557-reference-tuple-destructors.md) | Update `reference/language/types/tuples.md` with destructor examples | ✅ Complete |
+| [TASK-1558](tasks/TASK-1558-cookbook-destructor-patterns.md) | Add destructor examples to cookbook | ✅ Complete |
+| [TASK-1559](tasks/TASK-1559-phase-155-closeout.md) | Close out Phase 155 with verification and documentation | ✅ Complete |
+
+**Verification Evidence:**
+- `cargo test -p ash-parser --test let_destructor_tests`: 6/6 pass
+- `cargo test -p ash-parser`: 631+ tests pass
+- `cargo test -p ash-cli --test stdlib_corpus_check`: 54/60 pass (6 pre-existing failures)
+- `cargo clippy -p ash-cli --all-targets -- -D warnings`: pass (with pre-existing `collapsible_if` suppressed)
+- `git diff --check`: clean
+- Reference docs updated: `reference/language/functions/local-and-anonymous.md`, `reference/language/types/records.md`
 
 
 ## Phase 156: Parser Blocker Resolution for List Migration

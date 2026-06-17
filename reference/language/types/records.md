@@ -12,10 +12,13 @@ verified_against:
   git_commit: ce446c96
   specs:
     - docs/spec/SPEC-020-ADT-TYPES.md
+    - docs/spec/SPEC-088-CLOSURE-REFINEMENT-AND-EFFECT-SAFE-CAPTURE.md
+    - docs/spec/SPEC-091-LET-DESTRUCTORS.md
   code:
     - crates/ash-parser/src/parse_pattern.rs
     - crates/ash-parser/src/parse_expr.rs
     - crates/ash-parser/src/parse_module/fn_defs.rs
+    - crates/ash-interp/src/pattern.rs
   tests:
     - crates/ash-parser/tests/let_destructor_tests.rs
   examples:
@@ -139,9 +142,27 @@ fn sum_point(p: Point) -> Int {
 }
 ```
 
-### Shorthand (Not Yet Supported)
+### Shorthand
 
-The shorthand syntax `let { x, y } = p` (which would desugar to `let { x: x, y: y } = p`) is **not yet supported**. The parser requires explicit `field: pattern` pairs.
+The shorthand syntax `let { x, y } = p` is supported and desugars to `let { x: x, y: y } = p`:
+
+```ash
+fn sum_point(p: Point) -> Int {
+    let { x, y } = p;
+    x + y
+}
+```
+
+### Partial Destructuring
+
+You can extract only the fields you need:
+
+```ash
+fn get_x(p: Point) -> Int {
+    let { x } = p;
+    x
+}
+```
 
 ### Where Destructuring Works
 
@@ -149,6 +170,32 @@ Record destructuring works in:
 - ✅ `fn` body blocks: `fn foo() { let { x: a } = p; ... }`
 - ❌ Workflow `observe` blocks: `observe test { let { x: a } = p; ... }` — not supported (only `let name = value;`)
 - ❌ `act` blocks: same limitation
+
+### Closure Fields and Destructuring
+
+Records with function fields are common in higher-order code. Destructuring makes them easier to work with:
+
+```ash
+pub fn map_strategy<A, B>(s: Strategy<A>, f: (A) -> B) -> Strategy<B> {
+    let { gen, shrink } = s;
+    Strategy {
+        gen: fn(ctx) { f(gen(ctx)) },
+        shrink: fn(b) { [] },
+    }
+}
+```
+
+With explicit renaming:
+
+```ash
+pub fn map_with_shrink<A, B>(s: Strategy<A>, f: (A) -> B) -> Strategy<B> {
+    let { gen: g, shrink: sh } = s;
+    Strategy {
+        gen: fn(ctx) { f(g(ctx)) },
+        shrink: fn(b) { sh(b) },
+    }
+}
+```
 
 ## Comparison with Other Types
 
@@ -216,9 +263,10 @@ Here, `s.gen(ctx)` accesses the `gen` field of `s` (which is a function) and cal
 
 ## Known Limitations
 
-1. **Shorthand destructuring**: `let { x, y } = p` is not supported. Use `let { x: x, y: y } = p`.
+1. **Shorthand destructuring**: `let { x, y } = p` is now supported (since TASK-1550).
 2. **Workflow block destructuring**: `let` in `observe` and `act` blocks only supports `let name = value;`.
 3. **Arrow syntax in fn expressions**: `fn(x) => expr` is not supported. Use `fn(x) { expr }`.
+4. **Capture in pure closures**: Only pure values (effect level ≤ Pure) can be captured in pure closures. Effectful captures are rejected at runtime.
 
 ## See Also
 

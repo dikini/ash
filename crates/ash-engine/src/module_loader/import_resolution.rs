@@ -8,7 +8,11 @@ use sha2::{Digest, Sha256};
 use super::MODULE_ROOT_OVERRIDE;
 use crate::error::EngineError;
 
-pub(super) fn resolve_module_path(
+/// Resolve a module path from segments and search roots.
+///
+/// # Errors
+/// Returns an error if a locked vendor root or package root check fails.
+pub fn resolve_module_path(
     module_segments: &[String],
     search_roots: &[SearchRoot],
 ) -> Result<Option<PathBuf>, EngineError> {
@@ -49,21 +53,28 @@ pub(super) fn resolve_module_path(
     Ok(None)
 }
 
+/// A search root for module resolution.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(super) struct SearchRoot {
-    path: PathBuf,
-    kind: SearchRootKind,
+pub struct SearchRoot {
+    /// The path to the search root.
+    pub path: PathBuf,
+    /// The kind of search root.
+    pub kind: SearchRootKind,
 }
 
 impl SearchRoot {
-    const fn ordinary(path: PathBuf) -> Self {
+    /// Create an ordinary search root.
+    #[must_use]
+    pub const fn ordinary(path: PathBuf) -> Self {
         Self {
             path,
             kind: SearchRootKind::Ordinary,
         }
     }
 
-    const fn locked_cache(path: PathBuf) -> Self {
+    /// Create a locked cache search root.
+    #[must_use]
+    pub const fn locked_cache(path: PathBuf) -> Self {
         Self {
             path,
             kind: SearchRootKind::LockedCache,
@@ -71,9 +82,12 @@ impl SearchRoot {
     }
 }
 
+/// The kind of search root.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) enum SearchRootKind {
+pub enum SearchRootKind {
+    /// An ordinary search root.
     Ordinary,
+    /// A locked cache search root.
     LockedCache,
 }
 
@@ -202,7 +216,11 @@ fn normalize_import_resolution(
     }
 }
 
-pub(super) fn import_resolution_roots(
+/// Compute import resolution roots for a module import.
+///
+/// # Errors
+/// Returns an error if the module segments are empty or invalid.
+pub fn import_resolution_roots(
     module_segments: &[String],
     importing_dir: &Path,
     crate_root: Option<&Path>,
@@ -245,7 +263,9 @@ fn crate_import_roots(importing_dir: &Path, crate_root: Option<&Path>) -> Vec<Se
     roots
 }
 
-pub(super) fn discover_crate_root(importing_dir: &Path) -> Option<PathBuf> {
+/// Discover the crate root for a given importing directory.
+#[must_use]
+pub fn discover_crate_root(importing_dir: &Path) -> Option<PathBuf> {
     let mut current = importing_dir;
     let mut best = None;
 

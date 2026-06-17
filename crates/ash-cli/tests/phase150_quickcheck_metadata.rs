@@ -26,6 +26,24 @@ fn run_fixture(relative: &str) -> serde_json::Value {
     })
 }
 
+fn run_fixture_with_args(relative: &str, extra_args: &[&str]) -> (serde_json::Value, String) {
+    let output = Command::new(assert_cmd::cargo::cargo_bin("ash"))
+        .current_dir(repo_root())
+        .args(["test", relative, "--format", "json"])
+        .args(extra_args)
+        .output()
+        .expect("ash test fixture should launch");
+    let json = serde_json::from_slice(&output.stdout).unwrap_or_else(|error| {
+        panic!(
+            "fixture did not emit valid JSON: {error}\nstatus={}\nstdout={}\nstderr={}",
+            output.status,
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        )
+    });
+    (json, String::from_utf8_lossy(&output.stderr).into_owned())
+}
+
 #[test]
 fn parses_quickcheck_strategy_overrides_from_metadata() {
     let source = r#"
@@ -62,24 +80,27 @@ fn quickcheck_strategy_override_controls_generated_domain() {
     assert_eq!(domain.values[2], json!([-1, 0]));
     assert_eq!(
         domain.descriptor.id,
-        "strategy:xs:test::quickcheck::sorted_int_lists"
+        "strategy:xs:test::quickcheck::list::sorted_ints"
     );
 }
 
 #[test]
 fn arbitrary_default_strategy_is_distinct_from_explicit_override() {
     let descriptor = strategy_descriptor("x", "Int", None).unwrap();
-    assert_eq!(descriptor.strategy_id, "test::quickcheck::arbitrary<Int>");
+    assert_eq!(
+        descriptor.strategy_id,
+        "test::quickcheck::arbitrary::arbitrary<Int>"
+    );
     assert_eq!(
         descriptor.law_coherence,
-        "gen/shrink project from arbitrary()"
+        "ordinary Strategy<A> gen/shrink selected from in-scope evidence"
     );
 
     let override_descriptor =
         strategy_descriptor("x", "Int", Some("test::quickcheck::positive_ints")).unwrap();
     assert_eq!(
         override_descriptor.strategy_id,
-        "test::quickcheck::positive_ints"
+        "test::quickcheck::int::positive"
     );
     assert_eq!(
         override_descriptor.domain_role,
@@ -105,8 +126,10 @@ fn quickcheck_pass_repro_records_strategy_evidence_and_actual_case_count() {
     assert_eq!(snapshot["executed_cases"], 3);
     assert_eq!(
         snapshot["generators"][0]["id"],
-        "strategy:x:test::quickcheck::positive_ints"
+        "strategy:x:test::quickcheck::int::positive"
     );
+    assert_eq!(snapshot["rng_algorithm"], "ash-quickcheck-rng-v1");
+    assert_eq!(snapshot["aggregate_summary"], "empirical_pass_history");
 }
 
 #[test]
@@ -131,4 +154,71 @@ fn quickcheck_strategy_override_metadata_fails_closed_as_a_set() {
             test["message"]
         );
     }
+}
+
+#[test]
+fn quickcheck_v1_final_surface_canonical_paths_and_source_cases_are_no_cargo_visible() {
+    let (output, stderr) = run_fixture_with_args(
+        "fixtures/phase151-quickcheck-v1/tests/ash/property/quickcheck_canonical_positive_source_cases.ash",
+        &["--max-cases", "99", "--seed", "123"],
+    );
+    assert_eq!(output["success"], true);
+    assert_eq!(stderr, "");
+    let snapshot = &output["tests"][0]["repro_artifact"]["generated_input_snapshot"];
+    assert_eq!(snapshot["requested_cases"], 2);
+    assert_eq!(snapshot["executed_cases"], 2);
+    assert_eq!(snapshot["seed"], 123);
+    assert_eq!(snapshot["seed_source"], "cli");
+    assert_eq!(
+        snapshot["generators"][0]["id"],
+        "strategy:x:test::quickcheck::int::positive"
+    );
+
+    let (seed_override_output, seed_override_stderr) = run_fixture_with_args(
+        "fixtures/phase151-quickcheck-v1/tests/ash/property/quickcheck_source_seed_cli_override.ash",
+        &["--seed", "123"],
+    );
+    assert_eq!(seed_override_output["success"], true);
+    assert!(seed_override_stderr.contains("source-pinned QuickCheck seed 7"));
+    assert!(seed_override_stderr.contains("overridden by external seed 123"));
+    assert_eq!(
+        seed_override_output["tests"][0]["repro_artifact"]["generated_input_snapshot"]["seed_source"],
+        "cli"
+    );
+
+    let default_output = run_fixture(
+        "fixtures/phase151-quickcheck-v1/tests/ash/property/quickcheck_default_arbitrary_bool.ash",
+    );
+    let default_snapshot =
+        &default_output["tests"][0]["repro_artifact"]["generated_input_snapshot"];
+    assert_eq!(default_output["success"], true);
+    assert_eq!(default_snapshot["executed_cases"], 2);
+    assert_eq!(
+        default_snapshot["generators"][0]["id"],
+        "strategy:b:test::quickcheck::arbitrary::arbitrary<Bool>"
+    );
+
+    let missing_evidence_output = run_fixture(
+        "fixtures/phase151-quickcheck-v1/tests/ash/property/quickcheck_missing_arbitrary_import_fails_closed.ash",
+    );
+    assert_eq!(missing_evidence_output["success"], false);
+    let missing_evidence_test = &missing_evidence_output["tests"][0];
+    assert_eq!(missing_evidence_test["outcome"], "error");
+    assert!(
+        missing_evidence_test["message"]
+            .as_str()
+            .unwrap()
+            .contains("missing in-scope Arbitrary<Bool> evidence"),
+        "unexpected missing evidence message: {}",
+        missing_evidence_test["message"]
+    );
+
+    let sorted_output = run_fixture(
+        "fixtures/phase151-quickcheck-v1/tests/ash/property/quickcheck_canonical_sorted_list.ash",
+    );
+    assert_eq!(sorted_output["success"], true);
+    assert_eq!(
+        sorted_output["tests"][0]["repro_artifact"]["generated_input_snapshot"]["generators"][0]["id"],
+        "strategy:xs:test::quickcheck::list::sorted_ints"
+    );
 }

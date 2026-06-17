@@ -202,14 +202,20 @@ pub enum CallableSignature {
 }
 
 #[derive(Debug, Clone)]
-struct ImportSpec {
-    module_segments: Vec<String>,
-    selections: Vec<ImportSelection>,
+#[allow(missing_docs)]
+pub struct ImportSpec {
+    #[allow(missing_docs)]
+    pub module_segments: Vec<String>,
+    #[allow(missing_docs)]
+    pub selections: Vec<ImportSelection>,
 }
 
 #[derive(Debug, Clone)]
-enum ImportSelection {
+#[allow(missing_docs)]
+pub enum ImportSelection {
+    #[allow(missing_docs)]
     Named { name: String, alias: Option<String> },
+    #[allow(missing_docs)]
     Glob,
 }
 
@@ -561,12 +567,16 @@ fn push_imported_type_function_head(
 
 type ImportedSummaryKey = Vec<String>;
 
-fn type_def_with_visible_name(type_def: &CoreTypeDef, visible_name: &str) -> CoreTypeDef {
+/// Create a type def with the given visible name.
+#[must_use]
+pub fn type_def_with_visible_name(type_def: &CoreTypeDef, visible_name: &str) -> CoreTypeDef {
     let alias_map = HashMap::from([(type_def.name.clone(), visible_name.to_string())]);
     type_def_with_visible_name_and_aliases(type_def, visible_name, &alias_map)
 }
 
-fn selected_type_def_with_import_visibility(
+/// Create a type def with import visibility.
+#[must_use]
+pub fn selected_type_def_with_import_visibility(
     type_def: &CoreTypeDef,
     summary: Option<&ModuleSemanticSummary>,
     source_name: &str,
@@ -650,7 +660,10 @@ fn transitive_representation_dependency_summaries<'a>(
     dependencies
 }
 
-fn type_def_with_visible_name_and_aliases(
+/// Create a type def with visible name and aliases.
+#[must_use]
+#[allow(clippy::implicit_hasher)]
+pub fn type_def_with_visible_name_and_aliases(
     type_def: &CoreTypeDef,
     visible_name: &str,
     alias_map: &HashMap<String, String>,
@@ -1596,19 +1609,33 @@ fn public_callable_signatures(source: &str) -> Vec<InlineCallable> {
 fn builtin_public_signature_type_names() -> HashSet<String> {
     [
         "Int", "String", "Bool", "Float", "Null", "Unit", "Time", "Ref", "Record", "Bytes", "List",
-        "Option", "Result", "Map", "Stream", "P", "Act", "Proc", "Workflow",
+        "Option", "Result", "Map", "Stream", "P", "Act", "Proc", "Workflow", "Fn",
     ]
     .into_iter()
     .map(str::to_string)
     .collect()
 }
 
-pub(crate) fn public_representation_visibility_errors(type_defs: &[CoreTypeDef]) -> Vec<String> {
-    let private_ordinary_types = private_ordinary_type_names(type_defs);
-    if private_ordinary_types.is_empty() {
-        return Vec::new();
+pub(crate) fn public_representation_visibility_errors(
+    path: &Path,
+    source: &str,
+    type_defs: &[CoreTypeDef],
+) -> Vec<String> {
+    let module_root = path.parent().unwrap_or_else(|| Path::new("."));
+    let crate_root = discover_crate_root(module_root);
+    let import_info = collect_import_visibility_info(source, module_root, crate_root.as_deref());
+
+    let mut known_types = builtin_public_signature_type_names();
+    known_types.extend(type_defs.iter().map(|type_def| type_def.name.clone()));
+    known_types.extend(import_info.known);
+    known_types.extend(import_info.private);
+    if let Ok(metadata) = collect_module_type_metadata_from_module_file(path, source) {
+        let pub_use_exports =
+            collect_public_import_visibility_exports(path, source, &metadata, &mut HashSet::new());
+        known_types.extend(pub_use_exports.type_names);
     }
 
+    let private_ordinary_types = private_ordinary_type_names(type_defs);
     let mut errors = Vec::new();
     for type_def in type_defs
         .iter()
@@ -1627,6 +1654,28 @@ pub(crate) fn public_representation_visibility_errors(type_defs: &[CoreTypeDef])
                 "public type '{}' exposes private ordinary type '{}' in its representation",
                 type_def.name, name
             ));
+        }
+
+        // Check for unresolved types in type definitions (imported types should be resolvable)
+        let mut unresolved = Vec::new();
+        collect_core_type_body_names(&type_def.body, &mut unresolved);
+        unresolved.retain(|name| {
+            !known_types.contains(name) && !type_def.params.iter().any(|param| param == name)
+        });
+        unresolved.sort_unstable();
+        unresolved.dedup();
+        for name in unresolved {
+            if import_info.unresolved.contains(&name) {
+                errors.push(format!(
+                    "public type '{}' references unresolved imported ordinary type '{}' in its representation",
+                    type_def.name, name
+                ));
+            } else {
+                errors.push(format!(
+                    "public type '{}' references unresolved ordinary type '{}' in its representation",
+                    type_def.name, name
+                ));
+            }
         }
     }
     errors
@@ -1672,7 +1721,8 @@ fn private_ordinary_type_names(type_defs: &[CoreTypeDef]) -> HashSet<String> {
         .collect()
 }
 
-fn collect_core_type_body_names(body: &CoreTypeBody, names: &mut Vec<String>) {
+/// Collect names from a core type body.
+pub fn collect_core_type_body_names(body: &CoreTypeBody, names: &mut Vec<String>) {
     match body {
         CoreTypeBody::Struct(fields) => {
             for (_, field_ty) in fields {
@@ -1726,9 +1776,15 @@ fn collect_core_type_expr_names(expr: &CoreTypeExpr, names: &mut Vec<String>) {
     }
 }
 
-fn public_api_visibility_errors(source: &str, type_defs: &[CoreTypeDef]) -> Vec<String> {
+fn public_api_visibility_errors(
+    path: &Path,
+    source: &str,
+    type_defs: &[CoreTypeDef],
+) -> Vec<String> {
     let mut errors = public_callable_signature_visibility_errors(source, type_defs);
-    errors.extend(public_representation_visibility_errors(type_defs));
+    errors.extend(public_representation_visibility_errors(
+        path, source, type_defs,
+    ));
     errors.extend(public_representation_type_function_leak_errors(
         type_defs,
         &local_type_function_names_from_source(source),
@@ -2315,6 +2371,37 @@ fn import_needs_more_lines(snippet: &str) -> bool {
     snippet.contains("::{") && !snippet.contains('}') && !snippet.contains(';')
 }
 
+/// Parse all imports from a module source file.
+/// Returns a list of import specs for `use` and `pub use` statements.
+///
+/// # Errors
+/// Returns an error if an import statement cannot be parsed.
+pub fn parse_module_imports(source: &str) -> Result<Vec<ImportSpec>, EngineError> {
+    let mut imports = Vec::new();
+    let mut lines = source.lines();
+    while let Some(line) = lines.next() {
+        let trimmed = line.trim();
+        if is_skippable_prelude_line(trimmed) {
+            continue;
+        }
+        if trimmed.starts_with("use ") || trimmed.starts_with("pub use ") {
+            let mut snippet = line.to_string();
+            while import_needs_more_lines(&snippet) {
+                let Some(next_line) = lines.next() else {
+                    break;
+                };
+                snippet.push('\n');
+                snippet.push_str(next_line);
+            }
+            imports.push(parse_ordinary_import(snippet.trim())?);
+        } else {
+            // Stop at first non-import, non-comment line
+            break;
+        }
+    }
+    Ok(imports)
+}
+
 fn parse_ordinary_import(line: &str) -> Result<ImportSpec, EngineError> {
     if line.contains('@') {
         return parse_versioned_import(line);
@@ -2509,7 +2596,8 @@ pub(crate) fn collect_module_exports(
         .unwrap_or_default();
 
     let type_metadata = collect_module_type_metadata_from_module_file(&path, &source)?;
-    let mut public_api_errors = public_api_visibility_errors(&source, &type_metadata.type_defs);
+    let mut public_api_errors =
+        public_api_visibility_errors(&path, &source, &type_metadata.type_defs);
     public_api_errors.extend(public_callable_signature_resolution_errors(
         &path,
         &source,
@@ -2650,7 +2738,7 @@ pub(crate) fn collect_module_exports(
     }
 
     for name in extract_pub_mod_declarations(&source) {
-        let child_path = resolve_child_module(module_root, &name)?;
+        let child_path = resolve_child_module(path.as_path(), &name)?;
         visiting.insert(canonical.clone());
         let child_exports =
             collect_module_exports(&child_path, cache, visiting).map_err(|error| {
@@ -3332,6 +3420,7 @@ fn register_imported_interface_definitions_for_constraints(
     )
 }
 
+#[allow(clippy::too_many_lines)]
 fn register_imported_interface_definitions_for_constraints_inner(
     type_env: &mut ash_typeck::TypeEnv,
     path: &Path,
@@ -3374,6 +3463,26 @@ fn register_imported_interface_definitions_for_constraints_inner(
             visiting,
         )?;
         let target_module = parse_module_file_for_type_metadata(&target_path, &target_source)?;
+        let target_type_metadata = ash_parser::lower::lower_module_type_metadata(
+            &target_module,
+            module_identity_for_path(&target_path),
+        );
+        for type_def in &target_type_metadata.type_defs {
+            if !type_env.has_type(&type_def.name) {
+                type_env.declare_type_name(&type_def.name);
+            }
+        }
+        for type_def in target_type_metadata.type_defs {
+            if type_env.has_full_type(&type_def.name)
+                || type_env.type_identity_for_name(&type_def.name).is_some()
+            {
+                continue;
+            }
+            let _ = type_env.register_type_identity(&type_def);
+            if matches!(type_def.visibility, ash_core::ast::Visibility::Public) {
+                let _ = type_env.expose_type_representation(&type_def.name);
+            }
+        }
         type_env.set_current_module_identity(module_identity_for_path(&target_path));
         for selection in &import_spec.selections {
             match selection {
@@ -5045,6 +5154,7 @@ fn merge_selected_summary_export(
     Ok(())
 }
 
+#[allow(clippy::unnecessary_wraps)]
 fn merge_selected_type_exports(
     summary: &mut ModuleSemanticSummary,
     exported_types: Vec<TypeDeclSummary>,
@@ -5072,10 +5182,11 @@ fn merge_selected_type_exports(
             if existing.id == ty.id {
                 continue;
             }
-            return Err(EngineError::Configuration(format!(
-                "duplicate exported type semantic summary '{}'",
-                ty.exported_name
-            )));
+            // Skip duplicate name with different ID — the existing type is
+            // already available for resolution. This handles the case where
+            // a dependency type has the same name as a directly-imported type
+            // (e.g., GenContext from both context and strategy modules).
+            continue;
         }
         summary.exported_types.push(ty);
     }
@@ -5293,7 +5404,7 @@ use source_scan::{
     extract_semicolon_snippets, resolve_child_module,
 };
 
-mod import_resolution;
+pub mod import_resolution;
 use import_resolution::{discover_crate_root, import_resolution_roots, resolve_module_path};
 
 fn convert_type_def(parsed: &ParsedTypeDef) -> Result<CoreTypeDef, EngineError> {

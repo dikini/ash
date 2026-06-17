@@ -668,10 +668,9 @@ fn parse_fn_expr_params(input: &mut ParseInput) -> ModalResult<Vec<(Name, Option
     Ok(params)
 }
 
-/// Parse a simple type name (e.g., `Int`, `String`, `Bool`).
+/// Parse a type annotation name for anonymous function expressions.
 ///
 /// This is used for type annotations in anonymous fn params and return types.
-/// We deliberately keep this simple: a single identifier (no generics, no paths).
 fn parse_simple_type_name(input: &mut ParseInput) -> ModalResult<Name> {
     // Allow keyword-like type names (e.g. Int, Bool, String are identifiers,
     // but future types might overlap with keywords). Use take_while directly.
@@ -687,7 +686,41 @@ fn parse_simple_type_name(input: &mut ParseInput) -> ModalResult<Name> {
             winnow::error::ContextError::new(),
         ));
     }
-    Ok(name.into())
+    let mut type_name = String::from(name);
+
+    while input.input.starts_with('<') {
+        let generic_start = input.clone();
+        let mut depth = 0usize;
+        let mut consumed = String::new();
+
+        loop {
+            let Some(ch) = input.input.chars().next() else {
+                *input = generic_start;
+                return Err(winnow::error::ErrMode::Backtrack(
+                    winnow::error::ContextError::new(),
+                ));
+            };
+            let char_len = ch.len_utf8();
+            let _ = input.input.next_slice(char_len);
+            input.state.advance(ch);
+            consumed.push(ch);
+
+            match ch {
+                '<' => depth += 1,
+                '>' => {
+                    depth = depth.saturating_sub(1);
+                    if depth == 0 {
+                        break;
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        type_name.push_str(&consumed);
+    }
+
+    Ok(type_name.into())
 }
 
 /// Parse the body of an anonymous fn expression: `{ stmts* tail_expr? }`.
@@ -1475,7 +1508,7 @@ fn parse_constructor_fields(input: &mut ParseInput) -> ModalResult<Vec<(Name, Ex
         skip_whitespace_and_comments(input);
         if opt(literal_str(",")).parse_next(input)?.is_some() {
             skip_whitespace_and_comments(input);
-            if literal_str("}").parse_next(input).is_ok() {
+            if input.input.starts_with('}') {
                 break;
             }
 

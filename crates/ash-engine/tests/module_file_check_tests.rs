@@ -427,11 +427,22 @@ fn test_st8_child_export_not_available_without_pub_use() {
     let base = dir.path();
 
     // child.ash: defines two public types
+    // Create parent/ subdirectory for child module (Rust-like pub mod resolution)
+    std::fs::create_dir(base.join("parent")).expect("create parent dir");
+
+    // child.ash in parent/ for pub mod child;
+    std::fs::write(
+        base.join("parent").join("child.ash"),
+        "pub type Alpha = A | B;\npub type Beta = C | D;",
+    )
+    .expect("write child");
+
+    // Also create child.ash in root for pub use resolution
     std::fs::write(
         base.join("child.ash"),
         "pub type Alpha = A | B;\npub type Beta = C | D;",
     )
-    .expect("write child");
+    .expect("write child for use");
 
     // parent.ash: declares pub mod child; but only re-exports Alpha
     std::fs::write(

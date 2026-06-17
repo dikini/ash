@@ -32,3 +32,6 @@ pub fn assert_eq_bool(expected: Bool, actual: Bool) -> Bool {
 pub fn fail_test() -> Bool {
     false
 }
+
+-- QuickCheck property-testing substrate (Phase 151)
+pub mod quickcheck;

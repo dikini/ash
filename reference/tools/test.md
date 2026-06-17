@@ -7,7 +7,7 @@ authority: canonical-adjacent
 status: current
 stability: alpha
 owner: cli
-last_verified: 2026-06-03
+last_verified: 2026-06-16
 verified_against:
   git_commit: 7cf576d
   release_tag: null
@@ -17,6 +17,7 @@ verified_against:
     - docs/spec/SPEC-075-REFERENCE-SLICE-2-RUNTIME-TOOLCHAIN-MAINTENANCE.md
     - docs/spec/SPEC-077-ASH-TEST-RUNNER-SYNTHESIZED-AND-SMALLWORLD-COMPLETION.md
     - docs/spec/SPEC-083-LAW-COVERAGE-AND-MUTATION-TESTING.md
+    - docs/spec/SPEC-087-QUICKCHECK-V1-ORDINARY-STRATEGY-SEMANTICS.md
   tasks:
     - docs/plan/tasks/TASK-509-ash-test-runner-substrate.md
     - docs/plan/tasks/TASK-512-authored-test-metadata-and-execution-model.md
@@ -26,6 +27,7 @@ verified_against:
     - docs/plan/tasks/TASK-1010-phase-76b-rescope-spec-hardening-packet.md
     - docs/plan/tasks/TASK-1011-phase-76b-final-remediation-and-design022-023-planning.md
     - docs/plan/tasks/TASK-1019-reference-ash-test-daily-use.md
+    - docs/plan/tasks/TASK-1505-quickcheck-v1-final-surface-fixtures-and-docs.md
   code:
     - crates/ash-cli/src/commands/test.rs
     - crates/ash-cli/src/main.rs
@@ -35,10 +37,13 @@ verified_against:
     - crates/ash-cli/src/test_runner/output.rs
     - crates/ash-cli/src/test_runner/coverage_mutation.rs
     - crates/ash-cli/src/test_runner/property.rs
+    - crates/ash-cli/src/test_runner/quickcheck.rs
+    - crates/ash-cli/src/test_runner/evidence_cache.rs
     - crates/ash-cli/src/test_runner/synthesized.rs
     - crates/ash-cli/src/test_runner/types.rs
   tests:
     - cargo run -p ash-cli -- test --help
+    - ${ASH_UNDER_TEST:?set Ash candidate binary} test fixtures/phase151-quickcheck-v1/tests/ash/property --format json --seed 123 --max-cases 99
     - check_frontmatter pilot validation
     - check_frontmatter full reference validation
     - git diff --check
@@ -236,58 +241,89 @@ workflow main() -> Bool { ret true }
 
 For generated property rows, JSON `repro_artifact.generated_input_snapshot` includes the original `bindings`, generator descriptors, and `shrunk_counterexample` / `shrink_trace` when a counterexample is found. Unsupported parameter domains or malformed property oracles fail closed as `error` for authored property tests, and defer rather than pass for synthesized law evidence.
 
-## QuickCheck Strategies and Arbitrary Defaults
+## QuickCheck Strategies, Seeds, Shrinking, and Evidence
 
-Phase 150 adds the first QuickCheck-like surface under the standard-library
-namespace `test::quickcheck`. Conceptually:
+Phase 151 updates the QuickCheck model toward ordinary Ash strategy values while
+keeping the metadata bridge as the current runnable alpha surface. Conceptually:
 
 ```ash
-pub type Strategy<T> = Strategy { id: String }
+pub type Strategy<T> = Strategy {
+    gen: GenContext -> T,
+    shrink: T -> List<T>,
+}
 
 pub interface Arbitrary<T> {
     arbitrary() -> Strategy<T>
-    gen(Int, Int) -> List<T>
-    shrink(T) -> List<T>
 }
 ```
 
-`Arbitrary<T>` is the default generated-domain evidence for a type. `Strategy<T>`
-is a value-level override for a specific domain. The coherence law is:
+`Arbitrary<T>` is the default generated-domain evidence for a type. An explicit
+strategy override selects a `Strategy<T>` for one generated parameter. The
+target v1 parser form is `by test quickcheck with { x <- strategy expr }`, but
+the current runnable alpha path still encodes overrides in `@test strategy`
+metadata and canonicalizes Phase 150 aliases to the v1 namespace.
 
-```text
-Arbitrary<T>::gen(seed, size) == strategy::gen(Arbitrary<T>::arbitrary(), seed, size)
-Arbitrary<T>::shrink(value)   == strategy::shrink(Arbitrary<T>::arbitrary(), value)
-```
-
-The first runner slice exposes strategy overrides through metadata while the
-parser-level `by test quickcheck with { ... }` syntax remains future work:
+Canonical strategy descriptor paths use submodules in runner metadata. These
+names are accepted in `@test strategy` today; they are not yet source-visible
+stdlib function paths until the deferred module split/parser tasks land:
 
 ```ash
 -- @test name: sorted_binary_search_domain
 -- @test kind: property
+-- @test max_cases: 4
 -- @test params: xs: List<Int>, x: Int
--- @test strategy xs: test::quickcheck::sorted_int_lists
--- @test strategy x: test::quickcheck::positive_ints
+-- @test strategy xs: test::quickcheck::list::sorted_ints
+-- @test strategy x: test::quickcheck::int::positive
 -- @test property: x >= 1
 fn main() -> Bool { true }
 ```
 
-Supported first-slice strategies include `ints`, `small_ints`, `positive_ints`,
-`nonzero_ints`, `bools`, `strings`, `identifiers`, `sorted_int_lists`, and
-`nonempty_int_lists`. If no override is supplied, the runner uses the default
-bounded `Arbitrary<T>` strategy for supported primitive/container types. If an
-override's target type does not match the parameter type, the test fails closed
-as an `error`; it never counts as passing evidence.
+Alpha metadata aliases such as `test::quickcheck::positive_ints` and
+`test::quickcheck::sorted_int_lists` are accepted for migration, but reference
+material should prefer `test::quickcheck::int::positive` and
+`test::quickcheck::list::sorted_ints`. If no override is supplied, the runner
+uses the bounded default `Arbitrary<T>` representative domain for supported
+primitive/container types only when the source explicitly imports
+`test::quickcheck::{Arbitrary}` or `test::quickcheck::prelude`. Missing
+in-scope default evidence, unsupported domains, unknown override bindings,
+duplicate overrides, and strategy/type mismatches fail closed as `error` rows;
+they never count as passing evidence.
+
+The target v1 strategy library includes `qc::combinator::one_of`,
+`one_of_weighted`, `map`, `map_project`, `map2`, `recursive_with`,
+`with_shrink`, `append_shrink`, and `prepend_shrink`. In the current runnable
+alpha, these semantics are represented in the runner-side strategy descriptor
+and shrink/evidence model while full source-visible stdlib module splitting and
+parser/typechecker support for ordinary strategy expressions remain Phase 151
+planned work. Treat recursive/weighted source examples as design examples until
+TASK-1498/TASK-1501 are reopened and completed.
+
+QuickCheck v1 records the RNG contract as `ash-quickcheck-rng-v1`. Seeds are
+random by default and always recorded in JSON repro artifacts. A CLI/replay seed
+overrides source `@test seed` metadata. Source-pinned seeds are allowed for
+compatibility but produce a warning because they reduce exploration. Source
+`@test max_cases` is exact for the authored property; CLI `--max-cases` only
+fills in when the source is silent.
+
+Generated-property pass rows include a `generated_input_snapshot` with
+`schema_version: "ash-quickcheck-run-v1"`, executed/requested cases, effective
+seed, `rng_algorithm`, generator descriptors, and
+`aggregate_summary: "empirical_pass_history"`. Counterexample repro artifacts
+record `failure_class: "property_false"`, `shrunk_counterexample`,
+`shrink_trace`, and `shrink_order_policy: "preserve_order_no_dedup"`.
 
 Strategy shrinking is domain-preserving: explicit strategy overrides shrink via
 the strategy's own representative domain before using generic structural
-shrinking. For example, `positive_ints` does not shrink a failing positive value
-to `0`, because `0` is outside that strategy domain.
+shrinking. For example, `test::quickcheck::int::positive` does not shrink a
+failing positive value to `0`, because `0` is outside that strategy domain. The
+runner preserves candidate order exactly and does not deduplicate.
 
-Law cache schema is version-moderated. A stale or missing empirical law cache
-entry is distinct from a refuted law: stale evidence may require rerun under the
-active policy, while broken evidence means the law/property itself produced a
-counterexample.
+Law and QuickCheck evidence schemas are version-moderated. Missing or stale
+empirical law evidence is distinct from refuted law/property evidence. Phase 151
+adds aggregate QuickCheck run records with compatible pass history, sticky
+counterexample/error findings, exact case-count buckets, and same-seed
+nondeterminism detection; a later compatible pass does not clear an active
+counterexample or generator/error finding.
 
 Law evidence rows include:
 

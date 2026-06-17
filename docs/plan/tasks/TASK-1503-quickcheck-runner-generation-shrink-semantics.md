@@ -1,6 +1,6 @@
 # TASK-1503: QuickCheck runner generation and shrink semantics
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -89,3 +89,9 @@ checklist:
 ## Notes
 
 Setup/evidence errors are not ordinary shrinkable counterexamples.
+
+## Implementation Evidence
+
+- Implemented in Phase 151 worktree `feat/phase-151-quickcheck-v1`.
+- Focused verification: `cargo test -p ash-cli quickcheck -- --nocapture`.
+- Broad scoped gates: `cargo check -p ash-cli`; `cargo clippy -p ash-cli --all-targets -- -D warnings`; `cargo fmt --check`; `git diff --check`.

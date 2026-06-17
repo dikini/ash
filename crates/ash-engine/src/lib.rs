@@ -1479,6 +1479,7 @@ impl Engine {
     ///
     /// Returns `EngineError::Io` if the file cannot be read, or
     /// `EngineError::Parse` if the module file cannot be parsed for type metadata.
+    #[allow(clippy::too_many_lines)]
     pub fn check_module_file(
         &self,
         path: &std::path::Path,
@@ -1516,6 +1517,8 @@ impl Engine {
             path, &source,
         ));
         errors.extend(module_loader::public_representation_visibility_errors(
+            path,
+            &source,
             &type_metadata.type_defs,
         ));
         errors.extend(
@@ -1534,6 +1537,109 @@ impl Engine {
         // path as imports without colliding with hidden local builtin/private
         // implementation details such as std::act's ActEnv.
         let mut type_env = ash_typeck::TypeEnv::with_builtin_types();
+
+        // Process imports and register imported types so local type definitions
+        // can reference them (e.g., Strategy<T> referencing imported GenContext).
+        let module_root = path.parent().unwrap_or_else(|| std::path::Path::new("."));
+        let crate_root = module_loader::import_resolution::discover_crate_root(module_root);
+        let imports = module_loader::parse_module_imports(&source)?;
+        let mut imported_type_defs = Vec::new();
+        let mut imported_type_names = HashSet::new();
+        let mut module_cache = HashMap::new();
+        let mut visiting = HashSet::new();
+
+        for import in imports {
+            let (module_segments, search_roots) =
+                module_loader::import_resolution::import_resolution_roots(
+                    &import.module_segments,
+                    module_root,
+                    crate_root.as_deref(),
+                )?;
+            if let Ok(Some(module_path)) = module_loader::import_resolution::resolve_module_path(
+                &module_segments,
+                &search_roots,
+            ) {
+                let exports = module_loader::collect_module_exports(
+                    &module_path,
+                    &mut module_cache,
+                    &mut visiting,
+                )?;
+                for selection in import.selections {
+                    match selection {
+                        module_loader::ImportSelection::Glob => {
+                            for (name, type_def) in &exports.type_defs {
+                                let imported_type =
+                                    module_loader::type_def_with_visible_name(type_def, name);
+                                if imported_type_names.insert(imported_type.name.clone()) {
+                                    imported_type_defs.push(imported_type);
+                                }
+                            }
+                        }
+                        module_loader::ImportSelection::Named { name, alias } => {
+                            let exported_name =
+                                alias.as_ref().map_or_else(|| name.clone(), Clone::clone);
+                            if let Some(type_def) = exports.type_defs.get(&name) {
+                                // Use type_def_with_visible_name instead of selected_type_def_with_import_visibility
+                                // to avoid dependency metadata aliasing ($ash_dependency$...) which breaks
+                                // type registration when the dependency is also imported separately.
+                                let imported_type = module_loader::type_def_with_visible_name(
+                                    type_def,
+                                    &exported_name,
+                                );
+                                let imported_type_name = imported_type.name.clone();
+                                // Collect dependencies before moving imported_type
+                                let mut dependency_names = Vec::new();
+                                module_loader::collect_core_type_body_names(
+                                    &imported_type.body,
+                                    &mut dependency_names,
+                                );
+                                if imported_type_names.insert(imported_type_name.clone()) {
+                                    imported_type_defs.push(imported_type);
+                                }
+                                for dep_name in dependency_names {
+                                    if dep_name == imported_type_name
+                                        || imported_type_names.contains(&dep_name)
+                                    {
+                                        continue;
+                                    }
+                                    if let Some(dep_type_def) = exports.type_defs.get(&dep_name) {
+                                        let dep_imported =
+                                            module_loader::type_def_with_visible_name(
+                                                dep_type_def,
+                                                &dep_name,
+                                            );
+                                        if imported_type_names.insert(dep_imported.name.clone()) {
+                                            imported_type_defs.push(dep_imported);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Register imported type names as placeholders so local type definitions can reference them
+        for imported_type in &imported_type_defs {
+            if !type_env.has_type(&imported_type.name) {
+                type_env.declare_type_name(&imported_type.name);
+            }
+        }
+        // Register imported type identities
+        for imported_type in imported_type_defs {
+            if type_env.has_full_type(&imported_type.name)
+                || type_env
+                    .type_identity_for_name(&imported_type.name)
+                    .is_some()
+            {
+                continue;
+            }
+            if let Err(e) = type_env.register_type_identity(&imported_type) {
+                errors.push(format!("imported type '{}': {e}", imported_type.name));
+            }
+        }
+
         let mut public_summary = type_metadata.summary;
         public_summary
             .exported_types

@@ -20,20 +20,50 @@ pub(super) fn extract_pub_mod_declarations(source: &str) -> Vec<String> {
         .collect()
 }
 
-pub(super) fn resolve_child_module(module_root: &Path, name: &str) -> Result<PathBuf, EngineError> {
-    // Try name.ash first, then name/mod.ash
-    let file_candidate = module_root.join(format!("{name}.ash"));
+pub(super) fn resolve_child_module(module_path: &Path, name: &str) -> Result<PathBuf, EngineError> {
+    let module_root = module_path.parent().unwrap_or_else(|| Path::new("."));
+
+    // If parent is a file module (not `mod.ash`), child modules live in a
+    // subdirectory named after the parent module. For example, `test.ash`
+    // with `pub mod quickcheck;` looks for `test/quickcheck.ash` or
+    // `test/quickcheck/mod.ash`.
+    let parent_is_dir_module = module_path
+        .file_name()
+        .is_some_and(|name| name == "mod.ash");
+    let search_dir = if parent_is_dir_module {
+        module_root.to_path_buf()
+    } else if let Some(stem) = module_path.file_stem() {
+        module_root.join(stem)
+    } else {
+        module_root.to_path_buf()
+    };
+
+    // Try name.ash first, then name/mod.ash in the subdirectory
+    let file_candidate = search_dir.join(format!("{name}.ash"));
     if file_candidate.is_file() {
         return Ok(file_candidate);
     }
-    let mod_candidate = module_root.join(name).join("mod.ash");
+    let mod_candidate = search_dir.join(name).join("mod.ash");
     if mod_candidate.is_file() {
         return Ok(mod_candidate);
     }
+
+    // Fallback: try sibling module in the same directory (flat structure)
+    let sibling_file = module_root.join(format!("{name}.ash"));
+    if sibling_file.is_file() {
+        return Ok(sibling_file);
+    }
+    let sibling_mod = module_root.join(name).join("mod.ash");
+    if sibling_mod.is_file() {
+        return Ok(sibling_mod);
+    }
+
     Err(EngineError::Parse(format!(
-        "pub mod '{name}': module not found (searched {} and {})",
+        "pub mod '{name}': module not found (searched {}, {}, {}, {})",
         file_candidate.display(),
-        mod_candidate.display()
+        mod_candidate.display(),
+        sibling_file.display(),
+        sibling_mod.display()
     )))
 }
 

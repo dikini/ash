@@ -8,7 +8,6 @@
 //! - `use crate::foo::{a as x, b};` - Nested import with aliases
 //! - `pub use crate::foo::bar;` - With visibility modifier
 
-use winnow::combinator::{delimited, separated};
 use winnow::prelude::*;
 use winnow::stream::Stream;
 use winnow::token::take_while;
@@ -125,14 +124,41 @@ fn parse_path_segment<'a>(input: &mut ParseInput<'a>) -> ModalResult<&'a str> {
     take_while(1.., |c: char| c.is_ascii_alphanumeric() || c == '_').parse_next(input)
 }
 
-/// Parse use items within braces: `{a, b as c, d}`.
+/// Parse use items within braces: `{a, b as c, d}` or `{a, b,}` (trailing comma).
 fn parse_use_items(input: &mut ParseInput) -> ModalResult<Vec<UseItem>> {
-    let items = delimited(
-        parse_symbol("{"),
-        separated(0.., parse_use_item, parse_symbol(",")),
-        parse_symbol("}"),
-    )
-    .parse_next(input)?;
+    let _ = parse_symbol("{")(input)?;
+
+    let mut items = Vec::new();
+    loop {
+        // Skip whitespace
+        let _ = parse_whitespace(input)?;
+
+        // Check for closing brace
+        if input.input.starts_with('}') {
+            let _ = parse_symbol("}")(input)?;
+            break;
+        }
+
+        // Parse item
+        let item = parse_use_item(input)?;
+        items.push(item);
+
+        // Skip whitespace
+        let _ = parse_whitespace(input)?;
+
+        // Check for comma
+        if input.input.starts_with(',') {
+            let _ = parse_symbol(",")(input)?;
+            // Continue to next item (or trailing comma before })
+        } else if input.input.starts_with('}') {
+            let _ = parse_symbol("}")(input)?;
+            break;
+        } else {
+            return Err(winnow::error::ErrMode::Backtrack(
+                winnow::error::ContextError::new(),
+            ));
+        }
+    }
 
     Ok(items)
 }

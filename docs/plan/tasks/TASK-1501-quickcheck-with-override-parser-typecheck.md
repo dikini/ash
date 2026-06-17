@@ -1,10 +1,10 @@
-# TASK-1501: QuickCheck with-block override parser and typechecker support
+# TASK-1501: Property-test proof evidence with source-visible strategy overrides
 
 ## Status: 📝 Planned
 
 ## Description
 
-Implement parser/typechecker support for `by test quickcheck with { ... }` where override RHSs are pure `Strategy<T>` expressions, accepting both explicit `strategy` and inferred forms.
+Make `by test property` (and accepted synonym `quickcheck`) first-class proof evidence by extending the parser, AST, and runner schema so that strategy overrides are source-visible `Strategy<T>` expressions, not metadata strings. `property` and `quickcheck` are synonymous surface vocabulary; only one AST representation (`ProofBody::ByTestProperty`) should exist, extended with an optional `strategies` payload.
 
 ## Specification Reference
 
@@ -14,7 +14,11 @@ Implement parser/typechecker support for `by test quickcheck with { ... }` where
 
 ## Dependencies
 
-- 📝 TASK-1500: Arbitrary evidence resolution without hidden bridges (planned)
+- ✅ TASK-1497: Live syntax and seam audit
+- ✅ TASK-1498: QuickCheck stdlib module split and prelude
+- ✅ TASK-1499: GenContext, RNG, and Strategy value core
+- ✅ TASK-1500: Arbitrary evidence resolution without hidden bridges
+- ✅ TASK-1510: Parser support for `fn` expressions in multi-field struct literals
 
 ## Deferral / Planned-Feature Reconciliation
 
@@ -28,30 +32,53 @@ Implement parser/typechecker support for `by test quickcheck with { ... }` where
 
 ### Functional Requirements
 
-1. Parse `x <- strategy expr` and `x <- expr` in QuickCheck backend-local override blocks.
-2. Keep `with` blocks parameter/domain-only; run config remains in backend options.
-3. Reject unknown/duplicate bindings, wrong strategy type, and impure RHSs.
-4. Allow partial overrides with fallback to `Arbitrary<T>` evidence.
+1. Parse `by test property` and `by test quickcheck` as synonymous proof evidence modes into a single AST node.
+2. Parse optional `with { x <- strategy_expr, y <- strategy_expr }` strategy override block.
+3. Extend `ProofBody::ByTestProperty` with `strategies: Vec<PropertyStrategyBinding>`.
+4. Extend `LawTestEvidence::Property` with structured strategy descriptors.
+5. Validate: unknown binding → error; duplicate binding → error; strategy type mismatch → error/deferred; unsupported strategy expression → deferred with honest repro.
+6. Allow partial overrides: missing bindings fall back to in-scope `Arbitrary<T>` evidence.
+7. Preserve source spelling (`property` vs `quickcheck`) for diagnostics only; no semantic branching.
 
 ### Property Requirements
 
-- Explicit and inferred strategy forms elaborate to the same internal override representation.
-- Partial override fallback uses ordinary evidence.
-- Wrong type/impure/missing binding diagnostics fail closed and do not run the property.
+- Synonymous surface forms (`property`, `quickcheck`) produce identical AST and identical runner metadata.
+- Partial override fallback uses ordinary in-scope `Arbitrary<T>` evidence.
+- Wrong type / unsupported expression / missing binding diagnostics fail closed and do not run the property.
+- Strategy expressions survive into runner metadata without string formatting loss.
 
 ## TDD Steps
 
-### Step 1: RED parser/type fixtures
+### Step 1: RED — parser fixtures
 
-Add fixtures for explicit, inferred, partial, duplicate, unknown, wrong-type, and impure overrides.
+Add parser tests for:
+- `by test property` (no `with`)
+- `by test quickcheck` (no `with`)
+- `by test property with { x <- expr }`
+- `by test quickcheck with { x <- expr }`
+- `by test property with { x <- expr, y <- expr }` (trailing comma)
+- duplicate binding in `with` block
+- unknown binding in `with` block
+- strategy expression with multi-field struct literal (TASK-1510 pattern)
 
-### Step 2: GREEN parser and typed elaboration
+### Step 2: GREEN — parser + AST + schema
 
-Wire surface parsing, typed override resolution, and diagnostics.
+- Extend `ProofBody::ByTestProperty` with `strategies` payload.
+- Add `PropertyStrategyBinding` surface struct.
+- Extend `LawTestEvidence::Property` with strategy descriptors.
+- Update `extract_laws` / `law_test_evidence_from_proof_body` to preserve bindings.
+- Update `format_expr` to support `Constructor` and `FnDef` so strategy expressions survive into metadata.
 
-### Step 3: Runner handoff test
+### Step 3: GREEN — runner override resolution
 
-Assert typed strategy expressions reach runner resolution without metadata strings.
+- Wire `law_property_results` to consume `Property` strategy descriptors.
+- Map explicit strategy expressions to generated domains (initially via transitional path resolver).
+- Validate unknown/duplicate bindings against law params.
+
+### Step 4: REFACTOR — bridge removal
+
+- Add negative leakage test: metadata-only `@test strategy` still works but is not the independent semantic authority.
+- Document transitional bridge status in CHANGELOG.
 
 ## Dispatch
 
@@ -68,6 +95,7 @@ toolsets: [terminal, file, coding]
 strictness: clean
 commands:
   - cargo fmt --check
+  - cargo test -p ash-parser --test task_1501_property_test_override_parsing -- --nocapture
   - cargo test -p ash-cli --test test_command -- --nocapture
   - cargo clippy -p ash-cli --all-targets -- -D warnings
   - git diff --check
@@ -84,4 +112,6 @@ checklist:
 
 ## Notes
 
-Do not put `cases`, `seed`, or shrink limits inside the `with` block.
+- `property` and `quickcheck` are synonyms; do not add a separate `ByTestQuickCheck` AST branch.
+- Do not put `cases`, `seed`, or shrink limits inside the `with` block; run config remains in backend options / metadata.
+- The transitional bridge may accept path-like strategy expressions first (e.g. `test::quickcheck::int::positive`) before full ordinary `Strategy<T>` evaluation lands.

@@ -103,6 +103,36 @@ pub fn add_n(n: Int, x: Int) -> Int {
 }
 ```
 
+## Struct literal fields
+
+Anonymous `fn` expressions and closures can be used as field values in struct literals. This is the primary pattern for constructing higher-order values like strategies or handlers.
+
+```ash
+pub fn make_handler() -> Handler {
+    Handler {
+        on_request: fn(req: Request) -> Response { process(req) },
+        on_error: |err| -> default_response(),
+    }
+}
+```
+
+### Multi-field struct literal support
+
+As of TASK-1510, anonymous `fn` expressions and closure shorthand are accepted in single-field and multi-field struct literals, including trailing-comma forms and generic return annotations on anonymous functions.
+
+You may still use `let` bindings when that improves readability:
+
+```ash
+pub fn make_handler() -> Handler {
+    let on_req = fn(req: Request) -> Response { process(req) };
+    let on_err = |err| -> default_response();
+    Handler {
+        on_request: on_req,
+        on_error: on_err,
+    }
+}
+```
+
 ## Current boundaries
 
 - Module-level functions are collected as definitions and imported by module machinery; they are not reified as serializable closure values.

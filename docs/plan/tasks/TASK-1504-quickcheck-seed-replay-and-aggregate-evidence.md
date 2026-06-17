@@ -1,6 +1,6 @@
 # TASK-1504: QuickCheck seed, replay, and aggregate evidence history
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -91,3 +91,9 @@ checklist:
 ## Notes
 
 Default execution adds another run to the aggregate; it does not skip because prior compatible runs passed.
+
+## Implementation Evidence
+
+- Implemented in Phase 151 worktree `feat/phase-151-quickcheck-v1`.
+- Focused verification: `cargo test -p ash-cli quickcheck -- --nocapture`.
+- Broad scoped gates: `cargo check -p ash-cli`; `cargo clippy -p ash-cli --all-targets -- -D warnings`; `cargo fmt --check`; `git diff --check`.

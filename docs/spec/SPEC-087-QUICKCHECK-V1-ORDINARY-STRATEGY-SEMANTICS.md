@@ -87,7 +87,7 @@ pub interface Arbitrary<A> {
 }
 ```
 
-Default parameter resolution is: explicit `with` override, otherwise ordinary in-scope `Arbitrary<T>` evidence, otherwise fail closed. `by test quickcheck` does not inject hidden primitive/container generators.
+Default parameter resolution is: explicit `with` override, otherwise ordinary in-scope `Arbitrary<T>` evidence, otherwise fail closed. `by test quickcheck` does not inject hidden primitive/container generators. `property` and `quickcheck` are synonymous surface vocabulary for the same proof evidence mode; only one AST representation (`ProofBody::ByTestProperty`) should exist, extended with an optional `strategies` payload.
 
 Stdlib defaults are imported explicitly:
 
@@ -109,12 +109,14 @@ x <- expr
 
 Both require a generated parameter `x: T`, no duplicate binding, pure RHS, and `expr : Strategy<T>`.
 
+`by test property` and `by test quickcheck` are synonymous surface spellings for the same proof evidence mode. The parser accepts both; the AST and runner schema have one representation (`ProofBody::ByTestProperty` with optional `strategies`). Source spelling is preserved for diagnostics only.
+
 Example:
 
 ```ash
 proof division_safe(x: Int, y: Int) {
-    by test quickcheck cases 100 with {
-        y <- strategy qc::int::nonzero()
+    by test property with {
+        y <- qc::int::nonzero()
     }
 }
 ```

@@ -648,14 +648,20 @@ fn import_continuation_is_limited_to_nested_use_trees() {
 
 /// Test 1: `pub mod child;` loads the child module's exports and stores
 /// them in `child_modules` under the child name.
+///
+/// For a file module `parent.ash`, `pub mod child;` looks for
+/// `parent/child.ash` or `parent/child/mod.ash` (Rust-like module resolution).
 #[test]
 fn test_pub_mod_types_loads_child_exports() {
     let temp = tempfile::tempdir().expect("tempdir");
     let dir = temp.path();
 
+    // Create parent/ subdirectory for child module
+    std::fs::create_dir(dir.join("parent")).expect("create parent dir");
+
     // child.ash: defines a public type
     std::fs::write(
-        dir.join("child.ash"),
+        dir.join("parent").join("child.ash"),
         "pub type Role = System | User | Assistant;",
     )
     .expect("write child");
@@ -679,12 +685,27 @@ fn test_pub_mod_types_loads_child_exports() {
 
 /// Test 2: `pub use child::{Role}` re-exports still work alongside
 /// `pub mod child;` -- the parent's `type_defs` contains Role.
+///
+/// Note: `pub use child::{Role}` resolves `child` via the crate root, not via
+/// the file module's subdirectory. For `pub mod child;` we use `parent/child.ash`.
 #[test]
 fn test_pub_use_resolves_via_child_module() {
     let temp = tempfile::tempdir().expect("tempdir");
     let dir = temp.path();
 
-    std::fs::write(dir.join("child.ash"), "pub type Role = System | User;").expect("write child");
+    // Create parent/ subdirectory for child module (pub mod resolution)
+    std::fs::create_dir(dir.join("parent")).expect("create parent dir");
+
+    // child.ash in parent/ for pub mod child;
+    std::fs::write(
+        dir.join("parent").join("child.ash"),
+        "pub type Role = System | User;",
+    )
+    .expect("write child");
+
+    // Also create child.ash in root for pub use resolution
+    std::fs::write(dir.join("child.ash"), "pub type Role = System | User;")
+        .expect("write child for use");
 
     // parent.ash: both pub mod child; and pub use child::{Role};
     std::fs::write(
@@ -716,12 +737,22 @@ fn test_child_exports_not_flattened() {
     let temp = tempfile::tempdir().expect("tempdir");
     let dir = temp.path();
 
+    // Create parent/ subdirectory for child module
+    std::fs::create_dir(dir.join("parent")).expect("create parent dir");
+
     // child.ash: defines two public types
+    std::fs::write(
+        dir.join("parent").join("child.ash"),
+        "pub type Alpha = A | B;\npub type Beta = C | D;",
+    )
+    .expect("write child");
+
+    // Also create child.ash in root for pub use resolution
     std::fs::write(
         dir.join("child.ash"),
         "pub type Alpha = A | B;\npub type Beta = C | D;",
     )
-    .expect("write child");
+    .expect("write child for use");
 
     // parent.ash: declares pub mod child; but only re-exports Alpha
     std::fs::write(

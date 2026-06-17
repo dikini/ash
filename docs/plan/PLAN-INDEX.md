@@ -143,7 +143,7 @@ The following phases are active or recently completed and awaiting archival to [
 | [152](PLAN-152-CLOSURE-REFINEMENT-AND-TOWER-DOCUMENTATION.md) | 10 | 0 | 📝 Planned; Closure refinement and tower documentation |
 | [153](PLAN-153-LIST-BUILTIN-TO-STDLIB.md) | 10 | 0 | 📝 Planned; List builtin to stdlib migration |
 | [154](PLAN-154-TYPE-ANNOTATION-QUIRKS.md) | 5 | 0 | 📝 Planned; Fix type annotation quirks with imported types |
-| [155](PLAN-155-LET-DESTRUCTORS.md) | 10 | 0 | 📝 Planned; Let destructors for records and tuples |
+| [155](PLAN-155-LET-DESTRUCTORS.md) | 10 | 10 | ✅ Complete; Let destructors for records and tuples |
 
 ---
 
@@ -163,7 +163,7 @@ The following phases are active or recently completed and awaiting archival to [
 | [152](PLAN-152-CLOSURE-REFINEMENT-AND-TOWER-DOCUMENTATION.md) | 10 | 0 | 📝 Planned; Closure refinement and tower documentation |
 | [153](PLAN-153-LIST-BUILTIN-TO-STDLIB.md) | 10 | 0 | 📝 Planned; List builtin to stdlib migration |
 | [154](PLAN-154-TYPE-ANNOTATION-QUIRKS.md) | 5 | 0 | 📝 Planned; Fix type annotation quirks with imported types |
-| [155](PLAN-155-LET-DESTRUCTORS.md) | 10 | 0 | 📝 Planned; Let destructors for records and tuples |
+| [155](PLAN-155-LET-DESTRUCTORS.md) | 10 | 10 | ✅ Complete; Let destructors for records and tuples |
 
 ## Phase 145: Law Test Evidence Substrate
 

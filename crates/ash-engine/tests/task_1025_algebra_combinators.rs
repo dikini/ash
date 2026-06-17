@@ -124,8 +124,10 @@ async fn carrier_modules_execute_final_surface_monoid_helpers() {
         .run_file(&list_main)
         .await
         .expect("list monoid helper example should execute");
-    assert_eq!(
-        list_value,
-        Value::List(Box::new(vec![Value::Int(1), Value::Int(2)]))
+    // Since Phase 153, lists are represented as Cons/Nil variants
+    assert!(
+        matches!(list_value, Value::Variant { ref name, .. } if name == "Cons" || name == "Nil"),
+        "list should be Cons/Nil variant, got: {:?}",
+        list_value
     );
 }

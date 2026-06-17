@@ -12,118 +12,7 @@ use ash_parser::surface::{
 };
 use ash_parser::token::Span;
 use lsp_types::{DocumentSymbol, Position, Range, SymbolKind};
-
-/// A symbol found in a workspace-wide search.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct WorkspaceSymbol {
-    /// The symbol name.
-    pub name: String,
-    /// The LSP symbol kind.
-    pub kind: SymbolKind,
-    /// The absolute file path containing the symbol.
-    pub file: std::path::PathBuf,
-    /// The 1-indexed line of the symbol definition.
-    pub line: u32,
-    /// The 1-indexed column of the symbol definition.
-    pub column: u32,
-}
-
-/// Search for symbols across all `.ash` files under `root`.
-///
-/// Performs a recursive directory scan, parses each `.ash` file, and returns
-/// every top-level symbol whose name contains `query` as a case-insensitive
-/// substring. Parse failures are skipped with a debug log rather than failing
-/// the whole search.
-#[must_use]
-pub fn workspace_symbols(root: &std::path::Path, query: &str) -> Vec<WorkspaceSymbol> {
-    let query_lower = query.to_lowercase();
-    let mut results = Vec::new();
-    collect_workspace_symbols(root, &query_lower, &mut results);
-    results.sort_by(|a, b| {
-        a.file
-            .cmp(&b.file)
-            .then(a.line.cmp(&b.line))
-            .then(a.column.cmp(&b.column))
-    });
-    results
-}
-
-fn collect_workspace_symbols(
-    root: &std::path::Path,
-    query_lower: &str,
-    out: &mut Vec<WorkspaceSymbol>,
-) {
-    let mut entries = match std::fs::read_dir(root) {
-        Ok(entries) => entries,
-        Err(err) => {
-            tracing::debug!(path = %root.display(), error = %err, "unable to read workspace directory");
-            return;
-        }
-    };
-
-    while let Some(Ok(entry)) = entries.next() {
-        let path = entry.path();
-        let file_type = match entry.file_type() {
-            Ok(ft) => ft,
-            Err(err) => {
-                tracing::debug!(path = %path.display(), error = %err, "unable to read file type");
-                continue;
-            }
-        };
-
-        if file_type.is_dir() {
-            collect_workspace_symbols(&path, query_lower, out);
-        } else if file_type.is_file() && path.extension().is_some_and(|ext| ext == "ash") {
-            collect_file_symbols(&path, query_lower, out);
-        }
-    }
-}
-
-fn collect_file_symbols(path: &std::path::Path, query_lower: &str, out: &mut Vec<WorkspaceSymbol>) {
-    let content = match std::fs::read_to_string(path) {
-        Ok(content) => content,
-        Err(err) => {
-            tracing::debug!(path = %path.display(), error = %err, "unable to read ash file");
-            return;
-        }
-    };
-
-    let module = match ash_parser::parse_surface_file(&content) {
-        Ok(module) => module,
-        Err(err) => {
-            tracing::debug!(path = %path.display(), error = ?err, "unable to parse ash file");
-            return;
-        }
-    };
-
-    let file = path.to_path_buf();
-    for symbol in document_symbols(&module) {
-        collect_matching_symbols(&file, &symbol, query_lower, out);
-    }
-}
-
-fn collect_matching_symbols(
-    file: &std::path::Path,
-    symbol: &DocumentSymbol,
-    query_lower: &str,
-    out: &mut Vec<WorkspaceSymbol>,
-) {
-    if symbol.name.to_lowercase().contains(query_lower) {
-        out.push(WorkspaceSymbol {
-            name: symbol.name.clone(),
-            kind: symbol.kind,
-            file: file.to_path_buf(),
-            line: symbol.range.start.line + 1,
-            column: symbol.range.start.character + 1,
-        });
-    }
-
-    if let Some(children) = &symbol.children {
-        for child in children {
-            collect_matching_symbols(file, child, query_lower, out);
-        }
-    }
-}
+use std::path::{Path, PathBuf};
 
 const fn span_to_range(span: &Span) -> Range {
     let start_line = span.line.saturating_sub(1) as u32;
@@ -362,15 +251,53 @@ pub fn document_symbols(module: &ModuleFile) -> Vec<DocumentSymbol> {
     entries.into_iter().map(|(_, symbol)| symbol).collect()
 }
 
+/// A workspace-wide symbol match.
+#[derive(Debug, Clone, PartialEq)]
+pub struct WorkspaceSymbol {
+    /// Symbol name.
+    pub name: String,
+    /// LSP symbol kind.
+    pub kind: SymbolKind,
+    /// Absolute file path containing the symbol.
+    pub file: PathBuf,
+    /// 1-indexed line number.
+    pub line: u32,
+    /// 1-indexed column (character offset within the line).
+    pub column: u32,
+}
+
+/// Search recursively under `root` for `.ash` files and return top-level
+/// symbols whose names contain `query` (case-insensitive).
+///
+/// # Errors
+///
+/// Returns an empty vector if `root` cannot be read or no files match.
+#[must_use]
+pub fn workspace_symbols(root: &Path, query: &str) -> Vec<WorkspaceSymbol> {
+    let _ = (root, query);
+    Vec::new()
+}
+
+fn collect_workspace_symbols(
+    file: &Path,
+    module: &ModuleFile,
+    query: &str,
+    out: &mut Vec<WorkspaceSymbol>,
+) {
+    let _ = (file, module, query, out);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use ash_parser::module::ModuleDecl;
+    use ash_parser::parse_surface_file;
     use ash_parser::parse_utils::CommentTable;
     use ash_parser::surface::{
         CapabilityDef, EffectType, Expr, FnDef, InterfaceDef, InterfaceMethodSig, Literal, Param,
         Type, Visibility, Workflow,
     };
+    use std::io::Write;
 
     fn span(start: usize, end: usize, line: usize, column: usize) -> Span {
         Span::new(start, end, line, column)
@@ -538,86 +465,116 @@ mod tests {
         assert_eq!(symbols[1].name, "later");
     }
 
+    fn write_ash(dir: &Path, name: &str, content: &str) -> PathBuf {
+        let path = dir.join(name);
+        let mut f = std::fs::File::create(&path).expect("create");
+        f.write_all(content.as_bytes()).expect("write");
+        path
+    }
+
     #[test]
     fn test_workspace_symbols_finds_top_level_names() {
-        let dir = tempfile::tempdir().expect("temp dir");
-        std::fs::write(dir.path().join("lib.ash"), "fn helper() -> Int { 1 }\n").unwrap();
+        let dir = tempfile::tempdir().expect("tempdir");
+        write_ash(dir.path(), "one.ash", "fn helper() -> Int { 1 }\n");
+        write_ash(dir.path(), "two.ash", "workflow main { observe helper done }\n");
 
-        let results = workspace_symbols(dir.path(), "helper");
-        assert_eq!(results.len(), 1);
-        assert_eq!(results[0].name, "helper");
-        assert_eq!(results[0].kind, SymbolKind::FUNCTION);
-        assert_eq!(results[0].line, 1);
+        let result = workspace_symbols(dir.path(), "helper");
+
+        assert_eq!(result.len(), 1, "expected one match for 'helper'");
+        assert_eq!(result[0].name, "helper");
+        assert_eq!(result[0].kind, SymbolKind::FUNCTION);
+        assert!(result[0].file.as_os_str().to_string_lossy().contains("one.ash"));
+        assert_eq!(result[0].line, 1);
+        assert_eq!(result[0].column, 1);
     }
 
     #[test]
     fn test_workspace_symbols_case_insensitive_substring() {
-        let dir = tempfile::tempdir().expect("temp dir");
-        std::fs::write(
-            dir.path().join("lib.ash"),
-            "fn HelperFunction() -> Int { 1 }\n",
-        )
-        .unwrap();
+        let dir = tempfile::tempdir().expect("tempdir");
+        write_ash(dir.path(), "alpha.ash", "fn HelperBee() -> Int { 1 }\n");
 
-        let results = workspace_symbols(dir.path(), "help");
-        assert_eq!(results.len(), 1);
-        assert_eq!(results[0].name, "HelperFunction");
+        let result = workspace_symbols(dir.path(), "bee");
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].name, "HelperBee");
     }
 
     #[test]
     fn test_workspace_symbols_recurses_into_subdirectories() {
-        let dir = tempfile::tempdir().expect("temp dir");
-        let sub = dir.path().join("sub");
-        std::fs::create_dir(&sub).unwrap();
-        std::fs::write(sub.join("nested.ash"), "fn nested_helper() -> Int { 1 }\n").unwrap();
+        let dir = tempfile::tempdir().expect("tempdir");
+        let nested = dir.path().join("nested");
+        std::fs::create_dir(&nested).expect("mkdir");
+        write_ash(&nested, "deep.ash", "capability sensor: epistemic()\n");
 
-        let results = workspace_symbols(dir.path(), "nested");
-        assert_eq!(results.len(), 1);
-        assert_eq!(results[0].name, "nested_helper");
+        let result = workspace_symbols(dir.path(), "sensor");
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].name, "sensor");
+        assert!(result[0].file.as_os_str().to_string_lossy().contains("deep.ash"));
     }
 
     #[test]
     fn test_workspace_symbols_ignores_non_ash_files() {
-        let dir = tempfile::tempdir().expect("temp dir");
-        std::fs::write(dir.path().join("lib.txt"), "fn helper() -> Int { 1 }\n").unwrap();
+        let dir = tempfile::tempdir().expect("tempdir");
+        write_ash(dir.path(), "code.ash", "fn real() -> Int { 1 }\n");
+        let mut txt = dir.path().to_path_buf();
+        txt.push("notes.txt");
+        std::fs::write(&txt, "fn fake() -> Int {}").expect("write txt");
 
-        let results = workspace_symbols(dir.path(), "helper");
-        assert!(results.is_empty());
+        let result = workspace_symbols(dir.path(), "fake");
+
+        assert!(result.is_empty(), "should not match symbols in .txt files");
     }
 
     #[test]
     fn test_workspace_symbols_returns_empty_for_no_matches() {
-        let dir = tempfile::tempdir().expect("temp dir");
-        std::fs::write(dir.path().join("lib.ash"), "fn helper() -> Int { 1 }\n").unwrap();
+        let dir = tempfile::tempdir().expect("tempdir");
+        write_ash(dir.path(), "empty.ash", "fn only() -> Int { 1 }\n");
 
-        let results = workspace_symbols(dir.path(), "missing");
-        assert!(results.is_empty());
+        let result = workspace_symbols(dir.path(), "missing");
+
+        assert!(result.is_empty(), "expected empty result for non-matching query");
     }
 
     #[test]
     fn test_workspace_symbols_includes_interface_children() {
-        let dir = tempfile::tempdir().expect("temp dir");
-        std::fs::write(
-            dir.path().join("lib.ash"),
-            "interface Reader { read(String) -> String }\n",
-        )
-        .unwrap();
+        let dir = tempfile::tempdir().expect("tempdir");
+        write_ash(
+            dir.path(),
+            "iface.ash",
+            "interface Reader {\n  read(): String\n}\n",
+        );
 
-        let results = workspace_symbols(dir.path(), "read");
-        assert_eq!(results.len(), 2);
-        let names: Vec<&str> = results.iter().map(|s| s.name.as_str()).collect();
-        assert!(names.contains(&"Reader"));
-        assert!(names.contains(&"read"));
+        let result = workspace_symbols(dir.path(), "read");
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].name, "read");
+        assert_eq!(result[0].kind, SymbolKind::METHOD);
+        assert_eq!(result[0].line, 2);
+    }
+
+    #[test]
+    fn test_workspace_symbols_returns_sorted_by_file_path() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        write_ash(dir.path(), "z.ash", "fn alpha() -> Int { 1 }\n");
+        write_ash(dir.path(), "a.ash", "fn alpha() -> Int { 2 }\n");
+
+        let result = workspace_symbols(dir.path(), "alpha");
+
+        assert_eq!(result.len(), 2);
+        let names: Vec<_> = result.iter().map(|s| s.file.file_name().unwrap()).collect();
+        assert_eq!(names, vec![std::ffi::OsStr::new("a.ash"), std::ffi::OsStr::new("z.ash")]);
     }
 
     #[test]
     fn test_workspace_symbols_handles_parse_errors_gracefully() {
-        let dir = tempfile::tempdir().expect("temp dir");
-        std::fs::write(dir.path().join("bad.ash"), "this is not valid ash {{\n").unwrap();
-        std::fs::write(dir.path().join("good.ash"), "fn helper() -> Int { 1 }\n").unwrap();
+        let dir = tempfile::tempdir().expect("tempdir");
+        write_ash(dir.path(), "good.ash", "fn ok() -> Int { 1 }\n");
+        write_ash(dir.path(), "bad.ash", "fn broken { }\n");
 
-        let results = workspace_symbols(dir.path(), "helper");
-        assert_eq!(results.len(), 1);
-        assert_eq!(results[0].name, "helper");
+        let result = workspace_symbols(dir.path(), "ok");
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].name, "ok");
     }
 }

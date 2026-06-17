@@ -3,6 +3,23 @@
 --
 -- Previously these were Rust builtins. Now they are ordinary Ash functions.
 
+use algebra::semigroup::{Semigroup}
+use algebra::monoid::{Monoid}
+use algebra::functor::{Functor}
+
+pub impl Semigroup<List<A>> {
+    append(left, right) = concat(left, right)
+}
+
+pub impl Monoid<List<A>> {
+    empty() = []
+    append(left, right) = concat(left, right)
+}
+
+pub impl Functor<List> {
+    map(list, f) = map(list, f)
+}
+
 pub fn len<a>(list: List<a>) -> Int {
     match list {
         [] => 0,

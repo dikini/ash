@@ -17,7 +17,8 @@ Verify all tower examples and deferred QuickCheck combinators work with refined 
 - [ ] Verify `fn make_adder(n) { fn(x) { n + x } }` works
 - [ ] Verify `fn compose(f, g) { fn(x) { f(g(x)) } }` works
 - [ ] Verify QuickCheck `recursive` combinator with `GenContext` state passing
-- [ ] Verify QuickCheck `one_of` with list indexing (if list primitives available)
+- [ ] Verify QuickCheck `one_of` with list indexing (TASK-1532 will provide `index`)
+- [ ] Verify QuickCheck `append_shrink` with list concatenation (TASK-1531 will provide `concat`)
 - [ ] Verify all tower examples from SPEC-072 work
 - [ ] Produce verification report
 

@@ -127,7 +127,7 @@ When this task is implemented:
 
 - Language feature: `let` destructors for records (TASK-1520-TASK-1522 may enable workarounds)
 - Language feature: imported type unification in `fn` annotations
-- Language feature: list concatenation / indexing
+- Language feature: list concatenation / indexing (TASK-1530-TASK-1532 will provide `concat`, `index`)
 - Language feature: closures with variable capture (TASK-1520-TASK-1524 closure refinement)
 - OR: `GenContext` state extension as workaround
 

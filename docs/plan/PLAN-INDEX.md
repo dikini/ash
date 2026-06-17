@@ -141,6 +141,7 @@ The following phases are active or recently completed and awaiting archival to [
 | [150](PLAN-150-QUICKCHECK-ARBITRARY-STRATEGY.md) | 12 | 12 | ✅ Complete |
 | [151](PLAN-151-QUICKCHECK-V1-ORDINARY-STRATEGY-SEMANTICS.md) | 13 | 10 | 🚧 Partial Implementation; TASK-1511 deferred combinators planned, TASK-1512 docs planned |
 | [152](PLAN-152-CLOSURE-REFINEMENT-AND-TOWER-DOCUMENTATION.md) | 10 | 0 | 📝 Planned; Closure refinement and tower documentation |
+| [153](PLAN-153-LIST-BUILTIN-TO-STDLIB.md) | 10 | 0 | 📝 Planned; List builtin to stdlib migration |
 
 ---
 
@@ -158,6 +159,7 @@ The following phases are active or recently completed and awaiting archival to [
 | [150](PLAN-150-QUICKCHECK-ARBITRARY-STRATEGY.md) | 12 | 12 | ✅ Complete |
 | [151](PLAN-151-QUICKCHECK-V1-ORDINARY-STRATEGY-SEMANTICS.md) | 13 | 10 | 🚧 Partial Implementation; TASK-1511 deferred combinators planned, TASK-1512 docs planned |
 | [152](PLAN-152-CLOSURE-REFINEMENT-AND-TOWER-DOCUMENTATION.md) | 10 | 0 | 📝 Planned; Closure refinement and tower documentation |
+| [153](PLAN-153-LIST-BUILTIN-TO-STDLIB.md) | 10 | 0 | 📝 Planned; List builtin to stdlib migration |
 
 ## Phase 145: Law Test Evidence Substrate
 
@@ -329,3 +331,25 @@ Refines Ash closures to allow creation in pure contexts with capture-restricted 
 | [TASK-1527](tasks/TASK-1527-update-record-docs-with-closure-fields.md) | Update `reference/language/types/records.md` with closure field examples and capture rules | 📝 Planned |
 | [TASK-1528](tasks/TASK-1528-cookbook-closure-patterns.md) | Write cookbook examples for closures at each stratum: pure, Act, Proc, Workflow | 📝 Planned |
 | [TASK-1529](tasks/TASK-1529-phase-152-closeout.md) | Close out Phase 152 with verification, status reconciliation, and changelog | 📝 Planned |
+
+
+## Phase 153: List Builtin to Stdlib Migration
+
+**Status:** 📝 Planned
+**Plan:** [PLAN-153: List Builtin to Stdlib](PLAN-153-LIST-BUILTIN-TO-STDLIB.md)
+**Spec:** [SPEC-089: List Builtin to Stdlib](../spec/SPEC-089-LIST-BUILTIN-TO-STDLIB.md)
+
+Replace Rust-implemented list builtins with pure Ash implementations in `std/src/list.ash`. Lists become ordinary algebraic data types (`Cons`/`Nil`) rather than opaque runtime primitives. This unblocks Phase 151's deferred QuickCheck combinators and aligns with Ash's principle of minimizing builtins.
+
+| Task | Description | Status |
+|------|-------------|--------|
+| [TASK-1530](tasks/TASK-1530-list-type-definition-and-parsing.md) | Add `List<T>` type definition to stdlib, verify parsing and typechecking | 📝 Planned |
+| [TASK-1531](tasks/TASK-1531-core-list-operations.md) | Implement `len`, `head`, `tail`, `append`, `concat`, `map`, `filter` in pure Ash | 📝 Planned |
+| [TASK-1532](tasks/TASK-1532-extended-list-operations.md) | Implement `index`, `take`, `drop`, `reverse`, `prepend` for QuickCheck combinators | 📝 Planned |
+| [TASK-1533](tasks/TASK-1533-list-algebraic-structures.md) | Implement Applicative, Monad, Foldable, Traversable instances for List | 📝 Planned |
+| [TASK-1534](tasks/TASK-1534-parser-list-literal-desugaring.md) | Update parser to desugar `[...]` syntax to Cons/Nil variants | 📝 Planned |
+| [TASK-1535](tasks/TASK-1535-typechecker-list-constructor.md) | Update type checker to handle `List<T>` as ordinary type constructor | 📝 Planned |
+| [TASK-1536](tasks/TASK-1536-runtime-remove-list-primitive.md) | Remove `Value::List` from runtime, update evaluation and pattern matching | 📝 Planned |
+| [TASK-1537](tasks/TASK-1537-verification-and-benchmarking.md) | Verify all tests pass, run property tests, benchmark performance | 📝 Planned |
+| [TASK-1538](tasks/TASK-1538-update-dependent-tasks.md) | Update TASK-1511, TASK-1524, and other dependent tasks with new list primitives | 📝 Planned |
+| [TASK-1539](tasks/TASK-1539-phase-153-closeout.md) | Close out Phase 153 with documentation, changelog, and status reconciliation | 📝 Planned |

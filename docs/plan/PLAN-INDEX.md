@@ -139,7 +139,7 @@ The following phases are active or recently completed and awaiting archival to [
 | [148](PLAN-148-FLAKY-TEST-QUARANTINE-AND-DISTRIBUTED-ORCHESTRATION.md) | 8 | 8 | ✅ Complete |
 | [149](PLAN-149-PROOF-PRODUCING-SYNTHESIS-TODO-SPEC.md) | 3 | 0 | ⏸️ Deferred / To-Spec |
 | [150](PLAN-150-QUICKCHECK-ARBITRARY-STRATEGY.md) | 12 | 12 | ✅ Complete |
-| [151](PLAN-151-QUICKCHECK-V1-ORDINARY-STRATEGY-SEMANTICS.md) | 13 | 12 | ✅ Complete; TASK-1512 (docs) planned |
+| [151](PLAN-151-QUICKCHECK-V1-ORDINARY-STRATEGY-SEMANTICS.md) | 13 | 13 | ✅ Complete |
 | [152](PLAN-152-CLOSURE-REFINEMENT-AND-TOWER-DOCUMENTATION.md) | 10 | 10 | ✅ Complete; Closure refinement and tower documentation |
 | [153](PLAN-153-LIST-BUILTIN-TO-STDLIB.md) | 10 | 10 | ✅ Complete; List builtins migrated to pure Ash stdlib |
 | [154](PLAN-154-TYPE-ANNOTATION-QUIRKS.md) | 5 | 5 | ✅ Complete; Type annotation quirks (already worked) |
@@ -162,7 +162,7 @@ The following phases are active or recently completed and awaiting archival to [
 | [148](PLAN-148-FLAKY-TEST-QUARANTINE-AND-DISTRIBUTED-ORCHESTRATION.md) | 8 | 8 | ✅ Complete |
 | [149](PLAN-149-PROOF-PRODUCING-SYNTHESIS-TODO-SPEC.md) | 3 | 0 | ⏸️ Deferred / To-Spec |
 | [150](PLAN-150-QUICKCHECK-ARBITRARY-STRATEGY.md) | 12 | 12 | ✅ Complete |
-| [151](PLAN-151-QUICKCHECK-V1-ORDINARY-STRATEGY-SEMANTICS.md) | 13 | 12 | ✅ Complete; TASK-1512 (docs) planned |
+| [151](PLAN-151-QUICKCHECK-V1-ORDINARY-STRATEGY-SEMANTICS.md) | 13 | 13 | ✅ Complete |
 | [152](PLAN-152-CLOSURE-REFINEMENT-AND-TOWER-DOCUMENTATION.md) | 10 | 10 | ✅ Complete; Closure refinement and tower documentation |
 | [153](PLAN-153-LIST-BUILTIN-TO-STDLIB.md) | 10 | 10 | ✅ Complete; List builtins migrated to pure Ash stdlib |
 | [154](PLAN-154-TYPE-ANNOTATION-QUIRKS.md) | 5 | 5 | ✅ Complete; Type annotation quirks (already worked) |

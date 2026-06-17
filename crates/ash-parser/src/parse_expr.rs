@@ -1182,6 +1182,16 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
         return Ok(e);
     }
 
+    // Try anonymous fn expression: fn(params) [-> type] { body }
+    // Phase 158 fix: enable fn expressions in all primary positions
+    {
+        let saved = input.clone();
+        if let Ok(fn_def) = parse_fn_expr(input) {
+            return Ok(fn_def);
+        }
+        *input = saved;
+    }
+
     // Try bracket comprehension expression: [result | qualifiers]: K (SPEC-055 substrate)
     {
         let saved = input.clone();

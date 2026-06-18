@@ -150,9 +150,20 @@ type system, and runtime continuation objects in the evaluator. Only runtime/val
 continuations carry captured `env` and `chain`; the type-level `Cont` records only argument,
 answer, and row.
 
-A `Lam` is a CPS function value. It is not a tail computation — it is a value that can be
-bound to a variable, passed as an argument, or stored in a data structure. The body of a
-`Lam` is a `Term` (a tail computation), not a `Value`.
+At function entry, `cont_param` binds a continuation reference, not an ordinary value
+parameter. If the caller supplies a label continuation, the evaluator aliases the
+parameter to that label in the continuation environment. If the continuation crosses a
+handler boundary or must be stored/passed as a value, it is lowered to a `Cont` closure
+that captures `env` and `chain`.
+
+```text
+Lam { params: Vec<Param>, cont_param: ContParam(k), body: Term, row: EffectRow }
+```
+
+A `ContParam` is a special parameter kind that binds a `ContRef` at function entry. It is
+not an ordinary value parameter and cannot be stored in data structures or passed to
+ordinary functions. The callee's body may `Jump` to `k` directly, or pass `k` to another
+CPS function via `Call { cont: k, ... }`.
 
 ### 2.3 Term
 
@@ -195,9 +206,6 @@ Term ::= LetVal { name: Name, value: Value, body: Term }
 Every CPS term is typed under a fixed answer type `Ans` for its region:
 
 ```text
-The core judgment is:
-
-```text
 Γ ⊢ atom : A
 Γ ⊢ value : A
 Γ ⊢ term ! Ans, local ρ_local, total ρ_total
@@ -210,7 +218,10 @@ where:
 
 This dual-row accounting distinguishes a term's own effects from the effects of the
 continuations it invokes. `CpsFn.body_row`, `Lam.row`, and `HandlerClause.row` use the
-local row. Term execution and checking also compute a total row.
+local row. Term execution and checking also compute a total row. For ordinary term checking
+and boundary/admission discharge, `ρ_total` is the externally visible computation
+requirement row. `ρ_local` is used to summarize callable bodies, handler clauses, and
+residual body rows before adding designated continuation effects.
 
 **Row accounting by term form:**
 
@@ -230,6 +241,32 @@ Call { func, cont, row: ρ_total }:
 Handle { row: ρ_residual, cont }:
   local row = ρ_residual
   total row = ρ_residual ∪ ρ_cont
+
+LetVal { value, body }:
+  local row = body.local
+  total row = body.total
+
+LetPrim { op, args, body }:
+  local row = prim_row(op) ∪ body.local
+  total row = prim_row(op) ∪ body.total
+
+LetCont { name, param, body, rest }:
+  local row = rest.local
+  total row = rest.total
+  -- body determines the row of the bound continuation
+
+If { then_branch, else_branch, row }:
+  local row = then.local ∪ else.local
+  total row = then.total ∪ else.total
+  -- If.row is the local cached row (union of branch locals)
+
+RecordDischarge { discharge, body }:
+  local row = body.local after recorded discharge
+  total row = body.total after recorded discharge
+
+Trap:
+  local row = {}
+  total row = {}
 ```
 
 `Lam.row`, `CpsFn.body_row`, and `HandlerClause.row` use the local row of their bodies.
@@ -471,9 +508,10 @@ handler row: {handler_effects}
 Handle { op, ... } row: {handler_effects, ... | r}
 ```
 
-The handled operation `op` is removed from the row. The handler's own effects are added.
-Unhandled operations in the row remain. This rule applies only to operations from the
-"raised operations" category in §5.6.
+The handled operation `op` is removed from the body's **local** raised-operation row. The
+handler's own effects are added. Unhandled operations in the row remain. This rule applies
+only to operations from the "raised operations" category in §5.6. The total row of the
+`Handle` term is computed by adding the continuation row as described in §2.4.
 
 ### 5.6 Effect Handling vs Ambient Discharge
 
@@ -590,7 +628,7 @@ Lowers to a dynamic contract check followed by the operation:
 
 ```text
 safe_divide =
-  Lam { params: [a, b], cont_param: k, row: {requires {b != 0}},
+  Lam { params: [a, b], cont_param: k, row: {},
     body:
       LetPrim { name: ok, op: Neq, args: [b, 0],
         body:
@@ -613,6 +651,9 @@ safe_divide =
 
 Key points:
 - The source function advertises the pre-discharge contract requirement `{requires {b != 0}}`.
+- The lowered `Lam.row` is `{}` because the lowered body has local row `{}` after dynamic
+  discharge removes the contract requirement. The source requirement is preserved in the
+  `ContractDischarge` metadata, not in the residual effect row.
 - After the dynamic check records `ContractDischarge`, the residual row of the continuation
   is `{}`.
 - The contract predicate `b != 0` is a primitive operation (`Neq`), bound via `LetPrim`.
@@ -817,12 +858,12 @@ the computation.
 ## 9. Laziness and Evaluation Strategy in CPS (Pseudo-IR)
 
 This section explores how call-by-name and call-by-need evaluation can be expressed in the
-The examples below are **pseudo-IR** — they use notation that is not yet part of the
+CPS IR. The examples below are **pseudo-IR** — they use notation that is not yet part of the
 core grammar (e.g., mutable environment cells, `Option`, field access, inline continuation
 closures, `CpsClosure`). `CpsClosure` is pseudo-IR shorthand for a `Lam` or `Cont` value
-with a captured mutable environment. A fully normalized term must first bind each
-intermediate result to a name via `LetVal` or `LetPrim` before using it in a data position.
-primitive/effect model.
+with a captured mutable environment. A fully normalized term must first bind each thunk
+closure, inline continuation closure, and intermediate result to a name, and must lower
+memo-cell reads/writes through the chosen primitive/effect model.
 
 ### 9.1 Thunks in CPS
 
@@ -986,7 +1027,8 @@ eval(Handle { clause, body, cont = k }) under chain H
 The fresh label `h` is bound in the evaluator's continuation environment to the installed
 `HandlerFrame`. A normal `Jump` to `h` enters the frame and forwards the value to `next`;
 a `Raise` evaluated while `h` is current dispatches through the frame's handler/provider
-chain.
+chain. The label `h` is a runtime-only continuation-frame label outside source IR syntax;
+it is not an IR label introduced by lowering as an implicit `LetCont`-like declaration.
 ```
 
 The body is lowered with `current_cont` bound to the fresh handler label `h`. Only the

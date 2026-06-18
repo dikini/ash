@@ -524,7 +524,180 @@ Key points:
 
 All three patterns are built from the same six core CPS nodes. No special-purpose constructs.
 
-## 6. Handler Stack as CPS Continuation Chain
+## 6. Laziness and Evaluation Strategy in CPS
+
+This section explores how call-by-name and call-by-need evaluation can be expressed in the
+CPS IR without special constructs. The goal is to show that evaluation strategy is a calling
+convention — thunks instead of values — and that the existing CPS nodes are sufficient.
+
+This is a design exploration. The surface syntax, effect annotations, and type-system rules
+for laziness are left to future specs. The IR treatment below is the target that those specs
+must refine.
+
+### 6.1 Thunks in CPS
+
+A thunk is a zero-parameter CPS function that delays evaluation:
+
+```text
+Thunk<A> = Lam { params: [], cont_param: k, body: ... }
+```
+
+When applied with `App { func: thunk, args: [], cont: k }`, it evaluates its body and
+invokes `k` with the result. No special IR node needed.
+
+### 6.2 Call-by-Name
+
+In call-by-name, arguments are wrapped in thunks and passed unevaluated. The function
+forces each thunk at each use site.
+
+**Surface sketch (for illustration only):**
+```ash
+fn lazy_if(cond: Thunk<<Bool>, then: Thunk<A>, else: Thunk<A>) -> A {
+    if force(cond) then force(then) else force(else)
+}
+```
+
+**CPS lowering:**
+
+```text
+lazy_if = Lam { params: [cond, then, else], cont_param: k, row: r,
+    body: App { func: cond, args: [],           -- force cond
+        cont: Lam { params: [cond_val], cont_param: k_cond,
+            body: If { cond: cond_val,
+                then_branch: App { func: then, args: [], cont: k, row: r },  -- force then
+                else_branch: App { func: else, args: [], cont: k, row: r },  -- force else
+                cont: k, row: r } } } }
+```
+
+**Lazy application:**
+```ash
+lazy_if(
+    { expensive_predicate(x) },      -- thunk 1: not evaluated yet
+    { compute_then(y) },             -- thunk 2: not evaluated yet
+    { compute_else(z) }             -- thunk 3: not evaluated yet
+)
+```
+
+Lowers to:
+```text
+App { func: lazy_if,
+      args: [
+          Lam { params: [], cont_param: k1,
+                body: App { func: expensive_predicate, args: [x], cont: k1, row: r } },
+          Lam { params: [], cont_param: k2,
+                body: App { func: compute_then, args: [y], cont: k2, row: r } },
+          Lam { params: [], cont_param: k3,
+                body: App { func: compute_else, args: [z], cont: k3, row: r } }
+      ],
+      cont: k, row: r }
+```
+
+Key points:
+- Arguments are `Lam { params: [] }` — thunks.
+- The caller does not evaluate arguments before the call.
+- The callee decides when to force each thunk by applying it with `App { func: thunk, args: [] }`.
+- Effects inside the thunk fire at the force site, not at the call site.
+
+### 6.3 Call-by-Need (Memoized)
+
+In call-by-need, a thunk is forced once, then its result is cached. Subsequent forces return
+the cached value without re-evaluation.
+
+**CPS thunk with memo cell:**
+
+```text
+memo_thunk = CpsClosure {
+    params: [],
+    cont_param: k,
+    env: { computed: Bool, value: Option<A>, body: Expr },
+    body: If { cond: env.computed,
+        then_branch: App { func: k, args: [env.value.unwrap()], cont: k, row: {} },
+        else_branch: App { func: env.body, args: [],
+            cont: Lam { params: [v], cont_param: k_body,
+                body: Let { name: _, value: env.computed = true,
+                    body: Let { name: _, value: env.value = Some(v),
+                        body: App { func: k, args: [v], cont: k_body, row: {} } } } } } },
+    row: r
+}
+```
+
+Key points:
+- The thunk is a `CpsClosure` with a mutable environment cell.
+- On first force: evaluate `body`, store result, return it.
+- On subsequent force: return cached result directly.
+- The memo cell is part of the closure environment, not a separate IR construct.
+
+**Lazy list (streams):**
+```ash
+data Stream<A> = Cons { head: Thunk<A>, tail: Thunk<Stream<A>> }
+```
+
+A stream is a pair of memoized thunks. The head is forced when accessed, the tail is forced
+when the stream is advanced. Infinite streams are just recursive thunks.
+
+### 6.4 Strictness and Mixed Strategies
+
+A function can mix strict and lazy parameters:
+
+```text
+fn mixed(strict: Int, lazy: Thunk<String>) -> A
+```
+
+Lowers to:
+```text
+mixed = Lam { params: [strict, lazy], cont_param: k, row: r,
+    body: ... -- strict is a value, lazy is a thunk }
+```
+
+The IR does not distinguish them at the parameter level. The distinction is in the calling
+convention: the caller evaluates `strict` before the call, but passes `lazy` as a thunk.
+
+### 6.5 Effect Row Implications (Design Space)
+
+The effect row of a lazy function depends on which thunks are forced:
+
+```text
+fn f(x: Thunk<{cap db.read} String>) -> {cap db.read} Int
+```
+
+If `x` is forced inside `f`, the row includes `cap db.read`. If `x` is never forced, the row
+does not. The type checker must approximate this (e.g., assume all thunks may be forced, or
+track force sites).
+
+For call-by-need, the memoization itself is a stateful operation. It could be tracked as an
+effect:
+
+```text
+memo Thunk<A>  -- reads/writes a memo cell
+```
+
+Or it could be treated as a pure runtime primitive (invisible to the effect system).
+
+### 6.6 Open Questions for Future Specs
+
+1. **Surface syntax:** How are thunks created and forced? Explicit syntax (`Thunk { expr }`,
+   `force x`) or implicit (`lazy expr`, `x`)?
+2. **Type system:** Is `Thunk<A>` a distinct type constructor? Can it appear in effect rows?
+3. **Effect tracking:** Are `force` and `memo` explicit effect items, or implicit runtime
+   operations?
+4. **Pattern matching:** Are patterns lazy or strict by default? Can patterns force thunks?
+5. **Data constructors:** Can constructor fields be lazy? How is this annotated?
+6. **Interaction with `do`:** Is `do` notation strict or lazy? Can lazy thunks appear in `do`
+   blocks?
+7. **Memoization scope:** Is memoization per-thunk (global) or per-evaluation-context (local)?
+
+### 6.7 Summary
+
+| Strategy | IR Representation | Force Mechanism | Memoization |
+|----------|-------------------|-------------------|-------------|
+| Call-by-value | Value passed directly | N/A | N/A |
+| Call-by-name | `Lam { params: [] }` | `App { func: thunk, args: [] }` | None |
+| Call-by-need | `CpsClosure` with memo cell | `App { func: thunk, args: [] }` | Env cell |
+
+Laziness is a calling convention in the CPS IR. No special nodes needed. The design space for
+surface syntax, type system integration, and effect tracking is left to future specs.
+
+## 7. Handler Stack as CPS Continuation Chain
 
 In CPS, handlers are not a separate stack data structure. They are continuations that wrap
 the "next" continuation. A handler frame is a `Cont` value that intercepts matching `Raise` nodes.

@@ -75,6 +75,32 @@ Atom ::= ... | Label(LabelId) | Var(Name)
 A `Label` is a static continuation target. A `Var` may name a `Lam` (CPS function) or a
 `Cont` (continuation closure). The type checker distinguishes them by type.
 
+**Label declarations:**
+
+Labels are declared at function scope or via `LetCont`:
+
+```text
+Term ::= ... | LetCont { name: LabelId, param: Param, body: Term, rest: Term }
+```
+
+`LetCont` binds a label `name` with parameter `param` to `body`. The label is visible in
+`rest` and can be jumped to from anywhere in `rest`. Labels are not values — they are
+static control-flow targets. A `Jump { cont: Label(name), arg: v }` transfers control to
+the label's body with `v` bound to the label's parameter.
+
+**Continuation closure values:**
+
+When a continuation must be passed as a value (e.g., as a resume parameter), it is a
+`Cont` value:
+
+```text
+Value ::= ... | Cont { param: Param, body: Term, env: Env, row: EffectRow }
+```
+
+A `Cont` value is a closure that captures its environment. It is invoked by `Jump` and
+consumes its argument to produce the answer. `Cont` values are linear/affine: they can be
+invoked at most once. The type checker enforces this via affine typing.
+
 ## 2. Core Grammar
 
 The target IR has three syntactic layers. This separation is required for CPS soundness.
@@ -100,8 +126,10 @@ A value is an atom or a value constructor that does not perform effects.
 ```text
 Value ::= Atom
         | Lam { params: Vec<Param>, cont_param: Param, body: Term, row: EffectRow }
+        | Cont { param: Param, body: Term, env: Env, row: EffectRow }
         | Record { fields: Vec<(Name, Atom)> }
         | Tuple { elems: Vec<Atom> }
+        | DischargeMarker { discharge: ContractDischarge }
 ```
 
 A `Lam` is a CPS function value. It is not a tail computation — it is a value that can be
@@ -116,11 +144,13 @@ is evaluated under an answer type `Ans`.
 ```text
 Term ::= LetVal { name: Name, value: Value, body: Term }
         | LetPrim { name: Name, op: PrimOp, args: Vec<Atom>, body: Term }
+        | LetCont { name: LabelId, param: Param, body: Term, rest: Term }
         | Call { func: Atom, args: Vec<Atom>, cont: Atom, row: EffectRow }
         | Jump { cont: Atom, arg: Atom, row: EffectRow }
         | If { cond: Atom, then_branch: Term, else_branch: Term, row: EffectRow }
         | Raise { op: EffectOp, args: Vec<Atom>, resume: Atom, row: EffectRow }
         | Handle { clause: HandlerClause, body: Term, cont: Atom, row: EffectRow }
+        | RecordDischarge { discharge: ContractDischarge, body: Term }
 ```
 
 **Key invariants:**
@@ -132,8 +162,10 @@ Term ::= LetVal { name: Name, value: Value, body: Term }
    and produces the answer.
 3. A `Call` invokes an ordinary CPS function (`Lam`) with arguments and a continuation.
    The callee's body is a term that must eventually `Jump` to the provided continuation.
-4. `LetVal` and `LetPrim` bind values to names. They are administrative normal form (ANF)
-   bindings. Every intermediate result is named.
+4. `LetVal`, `LetPrim`, and `LetCont` bind values, primitive results, and labels to names.
+   They are administrative normal form (ANF) bindings. Every intermediate result is named.
+5. `RecordDischarge` is an administrative term that records contract discharge status.
+   It is a no-op at runtime but preserves metadata for audit and evidence caching.
 
 ### 2.4 Answer Type Discipline
 
@@ -248,7 +280,7 @@ pub enum EffectItem {
 }
 ```
 
-See SPEC-097b for the full type definitions.
+See SPEC-096b and SPEC-097b for the taxonomy and semantic definitions.
 
 ### 4.1 Contract Discharge Status
 
@@ -309,6 +341,13 @@ For example, a capability call `Raise { op: cap db.read, resume: k }` has:
 - `resume.row = ρk`
 - `term_row = {cap db.read} ∪ ρk`
 
+**Capability discharge layering:** For capability operations, `Raise` is the operational
+request form. The requirement row is discharged by an admitted provider/authority. In the
+CPS IR, that provider may be represented as a `HandlerFrame` installed by the runtime boundary,
+or as ambient authority that directly services the `Raise` without an explicit handler. Both
+paths preserve the "rows are requirements, not grants" rule: the row records what is needed,
+not what is available.
+
 ### 5.3 Handler Clause
 
 ```rust
@@ -349,7 +388,11 @@ residual row.
 
 ### 5.5 Handler Row Transformation
 
-A `Handle` node transforms the row of its body:
+A `Handle` node transforms the row of its body, but only for **raised operations** (see
+§5.6). Ambient-discharge items (roles, policies, contracts, evidence, resources) are not
+removed by `Handle`; they are discharged by their respective kind-specific mechanisms.
+
+For a raised operation:
 
 ```text
 body row: {op, ... | r}
@@ -358,7 +401,8 @@ Handle { op, ... } row: {handler_effects, ... | r}
 ```
 
 The handled operation `op` is removed from the row. The handler's own effects are added.
-Unhandled operations in the row remain. This rule must be explicit in the type system.
+Unhandled operations in the row remain. This rule applies only to operations from the
+"raised operations" category in §5.6.
 
 ### 5.6 Effect Handling vs Ambient Discharge
 
@@ -482,28 +526,38 @@ safe_divide =
           If { cond: ok,
             then_branch:
               LetPrim { name: result, op: Div, args: [a, b],
+              body:
+              RecordDischarge {
+                discharge: ContractDischarge {
+                  contract: Contract(requires {b != 0}),
+                  mode: Dynamic,
+                  evidence: None,
+                  source_span: ... },
                 body:
-                  LetVal { name: _,
-                    value: ContractDischarge {
-                      contract: Contract(requires {b != 0}),
-                      mode: Dynamic,
-                      evidence: None,
-                      source_span: ... },
-                    body:
-                      Jump { cont: k, arg: result, row: {} } },
+                  Jump { cont: k, arg: result, row: {} } },
             else_branch:
-              Jump { cont: k, arg: 0, row: {} },
+              Raise {
+                op: EffectOp { item: Failure(ContractViolation), args: [], result: () },
+                args: [],
+                resume: k,
+                row: {Failure(ContractViolation)} },
             row: {} } } }
 ```
 
 Key points:
 - The contract predicate `b != 0` is a primitive operation (`Neq`), bound via `LetPrim`.
 - On success: the contract is discharged with `mode: Dynamic` and recorded in the IR.
-- On failure: the function returns `0` (or could raise a failure effect).
+- On failure: the function raises a `Failure` effect (or could trap/abort). The example
+  below shows `Raise` with a `Failure` effect; alternatively, a runtime trap is acceptable
+  for unrecoverable contract violations.
 - The `ContractDischarge` node is a no-op at runtime but preserves the discharge status for
   audit and evidence caching. It does not appear in the effect row after discharge.
 - This example is consistent with §5.6: contracts are discharged by boundary checks, not by
   `Handle` frames.
+
+**Alternative failure semantics:** If the contract violation is unrecoverable, the failure
+branch can trap or abort rather than returning a default value. The choice between recovery
+and trap is a policy decision, not an IR invariant.
 
 ## 8. Handler Patterns (Schematic Examples)
 
@@ -548,6 +602,7 @@ fetch_with_retry = Lam { params: [url], cont_param: k, row: {cap http.get},
 Key points:
 - `retry_loop` is a recursive CPS function.
 - The body is re-invoked on each retry by `Call` to `retry_loop`.
+- The capability operation is a `Raise`, not a `Call`.
 - The schematic uses `Err(...)` and `>` in atom position — these would be `LetPrim` bindings
   in fully normalized IR.
 
@@ -611,7 +666,7 @@ k_release(_):
 
 Key points:
 - The undo action is inlined into the failure continuation `k_transfer`.
-- On failure: `Call` to `payment.release`, then `Jump` to `k` with error.
+- On failure: `Raise` to `payment.release`, then `Jump` to `k` with error.
 - The schematic uses `is_ok(...)` and `Ok(...)` in atom position — these would be `LetPrim`
   bindings in fully normalized IR.
 
@@ -676,11 +731,15 @@ Key points:
 
 | Pattern | Core Mechanism | IR Nodes Used |
 |---------|---------------|---------------|
-| Retry | Recursive CPS wrapper | `Lam`, `Call`, `If`, `LetVal` |
-| Rollback | Undo actions in failure continuations | `Call`, `If`, `Jump`, `LetVal` |
-| Transaction | Nested `Handle` frames intercepting `Raise` | `Handle`, `Lam`, `Call`, `If`, `LetVal` |
+| Retry | Recursive CPS wrapper | `Lam`, `Raise`, `Call`, `If`, `LetVal` |
+| Rollback | Undo actions in failure continuations | `Raise`, `If`, `Jump`, `LetVal` |
+| Transaction | Nested `Handle` frames intercepting `Raise` | `Handle`, `Raise`, `Lam`, `If`, `LetVal`, `LetPrim` |
 
 All three patterns are built from the core CPS nodes. No special-purpose constructs.
+
+**Note on example rows:** Unless stated otherwise, examples assume the top-level continuation
+`k` has empty row `{}`. In production IR, continuation rows carry the effects of the rest of
+the computation.
 
 ## 9. Laziness and Evaluation Strategy in CPS (Pseudo-IR)
 
@@ -696,7 +755,12 @@ primitive/effect model.
 A thunk is a zero-parameter CPS function that delays evaluation:
 
 ```text
-Thunk<A> = Lam { params: [], cont_param: k, body: Term<A>, row: ρ }
+Thunk<A> = Lam {
+  params: [],
+  cont_param: k : Cont<A, Ans, ρk>,
+  body: Term ! Ans, ρ,
+  row: ρ
+}
 ```
 
 When forced with `Call { func: thunk, args: [], cont: k, row: ρ }`, it evaluates its body and
@@ -811,7 +875,14 @@ wrap the "next" continuation. A `HandlerFrame` is a `Cont` value that intercepts
 ```rust
 pub struct HandlerFrame {
     pub clause: HandlerClause,
-    pub next: Box<Cont>,  -- the next continuation in the chain
+    pub next: Box<Cont>,      -- the next continuation in the chain
+    pub parent: HandlerChain, -- the rest of the chain beyond this frame
+}
+
+pub enum HandlerChain {
+    Empty,                          -- end of chain
+    Frame(Box<HandlerFrame>),       -- another handler frame
+    Cont(Box<Cont>),                -- ordinary continuation
 }
 ```
 
@@ -821,7 +892,8 @@ it matches the raised operation against `clause.op`.
 
 ### 10.2 Handle Operational Semantics
 
-`Handle` installs a handler frame around the body:
+`Handle` installs a handler frame around the body by rebinding the body's current
+continuation:
 
 ```text
 eval(Handle { clause, body, cont = k }) under chain H
@@ -829,8 +901,13 @@ eval(Handle { clause, body, cont = k }) under chain H
 ```
 
 The body evaluates with a new current continuation chain that has the handler frame at the
-head. The frame's `next` is the `Handle.cont` continuation `k`. If the body completes normally
-(by `Jump` to its current continuation), the handler frame forwards to `k`.
+head. The frame's `next` is the `Handle.cont` continuation `k`. The frame's `parent` is the
+previous chain `H`.
+
+**Rebinding rule:** All implicit or explicit continuation references inside `body` target the
+handler frame `h` as the current continuation. If the body completes normally (by `Jump` to
+its current continuation), the handler frame forwards to `k`. If the body raises an effect,
+the handler frame intercepts it (see §10.3).
 
 ### 10.3 Raise Operational Semantics
 
@@ -840,17 +917,31 @@ head. The frame's `next` is the `Handle.cont` continuation `k`. If the body comp
 eval(Raise { op, args, resume = k_resume }) under chain H
   = find first matching HandlerFrame in H
 
-If found (HandlerFrame { clause, next }):
-  - Build resume continuation: resume = Cont { arg: clause.op.result, body: rebuild_chain(next, k_resume) }
+If found (HandlerFrame { clause, next, parent }):
+  - Build resume continuation:
+      resume = Cont {
+        arg: clause.op.result,
+        body: Jump { cont: next, arg: arg, row: next.row },
+        env: capture_env(parent, k_resume),
+        row: clause.op.result_row ∪ next.row ∪ k_resume.row
+      }
   - Invoke clause.body with args and resume
 
 If not found:
   - Stuck(UnhandledEffect(op))
 ```
 
-The `resume` continuation reconstructs the rest of the chain: when the handler jumps to
-`resume`, execution continues with the next continuation after the handler frame, eventually
-reaching the original `k_resume`.
+**Resume construction:** The resume continuation is a `Cont` value that, when invoked,
+jumps to `next` (the continuation after the handler frame) with the resumed value. The
+resume captures the environment from `parent` and `k_resume`, preserving the rest of the
+chain. The resume is one-shot: after the handler jumps to it, the `Cont` is consumed.
+
+**Nested handler behavior:**
+- The resume continues after the matching handler frame only, not before it.
+- Outer handlers (closer to the root) remain in the chain and are preserved.
+- Inner handlers (installed after the raise site) are skipped because the resume jumps to
+  `next`, which is the continuation after the matching handler.
+- The matching handler itself is not reinstalled: the resume jumps past it.
 
 ### 10.4 Handler Dispatch
 
@@ -967,6 +1058,9 @@ The CPS form enables several standard optimizations:
 
 1. Whether to use explicit labels or closures for continuations (labels enable better
    contification and compilation to machine code; closures are simpler for interpretation).
+   **Current choice:** Labels are the default representation. Closures are used only when
+   a continuation must be passed as a value. This is an implementation choice, not a
+   semantic open question.
 2. Whether the CPS IR is the canonical IR or an intermediate layer between a higher-level IR
    and a lower-level IR.
 3. How to represent mutually recursive CPS functions (`LetRec` or fixpoint combinator).

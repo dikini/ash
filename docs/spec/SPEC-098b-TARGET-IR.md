@@ -309,7 +309,7 @@ add = Lam { params: [a, b], cont_param: k,
             body: App { func: PrimOp(Add), args: [a, b], cont: k, row: {} } }
 ```
 
-An effectful function:
+An effectful function (using `do` notation):
 ```ash
 fn read_config(path: String) -> {cap fs.read} String {
     do { contents <- fs.read(path); return contents }
@@ -322,6 +322,22 @@ read_config = Lam { params: [path], cont_param: k, row: {cap fs.read},
                 cont: Lam { params: [contents], cont_param: k2,
                             body: App { func: k2, args: [contents], cont: k, row: {cap fs.read} } } } }
 ```
+
+A simple effectful function (no `do` notation, just a direct capability call):
+```ash
+fn get_user_name(id: Int) -> {cap db.read} String {
+    db.read("users", id)
+}
+```
+lowers to:
+```text
+get_user_name = Lam { params: [id], cont_param: k, row: {cap db.read},
+    body: App { func: db.read, args: ["users", id], cont: k, row: {cap db.read} } }
+```
+
+This is the minimal case: a function with an effect row that simply invokes a capability
+and passes the result directly to the continuation. No `do` block, no bind, no local variables.
+The only difference from a pure function is the non-empty effect row on the `Lam` and the `App`.
 
 A handler boundary:
 ```ash

@@ -395,11 +395,52 @@ When a `Raise` node is evaluated:
 This is equivalent to the operational semantics in SPEC-099b but expressed directly in the
 CPS IR rather than as a separate runtime stack.
 
-## 7. Migration Compatibility
+## 7. Migration and IR Evolution
 
-### 7.1 Legacy IR to CPS Lowering
+### 7.1 Two IRs During Migration
 
-During migration, legacy AST variants are lowered to CPS in a single pass:
+During the migration period, the compiler maintains **two IRs**:
+
+1. **Legacy IR**: The current AST with `Act`, `Proc`, `Workflow`, `Do`, and other
+   migration-era artifacts. This is what the current parser produces.
+2. **Target IR (CPS)**: The new CPS form with `Lam`, `App`, `Raise`, `Handle`, etc.
+
+The lowering pipeline is:
+
+```text
+surface AST (legacy syntax)
+    |
+    v
+Legacy IR (Act/Proc/Workflow/Do variants)
+    |
+    v
+lower_to_cps.rs -- single pass lowering
+    |
+    v
+Target IR (CPS: Lam/App/Raise/Handle/If/Let)
+    |
+    v
+type checker, optimizer, code generator
+```
+
+All semantic analysis operates on the Target IR only. The Legacy IR is a transient
+representation that exists only between parsing and the CPS lowering pass.
+
+### 7.2 Migration Completion Flag
+
+Migration is complete when:
+
+- The parser produces Target IR directly (no Legacy IR variants);
+- The `lower_to_cps` pass becomes an identity function on Target IR;
+- No code path constructs `Act`, `Proc`, `Workflow`, or `Do` AST nodes;
+- The Legacy IR variants are removed from the `Expr` enum.
+
+At that point, the compiler has a single IR: the CPS form. The presence of a non-identity
+lowering pass is a clear flag that migration is still in progress.
+
+### 7.3 Legacy IR to CPS Lowering Rules
+
+During migration, legacy AST variants are lowered to CPS:
 
 ```text
 legacy Expr::Act { ... }      -> CPS Lam { cont_param: k, body: [lowered], row: Act_profile }
@@ -410,13 +451,13 @@ legacy Type::Fn { ... }       -> CPS CpsFn { params, cont: Cont { arg: ret, ... 
 legacy Type::Fun { ... }      -> CPS CpsFn { params, cont: Cont { arg: ret, ... }, ret: final_answer, row: effect }
 ```
 
-### 7.2 Dual Representation
+### 7.4 Dual Representation (Temporary)
 
 A conforming implementation may maintain both representations during migration:
 
 ```rust
 pub enum Expr {
-    -- CPS representation (new)
+    -- CPS representation (target)
     Lam { ... },
     App { ... },
     Raise { ... },
@@ -424,7 +465,7 @@ pub enum Expr {
     If { ... },
     Let { ... },
 
-    -- Legacy compatibility (deprecated, lowered to CPS before semantic analysis)
+    -- Legacy compatibility (to be removed after migration)
     Act { ... },
     Do { ... },
     Proc { ... },
@@ -432,8 +473,8 @@ pub enum Expr {
 }
 ```
 
-The legacy variants are always lowered to CPS before type checking, optimization, or code
-generation. No semantic analysis operates on the legacy forms directly.
+The legacy variants are always lowered to CPS before semantic analysis. They are never
+optimized, interpreted, or code-generated directly.
 
 ## 8. CPS Optimization Opportunities
 

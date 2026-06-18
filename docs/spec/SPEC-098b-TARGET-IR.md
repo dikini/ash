@@ -132,7 +132,7 @@ A value is an atom or a value constructor that does not perform effects.
 
 ```text
 Value ::= Atom
-        | Lam { params: Vec<Param>, cont_param: Param, body: Term, row: EffectRow }
+        | Lam { params: Vec<Param>, cont_param: ContParam, body: Term, row: EffectRow }
         | Cont { param: Param, body: Term, env: Env, chain: HandlerChain, row: EffectRow }
         | Record { fields: Vec<(Name, Atom)> }
         | Tuple { elems: Vec<Atom> }
@@ -172,6 +172,7 @@ is evaluated under an answer type `Ans`.
 
 ```text
 Term ::= LetVal { name: Name, value: Value, body: Term }
+        | LetRec { name: Name, value: Value, body: Term }
         | LetPrim { name: Name, op: PrimOp, args: Vec<Atom>, body: Term }
         | LetCont { name: LabelId, param: Param, body: Term, rest: Term }
         | Call { func: Atom, args: Vec<Atom>, cont: ContRef, row: EffectRow }
@@ -181,6 +182,19 @@ Term ::= LetVal { name: Name, value: Value, body: Term }
         | Handle { clause: HandlerClause, body: Term, cont: ContRef, row: EffectRow }
         | RecordDischarge { discharge: ContractDischarge, body: Term }
         | Trap { reason: TrapReason }
+```
+
+`LetRec` binds a name to a value where the value may reference the bound name. It is used
+for recursive CPS functions and self-referential continuations. The value is evaluated in an
+environment where the name is bound to a placeholder that is backfilled after the value is
+constructed. This is the standard approach for recursive bindings in compiler IRs.
+
+**Row accounting for `LetRec`:**
+
+```text
+LetRec { name, value, body }:
+  local row = value.local ∪ body.local
+  total row = value.total ∪ body.total
 ```
 
 **Key invariants:**
@@ -251,9 +265,12 @@ LetPrim { op, args, body }:
   total row = prim_row(op) ∪ body.total
 
 LetCont { name, param, body, rest }:
-  local row = rest.local
+  local row = rest.local ∪ body.local
   total row = rest.total
-  -- body determines the row of the bound continuation
+  -- The bound continuation's row is determined by its body. The body is part of the
+  -- enclosing local row because internal continuations are reachable from the rest term.
+  -- Only the function-entry continuation parameter and explicitly designated outer
+  -- continuations are excluded from local row summaries.
 
 If { then_branch, else_branch, row }:
   local row = then.local ∪ else.local
@@ -976,7 +993,7 @@ Or it could be treated as a pure runtime primitive (invisible to the effect syst
 | Call-by-name | `Lam { params: [] }` | `Call { func: thunk, args: [] }` | None |
 | Call-by-need | `CpsClosure` with memo cell | `Call { func: thunk, args: [] }` | Env cell |
 
-Laziness is a calling convention in the CPS IR. No special nodes needed. The design space for
+Laziness is a calling convention in the CPS IR. No special core control node is assumed here; representation and effect-tracking details for force/memo remain open. The design space for
 surface syntax, type system integration, and effect tracking is left to future specs.
 
 ## 10. Handler Stack as CPS Continuation Chain
@@ -1071,10 +1088,16 @@ If not found:
 
 **Capture chain semantics:** `prefix` is the chain segment between the raise site and the
 matched frame, containing any nonmatching frames. `parent` is the chain outside the matched
-frame. The captured chain `prefix ++ parent` excludes the matched frame itself for shallow
-handlers, preserving all nonmatching frames. `++` means relinking the prefix chain
-segment to the parent chain while preserving frame order. Frames outside the matched
-frame remain available through `parent`.
+frame. The captured chain depends on the matched frame kind:
+
+- If `matched` is a **user-installed handler** (`Handler` variant): shallow resume captures
+  `prefix ++ parent`, excluding the matched frame. The handler is not reinstalled.
+- If `matched` is a **runtime-installed provider** (`Provider` variant): resume captures
+  `prefix ++ matched ++ parent`, preserving the provider frame for subsequent operations.
+  Provider frames are persistent boundary frames, not one-shot user handlers.
+
+`++` means relinking the prefix chain segment to the parent chain while preserving frame
+order. Frames outside the matched frame remain available through `parent`.
 
 **Handler body evaluation:** When a matching frame is selected, the handler body evaluates
 under the chain outside the matching frame (`parent`). The selected frame is not active
@@ -1227,41 +1250,35 @@ and compilation to machine code; closures are simpler for interpretation.
 
 ### 13.2 Recursion in CPS
 
-Recursive CPS functions do not require a dedicated `LetRec` term. Recursion is expressed
-via a fixpoint combinator built from existing `Lam`, `Call`, and `Jump`:
+Recursive CPS functions use `LetRec` to bind a name to a `Lam` value that references itself:
 
 ```text
-fix = Lam { params: [f], cont_param: k,
-    body: Call { func: f, args: [fix], cont: k, row: {} } }
-```
-
-A recursive function `retry_loop` is defined by applying `fix` to a `Lam` that receives
-its own recursive copy as an argument:
-
-```text
-retry_loop = Call {
-    func: fix,
-    args: [Lam { params: [self, attempts_left], cont_param: k,
-        body: ... Call { func: self, args: [self, next_attempts], cont: k, ... } ... }],
-    cont: k_init,
-    row: ρ_total
+LetRec {
+  name: retry_loop,
+  value: Lam { params: [attempts_left], cont_param: k,
+    body: ... Call { func: retry_loop, args: [next_attempts], cont: k, ... } ... },
+  body: Call { func: retry_loop, args: [3], cont: k_init, row: ρ_total }
 }
 ```
 
-The `self` parameter is the recursive copy of the function. The body calls `self` to
-re-invoke. This is the standard Y-combinator pattern adapted for CPS. The retry and
-rollback examples in §8 use this pattern schematically; a fully normalized term would
-bind the fixpoint combinator via `LetVal` before applying it.
+The `retry_loop` name is bound to a `Lam` value. The body of the `Lam` may reference
+`retry_loop` via `Call` to re-invoke itself. `LetRec` uses mutable backfill: the name is
+bound to a placeholder during value construction, then backfilled with the actual value
+after construction completes. This is the standard approach for recursive bindings in
+compiler IRs and aligns with the current Ash interpreter's recursive closure model.
+
+Mutual recursion is deferred out of scope for MVP; the current `LetRec` is single-variable
+only. Multiple mutually recursive functions can be encoded via a single `LetRec` binding to
+a record/tuple of functions, or by chaining `LetRec` bindings.
 
 ### 13.3 Open Decisions
 
 1. Whether the CPS IR is the canonical IR or an intermediate layer between a higher-level IR
    and a lower-level IR.
-2. How to represent mutually recursive CPS functions (`LetRec` or fixpoint combinator).
-3. Whether contract discharge status is stored in the IR or in a separate sidecar.
-4. How row variables are represented in the CPS IR (names, indices, or de Bruijn indices).
-5. Whether effect aliases are expanded during CPS lowering or preserved for diagnostics.
-6. Whether to support direct-style fragments within CPS for performance-critical pure code.
+2. Whether contract discharge status is stored in the IR or in a separate sidecar.
+3. How row variables are represented in the CPS IR (names, indices, or de Bruijn indices).
+4. Whether effect aliases are expanded during CPS lowering or preserved for diagnostics.
+5. Whether to support direct-style fragments within CPS for performance-critical pure code.
 
 ## 14. See Also
 

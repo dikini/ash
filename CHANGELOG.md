@@ -2674,3 +2674,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ### Security
 
 
+
+## [Unreleased]
+
+### Added
+- Review findings resolution tracking in review.md for SPEC-098b target CPS IR.

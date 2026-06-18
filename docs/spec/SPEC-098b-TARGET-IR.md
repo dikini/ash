@@ -375,18 +375,22 @@ pub struct HandlerClause {
     pub params: Vec<Param>,
     pub resume: Param,          -- resume: Cont<OpResult, Ans, ρ_resume>
     pub body: Box<Term>,
-    pub row: EffectRow,
+    pub row: EffectRow,         -- local row of the handler clause body
 }
 ```
+
+The `row` on `HandlerClause` is the local row of the handler clause body, excluding the
+row of the resume continuation and excluding the outer continuation. In the row
+transformation (§5.5), `handler_effects` is `HandlerClause.row`.
 
 The handler clause body is a term that must eventually `Jump` to `resume` or `Jump` to the
 outer continuation. The `resume` parameter is one-shot: after the handler body jumps to it,
 it is consumed.
 
 **Non-resumptive handling:** The outer continuation available to a handler body is the
-`Handle.cont` atom captured when the `HandlerFrame` is installed. Handler clauses do not
-receive it as a separate parameter; non-resumptive handlers jump to that captured outer
-continuation directly.
+`Handle.cont` continuation reference captured when the `HandlerFrame` is installed. Handler
+clauses do not receive it as a separate parameter; non-resumptive handlers jump to that
+captured outer continuation directly.
 
 **One-shot enforcement:** The IR enforces one-shot resume via **linear/affine typing**.
 The `resume` parameter has an affine type: it can be used at most once in the handler body.
@@ -475,10 +479,6 @@ interpreter (with continuation chain and handler frames)
 |---------|---------------|
 | `fn f(x: A) -> {ρ} B { body }` | `Lam { params: [x], cont_param: k, body: [lowered body], row: ρ }` |
 | `f(x)` | `Call { func: f, args: [x], cont: k, row: ρ_total }` |
-
-`Call.row` records the computed total row of the call, `ρ_func_body ∪ ρ_cont`. Unlike
-`Raise.row` and `Handle.row`, which are local operation/residual rows, `Call.row` is a
-total-row annotation because the callee-local row lives in the callee's `CpsFn.body_row`.
 | `return v` | `Jump { cont: k, arg: v, row: ρk }` |
 | `let x = v in e` | `LetVal { name: x, value: [v], body: [e] }` |
 | `let x = a + b in e` | `LetPrim { name: x, op: Add, args: [a, b], body: [e] }` |
@@ -535,7 +535,7 @@ Key points:
 - A capability call is a `Raise`, not a `Call` or `App`.
 - The operation signature `(String, Int) -> String` is explicit in the `EffectOp`.
 - The resume continuation is the function's own continuation `k`.
-- The row `{cap db.read}` is the requirement that must be discharged by ambient authority.
+- The row `{cap db.read}` is the requirement that must be discharged by admitted provider authority, represented as a runtime-installed provider frame.
 
 ### 7.3 Dynamic Contract Discharge (Fully Normalized)
 
@@ -906,21 +906,25 @@ wrap the "next" continuation. A `HandlerFrame` is a `Cont` value that intercepts
 ```rust
 pub struct HandlerFrame {
     pub clause: HandlerClause,
-    pub next: Box<Cont>,      -- the next continuation in the chain
-    pub parent: HandlerChain, -- the rest of the chain beyond this frame
+    pub next: Box<Cont>,      -- normal-completion continuation for this frame
+    pub parent: HandlerChain, -- handler/provider chain outside this frame
 }
 
-Provider frames are represented as `HandlerFrame`s whose `clause.op` is installed by the runtime boundary and whose body calls the admitted provider, records evidence, and resumes `k_resume` with the provider result. There is no separate `ProviderFrame` chain variant; provider frames and user-installed handler frames share the same `HandlerFrame` structure and dispatch through the same `HandlerChain`.
-
-```text
 pub enum HandlerChain {
     Empty,                          -- end of chain
     Handler(Box<HandlerFrame>),     -- user-installed handler frame
     Provider(Box<HandlerFrame>),    -- runtime-installed provider frame
-    Cont(Box<Cont>),                -- ordinary continuation
+    Cont(Box<Cont>),                -- terminal ordinary continuation
 }
 ```
-```
+
+`next` is the normal-completion continuation for this frame. `parent` is the handler/provider
+chain outside this frame used for dispatching further `Raise`s. `HandlerChain::Cont` represents
+a terminal ordinary continuation in the dispatch chain, not another handler/provider frame.
+
+Provider frames do not use a separate frame struct. They are `HandlerFrame`s installed by
+the runtime boundary and tagged as `Provider` in the chain. Their clause body calls the
+admitted provider, records evidence, and resumes `k_resume` with the provider result.
 
 A handler frame participates in the current continuation chain. Normal `Jump`s pass through
 to `next`. `Raise` dispatch walks the chain and may select the frame by matching `clause.op`.
@@ -944,7 +948,7 @@ forwards to `k`.
 
 ### 10.3 Raise Operational Semantics
 
-`Raise` walks the current continuation chain to find a matching handler. The `resume` atom
+`Raise` walks the current continuation chain to find a matching handler. The `resume` continuation reference
 on `Raise` is the captured raise-site continuation, including any handler frames that remain
 active after the operation result is produced. Handler dispatch uses the chain `H` only to find
 the matching frame.
@@ -995,10 +999,7 @@ When a `Raise` node is evaluated:
 1. Walk the current continuation chain from the current continuation.
 2. Find the first `HandlerFrame` whose `clause.op` matches the raised `op`.
 3. If found: invoke the handler body with the effect arguments and a resume continuation that jumps to the captured raise-site continuation.
-   that reconstructs the rest of the chain.
 4. If not found: evaluation traps with `Trap { reason: UnhandledEffect(op) }`.
-
-If no matching handler is found, evaluation reaches `Trap { reason: UnhandledEffect(op) }`.
 This is distinct from authority discharge failure. Missing capability authority is rejected
 before the operation provider runs and is reported as `MissingAuthority` / `CapabilityDenied`,
 not `UnhandledEffect`.
@@ -1062,8 +1063,10 @@ legacy Expr::Act { ... }      -> CPS Lam { cont_param: k, body: [lowered], row: 
 legacy Expr::Do { target, ... } -> CPS Lam { cont_param: k, body: [lowered], row: target_profile }
 legacy Expr::Proc { ... }     -> CPS Lam { cont_param: k, body: [lowered], row: Proc_profile }
 legacy Expr::Workflow { ... } -> CPS Lam { cont_param: k, body: [lowered], row: Workflow_profile }
-legacy Type::Fn { ... }       -> CPS CpsFn { params, cont: Cont { arg: ret, answer: Ans }, answer: Ans, body_row: {}, total_row: ρk }
-legacy Type::Fun { ... }      -> CPS CpsFn { params, cont: Cont { arg: ret, answer: Ans }, answer: Ans, body_row: effect, total_row: effect ∪ ρk }
+legacy Type::Fn { ... }       -> CPS CpsFn { params, cont: Cont { arg: ret, answer: Ans }, answer: Ans, body_row: {} }
+                              -- total row is derived: body_row ∪ cont.row = ρk
+legacy Type::Fun { ... }      -> CPS CpsFn { params, cont: Cont { arg: ret, answer: Ans }, answer: Ans, body_row: effect }
+                              -- total row is derived: body_row ∪ cont.row = effect ∪ ρk
 ```
 
 ### 11.4 Dual Representation (Temporary)

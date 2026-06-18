@@ -65,11 +65,11 @@ The IR supports two representations for continuations:
 
 For this IR slice, the default representation is **labels**. Continuation closures are
 used only when a continuation must be passed as a value (e.g., to a handler clause or
-a higher-order function). The spec uses `Atom` for continuation references, which may be
+a higher-order function). The spec uses `ContRef` for continuation references, which may be
 `Label` or `Var` depending on the representation choice.
 
 ```text
-Atom ::= ... | Label(LabelId) | Var(Name)
+ContRef ::= Label(LabelId) | Var(Name)
 ```
 
 A `Label` is a static continuation target. A `Var` may name a `Lam` (CPS function) or a
@@ -165,9 +165,7 @@ Term ::= LetVal { name: Name, value: Value, body: Term }
 
 1. Every term eventually reaches a `Call`, `Jump`, `Raise`, `Handle`, or `If` that transfers
    control. There is no "return" — the answer type is produced by the outermost continuation.
-2. A `Jump` invokes a continuation with a single argument. The continuation is not a CPS
-   function that takes another continuation; it is a `Cont` value that consumes the argument
-   and produces the answer.
+2. A `Jump` transfers control to a continuation reference with a single argument. The reference may be a static label or a variable bound to a `Cont` closure; it is not an ordinary CPS function that takes another continuation.
 3. A `Call` invokes an ordinary CPS function (`Lam`) with arguments and a continuation.
    The callee's body is a term that must eventually `Jump` to the provided continuation.
 4. `LetVal`, `LetPrim`, and `LetCont` bind values, primitive results, and labels to names.
@@ -257,8 +255,7 @@ consumer of a value that produces the answer:
 Cont<A, Ans, ρ>  -- A -> {ρ} Ans
 ```
 
-In the IR, a continuation is referenced by an atom: either a `Label` for a static
-continuation target, or a `Var` naming a `Cont` closure value. It is invoked by `Jump`:
+In the IR, a continuation is referenced by a `ContRef`, not by an ordinary `Atom`. It is invoked by `Jump`:
 
 ```text
 Jump { cont: k, arg: v, row: ρ }
@@ -349,7 +346,7 @@ The resume continuation has type `Cont<OpResult, Ans, ρ_resume>`.
 pub struct Raise {
     pub op: EffectOp,
     pub args: Vec<Atom>,
-    pub resume: Atom,           -- resume: Cont<OpResult, Ans, ρ_resume>
+    pub resume: ContRef,         -- resume: Cont<OpResult, Ans, ρ_resume>
     pub row: EffectRow,
 }
 ```
@@ -368,7 +365,7 @@ For example, a capability call `Raise { op: cap db.read, resume: k }` has:
 request form. The requirement row is discharged by admitted provider authority. In the CPS
 IR operational model, that authority is represented by provider frames installed at the
 runtime boundary. There is no separate direct ambient servicing path in the IR semantics.
-Both paths preserve the "rows are requirements, not grants" rule: the row records what is
+This preserves the "rows are requirements, not grants" rule: the row records what is needed, not what is available.
 needed, not what is available.
 
 ### 5.3 Handler Clause
@@ -408,7 +405,7 @@ exclusive branches, but at most one dynamic invocation may occur.
 pub struct Handle {
     pub clause: HandlerClause,
     pub body: Box<Term>,
-    pub cont: Atom,             -- current continuation for normal completion: Cont<A, Ans, ρ_cont>
+    pub cont: ContRef,          -- current continuation for normal completion: Cont<A, Ans, ρ_cont>
     pub row: EffectRow,         -- residual row after handling
 }
 ```
@@ -980,8 +977,8 @@ handler jumps to it, the `Cont` is consumed.
 - Outer handlers (closer to the root) are preserved because `k_resume` may itself be a
   handler frame or may be wrapped by outer handlers.
 - Handler frames captured in `k_resume` are preserved. Frames outside the matching handler
-  remain available through the parent chain. The matching handler itself is not reinstalled.
-- The matching handler itself is not reinstalled: the resume bypasses it entirely.
+  remain available through the parent chain. The matching handler itself is not reinstalled:
+  the resume bypasses it entirely.
 
 ### 10.4 Handler Dispatch
 
@@ -989,7 +986,7 @@ When a `Raise` node is evaluated:
 
 1. Walk the current continuation chain from the current continuation.
 2. Find the first `HandlerFrame` whose `clause.op` matches the raised `op`.
-3. If found: invoke the handler body with the effect arguments and a resume continuation
+3. If found: invoke the handler body with the effect arguments and a resume continuation that jumps to the captured raise-site continuation.
    that reconstructs the rest of the chain.
 4. If not found: evaluation traps with `Trap { reason: UnhandledEffect(op) }`.
 

@@ -72,8 +72,8 @@ a higher-order function). The spec uses `ContRef` for continuation references, w
 ContRef ::= Label(LabelId) | Var(Name)
 ```
 
-A `Label` is a static continuation target. A `Var` may name a `Lam` (CPS function) or a
-`Cont` (continuation closure). The type checker distinguishes them by type.
+A `Label` is a static continuation target. A `ContRef::Var` must name a variable bound to
+a `Cont` closure. The type checker rejects a `Lam` in continuation-reference position.
 
 **Label declarations:**
 
@@ -366,7 +366,6 @@ request form. The requirement row is discharged by admitted provider authority. 
 IR operational model, that authority is represented by provider frames installed at the
 runtime boundary. There is no separate direct ambient servicing path in the IR semantics.
 This preserves the "rows are requirements, not grants" rule: the row records what is needed, not what is available.
-needed, not what is available.
 
 ### 5.3 Handler Clause
 
@@ -476,6 +475,10 @@ interpreter (with continuation chain and handler frames)
 |---------|---------------|
 | `fn f(x: A) -> {ρ} B { body }` | `Lam { params: [x], cont_param: k, body: [lowered body], row: ρ }` |
 | `f(x)` | `Call { func: f, args: [x], cont: k, row: ρ_total }` |
+
+`Call.row` records the computed total row of the call, `ρ_func_body ∪ ρ_cont`. Unlike
+`Raise.row` and `Handle.row`, which are local operation/residual rows, `Call.row` is a
+total-row annotation because the callee-local row lives in the callee's `CpsFn.body_row`.
 | `return v` | `Jump { cont: k, arg: v, row: ρk }` |
 | `let x = v in e` | `LetVal { name: x, value: [v], body: [e] }` |
 | `let x = a + b in e` | `LetPrim { name: x, op: Add, args: [a, b], body: [e] }` |
@@ -907,11 +910,16 @@ pub struct HandlerFrame {
     pub parent: HandlerChain, -- the rest of the chain beyond this frame
 }
 
+Provider frames are represented as `HandlerFrame`s whose `clause.op` is installed by the runtime boundary and whose body calls the admitted provider, records evidence, and resumes `k_resume` with the provider result. There is no separate `ProviderFrame` chain variant; provider frames and user-installed handler frames share the same `HandlerFrame` structure and dispatch through the same `HandlerChain`.
+
+```text
 pub enum HandlerChain {
     Empty,                          -- end of chain
-    Frame(Box<HandlerFrame>),       -- another handler frame
+    Handler(Box<HandlerFrame>),     -- user-installed handler frame
+    Provider(Box<HandlerFrame>),    -- runtime-installed provider frame
     Cont(Box<Cont>),                -- ordinary continuation
 }
+```
 ```
 
 A handler frame participates in the current continuation chain. Normal `Jump`s pass through

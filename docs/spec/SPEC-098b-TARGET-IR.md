@@ -47,9 +47,9 @@ Key design decisions:
 5. **Operation-typed raise/handle**: `Raise` names an operation with argument types and a
    result type. The resume continuation has type `Cont<OpResult, Ans, ρ_resume>`.
 6. **Rows are requirements**: The IR does not treat every `EffectItem` as a generic resumable
-   algebraic operation. Capabilities, roles, policies, contracts, channels, and process
-   effects are discharged by ambient authority, evidence, or boundary checks — not all by
-   `Handle` frames.
+   algebraic operation. Capabilities, roles, policies, contracts, resources, channels, and
+   process effects are discharged by ambient authority, evidence, or boundary checks — not
+   all by `Handle` frames.
 7. **Backward compatibility**: Legacy AST variants are lowered to CPS during migration.
 
 ### 1.1 Continuation Representation
@@ -168,7 +168,9 @@ Term ::= LetVal { name: Name, value: Value, body: Term }
 5. `RecordDischarge` is an administrative term that records contract discharge status.
    It is a no-op at runtime but preserves metadata for audit and evidence caching.
 6. `Trap` is an unrecoverable abort. It does not resume and is outside ordinary row
-   accounting. The row of a term containing `Trap` is the row of the trap reason, if any.
+   accounting. `TrapReason` is diagnostic metadata and does not contribute an effect row.
+   The row of a term containing `Trap` is `{}` (bottom row). Recoverable failures must use
+   `Raise { item: Failure(...), ... }` and are row-accounted.
 
 ### 2.4 Answer Type Discipline
 
@@ -380,6 +382,9 @@ another function, or jumps to it twice), the type checker rejects the term. For 
 implementation, a simpler runtime check that traps on second use is acceptable as a
 stopgap, but the target is static affine typing.
 
+Affine use is control-flow/path sensitive: a continuation may appear in multiple mutually
+exclusive branches, but at most one dynamic invocation may occur.
+
 ### 5.4 Handle
 
 ```rust
@@ -391,9 +396,10 @@ pub struct Handle {
 }
 ```
 
-The `row` on `Handle` is the residual row: the effects that remain after the handled
-operation is removed. The handler may add its own effects (e.g., logging, evidence) to the
-residual row.
+The `row` on `Handle` is the **local residual body row** after removing the handled
+operation and adding handler effects. The total row of the `Handle` term is
+`Handle.row ∪ ρ_cont`, where `ρ_cont` is the row of `Handle.cont`. This mirrors the
+same local-vs-total separation used by `Raise`.
 
 ### 5.5 Handler Row Transformation
 
@@ -419,7 +425,7 @@ Not every `EffectItem` is a resumable algebraic operation. The IR distinguishes:
 
 - **Raised operations**: Capability calls, channel ops, process ops, failures — these are
   runtime requests that are matched by `Handle` frames.
-- **Ambient discharge**: Roles, policies, contracts, evidence — these are discharged by
+- **Ambient discharge**: Roles, policies, contracts, resources, evidence — these are discharged by
   static checking, evidence proofs, or runtime boundary checks, not by `Handle` frames.
 
 A capability call lowers to `Raise` with a `Capability` operation. A role admission is not
@@ -461,7 +467,7 @@ interpreter (with continuation chain and handler frames)
 | `let x = a + b in e` | `LetPrim { name: x, op: Add, args: [a, b], body: [e] }` |
 | `if c then t else e` | `If { cond: c, then_branch: [t], else_branch: [e], row: ρ }` |
 | `handle E with { ... }` | `Handle { clause: C, body: [lowered], cont: k, row: ρ_residual }` |
-| `raise E(args)` | `Raise { op: O, args: [lowered], resume: k, row: ρ }` |
+| `raise E(args)` | `Raise { op: O, args: [lowered], resume: k, row: ρ_op }` |
 
 ## 7. CPS Lowering Examples
 
@@ -550,6 +556,9 @@ safe_divide =
 ```
 
 Key points:
+- The source function advertises the pre-discharge contract requirement `{requires {b != 0}}`.
+- After the dynamic check records `ContractDischarge`, the residual row of the continuation
+  is `{}`.
 - The contract predicate `b != 0` is a primitive operation (`Neq`), bound via `LetPrim`.
 - On success: the contract is discharged with `mode: Dynamic` and recorded in the IR.
 - On failure: the computation traps with `Trap { reason: ContractViolation(...) }`. A trap
@@ -896,26 +905,27 @@ to `next`. `Raise` dispatch walks the chain and may select the frame by matching
 
 ### 10.2 Handle Operational Semantics
 
-`Handle` installs a handler frame around the body by rebinding the body's current
-continuation:
+`Handle` installs a handler frame around the body by introducing a fresh continuation
+atom for the frame:
 
 ```text
 eval(Handle { clause, body, cont = k }) under chain H
-  = eval(body) under chain HandlerFrame { clause, next: k, parent: H }
+  = let h = fresh_label() in
+    eval(body[h / current_cont]) under chain HandlerFrame { clause, next: k, parent: H }
 ```
 
-The body evaluates with a new current continuation chain that has the handler frame at the
-head. The frame's `next` is the `Handle.cont` continuation `k`. The frame's `parent` is the
-previous chain `H`.
-
-**Rebinding rule:** All implicit or explicit continuation references inside `body` target the
-handler frame `h` as the current continuation. If the body completes normally (by `Jump` to
-its current continuation), the handler frame forwards to `k`. If the body raises an effect,
-the handler frame intercepts it (see §10.3).
+The body is lowered with `current_cont` bound to the fresh handler label `h`. Only the
+distinguished current continuation is rewritten to `h`; arbitrary continuation atoms captured
+from outer scopes are not rewritten. The handler frame intercepts `Raise` nodes that target
+the current continuation. If the body completes normally (by `Jump` to `h`), the handler frame
+forwards to `k`.
 
 ### 10.3 Raise Operational Semantics
 
-`Raise` walks the current continuation chain to find a matching handler:
+`Raise` walks the current continuation chain to find a matching handler. The `resume` atom
+on `Raise` is the captured raise-site continuation, including any handler frames that remain
+active after the operation result is produced. Handler dispatch uses the chain `H` only to find
+the matching frame.
 
 ```text
 eval(Raise { op, args, resume = k_resume }) under chain H
@@ -926,23 +936,22 @@ If found (HandlerFrame { clause, next, parent }):
       resume = Cont {
         arg: clause.op.result,
         body: Jump { cont: k_resume, arg: arg, row: k_resume.row },
-        env: capture_env(parent, next),
-        row: k_resume.row ∪ next.row
+        env: capture_env(k_resume),
+        row: k_resume.row
       }
   - Invoke clause.body with args and resume
 
 If not found:
-  - Stuck(UnhandledEffect(op))
+  - Trap { reason: UnhandledEffect(op) }
 ```
 
 **Resume construction:** The resume continuation is a `Cont` value that, when invoked with a
 value `v`, jumps to `k_resume` (the original continuation from the raise site) with `v`.
-The resume captures the environment from `parent` and `next`, preserving the rest of the
-chain outside the matching handler. The resume is one-shot: after the handler jumps to it,
-the `Cont` is consumed.
+The resume captures the environment from `k_resume`. The resume is one-shot: after the
+handler jumps to it, the `Cont` is consumed.
 
 **Nested handler behavior:**
-- The resume continues with the original raise-site continuation `k_resume`, not with `next`.
+- The resume continues with the original raise-site continuation `k_resume`.
 - The matching handler frame is removed from the chain: the resume jumps directly to
   `k_resume`, which is the continuation that was current at the raise site.
 - Outer handlers (closer to the root) are preserved because `k_resume` may itself be a
@@ -960,8 +969,10 @@ When a `Raise` node is evaluated:
    that reconstructs the rest of the chain.
 4. If not found: the computation is stuck (unhandled effect).
 
-This is equivalent to the operational semantics in SPEC-099b but expressed directly in the
-CPS IR rather than as a separate runtime stack.
+If no matching handler is found, evaluation reaches `Trap { reason: UnhandledEffect(op) }`.
+This is distinct from authority discharge failure. Missing capability authority is rejected
+before the operation provider runs and is reported as `MissingAuthority` / `CapabilityDenied`,
+not `UnhandledEffect`.
 
 ## 11. Migration and IR Evolution
 

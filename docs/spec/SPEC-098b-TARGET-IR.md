@@ -112,12 +112,19 @@ An atom is a reference that needs no evaluation.
 ```text
 Atom ::= Var(Name)
        | Lit(Literal)
-       | Label(LabelId)
        | PrimName(PrimOp)
        | ConstructorName(Name)
+
+ContRef ::= Label(LabelId) | Var(Name)
 ```
 
 Atoms appear in argument position, constructor fields, and primitive operations.
+
+**Continuation references** (`ContRef`) are separate from ordinary atoms. They name
+static continuation targets (`Label`) or variables bound to continuation closures (`Var`).
+They appear only in continuation positions: `Call.cont`, `Jump.cont`, `Raise.resume`,
+`Handle.cont`. Labels are not values and cannot appear in data positions (record fields,
+tuple elements, or ordinary function arguments).
 
 ### 2.2 Value
 
@@ -145,11 +152,11 @@ is evaluated under an answer type `Ans`.
 Term ::= LetVal { name: Name, value: Value, body: Term }
         | LetPrim { name: Name, op: PrimOp, args: Vec<Atom>, body: Term }
         | LetCont { name: LabelId, param: Param, body: Term, rest: Term }
-        | Call { func: Atom, args: Vec<Atom>, cont: Atom, row: EffectRow }
-        | Jump { cont: Atom, arg: Atom, row: EffectRow }
+        | Call { func: Atom, args: Vec<Atom>, cont: ContRef, row: EffectRow }
+        | Jump { cont: ContRef, arg: Atom, row: EffectRow }
         | If { cond: Atom, then_branch: Term, else_branch: Term, row: EffectRow }
-        | Raise { op: EffectOp, args: Vec<Atom>, resume: Atom, row: EffectRow }
-        | Handle { clause: HandlerClause, body: Term, cont: Atom, row: EffectRow }
+        | Raise { op: EffectOp, args: Vec<Atom>, resume: ContRef, row: EffectRow }
+        | Handle { clause: HandlerClause, body: Term, cont: ContRef, row: EffectRow }
         | RecordDischarge { discharge: ContractDischarge, body: Term }
         | Trap { reason: TrapReason }
 ```
@@ -169,7 +176,9 @@ Term ::= LetVal { name: Name, value: Value, body: Term }
    It is a no-op at runtime but preserves metadata for audit and evidence caching.
 6. `Trap` is an unrecoverable abort. It does not resume and is outside ordinary row
    accounting. `TrapReason` is diagnostic metadata and does not contribute an effect row.
-   The row of a term containing `Trap` is `{}` (bottom row). Recoverable failures must use
+   `Trap` itself type-checks at any answer type with local row `{}`. It does not add row
+   requirements. Enclosing terms still compute their rows from all non-trapping branches and
+   continuations normally. Recoverable failures must use
    `Raise { op: EffectOp { item: Failure(...), ... }, ... }` and are row-accounted.
 
 ### 2.4 Answer Type Discipline
@@ -191,7 +200,8 @@ Cont<A, Ans, ρk>  -- consumes A, produces Ans, with row ρk
 A CPS function called with a continuation must produce the same `Ans`:
 
 ```text
-f : CpsFn { params: [A], cont: Cont<B, Ans, ρk>, body_row: ρf, total_row: ρf ∪ ρk }
+f : CpsFn { params: [A], cont: Cont<B, Ans, ρk>, body_row: ρf }
+-- total row of the call: ρf ∪ ρk
 ```
 
 The answer type is fixed for a compilation region (e.g., a function, a workflow, or a module
@@ -210,8 +220,10 @@ pub struct CpsFn {
     pub cont: Box<Cont>,             -- continuation type
     pub answer: Type,                -- fixed answer type for the region
     pub body_row: EffectRow,         -- effects of the function body itself
-    pub total_row: EffectRow,        -- body_row ∪ cont_row (computed, not stored separately)
 }
+
+-- total_row is derived: body_row ∪ cont.row
+-- It is not stored separately; the type checker computes it on demand.
 
 pub struct Cont {
     pub arg: Type,                   -- argument type
@@ -227,9 +239,9 @@ f : ∀Ans ρk. CpsFn {
     params: [A],
     cont: Cont<B, Ans, ρk>,
     answer: Ans,
-    body_row: ρf,
-    total_row: ρf ∪ ρk
+    body_row: ρf
 }
+-- total row of the call: ρf ∪ ρk
 ```
 
 The callee's body row `ρf` and the continuation's row `ρk` are distinct. The total row of
@@ -353,11 +365,11 @@ For example, a capability call `Raise { op: cap db.read, resume: k }` has:
 - `term_row = {cap db.read} ∪ ρk`
 
 **Capability discharge layering:** For capability operations, `Raise` is the operational
-request form. The requirement row is discharged by an admitted provider/authority. In the
-CPS IR, that provider may be represented as a `HandlerFrame` installed by the runtime boundary,
-or as ambient authority that directly services the `Raise` without an explicit handler. Both
-paths preserve the "rows are requirements, not grants" rule: the row records what is needed,
-not what is available.
+request form. The requirement row is discharged by admitted provider authority. In the CPS
+IR operational model, that authority is represented by provider frames installed at the
+runtime boundary. There is no separate direct ambient servicing path in the IR semantics.
+Both paths preserve the "rows are requirements, not grants" rule: the row records what is
+needed, not what is available.
 
 ### 5.3 Handler Clause
 
@@ -374,6 +386,11 @@ pub struct HandlerClause {
 The handler clause body is a term that must eventually `Jump` to `resume` or `Jump` to the
 outer continuation. The `resume` parameter is one-shot: after the handler body jumps to it,
 it is consumed.
+
+**Non-resumptive handling:** The outer continuation available to a handler body is the
+`Handle.cont` atom captured when the `HandlerFrame` is installed. Handler clauses do not
+receive it as a separate parameter; non-resumptive handlers jump to that captured outer
+continuation directly.
 
 **One-shot enforcement:** The IR enforces one-shot resume via **linear/affine typing**.
 The `resume` parameter has an affine type: it can be used at most once in the handler body.
@@ -962,7 +979,8 @@ handler jumps to it, the `Cont` is consumed.
   `k_resume`, which is the continuation that was current at the raise site.
 - Outer handlers (closer to the root) are preserved because `k_resume` may itself be a
   handler frame or may be wrapped by outer handlers.
-- Inner handlers (installed after the raise site) are part of `k_resume` and are preserved.
+- Handler frames captured in `k_resume` are preserved. Frames outside the matching handler
+  remain available through the parent chain. The matching handler itself is not reinstalled.
 - The matching handler itself is not reinstalled: the resume bypasses it entirely.
 
 ### 10.4 Handler Dispatch

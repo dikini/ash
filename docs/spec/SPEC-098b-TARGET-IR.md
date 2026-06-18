@@ -1225,7 +1225,35 @@ continuation must be passed as a value (e.g., to a handler clause). This is an
 implementation tradeoff, not a semantic open question: labels enable better contification
 and compilation to machine code; closures are simpler for interpretation.
 
-### 13.2 Open Decisions
+### 13.2 Recursion in CPS
+
+Recursive CPS functions do not require a dedicated `LetRec` term. Recursion is expressed
+via a fixpoint combinator built from existing `Lam`, `Call`, and `Jump`:
+
+```text
+fix = Lam { params: [f], cont_param: k,
+    body: Call { func: f, args: [fix], cont: k, row: {} } }
+```
+
+A recursive function `retry_loop` is defined by applying `fix` to a `Lam` that receives
+its own recursive copy as an argument:
+
+```text
+retry_loop = Call {
+    func: fix,
+    args: [Lam { params: [self, attempts_left], cont_param: k,
+        body: ... Call { func: self, args: [self, next_attempts], cont: k, ... } ... }],
+    cont: k_init,
+    row: ρ_total
+}
+```
+
+The `self` parameter is the recursive copy of the function. The body calls `self` to
+re-invoke. This is the standard Y-combinator pattern adapted for CPS. The retry and
+rollback examples in §8 use this pattern schematically; a fully normalized term would
+bind the fixpoint combinator via `LetVal` before applying it.
+
+### 13.3 Open Decisions
 
 1. Whether the CPS IR is the canonical IR or an intermediate layer between a higher-level IR
    and a lower-level IR.

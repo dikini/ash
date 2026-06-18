@@ -358,6 +358,172 @@ Handle { effect: Contract(requires {b != 0}),
          cont: k, row: {} }
 ```
 
+### 5.3 Handler Patterns as Lowering Examples
+
+The following patterns show how common control-flow patterns are expressed as CPS handler
+combinations. They use only the core IR nodes (`Handle`, `Lam`, `App`, `If`, `Let`) and do
+not require special-purpose IR constructs.
+
+#### Retry Pattern
+
+A retry boundary re-executes a computation up to a maximum number of attempts:
+
+```ash
+fn fetch_with_retry(url: String) -> {cap http.get} Result<String, NetworkError> {
+    retry max_attempts: 3, backoff_ms: 1000 {
+        http.get(url)
+    } handle {
+        NetworkError => retry;           -- retry the body
+        _ => fail UnrecoverableError;    -- exhausted attempts
+    }
+}
+```
+
+Lowers to a recursive CPS wrapper that re-invokes the body on failure:
+
+```text
+fetch_with_retry = Lam { params: [url], cont_param: k, row: {cap http.get},
+    body: Let { name: retry_loop,
+                value: Lam { params: [attempts_left], cont_param: k_retry,
+                    body: If { cond: attempts_left > 0,
+                        then_branch:
+                            -- attempt the body
+                            App { func: http.get, args: [url],
+                                cont: Lam { params: [result], cont_param: k_body,
+                                    body: If { cond: success(result),
+                                        then_branch: App { func: k, args: [result], cont: k_retry, row: {cap http.get} },
+                                        else_branch:
+                                            -- wait then retry
+                                            App { func: wait, args: [1000],
+                                                cont: Lam { params: [_], cont_param: k_wait,
+                                                    body: App { func: retry_loop, args: [attempts_left - 1], cont: k_retry, row: {cap http.get} } } } } },
+                        else_branch: App { func: k, args: [Err(UnrecoverableError)], cont: k_retry, row: {} } } },
+                body: App { func: retry_loop, args: [3], cont: k, row: {cap http.get} } } }
+```
+
+Key points:
+- `retry_loop` is a recursive CPS function (a `Lam` that calls itself via `App`).
+- The body (`http.get`) is re-invoked on each retry by applying `retry_loop` with a decremented counter.
+- The wait is a tail call: `wait(backoff, λ_. retry_loop(n-1, k))`.
+- No special `Retry` IR node. The pattern is a recursive wrapper around the body.
+
+#### Rollback / Compensation Pattern
+
+A compensation pair executes a primary action and, on failure, runs an undo action:
+
+```ash
+fn transfer_funds(from: Account, to: Account, amount: Int)
+    -> {cap db.read, cap db.write} Result<Unit, TxError>
+{
+    compensate {
+        do { reserve <- payment.reserve(from, amount); return reserve }
+    } undo {
+        payment.release(from, amount);
+    } in {
+        do {
+            transfer <- payment.transfer(from, to, amount);
+            return transfer
+        }
+    }
+}
+```
+
+Lowers to a sequence where the undo action is threaded through the failure path:
+
+```text
+transfer_funds = Lam { params: [from, to, amount], cont_param: k, row: {cap db.read, cap db.write},
+    body: App { func: payment.reserve, args: [from, amount],
+        cont: Lam { params: [reserve], cont_param: k_reserve,
+            body: If { cond: success(reserve),
+                then_branch:
+                    -- primary action
+                    App { func: payment.transfer, args: [from, to, amount],
+                        cont: Lam { params: [transfer], cont_param: k_transfer,
+                            body: If { cond: success(transfer),
+                                then_branch: App { func: k, args: [Ok(())], cont: k_transfer, row: {cap db.write} },
+                                else_branch:
+                                    -- undo reserve, then fail
+                                    App { func: payment.release, args: [from, amount],
+                                        cont: Lam { params: [_], cont_param: k_release,
+                                            body: App { func: k, args: [Err(TxError)], cont: k_release, row: {cap db.write} } } } } },
+                else_branch: App { func: k, args: [Err(TxError)], cont: k_reserve, row: {} } } } } }
+```
+
+Key points:
+- The undo action (`payment.release`) is inlined into the failure path of the primary action.
+- The compensation sequence is explicit in the continuation chain: on failure, the continuation
+  invokes the undo before returning the error to the outer continuation `k`.
+- For multi-step sagas, the undo chain grows backwards: `undo_n(..., undo_{n-1}(..., k(error)))`.
+- No special `Compensate` IR node. The pattern is a sequence of `If` branches with undo actions
+  in the failure arms.
+
+#### Transactional Memory Pattern
+
+A transaction boundary intercepts read and write effects, logs them in a transaction-local
+read/write set, and either commits or aborts:
+
+```ash
+fn update_balance(account: Account, delta: Int)
+    -> {transaction {isolation: serializable}, cap db.read, cap db.write} Result<Unit, TxError>
+{
+    transaction {
+        let balance = db.read(account);
+        db.write(account, balance + delta);
+    }
+}
+```
+
+Lowers to nested `Handle` frames that intercept `db.read` and `db.write`:
+
+```text
+update_balance = Lam { params: [account, delta], cont_param: k, row: {transaction {isolation: serializable}, cap db.read, cap db.write},
+    body: Let { name: tx_log, value: new_log(),
+        body: Handle {
+            effect: cap db.read,
+            handler: Lam { params: [key], cont_param: resume,
+                body: If { cond: tx_log.has_write(key),
+                    then_branch: App { func: resume, args: [tx_log.get_write(key)], cont: resume, row: {transaction {isolation: serializable}} },
+                    else_branch: Let { name: value, value: read_from_store(key),
+                        body: Let { name: _, value: tx_log.add_read(key, value),
+                            body: App { func: resume, args: [value], cont: resume, row: {transaction {isolation: serializable}} } } } } },
+            body: Handle {
+                effect: cap db.write,
+                handler: Lam { params: [key, value], cont_param: resume,
+                    body: Let { name: _, value: tx_log.add_write(key, value),
+                        body: App { func: resume, args: [()], cont: resume, row: {transaction {isolation: serializable}} } } },
+                body: App { func: db.read, args: [account],
+                    cont: Lam { params: [balance], cont_param: k_read,
+                        body: App { func: db.write, args: [account, balance + delta],
+                            cont: Lam { params: [_], cont_param: k_write,
+                                body: If { cond: validate(tx_log),
+                                    then_branch: Let { name: _, value: commit(tx_log),
+                                        body: App { func: k, args: [Ok(())], cont: k_write, row: {transaction {isolation: serializable}} } },
+                                    else_branch: Let { name: _, value: abort(tx_log),
+                                        body: App { func: k, args: [Err(TxConflict)], cont: k_write, row: {transaction {isolation: serializable}} } } } } },
+                cont: k, row: {transaction {isolation: serializable}} },
+            cont: k, row: {transaction {isolation: serializable}} } } }
+```
+
+Key points:
+- Two nested `Handle` frames intercept `db.read` and `db.write`.
+- The `tx_log` is a mutable cell threaded through the handler closures.
+- Reads check the write log first (read-your-own-writes), then the read log, then the store.
+- Writes are logged but not applied until commit.
+- Validation and commit happen at the end of the transaction body.
+- On conflict, the transaction aborts and returns `Err(TxConflict)`. A retry loop would wrap
+  this in the pattern from the retry example above.
+- No special `Transaction` IR node. The pattern is nested `Handle` frames with a log cell.
+
+#### Summary of Handler Patterns
+
+| Pattern | Core Mechanism | IR Nodes Used |
+|---------|---------------|---------------|
+| Retry | Recursive CPS wrapper | `Lam`, `App`, `If`, `Let` |
+| Rollback | Undo actions in failure continuations | `Lam`, `App`, `If`, `Let` |
+| Transaction | Nested `Handle` frames intercepting effects | `Handle`, `Lam`, `App`, `If`, `Let` |
+
+All three patterns are built from the same six core CPS nodes. No special-purpose constructs.
+
 ## 6. Handler Stack as CPS Continuation Chain
 
 In CPS, handlers are not a separate stack data structure. They are continuations that wrap

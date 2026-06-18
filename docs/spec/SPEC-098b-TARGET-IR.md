@@ -46,10 +46,10 @@ Key design decisions:
    row and the continuation's row. They are not conflated.
 5. **Operation-typed raise/handle**: `Raise` names an operation with argument types and a
    result type. The resume continuation has type `Cont<OpResult, Ans, ρ_resume>`.
-6. **Rows are requirements**: The IR does not treat every `EffectItem` as a generic resumable
-   algebraic operation. Capabilities, roles, policies, contracts, resources, channels, and
-   process effects are discharged by ambient authority, evidence, or boundary checks — not
-   all by `Handle` frames.
+6. **Rows are requirements**: Their discharge is kind-specific: capabilities, channels,
+   process effects, and failures may appear as raised operations matched by `Handle` frames,
+   while roles, policies, contracts, resources, and evidence use static, evidence, ownership,
+   or boundary mechanisms.
 7. **Backward compatibility**: Legacy AST variants are lowered to CPS during migration.
 
 ### 1.1 Continuation Representation
@@ -170,7 +170,7 @@ Term ::= LetVal { name: Name, value: Value, body: Term }
 6. `Trap` is an unrecoverable abort. It does not resume and is outside ordinary row
    accounting. `TrapReason` is diagnostic metadata and does not contribute an effect row.
    The row of a term containing `Trap` is `{}` (bottom row). Recoverable failures must use
-   `Raise { item: Failure(...), ... }` and are row-accounted.
+   `Raise { op: EffectOp { item: Failure(...), ... }, ... }` and are row-accounted.
 
 ### 2.4 Answer Type Discipline
 
@@ -939,11 +939,17 @@ If found (HandlerFrame { clause, next, parent }):
         env: capture_env(k_resume),
         row: k_resume.row
       }
-  - Invoke clause.body with args and resume
+  - Evaluate clause.body under chain parent with args and resume
 
 If not found:
   - Trap { reason: UnhandledEffect(op) }
 ```
+
+**Handler body evaluation:** When a matching frame is selected, the handler body evaluates
+under the chain outside the matching frame (`parent`). The selected frame is not active
+while its own handler body runs. Effects raised by the handler body dispatch through `parent`
+and any frames outside it. If recursive self-handling is desired, the handler must explicitly
+reinstall itself.
 
 **Resume construction:** The resume continuation is a `Cont` value that, when invoked with a
 value `v`, jumps to `k_resume` (the original continuation from the raise site) with `v`.
@@ -967,12 +973,19 @@ When a `Raise` node is evaluated:
 2. Find the first `HandlerFrame` whose `clause.op` matches the raised `op`.
 3. If found: invoke the handler body with the effect arguments and a resume continuation
    that reconstructs the rest of the chain.
-4. If not found: the computation is stuck (unhandled effect).
+4. If not found: evaluation traps with `Trap { reason: UnhandledEffect(op) }`.
 
 If no matching handler is found, evaluation reaches `Trap { reason: UnhandledEffect(op) }`.
 This is distinct from authority discharge failure. Missing capability authority is rejected
 before the operation provider runs and is reported as `MissingAuthority` / `CapabilityDenied`,
 not `UnhandledEffect`.
+
+**Ambient authority as provider frames:** For the CPS IR operational model, ambient authority
+is represented by provider frames installed at the runtime boundary. A `Raise` is serviced only
+by a matching provider or handler frame; if no frame exists, evaluation traps with
+`UnhandledEffect(op)`. There is no separate "ambient authority directly services the Raise"
+path in the IR semantics — the runtime boundary installs the necessary frames before
+execution begins.
 
 ## 11. Migration and IR Evolution
 

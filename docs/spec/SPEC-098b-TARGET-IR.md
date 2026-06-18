@@ -133,11 +133,17 @@ A value is an atom or a value constructor that does not perform effects.
 ```text
 Value ::= Atom
         | Lam { params: Vec<Param>, cont_param: Param, body: Term, row: EffectRow }
-        | Cont { param: Param, body: Term, env: Env, row: EffectRow }
+        | Cont { param: Param, body: Term, env: Env, chain: HandlerChain, row: EffectRow }
         | Record { fields: Vec<(Name, Atom)> }
         | Tuple { elems: Vec<Atom> }
         | DischargeMarker { discharge: ContractDischarge }
 ```
+
+`Cont` is a continuation closure that captures both its lexical environment and the active
+handler/provider chain. The `chain` field is runtime context captured when the closure is
+constructed. It is not part of the type-level `Cont` type (§3.2) except through the row it
+may perform when resumed. Label-only continuations do not capture a chain; they are static
+targets resolved by the evaluator.
 
 A `Lam` is a CPS function value. It is not a tail computation — it is a value that can be
 bound to a variable, passed as an argument, or stored in a data structure. The body of a
@@ -393,10 +399,10 @@ The handler clause body is a term that must eventually `Jump` to `resume` or `Ju
 outer continuation. The `resume` parameter is one-shot: after the handler body jumps to it,
 it is consumed.
 
-**Non-resumptive handling:** The outer continuation available to a handler body is the
-`Handle.cont` continuation reference captured when the `HandlerFrame` is installed. Handler
-clauses do not receive it as a separate parameter; non-resumptive handlers jump to that
-captured outer continuation directly.
+**Non-resumptive handling:** When lowering a `Handle`, any non-resumptive branch that needs
+the outer continuation closes over the `Handle.cont` reference. The captured reference is
+available in the handler body exactly like any other captured continuation reference.
+Handler clauses do not receive the outer continuation as a separate parameter.
 
 **One-shot enforcement:** The IR enforces one-shot resume via **linear/affine typing**.
 The `resume` parameter has an affine type: it can be used at most once in the handler body.
@@ -913,6 +919,7 @@ wrap the "next" continuation. A `HandlerFrame` behaves as a continuation frame: 
 
 ```rust
 pub struct HandlerFrame {
+    pub label: LabelId,       -- continuation label bound to this frame
     pub clause: HandlerClause,
     pub next: Box<Cont>,      -- normal-completion continuation for this frame
     pub parent: HandlerChain, -- handler/provider chain outside this frame
@@ -950,8 +957,9 @@ eval(Handle { clause, body, cont = k }) under chain H
 
 The body is lowered with `current_cont` bound to the fresh handler label `h`. Only the
 distinguished `current_cont` continuation is rewritten; arbitrary captured continuation
-references in the body are not rewritten. The handler frame intercepts `Raise` nodes that
-target the current continuation. If the body completes normally (by `Jump` to `h`), the handler frame
+references in the body are not rewritten. The handler frame participates in the current
+handler/provider chain. A `Raise` evaluated in that chain may select the frame by matching
+`clause.op`. If the body completes normally (by `Jump` to `h`), the handler frame
 forwards to `k`.
 
 ### 10.3 Raise Operational Semantics
@@ -976,7 +984,7 @@ If found (HandlerFrame { clause, next, parent }):
         arg: clause.op.result,
         body: Jump { cont: k_resume, arg: arg, row: k_resume.row },
         env: capture_env(k_resume),
-        chain: capture_chain(parent, k_resume),  -- handler/provider chain to restore
+        chain: capture_chain(parent, k_resume),  -- capture raise-site chain segment
         row: k_resume.row
       }
   - Evaluate clause.body under chain parent with args and resume
@@ -984,6 +992,11 @@ If found (HandlerFrame { clause, next, parent }):
 If not found:
   - Trap { reason: UnhandledEffect(op) }
 ```
+
+**Capture chain semantics:** `capture_chain(parent, k_resume)` captures the raise-site chain
+segment needed to resume from `k_resume`, including any nonmatching frames between the raise
+site and the matched frame. It excludes the matched frame itself for shallow handlers. Frames
+outside the matched frame remain available through `parent`.
 
 **Handler body evaluation:** When a matching frame is selected, the handler body evaluates
 under the chain outside the matching frame (`parent`). The selected frame is not active

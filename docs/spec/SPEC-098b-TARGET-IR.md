@@ -246,6 +246,12 @@ The callee's body row `ρf` and the continuation's row `ρk` are distinct. The t
 the call is their union. A pure function called with an effectful continuation does not
 become intrinsically effectful — the total call context has the union of both.
 
+The `row` on `Call` is the computed total row of the call, `ρ_func_body ∪ ρ_cont`. It is an
+annotation checked against the callee's `CpsFn.body_row` and the row of `cont`; it is not
+the callee-local row alone. Unlike `Raise.row` and `Handle.row`, which are local
+operation/residual rows, `Call.row` is a cached total-row annotation because the
+callee-local row lives in the callee's `CpsFn.body_row`.
+
 ### 3.2 Continuation Type
 
 A continuation is not a CPS function that takes another continuation. It is a one-shot
@@ -594,8 +600,10 @@ the failure effect.
 
 The following patterns show how common control-flow constructs are expressed as CPS handler
 combinations. These examples are **schematic** — they use helper notation (e.g., `success()`,
-`Err(...)`, arithmetic in atom position) that is not part of the core grammar. They illustrate
-the design direction without claiming to be fully normalized target IR.
+`Err(...)`, arithmetic in atom position) that is not part of the core grammar. Continuation
+names such as `k_body`, `k_reserve`, and `k_transfer` stand for omitted `LetCont` declarations
+or `Cont` values. They illustrate the design direction without claiming to be fully normalized
+target IR.
 
 ### 8.1 Retry Pattern
 
@@ -898,8 +906,8 @@ surface syntax, type system integration, and effect tracking is left to future s
 ## 10. Handler Stack as CPS Continuation Chain
 
 In CPS, handlers are not a separate stack data structure. They are continuation frames that
-wrap the "next" continuation. A `HandlerFrame` is a `Cont` value that intercepts matching
-`Raise` nodes.
+wrap the "next" continuation. A `HandlerFrame` behaves as a continuation frame: normal
+`Jump`s forward to `next`, while `Raise` dispatch may select the frame by matching `clause.op`.
 
 ### 10.1 Handler Frame
 
@@ -932,7 +940,7 @@ to `next`. `Raise` dispatch walks the chain and may select the frame by matching
 ### 10.2 Handle Operational Semantics
 
 `Handle` installs a handler frame around the body by introducing a fresh continuation
-atom for the frame:
+reference for the frame:
 
 ```text
 eval(Handle { clause, body, cont = k }) under chain H
@@ -941,17 +949,22 @@ eval(Handle { clause, body, cont = k }) under chain H
 ```
 
 The body is lowered with `current_cont` bound to the fresh handler label `h`. Only the
-distinguished current continuation is rewritten to `h`; arbitrary continuation atoms captured
-from outer scopes are not rewritten. The handler frame intercepts `Raise` nodes that target
-the current continuation. If the body completes normally (by `Jump` to `h`), the handler frame
+distinguished `current_cont` continuation is rewritten; arbitrary captured continuation
+references in the body are not rewritten. The handler frame intercepts `Raise` nodes that
+target the current continuation. If the body completes normally (by `Jump` to `h`), the handler frame
 forwards to `k`.
 
 ### 10.3 Raise Operational Semantics
 
-`Raise` walks the current continuation chain to find a matching handler. The `resume` continuation reference
-on `Raise` is the captured raise-site continuation, including any handler frames that remain
-active after the operation result is produced. Handler dispatch uses the chain `H` only to find
-the matching frame.
+`Raise` walks the current continuation chain to find a matching handler. The `resume` continuation reference on `Raise` denotes a **captured raise-site continuation**:
+the continuation reference plus the handler/provider chain active at the raise site after
+removing the matching frame. When the handler invokes `resume`, the captured chain is
+restored and `k_resume` is jumped to with the operation result.
+
+For label-based continuations, a `Raise` that crosses a handler boundary must lower the
+`resume` reference to a `Cont` closure that captures both the lexical environment and the
+active handler/provider chain. Label-only continuations cannot be used as resumable handler
+arguments unless lowered to `Cont` closures first.
 
 ```text
 eval(Raise { op, args, resume = k_resume }) under chain H
@@ -963,6 +976,7 @@ If found (HandlerFrame { clause, next, parent }):
         arg: clause.op.result,
         body: Jump { cont: k_resume, arg: arg, row: k_resume.row },
         env: capture_env(k_resume),
+        chain: capture_chain(parent, k_resume),  -- handler/provider chain to restore
         row: k_resume.row
       }
   - Evaluate clause.body under chain parent with args and resume
@@ -1111,20 +1125,24 @@ The CPS form enables several standard optimizations:
 5. **Tail call optimization**: Every `Call` to a known function and every `Jump` to a
    continuation is a tail call by construction in CPS.
 
-## 13. Open Decisions
+## 13. Implementation Notes
 
-1. Whether to use explicit labels or closures for continuations (labels enable better
-   contification and compilation to machine code; closures are simpler for interpretation).
-   **Current choice:** Labels are the default representation. Closures are used only when
-   a continuation must be passed as a value. This is an implementation choice, not a
-   semantic open question.
-2. Whether the CPS IR is the canonical IR or an intermediate layer between a higher-level IR
+### 13.1 Continuation Representation
+
+Labels are the default representation for continuations. Closures are used only when a
+continuation must be passed as a value (e.g., to a handler clause). This is an
+implementation tradeoff, not a semantic open question: labels enable better contification
+and compilation to machine code; closures are simpler for interpretation.
+
+### 13.2 Open Decisions
+
+1. Whether the CPS IR is the canonical IR or an intermediate layer between a higher-level IR
    and a lower-level IR.
-3. How to represent mutually recursive CPS functions (`LetRec` or fixpoint combinator).
-4. Whether contract discharge status is stored in the IR or in a separate sidecar.
-5. How row variables are represented in the CPS IR (names, indices, or de Bruijn indices).
-6. Whether effect aliases are expanded during CPS lowering or preserved for diagnostics.
-7. Whether to support direct-style fragments within CPS for performance-critical pure code.
+2. How to represent mutually recursive CPS functions (`LetRec` or fixpoint combinator).
+3. Whether contract discharge status is stored in the IR or in a separate sidecar.
+4. How row variables are represented in the CPS IR (names, indices, or de Bruijn indices).
+5. Whether effect aliases are expanded during CPS lowering or preserved for diagnostics.
+6. Whether to support direct-style fragments within CPS for performance-critical pure code.
 
 ## 14. See Also
 

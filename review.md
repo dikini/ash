@@ -1,93 +1,90 @@
 # SPEC-098b target CPS IR re-review
 
 Reviewed: `docs/spec/SPEC-098b-TARGET-IR.md`
-Scope: target CPS IR in isolation. Legacy/current IR migration is ignored except where it leaks into target semantics.
+Scope: target CPS IR in isolation. Legacy/current IR and upper/pre-IR tiers ignored except where they affect target IR semantics.
 
 No spec files were edited. This report overwrites `review.md` as requested.
 
 ## Verdict
 
-PASS, with minor/important follow-ups.
+PASS.
 
-The target CPS IR is now structurally sound as an isolated draft. The earlier blockers around `Trap`, `Handle.row`, `Raise.row`, contract failure, resource classification, authority-denial classification, and explicit continuation rebinding have been addressed.
+The target CPS IR is structurally sound as an isolated draft.
 
-The remaining issues are not architecture blockers. They are precision gaps in the operational prose around provider dispatch and handler-body evaluation, plus a few wording nits.
+The target CPS IR is structurally sound at the spec level for the reviewed scope. The prior material blocker around shallow-handler residual row accounting is resolved, and no new material target-CPS issue was found.
 
-## Resolved since previous review
+## Material checks
 
-### Trap / failure boundary
+### Shallow handler residual rows
 
-- `Trap` is an explicit term: lines 151-155.
-- `Trap` is now defined as unrecoverable, non-resumable, and outside ordinary row accounting: lines 170-173.
-- `TrapReason` is diagnostic metadata and does not contribute an effect row: lines 170-173.
-- Recoverable failures must use row-accounted `Raise { ... Failure(...) ... }`: lines 172-173 and 571-574.
-- The contract example now traps on failed dynamic precondition instead of raising a mismatched resumable failure to `k`: lines 553-555.
+PASS.
 
-Assessment: resolved. The trap/failure split is now coherent.
+The previous issue was that shallow handlers were described operationally, but the row rule still looked like aggregate subtraction over the whole body row.
 
-### Contract discharge example
+The current spec now makes the necessary segmentation explicit:
 
-- The source/pre-discharge row and residual row are distinguished: lines 558-561.
-- Successful dynamic discharge records `ContractDischarge`: lines 545-552.
-- The residual continuation row after discharge is `{}`: lines 558-561.
-- The example states recoverable contract violation would require the function row to include the failure effect: lines 571-574.
+- shallow handlers remove only operation occurrences dispatched to the installed handler frame in the delimited body segment: lines 531-535;
+- the row equation is explicitly restricted to the delimited pre-resume segment: lines 537-540;
+- `captured_resume.local` is added separately and may include the same operation: lines 542-548;
+- user-handler resume excludes the matched handler frame: lines 1107-1116 and 1137-1138.
 
-Assessment: resolved.
+That is enough to avoid the unsound “remove same-op effects after resume” interpretation. The shallow operational semantics and residual-row accounting now agree.
 
-### Resource effects
+### Provider persistence
 
-- Resources are now included in the top rows-as-requirements list: lines 49-52.
-- Resources are included in ambient-discharge items: lines 406-408 and 426-429.
-- Resource effects remain non-raised and discharge through ownership/borrow/split/join/provenance: lines 431-435.
+PASS.
 
-Assessment: resolved.
+Provider frames are now consistently modeled as persistent boundary frames:
 
-### `Handle.row` accounting
+- provider row removal is justified because the provider remains active after resume: lines 550-560;
+- provider resume captures `prefix ++ matched ++ parent`: lines 1118-1127;
+- capture-chain semantics distinguishes user handlers from providers: lines 1137-1141;
+- provider body execution under `parent` is explicitly separated from provider persistence in the captured resume chain: lines 1152-1154.
 
-- `Handle.row` is now explicitly the local residual body row: lines 399-402.
-- Total `Handle` term row is `Handle.row ∪ ρ_cont`: lines 399-402.
-- This mirrors the local-vs-total separation used by `Raise`: lines 345-353.
+This resolves the earlier provider/user-handler conflation.
 
-Assessment: resolved.
+### `LetRec` construction vs latent invocation rows
 
-### Explicit continuation rebinding
+PASS.
 
-- `Handle` now introduces a fresh continuation atom for the handler frame: lines 908-915.
-- Only the distinguished `current_cont` is rewritten; arbitrary captured continuation atoms are not rewritten: lines 917-921.
+`LetRec` now separates construction effects from latent body effects:
 
-Assessment: resolved enough for this target IR spec. This removes the previous capture-prone “rewrite every explicit continuation reference” problem.
+- construction local/total rows are charged at binding construction: lines 192-199;
+- recursive `Lam` latent rows are recorded in function/body rows and charged on `Call`, not on `LetRec`: lines 201-202;
+- recursive CPS functions are explicitly represented with `LetRec`: lines 1301-1316.
 
-### Authority-denial vs unhandled provider
+This resolves the previous over-accounting concern.
 
-- Missing handler/provider becomes `Trap { reason: UnhandledEffect(op) }`: lines 944-945 and 972.
-- Missing capability authority is separately classified as `MissingAuthority` / `CapabilityDenied`, not `UnhandledEffect`: lines 972-975.
+### Local/total row discipline
 
-Assessment: mostly resolved. One operational success-path clarification remains below.
+PASS.
 
-## Remaining issues
+The spec consistently distinguishes local rows from total rows:
 
-All remaining issues from the previous review have been resolved in commit `19b67882`:
+- judgment form: lines 224-244;
+- `Call.row` as cached total row: lines 257-259 and 342-346;
+- `Raise.row` as operation/local row with resume effects in total row: lines 253-255 and 453-456;
+- `Handle.row` as local residual row with continuation effects added to total row: lines 518-521;
+- `LetCont` includes internal continuation body effects in local rows: lines 273-279.
 
-### 1. Ambient authority success path is not operationally defined — RESOLVED
+### Cross-spec consistency
 
-Fixed in SPEC-098b §10.4: Added explicit note that ambient authority is represented by provider frames installed at the runtime boundary. No separate ambient path exists in the IR semantics.
+PASS.
 
-### 2. Handler clause evaluation chain is still under-specified — RESOLVED
+No material contradiction found against `SPEC-096b-TARGET-EFFECT-SYSTEM.md` or `SPEC-097b-TARGET-TYPE-SYSTEM.md` for:
 
-Fixed in SPEC-098b §10.3: Added explicit rule that `clause.body` evaluates under chain `parent`, with the selected frame not active. Effects dispatch through `parent`.
+- rows-as-requirements;
+- trap vs recoverable failure;
+- contract discharge recording;
+- capability/provider dispatch;
+- provider persistence;
+- resources and ambient discharge;
+- `HandlerClause.row`;
+- `Call.row`;
+- local/total row mapping.
 
-### 3. Minor `Trap` vs "stuck" terminology inconsistency — RESOLVED
+## Final assessment
 
-Fixed in SPEC-098b §10.4: Replaced lingering "stuck (unhandled effect)" with "evaluation traps with `Trap { reason: UnhandledEffect(op) }`".
+PASS.
 
-### 4. Minor IR-shape typo in recoverable failure note — RESOLVED
-
-Fixed in SPEC-098b §2.3 invariants: Corrected `Raise { item: Failure(...) }` shorthand to full IR shape `Raise { op: EffectOp { item: Failure(...), ... }, ... }`.
-
-### 5. Summary wording slightly over-broad for channel/process discharge — RESOLVED
-
-Fixed in SPEC-098b §1 key design decisions: Tightened summary to distinguish raised ops (capabilities/channels/process/failures) from ambient discharge (roles/policies/contracts/resources/evidence).
-
----
-
-Status: **ALL FINDINGS RESOLVED**. The target CPS IR is structurally sound as an isolated draft.
+Within the requested scope — target CPS IR in isolation, ignoring legacy/current and upper/pre-IR work-in-progress tiers — `SPEC-098b` is now sound enough to proceed. I found no remaining material issue affecting the target CPS IR semantics or applicability of the core examples.

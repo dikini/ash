@@ -2679,3 +2679,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 - Review findings resolution tracking in review.md for SPEC-098b target CPS IR.
+
+## [Unreleased]
+
+### Added
+- SPEC-098b target CPS IR review reached PASS verdict after 19 revisions.
+  The target CPS IR is structurally sound as an isolated draft.

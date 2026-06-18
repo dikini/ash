@@ -50,7 +50,30 @@ Key design decisions:
    algebraic operation. Capabilities, roles, policies, contracts, channels, and process
    effects are discharged by ambient authority, evidence, or boundary checks — not all by
    `Handle` frames.
-7. **Backward compatibility**: Legacy AST variants are lowered to CPS during migration.
+6. **Backward compatibility**: Legacy AST variants are lowered to CPS during migration.
+
+### 1.1 Continuation Representation
+
+The IR supports two representations for continuations:
+
+1. **Labels**: Named continuation targets defined outside the term grammar. Labels are
+   bound at function entry or at `LetCont` declarations. They are not first-class values
+   and cannot be stored in data structures or passed as ordinary arguments.
+2. **Continuation closures**: `Cont` values that capture their environment. These are
+   first-class and can be passed as arguments, but they are linear/affine: they can be
+   invoked at most once.
+
+For this IR slice, the default representation is **labels**. Continuation closures are
+used only when a continuation must be passed as a value (e.g., to a handler clause or
+a higher-order function). The spec uses `Atom` for continuation references, which may be
+`Label` or `Var` depending on the representation choice.
+
+```text
+Atom ::= ... | Label(LabelId) | Var(Name)
+```
+
+A `Label` is a static continuation target. A `Var` may name a `Lam` (CPS function) or a
+`Cont` (continuation closure). The type checker distinguishes them by type.
 
 ## 2. Core Grammar
 
@@ -276,8 +299,15 @@ pub struct Raise {
 }
 ```
 
-The `row` on `Raise` is the effect of the operation itself. The resume continuation carries
-its own row for the rest of the computation.
+The `row` on `Raise` is the **operation row** `ρ_op`: the effect of the operation request
+itself. The total row of the term containing the `Raise` is `ρ_op ∪ ρ_resume`, where
+`ρ_resume` is the row of the resume continuation. The type checker computes the total term
+row; the `Raise.row` field records only the operation's local row.
+
+For example, a capability call `Raise { op: cap db.read, resume: k }` has:
+- `op_row = {cap db.read}`
+- `resume.row = ρk`
+- `term_row = {cap db.read} ∪ ρk`
 
 ### 5.3 Handler Clause
 
@@ -294,6 +324,13 @@ pub struct HandlerClause {
 The handler clause body is a term that must eventually `Jump` to `resume` or `Jump` to the
 outer continuation. The `resume` parameter is one-shot: after the handler body jumps to it,
 it is consumed.
+
+**One-shot enforcement:** The IR enforces one-shot resume via **linear/affine typing**.
+The `resume` parameter has an affine type: it can be used at most once in the handler body.
+If the handler body duplicates `resume` (e.g., stores it in a data structure, passes it to
+another function, or jumps to it twice), the type checker rejects the term. For the initial
+implementation, a simpler runtime check that traps on second use is acceptable as a
+stopgap, but the target is static affine typing.
 
 ### 5.4 Handle
 
@@ -334,7 +371,9 @@ Not every `EffectItem` is a resumable algebraic operation. The IR distinguishes:
 
 A capability call lowers to `Raise` with a `Capability` operation. A role admission is not
 raised; it is checked statically or at the workflow boundary. A policy effect is not raised;
-it is evaluated by a policy handler at an explicit boundary.
+it is evaluated by a policy handler at an explicit boundary. A resource effect is not raised;
+it is discharged through ownership, borrow, split, join, or provenance tracking at the
+runtime boundary.
 
 This aligns with SPEC-096b's "rows are requirements, not grants" rule.
 
@@ -422,42 +461,49 @@ Key points:
 - The resume continuation is the function's own continuation `k`.
 - The row `{cap db.read}` is the requirement that must be discharged by ambient authority.
 
-### 7.3 Handler Boundary (Fully Normalized)
+### 7.3 Dynamic Contract Discharge (Fully Normalized)
+
+A contract checked at runtime with dynamic discharge:
 
 ```ash
-handle requires {b != 0} with {
-    requires -> if b != 0 then () else return 0
-} in {
+fn safe_divide(a: Int, b: Int) -> {requires {b != 0}} Int {
     a / b
 }
 ```
 
-Lowers to:
+Lowers to a dynamic contract check followed by the operation:
 
 ```text
-Handle {
-  clause: HandlerClause {
-    op: EffectOp { item: Contract(requires {b != 0}), args: [], result: () },
-    params: [],
-    resume: resume,
+safe_divide =
+  Lam { params: [a, b], cont_param: k, row: {requires {b != 0}},
     body:
-      If { cond: b != 0,
-        then_branch: Jump { cont: resume, arg: (), row: {} },
-        else_branch: Jump { cont: k, arg: 0, row: {} },
-        row: {} },
-    row: {} },
-  body:
-    LetPrim { name: div_result, op: Div, args: [a, b],
-      body:
-        Jump { cont: k, arg: div_result, row: {} } },
-  cont: k,
-  row: {} }
+      LetPrim { name: ok, op: Neq, args: [b, 0],
+        body:
+          If { cond: ok,
+            then_branch:
+              LetPrim { name: result, op: Div, args: [a, b],
+                body:
+                  LetVal { name: _,
+                    value: ContractDischarge {
+                      contract: Contract(requires {b != 0}),
+                      mode: Dynamic,
+                      evidence: None,
+                      source_span: ... },
+                    body:
+                      Jump { cont: k, arg: result, row: {} } },
+            else_branch:
+              Jump { cont: k, arg: 0, row: {} },
+            row: {} } } }
 ```
 
 Key points:
-- The contract is an `EffectOp` with no arguments and result `()`.
-- The handler body `Jump`s to `resume` on success or to the outer `k` on failure.
-- The body is a `LetPrim` and `Jump` — no `Call` or `Raise` inside the body.
+- The contract predicate `b != 0` is a primitive operation (`Neq`), bound via `LetPrim`.
+- On success: the contract is discharged with `mode: Dynamic` and recorded in the IR.
+- On failure: the function returns `0` (or could raise a failure effect).
+- The `ContractDischarge` node is a no-op at runtime but preserves the discharge status for
+  audit and evidence caching. It does not appear in the effect row after discharge.
+- This example is consistent with §5.6: contracts are discharged by boundary checks, not by
+  `Handle` frames.
 
 ## 8. Handler Patterns (Schematic Examples)
 
@@ -489,7 +535,11 @@ fetch_with_retry = Lam { params: [url], cont_param: k, row: {cap http.get},
         value: Lam { params: [attempts_left], cont_param: k_retry, row: {cap http.get},
             body: If { cond: attempts_left > 0,
                 then_branch:
-                    Call { func: http.get, args: [url], cont: k_body, row: {cap http.get} }
+                    Raise {
+                        op: EffectOp { item: Capability(http.get), args: [String], result: Result<String, NetworkError> },
+                        args: [url],
+                        resume: k_body,
+                        row: {cap http.get} }
                     -- k_body is a continuation that checks result and retries
                 else_branch: Jump { cont: k, arg: Err(UnrecoverableError), row: {} } } },
         body: Call { func: retry_loop, args: [3], cont: k, row: {cap http.get} } } }
@@ -526,13 +576,21 @@ Schematic CPS lowering:
 
 ```text
 transfer_funds = Lam { params: [from, to, amount], cont_param: k, row: {cap db.read, cap db.write},
-    body: Call { func: payment.reserve, args: [from, amount], cont: k_reserve, row: {cap db.write} }
+    body: Raise {
+        op: EffectOp { item: Capability(payment.reserve), args: [Account, Int], result: Result<Unit, TxError> },
+        args: [from, amount],
+        resume: k_reserve,
+        row: {cap db.write} }
 }
 
 k_reserve(reserve_result):
   If { cond: is_ok(reserve_result),
     then_branch:
-      Call { func: payment.transfer, args: [from, to, amount], cont: k_transfer, row: {cap db.write} }
+      Raise {
+        op: EffectOp { item: Capability(payment.transfer), args: [Account, Account, Int], result: Result<Unit, TxError> },
+        args: [from, to, amount],
+        resume: k_transfer,
+        row: {cap db.write} }
     else_branch:
       Jump { cont: k, arg: Err(TxError), row: {} } }
 
@@ -541,7 +599,11 @@ k_transfer(transfer_result):
     then_branch:
       Jump { cont: k, arg: Ok(()), row: {} }
     else_branch:
-      Call { func: payment.release, args: [from, amount], cont: k_release, row: {cap db.write} } }
+      Raise {
+        op: EffectOp { item: Capability(payment.release), args: [Account, Int], result: () },
+        args: [from, amount],
+        resume: k_release,
+        row: {cap db.write} } }
 
 k_release(_):
   Jump { cont: k, arg: Err(TxError), row: {} }
@@ -592,10 +654,14 @@ update_balance = Lam { params: [account, delta], cont_param: k, row: {cap db.rea
                     body: LetPrim { name: _, op: LogAddWrite, args: [tx_log, key, value],
                         body: Jump { cont: resume, arg: (), row: {} } },
                     row: {} },
-                body: Call { func: db.read, args: [account], cont: k_read, row: {cap db.read} }
+                body: Raise {
+                    op: EffectOp { item: Capability(db.read), args: [Account], result: Int },
+                    args: [account],
+                    resume: k_read,
+                    row: {cap db.read} }
                 -- k_read continues with balance, then writes, then validates
-                cont: k, row: {cap db.read, cap db.write} },
-            cont: k, row: {cap db.read, cap db.write} } } }
+                cont: k, row: {tx_log_effects} },
+            cont: k, row: {tx_log_effects} } } }
 ```
 
 Key points:
@@ -620,9 +686,10 @@ All three patterns are built from the core CPS nodes. No special-purpose constru
 
 This section explores how call-by-name and call-by-need evaluation can be expressed in the
 CPS IR. The examples below are **pseudo-IR** — they use notation that is not yet part of the
-core grammar (e.g., mutable environment cells, `Option`, field access). A fully normalized
-term must first bind each thunk closure to a name and lower memo-cell reads/writes through
-the chosen primitive/effect model.
+core grammar (e.g., mutable environment cells, `Option`, field access, inline continuation
+closures). A fully normalized term must first bind each thunk closure and each inline
+continuation closure to a name, and must lower memo-cell reads/writes through the chosen
+primitive/effect model.
 
 ### 9.1 Thunks in CPS
 
@@ -668,10 +735,11 @@ In call-by-need, a thunk is forced once, then its result is cached.
 memo_thunk = CpsClosure {
     params: [],
     cont_param: k,
-    env: { computed: Bool, value: Option<A>, body: Term<A> },
+    env: { computed: Bool, value: Option<A>, body_thunk: Thunk<A> },
     body: If { cond: env.computed,
-        then_branch: Call { func: k, args: [env.value.unwrap()], cont: k, row: {} },
-        else_branch: Call { func: env.body, args: [],
+        then_branch: LetPrim { name: cached, op: UnwrapOption, args: [env.value],
+            body: Jump { cont: k, arg: cached, row: ρk } },
+        else_branch: Call { func: env.body_thunk, args: [],
             cont: Lam { params: [v], cont_param: k_body, row: r,
                 body: LetPrim { name: _, op: SetCell, args: [env.computed, true],
                     body: LetPrim { name: _, op: SetCell, args: [env.value, Some(v)],
@@ -734,8 +802,11 @@ surface syntax, type system integration, and effect tracking is left to future s
 
 ## 10. Handler Stack as CPS Continuation Chain
 
-In CPS, handlers are not a separate stack data structure. They are continuations that wrap
-the "next" continuation. A handler frame is a `Cont` value that intercepts matching `Raise` nodes.
+In CPS, handlers are not a separate stack data structure. They are continuation frames that
+wrap the "next" continuation. A `HandlerFrame` is a `Cont` value that intercepts matching
+`Raise` nodes.
+
+### 10.1 Handler Frame
 
 ```rust
 pub struct HandlerFrame {
@@ -744,11 +815,48 @@ pub struct HandlerFrame {
 }
 ```
 
-**Handler dispatch in CPS:**
+A `HandlerFrame` is a continuation that, when invoked, checks if the invocation is a normal
+value delivery or an effect raise. On normal delivery, it forwards to `next`. On effect raise,
+it matches the raised operation against `clause.op`.
+
+### 10.2 Handle Operational Semantics
+
+`Handle` installs a handler frame around the body:
+
+```text
+eval(Handle { clause, body, cont = k }) under chain H
+  = eval(body) under chain HandlerFrame { clause, next: k, parent: H }
+```
+
+The body evaluates with a new current continuation chain that has the handler frame at the
+head. The frame's `next` is the `Handle.cont` continuation `k`. If the body completes normally
+(by `Jump` to its current continuation), the handler frame forwards to `k`.
+
+### 10.3 Raise Operational Semantics
+
+`Raise` walks the current continuation chain to find a matching handler:
+
+```text
+eval(Raise { op, args, resume = k_resume }) under chain H
+  = find first matching HandlerFrame in H
+
+If found (HandlerFrame { clause, next }):
+  - Build resume continuation: resume = Cont { arg: clause.op.result, body: rebuild_chain(next, k_resume) }
+  - Invoke clause.body with args and resume
+
+If not found:
+  - Stuck(UnhandledEffect(op))
+```
+
+The `resume` continuation reconstructs the rest of the chain: when the handler jumps to
+`resume`, execution continues with the next continuation after the handler frame, eventually
+reaching the original `k_resume`.
+
+### 10.4 Handler Dispatch
 
 When a `Raise` node is evaluated:
 
-1. Walk the continuation chain from the current continuation.
+1. Walk the current continuation chain from the current continuation.
 2. Find the first `HandlerFrame` whose `clause.op` matches the raised `op`.
 3. If found: invoke the handler body with the effect arguments and a resume continuation
    that reconstructs the rest of the chain.

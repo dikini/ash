@@ -139,11 +139,16 @@ Value ::= Atom
         | DischargeMarker { discharge: ContractDischarge }
 ```
 
-`Cont` is a continuation closure that captures both its lexical environment and the active
+A `Cont` is a continuation closure that captures both its lexical environment and the active
 handler/provider chain. The `chain` field is runtime context captured when the closure is
 constructed. It is not part of the type-level `Cont` type (§3.2) except through the row it
 may perform when resumed. Label-only continuations do not capture a chain; they are static
 targets resolved by the evaluator.
+
+The spec uses `Cont` in three roles: `Cont` values in the IR, `Cont<A, Ans, ρ>` types in the
+type system, and runtime continuation objects in the evaluator. Only runtime/value
+continuations carry captured `env` and `chain`; the type-level `Cont` records only argument,
+answer, and row.
 
 A `Lam` is a CPS function value. It is not a tail computation — it is a value that can be
 bound to a variable, passed as an argument, or stored in a data structure. The body of a
@@ -952,7 +957,12 @@ reference for the frame:
 ```text
 eval(Handle { clause, body, cont = k }) under chain H
   = let h = fresh_label() in
-    eval(body[h / current_cont]) under chain HandlerFrame { clause, next: k, parent: H }
+    eval(body[h / current_cont]) under chain HandlerFrame { label: h, clause, next: k, parent: H }
+
+The fresh label `h` is bound in the evaluator's continuation environment to the installed
+`HandlerFrame`. A normal `Jump` to `h` enters the frame and forwards the value to `next`;
+a `Raise` evaluated while `h` is current dispatches through the frame's handler/provider
+chain.
 ```
 
 The body is lowered with `current_cont` bound to the fresh handler label `h`. Only the
@@ -964,7 +974,7 @@ forwards to `k`.
 
 ### 10.3 Raise Operational Semantics
 
-`Raise` walks the current continuation chain to find a matching handler. The `resume` continuation reference on `Raise` denotes a **captured raise-site continuation**:
+`Raise` walks the current handler/provider chain to find a matching handler or provider frame. The `resume` continuation reference on `Raise` denotes a **captured raise-site continuation**:
 the continuation reference plus the handler/provider chain active at the raise site after
 removing the matching frame. When the handler invokes `resume`, the captured chain is
 restored and `k_resume` is jumped to with the operation result.
@@ -976,27 +986,28 @@ arguments unless lowered to `Cont` closures first.
 
 ```text
 eval(Raise { op, args, resume = k_resume }) under chain H
-  = find first matching HandlerFrame in H
+  = let (prefix, matched, parent) = find_match(H, op) in
 
-If found (HandlerFrame { clause, next, parent }):
+If found:
   - Build resume continuation:
       resume = Cont {
         arg: clause.op.result,
         body: Jump { cont: k_resume, arg: arg, row: k_resume.row },
         env: capture_env(k_resume),
-        chain: capture_chain(parent, k_resume),  -- capture raise-site chain segment
+        chain: prefix ++ parent,  -- excludes matched frame; preserves inner nonmatching frames
         row: k_resume.row
       }
-  - Evaluate clause.body under chain parent with args and resume
+  - Evaluate matched.clause.body under chain parent with args and resume
 
 If not found:
   - Trap { reason: UnhandledEffect(op) }
 ```
 
-**Capture chain semantics:** `capture_chain(parent, k_resume)` captures the raise-site chain
-segment needed to resume from `k_resume`, including any nonmatching frames between the raise
-site and the matched frame. It excludes the matched frame itself for shallow handlers. Frames
-outside the matched frame remain available through `parent`.
+**Capture chain semantics:** `prefix` is the chain segment between the raise site and the
+matched frame, containing any nonmatching frames. `parent` is the chain outside the matched
+frame. The captured chain `prefix ++ parent` excludes the matched frame itself for shallow
+handlers, preserving all nonmatching frames. Frames outside the matched frame remain
+available through `parent`.
 
 **Handler body evaluation:** When a matching frame is selected, the handler body evaluates
 under the chain outside the matching frame (`parent`). The selected frame is not active

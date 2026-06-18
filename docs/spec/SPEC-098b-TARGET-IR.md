@@ -195,23 +195,45 @@ Term ::= LetVal { name: Name, value: Value, body: Term }
 Every CPS term is typed under a fixed answer type `Ans` for its region:
 
 ```text
+The core judgment is:
+
+```text
 Γ ⊢ atom : A
 Γ ⊢ value : A
-Γ ⊢ term ! Ans, ρ
+Γ ⊢ term ! Ans, local ρ_local, total ρ_total
 ```
 
-A continuation has type:
+where:
+- `Ans` is the fixed answer type for the compilation region
+- `ρ_local` is the row of effects performed by the term itself (excluding designated continuation effects)
+- `ρ_total` is the total row including all continuation effects
+
+This dual-row accounting distinguishes a term's own effects from the effects of the
+continuations it invokes. `CpsFn.body_row`, `Lam.row`, and `HandlerClause.row` use the
+local row. Term execution and checking also compute a total row.
+
+**Row accounting by term form:**
 
 ```text
-Cont<A, Ans, ρk>  -- consumes A, produces Ans, with row ρk
+Jump { cont: k, row: ρk }:
+  local row = {}
+  total row = ρk
+
+Raise { op, resume, row: ρ_op }:
+  local row = ρ_op
+  total row = ρ_op ∪ ρ_resume
+
+Call { func, cont, row: ρ_total }:
+  local row = ρ_func_body
+  total row = ρ_total = ρ_func_body ∪ ρ_cont
+
+Handle { row: ρ_residual, cont }:
+  local row = ρ_residual
+  total row = ρ_residual ∪ ρ_cont
 ```
 
-A CPS function called with a continuation must produce the same `Ans`:
-
-```text
-f : CpsFn { params: [A], cont: Cont<B, Ans, ρk>, body_row: ρf }
--- total row of the call: ρf ∪ ρk
-```
+`Lam.row`, `CpsFn.body_row`, and `HandlerClause.row` use the local row of their bodies.
+The total row is computed by the type checker when checking the enclosing term.
 
 The answer type is fixed for a compilation region (e.g., a function, a workflow, or a module
 entry point). It is not polymorphic unless the region explicitly supports answer-type
@@ -650,7 +672,8 @@ fetch_with_retry = Lam { params: [url], cont_param: k, row: {cap http.get},
 ```
 
 Key points:
-- `retry_loop` is a recursive CPS function.
+- `retry_loop` is a recursive CPS function (schematic; actual recursion requires `LetRec`
+  or a fixpoint combinator, which is still an open decision: §13.2).
 - The body is re-invoked on each retry by `Call` to `retry_loop`.
 - The capability operation is a `Raise`, not a `Call`.
 - The schematic uses `Err(...)` and `>` in atom position — these would be `LetPrim` bindings
@@ -794,10 +817,11 @@ the computation.
 ## 9. Laziness and Evaluation Strategy in CPS (Pseudo-IR)
 
 This section explores how call-by-name and call-by-need evaluation can be expressed in the
-CPS IR. The examples below are **pseudo-IR** — they use notation that is not yet part of the
+The examples below are **pseudo-IR** — they use notation that is not yet part of the
 core grammar (e.g., mutable environment cells, `Option`, field access, inline continuation
-closures). A fully normalized term must first bind each thunk closure and each inline
-continuation closure to a name, and must lower memo-cell reads/writes through the chosen
+closures, `CpsClosure`). `CpsClosure` is pseudo-IR shorthand for a `Lam` or `Cont` value
+with a captured mutable environment. A fully normalized term must first bind each
+intermediate result to a name via `LetVal` or `LetPrim` before using it in a data position.
 primitive/effect model.
 
 ### 9.1 Thunks in CPS
@@ -938,9 +962,9 @@ pub enum HandlerChain {
 }
 ```
 
-`next` is the normal-completion continuation for this frame. `parent` is the handler/provider
-chain outside this frame used for dispatching further `Raise`s. `HandlerChain::Cont` represents
-a terminal ordinary continuation in the dispatch chain, not another handler/provider frame.
+At runtime, `next: Box<Cont>` denotes a resolved continuation object. If `Handle.cont` is a
+`Label`, the evaluator resolves that label to a runtime continuation object before
+installing the frame.
 
 Provider frames do not use a separate frame struct. They are `HandlerFrame`s installed by
 the runtime boundary and tagged as `Provider` in the chain. Their clause body calls the
@@ -1006,8 +1030,9 @@ If not found:
 **Capture chain semantics:** `prefix` is the chain segment between the raise site and the
 matched frame, containing any nonmatching frames. `parent` is the chain outside the matched
 frame. The captured chain `prefix ++ parent` excludes the matched frame itself for shallow
-handlers, preserving all nonmatching frames. Frames outside the matched frame remain
-available through `parent`.
+handlers, preserving all nonmatching frames. `++` means relinking the prefix chain
+segment to the parent chain while preserving frame order. Frames outside the matched
+frame remain available through `parent`.
 
 **Handler body evaluation:** When a matching frame is selected, the handler body evaluates
 under the chain outside the matching frame (`parent`). The selected frame is not active

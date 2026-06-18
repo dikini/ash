@@ -534,20 +534,27 @@ captured resume continuation are not removed by this handler unless the handler 
 explicitly reinstalled. The residual local row preserves same-operation effects reachable
 only after resume.
 
+The row equation below applies to the **delimited segment under the handler frame**,
+excluding captured resume-continuation effects. The `body local row` in the equation is
+restricted to the pre-resume segment; effects in the resumed continuation are added
+separately via `captured_resume.local`.
+
 ```text
-body local row (delimited segment under handler): {op, ... | r}
-handler local row: {handler_effects}
-Handle { op, ... } local row: {handler_effects, ... | r}
+handled_segment.local (delimited, pre-resume): {op, ... | r}
+handler_clause.local: {handler_effects}
+captured_resume.local: effects reachable after resume (may include same op)
+Handle { op, ... } local row: (handled_segment.local - handled_op) ∪ captured_resume.local ∪ handler_clause.local
 -- op is removed from the delimited segment, but may reappear in the resumed continuation
 ```
 
 **Runtime-installed provider frames:** The handled operation is removed from the body's
 local row for all occurrences, because the provider frame is persistent and remains active
-after resume.
+after resume. Provider frames do not need delimited segmentation because they persist
+across the entire body.
 
 ```text
 body local row: {op, ... | r}
-provider local row: {provider_effects}
+provider_clause.local: {provider_effects}
 Handle { op, ... } local row: {provider_effects, ... | r}
 -- op is removed from the entire body because the provider persists across resumes
 ```

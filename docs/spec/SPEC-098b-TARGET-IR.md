@@ -50,7 +50,7 @@ Key design decisions:
    algebraic operation. Capabilities, roles, policies, contracts, channels, and process
    effects are discharged by ambient authority, evidence, or boundary checks — not all by
    `Handle` frames.
-6. **Backward compatibility**: Legacy AST variants are lowered to CPS during migration.
+7. **Backward compatibility**: Legacy AST variants are lowered to CPS during migration.
 
 ### 1.1 Continuation Representation
 
@@ -151,6 +151,7 @@ Term ::= LetVal { name: Name, value: Value, body: Term }
         | Raise { op: EffectOp, args: Vec<Atom>, resume: Atom, row: EffectRow }
         | Handle { clause: HandlerClause, body: Term, cont: Atom, row: EffectRow }
         | RecordDischarge { discharge: ContractDischarge, body: Term }
+        | Trap { reason: TrapReason }
 ```
 
 **Key invariants:**
@@ -166,6 +167,8 @@ Term ::= LetVal { name: Name, value: Value, body: Term }
    They are administrative normal form (ANF) bindings. Every intermediate result is named.
 5. `RecordDischarge` is an administrative term that records contract discharge status.
    It is a no-op at runtime but preserves metadata for audit and evidence caching.
+6. `Trap` is an unrecoverable abort. It does not resume and is outside ordinary row
+   accounting. The row of a term containing `Trap` is the row of the trap reason, if any.
 
 ### 2.4 Answer Type Discipline
 
@@ -240,8 +243,8 @@ consumer of a value that produces the answer:
 Cont<A, Ans, ρ>  -- A -> {ρ} Ans
 ```
 
-In the IR, a continuation is represented as a `Cont` value (a closure or label) that is
-invoked by `Jump`:
+In the IR, a continuation is referenced by an atom: either a `Label` for a static
+continuation target, or a `Var` naming a `Cont` closure value. It is invoked by `Jump`:
 
 ```text
 Jump { cont: k, arg: v, row: ρ }
@@ -316,6 +319,12 @@ pub struct EffectOp {
     pub args: Vec<Type>,
     pub result: Type,
 }
+
+pub enum TrapReason {
+    ContractViolation(ContractEffect),
+    UnhandledEffect(EffectOp),
+    Panic(String),
+}
 ```
 
 The resume continuation has type `Cont<OpResult, Ans, ρ_resume>`.
@@ -377,7 +386,7 @@ stopgap, but the target is static affine typing.
 pub struct Handle {
     pub clause: HandlerClause,
     pub body: Box<Term>,
-    pub cont: Atom,             -- cont: Cont<BodyResult, Ans, ρ_cont>
+    pub cont: Atom,             -- current continuation for normal completion: Cont<A, Ans, ρ_cont>
     pub row: EffectRow,         -- residual row after handling
 }
 ```
@@ -526,38 +535,34 @@ safe_divide =
           If { cond: ok,
             then_branch:
               LetPrim { name: result, op: Div, args: [a, b],
-              body:
-              RecordDischarge {
-                discharge: ContractDischarge {
-                  contract: Contract(requires {b != 0}),
-                  mode: Dynamic,
-                  evidence: None,
-                  source_span: ... },
                 body:
-                  Jump { cont: k, arg: result, row: {} } },
+                  RecordDischarge {
+                    discharge: ContractDischarge {
+                      contract: Contract(requires {b != 0}),
+                      mode: Dynamic,
+                      evidence: None,
+                      source_span: ... },
+                    body:
+                      Jump { cont: k, arg: result, row: {} } },
             else_branch:
-              Raise {
-                op: EffectOp { item: Failure(ContractViolation), args: [], result: () },
-                args: [],
-                resume: k,
-                row: {Failure(ContractViolation)} },
+              Trap { reason: ContractViolation(requires {b != 0}) },
             row: {} } } }
 ```
 
 Key points:
 - The contract predicate `b != 0` is a primitive operation (`Neq`), bound via `LetPrim`.
 - On success: the contract is discharged with `mode: Dynamic` and recorded in the IR.
-- On failure: the function raises a `Failure` effect (or could trap/abort). The example
-  below shows `Raise` with a `Failure` effect; alternatively, a runtime trap is acceptable
-  for unrecoverable contract violations.
-- The `ContractDischarge` node is a no-op at runtime but preserves the discharge status for
+- On failure: the computation traps with `Trap { reason: ContractViolation(...) }`. A trap
+  is an unrecoverable abort that does not resume. It is outside ordinary row accounting.
+- The `RecordDischarge` node is a no-op at runtime but preserves the discharge status for
   audit and evidence caching. It does not appear in the effect row after discharge.
 - This example is consistent with §5.6: contracts are discharged by boundary checks, not by
   `Handle` frames.
 
-**Alternative failure semantics:** If the contract violation is unrecoverable, the failure
-branch can trap or abort rather than returning a default value. The choice between recovery
-and trap is a policy decision, not an IR invariant.
+**Alternative failure semantics:** If the contract violation is recoverable, the failure
+branch can `Raise` a `Failure` effect instead of trapping. The choice between trap and recovery
+is a policy decision, not an IR invariant. If recovery is used, the function row must include
+the failure effect.
 
 ## 8. Handler Patterns (Schematic Examples)
 
@@ -886,9 +891,8 @@ pub enum HandlerChain {
 }
 ```
 
-A `HandlerFrame` is a continuation that, when invoked, checks if the invocation is a normal
-value delivery or an effect raise. On normal delivery, it forwards to `next`. On effect raise,
-it matches the raised operation against `clause.op`.
+A handler frame participates in the current continuation chain. Normal `Jump`s pass through
+to `next`. `Raise` dispatch walks the chain and may select the frame by matching `clause.op`.
 
 ### 10.2 Handle Operational Semantics
 
@@ -921,9 +925,9 @@ If found (HandlerFrame { clause, next, parent }):
   - Build resume continuation:
       resume = Cont {
         arg: clause.op.result,
-        body: Jump { cont: next, arg: arg, row: next.row },
-        env: capture_env(parent, k_resume),
-        row: clause.op.result_row ∪ next.row ∪ k_resume.row
+        body: Jump { cont: k_resume, arg: arg, row: k_resume.row },
+        env: capture_env(parent, next),
+        row: k_resume.row ∪ next.row
       }
   - Invoke clause.body with args and resume
 
@@ -931,17 +935,20 @@ If not found:
   - Stuck(UnhandledEffect(op))
 ```
 
-**Resume construction:** The resume continuation is a `Cont` value that, when invoked,
-jumps to `next` (the continuation after the handler frame) with the resumed value. The
-resume captures the environment from `parent` and `k_resume`, preserving the rest of the
-chain. The resume is one-shot: after the handler jumps to it, the `Cont` is consumed.
+**Resume construction:** The resume continuation is a `Cont` value that, when invoked with a
+value `v`, jumps to `k_resume` (the original continuation from the raise site) with `v`.
+The resume captures the environment from `parent` and `next`, preserving the rest of the
+chain outside the matching handler. The resume is one-shot: after the handler jumps to it,
+the `Cont` is consumed.
 
 **Nested handler behavior:**
-- The resume continues after the matching handler frame only, not before it.
-- Outer handlers (closer to the root) remain in the chain and are preserved.
-- Inner handlers (installed after the raise site) are skipped because the resume jumps to
-  `next`, which is the continuation after the matching handler.
-- The matching handler itself is not reinstalled: the resume jumps past it.
+- The resume continues with the original raise-site continuation `k_resume`, not with `next`.
+- The matching handler frame is removed from the chain: the resume jumps directly to
+  `k_resume`, which is the continuation that was current at the raise site.
+- Outer handlers (closer to the root) are preserved because `k_resume` may itself be a
+  handler frame or may be wrapped by outer handlers.
+- Inner handlers (installed after the raise site) are part of `k_resume` and are preserved.
+- The matching handler itself is not reinstalled: the resume bypasses it entirely.
 
 ### 10.4 Handler Dispatch
 

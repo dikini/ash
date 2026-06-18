@@ -134,8 +134,38 @@ Update this section as tasks complete:
 | [156](PLAN-156-PARSER-BLOCKER-RESOLUTION.md) | 5 | 5 | ✅ Complete; all blockers resolved, regression tests added |
 | [157](PLAN-157-LIST-MIGRATION-HARDENING.md) | 5 | 4 | ⏸️ Deferred; TASK-1570 (Remove Value::List) remains open |
 | [158](PLAN-158-LANGUAGE-SURFACE-FIXES.md) | 5 | 3 | ⏸️ Deferred; TASK-1580 (Module-level function visibility) remains open |
+| [159](PLAN-159-CPS-IR-INTERPRETER.md) | 15 | 0 | 📝 Planned; spec/plan only, no implementation |
 
 ---
+
+## Phase 159: CPS IR Interpreter
+
+**Status:** 📝 Planned; 0/15 implemented — spec/plan only, no implementation
+**Plan:** [PLAN-159: CPS IR Interpreter](PLAN-159-CPS-IR-INTERPRETER.md)
+**Spec:** [SPEC-098b: Ash Intermediate Representation — Target State](../spec/SPEC-098b-TARGET-IR.md)
+**Depends on:** SPEC-095b (Target Grammar), SPEC-096b (Target Effect System), SPEC-097b (Target Type System)
+**Design note:** DESIGN-NOTE: CPS IR Interpreter Architecture (to be written)
+
+Builds a CPS IR interpreter for the target Ash language with gradual feature addition, thorough testing, and formal operational semantics developed in parallel. The interpreter is the core execution engine; bytecode serialization and JIT compilation are future concerns. The S-expression textual format serves as the common interface for testing and differential testing against a future Lean 4 implementation.
+
+| Task | Description | Status |
+|------|-------------|--------|
+|| TASK-1590 | Define core data structures: Atom, Value, Term, Env, HandlerChain | 📝 Planned |
+|| TASK-1591 | Implement eval for LetVal, LetPrim, LetCont, Jump, Call | 📝 Planned |
+|| TASK-1592 | Implement If, Record, Tuple evaluation | 📝 Planned |
+|| TASK-1593 | Implement Raise, Handle with handler chain walking | 📝 Planned |
+|| TASK-1594 | Implement shallow handler vs provider frame persistence | 📝 Planned |
+|| TASK-1595 | Implement resume continuation construction with env + chain capture | 📝 Planned |
+|| TASK-1596 | Implement LetRec with placeholder backfill for recursion | 📝 Planned |
+|| TASK-1597 | Implement RecordDischarge (no-op) and Trap (abort) | 📝 Planned |
+|| TASK-1598 | Implement row checker pass for local/total row validation | 📝 Planned |
+|| TASK-1599 | Implement S-expression parser for .cps files | 📝 Planned |
+|| TASK-1600 | Implement S-expression serializer for IR | 📝 Planned |
+|| TASK-1601 | Write formal operational semantics for core terms (§1) | 📝 Planned |
+|| TASK-1602 | Write formal operational semantics for handlers (§3) | 📝 Planned |
+|| TASK-1603 | Build differential test harness comparing Rust and future Lean 4 | 📝 Planned |
+|| TASK-1604 | Close out Phase 159 with verification, documentation, and changelog | 📝 Planned |
+
 
 ## Phase 145: Law Test Evidence Substrate
 
@@ -145,18 +175,18 @@ Update this section as tasks complete:
 
 Phase 145 turns `proof ... { by test ... }` from string metadata into fail-closed empirical law evidence that can be authored and executed with an Ash-under-test candidate binary without Cargo in the user-facing path. The phase distinguishes authored/manual test evidence, law-as-property evidence, and finite small-world evidence while leaving symbolic/solver proof modes for later specs.
 
-| Task | Description | Status |
-|------|-------------|--------|
-| [TASK-1446](tasks/TASK-1446-law-test-evidence-no-rust-baseline.md) | Audit and freeze no-Rust CLI baseline for law/test evidence | ✅ Complete |
-| [TASK-1447](tasks/TASK-1447-structured-law-test-evidence-model.md) | Add structured test evidence metadata and result statuses | ✅ Complete |
-| [TASK-1448](tasks/TASK-1448-by-test-submode-parser-ast.md) | Parse/preserve authored/property/small-world `by test` submodes | ✅ Complete |
-| [TASK-1449](tasks/TASK-1449-authored-test-registry.md) | Build stable authored Ash test registry with duplicate detection | ✅ Complete |
-| [TASK-1450](tasks/TASK-1450-authored-by-test-resolver.md) | Resolve `by test "name"` to authored tests fail-closed | ✅ Complete |
-| [TASK-1451](tasks/TASK-1451-law-proposition-executor.md) | Execute supported law propositions over explicit bindings | ✅ Complete |
-| [TASK-1452](tasks/TASK-1452-by-test-property-generators.md) | Implement minimal `by test property` generators and binding injection | ✅ Complete |
-| [TASK-1453](tasks/TASK-1453-by-test-small-world-domains.md) | Implement minimal `by test small_world` finite domain enumeration | ✅ Complete |
-| [TASK-1454](tasks/TASK-1454-no-rust-final-surface-law-fixtures.md) | Add final-surface Ash law/test fixtures and no-Cargo smoke gates | ✅ Complete |
-| [TASK-1455](tasks/TASK-1455-law-test-evidence-closeout.md) | Closeout: docs, reference, PLAN-INDEX, changelog, broad verification | ✅ Complete |
+|| Task | Description | Status |
+||------|-------------|--------|
+|| [TASK-1446](tasks/TASK-1446-law-test-evidence-no-rust-baseline.md) | Audit and freeze no-Rust CLI baseline for law/test evidence | ✅ Complete |
+|| [TASK-1447](tasks/TASK-1447-structured-law-test-evidence-model.md) | Add structured test evidence metadata and result statuses | ✅ Complete |
+|| [TASK-1448](tasks/TASK-1448-by-test-submode-parser-ast.md) | Parse/preserve authored/property/small-world `by test` submodes | ✅ Complete |
+|| [TASK-1449](tasks/TASK-1449-authored-test-registry.md) | Build stable authored Ash test registry with duplicate detection | ✅ Complete |
+|| [TASK-1450](tasks/TASK-1450-authored-by-test-resolver.md) | Resolve `by test "name"` to authored tests fail-closed | ✅ Complete |
+|| [TASK-1451](tasks/TASK-1451-law-proposition-executor.md) | Execute supported law propositions over explicit bindings | ✅ Complete |
+|| [TASK-1452](tasks/TASK-1452-by-test-property-generators.md) | Implement minimal `by test property` generators and binding injection | ✅ Complete |
+|| [TASK-1453](tasks/TASK-1453-by-test-small-world-domains.md) | Implement minimal `by test small_world` finite domain enumeration | ✅ Complete |
+|| [TASK-1454](tasks/TASK-1454-no-rust-final-surface-law-fixtures.md) | Add final-surface Ash law/test fixtures and no-Cargo smoke gates | ✅ Complete |
+|| [TASK-1455](tasks/TASK-1455-law-test-evidence-closeout.md) | Closeout: docs, reference, PLAN-INDEX, changelog, broad verification | ✅ Complete |
 
 
 ## Phase 146: Property Generation and Shrinking Substrate
@@ -167,18 +197,18 @@ Phase 145 turns `proof ... { by test ... }` from string metadata into fail-close
 
 Builds generator, binding, counterexample, and shrinking substrate for `ash test` property evidence.
 
-| Task | Description | Status |
-|------|-------------|--------|
-| [TASK-1456](tasks/TASK-1456-property-generation-shrinking-audit.md) | Audit current property generation/shrinking gaps | ✅ Complete |
-| [TASK-1457](tasks/TASK-1457-generator-schema-and-binding-model.md) | Define generator schema and binding model | ✅ Complete |
-| [TASK-1458](tasks/TASK-1458-primitive-property-generators.md) | Implement primitive property generators | ✅ Complete |
-| [TASK-1459](tasks/TASK-1459-adt-container-property-generators.md) | Implement ADT/container property generators | ✅ Complete |
-| [TASK-1460](tasks/TASK-1460-authored-property-binding-injection.md) | Inject generated bindings into authored property tests | ✅ Complete |
-| [TASK-1461](tasks/TASK-1461-counterexample-artifact-schema.md) | Add counterexample artifact schema | ✅ Complete |
-| [TASK-1462](tasks/TASK-1462-primitive-shrinker-core.md) | Implement primitive shrinking core | ✅ Complete |
-| [TASK-1463](tasks/TASK-1463-adt-container-shrinking.md) | Implement ADT/container shrinking | ✅ Complete |
-| [TASK-1464](tasks/TASK-1464-property-shrinking-final-surface-fixtures.md) | Add no-Cargo property/shrinking fixtures | ✅ Complete |
-| [TASK-1465](tasks/TASK-1465-property-generation-shrinking-closeout.md) | Close out property generation/shrinking phase | ✅ Complete |
+|| Task | Description | Status |
+||------|-------------|--------|
+|| [TASK-1456](tasks/TASK-1456-property-generation-shrinking-audit.md) | Audit current property generation/shrinking gaps | ✅ Complete |
+|| [TASK-1457](tasks/TASK-1457-generator-schema-and-binding-model.md) | Define generator schema and binding model | ✅ Complete |
+|| [TASK-1458](tasks/TASK-1458-primitive-property-generators.md) | Implement primitive property generators | ✅ Complete |
+|| [TASK-1459](tasks/TASK-1459-adt-container-property-generators.md) | Implement ADT/container property generators | ✅ Complete |
+|| [TASK-1460](tasks/TASK-1460-authored-property-binding-injection.md) | Inject generated bindings into authored property tests | ✅ Complete |
+|| [TASK-1461](tasks/TASK-1461-counterexample-artifact-schema.md) | Add counterexample artifact schema | ✅ Complete |
+|| [TASK-1462](tasks/TASK-1462-primitive-shrinker-core.md) | Implement primitive shrinking core | ✅ Complete |
+|| [TASK-1463](tasks/TASK-1463-adt-container-shrinking.md) | Implement ADT/container shrinking | ✅ Complete |
+|| [TASK-1464](tasks/TASK-1464-property-shrinking-final-surface-fixtures.md) | Add no-Cargo property/shrinking fixtures | ✅ Complete |
+|| [TASK-1465](tasks/TASK-1465-property-generation-shrinking-closeout.md) | Close out property generation/shrinking phase | ✅ Complete |
 
 
 ## Phase 147: Law Coverage and Mutation Testing
@@ -189,16 +219,16 @@ Builds generator, binding, counterexample, and shrinking substrate for `ash test
 
 Adds law/test coverage reporting and bounded mutation testing for Ash tests/laws.
 
-| Task | Description | Status |
-|------|-------------|--------|
-| [TASK-1466](tasks/TASK-1466-coverage-mutation-audit.md) | Audit coverage and mutation seams | ✅ Complete |
-| [TASK-1467](tasks/TASK-1467-law-test-coverage-schema.md) | Define law/test coverage schema | ✅ Complete |
-| [TASK-1468](tasks/TASK-1468-coverage-cli-json-output.md) | Expose coverage in CLI/JSON output | ✅ Complete |
-| [TASK-1469](tasks/TASK-1469-coverage-final-surface-fixtures.md) | Add coverage final-surface fixtures | ✅ Complete |
-| [TASK-1470](tasks/TASK-1470-mutation-operator-catalog.md) | Define bounded mutation operator catalog | ✅ Complete |
-| [TASK-1471](tasks/TASK-1471-mutation-execution-loop.md) | Implement mutation execution loop | ✅ Complete |
-| [TASK-1472](tasks/TASK-1472-mutation-reporting-fixtures.md) | Add mutation reporting fixtures | ✅ Complete |
-| [TASK-1473](tasks/TASK-1473-coverage-mutation-closeout.md) | Close out coverage/mutation phase | ✅ Complete |
+|| Task | Description | Status |
+||------|-------------|--------|
+|| [TASK-1466](tasks/TASK-1466-coverage-mutation-audit.md) | Audit coverage and mutation seams | ✅ Complete |
+|| [TASK-1467](tasks/TASK-1467-law-test-coverage-schema.md) | Define law/test coverage schema | ✅ Complete |
+|| [TASK-1468](tasks/TASK-1468-coverage-cli-json-output.md) | Expose coverage in CLI/JSON output | ✅ Complete |
+|| [TASK-1469](tasks/TASK-1469-coverage-final-surface-fixtures.md) | Add coverage final-surface fixtures | ✅ Complete |
+|| [TASK-1470](tasks/TASK-1470-mutation-operator-catalog.md) | Define bounded mutation operator catalog | ✅ Complete |
+|| [TASK-1471](tasks/TASK-1471-mutation-execution-loop.md) | Implement mutation execution loop | ✅ Complete |
+|| [TASK-1472](tasks/TASK-1472-mutation-reporting-fixtures.md) | Add mutation reporting fixtures | ✅ Complete |
+|| [TASK-1473](tasks/TASK-1473-coverage-mutation-closeout.md) | Close out coverage/mutation phase | ✅ Complete |
 
 
 ## Phase 148: Flaky-Test Quarantine and Distributed Orchestration
@@ -209,16 +239,16 @@ Adds law/test coverage reporting and bounded mutation testing for Ash tests/laws
 
 Adds retry/flake classification, quarantine metadata, shard planning, local shard execution, and result merging.
 
-| Task | Description | Status |
-|------|-------------|--------|
-| [TASK-1474](tasks/TASK-1474-flake-orchestration-audit.md) | Audit runner orchestration seams | ✅ Complete |
-| [TASK-1475](tasks/TASK-1475-retry-policy-and-flake-schema.md) | Define retry policy and flake schema | ✅ Complete |
-| [TASK-1476](tasks/TASK-1476-flaky-test-quarantine-metadata.md) | Implement quarantine metadata handling | ✅ Complete |
-| [TASK-1477](tasks/TASK-1477-flake-final-surface-fixtures.md) | Add flaky/quarantine final-surface fixtures | ✅ Complete |
-| [TASK-1478](tasks/TASK-1478-shard-plan-schema.md) | Define shard plan schema | ✅ Complete |
-| [TASK-1479](tasks/TASK-1479-local-shard-execution.md) | Implement local shard execution | ✅ Complete |
-| [TASK-1480](tasks/TASK-1480-distributed-result-merge.md) | Implement distributed result merge | ✅ Complete |
-| [TASK-1481](tasks/TASK-1481-flake-orchestration-closeout.md) | Close out flake/orchestration phase | ✅ Complete |
+|| Task | Description | Status |
+||------|-------------|--------|
+|| [TASK-1474](tasks/TASK-1474-flake-orchestration-audit.md) | Audit runner orchestration seams | ✅ Complete |
+|| [TASK-1475](tasks/TASK-1475-retry-policy-and-flake-schema.md) | Define retry policy and flake schema | ✅ Complete |
+|| [TASK-1476](tasks/TASK-1476-flaky-test-quarantine-metadata.md) | Implement quarantine metadata handling | ✅ Complete |
+|| [TASK-1477](tasks/TASK-1477-flake-final-surface-fixtures.md) | Add flaky/quarantine final-surface fixtures | ✅ Complete |
+|| [TASK-1478](tasks/TASK-1478-shard-plan-schema.md) | Define shard plan schema | ✅ Complete |
+|| [TASK-1479](tasks/TASK-1479-local-shard-execution.md) | Implement local shard execution | ✅ Complete |
+|| [TASK-1480](tasks/TASK-1480-distributed-result-merge.md) | Implement distributed result merge | ✅ Complete |
+|| [TASK-1481](tasks/TASK-1481-flake-orchestration-closeout.md) | Close out flake/orchestration phase | ✅ Complete |
 
 
 ## Phase 149: Proof-Producing Synthesis Todo Spec
@@ -229,11 +259,11 @@ Adds retry/flake classification, quarantine metadata, shard planning, local shar
 
 Documents future proof-producing synthesis as a deferred non-test proof evidence family.
 
-| Task | Description | Status |
-|------|-------------|--------|
-| [TASK-1482](tasks/TASK-1482-proof-producing-synthesis-landscape.md) | Document proof-producing synthesis landscape | ⏸️ Deferred / To-Spec |
-| [TASK-1483](tasks/TASK-1483-proof-evidence-family-boundary.md) | Define future proof evidence family boundary | ⏸️ Deferred / To-Spec |
-| [TASK-1484](tasks/TASK-1484-proof-producing-synthesis-deferred-closeout.md) | Close deferred todo-spec packet | ⏸️ Deferred / To-Spec |
+|| Task | Description | Status |
+||------|-------------|--------|
+|| [TASK-1482](tasks/TASK-1482-proof-producing-synthesis-landscape.md) | Document proof-producing synthesis landscape | ⏸️ Deferred / To-Spec |
+|| [TASK-1483](tasks/TASK-1483-proof-evidence-family-boundary.md) | Define future proof evidence family boundary | ⏸️ Deferred / To-Spec |
+|| [TASK-1484](tasks/TASK-1484-proof-producing-synthesis-deferred-closeout.md) | Close deferred todo-spec packet | ⏸️ Deferred / To-Spec |
 
 
 ## Phase 150: QuickCheck Arbitrary and Strategy Property Testing
@@ -245,20 +275,20 @@ Documents future proof-producing synthesis as a deferred non-test proof evidence
 
 Adds a standard-library `test::quickcheck` property-testing substrate with `Strategy<T>`, `Arbitrary<T>`, compositional strategy overrides, law/property enforcement distinctions, evidence-cache schema, documentation examples, and no-Cargo final-surface fixtures.
 
-| Task | Description | Status |
-|------|-------------|--------|
-| [TASK-1485](tasks/TASK-1485-quickcheck-design-and-live-syntax-audit.md) | Audit live syntax, stdlib surfaces, interface evidence, runner seams, and cache seams | ✅ Complete |
-| [TASK-1486](tasks/TASK-1486-quickcheck-stdlib-namespace.md) | Add `test::quickcheck` namespace skeleton and docs | ✅ Complete |
-| [TASK-1487](tasks/TASK-1487-strategy-carrier-and-combinator-api.md) | Define `Strategy<T>` carrier and core combinator API | ✅ Complete |
-| [TASK-1488](tasks/TASK-1488-arbitrary-interface-and-laws.md) | Define `Arbitrary<T>` interface and library law docs/tests | ✅ Complete |
-| [TASK-1489](tasks/TASK-1489-primitive-container-arbitrary-impls.md) | Add primitive/container default strategies | ✅ Complete |
-| [TASK-1490](tasks/TASK-1490-runner-strategy-resolution.md) | Resolve explicit strategies and `Arbitrary<T>` evidence in the runner | ✅ Complete |
-| [TASK-1491](tasks/TASK-1491-quickcheck-generation-and-shrinking-execution.md) | Execute strategy generation/shrinking and record repro artifacts | ✅ Complete |
-| [TASK-1492](tasks/TASK-1492-law-property-enforcement-and-cache-schema.md) | Split law/property outcomes and add evidence cache schema | ✅ Complete |
-| [TASK-1493](tasks/TASK-1493-quickcheck-final-surface-fixtures.md) | Add no-Cargo fixtures for defaults, overrides, and failing shrink cases | ✅ Complete |
-| [TASK-1494](tasks/TASK-1494-quickcheck-documentation-cookbook.md) | Write documentation/cookbook examples | ✅ Complete |
-| [TASK-1495](tasks/TASK-1495-quickcheck-future-backends-design-note.md) | Validate and link future-backend design note | ✅ Complete |
-| [TASK-1496](tasks/TASK-1496-quickcheck-closeout.md) | Close out QuickCheck phase | ✅ Complete |
+|| Task | Description | Status |
+||------|-------------|--------|
+|| [TASK-1485](tasks/TASK-1485-quickcheck-design-and-live-syntax-audit.md) | Audit live syntax, stdlib surfaces, interface evidence, runner seams, and cache seams | ✅ Complete |
+|| [TASK-1486](tasks/TASK-1486-quickcheck-stdlib-namespace.md) | Add `test::quickcheck` namespace skeleton and docs | ✅ Complete |
+|| [TASK-1487](tasks/TASK-1487-strategy-carrier-and-combinator-api.md) | Define `Strategy<T>` carrier and core combinator API | ✅ Complete |
+|| [TASK-1488](tasks/TASK-1488-arbitrary-interface-and-laws.md) | Define `Arbitrary<T>` interface and library law docs/tests | ✅ Complete |
+|| [TASK-1489](tasks/TASK-1489-primitive-container-arbitrary-impls.md) | Add primitive/container default strategies | ✅ Complete |
+|| [TASK-1490](tasks/TASK-1490-runner-strategy-resolution.md) | Resolve explicit strategies and `Arbitrary<T>` evidence in the runner | ✅ Complete |
+|| [TASK-1491](tasks/TASK-1491-quickcheck-generation-and-shrinking-execution.md) | Execute strategy generation/shrinking and record repro artifacts | ✅ Complete |
+|| [TASK-1492](tasks/TASK-1492-law-property-enforcement-and-cache-schema.md) | Split law/property outcomes and add evidence cache schema | ✅ Complete |
+|| [TASK-1493](tasks/TASK-1493-quickcheck-final-surface-fixtures.md) | Add no-Cargo fixtures for defaults, overrides, and failing shrink cases | ✅ Complete |
+|| [TASK-1494](tasks/TASK-1494-quickcheck-documentation-cookbook.md) | Write documentation/cookbook examples | ✅ Complete |
+|| [TASK-1495](tasks/TASK-1495-quickcheck-future-backends-design-note.md) | Validate and link future-backend design note | ✅ Complete |
+|| [TASK-1496](tasks/TASK-1496-quickcheck-closeout.md) | Close out QuickCheck phase | ✅ Complete |
 
 
 ## Phase 151: QuickCheck v1 Ordinary Strategy Semantics
@@ -270,21 +300,21 @@ Adds a standard-library `test::quickcheck` property-testing substrate with `Stra
 
 Hardens the Phase 150 QuickCheck MVP into the ordinary-Ash v1 model with pure `Strategy<A>` values, helper-first `GenContext`, ordinary in-scope `Arbitrary<A>` evidence, pure strategy overrides, stable RNG/split, bounded recursive/weighted combinators, explicit shrink semantics, random seed/replay policy, and aggregate empirical evidence history.
 
-| Task | Description | Status |
-|------|-------------|--------|
-| [TASK-1497](tasks/TASK-1497-quickcheck-v1-live-syntax-and-seam-audit.md) | Audit live syntax, callable/evidence seams, parser override seams, runner bridges, and cache identity before implementation | ✅ Complete |
-| [TASK-1498](tasks/TASK-1498-quickcheck-stdlib-module-split-and-prelude.md) | Split `test::quickcheck` into canonical submodules, define prelude contents, and expose alpha root aliases | ✅ Complete |
-| [TASK-1499](tasks/TASK-1499-gencontext-rng-and-strategy-value-core.md) | Implement helper-first `GenContext`, ordinary strategy value core, stable RNG/split helpers, and golden vectors | ✅ Complete |
-| [TASK-1500](tasks/TASK-1500-arbitrary-evidence-resolution-no-bridges.md) | Resolve minimal `Arbitrary<A>` through ordinary in-scope evidence and remove/quarantine hidden fallback bridges | ✅ Complete |
-| [TASK-1501](tasks/TASK-1501-quickcheck-with-override-parser-typecheck.md) | Make `by test property` / `quickcheck` first-class proof evidence: extend parser, AST, and runner schema with source-visible `Strategy<T>` overrides; `property` and `quickcheck` are synonymous | ✅ Complete |
-| [TASK-1502](tasks/TASK-1502-quickcheck-combinators-recursion-and-weights.md) | Implement choice, weighted choice, map/project helpers, shrink wrappers, and bounded recursive combinators | ✅ Stdlib Surface Complete / Ordinary Ash |
-| [TASK-1503](tasks/TASK-1503-quickcheck-runner-generation-shrink-semantics.md) | Wire generation, per-parameter split paths, stop-first execution, failure-class shrink, and generator/shrinker errors | ✅ Complete |
-| [TASK-1504](tasks/TASK-1504-quickcheck-seed-replay-and-aggregate-evidence.md) | Implement random seed default, replay overrides, source-seed linting, run records, aggregate pass history, and sticky active findings | ✅ Complete |
-| [TASK-1512](tasks/TASK-1512-record-types-reference-documentation.md) | Add reference documentation for Ash record types at `reference/language/types/records.md`, clarifying terminology and usage | ✅ Complete |
-| [TASK-1511](tasks/TASK-1511-deferred-combinators-ordinary-ash.md) | Implement deferred QuickCheck combinators (`one_of`, `recursive`, `append_shrink`, etc.) in ordinary Ash. Blocked on language features: let destructors, imported type unification, list primitives, closures | ✅ Complete; 4/6 combinators implemented, recursive deferred |
-| [TASK-1505](tasks/TASK-1505-quickcheck-v1-final-surface-fixtures-and-docs.md) | Add no-Cargo fixtures and user docs for ordinary strategies, overrides, recursion, shrinking, seeds, and evidence history | ✅ Complete |
-| [TASK-1510](tasks/TASK-1510-parser-fn-expressions-in-multi-field-struct-literals.md) | Fix parser support for `fn` expressions and closures in multi-field struct literals, unblocking ordinary Ash QuickCheck combinator patterns | ✅ Complete |
-| [TASK-1506](tasks/TASK-1506-quickcheck-v1-closeout-and-review.md) | Close out Phase 151 with broad verification, independent review, and status/changelog/reference reconciliation | ✅ Complete |
+|| Task | Description | Status |
+||------|-------------|--------|
+|| [TASK-1497](tasks/TASK-1497-quickcheck-v1-live-syntax-and-seam-audit.md) | Audit live syntax, callable/evidence seams, parser override seams, runner bridges, and cache identity before implementation | ✅ Complete |
+|| [TASK-1498](tasks/TASK-1498-quickcheck-stdlib-module-split-and-prelude.md) | Split `test::quickcheck` into canonical submodules, define prelude contents, and expose alpha root aliases | ✅ Complete |
+|| [TASK-1499](tasks/TASK-1499-gencontext-rng-and-strategy-value-core.md) | Implement helper-first `GenContext`, ordinary strategy value core, stable RNG/split helpers, and golden vectors | ✅ Complete |
+|| [TASK-1500](tasks/TASK-1500-arbitrary-evidence-resolution-no-bridges.md) | Resolve minimal `Arbitrary<A>` through ordinary in-scope evidence and remove/quarantine hidden fallback bridges | ✅ Complete |
+|| [TASK-1501](tasks/TASK-1501-quickcheck-with-override-parser-typecheck.md) | Make `by test property` / `quickcheck` first-class proof evidence: extend parser, AST, and runner schema with source-visible `Strategy<T>` overrides; `property` and `quickcheck` are synonymous | ✅ Complete |
+|| [TASK-1502](tasks/TASK-1502-quickcheck-combinators-recursion-and-weights.md) | Implement choice, weighted choice, map/project helpers, shrink wrappers, and bounded recursive combinators | ✅ Stdlib Surface Complete / Ordinary Ash |
+|| [TASK-1503](tasks/TASK-1503-quickcheck-runner-generation-shrink-semantics.md) | Wire generation, per-parameter split paths, stop-first execution, failure-class shrink, and generator/shrinker errors | ✅ Complete |
+|| [TASK-1504](tasks/TASK-1504-quickcheck-seed-replay-and-aggregate-evidence.md) | Implement random seed default, replay overrides, source-seed linting, run records, aggregate pass history, and sticky active findings | ✅ Complete |
+|| [TASK-1512](tasks/TASK-1512-record-types-reference-documentation.md) | Add reference documentation for Ash record types at `reference/language/types/records.md`, clarifying terminology and usage | ✅ Complete |
+|| [TASK-1511](tasks/TASK-1511-deferred-combinators-ordinary-ash.md) | Implement deferred QuickCheck combinators (`one_of`, `recursive`, `append_shrink`, etc.) in ordinary Ash. Blocked on language features: let destructors, imported type unification, list primitives, closures | ✅ Complete; 4/6 combinators implemented, recursive deferred |
+|| [TASK-1505](tasks/TASK-1505-quickcheck-v1-final-surface-fixtures-and-docs.md) | Add no-Cargo fixtures and user docs for ordinary strategies, overrides, recursion, shrinking, seeds, and evidence history | ✅ Complete |
+|| [TASK-1510](tasks/TASK-1510-parser-fn-expressions-in-multi-field-struct-literals.md) | Fix parser support for `fn` expressions and closures in multi-field struct literals, unblocking ordinary Ash QuickCheck combinator patterns | ✅ Complete |
+|| [TASK-1506](tasks/TASK-1506-quickcheck-v1-closeout-and-review.md) | Close out Phase 151 with broad verification, independent review, and status/changelog/reference reconciliation | ✅ Complete |
 
 **Verification Evidence:**
 - `cargo test -p ash-parser --lib`: 650 passed, 2 pre-existing lower failures
@@ -304,18 +334,18 @@ Hardens the Phase 150 QuickCheck MVP into the ordinary-Ash v1 model with pure `S
 
 Refines Ash closures to allow creation in pure contexts with capture-restricted values, replacing the blanket "no closures in pure functions" ban with a precise effect-based rule. Writes comprehensive language reference documentation for functions, closures, and tower examples.
 
-| Task | Description | Status |
-|------|-------------|--------|
-| [TASK-1520](tasks/TASK-1520-closure-refinement-audit-and-capture-channels.md) | Audit current closure creation points, identify capture channels, and document effect leakage scenarios | ✅ Complete |
-| [TASK-1521](tasks/TASK-1521-effect-level-type-system-design.md) | Design `EffectLevel` enum, closure type extension, and capture analysis algorithm | ✅ Complete |
-| [TASK-1522](tasks/TASK-1522-typechecker-capture-analysis.md) | Implement typechecker capture analysis: extract effect level from types, check captures, emit diagnostics | ✅ Complete |
-| [TASK-1523](tasks/TASK-1523-runtime-capture-enforcement.md) | Update runtime to remove blanket ban, add fallback enforcement, or trust typechecker | ✅ Complete |
-| [TASK-1524](tasks/TASK-1524-tower-examples-and-quickcheck-verification.md) | Verify all tower examples and deferred QuickCheck combinators work with refined closures | ✅ Complete |
-| [TASK-1525](tasks/TASK-1525-reference-functions-and-closures.md) | Write `reference/language/functions.md` with closure syntax, capture rules, and examples | ✅ Complete |
-| [TASK-1526](tasks/TASK-1526-reference-tower-strata.md) | Write `reference/language/tower.md` with stratum examples, callable arrows, and boundary rules | ✅ Complete |
-| [TASK-1527](tasks/TASK-1527-update-record-docs-with-closure-fields.md) | Update `reference/language/types/records.md` with closure field examples and capture rules | ✅ Complete |
-| [TASK-1528](tasks/TASK-1528-cookbook-closure-patterns.md) | Write cookbook examples for closures at each stratum: pure, Act, Proc, Workflow | ✅ Complete |
-| [TASK-1529](tasks/TASK-1529-phase-152-closeout.md) | Close out Phase 152 with verification, status reconciliation, and changelog | ✅ Complete |
+|| Task | Description | Status |
+||------|-------------|--------|
+|| [TASK-1520](tasks/TASK-1520-closure-refinement-audit-and-capture-channels.md) | Audit current closure creation points, identify capture channels, and document effect leakage scenarios | ✅ Complete |
+|| [TASK-1521](tasks/TASK-1521-effect-level-type-system-design.md) | Design `EffectLevel` enum, closure type extension, and capture analysis algorithm | ✅ Complete |
+|| [TASK-1522](tasks/TASK-1522-typechecker-capture-analysis.md) | Implement typechecker capture analysis: extract effect level from types, check captures, emit diagnostics | ✅ Complete |
+|| [TASK-1523](tasks/TASK-1523-runtime-capture-enforcement.md) | Update runtime to remove blanket ban, add fallback enforcement, or trust typechecker | ✅ Complete |
+|| [TASK-1524](tasks/TASK-1524-tower-examples-and-quickcheck-verification.md) | Verify all tower examples and deferred QuickCheck combinators work with refined closures | ✅ Complete |
+|| [TASK-1525](tasks/TASK-1525-reference-functions-and-closures.md) | Write `reference/language/functions.md` with closure syntax, capture rules, and examples | ✅ Complete |
+|| [TASK-1526](tasks/TASK-1526-reference-tower-strata.md) | Write `reference/language/tower.md` with stratum examples, callable arrows, and boundary rules | ✅ Complete |
+|| [TASK-1527](tasks/TASK-1527-update-record-docs-with-closure-fields.md) | Update `reference/language/types/records.md` with closure field examples and capture rules | ✅ Complete |
+|| [TASK-1528](tasks/TASK-1528-cookbook-closure-patterns.md) | Write cookbook examples for closures at each stratum: pure, Act, Proc, Workflow | ✅ Complete |
+|| [TASK-1529](tasks/TASK-1529-phase-152-closeout.md) | Close out Phase 152 with verification, status reconciliation, and changelog | ✅ Complete |
 
 **Verification Evidence:**
 - `cargo test -p ash-interp --lib`: 514 tests pass
@@ -334,35 +364,35 @@ Refines Ash closures to allow creation in pure contexts with capture-restricted 
 
 Replace Rust-implemented list builtins with pure Ash implementations in `std/src/list.ash`. Lists become ordinary algebraic data types (`Cons`/`Nil`) rather than opaque runtime primitives. This unblocks Phase 151's deferred QuickCheck combinators and aligns with Ash's principle of minimizing builtins.
 
-| Task | Description | Status |
-|------|-------------|--------|
-| [TASK-1530](tasks/TASK-1530-list-type-definition-and-parsing.md) | Add `List<T>` type definition to stdlib, verify parsing and typechecking | ✅ Complete |
-| [TASK-1531](tasks/TASK-1531-core-list-operations.md) | Implement `len`, `head`, `tail`, `append`, `concat`, `map`, `filter` in pure Ash | ✅ Complete |
-| [TASK-1532](tasks/TASK-1532-extended-list-operations.md) | Implement `index`, `take`, `drop`, `reverse`, `prepend` for QuickCheck combinators | ✅ Complete |
-| [TASK-1533](tasks/TASK-1533-list-algebraic-structures.md) | Implement Applicative, Monad, Foldable, Traversable instances for List | ✅ Complete |
-| [TASK-1534](tasks/TASK-1534-parser-list-literal-desugaring.md) | Update parser to desugar `[...]` syntax to Cons/Nil variants | ✅ Complete |
-| [TASK-1535](tasks/TASK-1535-typechecker-list-constructor.md) | Update type checker to handle `List<T>` as ordinary type constructor | ✅ Complete |
-| [TASK-1536](tasks/TASK-1536-runtime-remove-list-primitive.md) | Remove `Value::List` from runtime, update evaluation and pattern matching | ✅ Complete |
-| [TASK-1537](tasks/TASK-1537-verification-and-benchmarking.md) | Verify all tests pass, run property tests, benchmark performance | ✅ Complete |
-| [TASK-1538](tasks/TASK-1538-update-dependent-tasks.md) | Update TASK-1511, TASK-1524, and other dependent tasks with new list primitives | ✅ Complete |
-| [TASK-1539](tasks/TASK-1539-phase-153-closeout.md) | Close out Phase 153 with documentation, changelog, and status reconciliation | ✅ Complete |
+|| Task | Description | Status |
+||------|-------------|--------|
+|| [TASK-1530](tasks/TASK-1530-list-type-definition-and-parsing.md) | Add `List<T>` type definition to stdlib, verify parsing and typechecking | ✅ Complete |
+|| [TASK-1531](tasks/TASK-1531-core-list-operations.md) | Implement `len`, `head`, `tail`, `append`, `concat`, `map`, `filter` in pure Ash | ✅ Complete |
+|| [TASK-1532](tasks/TASK-1532-extended-list-operations.md) | Implement `index`, `take`, `drop`, `reverse`, `prepend` for QuickCheck combinators | ✅ Complete |
+|| [TASK-1533](tasks/TASK-1533-list-algebraic-structures.md) | Implement Applicative, Monad, Foldable, Traversable instances for List | ✅ Complete |
+|| [TASK-1534](tasks/TASK-1534-parser-list-literal-desugaring.md) | Update parser to desugar `[...]` syntax to Cons/Nil variants | ✅ Complete |
+|| [TASK-1535](tasks/TASK-1535-typechecker-list-constructor.md) | Update type checker to handle `List<T>` as ordinary type constructor | ✅ Complete |
+|| [TASK-1536](tasks/TASK-1536-runtime-remove-list-primitive.md) | Remove `Value::List` from runtime, update evaluation and pattern matching | ✅ Complete |
+|| [TASK-1537](tasks/TASK-1537-verification-and-benchmarking.md) | Verify all tests pass, run property tests, benchmark performance | ✅ Complete |
+|| [TASK-1538](tasks/TASK-1538-update-dependent-tasks.md) | Update TASK-1511, TASK-1524, and other dependent tasks with new list primitives | ✅ Complete |
+|| [TASK-1539](tasks/TASK-1539-phase-153-closeout.md) | Close out Phase 153 with documentation, changelog, and status reconciliation | ✅ Complete |
 
 
 ## Phase 154: Fix Type Annotation Quirks with Imported Types
 
-**Status:** 📝 Planned; 0/5 implemented — spec/plan only
+**Status:** 📝 Planned; 0/5 implemented — spec/plan only, no implementation
 **Plan:** [PLAN-154: Type Annotation Quirks](PLAN-154-TYPE-ANNOTATION-QUIRKS.md)
 **Spec:** [SPEC-090: Type Annotation Quirks](../spec/SPEC-090-TYPE-ANNOTATION-QUIRKS.md)
 
 Fix the type system limitation where imported types cannot be used in local type definitions, `fn` return type annotations, and record field types. This unblocks modular type design, smart constructors, and cross-module type composition.
 
-| Task | Description | Status |
-|------|-------------|--------|
-| [TASK-1540](tasks/TASK-1540-parser-import-first-pass.md) | Modify parser to collect imports before type definitions | 📝 Planned |
-| [TASK-1541](tasks/TASK-1541-typeenv-imported-type-registration.md) | Modify TypeEnv to register imported types before local types | 📝 Planned |
-| [TASK-1542](tasks/TASK-1542-type-name-resolution-imported.md) | Update type name resolution to check imported types | 📝 Planned |
-| [TASK-1543](tasks/TASK-1543-type-inference-leakage-diagnostics.md) | Add diagnostics for type inference leakage | 📝 Planned |
-| [TASK-1544](tasks/TASK-1544-phase-154-closeout.md) | Close out Phase 154 with verification and documentation | 📝 Planned |
+|| Task | Description | Status |
+||------|-------------|--------|
+|| [TASK-1540](tasks/TASK-1540-parser-import-first-pass.md) | Modify parser to collect imports before type definitions | 📝 Planned |
+|| [TASK-1541](tasks/TASK-1541-typeenv-imported-type-registration.md) | Modify TypeEnv to register imported types before local types | 📝 Planned |
+|| [TASK-1542](tasks/TASK-1542-type-name-resolution-imported.md) | Update type name resolution to check imported types | 📝 Planned |
+|| [TASK-1543](tasks/TASK-1543-type-inference-leakage-diagnostics.md) | Add diagnostics for type inference leakage | 📝 Planned |
+|| [TASK-1544](tasks/TASK-1544-phase-154-closeout.md) | Close out Phase 154 with verification and documentation | 📝 Planned |
 
 
 ## Phase 155: Let Destructors for Records and Tuples
@@ -373,18 +403,18 @@ Fix the type system limitation where imported types cannot be used in local type
 
 Add `let` destructor syntax for record and tuple types. This is group assignment — not pattern matching — providing a convenient way to bind multiple variables from a structured value.
 
-| Task | Description | Status |
-|------|-------------|--------|
-| [TASK-1550](tasks/TASK-1550-parser-let-destructors.md) | Add parser support for `let { ... } = ...` and `let ( ... ) = ...` | ✅ Complete |
-| [TASK-1551](tasks/TASK-1551-ast-destructure-representation.md) | Add AST representation for `let` destructuring | ✅ Complete |
-| [TASK-1552](tasks/TASK-1552-typecheck-destructors.md) | Typecheck destructuring: verify fields, types, duplicates | ✅ Complete |
-| [TASK-1553](tasks/TASK-1553-interpreter-destructors.md) | Evaluate destructuring in interpreter | ✅ Complete |
-| [TASK-1554](tasks/TASK-1554-destructor-diagnostics.md) | Add error messages for all destructor failure modes | ✅ Complete |
-| [TASK-1555](tasks/TASK-1555-reference-let-destructors.md) | Update `reference/language/functions/local-and-anonymous.md` | ✅ Complete |
-| [TASK-1556](tasks/TASK-1556-reference-record-destructors.md) | Update `reference/language/types/records.md` with destructor examples | ✅ Complete |
-| [TASK-1557](tasks/TASK-1557-reference-tuple-destructors.md) | Update `reference/language/types/tuples.md` with destructor examples | ✅ Complete |
-| [TASK-1558](tasks/TASK-1558-cookbook-destructor-patterns.md) | Add destructor examples to cookbook | ✅ Complete |
-| [TASK-1559](tasks/TASK-1559-phase-155-closeout.md) | Close out Phase 155 with verification and documentation | ✅ Complete |
+|| Task | Description | Status |
+||------|-------------|--------|
+|| [TASK-1550](tasks/TASK-1550-parser-let-destructors.md) | Add parser support for `let { ... } = ...` and `let ( ... ) = ...` | ✅ Complete |
+|| [TASK-1551](tasks/TASK-1551-ast-destructure-representation.md) | Add AST representation for `let` destructuring | ✅ Complete |
+|| [TASK-1552](tasks/TASK-1552-typecheck-destructors.md) | Typecheck destructuring: verify fields, types, duplicates | ✅ Complete |
+|| [TASK-1553](tasks/TASK-1553-interpreter-destructors.md) | Evaluate destructuring in interpreter | ✅ Complete |
+|| [TASK-1554](tasks/TASK-1554-destructor-diagnostics.md) | Add error messages for all destructor failure modes | ✅ Complete |
+|| [TASK-1555](tasks/TASK-1555-reference-let-destructors.md) | Update `reference/language/functions/local-and-anonymous.md` | ✅ Complete |
+|| [TASK-1556](tasks/TASK-1556-reference-record-destructors.md) | Update `reference/language/types/records.md` with destructor examples | ✅ Complete |
+|| [TASK-1557](tasks/TASK-1557-reference-tuple-destructors.md) | Update `reference/language/types/tuples.md` with destructor examples | ✅ Complete |
+|| [TASK-1558](tasks/TASK-1558-cookbook-destructor-patterns.md) | Add destructor examples to cookbook | ✅ Complete |
+|| [TASK-1559](tasks/TASK-1559-phase-155-closeout.md) | Close out Phase 155 with verification and documentation | ✅ Complete |
 
 **Verification Evidence:**
 - `cargo test -p ash-parser --test let_destructor_tests`: 6/6 pass
@@ -403,33 +433,33 @@ Add `let` destructor syntax for record and tuple types. This is group assignment
 
 Resolve parser blockers that prevent Phase 153 (List Builtin to Stdlib) from proceeding. The three blockers are: `if`/`else` with `match` in the `else` branch, variant patterns with record payloads, and list literal patterns in `match`.
 
-| Task | Description | Status |
-|------|-------------|--------|
-| [TASK-1560](tasks/TASK-1560-fix-if-else-match.md) | Fix `if`/`else` with `match` in `else` branch | ✅ Complete; already worked, no regression tests added |
-| [TASK-1561](tasks/TASK-1561-fix-variant-record-patterns.md) | Fix variant patterns with record payloads | ✅ Complete; already worked, no regression tests added |
-| [TASK-1562](tasks/TASK-1562-fix-list-patterns.md) | Fix list literal patterns in `match` | ✅ Complete; parse_list_expr added, Expr::List lowering to Cons/Nil |
-| [TASK-1563](tasks/TASK-1563-regression-tests.md) | Add regression tests for all three blockers | ✅ Complete; 9 new tests in parse_expr/tests.rs + 11 existing in parse_module/tests.rs |
-| [TASK-1564](tasks/TASK-1564-verify-phase-153-unblocked.md) | Verify Phase 153 is unblocked | ✅ Complete; list.ash compiles and runs |
+|| Task | Description | Status |
+||------|-------------|--------|
+|| [TASK-1560](tasks/TASK-1560-fix-if-else-match.md) | Fix `if`/`else` with `match` in `else` branch | ✅ Complete; already worked, no regression tests added |
+|| [TASK-1561](tasks/TASK-1561-fix-variant-record-patterns.md) | Fix variant patterns with record payloads | ✅ Complete; already worked, no regression tests added |
+|| [TASK-1562](tasks/TASK-1562-fix-list-patterns.md) | Fix list literal patterns in `match` | ✅ Complete; parse_list_expr added, Expr::List lowering to Cons/Nil |
+|| [TASK-1563](tasks/TASK-1563-regression-tests.md) | Add regression tests for all three blockers | ✅ Complete; 9 new tests in parse_expr/tests.rs + 11 existing in parse_module/tests.rs |
+|| [TASK-1564](tasks/TASK-1564-verify-phase-153-unblocked.md) | Verify Phase 153 is unblocked | ✅ Complete; list.ash compiles and runs |
 
 
 ## Phase 157: List Migration Hardening and Cleanup
 
 **Status:** ⏸️ Deferred; TASK-1570 (Remove Value::List) remains open
 **Plan:** [PLAN-157: List Migration Hardening and Cleanup](PLAN-157-LIST-MIGRATION-HARDENING.md)
-**Spec:** [SPEC-093: List Migration Hardening](../spec/SPEC-093-LIST-MIGRATION-HARDENING.md)
+**Spec:** [SPEC-089: List Builtin to Stdlib](../spec/SPEC-089-LIST-BUILTIN-TO-STDLIB.md)
 **Builds on:** [PLAN-153](PLAN-153-LIST-BUILTIN-TO-STDLIB.md) (List Builtin to Stdlib)
 **Task range:** TASK-1570 through TASK-1574
 **Completion Date:** 2026-06-17
 
 Harden the Phase 153 list migration by completing the removal of `Value::List` from the runtime, fixing pre-existing test failures, adding property tests for algebraic laws, and establishing performance benchmarks.
 
-| Task | Description | Status |
-|------|-------------|--------|
-| [TASK-1570](tasks/TASK-1570-remove-value-list-enum.md) | Remove `Value::List` variant from `ash_core::Value` enum entirely | ⏸️ Deferred; High risk (368 references), will be addressed in future phase |
-| [TASK-1571](tasks/TASK-1571-fix-quickcheck-combinator-test.md) | Fix pre-existing `one_of` test failure in `phase151_quickcheck_stdlib` | ✅ Complete |
-| [TASK-1572](tasks/TASK-1572-list-algebra-property-tests.md) | Add property tests for list algebraic laws (Functor, Semigroup, Monoid) | ✅ Complete; 8 tests pass |
-| [TASK-1573](tasks/TASK-1573-list-performance-benchmarks.md) | Add performance benchmarks for list operations | ✅ Complete; Placeholder benchmark added |
-| [TASK-1574](tasks/TASK-1574-phase-157-closeout.md) | Close out Phase 157 with documentation, changelog, and verification | ✅ Complete |
+|| Task | Description | Status |
+||------|-------------|--------|
+|| [TASK-1570](tasks/TASK-1570-remove-value-list-enum.md) | Remove `Value::List` variant from `ash_core::Value` enum entirely | ⏸️ Deferred; High risk (368 references), will be addressed in future phase |
+|| [TASK-1571](tasks/TASK-1571-fix-quickcheck-combinator-test.md) | Fix pre-existing `one_of` test failure in `phase151_quickcheck_stdlib` | ✅ Complete |
+|| [TASK-1572](tasks/TASK-1572-list-algebra-property-tests.md) | Add property tests for list algebraic laws (Functor, Semigroup, Monoid) | ✅ Complete; 8 tests pass |
+|| [TASK-1573](tasks/TASK-1573-list-performance-benchmarks.md) | Add performance benchmarks for list operations | ✅ Complete; Placeholder benchmark added |
+|| [TASK-1574](tasks/TASK-1574-phase-157-closeout.md) | Close out Phase 157 with documentation, changelog, and verification | ✅ Complete |
 
 
 ## Phase 158: Language Surface Fixes
@@ -443,10 +473,10 @@ Harden the Phase 153 list migration by completing the removal of `Value::List` f
 
 Fix three language surface issues that prevent idiomatic usage of pure algebraic data types and higher-order functions in Ash.
 
-| Task | Description | Status |
-|------|-------------|--------|
-| [TASK-1580](tasks/TASK-1580-closure-module-function-visibility.md) | Fix module-level function visibility inside closures | ⏸️ Deferred; Requires power tower lifting in parser (distinguish pure fn calls from Act) |
-| [TASK-1581](tasks/TASK-1581-function-vs-capability-resolution.md) | Distinguish function calls from capability calls in lowerer | ✅ Complete |
-| [TASK-1582](tasks/TASK-1582-closure-expression-parsing.md) | Enable `fn` expression parsing in all expression contexts | ✅ Complete |
-| [TASK-1583](tasks/TASK-1583-verification-and-regression-tests.md) | Add verification tests and ensure no regressions | ✅ Complete |
-| [TASK-1584](tasks/TASK-1584-phase-158-closeout.md) | Close out Phase 158 with documentation and changelog | ✅ Complete |
+|| Task | Description | Status |
+||------|-------------|--------|
+|| [TASK-1580](tasks/TASK-1580-closure-module-function-visibility.md) | Fix module-level function visibility inside closures | ⏸️ Deferred; Requires power tower lifting in parser (distinguish pure fn calls from Act) |
+|| [TASK-1581](tasks/TASK-1581-function-vs-capability-resolution.md) | Distinguish function calls from capability calls in lowerer | ✅ Complete |
+|| [TASK-1582](tasks/TASK-1582-closure-expression-parsing.md) | Enable `fn` expression parsing in all expression contexts | ✅ Complete |
+|| [TASK-1583](tasks/TASK-1583-verification-and-regression-tests.md) | Add verification tests and ensure no regressions | ✅ Complete |
+|| [TASK-1584](tasks/TASK-1584-phase-158-closeout.md) | Close out Phase 158 with documentation and changelog | ✅ Complete |

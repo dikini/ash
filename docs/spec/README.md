@@ -81,6 +81,23 @@ This directory contains the canonical specifications for the Ash workflow langua
 
 None currently.
 
+## Current vs Target State Specifications
+
+The following specifications are split into **current state** (what the compiler/runtime
+do today) and **target state** (where we want the language to evolve):
+
+| Layer | Current State | Target State | Description |
+|-------|---------------|--------------|-------------|
+| Grammar | [SPEC-095a](SPEC-095a-CURRENT-GRAMMAR.md) | [SPEC-095b](SPEC-095b-TARGET-GRAMMAR.md) | Surface syntax |
+| Effect System | [SPEC-096a](SPEC-096a-CURRENT-EFFECT-SYSTEM.md) | [SPEC-096b](SPEC-096b-TARGET-EFFECT-SYSTEM.md) | Effect accounting |
+| Type System | [SPEC-097a](SPEC-097a-CURRENT-TYPE-SYSTEM.md) | [SPEC-097b](SPEC-097b-TARGET-TYPE-SYSTEM.md) | Type checking |
+| IR | [SPEC-098a](SPEC-098a-CURRENT-IR.md) | [SPEC-098b](SPEC-098b-TARGET-IR.md) | Intermediate representation |
+| Operational Semantics | [SPEC-099a](SPEC-099a-CURRENT-OPERATIONAL-SEMANTICS.md) | [SPEC-099b](SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md) | Runtime semantics |
+
+The current-state specs are **frozen** against live code and serve as implementation
+authorities. The target-state specs are **living documents** that evolve with design
+decisions and are refined as implementation progresses.
+
 ## Specification Template
 
 New specifications should follow this structure:

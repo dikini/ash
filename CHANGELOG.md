@@ -9,6 +9,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ### Added
 - Added `docs/ideas/research/PROTOCOL-GATED-TYPE-DIRECTED-LLM-EXECUTION.md`, a research note on protocol-gated type-directed LLM execution with deterministic oracles, evidence admission, replayable traces, and references to Recursive Language Models and LLM state-machine modeling work.
 ### Changed
+- Tightened SPEC-095 through SPEC-097 language-evolution drafts: SPEC-095 now marks itself as the parser-derived grammar baseline, SPEC-096 now models effect rows as requirement accounting with kind-specific discharge for roles, policies, contracts, channels, aliases, and groups, and SPEC-097 now separates requirement inclusion, environment discharge, and function subtyping.
+- Restructured SPEC-095 through SPEC-099 into current-state vs target-state document pairs: SPEC-095a/095b (Grammar), SPEC-096a/096b (Effect System), SPEC-097a/097b (Type System), SPEC-098a/098b (IR), SPEC-099a/099b (Operational Semantics). Current-state specs are frozen against live code (`e61f2792`). Target-state specs are living documents for the unified effect-row language direction.
 - AGENTS.md: documented native MCP server configuration for ash-mcp and rust-analyzer with persistent stdio transport, per-project activation instructions, and cross-language tool routing. Added Hermes profile at `~/.hermes/profiles/ash/config.yaml` for portable Ash project MCP setup.
 
 ### Added

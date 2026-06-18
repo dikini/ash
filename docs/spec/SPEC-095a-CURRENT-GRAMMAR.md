@@ -1,16 +1,17 @@
 ---
-id: spec.ash.surface-grammar
-title: Ash Surface Syntax Grammar
-description: EBNF grammar derived from the current parser implementation
+id: spec.ash.surface-grammar.current
+title: Ash Surface Syntax Grammar — Current State
+description: EBNF grammar derived from the current parser implementation, as of main HEAD
+code_commit: e61f2792
 kind: spec
 audience: [human, agent]
 authority: derived-from-code
-status: draft
-stability: alpha
+status: active
+stability: beta
 owner: language
-last_verified: 2026-06-17
+last_verified: 2026-06-18
 verified_against:
-  git_commit: main HEAD
+  git_commit: e61f2792
   code:
     - crates/ash-parser/src/parse_expr.rs
     - crates/ash-parser/src/parse_module.rs
@@ -30,22 +31,18 @@ verified_against:
     - crates/ash-parser/src/lexer.rs
 ---
 
-# Ash Surface Syntax Grammar
+# SPEC-095a: Ash Surface Syntax Grammar — Current State
 
-**Status:** Draft — derived from parser source code, needs manual review and annotation
-
-**Scope note:** This document is a parser-derived grammar baseline, not the
-normative owner of the language-evolution surface proposed in SPEC-096 and
-SPEC-097. When this file lists constructs that are only partially implemented,
-reserved, or targeted by future row/effect work, those constructs must be read
-through the deviations section rather than as implementation-ready syntax.
+**Status:** Active — derived from live parser source code
+**Scope:** This document records what the parser actually accepts today. It is the
+authority for current syntax, not a proposal for future syntax.
+**Frozen against:** `e61f2792` (main HEAD at time of verification)
 
 ## 1. Lexical Structure
 
 ### 1.1 Tokens
 
 ```ebnf
-(* Keywords — 99 reserved words *)
 keyword = "act" | "always" | "analyze" | "as" | "authored" | "builtin" | "by"
         | "by_definition" | "cap" | "capabilities" | "capability" | "case"
         | "check" | "config" | "control" | "crate" | "data" | "decide"
@@ -62,25 +59,14 @@ keyword = "act" | "always" | "analyze" | "as" | "authored" | "builtin" | "by"
         | "super" | "test" | "then" | "true" | "type" | "under" | "use" | "uses"
         | "wait" | "where" | "with" | "with_error" | "workflow" | "write" | "yield" ;
 
-(* Identifiers *)
 identifier = [a-zA-Z_] [a-zA-Z0-9_-]* ;
 
-(* String literals *)
 string_literal = '"' { any_char - '"' } '"' ;
-
-(* Integer literals *)
 int_literal = [0-9]+ ;
-
-(* Float literals *)
 float_literal = [0-9]+ "." [0-9]+ ;
-
-(* Boolean literals *)
 bool_literal = "true" | "false" ;
-
-(* Null literal *)
 null_literal = "null" ;
 
-(* Comments *)
 line_comment = "--" { any_char - newline } newline ;
 block_comment = "/*" { any_char } "*/" ;
 ```
@@ -88,26 +74,16 @@ block_comment = "/*" { any_char } "*/" ;
 ### 1.2 Operators and Punctuation
 
 ```ebnf
-(* Arithmetic operators *)
 add_op = "+" | "-" ;
 mul_op = "*" | "/" | "%" ;
-
-(* Comparison operators *)
 cmp_op = "==" | "!=" | "<" | ">" | "<=" | ">=" | "in" ;
-
-(* Logical operators *)
 and_op = "&&" ;
 or_op = "||" ;
 not_op = "!" ;
-
-(* Pipe operator *)
 pipe_op = "|>" ;
-
-(* Assignment and binding *)
 assign_op = "=" ;
 arrow = "->" ;
 
-(* Delimiters *)
 lparen = "(" ;
 rparen = ")" ;
 lbrace = "{" ;
@@ -127,9 +103,7 @@ underscore = "_" ;
 
 ```ebnf
 crate_root = crate_metadata { dependency_decl } ;
-
 crate_metadata = "crate" identifier ";" ;
-
 dependency_decl = "dependency" identifier "=" string_literal ";" ;
 ```
 
@@ -137,7 +111,6 @@ dependency_decl = "dependency" identifier "=" string_literal ";" ;
 
 ```ebnf
 module_file = { module_decl } { definition } ;
-
 module_decl = visibility "mod" identifier ";" ;
 
 definition = visibility (
@@ -172,17 +145,13 @@ builtin_fn_definition = "builtin" "fn" identifier [ type_params ] parameter_list
                         [ "->" type ] [ fn_contract ] ";" ;
 
 fn_contract = { requires_clause } { ensures_clause } ;
-
 requires_clause = "requires" ":" expr ";" ;
-
 ensures_clause = "ensures" ":" expr ";" ;
 
 parameter_list = "(" [ parameter { "," parameter } [","] ] ")" ;
-
 parameter = identifier ":" type ;
 
 fn_body = "{" { fn_stmt } "}" ;
-
 fn_stmt = let_stmt
         | fn_expr
         | "panic" [ string_literal ]
@@ -194,26 +163,18 @@ fn_stmt = let_stmt
 ### 3.1 Expression Hierarchy (Precedence)
 
 ```ebnf
-(* Lowest precedence *)
 expr = closure_expr
      | fn_expr
      | if_let_expr
      | pipe_expr ;
 
 pipe_expr = ternary_expr { "|>" call_expr } ;
-
 ternary_expr = or_expr [ "?" expr ":" expr ] ;
-
 or_expr = and_expr { "||" and_expr } ;
-
 and_expr = comparison_expr { "&&" comparison_expr } ;
-
 comparison_expr = additive_expr { cmp_op additive_expr } ;
-
 additive_expr = multiplicative_expr { add_op multiplicative_expr } ;
-
 multiplicative_expr = unary_expr { mul_op unary_expr } ;
-
 unary_expr = [ "-" | "!" ] primary_expr ;
 
 primary_expr = literal
@@ -234,9 +195,7 @@ primary_expr = literal
              | "fail" [ string_literal ]
              ;
 
-(* Highest precedence *)
 call_expr = primary_expr [ "(" [ argument_list ] ")" ] ;
-
 argument_list = expr { "," expr } [","] ;
 ```
 
@@ -244,7 +203,6 @@ argument_list = expr { "," expr } [","] ;
 
 ```ebnf
 closure_expr = "|" [ closure_param { "," closure_param } ] "|" "->" expr ;
-
 closure_param = identifier [ ":" type ] ;
 
 fn_expr = "fn" [ identifier ] "(" [ parameter_list ] ")" [ "->" type ] fn_body ;
@@ -254,19 +212,16 @@ if_let_expr = "if" "let" pattern "=" expr "then" expr [ "else" expr ] ;
 list_expr = "[" [ expr { "," expr } [","] ] "]" ;
 
 record_constructor = identifier "{" [ constructor_field { "," constructor_field } [","] ] "}" ;
-
 constructor_field = identifier [ ":" expr ] ;
 
 tuple_constructor = identifier "(" [ expr { "," expr } [","] ] ")" ;
 
 field_access = expr "." identifier ;
-
 index_access = expr "." int_literal ;
 
 qualified_identifier = identifier "." identifier ;
 
 comprehension_expr = "[" expr "|" comprehension_qualifier { "," comprehension_qualifier } "]" ;
-
 comprehension_qualifier = "let" pattern "=" expr
                          | "if" expr
                          | pattern "<-" expr
@@ -281,9 +236,7 @@ with_error_expr = "with_error" [ identifier ] "{" expr "}" [ "handle" "{" expr "
 act_block_expr = "act" [ capability_ref ] "{" { act_stmt } "}" ;
 
 do_block_expr = "do" ":" do_target "{" { do_stmt } "}" ;
-
 do_target = identifier [ "<" type_arg_list ">" ] ;
-
 type_arg_list = type { "," type } ;
 
 do_stmt = "let" identifier "=" expr ";"
@@ -306,31 +259,17 @@ pattern = wildcard_pattern
         ;
 
 wildcard_pattern = "_" ;
-
 variable_pattern = identifier ;
-
-literal_pattern = int_literal
-               | float_literal
-               | string_literal
-               | bool_literal
-               | null_literal
-               ;
+literal_pattern = int_literal | float_literal | string_literal | bool_literal | null_literal ;
 
 record_pattern = "{" [ record_pattern_field { "," record_pattern_field } [","] ] "}" ;
-
 record_pattern_field = identifier [ ":" pattern ] ;
 
 tuple_pattern = "(" [ pattern { "," pattern } [","] ] ")" ;
-
 list_pattern = "[" [ pattern { "," pattern } [","] ] "]" ;
 
 variant_pattern = identifier [ variant_payload ] ;
-
-variant_payload = record_pattern
-                | tuple_pattern
-                | simple_field_list
-                ;
-
+variant_payload = record_pattern | tuple_pattern | simple_field_list ;
 simple_field_list = identifier { "," identifier } ;
 ```
 
@@ -349,25 +288,16 @@ type_atom = type_name
           ;
 
 type_name = identifier [ "::" identifier ] ;
-
 type_constructor = identifier "<" type_arg_list ">" ;
-
 tuple_type = "(" [ type { "," type } [","] ] ")" ;
-
 record_type = "{" [ record_type_field { "," record_type_field } [","] ] "}" ;
-
 record_type_field = identifier ":" type ;
-
 fn_type = "Fn" "(" [ type { "," type } [","] ] ")" [ "->" type ] ;
-
 parenthesized_type = "(" type ")" ;
-
 type_hole = "_" ;
 
 type_params = "<" type_param { "," type_param } [","] ">" ;
-
 type_param = identifier [ ":" kind ] ;
-
 kind = "Type" | "Effect" | "Capability" | "Resource" ;
 ```
 
@@ -389,17 +319,11 @@ workflow_header_clauses = { requires_clause }
                           ;
 
 capabilities_clause = "capabilities" "{" capability_ref { "," capability_ref } "}" ;
-
 observes_clause = "observes" "{" observe_spec { "," observe_spec } "}" ;
-
 receives_clause = "receives" "{" receive_spec { "," receive_spec } "}" ;
-
 obligations_clause = "obligations" "{" obligation_ref { "," obligation_ref } "}" ;
-
 owns_clause = "owns" "{" resource_ref { "," resource_ref } "}" ;
-
 uses_clause = "uses" "{" capability_ref { "," capability_ref } "}" ;
-
 plays_roles = "plays" "role" role_ref { "," role_ref } ;
 
 workflow_stmt = act_stmt
@@ -425,56 +349,30 @@ workflow_stmt = act_stmt
                ;
 
 act_stmt = "act" [ action_ref ] [ "where" "{" { constraint } "}" ] [ "then" workflow_stmt ] ;
-
-action_ref = identifier
-           | qualified_identifier
-           | "(" expr ")"
-           ;
+action_ref = identifier | qualified_identifier | "(" expr ")" ;
 
 check_stmt = "check" obligation_ref [ "under" "{" { guard } "}" ] ;
-
 decide_stmt = "decide" "under" policy_ref "then" "{" { decision_arm } "}" ;
-
 decision_arm = identifier "->" workflow_stmt ;
-
 done_stmt = "done" ;
-
 for_stmt = "for" pattern "in" expr "do" "{" { workflow_stmt } "}" ;
-
 if_stmt = "if" expr "then" "{" { workflow_stmt } "}" [ "else" "{" { workflow_stmt } "}" ] ;
-
 let_stmt = "let" pattern "=" expr ";" ;
-
 maybe_stmt = "maybe" "{" { workflow_stmt } "}" [ "else" "{" { workflow_stmt } "}" ] ;
-
 must_stmt = "must" expr ";" ;
-
 observe_stmt = "observe" [ observe_index ] [ "as" pattern ] ";" ;
-
 observe_index = identifier "[" expr "]" ;
-
 orient_stmt = "orient" expr "as" type ";" ;
-
 propose_stmt = "propose" expr "as" identifier ";" ;
-
 receive_stmt = "receive" [ "wait" [ duration ] ] "{" { receive_arm } "}" ;
-
 duration = int_literal ( "ms" | "s" | "m" | "h" | "d" ) ;
-
 receive_arm = pattern [ "if" expr ] "->" "{" { workflow_stmt } "}" ;
-
 ret_stmt = "ret" expr ";" ;
-
 send_stmt = "send" expr [ "to" expr ] ";" ;
-
 set_stmt = "set" identifier "=" expr ";" ;
-
 with_stmt = "with" expr "do" "{" { workflow_stmt } "}" ;
-
 oblige_stmt = "oblige" obligation_ref ";" ;
-
 yield_stmt = "yield" "{" { yield_arm } "}" ;
-
 yield_arm = pattern "->" "{" { workflow_stmt } "}" ;
 ```
 
@@ -484,27 +382,12 @@ yield_arm = pattern "->" "{" { workflow_stmt } "}" ;
 
 ```ebnf
 type_definition = "type" identifier [ type_params ] "=" type_body ";" ;
-
-type_body = alias_body
-         | enum_body
-         | struct_body
-         | record_type
-         | tuple_type
-         ;
-
+type_body = alias_body | enum_body | struct_body | record_type | tuple_type ;
 alias_body = type ;
-
 enum_body = "{" variant_def { "|" variant_def } "}" ;
-
 variant_def = identifier [ variant_payload_type ] ;
-
-variant_payload_type = record_type
-                    | tuple_type
-                    | identifier
-                    ;
-
+variant_payload_type = record_type | tuple_type | identifier ;
 struct_body = "{" [ field_def { "," field_def } [","] ] "}" ;
-
 field_def = identifier ":" type ;
 ```
 
@@ -512,17 +395,13 @@ field_def = identifier ":" type ;
 
 ```ebnf
 capability_definition = "capability" identifier "{" { capability_operation } "}" ;
-
 capability_operation = identifier "(" [ parameter_list ] ")" [ "->" type ] [ operation_mode ] ";" ;
-
 operation_mode = "read" | "write" | "execute" | "observe" | "analyze" | "control" ;
 
 capability_interface_definition = "interface" identifier [ type_params ] "{" { interface_method } "}" ;
-
 interface_method = identifier "(" [ parameter_list ] ")" [ "->" type ] ";" ;
 
 capability_implementation_definition = "impl" identifier "for" identifier "{" { impl_method } "}" ;
-
 impl_method = "fn" identifier "(" [ parameter_list ] ")" [ "->" type ] fn_body ;
 ```
 
@@ -530,34 +409,21 @@ impl_method = "fn" identifier "(" [ parameter_list ] ")" [ "->" type ] fn_body ;
 
 ```ebnf
 role_definition = "role" identifier [ "(" parameter_list ")" ] "{" { role_clause } "}" ;
-
-role_clause = capability_ref ";"
-            | obligation_ref ";"
-            ;
+role_clause = capability_ref ";" | obligation_ref ";" ;
 ```
 
 ### 7.4 Law and Proof Definitions
 
 ```ebnf
 law_definition = "law" identifier [ parameter_list ] [ "->" type ] "by" proof_kind ";" ;
-
 proof_definition = "proof" identifier [ parameter_list ] [ "->" type ] "by" proof_kind ";" ;
-
-proof_kind = "test"
-           | "property"
-           | "quickcheck"
-           | "small_world"
-           | "definition"
-           | "authored"
-           | identifier
-           ;
+proof_kind = "test" | "property" | "quickcheck" | "small_world" | "definition" | "authored" | identifier ;
 ```
 
 ### 7.5 Proposition Definitions
 
 ```ebnf
 proposition_definition = "prop" identifier [ parameter_list ] [ "->" type ] "{" { proposition_clause } "}" ;
-
 proposition_clause = identifier "(" [ expr { "," expr } ] ")" ";" ;
 ```
 
@@ -565,14 +431,8 @@ proposition_clause = identifier "(" [ expr { "," expr } ] ")" ";" ;
 
 ```ebnf
 use_decl = "use" use_path ";" ;
-
-use_path = simple_path
-         | simple_path "::" "*"
-         | simple_path "::" "{" use_item { "," use_item } [","] "}"
-         ;
-
+use_path = simple_path | simple_path "::" "*" | simple_path "::" "{" use_item { "," use_item } [","] "}" ;
 use_item = identifier [ "as" identifier ] ;
-
 simple_path = identifier { "::" identifier } ;
 ```
 
@@ -580,36 +440,19 @@ simple_path = identifier { "::" identifier } ;
 
 ```ebnf
 visibility = [ "pub" [ "(" restricted_body ")" ] ] ;
-
-restricted_body = "crate"
-                | "self"
-                | "super"
-                | path
-                | "in" path
-                ;
+restricted_body = "crate" | "self" | "super" | path | "in" path ;
 ```
 
 ## 8. Policy Expressions
 
 ```ebnf
 policy_expr = policy_or ;
-
 policy_or = policy_and { "||" policy_and } ;
-
 policy_and = policy_seq { "&&" policy_seq } ;
-
 policy_seq = policy_unary [ ";" policy_unary ] ;
-
 policy_unary = [ "!" | "forall" identifier [ ":" type ] | "exists" identifier [ ":" type ] ] policy_primary ;
-
-policy_primary = identifier
-               | policy_call
-               | "(" policy_expr ")"
-               | policy_method_chain
-               ;
-
+policy_primary = identifier | policy_call | "(" policy_expr ")" | policy_method_chain ;
 policy_call = identifier "(" [ expr { "," expr } ] ")" ;
-
 policy_method_chain = policy_primary "." identifier [ "(" [ argument_list ] ")" ] ;
 ```
 
@@ -617,16 +460,16 @@ policy_method_chain = policy_primary "." identifier [ "(" [ argument_list ] ")" 
 
 ### 9.1 Parser Accepts More Than Specified
 
-- The parser accepts `fn` expressions in more contexts than documented
-- Record shorthand patterns (`Cons { head, tail }`) are partially supported
-- Some reserved callable arrows (`-*>`, `=>`, `=*>`) are rejected by the parser but not consistently
+- The parser accepts `fn` expressions in more contexts than documented.
+- Record shorthand patterns (`Cons { head, tail }`) are partially supported.
+- Some reserved callable arrows (`-*>`, `=>`, `=*>`) are rejected by the parser but not consistently.
 
 ### 9.2 Specified But Not Implemented
 
-- Deep destructuring (`let { a: { b } } = nested`) is not supported
-- Destructuring in workflow blocks (`observe`, `act`) is limited to simple `let name = value`
-- Arrow syntax in `fn` expressions (`fn(x) => expr`) is not supported
-- Pattern guards in `let` are not supported
+- Deep destructuring (`let { a: { b } } = nested`) is not supported.
+- Destructuring in workflow blocks (`observe`, `act`) is limited to simple `let name = value`.
+- Arrow syntax in `fn` expressions (`fn(x) => expr`) is not supported.
+- Pattern guards in `let` are not supported.
 
 ### 9.3 Reserved But Not Active
 
@@ -636,11 +479,8 @@ policy_method_chain = policy_primary "." identifier [ "(" [ argument_list ] ")" 
 
 ### 9.4 Language-Evolution Surfaces Not Owned Here
 
-SPEC-096 and SPEC-097 propose a future effect-row surface for capabilities,
-roles, policies, contracts, channels, process operations, failure, evidence,
-and effect aliases/groups. This grammar intentionally does not make those
-surfaces live. In particular, the following remain future syntax until a parser
-task updates this file from code-derived evidence:
+The following are future syntax targets defined in the goal-state specs. They are
+**not** accepted by the current parser:
 
 - effect rows such as `{cap fs.read, policy production_rate | r}`;
 - transparent effect aliases and diagnostic groups;
@@ -648,10 +488,6 @@ task updates this file from code-derived evidence:
 - policy effects as named policy-handler requirements;
 - channel send/receive/select effects with guards as contracts;
 - general user-defined effect-handler syntax.
-
-Future parser work must keep this file split between accepted grammar and
-reserved/future grammar so implementation tasks do not treat design examples as
-already accepted syntax.
 
 ## 10. Statistics
 
@@ -668,9 +504,16 @@ already accepted syntax.
 
 ## 11. See Also
 
-- [SPEC-009: Modules](../spec/SPEC-009-MODULES.md)
-- [SPEC-027: Pure Functions](../spec/SPEC-027-PURE-FUNCTIONS.md)
-- [SPEC-031: First-Class Functions](../spec/SPEC-031-FIRST-CLASS-FUNCTIONS.md)
-- [SPEC-072: Tower Callable Type and Closure Syntax](../spec/SPEC-072-TOWER-CALLABLE-TYPE-AND-CLOSURE-SYNTAX.md)
-- [SPEC-088: Closure Refinement and Effect-Safe Capture](../spec/SPEC-088-CLOSURE-REFINEMENT-AND-EFFECT-SAFE-CAPTURE.md)
-- [SPEC-091: Let Destructors](../spec/SPEC-091-LET-DESTRUCTORS.md)
+- [SPEC-095b: Target Grammar](SPEC-095b-TARGET-GRAMMAR.md) — future surface syntax direction
+- [SPEC-002: Surface Language](SPEC-002-SURFACE.md) — older surface spec
+- [SPEC-009: Modules](SPEC-009-MODULES.md)
+- [SPEC-027: Pure Functions](SPEC-027-PURE-FUNCTIONS.md)
+- [SPEC-031: First-Class Functions](SPEC-031-FIRST-CLASS-FUNCTIONS.md)
+- [SPEC-072: Tower Callable Type and Closure Syntax](SPEC-072-TOWER-CALLABLE-TYPE-AND-CLOSURE-SYNTAX.md)
+- [SPEC-088: Closure Refinement and Effect-Safe Capture](SPEC-088-CLOSURE-REFINEMENT-AND-EFFECT-SAFE-CAPTURE.md)
+- [SPEC-091: Let Destructors](SPEC-091-LET-DESTRUCTORS.md)
+
+## 12. Changelog
+
+- 2026-06-18: Split from combined SPEC-095 into current-state document. Frozen against `e61f2792`. Added scope note and cross-reference to target grammar.
+- 2026-06-17: Initial draft.

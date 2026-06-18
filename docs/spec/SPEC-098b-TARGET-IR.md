@@ -528,13 +528,14 @@ removed by `Handle`; they are discharged by their respective kind-specific mecha
 
 For a raised operation, the row transformation depends on handler mode:
 
-**User-installed shallow handlers:** The handled operation is removed from the body's
-local row for the delimited segment under the handler. Same-operation effects in the
-resumed continuation (after `resume` is invoked) are not handled by this frame and remain
-in the residual row. The handler is not reinstalled on resume.
+**User-installed shallow handlers:** The handler removes only the operation occurrence(s)
+dispatched to the installed handler frame in the delimited body segment. Effects in the
+captured resume continuation are not removed by this handler unless the handler is
+explicitly reinstalled. The residual local row preserves same-operation effects reachable
+only after resume.
 
 ```text
-body local row (under handler): {op, ... | r}
+body local row (delimited segment under handler): {op, ... | r}
 handler local row: {handler_effects}
 Handle { op, ... } local row: {handler_effects, ... | r}
 -- op is removed from the delimited segment, but may reappear in the resumed continuation

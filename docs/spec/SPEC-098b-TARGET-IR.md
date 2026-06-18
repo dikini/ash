@@ -193,8 +193,13 @@ constructed. This is the standard approach for recursive bindings in compiler IR
 
 ```text
 LetRec { name, value, body }:
-  local row = value.local ∪ body.local
-  total row = value.total ∪ body.total
+  construction local row = value.construction_local   -- usually {} for Lam/Cont/records
+  construction total row = value.construction_total   -- usually {}
+  local row = construction_local ∪ body.local
+  total row = construction_total ∪ body.total
+
+The latent row of a recursive `Lam` is recorded in its function type/body row and is
+charged when `Call` invokes it, not when `LetRec` constructs it.
 ```
 
 **Key invariants:**
@@ -204,8 +209,9 @@ LetRec { name, value, body }:
 2. A `Jump` transfers control to a continuation reference with a single argument. The reference may be a static label or a variable bound to a `Cont` closure; it is not an ordinary CPS function that takes another continuation.
 3. A `Call` invokes an ordinary CPS function (`Lam`) with arguments and a continuation.
    The callee's body is a term that must eventually `Jump` to the provided continuation.
-4. `LetVal`, `LetPrim`, and `LetCont` bind values, primitive results, and labels to names.
-   They are administrative normal form (ANF) bindings. Every intermediate result is named.
+4. `LetVal`, `LetRec`, `LetPrim`, and `LetCont` bind values, recursive values, primitive
+   results, and labels to names. They are administrative normal form (ANF) bindings.
+   Every intermediate result is named.
 5. `RecordDischarge` is an administrative term that records contract discharge status.
    It is a no-op at runtime but preserves metadata for audit and evidence caching.
 6. `Trap` is an unrecoverable abort. It does not resume and is outside ordinary row
@@ -467,6 +473,9 @@ pub struct HandlerClause {
     pub op: EffectOp,
     pub params: Vec<Param>,
     pub resume: Param,          -- resume: Cont<OpResult, Ans, ρ_resume>
+    -- Note: resume is an affine value parameter bound to a Cont closure,
+    -- unlike Lam.cont_param which binds a ContRef. The handler body receives
+    -- resume as a value that can be Jumped to, not as a static label.
     pub body: Box<Term>,
     pub row: EffectRow,         -- local row of the handler clause body
 }
@@ -517,18 +526,35 @@ A `Handle` node transforms the row of its body, but only for **raised operations
 §5.6). Ambient-discharge items (roles, policies, contracts, evidence, resources) are not
 removed by `Handle`; they are discharged by their respective kind-specific mechanisms.
 
-For a raised operation:
+For a raised operation, the row transformation depends on handler mode:
+
+**User-installed shallow handlers:** The handled operation is removed from the body's
+local row for the delimited segment under the handler. Same-operation effects in the
+resumed continuation (after `resume` is invoked) are not handled by this frame and remain
+in the residual row. The handler is not reinstalled on resume.
 
 ```text
-body row: {op, ... | r}
-handler row: {handler_effects}
-Handle { op, ... } row: {handler_effects, ... | r}
+body local row (under handler): {op, ... | r}
+handler local row: {handler_effects}
+Handle { op, ... } local row: {handler_effects, ... | r}
+-- op is removed from the delimited segment, but may reappear in the resumed continuation
 ```
 
-The handled operation `op` is removed from the body's **local** raised-operation row. The
-handler's own effects are added. Unhandled operations in the row remain. This rule applies
-only to operations from the "raised operations" category in §5.6. The total row of the
-`Handle` term is computed by adding the continuation row as described in §2.4.
+**Runtime-installed provider frames:** The handled operation is removed from the body's
+local row for all occurrences, because the provider frame is persistent and remains active
+after resume.
+
+```text
+body local row: {op, ... | r}
+provider local row: {provider_effects}
+Handle { op, ... } local row: {provider_effects, ... | r}
+-- op is removed from the entire body because the provider persists across resumes
+```
+
+The handled operation is removed from the row. The handler's own effects are added.
+Unhandled operations in the row remain. This rule applies only to operations from the
+"raised operations" category in §5.6. The total row of the `Handle` term is computed by
+adding the continuation row as described in §2.4.
 
 ### 5.6 Effect Handling vs Ambient Discharge
 
@@ -730,8 +756,7 @@ fetch_with_retry = Lam { params: [url], cont_param: k, row: {cap http.get},
 ```
 
 Key points:
-- `retry_loop` is a recursive CPS function (schematic; actual recursion requires `LetRec`
-  or a fixpoint combinator, which is still an open decision: §13.2).
+- `retry_loop` is a recursive CPS function using `LetRec` in fully normalized IR.
 - The body is re-invoked on each retry by `Call` to `retry_loop`.
 - The capability operation is a `Raise`, not a `Call`.
 - The schematic uses `Err(...)` and `>` in atom position — these would be `LetPrim` bindings
@@ -1057,9 +1082,9 @@ forwards to `k`.
 
 ### 10.3 Raise Operational Semantics
 
-`Raise` walks the current handler/provider chain to find a matching handler or provider frame. The `resume` continuation reference on `Raise` denotes a **captured raise-site continuation**:
+The `resume` continuation reference on `Raise` denotes a **captured raise-site continuation**:
 the continuation reference plus the handler/provider chain active at the raise site after
-removing the matching frame. When the handler invokes `resume`, the captured chain is
+adjusting for the matched frame. When the handler invokes `resume`, the captured chain is
 restored and `k_resume` is jumped to with the operation result.
 
 For label-based continuations, a `Raise` that crosses a handler boundary must lower the
@@ -1071,13 +1096,24 @@ arguments unless lowered to `Cont` closures first.
 eval(Raise { op, args, resume = k_resume }) under chain H
   = let (prefix, matched, parent) = find_match(H, op) in
 
-If found:
+If matched is Handler:
   - Build resume continuation:
       resume = Cont {
-        arg: clause.op.result,
+        arg: matched.clause.op.result,
         body: Jump { cont: k_resume, arg: arg, row: k_resume.row },
         env: capture_env(k_resume),
-        chain: prefix ++ parent,  -- excludes matched frame; preserves inner nonmatching frames
+        chain: prefix ++ parent,  -- excludes matched handler; shallow semantics
+        row: k_resume.row
+      }
+  - Evaluate matched.clause.body under chain parent with args and resume
+
+If matched is Provider:
+  - Build resume continuation:
+      resume = Cont {
+        arg: matched.clause.op.result,
+        body: Jump { cont: k_resume, arg: arg, row: k_resume.row },
+        env: capture_env(k_resume),
+        chain: prefix ++ matched ++ parent,  -- preserves provider frame; persistent semantics
         row: k_resume.row
       }
   - Evaluate matched.clause.body under chain parent with args and resume
@@ -1104,6 +1140,10 @@ under the chain outside the matching frame (`parent`). The selected frame is not
 while its own handler body runs. Effects raised by the handler body dispatch through `parent`
 and any frames outside it. If recursive self-handling is desired, the handler must explicitly
 reinstall itself.
+
+For provider frames, the provider body also evaluates under `parent` to avoid recursive
+self-service. Provider persistence applies only to the captured resume chain, not to the
+provider's own body execution.
 
 **Resume construction:** The resume continuation is a `Cont` value that, when invoked with a
 value `v`, jumps to `k_resume` (the original continuation from the raise site) with `v`.
@@ -1267,9 +1307,10 @@ bound to a placeholder during value construction, then backfilled with the actua
 after construction completes. This is the standard approach for recursive bindings in
 compiler IRs and aligns with the current Ash interpreter's recursive closure model.
 
-Mutual recursion is deferred out of scope for MVP; the current `LetRec` is single-variable
-only. Multiple mutually recursive functions can be encoded via a single `LetRec` binding to
-a record/tuple of functions, or by chaining `LetRec` bindings.
+Mutual recursion is deferred out of scope for MVP. The current `LetRec` is single-variable
+only. Encoding multiple mutually recursive functions would require either extending `LetRec`
+to support multiple bindings, or using a record/tuple of functions with forward references
+resolved through an additional indirection layer. Both are possible but not specified here.
 
 ### 13.3 Open Decisions
 

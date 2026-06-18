@@ -1,7 +1,7 @@
 ---
 id: spec.ash.ir.target
 title: Ash Intermediate Representation — Target State
-description: Target IR with unified effect rows, effect item identities, and a shared computation substrate
+description: Target CPS IR with unified effect rows, three-layer grammar, and operation-typed raise/handle
 kind: spec
 audience: [human, agent]
 authority: design
@@ -22,212 +22,179 @@ verified_against:
 
 # SPEC-098b: Ash Intermediate Representation — Target State
 
-**Status:** Draft — target IR for unified effect rows
+**Status:** Draft — target CPS IR for unified effect rows
 **Scope:** This document defines the IR representation we want Ash to have.
 It is a goal-state living document that will be refined as implementation progresses.
 **Depends on:** SPEC-095b (Target Grammar), SPEC-096b (Target Effect System), SPEC-097b (Target Type System)
 
 ## 1. Summary
 
-The target IR unifies Ash's computation representation into a **CPS (Continuation-Passing Style)**
-form with effect-row annotations. Every computation is a function that takes a continuation
-(represented as a closure or label) and never returns directly.
+The target IR is a **CPS (Continuation-Passing Style)** intermediate representation with
+three syntactic layers: atoms, values, and tail computations. Every non-atomic computation
+is a tail term that eventually jumps, calls, raises, or handles. There is no direct return.
 
 Key design decisions:
 
-1. **CPS form**: All expressions are in CPS. A function `A -> {r} B` becomes `A -> (B -> {r} C) -> {r} C`.
-2. **EffectRow on continuations**: The continuation itself carries the effect row, ensuring
-   effect requirements propagate through the call chain.
-3. **Unified computation type**: `Act`, `Proc`, and `Workflow` are views over a shared CPS
-   substrate, distinguished only by their row profile.
-4. **Effect item identities and namespaces**: Every effect item has a canonical identity.
-5. **Contract effect nodes**: Static/evidence/dynamic discharge status is tracked in the IR.
-6. **Handler stack as CPS frames**: Handlers are continuations installed at explicit boundaries.
+1. **Three-layer grammar**: `Atom` (variables, literals, labels), `Value` (atoms, lambdas,
+   records, tuples), `Term` (let-bindings, calls, jumps, conditionals, raise, handle).
+2. **Call vs Jump**: Ordinary function calls (`Call`) are separate from continuation
+   invocation (`Jump`). A continuation is not a CPS function that takes another continuation.
+3. **Answer type discipline**: Every CPS term is typed under a fixed answer type `Ans`.
+   A continuation `Cont<A, Ans, ρ>` consumes an `A` and produces an `Ans`. A CPS function
+   called with that continuation must also produce `Ans`.
+4. **Row composition**: The total effect row of a call is the union of the callee's body
+   row and the continuation's row. They are not conflated.
+5. **Operation-typed raise/handle**: `Raise` names an operation with argument types and a
+   result type. The resume continuation has type `Cont<OpResult, Ans, ρ_resume>`.
+6. **Rows are requirements**: The IR does not treat every `EffectItem` as a generic resumable
+   algebraic operation. Capabilities, roles, policies, contracts, channels, and process
+   effects are discharged by ambient authority, evidence, or boundary checks — not all by
+   `Handle` frames.
 7. **Backward compatibility**: Legacy AST variants are lowered to CPS during migration.
 
-## 2. Target AST Types
+## 2. Core Grammar
 
-### 2.1 CPS Expression AST
+The target IR has three syntactic layers. This separation is required for CPS soundness.
 
-In CPS form, every expression takes a continuation `k` and produces a result by invoking `k`.
-There is no direct return. The continuation is a first-class value (a closure or label) that
-carries its own effect row.
+### 2.1 Atom
 
-```rust
-pub enum Expr {
-    -- Primitive values (no continuation needed)
-    Lit(Literal),
-    Var(Name),
-    PrimOp { op: PrimOp, args: Vec<Atom> },
-
-    -- CPS application: apply a function to arguments and a continuation
-    App {
-        func: Atom,
-        args: Vec<Atom>,
-        cont: Atom,           -- continuation: A -> {r} C
-        row: EffectRow,       -- effect row of this application
-    },
-
-    -- CPS abstraction: a function that takes a continuation
-    Lam {
-        params: Vec<Param>,   -- ordinary parameters
-        cont_param: Param,    -- continuation parameter k
-        body: Box<Expr>,
-        row: EffectRow,       -- effect row of the function body
-    },
-
-    -- Let-binding (administrative normal form)
-    Let {
-        name: Name,
-        value: Box<Expr>,     -- must be a value or primitive op
-        body: Box<Expr>,
-    },
-
-    -- Effect raise: invoke the current continuation with an effect request
-    Raise {
-        effect: EffectItem,
-        args: Vec<Atom>,
-        cont: Atom,           -- continuation to resume after handling
-        row: EffectRow,
-    },
-
-    -- Handler boundary: install a handler around a body
-    Handle {
-        effect: EffectItem,
-        handler: HandlerDef,  -- handler implementation
-        body: Box<Expr>,      -- body to execute under the handler
-        cont: Atom,           -- continuation after the handler scope
-        row: EffectRow,
-    },
-
-    -- Conditional (CPS branch)
-    If {
-        cond: Atom,
-        then_branch: Box<Expr>,
-        else_branch: Box<Expr>,
-        cont: Atom,
-        row: EffectRow,
-    },
-
-    -- Record/tuple construction (atomic)
-    Record { fields: Vec<(Name, Atom)> },
-    Tuple { elems: Vec<Atom> },
-
-    -- Field access (atomic)
-    Field { record: Atom, field: Name },
-
-    -- Legacy compatibility aliases (lowered to CPS during migration)
-    Act { ... },
-    Do { ... },
-    Proc { ... },
-    Workflow { ... },
-}
-
-pub enum Atom {
-    Var(Name),
-    Lit(Literal),
-}
-```
-
-**Key CPS invariants:**
-
-1. Every non-atomic expression ends with an `App`, `Raise`, `Handle`, or `If` that invokes a continuation.
-2. Functions never return; they always invoke their continuation parameter.
-3. The continuation parameter is the last parameter of every `Lam`.
-4. Effect rows are attached to every `App`, `Lam`, `Raise`, and `Handle` node.
-
-### 2.2 CPS Function Type
-
-In CPS, a function type is:
-
-```rust
-pub enum Type {
-    -- ... existing variants ...
-
-    -- CPS function type: (params, cont) -> {row} result
-    CpsFn {
-        params: Vec<Type>,           -- ordinary parameters
-        cont: Box<Type>,             -- continuation type: B -> {row} C
-        ret: Box<Type>,              -- result type C (the "final answer")
-        row: EffectRow,              -- effect row of the function
-    },
-
-    -- Continuation type: a function that takes a value and returns a final answer
-    Cont {
-        arg: Box<Type>,              -- argument type
-        ret: Box<Type>,              -- final answer type
-        row: EffectRow,              -- effect row of the continuation
-    },
-
-    -- Effect row type
-    EffectRow {
-        items: Vec<EffectItem>,
-        tail: Option<RowVar>,
-    },
-
-    -- Legacy compatibility
-    Fn { params, ret },             -- pure function, lowered to CpsFn with empty row
-    Fun { params, ret, effect },    -- effectful callable, lowered to CpsFn
-}
-```
-
-A surface function `fn f(x: A) -> {r} B { ... }` lowers to a CPS function:
+An atom is a reference that needs no evaluation.
 
 ```text
-f : (A, (B -> {r} C)) -> {r} C
+Atom ::= Var(Name)
+       | Lit(Literal)
+       | Label(LabelId)
+       | PrimName(PrimOp)
+       | ConstructorName(Name)
 ```
 
-where `C` is the final answer type (often `Unit` or a top-level computation result).
+Atoms appear in argument position, constructor fields, and primitive operations.
 
-### 2.3 CPS Value Types
+### 2.2 Value
 
-In CPS, a "computation" is not a separate value type. It is simply a CPS function that takes
-a continuation. The runtime tracks effect rows through the continuation closure environment.
+A value is an atom or a value constructor that does not perform effects.
+
+```text
+Value ::= Atom
+        | Lam { params: Vec<Param>, cont_param: Param, body: Term, row: EffectRow }
+        | Record { fields: Vec<(Name, Atom)> }
+        | Tuple { elems: Vec<Atom> }
+```
+
+A `Lam` is a CPS function value. It is not a tail computation — it is a value that can be
+bound to a variable, passed as an argument, or stored in a data structure. The body of a
+`Lam` is a `Term` (a tail computation), not a `Value`.
+
+### 2.3 Term
+
+A term is a tail computation that eventually jumps, calls, raises, or handles. Every term
+is evaluated under an answer type `Ans`.
+
+```text
+Term ::= LetVal { name: Name, value: Value, body: Term }
+        | LetPrim { name: Name, op: PrimOp, args: Vec<Atom>, body: Term }
+        | Call { func: Atom, args: Vec<Atom>, cont: Atom, row: EffectRow }
+        | Jump { cont: Atom, arg: Atom, row: EffectRow }
+        | If { cond: Atom, then_branch: Term, else_branch: Term, row: EffectRow }
+        | Raise { op: EffectOp, args: Vec<Atom>, resume: Atom, row: EffectRow }
+        | Handle { clause: HandlerClause, body: Term, cont: Atom, row: EffectRow }
+```
+
+**Key invariants:**
+
+1. Every term eventually reaches a `Call`, `Jump`, `Raise`, `Handle`, or `If` that transfers
+   control. There is no "return" — the answer type is produced by the outermost continuation.
+2. A `Jump` invokes a continuation with a single argument. The continuation is not a CPS
+   function that takes another continuation; it is a `Cont` value that consumes the argument
+   and produces the answer.
+3. A `Call` invokes an ordinary CPS function (`Lam`) with arguments and a continuation.
+   The callee's body is a term that must eventually `Jump` to the provided continuation.
+4. `LetVal` and `LetPrim` bind values to names. They are administrative normal form (ANF)
+   bindings. Every intermediate result is named.
+
+### 2.4 Answer Type Discipline
+
+Every CPS term is typed under a fixed answer type `Ans` for its region:
+
+```text
+Γ ⊢ atom : A
+Γ ⊢ value : A
+Γ ⊢ term ! Ans, ρ
+```
+
+A continuation has type:
+
+```text
+Cont<A, Ans, ρk>  -- consumes A, produces Ans, with row ρk
+```
+
+A CPS function called with a continuation must produce the same `Ans`:
+
+```text
+f : CpsFn { params: [A], cont: Cont<B, Ans, ρk>, body_row: ρf, total_row: ρf ∪ ρk }
+```
+
+The answer type is fixed for a compilation region (e.g., a function, a workflow, or a module
+entry point). It is not polymorphic unless the region explicitly supports answer-type
+polymorphism.
+
+## 3. CPS Types
+
+### 3.1 CPS Function Type
+
+A CPS function type separates the callee's body row from the continuation's row:
 
 ```rust
-pub enum Value {
-    -- ... existing variants ...
+pub struct CpsFn {
+    pub params: Vec<Type>,           -- ordinary parameters
+    pub cont: Box<Cont>,             -- continuation type
+    pub answer: Type,                -- fixed answer type for the region
+    pub body_row: EffectRow,         -- effects of the function body itself
+    pub total_row: EffectRow,        -- body_row ∪ cont_row (computed, not stored separately)
+}
 
-    -- CPS closure: a function with its environment and continuation
-    CpsClosure {
-        params: Vec<Param>,
-        cont_param: Param,
-        body: Box<Expr>,
-        env: Env,
-        row: EffectRow,
-    },
-
-    -- Continuation: a special closure that never returns, only invokes its own continuation
-    Cont {
-        arg: Param,
-        body: Box<Expr>,
-        env: Env,
-        row: EffectRow,
-    },
-
-    -- Handler frame: a continuation that intercepts specific effects
-    HandlerFrame {
-        effect: EffectItem,
-        handler: HandlerDef,
-        next: Box<Value>,  -- the next continuation in the chain
-    },
-
-    -- Legacy compatibility aliases
-    ActEnvToken(...),  -- preserved during migration, lowered to CpsClosure
-    Proc(...),         -- preserved during migration, lowered to CpsClosure
+pub struct Cont {
+    pub arg: Type,                   -- argument type
+    pub answer: Type,                -- must match the region's answer type
+    pub row: EffectRow,              -- effects of the continuation
 }
 ```
 
-**Key CPS value invariants:**
+A surface function `fn f(x: A) -> {ρf} B { ... }` lowers to a CPS function:
 
-1. `CpsClosure` always has a `cont_param` as its last parameter.
-2. `Cont` never returns; it always invokes another continuation.
-3. `HandlerFrame` wraps a continuation and intercepts matching `Raise` nodes.
-4. Effect rows are part of the closure environment, not separate runtime values.
+```text
+f : ∀Ans ρk. CpsFn {
+    params: [A],
+    cont: Cont<B, Ans, ρk>,
+    answer: Ans,
+    body_row: ρf,
+    total_row: ρf ∪ ρk
+}
+```
 
-## 3. Effect Row Representation
+The callee's body row `ρf` and the continuation's row `ρk` are distinct. The total row of
+the call is their union. A pure function called with an effectful continuation does not
+become intrinsically effectful — the total call context has the union of both.
 
-### 3.1 Row Carrier
+### 3.2 Continuation Type
+
+A continuation is not a CPS function that takes another continuation. It is a one-shot
+consumer of a value that produces the answer:
+
+```text
+Cont<A, Ans, ρ>  -- A -> {ρ} Ans
+```
+
+In the IR, a continuation is represented as a `Cont` value (a closure or label) that is
+invoked by `Jump`:
+
+```text
+Jump { cont: k, arg: v, row: ρ }
+```
+
+The `row` on `Jump` is the continuation's row `ρk`, not the caller's body row.
+
+### 3.3 Effect Row Type
 
 ```rust
 pub struct EffectRow {
@@ -241,7 +208,7 @@ pub struct RowVar {
 }
 ```
 
-### 3.2 Effect Item Identity
+## 4. Effect Item Identity
 
 ```rust
 pub enum EffectItem {
@@ -260,86 +227,203 @@ pub enum EffectItem {
 
 See SPEC-097b for the full type definitions.
 
-## 5. Lowering Pipeline
+### 4.1 Contract Discharge Status
 
-### 5.1 Target Lowering
+Contract effects carry discharge status in the IR or in a sidecar:
+
+```rust
+pub struct ContractDischarge {
+    pub contract: ContractEffect,
+    pub mode: DischargeMode,
+    pub evidence: Option<EvidenceRef>,
+    pub source_span: Span,
+}
+
+pub enum DischargeMode {
+    Static,      -- discharged by type checker / prover
+    Evidence,    -- discharged by proof / test / law evidence
+    Dynamic,     -- discharged by runtime contract handler
+}
+```
+
+A contract effect cannot be silently erased from a row without recording its discharge mode.
+The IR must preserve this information for audit, diagnostics, and evidence caching.
+
+## 5. Raise and Handle
+
+### 5.1 Effect Operation
+
+`Raise` names an operation with a signature:
+
+```rust
+pub struct EffectOp {
+    pub item: EffectItem,
+    pub args: Vec<Type>,
+    pub result: Type,
+}
+```
+
+The resume continuation has type `Cont<OpResult, Ans, ρ_resume>`.
+
+### 5.2 Raise
+
+```rust
+pub struct Raise {
+    pub op: EffectOp,
+    pub args: Vec<Atom>,
+    pub resume: Atom,           -- resume: Cont<OpResult, Ans, ρ_resume>
+    pub row: EffectRow,
+}
+```
+
+The `row` on `Raise` is the effect of the operation itself. The resume continuation carries
+its own row for the rest of the computation.
+
+### 5.3 Handler Clause
+
+```rust
+pub struct HandlerClause {
+    pub op: EffectOp,
+    pub params: Vec<Param>,
+    pub resume: Param,          -- resume: Cont<OpResult, Ans, ρ_resume>
+    pub body: Box<Term>,
+    pub row: EffectRow,
+}
+```
+
+The handler clause body is a term that must eventually `Jump` to `resume` or `Jump` to the
+outer continuation. The `resume` parameter is one-shot: after the handler body jumps to it,
+it is consumed.
+
+### 5.4 Handle
+
+```rust
+pub struct Handle {
+    pub clause: HandlerClause,
+    pub body: Box<Term>,
+    pub cont: Atom,             -- cont: Cont<BodyResult, Ans, ρ_cont>
+    pub row: EffectRow,         -- residual row after handling
+}
+```
+
+The `row` on `Handle` is the residual row: the effects that remain after the handled
+operation is removed. The handler may add its own effects (e.g., logging, evidence) to the
+residual row.
+
+### 5.5 Handler Row Transformation
+
+A `Handle` node transforms the row of its body:
+
+```text
+body row: {op, ... | r}
+handler row: {handler_effects}
+Handle { op, ... } row: {handler_effects, ... | r}
+```
+
+The handled operation `op` is removed from the row. The handler's own effects are added.
+Unhandled operations in the row remain. This rule must be explicit in the type system.
+
+### 5.6 Effect Handling vs Ambient Discharge
+
+Not every `EffectItem` is a resumable algebraic operation. The IR distinguishes:
+
+- **Raised operations**: Capability calls, channel ops, process ops, failures — these are
+  runtime requests that are matched by `Handle` frames.
+- **Ambient discharge**: Roles, policies, contracts, evidence — these are discharged by
+  static checking, evidence proofs, or runtime boundary checks, not by `Handle` frames.
+
+A capability call lowers to `Raise` with a `Capability` operation. A role admission is not
+raised; it is checked statically or at the workflow boundary. A policy effect is not raised;
+it is evaluated by a policy handler at an explicit boundary.
+
+This aligns with SPEC-096b's "rows are requirements, not grants" rule.
+
+## 6. Lowering Pipeline
+
+### 6.1 Target Lowering
 
 ```text
 surface AST (with effect rows)
     |
     v
-lower.rs -- lowers to unified IR
+lower.rs -- lowers to unified CPS IR
     |
     v
-core AST (with EffectRow)
+core CPS AST (Atom/Value/Term with EffectRow)
     |
     v
-type checker (with row discharge)
+type checker (with row discharge and answer type discipline)
     |
     v
-interpreter (with handler stack)
+interpreter (with continuation chain and handler frames)
 ```
 
-### 5.2 CPS Lowering Rules
+### 6.2 CPS Lowering Rules
 
 | Surface | CPS Target IR |
 |---------|---------------|
-| `do { ... }` | `Lam { params: [], cont_param: k, body: [lowered body], row: inferred }` |
-| `do:Act { ... }` | `Lam { params: [], cont_param: k, body: [lowered body], row: Act_profile }` |
-| `do:Proc { ... }` | `Lam { params: [], cont_param: k, body: [lowered body], row: Proc_profile }` |
-| `do:Workflow { ... }` | `Lam { params: [], cont_param: k, body: [lowered body], row: Workflow_profile }` |
-| `act { ... }` | `Lam { params: [], cont_param: k, body: [lowered body], row: Act_profile }` |
-| `workflow { ... }` | `Lam { params: [], cont_param: k, body: [lowered body], row: Workflow_profile }` |
-| `fn f(x: A) -> {r} B { body }` | `Lam { params: [x], cont_param: k, body: [lowered body], row: r }` |
-| `handle E with { ... }` | `Handle { effect: E, handler: H, body: [lowered body], cont: k, row: r }` |
-| `raise E(args)` | `Raise { effect: E, args: [lowered args], cont: k, row: r }` |
-| `f(x)` | `App { func: f, args: [x], cont: k, row: r }` |
-| `if c then t else e` | `If { cond: c, then_branch: [t], else_branch: [e], cont: k, row: r }` |
-| `let x = v in e` | `Let { name: x, value: [v], body: [e] }` |
+| `fn f(x: A) -> {ρ} B { body }` | `Lam { params: [x], cont_param: k, body: [lowered body], row: ρ }` |
+| `f(x)` | `Call { func: f, args: [x], cont: k, row: ρ_total }` |
+| `return v` | `Jump { cont: k, arg: v, row: ρk }` |
+| `let x = v in e` | `LetVal { name: x, value: [v], body: [e] }` |
+| `let x = a + b in e` | `LetPrim { name: x, op: Add, args: [a, b], body: [e] }` |
+| `if c then t else e` | `If { cond: c, then_branch: [t], else_branch: [e], row: ρ }` |
+| `handle E with { ... }` | `Handle { clause: C, body: [lowered], cont: k, row: ρ_residual }` |
+| `raise E(args)` | `Raise { op: O, args: [lowered], resume: k, row: ρ }` |
 
-**CPS lowering examples:**
+## 7. CPS Lowering Examples
 
-A pure function:
+### 7.1 Pure Function (Fully Normalized)
+
 ```ash
 fn add(a: Int, b: Int) -> Int { a + b }
 ```
-lowers to:
+
+Lowers to:
+
 ```text
-add = Lam { params: [a, b], cont_param: k,
-            body: App { func: PrimOp(Add), args: [a, b], cont: k, row: {} } }
+add =
+  Lam { params: [a, b], cont_param: k, row: {},
+    body:
+      LetPrim { name: sum, op: Add, args: [a, b],
+        body:
+          Jump { cont: k, arg: sum, row: {} } } }
 ```
 
-An effectful function (using `do` notation):
-```ash
-fn read_config(path: String) -> {cap fs.read} String {
-    do { contents <- fs.read(path); return contents }
-}
-```
-lowers to:
-```text
-read_config = Lam { params: [path], cont_param: k, row: {cap fs.read},
-    body: App { func: fs.read, args: [path],
-                cont: Lam { params: [contents], cont_param: k2,
-                            body: App { func: k2, args: [contents], cont: k, row: {cap fs.read} } } } }
-```
+Key points:
+- `a + b` is a primitive operation, bound via `LetPrim`.
+- The result is returned by `Jump` to the continuation `k`.
+- No `App` or `Call` — the function body is a straight-line sequence of `LetPrim` and `Jump`.
 
-A simple effectful function (no `do` notation, just a direct capability call):
+### 7.2 Direct Capability Operation (Fully Normalized)
+
 ```ash
 fn get_user_name(id: Int) -> {cap db.read} String {
     db.read("users", id)
 }
 ```
-lowers to:
+
+Lowers to:
+
 ```text
-get_user_name = Lam { params: [id], cont_param: k, row: {cap db.read},
-    body: App { func: db.read, args: ["users", id], cont: k, row: {cap db.read} } }
+get_user_name =
+  Lam { params: [id], cont_param: k, row: {cap db.read},
+    body:
+      Raise {
+        op: EffectOp { item: Capability(db.read), args: [String, Int], result: String },
+        args: ["users", id],
+        resume: k,
+        row: {cap db.read} } }
 ```
 
-This is the minimal case: a function with an effect row that simply invokes a capability
-and passes the result directly to the continuation. No `do` block, no bind, no local variables.
-The only difference from a pure function is the non-empty effect row on the `Lam` and the `App`.
+Key points:
+- A capability call is a `Raise`, not a `Call` or `App`.
+- The operation signature `(String, Int) -> String` is explicit in the `EffectOp`.
+- The resume continuation is the function's own continuation `k`.
+- The row `{cap db.read}` is the requirement that must be discharged by ambient authority.
 
-A handler boundary:
+### 7.3 Handler Boundary (Fully Normalized)
+
 ```ash
 handle requires {b != 0} with {
     requires -> if b != 0 then () else return 0
@@ -347,24 +431,42 @@ handle requires {b != 0} with {
     a / b
 }
 ```
-lowers to:
+
+Lowers to:
+
 ```text
-Handle { effect: Contract(requires {b != 0}),
-         handler: Lam { params: [], cont_param: resume,
-                        body: If { cond: b != 0,
-                                   then_branch: App { func: resume, args: [()], cont: k, row: {} },
-                                   else_branch: App { func: k, args: [0], cont: k, row: {} } } },
-         body: App { func: PrimOp(Div), args: [a, b], cont: k, row: {} },
-         cont: k, row: {} }
+Handle {
+  clause: HandlerClause {
+    op: EffectOp { item: Contract(requires {b != 0}), args: [], result: () },
+    params: [],
+    resume: resume,
+    body:
+      If { cond: b != 0,
+        then_branch: Jump { cont: resume, arg: (), row: {} },
+        else_branch: Jump { cont: k, arg: 0, row: {} },
+        row: {} },
+    row: {} },
+  body:
+    LetPrim { name: div_result, op: Div, args: [a, b],
+      body:
+        Jump { cont: k, arg: div_result, row: {} } },
+  cont: k,
+  row: {} }
 ```
 
-### 5.3 Handler Patterns as Lowering Examples
+Key points:
+- The contract is an `EffectOp` with no arguments and result `()`.
+- The handler body `Jump`s to `resume` on success or to the outer `k` on failure.
+- The body is a `LetPrim` and `Jump` — no `Call` or `Raise` inside the body.
 
-The following patterns show how common control-flow patterns are expressed as CPS handler
-combinations. They use only the core IR nodes (`Handle`, `Lam`, `App`, `If`, `Let`) and do
-not require special-purpose IR constructs.
+## 8. Handler Patterns (Schematic Examples)
 
-#### Retry Pattern
+The following patterns show how common control-flow constructs are expressed as CPS handler
+combinations. These examples are **schematic** — they use helper notation (e.g., `success()`,
+`Err(...)`, arithmetic in atom position) that is not part of the core grammar. They illustrate
+the design direction without claiming to be fully normalized target IR.
+
+### 8.1 Retry Pattern
 
 A retry boundary re-executes a computation up to a maximum number of attempts:
 
@@ -373,41 +475,33 @@ fn fetch_with_retry(url: String) -> {cap http.get} Result<String, NetworkError> 
     retry max_attempts: 3, backoff_ms: 1000 {
         http.get(url)
     } handle {
-        NetworkError => retry;           -- retry the body
-        _ => fail UnrecoverableError;    -- exhausted attempts
+        NetworkError => retry;
+        _ => fail UnrecoverableError;
     }
 }
 ```
 
-Lowers to a recursive CPS wrapper that re-invokes the body on failure:
+Schematic CPS lowering:
 
 ```text
 fetch_with_retry = Lam { params: [url], cont_param: k, row: {cap http.get},
-    body: Let { name: retry_loop,
-                value: Lam { params: [attempts_left], cont_param: k_retry,
-                    body: If { cond: attempts_left > 0,
-                        then_branch:
-                            -- attempt the body
-                            App { func: http.get, args: [url],
-                                cont: Lam { params: [result], cont_param: k_body,
-                                    body: If { cond: success(result),
-                                        then_branch: App { func: k, args: [result], cont: k_retry, row: {cap http.get} },
-                                        else_branch:
-                                            -- wait then retry
-                                            App { func: wait, args: [1000],
-                                                cont: Lam { params: [_], cont_param: k_wait,
-                                                    body: App { func: retry_loop, args: [attempts_left - 1], cont: k_retry, row: {cap http.get} } } } } },
-                        else_branch: App { func: k, args: [Err(UnrecoverableError)], cont: k_retry, row: {} } } },
-                body: App { func: retry_loop, args: [3], cont: k, row: {cap http.get} } } }
+    body: LetVal { name: retry_loop,
+        value: Lam { params: [attempts_left], cont_param: k_retry, row: {cap http.get},
+            body: If { cond: attempts_left > 0,
+                then_branch:
+                    Call { func: http.get, args: [url], cont: k_body, row: {cap http.get} }
+                    -- k_body is a continuation that checks result and retries
+                else_branch: Jump { cont: k, arg: Err(UnrecoverableError), row: {} } } },
+        body: Call { func: retry_loop, args: [3], cont: k, row: {cap http.get} } } }
 ```
 
 Key points:
-- `retry_loop` is a recursive CPS function (a `Lam` that calls itself via `App`).
-- The body (`http.get`) is re-invoked on each retry by applying `retry_loop` with a decremented counter.
-- The wait is a tail call: `wait(backoff, λ_. retry_loop(n-1, k))`.
-- No special `Retry` IR node. The pattern is a recursive wrapper around the body.
+- `retry_loop` is a recursive CPS function.
+- The body is re-invoked on each retry by `Call` to `retry_loop`.
+- The schematic uses `Err(...)` and `>` in atom position — these would be `LetPrim` bindings
+  in fully normalized IR.
 
-#### Rollback / Compensation Pattern
+### 8.2 Rollback / Compensation Pattern
 
 A compensation pair executes a primary action and, on failure, runs an undo action:
 
@@ -428,43 +522,44 @@ fn transfer_funds(from: Account, to: Account, amount: Int)
 }
 ```
 
-Lowers to a sequence where the undo action is threaded through the failure path:
+Schematic CPS lowering:
 
 ```text
 transfer_funds = Lam { params: [from, to, amount], cont_param: k, row: {cap db.read, cap db.write},
-    body: App { func: payment.reserve, args: [from, amount],
-        cont: Lam { params: [reserve], cont_param: k_reserve,
-            body: If { cond: success(reserve),
-                then_branch:
-                    -- primary action
-                    App { func: payment.transfer, args: [from, to, amount],
-                        cont: Lam { params: [transfer], cont_param: k_transfer,
-                            body: If { cond: success(transfer),
-                                then_branch: App { func: k, args: [Ok(())], cont: k_transfer, row: {cap db.write} },
-                                else_branch:
-                                    -- undo reserve, then fail
-                                    App { func: payment.release, args: [from, amount],
-                                        cont: Lam { params: [_], cont_param: k_release,
-                                            body: App { func: k, args: [Err(TxError)], cont: k_release, row: {cap db.write} } } } } },
-                else_branch: App { func: k, args: [Err(TxError)], cont: k_reserve, row: {} } } } } }
+    body: Call { func: payment.reserve, args: [from, amount], cont: k_reserve, row: {cap db.write} }
+}
+
+k_reserve(reserve_result):
+  If { cond: is_ok(reserve_result),
+    then_branch:
+      Call { func: payment.transfer, args: [from, to, amount], cont: k_transfer, row: {cap db.write} }
+    else_branch:
+      Jump { cont: k, arg: Err(TxError), row: {} } }
+
+k_transfer(transfer_result):
+  If { cond: is_ok(transfer_result),
+    then_branch:
+      Jump { cont: k, arg: Ok(()), row: {} }
+    else_branch:
+      Call { func: payment.release, args: [from, amount], cont: k_release, row: {cap db.write} } }
+
+k_release(_):
+  Jump { cont: k, arg: Err(TxError), row: {} }
 ```
 
 Key points:
-- The undo action (`payment.release`) is inlined into the failure path of the primary action.
-- The compensation sequence is explicit in the continuation chain: on failure, the continuation
-  invokes the undo before returning the error to the outer continuation `k`.
-- For multi-step sagas, the undo chain grows backwards: `undo_n(..., undo_{n-1}(..., k(error)))`.
-- No special `Compensate` IR node. The pattern is a sequence of `If` branches with undo actions
-  in the failure arms.
+- The undo action is inlined into the failure continuation `k_transfer`.
+- On failure: `Call` to `payment.release`, then `Jump` to `k` with error.
+- The schematic uses `is_ok(...)` and `Ok(...)` in atom position — these would be `LetPrim`
+  bindings in fully normalized IR.
 
-#### Transactional Memory Pattern
+### 8.3 Transactional Memory Pattern
 
-A transaction boundary intercepts read and write effects, logs them in a transaction-local
-read/write set, and either commits or aborts:
+A transaction boundary intercepts read and write effects:
 
 ```ash
 fn update_balance(account: Account, delta: Int)
-    -> {transaction {isolation: serializable}, cap db.read, cap db.write} Result<Unit, TxError>
+    -> {cap db.read, cap db.write} Result<Unit, TxError>
 {
     transaction {
         let balance = db.read(account);
@@ -473,150 +568,114 @@ fn update_balance(account: Account, delta: Int)
 }
 ```
 
-Lowers to nested `Handle` frames that intercept `db.read` and `db.write`:
+Schematic CPS lowering:
 
 ```text
-update_balance = Lam { params: [account, delta], cont_param: k, row: {transaction {isolation: serializable}, cap db.read, cap db.write},
-    body: Let { name: tx_log, value: new_log(),
+update_balance = Lam { params: [account, delta], cont_param: k, row: {cap db.read, cap db.write},
+    body: LetVal { name: tx_log, value: new_log(),
         body: Handle {
-            effect: cap db.read,
-            handler: Lam { params: [key], cont_param: resume,
+            clause: HandlerClause {
+                op: EffectOp { item: Capability(db.read), args: [Account], result: Int },
+                params: [key],
+                resume: resume,
                 body: If { cond: tx_log.has_write(key),
-                    then_branch: App { func: resume, args: [tx_log.get_write(key)], cont: resume, row: {transaction {isolation: serializable}} },
-                    else_branch: Let { name: value, value: read_from_store(key),
-                        body: Let { name: _, value: tx_log.add_read(key, value),
-                            body: App { func: resume, args: [value], cont: resume, row: {transaction {isolation: serializable}} } } } } },
+                    then_branch: Jump { cont: resume, arg: tx_log.get_write(key), row: {} },
+                    else_branch: LetPrim { name: value, op: StoreRead, args: [key],
+                        body: LetPrim { name: _, op: LogAddRead, args: [tx_log, key, value],
+                          body: Jump { cont: resume, arg: value, row: {} } } },
+                row: {} },
             body: Handle {
-                effect: cap db.write,
-                handler: Lam { params: [key, value], cont_param: resume,
-                    body: Let { name: _, value: tx_log.add_write(key, value),
-                        body: App { func: resume, args: [()], cont: resume, row: {transaction {isolation: serializable}} } } },
-                body: App { func: db.read, args: [account],
-                    cont: Lam { params: [balance], cont_param: k_read,
-                        body: App { func: db.write, args: [account, balance + delta],
-                            cont: Lam { params: [_], cont_param: k_write,
-                                body: If { cond: validate(tx_log),
-                                    then_branch: Let { name: _, value: commit(tx_log),
-                                        body: App { func: k, args: [Ok(())], cont: k_write, row: {transaction {isolation: serializable}} } },
-                                    else_branch: Let { name: _, value: abort(tx_log),
-                                        body: App { func: k, args: [Err(TxConflict)], cont: k_write, row: {transaction {isolation: serializable}} } } } } },
-                cont: k, row: {transaction {isolation: serializable}} },
-            cont: k, row: {transaction {isolation: serializable}} } } }
+                clause: HandlerClause {
+                    op: EffectOp { item: Capability(db.write), args: [Account, Int], result: () },
+                    params: [key, value],
+                    resume: resume,
+                    body: LetPrim { name: _, op: LogAddWrite, args: [tx_log, key, value],
+                        body: Jump { cont: resume, arg: (), row: {} } },
+                    row: {} },
+                body: Call { func: db.read, args: [account], cont: k_read, row: {cap db.read} }
+                -- k_read continues with balance, then writes, then validates
+                cont: k, row: {cap db.read, cap db.write} },
+            cont: k, row: {cap db.read, cap db.write} } } }
 ```
 
 Key points:
 - Two nested `Handle` frames intercept `db.read` and `db.write`.
-- The `tx_log` is a mutable cell threaded through the handler closures.
-- Reads check the write log first (read-your-own-writes), then the read log, then the store.
-- Writes are logged but not applied until commit.
-- Validation and commit happen at the end of the transaction body.
-- On conflict, the transaction aborts and returns `Err(TxConflict)`. A retry loop would wrap
-  this in the pattern from the retry example above.
-- No special `Transaction` IR node. The pattern is nested `Handle` frames with a log cell.
+- The `tx_log` is a value threaded through the handler closures.
+- The schematic uses `tx_log.has_write(key)` and `tx_log.get_write(key)` in atom position —
+  these would be `LetPrim` bindings in fully normalized IR.
+- The transaction boundary itself is not a separate effect item; it is nested handlers over
+  capability operations.
 
-#### Summary of Handler Patterns
+### 8.4 Summary of Handler Patterns
 
 | Pattern | Core Mechanism | IR Nodes Used |
 |---------|---------------|---------------|
-| Retry | Recursive CPS wrapper | `Lam`, `App`, `If`, `Let` |
-| Rollback | Undo actions in failure continuations | `Lam`, `App`, `If`, `Let` |
-| Transaction | Nested `Handle` frames intercepting effects | `Handle`, `Lam`, `App`, `If`, `Let` |
+| Retry | Recursive CPS wrapper | `Lam`, `Call`, `If`, `LetVal` |
+| Rollback | Undo actions in failure continuations | `Call`, `If`, `Jump`, `LetVal` |
+| Transaction | Nested `Handle` frames intercepting `Raise` | `Handle`, `Lam`, `Call`, `If`, `LetVal` |
 
-All three patterns are built from the same six core CPS nodes. No special-purpose constructs.
+All three patterns are built from the core CPS nodes. No special-purpose constructs.
 
-## 6. Laziness and Evaluation Strategy in CPS
+## 9. Laziness and Evaluation Strategy in CPS (Pseudo-IR)
 
 This section explores how call-by-name and call-by-need evaluation can be expressed in the
-CPS IR without special constructs. The goal is to show that evaluation strategy is a calling
-convention — thunks instead of values — and that the existing CPS nodes are sufficient.
+CPS IR. The examples below are **pseudo-IR** — they use notation that is not yet part of the
+core grammar (e.g., mutable environment cells, `Option`, field access). A fully normalized
+term must first bind each thunk closure to a name and lower memo-cell reads/writes through
+the chosen primitive/effect model.
 
-This is a design exploration. The surface syntax, effect annotations, and type-system rules
-for laziness are left to future specs. The IR treatment below is the target that those specs
-must refine.
-
-### 6.1 Thunks in CPS
+### 9.1 Thunks in CPS
 
 A thunk is a zero-parameter CPS function that delays evaluation:
 
 ```text
-Thunk<A> = Lam { params: [], cont_param: k, body: ... }
+Thunk<A> = Lam { params: [], cont_param: k, body: Term<A>, row: ρ }
 ```
 
-When applied with `App { func: thunk, args: [], cont: k }`, it evaluates its body and
-invokes `k` with the result. No special IR node needed.
+When forced with `Call { func: thunk, args: [], cont: k, row: ρ }`, it evaluates its body and
+invokes `k` with the result.
 
-### 6.2 Call-by-Name
+### 9.2 Call-by-Name
 
 In call-by-name, arguments are wrapped in thunks and passed unevaluated. The function
 forces each thunk at each use site.
 
-**Surface sketch (for illustration only):**
-```ash
-fn lazy_if(cond: Thunk<<Bool>, then: Thunk<A>, else: Thunk<A>) -> A {
-    if force(cond) then force(then) else force(else)
-}
-```
-
-**CPS lowering:**
+**Pseudo-IR example:**
 
 ```text
 lazy_if = Lam { params: [cond, then, else], cont_param: k, row: r,
-    body: App { func: cond, args: [],           -- force cond
-        cont: Lam { params: [cond_val], cont_param: k_cond,
+    body: Call { func: cond, args: [],           -- force cond
+        cont: Lam { params: [cond_val], cont_param: k_cond, row: r,
             body: If { cond: cond_val,
-                then_branch: App { func: then, args: [], cont: k, row: r },  -- force then
-                else_branch: App { func: else, args: [], cont: k, row: r },  -- force else
-                cont: k, row: r } } } }
-```
-
-**Lazy application:**
-```ash
-lazy_if(
-    { expensive_predicate(x) },      -- thunk 1: not evaluated yet
-    { compute_then(y) },             -- thunk 2: not evaluated yet
-    { compute_else(z) }             -- thunk 3: not evaluated yet
-)
-```
-
-Lowers to:
-```text
-App { func: lazy_if,
-      args: [
-          Lam { params: [], cont_param: k1,
-                body: App { func: expensive_predicate, args: [x], cont: k1, row: r } },
-          Lam { params: [], cont_param: k2,
-                body: App { func: compute_then, args: [y], cont: k2, row: r } },
-          Lam { params: [], cont_param: k3,
-                body: App { func: compute_else, args: [z], cont: k3, row: r } }
-      ],
-      cont: k, row: r }
+                then_branch: Call { func: then, args: [], cont: k, row: r },
+                else_branch: Call { func: else, args: [], cont: k, row: r },
+                row: r } } } }
 ```
 
 Key points:
 - Arguments are `Lam { params: [] }` — thunks.
 - The caller does not evaluate arguments before the call.
-- The callee decides when to force each thunk by applying it with `App { func: thunk, args: [] }`.
+- The callee decides when to force each thunk by `Call` with empty args.
 - Effects inside the thunk fire at the force site, not at the call site.
 
-### 6.3 Call-by-Need (Memoized)
+### 9.3 Call-by-Need (Memoized)
 
-In call-by-need, a thunk is forced once, then its result is cached. Subsequent forces return
-the cached value without re-evaluation.
+In call-by-need, a thunk is forced once, then its result is cached.
 
-**CPS thunk with memo cell:**
+**Pseudo-IR example:**
 
 ```text
 memo_thunk = CpsClosure {
     params: [],
     cont_param: k,
-    env: { computed: Bool, value: Option<A>, body: Expr },
+    env: { computed: Bool, value: Option<A>, body: Term<A> },
     body: If { cond: env.computed,
-        then_branch: App { func: k, args: [env.value.unwrap()], cont: k, row: {} },
-        else_branch: App { func: env.body, args: [],
-            cont: Lam { params: [v], cont_param: k_body,
-                body: Let { name: _, value: env.computed = true,
-                    body: Let { name: _, value: env.value = Some(v),
-                        body: App { func: k, args: [v], cont: k_body, row: {} } } } } } },
+        then_branch: Call { func: k, args: [env.value.unwrap()], cont: k, row: {} },
+        else_branch: Call { func: env.body, args: [],
+            cont: Lam { params: [v], cont_param: k_body, row: r,
+                body: LetPrim { name: _, op: SetCell, args: [env.computed, true],
+                    body: LetPrim { name: _, op: SetCell, args: [env.value, Some(v)],
+                        body: Jump { cont: k, arg: v, row: {} } } } } } },
     row: r
 }
 ```
@@ -625,34 +684,10 @@ Key points:
 - The thunk is a `CpsClosure` with a mutable environment cell.
 - On first force: evaluate `body`, store result, return it.
 - On subsequent force: return cached result directly.
-- The memo cell is part of the closure environment, not a separate IR construct.
+- The pseudo-IR uses `env.computed`, `env.value.unwrap()`, and `SetCell` — these would be
+  lowered to primitive operations or memory effects in fully normalized IR.
 
-**Lazy list (streams):**
-```ash
-data Stream<A> = Cons { head: Thunk<A>, tail: Thunk<Stream<A>> }
-```
-
-A stream is a pair of memoized thunks. The head is forced when accessed, the tail is forced
-when the stream is advanced. Infinite streams are just recursive thunks.
-
-### 6.4 Strictness and Mixed Strategies
-
-A function can mix strict and lazy parameters:
-
-```text
-fn mixed(strict: Int, lazy: Thunk<String>) -> A
-```
-
-Lowers to:
-```text
-mixed = Lam { params: [strict, lazy], cont_param: k, row: r,
-    body: ... -- strict is a value, lazy is a thunk }
-```
-
-The IR does not distinguish them at the parameter level. The distinction is in the calling
-convention: the caller evaluates `strict` before the call, but passes `lazy` as a thunk.
-
-### 6.5 Effect Row Implications (Design Space)
+### 9.4 Effect Row Implications (Design Space)
 
 The effect row of a lazy function depends on which thunks are forced:
 
@@ -673,7 +708,7 @@ memo Thunk<A>  -- reads/writes a memo cell
 
 Or it could be treated as a pure runtime primitive (invisible to the effect system).
 
-### 6.6 Open Questions for Future Specs
+### 9.5 Open Questions for Future Specs
 
 1. **Surface syntax:** How are thunks created and forced? Explicit syntax (`Thunk { expr }`,
    `force x`) or implicit (`lazy expr`, `x`)?
@@ -686,38 +721,26 @@ Or it could be treated as a pure runtime primitive (invisible to the effect syst
    blocks?
 7. **Memoization scope:** Is memoization per-thunk (global) or per-evaluation-context (local)?
 
-### 6.7 Summary
+### 9.6 Summary
 
 | Strategy | IR Representation | Force Mechanism | Memoization |
 |----------|-------------------|-------------------|-------------|
 | Call-by-value | Value passed directly | N/A | N/A |
-| Call-by-name | `Lam { params: [] }` | `App { func: thunk, args: [] }` | None |
-| Call-by-need | `CpsClosure` with memo cell | `App { func: thunk, args: [] }` | Env cell |
+| Call-by-name | `Lam { params: [] }` | `Call { func: thunk, args: [] }` | None |
+| Call-by-need | `CpsClosure` with memo cell | `Call { func: thunk, args: [] }` | Env cell |
 
 Laziness is a calling convention in the CPS IR. No special nodes needed. The design space for
 surface syntax, type system integration, and effect tracking is left to future specs.
 
-## 7. Handler Stack as CPS Continuation Chain
+## 10. Handler Stack as CPS Continuation Chain
 
 In CPS, handlers are not a separate stack data structure. They are continuations that wrap
 the "next" continuation. A handler frame is a `Cont` value that intercepts matching `Raise` nodes.
 
 ```rust
-pub struct HandlerDef {
-    pub effect: EffectItem,
-    -- handler body: takes effect args and a resume continuation, produces a final answer
-    pub body: Box<Expr>,
-}
-
--- HandlerFrame is a Cont that checks if the raised effect matches,
--- and if so, invokes the handler body with the resume continuation.
-pub enum Value {
-    -- ...
-    HandlerFrame {
-        effect: EffectItem,
-        handler: HandlerDef,
-        next: Box<Value>,  -- the next continuation in the chain
-    },
+pub struct HandlerFrame {
+    pub clause: HandlerClause,
+    pub next: Box<Cont>,  -- the next continuation in the chain
 }
 ```
 
@@ -726,7 +749,7 @@ pub enum Value {
 When a `Raise` node is evaluated:
 
 1. Walk the continuation chain from the current continuation.
-2. Find the first `HandlerFrame` whose `effect` matches the raised effect.
+2. Find the first `HandlerFrame` whose `clause.op` matches the raised `op`.
 3. If found: invoke the handler body with the effect arguments and a resume continuation
    that reconstructs the rest of the chain.
 4. If not found: the computation is stuck (unhandled effect).
@@ -734,15 +757,15 @@ When a `Raise` node is evaluated:
 This is equivalent to the operational semantics in SPEC-099b but expressed directly in the
 CPS IR rather than as a separate runtime stack.
 
-## 7. Migration and IR Evolution
+## 11. Migration and IR Evolution
 
-### 7.1 Two IRs During Migration
+### 11.1 Two IRs During Migration
 
 During the migration period, the compiler maintains **two IRs**:
 
 1. **Legacy IR**: The current AST with `Act`, `Proc`, `Workflow`, `Do`, and other
    migration-era artifacts. This is what the current parser produces.
-2. **Target IR (CPS)**: The new CPS form with `Lam`, `App`, `Raise`, `Handle`, etc.
+2. **Target IR (CPS)**: The new CPS form with `Atom`, `Value`, `Term`, `Call`, `Jump`, etc.
 
 The lowering pipeline is:
 
@@ -756,7 +779,7 @@ Legacy IR (Act/Proc/Workflow/Do variants)
 lower_to_cps.rs -- single pass lowering
     |
     v
-Target IR (CPS: Lam/App/Raise/Handle/If/Let)
+Target IR (CPS: Atom/Value/Term)
     |
     v
 type checker, optimizer, code generator
@@ -765,7 +788,7 @@ type checker, optimizer, code generator
 All semantic analysis operates on the Target IR only. The Legacy IR is a transient
 representation that exists only between parsing and the CPS lowering pass.
 
-### 7.2 Migration Completion Flag
+### 11.2 Migration Completion Flag
 
 Migration is complete when:
 
@@ -777,7 +800,7 @@ Migration is complete when:
 At that point, the compiler has a single IR: the CPS form. The presence of a non-identity
 lowering pass is a clear flag that migration is still in progress.
 
-### 7.3 Legacy IR to CPS Lowering Rules
+### 11.3 Legacy IR to CPS Lowering Rules
 
 During migration, legacy AST variants are lowered to CPS:
 
@@ -786,11 +809,11 @@ legacy Expr::Act { ... }      -> CPS Lam { cont_param: k, body: [lowered], row: 
 legacy Expr::Do { target, ... } -> CPS Lam { cont_param: k, body: [lowered], row: target_profile }
 legacy Expr::Proc { ... }     -> CPS Lam { cont_param: k, body: [lowered], row: Proc_profile }
 legacy Expr::Workflow { ... } -> CPS Lam { cont_param: k, body: [lowered], row: Workflow_profile }
-legacy Type::Fn { ... }       -> CPS CpsFn { params, cont: Cont { arg: ret, ... }, ret: final_answer, row: {} }
-legacy Type::Fun { ... }      -> CPS CpsFn { params, cont: Cont { arg: ret, ... }, ret: final_answer, row: effect }
+legacy Type::Fn { ... }       -> CPS CpsFn { params, cont: Cont { arg: ret, answer: Ans }, answer: Ans, body_row: {}, total_row: ρk }
+legacy Type::Fun { ... }      -> CPS CpsFn { params, cont: Cont { arg: ret, answer: Ans }, answer: Ans, body_row: effect, total_row: effect ∪ ρk }
 ```
 
-### 7.4 Dual Representation (Temporary)
+### 11.4 Dual Representation (Temporary)
 
 A conforming implementation may maintain both representations during migration:
 
@@ -798,11 +821,13 @@ A conforming implementation may maintain both representations during migration:
 pub enum Expr {
     -- CPS representation (target)
     Lam { ... },
-    App { ... },
+    Call { ... },
+    Jump { ... },
     Raise { ... },
     Handle { ... },
     If { ... },
-    Let { ... },
+    LetVal { ... },
+    LetPrim { ... },
 
     -- Legacy compatibility (to be removed after migration)
     Act { ... },
@@ -815,33 +840,34 @@ pub enum Expr {
 The legacy variants are always lowered to CPS before semantic analysis. They are never
 optimized, interpreted, or code-generated directly.
 
-## 8. CPS Optimization Opportunities
+## 12. CPS Optimization Opportunities
 
 The CPS form enables several standard optimizations:
 
 1. **Contification**: Identify functions that are always called with a known continuation and
    inline the continuation into the function body.
-2. **Administrative normal form (ANF)**: All intermediate values are named `Let` bindings,
-   making dataflow analysis straightforward.
+2. **Administrative normal form (ANF)**: All intermediate values are named `LetVal` or
+   `LetPrim` bindings, making dataflow analysis straightforward.
 3. **Effect row propagation**: Effect rows flow through continuations, enabling precise
    effect-based dead code elimination and inlining decisions.
 4. **Handler frame simplification**: Nested handlers for the same effect can be merged or
    reordered if their rows are compatible.
-5. **Tail call optimization**: Every `App` to a continuation is a tail call by construction in CPS.
+5. **Tail call optimization**: Every `Call` to a known function and every `Jump` to a
+   continuation is a tail call by construction in CPS.
 
-## 9. Open Decisions
+## 13. Open Decisions
 
 1. Whether to use explicit labels or closures for continuations (labels enable better
    contification and compilation to machine code; closures are simpler for interpretation).
 2. Whether the CPS IR is the canonical IR or an intermediate layer between a higher-level IR
    and a lower-level IR.
-3. How to represent mutually recursive CPS functions.
+3. How to represent mutually recursive CPS functions (`LetRec` or fixpoint combinator).
 4. Whether contract discharge status is stored in the IR or in a separate sidecar.
 5. How row variables are represented in the CPS IR (names, indices, or de Bruijn indices).
 6. Whether effect aliases are expanded during CPS lowering or preserved for diagnostics.
 7. Whether to support direct-style fragments within CPS for performance-critical pure code.
 
-## 10. See Also
+## 14. See Also
 
 - [SPEC-098a: Current IR](SPEC-098a-CURRENT-IR.md) — what the IR looks like today
 - [SPEC-095b: Target Grammar](SPEC-095b-TARGET-GRAMMAR.md)
@@ -849,6 +875,10 @@ The CPS form enables several standard optimizations:
 - [SPEC-097b: Target Type System](SPEC-097b-TARGET-TYPE-SYSTEM.md)
 - [SPEC-099b: Target Operational Semantics](SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md)
 
-## 10. Changelog
+## 15. Changelog
 
-- 2026-06-18: Rewrote as CPS-based target IR. All computations are CPS functions with continuation parameters. Handlers are continuation chains, not separate stacks. Added CPS lowering examples, contification, ANF, and tail-call optimization notes.
+- 2026-06-18: Major revision after review. Split grammar into Atom/Value/Term. Added `Call`
+  vs `Jump` distinction. Added answer type discipline. Separated callee/continuation/total
+  rows. Made `Raise`/`Handle` operation-typed. Added contract discharge status. Rewrote
+  examples into fully normalized core examples and schematic handler patterns. Marked
+  laziness section as pseudo-IR.

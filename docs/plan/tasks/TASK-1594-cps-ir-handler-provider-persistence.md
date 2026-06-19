@@ -1,6 +1,6 @@
 # TASK-1594: Separate shallow handlers from provider frames
 
-**Status:** 📝 Planned
+**Status:** ✅ Complete
 **Phase:** [PLAN-159](../PLAN-159-CPS-IR-INTERPRETER.md)
 **Owner:** Phase 159
 

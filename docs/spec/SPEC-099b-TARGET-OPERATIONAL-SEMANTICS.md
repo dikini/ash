@@ -1,352 +1,348 @@
 ---
 id: spec.ash.operational-semantics.target
-title: Ash Operational Semantics — Target State
-description: Target big-step and small-step operational semantics with unified effect rows and kind-specific discharge
+title: Ash CPS IR Operational Semantics
+description: Big-step operational semantics for the CPS IR interpreter
 kind: spec
 audience: [human, agent]
 authority: design
 status: draft
 stability: alpha
 owner: language
-last_verified: 2026-06-18
+last_verified: 2026-06-19
 verified_against:
   specs:
-    - docs/spec/SPEC-095a-CURRENT-GRAMMAR.md
-    - docs/spec/SPEC-095b-TARGET-GRAMMAR.md
-    - docs/spec/SPEC-096a-CURRENT-EFFECT-SYSTEM.md
-    - docs/spec/SPEC-096b-TARGET-EFFECT-SYSTEM.md
-    - docs/spec/SPEC-097a-CURRENT-TYPE-SYSTEM.md
-    - docs/spec/SPEC-097b-TARGET-TYPE-SYSTEM.md
-    - docs/spec/SPEC-098a-CURRENT-IR.md
     - docs/spec/SPEC-098b-TARGET-IR.md
-    - docs/spec/SPEC-099a-CURRENT-OPERATIONAL-SEMANTICS.md
+    - docs/plan/PLAN-159-CPS-IR-INTERPRETER.md
 ---
 
-# SPEC-099b: Ash Operational Semantics — Target State
+# SPEC-099b: Ash CPS IR Operational Semantics
 
-**Status:** Draft — target operational semantics for unified effect rows
-**Scope:** This document defines the runtime semantics we want Ash to have.
-It is a goal-state living document that will be refined as implementation progresses.
-**Depends on:** SPEC-095b (Target Grammar), SPEC-096b (Target Effect System), SPEC-097b (Target Type System), SPEC-098b (Target IR)
+**Status:** Draft — CPS IR operational semantics for the isolated prototype
+**Scope:** This document defines the big-step operational semantics of the CPS IR interpreter implemented in Phase 159.
+**Depends on:** SPEC-098b (Target IR), PLAN-159 (CPS IR Interpreter)
 
-## 1. Summary
+## §1 Syntax
 
-The target operational semantics unifies Ash's runtime behavior into one substrate with
-effect-row annotations. The key changes:
-
-1. Replace separate `Act`, `Proc`, and `Workflow` state machines with a unified `Computation`
-   state machine carrying an effect row.
-2. Add kind-specific discharge rules for capabilities, roles, policies, contracts, channels,
-   process operations, failure, and evidence.
-3. Add handler stack semantics for effect dispatch.
-4. Add contract effect nodes for static/evidence/dynamic discharge tracking.
-5. Preserve backward compatibility during migration.
-
-## 2. Target Semantic Domains
-
-### 2.1 Values
+### §1.1 Atoms
 
 ```text
-Value      ::= Int(i) | Float(f) | String(s) | Bool(b) | Null
-             | Time(t) | Ref(r) | List([v, ...]) | Record({k: v, ...})
-             | Cap(c)
-             | Variant(name, {k: v, ...})
-             | Closure(params, body, env)
-             | Computation(row, state)
-             | HandlerStack(handlers)
-             | ProcessHandle(id)
-             | ChannelEndpoint(id, direction, type)
+a ::= Int(i) | Float(f) | String(s) | Bool(b) | Null | Var(x)
 ```
 
-### 2.2 Effect Rows
+Atoms are primitive values or variable references. Variables are resolved in the environment.
+
+### §1.2 Values
 
 ```text
-EffectRow  ::= { items: [EffectItem], tail: Option<RowVar> }
-
-EffectItem ::= Capability(interface, operation)
-             | Resource(resource, mode)
-             | Role(role)
-             | Policy(binding, decision_domain)
-             | Contract(contract_kind, predicate)
-             | Channel(channel, mode, message_type, guard)
-             | Process(operation)
-             | Failure(failure_type)
-             | Evidence(sink, kind)
-             | Group(group_ref)
+v ::= Atom(a)
+    | Lam { params: [x, ...], cont: k, body: t, row: ρ }
+    | Cont { param: x, body: t, captured_env: η, row: ρ }
 ```
 
-### 2.3 Computation State
+Values are inert data. `Lam` represents a function closure; `Cont` represents a continuation closure that captures its definition environment.
+
+### §1.3 Terms
 
 ```text
-ComputationState ::= Pure(v)
-                    | Effect(item: EffectItem, args: [Value], k: Value -> ComputationState)
-                    | Handle(handler: Handler, body: ComputationState, k: Value -> ComputationState)
-                    | Blocked(reason: BlockReason)
-                    | Stuck(error: Error)
+t ::= LetVal { name: x, value: v, body: t }
+    | LetPrim { name: x, op: ⊙, args: [a, ...], body: t }
+    | LetCont { name: k, param: x, cont_body: t, body: t }
+    | Jump { cont: κ, arg: a, row: ρ }
+    | Call { func: a, args: [a, ...], cont: κ, row: ρ }
+    | If { cond: a, then_branch: t, else_branch: t, row: ρ }
+    | LetRec { name: x, value: v, body: t }
+    | Raise { op: ε, args: [a, ...], resume: κ, row: ρ }
+    | Handle { clause: h, body: t, cont: κ, row: ρ }
+    | RecordDischarge { discharge: d, body: t }
+    | Trap { reason: r }
 ```
 
-### 2.4 Context
+Terms perform computation. All control flow is explicit via `Jump` and `Call`.
+
+### §1.4 Continuation References
 
 ```text
-Context    ::= Γ × E × C × P × Ω × π
-  where Γ  = Variable -> Value
-        E  = EffectEnvironment (ambient discharged rows)
-        C  = Capability -> Implementation
-        P  = PolicyEnv
-        Ω  = ObligationState
-        π  = Provenance
+κ ::= Label(k) | Var(x)
 ```
 
-## 3. Target Big-Step Semantics
+Labels are bound by `LetCont`; variables are bound in the environment.
 
-### 3.1 Pure Value
+### §1.5 Effect Rows
 
 ```text
-------------------
-Pure(v) ⇓ v
+ρ ::= EffectRow { items: [ι, ...] }
+
+ι ::= EffectItem { namespace: ns, name: n, kind: τ }
+
+τ ::= Capability | Role | Policy | Contract | Channel | Alias | Group
 ```
 
-A pure value is already a result.
+Effect rows track the effects a computation may perform. Rows are validated for duplicates.
 
-### 3.2 Effect Invocation (Handled)
+## §2 Core Term Rules
+
+### §2.1 LetVal
 
 ```text
-handler_stack = H :: hs
-H.can_handle(item) = true
-H.run(item, args) = Pure(v)
+eval(v, η) = v'
 -----------------------------------
-Effect(item, args, k) ⇓ k(v)
+⟨LetVal(x, v, t), η, χ⟩ ⇓ ⟨t, η[x ↦ v'], χ⟩
 ```
 
-The effect is handled by the top handler on the stack that can handle it.
+Bind a value in the environment and continue.
 
-### 3.3 Effect Invocation (Unhandled)
+### §2.2 LetPrim
 
 ```text
-handler_stack = hs
-no H in hs can handle(item)
+eval(aᵢ, η) = aᵢ'  for each i
+eval_prim(⊙, [a₁', ..., aₙ']) = a'
 -----------------------------------
-Effect(item, args, k) ⇓ Stuck(UnhandledEffect(item))
+⟨LetPrim(x, ⊙, [a₁, ..., aₙ], t), η, χ⟩ ⇓ ⟨t, η[x ↦ Atom(a')], χ⟩
 ```
 
-If no handler can handle the effect, the computation is stuck.
+Evaluate arguments (resolving variables), apply the primitive operation, bind the result, and continue.
 
-### 3.4 Handler Boundary
+### §2.3 LetCont
 
 ```text
-body ⇓ v
+c = Cont { param: x, body: t₁, captured_env: η, row: ρ }
 -----------------------------------
-Handle(H, body, k) ⇓ k(v)
+⟨LetCont(k, x, t₁, t₂), η, χ⟩ ⇓ ⟨t₂, η[k ↦ c], χ⟩
 ```
 
-The handler is installed for the duration of the body. After the body completes, the handler
-is removed and the continuation runs.
+Create a continuation closure capturing the current environment, bind it, and continue.
 
-### 3.5 Contract Discharge (Static)
+### §2.4 Jump
 
 ```text
-static_prove(predicate) = true
+eval(a, η) = a'
+lookup(κ, η) = Cont { param: x, body: t, captured_env: η', ... }
 -----------------------------------
-Effect(Contract(requires, predicate), args, k) ⇓ k(())
+⟨Jump(κ, a, ρ), η, χ⟩ ⇓ ⟨t, η'[x ↦ Atom(a')], χ⟩
 ```
 
-If the predicate is statically provable, the contract effect is discharged without runtime cost.
+Evaluate the argument, resolve the continuation, and execute the continuation body in the **captured** environment extended with the argument.
 
-### 3.6 Contract Discharge (Dynamic)
+### §2.5 Call
 
 ```text
-runtime_check(predicate, args) = true
+eval(a_f, η) = Var(x) or a_f
+eval(aᵢ, η) = aᵢ'  for each i
+lookup(func, η) = Lam { params: [p₁, ..., pₙ], cont: k, body: t, ... }
+lookup(κ, η) = c
+η' = η[p₁ ↦ Atom(a₁'), ..., pₙ ↦ Atom(aₙ')]
+η'' = η'[k ↦ c]  if k ∉ dom(η')
 -----------------------------------
-Effect(Contract(requires, predicate), args, k) ⇓ k(())
+⟨Call(a_f, [a₁, ..., aₙ], κ, ρ), η, χ⟩ ⇓ ⟨t, η'', χ⟩
+```
 
-runtime_check(predicate, args) = false
+Evaluate function and arguments. Create a new environment with parameters bound. Bind the continuation parameter **only if not already present** to preserve outer continuation references in nested continuations. Execute the lambda body.
+
+### §2.6 Answer Type Discipline
+
+All CPS terms are in **fixed answer type** discipline (Answer type): every term eventually reduces to a `Jump` to a continuation. There is no implicit return. The final result is produced by jumping to an exit continuation that traps with the result value.
+
+## §3 Conditionals and Data Rules
+
+### §3.1 If
+
+```text
+eval(a, η) = Bool(true)
 -----------------------------------
-Effect(Contract(requires, predicate), args, k) ⇓ Stuck(ContractViolation(predicate))
-```
+⟨If(a, t₁, t₂, ρ), η, χ⟩ ⇓ ⟨t₁, η, χ⟩
 
-If the predicate is not statically provable, a runtime check is performed.
-
-### 3.7 Channel Send
-
-```text
-channel_endpoint_exists(ch) = true
-channel_direction(ch) = send
-channel_type(ch) = T
-value : T
+eval(a, η) = Bool(false)
 -----------------------------------
-Effect(Channel(ch, send, T, None), [value], k) ⇓ k(())
-```
+⟨If(a, t₁, t₂, ρ), η, χ⟩ ⇓ ⟨t₂, η, χ⟩
 
-### 3.8 Channel Receive (Guarded)
-
-```text
-channel_endpoint_exists(ch) = true
-channel_direction(ch) = receive
-channel_type(ch) = T
-message : T
-guard_predicate(message) = true
+eval(a, η) ≠ Bool(_)
 -----------------------------------
-Effect(Channel(ch, receive, T, guard), [], k) ⇓ k(message)
+⟨If(a, t₁, t₂, ρ), η, χ⟩ ⇓ Stuck(InvalidCondition)
+```
 
-guard_predicate(message) = false
+Evaluate the condition. If true, take the then branch; if false, take the else branch. Non-boolean conditions are an error.
+
+### §3.2 RecordDischarge
+
+```text
 -----------------------------------
-Effect(Channel(ch, receive, T, guard), [], k) ⇓ Blocked(WaitingForGuard(ch, guard))
+⟨RecordDischarge(d, t), η, χ⟩ ⇓ ⟨t, η, χ⟩
 ```
 
-If the guard fails, the computation blocks until a matching message arrives.
+RecordDischarge is an administrative term that passes through to its body. In the full implementation, it would track contract discharge metadata.
 
-## 4. Target Small-Step Semantics
+## §4 Handler Rules
 
-### 4.1 Configuration
-
-```text
-Configuration ::= (ComputationState, Context, HandlerStack, Mailbox)
-```
-
-### 4.2 Transition Rules
+### §4.1 Raise (Handled)
 
 ```text
-(Pure(v), ctx, hs, mb) -->> v
-
-(Effect(item, args, k), ctx, H::hs, mb)
-  H.can_handle(item) = true
-  H.run(item, args) = Pure(v)
-  -->> (k(v), ctx, hs, mb)
-
-(Effect(item, args, k), ctx, hs, mb)
-  no H in hs can handle(item)
-  -->> Stuck(UnhandledEffect(item))
-
-(Handle(H, body, k), ctx, hs, mb)
-  -->> (body, ctx, H::hs, mb)
-  [when body completes, H is removed]
-
-(Effect(Contract(requires, p), args, k), ctx, hs, mb)
-  static_prove(p) = true
-  -->> (k(()), ctx, hs, mb)
-
-(Effect(Contract(requires, p), args, k), ctx, hs, mb)
-  static_prove(p) = false
-  runtime_check(p, args) = true
-  -->> (k(()), ctx, hs, mb)
-
-(Effect(Contract(requires, p), args, k), ctx, hs, mb)
-  static_prove(p) = false
-  runtime_check(p, args) = false
-  -->> Stuck(ContractViolation(p))
-
-(Effect(Channel(ch, send, T, None), [v], k), ctx, hs, mb)
-  channel_exists(ch) = true
-  -->> (send(ch, v); k(()), ctx, hs, mb)
-
-(Effect(Channel(ch, receive, T, guard), [], k), ctx, hs, mb)
-  message = mb.receive(ch)
-  guard(message) = true
-  -->> (k(message), ctx, hs, mb)
-
-(Effect(Channel(ch, receive, T, guard), [], k), ctx, hs, mb)
-  message = mb.receive(ch)
-  guard(message) = false
-  -->> (Blocked(WaitingForGuard(ch, guard)), ctx, hs, mb)
-```
-
-## 5. Row Profile Checking
-
-### 5.1 Profile Rules
-
-```text
-Pure_profile(row) = row == {}
-
-Act_profile(row) = row.items ⊆ {Capability, Resource, Failure, Evidence}
-
-Proc_profile(row) = Act_profile(row) or row.items ⊆ {Capability, Resource, Failure, Evidence, Channel, Process}
-
-Workflow_profile(row) = Proc_profile(row) or row.items ⊆ {Capability, Resource, Failure, Evidence, Channel, Process, Contract, Policy, Role}
-```
-
-### 5.2 Profile Violations
-
-If a computation's row contains items outside its profile, the computation is stuck:
-
-```text
-Proc_profile(row) = false
-row contains Process(item)
+lookup_handler(ε, χ) = Some(Clause { op: ε, params: [p₁, ..., pₙ], resume: r, body: t, ... })
+eval(aᵢ, η) = aᵢ'  for each i
+lookup(κ, η) = c
+η' = η[p₁ ↦ Atom(a₁'), ..., pₙ ↦ Atom(aₙ')]
+η'' = η'[r ↦ c]
 -----------------------------------
-Stuck(ProfileViolation(Proc, item))
+⟨Raise(ε, [a₁, ..., aₙ], κ, ρ), η, χ⟩ ⇓ ⟨t, η'', χ⟩
 ```
 
-## 6. Handler Stack Semantics
+Find the innermost handler for the effect. Evaluate arguments, resolve the resume continuation, bind parameters and resume, then execute the handler body.
 
-### 6.1 Handler Installation
-
-Handlers are installed by `Handle` expressions and by workflow/process boundaries:
+### §4.2 Raise (Unhandled)
 
 ```text
-workflow boundary:
-  installs handlers for: Contract, Policy, Role, Evidence
-
-process boundary:
-  installs handlers for: Channel, Process, Failure
-
-Act boundary:
-  installs handlers for: Capability, Resource
+lookup_handler(ε, χ) = None
+-----------------------------------
+⟨Raise(ε, [a₁, ..., aₙ], κ, ρ), η, χ⟩ ⇓ Stuck(UnhandledEffect(ε))
 ```
 
-### 6.2 Handler Lookup
+If no handler is found, the computation is stuck with an unhandled effect error.
 
-Handlers are searched from the top of the stack:
+### §4.3 Handle
 
 ```text
-handler_stack = H1 :: H2 :: ... :: Hn
-
-lookup(item) = first Hi such that Hi.can_handle(item)
+lookup(κ, η) = c
+χ' = χ :: Shallow(Clause { op: ε, ... })
+-----------------------------------
+⟨Handle(Clause { op: ε, ... }, t, κ, ρ), η, χ⟩ ⇓ ⟨t, η[r ↦ c], χ'⟩
 ```
 
-### 6.3 Handler Composition
+Install a shallow handler frame on the handler chain. Bind the resume continuation in the environment. Execute the body with the extended handler chain.
 
-Multiple handlers for the same effect type compose by stacking. The top handler takes precedence.
+### §4.4 Shallow Handler Removal
 
-## 7. Migration Compatibility
+Shallow handler frames are removed after handling a single effect. The handler frame is pushed when `Handle` is entered and is not re-pushed after `Raise` is handled. This means a second `Raise` of the same effect will not find the same handler.
 
-### 7.1 Legacy State Machine Preservation
+### §4.5 Provider Frame Persistence
 
-During migration, the old `ActState`, `ProcState`, and `WorkflowState` are preserved but are
-lowered to the unified `ComputationState` before semantic analysis:
+Provider frames persist across resumes. When a provider frame is installed, it remains on the handler chain until explicitly removed or the computation completes.
+
+### §4.6 Resume Construction
+
+The resume continuation `c` passed to a handler clause is the continuation captured at the point of the `Raise`. When the handler invokes `resume` with a value, execution continues from the point after the `Raise` with the result value.
+
+### §4.7 One-Shot Resume
+
+Resume continuations are one-shot: they may be invoked at most once. Invoking a resume continuation more than once is undefined behavior in the current implementation.
+
+### §4.8 Row Transformation
+
+When a handler is installed, the effect row of the body is transformed to include the handler's effect item. When a handler handles an effect, the effect item is removed from the row. Provider frames add their effect item to the row and it persists until the provider frame is removed. This is the row transformation rule.
+
+## §5 Recursion Rules
+
+### §5.1 LetRec
 
 ```text
-ActState<T>   -> ComputationState with Act_profile row
-ProcState<T>  -> ComputationState with Proc_profile row
-WorkflowState<T> -> ComputationState with Workflow_profile row
+η' = η[x ↦ Null]
+v' = eval(v, η')
+η'' = η'[x ↦ v']
+-----------------------------------
+⟨LetRec(x, v, t), η, χ⟩ ⇓ ⟨t, η'', χ⟩
 ```
 
-### 7.2 Dual Semantics
+Bind the recursive name to `Null` as a placeholder, evaluate the value in the environment with the placeholder, then backfill the placeholder with the actual value. This allows the value to reference itself recursively.
 
-A conforming implementation may maintain both semantics during migration:
+### §5.2 Recursive Call Example
 
-- Old semantics for legacy code;
-- New semantics for code with effect rows.
+```text
+letrec fact = (lam [n] k
+  letprim is_zero = eq n 0 in
+  if is_zero then
+    (jump k 1)
+  else
+    letprim n_minus_1 = sub n 1 in
+    letcont k_mul [result]
+      (letprim prod = mul n result in (jump k prod))
+    in (call fact [n_minus_1] k_mul))
+in (call fact [5] exit)
+```
 
-The choice is made by checking whether the code has effect-row annotations.
+The `LetRec` binds `fact` to the lambda. The lambda body references `fact` recursively. The continuation parameter `k` is preserved across recursive calls by the non-overwriting binding rule in `Call`.
 
-## 8. Open Decisions
+## §6 Advanced and Row-Checker Rules
 
-1. Whether the unified state machine replaces or wraps the old state machines.
-2. Whether handler stacks are first-class values or runtime-only constructs.
-3. Whether contract discharge status is stored in the computation state or in a separate sidecar.
-4. How row profile checking interacts with type checking.
-5. Whether blocked computations are resumed automatically or require explicit `await`.
-6. How process identity and mailbox ownership are represented in the unified semantics.
+### §6.1 Trap
 
-## 9. See Also
+```text
+-----------------------------------
+⟨Trap(r), η, χ⟩ ⇓ Stuck(Trap(r))
+```
 
-- [SPEC-099a: Current Operational Semantics](SPEC-099a-CURRENT-OPERATIONAL-SEMANTICS.md) — what the runtime does today
-- [SPEC-004: Operational Semantics](SPEC-004-SEMANTICS.md) — full big-step spec
-- [SPEC-025: Small-Step Operational Semantics](SPEC-025-SMALL-STEP-OPERATIONAL-SEMANTICS.md) — full small-step spec
-- [SPEC-095b: Target Grammar](SPEC-095b-TARGET-GRAMMAR.md)
-- [SPEC-096b: Target Effect System](SPEC-096b-TARGET-EFFECT-SYSTEM.md)
-- [SPEC-097b: Target Type System](SPEC-097b-TARGET-TYPE-SYSTEM.md)
-- [SPEC-098b: Target IR](SPEC-098b-TARGET-IR.md)
+Trap immediately halts computation with the given reason.
 
-## 10. Changelog
+### §6.2 Row Validation
 
-- 2026-06-18: Created as target-state operational semantics document. Defined unified computation state, kind-specific discharge rules, handler stack semantics, and migration compatibility.
+```text
+validate_row(ρ) = Ok(())  if all items in ρ have distinct (namespace, name) pairs
+validate_row(ρ) = Err(DuplicateItem(ns, n))  otherwise
+```
+
+Effect rows are validated for duplicate items. Two items are duplicates if they share the same namespace and name, regardless of kind.
+
+### §6.3 Handler Chain Lookup
+
+```text
+lookup_handler(ε, []) = None
+
+lookup_handler(ε, Shallow(Clause { op: ε', ... }) :: χ) =
+  if ε.item == ε'.item then Some(Clause { op: ε', ... })
+  else lookup_handler(ε, χ)
+
+lookup_handler(ε, Provider { op: ε', ... } :: χ) =
+  lookup_handler(ε, χ)  // provider frames don't have clauses
+```
+
+Handlers are searched from the innermost (top of stack) to outermost. Provider frames are skipped during clause lookup.
+
+## §7 Worked Example: Factorial in CPS
+
+```text
+letcont exit [v] (trap return) in
+letrec fact = (lam [n] k
+  letprim is_zero = eq n 0 in
+  if is_zero then
+    (jump k 1)
+  else
+    letprim n_minus_1 = sub n 1 in
+    letcont k_mul [result]
+      (letprim prod = mul n result in (jump k prod))
+    in (call fact [n_minus_1] k_mul))
+in (call fact [5] exit)
+```
+
+**Execution trace:**
+
+1. `exit` bound as continuation with body `trap return`
+2. `fact` bound to lambda via `LetRec` (placeholder → backfill)
+3. `Call fact [5] exit`: `n=5`, `k=exit`
+4. `is_zero = eq 5 0 = false`
+5. `If` takes else branch
+6. `n_minus_1 = sub 5 1 = 4`
+7. `k_mul` bound as continuation capturing env with `n=5`, `k=exit`
+8. `Call fact [4] k_mul`: `n=4`, `k=k_mul` (but `exit` preserved for `k_mul` body)
+9. ... recursion continues until `n=0` ...
+10. Base case: `jump k 1` where `k` is the innermost continuation
+11. Continuations unwind, multiplying results, until `exit` is reached with `120`
+
+## §8 Deferrals
+
+The following features are explicitly deferred outside PLAN-159 scope:
+
+- Legacy AST lowering to CPS IR
+- Lean 4 differential testing
+- Bytecode compilation
+- JIT compilation
+- Mutual recursion (single `LetRec` only)
+- Full row polymorphism (scaffold only)
+- Effect aliases
+- Full contract discharge
+
+## §9 See Also
+
+- [SPEC-098b: Target IR](SPEC-098b-TARGET-IR.md) — CPS IR syntax and types
+- [PLAN-159: CPS IR Interpreter](../plan/PLAN-159-CPS-IR-INTERPRETER.md) — implementation plan
+- [PLAN-INDEX](../plan/PLAN-INDEX.md) — task tracking
+
+## §10 Changelog
+
+- 2026-06-19: Rewrote with actual CPS IR semantics matching Phase 159 implementation. Added §2-7 with concrete rules for all term forms. Documented continuation capture, handler chain semantics, and LetRec backfill.

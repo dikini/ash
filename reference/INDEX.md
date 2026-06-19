@@ -85,7 +85,9 @@ refresh_trigger:
 - [Act effects](language/effects-act.md)
 - [Proc processes](language/processes-proc.md)
 - [Workflow boundaries](language/workflows.md)
-- [Generalized do](language/generalized-do.md)
+- [The Ash Tower](language/tower.md)
+- [CPS IR](language/cps-ir.md)
+- [CPS Operational Semantics](language/cps-operational-semantics.md)
 - [Record types](language/types/records.md)
 - [Tuple types](language/types/tuples.md)
 
@@ -118,6 +120,7 @@ refresh_trigger:
 - [Runtime artifacts](runtime/artifacts.md)
 - [Runtime daemon](runtime/daemon.md)
 - [Runtime policy profiles](runtime/policy-profiles.md)
+- [CPS Interpreter](runtime/cps-interpreter.md)
 
 ## Agent derivatives
 
@@ -129,6 +132,9 @@ refresh_trigger:
   - [Stdlib Workflow card](agents/cards/stdlib-workflow.md)
   - [Stdlib Result card](agents/cards/stdlib-result.md)
   - [Stdlib Algebra card](agents/cards/stdlib-algebra.md)
+  - [CPS IR card](agents/cards/cps-ir.md)
+  - [CPS Interpreter card](agents/cards/cps-interpreter.md)
+  - [CPS Operational Semantics card](agents/cards/cps-operational-semantics.md)
   - [Ash CLI card](agents/cards/ash-cli.md)
   - [Ashgrove card](agents/cards/ashgrove.md)
   - [RuntimeKernel card](agents/cards/runtime-kernel.md)

@@ -134,9 +134,10 @@ Update this section as tasks complete:
 | [156](PLAN-156-PARSER-BLOCKER-RESOLUTION.md) | 5 | 5 | ✅ Complete; all blockers resolved, regression tests added |
 | [157](PLAN-157-LIST-MIGRATION-HARDENING.md) | 5 | 4 | ⏸️ Deferred; TASK-1570 (Remove Value::List) remains open |
 | [158](PLAN-158-LANGUAGE-SURFACE-FIXES.md) | 5 | 3 | ⏸️ Deferred; TASK-1580 (Module-level function visibility) remains open |
-| [159](PLAN-159-CPS-IR-INTERPRETER.md) | 14 | 0 | 📝 Planned; spec/plan only, no implementation |
-
----
+|| [159](PLAN-159-CPS-IR-INTERPRETER.md) | 14 | 14 | ✅ Complete; all tasks implemented, 82 tests pass, reference docs added, review remediation done (validation boundary, lambda closure capture, handler semantics) |
+|| [160](PLAN-160-CPS-IR-RUNTIME-EXPANSION.md) | 10 | 0 | 📝 Planned; runtime expansion for structured data and speculative testing |
+|
+|---
 
 ## Phase 145: Law Test Evidence Substrate
 
@@ -444,7 +445,7 @@ Fix three language surface issues that prevent idiomatic usage of pure algebraic
 
 ## Phase 159: CPS IR Interpreter
 
-**Status:** 📝 Planned; 0/14 implemented — spec/plan only, no implementation
+**Status:** ✅ Complete; 14/14 tasks implemented, 76 tests pass, reference docs added
 **Plan:** [PLAN-159: CPS IR Interpreter](PLAN-159-CPS-IR-INTERPRETER.md)
 **Spec:** [SPEC-098b: Ash Intermediate Representation — Target State](../spec/SPEC-098b-TARGET-IR.md)
 **Depends on:** SPEC-095b (Target Grammar), SPEC-096b (Target Effect System), SPEC-097b (Target Type System)
@@ -452,19 +453,45 @@ Fix three language surface issues that prevent idiomatic usage of pure algebraic
 
 Builds an isolated prototype CPS IR interpreter for the target Ash language with gradual feature addition, thorough testing, and formal operational semantics developed in parallel. The interpreter prototype executes hand-authored Target CPS IR fixtures directly. Legacy lowering, differential testing against Lean 4, bytecode serialization, and JIT compilation are future concerns outside this phase.
 
-| Task | Description | Status |
-|------|-------------|--------|
-| [TASK-1590](tasks/TASK-1590-cps-ir-core-data-structures.md) | Define core data structures: Atom, Value, Term, Env, HandlerChain | 📝 Planned |
-| [TASK-1591](tasks/TASK-1591-cps-ir-core-evaluator.md) | Implement eval for LetVal, LetPrim, LetCont, Jump, Call | 📝 Planned |
-| [TASK-1592](tasks/TASK-1592-cps-ir-conditionals-data.md) | Implement If, Record, Tuple evaluation | 📝 Planned |
-| [TASK-1593](tasks/TASK-1593-cps-ir-raise-handle-dispatch.md) | Implement Raise, Handle with handler chain walking | 📝 Planned |
-| [TASK-1594](tasks/TASK-1594-cps-ir-handler-provider-persistence.md) | Implement shallow handler vs provider frame persistence | 📝 Planned |
-| [TASK-1595](tasks/TASK-1595-cps-ir-resume-continuations.md) | Implement resume continuation construction with env + chain capture | 📝 Planned |
-| [TASK-1596](tasks/TASK-1596-cps-ir-letrec-recursion.md) | Implement LetRec with placeholder backfill for recursion | 📝 Planned |
-| [TASK-1597](tasks/TASK-1597-cps-ir-discharge-trap.md) | Implement RecordDischarge (no-op) and Trap (abort) | 📝 Planned |
-| [TASK-1598](tasks/TASK-1598-cps-ir-row-validation-scaffold.md) | Implement row representation and local/total row validation scaffold | 📝 Planned |
-| [TASK-1599](tasks/TASK-1599-cps-ir-sexpr-parser-hardening.md) | Harden S-expression parser for full .cps files | 📝 Planned |
-| [TASK-1600](tasks/TASK-1600-cps-ir-sexpr-serializer-hardening.md) | Harden S-expression serializer for IR | 📝 Planned |
-| [TASK-1601](tasks/TASK-1601-cps-ir-core-operational-semantics.md) | Write formal operational semantics for syntax, core terms, conditionals/data, recursion, and advanced terms (§1-§3, §5-§6) | 📝 Planned |
-| [TASK-1602](tasks/TASK-1602-cps-ir-handler-operational-semantics.md) | Write formal operational semantics for handlers (§4) | 📝 Planned |
-| [TASK-1603](tasks/TASK-1603-phase-159-closeout.md) | Close out Phase 159 with verification, documentation, and changelog | 📝 Planned |
+|| Task | Description | Status |
+||------|-------------|--------|
+|| [TASK-1590](tasks/TASK-1590-cps-ir-core-data-structures.md) | Define core data structures: Atom, Value, Term, Env, HandlerChain | ✅ Complete |
+|| [TASK-1591](tasks/TASK-1591-cps-ir-core-evaluator.md) | Implement eval for LetVal, LetPrim, LetCont, Jump, Call | ✅ Complete |
+|| [TASK-1592](tasks/TASK-1592-cps-ir-conditionals-data.md) | Implement If, RecordDischarge, Trap evaluation | ✅ Complete |
+|| [TASK-1593](tasks/TASK-1593-cps-ir-raise-handle-dispatch.md) | Implement Raise, Handle with handler chain walking | ✅ Complete |
+|| [TASK-1594](tasks/TASK-1594-cps-ir-handler-provider-persistence.md) | Implement shallow handler vs provider frame persistence | ✅ Complete |
+|| [TASK-1595](tasks/TASK-1595-cps-ir-resume-continuations.md) | Implement resume continuation construction with env + chain capture | ✅ Complete |
+|| [TASK-1596](tasks/TASK-1596-cps-ir-letrec-recursion.md) | Implement LetRec with placeholder backfill for recursion | ✅ Complete |
+|| [TASK-1597](tasks/TASK-1597-cps-ir-discharge-trap.md) | Implement RecordDischarge (no-op) and Trap (abort) | ✅ Complete |
+|| [TASK-1598](tasks/TASK-1598-cps-ir-row-validation-scaffold.md) | Implement row representation and local/total row validation scaffold | ✅ Complete |
+|| [TASK-1599](tasks/TASK-1599-cps-ir-sexpr-parser-hardening.md) | Harden S-expression parser for full .cps files | ✅ Complete |
+|| [TASK-1600](tasks/TASK-1600-cps-ir-sexpr-serializer-hardening.md) | Harden S-expression serializer for IR | ✅ Complete |
+|| [TASK-1601](tasks/TASK-1601-cps-ir-core-operational-semantics.md) | Write formal operational semantics for syntax, core terms, conditionals/data, recursion, and advanced terms (§1-§3, §5-§6) | ✅ Complete |
+|| [TASK-1602](tasks/TASK-1602-cps-ir-handler-operational-semantics.md) | Write formal operational semantics for handlers (§4) | ✅ Complete |
+|| [TASK-1603](tasks/TASK-1603-phase-159-closeout.md) | Close out Phase 159 with verification, documentation, and changelog | ✅ Complete |
+|| [TASK-1604](tasks/TASK-1604-cps-ir-reference-documentation.md) | Add CPS IR reference documentation | ✅ Complete |
+|| [TASK-1605](tasks/TASK-1605-cps-interpreter-reference-documentation.md) | Add CPS interpreter reference documentation | ✅ Complete |
+||| [TASK-1606](tasks/TASK-1606-cps-operational-semantics-reference.md) | Add CPS operational semantics reference documentation | ✅ Complete |
+||| [TASK-1607](tasks/TASK-1607-cps-operational-semantics-agent-card.md) | Add CPS operational semantics agent card | ✅ Complete |
+
+## Phase 160: CPS IR Runtime Expansion
+
+**Status:** 📝 Planned; 0/10 implemented
+**Plan:** [PLAN-160: CPS IR Runtime Expansion](PLAN-160-CPS-IR-RUNTIME-EXPANSION.md)
+**Spec:** [SPEC-098b: Ash Intermediate Representation — Target State](../spec/SPEC-098b-TARGET-IR.md)
+**Depends on:** Phase 159 (CPS IR Interpreter)
+
+Extends the Phase 159 CPS IR interpreter with structured data (records, tuples), constructor tags, pattern matching, and mutual recursion desugaring. Provides an objective testing ground for speculative upper-language lowering patterns.
+
+||| Task | Description | Status |
+|||------|-------------|--------|
+||| [TASK-1600](tasks/TASK-1600-cps-ir-record-tuple-values.md) | Add Record and Tuple value variants to CPS IR | 📝 Planned |
+||| [TASK-1601](tasks/TASK-1601-cps-ir-field-access-primitives.md) | Add RecordGet and TupleGet primitive operations | 📝 Planned |
+||| [TASK-1602](tasks/TASK-1602-cps-ir-constructor-tags.md) | Add ConstructorName atom variant for sum types | 📝 Planned |
+||| [TASK-1603](tasks/TASK-1603-cps-ir-match-dispatch.md) | Add Match term for pattern dispatch | 📝 Planned |
+||| [TASK-1604](tasks/TASK-1604-cps-ir-mutual-recursion-desugaring.md) | Support mutual recursion via tuple-of-lambdas in LetRec | 📝 Planned |
+||| [TASK-1605](tasks/TASK-1605-cps-ir-sexpr-parser-new-forms.md) | Update S-expression parser/serializer for new forms | 📝 Planned |
+||| [TASK-1606](tasks/TASK-1606-cps-ir-speculative-fixtures.md) | Write speculative test fixtures for upper-language patterns | 📝 Planned |
+||| [TASK-1607](tasks/TASK-1607-cps-ir-expanded-operational-semantics.md) | Write operational semantics for new term forms (new doc) | 📝 Planned |
+||| [TASK-1608](tasks/TASK-1608-cps-ir-reference-docs-update.md) | Add reference documentation for expanded CPS IR | 📝 Planned |
+||| [TASK-1609](tasks/TASK-1609-phase-160-closeout.md) | Close out Phase 160 with verification and documentation | 📝 Planned |

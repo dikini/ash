@@ -1,6 +1,6 @@
 # TASK-1603: Close out Phase 159
 
-**Status:** 📝 Planned
+**Status:** ✅ Complete
 **Phase:** [PLAN-159](../PLAN-159-CPS-IR-INTERPRETER.md)
 **Owner:** Phase 159
 
@@ -35,6 +35,49 @@ Close Phase 159 by reconciling plan/task/changelog status, running focused and b
 - Status surfaces must agree: task files, PLAN-159, PLAN-INDEX, and CHANGELOG cannot contradict each other.
 - No closeout claim may rely on a zero-test run.
 - Closeout must not claim legacy lowering or Lean differential testing was implemented by Phase 159.
+
+## Review Remediation Guidance
+
+Phase 159's interpreter is intended to execute CPS IR produced by earlier Ash stages, not to be a general-purpose runtime validator for arbitrary malformed IR. Remediation should therefore preserve a two-layer contract:
+
+```text
+Raw .cps text / producer output
+        |
+        v
+CPS parser + validator boundary
+        |
+        v
+Valid CPS program
+        |
+        v
+Lean CPS interpreter
+```
+
+The interpreter may assume a `ValidCpsProgram`-style invariant once input has passed the parser/validator boundary. Do not scatter redundant arity, type, label, or row checks through hot evaluator paths merely to make malformed examples stable. Runtime checks are acceptable only when they are needed to avoid Rust panics, represent real dynamic semantics, or guard invariants that cannot be established statically in Phase 159.
+
+The boundary layer must fail closed for malformed hand-authored `.cps` fixtures and for output received from earlier stages during tests. It should own checks such as:
+
+- function call arity equals lambda parameter count;
+- primitive operation arity matches the selected `PrimOp`;
+- effect raise arity equals the selected operation/handler parameter shape;
+- continuation labels and variables resolve within the validated program;
+- rows are locally well formed and duplicate-free;
+- values, terms, atoms, and continuation references appear only in their allowed syntactic positions.
+
+Concrete implementation guidance for the next development pass:
+
+1. Introduce explicit raw-vs-validated API types or equivalent naming. A preferred shape is `RawCpsProgram(Term)` plus `ValidCpsProgram(Term)`, with `TryFrom<RawCpsProgram> for ValidCpsProgram` returning `CpsValidationError`. If wrapper types are too heavy for this phase, at least expose a clearly named `validate_cps_program(&Term) -> Result<(), CpsValidationError>` and require fixture/load tests to call it before evaluation.
+2. Keep `eval` lean by accepting the validated representation or documenting that callers must validate first. Do not treat interpreter arity checks as proof of correctness.
+3. Add validator tests for malformed arity, unresolved labels, row duplicates, and kind/position mistakes. These are validator tests, not evaluator semantics tests.
+4. Add evaluator tests only for valid programs and semantic behavior: lexical lambda closure capture, continuation environment capture, shallow handler removal before clause execution, provider-frame dispatch/persistence, resume chain restoration, and ordinary successful result observation.
+5. Keep `.cps` parser/serializer tests tied to the documented grammar. `parse(serialize(term))` should hold for generated valid terms, and committed lowercase `.cps` fixtures should parse through the same boundary used by the executor.
+
+Review finding classification under this contract:
+
+- `.cps` grammar drift is a boundary blocker because `.cps` is the Phase 159 fixture/load format.
+- lambda definition-environment capture is an interpreter semantics blocker.
+- shallow handler removal and provider-frame dispatch are interpreter semantics blockers.
+- call, primitive, and raise arity are validation-boundary blockers unless a task explicitly promotes a specific dynamic arity check into evaluator semantics.
 
 ## TDD Steps
 

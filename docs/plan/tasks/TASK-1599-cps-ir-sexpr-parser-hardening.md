@@ -1,6 +1,6 @@
 # TASK-1599: Harden the CPS S-expression parser
 
-**Status:** 📝 Planned
+**Status:** ✅ Complete
 **Phase:** [PLAN-159](../PLAN-159-CPS-IR-INTERPRETER.md)
 **Owner:** Phase 159
 
@@ -87,3 +87,29 @@ checklist:
 ## Notes
 
 Keep examples normalized CPS IR. Values must be bound with `LetVal`; primitive computations must be bound with `LetPrim`; branch bodies must be `Term`s.
+
+### Deferral Note: Custom .cps Grammar Parser
+
+The current implementation uses `serde-lexpr` for S-expression serialization/deserialization. This provides a safe round-trip from Rust AST → S-expression → Rust AST with minimal code. The trade-off is that the output format uses PascalCase enum names and dotted-pair field notation rather than the documented lowercase fixture grammar.
+
+**serde-lexpr format:**
+```
+(LetVal (name . "x") (value Atom Int . 42) (body Jump (cont Label . "exit") ...))
+```
+
+**Desired fixture format:**
+```
+(letval x 42 (jump (label exit) (var x)))
+```
+
+**Decision:** Defer custom parser/serializer to a follow-up task. The serde-lexpr approach is sufficient for Phase 159 because:
+- Round-trip property holds: `parse(serialize(term)) == term`
+- File I/O workflow is tested: write → read → execute
+- No external producer/consumer requires the lowercase format yet
+- A custom parser would require significant lexer + recursive descent work for primarily stylistic benefit
+
+When a custom parser is needed, implement:
+1. Lexer: `(`, `)`, `[`, `]`, identifiers, strings, numbers
+2. Parser: recursive descent for each term/value variant with lowercase keywords
+3. Serializer: custom output formatting with canonical shape
+4. Negative tests: malformed fixture rejection

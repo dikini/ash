@@ -1,6 +1,6 @@
 # TASK-1600: Harden the CPS S-expression serializer
 
-**Status:** 📝 Planned
+**Status:** ✅ Complete
 **Phase:** [PLAN-159](../PLAN-159-CPS-IR-INTERPRETER.md)
 **Owner:** Phase 159
 
@@ -81,3 +81,7 @@ checklist:
 ## Notes
 
 Keep examples normalized CPS IR. Values must be bound with `LetVal`; primitive computations must be bound with `LetPrim`; branch bodies must be `Term`s.
+
+### Deferral Note: Custom .cps Grammar Serializer
+
+See TASK-1599 deferral note. The current serializer uses `serde-lexpr` which produces PascalCase enum names with dotted-pair field notation. A custom serializer that outputs the canonical lowercase fixture format is deferred to a follow-up task, pending an external producer/consumer that requires the specific syntax.

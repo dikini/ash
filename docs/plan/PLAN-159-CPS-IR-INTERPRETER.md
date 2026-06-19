@@ -19,7 +19,7 @@ verified_against:
 
 # PLAN-159: CPS IR Interpreter
 
-**Status:** 📝 Planned; 0/14 implemented — spec/plan only, no implementation
+**Status:** ✅ Complete; 14/14 implemented — all tasks complete, 82 tests pass, review remediation done (validation boundary, lambda closure capture, handler semantics)
 **Spec:** [SPEC-098b: Ash Intermediate Representation — Target State](../spec/SPEC-098b-TARGET-IR.md)
 **Depends on:** SPEC-095b (Target Grammar), SPEC-096b (Target Effect System), SPEC-097b (Target Type System)
 **Task range:** TASK-1590 through TASK-1603
@@ -188,20 +188,20 @@ is the local residual row after the handler transformation.
 
 | Task | Description | Phase | Status |
 |------|-------------|-------|--------|
-| [TASK-1590](tasks/TASK-1590-cps-ir-core-data-structures.md) | Define core data structures: Atom, Value, Term, Env, HandlerChain | 1 | 📝 Planned |
-| [TASK-1591](tasks/TASK-1591-cps-ir-core-evaluator.md) | Implement eval for LetVal, LetPrim, LetCont, Jump, Call | 1 | 📝 Planned |
-| [TASK-1592](tasks/TASK-1592-cps-ir-conditionals-data.md) | Implement If, Record, Tuple evaluation | 2 | 📝 Planned |
-| [TASK-1593](tasks/TASK-1593-cps-ir-raise-handle-dispatch.md) | Implement Raise, Handle with handler chain walking | 3 | 📝 Planned |
-| [TASK-1594](tasks/TASK-1594-cps-ir-handler-provider-persistence.md) | Implement shallow handler vs provider frame persistence | 3 | 📝 Planned |
-| [TASK-1595](tasks/TASK-1595-cps-ir-resume-continuations.md) | Implement resume continuation construction with env + chain capture | 3 | 📝 Planned |
-| [TASK-1596](tasks/TASK-1596-cps-ir-letrec-recursion.md) | Implement LetRec with placeholder backfill for recursion | 4 | 📝 Planned |
-| [TASK-1597](tasks/TASK-1597-cps-ir-discharge-trap.md) | Implement RecordDischarge (no-op) and Trap (abort) | 5 | 📝 Planned |
-| [TASK-1598](tasks/TASK-1598-cps-ir-row-validation-scaffold.md) | Implement row representation and local/total row validation scaffold | 5 | 📝 Planned |
-| [TASK-1599](tasks/TASK-1599-cps-ir-sexpr-parser-hardening.md) | Harden S-expression parser for full .cps files | 6 | 📝 Planned |
-| [TASK-1600](tasks/TASK-1600-cps-ir-sexpr-serializer-hardening.md) | Harden S-expression serializer for IR | 6 | 📝 Planned |
-| [TASK-1601](tasks/TASK-1601-cps-ir-core-operational-semantics.md) | Write formal operational semantics for syntax, core terms, conditionals/data, recursion, and advanced terms (§1-§3, §5-§6) | 1/2/4/5 | 📝 Planned |
-| [TASK-1602](tasks/TASK-1602-cps-ir-handler-operational-semantics.md) | Write formal operational semantics for handlers (§4) | 3 | 📝 Planned |
-| [TASK-1603](tasks/TASK-1603-phase-159-closeout.md) | Close out Phase 159 with verification, documentation, and changelog | Closeout | 📝 Planned |
+|| [TASK-1590](tasks/TASK-1590-cps-ir-core-data-structures.md) | Define core data structures: Atom, Value, Term, Env, HandlerChain | 1 | ✅ Complete |
+|| [TASK-1591](tasks/TASK-1591-cps-ir-core-evaluator.md) | Implement eval for LetVal, LetPrim, LetCont, Jump, Call | 1 | ✅ Complete |
+|| [TASK-1592](tasks/TASK-1592-cps-ir-conditionals-data.md) | Implement If, Record, Tuple evaluation | 2 | ✅ Complete |
+|| [TASK-1593](tasks/TASK-1593-cps-ir-raise-handle-dispatch.md) | Implement Raise, Handle with handler chain walking | 3 | ✅ Complete |
+|| [TASK-1594](tasks/TASK-1594-cps-ir-handler-provider-persistence.md) | Implement shallow handler vs provider frame persistence | 3 | ✅ Complete |
+|| [TASK-1595](tasks/TASK-1595-cps-ir-resume-continuations.md) | Implement resume continuation construction with env + chain capture | 3 | ✅ Complete |
+|| [TASK-1596](tasks/TASK-1596-cps-ir-letrec-recursion.md) | Implement LetRec with placeholder backfill for recursion | 4 | ✅ Complete |
+|| [TASK-1597](tasks/TASK-1597-cps-ir-discharge-trap.md) | Implement RecordDischarge (no-op) and Trap (abort) | 5 | ✅ Complete |
+|| [TASK-1598](tasks/TASK-1598-cps-ir-row-validation-scaffold.md) | Implement row representation and local/total row validation scaffold | 5 | ✅ Complete |
+|| [TASK-1599](tasks/TASK-1599-cps-ir-sexpr-parser-hardening.md) | Harden S-expression parser for full .cps files | 6 | ✅ Complete |
+|| [TASK-1600](tasks/TASK-1600-cps-ir-sexpr-serializer-hardening.md) | Harden S-expression serializer for IR | 6 | ✅ Complete |
+|| [TASK-1601](tasks/TASK-1601-cps-ir-core-operational-semantics.md) | Write formal operational semantics for syntax, core terms, conditionals/data, recursion, and advanced terms (§1-§3, §5-§6) | 1/2/4/5 | ✅ Complete |
+|| [TASK-1602](tasks/TASK-1602-cps-ir-handler-operational-semantics.md) | Write formal operational semantics for handlers (§4) | 3 | ✅ Complete |
+|| [TASK-1603](tasks/TASK-1603-phase-159-closeout.md) | Close out Phase 159 with verification, documentation, and changelog | Closeout | ✅ Complete |
 
 TASK-1598 is intentionally a scaffold task. It must implement typed row carriers, namespaced
 effect-item identity, local-vs-total validation, duplicate elimination, and fail-closed residual

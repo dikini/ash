@@ -1,6 +1,6 @@
 # TASK-1591: Evaluate core CPS values and terms
 
-**Status:** 📝 Planned
+**Status:** ✅ Complete
 **Phase:** [PLAN-159](../PLAN-159-CPS-IR-INTERPRETER.md)
 **Owner:** Phase 159
 

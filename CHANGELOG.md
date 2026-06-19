@@ -5,14 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
-
 ### Added
+- [Phase 159](docs/plan/PLAN-159-CPS-IR-INTERPRETER.md): Implemented CPS IR interpreter core in Rust with TDD: CPS IR data structures (Atom, Value, Term, Env, HandlerChain), core evaluator (LetVal, LetPrim, LetCont, Jump, Call), conditionals (If, RecordDischarge, Trap), effect raising and handler dispatch (Raise, Handle), handler/provider persistence and resume continuations, LetRec recursion with factorial example, row validation scaffold, serde round-trip serialization for all term/value variants, and comprehensive operational semantics document (SPEC-099b). All 82 CPS tests pass. (TASK-1590 through TASK-1603)
+- [Phase 160](docs/plan/PLAN-160-CPS-IR-RUNTIME-EXPANSION.md): Extended CPS IR runtime with structured data and pattern matching: Value::Record and Value::Tuple with Value fields/elements, PrimOp::RecordGet and PrimOp::TupleGet field access, Atom::ConstructorName for tagged data, Term::Match for multi-way constructor dispatch, and rec_binding: Option<Name> on Value::Lam for scoped mutual recursion via tuple-of-lambdas. Removed PrimOp Copy derive. Updated evaluator to resolve primitive arguments as Values, added eval_match and eval_atom_to_value helpers. All 17 new tests pass plus existing Phase 159 tests. (TASK-1610 through TASK-1616)
+- **Phase 160 correctness fixes**: LetRec now recursively marks nested lambdas in Record/Tuple values with rec_binding; eval_call rejects arity mismatches instead of silently dropping arguments; handler dispatch matches full EffectOp (not just EffectItem); validator checks handler parameter arity against effect operation arg_types. (TASK-1610 through TASK-1616 remediation)
+- CPS validation boundary: `validate_cps_program()` separates parser/validator concerns from lean interpreter semantics, checking arity, unresolved labels/variables, and row duplicates. (TASK-1603 remediation)
+- Lambda closure capture: `Value::Lam` now carries `captured_env`, and `eval_call` merges call-site environment with captured environment for proper lexical closure semantics. (TASK-1603 remediation)
+- Reference documentation: Added `reference/language/cps-ir.md` and `reference/runtime/cps-interpreter.md` canonical pages with agent cards, targeting programmers and LLM agents. Updated `reference/INDEX.md`. (TASK-1604, TASK-1605)
 - Added `docs/ideas/research/PROTOCOL-GATED-TYPE-DIRECTED-LLM-EXECUTION.md`, a research note on protocol-gated type-directed LLM execution with deterministic oracles, evidence admission, replayable traces, and references to Recursive Language Models and LLM state-machine modeling work.
+
 ### Changed
+- [Phase 159](docs/plan/PLAN-159-CPS-IR-INTERPRETER.md): Clarified closeout remediation guidance for the CPS IR executor by separating raw `.cps`/producer input validation from lean validated-IR execution, and classified review findings as parser/validator boundary issues versus interpreter semantics blockers. (TASK-1603)
 - [Phase 159](docs/plan/PLAN-159-CPS-IR-INTERPRETER.md): Hardened the isolated CPS IR interpreter prototype plan before implementation by adding TASK-1590 through TASK-1603 task files, moving minimal `.cps` format scaffolding into Phase 1, correcting normalized CPS examples for records/handlers/recursion, resolving answer-type and affine-continuation planning decisions, narrowing row-checker scope, assigning the architecture/semantics document to an explicit task, removing out-of-scope legacy lowering and Lean differential testing work, tightening downstream task dependencies, and linking the task packet from PLAN-INDEX.
 - Tightened SPEC-095 through SPEC-097 language-evolution drafts: SPEC-095 now marks itself as the parser-derived grammar baseline, SPEC-096 now models effect rows as requirement accounting with kind-specific discharge for roles, policies, contracts, channels, aliases, and groups, and SPEC-097 now separates requirement inclusion, environment discharge, and function subtyping.
 - Restructured SPEC-095 through SPEC-099 into current-state vs target-state document pairs: SPEC-095a/095b (Grammar), SPEC-096a/096b (Effect System), SPEC-097a/097b (Type System), SPEC-098a/098b (IR), SPEC-099a/099b (Operational Semantics). Current-state specs are frozen against live code (`e61f2792`). Target-state specs are living documents for the unified effect-row language direction.
 - AGENTS.md: documented native MCP server configuration for ash-mcp and rust-analyzer with persistent stdio transport, per-project activation instructions, and cross-language tool routing. Added Hermes profile at `~/.hermes/profiles/ash/config.yaml` for portable Ash project MCP setup.
+
+### Fixed
+- [Phase 160](docs/plan/PLAN-160-CPS-IR-RUNTIME-EXPANSION.md): Reject provider handler lambda arity mismatches during CPS effect dispatch instead of silently dropping surplus effect arguments. (TASK-1616)
+
+### Deferred
+- Custom `.cps` grammar parser/serializer with lowercase keywords and fixture contract. The current `serde-lexpr` implementation provides safe AST round-trips and file I/O. A custom parser/serializer is deferred until an external producer/consumer requires the specific lowercase syntax. (TASK-1599, TASK-1600)
 
 ### Added
 - [Phase 151](docs/plan/PLAN-151-QUICKCHECK-V1-ORDINARY-STRATEGY-SEMANTICS.md): Planned QuickCheck v1 ordinary strategy semantics with SPEC-087, pure `Strategy<A>` values, helper-first `GenContext`, ordinary `Arbitrary<A>` evidence, pure strategy overrides, stable RNG/split, bounded recursive/weighted combinators, explicit shrink semantics, random seed/replay policy, aggregate empirical evidence history, and TASK-1497 through TASK-1506.

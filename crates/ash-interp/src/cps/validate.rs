@@ -119,13 +119,18 @@ fn validate_term(term: &Term, ctx: &mut ValidationContext) -> Result<(), CpsVali
             validate_term(body, &mut new_ctx)?;
             Ok(())
         }
-        Term::Jump { cont, arg, .. } => {
+        Term::Jump { cont, arg, row } => {
             validate_cont_ref(cont, ctx)?;
             validate_atom(arg, ctx)?;
+            validate_row(row)?;
             Ok(())
         }
         Term::Call {
-            func, args, cont, ..
+            func,
+            args,
+            cont,
+            row,
+            ..
         } => {
             validate_atom(func, ctx)?;
             for arg in args {
@@ -143,27 +148,35 @@ fn validate_term(term: &Term, ctx: &mut ValidationContext) -> Result<(), CpsVali
                     }
                 }
             }
+            validate_row(row)?;
             Ok(())
         }
         Term::If {
             cond,
             then_branch,
             else_branch,
+            row,
             ..
         } => {
             validate_atom(cond, ctx)?;
             validate_term(then_branch, ctx)?;
             validate_term(else_branch, ctx)?;
+            validate_row(row)?;
             Ok(())
         }
         Term::LetRec { name, value, body } => {
-            validate_value(value, ctx)?;
+            // Bind the recursive name BEFORE validating the value and body
             let mut new_ctx = ctx.with_binding(name.clone());
+            validate_value(value, &mut new_ctx)?;
             validate_term(body, &mut new_ctx)?;
             Ok(())
         }
         Term::Raise {
-            op, args, resume, ..
+            op,
+            args,
+            resume,
+            row,
+            ..
         } => {
             if op.arg_types.len() != args.len() {
                 return Err(CpsValidationError::RaiseArityMismatch {
@@ -175,14 +188,20 @@ fn validate_term(term: &Term, ctx: &mut ValidationContext) -> Result<(), CpsVali
                 validate_atom(arg, ctx)?;
             }
             validate_cont_ref(resume, ctx)?;
+            validate_row(row)?;
             Ok(())
         }
         Term::Handle {
-            clause, body, cont, ..
+            clause,
+            body,
+            cont,
+            row,
+            ..
         } => {
             validate_handler_clause(clause, ctx)?;
             validate_term(body, ctx)?;
             validate_cont_ref(cont, ctx)?;
+            validate_row(row)?;
             Ok(())
         }
         Term::RecordDischarge { body, .. } => {

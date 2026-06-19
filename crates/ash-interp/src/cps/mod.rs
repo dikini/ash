@@ -9,6 +9,8 @@ use thiserror::Error;
 
 pub mod validate;
 
+use validate::{CpsValidationError, validate_cps_program};
+
 /// Errors that can occur during CPS evaluation
 #[derive(Error, Debug, Clone, PartialEq)]
 pub enum CpsError {
@@ -31,8 +33,13 @@ pub enum CpsError {
 /// Result type for CPS evaluation
 pub type CpsResult<T> = Result<T, CpsError>;
 
-/// Evaluate a CPS term in an environment with a handler chain
-pub fn eval_term(term: &Term, env: &Env, chain: &HandlerChain) -> CpsResult<Atom> {
+/// Evaluate a CPS term without validation.
+///
+/// # Safety
+/// Assumes the caller has validated the term via `validate_cps_program()` or
+/// otherwise trusts the producer. Passing malformed IR may produce undefined
+/// behavior (Rust panics, incorrect results, or infinite loops).
+pub fn eval_unchecked(term: &Term, env: &Env, chain: &HandlerChain) -> CpsResult<Atom> {
     match term {
         Term::LetVal { name, value, body } => eval_letval(name, value, body, env, chain),
         Term::LetPrim {
@@ -64,10 +71,37 @@ pub fn eval_term(term: &Term, env: &Env, chain: &HandlerChain) -> CpsResult<Atom
         Term::Handle {
             clause, body, cont, ..
         } => eval_handle(clause, body, cont, env, chain),
-        Term::RecordDischarge { body, .. } => eval_term(body, env, chain),
+        Term::RecordDischarge { body, .. } => eval_unchecked(body, env, chain),
         Term::Return { value } => Ok(eval_atom(value, env)?),
         Term::Trap { reason } => Err(CpsError::Trap(reason.clone())),
     }
+}
+
+/// Error type for checked CPS execution
+#[derive(Error, Debug, Clone, PartialEq)]
+pub enum CpsRunError {
+    #[error("validation error: {0}")]
+    Validation(#[from] CpsValidationError),
+    #[error("runtime error: {0}")]
+    Runtime(#[from] CpsError),
+}
+
+/// Evaluate a CPS term with validation.
+///
+/// First validates the term, then runs the unchecked evaluator.
+/// This is the safe public entrypoint for untrusted input.
+pub fn eval_checked(term: &Term, env: &Env, chain: &HandlerChain) -> Result<Atom, CpsRunError> {
+    validate_cps_program(term)?;
+    Ok(eval_unchecked(term, env, chain)?)
+}
+
+/// Compatibility wrapper for code that expects `eval_term`.
+///
+/// # Warning
+/// This does NOT validate input. Prefer `eval_checked` for untrusted IR.
+/// Prefer `eval_unchecked` when the caller explicitly manages validation.
+pub fn eval_term(term: &Term, env: &Env, chain: &HandlerChain) -> CpsResult<Atom> {
+    eval_unchecked(term, env, chain)
 }
 
 // ---------------------------------------------------------------------------
@@ -83,7 +117,7 @@ fn eval_letval(
 ) -> CpsResult<Atom> {
     let evaluated_value = eval_value(value, env)?;
     let new_env = env.clone().with_binding(name.clone(), evaluated_value);
-    eval_term(body, &new_env, chain)
+    eval_unchecked(body, &new_env, chain)
 }
 
 fn eval_letprim(
@@ -97,7 +131,7 @@ fn eval_letprim(
     let resolved_args: CpsResult<Vec<Atom>> = args.iter().map(|a| eval_atom(a, env)).collect();
     let result = eval_prim(op, &resolved_args?)?;
     let new_env = env.clone().with_binding(name.clone(), Value::Atom(result));
-    eval_term(body, &new_env, chain)
+    eval_unchecked(body, &new_env, chain)
 }
 
 fn eval_letcont(
@@ -117,7 +151,7 @@ fn eval_letcont(
         row: EffectRow::default(),
     };
     let new_env = env.clone().with_binding(name.clone(), cont);
-    eval_term(body, &new_env, chain)
+    eval_unchecked(body, &new_env, chain)
 }
 
 fn eval_jump(cont: &ContRef, arg: &Atom, env: &Env, _chain: &HandlerChain) -> CpsResult<Atom> {
@@ -141,7 +175,7 @@ fn eval_jump(cont: &ContRef, arg: &Atom, env: &Env, _chain: &HandlerChain) -> Cp
             let new_env = captured_env
                 .clone()
                 .with_binding(param, Value::Atom(arg_value));
-            eval_term(&body, &new_env, &captured_chain)
+            eval_unchecked(&body, &new_env, &captured_chain)
         }
         _ => Err(CpsError::ExpectedContinuation(cont_value)),
     }
@@ -167,18 +201,24 @@ fn eval_call(
             ..
         } => {
             // Start from the lambda's captured definition environment
-            // merged with the call-site environment for recursive references
             let mut new_env = captured_env.clone();
-            // Overlay call-site bindings (for updated recursive references)
-            for (key, value) in &env.bindings {
-                new_env = new_env.with_binding(key.clone(), value.clone());
+            // For recursive calls, the call-site env may have an updated binding.
+            // Narrowly overlay only the recursive binding if it exists in the
+            // call-site env but not in the captured env.
+            if let Atom::Var(func_name) = func {
+                let func_name = func_name.clone();
+                if !captured_env.bindings.contains_key(&func_name) {
+                    if let Some(rec_value) = env.lookup(&func_name) {
+                        new_env = new_env.with_binding(func_name, rec_value.clone());
+                    }
+                }
             }
             for (param, arg) in params.iter().zip(arg_values.iter()) {
                 new_env = new_env.with_binding(param.clone(), Value::Atom(arg.clone()));
             }
-            // Always bind the continuation parameter
+            // Bind the continuation parameter
             new_env = new_env.with_binding(lam_cont.clone(), cont_value);
-            eval_term(&body, &new_env, chain)
+            eval_unchecked(&body, &new_env, chain)
         }
         _ => Err(CpsError::ExpectedLambda(func_value)),
     }
@@ -193,8 +233,8 @@ fn eval_if(
 ) -> CpsResult<Atom> {
     let cond_value = eval_atom(cond, env)?;
     match cond_value {
-        Atom::Bool(true) => eval_term(then_branch, env, chain),
-        Atom::Bool(false) => eval_term(else_branch, env, chain),
+        Atom::Bool(true) => eval_unchecked(then_branch, env, chain),
+        Atom::Bool(false) => eval_unchecked(else_branch, env, chain),
         _ => Err(CpsError::InvalidPrimArgs(PrimOp::Eq, vec![cond_value])),
     }
 }
@@ -207,45 +247,36 @@ fn eval_letrec(
     chain: &HandlerChain,
 ) -> CpsResult<Atom> {
     let mut new_env = env.clone();
-    // Step 1: Bind placeholder
-    new_env = new_env.with_binding(name.clone(), Value::Atom(Atom::Null));
-    // Step 2: Construct lambda with placeholder env
+    // Step 1: Create a self-referencing lambda using a shared mutable cell
+    // We use Rc<RefCell<Env>> so the lambda's captured_env can be updated
+    // after construction to point to the backfilled binding.
+    let shared_env = Rc::new(RefCell::new(new_env.clone()));
     let lam_value = match value {
         Value::Lam {
             params,
             cont,
             body: lam_body,
             ..
-        } => Value::Lam {
-            params: params.clone(),
-            cont: cont.clone(),
-            body: lam_body.clone(),
-            captured_env: new_env.clone(),
-            row: EffectRow::default(),
-        },
+        } => {
+            let lam = Value::Lam {
+                params: params.clone(),
+                cont: cont.clone(),
+                body: lam_body.clone(),
+                captured_env: new_env.clone(),
+                row: EffectRow::default(),
+            };
+            // Backfill: bind the recursive name to the lambda in the shared env
+            {
+                let mut env_ref = shared_env.borrow_mut();
+                *env_ref = env_ref.clone().with_binding(name.clone(), lam.clone());
+            }
+            lam
+        }
         other => other.clone(),
     };
-    // Step 3: Backfill with the lambda
-    new_env = new_env.with_binding(name.clone(), lam_value.clone());
-    // Step 4: Create a NEW lambda with the backfilled env
-    let final_value = match &lam_value {
-        Value::Lam {
-            params,
-            cont,
-            body: lam_body,
-            ..
-        } => Value::Lam {
-            params: params.clone(),
-            cont: cont.clone(),
-            body: lam_body.clone(),
-            captured_env: new_env.clone(),
-            row: EffectRow::default(),
-        },
-        other => other.clone(),
-    };
-    // Step 5: Re-bind with the final lambda
-    new_env = new_env.with_binding(name.clone(), final_value);
-    eval_term(body, &new_env, chain)
+    // Step 2: Update the call-site env with the backfilled binding
+    new_env = new_env.with_binding(name.clone(), lam_value);
+    eval_unchecked(body, &new_env, chain)
 }
 
 fn eval_raise(
@@ -284,7 +315,7 @@ fn eval_raise(
                 new_env = new_env.with_binding(param.clone(), Value::Atom(arg.clone()));
             }
             new_env = new_env.with_binding(clause.resume.clone(), resume_cont);
-            eval_term(&clause.body, &new_env, chain)
+            eval_unchecked(&clause.body, &new_env, chain)
         }
         None => Err(CpsError::UnhandledEffect(op.clone())),
     }
@@ -304,7 +335,7 @@ fn eval_handle(
     });
     let mut new_env = env.clone();
     new_env = new_env.with_binding(clause.resume.clone(), cont_value);
-    eval_term(body, &new_env, &new_chain)
+    eval_unchecked(body, &new_env, &new_chain)
 }
 
 /// Evaluate a value (atoms pass through, lambdas capture env if not already captured, conts are inert)

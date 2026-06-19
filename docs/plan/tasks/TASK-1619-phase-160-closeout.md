@@ -1,4 +1,4 @@
-# TASK-1609: Close out Phase 160 with verification and documentation
+# TASK-1619: Close out Phase 160 with verification and documentation
 
 ## Status: 📝 Planned
 
@@ -12,15 +12,15 @@ Close out Phase 160 by running full verification gates, updating all status surf
 
 ## Dependencies
 
-- ✅ TASK-1600: Record/Tuple values
-- ✅ TASK-1601: Field access primitives
-- ✅ TASK-1602: Constructor tags
-- ✅ TASK-1603: Match dispatch
-- ✅ TASK-1604: Mutual recursion desugaring
-- ✅ TASK-1605: S-expression parser updates
-- ✅ TASK-1606: Speculative fixtures
-- ✅ TASK-1607: Expanded operational semantics
-- ✅ TASK-1608: Reference documentation
+- ✅ TASK-1610: Record/Tuple values
+- ✅ TASK-1611: Field access primitives
+- ✅ TASK-1612: Constructor tags
+- ✅ TASK-1613: Match dispatch
+- ✅ TASK-1614: Mutual recursion desugaring
+- ✅ TASK-1615: Serde serialization extension
+- ✅ TASK-1616: Speculative fixtures
+- ✅ TASK-1617: Expanded operational semantics
+- ✅ TASK-1618: Reference documentation
 
 ## Requirements
 
@@ -35,7 +35,8 @@ Close out Phase 160 by running full verification gates, updating all status surf
 ## Verification Gates
 
 ```bash
-# Full workspace testscargo test --all
+# Full workspace tests
+cargo test --all
 
 # Clippy (all targets, all features)
 cargo clippy --all-targets --all-features -- -D warnings
@@ -50,16 +51,16 @@ cargo doc --no-deps
 git diff --check
 
 # Phase 160 specific tests
-cargo test -p ash-core -p ash-interp --test task_1600_cps_ir
-cargo test -p ash-core -p ash-interp --test task_1601_cps_ir
-cargo test -p ash-core -p ash-interp --test task_1602_cps_ir
-cargo test -p ash-core -p ash-interp --test task_1603_cps_ir
-cargo test -p ash-core -p ash-interp --test task_1604_cps_ir
-cargo test -p ash-core -p ash-interp --test task_1605_cps_ir
-cargo test -p ash-core -p ash-interp --test task_1606_cps_ir
+cargo test -p ash-core -p ash-interp --test task_1610_cps_ir
+cargo test -p ash-core -p ash-interp --test task_1611_cps_ir
+cargo test -p ash-core -p ash-interp --test task_1612_cps_ir
+cargo test -p ash-core -p ash-interp --test task_1613_cps_ir
+cargo test -p ash-core -p ash-interp --test task_1614_cps_ir
+cargo test -p ash-core -p ash-interp --test task_1615_cps_ir
+cargo test -p ash-core -p ash-interp --test task_1616_cps_ir
 
 # Speculative fixture execution
-cargo test -p ash-interp --test task_1606_cps_ir -- --nocapture
+cargo test -p ash-interp --test task_1616_cps_ir -- --nocapture
 ```
 
 ## Status Surface Updates
@@ -78,20 +79,20 @@ Add Phase 160 section with task table (all tasks marked ✅ Complete).
 Add under `[Unreleased]`:
 ```markdown
 ### Added
-- Record and tuple values in CPS IR (TASK-1600)
-- Field access primitives `RecordGet` and `TupleGet` (TASK-1601)
-- Constructor name atoms for sum type discrimination (TASK-1602)
-- Match dispatch term for pattern matching (TASK-1603)
-- Mutual recursion desugaring support via tuple-of-lambdas (TASK-1604)
-- S-expression parser/serializer updates for new forms (TASK-1605)
-- Speculative test fixtures for upper-language lowering patterns (TASK-1606)
-- Expanded operational semantics document (SPEC-099c) (TASK-1607)
-- Reference documentation for expanded CPS IR (TASK-1608)
+- Record and tuple values in CPS IR (TASK-1610)
+- Field access primitives `RecordGet` and `TupleGet` (TASK-1611)
+- Constructor name atoms for sum type discrimination (TASK-1612)
+- Match dispatch term for pattern matching (TASK-1613)
+- Mutual recursion desugaring support via tuple-of-lambdas (TASK-1614)
+- Serde-based serialization extension for new forms (TASK-1615)
+- Speculative test fixtures for upper-language lowering patterns (TASK-1616)
+- Expanded operational semantics document (SPEC-099c) (TASK-1617)
+- Reference documentation for expanded CPS IR (TASK-1618)
 ```
 
 ### Task Files
 
-Update all TASK-160x files to `Status: ✅ Complete` with verification evidence.
+Update all TASK-161x files to `Status: ✅ Complete` with verification evidence.
 
 ## Dispatch
 

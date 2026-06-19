@@ -1,4 +1,4 @@
-# TASK-1607: Write operational semantics for new term forms
+# TASK-1617: Write operational semantics for new term forms
 
 ## Status: 📝 Planned
 
@@ -13,10 +13,10 @@ Write a new operational semantics document covering the expanded CPS IR forms: `
 
 ## Dependencies
 
-- ✅ TASK-1600: Record/Tuple values
-- ✅ TASK-1601: Field access primitives
-- ✅ TASK-1602: Constructor tags
-- ✅ TASK-1603: Match dispatch
+- ✅ TASK-1610: Record/Tuple values
+- ✅ TASK-1611: Field access primitives
+- ✅ TASK-1612: Constructor tags
+- ✅ TASK-1613: Match dispatch
 
 ## Requirements
 
@@ -43,9 +43,11 @@ Write a new operational semantics document covering the expanded CPS IR forms: `
 
 ```text
 v ::= ... (from SPEC-099b §1.2)
-    | Record { fields: [(x, a), ...] }
-    | Tuple { elems: [a, ...] }
+    | Record { fields: [(x, v), ...] }
+    | Tuple { elems: [v, ...] }
 ```
+
+**Note:** The spec grammar (SPEC-098b) uses `Atom` for fields/elements because that's the frontend IR. The operational semantics uses `Value` because atoms are resolved to values during evaluation.
 
 ### §1.3 Atoms (extended)
 
@@ -191,7 +193,7 @@ checklist:
 
 ## Dependencies for Next Task
 
-- Provides formal semantics for TASK-1608 (reference docs)
+- Provides formal semantics for TASK-1618 (reference docs)
 
 ## Notes
 

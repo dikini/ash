@@ -476,22 +476,22 @@ Builds an isolated prototype CPS IR interpreter for the target Ash language with
 
 ## Phase 160: CPS IR Runtime Expansion
 
-**Status:** 📝 Planned; 0/10 implemented
+**Status:** 📝 Planned; 0/10 implemented — updated to use serde-based serialization (deferring hand-written S-expression parser)
 **Plan:** [PLAN-160: CPS IR Runtime Expansion](PLAN-160-CPS-IR-RUNTIME-EXPANSION.md)
 **Spec:** [SPEC-098b: Ash Intermediate Representation — Target State](../spec/SPEC-098b-TARGET-IR.md)
 **Depends on:** Phase 159 (CPS IR Interpreter)
 
 Extends the Phase 159 CPS IR interpreter with structured data (records, tuples), constructor tags, pattern matching, and mutual recursion desugaring. Provides an objective testing ground for speculative upper-language lowering patterns.
 
-||| Task | Description | Status |
-|||------|-------------|--------|
-||| [TASK-1600](tasks/TASK-1600-cps-ir-record-tuple-values.md) | Add Record and Tuple value variants to CPS IR | 📝 Planned |
-||| [TASK-1601](tasks/TASK-1601-cps-ir-field-access-primitives.md) | Add RecordGet and TupleGet primitive operations | 📝 Planned |
-||| [TASK-1602](tasks/TASK-1602-cps-ir-constructor-tags.md) | Add ConstructorName atom variant for sum types | 📝 Planned |
-||| [TASK-1603](tasks/TASK-1603-cps-ir-match-dispatch.md) | Add Match term for pattern dispatch | 📝 Planned |
-||| [TASK-1604](tasks/TASK-1604-cps-ir-mutual-recursion-desugaring.md) | Support mutual recursion via tuple-of-lambdas in LetRec | 📝 Planned |
-||| [TASK-1605](tasks/TASK-1605-cps-ir-sexpr-parser-new-forms.md) | Update S-expression parser/serializer for new forms | 📝 Planned |
-||| [TASK-1606](tasks/TASK-1606-cps-ir-speculative-fixtures.md) | Write speculative test fixtures for upper-language patterns | 📝 Planned |
-||| [TASK-1607](tasks/TASK-1607-cps-ir-expanded-operational-semantics.md) | Write operational semantics for new term forms (new doc) | 📝 Planned |
-||| [TASK-1608](tasks/TASK-1608-cps-ir-reference-docs-update.md) | Add reference documentation for expanded CPS IR | 📝 Planned |
-||| [TASK-1609](tasks/TASK-1609-phase-160-closeout.md) | Close out Phase 160 with verification and documentation | 📝 Planned |
+| Task | Description | Status |
+|------|-------------|--------|
+| [TASK-1610](tasks/TASK-1610-cps-ir-record-tuple-values.md) | Add Record and Tuple value variants to CPS IR | 📝 Planned |
+| [TASK-1611](tasks/TASK-1611-cps-ir-field-access-primitives.md) | Add RecordGet and TupleGet primitive operations | 📝 Planned |
+| [TASK-1612](tasks/TASK-1612-cps-ir-constructor-tags.md) | Add ConstructorName atom variant for sum types | 📝 Planned |
+| [TASK-1613](tasks/TASK-1613-cps-ir-match-dispatch.md) | Add Match term for pattern dispatch | 📝 Planned |
+| [TASK-1614](tasks/TASK-1614-cps-ir-mutual-recursion-desugaring.md) | Support mutual recursion via tuple-of-lambdas in LetRec | 📝 Planned |
+| [TASK-1615](tasks/TASK-1615-cps-ir-serde-extension.md) | Extend serde-based serialization for new IR forms | 📝 Planned |
+| [TASK-1616](tasks/TASK-1616-cps-ir-speculative-fixtures.md) | Write speculative test fixtures for upper-language patterns | 📝 Planned |
+| [TASK-1617](tasks/TASK-1617-cps-ir-expanded-operational-semantics.md) | Write operational semantics for new term forms (new doc) | 📝 Planned |
+| [TASK-1618](tasks/TASK-1618-cps-ir-reference-docs-update.md) | Add reference documentation for expanded CPS IR | 📝 Planned |
+| [TASK-1619](tasks/TASK-1619-phase-160-closeout.md) | Close out Phase 160 with verification and documentation | 📝 Planned |

@@ -1,4 +1,4 @@
-# TASK-1602: Add ConstructorName atom variant for sum types
+# TASK-1612: Add ConstructorName atom variant for sum types
 
 ## Status: 📝 Planned
 
@@ -34,9 +34,11 @@ Add `Atom::ConstructorName(Name)` variant to the CPS IR data model. Constructor 
 
 ### Step 1: Write Tests (Red)
 
-**Files:** `crates/ash-interp/tests/task_1602_cps_ir.rs`
+**Files:** `crates/ash-interp/tests/task_1612_cps_ir.rs`
 
 ```rust
+use ash_core::cps::*;
+
 #[test]
 fn test_constructor_name_equality() {
     let a = Atom::ConstructorName("Circle".to_string());
@@ -47,10 +49,25 @@ fn test_constructor_name_equality() {
 }
 
 #[test]
-fn test_constructor_name_eval() {
+fn test_constructor_name_roundtrip() {
     let atom = Atom::ConstructorName("Circle".to_string());
-    let result = eval_atom(&atom, &Env::new());
-    assert_eq!(result, Ok(Atom::ConstructorName("Circle".to_string())));
+    let s = serde_lexpr::to_string(&atom).unwrap();
+    let parsed: Atom = serde_lexpr::from_str(&s).unwrap();
+    assert_eq!(atom, parsed);
+}
+
+#[test]
+fn test_constructor_name_in_tuple() {
+    // Constructor name as first element of a sum type tuple
+    let tuple = Value::Tuple {
+        elems: vec![
+            Value::Atom(Atom::ConstructorName("Circle".to_string())),
+            Value::Atom(Atom::Float(5.0)),
+        ],
+    };
+    let s = serde_lexpr::to_string(&tuple).unwrap();
+    let parsed: Value = serde_lexpr::from_str(&s).unwrap();
+    assert_eq!(tuple, parsed);
 }
 ```
 
@@ -72,7 +89,9 @@ pub enum Atom {
 }
 ```
 
-`eval_atom` already passes through non-`Var` atoms unchanged, so no evaluator change needed.
+- `eval_atom` already passes through non-`Var` atoms unchanged, so no evaluator change needed for constructor name evaluation.
+- `eval_value` resolves atoms in record/tuple fields — when a `ConstructorName` is stored in a record/tuple field, it is resolved to `Value::Atom(Atom::ConstructorName(...))`.
+- The `Eq`/`PartialEq` derive on `Atom` handles `ConstructorName` automatically.
 
 ### Step 3: Integration
 
@@ -93,30 +112,31 @@ toolsets: [terminal, file]
 ```yaml
 strictness: clean
 commands:
-  - cargo test -p ash-core -p ash-interp --test task_1602_cps_ir
+  - cargo test -p ash-core -p ash-interp --test task_1612_cps_ir
   - cargo clippy -p ash-core -p ash-interp --all-targets -- -D warnings
   - cargo fmt --check
 checklist:
   - [ ] Constructor name equality works
-  - [ ] Constructor name evaluation is identity
   - [ ] Serialization round-trip works
+  - [ ] Constructor name in tuple round-trips
   - [ ] No clippy warnings
+  - [ ] CHANGELOG.md entry staged
 ```
 
 ## Dependencies for Next Task
 
-- Provides constructor tags for TASK-1603 (match dispatch)
+- Provides constructor tags for TASK-1613 (match dispatch)
 
 ## Notes
 
-- Constructor names are not function pointers. They are purely tags for discrimination.
-- In the lowered IR, a sum type constructor like `Circle(radius)` becomes:
-  ```rust
-  Value::Tuple {
-      elems: vec![
-          Atom::ConstructorName("Circle".to_string()),
-          Atom::Var("radius".to_string()),
-      ],
-  }
-  ```
+The lowered IR uses a tuple with the constructor name as the first element:
+
+```rust
+Value::Tuple {
+    elems: vec![
+        Value::Atom(Atom::ConstructorName("Circle".to_string())),
+        Value::Atom(Atom::Float(5.0)),
+    ],
+}
+```
 - The frontend is responsible for generating the correct tag + payload structure.

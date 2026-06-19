@@ -1,4 +1,4 @@
-# TASK-1608: Add reference documentation for expanded CPS IR
+# TASK-1618: Add reference documentation for expanded CPS IR
 
 ## Status: 📝 Planned
 
@@ -10,11 +10,11 @@ Add reference documentation for the expanded CPS IR: records, tuples, constructo
 
 - [PLAN-160](../PLAN-160-CPS-IR-RUNTIME-EXPANSION.md)
 - [SPEC-098b: Target IR](../../spec/SPEC-098b-TARGET-IR.md)
-- [SPEC-099c: Expanded Operational Semantics](../../spec/SPEC-099c-CPS-IR-EXPANDED-OPERATIONAL-SEMANTICS.md) (from TASK-1607)
+- [SPEC-099c: Expanded Operational Semantics](../../spec/SPEC-099c-CPS-IR-EXPANDED-OPERATIONAL-SEMANTICS.md) (from TASK-1617)
 
 ## Dependencies
 
-- ✅ TASK-1607: Expanded operational semantics (must be complete)
+- ✅ TASK-1617: Expanded operational semantics (must be complete)
 
 ## Requirements
 
@@ -28,9 +28,11 @@ Add reference documentation for the expanded CPS IR: records, tuples, constructo
    - `reference/language/ir/mutual-recursion.md` — Mutual recursion desugaring
 2. Each page must include:
    - Lowering rule (what frontend produces)
-   - Example `.cps` output
+   - Illustrative `.cps` syntax (for human readers — actual fixtures use serde-lexpr serialization)
    - Runtime semantics (how interpreter executes it)
    - Cross-references to specs
+
+**Note on `.cps` syntax examples:** The reference docs use hand-written S-expression syntax for readability. The actual `.cps` fixture files are generated from Rust structs via `serde_lexpr` (see TASK-1616). The syntax examples are approximate — the exact serde-lexpr output may differ.
 
 ### Content Outline
 
@@ -177,21 +179,26 @@ toolsets: [terminal, file]
 ```yaml
 strictness: clean
 commands:
-  - python3 -c "import os; files = ['reference/language/ir/records.md', 'reference/language/ir/tuples.md', 'reference/language/ir/constructors.md', 'reference/language/ir/pattern-matching.md', 'reference/language/ir/mutual-recursion.md']; [assert os.path.exists(f), f'Missing: {f}' for f in files]"
+  - test -f reference/language/ir/records.md
+  - test -f reference/language/ir/tuples.md
+  - test -f reference/language/ir/constructors.md
+  - test -f reference/language/ir/pattern-matching.md
+  - test -f reference/language/ir/mutual-recursion.md
   - git diff --check
 checklist:
   - [ ] All reference pages exist
   - [ ] Each page has lowering rule, example, and runtime semantics
   - [ ] Cross-references to specs are correct
   - [ ] No modification to existing reference pages
+  - [ ] CHANGELOG.md entry staged
 ```
 
 ## Dependencies for Next Task
 
-- Provides documentation for TASK-1609 (closeout)
+- Provides documentation for TASK-1619 (closeout)
 
 ## Notes
 
 - Reference pages should be concise but complete. They are for frontend developers, not end users.
-- Use the same `.cps` syntax as the speculative fixtures (TASK-1606) for consistency.
+- The `.cps` syntax examples are illustrative only. The actual serde-lexpr format is determined by serde's representation.
 - If `reference/language/ir/` directory doesn't exist, create it.

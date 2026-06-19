@@ -224,10 +224,10 @@ fn eval_call(
             }
             let mut new_env = captured_env.clone();
             // Overlay recursive binding if marked
-            if let Some(rec_name) = rec_binding {
-                if let Some(rec_value) = env.lookup(&rec_name) {
-                    new_env = new_env.with_binding(rec_name, rec_value.clone());
-                }
+            if let Some(rec_name) = rec_binding
+                && let Some(rec_value) = env.lookup(&rec_name)
+            {
+                new_env = new_env.with_binding(rec_name, rec_value.clone());
             }
             for (param, arg) in params.iter().zip(arg_values.iter()) {
                 new_env = new_env.with_binding(param.clone(), arg.clone());
@@ -394,12 +394,19 @@ fn eval_raise(
                 let arg_values: CpsResult<Vec<Atom>> =
                     args.iter().map(|a| eval_atom(a, env)).collect();
                 let arg_values = arg_values?;
+                if params.len() != arg_values.len() {
+                    return Err(CpsError::Trap(TrapReason::Custom(format!(
+                        "provider handler arity mismatch: expected {} args, got {}",
+                        params.len(),
+                        arg_values.len()
+                    ))));
+                }
                 let resume_value = resolve_cont(resume, env)?;
                 let mut new_env = captured_env.clone();
-                if let Some(rec_name) = rec_binding {
-                    if let Some(rec_value) = env.lookup(&rec_name) {
-                        new_env = new_env.with_binding(rec_name, rec_value.clone());
-                    }
+                if let Some(rec_name) = rec_binding
+                    && let Some(rec_value) = env.lookup(&rec_name)
+                {
+                    new_env = new_env.with_binding(rec_name, rec_value.clone());
                 }
                 for (param, arg) in params.iter().zip(arg_values.iter()) {
                     new_env = new_env.with_binding(param.clone(), Value::Atom(arg.clone()));

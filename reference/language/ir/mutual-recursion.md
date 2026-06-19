@@ -18,7 +18,7 @@ Lowers to CPS IR as:
 ```lisp
 (letrec pair
   (tuple
-    (lam [n] k (rec_binding "pair")
+    (lam [n] k
       (letprim is_zero = eq n 0 in
        if is_zero then
          (jump k true)
@@ -26,7 +26,7 @@ Lowers to CPS IR as:
          (letprim n_minus_1 = sub n 1 in
           (letprim odd_fn = tuple_get 1 pair in
            (call odd_fn [n_minus_1] k)))))
-    (lam [n] k (rec_binding "pair")
+    (lam [n] k
       (letprim is_zero = eq n 0 in
        if is_zero then
          (jump k false)
@@ -41,7 +41,7 @@ Lowers to CPS IR as:
 ## Why This Works
 
 1. **Placeholder binding:** `pair` is initially bound to `Null` via `LetRec`
-2. **Tuple construction:** The tuple is built with lambdas that each have `rec_binding: Some("pair")`
+2. **Tuple construction:** The tuple is built with lambdas; `LetRec` automatically marks all nested lambdas with `rec_binding: Some("pair")`
 3. **Backfill:** `pair` is updated to the actual tuple
 4. **Call-time overlay:** When a lambda is called, `eval_call` overlays the call-site binding for `pair` into the lambda's execution environment
 5. **Access:** The lambda body uses `tuple_get` on `pair` to extract the other function

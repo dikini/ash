@@ -1,7 +1,7 @@
 //! Tests for Phase 160 correctness fixes
 
 use ash_core::cps::*;
-use ash_interp::cps::eval_checked;
+use ash_interp::cps::{CpsError, CpsRunError, eval_checked};
 
 // ---------------------------------------------------------------------------
 // Fix 1: Nested LetRec lambdas in composite values get rec_binding
@@ -157,6 +157,64 @@ fn test_call_arity_mismatch_rejected() {
     assert!(
         result.is_err(),
         "Expected arity mismatch error, got: {:?}",
+        result
+    );
+}
+
+#[test]
+fn test_provider_handler_arity_mismatch_rejected() {
+    let op = EffectOp {
+        item: EffectItem {
+            namespace: "cap".to_string(),
+            name: "db.write".to_string(),
+            kind: EffectItemKind::Capability,
+        },
+        arg_types: vec!["Int".to_string(), "Int".to_string()],
+        result_type: "Int".to_string(),
+    };
+
+    let provider_handler = Value::Lam {
+        params: vec!["x".to_string()],
+        cont: "provider_k".to_string(),
+        body: Box::new(Term::Jump {
+            cont: ContRef::Var("provider_k".to_string()),
+            arg: Atom::Var("x".to_string()),
+            row: EffectRow::default(),
+        }),
+        captured_env: Env::new(),
+        rec_binding: None,
+        row: EffectRow::default(),
+    };
+
+    let env = Env::new().with_binding("provider_handler".to_string(), provider_handler);
+    let mut chain = HandlerChain::new();
+    chain.push(HandlerFrame::Provider {
+        op: op.clone(),
+        handler: "provider_handler".to_string(),
+    });
+
+    let term = Term::LetCont {
+        name: "exit".to_string(),
+        param: "v".to_string(),
+        cont_body: Box::new(Term::Return {
+            value: Atom::Var("v".to_string()),
+        }),
+        body: Box::new(Term::Raise {
+            op,
+            args: vec![Atom::Int(1), Atom::Int(2)],
+            resume: ContRef::Label("exit".to_string()),
+            row: EffectRow::default(),
+        }),
+    };
+
+    let result = eval_checked(&term, &env, &chain);
+    assert!(
+        matches!(
+            result,
+            Err(CpsRunError::Runtime(CpsError::Trap(TrapReason::Custom(ref message))))
+                if message.contains("provider handler arity mismatch")
+        ),
+        "Expected provider handler arity mismatch error, got: {:?}",
         result
     );
 }

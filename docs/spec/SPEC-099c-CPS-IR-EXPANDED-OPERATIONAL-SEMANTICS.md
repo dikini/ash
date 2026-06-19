@@ -232,7 +232,7 @@ v' = eval(v, η')
 ⟨LetRec(x, v, t), η, χ⟩ ⇓ ⟨t, η'', χ⟩
 ```
 
-For `Value::Lam` values inside `v`, `eval` sets `rec_binding: Some(x)` so that when the lambda is called, the recursive binding `x` is available in the execution environment.
+For `Value::Lam` values inside `v`, `eval` sets `rec_binding: Some(x)` so that when the lambda is called, the recursive binding `x` is available in the execution environment. For `Value::Record` and `Value::Tuple` values, `eval` recursively marks all nested lambdas with `rec_binding: Some(x)`.
 
 ### §4.4 Dynamic Scope Prevention
 
@@ -271,7 +271,7 @@ Primitive operations now take `Value` arguments and return `Value`. This allows 
 letcont exit [v] (trap return) in
 letrec pair = Tuple {
   elems: [
-    Lam { params: [n], cont: k, rec_binding: Some("pair"),
+    Lam { params: [n], cont: k,
       body: (
         letprim is_zero = eq n 0 in
         if is_zero then
@@ -282,7 +282,7 @@ letrec pair = Tuple {
           (call odd_fn [n_minus_1] k)
       )
     },
-    Lam { params: [n], cont: k, rec_binding: Some("pair"),
+    Lam { params: [n], cont: k,
       body: (
         letprim is_zero = eq n 0 in
         if is_zero then
@@ -304,7 +304,7 @@ letprim even_fn = tuple_get 0 pair in
 
 1. `exit` bound as continuation with body `trap return`
 2. `pair` bound via `LetRec` (placeholder → backfill with tuple)
-3. Both lambdas have `rec_binding: Some("pair")`
+3. `LetRec` automatically marks all nested lambdas with `rec_binding: Some("pair")`
 4. `even_fn` extracted from tuple (index 0)
 5. `Call even_fn [4] exit`: `n=4`, `k=exit`
 6. `is_zero = eq 4 0 = false`

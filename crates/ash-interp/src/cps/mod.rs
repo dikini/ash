@@ -215,6 +215,13 @@ fn eval_call(
             rec_binding,
             ..
         } => {
+            if params.len() != arg_values.len() {
+                return Err(CpsError::Trap(TrapReason::Custom(format!(
+                    "call arity mismatch: expected {} args, got {}",
+                    params.len(),
+                    arg_values.len()
+                ))));
+            }
             let mut new_env = captured_env.clone();
             // Overlay recursive binding if marked
             if let Some(rec_name) = rec_binding {
@@ -248,6 +255,41 @@ fn eval_if(
     }
 }
 
+fn mark_rec_binding(value: &Value, rec_name: &Name) -> Value {
+    match value {
+        Value::Lam {
+            params,
+            cont,
+            body,
+            captured_env,
+            rec_binding,
+            row,
+        } => Value::Lam {
+            params: params.clone(),
+            cont: cont.clone(),
+            body: body.clone(),
+            captured_env: captured_env.clone(),
+            rec_binding: rec_binding.clone().or_else(|| Some(rec_name.clone())),
+            row: row.clone(),
+        },
+        Value::Record { fields } => {
+            let mut new_fields = Vec::new();
+            for (field_name, field_value) in fields {
+                new_fields.push((field_name.clone(), mark_rec_binding(field_value, rec_name)));
+            }
+            Value::Record { fields: new_fields }
+        }
+        Value::Tuple { elems } => {
+            let mut new_elems = Vec::new();
+            for elem in elems {
+                new_elems.push(mark_rec_binding(elem, rec_name));
+            }
+            Value::Tuple { elems: new_elems }
+        }
+        other => other.clone(),
+    }
+}
+
 #[allow(clippy::result_large_err)]
 fn eval_letrec(
     name: &Name,
@@ -278,6 +320,20 @@ fn eval_letrec(
                 *env_ref = env_ref.clone().with_binding(name.clone(), lam.clone());
             }
             lam
+        }
+        Value::Record { fields } => {
+            let mut new_fields = Vec::new();
+            for (field_name, field_value) in fields {
+                new_fields.push((field_name.clone(), mark_rec_binding(field_value, name)));
+            }
+            Value::Record { fields: new_fields }
+        }
+        Value::Tuple { elems } => {
+            let mut new_elems = Vec::new();
+            for elem in elems {
+                new_elems.push(mark_rec_binding(elem, name));
+            }
+            Value::Tuple { elems: new_elems }
         }
         other => other.clone(),
     };

@@ -311,7 +311,7 @@ impl HandlerChain {
     pub fn find_handler(&self, op: &EffectOp) -> Option<(&HandlerClause, usize)> {
         for (idx, frame) in self.frames.iter().enumerate().rev() {
             match frame {
-                HandlerFrame::Shallow { clause } if clause.op.item == op.item => {
+                HandlerFrame::Shallow { clause } if clause.op == *op => {
                     return Some((clause, idx));
                 }
                 _ => continue,
@@ -327,7 +327,7 @@ impl HandlerChain {
                 HandlerFrame::Provider {
                     op: provider_op,
                     handler,
-                } if provider_op.item == op.item => {
+                } if provider_op == op => {
                     return Some((handler.clone(), idx));
                 }
                 _ => continue,

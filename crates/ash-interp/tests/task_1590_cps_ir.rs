@@ -232,8 +232,8 @@ fn test_handler_chain_push() {
             name: "db.read".to_string(),
             kind: EffectItemKind::Capability,
         },
-        arg_types: vec![],
-        result_type: "".to_string(),
+        arg_types: vec!["String".to_string()],
+        result_type: "Int".to_string(),
     });
     assert!(found.is_some());
 }

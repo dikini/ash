@@ -28,6 +28,8 @@ pub enum CpsValidationError {
     DuplicateRowItem(EffectItem),
     #[error("value in term position: {0:?}")]
     ValueInTermPosition(Value),
+    #[error("arity mismatch in handler: expected {expected} params, got {got}")]
+    HandlerArityMismatch { expected: usize, got: usize },
     #[error("invalid syntactic position for {0}")]
     InvalidSyntacticPosition(String),
 }
@@ -340,6 +342,13 @@ fn validate_handler_clause(
     ctx: &mut ValidationContext,
 ) -> Result<(), CpsValidationError> {
     validate_row(&clause.row)?;
+    // Check handler parameter arity matches effect operation argument types
+    if clause.params.len() != clause.op.arg_types.len() {
+        return Err(CpsValidationError::HandlerArityMismatch {
+            expected: clause.op.arg_types.len(),
+            got: clause.params.len(),
+        });
+    }
     let mut clause_ctx = ctx.clone();
     for param in &clause.params {
         clause_ctx.bindings.insert(param.clone());

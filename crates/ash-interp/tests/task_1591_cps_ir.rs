@@ -185,6 +185,7 @@ fn test_eval_call_identity() {
             row: EffectRow::default(),
         }),
         captured_env: Env::new(),
+        rec_binding: None,
         row: EffectRow::default(),
     };
     let term = Term::LetCont {

@@ -8,7 +8,7 @@ Close out Phase 160 by running full verification gates, updating all status surf
 
 ## Specification Reference
 
-- [PLAN-160](../PLAN-160-CPS-IR-RUNTIME-EXPANSION.md)
+- [PLAN-160: CPS IR Runtime Expansion](../PLAN-160-CPS-IR-RUNTIME-EXPANSION.md)
 
 ## Dependencies
 
@@ -69,7 +69,7 @@ cargo test -p ash-interp --test task_1616_cps_ir -- --nocapture
 
 Add Phase 160 row to progress table:
 ```markdown
-| [160](PLAN-160-CPS-IR-RUNTIME-EXPANSION.md) | 10 | 10 | ✅ Complete |
+| [160](../PLAN-160-CPS-IR-RUNTIME-EXPANSION.md) | 10 | 10 | ✅ Complete |
 ```
 
 Add Phase 160 section with task table (all tasks marked ✅ Complete).

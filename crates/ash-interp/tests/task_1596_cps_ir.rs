@@ -17,6 +17,7 @@ fn test_eval_letrec_simple() {
             row: EffectRow::default(),
         }),
         captured_env: Env::new(),
+        rec_binding: None,
         row: EffectRow::default(),
     };
     let term = Term::LetCont {
@@ -80,6 +81,7 @@ fn test_eval_letrec_countdown() {
         cont: "k".to_string(),
         body: Box::new(countdown_body),
         captured_env: Env::new(),
+        rec_binding: None,
         row: EffectRow::default(),
     };
     let term = Term::LetCont {
@@ -134,6 +136,7 @@ fn test_eval_letrec_factorial_n1() {
             row: EffectRow::default(),
         }),
         captured_env: Env::new(),
+        rec_binding: None,
         row: EffectRow::default(),
     };
     let term = Term::LetCont {
@@ -170,6 +173,7 @@ fn test_eval_letrec_identity() {
             row: EffectRow::default(),
         }),
         captured_env: Env::new(),
+        rec_binding: None,
         row: EffectRow::default(),
     };
     let term = Term::LetCont {
@@ -218,6 +222,7 @@ fn test_eval_letrec_self_reference() {
             row: EffectRow::default(),
         }),
         captured_env: Env::new(),
+        rec_binding: None,
         row: EffectRow::default(),
     };
     let term = Term::LetCont {
@@ -280,6 +285,7 @@ fn test_eval_factorial_returns_120() {
             row: EffectRow::default(),
         }),
         captured_env: Env::new(),
+        rec_binding: None,
         row: EffectRow::default(),
     };
     let term = Term::LetCont {

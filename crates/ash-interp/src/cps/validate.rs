@@ -106,7 +106,7 @@ fn validate_term(term: &Term, ctx: &mut ValidationContext) -> Result<(), CpsVali
             args,
             body,
         } => {
-            validate_prim_arity(*op, args)?;
+            validate_prim_arity(op.clone(), args)?;
             for arg in args {
                 validate_atom(arg, ctx)?;
             }
@@ -223,6 +223,20 @@ fn validate_term(term: &Term, ctx: &mut ValidationContext) -> Result<(), CpsVali
             validate_atom(value, ctx)?;
             Ok(())
         }
+        Term::Match {
+            scrutinee,
+            arms,
+            default,
+        } => {
+            validate_atom(scrutinee, ctx)?;
+            for (_, arm_body) in arms {
+                validate_term(arm_body, ctx)?;
+            }
+            if let Some(default_body) = default {
+                validate_term(default_body, ctx)?;
+            }
+            Ok(())
+        }
         Term::Trap { .. } => Ok(()),
     }
 }
@@ -247,13 +261,17 @@ fn validate_value(value: &Value, ctx: &mut ValidationContext) -> Result<(), CpsV
             validate_term(body, &mut lam_ctx)?;
             Ok(())
         }
-        Value::Cont {
-            param, body, row, ..
-        } => {
-            validate_row(row)?;
-            let mut cont_ctx = ctx.clone();
-            cont_ctx.bindings.insert(param.clone());
-            validate_term(body, &mut cont_ctx)?;
+        Value::Cont { .. } => Ok(()),
+        Value::Record { fields } => {
+            for (_, field_value) in fields {
+                validate_value(field_value, ctx)?;
+            }
+            Ok(())
+        }
+        Value::Tuple { elems } => {
+            for elem in elems {
+                validate_value(elem, ctx)?;
+            }
             Ok(())
         }
     }
@@ -304,6 +322,7 @@ fn validate_prim_arity(op: PrimOp, args: &[Atom]) -> Result<(), CpsValidationErr
         | PrimOp::Gt
         | PrimOp::Ge => 2,
         PrimOp::Neg | PrimOp::Not => 1,
+        PrimOp::RecordGet(_) | PrimOp::TupleGet(_) => 1,
     };
     if args.len() != expected {
         return Err(CpsValidationError::PrimArityMismatch {

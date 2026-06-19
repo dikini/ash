@@ -95,6 +95,7 @@ fn test_file_roundtrip_call() {
             row: EffectRow::default(),
         }),
         captured_env: Env::new(),
+        rec_binding: None,
         row: EffectRow::default(),
     };
     let term = Term::LetVal {
@@ -176,6 +177,7 @@ fn test_file_roundtrip_factorial() {
             }),
         }),
         captured_env: Env::new(),
+        rec_binding: None,
         row: EffectRow::default(),
     };
 

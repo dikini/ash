@@ -162,9 +162,9 @@ The placeholder/backfill mechanism (SPEC-099b §5.1) handles this correctly beca
 
 ## §5 See Also
 
-- [SPEC-099b: Base Operational Semantics](SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md)
-- [SPEC-098b: Target IR](SPEC-098b-TARGET-IR.md)
-- [PLAN-160: CPS IR Runtime Expansion](../plan/PLAN-160-CPS-IR-RUNTIME-EXPANSION.md)
+- [SPEC-099b: Base Operational Semantics](../../spec/SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md)
+- [SPEC-098b: Target IR](../../spec/SPEC-098b-TARGET-IR.md)
+- [PLAN-160: CPS IR Runtime Expansion](../PLAN-160-CPS-IR-RUNTIME-EXPANSION.md)
 ```
 
 ## Dispatch

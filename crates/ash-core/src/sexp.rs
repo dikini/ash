@@ -173,6 +173,7 @@ mod tests {
                 row: EffectRow::default(),
             }),
             captured_env: Env::new(),
+            rec_binding: None,
             row: EffectRow::default(),
         };
         let term = Term::LetVal {
@@ -211,6 +212,7 @@ mod tests {
                 row: EffectRow::default(),
             }),
             captured_env: Env::new(),
+            rec_binding: None,
             row: EffectRow::default(),
         };
         let s = value_to_string(&lam).unwrap();

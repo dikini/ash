@@ -35,6 +35,7 @@ fn test_lam_value() {
         cont: "k".to_string(),
         body,
         captured_env: Env::new(),
+        rec_binding: None,
         row: EffectRow::default(),
     };
     match lam {

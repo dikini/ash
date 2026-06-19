@@ -48,7 +48,7 @@ pub fn eval_unchecked(term: &Term, env: &Env, chain: &HandlerChain) -> CpsResult
             op,
             args,
             body,
-        } => eval_letprim(name, *op, args, body, env, chain),
+        } => eval_letprim(name, op, args, body, env, chain),
         Term::LetCont {
             name,
             param,
@@ -66,6 +66,11 @@ pub fn eval_unchecked(term: &Term, env: &Env, chain: &HandlerChain) -> CpsResult
             ..
         } => eval_if(cond, then_branch, else_branch, env, chain),
         Term::LetRec { name, value, body } => eval_letrec(name, value, body, env, chain),
+        Term::Match {
+            scrutinee,
+            arms,
+            default,
+        } => eval_match(scrutinee, arms, default.as_deref(), env, chain),
         Term::Raise {
             op, args, resume, ..
         } => eval_raise(op, args, resume, env, chain),
@@ -127,15 +132,16 @@ fn eval_letval(
 #[allow(clippy::result_large_err)]
 fn eval_letprim(
     name: &Name,
-    op: PrimOp,
+    op: &PrimOp,
     args: &[Atom],
     body: &Term,
     env: &Env,
     chain: &HandlerChain,
 ) -> CpsResult<Atom> {
-    let resolved_args: CpsResult<Vec<Atom>> = args.iter().map(|a| eval_atom(a, env)).collect();
-    let result = eval_prim(op, &resolved_args?)?;
-    let new_env = env.clone().with_binding(name.clone(), Value::Atom(result));
+    let resolved_args: CpsResult<Vec<Value>> =
+        args.iter().map(|a| eval_atom_to_value(a, env)).collect();
+    let result = eval_prim(op, &resolved_args?, env)?;
+    let new_env = env.clone().with_binding(name.clone(), result);
     eval_unchecked(body, &new_env, chain)
 }
 
@@ -162,7 +168,7 @@ fn eval_letcont(
 
 #[allow(clippy::result_large_err)]
 fn eval_jump(cont: &ContRef, arg: &Atom, env: &Env, _chain: &HandlerChain) -> CpsResult<Atom> {
-    let arg_value = eval_atom(arg, env)?;
+    let arg_value = eval_atom_to_value(arg, env)?;
     let cont_value = resolve_cont(cont, env)?;
     match cont_value {
         Value::Cont {
@@ -179,9 +185,7 @@ fn eval_jump(cont: &ContRef, arg: &Atom, env: &Env, _chain: &HandlerChain) -> Cp
                 )));
             }
             consumed.set(true);
-            let new_env = captured_env
-                .clone()
-                .with_binding(param, Value::Atom(arg_value));
+            let new_env = captured_env.clone().with_binding(param, arg_value);
             eval_unchecked(&body, &new_env, &captured_chain)
         }
         _ => Err(CpsError::ExpectedContinuation(cont_value)),
@@ -198,7 +202,8 @@ fn eval_call(
     chain: &HandlerChain,
 ) -> CpsResult<Atom> {
     let func_value = resolve_value(func, env)?;
-    let arg_values: CpsResult<Vec<Atom>> = args.iter().map(|a| eval_atom(a, env)).collect();
+    let arg_values: CpsResult<Vec<Value>> =
+        args.iter().map(|a| eval_atom_to_value(a, env)).collect();
     let arg_values = arg_values?;
     let cont_value = resolve_cont(cont, env)?;
     match func_value {
@@ -207,30 +212,19 @@ fn eval_call(
             cont: lam_cont,
             body,
             captured_env,
+            rec_binding,
             ..
         } => {
-            // Start from the lambda's captured definition environment
             let mut new_env = captured_env.clone();
-            // For recursive calls, the call-site env may have an updated binding.
-            // Narrowly overlay only the recursive binding if it exists in the
-            // call-site env but not in the captured env.
-            let func_name = match func {
-                Atom::Var(name) => Some(name.clone()),
-                _ => None,
-            };
-            if let Some(ref func_name) = func_name {
-                let has_in_captured = captured_env.bindings.contains_key(func_name);
-                let has_in_callsite = env.lookup(func_name).is_some();
-                if !has_in_captured && has_in_callsite {
-                    if let Some(rec_value) = env.lookup(func_name) {
-                        new_env = new_env.with_binding(func_name.clone(), rec_value.clone());
-                    }
+            // Overlay recursive binding if marked
+            if let Some(rec_name) = rec_binding {
+                if let Some(rec_value) = env.lookup(&rec_name) {
+                    new_env = new_env.with_binding(rec_name, rec_value.clone());
                 }
             }
             for (param, arg) in params.iter().zip(arg_values.iter()) {
-                new_env = new_env.with_binding(param.clone(), Value::Atom(arg.clone()));
+                new_env = new_env.with_binding(param.clone(), arg.clone());
             }
-            // Bind the continuation parameter
             new_env = new_env.with_binding(lam_cont.clone(), cont_value);
             eval_unchecked(&body, &new_env, chain)
         }
@@ -250,7 +244,7 @@ fn eval_if(
     match cond_value {
         Atom::Bool(true) => eval_unchecked(then_branch, env, chain),
         Atom::Bool(false) => eval_unchecked(else_branch, env, chain),
-        _ => Err(CpsError::InvalidPrimArgs(PrimOp::Eq, vec![cond_value])),
+        _ => Err(CpsError::InvalidPrimArgs(PrimOp::Eq, vec![])),
     }
 }
 
@@ -263,9 +257,6 @@ fn eval_letrec(
     chain: &HandlerChain,
 ) -> CpsResult<Atom> {
     let mut new_env = env.clone();
-    // Step 1: Create a self-referencing lambda using a shared mutable cell
-    // We use Rc<RefCell<Env>> so the lambda's captured_env can be updated
-    // after construction to point to the backfilled binding.
     let shared_env = Rc::new(RefCell::new(new_env.clone()));
     let lam_value = match value {
         Value::Lam {
@@ -279,9 +270,9 @@ fn eval_letrec(
                 cont: cont.clone(),
                 body: lam_body.clone(),
                 captured_env: new_env.clone(),
+                rec_binding: Some(name.clone()),
                 row: EffectRow::default(),
             };
-            // Backfill: bind the recursive name to the lambda in the shared env
             {
                 let mut env_ref = shared_env.borrow_mut();
                 *env_ref = env_ref.clone().with_binding(name.clone(), lam.clone());
@@ -290,7 +281,6 @@ fn eval_letrec(
         }
         other => other.clone(),
     };
-    // Step 2: Update the call-site env with the backfilled binding
     new_env = new_env.with_binding(name.clone(), lam_value);
     eval_unchecked(body, &new_env, chain)
 }
@@ -342,6 +332,7 @@ fn eval_raise(
                 cont: lam_cont,
                 body,
                 captured_env,
+                rec_binding,
                 ..
             } => {
                 let arg_values: CpsResult<Vec<Atom>> =
@@ -349,6 +340,11 @@ fn eval_raise(
                 let arg_values = arg_values?;
                 let resume_value = resolve_cont(resume, env)?;
                 let mut new_env = captured_env.clone();
+                if let Some(rec_name) = rec_binding {
+                    if let Some(rec_value) = env.lookup(&rec_name) {
+                        new_env = new_env.with_binding(rec_name, rec_value.clone());
+                    }
+                }
                 for (param, arg) in params.iter().zip(arg_values.iter()) {
                     new_env = new_env.with_binding(param.clone(), Value::Atom(arg.clone()));
                 }
@@ -390,6 +386,7 @@ fn eval_value(value: &Value, env: &Env) -> CpsResult<Value> {
             cont,
             body,
             captured_env,
+            rec_binding,
             row,
         } => {
             // If captured_env is empty, capture current env; otherwise preserve existing capture
@@ -403,8 +400,23 @@ fn eval_value(value: &Value, env: &Env) -> CpsResult<Value> {
                 cont: cont.clone(),
                 body: body.clone(),
                 captured_env: env_to_capture,
+                rec_binding: rec_binding.clone(),
                 row: row.clone(),
             })
+        }
+        Value::Record { fields } => {
+            let mut new_fields = Vec::new();
+            for (name, field_value) in fields {
+                new_fields.push((name.clone(), eval_value(field_value, env)?));
+            }
+            Ok(Value::Record { fields: new_fields })
+        }
+        Value::Tuple { elems } => {
+            let mut new_elems = Vec::new();
+            for elem in elems {
+                new_elems.push(eval_value(elem, env)?);
+            }
+            Ok(Value::Tuple { elems: new_elems })
         }
         other => Ok(other.clone()),
     }
@@ -454,16 +466,70 @@ fn resolve_value(atom: &Atom, env: &Env) -> CpsResult<Value> {
     }
 }
 
+/// Evaluate match dispatch on constructor tags
+#[allow(clippy::result_large_err)]
+fn eval_match(
+    scrutinee: &Atom,
+    arms: &[(Name, Box<Term>)],
+    default: Option<&Term>,
+    env: &Env,
+    chain: &HandlerChain,
+) -> CpsResult<Atom> {
+    let scrut_value = resolve_value(scrutinee, env)?;
+    match scrut_value {
+        Value::Tuple { elems } => {
+            let tag_value = elems.first().ok_or_else(|| {
+                CpsError::Trap(TrapReason::Custom("empty tuple in match".to_string()))
+            })?;
+            match tag_value {
+                Value::Atom(Atom::ConstructorName(name)) => {
+                    for (arm_tag, body) in arms {
+                        if arm_tag == name {
+                            return eval_unchecked(body, env, chain);
+                        }
+                    }
+                    if let Some(default_body) = default {
+                        return eval_unchecked(default_body, env, chain);
+                    }
+                    Err(CpsError::Trap(TrapReason::Custom(
+                        "no matching arm".to_string(),
+                    )))
+                }
+                _ => Err(CpsError::Trap(TrapReason::Custom(
+                    "match scrutinee tag is not a ConstructorName".to_string(),
+                ))),
+            }
+        }
+        _ => Err(CpsError::Trap(TrapReason::Custom(
+            "match scrutinee is not a tuple".to_string(),
+        ))),
+    }
+}
+
+/// Evaluate an atom to a Value (resolve variables, pass through literals)
+#[allow(clippy::result_large_err)]
+fn eval_atom_to_value(atom: &Atom, env: &Env) -> CpsResult<Value> {
+    match atom {
+        Atom::Var(name) => env
+            .lookup(name)
+            .ok_or_else(|| CpsError::UnboundVariable(name.clone()))
+            .cloned(),
+        other => Ok(Value::Atom(other.clone())),
+    }
+}
+
 /// Evaluate a primitive operation
 #[allow(clippy::result_large_err)]
-fn eval_prim(op: PrimOp, args: &[Atom]) -> CpsResult<Atom> {
-    let make_err = || CpsError::InvalidPrimArgs(op, args.to_vec());
-    match op {
+fn eval_prim(op: &PrimOp, args: &[Value], _env: &Env) -> CpsResult<Value> {
+    let make_err = || CpsError::InvalidPrimArgs(op.clone(), vec![]);
+    match *op {
         PrimOp::Add => {
             let a = args.first().ok_or_else(make_err)?;
             let b = args.get(1).ok_or_else(make_err)?;
             match (a, b) {
-                (Atom::Int(x), Atom::Int(y)) => Ok(Atom::Int(x + y)),
+                (Value::Atom(Atom::Int(x)), Value::Atom(Atom::Int(y))) => {
+                    Ok(Value::Atom(Atom::Int(x + y)))
+                }
                 _ => Err(make_err()),
             }
         }
@@ -471,7 +537,9 @@ fn eval_prim(op: PrimOp, args: &[Atom]) -> CpsResult<Atom> {
             let a = args.first().ok_or_else(make_err)?;
             let b = args.get(1).ok_or_else(make_err)?;
             match (a, b) {
-                (Atom::Int(x), Atom::Int(y)) => Ok(Atom::Int(x - y)),
+                (Value::Atom(Atom::Int(x)), Value::Atom(Atom::Int(y))) => {
+                    Ok(Value::Atom(Atom::Int(x - y)))
+                }
                 _ => Err(make_err()),
             }
         }
@@ -479,7 +547,9 @@ fn eval_prim(op: PrimOp, args: &[Atom]) -> CpsResult<Atom> {
             let a = args.first().ok_or_else(make_err)?;
             let b = args.get(1).ok_or_else(make_err)?;
             match (a, b) {
-                (Atom::Int(x), Atom::Int(y)) => Ok(Atom::Int(x * y)),
+                (Value::Atom(Atom::Int(x)), Value::Atom(Atom::Int(y))) => {
+                    Ok(Value::Atom(Atom::Int(x * y)))
+                }
                 _ => Err(make_err()),
             }
         }
@@ -487,11 +557,11 @@ fn eval_prim(op: PrimOp, args: &[Atom]) -> CpsResult<Atom> {
             let a = args.first().ok_or_else(make_err)?;
             let b = args.get(1).ok_or_else(make_err)?;
             match (a, b) {
-                (Atom::Int(x), Atom::Int(y)) => {
+                (Value::Atom(Atom::Int(x)), Value::Atom(Atom::Int(y))) => {
                     if *y == 0 {
                         Err(make_err())
                     } else {
-                        Ok(Atom::Int(x / y))
+                        Ok(Value::Atom(Atom::Int(x / y)))
                     }
                 }
                 _ => Err(make_err()),
@@ -500,18 +570,20 @@ fn eval_prim(op: PrimOp, args: &[Atom]) -> CpsResult<Atom> {
         PrimOp::Eq => {
             let a = args.first().ok_or_else(make_err)?;
             let b = args.get(1).ok_or_else(make_err)?;
-            Ok(Atom::Bool(a == b))
+            Ok(Value::Atom(Atom::Bool(a == b)))
         }
         PrimOp::Ne => {
             let a = args.first().ok_or_else(make_err)?;
             let b = args.get(1).ok_or_else(make_err)?;
-            Ok(Atom::Bool(a != b))
+            Ok(Value::Atom(Atom::Bool(a != b)))
         }
         PrimOp::Lt => {
             let a = args.first().ok_or_else(make_err)?;
             let b = args.get(1).ok_or_else(make_err)?;
             match (a, b) {
-                (Atom::Int(x), Atom::Int(y)) => Ok(Atom::Bool(x < y)),
+                (Value::Atom(Atom::Int(x)), Value::Atom(Atom::Int(y))) => {
+                    Ok(Value::Atom(Atom::Bool(x < y)))
+                }
                 _ => Err(make_err()),
             }
         }
@@ -519,7 +591,9 @@ fn eval_prim(op: PrimOp, args: &[Atom]) -> CpsResult<Atom> {
             let a = args.first().ok_or_else(make_err)?;
             let b = args.get(1).ok_or_else(make_err)?;
             match (a, b) {
-                (Atom::Int(x), Atom::Int(y)) => Ok(Atom::Bool(x <= y)),
+                (Value::Atom(Atom::Int(x)), Value::Atom(Atom::Int(y))) => {
+                    Ok(Value::Atom(Atom::Bool(x <= y)))
+                }
                 _ => Err(make_err()),
             }
         }
@@ -527,7 +601,9 @@ fn eval_prim(op: PrimOp, args: &[Atom]) -> CpsResult<Atom> {
             let a = args.first().ok_or_else(make_err)?;
             let b = args.get(1).ok_or_else(make_err)?;
             match (a, b) {
-                (Atom::Int(x), Atom::Int(y)) => Ok(Atom::Bool(x > y)),
+                (Value::Atom(Atom::Int(x)), Value::Atom(Atom::Int(y))) => {
+                    Ok(Value::Atom(Atom::Bool(x > y)))
+                }
                 _ => Err(make_err()),
             }
         }
@@ -535,21 +611,41 @@ fn eval_prim(op: PrimOp, args: &[Atom]) -> CpsResult<Atom> {
             let a = args.first().ok_or_else(make_err)?;
             let b = args.get(1).ok_or_else(make_err)?;
             match (a, b) {
-                (Atom::Int(x), Atom::Int(y)) => Ok(Atom::Bool(x >= y)),
+                (Value::Atom(Atom::Int(x)), Value::Atom(Atom::Int(y))) => {
+                    Ok(Value::Atom(Atom::Bool(x >= y)))
+                }
                 _ => Err(make_err()),
             }
         }
         PrimOp::Neg => {
             let a = args.first().ok_or_else(make_err)?;
             match a {
-                Atom::Int(x) => Ok(Atom::Int(-x)),
+                Value::Atom(Atom::Int(x)) => Ok(Value::Atom(Atom::Int(-x))),
                 _ => Err(make_err()),
             }
         }
         PrimOp::Not => {
             let a = args.first().ok_or_else(make_err)?;
             match a {
-                Atom::Bool(x) => Ok(Atom::Bool(!x)),
+                Value::Atom(Atom::Bool(x)) => Ok(Value::Atom(Atom::Bool(!x))),
+                _ => Err(make_err()),
+            }
+        }
+        PrimOp::RecordGet(ref field) => {
+            let record = args.first().ok_or_else(make_err)?;
+            match record {
+                Value::Record { fields } => fields
+                    .iter()
+                    .find(|(f, _)| f == field)
+                    .map(|(_, v)| v.clone())
+                    .ok_or_else(make_err),
+                _ => Err(make_err()),
+            }
+        }
+        PrimOp::TupleGet(index) => {
+            let tuple = args.first().ok_or_else(make_err)?;
+            match tuple {
+                Value::Tuple { elems } => elems.get(index).cloned().ok_or_else(make_err),
                 _ => Err(make_err()),
             }
         }

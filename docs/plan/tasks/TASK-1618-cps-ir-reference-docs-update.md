@@ -10,7 +10,7 @@ Add reference documentation for the expanded CPS IR: records, tuples, constructo
 
 - [PLAN-160](../PLAN-160-CPS-IR-RUNTIME-EXPANSION.md)
 - [SPEC-098b: Target IR](../../spec/SPEC-098b-TARGET-IR.md)
-- [SPEC-099c: Expanded Operational Semantics](../../spec/SPEC-099c-CPS-IR-EXPANDED-OPERATIONAL-SEMANTICS.md) (from TASK-1617)
+- [SPEC-099c: Expanded Operational Semantics](../tasks/TASK-1617-cps-ir-expanded-operational-semantics.md) (from TASK-1617)
 
 ## Dependencies
 

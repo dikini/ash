@@ -60,6 +60,7 @@ pub enum Atom {
     Bool(bool),
     Null,
     Var(Name),
+    ConstructorName(Name),
 }
 
 /// A value - inert data that can be bound to variables
@@ -71,6 +72,8 @@ pub enum Value {
         cont: Name,
         body: Box<Term>,
         captured_env: Env,
+        #[serde(default)]
+        rec_binding: Option<Name>,
         row: EffectRow,
     },
     Cont {
@@ -80,6 +83,12 @@ pub enum Value {
         captured_chain: HandlerChain,
         consumed: ConsumedFlag,
         row: EffectRow,
+    },
+    Record {
+        fields: Vec<(Name, Value)>,
+    },
+    Tuple {
+        elems: Vec<Value>,
     },
 }
 
@@ -132,6 +141,11 @@ pub enum Term {
         value: Value,
         body: Box<Term>,
     },
+    Match {
+        scrutinee: Atom,
+        arms: Vec<(Name, Box<Term>)>,
+        default: Option<Box<Term>>,
+    },
     Raise {
         op: EffectOp,
         args: Vec<Atom>,
@@ -155,7 +169,7 @@ pub enum Term {
 }
 
 /// Primitive operations
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum PrimOp {
     Add,
     Sub,
@@ -169,6 +183,8 @@ pub enum PrimOp {
     Ge,
     Neg,
     Not,
+    RecordGet(Name),
+    TupleGet(usize),
 }
 
 /// An effect operation
@@ -517,6 +533,7 @@ mod tests {
                 reason: TrapReason::Custom("test".to_string()),
             }),
             captured_env: Env::new(),
+            rec_binding: None,
             row: EffectRow::default(),
         };
         assert_eq!(value, value.clone());

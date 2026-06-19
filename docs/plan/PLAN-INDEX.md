@@ -134,38 +134,9 @@ Update this section as tasks complete:
 | [156](PLAN-156-PARSER-BLOCKER-RESOLUTION.md) | 5 | 5 | ✅ Complete; all blockers resolved, regression tests added |
 | [157](PLAN-157-LIST-MIGRATION-HARDENING.md) | 5 | 4 | ⏸️ Deferred; TASK-1570 (Remove Value::List) remains open |
 | [158](PLAN-158-LANGUAGE-SURFACE-FIXES.md) | 5 | 3 | ⏸️ Deferred; TASK-1580 (Module-level function visibility) remains open |
-| [159](PLAN-159-CPS-IR-INTERPRETER.md) | 15 | 0 | 📝 Planned; spec/plan only, no implementation |
+| [159](PLAN-159-CPS-IR-INTERPRETER.md) | 14 | 0 | 📝 Planned; spec/plan only, no implementation |
 
 ---
-
-## Phase 159: CPS IR Interpreter
-
-**Status:** 📝 Planned; 0/15 implemented — spec/plan only, no implementation
-**Plan:** [PLAN-159: CPS IR Interpreter](PLAN-159-CPS-IR-INTERPRETER.md)
-**Spec:** [SPEC-098b: Ash Intermediate Representation — Target State](../spec/SPEC-098b-TARGET-IR.md)
-**Depends on:** SPEC-095b (Target Grammar), SPEC-096b (Target Effect System), SPEC-097b (Target Type System)
-**Design note:** DESIGN-NOTE: CPS IR Interpreter Architecture (to be written)
-
-Builds a CPS IR interpreter for the target Ash language with gradual feature addition, thorough testing, and formal operational semantics developed in parallel. The interpreter is the core execution engine; bytecode serialization and JIT compilation are future concerns. The S-expression textual format serves as the common interface for testing and differential testing against a future Lean 4 implementation.
-
-| Task | Description | Status |
-|------|-------------|--------|
-|| TASK-1590 | Define core data structures: Atom, Value, Term, Env, HandlerChain | 📝 Planned |
-|| TASK-1591 | Implement eval for LetVal, LetPrim, LetCont, Jump, Call | 📝 Planned |
-|| TASK-1592 | Implement If, Record, Tuple evaluation | 📝 Planned |
-|| TASK-1593 | Implement Raise, Handle with handler chain walking | 📝 Planned |
-|| TASK-1594 | Implement shallow handler vs provider frame persistence | 📝 Planned |
-|| TASK-1595 | Implement resume continuation construction with env + chain capture | 📝 Planned |
-|| TASK-1596 | Implement LetRec with placeholder backfill for recursion | 📝 Planned |
-|| TASK-1597 | Implement RecordDischarge (no-op) and Trap (abort) | 📝 Planned |
-|| TASK-1598 | Implement row checker pass for local/total row validation | 📝 Planned |
-|| TASK-1599 | Implement S-expression parser for .cps files | 📝 Planned |
-|| TASK-1600 | Implement S-expression serializer for IR | 📝 Planned |
-|| TASK-1601 | Write formal operational semantics for core terms (§1) | 📝 Planned |
-|| TASK-1602 | Write formal operational semantics for handlers (§3) | 📝 Planned |
-|| TASK-1603 | Build differential test harness comparing Rust and future Lean 4 | 📝 Planned |
-|| TASK-1604 | Close out Phase 159 with verification, documentation, and changelog | 📝 Planned |
-
 
 ## Phase 145: Law Test Evidence Substrate
 
@@ -188,7 +159,6 @@ Phase 145 turns `proof ... { by test ... }` from string metadata into fail-close
 || [TASK-1454](tasks/TASK-1454-no-rust-final-surface-law-fixtures.md) | Add final-surface Ash law/test fixtures and no-Cargo smoke gates | ✅ Complete |
 || [TASK-1455](tasks/TASK-1455-law-test-evidence-closeout.md) | Closeout: docs, reference, PLAN-INDEX, changelog, broad verification | ✅ Complete |
 
-
 ## Phase 146: Property Generation and Shrinking Substrate
 
 **Status:** ✅ Complete
@@ -210,7 +180,6 @@ Builds generator, binding, counterexample, and shrinking substrate for `ash test
 || [TASK-1464](tasks/TASK-1464-property-shrinking-final-surface-fixtures.md) | Add no-Cargo property/shrinking fixtures | ✅ Complete |
 || [TASK-1465](tasks/TASK-1465-property-generation-shrinking-closeout.md) | Close out property generation/shrinking phase | ✅ Complete |
 
-
 ## Phase 147: Law Coverage and Mutation Testing
 
 **Status:** ✅ Complete
@@ -229,7 +198,6 @@ Adds law/test coverage reporting and bounded mutation testing for Ash tests/laws
 || [TASK-1471](tasks/TASK-1471-mutation-execution-loop.md) | Implement mutation execution loop | ✅ Complete |
 || [TASK-1472](tasks/TASK-1472-mutation-reporting-fixtures.md) | Add mutation reporting fixtures | ✅ Complete |
 || [TASK-1473](tasks/TASK-1473-coverage-mutation-closeout.md) | Close out coverage/mutation phase | ✅ Complete |
-
 
 ## Phase 148: Flaky-Test Quarantine and Distributed Orchestration
 
@@ -250,7 +218,6 @@ Adds retry/flake classification, quarantine metadata, shard planning, local shar
 || [TASK-1480](tasks/TASK-1480-distributed-result-merge.md) | Implement distributed result merge | ✅ Complete |
 || [TASK-1481](tasks/TASK-1481-flake-orchestration-closeout.md) | Close out flake/orchestration phase | ✅ Complete |
 
-
 ## Phase 149: Proof-Producing Synthesis Todo Spec
 
 **Status:** ⏸️ Deferred / To-Spec
@@ -264,7 +231,6 @@ Documents future proof-producing synthesis as a deferred non-test proof evidence
 || [TASK-1482](tasks/TASK-1482-proof-producing-synthesis-landscape.md) | Document proof-producing synthesis landscape | ⏸️ Deferred / To-Spec |
 || [TASK-1483](tasks/TASK-1483-proof-evidence-family-boundary.md) | Define future proof evidence family boundary | ⏸️ Deferred / To-Spec |
 || [TASK-1484](tasks/TASK-1484-proof-producing-synthesis-deferred-closeout.md) | Close deferred todo-spec packet | ⏸️ Deferred / To-Spec |
-
 
 ## Phase 150: QuickCheck Arbitrary and Strategy Property Testing
 
@@ -289,7 +255,6 @@ Adds a standard-library `test::quickcheck` property-testing substrate with `Stra
 || [TASK-1494](tasks/TASK-1494-quickcheck-documentation-cookbook.md) | Write documentation/cookbook examples | ✅ Complete |
 || [TASK-1495](tasks/TASK-1495-quickcheck-future-backends-design-note.md) | Validate and link future-backend design note | ✅ Complete |
 || [TASK-1496](tasks/TASK-1496-quickcheck-closeout.md) | Close out QuickCheck phase | ✅ Complete |
-
 
 ## Phase 151: QuickCheck v1 Ordinary Strategy Semantics
 
@@ -317,6 +282,7 @@ Hardens the Phase 150 QuickCheck MVP into the ordinary-Ash v1 model with pure `S
 || [TASK-1506](tasks/TASK-1506-quickcheck-v1-closeout-and-review.md) | Close out Phase 151 with broad verification, independent review, and status/changelog/reference reconciliation | ✅ Complete |
 
 **Verification Evidence:**
+
 - `cargo test -p ash-parser --lib`: 650 passed, 2 pre-existing lower failures
 - `cargo test -p ash-cli --lib`: 190 passed
 - `cargo test -p ash-engine --test phase151_quickcheck_stdlib`: 3 passed
@@ -324,7 +290,6 @@ Hardens the Phase 150 QuickCheck MVP into the ordinary-Ash v1 model with pure `S
 - `cargo clippy -p ash-cli --all-targets -- -D warnings`: pass (with pre-existing `collapsible_if` suppressed)
 - `git diff --check`: clean
 - CHANGELOG.md: Phase 151 entry present under [Unreleased]
-
 
 ## Phase 152: Closure Refinement and Tower Documentation
 
@@ -348,13 +313,13 @@ Refines Ash closures to allow creation in pure contexts with capture-restricted 
 || [TASK-1529](tasks/TASK-1529-phase-152-closeout.md) | Close out Phase 152 with verification, status reconciliation, and changelog | ✅ Complete |
 
 **Verification Evidence:**
+
 - `cargo test -p ash-interp --lib`: 514 tests pass
 - `cargo test -p ash-parser`: 631+ tests pass
 - `cargo test -p ash-cli --test stdlib_corpus_check`: 54/60 pass (6 pre-existing failures)
 - `cargo clippy -p ash-cli --all-targets -- -D warnings`: pass (with pre-existing `collapsible_if` suppressed)
 - `git diff --check`: clean
 - Reference docs updated: `reference/language/functions/local-and-anonymous.md`, `reference/language/types/records.md`, `reference/language/tower.md`
-
 
 ## Phase 153: List Builtin to Stdlib Migration
 
@@ -377,7 +342,6 @@ Replace Rust-implemented list builtins with pure Ash implementations in `std/src
 || [TASK-1538](tasks/TASK-1538-update-dependent-tasks.md) | Update TASK-1511, TASK-1524, and other dependent tasks with new list primitives | ✅ Complete |
 || [TASK-1539](tasks/TASK-1539-phase-153-closeout.md) | Close out Phase 153 with documentation, changelog, and status reconciliation | ✅ Complete |
 
-
 ## Phase 154: Fix Type Annotation Quirks with Imported Types
 
 **Status:** 📝 Planned; 0/5 implemented — spec/plan only, no implementation
@@ -393,7 +357,6 @@ Fix the type system limitation where imported types cannot be used in local type
 || [TASK-1542](tasks/TASK-1542-type-name-resolution-imported.md) | Update type name resolution to check imported types | 📝 Planned |
 || [TASK-1543](tasks/TASK-1543-type-inference-leakage-diagnostics.md) | Add diagnostics for type inference leakage | 📝 Planned |
 || [TASK-1544](tasks/TASK-1544-phase-154-closeout.md) | Close out Phase 154 with verification and documentation | 📝 Planned |
-
 
 ## Phase 155: Let Destructors for Records and Tuples
 
@@ -417,13 +380,13 @@ Add `let` destructor syntax for record and tuple types. This is group assignment
 || [TASK-1559](tasks/TASK-1559-phase-155-closeout.md) | Close out Phase 155 with verification and documentation | ✅ Complete |
 
 **Verification Evidence:**
+
 - `cargo test -p ash-parser --test let_destructor_tests`: 6/6 pass
 - `cargo test -p ash-parser`: 631+ tests pass
 - `cargo test -p ash-cli --test stdlib_corpus_check`: 54/60 pass (6 pre-existing failures)
 - `cargo clippy -p ash-cli --all-targets -- -D warnings`: pass (with pre-existing `collapsible_if` suppressed)
 - `git diff --check`: clean
 - Reference docs updated: `reference/language/functions/local-and-anonymous.md`, `reference/language/types/records.md`
-
 
 ## Phase 156: Parser Blocker Resolution for List Migration
 
@@ -440,7 +403,6 @@ Resolve parser blockers that prevent Phase 153 (List Builtin to Stdlib) from pro
 || [TASK-1562](tasks/TASK-1562-fix-list-patterns.md) | Fix list literal patterns in `match` | ✅ Complete; parse_list_expr added, Expr::List lowering to Cons/Nil |
 || [TASK-1563](tasks/TASK-1563-regression-tests.md) | Add regression tests for all three blockers | ✅ Complete; 9 new tests in parse_expr/tests.rs + 11 existing in parse_module/tests.rs |
 || [TASK-1564](tasks/TASK-1564-verify-phase-153-unblocked.md) | Verify Phase 153 is unblocked | ✅ Complete; list.ash compiles and runs |
-
 
 ## Phase 157: List Migration Hardening and Cleanup
 
@@ -461,7 +423,6 @@ Harden the Phase 153 list migration by completing the removal of `Value::List` f
 || [TASK-1573](tasks/TASK-1573-list-performance-benchmarks.md) | Add performance benchmarks for list operations | ✅ Complete; Placeholder benchmark added |
 || [TASK-1574](tasks/TASK-1574-phase-157-closeout.md) | Close out Phase 157 with documentation, changelog, and verification | ✅ Complete |
 
-
 ## Phase 158: Language Surface Fixes
 
 **Status:** ⏸️ Deferred; TASK-1580 (Module-level function visibility) remains open
@@ -480,3 +441,30 @@ Fix three language surface issues that prevent idiomatic usage of pure algebraic
 || [TASK-1582](tasks/TASK-1582-closure-expression-parsing.md) | Enable `fn` expression parsing in all expression contexts | ✅ Complete |
 || [TASK-1583](tasks/TASK-1583-verification-and-regression-tests.md) | Add verification tests and ensure no regressions | ✅ Complete |
 || [TASK-1584](tasks/TASK-1584-phase-158-closeout.md) | Close out Phase 158 with documentation and changelog | ✅ Complete |
+
+## Phase 159: CPS IR Interpreter
+
+**Status:** 📝 Planned; 0/14 implemented — spec/plan only, no implementation
+**Plan:** [PLAN-159: CPS IR Interpreter](PLAN-159-CPS-IR-INTERPRETER.md)
+**Spec:** [SPEC-098b: Ash Intermediate Representation — Target State](../spec/SPEC-098b-TARGET-IR.md)
+**Depends on:** SPEC-095b (Target Grammar), SPEC-096b (Target Effect System), SPEC-097b (Target Type System)
+**Design note:** Owned by [TASK-1601](tasks/TASK-1601-cps-ir-core-operational-semantics.md) in `docs/spec/SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md`.
+
+Builds an isolated prototype CPS IR interpreter for the target Ash language with gradual feature addition, thorough testing, and formal operational semantics developed in parallel. The interpreter prototype executes hand-authored Target CPS IR fixtures directly. Legacy lowering, differential testing against Lean 4, bytecode serialization, and JIT compilation are future concerns outside this phase.
+
+| Task | Description | Status |
+|------|-------------|--------|
+| [TASK-1590](tasks/TASK-1590-cps-ir-core-data-structures.md) | Define core data structures: Atom, Value, Term, Env, HandlerChain | 📝 Planned |
+| [TASK-1591](tasks/TASK-1591-cps-ir-core-evaluator.md) | Implement eval for LetVal, LetPrim, LetCont, Jump, Call | 📝 Planned |
+| [TASK-1592](tasks/TASK-1592-cps-ir-conditionals-data.md) | Implement If, Record, Tuple evaluation | 📝 Planned |
+| [TASK-1593](tasks/TASK-1593-cps-ir-raise-handle-dispatch.md) | Implement Raise, Handle with handler chain walking | 📝 Planned |
+| [TASK-1594](tasks/TASK-1594-cps-ir-handler-provider-persistence.md) | Implement shallow handler vs provider frame persistence | 📝 Planned |
+| [TASK-1595](tasks/TASK-1595-cps-ir-resume-continuations.md) | Implement resume continuation construction with env + chain capture | 📝 Planned |
+| [TASK-1596](tasks/TASK-1596-cps-ir-letrec-recursion.md) | Implement LetRec with placeholder backfill for recursion | 📝 Planned |
+| [TASK-1597](tasks/TASK-1597-cps-ir-discharge-trap.md) | Implement RecordDischarge (no-op) and Trap (abort) | 📝 Planned |
+| [TASK-1598](tasks/TASK-1598-cps-ir-row-validation-scaffold.md) | Implement row representation and local/total row validation scaffold | 📝 Planned |
+| [TASK-1599](tasks/TASK-1599-cps-ir-sexpr-parser-hardening.md) | Harden S-expression parser for full .cps files | 📝 Planned |
+| [TASK-1600](tasks/TASK-1600-cps-ir-sexpr-serializer-hardening.md) | Harden S-expression serializer for IR | 📝 Planned |
+| [TASK-1601](tasks/TASK-1601-cps-ir-core-operational-semantics.md) | Write formal operational semantics for syntax, core terms, conditionals/data, recursion, and advanced terms (§1-§3, §5-§6) | 📝 Planned |
+| [TASK-1602](tasks/TASK-1602-cps-ir-handler-operational-semantics.md) | Write formal operational semantics for handlers (§4) | 📝 Planned |
+| [TASK-1603](tasks/TASK-1603-phase-159-closeout.md) | Close out Phase 159 with verification, documentation, and changelog | 📝 Planned |

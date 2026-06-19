@@ -39,6 +39,7 @@ pub enum CpsValidationError {
 /// - Labels and variables resolve within the program
 /// - Rows are well-formed and duplicate-free
 /// - Values, terms, atoms, and cont refs appear in allowed positions
+#[allow(clippy::result_large_err)]
 pub fn validate_cps_program(term: &Term) -> Result<(), CpsValidationError> {
     let mut ctx = ValidationContext::new();
     validate_term(term, &mut ctx)
@@ -85,11 +86,17 @@ impl Clone for ValidationContext {
     }
 }
 
+#[allow(clippy::collapsible_if)]
+#[allow(clippy::result_large_err)]
 fn validate_term(term: &Term, ctx: &mut ValidationContext) -> Result<(), CpsValidationError> {
     match term {
         Term::LetVal { name, value, body } => {
             validate_value(value, ctx)?;
             let mut new_ctx = ctx.with_binding(name.clone());
+            // Record lambda arity for call validation
+            if let Value::Lam { params, .. } = value {
+                new_ctx.lambda_params.insert(name.clone(), params.len());
+            }
             validate_term(body, &mut new_ctx)?;
             Ok(())
         }
@@ -137,9 +144,9 @@ fn validate_term(term: &Term, ctx: &mut ValidationContext) -> Result<(), CpsVali
                 validate_atom(arg, ctx)?;
             }
             validate_cont_ref(cont, ctx)?;
-            // Arity check if we know the lambda
-            if let Atom::Var(name) = func {
-                if let Some(expected) = ctx.lambda_params.get(name) {
+            if let Atom::Var(func_name) = func {
+                let expected = ctx.lambda_params.get(func_name);
+                if let Some(expected) = expected {
                     if *expected != args.len() {
                         return Err(CpsValidationError::CallArityMismatch {
                             expected: *expected,
@@ -167,6 +174,10 @@ fn validate_term(term: &Term, ctx: &mut ValidationContext) -> Result<(), CpsVali
         Term::LetRec { name, value, body } => {
             // Bind the recursive name BEFORE validating the value and body
             let mut new_ctx = ctx.with_binding(name.clone());
+            // Record lambda arity for call validation
+            if let Value::Lam { params, .. } = value {
+                new_ctx.lambda_params.insert(name.clone(), params.len());
+            }
             validate_value(value, &mut new_ctx)?;
             validate_term(body, &mut new_ctx)?;
             Ok(())
@@ -216,12 +227,18 @@ fn validate_term(term: &Term, ctx: &mut ValidationContext) -> Result<(), CpsVali
     }
 }
 
+#[allow(clippy::result_large_err)]
 fn validate_value(value: &Value, ctx: &mut ValidationContext) -> Result<(), CpsValidationError> {
     match value {
         Value::Atom(atom) => validate_atom(atom, ctx),
         Value::Lam {
-            params, cont, body, ..
+            params,
+            cont,
+            body,
+            row,
+            ..
         } => {
+            validate_row(row)?;
             let mut lam_ctx = ctx.clone();
             for param in params {
                 lam_ctx.bindings.insert(param.clone());
@@ -230,7 +247,10 @@ fn validate_value(value: &Value, ctx: &mut ValidationContext) -> Result<(), CpsV
             validate_term(body, &mut lam_ctx)?;
             Ok(())
         }
-        Value::Cont { param, body, .. } => {
+        Value::Cont {
+            param, body, row, ..
+        } => {
+            validate_row(row)?;
             let mut cont_ctx = ctx.clone();
             cont_ctx.bindings.insert(param.clone());
             validate_term(body, &mut cont_ctx)?;
@@ -239,6 +259,7 @@ fn validate_value(value: &Value, ctx: &mut ValidationContext) -> Result<(), CpsV
     }
 }
 
+#[allow(clippy::result_large_err)]
 fn validate_atom(atom: &Atom, ctx: &ValidationContext) -> Result<(), CpsValidationError> {
     match atom {
         Atom::Var(name) => {
@@ -251,6 +272,7 @@ fn validate_atom(atom: &Atom, ctx: &ValidationContext) -> Result<(), CpsValidati
     }
 }
 
+#[allow(clippy::result_large_err)]
 fn validate_cont_ref(cont: &ContRef, ctx: &ValidationContext) -> Result<(), CpsValidationError> {
     match cont {
         ContRef::Label(name) => {
@@ -268,6 +290,7 @@ fn validate_cont_ref(cont: &ContRef, ctx: &ValidationContext) -> Result<(), CpsV
     }
 }
 
+#[allow(clippy::result_large_err)]
 fn validate_prim_arity(op: PrimOp, args: &[Atom]) -> Result<(), CpsValidationError> {
     let expected = match op {
         PrimOp::Add
@@ -292,10 +315,12 @@ fn validate_prim_arity(op: PrimOp, args: &[Atom]) -> Result<(), CpsValidationErr
     Ok(())
 }
 
+#[allow(clippy::result_large_err)]
 fn validate_handler_clause(
     clause: &HandlerClause,
     ctx: &mut ValidationContext,
 ) -> Result<(), CpsValidationError> {
+    validate_row(&clause.row)?;
     let mut clause_ctx = ctx.clone();
     for param in &clause.params {
         clause_ctx.bindings.insert(param.clone());
@@ -305,6 +330,7 @@ fn validate_handler_clause(
     Ok(())
 }
 
+#[allow(clippy::result_large_err)]
 fn validate_row(row: &EffectRow) -> Result<(), CpsValidationError> {
     let mut seen = HashSet::new();
     for item in &row.items {

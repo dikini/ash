@@ -39,6 +39,7 @@ pub type CpsResult<T> = Result<T, CpsError>;
 /// Assumes the caller has validated the term via `validate_cps_program()` or
 /// otherwise trusts the producer. Passing malformed IR may produce undefined
 /// behavior (Rust panics, incorrect results, or infinite loops).
+#[allow(clippy::result_large_err)]
 pub fn eval_unchecked(term: &Term, env: &Env, chain: &HandlerChain) -> CpsResult<Atom> {
     match term {
         Term::LetVal { name, value, body } => eval_letval(name, value, body, env, chain),
@@ -90,6 +91,7 @@ pub enum CpsRunError {
 ///
 /// First validates the term, then runs the unchecked evaluator.
 /// This is the safe public entrypoint for untrusted input.
+#[allow(clippy::result_large_err)]
 pub fn eval_checked(term: &Term, env: &Env, chain: &HandlerChain) -> Result<Atom, CpsRunError> {
     validate_cps_program(term)?;
     Ok(eval_unchecked(term, env, chain)?)
@@ -99,7 +101,8 @@ pub fn eval_checked(term: &Term, env: &Env, chain: &HandlerChain) -> Result<Atom
 ///
 /// # Warning
 /// This does NOT validate input. Prefer `eval_checked` for untrusted IR.
-/// Prefer `eval_unchecked` when the caller explicitly manages validation.
+/// Prefer `eval_unchecked` when the caller explicitly trusts the producer.
+#[allow(clippy::result_large_err)]
 pub fn eval_term(term: &Term, env: &Env, chain: &HandlerChain) -> CpsResult<Atom> {
     eval_unchecked(term, env, chain)
 }
@@ -108,6 +111,7 @@ pub fn eval_term(term: &Term, env: &Env, chain: &HandlerChain) -> CpsResult<Atom
 // Per-term evaluators
 // ---------------------------------------------------------------------------
 
+#[allow(clippy::result_large_err)]
 fn eval_letval(
     name: &Name,
     value: &Value,
@@ -120,6 +124,7 @@ fn eval_letval(
     eval_unchecked(body, &new_env, chain)
 }
 
+#[allow(clippy::result_large_err)]
 fn eval_letprim(
     name: &Name,
     op: PrimOp,
@@ -134,6 +139,7 @@ fn eval_letprim(
     eval_unchecked(body, &new_env, chain)
 }
 
+#[allow(clippy::result_large_err)]
 fn eval_letcont(
     name: &Name,
     param: &Name,
@@ -154,16 +160,17 @@ fn eval_letcont(
     eval_unchecked(body, &new_env, chain)
 }
 
+#[allow(clippy::result_large_err)]
 fn eval_jump(cont: &ContRef, arg: &Atom, env: &Env, _chain: &HandlerChain) -> CpsResult<Atom> {
     let arg_value = eval_atom(arg, env)?;
     let cont_value = resolve_cont(cont, env)?;
     match cont_value {
         Value::Cont {
-            mut param,
+            param,
             body,
             captured_env,
             captured_chain,
-            mut consumed,
+            consumed,
             ..
         } => {
             if consumed.get() {
@@ -181,6 +188,8 @@ fn eval_jump(cont: &ContRef, arg: &Atom, env: &Env, _chain: &HandlerChain) -> Cp
     }
 }
 
+#[allow(clippy::collapsible_if)]
+#[allow(clippy::result_large_err)]
 fn eval_call(
     func: &Atom,
     args: &[Atom],
@@ -205,11 +214,16 @@ fn eval_call(
             // For recursive calls, the call-site env may have an updated binding.
             // Narrowly overlay only the recursive binding if it exists in the
             // call-site env but not in the captured env.
-            if let Atom::Var(func_name) = func {
-                let func_name = func_name.clone();
-                if !captured_env.bindings.contains_key(&func_name) {
-                    if let Some(rec_value) = env.lookup(&func_name) {
-                        new_env = new_env.with_binding(func_name, rec_value.clone());
+            let func_name = match func {
+                Atom::Var(name) => Some(name.clone()),
+                _ => None,
+            };
+            if let Some(ref func_name) = func_name {
+                let has_in_captured = captured_env.bindings.contains_key(func_name);
+                let has_in_callsite = env.lookup(func_name).is_some();
+                if !has_in_captured && has_in_callsite {
+                    if let Some(rec_value) = env.lookup(func_name) {
+                        new_env = new_env.with_binding(func_name.clone(), rec_value.clone());
                     }
                 }
             }
@@ -224,6 +238,7 @@ fn eval_call(
     }
 }
 
+#[allow(clippy::result_large_err)]
 fn eval_if(
     cond: &Atom,
     then_branch: &Term,
@@ -239,6 +254,7 @@ fn eval_if(
     }
 }
 
+#[allow(clippy::result_large_err)]
 fn eval_letrec(
     name: &Name,
     value: &Value,
@@ -279,6 +295,7 @@ fn eval_letrec(
     eval_unchecked(body, &new_env, chain)
 }
 
+#[allow(clippy::result_large_err)]
 fn eval_raise(
     op: &EffectOp,
     args: &[Atom],
@@ -286,41 +303,66 @@ fn eval_raise(
     env: &Env,
     chain: &HandlerChain,
 ) -> CpsResult<Atom> {
-    match chain.find_handler(op) {
-        Some(clause) => {
-            let arg_values: CpsResult<Vec<Atom>> = args.iter().map(|a| eval_atom(a, env)).collect();
-            let arg_values = arg_values?;
-            // Build resume continuation that captures current env and chain WITHOUT the handler
-            let mut resume_chain = chain.clone();
-            // Remove the shallow handler that matched
-            if let Some(idx) = resume_chain.frames.iter().rposition(
-                |f| matches!(f, HandlerFrame::Shallow { clause: c } if c.op.item == op.item),
-            ) {
-                resume_chain.frames.remove(idx);
-            }
-            let resume_cont = Value::Cont {
-                param: clause.resume.clone(),
-                body: Box::new(Term::Jump {
-                    cont: resume.clone(),
-                    arg: Atom::Var(clause.resume.clone()),
-                    row: EffectRow::default(),
-                }),
-                captured_env: env.clone(),
-                captured_chain: resume_chain,
-                consumed: ConsumedFlag::new(),
+    // Check for shallow handler first
+    if let Some((clause, handler_idx)) = chain.find_handler(op) {
+        let arg_values: CpsResult<Vec<Atom>> = args.iter().map(|a| eval_atom(a, env)).collect();
+        let arg_values = arg_values?;
+        // Remove the matched shallow handler from the chain BEFORE evaluating clause body
+        let mut body_chain = chain.clone();
+        body_chain.frames.remove(handler_idx);
+        // Build resume continuation that captures current env and chain WITHOUT the handler
+        let resume_chain = body_chain.clone();
+        let resume_cont = Value::Cont {
+            param: clause.resume.clone(),
+            body: Box::new(Term::Jump {
+                cont: resume.clone(),
+                arg: Atom::Var(clause.resume.clone()),
                 row: EffectRow::default(),
-            };
-            let mut new_env = env.clone();
-            for (param, arg) in clause.params.iter().zip(arg_values.iter()) {
-                new_env = new_env.with_binding(param.clone(), Value::Atom(arg.clone()));
-            }
-            new_env = new_env.with_binding(clause.resume.clone(), resume_cont);
-            eval_unchecked(&clause.body, &new_env, chain)
+            }),
+            captured_env: env.clone(),
+            captured_chain: resume_chain,
+            consumed: ConsumedFlag::new(),
+            row: EffectRow::default(),
+        };
+        let mut new_env = env.clone();
+        for (param, arg) in clause.params.iter().zip(arg_values.iter()) {
+            new_env = new_env.with_binding(param.clone(), Value::Atom(arg.clone()));
         }
-        None => Err(CpsError::UnhandledEffect(op.clone())),
+        new_env = new_env.with_binding(clause.resume.clone(), resume_cont);
+        eval_unchecked(&clause.body, &new_env, &body_chain)
+    } else if let Some((handler_name, _provider_idx)) = chain.find_provider(op) {
+        // Provider dispatch: invoke the provider handler directly
+        let handler_value = env
+            .lookup(&handler_name)
+            .ok_or_else(|| CpsError::UnboundVariable(handler_name.clone()))?
+            .clone();
+        match handler_value {
+            Value::Lam {
+                params,
+                cont: lam_cont,
+                body,
+                captured_env,
+                ..
+            } => {
+                let arg_values: CpsResult<Vec<Atom>> =
+                    args.iter().map(|a| eval_atom(a, env)).collect();
+                let arg_values = arg_values?;
+                let resume_value = resolve_cont(resume, env)?;
+                let mut new_env = captured_env.clone();
+                for (param, arg) in params.iter().zip(arg_values.iter()) {
+                    new_env = new_env.with_binding(param.clone(), Value::Atom(arg.clone()));
+                }
+                new_env = new_env.with_binding(lam_cont.clone(), resume_value);
+                eval_unchecked(&body, &new_env, chain)
+            }
+            _ => Err(CpsError::ExpectedLambda(handler_value)),
+        }
+    } else {
+        Err(CpsError::UnhandledEffect(op.clone()))
     }
 }
 
+#[allow(clippy::result_large_err)]
 fn eval_handle(
     clause: &HandlerClause,
     body: &Term,
@@ -339,6 +381,7 @@ fn eval_handle(
 }
 
 /// Evaluate a value (atoms pass through, lambdas capture env if not already captured, conts are inert)
+#[allow(clippy::result_large_err)]
 fn eval_value(value: &Value, env: &Env) -> CpsResult<Value> {
     match value {
         Value::Atom(atom) => Ok(Value::Atom(eval_atom(atom, env)?)),
@@ -368,6 +411,7 @@ fn eval_value(value: &Value, env: &Env) -> CpsResult<Value> {
 }
 
 /// Evaluate an atom (resolve variables)
+#[allow(clippy::result_large_err)]
 fn eval_atom(atom: &Atom, env: &Env) -> CpsResult<Atom> {
     match atom {
         Atom::Var(name) => {
@@ -384,6 +428,7 @@ fn eval_atom(atom: &Atom, env: &Env) -> CpsResult<Atom> {
 }
 
 /// Resolve a continuation reference to a value
+#[allow(clippy::result_large_err)]
 fn resolve_cont(cont: &ContRef, env: &Env) -> CpsResult<Value> {
     match cont {
         ContRef::Label(name) => env
@@ -398,6 +443,7 @@ fn resolve_cont(cont: &ContRef, env: &Env) -> CpsResult<Value> {
 }
 
 /// Resolve a value from an atom
+#[allow(clippy::result_large_err)]
 fn resolve_value(atom: &Atom, env: &Env) -> CpsResult<Value> {
     match atom {
         Atom::Var(name) => env
@@ -409,6 +455,7 @@ fn resolve_value(atom: &Atom, env: &Env) -> CpsResult<Value> {
 }
 
 /// Evaluate a primitive operation
+#[allow(clippy::result_large_err)]
 fn eval_prim(op: PrimOp, args: &[Atom]) -> CpsResult<Atom> {
     let make_err = || CpsError::InvalidPrimArgs(op, args.to_vec());
     match op {

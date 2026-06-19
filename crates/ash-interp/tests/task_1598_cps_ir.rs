@@ -125,7 +125,7 @@ fn test_validate_row_all_valid_kinds() {
         EffectItemKind::Group,
     ];
     for kind in &kinds {
-        let kind_clone = kind.clone();
+        let kind_clone = *kind;
         let row = EffectRow {
             items: vec![EffectItem {
                 namespace: "test".to_string(),

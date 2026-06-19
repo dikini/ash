@@ -3,9 +3,7 @@
 //! Tests for the CPS IR data model defined in ash-core::cps.
 
 use ash_core::cps::*;
-use std::cell::RefCell;
 use std::collections::HashMap;
-use std::rc::Rc;
 
 #[test]
 fn test_atom_var() {

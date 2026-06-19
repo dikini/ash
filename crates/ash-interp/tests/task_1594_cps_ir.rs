@@ -121,7 +121,7 @@ fn test_handler_chain_ordering() {
     // find_handler should return the innermost (last pushed) handler
     let found = chain.find_handler(&op1);
     assert!(found.is_some());
-    assert_eq!(found.unwrap().params, vec!["y"]);
+    assert_eq!(found.unwrap().0.params, vec!["y"]);
 }
 
 #[test]
@@ -177,9 +177,9 @@ fn test_nested_handlers() {
     // Inner handler should catch fs.read
     let found_fs = chain.find_handler(&fs_op);
     assert!(found_fs.is_some());
-    assert_eq!(found_fs.unwrap().params, vec!["path"]);
+    assert_eq!(found_fs.unwrap().0.params, vec!["path"]);
     // Outer handler should still catch db.read
     let found_db = chain.find_handler(&db_op);
     assert!(found_db.is_some());
-    assert_eq!(found_db.unwrap().params, vec!["table"]);
+    assert_eq!(found_db.unwrap().0.params, vec!["table"]);
 }

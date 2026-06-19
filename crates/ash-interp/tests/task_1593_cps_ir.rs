@@ -159,7 +159,7 @@ fn test_eval_handler_chain_find() {
     });
     let found = chain.find_handler(&op);
     assert!(found.is_some());
-    assert_eq!(found.unwrap().params, vec!["table"]);
+    assert_eq!(found.unwrap().0.params, vec!["table"]);
 }
 
 #[test]

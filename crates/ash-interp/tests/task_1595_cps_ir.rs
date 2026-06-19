@@ -4,8 +4,6 @@
 
 use ash_core::cps::*;
 use ash_interp::cps::{CpsError, eval_term};
-use std::cell::RefCell;
-use std::rc::Rc;
 
 #[test]
 fn test_resume_restores_handler_chain() {

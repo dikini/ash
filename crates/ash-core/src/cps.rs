@@ -291,12 +291,28 @@ impl HandlerChain {
         self.frames.push(frame);
     }
 
-    /// Find the innermost handler for an effect operation
-    pub fn find_handler(&self, op: &EffectOp) -> Option<&HandlerClause> {
-        for frame in self.frames.iter().rev() {
+    /// Find the innermost handler for an effect operation, returning (clause, frame_index)
+    pub fn find_handler(&self, op: &EffectOp) -> Option<(&HandlerClause, usize)> {
+        for (idx, frame) in self.frames.iter().enumerate().rev() {
             match frame {
                 HandlerFrame::Shallow { clause } if clause.op.item == op.item => {
-                    return Some(clause);
+                    return Some((clause, idx));
+                }
+                _ => continue,
+            }
+        }
+        None
+    }
+
+    /// Find the innermost provider frame for an effect operation, returning (handler_name, frame_index)
+    pub fn find_provider(&self, op: &EffectOp) -> Option<(Name, usize)> {
+        for (idx, frame) in self.frames.iter().enumerate().rev() {
+            match frame {
+                HandlerFrame::Provider {
+                    op: provider_op,
+                    handler,
+                } if provider_op.item == op.item => {
+                    return Some((handler.clone(), idx));
                 }
                 _ => continue,
             }
@@ -387,7 +403,9 @@ mod tests {
         chain.push(HandlerFrame::Shallow {
             clause: clause.clone(),
         });
-        assert_eq!(chain.find_handler(&op), Some(&clause));
+        let (found_clause, found_idx) = chain.find_handler(&op).unwrap();
+        assert_eq!(found_clause, &clause);
+        assert_eq!(found_idx, 0);
     }
 
     #[test]

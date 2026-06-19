@@ -89,13 +89,13 @@ fn match_pattern_recursive(
                 }
                 _ => {
                     // Try matching as Cons/Nil list representation
-                    if let Some(values) = crate::list_helpers::list_to_vec(value) {
-                        if values.len() == patterns.len() {
-                            for (p, v) in patterns.iter().zip(values.iter()) {
-                                match_pattern_recursive(p, v, bindings)?;
-                            }
-                            return Ok(());
+                    if let Some(values) = crate::list_helpers::list_to_vec(value)
+                        && values.len() == patterns.len()
+                    {
+                        for (p, v) in patterns.iter().zip(values.iter()) {
+                            match_pattern_recursive(p, v, bindings)?;
                         }
+                        return Ok(());
                     }
                     Err(PatternError::MatchFailed {
                         expected: format!("tuple of {} elements", patterns.len()),

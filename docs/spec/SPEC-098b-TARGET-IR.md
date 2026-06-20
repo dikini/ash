@@ -915,6 +915,12 @@ with a captured mutable environment. A fully normalized term must first bind eac
 closure, inline continuation closure, and intermediate result to a name, and must lower
 memo-cell reads/writes through the chosen primitive/effect model.
 
+For normative Ash `lazy` and `memo` computation modes, see SPEC-101. Effectful thunks with
+creation-time authority semantics are not represented by a bare zero-argument `Lam`, because
+`Lam` values do not carry a captured handler/provider chain. SPEC-101 amends this design
+space with a value-level thunk carrier that stores the captured `HandlerChain`; no new CPS
+tail-term variant is required.
+
 ### 9.1 Thunks in CPS
 
 A thunk is a zero-parameter CPS function that delays evaluation:

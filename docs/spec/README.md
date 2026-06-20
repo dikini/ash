@@ -76,6 +76,7 @@ This directory contains the canonical specifications for the Ash workflow langua
 | [SPEC-085](SPEC-085-PROOF-PRODUCING-SYNTHESIS-TODO-SPEC.md) | Proof-Producing Synthesis Todo Spec | Deferred / To-Spec | Documents future proof-producing synthesis as a deferred non-test proof evidence family. |
 | [SPEC-086](SPEC-086-QUICKCHECK-ARBITRARY-STRATEGY.md) | QuickCheck Arbitrary and Strategy Property Testing | Planned | Adds the `test::quickcheck` standard-library property-testing substrate with `Strategy<T>`, `Arbitrary<T>`, compositional strategy overrides, law/property enforcement distinction, and evidence-cache schema groundwork. |
 | [SPEC-087](SPEC-087-QUICKCHECK-V1-ORDINARY-STRATEGY-SEMANTICS.md) | QuickCheck v1 Ordinary Strategy Semantics | Planned | Hardens Phase 150 QuickCheck from metadata/runner bridge MVP into ordinary pure `Strategy<A>` values, helper-first `GenContext`, in-scope `Arbitrary<A>` evidence, pure strategy overrides, stable RNG/split, bounded recursive/weighted combinators, explicit shrink semantics, random seed/replay policy, and aggregate empirical evidence history. |
+| [SPEC-101](SPEC-101-LAZY-AND-MEMO-COMPUTATION-MODES.md) | Lazy and Memo Computation Modes | Draft | Defines Core-level `lazy` and `memo` mode carriers, force semantics, row accounting, runtime memo behavior, tracing expectations, and lowering through existing CPS IR forms without adding new CPS term variants. |
 
 ## Deprecated Specifications
 

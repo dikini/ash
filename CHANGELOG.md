@@ -6,6 +6,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Added
+- Added SPEC-101 Lazy and Memo Computation Modes, defining Core-level `lazy`/`memo` mode carriers, force semantics, row accounting, runtime memo behavior, tracing expectations, and the decision not to add new CPS IR term variants unless implementation evidence requires a value-level memo-thunk carrier.
 - [Phase 162](docs/plan/PLAN-162-CORE-ASH-TYPE-CHECKING.md): Planned SPEC-100 Core Ash type-checking implementation with 12 TDD tasks covering checker APIs/environments, type well-formedness, row normalization and structural solving, atom/value/expression typing, call/jump row accounting, raised operation typing, handle/affine resume checks, refinement obligations, discharge metadata, public summaries, integration fixtures, and closeout documentation. (TASK-1640 through TASK-1651)
 - Added SPEC-100 Core Ash type-checking draft, defining declarative Core typing, annotation-led algorithmic checking, structural row solving, refinement obligations, handler affinity, discharge boundaries, and review-corrected refinement, Jump, handler-resume, and duplicate-row normalization rules.
 - Added SPEC-099 Core Ash AST carriers in `ash-core::core_ash`, including direct-style Core expressions, Core rows/types, handler clauses with affine resume metadata, and raised operation variants limited to capability, channel, process, and failure. (TASK-1620)
@@ -30,6 +31,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Added `docs/ideas/research/PROTOCOL-GATED-TYPE-DIRECTED-LLM-EXECUTION.md`, a research note on protocol-gated type-directed LLM execution with deterministic oracles, evidence admission, replayable traces, and references to Recursive Language Models and LLM state-machine modeling work.
 
 ### Changed
+- Reconciled SPEC-097b CPS lowering with SPEC-101 `ThunkClosure` chain-capture semantics and required `LetMode.mode` to match `LetMode.ty` exactly in SPEC-101.
+- Corrected SPEC-101 lazy/memo CPS lowering to require a value-level thunk carrier with captured handler/provider chain, preserving creation-time authority semantics instead of dispatching effectful thunk bodies through the force-time chain.
+- Clarified SPEC-097b memo force row accounting so static type-checker summaries retain the thunk latent row at each force site while dynamic memo cache hits may perform no effects, aligning it with SPEC-101.
 - [Phase 160](docs/plan/PLAN-160-CPS-IR-RUNTIME-EXPANSION.md): Reconciled closeout status surfaces for the CPS IR runtime expansion, including PLAN-INDEX, PLAN-160, TASK-1610 through TASK-1619, stale CPS reference warnings about tuple-of-lambdas mutual recursion, and fixture coverage for trait dictionaries plus serde `.cps` file round trips. (TASK-1619)
 - SPEC-099 Core Ash draft now resolves review blockers by defining deterministic CPS field synthesis for calls, raises, handles, jumps, and conditionals; aligning dynamic contract failures with contract discharge metadata plus `Trap`/optional `fail` behavior; adding law-evidence-to-refinement shape; documenting structured diagnostics across compiler/runtime phases; and recording a passing review. (TASK-177 follow-up)
 - [Phase 159](docs/plan/PLAN-159-CPS-IR-INTERPRETER.md): Clarified closeout remediation guidance for the CPS IR executor by separating raw `.cps`/producer input validation from lean validated-IR execution, and classified review findings as parser/validator boundary issues versus interpreter semantics blockers. (TASK-1603)

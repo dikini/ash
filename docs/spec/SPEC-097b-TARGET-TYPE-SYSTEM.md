@@ -736,18 +736,26 @@ let lazy x = {cap db.read} expr;  -- row of binding site: {}
 
 let memo y = {cap db.read} expr;  -- row of binding site: {}
                                     -- row of first force: {cap db.read}
-                                    -- row of subsequent force: {}
+                                    -- static row of each force site: {cap db.read}
+                                    -- dynamic cache-hit row: {}
 ```
+
+The checker must use the static force-site row unless a later state-sensitive analysis proves
+the memo cell is already filled on that path. A cache hit may perform no dynamic effects at
+runtime, but ordinary type-checker summaries and diagnostics must not erase the latent row
+from a force site merely because the thunk is memoized.
 
 ### 15.7 CPS Lowering
 
 In the CPS IR (SPEC-098b), modes become calling conventions:
 
 - **strict parameter**: pass value directly
-- **lazy parameter**: pass thunk (`Lam { params: [] }`)
-- **memo parameter**: pass memo-thunk (`Lam { params: [] }` with cache cell)
+- **lazy parameter**: pass a `ThunkClosure` whose body is a zero-argument CPS lambda and whose value stores the creation-time handler/provider chain
+- **memo parameter**: pass a `ThunkClosure` whose body is a zero-argument CPS lambda and whose value stores the creation-time handler/provider chain plus a memo cell
 
-The mode is visible in the IR as the presence or absence of thunk wrapping.
+The mode is visible in the IR as the presence or absence of thunk wrapping. For effectful
+thunks, the wrapper is semantically required: a bare zero-argument `Lam` does not preserve
+the creation-time authority boundary specified by SPEC-101.
 
 ### 15.8 Algorithmic Implications
 
@@ -770,3 +778,4 @@ Mode mismatch is a type error, not a performance warning. The user must explicit
 
 - 2026-06-18: Created as target-state type system document. Defined row semantics, effect item taxonomy, discharge rules, alias/group behavior, and acceptance criteria.
 - 2026-06-20: Added §15 Evaluation Modes. Defined strict/lazy/memo as invariant algorithmic contracts with explicit `_unsafe` conversions.
+- 2026-06-21: Clarified memo force row accounting so static force sites retain the thunk latent row while dynamic cache hits may perform no effects, and aligned CPS lowering text with SPEC-101 `ThunkClosure` chain-capture semantics.

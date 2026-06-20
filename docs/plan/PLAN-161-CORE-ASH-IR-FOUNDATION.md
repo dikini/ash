@@ -32,7 +32,7 @@ verified_against:
 
 ## Status
 
-Complete: 12/12 tasks complete.
+Complete: 13/13 tasks complete, including post-closeout review remediation.
 
 ## Background
 
@@ -101,6 +101,7 @@ The serializer must produce one canonical spelling so fixture diffs are stable. 
 | [TASK-1629](tasks/TASK-1629-core-end-to-end-fixtures.md) | Add `.core` -> validate -> CPS golden fixtures | 4 | TASK-1624, TASK-1628 | Complete |
 | [TASK-1630](tasks/TASK-1630-core-ash-reference-docs.md) | Document Core text and implementation boundaries | 2 | TASK-1629 | Complete |
 | [TASK-1631](tasks/TASK-1631-phase-161-closeout.md) | Close out Phase 161 with verification and review | 3 | All above | Complete |
+| [TASK-1632](tasks/TASK-1632-core-text-roundtrip-review-fixes.md) | Fix Core text public AST round-trip review findings | 2 | TASK-1624, TASK-1631 | Complete |
 
 **Total estimated hours:** 40.
 
@@ -224,4 +225,5 @@ TASK-1620 -> TASK-1621 -> TASK-1622 -> TASK-1623 -> TASK-1624
 - 2026-06-20: Completed TASK-1629 by adding end-to-end `.core` fixture tests that parse, validate, lower, serialize, reparse, and compare CPS golden outputs, plus an invalid validation fixture.
 - 2026-06-20: Completed TASK-1630 by documenting the Core text fixture/debug format, validated Core-to-CPS lowering boundary, implemented row/effect behavior, and deferred feature boundaries.
 - 2026-06-20: Completed TASK-1631 by reconciling Phase 161 status surfaces, recording closeout review evidence, and verifying all focused Phase 161 plus affected `ash-core` gates.
+- 2026-06-20: Completed TASK-1632 by fixing Core text parser support for serializer-emitted open row tails, refinement types, record types, and type applications.
 - 2026-06-20: Created Phase 161 plan for the Core Ash IR foundation, including `.core` text parser/serializer, Core validation, and Core-to-CPS lowering.

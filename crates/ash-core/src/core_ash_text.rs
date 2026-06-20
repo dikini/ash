@@ -335,12 +335,41 @@ impl Parser {
                 let ty = match head.as_str() {
                     "fn" => self.parse_function_type()?,
                     "cont" => self.parse_cont_type()?,
+                    "refine" => {
+                        let base = self.parse_type_inner()?;
+                        let predicate = self.expect_string()?;
+                        CoreType::Refinement {
+                            base: Box::new(base),
+                            predicate,
+                        }
+                    }
                     "tuple" => {
                         let mut elems = Vec::new();
                         while !self.consume_rparen() {
                             elems.push(self.parse_type_inner()?);
                         }
                         return Ok(CoreType::Tuple(elems));
+                    }
+                    "record-type" => {
+                        let mut fields = Vec::new();
+                        while !self.consume_rparen() {
+                            self.expect_lparen()?;
+                            let name = self.expect_symbol()?;
+                            self.expect_colon()?;
+                            let ty = self.parse_type_inner()?;
+                            self.expect_rparen()?;
+                            fields.push((name, ty));
+                        }
+                        return Ok(CoreType::Record(fields));
+                    }
+                    "type-app" => {
+                        let name = self.expect_symbol()?;
+                        self.expect_lparen()?;
+                        let mut args = Vec::new();
+                        while !self.consume_rparen() {
+                            args.push(self.parse_type_inner()?);
+                        }
+                        CoreType::App { name, args }
                     }
                     other => {
                         return Err(self.error_here(format!("unsupported type form `{other}`")));
@@ -389,11 +418,19 @@ impl Parser {
     fn parse_row_inner(&mut self) -> ParseResult<CoreRow> {
         self.expect_lbrace()?;
         let mut items = Vec::new();
+        let mut tail = None;
         if self.consume_rbrace() {
             return Ok(CoreRow::default());
         }
         loop {
-            items.push(self.parse_row_item_inner()?);
+            if self.peek_symbol().is_some_and(|symbol| symbol == "tail") {
+                let _ = self.expect_symbol()?;
+                if tail.replace(self.expect_symbol()?).is_some() {
+                    return Err(self.error_here("duplicate row tail"));
+                }
+            } else {
+                items.push(self.parse_row_item_inner()?);
+            }
             if self.consume_comma() {
                 continue;
             }
@@ -402,7 +439,7 @@ impl Parser {
             }
             return Err(self.error_here("expected `,` or `}` after row item"));
         }
-        Ok(CoreRow::closed(items))
+        Ok(CoreRow { items, tail })
     }
 
     fn parse_row_item_inner(&mut self) -> ParseResult<CoreRowItem> {

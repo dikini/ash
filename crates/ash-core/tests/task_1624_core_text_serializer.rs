@@ -116,6 +116,82 @@ fn serializes_handler_expression_with_affine_resume_canonically() {
 }
 
 #[test]
+fn serializes_open_rows_canonically_and_parseably() {
+    let open_row = CoreRow::open(
+        vec![ash_core::core_ash::CoreRowItem::Capability {
+            path: vec!["console".to_string()],
+            operation: "read".to_string(),
+        }],
+        "r".to_string(),
+    );
+    let expr = CoreExpr::LetVal {
+        name: "f".to_string(),
+        ty: CoreType::Function {
+            params: vec![base("Int")],
+            result: Box::new(base("Int")),
+            row: open_row.clone(),
+        },
+        value: CoreValue::Lam {
+            params: vec![CoreParam {
+                name: "x".to_string(),
+                ty: base("Int"),
+            }],
+            body: Box::new(CoreExpr::Atom(CoreAtom::Var("x".to_string()))),
+            row: open_row,
+        },
+        body: Box::new(CoreExpr::Jump {
+            cont: CoreContRef::Label("exit".to_string()),
+            arg: CoreAtom::Var("f".to_string()),
+        }),
+    };
+
+    assert_canonical_round_trip(
+        expr,
+        "(let-val f : (fn (Int) -> Int {cap console.read, tail r}) (lam ((x : Int)) : {cap console.read, tail r} x) (jump (label exit) f))",
+    );
+}
+
+#[test]
+fn serializes_public_type_forms_canonically_and_parseably() {
+    let expr = CoreExpr::LetVal {
+        name: "x".to_string(),
+        ty: CoreType::Record(vec![
+            (
+                "id".to_string(),
+                CoreType::App {
+                    name: "Box".to_string(),
+                    args: vec![CoreType::Refinement {
+                        base: Box::new(base("Int")),
+                        predicate: "value > 0".to_string(),
+                    }],
+                },
+            ),
+            (
+                "flag".to_string(),
+                CoreType::Cont {
+                    input: Box::new(base("Bool")),
+                    answer: Box::new(base("Unit")),
+                    row: CoreRow::open(Vec::new(), "resume".to_string()),
+                    multiplicity: CoreMultiplicity::Affine,
+                },
+            ),
+        ]),
+        value: CoreValue::Record {
+            fields: vec![("id".to_string(), CoreAtom::LitInt(1))],
+        },
+        body: Box::new(CoreExpr::Jump {
+            cont: CoreContRef::Label("exit".to_string()),
+            arg: CoreAtom::Var("x".to_string()),
+        }),
+    };
+
+    assert_canonical_round_trip(
+        expr,
+        "(let-val x : (record-type (id : (type-app Box ((refine Int \"value > 0\")))) (flag : (cont Bool Unit {tail resume} affine))) (record (id (lit-int 1))) (jump (label exit) x))",
+    );
+}
+
+#[test]
 fn serializes_contract_trap_expression_canonically() {
     let expr = CoreExpr::RecordDischarge {
         discharge: contract("requires-positive", CoreDischargeMode::Dynamic),

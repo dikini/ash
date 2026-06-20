@@ -1,6 +1,6 @@
 # TASK-1621: Freeze minimal Core text format and fixtures
 
-**Status:** Planned
+**Status:** Complete
 **Phase:** [PLAN-161](../PLAN-161-CORE-ASH-IR-FOUNDATION.md)
 **Owner:** Phase 161
 
@@ -70,3 +70,9 @@ git diff --check -- crates/ash-core/tests/fixtures/core docs/reference/core-ash-
 ```
 
 Expected: focused fixture existence tests pass.
+
+## Completion Evidence
+
+- Added five canonical `.core` fixtures under `crates/ash-core/tests/fixtures/core/`.
+- Added `docs/reference/core-ash-text-format.md`, explicitly documenting `.core` as a fixture/debug format, not surface Ash.
+- Added `crates/ash-core/tests/task_1621_core_text_format.rs` to guard fixture presence, compactness, top-level forms, and reference boundary wording.

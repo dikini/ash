@@ -1,0 +1,4 @@
+(let-prim cond lt ((lit-int 1) (lit-int 10))
+  (if cond
+    (jump (label yes) (lit-unit))
+    (jump (label no) (lit-unit))))

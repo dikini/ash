@@ -32,7 +32,7 @@ verified_against:
 
 ## Status
 
-In progress: 1/12 tasks complete.
+In progress: 2/12 tasks complete.
 
 ## Background
 
@@ -90,7 +90,7 @@ The serializer must produce one canonical spelling so fixture diffs are stable. 
 | Task | Description | Est. Hours | Dependencies | Status |
 |------|-------------|-----------:|--------------|--------|
 | [TASK-1620](tasks/TASK-1620-core-ash-ast-carriers.md) | Add Core Ash AST carriers and module exports | 3 | SPEC-099 | Complete |
-| [TASK-1621](tasks/TASK-1621-core-text-format-fixtures.md) | Freeze minimal `.core` text grammar and golden fixtures | 2 | TASK-1620 | Planned |
+| [TASK-1621](tasks/TASK-1621-core-text-format-fixtures.md) | Freeze minimal `.core` text grammar and golden fixtures | 2 | TASK-1620 | Complete |
 | [TASK-1622](tasks/TASK-1622-core-text-parser-atoms-values.md) | Parse Core atoms, rows, types, and values | 3 | TASK-1621 | Planned |
 | [TASK-1623](tasks/TASK-1623-core-text-parser-expressions.md) | Parse Core expressions and effect/discharge forms | 4 | TASK-1622 | Planned |
 | [TASK-1624](tasks/TASK-1624-core-text-serializer.md) | Add canonical Core AST serializer and round-trip tests | 3 | TASK-1623 | Planned |
@@ -189,4 +189,5 @@ TASK-1620 -> TASK-1621 -> TASK-1622 -> TASK-1623 -> TASK-1624
 ## Changelog
 
 - 2026-06-20: Completed TASK-1620 by adding Core Ash AST carriers and module exports.
+- 2026-06-20: Completed TASK-1621 by freezing the first `.core` fixture grammar documentation and golden fixture corpus.
 - 2026-06-20: Created Phase 161 plan for the Core Ash IR foundation, including `.core` text parser/serializer, Core validation, and Core-to-CPS lowering.

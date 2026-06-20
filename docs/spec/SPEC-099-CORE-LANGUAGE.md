@@ -161,6 +161,7 @@ Expr ::= Atom
        | LetVal { name: Name, ty: Type, value: Value, body: Expr }
        | LetRec { name: Name, ty: Type, value: Value, body: Expr }
        | LetPrim { name: Name, op: PrimOp, args: Vec<Atom>, body: Expr }
+       | LetCall { name: Name, func: Atom, args: Vec<Atom>, body: Expr }
        | If { cond: Atom, then_branch: Expr, else_branch: Expr }
        | Call { func: Atom, args: Vec<Atom> }
        | Jump { cont: ContRef, arg: Atom }
@@ -462,6 +463,7 @@ This spec writes `⟦e⟧` for "the CPS lowering of core expression `e`." It doe
 | `LetVal { name, value, body }` | `LetVal { name, value: ⟦value⟧, body: ⟦body⟧ }` |
 | `LetRec { name, value, body }` | `LetRec { name, value: ⟦value⟧, body: ⟦body⟧ }` |
 | `LetPrim { name, op, args, body }` | `LetPrim { name, op, args, body: ⟦body⟧ }` |
+| `LetCall { name, func, args, body }` | `LetCont { name: fresh_k, param: name, cont_body: ⟦body⟧, body: Call { func, args, cont: fresh_k, row: call_total_row } }` |
 | `If { cond, then, else }` | `If { cond, then_branch: ⟦then⟧, else_branch: ⟦else⟧, row }` |
 | `Call { func, args }` | `Call { func, args, cont: current_cont, row: call_total_row }` |
 | `Jump { cont, arg }` | `Jump { cont, arg, row: cont_row }` |
@@ -507,10 +509,10 @@ Every non-tail call introduces a continuation label or continuation closure:
 
 ```text
 -- Core:
-let x = add(1, 2) in body
+LetCall { name: x, func: add, args: [1, 2], body }
 
 -- CPS shape:
-LetCont { name: k_x, param: x, body: ⟦body⟧, rest:
+LetCont { name: k_x, param: x, cont_body: ⟦body⟧, body:
     Call { func: add, args: [1, 2], cont: Label(k_x), row: ... }
 }
 ```

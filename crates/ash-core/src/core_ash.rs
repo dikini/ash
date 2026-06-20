@@ -256,6 +256,12 @@ pub enum CoreExpr {
         args: Vec<CoreAtom>,
         body: Box<CoreExpr>,
     },
+    LetCall {
+        name: CoreName,
+        func: CoreAtom,
+        args: Vec<CoreAtom>,
+        body: Box<CoreExpr>,
+    },
     If {
         cond: CoreAtom,
         then_branch: Box<CoreExpr>,

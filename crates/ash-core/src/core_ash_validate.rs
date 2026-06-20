@@ -101,6 +101,13 @@ fn validate_expr(expr: &CoreExpr) -> Result<(), CoreValidationError> {
             validate_data_atoms(args)?;
             validate_expr(body)
         }
+        CoreExpr::LetCall {
+            func, args, body, ..
+        } => {
+            validate_data_atom(func)?;
+            validate_data_atoms(args)?;
+            validate_expr(body)
+        }
         CoreExpr::If {
             cond,
             then_branch,
@@ -364,6 +371,13 @@ fn count_affine_resume_uses(resume: &str, expr: &CoreExpr) -> Result<usize, Core
         }
         CoreExpr::LetPrim { args, body, .. } => {
             reject_resume_atoms(resume, args, "passed to primitive operation")?;
+            count_affine_resume_uses(resume, body)
+        }
+        CoreExpr::LetCall {
+            func, args, body, ..
+        } => {
+            reject_resume_atom(resume, func, "used as ordinary call target")?;
+            reject_resume_atoms(resume, args, "passed as ordinary function argument")?;
             count_affine_resume_uses(resume, body)
         }
         CoreExpr::If {

@@ -38,6 +38,7 @@ Rows are requirement rows. They record what a term requires; they are not author
 ```text
 (let-val name : Type Value Expr)
 (let-prim name prim-op (Atom...) Expr)
+(let-call name Atom (Atom...) Expr)
 (if Atom Expr Expr)
 (call Atom (Atom...))
 (jump (label name) Atom)
@@ -47,7 +48,7 @@ Rows are requirement rows. They record what a term requires; they are not author
 (trap TrapReason)
 ```
 
-`let-val`, `let-prim`, `if`, `call`, `raise`, `handle`, `record-discharge`, and `trap` are the Phase 161 fixture forms. `call`, `raise`, and `handle` are direct-style Core forms; CPS continuation fields are synthesized only during Core-to-CPS lowering.
+`let-val`, `let-prim`, `let-call`, `if`, `call`, `raise`, `handle`, `record-discharge`, and `trap` are the Phase 161 fixture forms. `let-call` binds the result of a non-tail direct-style call; CPS lowering introduces `LetCont` for it. `call`, `raise`, and `handle` are direct-style Core forms; CPS continuation fields are synthesized only during Core-to-CPS lowering.
 
 ## Values
 

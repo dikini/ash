@@ -499,7 +499,7 @@ Extends the Phase 159 CPS IR interpreter with structured data (records, tuples),
 
 ## Phase 161: Core Ash IR Foundation
 
-**Status:** 🚧 In progress; 7/12 implemented
+**Status:** 🚧 In progress; 8/12 implemented
 **Plan:** [PLAN-161: Core Ash IR Foundation](PLAN-161-CORE-ASH-IR-FOUNDATION.md)
 **Spec:** [SPEC-099: Ash Core Language](../spec/SPEC-099-CORE-LANGUAGE.md)
 **Depends on:** SPEC-099, SPEC-098b, SPEC-096b, SPEC-097b; builds on Phase 159 CPS IR substrate.
@@ -515,7 +515,7 @@ Builds the first implementation slice for Core Ash: dedicated Core AST carriers,
 | [TASK-1624](tasks/TASK-1624-core-text-serializer.md) | Add canonical Core AST serializer and round-trip tests | ✅ Complete |
 | [TASK-1625](tasks/TASK-1625-core-validator-basic-invariants.md) | Validate basic SPEC-099 Core invariants | ✅ Complete |
 | [TASK-1626](tasks/TASK-1626-core-validator-affine-resume.md) | Validate handler resume affine-position restrictions | ✅ Complete |
-| [TASK-1627](tasks/TASK-1627-core-to-cps-lowering-basic.md) | Lower values, lets, primitives, conditionals, calls, and jumps | 📝 Planned |
+| [TASK-1627](tasks/TASK-1627-core-to-cps-lowering-basic.md) | Lower values, lets, primitives, conditionals, calls, and jumps | ✅ Complete |
 | [TASK-1628](tasks/TASK-1628-core-to-cps-lowering-effects.md) | Lower raise, handle, discharge, and trap forms | 📝 Planned |
 | [TASK-1629](tasks/TASK-1629-core-end-to-end-fixtures.md) | Add `.core` -> validate -> CPS golden fixtures | 📝 Planned |
 | [TASK-1630](tasks/TASK-1630-core-ash-reference-docs.md) | Document Core text and implementation boundaries | 📝 Planned |

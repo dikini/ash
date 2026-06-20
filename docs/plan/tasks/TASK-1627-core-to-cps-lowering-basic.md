@@ -1,6 +1,6 @@
 # TASK-1627: Lower basic Core expressions to CPS IR
 
-**Status:** Planned
+**Status:** Complete
 **Phase:** [PLAN-161](../PLAN-161-CORE-ASH-IR-FOUNDATION.md)
 **Owner:** Phase 161
 
@@ -71,3 +71,16 @@ cargo fmt --check
 ```
 
 Expected: basic lowering tests pass.
+
+## Completion Evidence
+
+- Added `crates/ash-core/src/core_ash_lower.rs` and exported it from `ash-core`.
+- Lowered Core atoms, representable values, `LetVal`, `LetRec`, `LetPrim`, `LetCall`, `If`, tail `Call`, and `Jump` into the existing CPS carriers.
+- Added `LetCall` to Core AST/text to represent non-tail direct-style calls and lower them through CPS `LetCont`.
+- Synthesized `Call.row`, `If.row`, and `Jump.row` from explicit lowering context rows.
+- Verified:
+  - `cargo test -p ash-core --test task_1627_core_to_cps_basic`
+  - `cargo test -p ash-core --test task_1625_core_validator_basic`
+  - `cargo test -p ash-core`
+  - `cargo clippy -p ash-core --all-targets -- -D warnings`
+  - `cargo fmt --check && git diff --check`

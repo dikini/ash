@@ -233,6 +233,18 @@ impl Parser {
                     body: Box::new(body),
                 }
             }
+            "let-call" => {
+                let name = self.expect_symbol()?;
+                let func = self.parse_atom_inner()?;
+                let args = self.parse_atom_list()?;
+                let body = self.parse_expr_inner()?;
+                CoreExpr::LetCall {
+                    name,
+                    func,
+                    args,
+                    body: Box::new(body),
+                }
+            }
             "if" => {
                 let cond = self.parse_atom_inner()?;
                 let then_branch = self.parse_expr_inner()?;
@@ -949,6 +961,17 @@ fn format_expr(expr: &CoreExpr) -> String {
         } => format!(
             "(let-prim {name} {} {} {})",
             format_prim_op(op),
+            format_atom_list(args),
+            format_expr(body)
+        ),
+        CoreExpr::LetCall {
+            name,
+            func,
+            args,
+            body,
+        } => format!(
+            "(let-call {name} {} {} {})",
+            format_atom(func),
             format_atom_list(args),
             format_expr(body)
         ),

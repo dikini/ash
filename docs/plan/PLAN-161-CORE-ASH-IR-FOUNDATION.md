@@ -32,7 +32,7 @@ verified_against:
 
 ## Status
 
-In progress: 8/12 tasks complete.
+In progress: 9/12 tasks complete.
 
 ## Background
 
@@ -97,7 +97,7 @@ The serializer must produce one canonical spelling so fixture diffs are stable. 
 | [TASK-1625](tasks/TASK-1625-core-validator-basic-invariants.md) | Validate basic SPEC-099 Core invariants | 3 | TASK-1623 | Complete |
 | [TASK-1626](tasks/TASK-1626-core-validator-affine-resume.md) | Validate handler resume affine-position restrictions | 3 | TASK-1625 | Complete |
 | [TASK-1627](tasks/TASK-1627-core-to-cps-lowering-basic.md) | Lower values, lets, primitives, conditionals, calls, and jumps | 5 | TASK-1625 | Complete |
-| [TASK-1628](tasks/TASK-1628-core-to-cps-lowering-effects.md) | Lower raise, handle, discharge, and trap forms | 5 | TASK-1627 | Planned |
+| [TASK-1628](tasks/TASK-1628-core-to-cps-lowering-effects.md) | Lower raise, handle, discharge, and trap forms | 5 | TASK-1627 | Complete |
 | [TASK-1629](tasks/TASK-1629-core-end-to-end-fixtures.md) | Add `.core` -> validate -> CPS golden fixtures | 4 | TASK-1624, TASK-1628 | Planned |
 | [TASK-1630](tasks/TASK-1630-core-ash-reference-docs.md) | Document Core text and implementation boundaries | 2 | TASK-1629 | Planned |
 | [TASK-1631](tasks/TASK-1631-phase-161-closeout.md) | Close out Phase 161 with verification and review | 3 | All above | Planned |
@@ -196,4 +196,5 @@ TASK-1620 -> TASK-1621 -> TASK-1622 -> TASK-1623 -> TASK-1624
 - 2026-06-20: Completed TASK-1625 by adding the basic Core validator boundary for row duplicates, effect operation shape, and recursive type/value/expression checks.
 - 2026-06-20: Completed TASK-1626 by adding conservative affine handler resume validation for one-shot jumps and escape rejection.
 - 2026-06-20: Completed TASK-1627 by adding basic Core-to-CPS lowering for values, lets, primitive calls, conditionals, tail calls, jumps, and non-tail calls via `LetCont`.
+- 2026-06-20: Completed TASK-1628 by lowering Core raise, handle, record-discharge, and trap forms into CPS while preserving local row accounting and keeping contract violations as trap metadata only.
 - 2026-06-20: Created Phase 161 plan for the Core Ash IR foundation, including `.core` text parser/serializer, Core validation, and Core-to-CPS lowering.

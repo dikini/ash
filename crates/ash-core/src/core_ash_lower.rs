@@ -1,14 +1,18 @@
 //! Lowering from Core Ash direct-style IR into the existing CPS IR.
 //!
-//! Phase 161 starts with the pure/basic Core subset. Effect operations,
-//! handlers, contract discharge, and traps are deliberately left to the next
-//! lowering task so unsupported forms fail at this boundary.
+//! Phase 161 covers the Core fixture/debug subset needed by the first
+//! end-to-end Core-to-CPS tests. It lowers validated Core programs into
+//! materialized CPS terms with explicit continuation and row fields.
 
 use crate::core_ash::{
-    CoreAtom, CoreContRef, CoreExpr, CorePrimOp, CoreRow, CoreRowItem, CoreType, CoreValue,
+    CoreAtom, CoreContRef, CoreContractDischarge, CoreDischargeMode, CoreEffectOp, CoreExpr,
+    CoreHandlerClause, CorePrimOp, CoreRow, CoreRowItem, CoreTrapReason, CoreType, CoreValue,
 };
 use crate::core_ash_validate::ValidCoreProgram;
-use crate::cps::{Atom, ContRef, EffectItem, EffectItemKind, EffectRow, Env, PrimOp, Term, Value};
+use crate::cps::{
+    Atom, ContRef, ContractDischarge, DischargeType, EffectItem, EffectItemKind, EffectOp,
+    EffectRow, Env, HandlerClause, PrimOp, Term, TrapReason, Value,
+};
 use std::collections::HashMap;
 
 /// Error returned while lowering validated Core Ash into CPS IR.
@@ -113,7 +117,7 @@ struct CurrentContGuard {
 /// # Errors
 ///
 /// Returns [`CoreLoweringError`] if the validated Core program uses a form
-/// outside the TASK-1627 lowering subset.
+/// outside the Phase 161 lowering subset.
 pub fn lower_core_program(program: ValidCoreProgram) -> Result<Term, CoreLoweringError> {
     lower_core_program_with_context(
         program,
@@ -126,7 +130,7 @@ pub fn lower_core_program(program: ValidCoreProgram) -> Result<Term, CoreLowerin
 /// # Errors
 ///
 /// Returns [`CoreLoweringError`] if the validated Core program uses a form
-/// outside the TASK-1627 lowering subset or a Core carrier cannot be represented
+/// outside the Phase 161 lowering subset or a Core carrier cannot be represented
 /// by the current CPS IR.
 pub fn lower_core_program_with_context(
     program: ValidCoreProgram,
@@ -243,17 +247,24 @@ fn lower_expr(expr: &CoreExpr, state: &mut LoweringState) -> Result<Term, CoreLo
                 row: lower_row(&row),
             })
         }
-        CoreExpr::Raise { .. } => Err(CoreLoweringError::UnsupportedForm {
-            detail: "Raise lowering is owned by TASK-1628".to_string(),
+        CoreExpr::Raise { op, args } => Ok(Term::Raise {
+            op: lower_effect_op(op),
+            args: lower_atoms(args)?,
+            resume: state.context.current_cont.clone(),
+            row: lower_row(&effect_op_row(op)),
         }),
-        CoreExpr::Handle { .. } => Err(CoreLoweringError::UnsupportedForm {
-            detail: "Handle lowering is owned by TASK-1628".to_string(),
+        CoreExpr::Handle { clause, body } => Ok(Term::Handle {
+            clause: lower_handler_clause(clause, state)?,
+            body: Box::new(lower_expr(body, state)?),
+            cont: state.context.current_cont.clone(),
+            row: lower_row(&clause.row),
         }),
-        CoreExpr::RecordDischarge { .. } => Err(CoreLoweringError::UnsupportedForm {
-            detail: "RecordDischarge lowering is owned by TASK-1628".to_string(),
+        CoreExpr::RecordDischarge { discharge, body } => Ok(Term::RecordDischarge {
+            discharge: lower_contract_discharge(discharge),
+            body: Box::new(lower_expr(body, state)?),
         }),
-        CoreExpr::Trap { .. } => Err(CoreLoweringError::UnsupportedForm {
-            detail: "Trap lowering is owned by TASK-1628".to_string(),
+        CoreExpr::Trap { reason } => Ok(Term::Trap {
+            reason: lower_trap_reason(reason),
         }),
     }
 }
@@ -289,8 +300,19 @@ fn lower_value(value: &CoreValue, state: &mut LoweringState) -> Result<Value, Co
             }
             Ok(Value::Tuple { elems: lowered })
         }
-        CoreValue::DischargeMarker { .. } => Err(CoreLoweringError::UnsupportedForm {
-            detail: "DischargeMarker lowering is owned by TASK-1628".to_string(),
+        CoreValue::DischargeMarker { discharge } => Ok(Value::Record {
+            fields: vec![
+                (
+                    "contract".to_string(),
+                    Value::Atom(Atom::String(discharge.contract.clone())),
+                ),
+                (
+                    "mode".to_string(),
+                    Value::Atom(Atom::String(
+                        discharge_mode_name(discharge.mode).to_string(),
+                    )),
+                ),
+            ],
         }),
     }
 }
@@ -348,6 +370,195 @@ fn lower_prim_op(op: &CorePrimOp) -> Result<PrimOp, CoreLoweringError> {
     }
 }
 
+fn lower_handler_clause(
+    clause: &CoreHandlerClause,
+    state: &mut LoweringState,
+) -> Result<HandlerClause, CoreLoweringError> {
+    let resume_row = resume_row(&clause.resume.ty);
+    let guard = state.with_current_cont(ContRef::Var(clause.resume.name.clone()), resume_row);
+    let body = lower_expr(&clause.body, state);
+    state.restore_current_cont(guard);
+
+    Ok(HandlerClause {
+        op: lower_effect_op(&clause.op),
+        params: clause
+            .params
+            .iter()
+            .map(|param| param.name.clone())
+            .collect(),
+        resume: clause.resume.name.clone(),
+        body: Box::new(body?),
+        row: lower_row(&clause.row),
+    })
+}
+
+fn resume_row(ty: &CoreType) -> CoreRow {
+    match ty {
+        CoreType::Cont { row, .. } => row.clone(),
+        _ => CoreRow::default(),
+    }
+}
+
+fn lower_effect_op(op: &CoreEffectOp) -> EffectOp {
+    match op {
+        CoreEffectOp::Capability {
+            path,
+            operation,
+            arg_types,
+            result_type,
+        } => EffectOp {
+            item: EffectItem {
+                namespace: "cap".to_string(),
+                name: dotted_name(path, operation),
+                kind: EffectItemKind::Capability,
+            },
+            arg_types: lower_type_names(arg_types),
+            result_type: lower_type_name(result_type),
+        },
+        CoreEffectOp::Channel {
+            path,
+            mode,
+            payload_type,
+            result_type,
+        } => EffectOp {
+            item: EffectItem {
+                namespace: "channel".to_string(),
+                name: dotted_name(path, mode),
+                kind: EffectItemKind::Channel,
+            },
+            arg_types: vec![lower_type_name(payload_type)],
+            result_type: lower_type_name(result_type),
+        },
+        CoreEffectOp::Process {
+            operation,
+            arg_types,
+            result_type,
+        } => EffectOp {
+            item: EffectItem {
+                namespace: "proc".to_string(),
+                name: operation.clone(),
+                kind: EffectItemKind::Alias,
+            },
+            arg_types: lower_type_names(arg_types),
+            result_type: lower_type_name(result_type),
+        },
+        CoreEffectOp::Failure { ty } => EffectOp {
+            item: EffectItem {
+                namespace: "fail".to_string(),
+                name: ty
+                    .as_ref()
+                    .map(lower_type_name)
+                    .unwrap_or_else(|| "failure".to_string()),
+                kind: EffectItemKind::Alias,
+            },
+            arg_types: ty
+                .as_ref()
+                .map(|ty| vec![lower_type_name(ty)])
+                .unwrap_or_default(),
+            result_type: "Never".to_string(),
+        },
+    }
+}
+
+fn effect_op_row(op: &CoreEffectOp) -> CoreRow {
+    match op {
+        CoreEffectOp::Capability {
+            path, operation, ..
+        } => CoreRow::closed(vec![CoreRowItem::Capability {
+            path: path.clone(),
+            operation: operation.clone(),
+        }]),
+        CoreEffectOp::Channel {
+            path,
+            mode,
+            payload_type,
+            ..
+        } => CoreRow::closed(vec![CoreRowItem::Channel {
+            path: path.clone(),
+            mode: mode.clone(),
+            payload_type: Box::new(payload_type.clone()),
+        }]),
+        CoreEffectOp::Process { operation, .. } => CoreRow::closed(vec![CoreRowItem::Process {
+            operation: operation.clone(),
+        }]),
+        CoreEffectOp::Failure { ty } => CoreRow::closed(vec![CoreRowItem::Failure {
+            ty: ty.clone().map(Box::new),
+        }]),
+    }
+}
+
+fn lower_type_names(types: &[CoreType]) -> Vec<String> {
+    types.iter().map(lower_type_name).collect()
+}
+
+fn lower_type_name(ty: &CoreType) -> String {
+    match ty {
+        CoreType::Base(name) | CoreType::Named(name) | CoreType::Var(name) => name.clone(),
+        CoreType::Function { .. } => "Function".to_string(),
+        CoreType::Refinement { base, .. } => lower_type_name(base),
+        CoreType::Cont { .. } => "Cont".to_string(),
+        CoreType::Tuple(elems) => {
+            let elems = elems
+                .iter()
+                .map(lower_type_name)
+                .collect::<Vec<_>>()
+                .join(",");
+            format!("({elems})")
+        }
+        CoreType::Record(fields) => {
+            let fields = fields
+                .iter()
+                .map(|(name, ty)| format!("{name}:{}", lower_type_name(ty)))
+                .collect::<Vec<_>>()
+                .join(",");
+            format!("{{{fields}}}")
+        }
+        CoreType::App { name, args } => {
+            if args.is_empty() {
+                name.clone()
+            } else {
+                let args = args
+                    .iter()
+                    .map(lower_type_name)
+                    .collect::<Vec<_>>()
+                    .join(",");
+                format!("{name}<{args}>")
+            }
+        }
+    }
+}
+
+fn lower_contract_discharge(discharge: &CoreContractDischarge) -> ContractDischarge {
+    ContractDischarge {
+        contract: discharge.contract.clone(),
+        discharge_type: match discharge.mode {
+            CoreDischargeMode::Dynamic => DischargeType::Dynamic,
+            CoreDischargeMode::Static | CoreDischargeMode::Evidence => DischargeType::Static,
+        },
+    }
+}
+
+fn lower_trap_reason(reason: &CoreTrapReason) -> TrapReason {
+    match reason {
+        CoreTrapReason::ContractViolation(_) => TrapReason::ContractViolation,
+        CoreTrapReason::UnhandledEffect(op) => {
+            TrapReason::Custom(format!("unhandled effect: {:?}", lower_effect_op(op).item))
+        }
+        CoreTrapReason::Panic(message) => TrapReason::Custom(format!("panic: {message}")),
+        CoreTrapReason::NonExhaustiveMatch => {
+            TrapReason::Custom("non-exhaustive match".to_string())
+        }
+    }
+}
+
+fn discharge_mode_name(mode: CoreDischargeMode) -> &'static str {
+    match mode {
+        CoreDischargeMode::Static => "static",
+        CoreDischargeMode::Evidence => "evidence",
+        CoreDischargeMode::Dynamic => "dynamic",
+    }
+}
+
 fn record_function_row(name: &str, ty: &CoreType, state: &mut LoweringState) {
     if let CoreType::Function { row, .. } = ty {
         state
@@ -397,15 +608,9 @@ fn local_row(expr: &CoreExpr, state: &LoweringState) -> Result<CoreRow, CoreLowe
             &local_row(else_branch, state)?,
         )),
         CoreExpr::Call { func, .. } => Ok(function_row_for_atom(func, state).unwrap_or_default()),
-        CoreExpr::Raise { .. } => Err(CoreLoweringError::UnsupportedForm {
-            detail: "Raise row synthesis is owned by TASK-1628".to_string(),
-        }),
-        CoreExpr::Handle { .. } => Err(CoreLoweringError::UnsupportedForm {
-            detail: "Handle row synthesis is owned by TASK-1628".to_string(),
-        }),
-        CoreExpr::RecordDischarge { .. } => Err(CoreLoweringError::UnsupportedForm {
-            detail: "RecordDischarge row synthesis is owned by TASK-1628".to_string(),
-        }),
+        CoreExpr::Raise { op, .. } => Ok(effect_op_row(op)),
+        CoreExpr::Handle { clause, .. } => Ok(clause.row.clone()),
+        CoreExpr::RecordDischarge { body, .. } => local_row(body, state),
     }
 }
 
@@ -435,15 +640,14 @@ fn total_row(expr: &CoreExpr, state: &LoweringState) -> Result<CoreRow, CoreLowe
         )),
         CoreExpr::Jump { cont, .. } => Ok(cont_row(cont, state)),
         CoreExpr::Trap { .. } => Ok(CoreRow::default()),
-        CoreExpr::Raise { .. } => Err(CoreLoweringError::UnsupportedForm {
-            detail: "Raise row synthesis is owned by TASK-1628".to_string(),
-        }),
-        CoreExpr::Handle { .. } => Err(CoreLoweringError::UnsupportedForm {
-            detail: "Handle row synthesis is owned by TASK-1628".to_string(),
-        }),
-        CoreExpr::RecordDischarge { .. } => Err(CoreLoweringError::UnsupportedForm {
-            detail: "RecordDischarge row synthesis is owned by TASK-1628".to_string(),
-        }),
+        CoreExpr::Raise { op, .. } => Ok(union_rows(
+            &effect_op_row(op),
+            &state.context.current_cont_row,
+        )),
+        CoreExpr::Handle { clause, .. } => {
+            Ok(union_rows(&clause.row, &state.context.current_cont_row))
+        }
+        CoreExpr::RecordDischarge { body, .. } => total_row(body, state),
     }
 }
 
@@ -509,9 +713,24 @@ fn lower_row_item(item: &CoreRowItem) -> Option<EffectItem> {
             name: path.join("."),
             kind: EffectItemKind::Group,
         }),
-        CoreRowItem::Resource { .. }
-        | CoreRowItem::Process { .. }
-        | CoreRowItem::Failure { .. } => None,
+        CoreRowItem::Resource { path, mode } => Some(EffectItem {
+            namespace: "resource".to_string(),
+            name: dotted_name(path, mode),
+            kind: EffectItemKind::Alias,
+        }),
+        CoreRowItem::Process { operation } => Some(EffectItem {
+            namespace: "proc".to_string(),
+            name: operation.clone(),
+            kind: EffectItemKind::Alias,
+        }),
+        CoreRowItem::Failure { ty } => Some(EffectItem {
+            namespace: "fail".to_string(),
+            name: ty
+                .as_deref()
+                .map(lower_type_name)
+                .unwrap_or_else(|| "failure".to_string()),
+            kind: EffectItemKind::Alias,
+        }),
     }
 }
 

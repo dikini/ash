@@ -1,6 +1,6 @@
 # TASK-1628: Lower Core effect and discharge forms to CPS IR
 
-**Status:** Planned
+**Status:** Complete
 **Phase:** [PLAN-161](../PLAN-161-CORE-ASH-IR-FOUNDATION.md)
 **Owner:** Phase 161
 
@@ -73,3 +73,16 @@ cargo fmt --check
 ```
 
 Expected: effect lowering tests pass.
+
+## Completion Evidence
+
+- Added `crates/ash-core/tests/task_1628_core_to_cps_effects.rs` with red/green coverage for capability and failure `Raise`, handler lowering, `RecordDischarge`, `Trap`, and `ContractViolation` row exclusion.
+- Extended `crates/ash-core/src/core_ash_lower.rs` to lower Core effect operations, handler clauses, contract discharge metadata, and trap reasons into existing CPS carriers.
+- Preserved `Raise.row` as local operation row only and `Handle.row` as local residual handler row excluding the outer continuation row.
+- Kept recoverable contract behavior explicit through `fail` lowering while `ContractViolation` lowers only to trap metadata.
+- Verified:
+  - `cargo test -p ash-core --test task_1628_core_to_cps_effects`
+  - `cargo test -p ash-core --test task_1627_core_to_cps_basic`
+  - `cargo test -p ash-core`
+  - `cargo clippy -p ash-core --all-targets -- -D warnings`
+  - `cargo fmt --check && git diff --check`

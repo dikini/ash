@@ -1,6 +1,6 @@
 # TASK-1630: Document Core Ash implementation boundaries
 
-**Status:** Planned
+**Status:** Complete
 **Phase:** [PLAN-161](../PLAN-161-CORE-ASH-IR-FOUNDATION.md)
 **Owner:** Phase 161
 
@@ -63,3 +63,15 @@ git diff --check -- docs/reference crates/ash-core/tests/task_1630_core_docs_con
 ```
 
 Expected: docs consistency check passes.
+
+## Completion Evidence
+
+- Updated `docs/reference/core-ash-text-format.md` with the Phase 161 fixture/golden corpus and explicit `.core` fixture/debug boundary.
+- Added `docs/reference/core-ash-lowering.md` for the implemented validated Core-to-CPS lowering boundary, row synthesis rules, effect/handler/contract behavior, and deferred features.
+- Added `task_1630_core_docs_consistency.rs` to keep the reference pages tied to committed fixtures and bounded implementation claims.
+
+Verified on 2026-06-20:
+
+```bash
+cargo test -p ash-core --test task_1630_core_docs_consistency
+```

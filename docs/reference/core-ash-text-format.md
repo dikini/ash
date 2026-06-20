@@ -80,10 +80,23 @@ Only capability, channel, process, and failure operations are raised operations.
 
 ## Fixtures
 
-The initial corpus lives in `crates/ash-core/tests/fixtures/core/`:
+The Phase 161 corpus lives in `crates/ash-core/tests/fixtures/core/`. These files are hand-authored Core fixture text, not examples of source Ash syntax:
 
-- `let_val_jump.core`
-- `let_prim_if.core`
-- `call_non_tail.core`
-- `raise_handle.core`
-- `contract_trap.core`
+| Core fixture | CPS golden | Purpose |
+| --- | --- | --- |
+| `let_val_jump.core` | `let_val_jump.core.cps.golden` | Minimal `let-val` followed by a continuation `jump`. |
+| `let_prim_if.core` | `let_prim_if.core.cps.golden` | Pure primitive binding and local branch rows on `if`. |
+| `call_non_tail.core` | `call_non_tail.core.cps.golden` | Lambda value and direct-style tail `call`. |
+| `let_call.core` | `let_call.core.cps.golden` | Non-tail direct-style call lowered through CPS `LetCont`. |
+| `raise_handle.core` | `raise_handle.core.cps.golden` | Capability `raise`, affine handler resume, and local handler row. |
+| `contract_trap.core` | `contract_trap.core.cps.golden` | Dynamic contract `record-discharge` plus contract-violation `trap`. |
+
+`invalid_duplicate_row.core` is intentionally invalid. It parses as Core text, then fails validation because duplicate row items are rejected before lowering.
+
+## Implementation Boundaries
+
+The text parser accepts only the Phase 161 fixture/debug subset. It is intentionally stricter than SPEC-099 as a whole and does not accept surface Ash constructs such as `workflow`, `do`, `handle ... with`, typeclass constraints, laws, properties, comprehensions, or imports.
+
+The Core text serializer produces one canonical spelling for committed fixture forms. Stable diffs are the goal; human-friendly source syntax is not.
+
+Core-to-CPS lowering behavior is documented in [`core-ash-lowering.md`](core-ash-lowering.md).

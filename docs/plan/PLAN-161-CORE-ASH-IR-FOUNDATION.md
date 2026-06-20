@@ -99,7 +99,7 @@ The serializer must produce one canonical spelling so fixture diffs are stable. 
 | [TASK-1627](tasks/TASK-1627-core-to-cps-lowering-basic.md) | Lower values, lets, primitives, conditionals, calls, and jumps | 5 | TASK-1625 | Complete |
 | [TASK-1628](tasks/TASK-1628-core-to-cps-lowering-effects.md) | Lower raise, handle, discharge, and trap forms | 5 | TASK-1627 | Complete |
 | [TASK-1629](tasks/TASK-1629-core-end-to-end-fixtures.md) | Add `.core` -> validate -> CPS golden fixtures | 4 | TASK-1624, TASK-1628 | Complete |
-| [TASK-1630](tasks/TASK-1630-core-ash-reference-docs.md) | Document Core text and implementation boundaries | 2 | TASK-1629 | Planned |
+| [TASK-1630](tasks/TASK-1630-core-ash-reference-docs.md) | Document Core text and implementation boundaries | 2 | TASK-1629 | Complete |
 | [TASK-1631](tasks/TASK-1631-phase-161-closeout.md) | Close out Phase 161 with verification and review | 3 | All above | Planned |
 
 **Total estimated hours:** 40.
@@ -159,7 +159,7 @@ At worktree creation on 2026-06-20, `cargo test -p ash-core -p ash-interp` passe
 - [x] Basic Core terms lower into existing `crate::cps::Term` shapes with SPEC-098b row field conventions.
 - [x] Raise, Handle, RecordDischarge, and Trap lower without reintroducing `ContractViolation` as an effect row item.
 - [x] End-to-end `.core` fixtures produce expected CPS golden output.
-- [ ] Reference documentation states that Core text is a fixture/debug format, not surface Ash.
+- [x] Reference documentation states that Core text is a fixture/debug format, not surface Ash.
 - [ ] PLAN-INDEX and CHANGELOG are reconciled.
 
 ## Recommended Execution Order
@@ -198,4 +198,5 @@ TASK-1620 -> TASK-1621 -> TASK-1622 -> TASK-1623 -> TASK-1624
 - 2026-06-20: Completed TASK-1627 by adding basic Core-to-CPS lowering for values, lets, primitive calls, conditionals, tail calls, jumps, and non-tail calls via `LetCont`.
 - 2026-06-20: Completed TASK-1628 by lowering Core raise, handle, record-discharge, and trap forms into CPS while preserving local row accounting and keeping contract violations as trap metadata only.
 - 2026-06-20: Completed TASK-1629 by adding end-to-end `.core` fixture tests that parse, validate, lower, serialize, reparse, and compare CPS golden outputs, plus an invalid validation fixture.
+- 2026-06-20: Completed TASK-1630 by documenting the Core text fixture/debug format, validated Core-to-CPS lowering boundary, implemented row/effect behavior, and deferred feature boundaries.
 - 2026-06-20: Created Phase 161 plan for the Core Ash IR foundation, including `.core` text parser/serializer, Core validation, and Core-to-CPS lowering.

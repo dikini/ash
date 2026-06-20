@@ -1,6 +1,6 @@
 # TASK-1623: Parse Core expressions and effect forms
 
-**Status:** Planned
+**Status:** Complete
 **Phase:** [PLAN-161](../PLAN-161-CORE-ASH-IR-FOUNDATION.md)
 **Owner:** Phase 161
 
@@ -63,3 +63,13 @@ cargo fmt --check
 ```
 
 Expected: expression and earlier parser tests pass.
+
+## Completion Evidence
+
+- Added `parse_core_expr` and `parse_core_file` APIs for full Core expression fixtures.
+- Added support for `LetVal`, `LetRec`, `LetPrim`, `If`, `Call`, `Jump`, `Raise`, `Handle`, `RecordDischarge`, and `Trap`.
+- Added parsing for handler clauses, affine resume parameters, supported effect operation kinds, continuation refs, and trap reasons.
+- Added fail-closed tests for unknown Core forms and surface-like syntax.
+- Verified:
+  - `cargo test -p ash-core --test task_1623_core_text_parser_expressions`
+  - `cargo test -p ash-core --test task_1622_core_text_parser_atoms_values`

@@ -1,13 +1,15 @@
 //! Parser for the Core Ash `.core` fixture/debug text format.
 //!
-//! This module intentionally starts small. TASK-1622 covers atoms, types,
-//! rows, row items, and values; full expression parsing is owned by TASK-1623.
+//! This module intentionally stays close to the raw Core AST. TASK-1622 covers
+//! atoms, types, rows, row items, and values; TASK-1623 adds expression forms.
 
 use crate::core_ash::{
-    CoreAtom, CoreContractDischarge, CoreDischargeMode, CoreExpr, CoreMultiplicity, CoreParam,
-    CorePrimOp, CoreRow, CoreRowItem, CoreSourceSpan, CoreType, CoreValue,
+    CoreAtom, CoreContRef, CoreContractDischarge, CoreDischargeMode, CoreEffectOp, CoreExpr,
+    CoreHandlerClause, CoreMultiplicity, CoreParam, CorePrimOp, CoreRow, CoreRowItem,
+    CoreSourceSpan, CoreTrapReason, CoreType, CoreValue,
 };
 use std::fmt;
+use std::path::Path;
 
 /// Error returned by the Core text parser.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -115,6 +117,29 @@ pub fn parse_value(source: &str) -> ParseResult<CoreValue> {
     Parser::new(source)?.parse_complete(Parser::parse_value_inner)
 }
 
+/// Parses a complete Core expression.
+///
+/// # Errors
+///
+/// Returns [`CoreTextError`] when the source is not a single valid expression.
+pub fn parse_core_expr(source: &str) -> ParseResult<CoreExpr> {
+    Parser::new(source)?.parse_complete(Parser::parse_expr_inner)
+}
+
+/// Reads and parses a complete `.core` file.
+///
+/// # Errors
+///
+/// Returns [`CoreTextError`] when the file cannot be read or the contents are
+/// not a single valid expression.
+pub fn parse_core_file(path: impl AsRef<Path>) -> ParseResult<CoreExpr> {
+    let path = path.as_ref();
+    let source = std::fs::read_to_string(path).map_err(|error| {
+        CoreTextError::new(0, format!("failed to read {}: {error}", path.display()))
+    })?;
+    parse_core_expr(&source)
+}
+
 struct Parser {
     tokens: Vec<Token>,
     pos: usize,
@@ -138,6 +163,101 @@ impl Parser {
         } else {
             Err(self.error_here("unexpected trailing tokens"))
         }
+    }
+
+    fn parse_expr_inner(&mut self) -> ParseResult<CoreExpr> {
+        if self.peek_symbol().is_some() {
+            return Ok(CoreExpr::Atom(self.parse_atom_inner()?));
+        }
+        if !self.next_is_lparen() {
+            return Err(self.error_here("expected expression"));
+        }
+
+        let checkpoint = self.pos;
+        self.expect_lparen()?;
+        let head = self.expect_symbol()?;
+        let expr = match head.as_str() {
+            "let-val" => {
+                let name = self.expect_symbol()?;
+                self.expect_colon()?;
+                let ty = self.parse_type_inner()?;
+                let value = self.parse_value_inner()?;
+                let body = self.parse_expr_inner()?;
+                CoreExpr::LetVal {
+                    name,
+                    ty,
+                    value,
+                    body: Box::new(body),
+                }
+            }
+            "let-rec" => {
+                let name = self.expect_symbol()?;
+                self.expect_colon()?;
+                let ty = self.parse_type_inner()?;
+                let value = self.parse_value_inner()?;
+                let body = self.parse_expr_inner()?;
+                CoreExpr::LetRec {
+                    name,
+                    ty,
+                    value,
+                    body: Box::new(body),
+                }
+            }
+            "let-prim" => {
+                let name = self.expect_symbol()?;
+                let op = parse_prim_op(&self.expect_symbol()?);
+                let args = self.parse_atom_list()?;
+                let body = self.parse_expr_inner()?;
+                CoreExpr::LetPrim {
+                    name,
+                    op,
+                    args,
+                    body: Box::new(body),
+                }
+            }
+            "if" => {
+                let cond = self.parse_atom_inner()?;
+                let then_branch = self.parse_expr_inner()?;
+                let else_branch = self.parse_expr_inner()?;
+                CoreExpr::If {
+                    cond,
+                    then_branch: Box::new(then_branch),
+                    else_branch: Box::new(else_branch),
+                }
+            }
+            "call" => CoreExpr::Call {
+                func: self.parse_atom_inner()?,
+                args: self.parse_atom_list()?,
+            },
+            "jump" => CoreExpr::Jump {
+                cont: self.parse_cont_ref_inner()?,
+                arg: self.parse_atom_inner()?,
+            },
+            "raise" => CoreExpr::Raise {
+                op: self.parse_effect_op_inner()?,
+                args: self.parse_atom_list()?,
+            },
+            "handle" => CoreExpr::Handle {
+                clause: self.parse_handler_clause_inner()?,
+                body: Box::new(self.parse_expr_inner()?),
+            },
+            "record-discharge" => CoreExpr::RecordDischarge {
+                discharge: self.parse_contract_discharge_inner()?,
+                body: Box::new(self.parse_expr_inner()?),
+            },
+            "trap" => CoreExpr::Trap {
+                reason: self.parse_trap_reason_inner()?,
+            },
+            "lit-int" | "lit-string" | "lit-bool" | "lit-unit" | "prim" | "constructor" => {
+                self.pos = checkpoint;
+                return Ok(CoreExpr::Atom(self.parse_atom_inner()?));
+            }
+            other => {
+                return Err(self.error_here(format!("unsupported expression form `{other}`")));
+            }
+        };
+        self.expect_rparen()?;
+        Ok(expr)
     }
 
     fn parse_atom_inner(&mut self) -> ParseResult<CoreAtom> {
@@ -341,7 +461,7 @@ impl Parser {
         }
         self.expect_colon()?;
         let row = self.parse_row_inner()?;
-        let body = CoreExpr::Atom(self.parse_atom_inner()?);
+        let body = self.parse_expr_inner()?;
         Ok(CoreValue::Lam {
             params,
             body: Box::new(body),
@@ -398,6 +518,163 @@ impl Parser {
             evidence: None,
             source_span,
         })
+    }
+
+    fn parse_effect_op_inner(&mut self) -> ParseResult<CoreEffectOp> {
+        self.expect_lparen()?;
+        let head = self.expect_symbol()?;
+        let op = match head.as_str() {
+            "cap" => {
+                let (path, operation) = split_path_operation(&self.expect_symbol()?)?;
+                self.expect_colon()?;
+                let (arg_types, result_type) = self.parse_signature()?;
+                CoreEffectOp::Capability {
+                    path,
+                    operation,
+                    arg_types,
+                    result_type,
+                }
+            }
+            "channel" => {
+                let path = split_path(&self.expect_symbol()?);
+                let mode = self.expect_symbol()?;
+                self.expect_colon()?;
+                let payload_type = self.parse_type_inner()?;
+                self.expect_arrow()?;
+                let result_type = self.parse_type_inner()?;
+                CoreEffectOp::Channel {
+                    path,
+                    mode,
+                    payload_type,
+                    result_type,
+                }
+            }
+            "proc" => {
+                let operation = self.expect_symbol()?;
+                self.expect_colon()?;
+                let (arg_types, result_type) = self.parse_signature()?;
+                CoreEffectOp::Process {
+                    operation,
+                    arg_types,
+                    result_type,
+                }
+            }
+            "fail" => {
+                let ty = if self.next_is_rparen() {
+                    None
+                } else {
+                    Some(self.parse_type_inner()?)
+                };
+                CoreEffectOp::Failure { ty }
+            }
+            other => return Err(self.error_here(format!("unsupported effect op `{other}`"))),
+        };
+        self.expect_rparen()?;
+        Ok(op)
+    }
+
+    fn parse_handler_clause_inner(&mut self) -> ParseResult<CoreHandlerClause> {
+        self.expect_lparen()?;
+        let head = self.expect_symbol()?;
+        if head != "clause" {
+            return Err(self.error_here(format!("expected `clause`, got `{head}`")));
+        }
+        let op = self.parse_effect_op_inner()?;
+        let params = self.parse_param_list()?;
+        let resume = self.parse_resume_param()?;
+        self.expect_colon()?;
+        let row = self.parse_row_inner()?;
+        let body = self.parse_expr_inner()?;
+        self.expect_rparen()?;
+        Ok(CoreHandlerClause {
+            op,
+            params,
+            resume,
+            body: Box::new(body),
+            row,
+        })
+    }
+
+    fn parse_trap_reason_inner(&mut self) -> ParseResult<CoreTrapReason> {
+        self.expect_lparen()?;
+        let head = self.expect_symbol()?;
+        let reason = match head.as_str() {
+            "contract-violation" => CoreTrapReason::ContractViolation(self.expect_symbol()?),
+            "unhandled-effect" => CoreTrapReason::UnhandledEffect(self.parse_effect_op_inner()?),
+            "panic" => CoreTrapReason::Panic(self.expect_string()?),
+            "non-exhaustive-match" => CoreTrapReason::NonExhaustiveMatch,
+            other => return Err(self.error_here(format!("unsupported trap reason `{other}`"))),
+        };
+        self.expect_rparen()?;
+        Ok(reason)
+    }
+
+    fn parse_signature(&mut self) -> ParseResult<(Vec<CoreType>, CoreType)> {
+        self.expect_lparen()?;
+        let mut arg_types = Vec::new();
+        while !self.consume_rparen() {
+            arg_types.push(self.parse_type_inner()?);
+        }
+        self.expect_arrow()?;
+        let result_type = self.parse_type_inner()?;
+        Ok((arg_types, result_type))
+    }
+
+    fn parse_atom_list(&mut self) -> ParseResult<Vec<CoreAtom>> {
+        self.expect_lparen()?;
+        let mut args = Vec::new();
+        while !self.consume_rparen() {
+            args.push(self.parse_atom_inner()?);
+        }
+        Ok(args)
+    }
+
+    fn parse_param_list(&mut self) -> ParseResult<Vec<CoreParam>> {
+        self.expect_lparen()?;
+        let mut params = Vec::new();
+        while !self.consume_rparen() {
+            self.expect_lparen()?;
+            let name = self.expect_symbol()?;
+            self.expect_colon()?;
+            let ty = self.parse_type_inner()?;
+            self.expect_rparen()?;
+            params.push(CoreParam { name, ty });
+        }
+        Ok(params)
+    }
+
+    fn parse_resume_param(&mut self) -> ParseResult<CoreParam> {
+        self.expect_lparen()?;
+        let head = self.expect_symbol()?;
+        if head != "resume" {
+            return Err(self.error_here(format!("expected `resume`, got `{head}`")));
+        }
+        let name = self.expect_symbol()?;
+        self.expect_colon()?;
+        let ty = self.parse_type_inner()?;
+        self.expect_rparen()?;
+        Ok(CoreParam { name, ty })
+    }
+
+    fn parse_cont_ref_inner(&mut self) -> ParseResult<CoreContRef> {
+        match self.next_kind()? {
+            TokenKind::Symbol(name) => Ok(CoreContRef::Var(name)),
+            TokenKind::LParen => {
+                let head = self.expect_symbol()?;
+                let cont = match head.as_str() {
+                    "label" => CoreContRef::Label(self.expect_symbol()?),
+                    "var" => CoreContRef::Var(self.expect_symbol()?),
+                    other => {
+                        return Err(
+                            self.error_here(format!("unsupported continuation ref `{other}`"))
+                        );
+                    }
+                };
+                self.expect_rparen()?;
+                Ok(cont)
+            }
+            other => Err(self.error_from_kind(other, "expected continuation reference")),
+        }
     }
 
     fn expect_usize(&mut self) -> ParseResult<usize> {

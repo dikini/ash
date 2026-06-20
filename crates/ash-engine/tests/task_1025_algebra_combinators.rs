@@ -127,7 +127,6 @@ async fn carrier_modules_execute_final_surface_monoid_helpers() {
     // Since Phase 153, lists are represented as Cons/Nil variants
     assert!(
         matches!(list_value, Value::Variant { ref name, .. } if name == "Cons" || name == "Nil"),
-        "list should be Cons/Nil variant, got: {:?}",
-        list_value
+        "list should be Cons/Nil variant, got: {list_value:?}"
     );
 }

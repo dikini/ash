@@ -1,6 +1,6 @@
 # TASK-1617: Write operational semantics for new term forms
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 

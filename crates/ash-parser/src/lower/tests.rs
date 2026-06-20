@@ -804,8 +804,10 @@ fn test_lower_act_with_explicit_target_bypasses_resolution() {
 }
 
 #[test]
-fn test_lower_act_with_symbolic_target_requires_context() {
-    // Symbolic capability calls require resolution context
+fn test_lower_act_with_unmarked_symbolic_target_lowers_as_function_call() {
+    // Phase 158: symbolic act syntax is also used for user-defined functions.
+    // Names that are not known builtins or effectful declarations lower as pure
+    // function calls rather than unresolved capabilities.
     let surface = SurfaceWorkflow::Act {
         action: crate::surface::ActionRef {
             target: crate::surface::OperationalTarget::Symbolic {
@@ -819,9 +821,41 @@ fn test_lower_act_with_symbolic_target_requires_context() {
         span: dummy_span(),
     };
 
-    // Without capability context, should fail to resolve
     let ctx = LoweringContext::new();
-    let result = lower_workflow_body(&surface, &Provenance::new(), &ctx);
+    let core = lower_workflow_body(&surface, &Provenance::new(), &ctx).unwrap();
+    match core {
+        CoreWorkflow::Orient { expr, .. } => match expr {
+            CoreExpr::FnApply { func, args } => {
+                assert!(matches!(*func, CoreExpr::Variable { name, .. } if name == "fs_read"));
+                assert!(args.is_empty());
+            }
+            other => panic!("expected FnApply expression, got {other:?}"),
+        },
+        other => panic!("expected Orient workflow, got {other:?}"),
+    }
+}
+
+#[test]
+fn test_lower_act_with_effectful_symbolic_target_requires_context() {
+    // Known effectful symbolic capability calls still require resolution context.
+    let surface = SurfaceWorkflow::Act {
+        action: crate::surface::ActionRef {
+            target: crate::surface::OperationalTarget::Symbolic {
+                capability_name: "fs_read".into(),
+            },
+            args: vec![],
+        },
+        guard: None,
+        result_name: None,
+        continuation: None,
+        span: dummy_span(),
+    };
+
+    let ctx = LoweringContext::new();
+    let effectful_names = HashSet::from([String::from("fs_read")]);
+    let result = with_active_effectful_names(&effectful_names, || {
+        lower_workflow_body(&surface, &Provenance::new(), &ctx)
+    });
     assert!(
         matches!(result, Err(LoweringError::UnresolvedCapability { name }) if name == "fs_read")
     );
@@ -861,7 +895,11 @@ fn test_lower_act_with_capability_context_resolves_symbolic() {
     cap_context.register(&export);
 
     let ctx = LoweringContext::with_capability_context_for_module(cap_context, ModuleId(0));
-    let core = lower_workflow_body(&surface, &Provenance::new(), &ctx).unwrap();
+    let effectful_names = HashSet::from([String::from("fs_read")]);
+    let core = with_active_effectful_names(&effectful_names, || {
+        lower_workflow_body(&surface, &Provenance::new(), &ctx)
+    })
+    .unwrap();
 
     match core {
         CoreWorkflow::Act {

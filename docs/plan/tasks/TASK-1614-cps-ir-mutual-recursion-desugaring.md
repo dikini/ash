@@ -1,6 +1,6 @@
 # TASK-1614: Support mutual recursion via tuple-of-lambdas in LetRec
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 

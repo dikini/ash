@@ -6,6 +6,7 @@
 #![allow(deprecated, clippy::missing_const_for_fn)]
 
 use ash_parser::module::{ModuleDecl, ModuleSource};
+use ash_parser::parse_surface_file;
 use ash_parser::surface::{
     Definition, FnDef, ImplDef, ImplMethodDef, InterfaceDef, InterfaceMethodSig, ModuleFile,
     WorkflowDef,
@@ -252,7 +253,7 @@ pub fn document_symbols(module: &ModuleFile) -> Vec<DocumentSymbol> {
 }
 
 /// A workspace-wide symbol match.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WorkspaceSymbol {
     /// Symbol name.
     pub name: String,
@@ -274,8 +275,20 @@ pub struct WorkspaceSymbol {
 /// Returns an empty vector if `root` cannot be read or no files match.
 #[must_use]
 pub fn workspace_symbols(root: &Path, query: &str) -> Vec<WorkspaceSymbol> {
-    let _ = (root, query);
-    Vec::new()
+    if query.is_empty() {
+        return Vec::new();
+    }
+
+    let mut out = Vec::new();
+    collect_workspace_symbol_files(root, query, &mut out);
+    out.sort_by(|left, right| {
+        left.file
+            .cmp(&right.file)
+            .then_with(|| left.line.cmp(&right.line))
+            .then_with(|| left.column.cmp(&right.column))
+            .then_with(|| left.name.cmp(&right.name))
+    });
+    out
 }
 
 fn collect_workspace_symbols(
@@ -284,14 +297,63 @@ fn collect_workspace_symbols(
     query: &str,
     out: &mut Vec<WorkspaceSymbol>,
 ) {
-    let _ = (file, module, query, out);
+    let needle = query.to_lowercase();
+    let symbols = document_symbols(module);
+    for symbol in &symbols {
+        collect_symbol_match(file, symbol, &needle, out);
+    }
+}
+
+fn collect_symbol_match(
+    file: &Path,
+    symbol: &DocumentSymbol,
+    needle: &str,
+    out: &mut Vec<WorkspaceSymbol>,
+) {
+    if symbol.name.to_lowercase().contains(needle) {
+        out.push(WorkspaceSymbol {
+            name: symbol.name.clone(),
+            kind: symbol.kind,
+            file: file.to_path_buf(),
+            line: symbol.selection_range.start.line + 1,
+            column: symbol.selection_range.start.character + 1,
+        });
+    }
+
+    if let Some(children) = &symbol.children {
+        for child in children {
+            collect_symbol_match(file, child, needle, out);
+        }
+    }
+}
+
+fn collect_workspace_symbol_files(root: &Path, query: &str, out: &mut Vec<WorkspaceSymbol>) {
+    let entries = match std::fs::read_dir(root) {
+        Ok(entries) => entries,
+        Err(_) => return,
+    };
+    let mut paths = entries
+        .filter_map(Result::ok)
+        .map(|entry| entry.path())
+        .collect::<Vec<_>>();
+    paths.sort();
+
+    for path in paths {
+        if path.is_dir() {
+            collect_workspace_symbol_files(&path, query, out);
+        } else if path.extension().is_some_and(|ext| ext == "ash")
+            && let Ok(source) = std::fs::read_to_string(&path)
+            && let Ok(module) = parse_surface_file(&source)
+        {
+            collect_workspace_symbols(&path, &module, query, out);
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use ash_parser::module::ModuleDecl;
-    use ash_parser::parse_surface_file;
     use ash_parser::parse_utils::CommentTable;
     use ash_parser::surface::{
         CapabilityDef, EffectType, Expr, FnDef, InterfaceDef, InterfaceMethodSig, Literal, Param,
@@ -561,7 +623,7 @@ mod tests {
         write_ash(
             dir.path(),
             "iface.ash",
-            "interface Reader {\n  read(): String\n}\n",
+            "interface Source {\n  read() -> String\n}\n",
         );
 
         let result = workspace_symbols(dir.path(), "read");

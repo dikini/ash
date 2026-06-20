@@ -1,5 +1,7 @@
 //! TASK-1582: Test fn expression parsing in function arguments.
 
+#![allow(clippy::needless_raw_string_hashes, clippy::uninlined_format_args)]
+
 use ash_engine::Engine;
 use std::fs;
 

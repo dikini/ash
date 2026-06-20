@@ -159,8 +159,8 @@ fn test_workspace_symbols_finds_matches() {
     }));
     let text = extract_text(&result);
     assert!(
-        text.contains("Workspace symbols not yet implemented"),
-        "expected placeholder summary, got: {text}"
+        text.contains("1 symbol(s)") && text.contains("helper"),
+        "expected helper workspace symbol, got: {text}"
     );
 }
 
@@ -183,10 +183,10 @@ fn test_workspace_symbols_empty_query_honest() {
     );
 }
 
-// -- ash_find_references (placeholder) --
+// -- ash_find_references --
 
 #[test]
-fn test_find_references_placeholder() {
+fn test_find_references_returns_same_file_locations() {
     let f = write_temp_ash(ash_source());
     let path = f.path().to_str().expect("path");
     let s = server();
@@ -197,8 +197,8 @@ fn test_find_references_placeholder() {
     }));
     let text = extract_text(&result);
     assert!(
-        text.contains("not yet implemented"),
-        "expected placeholder message, got: {text}"
+        text.contains("1 reference(s)"),
+        "expected same-file reference summary, got: {text}"
     );
 }
 

@@ -7,7 +7,7 @@ authority: canonical-adjacent
 status: current
 stability: alpha
 owner: runtime
-last_verified: 2026-06-19
+last_verified: 2026-06-20
 verified_against:
   git_commit: b7d6137f
   specs:
@@ -326,7 +326,7 @@ All tests use TDD: failing tests were written first, then minimal implementation
 - No bytecode compilation or JIT (interpreter-only)
 - No legacy AST lowering
 - No Lean 4 differential testing
-- Single `LetRec` only (no mutual recursion)
+- Single-binding `LetRec` only; Phase 160 supports mutual recursion through the tuple-of-lambdas desugaring pattern, not native multi-binding `LetRec`
 - Row validation is limited to duplicate checking
 - Effect aliases not supported
 - Full contract discharge not implemented

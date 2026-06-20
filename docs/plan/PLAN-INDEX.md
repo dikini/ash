@@ -135,7 +135,7 @@ Update this section as tasks complete:
 | [157](PLAN-157-LIST-MIGRATION-HARDENING.md) | 5 | 4 | ⏸️ Deferred; TASK-1570 (Remove Value::List) remains open |
 | [158](PLAN-158-LANGUAGE-SURFACE-FIXES.md) | 5 | 3 | ⏸️ Deferred; TASK-1580 (Module-level function visibility) remains open |
 || [159](PLAN-159-CPS-IR-INTERPRETER.md) | 14 | 14 | ✅ Complete; all tasks implemented, 82 tests pass, reference docs added, review remediation done (validation boundary, lambda closure capture, handler semantics) |
-|| [160](PLAN-160-CPS-IR-RUNTIME-EXPANSION.md) | 10 | 0 | 📝 Planned; runtime expansion for structured data and speculative testing |
+|| [160](PLAN-160-CPS-IR-RUNTIME-EXPANSION.md) | 10 | 10 | ✅ Complete; CPS IR runtime expansion implemented, focused tests pass, reference docs updated |
 || [161](PLAN-161-CORE-ASH-IR-FOUNDATION.md) | 12 | 0 | 📝 Planned; Core Ash AST, `.core` fixture parser/serializer, validator, and Core-to-CPS lowering |
 |
 |---
@@ -477,7 +477,7 @@ Builds an isolated prototype CPS IR interpreter for the target Ash language with
 
 ## Phase 160: CPS IR Runtime Expansion
 
-**Status:** 📝 Planned; 0/10 implemented — updated to use serde-based serialization (deferring hand-written S-expression parser)
+**Status:** ✅ Complete; 10/10 implemented — uses serde-based serialization (hand-written S-expression parser remains deferred)
 **Plan:** [PLAN-160: CPS IR Runtime Expansion](PLAN-160-CPS-IR-RUNTIME-EXPANSION.md)
 **Spec:** [SPEC-098b: Ash Intermediate Representation — Target State](../spec/SPEC-098b-TARGET-IR.md)
 **Depends on:** Phase 159 (CPS IR Interpreter)
@@ -486,16 +486,16 @@ Extends the Phase 159 CPS IR interpreter with structured data (records, tuples),
 
 | Task | Description | Status |
 |------|-------------|--------|
-| [TASK-1610](tasks/TASK-1610-cps-ir-record-tuple-values.md) | Add Record and Tuple value variants to CPS IR | 📝 Planned |
-| [TASK-1611](tasks/TASK-1611-cps-ir-field-access-primitives.md) | Add RecordGet and TupleGet primitive operations | 📝 Planned |
-| [TASK-1612](tasks/TASK-1612-cps-ir-constructor-tags.md) | Add ConstructorName atom variant for sum types | 📝 Planned |
-| [TASK-1613](tasks/TASK-1613-cps-ir-match-dispatch.md) | Add Match term for pattern dispatch | 📝 Planned |
-| [TASK-1614](tasks/TASK-1614-cps-ir-mutual-recursion-desugaring.md) | Support mutual recursion via tuple-of-lambdas in LetRec | 📝 Planned |
-| [TASK-1615](tasks/TASK-1615-cps-ir-serde-extension.md) | Extend serde-based serialization for new IR forms | 📝 Planned |
-| [TASK-1616](tasks/TASK-1616-cps-ir-speculative-fixtures.md) | Write speculative test fixtures for upper-language patterns | 📝 Planned |
-| [TASK-1617](tasks/TASK-1617-cps-ir-expanded-operational-semantics.md) | Write operational semantics for new term forms (new doc) | 📝 Planned |
-| [TASK-1618](tasks/TASK-1618-cps-ir-reference-docs-update.md) | Add reference documentation for expanded CPS IR | 📝 Planned |
-| [TASK-1619](tasks/TASK-1619-phase-160-closeout.md) | Close out Phase 160 with verification and documentation | 📝 Planned |
+| [TASK-1610](tasks/TASK-1610-cps-ir-record-tuple-values.md) | Add Record and Tuple value variants to CPS IR | ✅ Complete |
+| [TASK-1611](tasks/TASK-1611-cps-ir-field-access-primitives.md) | Add RecordGet and TupleGet primitive operations | ✅ Complete |
+| [TASK-1612](tasks/TASK-1612-cps-ir-constructor-tags.md) | Add ConstructorName atom variant for sum types | ✅ Complete |
+| [TASK-1613](tasks/TASK-1613-cps-ir-match-dispatch.md) | Add Match term for pattern dispatch | ✅ Complete |
+| [TASK-1614](tasks/TASK-1614-cps-ir-mutual-recursion-desugaring.md) | Support mutual recursion via tuple-of-lambdas in LetRec | ✅ Complete |
+| [TASK-1615](tasks/TASK-1615-cps-ir-serde-extension.md) | Extend serde-based serialization for new IR forms | ✅ Complete |
+| [TASK-1616](tasks/TASK-1616-cps-ir-speculative-fixtures.md) | Write speculative test fixtures for upper-language patterns | ✅ Complete |
+| [TASK-1617](tasks/TASK-1617-cps-ir-expanded-operational-semantics.md) | Write operational semantics for new term forms (new doc) | ✅ Complete |
+| [TASK-1618](tasks/TASK-1618-cps-ir-reference-docs-update.md) | Add reference documentation for expanded CPS IR | ✅ Complete |
+| [TASK-1619](tasks/TASK-1619-phase-160-closeout.md) | Close out Phase 160 with verification and documentation | ✅ Complete |
 
 ## Phase 161: Core Ash IR Foundation
 

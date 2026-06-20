@@ -1,6 +1,6 @@
 # TASK-1615: Extend serde-based serialization for new CPS IR forms
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 

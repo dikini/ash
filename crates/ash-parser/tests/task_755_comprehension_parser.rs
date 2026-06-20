@@ -1,7 +1,7 @@
 use ash_parser::input::new_input;
 use ash_parser::lower::{LoweringError, lower_expr};
 use ash_parser::parse_expr::expr;
-use ash_parser::surface::{ComprehensionQualifier, Expr, Literal};
+use ash_parser::surface::{ComprehensionQualifier, Expr};
 
 fn parse_expr(src: &str) -> Expr {
     let mut input = new_input(src);
@@ -170,7 +170,7 @@ fn rejects_malformed_target_annotation() {
 #[test]
 fn preserves_list_literal_and_index_access_parsing() {
     let list = parse_expr("[1, 2, 3]");
-    assert!(matches!(list, Expr::Literal(Literal::List(elements)) if elements.len() == 3));
+    assert!(matches!(list, Expr::List { items, .. } if items.len() == 3));
 
     let index = parse_expr("xs[0]");
     assert!(matches!(index, Expr::IndexAccess { .. }));
@@ -181,7 +181,7 @@ fn malformed_comprehension_attempt_does_not_corrupt_subsequent_parse() {
     assert!(try_parse_expr("[x | ]: List").is_err());
 
     let parsed = parse_expr("[1, 2]");
-    assert!(matches!(parsed, Expr::Literal(Literal::List(elements)) if elements.len() == 2));
+    assert!(matches!(parsed, Expr::List { items, .. } if items.len() == 2));
 }
 
 #[test]

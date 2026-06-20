@@ -1,6 +1,111 @@
 use ash_core::cps::*;
-use ash_core::sexp::{string_to_term, string_to_value, term_to_string, value_to_string};
+use ash_core::sexp::{
+    read_term_from_file, string_to_term, string_to_value, term_to_string, value_to_string,
+    write_term_to_file,
+};
 use ash_interp::cps::eval_checked;
+use std::path::PathBuf;
+
+fn temp_cps_path(name: &str) -> PathBuf {
+    let mut path = std::env::temp_dir();
+    path.push(format!("ash_phase160_{name}.cps"));
+    path
+}
+
+fn trait_dictionary_term() -> Term {
+    let id_lam = Value::Lam {
+        params: vec!["x".to_string()],
+        cont: "k".to_string(),
+        body: Box::new(Term::Jump {
+            cont: ContRef::Var("k".to_string()),
+            arg: Atom::Var("x".to_string()),
+            row: EffectRow::default(),
+        }),
+        captured_env: Env::new(),
+        rec_binding: None,
+        row: EffectRow::default(),
+    };
+
+    Term::LetCont {
+        name: "k".to_string(),
+        param: "v".to_string(),
+        cont_body: Box::new(Term::Return {
+            value: Atom::Var("v".to_string()),
+        }),
+        body: Box::new(Term::LetVal {
+            name: "dict".to_string(),
+            value: Value::Record {
+                fields: vec![("id".to_string(), id_lam)],
+            },
+            body: Box::new(Term::LetPrim {
+                name: "id_fn".to_string(),
+                op: PrimOp::RecordGet("id".to_string()),
+                args: vec![Atom::Var("dict".to_string())],
+                body: Box::new(Term::Call {
+                    func: Atom::Var("id_fn".to_string()),
+                    args: vec![Atom::Int(42)],
+                    cont: ContRef::Label("k".to_string()),
+                    row: EffectRow::default(),
+                }),
+            }),
+        }),
+    }
+}
+
+fn record_fixture_term() -> Term {
+    Term::LetVal {
+        name: "r".to_string(),
+        value: Value::Record {
+            fields: vec![
+                ("x".to_string(), Value::Atom(Atom::Int(1))),
+                ("y".to_string(), Value::Atom(Atom::Int(2))),
+            ],
+        },
+        body: Box::new(Term::LetPrim {
+            name: "x_val".to_string(),
+            op: PrimOp::RecordGet("x".to_string()),
+            args: vec![Atom::Var("r".to_string())],
+            body: Box::new(Term::Return {
+                value: Atom::Var("x_val".to_string()),
+            }),
+        }),
+    }
+}
+
+fn sum_match_fixture_term() -> Term {
+    Term::LetVal {
+        name: "shape".to_string(),
+        value: Value::Tuple {
+            elems: vec![
+                Value::Atom(Atom::ConstructorName("Circle".to_string())),
+                Value::Atom(Atom::Int(5)),
+            ],
+        },
+        body: Box::new(Term::Match {
+            scrutinee: Atom::Var("shape".to_string()),
+            arms: vec![
+                (
+                    "Circle".to_string(),
+                    Box::new(Term::LetPrim {
+                        name: "radius".to_string(),
+                        op: PrimOp::TupleGet(1),
+                        args: vec![Atom::Var("shape".to_string())],
+                        body: Box::new(Term::Return {
+                            value: Atom::Var("radius".to_string()),
+                        }),
+                    }),
+                ),
+                (
+                    "Rect".to_string(),
+                    Box::new(Term::Return {
+                        value: Atom::Int(0),
+                    }),
+                ),
+            ],
+            default: None,
+        }),
+    }
+}
 
 // ---------------------------------------------------------------------------
 // TASK-1610: Value::Record and Value::Tuple
@@ -250,6 +355,45 @@ fn test_eval_match_default() {
 
     let result = eval_checked(&term, &Env::new(), &HandlerChain::new()).unwrap();
     assert_eq!(result, Atom::Int(-1));
+}
+
+#[test]
+fn test_eval_match_3way() {
+    let tuple = Value::Tuple {
+        elems: vec![Value::Atom(Atom::ConstructorName("B".to_string()))],
+    };
+
+    let term = Term::LetVal {
+        name: "t".to_string(),
+        value: tuple,
+        body: Box::new(Term::Match {
+            scrutinee: Atom::Var("t".to_string()),
+            arms: vec![
+                (
+                    "A".to_string(),
+                    Box::new(Term::Return {
+                        value: Atom::Int(1),
+                    }),
+                ),
+                (
+                    "B".to_string(),
+                    Box::new(Term::Return {
+                        value: Atom::Int(2),
+                    }),
+                ),
+                (
+                    "C".to_string(),
+                    Box::new(Term::Return {
+                        value: Atom::Int(3),
+                    }),
+                ),
+            ],
+            default: None,
+        }),
+    };
+
+    let result = eval_checked(&term, &Env::new(), &HandlerChain::new()).unwrap();
+    assert_eq!(result, Atom::Int(2));
 }
 
 // ---------------------------------------------------------------------------
@@ -506,5 +650,31 @@ fn test_serde_backward_compatibility_no_rec_binding() {
             rec_binding: None, ..
         } => {}
         other => panic!("Expected rec_binding: None, got {:?}", other),
+    }
+}
+
+#[test]
+fn test_trait_dictionary_passing_fixture() {
+    let result = eval_checked(&trait_dictionary_term(), &Env::new(), &HandlerChain::new()).unwrap();
+    assert_eq!(result, Atom::Int(42));
+}
+
+#[test]
+fn test_phase160_fixture_terms_roundtrip_through_cps_files() {
+    let fixtures = [
+        ("record", record_fixture_term(), Atom::Int(1)),
+        ("sum_match", sum_match_fixture_term(), Atom::Int(5)),
+        ("trait_dictionary", trait_dictionary_term(), Atom::Int(42)),
+    ];
+
+    for (name, term, expected) in fixtures {
+        let path = temp_cps_path(name);
+        write_term_to_file(&term, &path).unwrap();
+        let parsed = read_term_from_file(&path).unwrap();
+        std::fs::remove_file(&path).unwrap();
+
+        assert_eq!(parsed, term);
+        let result = eval_checked(&parsed, &Env::new(), &HandlerChain::new()).unwrap();
+        assert_eq!(result, expected);
     }
 }

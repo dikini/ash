@@ -1514,7 +1514,20 @@ pub(crate) fn public_callable_signature_resolution_errors(
     known_types.extend(type_defs.iter().map(|type_def| type_def.name.clone()));
     known_types.extend(import_info.known);
     known_types.extend(import_info.private);
+    if let Ok(module) = parse_module_file_for_type_metadata(path, source) {
+        known_types.extend(local_public_interface_names(&module));
+    }
+    if let Ok(imported_interfaces) = directly_visible_imported_interface_names(path, source) {
+        known_types.extend(imported_interfaces);
+    }
     if let Ok(metadata) = collect_module_type_metadata_from_module_file(path, source) {
+        known_types.extend(
+            metadata
+                .summary
+                .interface_identities
+                .iter()
+                .map(|identity| identity.name.clone()),
+        );
         let pub_use_exports =
             collect_public_import_visibility_exports(path, source, &metadata, &mut HashSet::new());
         known_types.extend(pub_use_exports.type_names);
@@ -1629,7 +1642,20 @@ pub(crate) fn public_representation_visibility_errors(
     known_types.extend(type_defs.iter().map(|type_def| type_def.name.clone()));
     known_types.extend(import_info.known);
     known_types.extend(import_info.private);
+    if let Ok(module) = parse_module_file_for_type_metadata(path, source) {
+        known_types.extend(local_public_interface_names(&module));
+    }
+    if let Ok(imported_interfaces) = directly_visible_imported_interface_names(path, source) {
+        known_types.extend(imported_interfaces);
+    }
     if let Ok(metadata) = collect_module_type_metadata_from_module_file(path, source) {
+        known_types.extend(
+            metadata
+                .summary
+                .interface_identities
+                .iter()
+                .map(|identity| identity.name.clone()),
+        );
         let pub_use_exports =
             collect_public_import_visibility_exports(path, source, &metadata, &mut HashSet::new());
         known_types.extend(pub_use_exports.type_names);

@@ -6,7 +6,7 @@
 //! The tests use the Ash engine to parse, typecheck, and execute Ash code
 //! that verifies these laws with concrete examples.
 
-use std::path::PathBuf;
+#![allow(clippy::needless_raw_string_hashes)]
 
 /// Build an engine with the stdlib available.
 fn build_engine() -> ash_engine::Engine {

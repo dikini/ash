@@ -9,7 +9,7 @@ canonical_page_path: reference/language/cps-operational-semantics.md
 status: current
 stability: alpha
 owner: language
-last_verified: 2026-06-19
+last_verified: 2026-06-20
 verified_against:
   git_commit: b7d6137f
 refresh_trigger:
@@ -26,7 +26,7 @@ operational-semantics, big-step, small-step, eval, judgment, rule, letval, letpr
 
 - Only **big-step semantics** is implemented. Do not claim small-step semantics exists.
 - Do not claim legacy AST lowering, Lean differential testing, bytecode, or JIT.
-- Do not claim mutual recursion. Only single `LetRec` works.
+- Do not claim native multi-binding `LetRec`. Phase 160 documents tuple-of-lambdas mutual recursion over single-binding `LetRec`.
 - Do not claim full row polymorphism. Only duplicate validation exists.
 - Effect aliases are not implemented.
 - Full contract discharge is not implemented.
@@ -36,8 +36,8 @@ operational-semantics, big-step, small-step, eval, judgment, rule, letval, letpr
 - **Location**: `docs/spec/SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md` (canonical spec)
 - **Reference**: `reference/language/cps-operational-semantics.md` (this page's canonical)
 - **Implementation**: `crates/ash-interp/src/cps.rs`
-- **Test files**: `crates/ash-interp/tests/task_1591_cps_ir.rs` through `task_1596_cps_ir.rs`
-- **Plan**: `docs/plan/PLAN-159-CPS-IR-INTERPRETER.md`
+- **Test files**: `crates/ash-interp/tests/task_1591_cps_ir.rs` through `task_1596_cps_ir.rs`, plus `task_1616*_cps_ir_*.rs`
+- **Plan**: `docs/plan/PLAN-159-CPS-IR-INTERPRETER.md`, `docs/plan/PLAN-160-CPS-IR-RUNTIME-EXPANSION.md`
 
 ## When to use this card
 

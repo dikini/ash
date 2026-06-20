@@ -61,7 +61,7 @@ pub fn list_tail(value: &Value) -> Option<&Value> {
     }
 }
 
-/// Convert a Vec<Value> to a list (nested Cons/Nil)
+/// Convert a `Vec<Value>` to a list (nested Cons/Nil)
 pub fn vec_to_list(values: Vec<Value>) -> Value {
     let mut result = nil();
     for value in values.into_iter().rev() {
@@ -70,7 +70,7 @@ pub fn vec_to_list(values: Vec<Value>) -> Value {
     result
 }
 
-/// Convert a list (nested Cons/Nil) to a Vec<Value>
+/// Convert a list (nested Cons/Nil) to a `Vec<Value>`
 pub fn list_to_vec(value: &Value) -> Option<Vec<Value>> {
     let mut result = Vec::new();
     let mut current = value;

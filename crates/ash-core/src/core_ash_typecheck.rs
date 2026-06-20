@@ -346,9 +346,62 @@ pub enum CoreTypeCheckError {
     #[error("unknown refinement predicate `{predicate}`")]
     UnknownRefinementPredicate { predicate: String },
 
+    /// A row alias or group reference could not be normalized structurally.
+    #[error("ambiguous row reference: {detail}")]
+    AmbiguousRowReference { detail: String },
+
     /// The checker has not implemented this Core form yet.
     #[error("unsupported Core type-check form: {detail}")]
     UnsupportedCoreForm { detail: String },
+}
+
+/// A structural row-variable solution discovered during row comparison.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CoreRowSolution {
+    variable: CoreName,
+    row: CoreRow,
+}
+
+impl CoreRowSolution {
+    /// Returns the row variable that was solved.
+    #[must_use]
+    pub fn variable(&self) -> &str {
+        &self.variable
+    }
+
+    /// Returns the structural row assigned to the variable.
+    #[must_use]
+    pub fn row(&self) -> &CoreRow {
+        &self.row
+    }
+}
+
+/// Result of a Core row inclusion comparison.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct CoreRowComparison {
+    included: bool,
+    missing_items: Vec<CoreRowItem>,
+    solutions: Vec<CoreRowSolution>,
+}
+
+impl CoreRowComparison {
+    /// Returns true when the left row is included in the right row.
+    #[must_use]
+    pub fn is_included(&self) -> bool {
+        self.included
+    }
+
+    /// Returns normalized left-row requirements that were not present in the right row.
+    #[must_use]
+    pub fn missing_items(&self) -> &[CoreRowItem] {
+        &self.missing_items
+    }
+
+    /// Returns structural row-variable solutions produced by the comparison.
+    #[must_use]
+    pub fn solutions(&self) -> &[CoreRowSolution] {
+        &self.solutions
+    }
 }
 
 /// Type-checks a validated Core program.
@@ -469,6 +522,95 @@ pub fn core_types_equivalent(
     Ok(types_equivalent_unchecked(lhs, rhs, env))
 }
 
+/// Normalizes a Core requirement row.
+///
+/// Exact duplicate items are removed, item-kind namespaces are preserved by the
+/// `CoreRowItem` variant identity, and an open-row tail is kept unchanged.
+///
+/// # Errors
+///
+/// Returns [`CoreTypeCheckError::AmbiguousRowReference`] when an effect group
+/// reference appears before alias/group expansion has happened.
+pub fn normalize_core_row(row: &CoreRow) -> Result<CoreRow, CoreTypeCheckError> {
+    let mut seen = HashSet::new();
+    let mut items = Vec::with_capacity(row.items.len());
+
+    for item in &row.items {
+        reject_ambiguous_row_item(item)?;
+        if seen.insert(item.clone()) {
+            items.push(item.clone());
+        }
+    }
+
+    Ok(CoreRow {
+        items,
+        tail: row.tail.clone(),
+    })
+}
+
+/// Checks structural inclusion of two Core requirement rows.
+///
+/// `actual <= expected` means every normalized requirement in `actual` appears
+/// in `expected`, possibly by solving one explicit open-row tail to the
+/// structural remainder demanded by the comparison.
+///
+/// # Errors
+///
+/// Returns [`CoreTypeCheckError::AmbiguousRowReference`] when either row still
+/// contains an unexpanded effect group reference.
+pub fn core_row_included_in(
+    actual: &CoreRow,
+    expected: &CoreRow,
+) -> Result<CoreRowComparison, CoreTypeCheckError> {
+    let actual = normalize_core_row(actual)?;
+    let expected = normalize_core_row(expected)?;
+    let missing_items = row_difference(&actual.items, &expected.items);
+
+    match (&actual.tail, &expected.tail) {
+        (None, None) => Ok(CoreRowComparison {
+            included: missing_items.is_empty(),
+            missing_items,
+            solutions: Vec::new(),
+        }),
+        (None, Some(expected_tail)) => {
+            let remainder = row_difference(&actual.items, &expected.items);
+            Ok(CoreRowComparison {
+                included: true,
+                missing_items: Vec::new(),
+                solutions: vec![CoreRowSolution {
+                    variable: expected_tail.clone(),
+                    row: CoreRow::closed(remainder),
+                }],
+            })
+        }
+        (Some(actual_tail), None) => {
+            if !missing_items.is_empty() {
+                return Ok(CoreRowComparison {
+                    included: false,
+                    missing_items,
+                    solutions: Vec::new(),
+                });
+            }
+
+            let solution_row = CoreRow::closed(row_difference(&expected.items, &actual.items));
+
+            Ok(CoreRowComparison {
+                included: true,
+                missing_items: Vec::new(),
+                solutions: vec![CoreRowSolution {
+                    variable: actual_tail.clone(),
+                    row: solution_row,
+                }],
+            })
+        }
+        (Some(actual_tail), Some(expected_tail)) => Ok(CoreRowComparison {
+            included: actual_tail == expected_tail && missing_items.is_empty(),
+            missing_items,
+            solutions: Vec::new(),
+        }),
+    }
+}
+
 fn check_types_well_formed(
     types: &[CoreType],
     env: &CoreTypeCheckEnv,
@@ -509,6 +651,7 @@ fn check_core_row_well_formed(
         }
     }
 
+    normalize_core_row(row)?;
     Ok(())
 }
 
@@ -535,7 +678,7 @@ fn types_equivalent_unchecked(lhs: &CoreType, rhs: &CoreType, env: &CoreTypeChec
         ) => {
             type_slices_equivalent_unchecked(left_params, right_params, env)
                 && types_equivalent_unchecked(left_result, right_result, env)
-                && left_row == right_row
+                && rows_equivalent_unchecked(left_row, right_row)
         }
         (
             CoreType::Refinement {
@@ -567,7 +710,7 @@ fn types_equivalent_unchecked(lhs: &CoreType, rhs: &CoreType, env: &CoreTypeChec
             left_multiplicity == right_multiplicity
                 && types_equivalent_unchecked(left_input, right_input, env)
                 && types_equivalent_unchecked(left_answer, right_answer, env)
-                && left_row == right_row
+                && rows_equivalent_unchecked(left_row, right_row)
         }
         (CoreType::Tuple(left), CoreType::Tuple(right)) => {
             type_slices_equivalent_unchecked(left, right, env)
@@ -617,6 +760,32 @@ fn record_fields_equivalent_unchecked(
             .find(|(right_name, _)| right_name == left_name)
             .is_some_and(|(_, right_ty)| types_equivalent_unchecked(left_ty, right_ty, env))
     })
+}
+
+fn rows_equivalent_unchecked(lhs: &CoreRow, rhs: &CoreRow) -> bool {
+    match (normalize_core_row(lhs), normalize_core_row(rhs)) {
+        (Ok(left), Ok(right)) => left == right,
+        _ => false,
+    }
+}
+
+fn row_difference(left: &[CoreRowItem], right: &[CoreRowItem]) -> Vec<CoreRowItem> {
+    left.iter()
+        .filter(|item| !right.contains(item))
+        .cloned()
+        .collect()
+}
+
+fn reject_ambiguous_row_item(item: &CoreRowItem) -> Result<(), CoreTypeCheckError> {
+    if let CoreRowItem::EffectGroupRef { path } = item {
+        return Err(CoreTypeCheckError::AmbiguousRowReference {
+            detail: format!(
+                "effect group {} must be expanded before row comparison",
+                path.join(".")
+            ),
+        });
+    }
+    Ok(())
 }
 
 fn type_check_expr(

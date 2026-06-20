@@ -93,7 +93,7 @@ The checker must preserve the row-accounting distinctions already established by
 |------|-------------|-----------:|--------------|--------|
 | [TASK-1640](tasks/TASK-1640-core-typecheck-api-and-environments.md) | Add Core type-checker API, environments, typed program wrappers, and diagnostics | 3 | Phase 161 | Complete |
 | [TASK-1641](tasks/TASK-1641-core-type-wellformedness.md) | Check Core type well-formedness and nominal/type-app shape | 3 | TASK-1640 | Complete |
-| [TASK-1642](tasks/TASK-1642-core-row-normalization-solving.md) | Normalize rows, remove duplicates, compare rows, and solve explicit row variables | 4 | TASK-1640 | Planned |
+| [TASK-1642](tasks/TASK-1642-core-row-normalization-solving.md) | Normalize rows, remove duplicates, compare rows, and solve explicit row variables | 4 | TASK-1640 | Complete |
 | [TASK-1643](tasks/TASK-1643-core-atom-value-typing.md) | Type Core atoms and values, including lambdas, records, tuples, and discharge markers | 4 | TASK-1641, TASK-1642 | Planned |
 | [TASK-1644](tasks/TASK-1644-core-expression-basics-typecheck.md) | Type Atom, LetVal, LetRec, LetPrim, If, and Trap expressions | 4 | TASK-1643 | Planned |
 | [TASK-1645](tasks/TASK-1645-core-call-jump-row-accounting.md) | Type LetCall, Call, and Jump with SPEC-098b row-accounting facts | 4 | TASK-1644 | Planned |

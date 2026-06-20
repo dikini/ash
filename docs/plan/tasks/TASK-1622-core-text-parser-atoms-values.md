@@ -1,6 +1,6 @@
 # TASK-1622: Parse Core atoms, rows, types, and values
 
-**Status:** Planned
+**Status:** Complete
 **Phase:** [PLAN-161](../PLAN-161-CORE-ASH-IR-FOUNDATION.md)
 **Owner:** Phase 161
 
@@ -69,3 +69,9 @@ cargo fmt --check
 ```
 
 Expected: focused parser tests pass.
+
+## Completion Evidence
+
+- Added `crates/ash-core/src/core_ash_text.rs` with typed `CoreTextError` and parser APIs for atoms, types, rows, row items, values, and contract discharge markers.
+- Exported `ash_core::core_ash_text` from `crates/ash-core/src/lib.rs`.
+- Added `crates/ash-core/tests/task_1622_core_text_parser_atoms_values.rs` covering literals, variables, function/continuation types, capability/failure rows, lambda/tuple/record/discharge-marker values, and unsupported row item rejection.

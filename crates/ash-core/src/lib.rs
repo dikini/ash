@@ -9,6 +9,7 @@ pub mod ast;
 pub mod capabilities;
 pub mod capability;
 pub mod core_ash;
+pub mod core_ash_text;
 pub mod cps;
 pub mod effect;
 pub mod env_frame;

@@ -1,0 +1,691 @@
+//! Parser for the Core Ash `.core` fixture/debug text format.
+//!
+//! This module intentionally starts small. TASK-1622 covers atoms, types,
+//! rows, row items, and values; full expression parsing is owned by TASK-1623.
+
+use crate::core_ash::{
+    CoreAtom, CoreContractDischarge, CoreDischargeMode, CoreExpr, CoreMultiplicity, CoreParam,
+    CorePrimOp, CoreRow, CoreRowItem, CoreSourceSpan, CoreType, CoreValue,
+};
+use std::fmt;
+
+/// Error returned by the Core text parser.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CoreTextError {
+    message: String,
+    position: usize,
+}
+
+impl CoreTextError {
+    fn new(position: usize, message: impl Into<String>) -> Self {
+        Self {
+            message: message.into(),
+            position,
+        }
+    }
+
+    /// Byte position where parsing failed.
+    #[must_use]
+    pub fn position(&self) -> usize {
+        self.position
+    }
+
+    /// Human-readable parser message.
+    #[must_use]
+    pub fn message(&self) -> &str {
+        &self.message
+    }
+}
+
+impl fmt::Display for CoreTextError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "core text parse error at {}: {}",
+            self.position, self.message
+        )
+    }
+}
+
+impl std::error::Error for CoreTextError {}
+
+type ParseResult<T> = Result<T, CoreTextError>;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum TokenKind {
+    LParen,
+    RParen,
+    LBrace,
+    RBrace,
+    Colon,
+    Comma,
+    Arrow,
+    Symbol(String),
+    String(String),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct Token {
+    kind: TokenKind,
+    position: usize,
+}
+
+/// Parses a Core atom.
+///
+/// # Errors
+///
+/// Returns [`CoreTextError`] when the source is not a single valid atom.
+pub fn parse_atom(source: &str) -> ParseResult<CoreAtom> {
+    Parser::new(source)?.parse_complete(Parser::parse_atom_inner)
+}
+
+/// Parses a Core type.
+///
+/// # Errors
+///
+/// Returns [`CoreTextError`] when the source is not a single valid type.
+pub fn parse_type(source: &str) -> ParseResult<CoreType> {
+    Parser::new(source)?.parse_complete(Parser::parse_type_inner)
+}
+
+/// Parses a Core row.
+///
+/// # Errors
+///
+/// Returns [`CoreTextError`] when the source is not a single valid row.
+pub fn parse_row(source: &str) -> ParseResult<CoreRow> {
+    Parser::new(source)?.parse_complete(Parser::parse_row_inner)
+}
+
+/// Parses a Core row item without surrounding braces.
+///
+/// # Errors
+///
+/// Returns [`CoreTextError`] when the source is not a single valid row item.
+pub fn parse_row_item(source: &str) -> ParseResult<CoreRowItem> {
+    Parser::new(source)?.parse_complete(Parser::parse_row_item_inner)
+}
+
+/// Parses a Core value.
+///
+/// # Errors
+///
+/// Returns [`CoreTextError`] when the source is not a single valid value.
+pub fn parse_value(source: &str) -> ParseResult<CoreValue> {
+    Parser::new(source)?.parse_complete(Parser::parse_value_inner)
+}
+
+struct Parser {
+    tokens: Vec<Token>,
+    pos: usize,
+}
+
+impl Parser {
+    fn new(source: &str) -> ParseResult<Self> {
+        Ok(Self {
+            tokens: lex(source)?,
+            pos: 0,
+        })
+    }
+
+    fn parse_complete<T>(
+        mut self,
+        parse: impl FnOnce(&mut Self) -> ParseResult<T>,
+    ) -> ParseResult<T> {
+        let value = parse(&mut self)?;
+        if self.is_eof() {
+            Ok(value)
+        } else {
+            Err(self.error_here("unexpected trailing tokens"))
+        }
+    }
+
+    fn parse_atom_inner(&mut self) -> ParseResult<CoreAtom> {
+        match self.next_kind()? {
+            TokenKind::Symbol(symbol) => Ok(symbol_to_atom(symbol)),
+            TokenKind::LParen => {
+                let head = self.expect_symbol()?;
+                let atom = match head.as_str() {
+                    "lit-int" => {
+                        let raw = self.expect_symbol()?;
+                        let value = raw.parse::<i64>().map_err(|_| {
+                            self.error_here(format!("invalid integer literal `{raw}`"))
+                        })?;
+                        CoreAtom::LitInt(value)
+                    }
+                    "lit-string" => CoreAtom::LitString(self.expect_string()?),
+                    "lit-bool" => match self.expect_symbol()?.as_str() {
+                        "true" => CoreAtom::LitBool(true),
+                        "false" => CoreAtom::LitBool(false),
+                        other => {
+                            return Err(
+                                self.error_here(format!("invalid boolean literal `{other}`"))
+                            );
+                        }
+                    },
+                    "lit-unit" => CoreAtom::LitUnit,
+                    "prim" => CoreAtom::PrimName(parse_prim_op(&self.expect_symbol()?)),
+                    "constructor" => CoreAtom::ConstructorName(self.expect_symbol()?),
+                    other => {
+                        return Err(self.error_here(format!("unsupported atom form `{other}`")));
+                    }
+                };
+                self.expect_rparen()?;
+                Ok(atom)
+            }
+            other => Err(self.error_from_kind(other, "expected atom")),
+        }
+    }
+
+    fn parse_type_inner(&mut self) -> ParseResult<CoreType> {
+        match self.next_kind()? {
+            TokenKind::Symbol(symbol) => Ok(symbol_to_type(symbol)),
+            TokenKind::LParen => {
+                let head = self.expect_symbol()?;
+                let ty = match head.as_str() {
+                    "fn" => self.parse_function_type()?,
+                    "cont" => self.parse_cont_type()?,
+                    "tuple" => {
+                        let mut elems = Vec::new();
+                        while !self.consume_rparen() {
+                            elems.push(self.parse_type_inner()?);
+                        }
+                        return Ok(CoreType::Tuple(elems));
+                    }
+                    other => {
+                        return Err(self.error_here(format!("unsupported type form `{other}`")));
+                    }
+                };
+                self.expect_rparen()?;
+                Ok(ty)
+            }
+            other => Err(self.error_from_kind(other, "expected type")),
+        }
+    }
+
+    fn parse_function_type(&mut self) -> ParseResult<CoreType> {
+        self.expect_lparen()?;
+        let mut params = Vec::new();
+        while !self.consume_rparen() {
+            params.push(self.parse_type_inner()?);
+        }
+        self.expect_arrow()?;
+        let result = self.parse_type_inner()?;
+        let row = self.parse_row_inner()?;
+        Ok(CoreType::Function {
+            params,
+            result: Box::new(result),
+            row,
+        })
+    }
+
+    fn parse_cont_type(&mut self) -> ParseResult<CoreType> {
+        let input = self.parse_type_inner()?;
+        let answer = self.parse_type_inner()?;
+        let row = self.parse_row_inner()?;
+        let multiplicity = match self.expect_symbol()?.as_str() {
+            "affine" | "Affine" => CoreMultiplicity::Affine,
+            "multi-shot-pure" | "MultiShotPure" => CoreMultiplicity::MultiShotPure,
+            other => return Err(self.error_here(format!("unsupported multiplicity `{other}`"))),
+        };
+        Ok(CoreType::Cont {
+            input: Box::new(input),
+            answer: Box::new(answer),
+            row,
+            multiplicity,
+        })
+    }
+
+    fn parse_row_inner(&mut self) -> ParseResult<CoreRow> {
+        self.expect_lbrace()?;
+        let mut items = Vec::new();
+        if self.consume_rbrace() {
+            return Ok(CoreRow::default());
+        }
+        loop {
+            items.push(self.parse_row_item_inner()?);
+            if self.consume_comma() {
+                continue;
+            }
+            if self.consume_rbrace() {
+                break;
+            }
+            return Err(self.error_here("expected `,` or `}` after row item"));
+        }
+        Ok(CoreRow::closed(items))
+    }
+
+    fn parse_row_item_inner(&mut self) -> ParseResult<CoreRowItem> {
+        let head = self.expect_symbol()?;
+        match head.as_str() {
+            "cap" => {
+                let (path, operation) = split_path_operation(&self.expect_symbol()?)?;
+                Ok(CoreRowItem::Capability { path, operation })
+            }
+            "resource" => Ok(CoreRowItem::Resource {
+                path: split_path(&self.expect_symbol()?),
+                mode: self.expect_symbol()?,
+            }),
+            "role" => Ok(CoreRowItem::Role {
+                path: split_path(&self.expect_symbol()?),
+            }),
+            "policy" => Ok(CoreRowItem::Policy {
+                path: split_path(&self.expect_symbol()?),
+            }),
+            "contract" => Ok(CoreRowItem::Contract {
+                contract: self.expect_symbol()?,
+            }),
+            "channel" => Ok(CoreRowItem::Channel {
+                path: split_path(&self.expect_symbol()?),
+                mode: self.expect_symbol()?,
+                payload_type: Box::new(self.parse_type_inner()?),
+            }),
+            "proc" => Ok(CoreRowItem::Process {
+                operation: self.expect_symbol()?,
+            }),
+            "fail" => {
+                let ty = if self.row_item_boundary() {
+                    None
+                } else {
+                    Some(Box::new(self.parse_type_inner()?))
+                };
+                Ok(CoreRowItem::Failure { ty })
+            }
+            "evidence" => Ok(CoreRowItem::Evidence {
+                path: split_path(&self.expect_symbol()?),
+            }),
+            "group" => Ok(CoreRowItem::EffectGroupRef {
+                path: split_path(&self.expect_symbol()?),
+            }),
+            _ => Err(self.error_here(format!("unsupported row item `{head}`"))),
+        }
+    }
+
+    fn parse_value_inner(&mut self) -> ParseResult<CoreValue> {
+        if self.peek_symbol().is_some() {
+            return Ok(CoreValue::Atom(self.parse_atom_inner()?));
+        }
+        if !self.next_is_lparen() {
+            return Err(self.error_here("expected value"));
+        }
+        let checkpoint = self.pos;
+        self.expect_lparen()?;
+        let head = self.expect_symbol()?;
+        let value = match head.as_str() {
+            "lam" => self.parse_lam_value()?,
+            "record" => self.parse_record_value()?,
+            "tuple" => self.parse_tuple_value()?,
+            "discharge-marker" => CoreValue::DischargeMarker {
+                discharge: self.parse_contract_discharge_inner()?,
+            },
+            "lit-int" | "lit-string" | "lit-bool" | "lit-unit" | "prim" | "constructor" => {
+                self.pos = checkpoint;
+                return Ok(CoreValue::Atom(self.parse_atom_inner()?));
+            }
+            other => return Err(self.error_here(format!("unsupported value form `{other}`"))),
+        };
+        self.expect_rparen()?;
+        Ok(value)
+    }
+
+    fn parse_lam_value(&mut self) -> ParseResult<CoreValue> {
+        self.expect_lparen()?;
+        let mut params = Vec::new();
+        while !self.consume_rparen() {
+            self.expect_lparen()?;
+            let name = self.expect_symbol()?;
+            self.expect_colon()?;
+            let ty = self.parse_type_inner()?;
+            self.expect_rparen()?;
+            params.push(CoreParam { name, ty });
+        }
+        self.expect_colon()?;
+        let row = self.parse_row_inner()?;
+        let body = CoreExpr::Atom(self.parse_atom_inner()?);
+        Ok(CoreValue::Lam {
+            params,
+            body: Box::new(body),
+            row,
+        })
+    }
+
+    fn parse_record_value(&mut self) -> ParseResult<CoreValue> {
+        let mut fields = Vec::new();
+        while !self.next_is_rparen() {
+            self.expect_lparen()?;
+            let name = self.expect_symbol()?;
+            let value = self.parse_atom_inner()?;
+            self.expect_rparen()?;
+            fields.push((name, value));
+        }
+        Ok(CoreValue::Record { fields })
+    }
+
+    fn parse_tuple_value(&mut self) -> ParseResult<CoreValue> {
+        let mut elems = Vec::new();
+        while !self.next_is_rparen() {
+            elems.push(self.parse_atom_inner()?);
+        }
+        Ok(CoreValue::Tuple { elems })
+    }
+
+    fn parse_contract_discharge_inner(&mut self) -> ParseResult<CoreContractDischarge> {
+        self.expect_lparen()?;
+        let head = self.expect_symbol()?;
+        if head != "contract" {
+            return Err(self.error_here(format!("expected `contract`, got `{head}`")));
+        }
+        let contract = self.expect_symbol()?;
+        let mode = match self.expect_symbol()?.as_str() {
+            "static" => CoreDischargeMode::Static,
+            "evidence" => CoreDischargeMode::Evidence,
+            "dynamic" => CoreDischargeMode::Dynamic,
+            other => return Err(self.error_here(format!("unsupported discharge mode `{other}`"))),
+        };
+        let mut source_span = None;
+        if self.peek_symbol().is_some_and(|symbol| symbol == "span") {
+            let _ = self.expect_symbol()?;
+            source_span = Some(CoreSourceSpan {
+                file: None,
+                start: self.expect_usize()?,
+                end: self.expect_usize()?,
+            });
+        }
+        self.expect_rparen()?;
+        Ok(CoreContractDischarge {
+            contract,
+            mode,
+            evidence: None,
+            source_span,
+        })
+    }
+
+    fn expect_usize(&mut self) -> ParseResult<usize> {
+        let raw = self.expect_symbol()?;
+        raw.parse::<usize>()
+            .map_err(|_| self.error_here(format!("invalid usize literal `{raw}`")))
+    }
+
+    fn row_item_boundary(&self) -> bool {
+        self.is_eof()
+            || matches!(
+                self.peek_kind(),
+                Some(TokenKind::Comma | TokenKind::RBrace | TokenKind::RParen)
+            )
+    }
+
+    fn peek_kind(&self) -> Option<&TokenKind> {
+        self.tokens.get(self.pos).map(|token| &token.kind)
+    }
+
+    fn peek_symbol(&self) -> Option<&str> {
+        match self.peek_kind() {
+            Some(TokenKind::Symbol(symbol)) => Some(symbol),
+            _ => None,
+        }
+    }
+
+    fn next_kind(&mut self) -> ParseResult<TokenKind> {
+        let token = self
+            .tokens
+            .get(self.pos)
+            .ok_or_else(|| self.error_here("unexpected end of input"))?
+            .clone();
+        self.pos += 1;
+        Ok(token.kind)
+    }
+
+    fn expect_symbol(&mut self) -> ParseResult<String> {
+        match self.next_kind()? {
+            TokenKind::Symbol(symbol) => Ok(symbol),
+            other => Err(self.error_from_kind(other, "expected symbol")),
+        }
+    }
+
+    fn expect_string(&mut self) -> ParseResult<String> {
+        match self.next_kind()? {
+            TokenKind::String(value) => Ok(value),
+            other => Err(self.error_from_kind(other, "expected string literal")),
+        }
+    }
+
+    fn expect_lparen(&mut self) -> ParseResult<()> {
+        match self.next_kind()? {
+            TokenKind::LParen => Ok(()),
+            other => Err(self.error_from_kind(other, "expected `(`")),
+        }
+    }
+
+    fn expect_rparen(&mut self) -> ParseResult<()> {
+        match self.next_kind()? {
+            TokenKind::RParen => Ok(()),
+            other => Err(self.error_from_kind(other, "expected `)`")),
+        }
+    }
+
+    fn expect_lbrace(&mut self) -> ParseResult<()> {
+        match self.next_kind()? {
+            TokenKind::LBrace => Ok(()),
+            other => Err(self.error_from_kind(other, "expected `{`")),
+        }
+    }
+
+    fn expect_colon(&mut self) -> ParseResult<()> {
+        match self.next_kind()? {
+            TokenKind::Colon => Ok(()),
+            other => Err(self.error_from_kind(other, "expected `:`")),
+        }
+    }
+
+    fn expect_arrow(&mut self) -> ParseResult<()> {
+        match self.next_kind()? {
+            TokenKind::Arrow => Ok(()),
+            other => Err(self.error_from_kind(other, "expected `->`")),
+        }
+    }
+
+    fn consume_rparen(&mut self) -> bool {
+        self.consume_if(|kind| matches!(kind, TokenKind::RParen))
+    }
+
+    fn consume_rbrace(&mut self) -> bool {
+        self.consume_if(|kind| matches!(kind, TokenKind::RBrace))
+    }
+
+    fn consume_comma(&mut self) -> bool {
+        self.consume_if(|kind| matches!(kind, TokenKind::Comma))
+    }
+
+    fn consume_if(&mut self, predicate: impl FnOnce(&TokenKind) -> bool) -> bool {
+        if self.peek_kind().is_some_and(predicate) {
+            self.pos += 1;
+            true
+        } else {
+            false
+        }
+    }
+
+    fn next_is_lparen(&self) -> bool {
+        matches!(self.peek_kind(), Some(TokenKind::LParen))
+    }
+
+    fn next_is_rparen(&self) -> bool {
+        matches!(self.peek_kind(), Some(TokenKind::RParen))
+    }
+
+    fn is_eof(&self) -> bool {
+        self.pos >= self.tokens.len()
+    }
+
+    fn error_here(&self, message: impl Into<String>) -> CoreTextError {
+        let position = self.tokens.get(self.pos).map_or_else(
+            || self.tokens.last().map_or(0, |token| token.position + 1),
+            |token| token.position,
+        );
+        CoreTextError::new(position, message)
+    }
+
+    fn error_from_kind(&self, kind: TokenKind, expected: &str) -> CoreTextError {
+        self.error_here(format!("{expected}, got {}", describe_token(&kind)))
+    }
+}
+
+fn lex(source: &str) -> ParseResult<Vec<Token>> {
+    let mut tokens = Vec::new();
+    let mut chars = source.char_indices().peekable();
+    while let Some((position, ch)) = chars.next() {
+        match ch {
+            ch if ch.is_whitespace() => {}
+            '(' => tokens.push(Token {
+                kind: TokenKind::LParen,
+                position,
+            }),
+            ')' => tokens.push(Token {
+                kind: TokenKind::RParen,
+                position,
+            }),
+            '{' => tokens.push(Token {
+                kind: TokenKind::LBrace,
+                position,
+            }),
+            '}' => tokens.push(Token {
+                kind: TokenKind::RBrace,
+                position,
+            }),
+            ':' => tokens.push(Token {
+                kind: TokenKind::Colon,
+                position,
+            }),
+            ',' => tokens.push(Token {
+                kind: TokenKind::Comma,
+                position,
+            }),
+            '-' if chars.peek().is_some_and(|(_, next)| *next == '>') => {
+                let _ = chars.next();
+                tokens.push(Token {
+                    kind: TokenKind::Arrow,
+                    position,
+                });
+            }
+            '"' => {
+                let mut value = String::new();
+                let mut terminated = false;
+                while let Some((_, next)) = chars.next() {
+                    match next {
+                        '"' => {
+                            terminated = true;
+                            break;
+                        }
+                        '\\' => {
+                            let escaped = chars.next().ok_or_else(|| {
+                                CoreTextError::new(position, "unterminated string escape")
+                            })?;
+                            value.push(match escaped.1 {
+                                'n' => '\n',
+                                'r' => '\r',
+                                't' => '\t',
+                                '"' => '"',
+                                '\\' => '\\',
+                                other => other,
+                            });
+                        }
+                        other => value.push(other),
+                    }
+                }
+                if !terminated {
+                    return Err(CoreTextError::new(position, "unterminated string literal"));
+                }
+                tokens.push(Token {
+                    kind: TokenKind::String(value),
+                    position,
+                });
+            }
+            _ => {
+                let mut symbol = String::from(ch);
+                while let Some((_, next)) = chars.peek() {
+                    if next.is_whitespace()
+                        || matches!(next, '(' | ')' | '{' | '}' | ':' | ',' | '"')
+                    {
+                        break;
+                    }
+                    symbol.push(*next);
+                    let _ = chars.next();
+                }
+                tokens.push(Token {
+                    kind: TokenKind::Symbol(symbol),
+                    position,
+                });
+            }
+        }
+    }
+    Ok(tokens)
+}
+
+fn symbol_to_atom(symbol: String) -> CoreAtom {
+    match symbol.as_str() {
+        "add" | "sub" | "mul" | "div" | "eq" | "ne" | "lt" | "le" | "gt" | "ge" | "neg" | "not" => {
+            CoreAtom::PrimName(parse_prim_op(&symbol))
+        }
+        _ => CoreAtom::Var(symbol),
+    }
+}
+
+fn parse_prim_op(symbol: &str) -> CorePrimOp {
+    match symbol {
+        "add" => CorePrimOp::Add,
+        "sub" => CorePrimOp::Sub,
+        "mul" => CorePrimOp::Mul,
+        "div" => CorePrimOp::Div,
+        "eq" => CorePrimOp::Eq,
+        "ne" => CorePrimOp::Ne,
+        "lt" => CorePrimOp::Lt,
+        "le" => CorePrimOp::Le,
+        "gt" => CorePrimOp::Gt,
+        "ge" => CorePrimOp::Ge,
+        "neg" => CorePrimOp::Neg,
+        "not" => CorePrimOp::Not,
+        other => CorePrimOp::ConstructorTag(other.to_string()),
+    }
+}
+
+fn symbol_to_type(symbol: String) -> CoreType {
+    match symbol.as_str() {
+        "Int" | "String" | "Bool" | "Unit" => CoreType::Base(symbol),
+        _ => CoreType::Named(symbol),
+    }
+}
+
+fn split_path_operation(raw: &str) -> ParseResult<(Vec<String>, String)> {
+    let mut parts = split_path(raw);
+    let operation = parts
+        .pop()
+        .ok_or_else(|| CoreTextError::new(0, "expected operation path"))?;
+    if parts.is_empty() {
+        return Err(CoreTextError::new(
+            0,
+            format!("expected path.operation, got `{raw}`"),
+        ));
+    }
+    Ok((parts, operation))
+}
+
+fn split_path(raw: &str) -> Vec<String> {
+    raw.split('.')
+        .filter(|part| !part.is_empty())
+        .map(str::to_string)
+        .collect()
+}
+
+fn describe_token(kind: &TokenKind) -> String {
+    match kind {
+        TokenKind::LParen => "`(`".to_string(),
+        TokenKind::RParen => "`)`".to_string(),
+        TokenKind::LBrace => "`{`".to_string(),
+        TokenKind::RBrace => "`}`".to_string(),
+        TokenKind::Colon => "`:`".to_string(),
+        TokenKind::Comma => "`,`".to_string(),
+        TokenKind::Arrow => "`->`".to_string(),
+        TokenKind::Symbol(symbol) => format!("symbol `{symbol}`"),
+        TokenKind::String(_) => "string literal".to_string(),
+    }
+}

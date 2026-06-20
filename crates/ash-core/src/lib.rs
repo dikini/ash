@@ -10,6 +10,7 @@ pub mod capabilities;
 pub mod capability;
 pub mod core_ash;
 pub mod core_ash_text;
+pub mod core_ash_validate;
 pub mod cps;
 pub mod effect;
 pub mod env_frame;

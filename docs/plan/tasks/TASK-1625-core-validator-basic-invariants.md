@@ -1,6 +1,6 @@
 # TASK-1625: Validate basic Core Ash invariants
 
-**Status:** Planned
+**Status:** Complete
 **Phase:** [PLAN-161](../PLAN-161-CORE-ASH-IR-FOUNDATION.md)
 **Owner:** Phase 161
 
@@ -71,3 +71,16 @@ cargo fmt --check
 ```
 
 Expected: validator tests pass and parser tests remain green.
+
+## Completion Evidence
+
+- Added `core_ash_validate` with `RawCoreProgram`, `ValidCoreProgram`, `CoreValidationError`, and `validate_core_program`.
+- Added recursive validation for rows, duplicate row items, effect operation shape, operation signatures, handler clauses, values, and nested types.
+- Confirmed attempted label data atoms fail before lowering at the Core text boundary.
+- Verified:
+  - `cargo test -p ash-core --test task_1625_core_validator_basic`
+  - `cargo test -p ash-core --test task_1623_core_text_parser_expressions`
+  - `cargo test -p ash-core`
+  - `cargo clippy -p ash-core --all-targets -- -D warnings`
+  - `cargo fmt --check`
+  - `git diff --check`

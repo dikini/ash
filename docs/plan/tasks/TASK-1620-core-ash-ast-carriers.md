@@ -1,6 +1,6 @@
 # TASK-1620: Add Core Ash AST carriers
 
-**Status:** Planned
+**Status:** Complete
 **Phase:** [PLAN-161](../PLAN-161-CORE-ASH-IR-FOUNDATION.md)
 **Owner:** Phase 161
 
@@ -73,3 +73,9 @@ Expected: focused test passes; affected crate remains green.
 ## Notes
 
 If existing Phase 160 CPS variants differ from SPEC-098b, do not repair them here. This task only creates the Core layer.
+
+## Completion Evidence
+
+- Added `crates/ash-core/src/core_ash.rs` with SPEC-099 Core AST carriers and Core-specific type names.
+- Exported `ash_core::core_ash` from `crates/ash-core/src/lib.rs`.
+- Added `crates/ash-core/tests/task_1620_core_ash_ast.rs` covering direct-style expressions, affine handler resume metadata, representable raised operation kinds, and `ContractViolation` as trap-only.

@@ -8,6 +8,7 @@ pub mod amir;
 pub mod ast;
 pub mod capabilities;
 pub mod capability;
+pub mod core_ash;
 pub mod cps;
 pub mod effect;
 pub mod env_frame;

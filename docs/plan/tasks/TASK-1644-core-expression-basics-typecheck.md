@@ -1,6 +1,6 @@
 # TASK-1644: Type basic Core expressions
 
-**Status:** Planned
+**Status:** Complete
 **Phase:** [PLAN-162](../PLAN-162-CORE-ASH-TYPE-CHECKING.md)
 **Owner:** Phase 162
 
@@ -71,3 +71,15 @@ cargo fmt --check
 ```
 
 Expected: focused tests pass.
+
+## Completion Evidence
+
+- Added basic expression typing for `LetVal`, `LetRec`, pure `LetPrim`, `If`, and `Trap` in expected-type contexts.
+- Added structured type mismatch and argument-count mismatch diagnostics for annotation and primitive-application checks.
+- Added `crates/ash-core/tests/task_1644_core_expression_basics_typecheck.rs` covering let-bound literals, declared type mismatch, pure `Add` success/failure, non-`Bool` `If` conditions, and trap branches with empty rows.
+- Verified with:
+  - `cargo test -p ash-core --test task_1644_core_expression_basics_typecheck`
+  - `cargo test -p ash-core --test task_1643_core_atom_value_typing`
+  - `cargo clippy -p ash-core --all-targets -- -D warnings`
+  - `cargo fmt --check`
+  - `git diff --check`

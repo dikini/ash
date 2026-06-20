@@ -33,7 +33,7 @@ verified_against:
 
 ## Status
 
-In progress: 4/12 tasks complete.
+In progress: 5/12 tasks complete.
 
 ## Background
 
@@ -95,7 +95,7 @@ The checker must preserve the row-accounting distinctions already established by
 | [TASK-1641](tasks/TASK-1641-core-type-wellformedness.md) | Check Core type well-formedness and nominal/type-app shape | 3 | TASK-1640 | Complete |
 | [TASK-1642](tasks/TASK-1642-core-row-normalization-solving.md) | Normalize rows, remove duplicates, compare rows, and solve explicit row variables | 4 | TASK-1640 | Complete |
 | [TASK-1643](tasks/TASK-1643-core-atom-value-typing.md) | Type Core atoms and values, including lambdas, records, tuples, and discharge markers | 4 | TASK-1641, TASK-1642 | Complete |
-| [TASK-1644](tasks/TASK-1644-core-expression-basics-typecheck.md) | Type Atom, LetVal, LetRec, LetPrim, If, and Trap expressions | 4 | TASK-1643 | Planned |
+| [TASK-1644](tasks/TASK-1644-core-expression-basics-typecheck.md) | Type Atom, LetVal, LetRec, LetPrim, If, and Trap expressions | 4 | TASK-1643 | Complete |
 | [TASK-1645](tasks/TASK-1645-core-call-jump-row-accounting.md) | Type LetCall, Call, and Jump with SPEC-098b row-accounting facts | 4 | TASK-1644 | Planned |
 | [TASK-1646](tasks/TASK-1646-core-effect-operation-typing.md) | Type capability/channel/process/failure Raise operations and operation signatures | 4 | TASK-1645 | Planned |
 | [TASK-1647](tasks/TASK-1647-core-handle-affine-resume-typecheck.md) | Type Handle clauses with affine resume and captured-resume row preservation | 5 | TASK-1646 | Planned |

@@ -372,6 +372,17 @@ pub enum CoreTypeCheckError {
     #[error("row mismatch")]
     RowMismatch { expected: CoreRow, actual: CoreRow },
 
+    /// Two types were expected to match but did not.
+    #[error("type mismatch")]
+    TypeMismatch {
+        expected: Box<CoreType>,
+        actual: Box<CoreType>,
+    },
+
+    /// A callable or primitive operation received the wrong number of arguments.
+    #[error("argument count mismatch: expected {expected}, got {actual}")]
+    ArgumentCountMismatch { expected: usize, actual: usize },
+
     /// A row alias or group reference could not be normalized structurally.
     #[error("ambiguous row reference: {detail}")]
     AmbiguousRowReference { detail: String },
@@ -914,6 +925,32 @@ fn row_difference(left: &[CoreRowItem], right: &[CoreRowItem]) -> Vec<CoreRowIte
         .collect()
 }
 
+fn union_core_rows(lhs: &CoreRow, rhs: &CoreRow) -> Result<CoreRow, CoreTypeCheckError> {
+    let left = normalize_core_row(lhs)?;
+    let right = normalize_core_row(rhs)?;
+    let mut items = left.items;
+    for item in right.items {
+        if !items.contains(&item) {
+            items.push(item);
+        }
+    }
+
+    let tail = match (left.tail, right.tail) {
+        (None, None) => None,
+        (Some(tail), None) | (None, Some(tail)) => Some(tail),
+        (Some(left_tail), Some(right_tail)) if left_tail == right_tail => Some(left_tail),
+        (Some(left_tail), Some(right_tail)) => {
+            return Err(CoreTypeCheckError::AmbiguousRowReference {
+                detail: format!(
+                    "cannot union rows with different open tails `{left_tail}` and `{right_tail}`"
+                ),
+            });
+        }
+    };
+
+    normalize_core_row(&CoreRow { items, tail })
+}
+
 fn reject_ambiguous_row_item(item: &CoreRowItem) -> Result<(), CoreTypeCheckError> {
     if let CoreRowItem::EffectGroupRef { path } = item {
         return Err(CoreTypeCheckError::AmbiguousRowReference {
@@ -932,11 +969,47 @@ fn type_check_expr(
 ) -> Result<(CoreType, CoreRow), CoreTypeCheckError> {
     match expr {
         CoreExpr::Atom(atom) => Ok((type_check_atom(atom, env)?, CoreRow::default())),
-        CoreExpr::LetVal { .. } => Err(unsupported("LetVal")),
-        CoreExpr::LetRec { .. } => Err(unsupported("LetRec")),
-        CoreExpr::LetPrim { .. } => Err(unsupported("LetPrim")),
+        CoreExpr::LetVal {
+            name,
+            ty,
+            value,
+            body,
+        } => {
+            check_core_type_well_formed(ty, env)?;
+            check_value_against(value, ty, env)?;
+            let mut body_env = env.clone();
+            body_env.values_mut().insert(name.clone(), ty.clone());
+            type_check_expr(body, &body_env)
+        }
+        CoreExpr::LetRec {
+            name,
+            ty,
+            value,
+            body,
+        } => {
+            check_core_type_well_formed(ty, env)?;
+            let mut recursive_env = env.clone();
+            recursive_env.values_mut().insert(name.clone(), ty.clone());
+            check_value_against(value, ty, &recursive_env)?;
+            type_check_expr(body, &recursive_env)
+        }
+        CoreExpr::LetPrim {
+            name,
+            op,
+            args,
+            body,
+        } => {
+            let result_ty = check_primitive_application(op, args, env)?;
+            let mut body_env = env.clone();
+            body_env.values_mut().insert(name.clone(), result_ty);
+            type_check_expr(body, &body_env)
+        }
         CoreExpr::LetCall { .. } => Err(unsupported("LetCall")),
-        CoreExpr::If { .. } => Err(unsupported("If")),
+        CoreExpr::If {
+            cond,
+            then_branch,
+            else_branch,
+        } => type_check_if(cond, then_branch, else_branch, env),
         CoreExpr::Call { .. } => Err(unsupported("Call")),
         CoreExpr::Jump { .. } => Err(unsupported("Jump")),
         CoreExpr::Raise { .. } => Err(unsupported("Raise")),
@@ -951,6 +1024,123 @@ fn type_check_atom(
     env: &CoreTypeCheckEnv,
 ) -> Result<CoreType, CoreTypeCheckError> {
     synthesize_core_atom(atom, env)
+}
+
+fn type_check_expr_against(
+    expr: &CoreExpr,
+    expected: &CoreType,
+    env: &CoreTypeCheckEnv,
+) -> Result<CoreRow, CoreTypeCheckError> {
+    check_core_type_well_formed(expected, env)?;
+    if let CoreExpr::Trap { .. } = expr {
+        return Ok(CoreRow::default());
+    }
+
+    let (actual, row) = type_check_expr(expr, env)?;
+    ensure_types_equivalent(expected, &actual, env)?;
+    Ok(row)
+}
+
+fn type_check_if(
+    cond: &CoreAtom,
+    then_branch: &CoreExpr,
+    else_branch: &CoreExpr,
+    env: &CoreTypeCheckEnv,
+) -> Result<(CoreType, CoreRow), CoreTypeCheckError> {
+    ensure_types_equivalent(
+        &CoreType::Base("Bool".into()),
+        &type_check_atom(cond, env)?,
+        env,
+    )?;
+
+    match (then_branch, else_branch) {
+        (CoreExpr::Trap { .. }, CoreExpr::Trap { .. }) => {
+            Err(unsupported("If with only Trap branches"))
+        }
+        (CoreExpr::Trap { .. }, _) => {
+            let (else_ty, else_row) = type_check_expr(else_branch, env)?;
+            let then_row = type_check_expr_against(then_branch, &else_ty, env)?;
+            Ok((else_ty, union_core_rows(&then_row, &else_row)?))
+        }
+        (_, CoreExpr::Trap { .. }) => {
+            let (then_ty, then_row) = type_check_expr(then_branch, env)?;
+            let else_row = type_check_expr_against(else_branch, &then_ty, env)?;
+            Ok((then_ty, union_core_rows(&then_row, &else_row)?))
+        }
+        _ => {
+            let (then_ty, then_row) = type_check_expr(then_branch, env)?;
+            let (else_ty, else_row) = type_check_expr(else_branch, env)?;
+            ensure_types_equivalent(&then_ty, &else_ty, env)?;
+            Ok((then_ty, union_core_rows(&then_row, &else_row)?))
+        }
+    }
+}
+
+fn check_value_against(
+    value: &CoreValue,
+    expected: &CoreType,
+    env: &CoreTypeCheckEnv,
+) -> Result<(), CoreTypeCheckError> {
+    let typed = synthesize_core_value(value, env)?;
+    ensure_types_equivalent(expected, typed.ty(), env)?;
+    if normalize_core_row(typed.row())? != CoreRow::default() {
+        return Err(CoreTypeCheckError::RowMismatch {
+            expected: CoreRow::default(),
+            actual: typed.row().clone(),
+        });
+    }
+    Ok(())
+}
+
+fn check_primitive_application(
+    op: &CorePrimOp,
+    args: &[CoreAtom],
+    env: &CoreTypeCheckEnv,
+) -> Result<CoreType, CoreTypeCheckError> {
+    let CoreType::Function {
+        params,
+        result,
+        row,
+    } = primitive_type(op)?
+    else {
+        return Err(unsupported("primitive without function type"));
+    };
+
+    if params.len() != args.len() {
+        return Err(CoreTypeCheckError::ArgumentCountMismatch {
+            expected: params.len(),
+            actual: args.len(),
+        });
+    }
+
+    for (arg, expected) in args.iter().zip(&params) {
+        let actual = type_check_atom(arg, env)?;
+        ensure_types_equivalent(expected, &actual, env)?;
+    }
+
+    if normalize_core_row(&row)? != CoreRow::default() {
+        return Err(CoreTypeCheckError::RowMismatch {
+            expected: CoreRow::default(),
+            actual: row,
+        });
+    }
+
+    Ok(*result)
+}
+
+fn ensure_types_equivalent(
+    expected: &CoreType,
+    actual: &CoreType,
+    env: &CoreTypeCheckEnv,
+) -> Result<(), CoreTypeCheckError> {
+    if core_types_equivalent(expected, actual, env)? {
+        Ok(())
+    } else {
+        Err(CoreTypeCheckError::TypeMismatch {
+            expected: Box::new(expected.clone()),
+            actual: Box::new(actual.clone()),
+        })
+    }
 }
 
 fn unsupported(form: &str) -> CoreTypeCheckError {

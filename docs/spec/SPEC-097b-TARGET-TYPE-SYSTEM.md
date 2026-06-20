@@ -8,7 +8,7 @@ authority: design
 status: draft
 stability: alpha
 owner: language
-last_verified: 2026-06-18
+last_verified: 2026-06-20
 verified_against:
   specs:
     - docs/spec/SPEC-095a-CURRENT-GRAMMAR.md
@@ -242,8 +242,8 @@ type-system packet is:
 
 Rows are not ordinary record types. A parser/typechecker implementation must distinguish
 record type `{x: Int}` from effect row `{cap fs.read}` by grammar context or an explicit
-row-introducing token chosen by the syntax spec. It must also distinguish `{r}` as a row
-variable from `{IO}` as an alias/group reference by kind and namespace resolution.
+row-introducing token chosen by the syntax spec. It must also distinguish `{r}` from an effect
+group reference by kind and namespace resolution.
 
 ### 4.2 Row variable kind
 
@@ -661,6 +661,112 @@ A future implementation plan should include tests for:
 - [SPEC-019: Role Runtime Semantics](SPEC-019-ROLE-RUNTIME-SEMANTICS.md)
 - [SPEC-052: Capability Interfaces and Implementations](SPEC-052-CAPABILITY-INTERFACES-AND-IMPLEMENTATIONS.md)
 
-## 15. Changelog
+## 15. Evaluation Modes
+
+### 15.1 Purpose
+
+Evaluation modes are algorithmic contracts that control when expressions are evaluated, not performance hints. They affect control-flow shape, stack usage, sharing behavior, and asymptotic complexity. Modes are preserved across function boundaries and checked at call sites.
+
+### 15.2 Modes
+
+| Mode | Evaluation timing | Sharing | Use case |
+|------|------------------|---------|----------|
+| `strict` | Immediate, at binding or call site | None | Accumulating folds, in-place mutation, resource acquisition |
+| `lazy` | On demand, at use site | None | Streams, generators, short-circuiting, infinite structures |
+| `memo` | On demand, once, then cached | Yes | Recursive patterns, dynamic programming, shared subcomputations |
+
+Default mode is `strict`.
+
+### 15.3 Syntax
+
+```ash
+-- Binding site:
+let x = expr;              -- strict (default)
+let lazy x = expr;         -- lazy
+let memo x = expr;         -- memo
+
+-- Parameter site:
+fn foo(x: Int) -> Int;                 -- strict parameter
+fn bar(lazy x: Int) -> Int;            -- lazy parameter
+fn baz(memo x: Int) -> Int;            -- memo parameter
+
+-- Return site:
+fn gen() -> lazy List<Int>;            -- lazy return
+fn compute() -> Int;                   -- strict return (default)
+```
+
+### 15.4 Invariance
+
+Modes are **invariant** in the type system. No implicit conversion between modes.
+
+```text
+strict A  ≮:  lazy A
+lazy A    ≮:  strict A
+memo A    ≮:  lazy A
+lazy A    ≮:  memo A
+```
+
+Mode mismatch at a boundary is a type error.
+
+### 15.5 Explicit Conversions
+
+All mode changes are explicit function calls:
+
+```ash
+-- Safe (no observable behavior change):
+let lazy_thunk = delay(value);      -- strict -> lazy: wrap in thunk
+let memo_thunk = delay_memo(value); -- strict -> memo: wrap in memo-thunk
+
+-- Unsafe (changes when effects fire, including bottom):
+let forced = force_unsafe(lazy_val);     -- lazy -> strict: force thunk
+let memoized = memoize_unsafe(lazy_val); -- lazy -> memo: add cache
+let stripped = strip_cache_unsafe(memo_val); -- memo -> lazy: remove cache
+```
+
+The `_unsafe` suffix indicates that the conversion changes temporal behavior: effects (including divergence) may fire at a different time or a different number of times.
+
+### 15.6 Row Accounting
+
+The total effect row is the same regardless of mode. Mode affects **when** effects fire, not **what** effects are present.
+
+```text
+let lazy x = {cap db.read} expr;  -- row of binding site: {}
+                                    -- row of x's body: {cap db.read}
+                                    -- row of force_unsafe(x): {cap db.read}
+
+let memo y = {cap db.read} expr;  -- row of binding site: {}
+                                    -- row of first force: {cap db.read}
+                                    -- row of subsequent force: {}
+```
+
+### 15.7 CPS Lowering
+
+In the CPS IR (SPEC-098b), modes become calling conventions:
+
+- **strict parameter**: pass value directly
+- **lazy parameter**: pass thunk (`Lam { params: [] }`)
+- **memo parameter**: pass memo-thunk (`Lam { params: [] }` with cache cell)
+
+The mode is visible in the IR as the presence or absence of thunk wrapping.
+
+### 15.8 Algorithmic Implications
+
+Some algorithms are naturally expressed in one mode:
+
+```ash
+-- Left fold: naturally strict, tail-recursive
+fn foldl<A, B>(f: B -> A -> B, acc: B, xs: List<A>) -> B { ... }
+
+-- Right fold: naturally lazy, builds thunk chain
+fn foldr<A, B>(f: A -> B -> B, base: B, xs: List<A>) -> lazy B { ... }
+
+-- Stream processing: lazy by design
+fn map<A, B>(f: A -> B, lazy xs: List<A>) -> lazy List<B> { ... }
+```
+
+Mode mismatch is a type error, not a performance warning. The user must explicitly convert.
+
+## 16. Changelog
 
 - 2026-06-18: Created as target-state type system document. Defined row semantics, effect item taxonomy, discharge rules, alias/group behavior, and acceptance criteria.
+- 2026-06-20: Added §15 Evaluation Modes. Defined strict/lazy/memo as invariant algorithmic contracts with explicit `_unsafe` conversions.

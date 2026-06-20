@@ -5,8 +5,8 @@
 //! closed instead of being accepted optimistically.
 
 use crate::core_ash::{
-    CoreAtom, CoreEffectOp, CoreExpr, CoreName, CorePrimOp, CoreRow, CoreRowItem, CoreType,
-    CoreValue,
+    CoreAtom, CoreContRef, CoreEffectOp, CoreExpr, CoreName, CorePrimOp, CoreRow, CoreRowItem,
+    CoreType, CoreValue,
 };
 use crate::core_ash_validate::ValidCoreProgram;
 use std::collections::{HashMap, HashSet};
@@ -307,6 +307,7 @@ pub struct TypedCoreProgram {
     expr: CoreExpr,
     ty: CoreType,
     row: CoreRow,
+    facts: CoreTypeCheckFacts,
 }
 
 impl TypedCoreProgram {
@@ -327,6 +328,33 @@ impl TypedCoreProgram {
     pub fn row(&self) -> &CoreRow {
         &self.row
     }
+
+    /// Returns typed facts needed by later lowering and diagnostic stages.
+    #[must_use]
+    pub fn facts(&self) -> &CoreTypeCheckFacts {
+        &self.facts
+    }
+}
+
+/// Typed facts computed during Core type checking for later compiler stages.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct CoreTypeCheckFacts {
+    jump_continuation_rows: HashMap<CoreContRef, CoreRow>,
+}
+
+impl CoreTypeCheckFacts {
+    /// Returns rows of target continuations reached by checked `Jump` expressions.
+    #[must_use]
+    pub fn jump_continuation_rows(&self) -> &HashMap<CoreContRef, CoreRow> {
+        &self.jump_continuation_rows
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct TypedCoreExpr {
+    ty: CoreType,
+    row: CoreRow,
+    facts: CoreTypeCheckFacts,
 }
 
 /// Error returned by Core Ash type checking.
@@ -473,11 +501,12 @@ pub fn type_check_core_program(
     program: ValidCoreProgram,
     env: &CoreTypeCheckEnv,
 ) -> Result<TypedCoreProgram, CoreTypeCheckError> {
-    let (ty, row) = type_check_expr(program.expr(), env)?;
+    let checked = type_check_expr(program.expr(), env)?;
     Ok(TypedCoreProgram {
         expr: program.into_expr(),
-        ty,
-        row,
+        ty: checked.ty,
+        row: checked.row,
+        facts: checked.facts,
     })
 }
 
@@ -723,17 +752,17 @@ pub fn synthesize_core_value(
                 param_types.push(param.ty.clone());
             }
 
-            let (body_ty, body_row) = type_check_expr(body, &body_env)?;
-            if normalize_core_row(&body_row)? != normalize_core_row(row)? {
+            let body_checked = type_check_expr(body, &body_env)?;
+            if normalize_core_row(&body_checked.row)? != normalize_core_row(row)? {
                 return Err(CoreTypeCheckError::RowMismatch {
                     expected: row.clone(),
-                    actual: body_row,
+                    actual: body_checked.row,
                 });
             }
 
             CoreType::Function {
                 params: param_types,
-                result: Box::new(body_ty),
+                result: Box::new(body_checked.ty),
                 row: row.clone(),
             }
         }
@@ -963,12 +992,29 @@ fn reject_ambiguous_row_item(item: &CoreRowItem) -> Result<(), CoreTypeCheckErro
     Ok(())
 }
 
+fn typed_expr(ty: CoreType, row: CoreRow) -> TypedCoreExpr {
+    TypedCoreExpr {
+        ty,
+        row,
+        facts: CoreTypeCheckFacts::default(),
+    }
+}
+
+fn merge_typecheck_facts(
+    mut lhs: CoreTypeCheckFacts,
+    rhs: CoreTypeCheckFacts,
+) -> CoreTypeCheckFacts {
+    lhs.jump_continuation_rows
+        .extend(rhs.jump_continuation_rows);
+    lhs
+}
+
 fn type_check_expr(
     expr: &CoreExpr,
     env: &CoreTypeCheckEnv,
-) -> Result<(CoreType, CoreRow), CoreTypeCheckError> {
+) -> Result<TypedCoreExpr, CoreTypeCheckError> {
     match expr {
-        CoreExpr::Atom(atom) => Ok((type_check_atom(atom, env)?, CoreRow::default())),
+        CoreExpr::Atom(atom) => Ok(typed_expr(type_check_atom(atom, env)?, CoreRow::default())),
         CoreExpr::LetVal {
             name,
             ty,
@@ -1004,14 +1050,32 @@ fn type_check_expr(
             body_env.values_mut().insert(name.clone(), result_ty);
             type_check_expr(body, &body_env)
         }
-        CoreExpr::LetCall { .. } => Err(unsupported("LetCall")),
+        CoreExpr::LetCall {
+            name,
+            func,
+            args,
+            body,
+        } => {
+            let (result_ty, callee_row) = check_function_application(func, args, env)?;
+            let mut body_env = env.clone();
+            body_env.values_mut().insert(name.clone(), result_ty);
+            let body_checked = type_check_expr(body, &body_env)?;
+            Ok(TypedCoreExpr {
+                ty: body_checked.ty,
+                row: union_core_rows(&callee_row, &body_checked.row)?,
+                facts: body_checked.facts,
+            })
+        }
         CoreExpr::If {
             cond,
             then_branch,
             else_branch,
         } => type_check_if(cond, then_branch, else_branch, env),
-        CoreExpr::Call { .. } => Err(unsupported("Call")),
-        CoreExpr::Jump { .. } => Err(unsupported("Jump")),
+        CoreExpr::Call { func, args } => {
+            let (result_ty, callee_row) = check_function_application(func, args, env)?;
+            Ok(typed_expr(result_ty, callee_row))
+        }
+        CoreExpr::Jump { cont, arg } => type_check_jump(cont, arg, env),
         CoreExpr::Raise { .. } => Err(unsupported("Raise")),
         CoreExpr::Handle { .. } => Err(unsupported("Handle")),
         CoreExpr::RecordDischarge { .. } => Err(unsupported("RecordDischarge")),
@@ -1030,15 +1094,15 @@ fn type_check_expr_against(
     expr: &CoreExpr,
     expected: &CoreType,
     env: &CoreTypeCheckEnv,
-) -> Result<CoreRow, CoreTypeCheckError> {
+) -> Result<TypedCoreExpr, CoreTypeCheckError> {
     check_core_type_well_formed(expected, env)?;
     if let CoreExpr::Trap { .. } = expr {
-        return Ok(CoreRow::default());
+        return Ok(typed_expr(expected.clone(), CoreRow::default()));
     }
 
-    let (actual, row) = type_check_expr(expr, env)?;
-    ensure_types_equivalent(expected, &actual, env)?;
-    Ok(row)
+    let checked = type_check_expr(expr, env)?;
+    ensure_types_equivalent(expected, &checked.ty, env)?;
+    Ok(checked)
 }
 
 fn type_check_if(
@@ -1046,7 +1110,7 @@ fn type_check_if(
     then_branch: &CoreExpr,
     else_branch: &CoreExpr,
     env: &CoreTypeCheckEnv,
-) -> Result<(CoreType, CoreRow), CoreTypeCheckError> {
+) -> Result<TypedCoreExpr, CoreTypeCheckError> {
     ensure_types_equivalent(
         &CoreType::Base("Bool".into()),
         &type_check_atom(cond, env)?,
@@ -1058,20 +1122,32 @@ fn type_check_if(
             Err(unsupported("If with only Trap branches"))
         }
         (CoreExpr::Trap { .. }, _) => {
-            let (else_ty, else_row) = type_check_expr(else_branch, env)?;
-            let then_row = type_check_expr_against(then_branch, &else_ty, env)?;
-            Ok((else_ty, union_core_rows(&then_row, &else_row)?))
+            let else_checked = type_check_expr(else_branch, env)?;
+            let then_checked = type_check_expr_against(then_branch, &else_checked.ty, env)?;
+            Ok(TypedCoreExpr {
+                ty: else_checked.ty,
+                row: union_core_rows(&then_checked.row, &else_checked.row)?,
+                facts: merge_typecheck_facts(then_checked.facts, else_checked.facts),
+            })
         }
         (_, CoreExpr::Trap { .. }) => {
-            let (then_ty, then_row) = type_check_expr(then_branch, env)?;
-            let else_row = type_check_expr_against(else_branch, &then_ty, env)?;
-            Ok((then_ty, union_core_rows(&then_row, &else_row)?))
+            let then_checked = type_check_expr(then_branch, env)?;
+            let else_checked = type_check_expr_against(else_branch, &then_checked.ty, env)?;
+            Ok(TypedCoreExpr {
+                ty: then_checked.ty,
+                row: union_core_rows(&then_checked.row, &else_checked.row)?,
+                facts: merge_typecheck_facts(then_checked.facts, else_checked.facts),
+            })
         }
         _ => {
-            let (then_ty, then_row) = type_check_expr(then_branch, env)?;
-            let (else_ty, else_row) = type_check_expr(else_branch, env)?;
-            ensure_types_equivalent(&then_ty, &else_ty, env)?;
-            Ok((then_ty, union_core_rows(&then_row, &else_row)?))
+            let then_checked = type_check_expr(then_branch, env)?;
+            let else_checked = type_check_expr(else_branch, env)?;
+            ensure_types_equivalent(&then_checked.ty, &else_checked.ty, env)?;
+            Ok(TypedCoreExpr {
+                ty: then_checked.ty,
+                row: union_core_rows(&then_checked.row, &else_checked.row)?,
+                facts: merge_typecheck_facts(then_checked.facts, else_checked.facts),
+            })
         }
     }
 }
@@ -1092,6 +1168,26 @@ fn check_value_against(
     Ok(())
 }
 
+fn check_function_application(
+    func: &CoreAtom,
+    args: &[CoreAtom],
+    env: &CoreTypeCheckEnv,
+) -> Result<(CoreType, CoreRow), CoreTypeCheckError> {
+    let func_ty = type_check_atom(func, env)?;
+    check_core_type_well_formed(&func_ty, env)?;
+    let CoreType::Function {
+        params,
+        result,
+        row,
+    } = func_ty
+    else {
+        return Err(unsupported("non-function call target"));
+    };
+
+    check_arguments(&params, args, env)?;
+    Ok((*result, row))
+}
+
 fn check_primitive_application(
     op: &CorePrimOp,
     args: &[CoreAtom],
@@ -1106,17 +1202,7 @@ fn check_primitive_application(
         return Err(unsupported("primitive without function type"));
     };
 
-    if params.len() != args.len() {
-        return Err(CoreTypeCheckError::ArgumentCountMismatch {
-            expected: params.len(),
-            actual: args.len(),
-        });
-    }
-
-    for (arg, expected) in args.iter().zip(&params) {
-        let actual = type_check_atom(arg, env)?;
-        ensure_types_equivalent(expected, &actual, env)?;
-    }
+    check_arguments(&params, args, env)?;
 
     if normalize_core_row(&row)? != CoreRow::default() {
         return Err(CoreTypeCheckError::RowMismatch {
@@ -1126,6 +1212,64 @@ fn check_primitive_application(
     }
 
     Ok(*result)
+}
+
+fn check_arguments(
+    params: &[CoreType],
+    args: &[CoreAtom],
+    env: &CoreTypeCheckEnv,
+) -> Result<(), CoreTypeCheckError> {
+    if params.len() != args.len() {
+        return Err(CoreTypeCheckError::ArgumentCountMismatch {
+            expected: params.len(),
+            actual: args.len(),
+        });
+    }
+
+    for (arg, expected) in args.iter().zip(params) {
+        let actual = type_check_atom(arg, env)?;
+        ensure_types_equivalent(expected, &actual, env)?;
+    }
+
+    Ok(())
+}
+
+fn type_check_jump(
+    cont: &CoreContRef,
+    arg: &CoreAtom,
+    env: &CoreTypeCheckEnv,
+) -> Result<TypedCoreExpr, CoreTypeCheckError> {
+    let Some(cont_ty) = env.continuations().lookup(cont_ref_name(cont)).cloned() else {
+        return Err(CoreTypeCheckError::UnknownContinuation {
+            name: cont_ref_name(cont).to_owned(),
+        });
+    };
+    check_core_type_well_formed(&cont_ty, env)?;
+    let CoreType::Cont {
+        input, answer, row, ..
+    } = cont_ty
+    else {
+        return Err(unsupported("non-continuation jump target"));
+    };
+
+    let actual = type_check_atom(arg, env)?;
+    ensure_types_equivalent(&input, &actual, env)?;
+
+    let mut facts = CoreTypeCheckFacts::default();
+    facts
+        .jump_continuation_rows
+        .insert(cont.clone(), row.clone());
+    Ok(TypedCoreExpr {
+        ty: *answer,
+        row: CoreRow::default(),
+        facts,
+    })
+}
+
+fn cont_ref_name(cont: &CoreContRef) -> &str {
+    match cont {
+        CoreContRef::Label(name) | CoreContRef::Var(name) => name,
+    }
 }
 
 fn ensure_types_equivalent(

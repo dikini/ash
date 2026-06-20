@@ -1,6 +1,6 @@
 # TASK-1645: Type calls and jumps with row accounting
 
-**Status:** Planned
+**Status:** Complete
 **Phase:** [PLAN-162](../PLAN-162-CORE-ASH-TYPE-CHECKING.md)
 **Owner:** Phase 162
 
@@ -71,3 +71,16 @@ cargo fmt --check
 ```
 
 Expected: focused tests pass.
+
+## Completion Evidence
+
+- Added typed lowering facts to `TypedCoreProgram` for jump target continuation rows.
+- Added `LetCall`, tail `Call`, and `Jump` type checking with function arity/type checks and continuation argument checks.
+- Preserved local row accounting: function latent rows are charged on calls, while `Jump` local row remains `{}` and target continuation rows are stored separately.
+- Added `crates/ash-core/tests/task_1645_core_call_jump_row_accounting.rs` covering non-tail calls, arity mismatch, tail call local rows, jump type mismatch, and jump continuation-row facts.
+- Verified with:
+  - `cargo test -p ash-core --test task_1645_core_call_jump_row_accounting`
+  - `cargo test -p ash-core --test task_1644_core_expression_basics_typecheck`
+  - `cargo clippy -p ash-core --all-targets -- -D warnings`
+  - `cargo fmt --check`
+  - `git diff --check`

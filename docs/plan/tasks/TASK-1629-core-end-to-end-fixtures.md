@@ -1,6 +1,6 @@
 # TASK-1629: Add end-to-end Core fixture tests
 
-**Status:** Planned
+**Status:** Complete
 **Phase:** [PLAN-161](../PLAN-161-CORE-ASH-IR-FOUNDATION.md)
 **Owner:** Phase 161
 
@@ -67,3 +67,15 @@ cargo fmt --check
 ```
 
 Expected: end-to-end fixtures pass.
+
+## Completion Evidence
+
+- Added `task_1629_core_end_to_end.rs` to parse `.core` fixtures, validate them, lower to CPS, serialize canonical CPS terms, reparse the serialized term, and compare against stable `.cps.golden` files.
+- Added end-to-end fixtures for let/value/jump, primitive conditional, non-tail call, `let-call`, raise/handle, and contract trap/discharge forms.
+- Added `invalid_duplicate_row.core` to verify invalid Core fails validation before lowering.
+
+Verified on 2026-06-20:
+
+```bash
+cargo test -p ash-core --test task_1629_core_end_to_end
+```

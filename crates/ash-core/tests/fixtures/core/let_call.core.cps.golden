@@ -1,0 +1,1 @@
+(LetCont (name . "__k0") (param . "user") (cont_body Jump (cont Label . "exit") (arg Var . "user") (row (items))) (body Call (func Var . "read_user") (args (Int . 7)) (cont Label . "__k0") (row (items))))

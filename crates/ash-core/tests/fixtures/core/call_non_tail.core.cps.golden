@@ -1,0 +1,1 @@
+(LetVal (name . "inc") (value Lam (params "n") (cont . "__k0") (body LetPrim (name . "out") (op . Add) (args (Var . "n") (Int . 1)) (body Jump (cont Var . "__k0") (arg Var . "out") (row (items)))) (captured_env (bindings) (parent)) (rec_binding) (row (items))) (body Call (func Var . "inc") (args (Int . 41)) (cont Label . "halt") (row (items))))

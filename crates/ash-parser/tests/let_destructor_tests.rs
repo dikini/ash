@@ -16,14 +16,8 @@ fn let_single_identifier_works() {
     match &f.body {
         Expr::Block { statements, .. } => {
             assert_eq!(statements.len(), 1);
-            match &statements[0] {
-                ash_parser::surface::BlockStmt::Let { pattern, .. } => {
-                    assert!(
-                        matches!(pattern, Pattern::Variable { name, .. } if name.as_ref() == "x")
-                    );
-                }
-                _ => panic!("expected Let statement"),
-            }
+            let ash_parser::surface::BlockStmt::Let { pattern, .. } = &statements[0];
+            assert!(matches!(pattern, Pattern::Variable { name, .. } if name.as_ref() == "x"));
         }
         _ => panic!("expected Block body"),
     }
@@ -42,20 +36,18 @@ fn let_record_destructor_works() {
     match &f.body {
         Expr::Block { statements, .. } => {
             assert_eq!(statements.len(), 2);
-            match &statements[1] {
-                ash_parser::surface::BlockStmt::Let { pattern, .. } => match pattern {
-                    Pattern::Record(fields) => {
-                        assert_eq!(fields.len(), 2);
-                        assert_eq!(fields[0].0.as_ref(), "x");
-                        assert!(matches!(
-                                &fields[0].1, Pattern::Variable { name, .. } if name.as_ref() == "x"));
-                        assert_eq!(fields[1].0.as_ref(), "y");
-                        assert!(matches!(
-                                &fields[1].1, Pattern::Variable { name, .. } if name.as_ref() == "y"));
-                    }
-                    _ => panic!("expected Record pattern, got: {:?}", pattern),
-                },
-                _ => panic!("expected Let statement"),
+            let ash_parser::surface::BlockStmt::Let { pattern, .. } = &statements[1];
+            match pattern {
+                Pattern::Record(fields) => {
+                    assert_eq!(fields.len(), 2);
+                    assert_eq!(fields[0].0.as_ref(), "x");
+                    assert!(matches!(
+                            &fields[0].1, Pattern::Variable { name, .. } if name.as_ref() == "x"));
+                    assert_eq!(fields[1].0.as_ref(), "y");
+                    assert!(matches!(
+                            &fields[1].1, Pattern::Variable { name, .. } if name.as_ref() == "y"));
+                }
+                _ => panic!("expected Record pattern, got: {:?}", pattern),
             }
         }
         _ => panic!("expected Block body"),
@@ -73,20 +65,18 @@ fn let_record_destructor_with_rename_works() {
     match &f.body {
         Expr::Block { statements, .. } => {
             assert_eq!(statements.len(), 2);
-            match &statements[1] {
-                ash_parser::surface::BlockStmt::Let { pattern, .. } => match pattern {
-                    Pattern::Record(fields) => {
-                        assert_eq!(fields.len(), 2);
-                        assert_eq!(fields[0].0.as_ref(), "x");
-                        assert!(matches!(
-                                &fields[0].1, Pattern::Variable { name, .. } if name.as_ref() == "a"));
-                        assert_eq!(fields[1].0.as_ref(), "y");
-                        assert!(matches!(
-                                &fields[1].1, Pattern::Variable { name, .. } if name.as_ref() == "b"));
-                    }
-                    _ => panic!("expected Record pattern, got: {:?}", pattern),
-                },
-                _ => panic!("expected Let statement"),
+            let ash_parser::surface::BlockStmt::Let { pattern, .. } = &statements[1];
+            match pattern {
+                Pattern::Record(fields) => {
+                    assert_eq!(fields.len(), 2);
+                    assert_eq!(fields[0].0.as_ref(), "x");
+                    assert!(matches!(
+                            &fields[0].1, Pattern::Variable { name, .. } if name.as_ref() == "a"));
+                    assert_eq!(fields[1].0.as_ref(), "y");
+                    assert!(matches!(
+                            &fields[1].1, Pattern::Variable { name, .. } if name.as_ref() == "b"));
+                }
+                _ => panic!("expected Record pattern, got: {:?}", pattern),
             }
         }
         _ => panic!("expected Block body"),
@@ -172,20 +162,18 @@ fn let_record_destructor_shorthand_works() {
     match &f.body {
         Expr::Block { statements, .. } => {
             assert_eq!(statements.len(), 2);
-            match &statements[1] {
-                ash_parser::surface::BlockStmt::Let { pattern, .. } => match pattern {
-                    Pattern::Record(fields) => {
-                        assert_eq!(fields.len(), 2);
-                        assert_eq!(fields[0].0.as_ref(), "x");
-                        assert!(matches!(
-                                &fields[0].1, Pattern::Variable { name, .. } if name.as_ref() == "x"));
-                        assert_eq!(fields[1].0.as_ref(), "y");
-                        assert!(matches!(
-                                &fields[1].1, Pattern::Variable { name, .. } if name.as_ref() == "y"));
-                    }
-                    _ => panic!("expected Record pattern, got: {:?}", pattern),
-                },
-                _ => panic!("expected Let statement"),
+            let ash_parser::surface::BlockStmt::Let { pattern, .. } = &statements[1];
+            match pattern {
+                Pattern::Record(fields) => {
+                    assert_eq!(fields.len(), 2);
+                    assert_eq!(fields[0].0.as_ref(), "x");
+                    assert!(matches!(
+                            &fields[0].1, Pattern::Variable { name, .. } if name.as_ref() == "x"));
+                    assert_eq!(fields[1].0.as_ref(), "y");
+                    assert!(matches!(
+                            &fields[1].1, Pattern::Variable { name, .. } if name.as_ref() == "y"));
+                }
+                _ => panic!("expected Record pattern, got: {:?}", pattern),
             }
         }
         _ => panic!("expected Block body"),

@@ -1,6 +1,6 @@
 # TASK-1618: Add reference documentation for expanded CPS IR
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 

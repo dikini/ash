@@ -22,7 +22,7 @@ verified_against:
 
 ## Phase: 160
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Goal
 
@@ -126,16 +126,16 @@ The interpreter is an execution engine for validated IR. It does not type-check,
 
 | Task | Description | Est. Hours | Dependencies | Status |
 |------|-------------|-----------:|--------------|--------|
-| [TASK-1610](tasks/TASK-1610-cps-ir-record-tuple-values.md) | Add Record and Tuple value variants to CPS IR | 4 | TASK-1590 | 📝 Planned |
-| [TASK-1611](tasks/TASK-1611-cps-ir-field-access-primitives.md) | Add RecordGet and TupleGet primitive operations | 3 | TASK-1610 | 📝 Planned |
-| [TASK-1612](tasks/TASK-1612-cps-ir-constructor-tags.md) | Add ConstructorName atom variant for sum types | 2 | TASK-1590 | 📝 Planned |
-| [TASK-1613](tasks/TASK-1613-cps-ir-match-dispatch.md) | Add Match term for pattern dispatch | 4 | TASK-1612 | 📝 Planned |
-| [TASK-1614](tasks/TASK-1614-cps-ir-mutual-recursion-desugaring.md) | Support mutual recursion via tuple-of-lambdas in LetRec | 5 | TASK-1596, TASK-1610 | 📝 Planned |
-| [TASK-1615](tasks/TASK-1615-cps-ir-serde-extension.md) | Extend serde-based serialization for new IR forms | 3 | TASK-1610, TASK-1611, TASK-1612, TASK-1613 | 📝 Planned |
-| [TASK-1616](tasks/TASK-1616-cps-ir-speculative-fixtures.md) | Write speculative test fixtures for upper-language patterns | 6 | TASK-1614, TASK-1615 | 📝 Planned |
-| [TASK-1617](tasks/TASK-1617-cps-ir-expanded-operational-semantics.md) | Write operational semantics for new term forms (new doc) | 4 | TASK-1610, TASK-1611, TASK-1612, TASK-1613 | 📝 Planned |
-| [TASK-1618](tasks/TASK-1618-cps-ir-reference-docs-update.md) | Add reference documentation for expanded CPS IR | 3 | TASK-1617 | 📝 Planned |
-| [TASK-1619](tasks/TASK-1619-phase-160-closeout.md) | Close out Phase 160 with verification and documentation | 3 | All above | 📝 Planned |
+| [TASK-1610](tasks/TASK-1610-cps-ir-record-tuple-values.md) | Add Record and Tuple value variants to CPS IR | 4 | TASK-1590 | ✅ Complete |
+| [TASK-1611](tasks/TASK-1611-cps-ir-field-access-primitives.md) | Add RecordGet and TupleGet primitive operations | 3 | TASK-1610 | ✅ Complete |
+| [TASK-1612](tasks/TASK-1612-cps-ir-constructor-tags.md) | Add ConstructorName atom variant for sum types | 2 | TASK-1590 | ✅ Complete |
+| [TASK-1613](tasks/TASK-1613-cps-ir-match-dispatch.md) | Add Match term for pattern dispatch | 4 | TASK-1612 | ✅ Complete |
+| [TASK-1614](tasks/TASK-1614-cps-ir-mutual-recursion-desugaring.md) | Support mutual recursion via tuple-of-lambdas in LetRec | 5 | TASK-1596, TASK-1610 | ✅ Complete |
+| [TASK-1615](tasks/TASK-1615-cps-ir-serde-extension.md) | Extend serde-based serialization for new IR forms | 3 | TASK-1610, TASK-1611, TASK-1612, TASK-1613 | ✅ Complete |
+| [TASK-1616](tasks/TASK-1616-cps-ir-speculative-fixtures.md) | Write speculative test fixtures for upper-language patterns | 6 | TASK-1614, TASK-1615 | ✅ Complete |
+| [TASK-1617](tasks/TASK-1617-cps-ir-expanded-operational-semantics.md) | Write operational semantics for new term forms (new doc) | 4 | TASK-1610, TASK-1611, TASK-1612, TASK-1613 | ✅ Complete |
+| [TASK-1618](tasks/TASK-1618-cps-ir-reference-docs-update.md) | Add reference documentation for expanded CPS IR | 3 | TASK-1617 | ✅ Complete |
+| [TASK-1619](tasks/TASK-1619-phase-160-closeout.md) | Close out Phase 160 with verification and documentation | 3 | All above | ✅ Complete |
 
 **Total estimated hours:** 37
 
@@ -172,17 +172,17 @@ cargo doc --no-deps
 
 ## Acceptance Criteria
 
-- [ ] `Value::Record` and `Value::Tuple` can be constructed, bound, and passed as arguments
-- [ ] `PrimOp::RecordGet` and `PrimOp::TupleGet` correctly extract field/element values
-- [ ] `Atom::ConstructorName` enables sum type discrimination in the IR
-- [ ] Pattern dispatch (Match) works for 2-way and 3-way cases
-- [ ] Mutual recursion (even/odd) executes correctly via tuple-of-lambdas in `LetRec`
-- [ ] All new IR forms round-trip through serde-lexpr serialization (`.cps` files)
-- [ ] Speculative fixtures demonstrate executable lowering patterns for: mutual recursion, records, sum types, trait dictionaries
-- [ ] Operational semantics document covers evaluation rules for all new forms
-- [ ] Reference documentation describes new IR constructs and their intended use in lowering
-- [ ] CHANGELOG.md updated
-- [ ] PLAN-INDEX.md updated
+- [x] `Value::Record` and `Value::Tuple` can be constructed, bound, and passed as arguments
+- [x] `PrimOp::RecordGet` and `PrimOp::TupleGet` correctly extract field/element values
+- [x] `Atom::ConstructorName` enables sum type discrimination in the IR
+- [x] Pattern dispatch (Match) works for 2-way, 3-way, and default cases
+- [x] Mutual recursion (even/odd) executes correctly via tuple-of-lambdas in `LetRec`
+- [x] All new IR forms round-trip through serde-lexpr serialization
+- [x] Speculative Rust fixtures demonstrate executable lowering patterns for mutual recursion, records, sum types, and trait dictionaries
+- [x] Operational semantics document covers evaluation rules for all new forms
+- [x] Reference documentation describes new IR constructs and their intended use in lowering
+- [x] CHANGELOG.md updated
+- [x] PLAN-INDEX.md updated
 
 ## Recommended Execution Order
 
@@ -231,3 +231,4 @@ TASK-1616 (Speculative fixtures) ──► TASK-1617 (Operational semantics)
 - 2026-06-19: Created as follow-on to Phase 159. Defines speculative IR shapes for structured data, pattern matching, and mutual recursion as proof-of-concepts for future frontend lowering.
 - 2026-06-19: Updated to reflect serde-based serialization (via `serde_lexpr`) as the established format. S-expression parser/serializer work is deferred; new forms will use serde derives instead.
 - 2026-06-19: Clarified scope: pure IR work only. Type checking, lowering, migration, and JIT are explicitly out of scope. This phase provides executable IR targets, not a frontend pipeline.
+- 2026-06-20: Closed out Phase 160 by reconciling status surfaces, reference cards, and focused verification evidence against the implemented CPS IR runtime expansion.

@@ -7,7 +7,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-/// Wrapper for one-shot consumed flag - serializes as bool but uses Rc<RefCell> internally
+/// Wrapper for one-shot consumed flag - serializes as bool but uses `Rc<RefCell>` internally
 #[derive(Debug, Clone, PartialEq)]
 pub struct ConsumedFlag(Rc<RefCell<bool>>);
 

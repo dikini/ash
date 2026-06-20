@@ -1,6 +1,6 @@
 # TASK-1613: Add Match term for pattern dispatch
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 

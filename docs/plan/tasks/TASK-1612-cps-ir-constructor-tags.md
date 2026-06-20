@@ -1,6 +1,6 @@
 # TASK-1612: Add ConstructorName atom variant for sum types
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 

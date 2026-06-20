@@ -4,6 +4,8 @@
 //! can query diagnostics, hover, go-to-definition, completion, and symbols
 //! with the same precision as a human IDE user.
 
+pub mod daemon;
+
 use std::sync::Arc;
 
 use rmcp::handler::server::tool::ToolRouter;
@@ -98,6 +100,21 @@ impl AshMcpServer {
         }
     }
 
+    /// Create a new MCP server sharing an existing VFS and analysis cache.
+    #[must_use]
+    pub fn with_vfs_and_cache(
+        vfs: Arc<Vfs>,
+        cache: Arc<AnalysisCache>,
+        config: LintConfig,
+    ) -> Self {
+        Self {
+            vfs,
+            cache,
+            config,
+            tool_router: Self::tool_router(),
+        }
+    }
+
     /// Build a `file://` URI from an OS path using `FromStr`.
     fn file_uri(file_path: &str) -> Result<lsp_types::Uri, String> {
         let uri_str = if file_path.starts_with('/') {
@@ -151,6 +168,24 @@ impl AshMcpServer {
     /// Build a JSON error response.
     fn json_error(msg: String) -> CallToolResult {
         CallToolResult::error(vec![Content::text(msg)])
+    }
+
+    /// Public convenience wrapper for workspace symbol tests and direct callers.
+    #[must_use]
+    pub fn workspace_symbols(&self, root: String, query: String) -> CallToolResult {
+        self.ash_workspace_symbols(Parameters(WorkspaceSymbolParams { root, query }))
+    }
+
+    /// Public convenience wrapper for same-file find-references tests and direct callers.
+    #[must_use]
+    pub fn find_references(&self, file: String, line: u32, column: u32) -> CallToolResult {
+        self.ash_find_references(Parameters(PositionParams { file, line, column }))
+    }
+
+    /// Public convenience wrapper for go-to-definition tests and direct callers.
+    #[must_use]
+    pub fn goto_definition(&self, file: String, line: u32, column: u32) -> CallToolResult {
+        self.ash_goto_definition(Parameters(PositionParams { file, line, column }))
     }
 }
 
@@ -379,29 +414,75 @@ impl AshMcpServer {
         Self::json_success(summary, serde_json::Value::Array(entries))
     }
 
-    /// Find references (placeholder — cross-file deferred to Phase 5).
-    #[tool(description = "Find references to the symbol at a position (single-file, placeholder)")]
+    /// Find same-file references to the symbol at a position.
+    #[tool(description = "Find references to the symbol at a position (single-file)")]
     fn ash_find_references(
         &self,
         Parameters(params): Parameters<PositionParams>,
     ) -> CallToolResult {
-        let _ = (self, params);
+        let entry = match self.ensure_open(&params.file) {
+            Ok(e) => e,
+            Err(e) => return Self::json_error(e),
+        };
+        let module = match Self::parse_file(&entry) {
+            Ok(m) => m,
+            Err(e) => return Self::json_error(e),
+        };
+        let uri = match Self::file_uri(&params.file) {
+            Ok(u) => u,
+            Err(e) => return Self::json_error(e),
+        };
+
+        let refs = goto::find_references(
+            &module,
+            &entry.content,
+            &uri,
+            params.line - 1,
+            params.column - 1,
+        );
+        let entries = refs
+            .iter()
+            .map(|loc| {
+                serde_json::json!({
+                    "file": loc.uri.to_string(),
+                    "start_line": loc.range.start.line + 1,
+                    "start_column": loc.range.start.character + 1,
+                    "end_line": loc.range.end.line + 1,
+                    "end_column": loc.range.end.character + 1,
+                })
+            })
+            .collect::<Vec<_>>();
+
         Self::json_success(
-            "Find references not yet implemented (deferred to Phase 5)".into(),
-            serde_json::Value::Array(vec![]),
+            format!("{} reference(s) found", entries.len()),
+            serde_json::Value::Array(entries),
         )
     }
 
-    /// Workspace symbol search (placeholder — deferred).
+    /// Workspace symbol search.
+    #[allow(clippy::unused_self)]
     #[tool(description = "Search workspace symbols by name")]
     fn ash_workspace_symbols(
         &self,
         Parameters(params): Parameters<WorkspaceSymbolParams>,
     ) -> CallToolResult {
-        let _ = params;
+        let symbols = symbols::workspace_symbols(std::path::Path::new(&params.root), &params.query);
+        let entries = symbols
+            .iter()
+            .map(|symbol| {
+                serde_json::json!({
+                    "name": symbol.name,
+                    "kind": format!("{:?}", symbol.kind).to_lowercase(),
+                    "file": symbol.file,
+                    "line": symbol.line,
+                    "column": symbol.column,
+                })
+            })
+            .collect::<Vec<_>>();
+
         Self::json_success(
-            "Workspace symbols not yet implemented (deferred to Phase 5)".into(),
-            serde_json::Value::Array(vec![]),
+            format!("{} symbol(s) found", entries.len()),
+            serde_json::Value::Array(entries),
         )
     }
 

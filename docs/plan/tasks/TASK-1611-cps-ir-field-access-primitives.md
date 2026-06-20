@@ -1,6 +1,6 @@
 # TASK-1611: Add RecordGet and TupleGet primitive operations
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 

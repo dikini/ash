@@ -9,7 +9,7 @@ canonical_page_path: reference/language/cps-ir.md
 status: current
 stability: alpha
 owner: language
-last_verified: 2026-06-19
+last_verified: 2026-06-20
 verified_against:
   git_commit: b7d6137f
 refresh_trigger:
@@ -26,7 +26,7 @@ cps, ir, intermediate-representation, continuation-passing-style, eval, interpre
 
 - The CPS IR is an isolated prototype. Do not claim it is connected to the legacy AST or Lean differential testing.
 - Do not claim bytecode compilation or JIT is implemented. Only the interpreter exists.
-- Do not claim mutual recursion is supported. Only single `LetRec` works.
+- Do not claim native multi-binding `LetRec` is supported. Phase 160 supports the documented tuple-of-lambdas mutual-recursion pattern inside single-binding `LetRec`.
 - Do not claim full row polymorphism. Only duplicate validation exists.
 - Effect aliases are not implemented.
 - Full contract discharge is not implemented.
@@ -35,10 +35,10 @@ cps, ir, intermediate-representation, continuation-passing-style, eval, interpre
 
 - **Location**: `crates/ash-core/src/cps.rs` (types), `crates/ash-core/src/sexp.rs` (serialization)
 - **Entry point**: `ash_interp::cps::eval_term(term, env, chain)`
-- **Test files**: `crates/ash-interp/tests/task_159*_cps_ir.rs`
+- **Test files**: `crates/ash-interp/tests/task_159*_cps_ir.rs`, `crates/ash-interp/tests/task_1616*_cps_ir_*.rs`
 - **Spec**: `docs/spec/SPEC-098b-TARGET-IR.md`
-- **Semantics**: `docs/spec/SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md`
-- **Plan**: `docs/plan/PLAN-159-CPS-IR-INTERPRETER.md`
+- **Semantics**: `docs/spec/SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md`, `docs/spec/SPEC-099c-CPS-IR-EXPANDED-OPERATIONAL-SEMANTICS.md`
+- **Plan**: `docs/plan/PLAN-159-CPS-IR-INTERPRETER.md`, `docs/plan/PLAN-160-CPS-IR-RUNTIME-EXPANSION.md`
 
 ## When to use this card
 

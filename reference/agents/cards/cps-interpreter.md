@@ -9,7 +9,7 @@ canonical_page_path: reference/runtime/cps-interpreter.md
 status: current
 stability: alpha
 owner: runtime
-last_verified: 2026-06-19
+last_verified: 2026-06-20
 verified_against:
   git_commit: b7d6137f
 refresh_trigger:
@@ -25,7 +25,7 @@ cps, interpreter, eval, eval_term, eval_letval, eval_letprim, eval_letcont, eval
 ## Stale-claim warnings
 
 - The interpreter is the only execution path. Do not claim bytecode or JIT exists.
-- Do not claim the interpreter handles mutual recursion. Only single `LetRec` works.
+- Do not claim native multi-binding `LetRec` exists. The interpreter handles Phase 160 tuple-of-lambdas mutual recursion through single-binding `LetRec`.
 - Do not claim full row polymorphism. Only duplicate validation exists.
 - Effect aliases are not implemented.
 - Full contract discharge is not implemented.
@@ -35,9 +35,9 @@ cps, interpreter, eval, eval_term, eval_letval, eval_letprim, eval_letcont, eval
 
 - **Location**: `crates/ash-interp/src/cps.rs`
 - **Entry point**: `eval_term(term, env, chain)`
-- **Test files**: `crates/ash-interp/tests/task_1591_cps_ir.rs` through `task_1596_cps_ir.rs`
-- **Semantics**: `docs/spec/SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md`
-- **Plan**: `docs/plan/PLAN-159-CPS-IR-INTERPRETER.md`
+- **Test files**: `crates/ash-interp/tests/task_1591_cps_ir.rs` through `task_1596_cps_ir.rs`, plus `task_1616*_cps_ir_*.rs`
+- **Semantics**: `docs/spec/SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md`, `docs/spec/SPEC-099c-CPS-IR-EXPANDED-OPERATIONAL-SEMANTICS.md`
+- **Plan**: `docs/plan/PLAN-159-CPS-IR-INTERPRETER.md`, `docs/plan/PLAN-160-CPS-IR-RUNTIME-EXPANSION.md`
 
 ## When to use this card
 

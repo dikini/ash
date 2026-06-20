@@ -4,7 +4,10 @@
 //! programs. Later tasks extend the expression rules; unsupported forms fail
 //! closed instead of being accepted optimistically.
 
-use crate::core_ash::{CoreAtom, CoreEffectOp, CoreExpr, CoreName, CoreRow, CoreRowItem, CoreType};
+use crate::core_ash::{
+    CoreAtom, CoreEffectOp, CoreExpr, CoreName, CorePrimOp, CoreRow, CoreRowItem, CoreType,
+    CoreValue,
+};
 use crate::core_ash_validate::ValidCoreProgram;
 use std::collections::{HashMap, HashSet};
 
@@ -98,6 +101,7 @@ impl CoreTypeCheckEnv {
 pub struct CoreTypeEnv {
     names: HashSet<CoreName>,
     constructors: HashMap<CoreName, usize>,
+    value_constructors: HashMap<CoreName, CoreType>,
     variables: HashSet<CoreName>,
 }
 
@@ -105,7 +109,10 @@ impl CoreTypeEnv {
     /// Returns true when the environment has no bindings.
     #[must_use]
     pub fn is_empty(&self) -> bool {
-        self.names.is_empty() && self.constructors.is_empty() && self.variables.is_empty()
+        self.names.is_empty()
+            && self.constructors.is_empty()
+            && self.value_constructors.is_empty()
+            && self.variables.is_empty()
     }
 
     /// Returns true when the type name is known.
@@ -139,6 +146,21 @@ impl CoreTypeEnv {
     /// Inserts a known type constructor arity.
     pub fn insert_constructor(&mut self, name: impl Into<CoreName>, arity: usize) -> Option<usize> {
         self.constructors.insert(name.into(), arity)
+    }
+
+    /// Looks up a value constructor type by name.
+    #[must_use]
+    pub fn value_constructor(&self, name: &str) -> Option<&CoreType> {
+        self.value_constructors.get(name)
+    }
+
+    /// Inserts a known value constructor type.
+    pub fn insert_value_constructor(
+        &mut self,
+        name: impl Into<CoreName>,
+        ty: CoreType,
+    ) -> Option<CoreType> {
+        self.value_constructors.insert(name.into(), ty)
     }
 }
 
@@ -346,6 +368,10 @@ pub enum CoreTypeCheckError {
     #[error("unknown refinement predicate `{predicate}`")]
     UnknownRefinementPredicate { predicate: String },
 
+    /// Two rows were expected to match but did not.
+    #[error("row mismatch")]
+    RowMismatch { expected: CoreRow, actual: CoreRow },
+
     /// A row alias or group reference could not be normalized structurally.
     #[error("ambiguous row reference: {detail}")]
     AmbiguousRowReference { detail: String },
@@ -401,6 +427,27 @@ impl CoreRowComparison {
     #[must_use]
     pub fn solutions(&self) -> &[CoreRowSolution] {
         &self.solutions
+    }
+}
+
+/// A Core value with its synthesized type and construction row.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TypedCoreValue {
+    ty: CoreType,
+    row: CoreRow,
+}
+
+impl TypedCoreValue {
+    /// Returns the synthesized value type.
+    #[must_use]
+    pub fn ty(&self) -> &CoreType {
+        &self.ty
+    }
+
+    /// Returns the value construction row.
+    #[must_use]
+    pub fn row(&self) -> &CoreRow {
+        &self.row
     }
 }
 
@@ -611,6 +658,97 @@ pub fn core_row_included_in(
     }
 }
 
+/// Synthesizes the type of a Core atom.
+///
+/// # Errors
+///
+/// Returns [`CoreTypeCheckError`] when a referenced value or constructor cannot
+/// be resolved, or when a primitive name has no first-slice function type.
+pub fn synthesize_core_atom(
+    atom: &CoreAtom,
+    env: &CoreTypeCheckEnv,
+) -> Result<CoreType, CoreTypeCheckError> {
+    match atom {
+        CoreAtom::Var(name) => env
+            .values()
+            .lookup(name)
+            .cloned()
+            .ok_or_else(|| CoreTypeCheckError::UnknownValue { name: name.clone() }),
+        CoreAtom::LitInt(_) => Ok(CoreType::Base("Int".into())),
+        CoreAtom::LitString(_) => Ok(CoreType::Base("String".into())),
+        CoreAtom::LitBool(_) => Ok(CoreType::Base("Bool".into())),
+        CoreAtom::LitUnit => Ok(CoreType::Base("Unit".into())),
+        CoreAtom::PrimName(op) => primitive_type(op),
+        CoreAtom::ConstructorName(name) => {
+            let Some(ty) = env.types().value_constructor(name).cloned() else {
+                return Err(CoreTypeCheckError::UnknownValue { name: name.clone() });
+            };
+            check_core_type_well_formed(&ty, env)?;
+            Ok(ty)
+        }
+    }
+}
+
+/// Synthesizes the type and construction row of an inert Core value.
+///
+/// # Errors
+///
+/// Returns [`CoreTypeCheckError`] when component atoms/types are not well
+/// formed, or when a lambda body row does not match its latent row annotation.
+pub fn synthesize_core_value(
+    value: &CoreValue,
+    env: &CoreTypeCheckEnv,
+) -> Result<TypedCoreValue, CoreTypeCheckError> {
+    let ty = match value {
+        CoreValue::Atom(atom) => synthesize_core_atom(atom, env)?,
+        CoreValue::Lam { params, body, row } => {
+            let mut body_env = env.clone();
+            let mut param_types = Vec::with_capacity(params.len());
+            for param in params {
+                check_core_type_well_formed(&param.ty, env)?;
+                body_env
+                    .values_mut()
+                    .insert(param.name.clone(), param.ty.clone());
+                param_types.push(param.ty.clone());
+            }
+
+            let (body_ty, body_row) = type_check_expr(body, &body_env)?;
+            if normalize_core_row(&body_row)? != normalize_core_row(row)? {
+                return Err(CoreTypeCheckError::RowMismatch {
+                    expected: row.clone(),
+                    actual: body_row,
+                });
+            }
+
+            CoreType::Function {
+                params: param_types,
+                result: Box::new(body_ty),
+                row: row.clone(),
+            }
+        }
+        CoreValue::Record { fields } => {
+            let mut typed_fields = Vec::with_capacity(fields.len());
+            for (name, atom) in fields {
+                typed_fields.push((name.clone(), synthesize_core_atom(atom, env)?));
+            }
+            CoreType::Record(typed_fields)
+        }
+        CoreValue::Tuple { elems } => {
+            let mut elem_types = Vec::with_capacity(elems.len());
+            for elem in elems {
+                elem_types.push(synthesize_core_atom(elem, env)?);
+            }
+            CoreType::Tuple(elem_types)
+        }
+        CoreValue::DischargeMarker { .. } => CoreType::Base("Unit".into()),
+    };
+
+    Ok(TypedCoreValue {
+        ty,
+        row: CoreRow::default(),
+    })
+}
+
 fn check_types_well_formed(
     types: &[CoreType],
     env: &CoreTypeCheckEnv,
@@ -812,23 +950,50 @@ fn type_check_atom(
     atom: &CoreAtom,
     env: &CoreTypeCheckEnv,
 ) -> Result<CoreType, CoreTypeCheckError> {
-    match atom {
-        CoreAtom::Var(name) => env
-            .values()
-            .lookup(name)
-            .cloned()
-            .ok_or_else(|| CoreTypeCheckError::UnknownValue { name: name.clone() }),
-        CoreAtom::LitInt(_) => Ok(CoreType::Base("Int".into())),
-        CoreAtom::LitString(_) => Ok(CoreType::Base("String".into())),
-        CoreAtom::LitBool(_) => Ok(CoreType::Base("Bool".into())),
-        CoreAtom::LitUnit => Ok(CoreType::Base("Unit".into())),
-        CoreAtom::PrimName(_) => Err(unsupported("PrimName atom")),
-        CoreAtom::ConstructorName(_) => Err(unsupported("ConstructorName atom")),
-    }
+    synthesize_core_atom(atom, env)
 }
 
 fn unsupported(form: &str) -> CoreTypeCheckError {
     CoreTypeCheckError::UnsupportedCoreForm {
         detail: form.to_owned(),
+    }
+}
+
+fn primitive_type(op: &CorePrimOp) -> Result<CoreType, CoreTypeCheckError> {
+    let int = CoreType::Base("Int".into());
+    let bool_ty = CoreType::Base("Bool".into());
+    let unary_int = || CoreType::Function {
+        params: vec![int.clone()],
+        result: Box::new(int.clone()),
+        row: CoreRow::default(),
+    };
+    let binary_int = || CoreType::Function {
+        params: vec![int.clone(), int.clone()],
+        result: Box::new(int.clone()),
+        row: CoreRow::default(),
+    };
+    let binary_int_to_bool = || CoreType::Function {
+        params: vec![int.clone(), int.clone()],
+        result: Box::new(bool_ty.clone()),
+        row: CoreRow::default(),
+    };
+
+    match op {
+        CorePrimOp::Add | CorePrimOp::Sub | CorePrimOp::Mul | CorePrimOp::Div => Ok(binary_int()),
+        CorePrimOp::Eq
+        | CorePrimOp::Ne
+        | CorePrimOp::Lt
+        | CorePrimOp::Le
+        | CorePrimOp::Gt
+        | CorePrimOp::Ge => Ok(binary_int_to_bool()),
+        CorePrimOp::Neg => Ok(unary_int()),
+        CorePrimOp::Not => Ok(CoreType::Function {
+            params: vec![bool_ty.clone()],
+            result: Box::new(bool_ty),
+            row: CoreRow::default(),
+        }),
+        CorePrimOp::RecordGet(_) | CorePrimOp::TupleGet(_) | CorePrimOp::ConstructorTag(_) => {
+            Err(unsupported("structural primitive name atom"))
+        }
     }
 }

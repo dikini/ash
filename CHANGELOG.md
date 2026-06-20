@@ -6,6 +6,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Added
+- Added Core Ash atom and inert-value type synthesis for literals, variables, first-slice primitive names, environment-backed constructors, records, tuples, lambdas with latent-row checks, and administrative discharge markers. (TASK-1643)
 - Added Core Ash row normalization and structural row inclusion with exact duplicate removal, effect-kind namespace preservation, open-tail remainder solving, role non-expansion, and ambiguous group-reference rejection. (TASK-1642)
 - Added Core Ash type well-formedness checks for built-in bases, named types, scoped type variables, type applications, recursive child types, row tails, refinement predicate metadata, and record field-name equivalence. (TASK-1641)
 - Added the initial Core Ash type-checker API scaffold with validated-program entrypoint, typed program wrapper, scoped environment carriers, structured diagnostics, and focused API tests. (TASK-1640)

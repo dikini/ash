@@ -4,7 +4,7 @@ title: Core Ash IR Foundation
 kind: plan
 audience: [human, agent]
 authority: design
-status: draft
+status: complete
 stability: alpha
 owner: language
 last_verified: 2026-06-20
@@ -32,7 +32,7 @@ verified_against:
 
 ## Status
 
-In progress: 9/12 tasks complete.
+Complete: 12/12 tasks complete.
 
 ## Background
 
@@ -100,7 +100,7 @@ The serializer must produce one canonical spelling so fixture diffs are stable. 
 | [TASK-1628](tasks/TASK-1628-core-to-cps-lowering-effects.md) | Lower raise, handle, discharge, and trap forms | 5 | TASK-1627 | Complete |
 | [TASK-1629](tasks/TASK-1629-core-end-to-end-fixtures.md) | Add `.core` -> validate -> CPS golden fixtures | 4 | TASK-1624, TASK-1628 | Complete |
 | [TASK-1630](tasks/TASK-1630-core-ash-reference-docs.md) | Document Core text and implementation boundaries | 2 | TASK-1629 | Complete |
-| [TASK-1631](tasks/TASK-1631-phase-161-closeout.md) | Close out Phase 161 with verification and review | 3 | All above | Planned |
+| [TASK-1631](tasks/TASK-1631-phase-161-closeout.md) | Close out Phase 161 with verification and review | 3 | All above | Complete |
 
 **Total estimated hours:** 40.
 
@@ -160,7 +160,31 @@ At worktree creation on 2026-06-20, `cargo test -p ash-core -p ash-interp` passe
 - [x] Raise, Handle, RecordDischarge, and Trap lower without reintroducing `ContractViolation` as an effect row item.
 - [x] End-to-end `.core` fixtures produce expected CPS golden output.
 - [x] Reference documentation states that Core text is a fixture/debug format, not surface Ash.
-- [ ] PLAN-INDEX and CHANGELOG are reconciled.
+- [x] PLAN-INDEX and CHANGELOG are reconciled.
+
+## Verification Evidence
+
+Verified on 2026-06-20:
+
+```bash
+cargo test -p ash-core --test task_1620_core_ash_ast
+cargo test -p ash-core --test task_1621_core_text_format
+cargo test -p ash-core --test task_1622_core_text_parser_atoms_values
+cargo test -p ash-core --test task_1623_core_text_parser_expressions
+cargo test -p ash-core --test task_1624_core_text_serializer
+cargo test -p ash-core --test task_1625_core_validator_basic
+cargo test -p ash-core --test task_1626_core_validator_affine_resume
+cargo test -p ash-core --test task_1627_core_to_cps_basic
+cargo test -p ash-core --test task_1628_core_to_cps_effects
+cargo test -p ash-core --test task_1629_core_end_to_end
+cargo test -p ash-core --test task_1630_core_docs_consistency
+cargo test -p ash-core
+cargo clippy -p ash-core --all-targets -- -D warnings
+cargo fmt --check
+git diff --check
+```
+
+Closeout review: [`PHASE-161-CLOSEOUT-REVIEW.md`](audits/PHASE-161-CLOSEOUT-REVIEW.md).
 
 ## Recommended Execution Order
 
@@ -199,4 +223,5 @@ TASK-1620 -> TASK-1621 -> TASK-1622 -> TASK-1623 -> TASK-1624
 - 2026-06-20: Completed TASK-1628 by lowering Core raise, handle, record-discharge, and trap forms into CPS while preserving local row accounting and keeping contract violations as trap metadata only.
 - 2026-06-20: Completed TASK-1629 by adding end-to-end `.core` fixture tests that parse, validate, lower, serialize, reparse, and compare CPS golden outputs, plus an invalid validation fixture.
 - 2026-06-20: Completed TASK-1630 by documenting the Core text fixture/debug format, validated Core-to-CPS lowering boundary, implemented row/effect behavior, and deferred feature boundaries.
+- 2026-06-20: Completed TASK-1631 by reconciling Phase 161 status surfaces, recording closeout review evidence, and verifying all focused Phase 161 plus affected `ash-core` gates.
 - 2026-06-20: Created Phase 161 plan for the Core Ash IR foundation, including `.core` text parser/serializer, Core validation, and Core-to-CPS lowering.

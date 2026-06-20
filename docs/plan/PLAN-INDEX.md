@@ -136,7 +136,7 @@ Update this section as tasks complete:
 | [158](PLAN-158-LANGUAGE-SURFACE-FIXES.md) | 5 | 3 | ⏸️ Deferred; TASK-1580 (Module-level function visibility) remains open |
 || [159](PLAN-159-CPS-IR-INTERPRETER.md) | 14 | 14 | ✅ Complete; all tasks implemented, 82 tests pass, reference docs added, review remediation done (validation boundary, lambda closure capture, handler semantics) |
 || [160](PLAN-160-CPS-IR-RUNTIME-EXPANSION.md) | 10 | 10 | ✅ Complete; CPS IR runtime expansion implemented, focused tests pass, reference docs updated |
-|| [161](PLAN-161-CORE-ASH-IR-FOUNDATION.md) | 12 | 11 | 🚧 In progress; Core Ash AST carriers, `.core` fixture format, parser, serializer, validator, Core-to-CPS lowering, end-to-end fixtures, and reference docs complete; closeout remains |
+|| [161](PLAN-161-CORE-ASH-IR-FOUNDATION.md) | 12 | 12 | ✅ Complete; Core Ash AST carriers, `.core` fixture format, parser, serializer, validator, Core-to-CPS lowering, end-to-end fixtures, reference docs, and closeout verified |
 |
 |---
 
@@ -499,7 +499,7 @@ Extends the Phase 159 CPS IR interpreter with structured data (records, tuples),
 
 ## Phase 161: Core Ash IR Foundation
 
-**Status:** 🚧 In progress; 11/12 implemented
+**Status:** ✅ Complete; 12/12 implemented and closeout verified
 **Plan:** [PLAN-161: Core Ash IR Foundation](PLAN-161-CORE-ASH-IR-FOUNDATION.md)
 **Spec:** [SPEC-099: Ash Core Language](../spec/SPEC-099-CORE-LANGUAGE.md)
 **Depends on:** SPEC-099, SPEC-098b, SPEC-096b, SPEC-097b; builds on Phase 159 CPS IR substrate.
@@ -519,4 +519,12 @@ Builds the first implementation slice for Core Ash: dedicated Core AST carriers,
 | [TASK-1628](tasks/TASK-1628-core-to-cps-lowering-effects.md) | Lower raise, handle, discharge, and trap forms | ✅ Complete |
 | [TASK-1629](tasks/TASK-1629-core-end-to-end-fixtures.md) | Add `.core` -> validate -> CPS golden fixtures | ✅ Complete |
 | [TASK-1630](tasks/TASK-1630-core-ash-reference-docs.md) | Document Core text and implementation boundaries | ✅ Complete |
-| [TASK-1631](tasks/TASK-1631-phase-161-closeout.md) | Close out Phase 161 with verification and review | 📝 Planned |
+| [TASK-1631](tasks/TASK-1631-phase-161-closeout.md) | Close out Phase 161 with verification and review | ✅ Complete |
+
+**Verification Evidence:**
+
+- Focused Phase 161 tests `task_1620_core_ash_ast` through `task_1630_core_docs_consistency` pass.
+- `cargo test -p ash-core` passes.
+- `cargo clippy -p ash-core --all-targets -- -D warnings` passes.
+- `cargo fmt --check` and `git diff --check` pass.
+- Closeout review recorded in [PHASE-161-CLOSEOUT-REVIEW.md](audits/PHASE-161-CLOSEOUT-REVIEW.md).

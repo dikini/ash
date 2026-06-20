@@ -1,6 +1,6 @@
 # TASK-1631: Close out Phase 161
 
-**Status:** Planned
+**Status:** Complete
 **Phase:** [PLAN-161](../PLAN-161-CORE-ASH-IR-FOUNDATION.md)
 **Owner:** Phase 161
 
@@ -87,8 +87,35 @@ commands:
   - cargo fmt --check
   - git diff --check
 checklist:
-  - [ ] TASK-1620 through TASK-1630 status surfaces agree
-  - [ ] CHANGELOG.md updated
-  - [ ] PLAN-INDEX.md updated
-  - [ ] Independent review complete
+  - [x] TASK-1620 through TASK-1630 status surfaces agree
+  - [x] CHANGELOG.md updated
+  - [x] PLAN-INDEX.md updated
+  - [x] Independent review complete
+```
+
+## Completion Evidence
+
+- Re-read PLAN-161, TASK-1620 through TASK-1630, TASK-1631, SPEC-099, and SPEC-098b.
+- Ran all focused Phase 161 tests and affected `ash-core` gates listed above.
+- Added closeout review artifact: [`PHASE-161-CLOSEOUT-REVIEW.md`](../audits/PHASE-161-CLOSEOUT-REVIEW.md).
+- Reconciled PLAN-161, PLAN-INDEX, TASK-1631, and CHANGELOG status surfaces.
+
+Verified on 2026-06-20:
+
+```bash
+cargo test -p ash-core --test task_1620_core_ash_ast
+cargo test -p ash-core --test task_1621_core_text_format
+cargo test -p ash-core --test task_1622_core_text_parser_atoms_values
+cargo test -p ash-core --test task_1623_core_text_parser_expressions
+cargo test -p ash-core --test task_1624_core_text_serializer
+cargo test -p ash-core --test task_1625_core_validator_basic
+cargo test -p ash-core --test task_1626_core_validator_affine_resume
+cargo test -p ash-core --test task_1627_core_to_cps_basic
+cargo test -p ash-core --test task_1628_core_to_cps_effects
+cargo test -p ash-core --test task_1629_core_end_to_end
+cargo test -p ash-core --test task_1630_core_docs_consistency
+cargo test -p ash-core
+cargo clippy -p ash-core --all-targets -- -D warnings
+cargo fmt --check
+git diff --check
 ```

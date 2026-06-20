@@ -6,6 +6,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Added
+- Added Core Ash raised-operation type checking for capability, channel, process, and failure `Raise` forms, including operation environment lookup, argument/result type checks, operation-only local rows, and ContractViolation trap separation. (TASK-1646)
 - Added Core Ash call and jump type checking for `LetCall`, tail `Call`, and `Jump`, preserving callee-local rows separately from jump target continuation rows through typed lowering facts. (TASK-1645)
 - Added basic Core Ash expression type checking for `LetVal`, `LetRec`, pure `LetPrim`, `If`, and expected-type `Trap` contexts, including structured type and argument-count mismatch diagnostics. (TASK-1644)
 - Added Core Ash atom and inert-value type synthesis for literals, variables, first-slice primitive names, environment-backed constructors, records, tuples, lambdas with latent-row checks, and administrative discharge markers. (TASK-1643)

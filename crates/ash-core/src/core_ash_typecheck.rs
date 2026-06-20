@@ -1076,7 +1076,7 @@ fn type_check_expr(
             Ok(typed_expr(result_ty, callee_row))
         }
         CoreExpr::Jump { cont, arg } => type_check_jump(cont, arg, env),
-        CoreExpr::Raise { .. } => Err(unsupported("Raise")),
+        CoreExpr::Raise { op, args } => type_check_raise(op, args, env),
         CoreExpr::Handle { .. } => Err(unsupported("Handle")),
         CoreExpr::RecordDischarge { .. } => Err(unsupported("RecordDischarge")),
         CoreExpr::Trap { .. } => Err(unsupported("Trap")),
@@ -1186,6 +1186,133 @@ fn check_function_application(
 
     check_arguments(&params, args, env)?;
     Ok((*result, row))
+}
+
+fn type_check_raise(
+    op: &CoreEffectOp,
+    args: &[CoreAtom],
+    env: &CoreTypeCheckEnv,
+) -> Result<TypedCoreExpr, CoreTypeCheckError> {
+    let (arg_types, result_type, row) = effect_operation_signature(op, env)?;
+    if !env.operations().contains(op) {
+        return Err(CoreTypeCheckError::UnknownOperation {
+            detail: effect_operation_detail(op),
+        });
+    }
+
+    check_arguments(&arg_types, args, env)?;
+    Ok(typed_expr(result_type, row))
+}
+
+fn effect_operation_signature(
+    op: &CoreEffectOp,
+    env: &CoreTypeCheckEnv,
+) -> Result<(Vec<CoreType>, CoreType, CoreRow), CoreTypeCheckError> {
+    match op {
+        CoreEffectOp::Capability {
+            path,
+            operation,
+            arg_types,
+            result_type,
+        } => {
+            check_types_well_formed(arg_types, env)?;
+            check_core_type_well_formed(result_type, env)?;
+            Ok((
+                arg_types.clone(),
+                result_type.clone(),
+                CoreRow::closed(vec![CoreRowItem::Capability {
+                    path: path.clone(),
+                    operation: operation.clone(),
+                }]),
+            ))
+        }
+        CoreEffectOp::Channel {
+            path,
+            mode,
+            payload_type,
+            result_type,
+        } => {
+            check_core_type_well_formed(payload_type, env)?;
+            check_core_type_well_formed(result_type, env)?;
+            Ok((
+                vec![payload_type.clone()],
+                result_type.clone(),
+                CoreRow::closed(vec![CoreRowItem::Channel {
+                    path: path.clone(),
+                    mode: mode.clone(),
+                    payload_type: Box::new(payload_type.clone()),
+                }]),
+            ))
+        }
+        CoreEffectOp::Process {
+            operation,
+            arg_types,
+            result_type,
+        } => {
+            check_types_well_formed(arg_types, env)?;
+            check_core_type_well_formed(result_type, env)?;
+            Ok((
+                arg_types.clone(),
+                result_type.clone(),
+                CoreRow::closed(vec![CoreRowItem::Process {
+                    operation: operation.clone(),
+                }]),
+            ))
+        }
+        CoreEffectOp::Failure { ty } => {
+            if let Some(ty) = ty {
+                check_core_type_well_formed(ty, env)?;
+            }
+            let arg_types = ty.iter().cloned().collect();
+            let result_type = CoreType::Named("Never".into());
+            check_core_type_well_formed(&result_type, env)?;
+            Ok((
+                arg_types,
+                result_type,
+                CoreRow::closed(vec![CoreRowItem::Failure {
+                    ty: ty.clone().map(Box::new),
+                }]),
+            ))
+        }
+    }
+}
+
+fn effect_operation_detail(op: &CoreEffectOp) -> String {
+    match op {
+        CoreEffectOp::Capability {
+            path, operation, ..
+        } => format!("cap {}", dotted_name(path, operation)),
+        CoreEffectOp::Channel { path, mode, .. } => {
+            format!("channel {}", dotted_name(path, mode))
+        }
+        CoreEffectOp::Process { operation, .. } => format!("proc {operation}"),
+        CoreEffectOp::Failure { ty } => ty
+            .as_ref()
+            .map(|ty| format!("fail {}", type_detail(ty)))
+            .unwrap_or_else(|| "fail failure".to_owned()),
+    }
+}
+
+fn dotted_name(path: &[String], leaf: &str) -> String {
+    if path.is_empty() {
+        leaf.to_owned()
+    } else {
+        format!("{}.{}", path.join("."), leaf)
+    }
+}
+
+fn type_detail(ty: &CoreType) -> String {
+    match ty {
+        CoreType::Base(name) | CoreType::Named(name) | CoreType::Var(name) => name.clone(),
+        CoreType::Function { .. } => "function".to_owned(),
+        CoreType::Refinement { base, predicate } => {
+            format!("{}|{predicate}", type_detail(base))
+        }
+        CoreType::Cont { .. } => "continuation".to_owned(),
+        CoreType::Tuple(elems) => format!("tuple/{}", elems.len()),
+        CoreType::Record(fields) => format!("record/{}", fields.len()),
+        CoreType::App { name, args } => format!("{name}/{}", args.len()),
+    }
 }
 
 fn check_primitive_application(

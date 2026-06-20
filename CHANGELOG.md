@@ -6,6 +6,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Added
+- [Phase 162](docs/plan/PLAN-162-CORE-ASH-TYPE-CHECKING.md): Planned SPEC-100 Core Ash type-checking implementation with 12 TDD tasks covering checker APIs/environments, type well-formedness, row normalization and structural solving, atom/value/expression typing, call/jump row accounting, raised operation typing, handle/affine resume checks, refinement obligations, discharge metadata, public summaries, integration fixtures, and closeout documentation. (TASK-1640 through TASK-1651)
 - Added SPEC-100 Core Ash type-checking draft, defining declarative Core typing, annotation-led algorithmic checking, structural row solving, refinement obligations, handler affinity, discharge boundaries, and review-corrected refinement, Jump, handler-resume, and duplicate-row normalization rules.
 - Added SPEC-099 Core Ash AST carriers in `ash-core::core_ash`, including direct-style Core expressions, Core rows/types, handler clauses with affine resume metadata, and raised operation variants limited to capability, channel, process, and failure. (TASK-1620)
 - Added the initial `.core` fixture/debug text format reference and golden fixture corpus for Core Ash parser, serializer, validator, and lowering tests. (TASK-1621)

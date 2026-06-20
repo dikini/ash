@@ -137,6 +137,7 @@ Update this section as tasks complete:
 || [159](PLAN-159-CPS-IR-INTERPRETER.md) | 14 | 14 | ✅ Complete; all tasks implemented, 82 tests pass, reference docs added, review remediation done (validation boundary, lambda closure capture, handler semantics) |
 || [160](PLAN-160-CPS-IR-RUNTIME-EXPANSION.md) | 10 | 10 | ✅ Complete; CPS IR runtime expansion implemented, focused tests pass, reference docs updated |
 || [161](PLAN-161-CORE-ASH-IR-FOUNDATION.md) | 13 | 13 | ✅ Complete; Core Ash foundation and public Core text round-trip review remediation verified |
+|| [162](PLAN-162-CORE-ASH-TYPE-CHECKING.md) | 12 | 0 | 📝 Planned; SPEC-100 Core Ash type-checking implementation packet |
 |
 |---
 
@@ -529,3 +530,27 @@ Builds the first implementation slice for Core Ash: dedicated Core AST carriers,
 - `cargo clippy -p ash-core --all-targets -- -D warnings` passes.
 - `cargo fmt --check` and `git diff --check` pass.
 - Closeout review recorded in [PHASE-161-CLOSEOUT-REVIEW.md](audits/PHASE-161-CLOSEOUT-REVIEW.md).
+
+## Phase 162: Core Ash Type Checking
+
+**Status:** 📝 Planned; 0/12 implemented
+**Plan:** [PLAN-162: Core Ash Type Checking](PLAN-162-CORE-ASH-TYPE-CHECKING.md)
+**Spec:** [SPEC-100: Ash Core Type Checking](../spec/SPEC-100-CORE-TYPE-CHECKING.md)
+**Depends on:** Phase 161; SPEC-100, SPEC-099, SPEC-098b, SPEC-097b, SPEC-096b.
+
+Implements the first annotation-led Core Ash type checker. The phase adds Core type-checker environments, type well-formedness, row normalization/solving, atom/value/expression typing, operation and handler checking, refinement obligation recording, discharge metadata checks, public summary scaffolding, integration fixtures, and closeout documentation.
+
+| Task | Description | Status |
+|------|-------------|--------|
+| [TASK-1640](tasks/TASK-1640-core-typecheck-api-and-environments.md) | Add Core type-checker API, environments, typed program wrappers, and diagnostics | 📝 Planned |
+| [TASK-1641](tasks/TASK-1641-core-type-wellformedness.md) | Check Core type well-formedness and nominal/type-app shape | 📝 Planned |
+| [TASK-1642](tasks/TASK-1642-core-row-normalization-solving.md) | Normalize rows, remove duplicates, compare rows, and solve explicit row variables | 📝 Planned |
+| [TASK-1643](tasks/TASK-1643-core-atom-value-typing.md) | Type Core atoms and values, including lambdas, records, tuples, and discharge markers | 📝 Planned |
+| [TASK-1644](tasks/TASK-1644-core-expression-basics-typecheck.md) | Type Atom, LetVal, LetRec, LetPrim, If, and Trap expressions | 📝 Planned |
+| [TASK-1645](tasks/TASK-1645-core-call-jump-row-accounting.md) | Type LetCall, Call, and Jump with SPEC-098b row-accounting facts | 📝 Planned |
+| [TASK-1646](tasks/TASK-1646-core-effect-operation-typing.md) | Type capability/channel/process/failure Raise operations and operation signatures | 📝 Planned |
+| [TASK-1647](tasks/TASK-1647-core-handle-affine-resume-typecheck.md) | Type Handle clauses with affine resume and captured-resume row preservation | 📝 Planned |
+| [TASK-1648](tasks/TASK-1648-core-refinement-obligations-discharge.md) | Record refinement obligations and validate discharge metadata shape | 📝 Planned |
+| [TASK-1649](tasks/TASK-1649-core-public-summary-scaffold.md) | Add public type/row summary scaffolding and private alias diagnostics | 📝 Planned |
+| [TASK-1650](tasks/TASK-1650-core-typecheck-integration-fixtures.md) | Add `.core` parse -> validate -> type-check -> lower integration fixtures | 📝 Planned |
+| [TASK-1651](tasks/TASK-1651-core-typecheck-reference-closeout.md) | Document Core type-checker behavior and close out Phase 162 | 📝 Planned |

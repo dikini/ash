@@ -4,7 +4,7 @@
 //! programs. Later tasks extend the expression rules; unsupported forms fail
 //! closed instead of being accepted optimistically.
 
-use crate::core_ash::{CoreAtom, CoreEffectOp, CoreExpr, CoreName, CoreRow, CoreType};
+use crate::core_ash::{CoreAtom, CoreEffectOp, CoreExpr, CoreName, CoreRow, CoreRowItem, CoreType};
 use crate::core_ash_validate::ValidCoreProgram;
 use std::collections::{HashMap, HashSet};
 
@@ -98,13 +98,14 @@ impl CoreTypeCheckEnv {
 pub struct CoreTypeEnv {
     names: HashSet<CoreName>,
     constructors: HashMap<CoreName, usize>,
+    variables: HashSet<CoreName>,
 }
 
 impl CoreTypeEnv {
     /// Returns true when the environment has no bindings.
     #[must_use]
     pub fn is_empty(&self) -> bool {
-        self.names.is_empty() && self.constructors.is_empty()
+        self.names.is_empty() && self.constructors.is_empty() && self.variables.is_empty()
     }
 
     /// Returns true when the type name is known.
@@ -116,6 +117,17 @@ impl CoreTypeEnv {
     /// Inserts a known nominal type name.
     pub fn insert_name(&mut self, name: impl Into<CoreName>) -> bool {
         self.names.insert(name.into())
+    }
+
+    /// Returns true when the type variable is in scope.
+    #[must_use]
+    pub fn contains_variable(&self, name: &str) -> bool {
+        self.variables.contains(name)
+    }
+
+    /// Inserts an in-scope type variable.
+    pub fn insert_variable(&mut self, name: impl Into<CoreName>) -> bool {
+        self.variables.insert(name.into())
     }
 
     /// Returns the expected type-constructor arity, when known.
@@ -234,13 +246,14 @@ impl CoreOpEnv {
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct CoreDischargeEnv {
     discharged_contracts: HashSet<CoreName>,
+    refinement_predicates: HashSet<String>,
 }
 
 impl CoreDischargeEnv {
     /// Returns true when the environment has no discharge bindings.
     #[must_use]
     pub fn is_empty(&self) -> bool {
-        self.discharged_contracts.is_empty()
+        self.discharged_contracts.is_empty() && self.refinement_predicates.is_empty()
     }
 
     /// Returns true when a contract discharge is known.
@@ -252,6 +265,17 @@ impl CoreDischargeEnv {
     /// Inserts a discharged contract name.
     pub fn insert_contract(&mut self, name: impl Into<CoreName>) -> bool {
         self.discharged_contracts.insert(name.into())
+    }
+
+    /// Returns true when textual refinement predicate metadata is in scope.
+    #[must_use]
+    pub fn contains_refinement_predicate(&self, predicate: &str) -> bool {
+        self.refinement_predicates.contains(predicate)
+    }
+
+    /// Inserts a placeholder for scoped textual refinement predicate metadata.
+    pub fn insert_refinement_predicate(&mut self, predicate: impl Into<String>) -> bool {
+        self.refinement_predicates.insert(predicate.into())
     }
 }
 
@@ -294,6 +318,14 @@ pub enum CoreTypeCheckError {
     #[error("unknown type `{name}`")]
     UnknownType { name: CoreName },
 
+    /// A type variable was referenced but not in scope.
+    #[error("unknown type variable `{name}`")]
+    UnknownTypeVariable { name: CoreName },
+
+    /// A row variable was referenced but not in scope.
+    #[error("unknown row variable `{name}`")]
+    UnknownRowVariable { name: CoreName },
+
     /// A continuation binding was referenced but not present in the continuation environment.
     #[error("unknown continuation `{name}`")]
     UnknownContinuation { name: CoreName },
@@ -301,6 +333,18 @@ pub enum CoreTypeCheckError {
     /// An effect operation was referenced but not present in the operation environment.
     #[error("unknown operation: {detail}")]
     UnknownOperation { detail: String },
+
+    /// A type application was supplied the wrong number of arguments.
+    #[error("type application `{name}` expected {expected} arguments, got {actual}")]
+    TypeApplicationArityMismatch {
+        name: CoreName,
+        expected: usize,
+        actual: usize,
+    },
+
+    /// A textual refinement predicate had no scoped metadata placeholder.
+    #[error("unknown refinement predicate `{predicate}`")]
+    UnknownRefinementPredicate { predicate: String },
 
     /// The checker has not implemented this Core form yet.
     #[error("unsupported Core type-check form: {detail}")]
@@ -323,6 +367,255 @@ pub fn type_check_core_program(
         expr: program.into_expr(),
         ty,
         row,
+    })
+}
+
+/// Checks that a Core type is well formed under the type-checking environment.
+///
+/// # Errors
+///
+/// Returns [`CoreTypeCheckError`] when a type, type variable, row variable, or
+/// refinement predicate cannot be resolved, or when a type application has the
+/// wrong arity.
+pub fn check_core_type_well_formed(
+    ty: &CoreType,
+    env: &CoreTypeCheckEnv,
+) -> Result<(), CoreTypeCheckError> {
+    match ty {
+        CoreType::Base(name) => {
+            if is_builtin_base_type(name) {
+                Ok(())
+            } else {
+                Err(CoreTypeCheckError::UnknownType { name: name.clone() })
+            }
+        }
+        CoreType::Named(name) => {
+            if env.types().contains_name(name) {
+                Ok(())
+            } else {
+                Err(CoreTypeCheckError::UnknownType { name: name.clone() })
+            }
+        }
+        CoreType::Var(name) => {
+            if env.types().contains_variable(name) {
+                Ok(())
+            } else {
+                Err(CoreTypeCheckError::UnknownTypeVariable { name: name.clone() })
+            }
+        }
+        CoreType::Function {
+            params,
+            result,
+            row,
+        } => {
+            check_types_well_formed(params, env)?;
+            check_core_type_well_formed(result, env)?;
+            check_core_row_well_formed(row, env)
+        }
+        CoreType::Refinement { base, predicate } => {
+            check_core_type_well_formed(base, env)?;
+            if env.discharges().contains_refinement_predicate(predicate) {
+                Ok(())
+            } else {
+                Err(CoreTypeCheckError::UnknownRefinementPredicate {
+                    predicate: predicate.clone(),
+                })
+            }
+        }
+        CoreType::Cont {
+            input, answer, row, ..
+        } => {
+            check_core_type_well_formed(input, env)?;
+            check_core_type_well_formed(answer, env)?;
+            check_core_row_well_formed(row, env)
+        }
+        CoreType::Tuple(elems) => check_types_well_formed(elems, env),
+        CoreType::Record(fields) => {
+            for (_, field_ty) in fields {
+                check_core_type_well_formed(field_ty, env)?;
+            }
+            Ok(())
+        }
+        CoreType::App { name, args } => {
+            let Some(expected) = env.types().constructor_arity(name) else {
+                return Err(CoreTypeCheckError::UnknownType { name: name.clone() });
+            };
+            if expected != args.len() {
+                return Err(CoreTypeCheckError::TypeApplicationArityMismatch {
+                    name: name.clone(),
+                    expected,
+                    actual: args.len(),
+                });
+            }
+            check_types_well_formed(args, env)
+        }
+    }
+}
+
+/// Compares Core types using the Phase 162 definitional equality scaffold.
+///
+/// Record fields are compared by field name rather than source order.
+///
+/// # Errors
+///
+/// Returns [`CoreTypeCheckError`] when either type is not well formed.
+pub fn core_types_equivalent(
+    lhs: &CoreType,
+    rhs: &CoreType,
+    env: &CoreTypeCheckEnv,
+) -> Result<bool, CoreTypeCheckError> {
+    check_core_type_well_formed(lhs, env)?;
+    check_core_type_well_formed(rhs, env)?;
+    Ok(types_equivalent_unchecked(lhs, rhs, env))
+}
+
+fn check_types_well_formed(
+    types: &[CoreType],
+    env: &CoreTypeCheckEnv,
+) -> Result<(), CoreTypeCheckError> {
+    for ty in types {
+        check_core_type_well_formed(ty, env)?;
+    }
+    Ok(())
+}
+
+fn check_core_row_well_formed(
+    row: &CoreRow,
+    env: &CoreTypeCheckEnv,
+) -> Result<(), CoreTypeCheckError> {
+    if let Some(tail) = &row.tail
+        && env.rows().lookup(tail).is_none()
+    {
+        return Err(CoreTypeCheckError::UnknownRowVariable { name: tail.clone() });
+    }
+
+    for item in &row.items {
+        match item {
+            CoreRowItem::Channel { payload_type, .. } => {
+                check_core_type_well_formed(payload_type, env)?;
+            }
+            CoreRowItem::Failure { ty: Some(ty) } => {
+                check_core_type_well_formed(ty, env)?;
+            }
+            CoreRowItem::Capability { .. }
+            | CoreRowItem::Resource { .. }
+            | CoreRowItem::Role { .. }
+            | CoreRowItem::Policy { .. }
+            | CoreRowItem::Contract { .. }
+            | CoreRowItem::Process { .. }
+            | CoreRowItem::Failure { ty: None }
+            | CoreRowItem::Evidence { .. }
+            | CoreRowItem::EffectGroupRef { .. } => {}
+        }
+    }
+
+    Ok(())
+}
+
+fn is_builtin_base_type(name: &str) -> bool {
+    matches!(name, "Int" | "String" | "Bool" | "Unit")
+}
+
+fn types_equivalent_unchecked(lhs: &CoreType, rhs: &CoreType, env: &CoreTypeCheckEnv) -> bool {
+    match (lhs, rhs) {
+        (CoreType::Base(left), CoreType::Base(right))
+        | (CoreType::Named(left), CoreType::Named(right))
+        | (CoreType::Var(left), CoreType::Var(right)) => left == right,
+        (
+            CoreType::Function {
+                params: left_params,
+                result: left_result,
+                row: left_row,
+            },
+            CoreType::Function {
+                params: right_params,
+                result: right_result,
+                row: right_row,
+            },
+        ) => {
+            type_slices_equivalent_unchecked(left_params, right_params, env)
+                && types_equivalent_unchecked(left_result, right_result, env)
+                && left_row == right_row
+        }
+        (
+            CoreType::Refinement {
+                base: left_base,
+                predicate: left_predicate,
+            },
+            CoreType::Refinement {
+                base: right_base,
+                predicate: right_predicate,
+            },
+        ) => {
+            left_predicate == right_predicate
+                && types_equivalent_unchecked(left_base, right_base, env)
+        }
+        (
+            CoreType::Cont {
+                input: left_input,
+                answer: left_answer,
+                row: left_row,
+                multiplicity: left_multiplicity,
+            },
+            CoreType::Cont {
+                input: right_input,
+                answer: right_answer,
+                row: right_row,
+                multiplicity: right_multiplicity,
+            },
+        ) => {
+            left_multiplicity == right_multiplicity
+                && types_equivalent_unchecked(left_input, right_input, env)
+                && types_equivalent_unchecked(left_answer, right_answer, env)
+                && left_row == right_row
+        }
+        (CoreType::Tuple(left), CoreType::Tuple(right)) => {
+            type_slices_equivalent_unchecked(left, right, env)
+        }
+        (CoreType::Record(left), CoreType::Record(right)) => {
+            record_fields_equivalent_unchecked(left, right, env)
+        }
+        (
+            CoreType::App {
+                name: left_name,
+                args: left_args,
+            },
+            CoreType::App {
+                name: right_name,
+                args: right_args,
+            },
+        ) => {
+            left_name == right_name && type_slices_equivalent_unchecked(left_args, right_args, env)
+        }
+        _ => false,
+    }
+}
+
+fn type_slices_equivalent_unchecked(
+    lhs: &[CoreType],
+    rhs: &[CoreType],
+    env: &CoreTypeCheckEnv,
+) -> bool {
+    lhs.len() == rhs.len()
+        && lhs
+            .iter()
+            .zip(rhs)
+            .all(|(left, right)| types_equivalent_unchecked(left, right, env))
+}
+
+fn record_fields_equivalent_unchecked(
+    lhs: &[(CoreName, CoreType)],
+    rhs: &[(CoreName, CoreType)],
+    env: &CoreTypeCheckEnv,
+) -> bool {
+    if lhs.len() != rhs.len() {
+        return false;
+    }
+
+    lhs.iter().all(|(left_name, left_ty)| {
+        rhs.iter()
+            .find(|(right_name, _)| right_name == left_name)
+            .is_some_and(|(_, right_ty)| types_equivalent_unchecked(left_ty, right_ty, env))
     })
 }
 

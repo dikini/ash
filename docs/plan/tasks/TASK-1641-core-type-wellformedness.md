@@ -1,6 +1,6 @@
 # TASK-1641: Check Core type well-formedness
 
-**Status:** Planned
+**Status:** Complete
 **Phase:** [PLAN-162](../PLAN-162-CORE-ASH-TYPE-CHECKING.md)
 **Owner:** Phase 162
 
@@ -71,3 +71,17 @@ cargo fmt --check
 ```
 
 Expected: focused tests pass.
+
+## Completion Evidence
+
+- Added recursive Core type well-formedness checking for base, named, variable, function, continuation, tuple, record, refinement, and type-application forms.
+- Added row-tail well-formedness scaffolding for function and continuation rows.
+- Added field-name-based record type equivalence and scoped textual refinement predicate placeholders.
+- Added `crates/ash-core/tests/task_1641_core_type_wellformedness.rs` covering known and unknown type names, type-application arity, record field-order independence, refinement predicate metadata, recursive refinement base checks, and row-tail scope checks.
+- Verified with:
+  - `cargo test -p ash-core --test task_1641_core_type_wellformedness`
+  - `cargo test -p ash-core --test task_1640_core_typecheck_api`
+  - `cargo test -p ash-core`
+  - `cargo clippy -p ash-core --all-targets -- -D warnings`
+  - `cargo fmt --check`
+  - `git diff --check`

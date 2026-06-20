@@ -137,7 +137,7 @@ Update this section as tasks complete:
 || [159](PLAN-159-CPS-IR-INTERPRETER.md) | 14 | 14 | ✅ Complete; all tasks implemented, 82 tests pass, reference docs added, review remediation done (validation boundary, lambda closure capture, handler semantics) |
 || [160](PLAN-160-CPS-IR-RUNTIME-EXPANSION.md) | 10 | 10 | ✅ Complete; CPS IR runtime expansion implemented, focused tests pass, reference docs updated |
 || [161](PLAN-161-CORE-ASH-IR-FOUNDATION.md) | 13 | 13 | ✅ Complete; Core Ash foundation and public Core text round-trip review remediation verified |
-|| [162](PLAN-162-CORE-ASH-TYPE-CHECKING.md) | 12 | 1 | 🧪 In progress; Core Ash type-checking API scaffold complete |
+|| [162](PLAN-162-CORE-ASH-TYPE-CHECKING.md) | 12 | 2 | 🧪 In progress; Core Ash type-checking API and type well-formedness complete |
 |
 |---
 
@@ -533,7 +533,7 @@ Builds the first implementation slice for Core Ash: dedicated Core AST carriers,
 
 ## Phase 162: Core Ash Type Checking
 
-**Status:** 🧪 In progress; 1/12 implemented
+**Status:** 🧪 In progress; 2/12 implemented
 **Plan:** [PLAN-162: Core Ash Type Checking](PLAN-162-CORE-ASH-TYPE-CHECKING.md)
 **Spec:** [SPEC-100: Ash Core Type Checking](../spec/SPEC-100-CORE-TYPE-CHECKING.md)
 **Depends on:** Phase 161; SPEC-100, SPEC-099, SPEC-098b, SPEC-097b, SPEC-096b.
@@ -543,7 +543,7 @@ Implements the first annotation-led Core Ash type checker. The phase adds Core t
 | Task | Description | Status |
 |------|-------------|--------|
 | [TASK-1640](tasks/TASK-1640-core-typecheck-api-and-environments.md) | Add Core type-checker API, environments, typed program wrappers, and diagnostics | ✅ Complete |
-| [TASK-1641](tasks/TASK-1641-core-type-wellformedness.md) | Check Core type well-formedness and nominal/type-app shape | 📝 Planned |
+| [TASK-1641](tasks/TASK-1641-core-type-wellformedness.md) | Check Core type well-formedness and nominal/type-app shape | ✅ Complete |
 | [TASK-1642](tasks/TASK-1642-core-row-normalization-solving.md) | Normalize rows, remove duplicates, compare rows, and solve explicit row variables | 📝 Planned |
 | [TASK-1643](tasks/TASK-1643-core-atom-value-typing.md) | Type Core atoms and values, including lambdas, records, tuples, and discharge markers | 📝 Planned |
 | [TASK-1644](tasks/TASK-1644-core-expression-basics-typecheck.md) | Type Atom, LetVal, LetRec, LetPrim, If, and Trap expressions | 📝 Planned |

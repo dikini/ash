@@ -4,7 +4,8 @@
 //! invariants that should fail before lowering into the CPS substrate.
 
 use crate::core_ash::{
-    CoreAtom, CoreEffectOp, CoreExpr, CoreParam, CoreRow, CoreRowItem, CoreType, CoreValue,
+    CoreAtom, CoreContRef, CoreEffectOp, CoreExpr, CoreMultiplicity, CoreParam, CoreRow,
+    CoreRowItem, CoreTrapReason, CoreType, CoreValue,
 };
 use std::collections::HashSet;
 
@@ -64,6 +65,10 @@ pub enum CoreValidationError {
     /// A raised operation is malformed or not representable by the target IR.
     #[error("unsupported effect operation: {detail}")]
     UnsupportedEffectOperation { detail: String },
+
+    /// An affine handler resume continuation is used outside the Phase 161 discipline.
+    #[error("affine resume `{resume}` violation: {detail}")]
+    AffineResumeViolation { resume: String, detail: String },
 }
 
 /// Validates a raw Core program before lowering.
@@ -120,11 +125,12 @@ fn validate_expr(expr: &CoreExpr) -> Result<(), CoreValidationError> {
             validate_type(&clause.resume.ty)?;
             validate_row(&clause.row)?;
             validate_expr(&clause.body)?;
+            validate_handler_resume(&clause.resume, &clause.body)?;
             validate_expr(body)
         }
         CoreExpr::RecordDischarge { body, .. } => validate_expr(body),
         CoreExpr::Trap { reason } => {
-            if let crate::core_ash::CoreTrapReason::UnhandledEffect(op) = reason {
+            if let CoreTrapReason::UnhandledEffect(op) = reason {
                 validate_effect_op(op)?;
             }
             Ok(())
@@ -313,5 +319,134 @@ fn validate_data_atom(_atom: &CoreAtom) -> Result<(), CoreValidationError> {
     // Labels have a distinct CoreContRef carrier, so the current AST cannot
     // place a label inside an ordinary atom slot. Parser tests cover the raw
     // fixture boundary for attempted `(label ...)` data atoms.
+    Ok(())
+}
+
+fn validate_handler_resume(resume: &CoreParam, body: &CoreExpr) -> Result<(), CoreValidationError> {
+    match &resume.ty {
+        CoreType::Cont {
+            multiplicity: CoreMultiplicity::Affine,
+            ..
+        } => {}
+        CoreType::Cont { .. } => {
+            return Err(CoreValidationError::AffineResumeViolation {
+                resume: resume.name.clone(),
+                detail: "Phase 161 supports only affine handler resumes".to_string(),
+            });
+        }
+        _ => {
+            return Err(CoreValidationError::AffineResumeViolation {
+                resume: resume.name.clone(),
+                detail: "handler resume parameter must have continuation type".to_string(),
+            });
+        }
+    }
+
+    let uses = count_affine_resume_uses(&resume.name, body)?;
+    if uses > 1 {
+        return Err(CoreValidationError::AffineResumeViolation {
+            resume: resume.name.clone(),
+            detail: "resume is jumped to more than once".to_string(),
+        });
+    }
+    Ok(())
+}
+
+fn count_affine_resume_uses(resume: &str, expr: &CoreExpr) -> Result<usize, CoreValidationError> {
+    match expr {
+        CoreExpr::Atom(atom) => {
+            reject_resume_atom(resume, atom, "used as ordinary data")?;
+            Ok(0)
+        }
+        CoreExpr::LetVal { value, body, .. } | CoreExpr::LetRec { value, body, .. } => {
+            reject_resume_value(resume, value)?;
+            count_affine_resume_uses(resume, body)
+        }
+        CoreExpr::LetPrim { args, body, .. } => {
+            reject_resume_atoms(resume, args, "passed to primitive operation")?;
+            count_affine_resume_uses(resume, body)
+        }
+        CoreExpr::If {
+            cond,
+            then_branch,
+            else_branch,
+        } => {
+            reject_resume_atom(resume, cond, "used as ordinary condition data")?;
+            Ok(count_affine_resume_uses(resume, then_branch)?
+                + count_affine_resume_uses(resume, else_branch)?)
+        }
+        CoreExpr::Call { func, args } => {
+            reject_resume_atom(resume, func, "used as ordinary call target")?;
+            reject_resume_atoms(resume, args, "passed as ordinary function argument")?;
+            Ok(0)
+        }
+        CoreExpr::Jump { cont, arg } => {
+            reject_resume_atom(resume, arg, "used as ordinary jump argument")?;
+            Ok(usize::from(
+                matches!(cont, CoreContRef::Var(name) if name == resume),
+            ))
+        }
+        CoreExpr::Raise { args, .. } => {
+            reject_resume_atoms(resume, args, "passed as raised operation argument")?;
+            Ok(0)
+        }
+        CoreExpr::Handle { clause, body } => {
+            let clause_uses = if clause.resume.name == resume {
+                0
+            } else {
+                count_affine_resume_uses(resume, &clause.body)?
+            };
+            Ok(clause_uses + count_affine_resume_uses(resume, body)?)
+        }
+        CoreExpr::RecordDischarge { body, .. } => count_affine_resume_uses(resume, body),
+        CoreExpr::Trap { .. } => Ok(0),
+    }
+}
+
+fn reject_resume_value(resume: &str, value: &CoreValue) -> Result<(), CoreValidationError> {
+    match value {
+        CoreValue::Atom(atom) => reject_resume_atom(resume, atom, "stored as ordinary value"),
+        CoreValue::Lam { body, .. } => {
+            if count_affine_resume_uses(resume, body)? > 0 {
+                return Err(CoreValidationError::AffineResumeViolation {
+                    resume: resume.to_string(),
+                    detail: "captured by lambda value".to_string(),
+                });
+            }
+            Ok(())
+        }
+        CoreValue::Record { fields } => {
+            for (_, atom) in fields {
+                reject_resume_atom(resume, atom, "stored in record value")?;
+            }
+            Ok(())
+        }
+        CoreValue::Tuple { elems } => reject_resume_atoms(resume, elems, "stored in tuple value"),
+        CoreValue::DischargeMarker { .. } => Ok(()),
+    }
+}
+
+fn reject_resume_atoms(
+    resume: &str,
+    atoms: &[CoreAtom],
+    detail: &str,
+) -> Result<(), CoreValidationError> {
+    for atom in atoms {
+        reject_resume_atom(resume, atom, detail)?;
+    }
+    Ok(())
+}
+
+fn reject_resume_atom(
+    resume: &str,
+    atom: &CoreAtom,
+    detail: &str,
+) -> Result<(), CoreValidationError> {
+    if matches!(atom, CoreAtom::Var(name) if name == resume) {
+        return Err(CoreValidationError::AffineResumeViolation {
+            resume: resume.to_string(),
+            detail: detail.to_string(),
+        });
+    }
     Ok(())
 }

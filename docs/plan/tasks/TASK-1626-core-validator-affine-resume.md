@@ -1,6 +1,6 @@
 # TASK-1626: Validate affine handler resume restrictions
 
-**Status:** Planned
+**Status:** Complete
 **Phase:** [PLAN-161](../PLAN-161-CORE-ASH-IR-FOUNDATION.md)
 **Owner:** Phase 161
 
@@ -71,3 +71,18 @@ cargo fmt --check
 ```
 
 Expected: affine validator tests pass.
+
+## Completion Evidence
+
+- Added conservative affine handler resume validation to `core_ash_validate`.
+- Validates handler resume parameters are affine continuation types.
+- Rejects duplicate resume jumps by conservatively counting uses across handler-body branches.
+- Rejects resume escape through ordinary calls, primitive/raise arguments, lambda capture, record storage, tuple storage, and ordinary data positions.
+- Allows zero-use non-resumptive handlers and one direct `Jump` to the resume.
+- Verified:
+  - `cargo test -p ash-core --test task_1626_core_validator_affine_resume`
+  - `cargo test -p ash-core --test task_1625_core_validator_basic`
+  - `cargo test -p ash-core`
+  - `cargo clippy -p ash-core --all-targets -- -D warnings`
+  - `cargo fmt --check`
+  - `git diff --check`

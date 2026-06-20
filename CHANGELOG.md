@@ -6,6 +6,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Added
+- Added SPEC-100 Core Ash type-checking draft, defining declarative Core typing, annotation-led algorithmic checking, structural row solving, refinement obligations, handler affinity, discharge boundaries, and review-corrected refinement, Jump, handler-resume, and duplicate-row normalization rules.
 - Added SPEC-099 Core Ash AST carriers in `ash-core::core_ash`, including direct-style Core expressions, Core rows/types, handler clauses with affine resume metadata, and raised operation variants limited to capability, channel, process, and failure. (TASK-1620)
 - Added the initial `.core` fixture/debug text format reference and golden fixture corpus for Core Ash parser, serializer, validator, and lowering tests. (TASK-1621)
 - Added the first Core Ash text parser slice for `.core` atoms, types, rows, row items, values, and discharge markers with typed fixture-debug errors. (TASK-1622)

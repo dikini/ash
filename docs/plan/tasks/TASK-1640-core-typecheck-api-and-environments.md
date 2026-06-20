@@ -1,6 +1,6 @@
 # TASK-1640: Add Core type-checker API and environments
 
-**Status:** Planned
+**Status:** Complete
 **Phase:** [PLAN-162](../PLAN-162-CORE-ASH-TYPE-CHECKING.md)
 **Owner:** Phase 162
 
@@ -70,3 +70,14 @@ git diff --check
 ```
 
 Expected: focused tests pass and formatting is clean.
+
+## Completion Evidence
+
+- Added `ash-core::core_ash_typecheck` with the initial validated-program checker API, typed program wrapper, scoped environment carriers, and structured diagnostics.
+- Added `crates/ash-core/tests/task_1640_core_typecheck_api.rs` covering default environments, populated value environments, minimal literal-program type checking, and structured unknown-value errors.
+- Verified with:
+  - `cargo test -p ash-core --test task_1640_core_typecheck_api`
+  - `cargo test -p ash-core`
+  - `cargo clippy -p ash-core --all-targets -- -D warnings`
+  - `cargo fmt --check`
+  - `git diff --check`

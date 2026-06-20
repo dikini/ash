@@ -11,6 +11,7 @@ pub mod capability;
 pub mod core_ash;
 pub mod core_ash_lower;
 pub mod core_ash_text;
+pub mod core_ash_typecheck;
 pub mod core_ash_validate;
 pub mod cps;
 pub mod effect;

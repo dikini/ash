@@ -1,0 +1,5 @@
+(let-val inc : (fn (Int) -> Int {} )
+  (lam ((n : Int)) : {}
+    (let-prim out add (n (lit-int 1))
+      out))
+  (call inc ((lit-int 41))))

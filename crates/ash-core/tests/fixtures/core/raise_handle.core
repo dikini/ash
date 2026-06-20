@@ -1,0 +1,4 @@
+(handle
+  (clause (cap console.read : (String) -> Unit) ((line : String)) (resume k : (cont Unit Unit {} affine)) : {}
+    (jump k (lit-unit)))
+  (raise (cap console.read : (String) -> Unit) ((lit-string "ok"))))

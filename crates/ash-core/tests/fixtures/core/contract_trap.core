@@ -1,0 +1,2 @@
+(record-discharge (contract requires-positive dynamic)
+  (trap (contract-violation requires-positive)))

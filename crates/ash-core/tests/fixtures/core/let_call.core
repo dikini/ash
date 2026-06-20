@@ -1,0 +1,2 @@
+(let-call user read_user ((lit-int 7))
+  (jump (label exit) user))

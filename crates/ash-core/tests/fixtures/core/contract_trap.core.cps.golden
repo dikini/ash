@@ -1,0 +1,1 @@
+(RecordDischarge (discharge (contract . "requires-positive") (discharge_type . Dynamic)) (body Trap (reason . ContractViolation)))

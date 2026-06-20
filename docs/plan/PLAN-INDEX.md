@@ -136,6 +136,7 @@ Update this section as tasks complete:
 | [158](PLAN-158-LANGUAGE-SURFACE-FIXES.md) | 5 | 3 | ⏸️ Deferred; TASK-1580 (Module-level function visibility) remains open |
 || [159](PLAN-159-CPS-IR-INTERPRETER.md) | 14 | 14 | ✅ Complete; all tasks implemented, 82 tests pass, reference docs added, review remediation done (validation boundary, lambda closure capture, handler semantics) |
 || [160](PLAN-160-CPS-IR-RUNTIME-EXPANSION.md) | 10 | 10 | ✅ Complete; CPS IR runtime expansion implemented, focused tests pass, reference docs updated |
+|| [161](PLAN-161-CORE-ASH-IR-FOUNDATION.md) | 13 | 13 | ✅ Complete; Core Ash foundation and public Core text round-trip review remediation verified |
 |
 |---
 
@@ -495,3 +496,36 @@ Extends the Phase 159 CPS IR interpreter with structured data (records, tuples),
 | [TASK-1617](tasks/TASK-1617-cps-ir-expanded-operational-semantics.md) | Write operational semantics for new term forms (new doc) | ✅ Complete |
 | [TASK-1618](tasks/TASK-1618-cps-ir-reference-docs-update.md) | Add reference documentation for expanded CPS IR | ✅ Complete |
 | [TASK-1619](tasks/TASK-1619-phase-160-closeout.md) | Close out Phase 160 with verification and documentation | ✅ Complete |
+
+## Phase 161: Core Ash IR Foundation
+
+**Status:** ✅ Complete; 13/13 implemented, closeout and review remediation verified
+**Plan:** [PLAN-161: Core Ash IR Foundation](PLAN-161-CORE-ASH-IR-FOUNDATION.md)
+**Spec:** [SPEC-099: Ash Core Language](../spec/SPEC-099-CORE-LANGUAGE.md)
+**Depends on:** SPEC-099, SPEC-098b, SPEC-096b, SPEC-097b; builds on Phase 159 CPS IR substrate.
+
+Builds the first implementation slice for Core Ash: dedicated Core AST carriers, a strict `.core` fixture/debug text format, parser/serializer round-trips, Core validation, and minimal Core-to-CPS lowering. Surface-to-Core lowering, ad-hoc polymorphism, arbitrary user-defined algebraic effects, and full type checking remain out of scope.
+
+| Task | Description | Status |
+|------|-------------|--------|
+| [TASK-1620](tasks/TASK-1620-core-ash-ast-carriers.md) | Add Core Ash AST carriers and module exports | ✅ Complete |
+| [TASK-1621](tasks/TASK-1621-core-text-format-fixtures.md) | Freeze minimal `.core` text grammar and golden fixtures | ✅ Complete |
+| [TASK-1622](tasks/TASK-1622-core-text-parser-atoms-values.md) | Parse Core atoms, rows, types, and values | ✅ Complete |
+| [TASK-1623](tasks/TASK-1623-core-text-parser-expressions.md) | Parse Core expressions and effect/discharge forms | ✅ Complete |
+| [TASK-1624](tasks/TASK-1624-core-text-serializer.md) | Add canonical Core AST serializer and round-trip tests | ✅ Complete |
+| [TASK-1625](tasks/TASK-1625-core-validator-basic-invariants.md) | Validate basic SPEC-099 Core invariants | ✅ Complete |
+| [TASK-1626](tasks/TASK-1626-core-validator-affine-resume.md) | Validate handler resume affine-position restrictions | ✅ Complete |
+| [TASK-1627](tasks/TASK-1627-core-to-cps-lowering-basic.md) | Lower values, lets, primitives, conditionals, calls, and jumps | ✅ Complete |
+| [TASK-1628](tasks/TASK-1628-core-to-cps-lowering-effects.md) | Lower raise, handle, discharge, and trap forms | ✅ Complete |
+| [TASK-1629](tasks/TASK-1629-core-end-to-end-fixtures.md) | Add `.core` -> validate -> CPS golden fixtures | ✅ Complete |
+| [TASK-1630](tasks/TASK-1630-core-ash-reference-docs.md) | Document Core text and implementation boundaries | ✅ Complete |
+| [TASK-1631](tasks/TASK-1631-phase-161-closeout.md) | Close out Phase 161 with verification and review | ✅ Complete |
+| [TASK-1632](tasks/TASK-1632-core-text-roundtrip-review-fixes.md) | Fix Core text public AST round-trip review findings | ✅ Complete |
+
+**Verification Evidence:**
+
+- Focused Phase 161 tests `task_1620_core_ash_ast` through `task_1630_core_docs_consistency` pass.
+- `cargo test -p ash-core` passes.
+- `cargo clippy -p ash-core --all-targets -- -D warnings` passes.
+- `cargo fmt --check` and `git diff --check` pass.
+- Closeout review recorded in [PHASE-161-CLOSEOUT-REVIEW.md](audits/PHASE-161-CLOSEOUT-REVIEW.md).

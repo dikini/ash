@@ -1,0 +1,3 @@
+(let-val f : (fn (Int) -> Int {cap console.read, cap console.read})
+  (lit-unit)
+  (lit-unit))

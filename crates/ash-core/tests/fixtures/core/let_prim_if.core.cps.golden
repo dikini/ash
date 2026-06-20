@@ -1,0 +1,1 @@
+(LetPrim (name . "cond") (op . Lt) (args (Int . 1) (Int . 10)) (body If (cond Var . "cond") (then_branch Jump (cont Label . "yes") (arg . Null) (row (items))) (else_branch Jump (cont Label . "no") (arg . Null) (row (items))) (row (items))))

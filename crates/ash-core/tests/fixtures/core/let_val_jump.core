@@ -1,0 +1,2 @@
+(let-val x : Int (lit-int 1)
+  (jump (label exit) x))

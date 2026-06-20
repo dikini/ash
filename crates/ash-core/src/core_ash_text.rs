@@ -9,6 +9,7 @@ use crate::core_ash::{
     CoreSourceSpan, CoreTrapReason, CoreType, CoreValue,
 };
 use std::fmt;
+use std::fmt::Write as _;
 use std::path::Path;
 
 /// Error returned by the Core text parser.
@@ -138,6 +139,23 @@ pub fn parse_core_file(path: impl AsRef<Path>) -> ParseResult<CoreExpr> {
         CoreTextError::new(0, format!("failed to read {}: {error}", path.display()))
     })?;
     parse_core_expr(&source)
+}
+
+/// Serializes a Core expression to canonical `.core` fixture text.
+#[must_use]
+pub fn core_expr_to_string(expr: &CoreExpr) -> String {
+    format_expr(expr)
+}
+
+/// Writes a Core expression to a `.core` file with a trailing newline.
+///
+/// # Errors
+///
+/// Returns [`std::io::Error`] when the destination cannot be written.
+pub fn write_core_expr_to_file(path: impl AsRef<Path>, expr: &CoreExpr) -> std::io::Result<()> {
+    let mut text = core_expr_to_string(expr);
+    text.push('\n');
+    std::fs::write(path, text)
 }
 
 struct Parser {
@@ -896,6 +914,401 @@ fn lex(source: &str) -> ParseResult<Vec<Token>> {
         }
     }
     Ok(tokens)
+}
+
+fn format_expr(expr: &CoreExpr) -> String {
+    match expr {
+        CoreExpr::Atom(atom) => format_atom(atom),
+        CoreExpr::LetVal {
+            name,
+            ty,
+            value,
+            body,
+        } => format!(
+            "(let-val {name} : {} {} {})",
+            format_type(ty),
+            format_value(value),
+            format_expr(body)
+        ),
+        CoreExpr::LetRec {
+            name,
+            ty,
+            value,
+            body,
+        } => format!(
+            "(let-rec {name} : {} {} {})",
+            format_type(ty),
+            format_value(value),
+            format_expr(body)
+        ),
+        CoreExpr::LetPrim {
+            name,
+            op,
+            args,
+            body,
+        } => format!(
+            "(let-prim {name} {} {} {})",
+            format_prim_op(op),
+            format_atom_list(args),
+            format_expr(body)
+        ),
+        CoreExpr::If {
+            cond,
+            then_branch,
+            else_branch,
+        } => format!(
+            "(if {} {} {})",
+            format_atom(cond),
+            format_expr(then_branch),
+            format_expr(else_branch)
+        ),
+        CoreExpr::Call { func, args } => {
+            format!("(call {} {})", format_atom(func), format_atom_list(args))
+        }
+        CoreExpr::Jump { cont, arg } => {
+            format!("(jump {} {})", format_cont_ref(cont), format_atom(arg))
+        }
+        CoreExpr::Raise { op, args } => {
+            format!(
+                "(raise {} {})",
+                format_effect_op(op),
+                format_atom_list(args)
+            )
+        }
+        CoreExpr::Handle { clause, body } => {
+            format!(
+                "(handle {} {})",
+                format_handler_clause(clause),
+                format_expr(body)
+            )
+        }
+        CoreExpr::RecordDischarge { discharge, body } => format!(
+            "(record-discharge {} {})",
+            format_contract_discharge(discharge),
+            format_expr(body)
+        ),
+        CoreExpr::Trap { reason } => format!("(trap {})", format_trap_reason(reason)),
+    }
+}
+
+fn format_value(value: &CoreValue) -> String {
+    match value {
+        CoreValue::Atom(atom) => format_atom(atom),
+        CoreValue::Lam { params, body, row } => format!(
+            "(lam {} : {} {})",
+            format_param_list(params),
+            format_row(row),
+            format_expr(body)
+        ),
+        CoreValue::Record { fields } => {
+            let fields = fields
+                .iter()
+                .map(|(name, atom)| format!("({name} {})", format_atom(atom)))
+                .collect::<Vec<_>>()
+                .join(" ");
+            if fields.is_empty() {
+                "(record)".to_string()
+            } else {
+                format!("(record {fields})")
+            }
+        }
+        CoreValue::Tuple { elems } => {
+            if elems.is_empty() {
+                "(tuple)".to_string()
+            } else {
+                format!(
+                    "(tuple {})",
+                    elems.iter().map(format_atom).collect::<Vec<_>>().join(" ")
+                )
+            }
+        }
+        CoreValue::DischargeMarker { discharge } => {
+            format!(
+                "(discharge-marker {})",
+                format_contract_discharge(discharge)
+            )
+        }
+    }
+}
+
+fn format_atom(atom: &CoreAtom) -> String {
+    match atom {
+        CoreAtom::Var(name) => name.clone(),
+        CoreAtom::LitInt(value) => format!("(lit-int {value})"),
+        CoreAtom::LitString(value) => format!("(lit-string {})", format_string(value)),
+        CoreAtom::LitBool(value) => format!("(lit-bool {value})"),
+        CoreAtom::LitUnit => "(lit-unit)".to_string(),
+        CoreAtom::PrimName(op) => format!("(prim {})", format_prim_op(op)),
+        CoreAtom::ConstructorName(name) => format!("(constructor {name})"),
+    }
+}
+
+fn format_type(ty: &CoreType) -> String {
+    match ty {
+        CoreType::Base(name) | CoreType::Named(name) | CoreType::Var(name) => name.clone(),
+        CoreType::Function {
+            params,
+            result,
+            row,
+        } => format!(
+            "(fn ({}) -> {} {})",
+            params.iter().map(format_type).collect::<Vec<_>>().join(" "),
+            format_type(result),
+            format_row(row)
+        ),
+        CoreType::Refinement { base, predicate } => {
+            format!(
+                "(refine {} {})",
+                format_type(base),
+                format_string(predicate)
+            )
+        }
+        CoreType::Cont {
+            input,
+            answer,
+            row,
+            multiplicity,
+        } => format!(
+            "(cont {} {} {} {})",
+            format_type(input),
+            format_type(answer),
+            format_row(row),
+            format_multiplicity(*multiplicity)
+        ),
+        CoreType::Tuple(elems) => format!(
+            "(tuple {})",
+            elems.iter().map(format_type).collect::<Vec<_>>().join(" ")
+        ),
+        CoreType::Record(fields) => format!(
+            "(record-type {})",
+            fields
+                .iter()
+                .map(|(name, ty)| format!("({name} : {})", format_type(ty)))
+                .collect::<Vec<_>>()
+                .join(" ")
+        ),
+        CoreType::App { name, args } => format!(
+            "(type-app {name} ({}))",
+            args.iter().map(format_type).collect::<Vec<_>>().join(" ")
+        ),
+    }
+}
+
+fn format_row(row: &CoreRow) -> String {
+    let mut items = row.items.iter().map(format_row_item).collect::<Vec<_>>();
+    if let Some(tail) = &row.tail {
+        items.push(format!("tail {tail}"));
+    }
+    if items.is_empty() {
+        "{}".to_string()
+    } else {
+        format!("{{{}}}", items.join(", "))
+    }
+}
+
+fn format_row_item(item: &CoreRowItem) -> String {
+    match item {
+        CoreRowItem::Capability { path, operation } => {
+            format!("cap {}", format_path_operation(path, operation))
+        }
+        CoreRowItem::Resource { path, mode } => {
+            format!("resource {} {mode}", format_path(path))
+        }
+        CoreRowItem::Role { path } => format!("role {}", format_path(path)),
+        CoreRowItem::Policy { path } => format!("policy {}", format_path(path)),
+        CoreRowItem::Contract { contract } => format!("contract {contract}"),
+        CoreRowItem::Channel {
+            path,
+            mode,
+            payload_type,
+        } => format!(
+            "channel {} {mode} {}",
+            format_path(path),
+            format_type(payload_type)
+        ),
+        CoreRowItem::Process { operation } => format!("proc {operation}"),
+        CoreRowItem::Failure { ty } => match ty {
+            Some(ty) => format!("fail {}", format_type(ty)),
+            None => "fail".to_string(),
+        },
+        CoreRowItem::Evidence { path } => format!("evidence {}", format_path(path)),
+        CoreRowItem::EffectGroupRef { path } => format!("group {}", format_path(path)),
+    }
+}
+
+fn format_effect_op(op: &CoreEffectOp) -> String {
+    match op {
+        CoreEffectOp::Capability {
+            path,
+            operation,
+            arg_types,
+            result_type,
+        } => format!(
+            "(cap {} : ({}) -> {})",
+            format_path_operation(path, operation),
+            arg_types
+                .iter()
+                .map(format_type)
+                .collect::<Vec<_>>()
+                .join(" "),
+            format_type(result_type)
+        ),
+        CoreEffectOp::Channel {
+            path,
+            mode,
+            payload_type,
+            result_type,
+        } => format!(
+            "(channel {} {mode} : {} -> {})",
+            format_path(path),
+            format_type(payload_type),
+            format_type(result_type)
+        ),
+        CoreEffectOp::Process {
+            operation,
+            arg_types,
+            result_type,
+        } => format!(
+            "(proc {operation} : ({}) -> {})",
+            arg_types
+                .iter()
+                .map(format_type)
+                .collect::<Vec<_>>()
+                .join(" "),
+            format_type(result_type)
+        ),
+        CoreEffectOp::Failure { ty } => match ty {
+            Some(ty) => format!("(fail {})", format_type(ty)),
+            None => "(fail)".to_string(),
+        },
+    }
+}
+
+fn format_handler_clause(clause: &CoreHandlerClause) -> String {
+    format!(
+        "(clause {} {} (resume {} : {}) : {} {})",
+        format_effect_op(&clause.op),
+        format_param_list(&clause.params),
+        clause.resume.name,
+        format_type(&clause.resume.ty),
+        format_row(&clause.row),
+        format_expr(&clause.body)
+    )
+}
+
+fn format_contract_discharge(discharge: &CoreContractDischarge) -> String {
+    let mut text = format!(
+        "(contract {} {}",
+        discharge.contract,
+        format_discharge_mode(discharge.mode)
+    );
+    if let Some(span) = &discharge.source_span {
+        let _ = write!(text, " span {} {}", span.start, span.end);
+    }
+    text.push(')');
+    text
+}
+
+fn format_trap_reason(reason: &CoreTrapReason) -> String {
+    match reason {
+        CoreTrapReason::ContractViolation(contract) => {
+            format!("(contract-violation {contract})")
+        }
+        CoreTrapReason::UnhandledEffect(op) => {
+            format!("(unhandled-effect {})", format_effect_op(op))
+        }
+        CoreTrapReason::Panic(message) => format!("(panic {})", format_string(message)),
+        CoreTrapReason::NonExhaustiveMatch => "(non-exhaustive-match)".to_string(),
+    }
+}
+
+fn format_param_list(params: &[CoreParam]) -> String {
+    format!(
+        "({})",
+        params
+            .iter()
+            .map(|param| format!("({} : {})", param.name, format_type(&param.ty)))
+            .collect::<Vec<_>>()
+            .join(" ")
+    )
+}
+
+fn format_atom_list(args: &[CoreAtom]) -> String {
+    format!(
+        "({})",
+        args.iter().map(format_atom).collect::<Vec<_>>().join(" ")
+    )
+}
+
+fn format_cont_ref(cont: &CoreContRef) -> String {
+    match cont {
+        CoreContRef::Label(name) => format!("(label {name})"),
+        CoreContRef::Var(name) => name.clone(),
+    }
+}
+
+fn format_prim_op(op: &CorePrimOp) -> String {
+    match op {
+        CorePrimOp::Add => "add".to_string(),
+        CorePrimOp::Sub => "sub".to_string(),
+        CorePrimOp::Mul => "mul".to_string(),
+        CorePrimOp::Div => "div".to_string(),
+        CorePrimOp::Eq => "eq".to_string(),
+        CorePrimOp::Ne => "ne".to_string(),
+        CorePrimOp::Lt => "lt".to_string(),
+        CorePrimOp::Le => "le".to_string(),
+        CorePrimOp::Gt => "gt".to_string(),
+        CorePrimOp::Ge => "ge".to_string(),
+        CorePrimOp::Neg => "neg".to_string(),
+        CorePrimOp::Not => "not".to_string(),
+        CorePrimOp::RecordGet(field) => format!("record-get-{field}"),
+        CorePrimOp::TupleGet(index) => format!("tuple-get-{index}"),
+        CorePrimOp::ConstructorTag(name) => name.clone(),
+    }
+}
+
+fn format_multiplicity(multiplicity: CoreMultiplicity) -> &'static str {
+    match multiplicity {
+        CoreMultiplicity::Affine => "affine",
+        CoreMultiplicity::MultiShotPure => "multi-shot-pure",
+    }
+}
+
+fn format_discharge_mode(mode: CoreDischargeMode) -> &'static str {
+    match mode {
+        CoreDischargeMode::Static => "static",
+        CoreDischargeMode::Evidence => "evidence",
+        CoreDischargeMode::Dynamic => "dynamic",
+    }
+}
+
+fn format_path(path: &[String]) -> String {
+    path.join(".")
+}
+
+fn format_path_operation(path: &[String], operation: &str) -> String {
+    if path.is_empty() {
+        operation.to_string()
+    } else {
+        format!("{}.{}", format_path(path), operation)
+    }
+}
+
+fn format_string(value: &str) -> String {
+    let mut escaped = String::with_capacity(value.len() + 2);
+    escaped.push('"');
+    for ch in value.chars() {
+        match ch {
+            '\n' => escaped.push_str("\\n"),
+            '\r' => escaped.push_str("\\r"),
+            '\t' => escaped.push_str("\\t"),
+            '"' => escaped.push_str("\\\""),
+            '\\' => escaped.push_str("\\\\"),
+            other => escaped.push(other),
+        }
+    }
+    escaped.push('"');
+    escaped
 }
 
 fn symbol_to_atom(symbol: String) -> CoreAtom {

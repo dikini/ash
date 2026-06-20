@@ -32,7 +32,7 @@ verified_against:
 
 ## Status
 
-In progress: 4/12 tasks complete.
+In progress: 5/12 tasks complete.
 
 ## Background
 
@@ -93,7 +93,7 @@ The serializer must produce one canonical spelling so fixture diffs are stable. 
 | [TASK-1621](tasks/TASK-1621-core-text-format-fixtures.md) | Freeze minimal `.core` text grammar and golden fixtures | 2 | TASK-1620 | Complete |
 | [TASK-1622](tasks/TASK-1622-core-text-parser-atoms-values.md) | Parse Core atoms, rows, types, and values | 3 | TASK-1621 | Complete |
 | [TASK-1623](tasks/TASK-1623-core-text-parser-expressions.md) | Parse Core expressions and effect/discharge forms | 4 | TASK-1622 | Complete |
-| [TASK-1624](tasks/TASK-1624-core-text-serializer.md) | Add canonical Core AST serializer and round-trip tests | 3 | TASK-1623 | Planned |
+| [TASK-1624](tasks/TASK-1624-core-text-serializer.md) | Add canonical Core AST serializer and round-trip tests | 3 | TASK-1623 | Complete |
 | [TASK-1625](tasks/TASK-1625-core-validator-basic-invariants.md) | Validate basic SPEC-099 Core invariants | 3 | TASK-1623 | Planned |
 | [TASK-1626](tasks/TASK-1626-core-validator-affine-resume.md) | Validate handler resume affine-position restrictions | 3 | TASK-1625 | Planned |
 | [TASK-1627](tasks/TASK-1627-core-to-cps-lowering-basic.md) | Lower values, lets, primitives, conditionals, calls, and jumps | 5 | TASK-1625 | Planned |
@@ -192,4 +192,5 @@ TASK-1620 -> TASK-1621 -> TASK-1622 -> TASK-1623 -> TASK-1624
 - 2026-06-20: Completed TASK-1621 by freezing the first `.core` fixture grammar documentation and golden fixture corpus.
 - 2026-06-20: Completed TASK-1622 by adding the first Core text parser slice for atoms, rows, types, and values.
 - 2026-06-20: Completed TASK-1623 by extending the Core text parser to expressions, supported effect operations, handler clauses, and trap reasons.
+- 2026-06-20: Completed TASK-1624 by adding canonical Core text serialization, file output, and parser/serializer round-trip tests.
 - 2026-06-20: Created Phase 161 plan for the Core Ash IR foundation, including `.core` text parser/serializer, Core validation, and Core-to-CPS lowering.

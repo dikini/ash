@@ -136,7 +136,7 @@ Update this section as tasks complete:
 | [158](PLAN-158-LANGUAGE-SURFACE-FIXES.md) | 5 | 3 | ⏸️ Deferred; TASK-1580 (Module-level function visibility) remains open |
 || [159](PLAN-159-CPS-IR-INTERPRETER.md) | 14 | 14 | ✅ Complete; all tasks implemented, 82 tests pass, reference docs added, review remediation done (validation boundary, lambda closure capture, handler semantics) |
 || [160](PLAN-160-CPS-IR-RUNTIME-EXPANSION.md) | 10 | 10 | ✅ Complete; CPS IR runtime expansion implemented, focused tests pass, reference docs updated |
-|| [161](PLAN-161-CORE-ASH-IR-FOUNDATION.md) | 12 | 4 | 🚧 In progress; Core Ash AST carriers, `.core` fixture format, atom/value parser slice, and expression parser slice complete; serializer, validator, and Core-to-CPS lowering remain |
+|| [161](PLAN-161-CORE-ASH-IR-FOUNDATION.md) | 12 | 5 | 🚧 In progress; Core Ash AST carriers, `.core` fixture format, parser, and serializer slices complete; validator and Core-to-CPS lowering remain |
 |
 |---
 
@@ -499,7 +499,7 @@ Extends the Phase 159 CPS IR interpreter with structured data (records, tuples),
 
 ## Phase 161: Core Ash IR Foundation
 
-**Status:** 🚧 In progress; 4/12 implemented
+**Status:** 🚧 In progress; 5/12 implemented
 **Plan:** [PLAN-161: Core Ash IR Foundation](PLAN-161-CORE-ASH-IR-FOUNDATION.md)
 **Spec:** [SPEC-099: Ash Core Language](../spec/SPEC-099-CORE-LANGUAGE.md)
 **Depends on:** SPEC-099, SPEC-098b, SPEC-096b, SPEC-097b; builds on Phase 159 CPS IR substrate.
@@ -512,7 +512,7 @@ Builds the first implementation slice for Core Ash: dedicated Core AST carriers,
 | [TASK-1621](tasks/TASK-1621-core-text-format-fixtures.md) | Freeze minimal `.core` text grammar and golden fixtures | ✅ Complete |
 | [TASK-1622](tasks/TASK-1622-core-text-parser-atoms-values.md) | Parse Core atoms, rows, types, and values | ✅ Complete |
 | [TASK-1623](tasks/TASK-1623-core-text-parser-expressions.md) | Parse Core expressions and effect/discharge forms | ✅ Complete |
-| [TASK-1624](tasks/TASK-1624-core-text-serializer.md) | Add canonical Core AST serializer and round-trip tests | 📝 Planned |
+| [TASK-1624](tasks/TASK-1624-core-text-serializer.md) | Add canonical Core AST serializer and round-trip tests | ✅ Complete |
 | [TASK-1625](tasks/TASK-1625-core-validator-basic-invariants.md) | Validate basic SPEC-099 Core invariants | 📝 Planned |
 | [TASK-1626](tasks/TASK-1626-core-validator-affine-resume.md) | Validate handler resume affine-position restrictions | 📝 Planned |
 | [TASK-1627](tasks/TASK-1627-core-to-cps-lowering-basic.md) | Lower values, lets, primitives, conditionals, calls, and jumps | 📝 Planned |

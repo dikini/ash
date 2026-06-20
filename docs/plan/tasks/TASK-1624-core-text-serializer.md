@@ -1,6 +1,6 @@
 # TASK-1624: Add canonical Core text serializer
 
-**Status:** Planned
+**Status:** Complete
 **Phase:** [PLAN-161](../PLAN-161-CORE-ASH-IR-FOUNDATION.md)
 **Owner:** Phase 161
 
@@ -68,3 +68,17 @@ cargo fmt --check
 ```
 
 Expected: parser/serializer round-trip tests pass.
+
+## Completion Evidence
+
+- Added `core_expr_to_string` and `write_core_expr_to_file` APIs.
+- Added canonical one-line serialization for representative Core expressions, values, rows, types, effect operations, handler clauses, contract discharges, and trap reasons.
+- Added round-trip tests for simple let/jump, nested let/if, handler, and contract trap expressions.
+- Added deterministic serialization and file write coverage.
+- Verified:
+  - `cargo test -p ash-core --test task_1624_core_text_serializer`
+  - `cargo test -p ash-core --test task_1623_core_text_parser_expressions`
+  - `cargo test -p ash-core`
+  - `cargo clippy -p ash-core --all-targets -- -D warnings`
+  - `cargo fmt --check`
+  - `git diff --check`

@@ -5,8 +5,9 @@
 //! closed instead of being accepted optimistically.
 
 use crate::core_ash::{
-    CoreAtom, CoreContRef, CoreEffectOp, CoreExpr, CoreHandlerClause, CoreMultiplicity, CoreName,
-    CoreParam, CorePrimOp, CoreRow, CoreRowItem, CoreType, CoreValue,
+    CoreAtom, CoreContRef, CoreContractDischarge, CoreDischargeMode, CoreEffectOp,
+    CoreEvidenceStatus, CoreExpr, CoreHandlerClause, CoreMultiplicity, CoreName, CoreParam,
+    CorePrimOp, CoreRow, CoreRowItem, CoreType, CoreValue,
 };
 use crate::core_ash_validate::ValidCoreProgram;
 use std::collections::{HashMap, HashSet};
@@ -334,12 +335,26 @@ impl TypedCoreProgram {
     pub fn facts(&self) -> &CoreTypeCheckFacts {
         &self.facts
     }
+
+    /// Returns refinement proof obligations emitted while checking the program.
+    #[must_use]
+    pub fn obligations(&self) -> &[CoreRefinementObligation] {
+        self.facts.refinement_obligations()
+    }
+
+    /// Returns validated discharge records encountered while checking the program.
+    #[must_use]
+    pub fn discharges(&self) -> &[CoreContractDischarge] {
+        self.facts.discharges()
+    }
 }
 
 /// Typed facts computed during Core type checking for later compiler stages.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct CoreTypeCheckFacts {
     jump_continuation_rows: HashMap<CoreContRef, CoreRow>,
+    refinement_obligations: Vec<CoreRefinementObligation>,
+    discharges: Vec<CoreContractDischarge>,
 }
 
 impl CoreTypeCheckFacts {
@@ -347,6 +362,53 @@ impl CoreTypeCheckFacts {
     #[must_use]
     pub fn jump_continuation_rows(&self) -> &HashMap<CoreContRef, CoreRow> {
         &self.jump_continuation_rows
+    }
+
+    /// Returns refinement obligations emitted by annotation checking.
+    #[must_use]
+    pub fn refinement_obligations(&self) -> &[CoreRefinementObligation] {
+        &self.refinement_obligations
+    }
+
+    /// Returns validated discharge metadata records.
+    #[must_use]
+    pub fn discharges(&self) -> &[CoreContractDischarge] {
+        &self.discharges
+    }
+}
+
+/// A refinement proof obligation emitted by Core annotation checking.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CoreRefinementObligation {
+    predicate: String,
+    value_name: Option<CoreName>,
+    base_type: CoreType,
+    refinement_type: CoreType,
+}
+
+impl CoreRefinementObligation {
+    /// Returns the textual refinement predicate.
+    #[must_use]
+    pub fn predicate(&self) -> &str {
+        &self.predicate
+    }
+
+    /// Returns the binding name associated with the obligation, when known.
+    #[must_use]
+    pub fn value_name(&self) -> Option<&str> {
+        self.value_name.as_deref()
+    }
+
+    /// Returns the base type being refined.
+    #[must_use]
+    pub fn base_type(&self) -> &CoreType {
+        &self.base_type
+    }
+
+    /// Returns the target refinement type.
+    #[must_use]
+    pub fn refinement_type(&self) -> &CoreType {
+        &self.refinement_type
     }
 }
 
@@ -395,6 +457,10 @@ pub enum CoreTypeCheckError {
     /// A textual refinement predicate had no scoped metadata placeholder.
     #[error("unknown refinement predicate `{predicate}`")]
     UnknownRefinementPredicate { predicate: String },
+
+    /// A discharge record was malformed or did not prove a hard refinement.
+    #[error("invalid discharge: {detail}")]
+    InvalidDischarge { detail: String },
 
     /// Two rows were expected to match but did not.
     #[error("row mismatch")]
@@ -474,6 +540,7 @@ impl CoreRowComparison {
 pub struct TypedCoreValue {
     ty: CoreType,
     row: CoreRow,
+    facts: CoreTypeCheckFacts,
 }
 
 impl TypedCoreValue {
@@ -487,6 +554,12 @@ impl TypedCoreValue {
     #[must_use]
     pub fn row(&self) -> &CoreRow {
         &self.row
+    }
+
+    /// Returns metadata facts produced while synthesizing this value.
+    #[must_use]
+    pub fn facts(&self) -> &CoreTypeCheckFacts {
+        &self.facts
     }
 }
 
@@ -780,12 +853,22 @@ pub fn synthesize_core_value(
             }
             CoreType::Tuple(elem_types)
         }
-        CoreValue::DischargeMarker { .. } => CoreType::Base("Unit".into()),
+        CoreValue::DischargeMarker { discharge } => {
+            validate_discharge_marker(discharge, env)?;
+            let mut facts = CoreTypeCheckFacts::default();
+            facts.discharges.push(discharge.clone());
+            return Ok(TypedCoreValue {
+                ty: CoreType::Base("Unit".into()),
+                row: CoreRow::default(),
+                facts,
+            });
+        }
     };
 
     Ok(TypedCoreValue {
         ty,
         row: CoreRow::default(),
+        facts: CoreTypeCheckFacts::default(),
     })
 }
 
@@ -1006,6 +1089,9 @@ fn merge_typecheck_facts(
 ) -> CoreTypeCheckFacts {
     lhs.jump_continuation_rows
         .extend(rhs.jump_continuation_rows);
+    lhs.refinement_obligations
+        .extend(rhs.refinement_obligations);
+    lhs.discharges.extend(rhs.discharges);
     lhs
 }
 
@@ -1022,10 +1108,15 @@ fn type_check_expr(
             body,
         } => {
             check_core_type_well_formed(ty, env)?;
-            check_value_against(value, ty, env)?;
+            let value_facts = check_value_against(value, ty, env, Some(name.clone()))?;
             let mut body_env = env.clone();
             body_env.values_mut().insert(name.clone(), ty.clone());
-            type_check_expr(body, &body_env)
+            let body_checked = type_check_expr(body, &body_env)?;
+            Ok(TypedCoreExpr {
+                ty: body_checked.ty,
+                row: body_checked.row,
+                facts: merge_typecheck_facts(value_facts, body_checked.facts),
+            })
         }
         CoreExpr::LetRec {
             name,
@@ -1036,8 +1127,13 @@ fn type_check_expr(
             check_core_type_well_formed(ty, env)?;
             let mut recursive_env = env.clone();
             recursive_env.values_mut().insert(name.clone(), ty.clone());
-            check_value_against(value, ty, &recursive_env)?;
-            type_check_expr(body, &recursive_env)
+            let value_facts = check_value_against(value, ty, &recursive_env, Some(name.clone()))?;
+            let body_checked = type_check_expr(body, &recursive_env)?;
+            Ok(TypedCoreExpr {
+                ty: body_checked.ty,
+                row: body_checked.row,
+                facts: merge_typecheck_facts(value_facts, body_checked.facts),
+            })
         }
         CoreExpr::LetPrim {
             name,
@@ -1078,7 +1174,17 @@ fn type_check_expr(
         CoreExpr::Jump { cont, arg } => type_check_jump(cont, arg, env),
         CoreExpr::Raise { op, args } => type_check_raise(op, args, env),
         CoreExpr::Handle { clause, body } => type_check_handle(clause, body, env),
-        CoreExpr::RecordDischarge { .. } => Err(unsupported("RecordDischarge")),
+        CoreExpr::RecordDischarge { discharge, body } => {
+            validate_contract_discharge(discharge, env)?;
+            let body_checked = type_check_expr(body, env)?;
+            let mut facts = body_checked.facts;
+            facts.discharges.push(discharge.clone());
+            Ok(TypedCoreExpr {
+                ty: body_checked.ty,
+                row: body_checked.row,
+                facts,
+            })
+        }
         CoreExpr::Trap { .. } => Err(unsupported("Trap")),
     }
 }
@@ -1156,16 +1262,132 @@ fn check_value_against(
     value: &CoreValue,
     expected: &CoreType,
     env: &CoreTypeCheckEnv,
-) -> Result<(), CoreTypeCheckError> {
+    value_name: Option<CoreName>,
+) -> Result<CoreTypeCheckFacts, CoreTypeCheckError> {
     let typed = synthesize_core_value(value, env)?;
-    ensure_types_equivalent(expected, typed.ty(), env)?;
+    let mut facts = check_type_against_annotation(expected, typed.ty(), env)?;
+    facts = merge_typecheck_facts(typed.facts().clone(), facts);
     if normalize_core_row(typed.row())? != CoreRow::default() {
         return Err(CoreTypeCheckError::RowMismatch {
             expected: CoreRow::default(),
             actual: typed.row().clone(),
         });
     }
+    for obligation in &mut facts.refinement_obligations {
+        obligation.value_name = value_name.clone();
+    }
+    Ok(facts)
+}
+
+fn check_type_against_annotation(
+    expected: &CoreType,
+    actual: &CoreType,
+    env: &CoreTypeCheckEnv,
+) -> Result<CoreTypeCheckFacts, CoreTypeCheckError> {
+    check_core_type_well_formed(expected, env)?;
+    check_core_type_well_formed(actual, env)?;
+
+    if types_equivalent_unchecked(expected, actual, env) {
+        return Ok(CoreTypeCheckFacts::default());
+    }
+
+    if let CoreType::Refinement { base, predicate } = expected
+        && actual_refines_base_or_matches_base(actual, base, env)
+    {
+        let mut facts = CoreTypeCheckFacts::default();
+        facts.refinement_obligations.push(CoreRefinementObligation {
+            predicate: predicate.clone(),
+            value_name: None,
+            base_type: (**base).clone(),
+            refinement_type: expected.clone(),
+        });
+        return Ok(facts);
+    }
+
+    if let CoreType::Refinement { base, .. } = actual
+        && types_equivalent_unchecked(expected, base, env)
+    {
+        return Ok(CoreTypeCheckFacts::default());
+    }
+
+    Err(CoreTypeCheckError::TypeMismatch {
+        expected: Box::new(expected.clone()),
+        actual: Box::new(actual.clone()),
+    })
+}
+
+fn actual_refines_base_or_matches_base(
+    actual: &CoreType,
+    expected_base: &CoreType,
+    env: &CoreTypeCheckEnv,
+) -> bool {
+    if types_equivalent_unchecked(actual, expected_base, env) {
+        return true;
+    }
+
+    if let CoreType::Refinement { base, .. } = actual {
+        return types_equivalent_unchecked(base, expected_base, env);
+    }
+
+    false
+}
+
+fn validate_contract_discharge(
+    discharge: &CoreContractDischarge,
+    env: &CoreTypeCheckEnv,
+) -> Result<(), CoreTypeCheckError> {
+    match discharge.mode {
+        CoreDischargeMode::Static | CoreDischargeMode::Evidence => {
+            let Some(evidence) = &discharge.evidence else {
+                return Err(invalid_discharge(
+                    "static and evidence discharge modes require evidence metadata",
+                ));
+            };
+
+            if !env
+                .discharges()
+                .contains_refinement_predicate(&evidence.predicate)
+            {
+                return Err(CoreTypeCheckError::UnknownRefinementPredicate {
+                    predicate: evidence.predicate.clone(),
+                });
+            }
+
+            if evidence.status != CoreEvidenceStatus::Proven {
+                return Err(invalid_discharge(
+                    "hard refinement discharges require proven evidence",
+                ));
+            }
+        }
+        CoreDischargeMode::Dynamic => {
+            if discharge.evidence.is_some() {
+                return Err(invalid_discharge(
+                    "dynamic discharge mode must not carry static evidence",
+                ));
+            }
+        }
+    }
+
     Ok(())
+}
+
+fn validate_discharge_marker(
+    discharge: &CoreContractDischarge,
+    env: &CoreTypeCheckEnv,
+) -> Result<(), CoreTypeCheckError> {
+    match discharge.mode {
+        CoreDischargeMode::Static if discharge.evidence.is_none() => Ok(()),
+        CoreDischargeMode::Evidence if discharge.evidence.is_none() => Err(invalid_discharge(
+            "evidence discharge mode requires evidence metadata",
+        )),
+        _ => validate_contract_discharge(discharge, env),
+    }
+}
+
+fn invalid_discharge(detail: &str) -> CoreTypeCheckError {
+    CoreTypeCheckError::InvalidDischarge {
+        detail: detail.to_owned(),
+    }
 }
 
 fn check_function_application(

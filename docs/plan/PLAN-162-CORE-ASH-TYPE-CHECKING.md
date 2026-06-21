@@ -33,7 +33,7 @@ verified_against:
 
 ## Status
 
-In progress: 8/12 tasks complete.
+In progress: 9/12 tasks complete.
 
 ## Background
 
@@ -99,7 +99,7 @@ The checker must preserve the row-accounting distinctions already established by
 | [TASK-1645](tasks/TASK-1645-core-call-jump-row-accounting.md) | Type LetCall, Call, and Jump with SPEC-098b row-accounting facts | 4 | TASK-1644 | Complete |
 | [TASK-1646](tasks/TASK-1646-core-effect-operation-typing.md) | Type capability/channel/process/failure Raise operations and operation signatures | 4 | TASK-1645 | Complete |
 | [TASK-1647](tasks/TASK-1647-core-handle-affine-resume-typecheck.md) | Type Handle clauses with affine resume and captured-resume row preservation | 5 | TASK-1646 | Complete |
-| [TASK-1648](tasks/TASK-1648-core-refinement-obligations-discharge.md) | Record refinement obligations and validate discharge metadata shape | 5 | TASK-1647 | Planned |
+| [TASK-1648](tasks/TASK-1648-core-refinement-obligations-discharge.md) | Record refinement obligations and validate discharge metadata shape | 5 | TASK-1647 | Complete |
 | [TASK-1649](tasks/TASK-1649-core-public-summary-scaffold.md) | Add public type/row summary scaffolding and private alias diagnostics | 3 | TASK-1648 | Planned |
 | [TASK-1650](tasks/TASK-1650-core-typecheck-integration-fixtures.md) | Add `.core` parse -> validate -> type-check -> lower integration fixtures | 4 | TASK-1649 | Planned |
 | [TASK-1651](tasks/TASK-1651-core-typecheck-reference-closeout.md) | Document Core type-checker behavior and close out Phase 162 | 3 | TASK-1650 | Planned |

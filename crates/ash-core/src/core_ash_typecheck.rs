@@ -384,6 +384,7 @@ impl CheckedLoweredCoreProgram {
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct CoreTypeCheckFacts {
     jump_continuation_rows: HashMap<CoreContRef, CoreRow>,
+    mode_binding_latent_rows: HashMap<CoreName, CoreRow>,
     refinement_obligations: Vec<CoreRefinementObligation>,
     discharges: Vec<CoreContractDischarge>,
 }
@@ -393,6 +394,12 @@ impl CoreTypeCheckFacts {
     #[must_use]
     pub fn jump_continuation_rows(&self) -> &HashMap<CoreContRef, CoreRow> {
         &self.jump_continuation_rows
+    }
+
+    /// Returns latent rows inferred for local `LetMode` mode bindings.
+    #[must_use]
+    pub fn mode_binding_latent_rows(&self) -> &HashMap<CoreName, CoreRow> {
+        &self.mode_binding_latent_rows
     }
 
     /// Returns refinement obligations emitted by annotation checking.
@@ -664,6 +671,14 @@ pub enum CoreTypeCheckError {
     /// A mode type has an invalid latent-row shape.
     #[error("invalid mode type: {detail}")]
     InvalidModeType { detail: String },
+
+    /// A mode binding annotation row does not match the inferred latent row.
+    #[error("mode latent row mismatch for `{name}`")]
+    ModeLatentRowMismatch {
+        name: CoreName,
+        expected: CoreRow,
+        actual: CoreRow,
+    },
 }
 
 /// Error returned while constructing public Core summaries.
@@ -2047,6 +2062,8 @@ fn merge_typecheck_facts(
 ) -> CoreTypeCheckFacts {
     lhs.jump_continuation_rows
         .extend(rhs.jump_continuation_rows);
+    lhs.mode_binding_latent_rows
+        .extend(rhs.mode_binding_latent_rows);
     lhs.refinement_obligations
         .extend(rhs.refinement_obligations);
     lhs.discharges.extend(rhs.discharges);
@@ -2066,6 +2083,10 @@ fn lowering_context_with_checked_facts(
 
     for (cont, row) in facts.jump_continuation_rows() {
         context = context.with_cont_row(cont_ref_name(cont), row.clone());
+    }
+
+    for (name, row) in facts.mode_binding_latent_rows() {
+        context = context.with_mode_row(name, row.clone());
     }
 
     context
@@ -2156,8 +2177,96 @@ fn type_check_expr(
                 facts,
             })
         }
-        CoreExpr::LetMode { .. } => Err(unsupported("LetMode")),
-        CoreExpr::Force { .. } => Err(unsupported("Force")),
+        CoreExpr::LetMode {
+            name,
+            mode,
+            ty,
+            expr,
+            body,
+        } => {
+            check_core_type_well_formed(ty, env)?;
+            let (inner_ty, letmode_row) = check_letmode_type(ty, *mode, name)?;
+            let expr_checked = type_check_expr_against(expr, &inner_ty, env)?;
+
+            if matches!(mode, CoreEvalMode::Lazy | CoreEvalMode::Memo)
+                && let Some(expected_row) = &letmode_row
+                && !rows_equivalent(&expr_checked.row, expected_row, env)?
+            {
+                return Err(CoreTypeCheckError::ModeLatentRowMismatch {
+                    name: name.clone(),
+                    expected: expected_row.clone(),
+                    actual: expr_checked.row,
+                });
+            }
+
+            let mut body_env = env.clone();
+            body_env.values_mut().insert(name.clone(), ty.clone());
+            let body_checked = type_check_expr(body, &body_env)?;
+
+            let mut facts = merge_typecheck_facts(expr_checked.facts, body_checked.facts);
+            let row = match mode {
+                CoreEvalMode::Strict => {
+                    union_core_rows_structural(&expr_checked.row, &body_checked.row, env)?
+                }
+                CoreEvalMode::Lazy | CoreEvalMode::Memo => {
+                    if let Some(latent_row) = letmode_row {
+                        facts
+                            .mode_binding_latent_rows
+                            .insert(name.clone(), latent_row);
+                    }
+
+                    body_checked.row
+                }
+            };
+
+            Ok(TypedCoreExpr {
+                ty: body_checked.ty,
+                row,
+                facts,
+            })
+        }
+        CoreExpr::Force { name, thunk, body } => {
+            let CoreAtom::Var(_) = thunk else {
+                return Err(unsupported("Force requires variable thunk"));
+            };
+
+            let thunk_ty = type_check_atom(thunk, env)?;
+            let (result_ty, thunk_row) = match thunk_ty {
+                CoreType::Mode {
+                    mode: CoreEvalMode::Lazy,
+                    inner,
+                    latent_row,
+                } => (inner.as_ref().clone(), latent_row),
+                CoreType::Mode {
+                    mode: CoreEvalMode::Memo,
+                    inner,
+                    latent_row,
+                } => (inner.as_ref().clone(), latent_row),
+                CoreType::Mode {
+                    mode: CoreEvalMode::Strict,
+                    ..
+                } => {
+                    return Err(unsupported("cannot force strict mode"));
+                }
+                _ => return Err(unsupported("Force requires mode-typed thunk")),
+            };
+
+            let thunk_row = thunk_row.ok_or_else(|| CoreTypeCheckError::InvalidModeType {
+                detail: "forced thunk mode must carry a latent row".to_owned(),
+            })?;
+            let inner_ty = result_ty;
+
+            let mut body_env = env.clone();
+            body_env.values_mut().insert(name.clone(), inner_ty.clone());
+            let body_checked = type_check_expr_against(body, &inner_ty, &body_env)?;
+            let row = union_core_rows_structural(&body_checked.row, &thunk_row, env)?;
+
+            Ok(TypedCoreExpr {
+                ty: body_checked.ty,
+                row,
+                facts: body_checked.facts,
+            })
+        }
         CoreExpr::Jump { cont, arg } => type_check_jump(cont, arg, env),
         CoreExpr::Raise { op, args } => type_check_raise(op, args, env),
         CoreExpr::Handle { clause, body } => type_check_handle(clause, body, env),
@@ -2188,6 +2297,45 @@ fn type_check_atom(
     env: &CoreTypeCheckEnv,
 ) -> Result<CoreType, CoreTypeCheckError> {
     synthesize_core_atom(atom, env)
+}
+
+fn check_letmode_type(
+    ty: &CoreType,
+    mode: CoreEvalMode,
+    name: &str,
+) -> Result<(CoreType, Option<CoreRow>), CoreTypeCheckError> {
+    let CoreType::Mode {
+        mode: actual_mode,
+        inner,
+        latent_row,
+    } = ty
+    else {
+        return Err(unsupported("let-mode requires a mode-typed annotation"));
+    };
+
+    if *actual_mode != mode {
+        return Err(CoreTypeCheckError::ModeTypeMismatch {
+            expected: mode,
+            actual: *actual_mode,
+        });
+    }
+
+    match (mode, latent_row) {
+        (CoreEvalMode::Strict, Some(_)) => {
+            return Err(CoreTypeCheckError::InvalidModeType {
+                detail: format!("strict mode binding `{name}` requires no latent row",),
+            });
+        }
+        (CoreEvalMode::Strict, None) => {}
+        (CoreEvalMode::Lazy | CoreEvalMode::Memo, None) => {
+            return Err(CoreTypeCheckError::InvalidModeType {
+                detail: format!("{:?} mode binding `{name}` requires a latent row", mode),
+            });
+        }
+        (CoreEvalMode::Lazy | CoreEvalMode::Memo, Some(_)) => {}
+    }
+
+    Ok((*inner.clone(), latent_row.clone()))
 }
 
 fn type_check_expr_against(

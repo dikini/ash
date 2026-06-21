@@ -34,6 +34,7 @@ pub struct CoreLoweringContext {
     current_cont_row: CoreRow,
     cont_rows: HashMap<String, CoreRow>,
     function_rows: HashMap<String, CoreRow>,
+    mode_rows: HashMap<String, CoreRow>,
 }
 
 impl CoreLoweringContext {
@@ -50,6 +51,7 @@ impl CoreLoweringContext {
             current_cont_row,
             cont_rows,
             function_rows: HashMap::new(),
+            mode_rows: HashMap::new(),
         }
     }
 
@@ -64,6 +66,13 @@ impl CoreLoweringContext {
     #[must_use]
     pub fn with_function_row(mut self, name: impl Into<String>, row: CoreRow) -> Self {
         self.function_rows.insert(name.into(), row);
+        self
+    }
+
+    /// Registers a local latent row captured by `LetMode`.
+    #[must_use]
+    pub fn with_mode_row(mut self, name: impl Into<String>, row: CoreRow) -> Self {
+        self.mode_rows.insert(name.into(), row);
         self
     }
 }

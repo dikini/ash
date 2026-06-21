@@ -53,10 +53,11 @@ In scope:
 1. Core continuation multiplicity semantics.
 2. CPS continuation value multiplicity and runtime invocation behavior.
 3. Core text parsing/serialization for continuation multiplicity using current `.core` spelling.
-4. Core validation and type checking for legal multiplicity shapes.
-5. Affine use checking and multi-shot use acceptance in handler bodies.
-6. Core-to-CPS lowering that preserves multiplicity.
-7. Motivational examples represented as executable Core/CPS fixtures.
+4. Core and CPS answer-binding continuation invocation for handlers that inspect resumed answers.
+5. Core validation and type checking for legal multiplicity shapes.
+6. Affine use checking and multi-shot use acceptance in handler bodies.
+7. Core-to-CPS lowering that preserves multiplicity.
+8. Motivational examples represented as executable Core/CPS fixtures.
 
 Out of scope:
 
@@ -149,6 +150,95 @@ MultiShotPure
 all `Value::Cont` values for compatibility, but invoking a `MultiShotPure` continuation must not
 set or inspect `consumed` for one-shot rejection.
 
+CPS handler clauses must also carry the multiplicity used for the dynamic resume continuation:
+
+```rust
+enum ResumeRowMetadata {
+    Known(EffectRow),
+    LegacyInheritFromTarget,
+}
+
+HandlerClause {
+    op: EffectOp,
+    params: Vec<Name>,
+    resume: Name,
+    resume_row: ResumeRowMetadata,
+    resume_multiplicity: ContMultiplicity,
+    body: Box<Term>,
+    row: EffectRow,
+}
+```
+
+These fields are required because the runtime, not Core lowering, constructs the dynamic
+`Value::Cont` for a handled operation. Lowering must therefore write row and multiplicity onto
+`HandlerClause`; the interpreter must resolve the row metadata and copy multiplicity into the
+`Value::Cont` it binds as the handler resume.
+
+`resume_row` is also required for new checked lowering. It is the declared static row of the
+dynamic resume continuation, not a runtime fact that unchecked CPS may use without corroboration.
+Checked Core lowering writes `ResumeRowMetadata::Known(row)` from the Core resume parameter type.
+
+Legacy serialized handler clauses that omit `resume_row` must not deserialize as a real known
+empty row. They must deserialize to an explicit compatibility state such as
+`ResumeRowMetadata::LegacyInheritFromTarget`. This state is valid only with
+`resume_multiplicity = Affine`; multi-shot-pure resumes require a known row. At handler dispatch,
+`LegacyInheritFromTarget` derives the dynamic resume row from the resolved `Raise.resume` target
+row instead of comparing against `{}`. If the target row cannot be resolved, dispatch must trap or
+otherwise fail closed.
+
+For unchecked CPS input with `ResumeRowMetadata::Known(row)`, CPS validation must ensure the known
+row matches the row required by the `Raise.resume` target at the handler boundary when that target
+is statically resolvable. Runtime handler dispatch must also compare the known `clause.resume_row`
+with the row of the resolved `Raise.resume` target before constructing the dynamic resume. If the
+target row cannot be resolved, or if it differs from the known `clause.resume_row`, dispatch must
+trap or otherwise fail closed. Only after this comparison may the interpreter construct the dynamic
+resume as:
+
+```rust
+Value::Cont {
+    row: resolved_resume_row.clone(),
+    multiplicity: clause.resume_multiplicity,
+    ...
+}
+```
+
+It must not use `EffectRow::default()` as the resume row except when the resolved or known row is
+already the closed empty row.
+
+To support handlers that invoke a continuation, observe its answer, and continue, CPS IR also gains
+an answer-binding continuation invocation:
+
+```rust
+Term::LetCont {
+    name: Name,
+    param: Name,
+    cont_body: Box<Term>,
+    row: EffectRow,
+    multiplicity: ContMultiplicity,
+    body: Box<Term>,
+}
+
+Term::LetContCall {
+    name: Name,
+    cont: ContRef,
+    arg: Atom,
+    row: EffectRow,
+    body: Box<Term>,
+}
+```
+
+`Jump` remains the terminal continuation transfer. `LetContCall` is the non-tail form used when a
+handler needs the continuation answer as a value before evaluating more handler code. Its `row`
+field is the same row-accounting carrier as `Jump.row`: it records the requirements of invoking
+the target continuation before evaluating `body`.
+
+`Term::LetCont.row` and `Term::LetCont.multiplicity` are the declared source for the
+`Value::Cont.row` and `Value::Cont.multiplicity` created when the runtime evaluates `LetCont`.
+For checked Core lowering, these fields are already type-derived facts. For unchecked CPS input,
+CPS validation must verify that the effective row of `cont_body` matches `Term::LetCont.row`
+before treating a `MultiShotPure` `LetCont` as reusable. Existing serialized CPS terms that omit
+those fields default to `row = {}` and `multiplicity = Affine` for backward compatibility.
+
 ## 6. Runtime Semantics
 
 ### 6.1 Affine Jump
@@ -170,6 +260,18 @@ Trap("resume already consumed")
 The exact trap string may remain the current one for compatibility, but new structured tests should
 match a structured reason when available rather than depending only on text.
 
+When evaluating `LetCont`, the runtime constructs:
+
+```rust
+Value::Cont {
+    row: term.row.clone(),
+    multiplicity: term.multiplicity,
+    ...
+}
+```
+
+It must not infer multiplicity from `term.row`.
+
 ### 6.2 Multi-Shot Jump
 
 When a CPS `Jump` targets a multi-shot-pure continuation:
@@ -188,14 +290,42 @@ Each invocation must observe that captured environment and chain. The initial im
 use existing persistent/clone semantics for `Env` and `HandlerChain`; it must not introduce shared
 mutable user-visible state between invocations.
 
-### 6.3 Runtime Validation Boundary
+### 6.3 Answer-Binding Continuation Invocation
+
+`LetContCall` invokes a continuation and binds the terminal answer before continuing:
+
+```text
+resolve cont to Value::Cont { input = A, answer = Ans, row, multiplicity, ... }
+arg : A
+term.row includes row
+invoke continuation according to multiplicity rules
+continuation invocation returns ans : Ans
+-------------------------------------
+evaluate body with name bound to ans
+```
+
+For affine continuations, `LetContCall` consumes the continuation exactly like `Jump`. For
+multi-shot-pure continuations, `LetContCall` may be evaluated repeatedly against the same
+continuation value.
+
+`LetContCall` exists for Core/CPS handler bodies. It is not a surface syntax commitment.
+
+<a id="63-runtime-validation-boundary"></a>
+
+### 6.4 Runtime Validation Boundary
 
 Unchecked CPS input can still build inconsistent values. Runtime must fail closed:
 
-1. A `MultiShotPure` continuation with a non-empty row must be rejected by CPS validation or trap
-   before evaluation.
-2. An affine continuation invoked twice traps.
-3. A multi-shot-pure continuation invoked repeatedly does not trap only because of repetition.
+1. A `MultiShotPure` continuation with a non-empty declared row, or with a body whose effective
+   row does not match the declared empty row, must be rejected by CPS validation or trap before
+   reusable invocation.
+2. A `HandlerClause` with `resume_multiplicity = MultiShotPure` and non-empty or legacy/unknown
+   `resume_row` must be rejected by CPS validation or trap before the dynamic resume is
+   constructed.
+3. A `LetContCall` whose `row` does not include the resolved continuation row must be rejected by
+   CPS validation.
+4. An affine continuation invoked twice traps.
+5. A multi-shot-pure continuation invoked repeatedly does not trap only because of repetition.
 
 ## 7. Handler Resume Semantics
 
@@ -217,6 +347,13 @@ For `multi-shot-pure`, the captured resume continuation:
 3. may be jumped to multiple times by the handler body;
 4. requires the resume row to normalize to `{}`.
 
+At handler dispatch, the runtime must resolve the `Raise.resume` continuation target row before
+constructing the dynamic resume. If `clause.resume_row` is known, dispatch must compare it with the
+resolved target row. If `clause.resume_row` is the legacy compatibility state, dispatch must derive
+the dynamic affine resume row from the resolved target row. If the target row cannot be resolved,
+or if a known row differs from the target row, dispatch must trap or otherwise fail closed. This
+runtime check is required even when CPS validation already checked statically resolvable cases.
+
 A handler body may discard any resume continuation. Discarding is valid for both affine and
 multi-shot-pure continuations.
 
@@ -231,7 +368,12 @@ SPEC-100 is amended with these checks:
 5. The affine-use checker continues to reject more than one invocation of an affine resume.
 6. The affine-use checker does not count repeated invocations of a multi-shot-pure resume as an
    affine violation.
-7. Clause result and residual-row checks are unchanged except for using the resume row carried by
+7. `CoreExpr::LetContCall` requires a continuation of type `Cont<A, Ans, row, multiplicity>`,
+   checks the argument against `A`, binds the result name as `Ans`, and contributes `row` plus the
+   body row.
+8. `CoreExpr::LetContCall` consumes affine continuations for use-discipline purposes and leaves
+   multi-shot-pure continuations reusable.
+9. Clause result and residual-row checks are unchanged except for using the resume row carried by
    the continuation type.
 
 This spec does not infer multi-shot-pure from row emptiness. Core producers must explicitly choose
@@ -244,10 +386,18 @@ values:
 
 1. `LetCont` lowering uses `Affine` unless the source Core continuation type or checked lowering
    fact says `MultiShotPure`.
-2. Handler resume lowering maps `CoreMultiplicity::Affine` to CPS `Affine`.
-3. Handler resume lowering maps legal `CoreMultiplicity::MultiShotPure` to CPS `MultiShotPure`.
-4. Lowering must not infer multi-shot-pure from an empty row.
-5. Lowering must not silently downgrade explicit multi-shot-pure to affine.
+2. `LetCont` lowering writes the checked continuation row and multiplicity into CPS
+   `Term::LetCont.row` and `Term::LetCont.multiplicity`.
+3. Handler resume lowering maps `CoreMultiplicity::Affine` to CPS `Affine`.
+4. Handler resume lowering maps legal `CoreMultiplicity::MultiShotPure` to CPS `MultiShotPure`.
+5. Handler lowering stores resume multiplicity on CPS `HandlerClause` because runtime constructs
+   the dynamic resume `Value::Cont`.
+6. Handler lowering stores the Core resume parameter row on CPS `HandlerClause.resume_row` as a
+   known row; checked lowering must not emit the legacy compatibility state.
+7. Core `LetContCall` lowers to CPS `Term::LetContCall` with the checked continuation row in
+   `Term::LetContCall.row`.
+8. Lowering must not infer multi-shot-pure from an empty row.
+9. Lowering must not silently downgrade explicit multi-shot-pure to affine.
 
 If lowering receives untyped Core where a handler resume type is unavailable or unsupported, it
 must preserve the existing conservative affine behavior.
@@ -255,7 +405,8 @@ must preserve the existing conservative affine behavior.
 ## 10. Motivational Examples
 
 The examples below are requirements for test coverage, not surface syntax commitments. Test agents
-must encode them as current Core `.core` fixtures and/or direct CPS IR tests.
+must encode them as Core `.core` fixtures using the Phase 164 Core continuation-invocation form
+and may add direct CPS IR tests for lower-level runtime coverage.
 
 ### 10.1 Choice: All Outcomes
 

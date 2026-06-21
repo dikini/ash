@@ -6,8 +6,9 @@
 
 ## Description
 
-Encode the motivational multi-shot continuation examples as executable Core/CPS tests using current
-syntax.
+Encode the motivational multi-shot continuation examples as executable Core tests using Core syntax
+available after TASK-1686. Direct CPS tests may supplement runtime coverage, but they must not
+replace the Core motivational fixtures.
 
 ## Specification Reference
 
@@ -22,8 +23,7 @@ syntax.
 
 - Create fixtures under: `crates/ash-core/tests/fixtures/core/`
 - Test: `crates/ash-core/tests/task_1689_motivational_multishot_fixtures.rs`
-- Add direct CPS tests in `crates/ash-interp/tests/` only if Core text cannot express a scenario
-  without unrelated syntax work.
+- Optional supplemental direct CPS tests in `crates/ash-interp/tests/` for runtime edge cases.
 
 ## Required Examples
 
@@ -39,14 +39,17 @@ syntax.
 ## Requirements
 
 1. Do not copy surface syntax from the design note.
-2. Use current `.core` parser syntax and existing Core operations.
-3. Prefer small integer/tuple/list-free encodings if list support would distract from the feature.
-4. Make the expected outcome obvious in each test name.
-5. Keep each fixture focused; do not introduce a general search library.
+2. Use `.core` parser syntax available after TASK-1686, especially `let-cont-call` or its chosen
+   equivalent.
+3. Do not move Choice/backtracking/nested examples out of Core because pre-Phase-164 Core lacks
+   non-tail resume invocation; TASK-1686 exists to add that Core ability.
+4. Prefer small integer/tuple/list-free encodings if list support would distract from the feature.
+5. Make the expected outcome obvious in each test name.
+6. Keep each fixture focused; do not introduce a general search library.
 
 ## TDD Steps
 
-1. Add failing fixture tests for the four positive examples.
+1. Add failing Core fixture tests for the four positive examples.
 2. Add failing tests for the two negative examples.
 3. Adjust implementation only if earlier tasks missed behavior needed by these examples.
 4. Run `cargo test -p ash-core --test task_1689_motivational_multishot_fixtures`.
@@ -54,7 +57,7 @@ syntax.
 
 ## Completion Checklist
 
-- [ ] All four motivational positive examples execute or type-check as intended.
+- [ ] All four motivational positive examples execute or type-check as Core fixtures.
 - [ ] Both negative examples reject for the intended reason.
 - [ ] Surface syntax remains untouched.
 - [ ] CHANGELOG has a task entry.

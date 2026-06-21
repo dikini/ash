@@ -6,7 +6,8 @@
 
 ## Description
 
-Add `.core` fixtures and golden coverage for continuation multiplicity.
+Add `.core` fixtures and golden coverage for continuation multiplicity and answer-binding
+continuation invocation.
 
 ## Specification Reference
 
@@ -16,6 +17,7 @@ Add `.core` fixtures and golden coverage for continuation multiplicity.
 ## Dependencies
 
 - [TASK-1684](TASK-1684-core-cont-multiplicity-wellformedness.md)
+- [TASK-1686](TASK-1686-core-affine-use-discipline-with-multishot.md)
 - [TASK-1687](TASK-1687-core-to-cps-multiplicity-lowering.md)
 
 ## Files
@@ -29,14 +31,16 @@ Add `.core` fixtures and golden coverage for continuation multiplicity.
 2. `affine_empty_row_remains_affine.core`
 3. `invalid_multishot_nonempty_row.core`
 4. `invalid_multishot_open_row.core`
+5. `let_cont_call_text_roundtrip.core`
 
 ## Requirements
 
-1. Use current Core text syntax.
+1. Use Core text syntax available after TASK-1686.
 2. Round-trip legal fixtures through parser and serializer.
 3. Validate/type-check legal fixtures.
 4. Assert invalid fixtures fail at validation or type checking with multiplicity-specific errors.
-5. Add `.cps.golden` files only where existing Core fixture tests expect them.
+5. Include at least one legal fixture that lowers `let-cont-call` to CPS `LetContCall`.
+6. Add `.cps.golden` files only where existing Core fixture tests expect them.
 
 ## TDD Steps
 

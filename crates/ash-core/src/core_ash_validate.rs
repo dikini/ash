@@ -62,6 +62,10 @@ pub enum CoreValidationError {
     #[error("duplicate row item: {item}")]
     DuplicateRowItem { item: String },
 
+    /// A binder name is reused in a program scope.
+    #[error("duplicate {kind} binding `{name}`")]
+    DuplicateBinding { kind: String, name: String },
+
     /// A raised operation is malformed or not representable by the target IR.
     #[error("unsupported effect operation: {detail}")]
     UnsupportedEffectOperation { detail: String },
@@ -78,13 +82,17 @@ pub enum CoreValidationError {
 /// Returns [`CoreValidationError`] when a basic representation invariant is
 /// violated.
 pub fn validate_core_program(raw: RawCoreProgram) -> Result<ValidCoreProgram, CoreValidationError> {
-    validate_expr(raw.expr())?;
+    let mut bindings = HashSet::new();
+    validate_expr(raw.expr(), &mut bindings)?;
     Ok(ValidCoreProgram {
         expr: raw.into_expr(),
     })
 }
 
-fn validate_expr(expr: &CoreExpr) -> Result<(), CoreValidationError> {
+fn validate_expr(
+    expr: &CoreExpr,
+    bindings: &mut HashSet<String>,
+) -> Result<(), CoreValidationError> {
     match expr {
         CoreExpr::Atom(atom) => validate_data_atom(atom),
         CoreExpr::LetVal {
@@ -93,20 +101,32 @@ fn validate_expr(expr: &CoreExpr) -> Result<(), CoreValidationError> {
         | CoreExpr::LetRec {
             ty, value, body, ..
         } => {
+            let name = match expr {
+                CoreExpr::LetVal { name, .. } | CoreExpr::LetRec { name, .. } => name.as_str(),
+                _ => unreachable!(),
+            };
+            validate_binding_name("value", name, bindings)?;
             validate_type(ty)?;
-            validate_value(value)?;
-            validate_expr(body)
+            let mut value_bindings = bindings.clone();
+            validate_value(value, &mut value_bindings)?;
+            validate_expr(body, bindings)
         }
         CoreExpr::LetPrim { args, body, .. } => {
+            if let CoreExpr::LetPrim { name, .. } = expr {
+                validate_binding_name("primitive", name, bindings)?;
+            }
             validate_data_atoms(args)?;
-            validate_expr(body)
+            validate_expr(body, bindings)
         }
         CoreExpr::LetCall {
             func, args, body, ..
         } => {
+            if let CoreExpr::LetCall { name, .. } = expr {
+                validate_binding_name("call result", name, bindings)?;
+            }
             validate_data_atom(func)?;
             validate_data_atoms(args)?;
-            validate_expr(body)
+            validate_expr(body, bindings)
         }
         CoreExpr::If {
             cond,
@@ -114,8 +134,12 @@ fn validate_expr(expr: &CoreExpr) -> Result<(), CoreValidationError> {
             else_branch,
         } => {
             validate_data_atom(cond)?;
-            validate_expr(then_branch)?;
-            validate_expr(else_branch)
+            let mut then_bindings = bindings.clone();
+            validate_expr(then_branch, &mut then_bindings)?;
+
+            let mut else_bindings = bindings.clone();
+            validate_expr(else_branch, &mut else_bindings)?;
+            Ok(())
         }
         CoreExpr::Call { func, args } => {
             validate_data_atom(func)?;
@@ -128,14 +152,16 @@ fn validate_expr(expr: &CoreExpr) -> Result<(), CoreValidationError> {
         }
         CoreExpr::Handle { clause, body } => {
             validate_effect_op(&clause.op)?;
-            validate_params(&clause.params)?;
+            let mut clause_bindings = bindings.clone();
+            validate_params(&clause.params, &mut clause_bindings)?;
+            validate_binding_name("resume", &clause.resume.name, &mut clause_bindings)?;
             validate_type(&clause.resume.ty)?;
             validate_row(&clause.row)?;
-            validate_expr(&clause.body)?;
+            validate_expr(&clause.body, &mut clause_bindings)?;
             validate_handler_resume(&clause.resume, &clause.body)?;
-            validate_expr(body)
+            validate_expr(body, bindings)
         }
-        CoreExpr::RecordDischarge { body, .. } => validate_expr(body),
+        CoreExpr::RecordDischarge { body, .. } => validate_expr(body, bindings),
         CoreExpr::Trap { reason } => {
             if let CoreTrapReason::UnhandledEffect(op) = reason {
                 validate_effect_op(op)?;
@@ -145,13 +171,32 @@ fn validate_expr(expr: &CoreExpr) -> Result<(), CoreValidationError> {
     }
 }
 
-fn validate_value(value: &CoreValue) -> Result<(), CoreValidationError> {
+fn validate_binding_name(
+    kind: &str,
+    name: &str,
+    bindings: &mut HashSet<String>,
+) -> Result<(), CoreValidationError> {
+    if bindings.contains(name) {
+        return Err(CoreValidationError::DuplicateBinding {
+            kind: kind.to_string(),
+            name: name.to_string(),
+        });
+    }
+    bindings.insert(name.to_string());
+    Ok(())
+}
+
+fn validate_value(
+    value: &CoreValue,
+    bindings: &mut HashSet<String>,
+) -> Result<(), CoreValidationError> {
     match value {
         CoreValue::Atom(atom) => validate_data_atom(atom),
         CoreValue::Lam { params, body, row } => {
-            validate_params(params)?;
+            let mut lambda_bindings = bindings.clone();
+            validate_params(params, &mut lambda_bindings)?;
             validate_row(row)?;
-            validate_expr(body)
+            validate_expr(body, &mut lambda_bindings)
         }
         CoreValue::Record { fields } => {
             for (_, atom) in fields {
@@ -164,8 +209,12 @@ fn validate_value(value: &CoreValue) -> Result<(), CoreValidationError> {
     }
 }
 
-fn validate_params(params: &[CoreParam]) -> Result<(), CoreValidationError> {
+fn validate_params(
+    params: &[CoreParam],
+    bindings: &mut HashSet<String>,
+) -> Result<(), CoreValidationError> {
     for param in params {
+        validate_binding_name("param", &param.name, bindings)?;
         validate_type(&param.ty)?;
     }
     Ok(())

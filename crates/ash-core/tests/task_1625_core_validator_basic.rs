@@ -1,10 +1,10 @@
 use std::path::{Path, PathBuf};
 
 use ash_core::core_ash::{
-    CoreAtom, CoreEffectOp, CoreExpr, CoreRow, CoreRowItem, CoreType, CoreValue,
+    CoreAtom, CoreEffectOp, CoreExpr, CoreParam, CoreRow, CoreRowItem, CoreType, CoreValue,
 };
 use ash_core::core_ash_text::{parse_core_expr, parse_core_file};
-use ash_core::core_ash_validate::{RawCoreProgram, validate_core_program};
+use ash_core::core_ash_validate::{CoreValidationError, RawCoreProgram, validate_core_program};
 
 fn repo_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -28,6 +28,14 @@ fn console_read_row_item() -> CoreRowItem {
     CoreRowItem::Capability {
         path: vec!["console".to_string()],
         operation: "read".to_string(),
+    }
+}
+
+fn function_ty() -> CoreType {
+    CoreType::Function {
+        params: vec![],
+        result: Box::new(unit()),
+        row: CoreRow::default(),
     }
 }
 
@@ -58,6 +66,138 @@ fn rejects_duplicate_row_items() {
         error.to_string().contains("duplicate row item"),
         "unexpected error: {error}"
     );
+}
+
+#[test]
+fn if_branch_local_bindings_may_reuse_names() {
+    let duplicate_name = "x".to_string();
+    let duplicate_binding = CoreExpr::LetVal {
+        name: duplicate_name.clone(),
+        ty: function_ty(),
+        value: CoreValue::Atom(CoreAtom::LitUnit),
+        body: Box::new(CoreExpr::Atom(CoreAtom::LitUnit)),
+    };
+
+    let expr = CoreExpr::If {
+        cond: CoreAtom::LitBool(true),
+        then_branch: Box::new(duplicate_binding.clone()),
+        else_branch: Box::new(duplicate_binding),
+    };
+
+    assert!(validate_core_program(RawCoreProgram::new(expr)).is_ok());
+}
+
+#[test]
+fn rejects_duplicate_value_bindings_along_lexical_path() {
+    let duplicate_name = "x".to_string();
+    let inner = CoreExpr::LetVal {
+        name: duplicate_name.clone(),
+        ty: function_ty(),
+        value: CoreValue::Atom(CoreAtom::LitUnit),
+        body: Box::new(CoreExpr::Atom(CoreAtom::LitUnit)),
+    };
+    let expr = CoreExpr::LetVal {
+        name: duplicate_name.clone(),
+        ty: function_ty(),
+        value: CoreValue::Atom(CoreAtom::LitUnit),
+        body: Box::new(inner),
+    };
+
+    let error = validate_core_program(RawCoreProgram::new(expr)).unwrap_err();
+    assert!(
+        matches!(
+            error,
+            CoreValidationError::DuplicateBinding {
+                kind: _,
+                ref name,
+            } if name == &duplicate_name
+        ),
+        "unexpected error: {error}"
+    );
+}
+
+#[test]
+fn rejects_duplicate_bindings_between_parent_scope_and_branch() {
+    let duplicate_name = "x".to_string();
+    let expr = CoreExpr::LetVal {
+        name: duplicate_name.clone(),
+        ty: function_ty(),
+        value: CoreValue::Atom(CoreAtom::LitUnit),
+        body: Box::new(CoreExpr::If {
+            cond: CoreAtom::LitBool(true),
+            then_branch: Box::new(CoreExpr::LetVal {
+                name: duplicate_name.clone(),
+                ty: function_ty(),
+                value: CoreValue::Atom(CoreAtom::LitUnit),
+                body: Box::new(CoreExpr::Atom(CoreAtom::LitUnit)),
+            }),
+            else_branch: Box::new(CoreExpr::Atom(CoreAtom::LitUnit)),
+        }),
+    };
+
+    let error = validate_core_program(RawCoreProgram::new(expr)).unwrap_err();
+    assert!(
+        matches!(
+            error,
+            CoreValidationError::DuplicateBinding {
+                kind: _,
+                ref name,
+            } if name == &duplicate_name
+        ),
+        "unexpected error: {error}"
+    );
+}
+
+#[test]
+fn let_lambda_param_does_not_leak_into_let_body_scope() {
+    let expr = CoreExpr::LetVal {
+        name: "f".into(),
+        ty: function_ty(),
+        value: CoreValue::Lam {
+            params: vec![CoreParam {
+                name: "x".into(),
+                ty: unit(),
+            }],
+            body: Box::new(CoreExpr::Atom(CoreAtom::Var("x".into()))),
+            row: CoreRow::default(),
+        },
+        body: Box::new(CoreExpr::LetVal {
+            name: "x".into(),
+            ty: function_ty(),
+            value: CoreValue::Atom(CoreAtom::LitUnit),
+            body: Box::new(CoreExpr::Atom(CoreAtom::LitUnit)),
+        }),
+    };
+
+    assert!(validate_core_program(RawCoreProgram::new(expr)).is_ok());
+}
+
+#[test]
+fn duplicate_lambda_params_still_fail_validation() {
+    let expr = CoreExpr::LetVal {
+        name: "f".into(),
+        ty: function_ty(),
+        value: CoreValue::Lam {
+            params: vec![
+                CoreParam {
+                    name: "x".into(),
+                    ty: unit(),
+                },
+                CoreParam {
+                    name: "x".into(),
+                    ty: unit(),
+                },
+            ],
+            body: Box::new(CoreExpr::Atom(CoreAtom::LitUnit)),
+            row: CoreRow::default(),
+        },
+        body: Box::new(CoreExpr::Atom(CoreAtom::LitUnit)),
+    };
+
+    assert!(matches!(
+        validate_core_program(RawCoreProgram::new(expr)),
+        Err(CoreValidationError::DuplicateBinding { kind: _, ref name }) if name == "x"
+    ));
 }
 
 #[test]

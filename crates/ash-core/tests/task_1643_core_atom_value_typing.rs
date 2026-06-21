@@ -71,6 +71,46 @@ fn unknown_variable_atom_fails() {
 }
 
 #[test]
+fn variable_atom_fails_for_ill_formed_env_value_type() {
+    let mut env = CoreTypeCheckEnv::default();
+    env.values_mut()
+        .insert("x", CoreType::Named("Missing".into()));
+
+    let err = synthesize_core_atom(&CoreAtom::Var("x".into()), &env)
+        .expect_err("ill-formed env value type");
+
+    assert_eq!(
+        err,
+        CoreTypeCheckError::UnknownType {
+            name: "Missing".into()
+        }
+    );
+}
+
+#[test]
+fn type_check_failures_reject_external_function_row_variable_types() {
+    let mut env = CoreTypeCheckEnv::default();
+    env.values_mut().insert(
+        "f",
+        CoreType::Function {
+            params: vec![],
+            result: Box::new(CoreType::Base("Unit".into())),
+            row: CoreRow {
+                items: Vec::new(),
+                tail: Some("r".into()),
+            },
+        },
+    );
+
+    let err = type_check(CoreExpr::Atom(CoreAtom::Var("f".into())), &env)
+        .expect_err("unknown row variable in external value type is rejected");
+    assert_eq!(
+        err,
+        CoreTypeCheckError::UnknownRowVariable { name: "r".into() }
+    );
+}
+
+#[test]
 fn primitive_and_constructor_names_synthesize_function_types() {
     let mut env = CoreTypeCheckEnv::default();
     env.types_mut().insert_name("OptionInt");
@@ -160,6 +200,22 @@ fn type_check(
         validate_core_program(RawCoreProgram::new(expr)).expect("Core expression validates");
     let typed = type_check_core_program(valid, env)?;
     Ok((typed.ty().clone(), typed.row().clone()))
+}
+
+fn type_check_program(
+    expr: CoreExpr,
+    env: &CoreTypeCheckEnv,
+) -> Result<ash_core::core_ash_typecheck::TypedCoreProgram, CoreTypeCheckError> {
+    let valid =
+        validate_core_program(RawCoreProgram::new(expr)).expect("Core expression validates");
+    type_check_core_program(valid, env)
+}
+
+fn positive_int() -> CoreType {
+    CoreType::Refinement {
+        base: Box::new(CoreType::Base("Int".into())),
+        predicate: "result > 0".into(),
+    }
 }
 
 #[test]
@@ -323,6 +379,77 @@ fn lambda_annotation_row_subtyping_rejects_purer_annotation_for_effectful_functi
     .expect_err("effectful annotation should reject a purer function argument");
 
     assert!(matches!(err, CoreTypeCheckError::RowMismatch { .. }));
+}
+
+#[test]
+fn function_annotation_result_allows_refinement_actual_against_expected_base_result() {
+    let mut env = CoreTypeCheckEnv::default();
+    env.discharges_mut()
+        .insert_refinement_predicate("result > 0");
+    env.values_mut().insert("positive", positive_int());
+
+    let expected = CoreType::Function {
+        params: Vec::new(),
+        result: Box::new(CoreType::Base("Int".into())),
+        row: CoreRow::default(),
+    };
+    let lambda = CoreValue::Lam {
+        params: Vec::new(),
+        body: Box::new(CoreExpr::Atom(CoreAtom::Var("positive".into()))),
+        row: CoreRow::default(),
+    };
+
+    let typed = type_check(
+        CoreExpr::LetVal {
+            name: "f".into(),
+            ty: expected.clone(),
+            value: lambda,
+            body: Box::new(CoreExpr::Atom(CoreAtom::Var("f".into()))),
+        },
+        &env,
+    )
+    .expect("refined actual function result should satisfy base-annotated function result");
+
+    assert_eq!(typed.0, expected);
+    assert_eq!(typed.1, CoreRow::default());
+}
+
+#[test]
+fn function_annotation_result_records_refinement_obligation_for_base_actual_against_refined_expected()
+ {
+    let mut env = CoreTypeCheckEnv::default();
+    env.discharges_mut()
+        .insert_refinement_predicate("result > 0");
+
+    let expected = CoreType::Function {
+        params: Vec::new(),
+        result: Box::new(positive_int()),
+        row: CoreRow::default(),
+    };
+    let lambda = CoreValue::Lam {
+        params: Vec::new(),
+        body: Box::new(CoreExpr::Atom(CoreAtom::LitInt(7))),
+        row: CoreRow::default(),
+    };
+
+    let typed = type_check_program(
+        CoreExpr::LetVal {
+            name: "f".into(),
+            ty: expected.clone(),
+            value: lambda,
+            body: Box::new(CoreExpr::Atom(CoreAtom::Var("f".into()))),
+        },
+        &env,
+    )
+    .expect(
+        "base function result should satisfy refinement-annotated function result with obligation",
+    );
+
+    assert_eq!(typed.ty(), &expected);
+    let obligations = typed.obligations();
+    assert_eq!(obligations.len(), 1);
+    assert_eq!(obligations[0].predicate(), "result > 0");
+    assert_eq!(obligations[0].value_name(), Some("f"));
 }
 
 #[test]

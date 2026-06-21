@@ -136,11 +136,24 @@ pub fn lower_core_program_with_context(
     program: ValidCoreProgram,
     context: CoreLoweringContext,
 ) -> Result<Term, CoreLoweringError> {
-    let mut state = LoweringState::new(context);
-    lower_expr(&program.into_expr(), &mut state)
+    lower_core_program_with_context_and_letcall_rows(program, context, &HashMap::new())
 }
 
-fn lower_expr(expr: &CoreExpr, state: &mut LoweringState) -> Result<Term, CoreLoweringError> {
+pub fn lower_core_program_with_context_and_letcall_rows(
+    program: ValidCoreProgram,
+    context: CoreLoweringContext,
+    letcall_rows: &HashMap<Vec<usize>, CoreRow>,
+) -> Result<Term, CoreLoweringError> {
+    let mut state = LoweringState::new(context);
+    lower_expr_with_letcall_rows(&program.into_expr(), &mut state, &Vec::new(), letcall_rows)
+}
+
+fn lower_expr_with_letcall_rows(
+    expr: &CoreExpr,
+    state: &mut LoweringState,
+    path: &[usize],
+    letcall_rows: &HashMap<Vec<usize>, CoreRow>,
+) -> Result<Term, CoreLoweringError> {
     match expr {
         CoreExpr::Atom(atom) => Ok(Term::Jump {
             cont: state.context.current_cont.clone(),
@@ -153,11 +166,22 @@ fn lower_expr(expr: &CoreExpr, state: &mut LoweringState) -> Result<Term, CoreLo
             value,
             body,
         } => {
-            record_function_row(name, ty, state);
+            let mut lexical_state = state.clone();
+            record_local_function_row(name, ty, value, &mut lexical_state);
+            let value_path = with_child_path(path, 0);
+            let body_path = with_child_path(path, 1);
+            let lowered_value = lower_value_with_letcall_rows(
+                value,
+                &mut lexical_state,
+                &value_path,
+                letcall_rows,
+            )?;
+            let lowered_body =
+                lower_expr_with_letcall_rows(body, &mut lexical_state, &body_path, letcall_rows)?;
             Ok(Term::LetVal {
                 name: name.clone(),
-                value: lower_value(value, state)?,
-                body: Box::new(lower_expr(body, state)?),
+                value: lowered_value,
+                body: Box::new(lowered_body),
             })
         }
         CoreExpr::LetRec {
@@ -166,11 +190,22 @@ fn lower_expr(expr: &CoreExpr, state: &mut LoweringState) -> Result<Term, CoreLo
             value,
             body,
         } => {
-            record_function_row(name, ty, state);
+            let mut lexical_state = state.clone();
+            record_local_function_row(name, ty, value, &mut lexical_state);
+            let value_path = with_child_path(path, 0);
+            let body_path = with_child_path(path, 1);
+            let lowered_value = lower_value_with_letcall_rows(
+                value,
+                &mut lexical_state,
+                &value_path,
+                letcall_rows,
+            )?;
+            let lowered_body =
+                lower_expr_with_letcall_rows(body, &mut lexical_state, &body_path, letcall_rows)?;
             Ok(Term::LetRec {
                 name: name.clone(),
-                value: lower_value(value, state)?,
-                body: Box::new(lower_expr(body, state)?),
+                value: lowered_value,
+                body: Box::new(lowered_body),
             })
         }
         CoreExpr::LetPrim {
@@ -182,7 +217,12 @@ fn lower_expr(expr: &CoreExpr, state: &mut LoweringState) -> Result<Term, CoreLo
             name: name.clone(),
             op: lower_prim_op(op)?,
             args: lower_atoms(args)?,
-            body: Box::new(lower_expr(body, state)?),
+            body: Box::new(lower_expr_with_letcall_rows(
+                body,
+                state,
+                &with_child_path(path, 0),
+                letcall_rows,
+            )?),
         }),
         CoreExpr::LetCall {
             name,
@@ -191,8 +231,19 @@ fn lower_expr(expr: &CoreExpr, state: &mut LoweringState) -> Result<Term, CoreLo
             body,
         } => {
             let cont_name = state.fresh_cont_name();
-            let cont_row = total_row(body, state)?;
-            let cont_body = lower_expr(body, state)?;
+            let body_path = with_child_path(path, 0);
+            let mut body_state = state.clone();
+            if let Some(row) = letcall_rows.get(path) {
+                body_state
+                    .context
+                    .function_rows
+                    .insert(name.clone(), row.clone());
+            }
+
+            let cont_row =
+                total_row_with_letcall_rows(body, &body_state, &body_path, letcall_rows)?;
+            let cont_body =
+                lower_expr_with_letcall_rows(body, &mut body_state, &body_path, letcall_rows)?;
             let guard =
                 state.with_current_cont(ContRef::Label(cont_name.clone()), cont_row.clone());
             let call_row = union_rows(
@@ -218,12 +269,30 @@ fn lower_expr(expr: &CoreExpr, state: &mut LoweringState) -> Result<Term, CoreLo
             then_branch,
             else_branch,
         } => {
-            let then_local = local_row(then_branch, state)?;
-            let else_local = local_row(else_branch, state)?;
+            let then_path = with_child_path(path, 0);
+            let else_path = with_child_path(path, 1);
+            let then_local =
+                local_row_with_letcall_rows(then_branch, state, &then_path, letcall_rows)?;
+            let else_local =
+                local_row_with_letcall_rows(else_branch, state, &else_path, letcall_rows)?;
+
+            let mut then_state = state.clone();
+            let mut else_state = state.clone();
+
             Ok(Term::If {
                 cond: lower_atom(cond)?,
-                then_branch: Box::new(lower_expr(then_branch, state)?),
-                else_branch: Box::new(lower_expr(else_branch, state)?),
+                then_branch: Box::new(lower_expr_with_letcall_rows(
+                    then_branch,
+                    &mut then_state,
+                    &then_path,
+                    letcall_rows,
+                )?),
+                else_branch: Box::new(lower_expr_with_letcall_rows(
+                    else_branch,
+                    &mut else_state,
+                    &else_path,
+                    letcall_rows,
+                )?),
                 row: lower_row(&union_rows(&then_local, &else_local)),
             })
         }
@@ -254,17 +323,45 @@ fn lower_expr(expr: &CoreExpr, state: &mut LoweringState) -> Result<Term, CoreLo
             row: lower_row(&effect_op_row(op)),
         }),
         CoreExpr::Handle { clause, body } => {
-            let residual_row = handle_residual_row(clause, body, state)?;
+            let clause_path = with_child_path(path, 0);
+            let body_path = with_child_path(path, 1);
+            let mut clause_state = state.clone();
+            let residual_row = handle_residual_row_with_letcall_rows(
+                clause,
+                body,
+                &mut clause_state,
+                &body_path,
+                letcall_rows,
+            )?;
+
+            let mut lowered_body_state = state.clone();
+            let lowered_body = lower_expr_with_letcall_rows(
+                body,
+                &mut lowered_body_state,
+                &body_path,
+                letcall_rows,
+            )?;
+
             Ok(Term::Handle {
-                clause: lower_handler_clause(clause, state)?,
-                body: Box::new(lower_expr(body, state)?),
+                clause: lower_handler_clause_with_letcall_rows(
+                    clause,
+                    &mut clause_state,
+                    &clause_path,
+                    letcall_rows,
+                )?,
+                body: Box::new(lowered_body),
                 cont: state.context.current_cont.clone(),
                 row: lower_row(&residual_row),
             })
         }
         CoreExpr::RecordDischarge { discharge, body } => Ok(Term::RecordDischarge {
             discharge: lower_contract_discharge(discharge),
-            body: Box::new(lower_expr(body, state)?),
+            body: Box::new(lower_expr_with_letcall_rows(
+                body,
+                state,
+                &with_child_path(path, 0),
+                letcall_rows,
+            )?),
         }),
         CoreExpr::Trap { reason } => Ok(Term::Trap {
             reason: lower_trap_reason(reason),
@@ -272,13 +369,19 @@ fn lower_expr(expr: &CoreExpr, state: &mut LoweringState) -> Result<Term, CoreLo
     }
 }
 
-fn lower_value(value: &CoreValue, state: &mut LoweringState) -> Result<Value, CoreLoweringError> {
+fn lower_value_with_letcall_rows(
+    value: &CoreValue,
+    state: &mut LoweringState,
+    path: &[usize],
+    letcall_rows: &HashMap<Vec<usize>, CoreRow>,
+) -> Result<Value, CoreLoweringError> {
     match value {
         CoreValue::Atom(atom) => Ok(Value::Atom(lower_atom(atom)?)),
         CoreValue::Lam { params, body, row } => {
             let cont = state.fresh_cont_name();
             let guard = state.with_current_cont(ContRef::Var(cont.clone()), CoreRow::default());
-            let lowered_body = lower_expr(body, state);
+            let lowered_body =
+                lower_expr_with_letcall_rows(body, state, &with_child_path(path, 0), letcall_rows);
             state.restore_current_cont(guard);
             Ok(Value::Lam {
                 params: params.iter().map(|param| param.name.clone()).collect(),
@@ -373,13 +476,15 @@ fn lower_prim_op(op: &CorePrimOp) -> Result<PrimOp, CoreLoweringError> {
     }
 }
 
-fn lower_handler_clause(
+fn lower_handler_clause_with_letcall_rows(
     clause: &CoreHandlerClause,
     state: &mut LoweringState,
+    path: &[usize],
+    letcall_rows: &HashMap<Vec<usize>, CoreRow>,
 ) -> Result<HandlerClause, CoreLoweringError> {
     let resume_row = resume_row(&clause.resume.ty);
     let guard = state.with_current_cont(ContRef::Var(clause.resume.name.clone()), resume_row);
-    let body = lower_expr(&clause.body, state);
+    let body = lower_expr_with_letcall_rows(&clause.body, state, path, letcall_rows);
     state.restore_current_cont(guard);
 
     Ok(HandlerClause {
@@ -562,15 +667,6 @@ fn discharge_mode_name(mode: CoreDischargeMode) -> &'static str {
     }
 }
 
-fn record_function_row(name: &str, ty: &CoreType, state: &mut LoweringState) {
-    if let CoreType::Function { row, .. } = ty {
-        state
-            .context
-            .function_rows
-            .insert(name.to_string(), row.clone());
-    }
-}
-
 fn local_function_row_from_binding<'a>(ty: &'a CoreType, value: &'a CoreValue) -> Option<CoreRow> {
     if let CoreType::Function { row, .. } = ty {
         return Some(row.clone());
@@ -613,7 +709,18 @@ fn cont_row(cont: &CoreContRef, state: &LoweringState) -> CoreRow {
         .unwrap_or_default()
 }
 
-fn local_row(expr: &CoreExpr, state: &LoweringState) -> Result<CoreRow, CoreLoweringError> {
+fn with_child_path(path: &[usize], child: usize) -> Vec<usize> {
+    let mut child_path = path.to_vec();
+    child_path.push(child);
+    child_path
+}
+
+fn local_row_with_letcall_rows(
+    expr: &CoreExpr,
+    state: &LoweringState,
+    path: &[usize],
+    letcall_rows: &HashMap<Vec<usize>, CoreRow>,
+) -> Result<CoreRow, CoreLoweringError> {
     match expr {
         CoreExpr::Atom(_) | CoreExpr::Jump { .. } | CoreExpr::Trap { .. } => Ok(CoreRow::default()),
         CoreExpr::LetVal {
@@ -630,35 +737,82 @@ fn local_row(expr: &CoreExpr, state: &LoweringState) -> Result<CoreRow, CoreLowe
         } => {
             let mut lexical_state = state.clone();
             record_local_function_row(name, ty, value, &mut lexical_state);
-            local_row(body, &lexical_state)
+            local_row_with_letcall_rows(
+                body,
+                &lexical_state,
+                &with_child_path(path, 1),
+                letcall_rows,
+            )
         }
         CoreExpr::LetPrim { op, body, .. } => {
             lower_prim_op(op)?;
-            local_row(body, state)
+            local_row_with_letcall_rows(body, state, &with_child_path(path, 0), letcall_rows)
         }
-        CoreExpr::LetCall { func, body, .. } => Ok(union_rows(
-            &function_row_for_atom(func, state).unwrap_or_default(),
-            &local_row(body, state)?,
-        )),
+        CoreExpr::LetCall {
+            func, body, name, ..
+        } => {
+            let mut lexical_state = state.clone();
+            if let Some(row) = letcall_rows.get(path) {
+                lexical_state
+                    .context
+                    .function_rows
+                    .insert(name.clone(), row.clone());
+            }
+            Ok(union_rows(
+                &function_row_for_atom(func, state).unwrap_or_default(),
+                &local_row_with_letcall_rows(
+                    body,
+                    &lexical_state,
+                    &with_child_path(path, 0),
+                    letcall_rows,
+                )?,
+            ))
+        }
         CoreExpr::If {
             then_branch,
             else_branch,
             ..
         } => Ok(union_rows(
-            &local_row(then_branch, state)?,
-            &local_row(else_branch, state)?,
+            &local_row_with_letcall_rows(
+                then_branch,
+                state,
+                &with_child_path(path, 0),
+                letcall_rows,
+            )?,
+            &local_row_with_letcall_rows(
+                else_branch,
+                state,
+                &with_child_path(path, 1),
+                letcall_rows,
+            )?,
         )),
         CoreExpr::Call { func, .. } => Ok(function_row_for_atom(func, state).unwrap_or_default()),
         CoreExpr::Raise { op, .. } => Ok(effect_op_row(op)),
-        CoreExpr::Handle { clause, body } => handle_residual_row(clause, body, state),
+        CoreExpr::Handle { clause, body } => {
+            let mut clause_state = state.clone();
+            let body_path = with_child_path(path, 1);
+            let clause_row = handle_residual_row_with_letcall_rows(
+                clause,
+                body,
+                &mut clause_state,
+                &body_path,
+                letcall_rows,
+            )?;
+            Ok(clause_row)
+        }
         CoreExpr::RecordDischarge { discharge, body } => Ok(subtract_rows(
-            &local_row(body, state)?,
+            &local_row_with_letcall_rows(body, state, &with_child_path(path, 0), letcall_rows)?,
             &contract_row(&discharge.contract),
         )),
     }
 }
 
-fn total_row(expr: &CoreExpr, state: &LoweringState) -> Result<CoreRow, CoreLoweringError> {
+fn total_row_with_letcall_rows(
+    expr: &CoreExpr,
+    state: &LoweringState,
+    path: &[usize],
+    letcall_rows: &HashMap<Vec<usize>, CoreRow>,
+) -> Result<CoreRow, CoreLoweringError> {
     match expr {
         CoreExpr::Atom(_) => Ok(state.context.current_cont_row.clone()),
         CoreExpr::LetVal {
@@ -675,23 +829,55 @@ fn total_row(expr: &CoreExpr, state: &LoweringState) -> Result<CoreRow, CoreLowe
         } => {
             let mut lexical_state = state.clone();
             record_local_function_row(name, ty, value, &mut lexical_state);
-            total_row(body, &lexical_state)
+            total_row_with_letcall_rows(
+                body,
+                &lexical_state,
+                &with_child_path(path, 1),
+                letcall_rows,
+            )
         }
         CoreExpr::LetPrim { op, body, .. } => {
             lower_prim_op(op)?;
-            total_row(body, state)
+            total_row_with_letcall_rows(body, state, &with_child_path(path, 0), letcall_rows)
         }
-        CoreExpr::LetCall { func, body, .. } => Ok(union_rows(
-            &function_row_for_atom(func, state).unwrap_or_default(),
-            &total_row(body, state)?,
-        )),
+        CoreExpr::LetCall {
+            func, body, name, ..
+        } => {
+            let mut lexical_state = state.clone();
+            if let Some(row) = letcall_rows.get(path) {
+                lexical_state
+                    .context
+                    .function_rows
+                    .insert(name.clone(), row.clone());
+            }
+
+            Ok(union_rows(
+                &function_row_for_atom(func, state).unwrap_or_default(),
+                &total_row_with_letcall_rows(
+                    body,
+                    &lexical_state,
+                    &with_child_path(path, 0),
+                    letcall_rows,
+                )?,
+            ))
+        }
         CoreExpr::If {
             then_branch,
             else_branch,
             ..
         } => Ok(union_rows(
-            &total_row(then_branch, state)?,
-            &total_row(else_branch, state)?,
+            &total_row_with_letcall_rows(
+                then_branch,
+                state,
+                &with_child_path(path, 0),
+                letcall_rows,
+            )?,
+            &total_row_with_letcall_rows(
+                else_branch,
+                state,
+                &with_child_path(path, 1),
+                letcall_rows,
+            )?,
         )),
         CoreExpr::Call { func, .. } => Ok(union_rows(
             &function_row_for_atom(func, state).unwrap_or_default(),
@@ -703,12 +889,20 @@ fn total_row(expr: &CoreExpr, state: &LoweringState) -> Result<CoreRow, CoreLowe
             &effect_op_row(op),
             &state.context.current_cont_row,
         )),
-        CoreExpr::Handle { clause, body } => Ok(union_rows(
-            &handle_residual_row(clause, body, state)?,
-            &state.context.current_cont_row,
-        )),
+        CoreExpr::Handle { clause, body } => {
+            let mut clause_state = state.clone();
+            let body_path = with_child_path(path, 1);
+            let clause_row = handle_residual_row_with_letcall_rows(
+                clause,
+                body,
+                &mut clause_state,
+                &body_path,
+                letcall_rows,
+            )?;
+            Ok(union_rows(&clause_row, &state.context.current_cont_row))
+        }
         CoreExpr::RecordDischarge { discharge, body } => Ok(subtract_rows(
-            &total_row(body, state)?,
+            &total_row_with_letcall_rows(body, state, &with_child_path(path, 0), letcall_rows)?,
             &contract_row(&discharge.contract),
         )),
     }
@@ -727,12 +921,14 @@ fn union_rows(left: &CoreRow, right: &CoreRow) -> CoreRow {
     }
 }
 
-fn handle_residual_row(
+fn handle_residual_row_with_letcall_rows(
     clause: &CoreHandlerClause,
     body: &CoreExpr,
-    state: &LoweringState,
+    state: &mut LoweringState,
+    path: &[usize],
+    letcall_rows: &HashMap<Vec<usize>, CoreRow>,
 ) -> Result<CoreRow, CoreLoweringError> {
-    let body_row = local_row(body, state)?;
+    let body_row = local_row_with_letcall_rows(body, state, path, letcall_rows)?;
     let body_without_op = subtract_rows_structural(&body_row, &effect_op_row(&clause.op));
     Ok(union_rows(
         &union_rows(&body_without_op, &resume_row(&clause.resume.ty)),

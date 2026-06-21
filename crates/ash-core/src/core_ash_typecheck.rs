@@ -10,7 +10,7 @@ use crate::core_ash::{
     CorePrimOp, CoreRow, CoreRowItem, CoreType, CoreValue,
 };
 use crate::core_ash_lower::{
-    CoreLoweringContext, CoreLoweringError, lower_core_program_with_context,
+    CoreLoweringContext, CoreLoweringError, lower_core_program_with_context_and_letcall_rows,
 };
 use crate::core_ash_validate::ValidCoreProgram;
 use crate::cps::Term;
@@ -800,9 +800,161 @@ pub fn type_check_and_lower_core_program(
     context: CoreLoweringContext,
 ) -> Result<CheckedLoweredCoreProgram, CoreCheckedLoweringError> {
     let typed = type_check_core_program(program.clone(), env)?;
+    let mut letcall_function_rows = HashMap::new();
+    collect_letcall_function_rows(
+        program.expr(),
+        env,
+        &mut Vec::new(),
+        &mut letcall_function_rows,
+    )?;
     let context = lowering_context_with_checked_facts(context, env, typed.facts());
-    let lowered = lower_core_program_with_context(program, context)?;
+    let lowered =
+        lower_core_program_with_context_and_letcall_rows(program, context, &letcall_function_rows)?;
     Ok(CheckedLoweredCoreProgram { typed, lowered })
+}
+
+fn collect_letcall_function_rows(
+    expr: &CoreExpr,
+    env: &CoreTypeCheckEnv,
+    path: &mut Vec<usize>,
+    rows: &mut HashMap<Vec<usize>, CoreRow>,
+) -> Result<(), CoreTypeCheckError> {
+    match expr {
+        CoreExpr::Atom(_)
+        | CoreExpr::Call { .. }
+        | CoreExpr::Jump { .. }
+        | CoreExpr::Trap { .. } => Ok(()),
+        CoreExpr::LetVal {
+            name,
+            ty,
+            value,
+            body,
+        } => {
+            let mut body_env = env.clone();
+            body_env.values_mut().insert(name.clone(), ty.clone());
+
+            path.push(0);
+            collect_letcall_function_rows_in_value(value, env, path, rows)?;
+            path.pop();
+
+            path.push(1);
+            collect_letcall_function_rows(body, &body_env, path, rows)?;
+            path.pop();
+            Ok(())
+        }
+        CoreExpr::LetRec {
+            name,
+            ty,
+            value,
+            body,
+        } => {
+            let mut recursive_env = env.clone();
+            recursive_env.values_mut().insert(name.clone(), ty.clone());
+
+            path.push(0);
+            collect_letcall_function_rows_in_value(value, &recursive_env, path, rows)?;
+            path.pop();
+
+            path.push(1);
+            collect_letcall_function_rows(body, &recursive_env, path, rows)?;
+            path.pop();
+            Ok(())
+        }
+        CoreExpr::LetPrim { body, .. } => {
+            path.push(0);
+            let result = collect_letcall_function_rows(body, env, path, rows);
+            path.pop();
+            result
+        }
+        CoreExpr::LetCall {
+            name,
+            func,
+            args,
+            body,
+            ..
+        } => {
+            let (result_ty, _, _) = check_function_application(func, args, env)?;
+            if let CoreType::Function { row, .. } = &result_ty {
+                rows.insert(path.clone(), row.clone());
+            }
+
+            let mut body_env = env.clone();
+            body_env
+                .values_mut()
+                .insert(name.clone(), result_ty.clone());
+
+            path.push(0);
+            let result = collect_letcall_function_rows(body, &body_env, path, rows);
+            path.pop();
+            result
+        }
+        CoreExpr::If {
+            then_branch,
+            else_branch,
+            ..
+        } => {
+            path.push(0);
+            let then_result = collect_letcall_function_rows(then_branch, env, path, rows);
+            path.pop();
+
+            path.push(1);
+            let else_result = collect_letcall_function_rows(else_branch, env, path, rows);
+            path.pop();
+
+            then_result.and(else_result)
+        }
+        CoreExpr::Raise { .. } => Ok(()),
+        CoreExpr::Handle { clause, body } => {
+            let mut clause_env = env.clone();
+            for param in &clause.params {
+                clause_env
+                    .values_mut()
+                    .insert(param.name.clone(), param.ty.clone());
+            }
+
+            path.push(0);
+            collect_letcall_function_rows(&clause.body, &clause_env, path, rows)?;
+            path.pop();
+
+            path.push(1);
+            collect_letcall_function_rows(body, env, path, rows)?;
+            path.pop();
+            Ok(())
+        }
+        CoreExpr::RecordDischarge { body, .. } => {
+            path.push(0);
+            let result = collect_letcall_function_rows(body, env, path, rows);
+            path.pop();
+            result
+        }
+    }
+}
+
+fn collect_letcall_function_rows_in_value(
+    value: &CoreValue,
+    env: &CoreTypeCheckEnv,
+    path: &mut Vec<usize>,
+    rows: &mut HashMap<Vec<usize>, CoreRow>,
+) -> Result<(), CoreTypeCheckError> {
+    match value {
+        CoreValue::Atom(_) => Ok(()),
+        CoreValue::Lam { params, body, .. } => {
+            let mut body_env = env.clone();
+            for param in params {
+                body_env
+                    .values_mut()
+                    .insert(param.name.clone(), param.ty.clone());
+            }
+
+            path.push(0);
+            let result = collect_letcall_function_rows(body, &body_env, path, rows);
+            path.pop();
+            result
+        }
+        CoreValue::Record { .. } | CoreValue::Tuple { .. } | CoreValue::DischargeMarker { .. } => {
+            Ok(())
+        }
+    }
 }
 
 /// Checks that a Core type is well formed under the type-checking environment.
@@ -1146,11 +1298,15 @@ pub fn synthesize_core_atom(
     env: &CoreTypeCheckEnv,
 ) -> Result<CoreType, CoreTypeCheckError> {
     match atom {
-        CoreAtom::Var(name) => env
-            .values()
-            .lookup(name)
-            .cloned()
-            .ok_or_else(|| CoreTypeCheckError::UnknownValue { name: name.clone() }),
+        CoreAtom::Var(name) => {
+            let ty = env
+                .values()
+                .lookup(name)
+                .cloned()
+                .ok_or_else(|| CoreTypeCheckError::UnknownValue { name: name.clone() })?;
+            check_core_type_well_formed(&ty, env)?;
+            Ok(ty)
+        }
         CoreAtom::LitInt(_) => Ok(CoreType::Base("Int".into())),
         CoreAtom::LitString(_) => Ok(CoreType::Base("String".into())),
         CoreAtom::LitBool(_) => Ok(CoreType::Base("Bool".into())),
@@ -1794,6 +1950,7 @@ fn lowering_context_with_checked_facts(
     for (cont, row) in facts.jump_continuation_rows() {
         context = context.with_cont_row(cont_ref_name(cont), row.clone());
     }
+
     context
 }
 
@@ -2026,9 +2183,9 @@ fn check_type_against_annotation(
         },
     ) = (expected, actual)
     {
-        if !type_slices_equivalent_unchecked(expected_params, actual_params, env)
-            || !types_equivalent_unchecked(expected_result, actual_result, env)
-        {
+        let result_facts = check_type_against_annotation(expected_result, actual_result, env)?;
+
+        if !type_slices_equivalent_unchecked(expected_params, actual_params, env) {
             return Err(CoreTypeCheckError::TypeMismatch {
                 expected: Box::new(expected.clone()),
                 actual: Box::new(actual.clone()),
@@ -2042,7 +2199,7 @@ fn check_type_against_annotation(
             });
         }
 
-        return Ok(CoreTypeCheckFacts::default());
+        return Ok(result_facts);
     }
 
     if types_equivalent_unchecked(expected, actual, env) {

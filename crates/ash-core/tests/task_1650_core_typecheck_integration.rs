@@ -389,6 +389,191 @@ fn checked_lowering_uses_typechecked_external_function_rows() {
 }
 
 #[test]
+fn checked_lowering_uses_local_function_row_from_letcall_binding() {
+    let reader_row = cap_row(&["db"], "read");
+    let mut env = CoreTypeCheckEnv::default();
+    env.values_mut().insert(
+        "make_reader",
+        function_ty(
+            Vec::new(),
+            function_ty(Vec::new(), unit_ty(), reader_row.clone()),
+            CoreRow::default(),
+        ),
+    );
+
+    let program = validate_core_program(RawCoreProgram::new(CoreExpr::LetCall {
+        name: "reader".into(),
+        func: CoreAtom::Var("make_reader".into()),
+        args: Vec::new(),
+        body: Box::new(CoreExpr::Call {
+            func: CoreAtom::Var("reader".into()),
+            args: Vec::new(),
+        }),
+    }))
+    .expect("program should validate");
+
+    let context = CoreLoweringContext::new(ContRef::Label("halt".into()), CoreRow::default());
+    let checked = type_check_and_lower_core_program(program, &env, context)
+        .expect("checked lowering should use local function row discovered for let-call binding");
+
+    assert_eq!(
+        checked.typed().row(),
+        &reader_row,
+        "LetCall should preserve callee result row from local function binding"
+    );
+    let continuation_call_row =
+        let_cont_body_call_row(checked.lowered()).expect("LetCall lowers to LetCont with a Call");
+    assert!(
+        continuation_call_row
+            .items
+            .iter()
+            .any(|item| item.namespace == "cap"
+                && item.name == "db.read"
+                && item.kind == EffectItemKind::Capability),
+        "continuation call should carry function row from the let-call result binding"
+    );
+}
+
+#[test]
+fn checked_lowering_handles_sibling_branch_local_letcall_bindings_with_same_name() {
+    let db_reader_row = cap_row(&["db"], "read");
+    let console_reader_row = cap_row(&["console"], "write");
+
+    let mut env = CoreTypeCheckEnv::default();
+    env.values_mut().insert(
+        "make_db_reader",
+        function_ty(
+            Vec::new(),
+            function_ty(Vec::new(), unit_ty(), db_reader_row.clone()),
+            CoreRow::default(),
+        ),
+    );
+    env.values_mut().insert(
+        "make_console_reader",
+        function_ty(
+            Vec::new(),
+            function_ty(Vec::new(), unit_ty(), console_reader_row.clone()),
+            CoreRow::default(),
+        ),
+    );
+
+    let program = validate_core_program(RawCoreProgram::new(CoreExpr::If {
+        cond: CoreAtom::LitBool(true),
+        then_branch: Box::new(CoreExpr::LetCall {
+            name: "reader".into(),
+            func: CoreAtom::Var("make_db_reader".into()),
+            args: Vec::new(),
+            body: Box::new(CoreExpr::Call {
+                func: CoreAtom::Var("reader".into()),
+                args: Vec::new(),
+            }),
+        }),
+        else_branch: Box::new(CoreExpr::LetCall {
+            name: "reader".into(),
+            func: CoreAtom::Var("make_console_reader".into()),
+            args: Vec::new(),
+            body: Box::new(CoreExpr::Call {
+                func: CoreAtom::Var("reader".into()),
+                args: Vec::new(),
+            }),
+        }),
+    }))
+    .expect("program should validate");
+
+    let context = CoreLoweringContext::new(ContRef::Label("halt".into()), CoreRow::default());
+    let checked = type_check_and_lower_core_program(program, &env, context)
+        .expect("checked lowering should preserve branch-local LetCall function rows");
+    let db_capability = CoreRowItem::Capability {
+        path: vec!["db".to_owned()],
+        operation: "read".to_owned(),
+    };
+    let console_capability = CoreRowItem::Capability {
+        path: vec!["console".to_owned()],
+        operation: "write".to_owned(),
+    };
+
+    assert!(
+        checked
+            .typed()
+            .row()
+            .items
+            .iter()
+            .all(|item| matches!(item, CoreRowItem::Capability { .. }))
+    );
+    assert!(
+        checked
+            .typed()
+            .row()
+            .items
+            .iter()
+            .any(|item| item == &db_capability),
+        "typed program row should include db.read from then branch"
+    );
+    assert!(
+        checked
+            .typed()
+            .row()
+            .items
+            .iter()
+            .any(|item| item == &console_capability),
+        "typed program row should include console.write from else branch"
+    );
+
+    let lowered = checked.lowered();
+    let Term::If {
+        then_branch,
+        else_branch,
+        ..
+    } = lowered
+    else {
+        panic!("checked lowering of top-level if should produce an if-term");
+    };
+
+    let then_call_row = let_cont_body_call_row(then_branch)
+        .expect("then branch should lower reader call through a let continuation");
+    let else_call_row = let_cont_body_call_row(else_branch)
+        .expect("else branch should lower reader call through a let continuation");
+
+    assert!(
+        then_call_row
+            .items
+            .iter()
+            .any(|item| item.namespace == "cap"
+                && item.name == "db.read"
+                && item.kind == EffectItemKind::Capability),
+        "then-branch continuation call should use db reader effect"
+    );
+    assert!(
+        !then_call_row
+            .items
+            .iter()
+            .any(|item| item.namespace == "cap"
+                && item.name == "console.write"
+                && item.kind == EffectItemKind::Capability),
+        "then-branch continuation call should not capture else branch console effect"
+    );
+
+    assert!(
+        else_call_row
+            .items
+            .iter()
+            .any(|item| item.namespace == "cap"
+                && item.name == "console.write"
+                && item.kind == EffectItemKind::Capability),
+        "else-branch continuation call should use console reader effect"
+    );
+    assert!(
+        !else_call_row
+            .items
+            .iter()
+            .any(|item| item.namespace == "cap"
+                && item.name == "db.read"
+                && item.kind == EffectItemKind::Capability),
+        "else-branch continuation call should not capture then branch db effect"
+    );
+}
+
+#[test]
 fn checked_lowering_uses_typechecked_handle_residual_row() {
     let resume_row = cap_row(&["audit"], "emit");
     let mut env = CoreTypeCheckEnv::default();

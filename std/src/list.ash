@@ -7,17 +7,17 @@ use algebra::semigroup::{Semigroup}
 use algebra::monoid::{Monoid}
 use algebra::functor::{Functor}
 
-pub impl Semigroup<List<A>> {
-    append(left, right) = concat(left, right)
+pub impl <A : *> Semigroup<List<A>> {
+    append(left, right) = list::concat(left, right)
 }
 
-pub impl Monoid<List<A>> {
+pub impl <A : *> Monoid<List<A>> {
     empty() = []
-    append(left, right) = concat(left, right)
+    append(left, right) = list::concat(left, right)
 }
 
 pub impl Functor<List> {
-    map(list, f) = map(list, f)
+    map(list, f) = list::map(list, f)
 }
 
 pub fn len<a>(list: List<a>) -> Int {

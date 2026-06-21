@@ -52,6 +52,9 @@ Depends on TASK-1020 and TASK-1021 completion.
 
 ## RED/GREEN Evidence
 
+- REPAIR RED: `cargo test -p ash-typeck --test task_1022_pure_algebra_instances -- --nocapture` failed with 6 failing tests during stdlib impl registration because `List<A>` semigroup/monoid impl heads used `A` without an explicit impl type-parameter binder; after adding the binder, the same gate exposed unqualified `concat`/`map` list helper calls in the impl bodies.
+- REPAIR GREEN: `cargo test -p ash-typeck --test task_1022_pure_algebra_instances -- --nocapture` passed 8 tests after adding explicit `<A : *>` binders to list semigroup/monoid impls and qualifying list algebra helper calls as `list::concat`/`list::map`.
+- REPAIR GREEN: `cargo test -p ash-engine --test task_1022_pure_algebra_instances -- --nocapture` passed 3 tests, confirming the real stdlib algebra surfaces still parse and check through the engine path.
 - RED: `RUSTC_WRAPPER= cargo test -p ash-typeck --test task_1022_pure_algebra_instances -- --nocapture` failed with 4 failing tests while registering `Functor<Result<_, E>>`; the impl body call to `result::map` reported an argument type mismatch because `Result<_, E>` partial constructor evidence was not applied to the monomorphic `F<Int>` method surface.
 - GREEN: `RUSTC_WRAPPER= cargo test -p ash-typeck --test task_1022_pure_algebra_instances -- --nocapture` passed 5 tests after partial constructor evidence application, generic impl-head matching, and fail-closed ambiguous evidence coverage were added for source stdlib evidence.
 - GREEN: `RUSTC_WRAPPER= cargo test -p ash-engine --test task_1022_pure_algebra_instances -- --nocapture` passed 3 tests proving importable stdlib algebra surfaces and public pure impl heads parse/check through the real stdlib path.

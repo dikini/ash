@@ -56,6 +56,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - AGENTS.md: documented native MCP server configuration for ash-mcp and rust-analyzer with persistent stdio transport, per-project activation instructions, and cross-language tool routing. Added Hermes profile at `~/.hermes/profiles/ash/config.yaml` for portable Ash project MCP setup.
 
 ### Fixed
+- Fixed stdlib list algebra impl heads to bind their `List<A>` payload parameter explicitly,
+  restoring TASK-1022 pure algebra instance registration in `ash-typeck`. (TASK-1022)
 - Fixed Core mode checked lowering for forced function thunks so `LetMode` bindings are scoped
   during let-call row collection and calls through forced functions preserve the checked inner
   function row in emitted CPS `Call.row`. (TASK-1674)

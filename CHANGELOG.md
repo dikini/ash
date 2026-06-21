@@ -6,6 +6,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Added
+- [Phase 162](docs/plan/PLAN-162-CORE-ASH-TYPE-CHECKING.md): Completed the Core Ash type-checking implementation with reference documentation and closeout review, covering the annotation-led checker API, row normalization/structural solving, atom/value/expression typing, call/jump row facts, raised operation and handler checks, refinement/discharge metadata, public summaries, integration fixtures, and checked lowering row-fact preservation. (TASK-1640 through TASK-1651)
 - Added Core Ash type-check integration fixtures and a checked type-check-and-lower boundary that preserves checked continuation and external function rows before CPS lowering, with invalid fixtures for type mismatch, row mismatch, operation arity mismatch, and affine resume misuse. (TASK-1650)
 - Added Core Ash public summary scaffolding for normalized public function rows, type-constructor identity/arity facts, refinement obligation metadata, discharge metadata, and private effect-group leakage diagnostics. (TASK-1649)
 - Added Core Ash refinement-obligation and discharge metadata scaffolding, including base-to-refinement obligations, refinement-to-base forgetting without new obligations, `RecordDischarge` validation, invalid discharge diagnostics, and proof/evidence metadata accessors on typed programs. (TASK-1648)

@@ -4,8 +4,9 @@ use ash_core::core_ash::{
 };
 use ash_core::core_ash_typecheck::{
     CoreTypeCheckEnv, CoreTypeCheckError, core_types_equivalent, synthesize_core_atom,
-    synthesize_core_value,
+    synthesize_core_value, type_check_core_program,
 };
+use ash_core::core_ash_validate::{RawCoreProgram, validate_core_program};
 
 fn cap(path: &[&str], operation: &str) -> CoreRowItem {
     CoreRowItem::Capability {
@@ -151,6 +152,16 @@ fn cap_op(path: &[&str], operation: &str) -> CoreEffectOp {
     }
 }
 
+fn type_check(
+    expr: CoreExpr,
+    env: &CoreTypeCheckEnv,
+) -> Result<(CoreType, CoreRow), CoreTypeCheckError> {
+    let valid =
+        validate_core_program(RawCoreProgram::new(expr)).expect("Core expression validates");
+    let typed = type_check_core_program(valid, env)?;
+    Ok((typed.ty().clone(), typed.row().clone()))
+}
+
 #[test]
 fn lambda_latent_row_accepts_body_row_included_in_annotation() {
     let lambda = CoreValue::Lam {
@@ -241,6 +252,75 @@ fn lambda_latent_row_rejects_body_row_not_included_in_annotation() {
 
     let err = synthesize_core_value(&lambda, &env)
         .expect_err("effectful lambda body must be included in the annotation row");
+
+    assert!(matches!(err, CoreTypeCheckError::RowMismatch { .. }));
+}
+
+#[test]
+fn lambda_annotation_row_subtyping_allows_purer_function_as_argument_to_superset_requirement() {
+    let pure_fn_ty = CoreType::Function {
+        params: Vec::new(),
+        result: Box::new(CoreType::Base("Unit".into())),
+        row: CoreRow::default(),
+    };
+    let takes_fn_param_ty = CoreType::Function {
+        params: Vec::new(),
+        result: Box::new(CoreType::Base("Unit".into())),
+        row: CoreRow::closed(vec![cap(&["fs"], "read")]),
+    };
+    let takes_fn_ty = CoreType::Function {
+        params: vec![takes_fn_param_ty],
+        result: Box::new(CoreType::Base("Unit".into())),
+        row: CoreRow::default(),
+    };
+    let mut env = CoreTypeCheckEnv::default();
+    env.values_mut().insert("pure_fn", pure_fn_ty);
+    env.values_mut().insert("takes_fn", takes_fn_ty);
+
+    let (ty, row) = type_check(
+        CoreExpr::Call {
+            func: CoreAtom::Var("takes_fn".into()),
+            args: vec![CoreAtom::Var("pure_fn".into())],
+        },
+        &env,
+    )
+    .expect("pure function should satisfy superset function-row annotation");
+
+    assert_eq!(ty, CoreType::Base("Unit".into()));
+    assert_eq!(row, CoreRow::default());
+}
+
+#[test]
+fn lambda_annotation_row_subtyping_rejects_purer_annotation_for_effectful_function_value() {
+    let takes_fn_param_ty = CoreType::Function {
+        params: Vec::new(),
+        result: Box::new(CoreType::Base("Unit".into())),
+        row: CoreRow::default(),
+    };
+    let cap_fn_ty = CoreType::Function {
+        params: Vec::new(),
+        result: Box::new(CoreType::Base("Unit".into())),
+        row: CoreRow::closed(vec![cap(&["fs"], "read")]),
+    };
+    let mut env = CoreTypeCheckEnv::default();
+    env.values_mut().insert("cap_fn", cap_fn_ty);
+    env.values_mut().insert(
+        "takes_cap_fn",
+        CoreType::Function {
+            params: vec![takes_fn_param_ty],
+            result: Box::new(CoreType::Base("Unit".into())),
+            row: CoreRow::default(),
+        },
+    );
+
+    let err = type_check(
+        CoreExpr::Call {
+            func: CoreAtom::Var("takes_cap_fn".into()),
+            args: vec![CoreAtom::Var("cap_fn".into())],
+        },
+        &env,
+    )
+    .expect_err("effectful annotation should reject a purer function argument");
 
     assert!(matches!(err, CoreTypeCheckError::RowMismatch { .. }));
 }

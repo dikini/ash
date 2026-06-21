@@ -86,6 +86,15 @@ fn kv_read_op() -> CoreEffectOp {
     }
 }
 
+fn channel_send_op(payload_type: CoreType) -> CoreEffectOp {
+    CoreEffectOp::Channel {
+        path: path(&["jobs"]),
+        mode: "send".into(),
+        payload_type,
+        result_type: unit_ty(),
+    }
+}
+
 fn audit_op() -> CoreEffectOp {
     CoreEffectOp::Capability {
         path: path(&["audit"]),
@@ -465,6 +474,54 @@ fn handle_clause_row_comparison_uses_type_equivalence_for_channel_payload_record
             .any(|item| matches!(item, CoreRowItem::Channel { .. })),
         "type checker should keep channel row item after order-insensitive comparison"
     );
+}
+
+#[test]
+fn handle_accepts_structurally_equivalent_registered_channel_operation_signature() {
+    let registered_payload =
+        CoreType::Record(vec![("b".into(), string_ty()), ("a".into(), int_ty())]);
+    let clause_payload = CoreType::Record(vec![("a".into(), int_ty()), ("b".into(), string_ty())]);
+
+    let mut env = base_env();
+    env.operations_mut()
+        .insert(channel_send_op(registered_payload.clone()));
+    env.values_mut()
+        .insert("job_payload", clause_payload.clone());
+    env.values_mut().insert(
+        "needs_channel",
+        function_ty(vec![clause_payload.clone()], unit_ty(), row(vec![])),
+    );
+
+    let clause = CoreHandlerClause {
+        op: channel_send_op(clause_payload.clone()),
+        params: vec![param("payload", clause_payload)],
+        resume: resume_param_with_answer(
+            unit_ty(),
+            unit_ty(),
+            CoreRow::default(),
+            CoreMultiplicity::Affine,
+        ),
+        body: Box::new(CoreExpr::Jump {
+            cont: CoreContRef::Var("resume".into()),
+            arg: CoreAtom::LitUnit,
+        }),
+        row: CoreRow::default(),
+    };
+
+    let typed = type_check(
+        handle_with(
+            clause,
+            CoreExpr::Raise {
+                op: channel_send_op(registered_payload),
+                args: vec![CoreAtom::Var("job_payload".into())],
+            },
+        ),
+        &env,
+    )
+    .expect("handle should accept a structurally equivalent channel operation signature");
+
+    assert_eq!(typed.ty(), &unit_ty());
+    assert_eq!(typed.row(), &CoreRow::default());
 }
 
 #[test]

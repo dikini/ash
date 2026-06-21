@@ -733,7 +733,7 @@ fn handle_residual_row(
     state: &LoweringState,
 ) -> Result<CoreRow, CoreLoweringError> {
     let body_row = local_row(body, state)?;
-    let body_without_op = subtract_rows(&body_row, &effect_op_row(&clause.op));
+    let body_without_op = subtract_rows_structural(&body_row, &effect_op_row(&clause.op));
     Ok(union_rows(
         &union_rows(&body_without_op, &resume_row(&clause.resume.ty)),
         &clause.row,
@@ -750,6 +750,246 @@ fn subtract_rows(left: &CoreRow, right: &CoreRow) -> CoreRow {
             .collect(),
         tail: left.tail.clone(),
     }
+}
+
+fn subtract_rows_structural(left: &CoreRow, right: &CoreRow) -> CoreRow {
+    let mut used = vec![false; right.items.len()];
+    let mut items = Vec::with_capacity(left.items.len());
+
+    'left_items: for left_item in &left.items {
+        for (index, right_item) in right.items.iter().enumerate() {
+            if used[index] {
+                continue;
+            }
+            if row_items_equivalent_for_lowering(left_item, right_item) {
+                used[index] = true;
+                continue 'left_items;
+            }
+        }
+        items.push(left_item.clone());
+    }
+
+    CoreRow {
+        items,
+        tail: left.tail.clone(),
+    }
+}
+
+fn row_items_equivalent_for_lowering(lhs: &CoreRowItem, rhs: &CoreRowItem) -> bool {
+    match (lhs, rhs) {
+        (
+            CoreRowItem::Capability {
+                path: lhs_path,
+                operation: lhs_operation,
+            },
+            CoreRowItem::Capability {
+                path: rhs_path,
+                operation: rhs_operation,
+            },
+        ) => lhs_path == rhs_path && lhs_operation == rhs_operation,
+        (
+            CoreRowItem::Resource {
+                path: lhs_path,
+                mode: lhs_mode,
+            },
+            CoreRowItem::Resource {
+                path: rhs_path,
+                mode: rhs_mode,
+            },
+        ) => lhs_path == rhs_path && lhs_mode == rhs_mode,
+        (CoreRowItem::Role { path: lhs_path }, CoreRowItem::Role { path: rhs_path }) => {
+            lhs_path == rhs_path
+        }
+        (CoreRowItem::Policy { path: lhs_path }, CoreRowItem::Policy { path: rhs_path }) => {
+            lhs_path == rhs_path
+        }
+        (
+            CoreRowItem::Contract {
+                contract: lhs_contract,
+            },
+            CoreRowItem::Contract {
+                contract: rhs_contract,
+            },
+        ) => lhs_contract == rhs_contract,
+        (
+            CoreRowItem::Channel {
+                path: lhs_path,
+                mode: lhs_mode,
+                payload_type: lhs_payload_type,
+            },
+            CoreRowItem::Channel {
+                path: rhs_path,
+                mode: rhs_mode,
+                payload_type: rhs_payload_type,
+            },
+        ) => {
+            lhs_path == rhs_path
+                && lhs_mode == rhs_mode
+                && core_types_equivalent_for_lowering(lhs_payload_type, rhs_payload_type)
+        }
+        (
+            CoreRowItem::Process {
+                operation: lhs_operation,
+            },
+            CoreRowItem::Process {
+                operation: rhs_operation,
+            },
+        ) => lhs_operation == rhs_operation,
+        (CoreRowItem::Failure { ty: Some(lhs_ty) }, CoreRowItem::Failure { ty: Some(rhs_ty) }) => {
+            core_types_equivalent_for_lowering(lhs_ty, rhs_ty)
+        }
+        (CoreRowItem::Failure { ty: None }, CoreRowItem::Failure { ty: None }) => true,
+        (CoreRowItem::Evidence { path: lhs_path }, CoreRowItem::Evidence { path: rhs_path }) => {
+            lhs_path == rhs_path
+        }
+        (
+            CoreRowItem::EffectGroupRef { path: lhs_path },
+            CoreRowItem::EffectGroupRef { path: rhs_path },
+        ) => lhs_path == rhs_path,
+        _ => false,
+    }
+}
+
+fn core_types_equivalent_for_lowering(lhs: &CoreType, rhs: &CoreType) -> bool {
+    match (lhs, rhs) {
+        (CoreType::Base(lhs), CoreType::Base(rhs))
+        | (CoreType::Named(lhs), CoreType::Named(rhs))
+        | (CoreType::Var(lhs), CoreType::Var(rhs)) => lhs == rhs,
+        (
+            CoreType::Function {
+                params: lhs_params,
+                result: lhs_result,
+                row: lhs_row,
+            },
+            CoreType::Function {
+                params: rhs_params,
+                result: rhs_result,
+                row: rhs_row,
+            },
+        ) => {
+            lhs_params.len() == rhs_params.len()
+                && lhs_params
+                    .iter()
+                    .zip(rhs_params)
+                    .all(|(lhs_ty, rhs_ty)| core_types_equivalent_for_lowering(lhs_ty, rhs_ty))
+                && core_types_equivalent_for_lowering(lhs_result, rhs_result)
+                && rows_are_equivalent_for_lowering(lhs_row, rhs_row)
+        }
+        (
+            CoreType::Refinement {
+                base: lhs_base,
+                predicate: lhs_predicate,
+            },
+            CoreType::Refinement {
+                base: rhs_base,
+                predicate: rhs_predicate,
+            },
+        ) => {
+            lhs_predicate == rhs_predicate && core_types_equivalent_for_lowering(lhs_base, rhs_base)
+        }
+        (
+            CoreType::Cont {
+                input: lhs_input,
+                answer: lhs_answer,
+                row: lhs_row,
+                multiplicity: lhs_multiplicity,
+            },
+            CoreType::Cont {
+                input: rhs_input,
+                answer: rhs_answer,
+                row: rhs_row,
+                multiplicity: rhs_multiplicity,
+            },
+        ) => {
+            lhs_multiplicity == rhs_multiplicity
+                && core_types_equivalent_for_lowering(lhs_input, rhs_input)
+                && core_types_equivalent_for_lowering(lhs_answer, rhs_answer)
+                && rows_are_equivalent_for_lowering(lhs_row, rhs_row)
+        }
+        (CoreType::Tuple(lhs), CoreType::Tuple(rhs)) => {
+            lhs.len() == rhs.len()
+                && lhs
+                    .iter()
+                    .zip(rhs)
+                    .all(|(lhs_ty, rhs_ty)| core_types_equivalent_for_lowering(lhs_ty, rhs_ty))
+        }
+        (CoreType::Record(lhs), CoreType::Record(rhs)) => {
+            record_fields_equivalent_for_lowering(lhs, rhs)
+        }
+        (
+            CoreType::App {
+                name: lhs_name,
+                args: lhs_args,
+            },
+            CoreType::App {
+                name: rhs_name,
+                args: rhs_args,
+            },
+        ) => {
+            lhs_name == rhs_name
+                && lhs_args.len() == rhs_args.len()
+                && lhs_args
+                    .iter()
+                    .zip(rhs_args)
+                    .all(|(lhs_ty, rhs_ty)| core_types_equivalent_for_lowering(lhs_ty, rhs_ty))
+        }
+        _ => false,
+    }
+}
+
+fn record_fields_equivalent_for_lowering(
+    lhs: &[(String, CoreType)],
+    rhs: &[(String, CoreType)],
+) -> bool {
+    if lhs.len() != rhs.len()
+        || has_duplicate_record_field_name(lhs)
+        || has_duplicate_record_field_name(rhs)
+    {
+        return false;
+    }
+
+    lhs.iter().all(|(lhs_name, lhs_ty)| {
+        rhs.iter()
+            .find(|(rhs_name, _)| rhs_name == lhs_name)
+            .is_some_and(|(_, rhs_ty)| core_types_equivalent_for_lowering(lhs_ty, rhs_ty))
+    })
+}
+
+fn has_duplicate_record_field_name(fields: &[(String, CoreType)]) -> bool {
+    for i in 0..fields.len() {
+        for j in i + 1..fields.len() {
+            if fields[i].0 == fields[j].0 {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+fn rows_are_equivalent_for_lowering(lhs: &CoreRow, rhs: &CoreRow) -> bool {
+    if lhs.tail != rhs.tail || lhs.items.len() != rhs.items.len() {
+        return false;
+    }
+
+    let mut used = vec![false; rhs.items.len()];
+    for lhs_item in &lhs.items {
+        let mut found = None;
+        for (index, rhs_item) in rhs.items.iter().enumerate() {
+            if used[index] {
+                continue;
+            }
+            if row_items_equivalent_for_lowering(lhs_item, rhs_item) {
+                found = Some(index);
+                break;
+            }
+        }
+
+        let Some(index) = found else {
+            return false;
+        };
+        used[index] = true;
+    }
+    true
 }
 
 fn contract_row(contract: &str) -> CoreRow {
@@ -836,4 +1076,49 @@ fn dotted_name(path: &[String], leaf: &str) -> String {
         return leaf.to_string();
     }
     format!("{}.{}", path.join("."), leaf)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn payload_a_first() -> CoreType {
+        CoreType::Record(vec![
+            ("a".into(), CoreType::Base("Int".into())),
+            ("b".into(), CoreType::Base("String".into())),
+        ])
+    }
+
+    fn payload_b_first() -> CoreType {
+        CoreType::Record(vec![
+            ("b".into(), CoreType::Base("String".into())),
+            ("a".into(), CoreType::Base("Int".into())),
+        ])
+    }
+
+    #[test]
+    fn subtract_rows_structural_matches_channel_payload_rows_in_record_field_permuted_form() {
+        let left = CoreRow {
+            items: vec![CoreRowItem::Channel {
+                path: vec!["jobs".into()],
+                mode: "send".into(),
+                payload_type: Box::new(payload_a_first()),
+            }],
+            tail: None,
+        };
+        let right = CoreRow {
+            items: vec![CoreRowItem::Channel {
+                path: vec!["jobs".into()],
+                mode: "send".into(),
+                payload_type: Box::new(payload_b_first()),
+            }],
+            tail: None,
+        };
+        let remaining = subtract_rows_structural(&left, &right);
+        assert!(
+            remaining.items.is_empty(),
+            "structural subtraction should remove equivalent typed payload row item"
+        );
+        assert_eq!(remaining.tail, None);
+    }
 }

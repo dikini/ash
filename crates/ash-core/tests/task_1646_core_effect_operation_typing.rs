@@ -81,6 +81,15 @@ fn channel_send_op() -> CoreEffectOp {
     }
 }
 
+fn channel_send_record_op(payload_type: CoreType) -> CoreEffectOp {
+    CoreEffectOp::Channel {
+        path: path(&["jobs"]),
+        mode: "send".into(),
+        payload_type,
+        result_type: unit_ty(),
+    }
+}
+
 fn process_spawn_op() -> CoreEffectOp {
     CoreEffectOp::Process {
         operation: "spawn".into(),
@@ -308,6 +317,38 @@ fn channel_raise_checks_payload_signature_and_operation_row() {
     assert_eq!(
         typed.row(),
         &CoreRow::closed(vec![channel_item(&["jobs"], "send", named_ty("Job"))])
+    );
+}
+
+#[test]
+fn channel_raise_accepts_structurally_equivalent_payload_record_type() {
+    let registered_payload =
+        CoreType::Record(vec![("b".into(), string_ty()), ("a".into(), int_ty())]);
+    let requested_payload =
+        CoreType::Record(vec![("a".into(), int_ty()), ("b".into(), string_ty())]);
+
+    let op = channel_send_record_op(registered_payload.clone());
+    let mut env = env_with_op(op.clone());
+    env.values_mut()
+        .insert("job_payload", requested_payload.clone());
+
+    let typed = type_check(
+        CoreExpr::Raise {
+            op: channel_send_record_op(requested_payload),
+            args: vec![CoreAtom::Var("job_payload".into())],
+        },
+        &env,
+    )
+    .expect("channel raise should type-check using structural channel payload comparison");
+
+    assert_eq!(typed.ty(), &unit_ty());
+    assert_eq!(
+        typed.row(),
+        &CoreRow::closed(vec![channel_item(
+            &["jobs"],
+            "send",
+            registered_payload.clone()
+        )])
     );
 }
 

@@ -2013,6 +2013,38 @@ fn check_type_against_annotation(
     check_core_type_well_formed(expected, env)?;
     check_core_type_well_formed(actual, env)?;
 
+    if let (
+        CoreType::Function {
+            params: expected_params,
+            result: expected_result,
+            row: expected_row,
+        },
+        CoreType::Function {
+            params: actual_params,
+            result: actual_result,
+            row: actual_row,
+        },
+    ) = (expected, actual)
+    {
+        if !type_slices_equivalent_unchecked(expected_params, actual_params, env)
+            || !types_equivalent_unchecked(expected_result, actual_result, env)
+        {
+            return Err(CoreTypeCheckError::TypeMismatch {
+                expected: Box::new(expected.clone()),
+                actual: Box::new(actual.clone()),
+            });
+        }
+
+        if !core_row_included_in_env(actual_row, expected_row, env)?.is_included() {
+            return Err(CoreTypeCheckError::RowMismatch {
+                expected: expected_row.clone(),
+                actual: actual_row.clone(),
+            });
+        }
+
+        return Ok(CoreTypeCheckFacts::default());
+    }
+
     if types_equivalent_unchecked(expected, actual, env) {
         return Ok(CoreTypeCheckFacts::default());
     }
@@ -2141,13 +2173,13 @@ fn type_check_raise(
     args: &[CoreAtom],
     env: &CoreTypeCheckEnv,
 ) -> Result<TypedCoreExpr, CoreTypeCheckError> {
-    let (arg_types, result_type, row) = effect_operation_signature(op, env)?;
-    if !env.operations().contains(op) {
-        return Err(CoreTypeCheckError::UnknownOperation {
+    let op = lookup_effect_operation_structural(op, env)?.ok_or_else(|| {
+        CoreTypeCheckError::UnknownOperation {
             detail: effect_operation_detail(op),
-        });
-    }
+        }
+    })?;
 
+    let (arg_types, result_type, row) = effect_operation_signature(op, env)?;
     let facts = check_arguments(&arg_types, args, env)?;
     Ok(TypedCoreExpr {
         ty: result_type,
@@ -2161,8 +2193,14 @@ fn type_check_handle(
     body: &CoreExpr,
     env: &CoreTypeCheckEnv,
 ) -> Result<TypedCoreExpr, CoreTypeCheckError> {
-    let (arg_types, op_result_ty, op_row) = effect_operation_signature(&clause.op, env)?;
-    if !env.operations().contains(&clause.op) {
+    let clause_op = lookup_effect_operation_structural(&clause.op, env)?.ok_or_else(|| {
+        CoreTypeCheckError::UnknownOperation {
+            detail: effect_operation_detail(&clause.op),
+        }
+    })?;
+
+    let (arg_types, op_result_ty, op_row) = effect_operation_signature(clause_op, env)?;
+    if !operation_signature_matches(clause_op, &clause.op, env)? {
         return Err(CoreTypeCheckError::UnknownOperation {
             detail: effect_operation_detail(&clause.op),
         });
@@ -2208,6 +2246,100 @@ fn type_check_handle(
             result_facts,
         ),
     })
+}
+
+fn operation_signature_matches(
+    declared: &CoreEffectOp,
+    registered: &CoreEffectOp,
+    env: &CoreTypeCheckEnv,
+) -> Result<bool, CoreTypeCheckError> {
+    match (declared, registered) {
+        (
+            CoreEffectOp::Channel {
+                path: declared_path,
+                mode: declared_mode,
+                payload_type: declared_payload_type,
+                result_type: declared_result_type,
+                ..
+            },
+            CoreEffectOp::Channel {
+                path: registered_path,
+                mode: registered_mode,
+                payload_type: registered_payload_type,
+                result_type: registered_result_type,
+                ..
+            },
+        ) => Ok(declared_path == registered_path
+            && declared_mode == registered_mode
+            && core_types_equivalent(declared_payload_type, registered_payload_type, env)?
+            && types_equivalent_unchecked(declared_result_type, registered_result_type, env)),
+        (
+            CoreEffectOp::Capability {
+                path: declared_path,
+                operation: declared_operation,
+                arg_types: declared_args,
+                result_type: declared_result_type,
+                ..
+            },
+            CoreEffectOp::Capability {
+                path: declared_path2,
+                operation: declared_operation2,
+                arg_types: registered_args,
+                result_type: registered_result_type,
+                ..
+            },
+        ) => Ok(declared_path == declared_path2
+            && declared_operation == declared_operation2
+            && type_slices_equivalent_unchecked(declared_args, registered_args, env)
+            && types_equivalent_unchecked(declared_result_type, registered_result_type, env)),
+        (
+            CoreEffectOp::Process {
+                operation: declared_operation,
+                ..
+            },
+            CoreEffectOp::Process {
+                operation: registered_operation,
+                ..
+            },
+        ) => Ok(declared_operation == registered_operation
+            && args_and_results_match(declared, registered, env)?),
+        (
+            CoreEffectOp::Failure { ty: declared_ty },
+            CoreEffectOp::Failure { ty: registered_ty },
+        ) => match (declared_ty, registered_ty) {
+            (None, None) => Ok(true),
+            (Some(declared_ty), Some(registered_ty)) => {
+                core_types_equivalent(declared_ty, registered_ty, env)
+            }
+            _ => Ok(false),
+        },
+        _ => Ok(false),
+    }
+}
+
+fn args_and_results_match(
+    declared: &CoreEffectOp,
+    registered: &CoreEffectOp,
+    env: &CoreTypeCheckEnv,
+) -> Result<bool, CoreTypeCheckError> {
+    let (declared_args, declared_result, _) = effect_operation_signature(declared, env)?;
+    let (registered_args, registered_result, _) = effect_operation_signature(registered, env)?;
+    Ok(
+        type_slices_equivalent_unchecked(&declared_args, &registered_args, env)
+            && types_equivalent_unchecked(&declared_result, &registered_result, env),
+    )
+}
+
+fn lookup_effect_operation_structural<'a>(
+    op: &CoreEffectOp,
+    env: &'a CoreTypeCheckEnv,
+) -> Result<Option<&'a CoreEffectOp>, CoreTypeCheckError> {
+    for registered in env.operations().operations.iter() {
+        if operation_signature_matches(op, registered, env)? {
+            return Ok(Some(registered));
+        }
+    }
+    Ok(None)
 }
 
 fn check_handler_params(

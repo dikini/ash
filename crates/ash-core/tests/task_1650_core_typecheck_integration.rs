@@ -52,6 +52,14 @@ fn cap_row(path: &[&str], operation: &str) -> CoreRow {
     CoreRow::closed(vec![cap(path, operation)])
 }
 
+fn chan_row(path: &[&str], mode: &str, payload: CoreType) -> CoreRow {
+    CoreRow::closed(vec![CoreRowItem::Channel {
+        path: path.iter().map(|part| (*part).to_owned()).collect(),
+        mode: mode.to_owned(),
+        payload_type: Box::new(payload),
+    }])
+}
+
 fn contract_row(contract: &str) -> CoreRow {
     CoreRow::closed(vec![CoreRowItem::Contract {
         contract: contract.to_owned(),
@@ -467,6 +475,62 @@ fn checked_lowering_uses_local_function_row_from_handle_body() {
             && item.name == "db.read"
             && item.kind == EffectItemKind::Capability),
         "Handle.row should include the local function's latent row"
+    );
+}
+
+#[test]
+fn checked_lowering_uses_structural_handle_residual_subtraction_for_row_type_equivalence() {
+    let body_payload = CoreType::Record(vec![("a".into(), int_ty()), ("b".into(), string_ty())]);
+    let op_payload = CoreType::Record(vec![("b".into(), string_ty()), ("a".into(), int_ty())]);
+    let local_row = chan_row(&["jobs"], "send", body_payload.clone());
+    let local_function_ty = function_ty(Vec::new(), unit_ty(), local_row.clone());
+    let clause_op = CoreEffectOp::Channel {
+        path: vec!["jobs".into()],
+        mode: "send".into(),
+        payload_type: op_payload.clone(),
+        result_type: unit_ty(),
+    };
+    let mut env = CoreTypeCheckEnv::default();
+    env.operations_mut().insert(clause_op.clone());
+
+    let program = validate_core_program(RawCoreProgram::new(CoreExpr::Handle {
+        clause: CoreHandlerClause {
+            op: clause_op,
+            params: vec![CoreParam {
+                name: "payload".into(),
+                ty: op_payload,
+            }],
+            resume: handle_resume_param(unit_ty(), unit_ty(), CoreRow::default()),
+            body: Box::new(CoreExpr::Atom(CoreAtom::LitUnit)),
+            row: CoreRow::default(),
+        },
+        body: Box::new(CoreExpr::LetRec {
+            name: "reader".into(),
+            ty: local_function_ty,
+            value: CoreValue::Lam {
+                params: Vec::new(),
+                body: Box::new(CoreExpr::Atom(CoreAtom::LitUnit)),
+                row: local_row.clone(),
+            },
+            body: Box::new(CoreExpr::LetCall {
+                name: "ignored".into(),
+                func: CoreAtom::Var("reader".into()),
+                args: Vec::new(),
+                body: Box::new(CoreExpr::Atom(CoreAtom::LitUnit)),
+            }),
+        }),
+    }))
+    .expect("handle with typed local function should validate");
+
+    let context = CoreLoweringContext::new(ContRef::Label("halt".into()), CoreRow::default());
+
+    let checked = type_check_and_lower_core_program(program, &env, context)
+        .expect("checked lowering should preserve structural residual subtraction");
+
+    let handle_row = first_handle_row(checked.lowered()).expect("expression lowers to a handle");
+    assert!(
+        handle_row.items.is_empty(),
+        "lowered handle row should drop handled channel when row item is structurally equal"
     );
 }
 

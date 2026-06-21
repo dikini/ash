@@ -1055,6 +1055,9 @@ pub fn summarize_core_public_function_type(
         collect_public_type_constructors(param, &mut type_constructors);
     }
     collect_public_type_constructors(result, &mut type_constructors);
+    for item in &row.items {
+        collect_public_row_item_type_constructors(item, &mut type_constructors);
+    }
 
     Ok(CorePublicFunctionSummary {
         exported_name: exported_name.into(),

@@ -51,6 +51,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - AGENTS.md: documented native MCP server configuration for ash-mcp and rust-analyzer with persistent stdio transport, per-project activation instructions, and cross-language tool routing. Added Hermes profile at `~/.hermes/profiles/ash/config.yaml` for portable Ash project MCP setup.
 
 ### Fixed
+- Fixed Core Ash public function summaries so type constructors referenced only from typed row items, such as channel payloads and failure payloads, are included in exported function metadata. (TASK-1649 review remediation)
 - Forward-declared `test::quickcheck::*` stdlib builtin entries in the interpreter dispatch table so the honest stdlib builtin declaration gate remains green while QuickCheck execution stays owned by the test runner, and fixed rustdoc literal markup warnings exposed by closeout docs verification. (Phase 160 closeout gate remediation)
 - Restored ash-mcp full-workspace testability by exporting daemon mode, adding the shared VFS/cache server constructor expected by daemon tests, wiring public MCP query convenience methods, and implementing recursive workspace-symbol search plus same-file reference lookup. (Phase 160 closeout gate remediation)
 - Fixed public type visibility validation for explicit associated-family projections so public interface names in projection heads are not misclassified as unresolved ordinary representation types. (Phase 160 closeout gate remediation)

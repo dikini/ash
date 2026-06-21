@@ -164,3 +164,34 @@ fn public_function_summary_preserves_type_constructor_identity_and_arity() {
     assert_eq!(constructors[1].name(), "Result");
     assert_eq!(constructors[1].arity(), 2);
 }
+
+#[test]
+fn public_function_summary_preserves_row_payload_type_constructors() {
+    let ty = CoreType::Function {
+        params: vec![int_ty()],
+        result: Box::new(CoreType::Base("Unit".into())),
+        row: CoreRow::closed(vec![
+            CoreRowItem::Channel {
+                path: vec!["events".into()],
+                mode: "recv".into(),
+                payload_type: Box::new(app_ty("Event", vec![int_ty()])),
+            },
+            CoreRowItem::Failure {
+                ty: Some(Box::new(app_ty(
+                    "Result",
+                    vec![int_ty(), CoreType::Base("String".into())],
+                ))),
+            },
+        ]),
+    };
+
+    let summary = summarize_core_public_function_type("row_payloads", &ty, &[], &[])
+        .expect("public function type summarizes row payload constructors");
+
+    let constructors = summary.type_constructors();
+    assert_eq!(constructors.len(), 2);
+    assert_eq!(constructors[0].name(), "Event");
+    assert_eq!(constructors[0].arity(), 1);
+    assert_eq!(constructors[1].name(), "Result");
+    assert_eq!(constructors[1].arity(), 2);
+}

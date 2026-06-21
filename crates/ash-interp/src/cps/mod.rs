@@ -202,11 +202,46 @@ fn eval_letprim(
     chain: &HandlerChain,
     runtime: &mut CpsRuntime,
 ) -> CpsResult<Atom> {
-    let resolved_args: CpsResult<Vec<Value>> =
-        args.iter().map(|a| eval_atom_to_value(a, env)).collect();
-    let result = eval_prim(op, &resolved_args?, env, runtime)?;
+    eval_letprim_with_runtime(name, op, args, body, env, chain, runtime)
+}
+
+#[allow(clippy::result_large_err)]
+fn eval_letprim_with_runtime(
+    name: &Name,
+    op: &PrimOp,
+    args: &[Atom],
+    body: &Term,
+    env: &Env,
+    chain: &HandlerChain,
+    runtime: &mut CpsRuntime,
+) -> CpsResult<Atom> {
+    let result = if *op == PrimOp::ForceThunk {
+        return eval_force_thunk_binding(name, args, body, env, chain, runtime);
+    } else {
+        let resolved_args: CpsResult<Vec<Value>> =
+            args.iter().map(|a| eval_atom_to_value(a, env)).collect();
+        eval_prim(op, &resolved_args?, env, runtime)?
+    };
     let new_env = env.clone().with_binding(name.clone(), result);
     eval_unchecked_with_runtime(body, &new_env, chain, runtime)
+}
+
+#[allow(clippy::result_large_err)]
+fn eval_force_thunk_binding(
+    name: &Name,
+    args: &[Atom],
+    continuation_body: &Term,
+    env: &Env,
+    chain: &HandlerChain,
+    runtime: &mut CpsRuntime,
+) -> CpsResult<Atom> {
+    if args.len() != 1 {
+        return Err(CpsError::InvalidPrimArgs(PrimOp::ForceThunk, vec![]));
+    }
+    let maybe_thunk = eval_atom_to_value(&args[0], env)?;
+    let forced = force_thunk_value(&maybe_thunk, runtime)?;
+    let new_env = env.clone().with_binding(name.clone(), Value::Atom(forced));
+    eval_unchecked_with_runtime(continuation_body, &new_env, chain, runtime)
 }
 
 #[allow(clippy::result_large_err)]
@@ -703,7 +738,7 @@ fn eval_prim(
     op: &PrimOp,
     args: &[Value],
     _env: &Env,
-    runtime: &mut CpsRuntime,
+    _runtime: &mut CpsRuntime,
 ) -> CpsResult<Value> {
     let make_err = || CpsError::InvalidPrimArgs(op.clone(), vec![]);
     match *op {
@@ -833,112 +868,115 @@ fn eval_prim(
                 _ => Err(make_err()),
             }
         }
-        PrimOp::ForceThunk => {
-            let thunk = args.first().ok_or_else(make_err)?;
-            match thunk {
-                Value::ThunkClosure {
-                    mode,
-                    body,
-                    captured_env,
-                    captured_chain,
-                    memo_cell,
-                    ..
-                } => Ok(Value::Atom(force_thunk(
-                    mode,
-                    body.as_ref(),
-                    captured_env,
-                    captured_chain,
-                    *memo_cell,
-                    runtime,
-                )?)),
-                _ => Err(CpsError::ExpectedThunk(thunk.clone())),
-            }
-        }
+        _ => Err(CpsError::InvalidPrimArgs(op.clone(), vec![])),
     }
 }
 
 #[allow(clippy::result_large_err)]
-fn force_thunk(
-    mode: &ThunkMode,
-    body: &Value,
-    captured_env: &Env,
-    captured_chain: &HandlerChain,
-    memo_cell: Option<MemoCellId>,
-    runtime: &mut CpsRuntime,
-) -> CpsResult<Atom> {
-    #[allow(clippy::result_large_err)]
-    fn run_thunk_body(
-        body: &Value,
-        captured_env: &Env,
-        captured_chain: &HandlerChain,
-        runtime: &mut CpsRuntime,
-    ) -> CpsResult<Atom> {
-        let Value::Lam {
-            params,
-            cont: lam_cont,
-            body: lam_body,
-            rec_binding,
-            ..
-        } = body
-        else {
-            return Err(CpsError::ExpectedThunk(body.clone()));
-        };
-        if !params.is_empty() {
-            return Err(CpsError::InvalidPrimArgs(PrimOp::ForceThunk, vec![]));
-        }
-        let cont_value = Value::Cont {
-            param: lam_cont.clone(),
-            body: Box::new(Term::Return {
-                value: Atom::Var(lam_cont.clone()),
-            }),
-            captured_env: captured_env.clone(),
-            captured_chain: captured_chain.clone(),
-            consumed: ConsumedFlag::new(),
-            row: EffectRow::default(),
-        };
-        let mut body_env = captured_env.clone();
-        if let Some(rec_name) = rec_binding
-            && let Some(rec_value) = captured_env.lookup(rec_name)
-        {
-            body_env = body_env.with_binding(rec_name.clone(), rec_value.clone());
-        }
-        body_env = body_env.with_binding(lam_cont.clone(), cont_value);
-        eval_unchecked_with_runtime(lam_body, &body_env, captured_chain, runtime)
-    }
+fn force_thunk_value(thunk: &Value, runtime: &mut CpsRuntime) -> CpsResult<Atom> {
+    let Value::ThunkClosure {
+        mode, memo_cell, ..
+    } = thunk
+    else {
+        return Err(CpsError::ExpectedThunk(thunk.clone()));
+    };
 
-    match (mode, memo_cell) {
-        (ThunkMode::Memo, Some(cell_id)) => match runtime.memo_cells.get(&cell_id) {
-            Some(MemoCellState::Filled(outcome)) => match outcome {
-                CachedThunkOutcome::Success(atom) => Ok(atom.clone()),
-                CachedThunkOutcome::Failure(error) => Err(error.clone()),
-            },
-            Some(MemoCellState::Evaluating) => Err(CpsError::Trap(TrapReason::Custom(
-                "recursive thunk force detected".to_string(),
-            ))),
-            Some(MemoCellState::Empty) => {
-                runtime
-                    .memo_cells
-                    .insert(cell_id, MemoCellState::Evaluating);
-                let result = run_thunk_body(body, captured_env, captured_chain, runtime);
-                match result {
-                    Ok(atom) => {
-                        runtime.memo_cells.insert(
-                            cell_id,
-                            MemoCellState::Filled(CachedThunkOutcome::Success(atom.clone())),
-                        );
-                        Ok(atom)
-                    }
-                    Err(error) => {
-                        runtime.memo_cells.insert(
-                            cell_id,
-                            MemoCellState::Filled(CachedThunkOutcome::Failure(error.clone())),
-                        );
-                        Err(error)
+    match (mode, *memo_cell) {
+        (ThunkMode::Memo, None) => Err(CpsError::Trap(TrapReason::Custom(
+            "memo thunk missing memo cell".to_string(),
+        ))),
+        (ThunkMode::Memo, Some(cell_id)) => {
+            let state = runtime.memo_cells.get(&cell_id).cloned();
+            match state {
+                Some(MemoCellState::Filled(outcome)) => match outcome {
+                    CachedThunkOutcome::Success(atom) => Ok(atom),
+                    CachedThunkOutcome::Failure(error) => Err(error),
+                },
+                Some(MemoCellState::Evaluating) => Err(CpsError::Trap(TrapReason::Custom(
+                    "re-entrant memo force".to_string(),
+                ))),
+                Some(MemoCellState::Empty) | None => {
+                    runtime
+                        .memo_cells
+                        .insert(cell_id, MemoCellState::Evaluating);
+                    let result = run_thunk_body_with_runtime(thunk, runtime);
+                    match result {
+                        Ok(atom) => {
+                            runtime.memo_cells.insert(
+                                cell_id,
+                                MemoCellState::Filled(CachedThunkOutcome::Success(atom.clone())),
+                            );
+                            Ok(atom)
+                        }
+                        Err(error) if is_cacheable_thunk_error(&error) => {
+                            runtime.memo_cells.insert(
+                                cell_id,
+                                MemoCellState::Filled(CachedThunkOutcome::Failure(error.clone())),
+                            );
+                            Err(error)
+                        }
+                        Err(error) => {
+                            runtime.memo_cells.insert(cell_id, MemoCellState::Empty);
+                            Err(error)
+                        }
                     }
                 }
             }
-            None => run_thunk_body(body, captured_env, captured_chain, runtime),
-        },
-        _ => run_thunk_body(body, captured_env, captured_chain, runtime),
+        }
+        (ThunkMode::Lazy, _) => run_thunk_body_with_runtime(thunk, runtime),
     }
+}
+
+#[allow(clippy::result_large_err)]
+fn is_cacheable_thunk_error(error: &CpsError) -> bool {
+    matches!(error, CpsError::Trap(_) | CpsError::UnhandledEffect(_))
+}
+
+#[allow(clippy::result_large_err)]
+fn run_thunk_body_with_runtime(thunk: &Value, runtime: &mut CpsRuntime) -> CpsResult<Atom> {
+    let Value::ThunkClosure {
+        body,
+        captured_env,
+        captured_chain,
+        ..
+    } = thunk
+    else {
+        return Err(CpsError::ExpectedThunk(thunk.clone()));
+    };
+
+    let Value::Lam {
+        params,
+        cont: lam_cont,
+        body: lam_body,
+        rec_binding,
+        ..
+    } = body.as_ref()
+    else {
+        return Err(CpsError::ExpectedThunk((**body).clone()));
+    };
+
+    if !params.is_empty() {
+        return Err(CpsError::InvalidPrimArgs(PrimOp::ForceThunk, vec![]));
+    }
+
+    let force_result_name = "__force_result";
+    let cont_value = Value::Cont {
+        param: force_result_name.to_string(),
+        body: Box::new(Term::Return {
+            value: Atom::Var(force_result_name.to_string()),
+        }),
+        captured_env: Env::new(),
+        captured_chain: captured_chain.clone(),
+        consumed: ConsumedFlag::new(),
+        row: EffectRow::default(),
+    };
+
+    let mut body_env = captured_env.clone();
+    if let Some(rec_name) = rec_binding
+        && let Some(rec_value) = captured_env.lookup(rec_name)
+    {
+        body_env = body_env.with_binding(rec_name.clone(), rec_value.clone());
+    }
+    body_env = body_env.with_binding(lam_cont.clone(), cont_value);
+    eval_unchecked_with_runtime(lam_body, &body_env, captured_chain, runtime)
 }

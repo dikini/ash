@@ -17,6 +17,13 @@ fn unit_ty() -> CoreType {
     CoreType::Base("Unit".into())
 }
 
+fn positive_int_ty() -> CoreType {
+    CoreType::Refinement {
+        base: Box::new(int_ty()),
+        predicate: "result > 0".into(),
+    }
+}
+
 fn never_ty() -> CoreType {
     CoreType::Named("Never".into())
 }
@@ -98,6 +105,15 @@ fn env_with_op(op: CoreEffectOp) -> CoreTypeCheckEnv {
     env.values_mut().insert("job", named_ty("Job"));
     env.operations_mut().insert(op);
     env
+}
+
+fn cap_int_op() -> CoreEffectOp {
+    CoreEffectOp::Capability {
+        path: path(&["counter"]),
+        operation: "set".into(),
+        arg_types: vec![int_ty()],
+        result_type: unit_ty(),
+    }
 }
 
 fn type_check(
@@ -189,6 +205,30 @@ fn capability_raise_argument_type_mismatch_fails() {
     .expect_err("capability raise must reject argument type mismatch");
 
     assert!(matches!(err, CoreTypeCheckError::TypeMismatch { .. }));
+}
+
+#[test]
+fn capability_raise_accepts_refinement_argument_where_base_is_expected() {
+    let op = cap_int_op();
+    let mut env = env_with_op(op.clone());
+    env.discharges_mut()
+        .insert_refinement_predicate("result > 0");
+    env.values_mut().insert("positive", positive_int_ty());
+
+    let typed = type_check(
+        CoreExpr::Raise {
+            op,
+            args: vec![CoreAtom::Var("positive".into())],
+        },
+        &env,
+    )
+    .expect("operation argument checks should allow refinement-to-base compatibility");
+
+    assert_eq!(typed.ty(), &unit_ty());
+    assert_eq!(
+        typed.row(),
+        &CoreRow::closed(vec![cap_item(&["counter"], "set")])
+    );
 }
 
 #[test]

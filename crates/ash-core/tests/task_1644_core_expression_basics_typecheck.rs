@@ -12,12 +12,26 @@ fn bool_ty() -> CoreType {
     CoreType::Base("Bool".into())
 }
 
-fn type_check(expr: CoreExpr) -> Result<(CoreType, CoreRow), CoreTypeCheckError> {
+fn positive_bool_ty() -> CoreType {
+    CoreType::Refinement {
+        base: Box::new(bool_ty()),
+        predicate: "is-ready".into(),
+    }
+}
+
+fn type_check_with_env(
+    expr: CoreExpr,
+    env: &CoreTypeCheckEnv,
+) -> Result<(CoreType, CoreRow), CoreTypeCheckError> {
     let valid =
         validate_core_program(RawCoreProgram::new(expr)).expect("Core expression validates");
-    let typed = type_check_core_program(valid, &CoreTypeCheckEnv::default())?;
+    let typed = type_check_core_program(valid, env)?;
 
     Ok((typed.ty().clone(), typed.row().clone()))
+}
+
+fn type_check(expr: CoreExpr) -> Result<(CoreType, CoreRow), CoreTypeCheckError> {
+    type_check_with_env(expr, &CoreTypeCheckEnv::default())
 }
 
 #[test]
@@ -83,6 +97,24 @@ fn if_rejects_non_bool_condition() {
     };
 
     type_check(expr).expect_err("If condition must be Bool");
+}
+
+#[test]
+fn if_accepts_refined_bool_condition() {
+    let mut env = CoreTypeCheckEnv::default();
+    env.discharges_mut().insert_refinement_predicate("is-ready");
+    env.values_mut().insert("ready", positive_bool_ty());
+    let expr = CoreExpr::If {
+        cond: CoreAtom::Var("ready".into()),
+        then_branch: Box::new(CoreExpr::Atom(CoreAtom::LitInt(1))),
+        else_branch: Box::new(CoreExpr::Atom(CoreAtom::LitInt(0))),
+    };
+
+    let (ty, row) = type_check_with_env(expr, &env)
+        .expect("refinement-typed Bool values should be usable as If conditions");
+
+    assert_eq!(ty, int_ty());
+    assert_eq!(row, CoreRow::default());
 }
 
 #[test]

@@ -121,6 +121,15 @@ fn resume_param(input: CoreType, row: CoreRow, multiplicity: CoreMultiplicity) -
     param("resume", cont_ty(input, unit_ty(), row, multiplicity))
 }
 
+fn resume_param_with_answer(
+    input: CoreType,
+    answer: CoreType,
+    row: CoreRow,
+    multiplicity: CoreMultiplicity,
+) -> CoreParam {
+    param("resume", cont_ty(input, answer, row, multiplicity))
+}
+
 fn handler_clause(
     params: Vec<CoreParam>,
     resume: CoreParam,
@@ -172,6 +181,14 @@ fn base_env() -> CoreTypeCheckEnv {
             )],
             unit_ty(),
             CoreRow::default(),
+        ),
+    );
+    env.values_mut().insert(
+        "audit_string",
+        function_ty(
+            vec![string_ty()],
+            string_ty(),
+            row(vec![cap_item(&["audit"], "emit")]),
         ),
     );
     env.values_mut().insert(
@@ -250,7 +267,12 @@ fn assert_type_mismatch(err: CoreTypeCheckError) {
 fn handle_accepts_handler_params_matching_operation_argument_types() {
     let clause = handler_clause(
         vec![param("key", string_ty())],
-        resume_param(string_ty(), CoreRow::default(), CoreMultiplicity::Affine),
+        resume_param_with_answer(
+            string_ty(),
+            string_ty(),
+            CoreRow::default(),
+            CoreMultiplicity::Affine,
+        ),
         resume_with(CoreAtom::Var("key".into())),
         CoreRow::default(),
     );
@@ -305,6 +327,44 @@ fn handle_rejects_clause_row_that_does_not_match_handler_body_local_row() {
         .expect_err("handler clause row must match handler body local row");
 
     assert!(matches!(err, CoreTypeCheckError::RowMismatch { .. }));
+}
+
+#[test]
+fn handle_rejects_non_resuming_clause_result_that_does_not_match_handled_result() {
+    let clause = handler_clause(
+        vec![param("key", string_ty())],
+        resume_param(string_ty(), CoreRow::default(), CoreMultiplicity::Affine),
+        CoreExpr::Atom(CoreAtom::LitUnit),
+        CoreRow::default(),
+    );
+
+    let err = type_check(handle_with(clause, raise_read()), &base_env())
+        .expect_err("non-resuming handler clause result must match the handled expression result");
+
+    assert_type_mismatch(err);
+}
+
+#[test]
+fn handle_rejects_resume_answer_that_does_not_match_handled_result() {
+    let clause = handler_clause(
+        vec![param("key", string_ty())],
+        param(
+            "resume",
+            cont_ty(
+                string_ty(),
+                int_ty(),
+                CoreRow::default(),
+                CoreMultiplicity::Affine,
+            ),
+        ),
+        resume_with(CoreAtom::Var("key".into())),
+        CoreRow::default(),
+    );
+
+    let err = type_check(handle_with(clause, raise_read()), &base_env())
+        .expect_err("handler resume answer must match the handled expression result");
+
+    assert_type_mismatch(err);
 }
 
 #[test]
@@ -390,7 +450,12 @@ fn residual_local_row_preserves_resume_row() {
     let resume_row = row(vec![cap_item(&["audit"], "emit")]);
     let clause = handler_clause(
         vec![param("key", string_ty())],
-        resume_param(string_ty(), resume_row.clone(), CoreMultiplicity::Affine),
+        resume_param_with_answer(
+            string_ty(),
+            string_ty(),
+            resume_row.clone(),
+            CoreMultiplicity::Affine,
+        ),
         resume_with(CoreAtom::Var("key".into())),
         CoreRow::default(),
     );
@@ -408,8 +473,16 @@ fn handle_removes_operation_only_from_delimited_segment_and_preserves_ambient_ro
     let clause_row = row(vec![cap_item(&["audit"], "emit")]);
     let clause = handler_clause(
         vec![param("key", string_ty())],
-        resume_param(string_ty(), resume_row, CoreMultiplicity::Affine),
-        raise_audit(),
+        resume_param_with_answer(
+            string_ty(),
+            string_ty(),
+            resume_row,
+            CoreMultiplicity::Affine,
+        ),
+        CoreExpr::Call {
+            func: CoreAtom::Var("audit_string".into()),
+            args: vec![CoreAtom::Var("key".into())],
+        },
         clause_row,
     );
     let handled_body = CoreExpr::LetCall {

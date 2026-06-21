@@ -16,6 +16,13 @@ fn unit_ty() -> CoreType {
     CoreType::Base("Unit".into())
 }
 
+fn positive_int_ty() -> CoreType {
+    CoreType::Refinement {
+        base: Box::new(int_ty()),
+        predicate: "result > 0".into(),
+    }
+}
+
 fn cap(path: &[&str], operation: &str) -> CoreRowItem {
     CoreRowItem::Capability {
         path: path.iter().map(|part| (*part).to_owned()).collect(),
@@ -112,6 +119,80 @@ fn let_call_function_arity_mismatch_reports_argument_count_mismatch() {
             actual: 1
         }
     );
+}
+
+#[test]
+fn function_call_accepts_refinement_argument_where_base_is_expected() {
+    let mut env = CoreTypeCheckEnv::default();
+    env.discharges_mut()
+        .insert_refinement_predicate("result > 0");
+    env.values_mut().insert("positive", positive_int_ty());
+    env.values_mut().insert(
+        "consume_int",
+        function_ty(vec![int_ty()], unit_ty(), CoreRow::default()),
+    );
+
+    let typed = type_check(
+        CoreExpr::Call {
+            func: CoreAtom::Var("consume_int".into()),
+            args: vec![CoreAtom::Var("positive".into())],
+        },
+        &env,
+    )
+    .expect("refinement-typed values should be usable where their base type is expected");
+
+    assert_eq!(typed.ty(), &unit_ty());
+    assert_eq!(typed.row(), &CoreRow::default());
+}
+
+#[test]
+fn function_call_refinement_argument_obligation_records_argument_name() {
+    let mut env = CoreTypeCheckEnv::default();
+    env.discharges_mut()
+        .insert_refinement_predicate("result > 0");
+    env.values_mut().insert("x", int_ty());
+    env.values_mut().insert(
+        "consume_positive",
+        function_ty(vec![positive_int_ty()], unit_ty(), CoreRow::default()),
+    );
+
+    let typed = type_check(
+        CoreExpr::Call {
+            func: CoreAtom::Var("consume_positive".into()),
+            args: vec![CoreAtom::Var("x".into())],
+        },
+        &env,
+    )
+    .expect("plain variable arguments should emit refinement obligations");
+
+    let obligations = typed.obligations();
+    assert_eq!(obligations.len(), 1);
+    assert_eq!(obligations[0].value_name(), Some("x"));
+    assert_eq!(obligations[0].predicate(), "result > 0");
+}
+
+#[test]
+fn function_call_refinement_argument_obligation_for_literal_stays_anonymous() {
+    let mut env = CoreTypeCheckEnv::default();
+    env.discharges_mut()
+        .insert_refinement_predicate("result > 0");
+    env.values_mut().insert(
+        "consume_positive",
+        function_ty(vec![positive_int_ty()], unit_ty(), CoreRow::default()),
+    );
+
+    let typed = type_check(
+        CoreExpr::Call {
+            func: CoreAtom::Var("consume_positive".into()),
+            args: vec![CoreAtom::LitInt(7)],
+        },
+        &env,
+    )
+    .expect("literal arguments should still emit anonymous refinement obligations");
+
+    let obligations = typed.obligations();
+    assert_eq!(obligations.len(), 1);
+    assert_eq!(obligations[0].value_name(), None);
 }
 
 #[test]

@@ -623,6 +623,10 @@ pub enum CoreTypeCheckError {
     #[error("unknown refinement predicate `{predicate}`")]
     UnknownRefinementPredicate { predicate: String },
 
+    /// A record type used the same field name more than once.
+    #[error("duplicate record field `{field}`")]
+    DuplicateRecordField { field: CoreName },
+
     /// A discharge record was malformed or did not prove a hard refinement.
     #[error("invalid discharge: {detail}")]
     InvalidDischarge { detail: String },
@@ -862,6 +866,9 @@ pub fn check_core_type_well_formed(
         }
         CoreType::Tuple(elems) => check_types_well_formed(elems, env),
         CoreType::Record(fields) => {
+            if let Some(field) = duplicate_record_field_name(fields) {
+                return Err(CoreTypeCheckError::DuplicateRecordField { field });
+            }
             for (_, field_ty) in fields {
                 check_core_type_well_formed(field_ty, env)?;
             }
@@ -1111,8 +1118,11 @@ pub fn synthesize_core_value(
     value: &CoreValue,
     env: &CoreTypeCheckEnv,
 ) -> Result<TypedCoreValue, CoreTypeCheckError> {
-    let ty = match value {
-        CoreValue::Atom(atom) => synthesize_core_atom(atom, env)?,
+    let (ty, facts) = match value {
+        CoreValue::Atom(atom) => (
+            synthesize_core_atom(atom, env)?,
+            CoreTypeCheckFacts::default(),
+        ),
         CoreValue::Lam { params, body, row } => {
             let mut body_env = env.clone();
             let mut param_types = Vec::with_capacity(params.len());
@@ -1125,32 +1135,39 @@ pub fn synthesize_core_value(
             }
 
             let body_checked = type_check_expr(body, &body_env)?;
-            if normalize_core_row(&body_checked.row)? != normalize_core_row(row)? {
+            let comparison = core_row_included_in(&body_checked.row, row)?;
+            if !comparison.is_included() {
                 return Err(CoreTypeCheckError::RowMismatch {
                     expected: row.clone(),
                     actual: body_checked.row,
                 });
             }
 
-            CoreType::Function {
-                params: param_types,
-                result: Box::new(body_checked.ty),
-                row: row.clone(),
-            }
+            (
+                CoreType::Function {
+                    params: param_types,
+                    result: Box::new(body_checked.ty),
+                    row: row.clone(),
+                },
+                body_checked.facts,
+            )
         }
         CoreValue::Record { fields } => {
             let mut typed_fields = Vec::with_capacity(fields.len());
             for (name, atom) in fields {
                 typed_fields.push((name.clone(), synthesize_core_atom(atom, env)?));
             }
-            CoreType::Record(typed_fields)
+            (
+                CoreType::Record(typed_fields),
+                CoreTypeCheckFacts::default(),
+            )
         }
         CoreValue::Tuple { elems } => {
             let mut elem_types = Vec::with_capacity(elems.len());
             for elem in elems {
                 elem_types.push(synthesize_core_atom(elem, env)?);
             }
-            CoreType::Tuple(elem_types)
+            (CoreType::Tuple(elem_types), CoreTypeCheckFacts::default())
         }
         CoreValue::DischargeMarker { discharge } => {
             validate_discharge_marker(discharge, env)?;
@@ -1167,7 +1184,7 @@ pub fn synthesize_core_value(
     Ok(TypedCoreValue {
         ty,
         row: CoreRow::default(),
-        facts: CoreTypeCheckFacts::default(),
+        facts,
     })
 }
 
@@ -1311,7 +1328,10 @@ fn record_fields_equivalent_unchecked(
     rhs: &[(CoreName, CoreType)],
     env: &CoreTypeCheckEnv,
 ) -> bool {
-    if lhs.len() != rhs.len() {
+    if lhs.len() != rhs.len()
+        || has_duplicate_record_field_names(lhs)
+        || has_duplicate_record_field_names(rhs)
+    {
         return false;
     }
 
@@ -1320,6 +1340,17 @@ fn record_fields_equivalent_unchecked(
             .find(|(right_name, _)| right_name == left_name)
             .is_some_and(|(_, right_ty)| types_equivalent_unchecked(left_ty, right_ty, env))
     })
+}
+
+fn has_duplicate_record_field_names(fields: &[(CoreName, CoreType)]) -> bool {
+    duplicate_record_field_name(fields).is_some()
+}
+
+fn duplicate_record_field_name(fields: &[(CoreName, CoreType)]) -> Option<CoreName> {
+    let mut seen = HashSet::with_capacity(fields.len());
+    fields
+        .iter()
+        .find_map(|(field_name, _)| (!seen.insert(field_name)).then(|| field_name.clone()))
 }
 
 fn rows_equivalent_unchecked(lhs: &CoreRow, rhs: &CoreRow) -> bool {
@@ -1580,10 +1611,15 @@ fn type_check_expr(
             args,
             body,
         } => {
-            let result_ty = check_primitive_application(op, args, env)?;
+            let (result_ty, arg_facts) = check_primitive_application(op, args, env)?;
             let mut body_env = env.clone();
             body_env.values_mut().insert(name.clone(), result_ty);
-            type_check_expr(body, &body_env)
+            let body_checked = type_check_expr(body, &body_env)?;
+            Ok(TypedCoreExpr {
+                ty: body_checked.ty,
+                row: body_checked.row,
+                facts: merge_typecheck_facts(arg_facts, body_checked.facts),
+            })
         }
         CoreExpr::LetCall {
             name,
@@ -1591,14 +1627,14 @@ fn type_check_expr(
             args,
             body,
         } => {
-            let (result_ty, callee_row) = check_function_application(func, args, env)?;
+            let (result_ty, callee_row, arg_facts) = check_function_application(func, args, env)?;
             let mut body_env = env.clone();
             body_env.values_mut().insert(name.clone(), result_ty);
             let body_checked = type_check_expr(body, &body_env)?;
             Ok(TypedCoreExpr {
                 ty: body_checked.ty,
                 row: union_core_rows(&callee_row, &body_checked.row)?,
-                facts: body_checked.facts,
+                facts: merge_typecheck_facts(arg_facts, body_checked.facts),
             })
         }
         CoreExpr::If {
@@ -1607,8 +1643,12 @@ fn type_check_expr(
             else_branch,
         } => type_check_if(cond, then_branch, else_branch, env),
         CoreExpr::Call { func, args } => {
-            let (result_ty, callee_row) = check_function_application(func, args, env)?;
-            Ok(typed_expr(result_ty, callee_row))
+            let (result_ty, callee_row, facts) = check_function_application(func, args, env)?;
+            Ok(TypedCoreExpr {
+                ty: result_ty,
+                row: callee_row,
+                facts,
+            })
         }
         CoreExpr::Jump { cont, arg } => type_check_jump(cont, arg, env),
         CoreExpr::Raise { op, args } => type_check_raise(op, args, env),
@@ -1616,11 +1656,17 @@ fn type_check_expr(
         CoreExpr::RecordDischarge { discharge, body } => {
             validate_contract_discharge(discharge, env)?;
             let body_checked = type_check_expr(body, env)?;
+            let residual_row = subtract_core_row(
+                &body_checked.row,
+                &CoreRow::closed(vec![CoreRowItem::Contract {
+                    contract: discharge.contract.clone(),
+                }]),
+            )?;
             let mut facts = body_checked.facts;
             facts.discharges.push(discharge.clone());
             Ok(TypedCoreExpr {
                 ty: body_checked.ty,
-                row: body_checked.row,
+                row: residual_row,
                 facts,
             })
         }
@@ -1656,11 +1702,8 @@ fn type_check_if(
     else_branch: &CoreExpr,
     env: &CoreTypeCheckEnv,
 ) -> Result<TypedCoreExpr, CoreTypeCheckError> {
-    ensure_types_equivalent(
-        &CoreType::Base("Bool".into()),
-        &type_check_atom(cond, env)?,
-        env,
-    )?;
+    let cond_ty = type_check_atom(cond, env)?;
+    let cond_facts = check_type_against_annotation(&CoreType::Base("Bool".into()), &cond_ty, env)?;
 
     match (then_branch, else_branch) {
         (CoreExpr::Trap { .. }, CoreExpr::Trap { .. }) => {
@@ -1672,7 +1715,10 @@ fn type_check_if(
             Ok(TypedCoreExpr {
                 ty: else_checked.ty,
                 row: union_core_rows(&then_checked.row, &else_checked.row)?,
-                facts: merge_typecheck_facts(then_checked.facts, else_checked.facts),
+                facts: merge_typecheck_facts(
+                    cond_facts,
+                    merge_typecheck_facts(then_checked.facts, else_checked.facts),
+                ),
             })
         }
         (_, CoreExpr::Trap { .. }) => {
@@ -1681,7 +1727,10 @@ fn type_check_if(
             Ok(TypedCoreExpr {
                 ty: then_checked.ty,
                 row: union_core_rows(&then_checked.row, &else_checked.row)?,
-                facts: merge_typecheck_facts(then_checked.facts, else_checked.facts),
+                facts: merge_typecheck_facts(
+                    cond_facts,
+                    merge_typecheck_facts(then_checked.facts, else_checked.facts),
+                ),
             })
         }
         _ => {
@@ -1691,7 +1740,10 @@ fn type_check_if(
             Ok(TypedCoreExpr {
                 ty: then_checked.ty,
                 row: union_core_rows(&then_checked.row, &else_checked.row)?,
-                facts: merge_typecheck_facts(then_checked.facts, else_checked.facts),
+                facts: merge_typecheck_facts(
+                    cond_facts,
+                    merge_typecheck_facts(then_checked.facts, else_checked.facts),
+                ),
             })
         }
     }
@@ -1713,7 +1765,9 @@ fn check_value_against(
         });
     }
     for obligation in &mut facts.refinement_obligations {
-        obligation.value_name = value_name.clone();
+        if obligation.value_name.is_none() {
+            obligation.value_name.clone_from(&value_name);
+        }
     }
     Ok(facts)
 }
@@ -1833,7 +1887,7 @@ fn check_function_application(
     func: &CoreAtom,
     args: &[CoreAtom],
     env: &CoreTypeCheckEnv,
-) -> Result<(CoreType, CoreRow), CoreTypeCheckError> {
+) -> Result<(CoreType, CoreRow, CoreTypeCheckFacts), CoreTypeCheckError> {
     let func_ty = type_check_atom(func, env)?;
     check_core_type_well_formed(&func_ty, env)?;
     let CoreType::Function {
@@ -1845,8 +1899,8 @@ fn check_function_application(
         return Err(unsupported("non-function call target"));
     };
 
-    check_arguments(&params, args, env)?;
-    Ok((*result, row))
+    let facts = check_arguments(&params, args, env)?;
+    Ok((*result, row, facts))
 }
 
 fn type_check_raise(
@@ -1861,8 +1915,12 @@ fn type_check_raise(
         });
     }
 
-    check_arguments(&arg_types, args, env)?;
-    Ok(typed_expr(result_type, row))
+    let facts = check_arguments(&arg_types, args, env)?;
+    Ok(TypedCoreExpr {
+        ty: result_type,
+        row,
+        facts,
+    })
 }
 
 fn type_check_handle(
@@ -1878,7 +1936,8 @@ fn type_check_handle(
     }
 
     check_handler_params(&clause.params, &arg_types, env)?;
-    let resume_row = check_handler_resume(&clause.resume.ty, &op_result_ty, env)?;
+    let (resume_row, resume_answer_ty) =
+        check_handler_resume(&clause.resume.ty, &op_result_ty, env)?;
 
     let mut clause_env = env.clone();
     for param in &clause.params {
@@ -1901,11 +1960,22 @@ fn type_check_handle(
     }
 
     let body_checked = type_check_expr(body, env)?;
+    ensure_types_equivalent(&body_checked.ty, &resume_answer_ty, env)?;
+    let expected_clause_ty =
+        if clause_may_complete_without_resume(&clause.body, &clause.resume.name) {
+            &body_checked.ty
+        } else {
+            &resume_answer_ty
+        };
+    let result_facts = check_type_against_annotation(expected_clause_ty, &clause_checked.ty, env)?;
     let residual = handle_residual_row(&body_checked.row, &op_row, &resume_row, &clause.row)?;
     Ok(TypedCoreExpr {
         ty: body_checked.ty,
         row: residual,
-        facts: merge_typecheck_facts(body_checked.facts, clause_checked.facts),
+        facts: merge_typecheck_facts(
+            merge_typecheck_facts(body_checked.facts, clause_checked.facts),
+            result_facts,
+        ),
     })
 }
 
@@ -1932,13 +2002,13 @@ fn check_handler_resume(
     resume_ty: &CoreType,
     op_result_ty: &CoreType,
     env: &CoreTypeCheckEnv,
-) -> Result<CoreRow, CoreTypeCheckError> {
+) -> Result<(CoreRow, CoreType), CoreTypeCheckError> {
     check_core_type_well_formed(resume_ty, env)?;
     let CoreType::Cont {
         input,
+        answer,
         row,
         multiplicity,
-        ..
     } = resume_ty
     else {
         return Err(unsupported("handler resume without continuation type"));
@@ -1949,7 +2019,35 @@ fn check_handler_resume(
     }
 
     ensure_types_equivalent(op_result_ty, input, env)?;
-    Ok(row.clone())
+    Ok((row.clone(), (**answer).clone()))
+}
+
+fn clause_may_complete_without_resume(expr: &CoreExpr, resume_name: &str) -> bool {
+    match expr {
+        CoreExpr::Atom(_) | CoreExpr::Call { .. } | CoreExpr::Raise { .. } => true,
+        CoreExpr::Trap { .. } => false,
+        CoreExpr::Jump { cont, .. } => cont_ref_name(cont) != resume_name,
+        CoreExpr::LetVal { body, .. }
+        | CoreExpr::LetRec { body, .. }
+        | CoreExpr::LetPrim { body, .. }
+        | CoreExpr::LetCall { body, .. }
+        | CoreExpr::RecordDischarge { body, .. } => {
+            clause_may_complete_without_resume(body, resume_name)
+        }
+        CoreExpr::If {
+            then_branch,
+            else_branch,
+            ..
+        } => {
+            clause_may_complete_without_resume(then_branch, resume_name)
+                || clause_may_complete_without_resume(else_branch, resume_name)
+        }
+        CoreExpr::Handle { clause, body } => {
+            clause_may_complete_without_resume(body, resume_name)
+                || (clause.resume.name != resume_name
+                    && clause_may_complete_without_resume(&clause.body, resume_name))
+        }
+    }
 }
 
 fn handle_residual_row(
@@ -2086,7 +2184,7 @@ fn check_primitive_application(
     op: &CorePrimOp,
     args: &[CoreAtom],
     env: &CoreTypeCheckEnv,
-) -> Result<CoreType, CoreTypeCheckError> {
+) -> Result<(CoreType, CoreTypeCheckFacts), CoreTypeCheckError> {
     let CoreType::Function {
         params,
         result,
@@ -2096,7 +2194,7 @@ fn check_primitive_application(
         return Err(unsupported("primitive without function type"));
     };
 
-    check_arguments(&params, args, env)?;
+    let facts = check_arguments(&params, args, env)?;
 
     if normalize_core_row(&row)? != CoreRow::default() {
         return Err(CoreTypeCheckError::RowMismatch {
@@ -2105,14 +2203,14 @@ fn check_primitive_application(
         });
     }
 
-    Ok(*result)
+    Ok((*result, facts))
 }
 
 fn check_arguments(
     params: &[CoreType],
     args: &[CoreAtom],
     env: &CoreTypeCheckEnv,
-) -> Result<(), CoreTypeCheckError> {
+) -> Result<CoreTypeCheckFacts, CoreTypeCheckError> {
     if params.len() != args.len() {
         return Err(CoreTypeCheckError::ArgumentCountMismatch {
             expected: params.len(),
@@ -2120,12 +2218,25 @@ fn check_arguments(
         });
     }
 
+    let mut facts = CoreTypeCheckFacts::default();
     for (arg, expected) in args.iter().zip(params) {
         let actual = type_check_atom(arg, env)?;
-        ensure_types_equivalent(expected, &actual, env)?;
+        let mut arg_facts = check_type_against_annotation(expected, &actual, env)?;
+        if let CoreAtom::Var(name) = arg {
+            fill_missing_obligation_owner(&mut arg_facts, name);
+        }
+        facts = merge_typecheck_facts(facts, arg_facts);
     }
 
-    Ok(())
+    Ok(facts)
+}
+
+fn fill_missing_obligation_owner(facts: &mut CoreTypeCheckFacts, value_name: &str) {
+    for obligation in &mut facts.refinement_obligations {
+        if obligation.value_name.is_none() {
+            obligation.value_name = Some(value_name.to_owned());
+        }
+    }
 }
 
 fn type_check_jump(
@@ -2147,9 +2258,8 @@ fn type_check_jump(
     };
 
     let actual = type_check_atom(arg, env)?;
-    ensure_types_equivalent(&input, &actual, env)?;
+    let mut facts = check_type_against_annotation(&input, &actual, env)?;
 
-    let mut facts = CoreTypeCheckFacts::default();
     facts
         .jump_continuation_rows
         .insert(cont.clone(), row.clone());

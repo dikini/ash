@@ -1,7 +1,8 @@
 use std::path::{Path, PathBuf};
 
 use ash_core::core_ash::{
-    CoreContRef, CoreEffectOp, CoreMultiplicity, CoreRow, CoreRowItem, CoreType,
+    CoreAtom, CoreContRef, CoreContractDischarge, CoreDischargeMode, CoreEffectOp, CoreExpr,
+    CoreHandlerClause, CoreMultiplicity, CoreParam, CoreRow, CoreRowItem, CoreType,
 };
 use ash_core::core_ash_lower::{CoreLoweringContext, CoreLoweringError};
 use ash_core::core_ash_text::{CoreTextError, parse_core_file};
@@ -51,6 +52,12 @@ fn cap_row(path: &[&str], operation: &str) -> CoreRow {
     CoreRow::closed(vec![cap(path, operation)])
 }
 
+fn contract_row(contract: &str) -> CoreRow {
+    CoreRow::closed(vec![CoreRowItem::Contract {
+        contract: contract.to_owned(),
+    }])
+}
+
 fn function_ty(params: Vec<CoreType>, result: CoreType, row: CoreRow) -> CoreType {
     CoreType::Function {
         params,
@@ -83,6 +90,18 @@ fn audit_emit_op() -> CoreEffectOp {
         operation: "emit".into(),
         arg_types: vec![string_ty()],
         result_type: unit_ty(),
+    }
+}
+
+fn handle_resume_param(input: CoreType, answer: CoreType, row: CoreRow) -> CoreParam {
+    CoreParam {
+        name: "resume".into(),
+        ty: CoreType::Cont {
+            input: Box::new(input),
+            answer: Box::new(answer),
+            row,
+            multiplicity: CoreMultiplicity::Affine,
+        },
     }
 }
 
@@ -190,6 +209,40 @@ fn first_call_row(term: &Term) -> Option<&EffectRow> {
         | Term::Return { .. }
         | Term::Trap { .. } => None,
     }
+}
+
+fn first_handle_row(term: &Term) -> Option<&EffectRow> {
+    match term {
+        Term::LetVal { body, .. }
+        | Term::LetRec { body, .. }
+        | Term::RecordDischarge { body, .. } => first_handle_row(body),
+        Term::LetPrim { body, .. } => first_handle_row(body),
+        Term::LetCont {
+            cont_body, body, ..
+        } => first_handle_row(cont_body).or_else(|| first_handle_row(body)),
+        Term::If {
+            then_branch,
+            else_branch,
+            ..
+        } => first_handle_row(then_branch).or_else(|| first_handle_row(else_branch)),
+        Term::Handle { row, .. } => Some(row),
+        Term::Call { .. }
+        | Term::Jump { .. }
+        | Term::Raise { .. }
+        | Term::Match { .. }
+        | Term::Return { .. }
+        | Term::Trap { .. } => None,
+    }
+}
+
+fn let_cont_body_call_row(term: &Term) -> Option<&EffectRow> {
+    let Term::LetCont { body, .. } = term else {
+        return None;
+    };
+    let Term::Call { row, .. } = body.as_ref() else {
+        return None;
+    };
+    Some(row)
 }
 
 #[test]
@@ -324,6 +377,146 @@ fn checked_lowering_uses_typechecked_external_function_rows() {
             && item.name == "console.write"
             && item.kind == EffectItemKind::Capability),
         "checked lowering must also preserve the checked continuation row"
+    );
+}
+
+#[test]
+fn checked_lowering_uses_typechecked_handle_residual_row() {
+    let resume_row = cap_row(&["audit"], "emit");
+    let mut env = CoreTypeCheckEnv::default();
+    env.operations_mut().insert(console_read_op());
+    let program = validate_core_program(RawCoreProgram::new(CoreExpr::Handle {
+        clause: CoreHandlerClause {
+            op: console_read_op(),
+            params: vec![CoreParam {
+                name: "prompt".into(),
+                ty: string_ty(),
+            }],
+            resume: handle_resume_param(unit_ty(), unit_ty(), resume_row.clone()),
+            body: Box::new(CoreExpr::Jump {
+                cont: CoreContRef::Var("resume".into()),
+                arg: CoreAtom::LitUnit,
+            }),
+            row: CoreRow::default(),
+        },
+        body: Box::new(CoreExpr::Raise {
+            op: console_read_op(),
+            args: vec![CoreAtom::LitString("ready".into())],
+        }),
+    }))
+    .expect("Core handle expression validates");
+    let context = CoreLoweringContext::new(ContRef::Label("halt".into()), CoreRow::default());
+
+    let checked = type_check_and_lower_core_program(program, &env, context)
+        .expect("checked lowering should preserve checked handle rows");
+
+    assert_eq!(checked.typed().row(), &resume_row);
+    let handle_row = first_handle_row(checked.lowered()).expect("expression lowers to a handle");
+    assert!(
+        handle_row.items.iter().any(|item| item.namespace == "cap"
+            && item.name == "audit.emit"
+            && item.kind == EffectItemKind::Capability),
+        "lowered Handle.row must use the checked residual row, not the empty clause row"
+    );
+}
+
+#[test]
+fn checked_lowering_preserves_discharged_rows_inside_handle_body() {
+    let contract = "requires-clean";
+    let mut env = CoreTypeCheckEnv::default();
+    env.operations_mut().insert(console_read_op());
+    env.values_mut().insert(
+        "contract_checked_unit",
+        function_ty(Vec::new(), unit_ty(), contract_row(contract)),
+    );
+    let program = validate_core_program(RawCoreProgram::new(CoreExpr::Handle {
+        clause: CoreHandlerClause {
+            op: console_read_op(),
+            params: vec![CoreParam {
+                name: "prompt".into(),
+                ty: string_ty(),
+            }],
+            resume: handle_resume_param(unit_ty(), unit_ty(), CoreRow::default()),
+            body: Box::new(CoreExpr::Jump {
+                cont: CoreContRef::Var("resume".into()),
+                arg: CoreAtom::LitUnit,
+            }),
+            row: CoreRow::default(),
+        },
+        body: Box::new(CoreExpr::RecordDischarge {
+            discharge: CoreContractDischarge {
+                contract: contract.into(),
+                mode: CoreDischargeMode::Dynamic,
+                evidence: None,
+                source_span: None,
+            },
+            body: Box::new(CoreExpr::Call {
+                func: CoreAtom::Var("contract_checked_unit".into()),
+                args: Vec::new(),
+            }),
+        }),
+    }))
+    .expect("Core handle expression validates");
+    let context = CoreLoweringContext::new(ContRef::Label("halt".into()), CoreRow::default());
+
+    let checked = type_check_and_lower_core_program(program, &env, context)
+        .expect("checked lowering should preserve discharged rows inside handles");
+
+    assert_eq!(checked.typed().row(), &CoreRow::default());
+    let handle_row = first_handle_row(checked.lowered()).expect("expression lowers to a handle");
+    assert!(
+        handle_row
+            .items
+            .iter()
+            .all(|item| item.namespace != "contract" || item.name != contract),
+        "lowered Handle.row must not reintroduce a discharged contract requirement"
+    );
+}
+
+#[test]
+fn checked_lowering_preserves_discharged_rows_in_letcall_continuation_rows() {
+    let contract = "requires-clean";
+    let mut env = CoreTypeCheckEnv::default();
+    env.values_mut().insert(
+        "start",
+        function_ty(Vec::new(), unit_ty(), CoreRow::default()),
+    );
+    env.values_mut().insert(
+        "contract_checked_unit",
+        function_ty(Vec::new(), unit_ty(), contract_row(contract)),
+    );
+    let program = validate_core_program(RawCoreProgram::new(CoreExpr::LetCall {
+        name: "ignored".into(),
+        func: CoreAtom::Var("start".into()),
+        args: Vec::new(),
+        body: Box::new(CoreExpr::RecordDischarge {
+            discharge: CoreContractDischarge {
+                contract: contract.into(),
+                mode: CoreDischargeMode::Dynamic,
+                evidence: None,
+                source_span: None,
+            },
+            body: Box::new(CoreExpr::Call {
+                func: CoreAtom::Var("contract_checked_unit".into()),
+                args: Vec::new(),
+            }),
+        }),
+    }))
+    .expect("Core let-call expression validates");
+    let context = CoreLoweringContext::new(ContRef::Label("halt".into()), CoreRow::default());
+
+    let checked = type_check_and_lower_core_program(program, &env, context)
+        .expect("checked lowering should preserve discharged rows in continuation rows");
+
+    assert_eq!(checked.typed().row(), &CoreRow::default());
+    let outer_call_row =
+        let_cont_body_call_row(checked.lowered()).expect("LetCall lowers to LetCont with a Call");
+    assert!(
+        outer_call_row
+            .items
+            .iter()
+            .all(|item| item.namespace != "contract" || item.name != contract),
+        "lowered LetCall call row must not reintroduce a discharged continuation-body contract"
     );
 }
 

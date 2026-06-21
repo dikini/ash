@@ -69,6 +69,42 @@ fn record_type_equivalence_is_field_name_based() {
 }
 
 #[test]
+fn duplicate_record_field_names_are_rejected_by_well_formedness() {
+    let env = CoreTypeCheckEnv::default();
+    let duplicate = CoreType::Record(vec![
+        ("a".into(), CoreType::Base("Int".into())),
+        ("a".into(), CoreType::Base("Int".into())),
+    ]);
+
+    let err = check_core_type_well_formed(&duplicate, &env)
+        .expect_err("duplicate record field names are ambiguous in Core type metadata");
+
+    assert_eq!(
+        err,
+        CoreTypeCheckError::DuplicateRecordField { field: "a".into() }
+    );
+}
+
+#[test]
+fn duplicate_record_field_names_are_not_equivalent_to_ambiguous_records() {
+    let env = CoreTypeCheckEnv::default();
+    let expected = CoreType::Record(vec![
+        ("a".into(), CoreType::Base("Int".into())),
+        ("b".into(), CoreType::Base("Int".into())),
+    ]);
+    let actual = CoreType::Record(vec![
+        ("a".into(), CoreType::Base("Int".into())),
+        ("a".into(), CoreType::Base("String".into())),
+    ]);
+
+    assert_eq!(
+        core_types_equivalent(&expected, &actual, &env)
+            .expect_err("duplicate record field names are rejected before equality"),
+        CoreTypeCheckError::DuplicateRecordField { field: "a".into() }
+    );
+}
+
+#[test]
 fn refinement_checks_base_type_recursively() {
     let mut env = CoreTypeCheckEnv::default();
     env.discharges_mut()

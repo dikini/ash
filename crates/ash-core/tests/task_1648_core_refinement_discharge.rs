@@ -1,6 +1,6 @@
 use ash_core::core_ash::{
     CoreAtom, CoreContractDischarge, CoreDischargeMode, CoreEvidenceSource, CoreEvidenceStatus,
-    CoreExpr, CoreRefinementEvidence, CoreRow, CoreTrapReason, CoreType, CoreValue,
+    CoreExpr, CoreRefinementEvidence, CoreRow, CoreRowItem, CoreTrapReason, CoreType, CoreValue,
 };
 use ash_core::core_ash_typecheck::{
     CoreTypeCheckEnv, CoreTypeCheckError, check_core_type_well_formed, type_check_core_program,
@@ -94,10 +94,23 @@ fn dynamic_discharge() -> CoreContractDischarge {
     }
 }
 
+fn contract_row(contract: &str) -> CoreRow {
+    CoreRow::closed(vec![CoreRowItem::Contract {
+        contract: contract.to_owned(),
+    }])
+}
+
 fn record_discharge(discharge: CoreContractDischarge) -> CoreExpr {
     CoreExpr::RecordDischarge {
         discharge,
         body: Box::new(CoreExpr::Atom(CoreAtom::LitUnit)),
+    }
+}
+
+fn call_contract_function(name: &str) -> CoreExpr {
+    CoreExpr::Call {
+        func: CoreAtom::Var(name.to_owned()),
+        args: Vec::new(),
     }
 }
 
@@ -148,6 +161,40 @@ fn using_existing_refinement_at_base_type_emits_no_new_obligation() {
 }
 
 #[test]
+fn lambda_body_refinement_obligations_keep_local_owner_names() {
+    let env = env_with_predicates(&[POSITIVE_PREDICATE]);
+    let fn_ty = CoreType::Function {
+        params: Vec::new(),
+        result: Box::new(positive_int_ty()),
+        row: CoreRow::default(),
+    };
+    let expr = let_val(
+        "f",
+        fn_ty.clone(),
+        CoreValue::Lam {
+            params: Vec::new(),
+            row: CoreRow::default(),
+            body: Box::new(let_val(
+                "x",
+                positive_int_ty(),
+                CoreValue::Atom(CoreAtom::LitInt(7)),
+                CoreExpr::Atom(CoreAtom::Var("x".into())),
+            )),
+        },
+        CoreExpr::Atom(CoreAtom::Var("f".into())),
+    );
+
+    let typed = type_check(expr, &env)
+        .expect("lambda body refinement obligations should be preserved for public metadata");
+
+    assert_eq!(typed.ty(), &fn_ty);
+    let obligations = typed.obligations();
+    assert_eq!(obligations.len(), 1);
+    assert_eq!(obligations[0].value_name(), Some("x"));
+    assert_eq!(obligations[0].predicate(), POSITIVE_PREDICATE);
+}
+
+#[test]
 fn unknown_predicate_metadata_stays_rejected_by_well_formedness() {
     let err = check_core_type_well_formed(
         &refinement_ty(NONZERO_PREDICATE),
@@ -183,6 +230,35 @@ fn record_discharge_accepts_static_evidence_and_dynamic_shapes_and_records_metad
             "recorded discharge metadata must not become a residual obligation"
         );
     }
+}
+
+#[test]
+fn record_discharge_removes_matching_contract_from_residual_row() {
+    let mut env = env_with_predicates(&[POSITIVE_PREDICATE]);
+    env.values_mut().insert(
+        "checked_unit",
+        CoreType::Function {
+            params: Vec::new(),
+            result: Box::new(unit_ty()),
+            row: contract_row(POSITIVE_CONTRACT),
+        },
+    );
+    let discharge = dynamic_discharge();
+    let expr = CoreExpr::RecordDischarge {
+        discharge: discharge.clone(),
+        body: Box::new(call_contract_function("checked_unit")),
+    };
+
+    let typed = type_check(expr, &env)
+        .expect("record discharge should remove its matching contract requirement");
+
+    assert_eq!(typed.ty(), &unit_ty());
+    assert_eq!(
+        typed.row(),
+        &CoreRow::default(),
+        "discharged contract requirements must not remain residual"
+    );
+    assert_eq!(typed.discharges(), &[discharge]);
 }
 
 #[test]

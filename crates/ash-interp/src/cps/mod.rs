@@ -980,3 +980,136 @@ fn run_thunk_body_with_runtime(thunk: &Value, runtime: &mut CpsRuntime) -> CpsRe
     body_env = body_env.with_binding(lam_cont.clone(), cont_value);
     eval_unchecked_with_runtime(lam_body, &body_env, captured_chain, runtime)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn captured_effect_op() -> EffectOp {
+        EffectOp {
+            item: EffectItem {
+                namespace: "cap".to_string(),
+                name: "db.read".to_string(),
+                kind: EffectItemKind::Capability,
+            },
+            arg_types: vec!["String".to_string()],
+            result_type: "Int".to_string(),
+        }
+    }
+
+    fn provider_handler(body_result: i64) -> Value {
+        Value::Lam {
+            params: vec!["msg".to_string()],
+            cont: "k".to_string(),
+            body: Box::new(Term::Jump {
+                cont: ContRef::Var("k".to_string()),
+                arg: Atom::Int(body_result),
+                row: EffectRow::default(),
+            }),
+            captured_env: Env::new(),
+            rec_binding: None,
+            row: EffectRow::default(),
+        }
+    }
+
+    fn captured_thunk(mode: ThunkMode, op: &EffectOp) -> Value {
+        Value::ThunkClosure {
+            mode,
+            body: Box::new(Value::Lam {
+                params: vec![],
+                cont: "resume".to_string(),
+                body: Box::new(Term::Raise {
+                    op: op.clone(),
+                    args: vec![Atom::String("resource".to_string())],
+                    resume: ContRef::Var("resume".to_string()),
+                    row: EffectRow::default(),
+                }),
+                captured_env: Env::new(),
+                rec_binding: None,
+                row: EffectRow::default(),
+            }),
+            captured_env: Env::new(),
+            captured_chain: HandlerChain::new(),
+            row: EffectRow::default(),
+            memo_cell: None,
+        }
+    }
+
+    #[allow(clippy::result_large_err)]
+    fn force_thunk_result(
+        thunk: Value,
+        force_chain: HandlerChain,
+        run_time: &mut CpsRuntime,
+    ) -> CpsResult<Atom> {
+        let env = Env::new().with_binding("thunk".to_string(), thunk);
+        let body = Term::LetCont {
+            name: "out".to_string(),
+            param: "result".to_string(),
+            cont_body: Box::new(Term::Return {
+                value: Atom::Var("result".to_string()),
+            }),
+            body: Box::new(Term::LetPrim {
+                name: "forced".to_string(),
+                op: PrimOp::ForceThunk,
+                args: vec![Atom::Var("thunk".to_string())],
+                body: Box::new(Term::Jump {
+                    cont: ContRef::Label("out".to_string()),
+                    arg: Atom::Var("forced".to_string()),
+                    row: EffectRow::default(),
+                }),
+            }),
+        };
+
+        eval_unchecked_with_runtime(&body, &env, &force_chain, run_time)
+    }
+
+    #[test]
+    fn thunk_value_captures_handler_chain_for_future_force() {
+        let op = captured_effect_op();
+        let env = Env::new().with_binding("provider".to_string(), provider_handler(17));
+        let mut chain_with_provider = HandlerChain::new();
+        chain_with_provider.push(HandlerFrame::Provider {
+            op: op.clone(),
+            handler: "provider".to_string(),
+        });
+
+        let thunk = captured_thunk(ThunkMode::Memo, &op);
+        let mut runtime = CpsRuntime::new();
+        let evaluated = eval_value_with_runtime(&thunk, &env, &chain_with_provider, &mut runtime)
+            .expect("memo thunk should evaluate");
+        if let Value::ThunkClosure { captured_chain, .. } = &evaluated {
+            assert_eq!(*captured_chain, chain_with_provider);
+        } else {
+            panic!("expected thunk closure");
+        }
+        let thunk = evaluated;
+
+        let result = force_thunk_result(thunk, HandlerChain::new(), &mut runtime);
+        assert_eq!(result, Ok(Atom::Int(17)));
+    }
+
+    #[test]
+    fn lazy_thunk_uses_construction_chain_for_force_dispatch() {
+        let op = captured_effect_op();
+        let env = Env::new().with_binding("provider".to_string(), provider_handler(23));
+        let mut chain_with_provider = HandlerChain::new();
+        chain_with_provider.push(HandlerFrame::Provider {
+            op: op.clone(),
+            handler: "provider".to_string(),
+        });
+
+        let thunk = captured_thunk(ThunkMode::Lazy, &op);
+        let mut runtime = CpsRuntime::new();
+        let evaluated = eval_value_with_runtime(&thunk, &env, &chain_with_provider, &mut runtime)
+            .expect("lazy thunk should evaluate");
+        if let Value::ThunkClosure { captured_chain, .. } = &evaluated {
+            assert_eq!(*captured_chain, chain_with_provider);
+        } else {
+            panic!("expected thunk closure");
+        }
+        let thunk = evaluated;
+
+        let result = force_thunk_result(thunk, HandlerChain::new(), &mut runtime);
+        assert_eq!(result, Ok(Atom::Int(23)));
+    }
+}

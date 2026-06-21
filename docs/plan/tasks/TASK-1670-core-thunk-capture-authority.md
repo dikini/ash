@@ -1,6 +1,6 @@
 # TASK-1670: Verify thunk capture authority
 
-**Status:** Planned
+**Status:** Done
 **Phase:** [PLAN-163](../PLAN-163-CORE-LAZY-MEMO-MODES.md)
 **Owner:** Phase 163
 
@@ -45,7 +45,8 @@ Add lowering/runtime tests proving thunks use the handler/provider chain capture
 
 ## Completion Checklist
 
-- [ ] Lazy thunk force uses construction-time chain.
-- [ ] Memo thunk force uses construction-time chain.
-- [ ] Force-site continuation still receives the result.
-- [ ] Lowering tests confirm emitted thunk placeholders are filled by runtime construction.
+- [x] Lazy thunk force uses construction-time chain.
+- [x] Memo thunk force uses construction-time chain.
+- [x] Force-site continuation still receives the result.
+- [x] Lowering tests confirm emitted thunk placeholders are filled by runtime construction.
+- [x] Add runtime assertion that forced thunks dispatch through construction-time handler/provider chain.

@@ -1,6 +1,6 @@
 # TASK-1665: Type-check mode type well-formedness
 
-**Status:** Planned
+**Status:** Done
 **Phase:** [PLAN-163](../PLAN-163-CORE-LAZY-MEMO-MODES.md)
 **Owner:** Phase 163
 
@@ -38,9 +38,9 @@ Extend Core type well-formedness and equivalence for `Strict`, `Lazy`, and `Memo
 
 ## Completion Checklist
 
-- [ ] Inner type validation is recursive.
-- [ ] Strict mode rejects `Some(row)`.
-- [ ] Lazy and memo modes reject missing latent rows.
-- [ ] Lazy and memo latent rows are recursively well formed.
-- [ ] Mode invariance is enforced.
-- [ ] Mode mismatch has a structured diagnostic.
+- [x] Inner type validation is recursive.
+- [x] Strict mode rejects `Some(row)`.
+- [x] Lazy and memo modes reject missing latent rows.
+- [x] Lazy and memo latent rows are recursively well formed.
+- [x] Mode invariance is enforced.
+- [x] Mode mismatch has a structured diagnostic.

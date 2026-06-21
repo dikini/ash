@@ -5,7 +5,7 @@
 //! closed instead of being accepted optimistically.
 
 use crate::core_ash::{
-    CoreAtom, CoreContRef, CoreContractDischarge, CoreDischargeMode, CoreEffectOp,
+    CoreAtom, CoreContRef, CoreContractDischarge, CoreDischargeMode, CoreEffectOp, CoreEvalMode,
     CoreEvidenceStatus, CoreExpr, CoreHandlerClause, CoreMultiplicity, CoreName, CoreParam,
     CorePrimOp, CoreRow, CoreRowItem, CoreType, CoreValue,
 };
@@ -635,6 +635,13 @@ pub enum CoreTypeCheckError {
     #[error("row mismatch")]
     RowMismatch { expected: CoreRow, actual: CoreRow },
 
+    /// Two mode types are structurally incompatible.
+    #[error("mode type mismatch: expected mode `{expected:?}`, got `{actual:?}`")]
+    ModeTypeMismatch {
+        expected: CoreEvalMode,
+        actual: CoreEvalMode,
+    },
+
     /// Two types were expected to match but did not.
     #[error("type mismatch")]
     TypeMismatch {
@@ -653,6 +660,10 @@ pub enum CoreTypeCheckError {
     /// The checker has not implemented this Core form yet.
     #[error("unsupported Core type-check form: {detail}")]
     UnsupportedCoreForm { detail: String },
+
+    /// A mode type has an invalid latent-row shape.
+    #[error("invalid mode type: {detail}")]
+    InvalidModeType { detail: String },
 }
 
 /// Error returned while constructing public Core summaries.
@@ -1058,13 +1069,31 @@ pub fn check_core_type_well_formed(
             check_types_well_formed(args, env)
         }
         CoreType::Mode {
-            mode: _,
+            mode,
             inner,
             latent_row,
         } => {
             check_core_type_well_formed(inner, env)?;
-            if let Some(row) = latent_row {
-                check_core_row_well_formed(row, env)?;
+            match mode {
+                CoreEvalMode::Strict => {
+                    if latent_row.is_some() {
+                        return Err(CoreTypeCheckError::InvalidModeType {
+                            detail: "strict mode requires no latent row".to_owned(),
+                        });
+                    }
+                }
+                CoreEvalMode::Lazy | CoreEvalMode::Memo => {
+                    let Some(row) = latent_row else {
+                        return Err(CoreTypeCheckError::InvalidModeType {
+                            detail: match mode {
+                                CoreEvalMode::Lazy => "lazy mode requires a latent row".to_owned(),
+                                CoreEvalMode::Memo => "memo mode requires a latent row".to_owned(),
+                                CoreEvalMode::Strict => unreachable!(),
+                            },
+                        });
+                    };
+                    check_core_row_well_formed(row, env)?;
+                }
             }
             Ok(())
         }
@@ -1554,6 +1583,28 @@ fn types_equivalent_unchecked(lhs: &CoreType, rhs: &CoreType, env: &CoreTypeChec
             },
         ) => {
             left_name == right_name && type_slices_equivalent_unchecked(left_args, right_args, env)
+        }
+        (
+            CoreType::Mode {
+                mode: left_mode,
+                inner: left_inner,
+                latent_row: left_latent_row,
+            },
+            CoreType::Mode {
+                mode: right_mode,
+                inner: right_inner,
+                latent_row: right_latent_row,
+            },
+        ) => {
+            left_mode == right_mode
+                && types_equivalent_unchecked(left_inner, right_inner, env)
+                && match (left_latent_row, right_latent_row) {
+                    (None, None) => true,
+                    (Some(left_row), Some(right_row)) => {
+                        rows_equivalent_unchecked(left_row, right_row, env)
+                    }
+                    _ => false,
+                }
         }
         _ => false,
     }
@@ -2235,6 +2286,46 @@ fn check_type_against_annotation(
         }
 
         return Ok(result_facts);
+    }
+
+    if let (
+        CoreType::Mode {
+            mode: expected_mode,
+            inner: expected_inner,
+            latent_row: expected_row,
+        },
+        CoreType::Mode {
+            mode: actual_mode,
+            inner: actual_inner,
+            latent_row: actual_row,
+        },
+    ) = (expected, actual)
+    {
+        if expected_mode != actual_mode {
+            return Err(CoreTypeCheckError::ModeTypeMismatch {
+                expected: *expected_mode,
+                actual: *actual_mode,
+            });
+        }
+
+        match (expected_row, actual_row) {
+            (None, None) => {}
+            (Some(expected_row), Some(actual_row)) => {
+                if !rows_equivalent(expected_row, actual_row, env)? {
+                    return Err(CoreTypeCheckError::RowMismatch {
+                        expected: expected_row.clone(),
+                        actual: actual_row.clone(),
+                    });
+                }
+            }
+            _ => {
+                return Err(CoreTypeCheckError::InvalidModeType {
+                    detail: "mode latent-row shape differs".to_owned(),
+                });
+            }
+        }
+
+        return check_type_against_annotation(expected_inner, actual_inner, env);
     }
 
     if types_equivalent_unchecked(expected, actual, env) {

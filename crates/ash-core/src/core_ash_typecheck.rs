@@ -7,7 +7,7 @@
 use crate::core_ash::{
     CoreAtom, CoreContRef, CoreContractDischarge, CoreDischargeMode, CoreEffectOp, CoreEvalMode,
     CoreEvidenceStatus, CoreExpr, CoreHandlerClause, CoreMultiplicity, CoreName, CoreParam,
-    CorePrimOp, CoreRow, CoreRowItem, CoreType, CoreValue,
+    CorePrimOp, CoreRow, CoreRowItem, CoreThunkMode, CoreType, CoreValue,
 };
 use crate::core_ash_lower::{
     CoreLoweringContext, CoreLoweringError, lower_core_program_with_context_and_letcall_rows,
@@ -1453,8 +1453,41 @@ pub fn synthesize_core_value(
                 facts,
             });
         }
-        CoreValue::Thunk { .. } => {
-            return Err(unsupported("Thunk"));
+        CoreValue::Thunk {
+            mode: thunk_mode,
+            result_ty,
+            body,
+            row,
+            captures: _,
+        } => {
+            if matches!(result_ty, CoreType::Mode { .. }) {
+                return Err(CoreTypeCheckError::InvalidModeType {
+                    detail: "thunk result type must not be a mode type".to_owned(),
+                });
+            }
+
+            check_core_row_well_formed(row, env)?;
+            let body_checked = type_check_expr_against(body, result_ty, env)?;
+
+            if !rows_equivalent(row, &body_checked.row, env)? {
+                return Err(CoreTypeCheckError::RowMismatch {
+                    expected: row.clone(),
+                    actual: body_checked.row,
+                });
+            }
+
+            let mode = match thunk_mode {
+                CoreThunkMode::Lazy => CoreEvalMode::Lazy,
+                CoreThunkMode::Memo => CoreEvalMode::Memo,
+            };
+            (
+                CoreType::Mode {
+                    mode,
+                    inner: Box::new(result_ty.clone()),
+                    latent_row: Some(row.clone()),
+                },
+                body_checked.facts,
+            )
         }
     };
 

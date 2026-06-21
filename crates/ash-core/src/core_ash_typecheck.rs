@@ -958,9 +958,22 @@ fn collect_letcall_function_rows(
             path.pop();
             Ok(())
         }
-        CoreExpr::Force { body, .. } => {
+        CoreExpr::Force { name, thunk, body } => {
+            let mut body_env = env.clone();
+            if let CoreAtom::Var(thunk_name) = thunk
+                && let Some(CoreType::Mode {
+                    mode: CoreEvalMode::Lazy | CoreEvalMode::Memo,
+                    inner,
+                    ..
+                }) = env.values().lookup(thunk_name)
+            {
+                body_env
+                    .values_mut()
+                    .insert(name.clone(), inner.as_ref().clone());
+            }
+
             path.push(0);
-            let result = collect_letcall_function_rows(body, env, path, rows);
+            let result = collect_letcall_function_rows(body, &body_env, path, rows);
             path.pop();
             result
         }
@@ -2101,6 +2114,15 @@ fn lowering_context_with_checked_facts(
     for (name, ty) in &env.values.bindings {
         if let CoreType::Function { row, .. } = ty {
             context = context.with_function_row(name.clone(), row.clone());
+        }
+
+        if let CoreType::Mode {
+            mode: CoreEvalMode::Lazy | CoreEvalMode::Memo,
+            latent_row: Some(row),
+            ..
+        } = ty
+        {
+            context = context.with_mode_binding_latent_row(name.clone(), row.clone());
         }
     }
 

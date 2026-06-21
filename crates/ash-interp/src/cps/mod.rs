@@ -489,16 +489,36 @@ fn eval_letrec(
             row,
             memo_cell,
         } => {
+            let memo_cell = match (mode, memo_cell) {
+                (ThunkMode::Memo, None) => Some(runtime.allocate_memo_cell()),
+                (_, memo_cell) => *memo_cell,
+            };
+
             let marked_body = mark_rec_binding(body.as_ref(), name);
-            let marked_thunk = Value::ThunkClosure {
+            let marked_body = Box::new(marked_body);
+
+            let placeholder = Value::ThunkClosure {
                 mode: *mode,
-                body: Box::new(marked_body),
+                body: marked_body.clone(),
                 captured_env: captured_env.clone(),
                 captured_chain: captured_chain.clone(),
                 row: row.clone(),
-                memo_cell: *memo_cell,
+                memo_cell,
             };
-            eval_value_with_runtime(&marked_thunk, &new_env, chain, runtime)?
+
+            let mut recursive_env = new_env.clone();
+            recursive_env = recursive_env.with_binding(name.clone(), placeholder);
+
+            let marked_thunk = Value::ThunkClosure {
+                mode: *mode,
+                body: marked_body,
+                captured_env: captured_env.clone(),
+                captured_chain: captured_chain.clone(),
+                row: row.clone(),
+                memo_cell,
+            };
+
+            eval_value_with_runtime(&marked_thunk, &recursive_env, chain, runtime)?
         }
         other => other.clone(),
     };
@@ -1306,5 +1326,56 @@ mod tests {
         let result =
             eval_unchecked_with_runtime(&letrec_term, &env, &chain_with_provider, &mut runtime);
         assert_eq!(result, Ok(Atom::Int(41)));
+    }
+
+    #[test]
+    fn letrec_memo_thunk_self_force_is_reentrant_rejected() {
+        let letrec_term = Term::LetRec {
+            name: "memoized".to_string(),
+            value: Value::ThunkClosure {
+                mode: ThunkMode::Memo,
+                body: Box::new(Value::Lam {
+                    params: vec![],
+                    cont: "resume".to_string(),
+                    body: Box::new(Term::LetPrim {
+                        name: "self_forced".to_string(),
+                        op: PrimOp::ForceThunk,
+                        args: vec![Atom::Var("memoized".to_string())],
+                        body: Box::new(Term::Return {
+                            value: Atom::Int(7),
+                        }),
+                    }),
+                    captured_env: Env::default(),
+                    rec_binding: None,
+                    row: EffectRow::default(),
+                }),
+                captured_env: Env::default(),
+                captured_chain: HandlerChain::new(),
+                row: EffectRow::default(),
+                memo_cell: None,
+            },
+            body: Box::new(Term::LetPrim {
+                name: "forced".to_string(),
+                op: PrimOp::ForceThunk,
+                args: vec![Atom::Var("memoized".to_string())],
+                body: Box::new(Term::Return {
+                    value: Atom::Int(0),
+                }),
+            }),
+        };
+
+        let mut runtime = CpsRuntime::new();
+        let result = eval_unchecked_with_runtime(
+            &letrec_term,
+            &Env::default(),
+            &HandlerChain::default(),
+            &mut runtime,
+        );
+        assert_eq!(
+            result,
+            Err(CpsError::Trap(TrapReason::Custom(
+                "re-entrant memo force".to_string()
+            )))
+        );
     }
 }

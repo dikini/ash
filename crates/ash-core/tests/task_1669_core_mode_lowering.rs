@@ -331,3 +331,137 @@ fn force_lowers_to_force_primitive_and_carries_latent_row() {
         other => panic!("expected top-level LetVal for memo letmode, got {other:?}"),
     }
 }
+
+#[test]
+fn force_binder_is_visible_for_nested_letcall_rows() {
+    let mut env = CoreTypeCheckEnv::default();
+    env.values_mut().insert(
+        "memoized_fn".to_string(),
+        typed_fn(vec![], base("Int"), cap_row(&["db"], "read")),
+    );
+    env.values_mut().insert(
+        "thunked_fn".to_string(),
+        CoreType::Mode {
+            mode: CoreEvalMode::Lazy,
+            inner: Box::new(CoreType::Function {
+                params: vec![],
+                result: Box::new(base("Int")),
+                row: cap_row(&["db"], "write"),
+            }),
+            latent_row: Some(cap_row(&["db"], "read")),
+        },
+    );
+
+    let expr = CoreExpr::Force {
+        name: "forced".to_string(),
+        thunk: CoreAtom::Var("thunked_fn".to_string()),
+        body: Box::new(CoreExpr::LetCall {
+            name: "forced_call".to_string(),
+            func: CoreAtom::Var("forced".to_string()),
+            args: vec![],
+            body: Box::new(CoreExpr::Atom(CoreAtom::LitInt(1))),
+        }),
+    };
+
+    let (typed, lowered) = lower_program(expr, env);
+
+    assert_eq!(
+        typed.row(),
+        &CoreRow {
+            items: vec![
+                CoreRowItem::Capability {
+                    path: vec!["db".to_string()],
+                    operation: "write".to_string()
+                },
+                CoreRowItem::Capability {
+                    path: vec!["db".to_string()],
+                    operation: "read".to_string()
+                },
+            ],
+            tail: None,
+        }
+    );
+    assert_eq!(typed.ty(), &base("Int"));
+
+    match lowered {
+        Term::LetPrim {
+            name,
+            op,
+            args,
+            body,
+            ..
+        } => {
+            assert_eq!(name, "forced");
+            assert_eq!(op, PrimOp::ForceThunk);
+            assert_eq!(args, vec![cps::Atom::Var("thunked_fn".to_string())]);
+            match *body {
+                Term::LetCont {
+                    cont_body,
+                    body: call_body,
+                    ..
+                } => {
+                    assert!(matches!(*call_body, Term::Call { .. }));
+                    assert!(matches!(*cont_body, Term::Jump { .. }));
+                }
+                other => panic!("expected let-call lowering to follow force, got {other:?}"),
+            }
+        }
+        other => panic!("expected top-level force lowering, got {other:?}"),
+    }
+}
+
+#[test]
+fn checked_lowering_seeds_mode_rows_from_environment_bindings() {
+    let mut env = CoreTypeCheckEnv::default();
+    env.values_mut().insert(
+        "memoized".to_string(),
+        CoreType::Mode {
+            mode: CoreEvalMode::Memo,
+            inner: Box::new(base("Int")),
+            latent_row: Some(cap_row(&["db"], "read")),
+        },
+    );
+
+    let expr = CoreExpr::Force {
+        name: "forced".to_string(),
+        thunk: CoreAtom::Var("memoized".to_string()),
+        body: Box::new(CoreExpr::Atom(CoreAtom::LitInt(1))),
+    };
+
+    let (typed, lowered) = {
+        let program = RawCoreProgram::new(expr);
+        let valid = validate_core_program(program).expect("test fixture should validate");
+        let context = CoreLoweringContext::new(
+            ash_core::cps::ContRef::Label("k0".to_string()),
+            CoreRow::default(),
+        );
+        type_check_and_lower_core_program(valid, &env, context)
+            .expect("environment-mode force should lower using seeded checked mode rows")
+            .into_parts()
+    };
+
+    assert_eq!(typed.row(), &cap_row(&["db"], "read"));
+    assert_eq!(typed.ty(), &base("Int"));
+
+    match lowered {
+        Term::LetPrim {
+            name,
+            op,
+            args,
+            body,
+            ..
+        } => {
+            assert_eq!(name, "forced");
+            assert_eq!(op, PrimOp::ForceThunk);
+            assert_eq!(args, vec![cps::Atom::Var("memoized".to_string())]);
+            match *body {
+                Term::Jump {
+                    arg: cps::Atom::Int(1),
+                    ..
+                } => {}
+                other => panic!("expected forced body jump, got {other:?}"),
+            }
+        }
+        other => panic!("expected top-level LetPrim for force, got {other:?}"),
+    }
+}

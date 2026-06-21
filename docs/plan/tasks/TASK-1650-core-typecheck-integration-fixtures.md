@@ -1,6 +1,6 @@
 # TASK-1650: Add Core type-check integration fixtures
 
-**Status:** Planned
+**Status:** Complete
 **Phase:** [PLAN-162](../PLAN-162-CORE-ASH-TYPE-CHECKING.md)
 **Owner:** Phase 162
 
@@ -66,3 +66,25 @@ cargo fmt --check
 ```
 
 Expected: integration and affected crate tests pass.
+
+## Completion Evidence
+
+Implemented in Phase 162 worktree:
+
+- Added `crates/ash-core/tests/task_1650_core_typecheck_integration.rs`.
+- Added invalid Core fixture coverage for type mismatch, row mismatch, operation arity mismatch, and affine resume misuse.
+- Added `type_check_and_lower_core_program` so lowering runs after type checking and consumes checked continuation/function row facts.
+- Added regression coverage proving checked lowering preserves external function rows from the type-check environment even when the lowering context does not pre-register them.
+
+Verified:
+
+```bash
+cargo test -p ash-core --test task_1650_core_typecheck_integration checked_lowering_uses_typechecked_external_function_rows
+cargo test -p ash-core --test task_1650_core_typecheck_integration
+cargo test -p ash-core --test task_1629_core_end_to_end
+cargo test -p ash-core
+cargo clippy -p ash-core --all-targets -- -D warnings
+cargo fmt --check
+git diff --check
+cargo test -p spec_processor spec_links
+```

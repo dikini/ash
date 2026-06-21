@@ -9,7 +9,11 @@ use crate::core_ash::{
     CoreEvidenceStatus, CoreExpr, CoreHandlerClause, CoreMultiplicity, CoreName, CoreParam,
     CorePrimOp, CoreRow, CoreRowItem, CoreType, CoreValue,
 };
+use crate::core_ash_lower::{
+    CoreLoweringContext, CoreLoweringError, lower_core_program_with_context,
+};
 use crate::core_ash_validate::ValidCoreProgram;
+use crate::cps::Term;
 use std::collections::{HashMap, HashSet};
 
 /// Type-checking environment for Core Ash.
@@ -349,6 +353,33 @@ impl TypedCoreProgram {
     }
 }
 
+/// A Core program that has been type-checked and lowered using checked facts.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CheckedLoweredCoreProgram {
+    typed: TypedCoreProgram,
+    lowered: Term,
+}
+
+impl CheckedLoweredCoreProgram {
+    /// Returns the typed Core program.
+    #[must_use]
+    pub fn typed(&self) -> &TypedCoreProgram {
+        &self.typed
+    }
+
+    /// Returns the lowered CPS term.
+    #[must_use]
+    pub fn lowered(&self) -> &Term {
+        &self.lowered
+    }
+
+    /// Consumes the wrapper and returns both checked and lowered artifacts.
+    #[must_use]
+    pub fn into_parts(self) -> (TypedCoreProgram, Term) {
+        (self.typed, self.lowered)
+    }
+}
+
 /// Typed facts computed during Core type checking for later compiler stages.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct CoreTypeCheckFacts {
@@ -640,6 +671,18 @@ pub enum CorePublicSummaryError {
     InvalidRow { detail: String },
 }
 
+/// Error returned by the checked Core type-check-and-lower integration path.
+#[derive(Debug, Clone, PartialEq, thiserror::Error)]
+pub enum CoreCheckedLoweringError {
+    /// Core type checking failed before lowering started.
+    #[error(transparent)]
+    TypeCheck(#[from] CoreTypeCheckError),
+
+    /// Core-to-CPS lowering failed after successful type checking.
+    #[error(transparent)]
+    Lower(#[from] CoreLoweringError),
+}
+
 /// A structural row-variable solution discovered during row comparison.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CoreRowSolution {
@@ -735,6 +778,27 @@ pub fn type_check_core_program(
         row: checked.row,
         facts: checked.facts,
     })
+}
+
+/// Type-checks a validated Core program, then lowers it using checked facts.
+///
+/// This is the integration boundary for consumers that need lowering to honor
+/// typechecker facts such as continuation rows discovered for `Jump`.
+///
+/// # Errors
+///
+/// Returns [`CoreCheckedLoweringError::TypeCheck`] if type checking fails, and
+/// [`CoreCheckedLoweringError::Lower`] if lowering fails after successful type
+/// checking.
+pub fn type_check_and_lower_core_program(
+    program: ValidCoreProgram,
+    env: &CoreTypeCheckEnv,
+    context: CoreLoweringContext,
+) -> Result<CheckedLoweredCoreProgram, CoreCheckedLoweringError> {
+    let typed = type_check_core_program(program.clone(), env)?;
+    let context = lowering_context_with_checked_facts(context, env, typed.facts());
+    let lowered = lower_core_program_with_context(program, context)?;
+    Ok(CheckedLoweredCoreProgram { typed, lowered })
 }
 
 /// Checks that a Core type is well formed under the type-checking environment.
@@ -1448,6 +1512,23 @@ fn merge_typecheck_facts(
         .extend(rhs.refinement_obligations);
     lhs.discharges.extend(rhs.discharges);
     lhs
+}
+
+fn lowering_context_with_checked_facts(
+    mut context: CoreLoweringContext,
+    env: &CoreTypeCheckEnv,
+    facts: &CoreTypeCheckFacts,
+) -> CoreLoweringContext {
+    for (name, ty) in &env.values.bindings {
+        if let CoreType::Function { row, .. } = ty {
+            context = context.with_function_row(name.clone(), row.clone());
+        }
+    }
+
+    for (cont, row) in facts.jump_continuation_rows() {
+        context = context.with_cont_row(cont_ref_name(cont), row.clone());
+    }
+    context
 }
 
 fn type_check_expr(

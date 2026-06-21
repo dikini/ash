@@ -6,6 +6,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Added
+- Added Core Ash type-check integration fixtures and a checked type-check-and-lower boundary that preserves checked continuation and external function rows before CPS lowering, with invalid fixtures for type mismatch, row mismatch, operation arity mismatch, and affine resume misuse. (TASK-1650)
 - Added Core Ash public summary scaffolding for normalized public function rows, type-constructor identity/arity facts, refinement obligation metadata, discharge metadata, and private effect-group leakage diagnostics. (TASK-1649)
 - Added Core Ash refinement-obligation and discharge metadata scaffolding, including base-to-refinement obligations, refinement-to-base forgetting without new obligations, `RecordDischarge` validation, invalid discharge diagnostics, and proof/evidence metadata accessors on typed programs. (TASK-1648)
 - Added Core Ash `Handle` type checking with operation parameter checks, affine resume type checks, handler-clause row validation, and SPEC-098b residual-row transformation preserving captured resume effects and ambient non-raised requirements. (TASK-1647)

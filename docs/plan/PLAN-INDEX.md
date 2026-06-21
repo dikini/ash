@@ -137,7 +137,7 @@ Update this section as tasks complete:
 || [159](PLAN-159-CPS-IR-INTERPRETER.md) | 14 | 14 | ✅ Complete; all tasks implemented, 82 tests pass, reference docs added, review remediation done (validation boundary, lambda closure capture, handler semantics) |
 || [160](PLAN-160-CPS-IR-RUNTIME-EXPANSION.md) | 10 | 10 | ✅ Complete; CPS IR runtime expansion implemented, focused tests pass, reference docs updated |
 || [161](PLAN-161-CORE-ASH-IR-FOUNDATION.md) | 13 | 13 | ✅ Complete; Core Ash foundation and public Core text round-trip review remediation verified |
-|| [162](PLAN-162-CORE-ASH-TYPE-CHECKING.md) | 12 | 9 | 🧪 In progress; Core Ash API, type/row scaffolds, atom/value/expression typing, call/jump row accounting, raised operations, handlers, and refinement/discharge metadata complete |
+|| [162](PLAN-162-CORE-ASH-TYPE-CHECKING.md) | 12 | 10 | 🧪 In progress; Core Ash API, type/row scaffolds, atom/value/expression typing, call/jump row accounting, raised operations, handlers, refinement/discharge metadata, and public summaries complete |
 |
 |---
 
@@ -533,7 +533,7 @@ Builds the first implementation slice for Core Ash: dedicated Core AST carriers,
 
 ## Phase 162: Core Ash Type Checking
 
-**Status:** 🧪 In progress; 9/12 implemented
+**Status:** 🧪 In progress; 10/12 implemented
 **Plan:** [PLAN-162: Core Ash Type Checking](PLAN-162-CORE-ASH-TYPE-CHECKING.md)
 **Spec:** [SPEC-100: Ash Core Type Checking](../spec/SPEC-100-CORE-TYPE-CHECKING.md)
 **Depends on:** Phase 161; SPEC-100, SPEC-099, SPEC-098b, SPEC-097b, SPEC-096b.
@@ -551,6 +551,6 @@ Implements the first annotation-led Core Ash type checker. The phase adds Core t
 | [TASK-1646](tasks/TASK-1646-core-effect-operation-typing.md) | Type capability/channel/process/failure Raise operations and operation signatures | ✅ Complete |
 | [TASK-1647](tasks/TASK-1647-core-handle-affine-resume-typecheck.md) | Type Handle clauses with affine resume and captured-resume row preservation | ✅ Complete |
 | [TASK-1648](tasks/TASK-1648-core-refinement-obligations-discharge.md) | Record refinement obligations and validate discharge metadata shape | ✅ Complete |
-| [TASK-1649](tasks/TASK-1649-core-public-summary-scaffold.md) | Add public type/row summary scaffolding and private alias diagnostics | 📝 Planned |
+| [TASK-1649](tasks/TASK-1649-core-public-summary-scaffold.md) | Add public type/row summary scaffolding and private alias diagnostics | ✅ Complete |
 | [TASK-1650](tasks/TASK-1650-core-typecheck-integration-fixtures.md) | Add `.core` parse -> validate -> type-check -> lower integration fixtures | 📝 Planned |
 | [TASK-1651](tasks/TASK-1651-core-typecheck-reference-closeout.md) | Document Core type-checker behavior and close out Phase 162 | 📝 Planned |

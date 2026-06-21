@@ -412,6 +412,140 @@ impl CoreRefinementObligation {
     }
 }
 
+/// Public summary of one Core function type.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CorePublicFunctionSummary {
+    exported_name: CoreName,
+    params: Vec<CoreType>,
+    result: CoreType,
+    row: CorePublicRowSummary,
+    type_constructors: Vec<CorePublicTypeConstructorSummary>,
+    refinement_obligations: Vec<CoreRefinementObligation>,
+    discharges: Vec<CoreContractDischarge>,
+}
+
+impl CorePublicFunctionSummary {
+    /// Returns the exported function name represented by this summary.
+    #[must_use]
+    pub fn exported_name(&self) -> &str {
+        &self.exported_name
+    }
+
+    /// Returns the public parameter types.
+    #[must_use]
+    pub fn params(&self) -> &[CoreType] {
+        &self.params
+    }
+
+    /// Returns the public result type.
+    #[must_use]
+    pub fn result(&self) -> &CoreType {
+        &self.result
+    }
+
+    /// Returns the normalized public requirement row summary.
+    #[must_use]
+    pub fn row(&self) -> &CorePublicRowSummary {
+        &self.row
+    }
+
+    /// Returns named type constructors referenced by the public function type.
+    #[must_use]
+    pub fn type_constructors(&self) -> &[CorePublicTypeConstructorSummary] {
+        &self.type_constructors
+    }
+
+    /// Returns public refinement obligations retained for downstream checking.
+    #[must_use]
+    pub fn refinement_obligations(&self) -> &[CoreRefinementObligation] {
+        &self.refinement_obligations
+    }
+
+    /// Returns discharge metadata retained for downstream checking.
+    #[must_use]
+    pub fn discharges(&self) -> &[CoreContractDischarge] {
+        &self.discharges
+    }
+}
+
+/// Public summary of a normalized Core requirement row.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CorePublicRowSummary {
+    items: Vec<CorePublicRowItemSummary>,
+    tail: Option<CoreName>,
+}
+
+impl CorePublicRowSummary {
+    /// Returns normalized public row items.
+    #[must_use]
+    pub fn items(&self) -> &[CorePublicRowItemSummary] {
+        &self.items
+    }
+
+    /// Returns the open-row tail, when the public row remains polymorphic.
+    #[must_use]
+    pub fn tail(&self) -> Option<&str> {
+        self.tail.as_deref()
+    }
+}
+
+/// Public summary of one normalized Core row item.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CorePublicRowItemSummary {
+    Capability {
+        path: Vec<String>,
+        operation: String,
+    },
+    Resource {
+        path: Vec<String>,
+        mode: String,
+    },
+    Role {
+        path: Vec<String>,
+    },
+    Policy {
+        path: Vec<String>,
+    },
+    Contract {
+        contract: String,
+    },
+    Channel {
+        path: Vec<String>,
+        mode: String,
+        payload_type: Box<CoreType>,
+    },
+    Process {
+        operation: String,
+    },
+    Failure {
+        ty: Option<Box<CoreType>>,
+    },
+    Evidence {
+        path: Vec<String>,
+    },
+}
+
+/// Public type-constructor identity and arity referenced by a summary.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CorePublicTypeConstructorSummary {
+    name: CoreName,
+    arity: usize,
+}
+
+impl CorePublicTypeConstructorSummary {
+    /// Returns the constructor name.
+    #[must_use]
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    /// Returns the constructor arity visible in the public type.
+    #[must_use]
+    pub fn arity(&self) -> usize {
+        self.arity
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct TypedCoreExpr {
     ty: CoreType,
@@ -484,6 +618,26 @@ pub enum CoreTypeCheckError {
     /// The checker has not implemented this Core form yet.
     #[error("unsupported Core type-check form: {detail}")]
     UnsupportedCoreForm { detail: String },
+}
+
+/// Error returned while constructing public Core summaries.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+pub enum CorePublicSummaryError {
+    /// A private or ambiguous row reference would leak through a public summary.
+    #[error("private row reference `{}` in public summary", path.join("."))]
+    PrivateRowReference {
+        path: Vec<String>,
+        public_item: Option<CoreName>,
+        detail: String,
+    },
+
+    /// A non-function type was summarized as a public function.
+    #[error("invalid public function summary: {detail}")]
+    InvalidFunctionType { detail: String },
+
+    /// A row failed normalization before summary emission.
+    #[error("invalid public row summary: {detail}")]
+    InvalidRow { detail: String },
 }
 
 /// A structural row-variable solution discovered during row comparison.
@@ -771,6 +925,84 @@ pub fn core_row_included_in(
     }
 }
 
+/// Builds a public summary for a normalized Core requirement row.
+///
+/// # Errors
+///
+/// Returns [`CorePublicSummaryError`] when the row contains a private or
+/// ambiguous group reference, or when normalization fails.
+pub fn summarize_core_public_row(
+    row: &CoreRow,
+) -> Result<CorePublicRowSummary, CorePublicSummaryError> {
+    for item in &row.items {
+        if let CoreRowItem::EffectGroupRef { path } = item {
+            return Err(CorePublicSummaryError::PrivateRowReference {
+                path: path.clone(),
+                public_item: None,
+                detail: format!(
+                    "private effect group {} must be expanded or exported before summary",
+                    path.join(".")
+                ),
+            });
+        }
+    }
+
+    let normalized = normalize_core_row(row).map_err(|err| CorePublicSummaryError::InvalidRow {
+        detail: err.to_string(),
+    })?;
+
+    let items = normalized
+        .items
+        .iter()
+        .map(public_row_item_summary)
+        .collect();
+
+    Ok(CorePublicRowSummary {
+        items,
+        tail: normalized.tail,
+    })
+}
+
+/// Builds a public summary for a Core function type.
+///
+/// # Errors
+///
+/// Returns [`CorePublicSummaryError`] when `ty` is not a function type or when
+/// its row cannot be exported safely.
+pub fn summarize_core_public_function_type(
+    exported_name: impl Into<CoreName>,
+    ty: &CoreType,
+    obligations: &[CoreRefinementObligation],
+    discharges: &[CoreContractDischarge],
+) -> Result<CorePublicFunctionSummary, CorePublicSummaryError> {
+    let CoreType::Function {
+        params,
+        result,
+        row,
+    } = ty
+    else {
+        return Err(CorePublicSummaryError::InvalidFunctionType {
+            detail: "public function summary requires a function type".to_owned(),
+        });
+    };
+
+    let mut type_constructors = Vec::new();
+    for param in params {
+        collect_public_type_constructors(param, &mut type_constructors);
+    }
+    collect_public_type_constructors(result, &mut type_constructors);
+
+    Ok(CorePublicFunctionSummary {
+        exported_name: exported_name.into(),
+        params: params.clone(),
+        result: (**result).clone(),
+        row: summarize_core_public_row(row)?,
+        type_constructors,
+        refinement_obligations: obligations.to_vec(),
+        discharges: discharges.to_vec(),
+    })
+}
+
 /// Synthesizes the type of a Core atom.
 ///
 /// # Errors
@@ -1035,6 +1267,129 @@ fn row_difference(left: &[CoreRowItem], right: &[CoreRowItem]) -> Vec<CoreRowIte
         .filter(|item| !right.contains(item))
         .cloned()
         .collect()
+}
+
+fn public_row_item_summary(item: &CoreRowItem) -> CorePublicRowItemSummary {
+    match item {
+        CoreRowItem::Capability { path, operation } => CorePublicRowItemSummary::Capability {
+            path: path.clone(),
+            operation: operation.clone(),
+        },
+        CoreRowItem::Resource { path, mode } => CorePublicRowItemSummary::Resource {
+            path: path.clone(),
+            mode: mode.clone(),
+        },
+        CoreRowItem::Role { path } => CorePublicRowItemSummary::Role { path: path.clone() },
+        CoreRowItem::Policy { path } => CorePublicRowItemSummary::Policy { path: path.clone() },
+        CoreRowItem::Contract { contract } => CorePublicRowItemSummary::Contract {
+            contract: contract.clone(),
+        },
+        CoreRowItem::Channel {
+            path,
+            mode,
+            payload_type,
+        } => CorePublicRowItemSummary::Channel {
+            path: path.clone(),
+            mode: mode.clone(),
+            payload_type: payload_type.clone(),
+        },
+        CoreRowItem::Process { operation } => CorePublicRowItemSummary::Process {
+            operation: operation.clone(),
+        },
+        CoreRowItem::Failure { ty } => CorePublicRowItemSummary::Failure { ty: ty.clone() },
+        CoreRowItem::Evidence { path } => CorePublicRowItemSummary::Evidence { path: path.clone() },
+        CoreRowItem::EffectGroupRef { .. } => {
+            unreachable!("effect group refs are rejected before summary mapping")
+        }
+    }
+}
+
+fn collect_public_type_constructors(
+    ty: &CoreType,
+    constructors: &mut Vec<CorePublicTypeConstructorSummary>,
+) {
+    match ty {
+        CoreType::Base(_) | CoreType::Named(_) | CoreType::Var(_) => {}
+        CoreType::Function {
+            params,
+            result,
+            row,
+        } => {
+            for param in params {
+                collect_public_type_constructors(param, constructors);
+            }
+            collect_public_type_constructors(result, constructors);
+            for item in &row.items {
+                collect_public_row_item_type_constructors(item, constructors);
+            }
+        }
+        CoreType::Refinement { base, .. } => {
+            collect_public_type_constructors(base, constructors);
+        }
+        CoreType::Cont {
+            input, answer, row, ..
+        } => {
+            collect_public_type_constructors(input, constructors);
+            collect_public_type_constructors(answer, constructors);
+            for item in &row.items {
+                collect_public_row_item_type_constructors(item, constructors);
+            }
+        }
+        CoreType::Tuple(elems) => {
+            for elem in elems {
+                collect_public_type_constructors(elem, constructors);
+            }
+        }
+        CoreType::Record(fields) => {
+            for (_, field_ty) in fields {
+                collect_public_type_constructors(field_ty, constructors);
+            }
+        }
+        CoreType::App { name, args } => {
+            push_public_type_constructor(constructors, name.clone(), args.len());
+            for arg in args {
+                collect_public_type_constructors(arg, constructors);
+            }
+        }
+    }
+}
+
+fn collect_public_row_item_type_constructors(
+    item: &CoreRowItem,
+    constructors: &mut Vec<CorePublicTypeConstructorSummary>,
+) {
+    match item {
+        CoreRowItem::Channel { payload_type, .. } => {
+            collect_public_type_constructors(payload_type, constructors);
+        }
+        CoreRowItem::Failure { ty: Some(ty) } => {
+            collect_public_type_constructors(ty, constructors);
+        }
+        CoreRowItem::Capability { .. }
+        | CoreRowItem::Resource { .. }
+        | CoreRowItem::Role { .. }
+        | CoreRowItem::Policy { .. }
+        | CoreRowItem::Contract { .. }
+        | CoreRowItem::Process { .. }
+        | CoreRowItem::Failure { ty: None }
+        | CoreRowItem::Evidence { .. }
+        | CoreRowItem::EffectGroupRef { .. } => {}
+    }
+}
+
+fn push_public_type_constructor(
+    constructors: &mut Vec<CorePublicTypeConstructorSummary>,
+    name: CoreName,
+    arity: usize,
+) {
+    if constructors
+        .iter()
+        .any(|constructor| constructor.name == name && constructor.arity == arity)
+    {
+        return;
+    }
+
+    constructors.push(CorePublicTypeConstructorSummary { name, arity });
 }
 
 fn union_core_rows(lhs: &CoreRow, rhs: &CoreRow) -> Result<CoreRow, CoreTypeCheckError> {

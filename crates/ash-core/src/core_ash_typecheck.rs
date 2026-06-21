@@ -2086,7 +2086,7 @@ fn lowering_context_with_checked_facts(
     }
 
     for (name, row) in facts.mode_binding_latent_rows() {
-        context = context.with_mode_row(name, row.clone());
+        context = context.with_mode_binding_latent_row(name, row.clone());
     }
 
     context

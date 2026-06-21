@@ -11,7 +11,7 @@ use crate::core_ash::{
 use crate::core_ash_validate::ValidCoreProgram;
 use crate::cps::{
     Atom, ContRef, ContractDischarge, DischargeType, EffectItem, EffectItemKind, EffectOp,
-    EffectRow, Env, HandlerClause, PrimOp, Term, TrapReason, Value,
+    EffectRow, Env, HandlerChain, HandlerClause, PrimOp, Term, ThunkMode, TrapReason, Value,
 };
 use std::collections::HashMap;
 
@@ -69,11 +69,24 @@ impl CoreLoweringContext {
         self
     }
 
-    /// Registers a local latent row captured by `LetMode`.
+    /// Register a local latent row captured by a lazy/memo mode binding.
     #[must_use]
-    pub fn with_mode_row(mut self, name: impl Into<String>, row: CoreRow) -> Self {
+    pub fn with_mode_binding_latent_row(mut self, name: impl Into<String>, row: CoreRow) -> Self {
         self.mode_rows.insert(name.into(), row);
         self
+    }
+
+    /// Registers a local latent row captured by `LetMode`.
+    ///
+    /// Deprecated: use [`with_mode_binding_latent_row`] directly.
+    #[must_use]
+    pub fn with_mode_row(self, name: impl Into<String>, row: CoreRow) -> Self {
+        self.with_mode_binding_latent_row(name, row)
+    }
+
+    /// Returns the latent row for a `LetMode` binding in scope.
+    pub fn mode_binding_latent_row(&self, name: &str) -> Option<&CoreRow> {
+        self.mode_rows.get(name)
     }
 }
 
@@ -317,12 +330,125 @@ fn lower_expr_with_letcall_rows(
                 row: lower_row(&call_row),
             })
         }
-        CoreExpr::Force { name, .. } => Err(CoreLoweringError::UnsupportedForm {
-            detail: format!("Force form is not supported in this phase: {name}"),
-        }),
-        CoreExpr::LetMode { .. } => Err(CoreLoweringError::UnsupportedForm {
-            detail: "LetMode is not supported in this phase".to_string(),
-        }),
+        CoreExpr::LetMode {
+            name,
+            mode,
+            ty,
+            expr,
+            body,
+        } => {
+            let expr_path = with_child_path(path, 0);
+            let body_path = with_child_path(path, 1);
+
+            let body_row = total_row_with_letcall_rows(body, state, &body_path, letcall_rows)?;
+
+            let mut expr_state = state.clone();
+            let cont_name = expr_state.fresh_cont_name();
+            let lowered_expr = {
+                let guard =
+                    expr_state.with_current_cont(ContRef::Var(cont_name.clone()), body_row.clone());
+                let lowered =
+                    lower_expr_with_letcall_rows(expr, &mut expr_state, &expr_path, letcall_rows)?;
+                expr_state.restore_current_cont(guard);
+                lowered
+            };
+
+            if matches!(mode, crate::core_ash::CoreEvalMode::Strict) {
+                let mut body_state = state.clone();
+                if let CoreType::Function { row, .. } = ty {
+                    body_state
+                        .context
+                        .function_rows
+                        .insert(name.clone(), row.clone());
+                }
+
+                let lowered_body =
+                    lower_expr_with_letcall_rows(body, &mut body_state, &body_path, letcall_rows)?;
+
+                Ok(Term::LetCont {
+                    name: cont_name,
+                    param: name.clone(),
+                    cont_body: Box::new(lowered_body),
+                    body: Box::new(lowered_expr),
+                })
+            } else {
+                let latent_row = match mode {
+                    crate::core_ash::CoreEvalMode::Lazy => match ty {
+                        CoreType::Mode {
+                            latent_row: Some(row),
+                            ..
+                        } => row.clone(),
+                        _ => {
+                            return Err(CoreLoweringError::UnsupportedForm {
+                                detail: "lazy mode annotation requires latent row".to_string(),
+                            });
+                        }
+                    },
+                    crate::core_ash::CoreEvalMode::Memo => match ty {
+                        CoreType::Mode {
+                            latent_row: Some(row),
+                            ..
+                        } => row.clone(),
+                        _ => {
+                            return Err(CoreLoweringError::UnsupportedForm {
+                                detail: "memo mode annotation requires latent row".to_string(),
+                            });
+                        }
+                    },
+                    crate::core_ash::CoreEvalMode::Strict => {
+                        unreachable!("handled above")
+                    }
+                };
+
+                let mut body_state = state.clone();
+                let lexical_state = body_state
+                    .context
+                    .with_mode_binding_latent_row(name.clone(), latent_row.clone());
+                body_state.context = lexical_state;
+
+                let thunk_mode = match mode {
+                    crate::core_ash::CoreEvalMode::Lazy => ThunkMode::Lazy,
+                    crate::core_ash::CoreEvalMode::Memo => ThunkMode::Memo,
+                    crate::core_ash::CoreEvalMode::Strict => {
+                        unreachable!("handled above")
+                    }
+                };
+
+                let lowered_body =
+                    lower_expr_with_letcall_rows(body, &mut body_state, &body_path, letcall_rows)?;
+                let lowered_thunk = lower_core_mode_thunk(
+                    state,
+                    &expr_path,
+                    letcall_rows,
+                    thunk_mode,
+                    &latent_row,
+                    expr,
+                )?;
+
+                Ok(Term::LetVal {
+                    name: name.clone(),
+                    value: lowered_thunk,
+                    body: Box::new(lowered_body),
+                })
+            }
+        }
+        CoreExpr::Force { name, thunk, body } => {
+            let _latent_row = mode_binding_row_for_force(state, thunk)?;
+
+            let letprim = Term::LetPrim {
+                name: name.clone(),
+                op: PrimOp::ForceThunk,
+                args: vec![lower_atom(thunk)?],
+                body: Box::new(lower_expr_with_letcall_rows(
+                    body,
+                    &mut state.clone(),
+                    &with_child_path(path, 0),
+                    letcall_rows,
+                )?),
+            };
+
+            Ok(letprim)
+        }
         CoreExpr::Jump { cont, arg } => {
             let row = cont_row(cont, state);
             Ok(Term::Jump {
@@ -392,9 +518,22 @@ fn lower_value_with_letcall_rows(
 ) -> Result<Value, CoreLoweringError> {
     match value {
         CoreValue::Atom(atom) => Ok(Value::Atom(lower_atom(atom)?)),
-        CoreValue::Thunk { .. } => Err(CoreLoweringError::UnsupportedForm {
-            detail: "Thunk value is not supported in this phase".to_string(),
-        }),
+        CoreValue::Thunk {
+            mode, row, body, ..
+        } => {
+            let thunk_mode = match mode {
+                crate::core_ash::CoreThunkMode::Lazy => ThunkMode::Lazy,
+                crate::core_ash::CoreThunkMode::Memo => ThunkMode::Memo,
+            };
+            lower_core_mode_thunk(
+                state,
+                &with_child_path(path, 0),
+                letcall_rows,
+                thunk_mode,
+                row,
+                body,
+            )
+        }
         CoreValue::Lam { params, body, row } => {
             let cont = state.fresh_cont_name();
             let guard = state.with_current_cont(ContRef::Var(cont.clone()), CoreRow::default());
@@ -439,6 +578,58 @@ fn lower_value_with_letcall_rows(
             ],
         }),
     }
+}
+
+fn lower_core_mode_thunk(
+    state: &mut LoweringState,
+    path: &[usize],
+    letcall_rows: &HashMap<Vec<usize>, CoreRow>,
+    thunk_mode: ThunkMode,
+    row: &CoreRow,
+    expr: &CoreExpr,
+) -> Result<Value, CoreLoweringError> {
+    let cont = state.fresh_cont_name();
+    let lowered_expr = {
+        let guard = state.with_current_cont(ContRef::Var(cont.clone()), CoreRow::default());
+        let lowered = lower_expr_with_letcall_rows(expr, state, path, letcall_rows)?;
+        state.restore_current_cont(guard);
+        lowered
+    };
+    let thunk_body = Value::Lam {
+        params: Vec::new(),
+        cont: cont.clone(),
+        body: Box::new(lowered_expr),
+        captured_env: Env::default(),
+        rec_binding: None,
+        row: lower_row(row),
+    };
+    Ok(Value::ThunkClosure {
+        mode: thunk_mode,
+        body: Box::new(thunk_body),
+        captured_env: Env::default(),
+        captured_chain: HandlerChain::new(),
+        row: lower_row(row),
+        memo_cell: None,
+    })
+}
+
+fn mode_binding_row_for_force(
+    state: &LoweringState,
+    thunk: &CoreAtom,
+) -> Result<CoreRow, CoreLoweringError> {
+    let CoreAtom::Var(thunk_name) = thunk else {
+        return Err(CoreLoweringError::UnsupportedForm {
+            detail: "Force requires a variable thunk atom".to_string(),
+        });
+    };
+
+    state
+        .context
+        .mode_binding_latent_row(thunk_name)
+        .cloned()
+        .ok_or_else(|| CoreLoweringError::UnsupportedForm {
+            detail: format!("force has no checked latent row for `{thunk_name}`"),
+        })
 }
 
 fn lower_atom(atom: &CoreAtom) -> Result<Atom, CoreLoweringError> {
@@ -827,8 +1018,12 @@ fn local_row_with_letcall_rows(
             &local_row_with_letcall_rows(body, state, &with_child_path(path, 0), letcall_rows)?,
             &contract_row(&discharge.contract),
         )),
-        CoreExpr::Force { body, .. } => {
-            local_row_with_letcall_rows(body, state, &with_child_path(path, 0), letcall_rows)
+        CoreExpr::Force { thunk, body, .. } => {
+            let thunk_row = mode_binding_row_for_force(state, thunk)?;
+            Ok(union_rows(
+                &local_row_with_letcall_rows(body, state, &with_child_path(path, 0), letcall_rows)?,
+                &thunk_row,
+            ))
         }
     }
 }
@@ -935,8 +1130,12 @@ fn total_row_with_letcall_rows(
             &total_row_with_letcall_rows(body, state, &with_child_path(path, 0), letcall_rows)?,
             &contract_row(&discharge.contract),
         )),
-        CoreExpr::Force { body, .. } => {
-            total_row_with_letcall_rows(body, state, &with_child_path(path, 0), letcall_rows)
+        CoreExpr::Force { thunk, body, .. } => {
+            let thunk_row = mode_binding_row_for_force(state, thunk)?;
+            Ok(union_rows(
+                &total_row_with_letcall_rows(body, state, &with_child_path(path, 0), letcall_rows)?,
+                &thunk_row,
+            ))
         }
     }
 }
@@ -1310,6 +1509,10 @@ fn dotted_name(path: &[String], leaf: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core_ash::{
+        CoreCaptureSet, CoreEvalMode, CoreExpr, CoreThunkMode, CoreType, CoreValue,
+    };
+    use crate::cps::{ThunkMode, Value as LoweredValue};
 
     fn payload_a_first() -> CoreType {
         CoreType::Record(vec![
@@ -1323,6 +1526,23 @@ mod tests {
             ("b".into(), CoreType::Base("String".into())),
             ("a".into(), CoreType::Base("Int".into())),
         ])
+    }
+
+    fn sample_row_item_row() -> CoreRow {
+        CoreRow {
+            items: vec![CoreRowItem::Capability {
+                path: vec!["db".into()],
+                operation: "read".into(),
+            }],
+            tail: None,
+        }
+    }
+
+    fn test_lowering_state() -> LoweringState {
+        LoweringState::new(CoreLoweringContext::new(
+            ContRef::Label("k0".to_string()),
+            CoreRow::default(),
+        ))
     }
 
     #[test]
@@ -1349,5 +1569,125 @@ mod tests {
             "structural subtraction should remove equivalent typed payload row item"
         );
         assert_eq!(remaining.tail, None);
+    }
+
+    #[test]
+    fn lower_thunk_value_produces_thunk_closure() {
+        let thunk = CoreValue::Thunk {
+            mode: CoreThunkMode::Lazy,
+            result_ty: CoreType::Base("Int".into()),
+            body: Box::new(CoreExpr::Atom(CoreAtom::LitInt(42))),
+            row: sample_row_item_row(),
+            captures: CoreCaptureSet::default(),
+        };
+
+        let mut state = test_lowering_state();
+        let lowered = lower_value_with_letcall_rows(&thunk, &mut state, &[], &HashMap::new())
+            .expect("thunk value should lower");
+
+        match lowered {
+            LoweredValue::ThunkClosure {
+                mode, body, row, ..
+            } => {
+                assert_eq!(mode, ThunkMode::Lazy);
+                assert_eq!(row, lower_row(&sample_row_item_row()));
+                match *body {
+                    LoweredValue::Lam {
+                        params, body, row, ..
+                    } => {
+                        assert!(params.is_empty());
+                        assert_eq!(row, lower_row(&sample_row_item_row()));
+                        assert!(matches!(
+                            *body,
+                            Term::Jump {
+                                arg: Atom::Int(42),
+                                ..
+                            }
+                        ));
+                    }
+                    other => panic!("expected thunk body lambda, got {other:?}"),
+                }
+            }
+            other => panic!("expected thunk closure, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn lower_letmode_lazy_binds_thunk_value() {
+        let expr = CoreExpr::LetMode {
+            name: "t".to_string(),
+            mode: CoreEvalMode::Lazy,
+            ty: CoreType::Mode {
+                mode: CoreEvalMode::Lazy,
+                inner: Box::new(CoreType::Base("Int".into())),
+                latent_row: Some(sample_row_item_row()),
+            },
+            expr: Box::new(CoreExpr::Atom(CoreAtom::LitInt(1))),
+            body: Box::new(CoreExpr::Atom(CoreAtom::Var("t".to_string()))),
+        };
+
+        let mut state = test_lowering_state();
+        let lowered = lower_expr_with_letcall_rows(&expr, &mut state, &[], &HashMap::new())
+            .expect("letmode lazy should lower");
+
+        match lowered {
+            Term::LetVal {
+                name,
+                value,
+                body: _body,
+            } => {
+                assert_eq!(name, "t");
+                match value {
+                    LoweredValue::ThunkClosure { mode, .. } => {
+                        assert_eq!(mode, ThunkMode::Lazy);
+                    }
+                    other => panic!("expected thunk closure value, got {other:?}"),
+                }
+            }
+            other => panic!("expected let-val term, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn lower_force_uses_force_primitive_and_preserves_row() {
+        let latent_row = sample_row_item_row();
+        let mut state = LoweringState::new(
+            CoreLoweringContext::new(ContRef::Label("k0".to_string()), CoreRow::default())
+                .with_mode_binding_latent_row("t", latent_row.clone()),
+        );
+
+        let expr = CoreExpr::Force {
+            name: "v".to_string(),
+            thunk: CoreAtom::Var("t".to_string()),
+            body: Box::new(CoreExpr::Atom(CoreAtom::LitInt(3))),
+        };
+
+        let lowered = lower_expr_with_letcall_rows(&expr, &mut state, &[], &HashMap::new())
+            .expect("force should lower");
+
+        match lowered {
+            Term::LetPrim {
+                name,
+                op,
+                args,
+                body,
+            } => {
+                assert_eq!(name, "v");
+                assert_eq!(op, PrimOp::ForceThunk);
+                assert_eq!(args, vec![Atom::Var("t".to_string())]);
+                assert!(matches!(
+                    *body,
+                    Term::Jump {
+                        arg: Atom::Int(3),
+                        ..
+                    }
+                ));
+            }
+            other => panic!("expected letprim term, got {other:?}"),
+        }
+
+        let lowered_row = local_row_with_letcall_rows(&expr, &state, &[], &HashMap::new())
+            .expect("force row should include latent row");
+        assert_eq!(lowered_row, latent_row);
     }
 }

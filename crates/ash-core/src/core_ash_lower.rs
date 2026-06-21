@@ -253,12 +253,15 @@ fn lower_expr(expr: &CoreExpr, state: &mut LoweringState) -> Result<Term, CoreLo
             resume: state.context.current_cont.clone(),
             row: lower_row(&effect_op_row(op)),
         }),
-        CoreExpr::Handle { clause, body } => Ok(Term::Handle {
-            clause: lower_handler_clause(clause, state)?,
-            body: Box::new(lower_expr(body, state)?),
-            cont: state.context.current_cont.clone(),
-            row: lower_row(&clause.row),
-        }),
+        CoreExpr::Handle { clause, body } => {
+            let residual_row = handle_residual_row(clause, body, state)?;
+            Ok(Term::Handle {
+                clause: lower_handler_clause(clause, state)?,
+                body: Box::new(lower_expr(body, state)?),
+                cont: state.context.current_cont.clone(),
+                row: lower_row(&residual_row),
+            })
+        }
         CoreExpr::RecordDischarge { discharge, body } => Ok(Term::RecordDischarge {
             discharge: lower_contract_discharge(discharge),
             body: Box::new(lower_expr(body, state)?),
@@ -568,6 +571,29 @@ fn record_function_row(name: &str, ty: &CoreType, state: &mut LoweringState) {
     }
 }
 
+fn local_function_row_from_binding<'a>(ty: &'a CoreType, value: &'a CoreValue) -> Option<CoreRow> {
+    if let CoreType::Function { row, .. } = ty {
+        return Some(row.clone());
+    }
+
+    if let CoreValue::Lam { row, .. } = value {
+        return Some(row.clone());
+    }
+
+    None
+}
+
+fn record_local_function_row(
+    name: &str,
+    ty: &CoreType,
+    value: &CoreValue,
+    state: &mut LoweringState,
+) {
+    if let Some(row) = local_function_row_from_binding(ty, value) {
+        state.context.function_rows.insert(name.to_string(), row);
+    }
+}
+
 fn function_row_for_atom(atom: &CoreAtom, state: &LoweringState) -> Option<CoreRow> {
     let CoreAtom::Var(name) = atom else {
         return None;
@@ -590,7 +616,22 @@ fn cont_row(cont: &CoreContRef, state: &LoweringState) -> CoreRow {
 fn local_row(expr: &CoreExpr, state: &LoweringState) -> Result<CoreRow, CoreLoweringError> {
     match expr {
         CoreExpr::Atom(_) | CoreExpr::Jump { .. } | CoreExpr::Trap { .. } => Ok(CoreRow::default()),
-        CoreExpr::LetVal { body, .. } | CoreExpr::LetRec { body, .. } => local_row(body, state),
+        CoreExpr::LetVal {
+            name,
+            ty,
+            value,
+            body,
+        }
+        | CoreExpr::LetRec {
+            name,
+            ty,
+            value,
+            body,
+        } => {
+            let mut lexical_state = state.clone();
+            record_local_function_row(name, ty, value, &mut lexical_state);
+            local_row(body, &lexical_state)
+        }
         CoreExpr::LetPrim { op, body, .. } => {
             lower_prim_op(op)?;
             local_row(body, state)
@@ -609,15 +650,33 @@ fn local_row(expr: &CoreExpr, state: &LoweringState) -> Result<CoreRow, CoreLowe
         )),
         CoreExpr::Call { func, .. } => Ok(function_row_for_atom(func, state).unwrap_or_default()),
         CoreExpr::Raise { op, .. } => Ok(effect_op_row(op)),
-        CoreExpr::Handle { clause, .. } => Ok(clause.row.clone()),
-        CoreExpr::RecordDischarge { body, .. } => local_row(body, state),
+        CoreExpr::Handle { clause, body } => handle_residual_row(clause, body, state),
+        CoreExpr::RecordDischarge { discharge, body } => Ok(subtract_rows(
+            &local_row(body, state)?,
+            &contract_row(&discharge.contract),
+        )),
     }
 }
 
 fn total_row(expr: &CoreExpr, state: &LoweringState) -> Result<CoreRow, CoreLoweringError> {
     match expr {
         CoreExpr::Atom(_) => Ok(state.context.current_cont_row.clone()),
-        CoreExpr::LetVal { body, .. } | CoreExpr::LetRec { body, .. } => total_row(body, state),
+        CoreExpr::LetVal {
+            name,
+            ty,
+            value,
+            body,
+        }
+        | CoreExpr::LetRec {
+            name,
+            ty,
+            value,
+            body,
+        } => {
+            let mut lexical_state = state.clone();
+            record_local_function_row(name, ty, value, &mut lexical_state);
+            total_row(body, &lexical_state)
+        }
         CoreExpr::LetPrim { op, body, .. } => {
             lower_prim_op(op)?;
             total_row(body, state)
@@ -644,10 +703,14 @@ fn total_row(expr: &CoreExpr, state: &LoweringState) -> Result<CoreRow, CoreLowe
             &effect_op_row(op),
             &state.context.current_cont_row,
         )),
-        CoreExpr::Handle { clause, .. } => {
-            Ok(union_rows(&clause.row, &state.context.current_cont_row))
-        }
-        CoreExpr::RecordDischarge { body, .. } => total_row(body, state),
+        CoreExpr::Handle { clause, body } => Ok(union_rows(
+            &handle_residual_row(clause, body, state)?,
+            &state.context.current_cont_row,
+        )),
+        CoreExpr::RecordDischarge { discharge, body } => Ok(subtract_rows(
+            &total_row(body, state)?,
+            &contract_row(&discharge.contract),
+        )),
     }
 }
 
@@ -661,6 +724,40 @@ fn union_rows(left: &CoreRow, right: &CoreRow) -> CoreRow {
     CoreRow {
         items,
         tail: left.tail.clone().or_else(|| right.tail.clone()),
+    }
+}
+
+fn handle_residual_row(
+    clause: &CoreHandlerClause,
+    body: &CoreExpr,
+    state: &LoweringState,
+) -> Result<CoreRow, CoreLoweringError> {
+    let body_row = local_row(body, state)?;
+    let body_without_op = subtract_rows(&body_row, &effect_op_row(&clause.op));
+    Ok(union_rows(
+        &union_rows(&body_without_op, &resume_row(&clause.resume.ty)),
+        &clause.row,
+    ))
+}
+
+fn subtract_rows(left: &CoreRow, right: &CoreRow) -> CoreRow {
+    CoreRow {
+        items: left
+            .items
+            .iter()
+            .filter(|item| !right.items.contains(item))
+            .cloned()
+            .collect(),
+        tail: left.tail.clone(),
+    }
+}
+
+fn contract_row(contract: &str) -> CoreRow {
+    CoreRow {
+        items: vec![CoreRowItem::Contract {
+            contract: contract.to_owned(),
+        }],
+        tail: None,
     }
 }
 

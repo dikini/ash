@@ -4,7 +4,7 @@ title: Core Ash Type Checking
 kind: plan
 audience: [human, agent]
 authority: design
-status: planned
+status: complete
 stability: alpha
 owner: language
 last_verified: 2026-06-20
@@ -33,7 +33,7 @@ verified_against:
 
 ## Status
 
-Planned: 0/12 tasks complete.
+Complete: 12/12 tasks complete.
 
 ## Background
 
@@ -91,18 +91,18 @@ The checker must preserve the row-accounting distinctions already established by
 
 | Task | Description | Est. Hours | Dependencies | Status |
 |------|-------------|-----------:|--------------|--------|
-| [TASK-1640](tasks/TASK-1640-core-typecheck-api-and-environments.md) | Add Core type-checker API, environments, typed program wrappers, and diagnostics | 3 | Phase 161 | Planned |
-| [TASK-1641](tasks/TASK-1641-core-type-wellformedness.md) | Check Core type well-formedness and nominal/type-app shape | 3 | TASK-1640 | Planned |
-| [TASK-1642](tasks/TASK-1642-core-row-normalization-solving.md) | Normalize rows, remove duplicates, compare rows, and solve explicit row variables | 4 | TASK-1640 | Planned |
-| [TASK-1643](tasks/TASK-1643-core-atom-value-typing.md) | Type Core atoms and values, including lambdas, records, tuples, and discharge markers | 4 | TASK-1641, TASK-1642 | Planned |
-| [TASK-1644](tasks/TASK-1644-core-expression-basics-typecheck.md) | Type Atom, LetVal, LetRec, LetPrim, If, and Trap expressions | 4 | TASK-1643 | Planned |
-| [TASK-1645](tasks/TASK-1645-core-call-jump-row-accounting.md) | Type LetCall, Call, and Jump with SPEC-098b row-accounting facts | 4 | TASK-1644 | Planned |
-| [TASK-1646](tasks/TASK-1646-core-effect-operation-typing.md) | Type capability/channel/process/failure Raise operations and operation signatures | 4 | TASK-1645 | Planned |
-| [TASK-1647](tasks/TASK-1647-core-handle-affine-resume-typecheck.md) | Type Handle clauses with affine resume and captured-resume row preservation | 5 | TASK-1646 | Planned |
-| [TASK-1648](tasks/TASK-1648-core-refinement-obligations-discharge.md) | Record refinement obligations and validate discharge metadata shape | 5 | TASK-1647 | Planned |
-| [TASK-1649](tasks/TASK-1649-core-public-summary-scaffold.md) | Add public type/row summary scaffolding and private alias diagnostics | 3 | TASK-1648 | Planned |
-| [TASK-1650](tasks/TASK-1650-core-typecheck-integration-fixtures.md) | Add `.core` parse -> validate -> type-check -> lower integration fixtures | 4 | TASK-1649 | Planned |
-| [TASK-1651](tasks/TASK-1651-core-typecheck-reference-closeout.md) | Document Core type-checker behavior and close out Phase 162 | 3 | TASK-1650 | Planned |
+| [TASK-1640](tasks/TASK-1640-core-typecheck-api-and-environments.md) | Add Core type-checker API, environments, typed program wrappers, and diagnostics | 3 | Phase 161 | Complete |
+| [TASK-1641](tasks/TASK-1641-core-type-wellformedness.md) | Check Core type well-formedness and nominal/type-app shape | 3 | TASK-1640 | Complete |
+| [TASK-1642](tasks/TASK-1642-core-row-normalization-solving.md) | Normalize rows, remove duplicates, compare rows, and solve explicit row variables | 4 | TASK-1640 | Complete |
+| [TASK-1643](tasks/TASK-1643-core-atom-value-typing.md) | Type Core atoms and values, including lambdas, records, tuples, and discharge markers | 4 | TASK-1641, TASK-1642 | Complete |
+| [TASK-1644](tasks/TASK-1644-core-expression-basics-typecheck.md) | Type Atom, LetVal, LetRec, LetPrim, If, and Trap expressions | 4 | TASK-1643 | Complete |
+| [TASK-1645](tasks/TASK-1645-core-call-jump-row-accounting.md) | Type LetCall, Call, and Jump with SPEC-098b row-accounting facts | 4 | TASK-1644 | Complete |
+| [TASK-1646](tasks/TASK-1646-core-effect-operation-typing.md) | Type capability/channel/process/failure Raise operations and operation signatures | 4 | TASK-1645 | Complete |
+| [TASK-1647](tasks/TASK-1647-core-handle-affine-resume-typecheck.md) | Type Handle clauses with affine resume and captured-resume row preservation | 5 | TASK-1646 | Complete |
+| [TASK-1648](tasks/TASK-1648-core-refinement-obligations-discharge.md) | Record refinement obligations and validate discharge metadata shape | 5 | TASK-1647 | Complete |
+| [TASK-1649](tasks/TASK-1649-core-public-summary-scaffold.md) | Add public type/row summary scaffolding and private alias diagnostics | 3 | TASK-1648 | Complete |
+| [TASK-1650](tasks/TASK-1650-core-typecheck-integration-fixtures.md) | Add `.core` parse -> validate -> type-check -> lower integration fixtures | 4 | TASK-1649 | Complete |
+| [TASK-1651](tasks/TASK-1651-core-typecheck-reference-closeout.md) | Document Core type-checker behavior and close out Phase 162 | 3 | TASK-1650 | Complete |
 
 **Total estimated hours:** 46.
 
@@ -155,22 +155,22 @@ cargo test -p spec_processor spec_links
 
 ## Acceptance Criteria
 
-- [ ] Core type-checker module is exported from `ash-core`.
-- [ ] Type-checker entrypoint consumes validated Core and returns a typed Core program or structured diagnostics.
-- [ ] Type, row, value, continuation, operation, and discharge environments are represented.
-- [ ] Core type well-formedness covers all Phase 161 `CoreType` variants.
-- [ ] Rows normalize by namespace identity, remove exact duplicates, preserve open tails, and solve explicit row variables conservatively.
-- [ ] Atom and value typing covers variables, literals, primitive names, constructors, lambdas, records, tuples, and discharge markers.
-- [ ] Expression typing covers all Phase 161 Core expression variants.
-- [ ] `Jump` keeps Core local row `{}` while preserving the target continuation row for lowering facts.
-- [ ] `Raise` checks operation arity/types and records operation-local row only.
-- [ ] `Handle` checks operation parameters, affine resume type, handler body row, and residual row including `resume_row`.
-- [ ] Refinement checks emit obligations in the base-to-refinement direction and allow refinement-to-base use without new obligations.
-- [ ] Static/evidence/dynamic discharge metadata is checked for coherent shape without running proof search.
-- [ ] Public summary scaffold preserves normalized row/type facts needed by future export/import work.
-- [ ] Integration fixtures prove `.core` parse -> validate -> type-check -> lower works for representative programs.
-- [ ] Reference documentation explains the initial algorithmic profile and deferred features.
-- [ ] PLAN-INDEX and CHANGELOG are reconciled.
+- [x] Core type-checker module is exported from `ash-core`.
+- [x] Type-checker entrypoint consumes validated Core and returns a typed Core program or structured diagnostics.
+- [x] Type, row, value, continuation, operation, and discharge environments are represented.
+- [x] Core type well-formedness covers all Phase 161 `CoreType` variants.
+- [x] Rows normalize by namespace identity, remove exact duplicates, preserve open tails, and solve explicit row variables conservatively.
+- [x] Atom and value typing covers variables, literals, primitive names, constructors, lambdas, records, tuples, and discharge markers.
+- [x] Expression typing covers all Phase 161 Core expression variants.
+- [x] `Jump` keeps Core local row `{}` while preserving the target continuation row for lowering facts.
+- [x] `Raise` checks operation arity/types and records operation-local row only.
+- [x] `Handle` checks operation parameters, affine resume type, handler body row, and residual row including `resume_row`.
+- [x] Refinement checks emit obligations in the base-to-refinement direction and allow refinement-to-base use without new obligations.
+- [x] Static/evidence/dynamic discharge metadata is checked for coherent shape without running proof search.
+- [x] Public summary scaffold preserves normalized row/type facts needed by future export/import work.
+- [x] Integration fixtures prove `.core` parse -> validate -> type-check -> lower works for representative programs.
+- [x] Reference documentation explains the initial algorithmic profile and deferred features.
+- [x] PLAN-INDEX and CHANGELOG are reconciled.
 
 ## Recommended Execution Order
 
@@ -196,3 +196,4 @@ TASK-1640 -> TASK-1641 -> TASK-1642 -> TASK-1643 -> TASK-1644
 ## Changelog
 
 - 2026-06-20: Created Phase 162 plan for implementing SPEC-100 Core Ash type checking with annotation-led TDD tasks.
+- 2026-06-21: Completed Phase 162 implementation, reference documentation, and closeout review.

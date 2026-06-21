@@ -150,9 +150,17 @@ fn lowers_handle_with_outer_continuation_and_local_residual_row() {
     };
 
     assert_eq!(cont, ContRef::Label("exit".to_string()));
-    assert_eq!(row.items.len(), 1);
-    assert_eq!(row.items[0].namespace, "cap");
-    assert_eq!(row.items[0].name, "audit.write");
+    assert_eq!(row.items.len(), 2);
+    assert!(
+        row.items
+            .iter()
+            .any(|item| item.namespace == "cap" && item.name == "audit.write")
+    );
+    assert!(
+        row.items
+            .iter()
+            .any(|item| item.namespace == "cap" && item.name == "resume.audit")
+    );
     assert_eq!(clause.params, vec!["line".to_string()]);
     assert_eq!(clause.resume, "k");
     assert_eq!(clause.row.items[0].name, "audit.write");

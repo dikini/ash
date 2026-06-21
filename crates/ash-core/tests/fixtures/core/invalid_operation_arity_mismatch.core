@@ -1,0 +1,1 @@
+(raise (cap console.read : (String) -> Unit) ())

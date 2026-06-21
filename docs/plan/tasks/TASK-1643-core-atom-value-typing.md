@@ -1,6 +1,6 @@
 # TASK-1643: Type Core atoms and values
 
-**Status:** Planned
+**Status:** Complete
 **Phase:** [PLAN-162](../PLAN-162-CORE-ASH-TYPE-CHECKING.md)
 **Owner:** Phase 162
 
@@ -73,3 +73,17 @@ cargo fmt --check
 ```
 
 Expected: focused tests pass.
+
+## Completion Evidence
+
+- Added Core atom synthesis for variables, literals, first-slice primitive names, and environment-backed constructor names.
+- Added inert Core value synthesis for atom, lambda, record, tuple, and administrative discharge marker values.
+- Enforced value construction row `{}` and exact normalized lambda latent-row matching against the synthesized body row.
+- Added `crates/ash-core/tests/task_1643_core_atom_value_typing.rs` covering literals, unknown variables, primitive and constructor names, records, tuples, lambda row mismatch, and administrative discharge markers.
+- Verified with:
+  - `cargo test -p ash-core --test task_1643_core_atom_value_typing`
+  - `cargo test -p ash-core --test task_1642_core_row_normalization`
+  - `cargo test -p ash-core`
+  - `cargo clippy -p ash-core --all-targets -- -D warnings`
+  - `cargo fmt --check`
+  - `git diff --check`

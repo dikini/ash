@@ -1,6 +1,6 @@
 # TASK-1648: Record refinement obligations and discharge metadata
 
-**Status:** Planned
+**Status:** Complete
 **Phase:** [PLAN-162](../PLAN-162-CORE-ASH-TYPE-CHECKING.md)
 **Owner:** Phase 162
 
@@ -71,3 +71,12 @@ cargo fmt --check
 ```
 
 Expected: focused tests pass.
+
+## Completion Evidence
+
+- Added focused tests in `crates/ash-core/tests/task_1648_core_refinement_discharge.rs`.
+- Implemented refinement obligation metadata and discharge validation in `crates/ash-core/src/core_ash_typecheck.rs`.
+- Verified:
+  - `cargo test -p ash-core --test task_1648_core_refinement_discharge`
+  - `cargo test -p ash-core --test task_1647_core_handle_affine_resume`
+  - `cargo fmt --check`

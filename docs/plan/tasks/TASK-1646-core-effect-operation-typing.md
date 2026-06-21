@@ -1,6 +1,6 @@
 # TASK-1646: Type Core raised operations
 
-**Status:** Planned
+**Status:** Complete
 **Phase:** [PLAN-162](../PLAN-162-CORE-ASH-TYPE-CHECKING.md)
 **Owner:** Phase 162
 
@@ -72,3 +72,16 @@ cargo fmt --check
 ```
 
 Expected: focused tests pass.
+
+## Completion Evidence
+
+- Added `Raise` type checking for capability, channel, process, and failure operations.
+- Added operation signature lookup through `CoreOpEnv`, with arity/type mismatch diagnostics.
+- Synthesized operation-local rows only, leaving resume/continuation effects to CPS lowering.
+- Added `crates/ash-core/tests/task_1646_core_effect_operation_typing.rs` covering capability, channel, process, failure, unknown operations, argument mismatches, and ContractViolation trap separation.
+- Verified with:
+  - `cargo test -p ash-core --test task_1646_core_effect_operation_typing`
+  - `cargo test -p ash-core --test task_1645_core_call_jump_row_accounting`
+  - `cargo clippy -p ash-core --all-targets -- -D warnings`
+  - `cargo fmt --check`
+  - `git diff --check`

@@ -1,6 +1,6 @@
 # TASK-1649: Add Core public summary scaffold
 
-**Status:** Planned
+**Status:** Complete
 **Phase:** [PLAN-162](../PLAN-162-CORE-ASH-TYPE-CHECKING.md)
 **Owner:** Phase 162
 
@@ -69,3 +69,12 @@ cargo fmt --check
 ```
 
 Expected: focused tests pass.
+
+## Completion Evidence
+
+- Added focused tests in `crates/ash-core/tests/task_1649_core_public_summary.rs`.
+- Implemented public summary carriers and extraction helpers in `crates/ash-core/src/core_ash_typecheck.rs`.
+- Verified:
+  - `cargo test -p ash-core --test task_1649_core_public_summary`
+  - `cargo test -p ash-core --test task_1648_core_refinement_discharge`
+  - `cargo fmt --check`

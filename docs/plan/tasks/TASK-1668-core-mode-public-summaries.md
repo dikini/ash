@@ -1,6 +1,6 @@
 # TASK-1668: Preserve mode facts in public summaries
 
-**Status:** Planned
+**Status:** Done
 **Phase:** [PLAN-163](../PLAN-163-CORE-LAZY-MEMO-MODES.md)
 **Owner:** Phase 163
 
@@ -37,7 +37,7 @@ Extend public Core summaries to preserve mode types and thunk latent-row metadat
 
 ## Completion Checklist
 
-- [ ] Mode wrappers appear in summaries.
-- [ ] Latent rows are exported where required.
-- [ ] Existing public summary behavior is preserved.
-- [ ] Type constructors inside latent row payload types are included.
+- [x] Mode wrappers appear in summaries.
+- [x] Latent rows are exported where required.
+- [x] Existing public summary behavior is preserved.
+- [x] Type constructors inside latent row payload types are included.

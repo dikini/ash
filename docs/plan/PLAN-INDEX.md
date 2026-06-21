@@ -575,7 +575,7 @@ Implements SPEC-101 for Core Ash: explicit `Strict`/`Lazy`/`Memo` mode types, th
 | [TASK-1665](tasks/TASK-1665-core-mode-type-wellformedness.md) | Type-check mode type well-formedness and mode invariance diagnostics | 📝 Planned |
 | [TASK-1666](tasks/TASK-1666-core-thunk-value-typing.md) | Type thunk values with latent rows and pure construction row | 📝 Planned |
 | [TASK-1667](tasks/TASK-1667-core-letmode-force-typechecking.md) | Type LetMode and Force expressions with SPEC-101 row accounting | 📝 Planned |
-| [TASK-1668](tasks/TASK-1668-core-mode-public-summaries.md) | Preserve mode and latent-row facts in public summaries and diagnostics | 📝 Planned |
+| [TASK-1668](tasks/TASK-1668-core-mode-public-summaries.md) | Preserve mode and latent-row facts in public summaries and diagnostics | ✅ Complete |
 | [TASK-1669](tasks/TASK-1669-core-mode-lowering.md) | Lower thunk construction, strict/lazy/memo LetMode, and Force into CPS thunk runtime forms | 📝 Planned |
 | [TASK-1670](tasks/TASK-1670-core-thunk-capture-authority.md) | Verify captured handler/provider-chain authority at force time | 📝 Planned |
 | [TASK-1672](tasks/TASK-1672-core-mode-tracing-observability.md) | Add thunk construction/force/memo trace events and observability tests | 📝 Planned |

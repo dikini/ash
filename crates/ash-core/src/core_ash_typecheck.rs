@@ -1342,11 +1342,11 @@ pub fn summarize_core_public_function_type(
 
     let mut type_constructors = Vec::new();
     for param in params {
-        collect_public_type_constructors(param, &mut type_constructors);
+        collect_public_type_constructors(param, &mut type_constructors)?;
     }
-    collect_public_type_constructors(result, &mut type_constructors);
+    collect_public_type_constructors(result, &mut type_constructors)?;
     for item in &row.items {
-        collect_public_row_item_type_constructors(item, &mut type_constructors);
+        collect_public_row_item_type_constructors(item, &mut type_constructors)?;
     }
 
     Ok(CorePublicFunctionSummary {
@@ -1924,7 +1924,7 @@ fn public_row_item_summary(item: &CoreRowItem) -> CorePublicRowItemSummary {
 fn collect_public_type_constructors(
     ty: &CoreType,
     constructors: &mut Vec<CorePublicTypeConstructorSummary>,
-) {
+) -> Result<(), CorePublicSummaryError> {
     match ty {
         CoreType::Base(_) | CoreType::Named(_) | CoreType::Var(_) => {}
         CoreType::Function {
@@ -1933,56 +1933,66 @@ fn collect_public_type_constructors(
             row,
         } => {
             for param in params {
-                collect_public_type_constructors(param, constructors);
+                collect_public_type_constructors(param, constructors)?;
             }
-            collect_public_type_constructors(result, constructors);
+            collect_public_type_constructors(result, constructors)?;
             for item in &row.items {
-                collect_public_row_item_type_constructors(item, constructors);
+                collect_public_row_item_type_constructors(item, constructors)?;
             }
         }
         CoreType::Refinement { base, .. } => {
-            collect_public_type_constructors(base, constructors);
+            collect_public_type_constructors(base, constructors)?;
         }
         CoreType::Cont {
             input, answer, row, ..
         } => {
-            collect_public_type_constructors(input, constructors);
-            collect_public_type_constructors(answer, constructors);
+            collect_public_type_constructors(input, constructors)?;
+            collect_public_type_constructors(answer, constructors)?;
             for item in &row.items {
-                collect_public_row_item_type_constructors(item, constructors);
+                collect_public_row_item_type_constructors(item, constructors)?;
             }
         }
-        CoreType::Mode { inner, .. } => collect_public_type_constructors(inner, constructors),
+        CoreType::Mode {
+            inner, latent_row, ..
+        } => {
+            collect_public_type_constructors(inner, constructors)?;
+            let Some(latent_row) = latent_row else {
+                return Ok(());
+            };
+            for item in &latent_row.items {
+                collect_public_row_item_type_constructors_with_privacy(item, constructors)?;
+            }
+        }
         CoreType::Tuple(elems) => {
             for elem in elems {
-                collect_public_type_constructors(elem, constructors);
+                collect_public_type_constructors(elem, constructors)?;
             }
         }
         CoreType::Record(fields) => {
             for (_, field_ty) in fields {
-                collect_public_type_constructors(field_ty, constructors);
+                collect_public_type_constructors(field_ty, constructors)?;
             }
         }
         CoreType::App { name, args } => {
             push_public_type_constructor(constructors, name.clone(), args.len());
             for arg in args {
-                collect_public_type_constructors(arg, constructors);
+                collect_public_type_constructors(arg, constructors)?;
             }
         }
     }
+
+    Ok(())
 }
 
 fn collect_public_row_item_type_constructors(
     item: &CoreRowItem,
     constructors: &mut Vec<CorePublicTypeConstructorSummary>,
-) {
+) -> Result<(), CorePublicSummaryError> {
     match item {
         CoreRowItem::Channel { payload_type, .. } => {
-            collect_public_type_constructors(payload_type, constructors);
+            collect_public_type_constructors(payload_type, constructors)
         }
-        CoreRowItem::Failure { ty: Some(ty) } => {
-            collect_public_type_constructors(ty, constructors);
-        }
+        CoreRowItem::Failure { ty: Some(ty) } => collect_public_type_constructors(ty, constructors),
         CoreRowItem::Capability { .. }
         | CoreRowItem::Resource { .. }
         | CoreRowItem::Role { .. }
@@ -1991,7 +2001,7 @@ fn collect_public_row_item_type_constructors(
         | CoreRowItem::Process { .. }
         | CoreRowItem::Failure { ty: None }
         | CoreRowItem::Evidence { .. }
-        | CoreRowItem::EffectGroupRef { .. } => {}
+        | CoreRowItem::EffectGroupRef { .. } => Ok(()),
     }
 }
 
@@ -2403,6 +2413,38 @@ fn type_check_if(
                 ),
             })
         }
+    }
+}
+
+fn collect_public_row_item_type_constructors_with_privacy(
+    item: &CoreRowItem,
+    constructors: &mut Vec<CorePublicTypeConstructorSummary>,
+) -> Result<(), CorePublicSummaryError> {
+    match item {
+        CoreRowItem::EffectGroupRef { path } => Err(CorePublicSummaryError::PrivateRowReference {
+            path: path.clone(),
+            public_item: None,
+            detail: format!(
+                "private effect group {} must be expanded or exported before summary",
+                path.join(".")
+            ),
+        }),
+        CoreRowItem::Channel { payload_type, .. } => {
+            collect_public_type_constructors(payload_type, constructors)?;
+            Ok(())
+        }
+        CoreRowItem::Failure { ty: Some(ty) } => {
+            collect_public_type_constructors(ty, constructors)?;
+            Ok(())
+        }
+        CoreRowItem::Capability { .. }
+        | CoreRowItem::Resource { .. }
+        | CoreRowItem::Role { .. }
+        | CoreRowItem::Policy { .. }
+        | CoreRowItem::Contract { .. }
+        | CoreRowItem::Process { .. }
+        | CoreRowItem::Failure { ty: None }
+        | CoreRowItem::Evidence { .. } => Ok(()),
     }
 }
 

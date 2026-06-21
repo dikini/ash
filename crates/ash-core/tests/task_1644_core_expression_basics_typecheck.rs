@@ -1,5 +1,5 @@
 use ash_core::core_ash::{
-    CoreAtom, CoreExpr, CorePrimOp, CoreRow, CoreTrapReason, CoreType, CoreValue,
+    CoreAtom, CoreExpr, CorePrimOp, CoreRow, CoreRowItem, CoreTrapReason, CoreType, CoreValue,
 };
 use ash_core::core_ash_typecheck::{CoreTypeCheckEnv, CoreTypeCheckError, type_check_core_program};
 use ash_core::core_ash_validate::{RawCoreProgram, validate_core_program};
@@ -16,6 +16,26 @@ fn positive_bool_ty() -> CoreType {
     CoreType::Refinement {
         base: Box::new(bool_ty()),
         predicate: "is-ready".into(),
+    }
+}
+
+fn string_ty() -> CoreType {
+    CoreType::Base("String".into())
+}
+
+fn chan(path: &[&str], mode: &str, payload: CoreType) -> CoreRowItem {
+    CoreRowItem::Channel {
+        path: path.iter().map(|part| (*part).to_owned()).collect(),
+        mode: mode.to_owned(),
+        payload_type: Box::new(payload),
+    }
+}
+
+fn function_row(row: CoreRow) -> CoreType {
+    CoreType::Function {
+        params: Vec::new(),
+        result: Box::new(CoreType::Base("Unit".into())),
+        row,
     }
 }
 
@@ -115,6 +135,51 @@ fn if_accepts_refined_bool_condition() {
 
     assert_eq!(ty, int_ty());
     assert_eq!(row, CoreRow::default());
+}
+
+#[test]
+fn if_branches_union_structurally_equivalent_channel_rows_to_single_item() {
+    let payload = CoreType::Record(vec![("a".into(), int_ty()), ("b".into(), string_ty())]);
+    let swapped_payload = CoreType::Record(vec![("b".into(), string_ty()), ("a".into(), int_ty())]);
+    let then_fn = function_row(CoreRow::closed(vec![chan(
+        &["jobs"],
+        "send",
+        payload.clone(),
+    )]));
+    let else_fn = function_row(CoreRow::closed(vec![chan(
+        &["jobs"],
+        "send",
+        swapped_payload,
+    )]));
+    let mut env = CoreTypeCheckEnv::default();
+    env.values_mut().insert("then_fn", then_fn.clone());
+    env.values_mut().insert("else_fn", else_fn);
+
+    let expr = CoreExpr::If {
+        cond: CoreAtom::LitBool(true),
+        then_branch: Box::new(CoreExpr::Call {
+            func: CoreAtom::Var("then_fn".into()),
+            args: Vec::new(),
+        }),
+        else_branch: Box::new(CoreExpr::Call {
+            func: CoreAtom::Var("else_fn".into()),
+            args: Vec::new(),
+        }),
+    };
+
+    let (ty, row) = type_check_with_env(expr, &env).expect(
+        "If branches with semantically equivalent payload records should union structurally",
+    );
+
+    assert_eq!(ty, CoreType::Base("Unit".into()));
+    assert_eq!(
+        row,
+        CoreRow::closed(vec![chan(
+            &["jobs"],
+            "send",
+            CoreType::Record(vec![("a".into(), int_ty()), ("b".into(), string_ty())]),
+        )])
+    );
 }
 
 #[test]

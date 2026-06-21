@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 
 use ash_core::core_ash::{
     CoreAtom, CoreContRef, CoreContractDischarge, CoreDischargeMode, CoreEffectOp, CoreExpr,
-    CoreHandlerClause, CoreMultiplicity, CoreParam, CoreRow, CoreRowItem, CoreType,
+    CoreHandlerClause, CoreMultiplicity, CoreParam, CoreRow, CoreRowItem, CoreType, CoreValue,
 };
 use ash_core::core_ash_lower::{CoreLoweringContext, CoreLoweringError};
 use ash_core::core_ash_text::{CoreTextError, parse_core_file};
@@ -417,6 +417,56 @@ fn checked_lowering_uses_typechecked_handle_residual_row() {
             && item.name == "audit.emit"
             && item.kind == EffectItemKind::Capability),
         "lowered Handle.row must use the checked residual row, not the empty clause row"
+    );
+}
+
+#[test]
+fn checked_lowering_uses_local_function_row_from_handle_body() {
+    let local_row = cap_row(&["db"], "read");
+    let mut env = CoreTypeCheckEnv::default();
+    env.operations_mut().insert(console_read_op());
+    let program = validate_core_program(RawCoreProgram::new(CoreExpr::Handle {
+        clause: CoreHandlerClause {
+            op: console_read_op(),
+            params: vec![CoreParam {
+                name: "prompt".into(),
+                ty: string_ty(),
+            }],
+            resume: handle_resume_param(unit_ty(), unit_ty(), CoreRow::default()),
+            body: Box::new(CoreExpr::Jump {
+                cont: CoreContRef::Var("resume".into()),
+                arg: CoreAtom::LitUnit,
+            }),
+            row: CoreRow::default(),
+        },
+        body: Box::new(CoreExpr::LetVal {
+            name: "read_row".into(),
+            ty: function_ty(Vec::new(), unit_ty(), local_row.clone()),
+            value: CoreValue::Lam {
+                params: Vec::new(),
+                body: Box::new(CoreExpr::Atom(CoreAtom::LitUnit)),
+                row: local_row.clone(),
+            },
+            body: Box::new(CoreExpr::LetCall {
+                name: "value".into(),
+                func: CoreAtom::Var("read_row".into()),
+                args: Vec::new(),
+                body: Box::new(CoreExpr::Atom(CoreAtom::LitUnit)),
+            }),
+        }),
+    }))
+    .expect("handle with local function body should validate");
+    let context = CoreLoweringContext::new(ContRef::Label("halt".into()), CoreRow::default());
+
+    let checked = type_check_and_lower_core_program(program, &env, context)
+        .expect("checked lowering should preserve local function row from handle body");
+    let handle_row = first_handle_row(checked.lowered()).expect("expression lowers to a handle");
+
+    assert!(
+        handle_row.items.iter().any(|item| item.namespace == "cap"
+            && item.name == "db.read"
+            && item.kind == EffectItemKind::Capability),
+        "Handle.row should include the local function's latent row"
     );
 }
 

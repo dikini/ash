@@ -1,5 +1,8 @@
-use ash_core::core_ash::{CoreRow, CoreRowItem};
-use ash_core::core_ash_typecheck::{CoreTypeCheckError, core_row_included_in, normalize_core_row};
+use ash_core::core_ash::{CoreMultiplicity, CoreRow, CoreRowItem, CoreType};
+use ash_core::core_ash_typecheck::{
+    CoreTypeCheckEnv, CoreTypeCheckError, core_row_included_in, core_types_equivalent,
+    normalize_core_row,
+};
 
 fn cap(path: &[&str], operation: &str) -> CoreRowItem {
     CoreRowItem::Capability {
@@ -11,6 +14,31 @@ fn cap(path: &[&str], operation: &str) -> CoreRowItem {
 fn role(path: &[&str]) -> CoreRowItem {
     CoreRowItem::Role {
         path: path.iter().map(|part| (*part).to_owned()).collect(),
+    }
+}
+
+fn chan(path: &[&str], mode: &str, payload: CoreType) -> CoreRowItem {
+    CoreRowItem::Channel {
+        path: path.iter().map(|part| (*part).to_owned()).collect(),
+        mode: mode.to_owned(),
+        payload_type: Box::new(payload),
+    }
+}
+
+fn function_row_type(row: CoreRow) -> CoreType {
+    CoreType::Function {
+        params: vec![],
+        result: Box::new(CoreType::Base("Unit".into())),
+        row,
+    }
+}
+
+fn cont_type(row: CoreRow) -> CoreType {
+    CoreType::Cont {
+        input: Box::new(CoreType::Base("String".into())),
+        answer: Box::new(CoreType::Base("Unit".into())),
+        row,
+        multiplicity: CoreMultiplicity::Affine,
     }
 }
 
@@ -36,6 +64,65 @@ fn normalization_preserves_effect_kind_namespaces() {
         normalized,
         CoreRow::closed(vec![read_capability, read_role])
     );
+}
+
+#[test]
+fn rows_compare_equal_when_items_are_reordered_for_function_types() {
+    let left = function_row_type(CoreRow::closed(vec![
+        role(&["tenant", "primary"]),
+        cap(&["fs"], "write"),
+    ]));
+    let right = function_row_type(CoreRow::closed(vec![
+        cap(&["fs"], "write"),
+        role(&["tenant", "primary"]),
+    ]));
+
+    assert!(
+        core_types_equivalent(&left, &right, &CoreTypeCheckEnv::default())
+            .expect("comparison should not fail"),
+        "function rows should compare equivalent regardless of item order"
+    );
+}
+
+#[test]
+fn rows_compare_equal_when_items_are_reordered_for_continuation_types() {
+    let left = cont_type(CoreRow::closed(vec![
+        cap(&["fs"], "write"),
+        cap(&["audit"], "emit"),
+    ]));
+    let right = cont_type(CoreRow::closed(vec![
+        cap(&["audit"], "emit"),
+        cap(&["fs"], "write"),
+    ]));
+
+    assert!(
+        core_types_equivalent(&left, &right, &CoreTypeCheckEnv::default())
+            .expect("comparison should not fail"),
+        "continuation rows should compare equivalent regardless of item order"
+    );
+}
+
+#[test]
+fn public_row_inclusion_uses_exact_row_item_matching() {
+    let named_payload = CoreType::Named("Payload".into());
+    let app_payload = CoreType::App {
+        name: "Box".into(),
+        args: vec![CoreType::Base("Int".into())],
+    };
+    let actual = CoreRow::closed(vec![
+        chan(&["jobs"], "send", named_payload.clone()),
+        chan(&["jobs"], "send", app_payload.clone()),
+    ]);
+    let expected = CoreRow::closed(vec![
+        chan(&["jobs"], "send", named_payload),
+        chan(&["jobs"], "send", app_payload),
+    ]);
+
+    let comparison =
+        core_row_included_in(&actual, &expected).expect("public API should not require type env");
+
+    assert!(comparison.is_included());
+    assert!(comparison.missing_items().is_empty());
 }
 
 #[test]

@@ -34,6 +34,14 @@ fn cap_row(path: &[&str], operation: &str) -> CoreRow {
     CoreRow::closed(vec![cap(path, operation)])
 }
 
+fn chan_row(path: &[&str], mode: &str, payload: CoreType) -> CoreRow {
+    CoreRow::closed(vec![CoreRowItem::Channel {
+        path: path.iter().map(|part| (*part).to_owned()).collect(),
+        mode: mode.to_owned(),
+        payload_type: Box::new(payload),
+    }])
+}
+
 fn function_ty(params: Vec<CoreType>, result: CoreType, row: CoreRow) -> CoreType {
     CoreType::Function {
         params,
@@ -88,6 +96,44 @@ fn let_call_binds_result_in_body_and_charges_function_latent_row_plus_body_local
         &env,
     )
     .expect("LetCall result binding and row accounting should type-check");
+
+    assert_eq!(typed.ty(), &unit_ty());
+    assert_eq!(typed.row(), &expected_row);
+}
+
+#[test]
+fn let_call_unions_structurally_equivalent_channel_rows_without_duplicates() {
+    let callee_row = chan_row(
+        &["jobs"],
+        "send",
+        CoreType::Record(vec![("a".into(), int_ty()), ("b".into(), string_ty())]),
+    );
+    let body_row = chan_row(
+        &["jobs"],
+        "send",
+        CoreType::Record(vec![("b".into(), string_ty()), ("a".into(), int_ty())]),
+    );
+    let expected_row = callee_row.clone();
+
+    let mut env = CoreTypeCheckEnv::default();
+    env.values_mut()
+        .insert("callee", function_ty(Vec::new(), unit_ty(), callee_row));
+    env.values_mut()
+        .insert("body_fn", function_ty(Vec::new(), unit_ty(), body_row));
+
+    let typed = type_check(
+        CoreExpr::LetCall {
+            name: "x".into(),
+            func: CoreAtom::Var("callee".into()),
+            args: Vec::new(),
+            body: Box::new(CoreExpr::Call {
+                func: CoreAtom::Var("body_fn".into()),
+                args: Vec::new(),
+            }),
+        },
+        &env,
+    )
+    .expect("LetCall should structurally deduplicate semantically equivalent channel rows");
 
     assert_eq!(typed.ty(), &unit_ty());
     assert_eq!(typed.row(), &expected_row);

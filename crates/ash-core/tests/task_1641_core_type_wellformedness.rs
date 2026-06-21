@@ -1,7 +1,21 @@
-use ash_core::core_ash::{CoreMultiplicity, CoreRow, CoreType};
+use ash_core::core_ash::{CoreMultiplicity, CoreRow, CoreRowItem, CoreType};
 use ash_core::core_ash_typecheck::{
     CoreTypeCheckEnv, CoreTypeCheckError, check_core_type_well_formed, core_types_equivalent,
 };
+
+fn channel_row_item(path: &[&str], mode: &str, payload: CoreType) -> CoreRowItem {
+    CoreRowItem::Channel {
+        path: path.iter().map(|part| (*part).to_owned()).collect(),
+        mode: mode.to_owned(),
+        payload_type: Box::new(payload),
+    }
+}
+
+fn failure_row_item(payload: Option<CoreType>) -> CoreRowItem {
+    CoreRowItem::Failure {
+        ty: payload.map(Box::new),
+    }
+}
 
 #[test]
 fn known_base_and_named_types_are_well_formed() {
@@ -66,6 +80,107 @@ fn record_type_equivalence_is_field_name_based() {
     check_core_type_well_formed(&first, &env).expect("first record is well formed");
     check_core_type_well_formed(&second, &env).expect("second record is well formed");
     assert!(core_types_equivalent(&first, &second, &env).expect("record comparison succeeds"));
+}
+
+#[test]
+fn function_row_type_equivalence_ignores_channel_payload_field_order() {
+    let env = CoreTypeCheckEnv::default();
+    let left = CoreType::Function {
+        params: vec![],
+        result: Box::new(CoreType::Base("Unit".into())),
+        row: CoreRow::closed(vec![channel_row_item(
+            &["jobs"],
+            "send",
+            CoreType::Record(vec![
+                ("a".into(), CoreType::Base("Int".into())),
+                ("b".into(), CoreType::Base("String".into())),
+            ]),
+        )]),
+    };
+    let right = CoreType::Function {
+        params: vec![],
+        result: Box::new(CoreType::Base("Unit".into())),
+        row: CoreRow::closed(vec![channel_row_item(
+            &["jobs"],
+            "send",
+            CoreType::Record(vec![
+                ("b".into(), CoreType::Base("String".into())),
+                ("a".into(), CoreType::Base("Int".into())),
+            ]),
+        )]),
+    };
+
+    assert!(
+        core_types_equivalent(&left, &right, &env).expect("comparison should succeed"),
+        "channel payload record field order should not affect row equivalence"
+    );
+}
+
+#[test]
+fn continuation_row_type_equivalence_ignores_failure_payload_field_order() {
+    let env = CoreTypeCheckEnv::default();
+    let left_payload = CoreType::Record(vec![
+        ("a".into(), CoreType::Base("Int".into())),
+        ("b".into(), CoreType::Base("String".into())),
+    ]);
+    let right_payload = CoreType::Record(vec![
+        ("b".into(), CoreType::Base("String".into())),
+        ("a".into(), CoreType::Base("Int".into())),
+    ]);
+
+    let left = CoreType::Cont {
+        input: Box::new(CoreType::Base("String".into())),
+        answer: Box::new(CoreType::Base("String".into())),
+        row: CoreRow::closed(vec![failure_row_item(Some(left_payload))]),
+        multiplicity: CoreMultiplicity::Affine,
+    };
+    let right = CoreType::Cont {
+        input: Box::new(CoreType::Base("String".into())),
+        answer: Box::new(CoreType::Base("String".into())),
+        row: CoreRow::closed(vec![failure_row_item(Some(right_payload))]),
+        multiplicity: CoreMultiplicity::Affine,
+    };
+
+    assert!(
+        core_types_equivalent(&left, &right, &env).expect("comparison should succeed"),
+        "failure payload record field order should not affect row equivalence"
+    );
+}
+
+#[test]
+fn function_row_type_equivalence_ignores_structurally_duplicate_typed_items() {
+    let canonical = channel_row_item(
+        &["jobs"],
+        "send",
+        CoreType::Record(vec![
+            ("a".into(), CoreType::Base("Int".into())),
+            ("b".into(), CoreType::Base("String".into())),
+        ]),
+    );
+    let reordered = channel_row_item(
+        &["jobs"],
+        "send",
+        CoreType::Record(vec![
+            ("b".into(), CoreType::Base("String".into())),
+            ("a".into(), CoreType::Base("Int".into())),
+        ]),
+    );
+    let left = CoreType::Function {
+        params: vec![],
+        result: Box::new(CoreType::Base("Unit".into())),
+        row: CoreRow::closed(vec![canonical.clone(), reordered]),
+    };
+    let right = CoreType::Function {
+        params: vec![],
+        result: Box::new(CoreType::Base("Unit".into())),
+        row: CoreRow::closed(vec![canonical]),
+    };
+
+    assert!(
+        core_types_equivalent(&left, &right, &CoreTypeCheckEnv::default())
+            .expect("comparison should deduplicate structural duplicates"),
+        "semantically equivalent typed items should be deduplicated before row equivalence"
+    );
 }
 
 #[test]

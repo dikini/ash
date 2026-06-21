@@ -571,6 +571,29 @@ fn record_function_row(name: &str, ty: &CoreType, state: &mut LoweringState) {
     }
 }
 
+fn local_function_row_from_binding<'a>(ty: &'a CoreType, value: &'a CoreValue) -> Option<CoreRow> {
+    if let CoreType::Function { row, .. } = ty {
+        return Some(row.clone());
+    }
+
+    if let CoreValue::Lam { row, .. } = value {
+        return Some(row.clone());
+    }
+
+    None
+}
+
+fn record_local_function_row(
+    name: &str,
+    ty: &CoreType,
+    value: &CoreValue,
+    state: &mut LoweringState,
+) {
+    if let Some(row) = local_function_row_from_binding(ty, value) {
+        state.context.function_rows.insert(name.to_string(), row);
+    }
+}
+
 fn function_row_for_atom(atom: &CoreAtom, state: &LoweringState) -> Option<CoreRow> {
     let CoreAtom::Var(name) = atom else {
         return None;
@@ -593,7 +616,22 @@ fn cont_row(cont: &CoreContRef, state: &LoweringState) -> CoreRow {
 fn local_row(expr: &CoreExpr, state: &LoweringState) -> Result<CoreRow, CoreLoweringError> {
     match expr {
         CoreExpr::Atom(_) | CoreExpr::Jump { .. } | CoreExpr::Trap { .. } => Ok(CoreRow::default()),
-        CoreExpr::LetVal { body, .. } | CoreExpr::LetRec { body, .. } => local_row(body, state),
+        CoreExpr::LetVal {
+            name,
+            ty,
+            value,
+            body,
+        }
+        | CoreExpr::LetRec {
+            name,
+            ty,
+            value,
+            body,
+        } => {
+            let mut lexical_state = state.clone();
+            record_local_function_row(name, ty, value, &mut lexical_state);
+            local_row(body, &lexical_state)
+        }
         CoreExpr::LetPrim { op, body, .. } => {
             lower_prim_op(op)?;
             local_row(body, state)
@@ -623,7 +661,22 @@ fn local_row(expr: &CoreExpr, state: &LoweringState) -> Result<CoreRow, CoreLowe
 fn total_row(expr: &CoreExpr, state: &LoweringState) -> Result<CoreRow, CoreLoweringError> {
     match expr {
         CoreExpr::Atom(_) => Ok(state.context.current_cont_row.clone()),
-        CoreExpr::LetVal { body, .. } | CoreExpr::LetRec { body, .. } => total_row(body, state),
+        CoreExpr::LetVal {
+            name,
+            ty,
+            value,
+            body,
+        }
+        | CoreExpr::LetRec {
+            name,
+            ty,
+            value,
+            body,
+        } => {
+            let mut lexical_state = state.clone();
+            record_local_function_row(name, ty, value, &mut lexical_state);
+            total_row(body, &lexical_state)
+        }
         CoreExpr::LetPrim { op, body, .. } => {
             lower_prim_op(op)?;
             total_row(body, state)

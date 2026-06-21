@@ -14,6 +14,23 @@ fn cap(path: &[&str], operation: &str) -> CoreRowItem {
     }
 }
 
+fn chan(path: &[&str], mode: &str, payload: CoreType) -> CoreRowItem {
+    CoreRowItem::Channel {
+        path: path.iter().map(|part| (*part).to_owned()).collect(),
+        mode: mode.to_owned(),
+        payload_type: Box::new(payload),
+    }
+}
+
+fn channel_op(path: &[&str], mode: &str, payload: CoreType) -> CoreEffectOp {
+    CoreEffectOp::Channel {
+        path: path.iter().map(|part| (*part).to_owned()).collect(),
+        mode: mode.to_owned(),
+        payload_type: payload,
+        result_type: CoreType::Base("Unit".into()),
+    }
+}
+
 #[test]
 fn literals_synthesize_builtin_base_types() {
     let env = CoreTypeCheckEnv::default();
@@ -160,6 +177,56 @@ fn lambda_latent_row_accepts_body_row_included_in_annotation() {
 }
 
 #[test]
+fn lambda_latent_row_accepts_equivalent_channel_payload_record_order() {
+    let param_payload = CoreType::Record(vec![
+        ("a".into(), CoreType::Base("Int".into())),
+        ("b".into(), CoreType::Base("String".into())),
+    ]);
+    let annotated_payload = CoreType::Record(vec![
+        ("b".into(), CoreType::Base("String".into())),
+        ("a".into(), CoreType::Base("Int".into())),
+    ]);
+    let mut env = CoreTypeCheckEnv::default();
+    env.operations_mut()
+        .insert(channel_op(&["jobs"], "send", param_payload.clone()));
+
+    let lambda = CoreValue::Lam {
+        params: vec![CoreParam {
+            name: "payload".into(),
+            ty: param_payload.clone(),
+        }],
+        body: Box::new(CoreExpr::Raise {
+            op: channel_op(&["jobs"], "send", param_payload),
+            args: vec![CoreAtom::Var("payload".into())],
+        }),
+        row: CoreRow::closed(vec![chan(&["jobs"], "send", annotated_payload)]),
+    };
+
+    let typed =
+        synthesize_core_value(&lambda, &env).expect("channel latent row compares structurally");
+
+    assert_eq!(typed.row(), &CoreRow::default());
+    assert_eq!(
+        typed.ty(),
+        &CoreType::Function {
+            params: vec![CoreType::Record(vec![
+                ("a".into(), CoreType::Base("Int".into())),
+                ("b".into(), CoreType::Base("String".into())),
+            ])],
+            result: Box::new(CoreType::Base("Unit".into())),
+            row: CoreRow::closed(vec![chan(
+                &["jobs"],
+                "send",
+                CoreType::Record(vec![
+                    ("b".into(), CoreType::Base("String".into())),
+                    ("a".into(), CoreType::Base("Int".into())),
+                ])
+            )]),
+        }
+    );
+}
+
+#[test]
 fn lambda_latent_row_rejects_body_row_not_included_in_annotation() {
     let mut env = CoreTypeCheckEnv::default();
     env.operations_mut().insert(cap_op(&["fs"], "read"));
@@ -224,4 +291,46 @@ fn discharge_marker_is_administrative_unit_metadata() {
 
     assert_eq!(typed.ty(), &CoreType::Base("Unit".into()));
     assert_eq!(typed.row(), &CoreRow::default());
+}
+
+#[test]
+fn lambda_rejects_unknown_row_tail_in_latent_annotation() {
+    let lambda = CoreValue::Lam {
+        params: Vec::new(),
+        body: Box::new(CoreExpr::Atom(CoreAtom::LitUnit)),
+        row: CoreRow::open(Vec::new(), "missing_row_var"),
+    };
+
+    let err = synthesize_core_value(&lambda, &CoreTypeCheckEnv::default())
+        .expect_err("unknown row variable should be rejected before returning a function type");
+
+    assert_eq!(
+        err,
+        CoreTypeCheckError::UnknownRowVariable {
+            name: "missing_row_var".into()
+        }
+    );
+}
+
+#[test]
+fn lambda_rejects_unknown_channel_payload_type_in_latent_row_annotation() {
+    let lambda = CoreValue::Lam {
+        params: Vec::new(),
+        body: Box::new(CoreExpr::Atom(CoreAtom::LitUnit)),
+        row: CoreRow::closed(vec![CoreRowItem::Channel {
+            path: vec!["jobs".into()],
+            mode: "send".into(),
+            payload_type: Box::new(CoreType::Named("Payload".into())),
+        }]),
+    };
+
+    let err = synthesize_core_value(&lambda, &CoreTypeCheckEnv::default())
+        .expect_err("unknown payload type should be rejected in lambda row annotations");
+
+    assert_eq!(
+        err,
+        CoreTypeCheckError::UnknownType {
+            name: "Payload".into()
+        }
+    );
 }

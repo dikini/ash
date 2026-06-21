@@ -933,11 +933,11 @@ pub fn normalize_core_row(row: &CoreRow) -> Result<CoreRow, CoreTypeCheckError> 
     })
 }
 
-/// Checks structural inclusion of two Core requirement rows.
+/// Checks exact inclusion of two Core requirement rows.
 ///
 /// `actual <= expected` means every normalized requirement in `actual` appears
 /// in `expected`, possibly by solving one explicit open-row tail to the
-/// structural remainder demanded by the comparison.
+/// exact remainder demanded by the comparison.
 ///
 /// # Errors
 ///
@@ -978,6 +978,64 @@ pub fn core_row_included_in(
             }
 
             let solution_row = CoreRow::closed(row_difference(&expected.items, &actual.items));
+
+            Ok(CoreRowComparison {
+                included: true,
+                missing_items: Vec::new(),
+                solutions: vec![CoreRowSolution {
+                    variable: actual_tail.clone(),
+                    row: solution_row,
+                }],
+            })
+        }
+        (Some(actual_tail), Some(expected_tail)) => Ok(CoreRowComparison {
+            included: actual_tail == expected_tail && missing_items.is_empty(),
+            missing_items,
+            solutions: Vec::new(),
+        }),
+    }
+}
+
+fn core_row_included_in_env(
+    actual: &CoreRow,
+    expected: &CoreRow,
+    env: &CoreTypeCheckEnv,
+) -> Result<CoreRowComparison, CoreTypeCheckError> {
+    let actual = normalize_core_row_structural(actual, env)?;
+    let expected = normalize_core_row_structural(expected, env)?;
+    let missing_items = row_difference_structural(&actual.items, &expected.items, env)?;
+
+    match (&actual.tail, &expected.tail) {
+        (None, None) => Ok(CoreRowComparison {
+            included: missing_items.is_empty(),
+            missing_items,
+            solutions: Vec::new(),
+        }),
+        (None, Some(expected_tail)) => {
+            let remainder = row_difference_structural(&actual.items, &expected.items, env)?;
+            Ok(CoreRowComparison {
+                included: true,
+                missing_items: Vec::new(),
+                solutions: vec![CoreRowSolution {
+                    variable: expected_tail.clone(),
+                    row: CoreRow::closed(remainder),
+                }],
+            })
+        }
+        (Some(actual_tail), None) => {
+            if !missing_items.is_empty() {
+                return Ok(CoreRowComparison {
+                    included: false,
+                    missing_items,
+                    solutions: Vec::new(),
+                });
+            }
+
+            let solution_row = CoreRow::closed(row_difference_structural(
+                &expected.items,
+                &actual.items,
+                env,
+            )?);
 
             Ok(CoreRowComparison {
                 included: true,
@@ -1134,8 +1192,10 @@ pub fn synthesize_core_value(
                 param_types.push(param.ty.clone());
             }
 
+            check_core_row_well_formed(row, env)?;
+
             let body_checked = type_check_expr(body, &body_env)?;
-            let comparison = core_row_included_in(&body_checked.row, row)?;
+            let comparison = core_row_included_in_env(&body_checked.row, row, env)?;
             if !comparison.is_included() {
                 return Err(CoreTypeCheckError::RowMismatch {
                     expected: row.clone(),
@@ -1255,7 +1315,7 @@ fn types_equivalent_unchecked(lhs: &CoreType, rhs: &CoreType, env: &CoreTypeChec
         ) => {
             type_slices_equivalent_unchecked(left_params, right_params, env)
                 && types_equivalent_unchecked(left_result, right_result, env)
-                && rows_equivalent_unchecked(left_row, right_row)
+                && rows_equivalent_unchecked(left_row, right_row, env)
         }
         (
             CoreType::Refinement {
@@ -1287,7 +1347,7 @@ fn types_equivalent_unchecked(lhs: &CoreType, rhs: &CoreType, env: &CoreTypeChec
             left_multiplicity == right_multiplicity
                 && types_equivalent_unchecked(left_input, right_input, env)
                 && types_equivalent_unchecked(left_answer, right_answer, env)
-                && rows_equivalent_unchecked(left_row, right_row)
+                && rows_equivalent_unchecked(left_row, right_row, env)
         }
         (CoreType::Tuple(left), CoreType::Tuple(right)) => {
             type_slices_equivalent_unchecked(left, right, env)
@@ -1353,11 +1413,152 @@ fn duplicate_record_field_name(fields: &[(CoreName, CoreType)]) -> Option<CoreNa
         .find_map(|(field_name, _)| (!seen.insert(field_name)).then(|| field_name.clone()))
 }
 
-fn rows_equivalent_unchecked(lhs: &CoreRow, rhs: &CoreRow) -> bool {
-    match (normalize_core_row(lhs), normalize_core_row(rhs)) {
-        (Ok(left), Ok(right)) => left == right,
-        _ => false,
+fn rows_equivalent(
+    lhs: &CoreRow,
+    rhs: &CoreRow,
+    env: &CoreTypeCheckEnv,
+) -> Result<bool, CoreTypeCheckError> {
+    let left = normalize_core_row_structural(lhs, env)?;
+    let right = normalize_core_row_structural(rhs, env)?;
+
+    if left.tail != right.tail || left.items.len() != right.items.len() {
+        return Ok(false);
+    };
+
+    let mut used = vec![false; right.items.len()];
+    for lhs_item in &left.items {
+        let mut found = None;
+        for (index, rhs_item) in right.items.iter().enumerate() {
+            if used[index] {
+                continue;
+            }
+
+            if row_items_equivalent(lhs_item, rhs_item, env)? {
+                found = Some(index);
+                break;
+            }
+        }
+
+        let Some(index) = found else {
+            return Ok(false);
+        };
+
+        used[index] = true;
     }
+
+    Ok(used.iter().all(|used| *used))
+}
+
+fn rows_equivalent_unchecked(lhs: &CoreRow, rhs: &CoreRow, env: &CoreTypeCheckEnv) -> bool {
+    rows_equivalent(lhs, rhs, env).unwrap_or(false)
+}
+
+fn normalize_core_row_structural(
+    row: &CoreRow,
+    env: &CoreTypeCheckEnv,
+) -> Result<CoreRow, CoreTypeCheckError> {
+    let normalized = normalize_core_row(row)?;
+    let items = structural_dedup_row_items(&normalized.items, env)?;
+    Ok(CoreRow {
+        items,
+        tail: normalized.tail,
+    })
+}
+
+fn structural_dedup_row_items(
+    items: &[CoreRowItem],
+    env: &CoreTypeCheckEnv,
+) -> Result<Vec<CoreRowItem>, CoreTypeCheckError> {
+    let mut deduped = Vec::new();
+    'outer: for item in items {
+        for existing in &deduped {
+            if row_items_equivalent(item, existing, env)? {
+                continue 'outer;
+            }
+        }
+        deduped.push(item.clone());
+    }
+    Ok(deduped)
+}
+
+fn row_items_equivalent(
+    lhs: &CoreRowItem,
+    rhs: &CoreRowItem,
+    env: &CoreTypeCheckEnv,
+) -> Result<bool, CoreTypeCheckError> {
+    Ok(match (lhs, rhs) {
+        (
+            CoreRowItem::Capability {
+                path: left_path,
+                operation: left_op,
+            },
+            CoreRowItem::Capability {
+                path: right_path,
+                operation: right_op,
+            },
+        ) => left_path == right_path && left_op == right_op,
+        (
+            CoreRowItem::Resource {
+                path: left_path,
+                mode: left_mode,
+            },
+            CoreRowItem::Resource {
+                path: right_path,
+                mode: right_mode,
+            },
+        ) => left_path == right_path && left_mode == right_mode,
+        (CoreRowItem::Role { path: left_path }, CoreRowItem::Role { path: right_path }) => {
+            left_path == right_path
+        }
+        (CoreRowItem::Policy { path: left_path }, CoreRowItem::Policy { path: right_path }) => {
+            left_path == right_path
+        }
+        (
+            CoreRowItem::Contract {
+                contract: left_contract,
+            },
+            CoreRowItem::Contract {
+                contract: right_contract,
+            },
+        ) => left_contract == right_contract,
+        (
+            CoreRowItem::Channel {
+                path: left_path,
+                mode: left_mode,
+                payload_type: left_payload_type,
+            },
+            CoreRowItem::Channel {
+                path: right_path,
+                mode: right_mode,
+                payload_type: right_payload_type,
+            },
+        ) => {
+            left_path == right_path
+                && left_mode == right_mode
+                && core_types_equivalent(left_payload_type, right_payload_type, env)?
+        }
+        (
+            CoreRowItem::Process {
+                operation: left_operation,
+            },
+            CoreRowItem::Process {
+                operation: right_operation,
+            },
+        ) => left_operation == right_operation,
+        (
+            CoreRowItem::Failure { ty: Some(left_ty) },
+            CoreRowItem::Failure { ty: Some(right_ty) },
+        ) => core_types_equivalent(left_ty, right_ty, env)?,
+        (CoreRowItem::Failure { ty: None }, CoreRowItem::Failure { ty: None }) => true,
+        (CoreRowItem::Evidence { path: left_path }, CoreRowItem::Evidence { path: right_path }) => {
+            left_path == right_path
+        }
+        (
+            CoreRowItem::EffectGroupRef { path: left_path },
+            CoreRowItem::EffectGroupRef { path: right_path },
+        ) => left_path == right_path,
+        _ => false,
+    })
 }
 
 fn row_difference(left: &[CoreRowItem], right: &[CoreRowItem]) -> Vec<CoreRowItem> {
@@ -1365,6 +1566,37 @@ fn row_difference(left: &[CoreRowItem], right: &[CoreRowItem]) -> Vec<CoreRowIte
         .filter(|item| !right.contains(item))
         .cloned()
         .collect()
+}
+
+fn row_difference_structural(
+    left: &[CoreRowItem],
+    right: &[CoreRowItem],
+    env: &CoreTypeCheckEnv,
+) -> Result<Vec<CoreRowItem>, CoreTypeCheckError> {
+    let mut used = vec![false; right.len()];
+    let mut difference = Vec::new();
+
+    for item in left {
+        let mut matched_index = None;
+        for (index, expected_item) in right.iter().enumerate() {
+            if used[index] {
+                continue;
+            }
+
+            if row_items_equivalent(item, expected_item, env)? {
+                matched_index = Some(index);
+                break;
+            }
+        }
+
+        if let Some(index) = matched_index {
+            used[index] = true;
+        } else {
+            difference.push(item.clone());
+        }
+    }
+
+    Ok(difference)
 }
 
 fn public_row_item_summary(item: &CoreRowItem) -> CorePublicRowItemSummary {
@@ -1633,7 +1865,7 @@ fn type_check_expr(
             let body_checked = type_check_expr(body, &body_env)?;
             Ok(TypedCoreExpr {
                 ty: body_checked.ty,
-                row: union_core_rows(&callee_row, &body_checked.row)?,
+                row: union_core_rows_structural(&callee_row, &body_checked.row, env)?,
                 facts: merge_typecheck_facts(arg_facts, body_checked.facts),
             })
         }
@@ -1661,6 +1893,7 @@ fn type_check_expr(
                 &CoreRow::closed(vec![CoreRowItem::Contract {
                     contract: discharge.contract.clone(),
                 }]),
+                env,
             )?;
             let mut facts = body_checked.facts;
             facts.discharges.push(discharge.clone());
@@ -1714,7 +1947,7 @@ fn type_check_if(
             let then_checked = type_check_expr_against(then_branch, &else_checked.ty, env)?;
             Ok(TypedCoreExpr {
                 ty: else_checked.ty,
-                row: union_core_rows(&then_checked.row, &else_checked.row)?,
+                row: union_core_rows_structural(&then_checked.row, &else_checked.row, env)?,
                 facts: merge_typecheck_facts(
                     cond_facts,
                     merge_typecheck_facts(then_checked.facts, else_checked.facts),
@@ -1726,7 +1959,7 @@ fn type_check_if(
             let else_checked = type_check_expr_against(else_branch, &then_checked.ty, env)?;
             Ok(TypedCoreExpr {
                 ty: then_checked.ty,
-                row: union_core_rows(&then_checked.row, &else_checked.row)?,
+                row: union_core_rows_structural(&then_checked.row, &else_checked.row, env)?,
                 facts: merge_typecheck_facts(
                     cond_facts,
                     merge_typecheck_facts(then_checked.facts, else_checked.facts),
@@ -1739,7 +1972,7 @@ fn type_check_if(
             ensure_types_equivalent(&then_checked.ty, &else_checked.ty, env)?;
             Ok(TypedCoreExpr {
                 ty: then_checked.ty,
-                row: union_core_rows(&then_checked.row, &else_checked.row)?,
+                row: union_core_rows_structural(&then_checked.row, &else_checked.row, env)?,
                 facts: merge_typecheck_facts(
                     cond_facts,
                     merge_typecheck_facts(then_checked.facts, else_checked.facts),
@@ -1950,9 +2183,7 @@ fn type_check_handle(
         .insert(clause.resume.name.clone(), clause.resume.ty.clone());
 
     let clause_checked = type_check_expr(&clause.body, &clause_env)?;
-    let expected_clause_row = normalize_core_row(&clause.row)?;
-    let actual_clause_row = normalize_core_row(&clause_checked.row)?;
-    if actual_clause_row != expected_clause_row {
+    if !rows_equivalent(&clause.row, &clause_checked.row, env)? {
         return Err(CoreTypeCheckError::RowMismatch {
             expected: clause.row.clone(),
             actual: clause_checked.row,
@@ -1968,7 +2199,7 @@ fn type_check_handle(
             &resume_answer_ty
         };
     let result_facts = check_type_against_annotation(expected_clause_ty, &clause_checked.ty, env)?;
-    let residual = handle_residual_row(&body_checked.row, &op_row, &resume_row, &clause.row)?;
+    let residual = handle_residual_row(&body_checked.row, &op_row, &resume_row, &clause.row, env)?;
     Ok(TypedCoreExpr {
         ty: body_checked.ty,
         row: residual,
@@ -2055,16 +2286,34 @@ fn handle_residual_row(
     op_row: &CoreRow,
     resume_row: &CoreRow,
     clause_row: &CoreRow,
+    env: &CoreTypeCheckEnv,
 ) -> Result<CoreRow, CoreTypeCheckError> {
-    let body_without_op = subtract_core_row(body_row, op_row)?;
-    union_core_rows(&union_core_rows(&body_without_op, resume_row)?, clause_row)
+    let body_without_op = subtract_core_row(body_row, op_row, env)?;
+    union_core_rows_structural(
+        &union_core_rows_structural(&body_without_op, resume_row, env)?,
+        clause_row,
+        env,
+    )
 }
 
-fn subtract_core_row(lhs: &CoreRow, rhs: &CoreRow) -> Result<CoreRow, CoreTypeCheckError> {
-    let left = normalize_core_row(lhs)?;
-    let right = normalize_core_row(rhs)?;
+fn union_core_rows_structural(
+    lhs: &CoreRow,
+    rhs: &CoreRow,
+    env: &CoreTypeCheckEnv,
+) -> Result<CoreRow, CoreTypeCheckError> {
+    let unioned = union_core_rows(lhs, rhs)?;
+    normalize_core_row_structural(&unioned, env)
+}
+
+fn subtract_core_row(
+    lhs: &CoreRow,
+    rhs: &CoreRow,
+    env: &CoreTypeCheckEnv,
+) -> Result<CoreRow, CoreTypeCheckError> {
+    let left = normalize_core_row_structural(lhs, env)?;
+    let right = normalize_core_row_structural(rhs, env)?;
     Ok(CoreRow {
-        items: row_difference(&left.items, &right.items),
+        items: row_difference_structural(&left.items, &right.items, env)?,
         tail: left.tail,
     })
 }
@@ -2333,5 +2582,96 @@ fn primitive_type(op: &CorePrimOp) -> Result<CoreType, CoreTypeCheckError> {
         CorePrimOp::RecordGet(_) | CorePrimOp::TupleGet(_) | CorePrimOp::ConstructorTag(_) => {
             Err(unsupported("structural primitive name atom"))
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn chan(path: &[&str], mode: &str, payload: CoreType) -> CoreRowItem {
+        CoreRowItem::Channel {
+            path: path.iter().map(|part| (*part).to_owned()).collect(),
+            mode: mode.to_owned(),
+            payload_type: Box::new(payload),
+        }
+    }
+
+    fn cap(path: &[&str], operation: &str) -> CoreRowItem {
+        CoreRowItem::Capability {
+            path: path.iter().map(|part| (*part).to_owned()).collect(),
+            operation: operation.to_owned(),
+        }
+    }
+
+    #[test]
+    fn core_row_included_in_env_deduplicates_structural_typed_items_before_solving_open_tails() {
+        let payload = CoreType::Record(vec![
+            ("a".into(), CoreType::Base("Int".into())),
+            ("b".into(), CoreType::Base("String".into())),
+        ]);
+        let swapped_payload = CoreType::Record(vec![
+            ("b".into(), CoreType::Base("String".into())),
+            ("a".into(), CoreType::Base("Int".into())),
+        ]);
+
+        let actual = CoreRow::closed(vec![
+            chan(&["jobs"], "send", payload),
+            chan(&["jobs"], "send", swapped_payload),
+            cap(&["log"], "write"),
+        ]);
+        let expected = CoreRow::open(
+            vec![chan(
+                &["jobs"],
+                "send",
+                CoreType::Record(vec![
+                    ("a".into(), CoreType::Base("Int".into())),
+                    ("b".into(), CoreType::Base("String".into())),
+                ]),
+            )],
+            "r",
+        );
+        let comparison = core_row_included_in_env(&actual, &expected, &CoreTypeCheckEnv::default())
+            .expect("typed row inclusion should deduplicate equivalent items");
+
+        assert!(comparison.is_included());
+        assert_eq!(comparison.solutions().len(), 1);
+        assert_eq!(
+            comparison.solutions()[0].row(),
+            &CoreRow::closed(vec![cap(&["log"], "write")])
+        );
+    }
+
+    #[test]
+    fn union_core_rows_structural_deduplicates_structural_typed_items() {
+        let payload = CoreType::Record(vec![
+            ("a".into(), CoreType::Base("Int".into())),
+            ("b".into(), CoreType::Base("String".into())),
+        ]);
+        let reordered_payload = CoreType::Record(vec![
+            ("b".into(), CoreType::Base("String".into())),
+            ("a".into(), CoreType::Base("Int".into())),
+        ]);
+
+        let lhs = CoreRow::closed(vec![
+            chan(&["jobs"], "send", payload.clone()),
+            cap(&["cache"], "read"),
+        ]);
+        let rhs = CoreRow::closed(vec![
+            chan(&["jobs"], "send", reordered_payload),
+            cap(&["audit"], "emit"),
+        ]);
+
+        let unioned = union_core_rows_structural(&lhs, &rhs, &CoreTypeCheckEnv::default())
+            .expect("typed row unions should collapse semantically equivalent items");
+
+        assert_eq!(
+            unioned,
+            CoreRow::closed(vec![
+                chan(&["jobs"], "send", payload),
+                cap(&["cache"], "read"),
+                cap(&["audit"], "emit"),
+            ])
+        );
     }
 }

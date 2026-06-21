@@ -3,6 +3,7 @@
 //! Evaluates CPS IR terms in the Ash language.
 
 use ash_core::cps::*;
+use chrono::Utc;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -239,7 +240,28 @@ fn eval_force_thunk_binding(
         return Err(CpsError::InvalidPrimArgs(PrimOp::ForceThunk, vec![]));
     }
     let maybe_thunk = eval_atom_to_value(&args[0], env)?;
-    let forced = force_thunk_value(&maybe_thunk, runtime)?;
+    let mode = match &maybe_thunk {
+        Value::ThunkClosure { mode, .. } => *mode,
+        _ => return Err(CpsError::ExpectedThunk(maybe_thunk)),
+    };
+
+    runtime
+        .trace
+        .push(ash_core::provenance::TraceEvent::ThunkForceStarted {
+            mode: thunk_mode_to_string(mode),
+            timestamp: Utc::now(),
+        });
+
+    let force_result = force_thunk_value(&maybe_thunk, runtime);
+    runtime
+        .trace
+        .push(ash_core::provenance::TraceEvent::ThunkForceCompleted {
+            mode: thunk_mode_to_string(mode),
+            outcome: trace_outcome_string(&force_result),
+            timestamp: Utc::now(),
+        });
+    let forced = force_result?;
+
     let new_env = env.clone().with_binding(name.clone(), Value::Atom(forced));
     eval_unchecked_with_runtime(continuation_body, &new_env, chain, runtime)
 }
@@ -605,6 +627,15 @@ fn eval_value_with_runtime(
                 ThunkMode::Memo if memo_cell.is_none() => Some(runtime.allocate_memo_cell()),
                 _ => *memo_cell,
             };
+
+            runtime
+                .trace
+                .push(ash_core::provenance::TraceEvent::ThunkConstructed {
+                    mode: thunk_mode_to_string(*mode),
+                    row: effect_row_to_strings(row),
+                    timestamp: Utc::now(),
+                });
+
             Ok(Value::ThunkClosure {
                 mode: *mode,
                 body: body.clone(),
@@ -889,12 +920,35 @@ fn force_thunk_value(thunk: &Value, runtime: &mut CpsRuntime) -> CpsResult<Atom>
             let state = runtime.memo_cells.get(&cell_id).cloned();
             match state {
                 Some(MemoCellState::Filled(outcome)) => match outcome {
-                    CachedThunkOutcome::Success(atom) => Ok(atom),
-                    CachedThunkOutcome::Failure(error) => Err(error),
+                    CachedThunkOutcome::Success(atom) => {
+                        runtime
+                            .trace
+                            .push(ash_core::provenance::TraceEvent::MemoCacheHit {
+                                outcome: trace_outcome_string::<Atom>(&Ok(atom.clone())),
+                                timestamp: Utc::now(),
+                            });
+                        Ok(atom)
+                    }
+                    CachedThunkOutcome::Failure(error) => {
+                        runtime
+                            .trace
+                            .push(ash_core::provenance::TraceEvent::MemoReplayFailure {
+                                reason: trace_error_outcome_string(&error),
+                                timestamp: Utc::now(),
+                            });
+                        Err(error)
+                    }
                 },
-                Some(MemoCellState::Evaluating) => Err(CpsError::Trap(TrapReason::Custom(
-                    "re-entrant memo force".to_string(),
-                ))),
+                Some(MemoCellState::Evaluating) => {
+                    runtime
+                        .trace
+                        .push(ash_core::provenance::TraceEvent::MemoReentrantRejected {
+                            timestamp: Utc::now(),
+                        });
+                    Err(CpsError::Trap(TrapReason::Custom(
+                        "re-entrant memo force".to_string(),
+                    )))
+                }
                 Some(MemoCellState::Empty) | None => {
                     runtime
                         .memo_cells
@@ -902,6 +956,12 @@ fn force_thunk_value(thunk: &Value, runtime: &mut CpsRuntime) -> CpsResult<Atom>
                     let result = run_thunk_body_with_runtime(thunk, runtime);
                     match result {
                         Ok(atom) => {
+                            runtime
+                                .trace
+                                .push(ash_core::provenance::TraceEvent::MemoCacheFilled {
+                                    outcome: trace_outcome_string(&Ok(atom.clone())),
+                                    timestamp: Utc::now(),
+                                });
                             runtime.memo_cells.insert(
                                 cell_id,
                                 MemoCellState::Filled(CachedThunkOutcome::Success(atom.clone())),
@@ -909,6 +969,12 @@ fn force_thunk_value(thunk: &Value, runtime: &mut CpsRuntime) -> CpsResult<Atom>
                             Ok(atom)
                         }
                         Err(error) if is_cacheable_thunk_error(&error) => {
+                            runtime
+                                .trace
+                                .push(ash_core::provenance::TraceEvent::MemoCacheFilled {
+                                    outcome: trace_outcome_string::<Atom>(&Err(error.clone())),
+                                    timestamp: Utc::now(),
+                                });
                             runtime.memo_cells.insert(
                                 cell_id,
                                 MemoCellState::Filled(CachedThunkOutcome::Failure(error.clone())),
@@ -935,6 +1001,7 @@ fn is_cacheable_thunk_error(error: &CpsError) -> bool {
 #[allow(clippy::result_large_err)]
 fn run_thunk_body_with_runtime(thunk: &Value, runtime: &mut CpsRuntime) -> CpsResult<Atom> {
     let Value::ThunkClosure {
+        mode,
         body,
         captured_env,
         captured_chain,
@@ -959,6 +1026,13 @@ fn run_thunk_body_with_runtime(thunk: &Value, runtime: &mut CpsRuntime) -> CpsRe
         return Err(CpsError::InvalidPrimArgs(PrimOp::ForceThunk, vec![]));
     }
 
+    runtime.trace.push(
+        ash_core::provenance::TraceEvent::ThunkBodyEvaluationStarted {
+            mode: thunk_mode_to_string(*mode),
+            timestamp: Utc::now(),
+        },
+    );
+
     let force_result_name = "__force_result";
     let cont_value = Value::Cont {
         param: force_result_name.to_string(),
@@ -978,7 +1052,46 @@ fn run_thunk_body_with_runtime(thunk: &Value, runtime: &mut CpsRuntime) -> CpsRe
         body_env = body_env.with_binding(rec_name.clone(), rec_value.clone());
     }
     body_env = body_env.with_binding(lam_cont.clone(), cont_value);
-    eval_unchecked_with_runtime(lam_body, &body_env, captured_chain, runtime)
+    let result = eval_unchecked_with_runtime(lam_body, &body_env, captured_chain, runtime);
+    runtime.trace.push(
+        ash_core::provenance::TraceEvent::ThunkBodyEvaluationCompleted {
+            mode: thunk_mode_to_string(*mode),
+            outcome: trace_outcome_string(&result),
+            timestamp: Utc::now(),
+        },
+    );
+    result
+}
+
+fn thunk_mode_to_string(mode: ThunkMode) -> String {
+    match mode {
+        ThunkMode::Lazy => "lazy".to_string(),
+        ThunkMode::Memo => "memo".to_string(),
+    }
+}
+
+fn trace_outcome_string<T>(result: &CpsResult<T>) -> String {
+    match result {
+        Ok(_) => "success".to_string(),
+        Err(CpsError::Trap(_)) => "trap".to_string(),
+        Err(CpsError::UnhandledEffect(_)) => "unhandled-effect".to_string(),
+        Err(_) => "runtime-error".to_string(),
+    }
+}
+
+fn trace_error_outcome_string(error: &CpsError) -> String {
+    match error {
+        CpsError::Trap(_) => "trap".to_string(),
+        CpsError::UnhandledEffect(_) => "unhandled-effect".to_string(),
+        _ => "runtime-error".to_string(),
+    }
+}
+
+fn effect_row_to_strings(row: &EffectRow) -> Vec<String> {
+    row.items
+        .iter()
+        .map(|item| format!("{} {}", item.namespace, item.name))
+        .collect()
 }
 
 #[cfg(test)]

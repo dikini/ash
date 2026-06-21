@@ -57,10 +57,12 @@ fn allocates_memo_cell_at_value_construction() {
         1,
         "memo cell should be allocated during value eval"
     );
-    assert_eq!(
-        runtime.trace.len(),
-        0,
-        "TASK-1663 runtime scaffold adds only shared trace sink"
+    assert!(
+        runtime
+            .trace
+            .iter()
+            .any(|event| matches!(event, ash_core::TraceEvent::ThunkConstructed { .. })),
+        "memo thunk construction should emit a trace event"
     );
 }
 

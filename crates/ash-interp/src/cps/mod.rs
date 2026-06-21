@@ -472,14 +472,20 @@ fn eval_letrec(
             for (field_name, field_value) in fields {
                 new_fields.push((field_name.clone(), mark_rec_binding(field_value, name)));
             }
-            Value::Record { fields: new_fields }
+            let marked_record = Value::Record { fields: new_fields };
+            let mut recursive_env = new_env.clone();
+            recursive_env = recursive_env.with_binding(name.clone(), marked_record.clone());
+            eval_value_with_runtime(&marked_record, &recursive_env, chain, runtime)?
         }
         Value::Tuple { elems } => {
             let mut new_elems = Vec::new();
             for elem in elems {
                 new_elems.push(mark_rec_binding(elem, name));
             }
-            Value::Tuple { elems: new_elems }
+            let marked_tuple = Value::Tuple { elems: new_elems };
+            let mut recursive_env = new_env.clone();
+            recursive_env = recursive_env.with_binding(name.clone(), marked_tuple.clone());
+            eval_value_with_runtime(&marked_tuple, &recursive_env, chain, runtime)?
         }
         Value::ThunkClosure {
             mode,
@@ -1329,7 +1335,7 @@ mod tests {
     }
 
     #[test]
-    fn letrec_memo_thunk_self_force_is_reentrant_rejected() {
+    fn recursive_memo_force_rejects_reentrant_force() {
         let letrec_term = Term::LetRec {
             name: "memoized".to_string(),
             value: Value::ThunkClosure {
@@ -1377,5 +1383,61 @@ mod tests {
                 "re-entrant memo force".to_string()
             )))
         );
+    }
+
+    #[test]
+    fn composite_recursive_memo_thunk_preserves_enclosing_binding() {
+        let letrec_term = Term::LetRec {
+            name: "pair".to_string(),
+            value: Value::Tuple {
+                elems: vec![
+                    Value::ThunkClosure {
+                        mode: ThunkMode::Memo,
+                        body: Box::new(Value::Lam {
+                            params: vec![],
+                            cont: "resume".to_string(),
+                            body: Box::new(Term::LetPrim {
+                                name: "pair_second".to_string(),
+                                op: PrimOp::TupleGet(1),
+                                args: vec![Atom::Var("pair".to_string())],
+                                body: Box::new(Term::Return {
+                                    value: Atom::Var("pair_second".to_string()),
+                                }),
+                            }),
+                            captured_env: Env::new(),
+                            rec_binding: None,
+                            row: EffectRow::default(),
+                        }),
+                        captured_env: Env::default(),
+                        captured_chain: HandlerChain::new(),
+                        row: EffectRow::default(),
+                        memo_cell: None,
+                    },
+                    Value::Atom(Atom::Int(9)),
+                ],
+            },
+            body: Box::new(Term::LetPrim {
+                name: "pair0".to_string(),
+                op: PrimOp::TupleGet(0),
+                args: vec![Atom::Var("pair".to_string())],
+                body: Box::new(Term::LetPrim {
+                    name: "forced".to_string(),
+                    op: PrimOp::ForceThunk,
+                    args: vec![Atom::Var("pair0".to_string())],
+                    body: Box::new(Term::Return {
+                        value: Atom::Var("forced".to_string()),
+                    }),
+                }),
+            }),
+        };
+
+        let mut runtime = CpsRuntime::new();
+        let result = eval_unchecked_with_runtime(
+            &letrec_term,
+            &Env::default(),
+            &HandlerChain::default(),
+            &mut runtime,
+        );
+        assert_eq!(result, Ok(Atom::Int(9)));
     }
 }

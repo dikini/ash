@@ -90,6 +90,16 @@ pub enum Value {
     Tuple {
         elems: Vec<Value>,
     },
+    /// A thunk closure capturing its creation-time runtime environment and handler chain.
+    ThunkClosure {
+        mode: ThunkMode,
+        body: Box<Value>,
+        captured_env: Env,
+        captured_chain: HandlerChain,
+        row: EffectRow,
+        #[serde(skip, default)]
+        memo_cell: Option<MemoCellId>,
+    },
 }
 
 /// A continuation reference - either a static label or a variable
@@ -185,6 +195,34 @@ pub enum PrimOp {
     Not,
     RecordGet(Name),
     TupleGet(usize),
+    ForceThunk,
+}
+
+/// The thunk evaluation mode carried in `ThunkClosure`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum ThunkMode {
+    /// Lazy thunk semantics.
+    Lazy,
+    /// Memo thunk semantics with optional memo-cell state.
+    Memo,
+}
+
+/// Opaque identifier for memo cells (process-local runtime state).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct MemoCellId {
+    raw_id: u64,
+}
+
+impl MemoCellId {
+    #[must_use]
+    pub fn new(raw: u64) -> Self {
+        Self { raw_id: raw }
+    }
+
+    #[must_use]
+    pub fn raw(self) -> u64 {
+        self.raw_id
+    }
 }
 
 /// An effect operation

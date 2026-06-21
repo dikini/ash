@@ -4,6 +4,7 @@
 
 use ash_core::cps::*;
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::rc::Rc;
 use thiserror::Error;
 
@@ -22,12 +23,59 @@ pub enum CpsError {
     ExpectedLambda(Value),
     #[error("expected continuation, got: {0:?}")]
     ExpectedContinuation(Value),
+    #[error("expected thunk closure, got: {0:?}")]
+    ExpectedThunk(Value),
     #[error("invalid primitive arguments for {0:?}: {1:?}")]
     InvalidPrimArgs(PrimOp, Vec<Atom>),
     #[error("unhandled effect: {0:?}")]
     UnhandledEffect(EffectOp),
     #[error("trap: {0:?}")]
     Trap(TrapReason),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum CachedThunkOutcome {
+    Success(Atom),
+    Failure(CpsError),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum MemoCellState {
+    Empty,
+    Evaluating,
+    Filled(CachedThunkOutcome),
+}
+
+/// Process-local runtime state for thunk execution.
+#[derive(Debug)]
+pub struct CpsRuntime {
+    pub next_memo_cell: u64,
+    pub memo_cells: HashMap<MemoCellId, MemoCellState>,
+    pub trace: Vec<ash_core::provenance::TraceEvent>,
+}
+
+impl CpsRuntime {
+    #[must_use]
+    pub fn new() -> Self {
+        Self {
+            next_memo_cell: 0,
+            memo_cells: HashMap::new(),
+            trace: Vec::new(),
+        }
+    }
+
+    pub fn allocate_memo_cell(&mut self) -> MemoCellId {
+        let id = MemoCellId::new(self.next_memo_cell);
+        self.next_memo_cell += 1;
+        self.memo_cells.insert(id, MemoCellState::Empty);
+        id
+    }
+}
+
+impl Default for CpsRuntime {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 /// Result type for CPS evaluation
@@ -41,43 +89,56 @@ pub type CpsResult<T> = Result<T, CpsError>;
 /// behavior (Rust panics, incorrect results, or infinite loops).
 #[allow(clippy::result_large_err)]
 pub fn eval_unchecked(term: &Term, env: &Env, chain: &HandlerChain) -> CpsResult<Atom> {
+    let mut runtime = CpsRuntime::new();
+    eval_unchecked_with_runtime(term, env, chain, &mut runtime)
+}
+
+#[allow(clippy::result_large_err)]
+pub fn eval_unchecked_with_runtime(
+    term: &Term,
+    env: &Env,
+    chain: &HandlerChain,
+    runtime: &mut CpsRuntime,
+) -> CpsResult<Atom> {
     match term {
-        Term::LetVal { name, value, body } => eval_letval(name, value, body, env, chain),
+        Term::LetVal { name, value, body } => eval_letval(name, value, body, env, chain, runtime),
         Term::LetPrim {
             name,
             op,
             args,
             body,
-        } => eval_letprim(name, op, args, body, env, chain),
+        } => eval_letprim(name, op, args, body, env, chain, runtime),
         Term::LetCont {
             name,
             param,
             cont_body,
             body,
-        } => eval_letcont(name, param, cont_body, body, env, chain),
-        Term::Jump { cont, arg, .. } => eval_jump(cont, arg, env, chain),
+        } => eval_letcont(name, param, cont_body, body, env, chain, runtime),
+        Term::Jump { cont, arg, .. } => eval_jump(cont, arg, env, chain, runtime),
         Term::Call {
             func, args, cont, ..
-        } => eval_call(func, args, cont, env, chain),
+        } => eval_call(func, args, cont, env, chain, runtime),
         Term::If {
             cond,
             then_branch,
             else_branch,
             ..
-        } => eval_if(cond, then_branch, else_branch, env, chain),
-        Term::LetRec { name, value, body } => eval_letrec(name, value, body, env, chain),
+        } => eval_if(cond, then_branch, else_branch, env, chain, runtime),
+        Term::LetRec { name, value, body } => eval_letrec(name, value, body, env, chain, runtime),
         Term::Match {
             scrutinee,
             arms,
             default,
-        } => eval_match(scrutinee, arms, default.as_deref(), env, chain),
+        } => eval_match(scrutinee, arms, default.as_deref(), env, chain, runtime),
         Term::Raise {
             op, args, resume, ..
-        } => eval_raise(op, args, resume, env, chain),
+        } => eval_raise(op, args, resume, env, chain, runtime),
         Term::Handle {
             clause, body, cont, ..
-        } => eval_handle(clause, body, cont, env, chain),
-        Term::RecordDischarge { body, .. } => eval_unchecked(body, env, chain),
+        } => eval_handle(clause, body, cont, env, chain, runtime),
+        Term::RecordDischarge { body, .. } => {
+            eval_unchecked_with_runtime(body, env, chain, runtime)
+        }
         Term::Return { value } => Ok(eval_atom(value, env)?),
         Term::Trap { reason } => Err(CpsError::Trap(reason.clone())),
     }
@@ -99,7 +160,8 @@ pub enum CpsRunError {
 #[allow(clippy::result_large_err)]
 pub fn eval_checked(term: &Term, env: &Env, chain: &HandlerChain) -> Result<Atom, CpsRunError> {
     validate_cps_program(term)?;
-    Ok(eval_unchecked(term, env, chain)?)
+    let mut runtime = CpsRuntime::new();
+    Ok(eval_unchecked_with_runtime(term, env, chain, &mut runtime)?)
 }
 
 /// Compatibility wrapper for code that expects `eval_term`.
@@ -123,10 +185,11 @@ fn eval_letval(
     body: &Term,
     env: &Env,
     chain: &HandlerChain,
+    runtime: &mut CpsRuntime,
 ) -> CpsResult<Atom> {
-    let evaluated_value = eval_value(value, env)?;
+    let evaluated_value = eval_value_with_runtime(value, env, chain, runtime)?;
     let new_env = env.clone().with_binding(name.clone(), evaluated_value);
-    eval_unchecked(body, &new_env, chain)
+    eval_unchecked_with_runtime(body, &new_env, chain, runtime)
 }
 
 #[allow(clippy::result_large_err)]
@@ -137,12 +200,13 @@ fn eval_letprim(
     body: &Term,
     env: &Env,
     chain: &HandlerChain,
+    runtime: &mut CpsRuntime,
 ) -> CpsResult<Atom> {
     let resolved_args: CpsResult<Vec<Value>> =
         args.iter().map(|a| eval_atom_to_value(a, env)).collect();
-    let result = eval_prim(op, &resolved_args?, env)?;
+    let result = eval_prim(op, &resolved_args?, env, runtime)?;
     let new_env = env.clone().with_binding(name.clone(), result);
-    eval_unchecked(body, &new_env, chain)
+    eval_unchecked_with_runtime(body, &new_env, chain, runtime)
 }
 
 #[allow(clippy::result_large_err)]
@@ -153,6 +217,7 @@ fn eval_letcont(
     body: &Term,
     env: &Env,
     chain: &HandlerChain,
+    runtime: &mut CpsRuntime,
 ) -> CpsResult<Atom> {
     let cont = Value::Cont {
         param: param.clone(),
@@ -163,11 +228,17 @@ fn eval_letcont(
         row: EffectRow::default(),
     };
     let new_env = env.clone().with_binding(name.clone(), cont);
-    eval_unchecked(body, &new_env, chain)
+    eval_unchecked_with_runtime(body, &new_env, chain, runtime)
 }
 
 #[allow(clippy::result_large_err)]
-fn eval_jump(cont: &ContRef, arg: &Atom, env: &Env, _chain: &HandlerChain) -> CpsResult<Atom> {
+fn eval_jump(
+    cont: &ContRef,
+    arg: &Atom,
+    env: &Env,
+    _chain: &HandlerChain,
+    runtime: &mut CpsRuntime,
+) -> CpsResult<Atom> {
     let arg_value = eval_atom_to_value(arg, env)?;
     let cont_value = resolve_cont(cont, env)?;
     match cont_value {
@@ -186,7 +257,7 @@ fn eval_jump(cont: &ContRef, arg: &Atom, env: &Env, _chain: &HandlerChain) -> Cp
             }
             consumed.set(true);
             let new_env = captured_env.clone().with_binding(param, arg_value);
-            eval_unchecked(&body, &new_env, &captured_chain)
+            eval_unchecked_with_runtime(&body, &new_env, &captured_chain, runtime)
         }
         _ => Err(CpsError::ExpectedContinuation(cont_value)),
     }
@@ -200,6 +271,7 @@ fn eval_call(
     cont: &ContRef,
     env: &Env,
     chain: &HandlerChain,
+    runtime: &mut CpsRuntime,
 ) -> CpsResult<Atom> {
     let func_value = resolve_value(func, env)?;
     let arg_values: CpsResult<Vec<Value>> =
@@ -233,7 +305,7 @@ fn eval_call(
                 new_env = new_env.with_binding(param.clone(), arg.clone());
             }
             new_env = new_env.with_binding(lam_cont.clone(), cont_value);
-            eval_unchecked(&body, &new_env, chain)
+            eval_unchecked_with_runtime(&body, &new_env, chain, runtime)
         }
         _ => Err(CpsError::ExpectedLambda(func_value)),
     }
@@ -246,11 +318,12 @@ fn eval_if(
     else_branch: &Term,
     env: &Env,
     chain: &HandlerChain,
+    runtime: &mut CpsRuntime,
 ) -> CpsResult<Atom> {
     let cond_value = eval_atom(cond, env)?;
     match cond_value {
-        Atom::Bool(true) => eval_unchecked(then_branch, env, chain),
-        Atom::Bool(false) => eval_unchecked(else_branch, env, chain),
+        Atom::Bool(true) => eval_unchecked_with_runtime(then_branch, env, chain, runtime),
+        Atom::Bool(false) => eval_unchecked_with_runtime(else_branch, env, chain, runtime),
         _ => Err(CpsError::InvalidPrimArgs(PrimOp::Eq, vec![])),
     }
 }
@@ -297,6 +370,7 @@ fn eval_letrec(
     body: &Term,
     env: &Env,
     chain: &HandlerChain,
+    runtime: &mut CpsRuntime,
 ) -> CpsResult<Atom> {
     let mut new_env = env.clone();
     let shared_env = Rc::new(RefCell::new(new_env.clone()));
@@ -338,7 +412,7 @@ fn eval_letrec(
         other => other.clone(),
     };
     new_env = new_env.with_binding(name.clone(), lam_value);
-    eval_unchecked(body, &new_env, chain)
+    eval_unchecked_with_runtime(body, &new_env, chain, runtime)
 }
 
 #[allow(clippy::result_large_err)]
@@ -348,6 +422,7 @@ fn eval_raise(
     resume: &ContRef,
     env: &Env,
     chain: &HandlerChain,
+    runtime: &mut CpsRuntime,
 ) -> CpsResult<Atom> {
     // Check for shallow handler first
     if let Some((clause, handler_idx)) = chain.find_handler(op) {
@@ -375,7 +450,7 @@ fn eval_raise(
             new_env = new_env.with_binding(param.clone(), Value::Atom(arg.clone()));
         }
         new_env = new_env.with_binding(clause.resume.clone(), resume_cont);
-        eval_unchecked(&clause.body, &new_env, &body_chain)
+        eval_unchecked_with_runtime(&clause.body, &new_env, &body_chain, runtime)
     } else if let Some((handler_name, _provider_idx)) = chain.find_provider(op) {
         // Provider dispatch: invoke the provider handler directly
         let handler_value = env
@@ -412,7 +487,7 @@ fn eval_raise(
                     new_env = new_env.with_binding(param.clone(), Value::Atom(arg.clone()));
                 }
                 new_env = new_env.with_binding(lam_cont.clone(), resume_value);
-                eval_unchecked(&body, &new_env, chain)
+                eval_unchecked_with_runtime(&body, &new_env, chain, runtime)
             }
             _ => Err(CpsError::ExpectedLambda(handler_value)),
         }
@@ -428,6 +503,7 @@ fn eval_handle(
     cont: &ContRef,
     env: &Env,
     chain: &HandlerChain,
+    runtime: &mut CpsRuntime,
 ) -> CpsResult<Atom> {
     let cont_value = resolve_cont(cont, env)?;
     let mut new_chain = chain.clone();
@@ -436,12 +512,17 @@ fn eval_handle(
     });
     let mut new_env = env.clone();
     new_env = new_env.with_binding(clause.resume.clone(), cont_value);
-    eval_unchecked(body, &new_env, &new_chain)
+    eval_unchecked_with_runtime(body, &new_env, &new_chain, runtime)
 }
 
 /// Evaluate a value (atoms pass through, lambdas capture env if not already captured, conts are inert)
 #[allow(clippy::result_large_err)]
-fn eval_value(value: &Value, env: &Env) -> CpsResult<Value> {
+fn eval_value_with_runtime(
+    value: &Value,
+    env: &Env,
+    chain: &HandlerChain,
+    runtime: &mut CpsRuntime,
+) -> CpsResult<Value> {
     match value {
         Value::Atom(atom) => Ok(Value::Atom(eval_atom(atom, env)?)),
         Value::Lam {
@@ -467,17 +548,51 @@ fn eval_value(value: &Value, env: &Env) -> CpsResult<Value> {
                 row: row.clone(),
             })
         }
+        Value::ThunkClosure {
+            mode,
+            body,
+            captured_env,
+            captured_chain,
+            row,
+            memo_cell,
+        } => {
+            let env_to_capture = if captured_env.bindings.is_empty() {
+                env.clone()
+            } else {
+                captured_env.clone()
+            };
+            let chain_to_capture = if captured_chain.frames.is_empty() {
+                chain.clone()
+            } else {
+                captured_chain.clone()
+            };
+            let allocated_cell = match mode {
+                ThunkMode::Memo if memo_cell.is_none() => Some(runtime.allocate_memo_cell()),
+                _ => *memo_cell,
+            };
+            Ok(Value::ThunkClosure {
+                mode: *mode,
+                body: body.clone(),
+                captured_env: env_to_capture,
+                captured_chain: chain_to_capture,
+                row: row.clone(),
+                memo_cell: allocated_cell,
+            })
+        }
         Value::Record { fields } => {
             let mut new_fields = Vec::new();
             for (name, field_value) in fields {
-                new_fields.push((name.clone(), eval_value(field_value, env)?));
+                new_fields.push((
+                    name.clone(),
+                    eval_value_with_runtime(field_value, env, chain, runtime)?,
+                ));
             }
             Ok(Value::Record { fields: new_fields })
         }
         Value::Tuple { elems } => {
             let mut new_elems = Vec::new();
             for elem in elems {
-                new_elems.push(eval_value(elem, env)?);
+                new_elems.push(eval_value_with_runtime(elem, env, chain, runtime)?);
             }
             Ok(Value::Tuple { elems: new_elems })
         }
@@ -537,6 +652,7 @@ fn eval_match(
     default: Option<&Term>,
     env: &Env,
     chain: &HandlerChain,
+    runtime: &mut CpsRuntime,
 ) -> CpsResult<Atom> {
     let scrut_value = resolve_value(scrutinee, env)?;
     match scrut_value {
@@ -548,11 +664,11 @@ fn eval_match(
                 Value::Atom(Atom::ConstructorName(name)) => {
                     for (arm_tag, body) in arms {
                         if arm_tag == name {
-                            return eval_unchecked(body, env, chain);
+                            return eval_unchecked_with_runtime(body, env, chain, runtime);
                         }
                     }
                     if let Some(default_body) = default {
-                        return eval_unchecked(default_body, env, chain);
+                        return eval_unchecked_with_runtime(default_body, env, chain, runtime);
                     }
                     Err(CpsError::Trap(TrapReason::Custom(
                         "no matching arm".to_string(),
@@ -583,7 +699,12 @@ fn eval_atom_to_value(atom: &Atom, env: &Env) -> CpsResult<Value> {
 
 /// Evaluate a primitive operation
 #[allow(clippy::result_large_err)]
-fn eval_prim(op: &PrimOp, args: &[Value], _env: &Env) -> CpsResult<Value> {
+fn eval_prim(
+    op: &PrimOp,
+    args: &[Value],
+    _env: &Env,
+    runtime: &mut CpsRuntime,
+) -> CpsResult<Value> {
     let make_err = || CpsError::InvalidPrimArgs(op.clone(), vec![]);
     match *op {
         PrimOp::Add => {
@@ -712,5 +833,112 @@ fn eval_prim(op: &PrimOp, args: &[Value], _env: &Env) -> CpsResult<Value> {
                 _ => Err(make_err()),
             }
         }
+        PrimOp::ForceThunk => {
+            let thunk = args.first().ok_or_else(make_err)?;
+            match thunk {
+                Value::ThunkClosure {
+                    mode,
+                    body,
+                    captured_env,
+                    captured_chain,
+                    memo_cell,
+                    ..
+                } => Ok(Value::Atom(force_thunk(
+                    mode,
+                    body.as_ref(),
+                    captured_env,
+                    captured_chain,
+                    *memo_cell,
+                    runtime,
+                )?)),
+                _ => Err(CpsError::ExpectedThunk(thunk.clone())),
+            }
+        }
+    }
+}
+
+#[allow(clippy::result_large_err)]
+fn force_thunk(
+    mode: &ThunkMode,
+    body: &Value,
+    captured_env: &Env,
+    captured_chain: &HandlerChain,
+    memo_cell: Option<MemoCellId>,
+    runtime: &mut CpsRuntime,
+) -> CpsResult<Atom> {
+    #[allow(clippy::result_large_err)]
+    fn run_thunk_body(
+        body: &Value,
+        captured_env: &Env,
+        captured_chain: &HandlerChain,
+        runtime: &mut CpsRuntime,
+    ) -> CpsResult<Atom> {
+        let Value::Lam {
+            params,
+            cont: lam_cont,
+            body: lam_body,
+            rec_binding,
+            ..
+        } = body
+        else {
+            return Err(CpsError::ExpectedThunk(body.clone()));
+        };
+        if !params.is_empty() {
+            return Err(CpsError::InvalidPrimArgs(PrimOp::ForceThunk, vec![]));
+        }
+        let cont_value = Value::Cont {
+            param: lam_cont.clone(),
+            body: Box::new(Term::Return {
+                value: Atom::Var(lam_cont.clone()),
+            }),
+            captured_env: captured_env.clone(),
+            captured_chain: captured_chain.clone(),
+            consumed: ConsumedFlag::new(),
+            row: EffectRow::default(),
+        };
+        let mut body_env = captured_env.clone();
+        if let Some(rec_name) = rec_binding
+            && let Some(rec_value) = captured_env.lookup(rec_name)
+        {
+            body_env = body_env.with_binding(rec_name.clone(), rec_value.clone());
+        }
+        body_env = body_env.with_binding(lam_cont.clone(), cont_value);
+        eval_unchecked_with_runtime(lam_body, &body_env, captured_chain, runtime)
+    }
+
+    match (mode, memo_cell) {
+        (ThunkMode::Memo, Some(cell_id)) => match runtime.memo_cells.get(&cell_id) {
+            Some(MemoCellState::Filled(outcome)) => match outcome {
+                CachedThunkOutcome::Success(atom) => Ok(atom.clone()),
+                CachedThunkOutcome::Failure(error) => Err(error.clone()),
+            },
+            Some(MemoCellState::Evaluating) => Err(CpsError::Trap(TrapReason::Custom(
+                "recursive thunk force detected".to_string(),
+            ))),
+            Some(MemoCellState::Empty) => {
+                runtime
+                    .memo_cells
+                    .insert(cell_id, MemoCellState::Evaluating);
+                let result = run_thunk_body(body, captured_env, captured_chain, runtime);
+                match result {
+                    Ok(atom) => {
+                        runtime.memo_cells.insert(
+                            cell_id,
+                            MemoCellState::Filled(CachedThunkOutcome::Success(atom.clone())),
+                        );
+                        Ok(atom)
+                    }
+                    Err(error) => {
+                        runtime.memo_cells.insert(
+                            cell_id,
+                            MemoCellState::Filled(CachedThunkOutcome::Failure(error.clone())),
+                        );
+                        Err(error)
+                    }
+                }
+            }
+            None => run_thunk_body(body, captured_env, captured_chain, runtime),
+        },
+        _ => run_thunk_body(body, captured_env, captured_chain, runtime),
     }
 }

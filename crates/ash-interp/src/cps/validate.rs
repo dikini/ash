@@ -264,6 +264,44 @@ fn validate_value(value: &Value, ctx: &mut ValidationContext) -> Result<(), CpsV
             Ok(())
         }
         Value::Cont { .. } => Ok(()),
+        Value::ThunkClosure {
+            body,
+            captured_env: _,
+            captured_chain: _,
+            row,
+            ..
+        } => {
+            if let Value::Lam {
+                params,
+                cont,
+                body: lam_body,
+                row: lam_row,
+                ..
+            } = body.as_ref()
+            {
+                if !params.is_empty() {
+                    return Err(CpsValidationError::InvalidSyntacticPosition(
+                        "thunk closure body must be a zero-argument lambda".to_string(),
+                    ));
+                }
+                if lam_row != row {
+                    return Err(CpsValidationError::InvalidSyntacticPosition(
+                        "thunk closure body and closure rows must match".to_string(),
+                    ));
+                }
+                let _ = lam_body;
+                let _ = cont;
+                // Reuse existing lambda validation behavior for parameter/body checking.
+                let mut lam_ctx = ctx.clone();
+                lam_ctx.bindings.insert(cont.clone());
+                validate_term(lam_body, &mut lam_ctx)?;
+                Ok(())
+            } else {
+                Err(CpsValidationError::InvalidSyntacticPosition(
+                    "thunk closure body must be a lambda".to_string(),
+                ))
+            }
+        }
         Value::Record { fields } => {
             for (_, field_value) in fields {
                 validate_value(field_value, ctx)?;
@@ -325,6 +363,7 @@ fn validate_prim_arity(op: PrimOp, args: &[Atom]) -> Result<(), CpsValidationErr
         | PrimOp::Ge => 2,
         PrimOp::Neg | PrimOp::Not => 1,
         PrimOp::RecordGet(_) | PrimOp::TupleGet(_) => 1,
+        PrimOp::ForceThunk => 1,
     };
     if args.len() != expected {
         return Err(CpsValidationError::PrimArityMismatch {

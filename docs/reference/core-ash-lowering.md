@@ -1,12 +1,12 @@
 # Core Ash Lowering
 
-This page documents the implemented Phase 161 Core-to-CPS lowering boundary. It describes the Rust implementation in `ash-core::core_ash_lower`, not the whole SPEC-099 design space.
+This page documents the implemented Phase 161/163 Core-to-CPS lowering boundary. It describes the Rust implementation in `ash-core::core_ash_lower`, not the whole SPEC-099 design space.
 
 Core-to-CPS lowering consumes validated Core from `ash-core::core_ash_validate` and produces the existing `ash-core::cps::Term` tree. Raw parsed `.core` files must pass validation first; the lowering API is intentionally shaped around validated Core.
 
 ## Implemented Input Boundary
 
-The lowering pass handles the Phase 161 fixture subset:
+The lowering pass handles the Phase 161/163 fixture subset:
 
 - atoms and literal values;
 - lambda, record, tuple, and discharge-marker values where the current CPS carrier can represent them;
@@ -14,7 +14,9 @@ The lowering pass handles the Phase 161 fixture subset:
 - capability, channel, process, and failure `raise` operations;
 - single-clause `handle` with affine resume metadata;
 - `record-discharge`;
-- `trap`.
+- `trap`;
+- `let-mode` and `force` mode forms;
+- `thunk` values.
 
 The fixture examples live under `crates/ash-core/tests/fixtures/core/`:
 
@@ -22,8 +24,11 @@ The fixture examples live under `crates/ash-core/tests/fixtures/core/`:
 - `let_call.core` shows a non-tail direct-style call.
 - `raise_handle.core` shows operation raising and handling.
 - `contract_trap.core` shows contract discharge plus trap lowering.
+- `mode_forms.core` shows `let-mode`, `thunk`, and `force` lowering.
 
 Each valid fixture has a matching `.cps.golden` file checked by `task_1629_core_end_to_end.rs`.
+
+Mode-aware fixtures and mode-specific lowering are also exercised by `task_1669_core_mode_lowering.rs`, `task_1670_core_thunk_capture_authority.rs`, and `task_1672_core_mode_tracing_docs_consistency.rs`.
 
 ## Lowering Rules
 
@@ -32,8 +37,11 @@ Pure bindings lower structurally:
 - Core `LetVal` lowers to CPS `LetVal`.
 - Core `LetRec` lowers to CPS `LetRec`.
 - Core `LetPrim` lowers to CPS `LetPrim`.
+- Mode `let-mode` forms are lowered to strict binding paths for `strict` and thunk binding paths for `lazy`/`memo`.
 - Core `If` lowers to CPS `If`; the CPS `If.row` is the union of local branch rows, not the current continuation row.
 - Core `Jump` lowers to CPS `Jump`; its row is the target continuation row.
+- `thunk` values lower to `Value::ThunkClosure`.
+- `force` lowers to `PrimOp::ForceThunk` with the checked force result name/row.
 
 Tail calls lower to CPS `Call` with the current continuation. The call row is the union of the callee body row and the current continuation row, matching SPEC-098b's call-row split.
 
@@ -51,9 +59,24 @@ Handler resume parameters lower as affine continuation variables. Phase 161 vali
 
 Contract discharge lowers to CPS `RecordDischarge`. `ContractViolation is trap metadata`: dynamic contract failure lowers to `Trap { reason: ContractViolation }` under the discharge record, not to a contract row item and not to a raised operation. Recoverable behavior must use an explicit failure operation upstream.
 
+Mode lowering preserves thunk semantics explicitly:
+
+- `Value::ThunkClosure` carries the mode (`Lazy`/`Memo`), row, and placeholder capture metadata.
+- `memo` thunk closures preserve memo identity placeholders for runtime memo cells.
+- force sites preserve the checked latent-row obligations from the forced mode type at the lowering row level.
+
 ## Out Of Scope
 
-The following features are intentionally not implemented in Phase 161:
+## Runtime Notes
+
+- Forcing `ForceThunk` at runtime is where lazy re-run and memo replay behavior are enforced.
+- Lazy thunks re-evaluate body on each force and contribute the thunk latent row to the force-local row.
+- Memo thunks run at most once unless cache replay and preserve terminal failure outcomes.
+- Re-entrant memo forcing reports a trap to avoid inconsistent recursive memo-cell state.
+
+## Out Of Scope
+
+The following features are intentionally not implemented in this phase:
 
 - surface-to-Core lowering is out of scope;
 - typeclass solving is out of scope;

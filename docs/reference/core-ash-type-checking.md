@@ -30,6 +30,23 @@ Refinement checks record refinement obligations. Checking a plain base value as 
 
 Contract discharge checking validates discharge metadata shapes. Static/evidence discharges require proven evidence metadata, dynamic discharges require no proof evidence, and contract violations remain trap metadata rather than row items or raised operations.
 
+## Mode-Specific Type Checking
+
+Phase 163 adds mode constructors and lazy/memo thunk typing in the same checker architecture:
+
+- `strict`, `lazy`, and `memo` are represented as `CoreType::Mode { mode, inner, latent_row }`.
+- Mode types are invariant with respect to source and target positions.
+- `strict` mode requires an omitted latent row (`None`), while `lazy`/`memo` require an explicit row.
+- `CoreValue::Thunk` checks that:
+  - its `result_ty` and row match the checked body type/row;
+  - strict mode is rejected for thunk results;
+  - its body has row `result` and the body result type is the strict inner type.
+- `CoreExpr::LetMode` checks mode/type agreement at construction time and records mode metadata for checked-lowering:
+  - `strict` binds the exact strict annotation and has local row `{}`;
+  - `lazy` and `memo` also bind a strict inner value result type and keep the thunk latent row for force-time use.
+- `CoreExpr::Force` is value-position only (`CoreAtom::Var`) and contributes the bound thunk latent row to force rows.
+- Checked summaries preserve mode metadata and latent rows for exported variables and diagnostics.
+
 ## Deferred Features
 
 The implemented boundary is intentionally smaller than the end-state type system:
@@ -46,6 +63,6 @@ Upper layers may lower typeclasses, dictionary evidence, laws, properties, and r
 
 ## Fixture Coverage
 
-The implemented behavior is covered by focused task tests in `crates/ash-core/tests/task_1640_*` through `task_1651_*`.
+The implemented behavior is covered by focused task tests in `crates/ash-core/tests/task_1640_*` through `task_1651_*`, plus phase-163 mode tests in `task_1665_*` through `task_1672_*` and the dedicated mode-reference consistency test in `task_1673_core_lazy_memo_docs_consistency.rs`.
 
 The integration fixtures in `crates/ash-core/tests/task_1650_core_typecheck_integration.rs` prove valid `.core` fixtures type-check before lowering and that invalid fixtures fail at parse, validation, or type-checking before lowering. They also prove checked lowering preserves target continuation rows and external function rows from `CoreTypeCheckEnv`.

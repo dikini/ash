@@ -558,7 +558,7 @@ Implements the first annotation-led Core Ash type checker. The phase adds Core t
 
 ## Phase 163: Core Lazy and Memo Computation Modes
 
-**Status:** 📝 Planned; 0/14 implemented
+**Status:** ✅ Complete; 14/14 implemented
 **Plan:** [PLAN-163: Core Lazy and Memo Computation Modes](PLAN-163-CORE-LAZY-MEMO-MODES.md)
 **Spec:** [SPEC-101: Lazy and Memo Computation Modes](../spec/SPEC-101-LAZY-AND-MEMO-COMPUTATION-MODES.md)
 **Depends on:** Phase 161, Phase 162; SPEC-101, SPEC-100, SPEC-099, SPEC-098b, SPEC-097b, SPEC-096b.
@@ -567,17 +567,17 @@ Implements SPEC-101 for Core Ash: explicit `Strict`/`Lazy`/`Memo` mode types, th
 
 | Task | Description | Status |
 |------|-------------|--------|
-| [TASK-1660](tasks/TASK-1660-core-mode-ast-carriers.md) | Add Core mode type, thunk value, LetMode, and Force AST carriers | 📝 Planned |
-| [TASK-1661](tasks/TASK-1661-core-mode-text-format.md) | Parse, serialize, and round-trip `.core` mode syntax and fixtures | 📝 Planned |
-| [TASK-1662](tasks/TASK-1662-core-mode-validation.md) | Validate mode/type agreement, thunk shape, Force shape, and binder scoping | 📝 Planned |
-| [TASK-1663](tasks/TASK-1663-cps-thunk-carrier.md) | Add CPS ThunkClosure value carrier and memo-cell state scaffolding | 📝 Planned |
-| [TASK-1664](tasks/TASK-1664-cps-force-runtime.md) | Implement CPS lazy/memo force runtime behavior, cached outcomes, and re-entrant rejection | 📝 Planned |
-| [TASK-1665](tasks/TASK-1665-core-mode-type-wellformedness.md) | Type-check mode type well-formedness and mode invariance diagnostics | 📝 Planned |
-| [TASK-1666](tasks/TASK-1666-core-thunk-value-typing.md) | Type thunk values with latent rows and pure construction row | 📝 Planned |
-| [TASK-1667](tasks/TASK-1667-core-letmode-force-typechecking.md) | Type LetMode and Force expressions with SPEC-101 row accounting | 📝 Planned |
+| [TASK-1660](tasks/TASK-1660-core-mode-ast-carriers.md) | Add Core mode type, thunk value, LetMode, and Force AST carriers | ✅ Complete |
+| [TASK-1661](tasks/TASK-1661-core-mode-text-format.md) | Parse, serialize, and round-trip `.core` mode syntax and fixtures | ✅ Complete |
+| [TASK-1662](tasks/TASK-1662-core-mode-validation.md) | Validate mode/type agreement, thunk shape, Force shape, and binder scoping | ✅ Complete |
+| [TASK-1663](tasks/TASK-1663-cps-thunk-carrier.md) | Add CPS ThunkClosure value carrier and memo-cell state scaffolding | ✅ Complete |
+| [TASK-1664](tasks/TASK-1664-cps-force-runtime.md) | Implement CPS lazy/memo force runtime behavior, cached outcomes, and re-entrant rejection | ✅ Complete |
+| [TASK-1665](tasks/TASK-1665-core-mode-type-wellformedness.md) | Type-check mode type well-formedness and mode invariance diagnostics | ✅ Complete |
+| [TASK-1666](tasks/TASK-1666-core-thunk-value-typing.md) | Type thunk values with latent rows and pure construction row | ✅ Complete |
+| [TASK-1667](tasks/TASK-1667-core-letmode-force-typechecking.md) | Type LetMode and Force expressions with SPEC-101 row accounting | ✅ Complete |
 | [TASK-1668](tasks/TASK-1668-core-mode-public-summaries.md) | Preserve mode and latent-row facts in public summaries and diagnostics | ✅ Complete |
 | [TASK-1669](tasks/TASK-1669-core-mode-lowering.md) | Lower thunk construction, strict/lazy/memo LetMode, and Force into CPS thunk runtime forms | ✅ Complete |
-| [TASK-1670](tasks/TASK-1670-core-thunk-capture-authority.md) | Verify captured handler/provider-chain authority at force time | 📝 Planned |
-| [TASK-1672](tasks/TASK-1672-core-mode-tracing-observability.md) | Add thunk construction/force/memo trace events and observability tests | 📝 Planned |
-| [TASK-1671](tasks/TASK-1671-core-mode-end-to-end-fixtures.md) | Add parse -> validate -> type-check -> lower -> run fixtures and golden examples | 📝 Planned |
-| [TASK-1673](tasks/TASK-1673-core-lazy-memo-reference-closeout.md) | Document behavior, reconcile tracking, and close out Phase 163 | 📝 Planned |
+| [TASK-1670](tasks/TASK-1670-core-thunk-capture-authority.md) | Verify captured handler/provider-chain authority at force time | ✅ Complete |
+| [TASK-1672](tasks/TASK-1672-core-mode-tracing-observability.md) | Add thunk construction/force/memo trace events and observability tests | ✅ Complete |
+| [TASK-1671](tasks/TASK-1671-core-mode-end-to-end-fixtures.md) | Add parse -> validate -> type-check -> lower -> run fixtures and golden examples | ✅ Complete |
+| [TASK-1673](tasks/TASK-1673-core-lazy-memo-reference-closeout.md) | Document behavior, reconcile tracking, and close out Phase 163 | ✅ Complete |

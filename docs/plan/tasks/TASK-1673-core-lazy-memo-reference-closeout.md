@@ -1,6 +1,6 @@
 # TASK-1673: Document and close out Core lazy/memo modes
 
-**Status:** Planned
+**Status:** Done
 **Phase:** [PLAN-163](../PLAN-163-CORE-LAZY-MEMO-MODES.md)
 **Owner:** Phase 163
 
@@ -35,6 +35,26 @@ Document the implemented SPEC-101 Core lazy/memo behavior, reconcile tracking su
 
 ## Completion Checklist
 
-- [ ] Reference docs explain implemented behavior and non-goals.
-- [ ] PLAN-INDEX and CHANGELOG are reconciled.
-- [ ] Closeout audit lists exact command evidence.
+- [x] Reference docs explain implemented behavior and non-goals.
+- [x] PLAN-INDEX and CHANGELOG are reconciled.
+- [x] Closeout audit lists exact command evidence.
+
+## Closeout Audit
+
+- `cargo test -p ash-core --test task_1660_core_mode_ast`
+- `cargo test -p ash-core --test task_1661_core_mode_text`
+- `cargo test -p ash-core --test task_1662_core_mode_validation`
+- `cargo test -p ash-core --test task_1665_core_mode_type_wellformedness`
+- `cargo test -p ash-core --test task_1666_core_thunk_value_typing`
+- `cargo test -p ash-core --test task_1667_core_letmode_force_typecheck`
+- `cargo test -p ash-core --test task_1668_core_mode_public_summary`
+- `cargo test -p ash-core --test task_1669_core_mode_lowering`
+- `cargo test -p ash-core --test task_1670_core_thunk_capture_authority`
+- `cargo test -p ash-core --test task_1671_core_mode_end_to_end`
+- `cargo test -p ash-core --test task_1672_core_mode_tracing_docs_consistency`
+- `cargo test -p ash-core --test task_1673_core_lazy_memo_docs_consistency`
+- `cargo test -p ash-core --test task_1650_core_typecheck_integration`
+- `cargo test -p ash-interp --test task_1664_cps_force_runtime`
+- `cargo test -p ash-interp --test task_1663_cps_runtime_scaffold`
+- `cargo test -p ash-interp --test task_1672_cps_thunk_trace_observability`
+- `cargo test -p spec_processor spec_links`

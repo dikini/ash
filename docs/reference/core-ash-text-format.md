@@ -23,6 +23,9 @@ Bare names are Core variable atoms. Labels are only valid in continuation positi
 Int
 String
 Bool
+(strict Int)
+(lazy Int {})
+(memo (record (a Int) (b String)) {})
 Unit
 (fn (Int String) -> Unit {cap console.write})
 (cont Unit Unit {} affine)
@@ -46,9 +49,20 @@ Rows are requirement rows. They record what a term requires; they are not author
 (handle HandlerClause Expr)
 (record-discharge ContractDischarge Expr)
 (trap TrapReason)
+(let-mode name mode : Type Expr Expr)
+(force name thunk-atom Expr)
 ```
 
 `let-val`, `let-prim`, `let-call`, `if`, `call`, `raise`, `handle`, `record-discharge`, and `trap` are the Phase 161 fixture forms. `let-call` binds the result of a non-tail direct-style call; CPS lowering introduces `LetCont` for it. `call`, `raise`, and `handle` are direct-style Core forms; CPS continuation fields are synthesized only during Core-to-CPS lowering.
+
+Mode-aware fixture forms are also supported and covered by phase-163 text tests:
+
+```text
+(let-mode name mode : Type Expr Expr)
+(force result-name thunk-atom Expr)
+(thunk lazy ResultType Row Expr)
+(thunk memo ResultType Row Expr)
+```
 
 ## Values
 
@@ -57,6 +71,7 @@ Rows are requirement rows. They record what a term requires; they are not author
 (lam ((x : Int)) : {} Expr)
 (record (field Atom)...)
 (tuple Atom...)
+(thunk memo Int {} (lit-int 1))
 (discharge-marker ContractDischarge)
 ```
 
@@ -80,7 +95,7 @@ Only capability, channel, process, and failure operations are raised operations.
 
 ## Fixtures
 
-The Phase 161 corpus lives in `crates/ash-core/tests/fixtures/core/`. These files are hand-authored Core fixture text, not examples of source Ash syntax:
+The phase-163 fixture corpus lives in `crates/ash-core/tests/fixtures/core/`. These files are hand-authored Core fixture text, not examples of source Ash syntax:
 
 | Core fixture | CPS golden | Purpose |
 | --- | --- | --- |
@@ -90,6 +105,9 @@ The Phase 161 corpus lives in `crates/ash-core/tests/fixtures/core/`. These file
 | `let_call.core` | `let_call.core.cps.golden` | Non-tail direct-style call lowered through CPS `LetCont`. |
 | `raise_handle.core` | `raise_handle.core.cps.golden` | Capability `raise`, affine handler resume, and local handler row. |
 | `contract_trap.core` | `contract_trap.core.cps.golden` | Dynamic contract `record-discharge` plus contract-violation `trap`. |
+| `mode_forms.core` | *invalid as CPS golden* | `let-mode`, `thunk`, and `force` in one phase-163 fixture. |
+
+Phase-163 also includes `mode_invalid_type_mismatch.core`, which is intentionally rejected during validation and therefore has no CPS golden.
 
 `invalid_duplicate_row.core` is intentionally invalid. It parses as Core text, then fails validation because duplicate row items are rejected before lowering.
 

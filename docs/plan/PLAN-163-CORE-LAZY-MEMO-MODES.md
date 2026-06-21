@@ -629,7 +629,7 @@ Fixture/runtime tests observe repeated execution through trace counts:
 | [TASK-1670](tasks/TASK-1670-core-thunk-capture-authority.md) | Verify captured handler/provider-chain authority at force time | 4 | TASK-1669 | Planned |
 | [TASK-1672](tasks/TASK-1672-core-mode-tracing-observability.md) | Add thunk construction/force/memo trace events and observability tests | 4 | TASK-1664, TASK-1669 | Planned |
 | [TASK-1671](tasks/TASK-1671-core-mode-end-to-end-fixtures.md) | Add parse -> validate -> type-check -> lower -> run fixtures and golden examples | 5 | TASK-1670, TASK-1672 | Planned |
-| [TASK-1673](tasks/TASK-1673-core-lazy-memo-reference-closeout.md) | Document behavior, reconcile tracking, and close out Phase 163 | 3 | TASK-1671 | Planned |
+| [TASK-1673](tasks/TASK-1673-core-lazy-memo-reference-closeout.md) | Document behavior, reconcile tracking, and close out Phase 163 | 3 | TASK-1671 | Done |
 
 **Total estimated hours:** 55.
 
@@ -724,7 +724,7 @@ cargo test -p spec_processor spec_links
 - [ ] Lowering tests prove captured authority is creation-time, not force-time.
 - [ ] End-to-end fixtures cover lazy re-run, memo cache hit/fill, cached failure/trap, re-entrant rejection, row accounting, and mode mismatch.
 - [ ] Runtime traces distinguish construction, force, cache fill, cache hit, replay, and re-entrant rejection without exposing raw memo-cell addresses.
-- [ ] Reference docs, PLAN-INDEX, task files, and CHANGELOG are reconciled.
+- [x] Reference docs, PLAN-INDEX, task files, and CHANGELOG are reconciled.
 
 ## Recommended Execution Order
 

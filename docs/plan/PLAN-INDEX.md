@@ -138,7 +138,7 @@ Update this section as tasks complete:
 | [160](PLAN-160-CPS-IR-RUNTIME-EXPANSION.md) | 10 | 10 | ✅ Complete; CPS IR runtime expansion implemented, focused tests pass, reference docs updated |
 | [161](PLAN-161-CORE-ASH-IR-FOUNDATION.md) | 13 | 13 | ✅ Complete; Core Ash foundation and public Core text round-trip review remediation verified |
 | [162](PLAN-162-CORE-ASH-TYPE-CHECKING.md) | 12 | 12 | ✅ Complete; Core Ash type checker implemented with reference docs and closeout review |
-| [163](PLAN-163-CORE-LAZY-MEMO-MODES.md) | 14 | 0 | 📝 Planned; SPEC-101 Core lazy/memo mode implementation packet |
+| [163](PLAN-163-CORE-LAZY-MEMO-MODES.md) | 14 | 14 | ✅ Complete; SPEC-101 Core lazy/memo mode implementation packet |
 
 ---
 

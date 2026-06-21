@@ -1,6 +1,6 @@
 # TASK-1664: Implement CPS force runtime behavior
 
-**Status:** Planned
+**Status:** Done
 **Phase:** [PLAN-163](../PLAN-163-CORE-LAZY-MEMO-MODES.md)
 **Owner:** Phase 163
 
@@ -194,14 +194,14 @@ cargo test -p ash-interp
 
 ## Completion Checklist
 
-- [ ] Lazy force re-runs.
-- [ ] Memo force caches terminal outcomes.
-- [ ] Re-entrant memo force traps.
-- [ ] Non-thunk force returns `CpsError::ExpectedThunk(Value)`.
-- [ ] Captured chain is restored for thunk body execution.
-- [ ] Existing public eval entrypoints are compatibility wrappers over `CpsRuntime`.
-- [ ] Force resumes the force-site body under the original force-site env/chain.
-- [ ] Empty/default capture placeholders are overwritten exactly once at runtime construction.
-- [ ] Programmatic non-empty capture fields are preserved as already constructed runtime values.
-- [ ] Fixture text cannot encode live captured env/chain fields.
-- [ ] TASK-1664 was executed in the four mandatory sub-assignments above.
+- [x] Lazy force re-runs.
+- [x] Memo force caches terminal outcomes.
+- [x] Re-entrant memo force traps.
+- [x] Non-thunk force returns `CpsError::ExpectedThunk(Value)`.
+- [x] Captured chain is restored for thunk body execution.
+- [x] Existing public eval entrypoints are compatibility wrappers over `CpsRuntime`.
+- [x] Force resumes the force-site body under the original force-site env/chain.
+- [x] Empty/default capture placeholders are overwritten exactly once at runtime construction.
+- [x] Programmatic non-empty capture fields are preserved as already constructed runtime values.
+- [x] Fixture text cannot encode live captured env/chain fields.
+- [x] TASK-1664 was executed in the four mandatory sub-assignments above.

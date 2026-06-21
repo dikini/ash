@@ -1,6 +1,6 @@
 # TASK-1671: Add Core mode end-to-end fixtures
 
-**Status:** Planned
+**Status:** Done
 **Phase:** [PLAN-163](../PLAN-163-CORE-LAZY-MEMO-MODES.md)
 **Owner:** Phase 163
 
@@ -68,7 +68,7 @@ use the `CpsRuntime` trace sink required by TASK-1663/TASK-1664 rather than ad h
 
 ## Completion Checklist
 
-- [ ] Required examples from PLAN-163 exist.
-- [ ] Lowered thunk forms are checked.
-- [ ] Runtime behavior is exercised where available.
-- [ ] Lazy/memo execution counts are asserted through trace events, not informal comments.
+- [x] Required examples from PLAN-163 exist.
+- [x] Lowered thunk forms are checked.
+- [x] Runtime behavior is exercised where available.
+- [x] Lazy/memo execution counts are asserted through trace events, not informal comments.

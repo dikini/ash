@@ -1,6 +1,6 @@
 # TASK-1672: Add thunk tracing and observability
 
-**Status:** Planned
+**Status:** Done
 **Phase:** [PLAN-163](../PLAN-163-CORE-LAZY-MEMO-MODES.md)
 **Owner:** Phase 163
 
@@ -94,10 +94,10 @@ such as `"failed"`, `"error"`, or `"panic"` in Phase 163 tests.
 
 ## Completion Checklist
 
-- [ ] All SPEC-101 trace event families are represented.
-- [ ] Memo cell internals are not exposed.
-- [ ] Trace docs name the events.
-- [ ] `trace_event_timestamp` handles every new thunk/memo variant.
-- [ ] `CpsRuntime.trace` stores public `TraceEvent` values directly.
-- [ ] Trace outcome/reason payloads use only the stable strings listed above.
-- [ ] Fixture tests can count body-evaluation/cache events to distinguish lazy rerun from memo hit.
+- [x] All SPEC-101 trace event families are represented.
+- [x] Memo cell internals are not exposed.
+- [x] Trace docs name the events.
+- [x] `trace_event_timestamp` handles every new thunk/memo variant.
+- [x] `CpsRuntime.trace` stores public `TraceEvent` values directly.
+- [x] Trace outcome/reason payloads use only the stable strings listed above.
+- [x] Fixture tests can count body-evaluation/cache events to distinguish lazy rerun from memo hit.

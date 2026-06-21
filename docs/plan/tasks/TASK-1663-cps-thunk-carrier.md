@@ -1,6 +1,6 @@
 # TASK-1663: Add CPS thunk carrier
 
-**Status:** Planned
+**Status:** Done
 **Phase:** [PLAN-163](../PLAN-163-CORE-LAZY-MEMO-MODES.md)
 **Owner:** Phase 163
 
@@ -63,14 +63,14 @@ Add the value-level CPS/runtime carrier needed for SPEC-101 thunk execution with
 
 ## Completion Checklist
 
-- [ ] CPS values can represent lazy and memo thunk closures.
-- [ ] `MemoCellId` has a private field plus `new(raw)` and `raw()` methods; no public tuple field.
-- [ ] Memo cell state is process-local runtime state.
-- [ ] `CpsRuntime.trace` is `Vec<TraceEvent>`, not a separate internal event type.
-- [ ] TASK-1663 adds no thunk-specific trace variants or emissions.
-- [ ] Serialization does not leak runtime memo storage internals.
-- [ ] Serde uses `#[serde(skip, default)]` for `memo_cell`, and fixture text omits it.
-- [ ] CPS validation rejects malformed thunk bodies that are not zero-argument lambdas.
-- [ ] `ash-core` does not depend on `ash-interp` memo outcome or error types.
-- [ ] Runtime tests can create an explicit `CpsRuntime` and observe shared memo cells.
-- [ ] Memo cell allocation happens at thunk construction, not at force time.
+- [x] CPS values can represent lazy and memo thunk closures.
+- [x] `MemoCellId` has a private field plus `new(raw)` and `raw()` methods; no public tuple field.
+- [x] Memo cell state is process-local runtime state.
+- [x] `CpsRuntime.trace` is `Vec<TraceEvent>`, not a separate internal event type.
+- [x] TASK-1663 adds no thunk-specific trace variants or emissions.
+- [x] Serialization does not leak runtime memo storage internals.
+- [x] Serde uses `#[serde(skip, default)]` for `memo_cell`, and fixture text omits it.
+- [x] CPS validation rejects malformed thunk bodies that are not zero-argument lambdas.
+- [x] `ash-core` does not depend on `ash-interp` memo outcome or error types.
+- [x] Runtime tests can create an explicit `CpsRuntime` and observe shared memo cells.
+- [x] Memo cell allocation happens at thunk construction, not at force time.

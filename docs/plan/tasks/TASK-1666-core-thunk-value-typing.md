@@ -1,6 +1,6 @@
 # TASK-1666: Type Core thunk values
 
-**Status:** Planned
+**Status:** Done
 **Phase:** [PLAN-163](../PLAN-163-CORE-LAZY-MEMO-MODES.md)
 **Owner:** Phase 163
 
@@ -42,9 +42,9 @@ Type-check `Thunk` values, preserving latent rows while construction remains pur
 
 ## Completion Checklist
 
-- [ ] Thunk construction row is empty.
-- [ ] Latent row is preserved.
-- [ ] Body type and latent row are checked.
-- [ ] `result_ty` is validated as the strict inner type.
-- [ ] A thunk result that is already a mode type is rejected.
-- [ ] Computed mode type latent row is exactly `CoreValue::Thunk.row`.
+- [x] Thunk construction row is empty.
+- [x] Latent row is preserved.
+- [x] Body type and latent row are checked.
+- [x] `result_ty` is validated as the strict inner type.
+- [x] A thunk result that is already a mode type is rejected.
+- [x] Computed mode type latent row is exactly `CoreValue::Thunk.row`.

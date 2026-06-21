@@ -1,6 +1,6 @@
 # TASK-1661: Add Core mode text format support
 
-**Status:** Planned
+**Status:** Done
 **Phase:** [PLAN-163](../PLAN-163-CORE-LAZY-MEMO-MODES.md)
 **Owner:** Phase 163
 
@@ -63,9 +63,9 @@ This malformed Core fixture must parse but be rejected by validation/type checki
 
 ## Completion Checklist
 
-- [ ] Mode type text round-trips.
-- [ ] Thunk values round-trip.
-- [ ] Parsed thunk capture metadata defaults to an empty `CoreCaptureSet`.
-- [ ] Serializer omits capture metadata even when the AST contains non-empty capture metadata.
-- [ ] `LetMode` and `Force` expressions round-trip.
-- [ ] Existing Core text tests remain green.
+- [x] Mode type text round-trips.
+- [x] Thunk values round-trip.
+- [x] Parsed thunk capture metadata defaults to an empty `CoreCaptureSet`.
+- [x] Serializer omits capture metadata even when the AST contains non-empty capture metadata.
+- [x] `LetMode` and `Force` expressions round-trip.
+- [x] Existing Core text tests remain green.

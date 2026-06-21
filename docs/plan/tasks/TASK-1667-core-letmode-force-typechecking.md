@@ -1,6 +1,6 @@
 # TASK-1667: Type LetMode and Force expressions
 
-**Status:** Planned
+**Status:** Done
 **Phase:** [PLAN-163](../PLAN-163-CORE-LAZY-MEMO-MODES.md)
 **Owner:** Phase 163
 
@@ -55,12 +55,12 @@ Add expression typing for strict/lazy/memo `LetMode` and `Force`.
 
 ## Completion Checklist
 
-- [ ] Force contributes latent row.
-- [ ] Lazy/memo construction remains pure.
-- [ ] Strict `LetMode` does not create a thunk boundary.
-- [ ] Mode mismatch diagnostics are distinct from ordinary type mismatch diagnostics.
-- [ ] Checked-lowering metadata preserves the same latent row as the mode type.
-- [ ] `CoreTypeCheckFacts::mode_binding_latent_rows()` exposes lazy/memo binding rows.
-- [ ] Lazy/memo annotation rows that disagree with computed initializer rows fail with
+- [x] Force contributes latent row.
+- [x] Lazy/memo construction remains pure.
+- [x] Strict `LetMode` does not create a thunk boundary.
+- [x] Mode mismatch diagnostics are distinct from ordinary type mismatch diagnostics.
+- [x] Checked-lowering metadata preserves the same latent row as the mode type.
+- [x] `CoreTypeCheckFacts::mode_binding_latent_rows()` exposes lazy/memo binding rows.
+- [x] Lazy/memo annotation rows that disagree with computed initializer rows fail with
       `ModeLatentRowMismatch`.
-- [ ] Non-variable force atoms are rejected by type checking.
+- [x] Non-variable force atoms are rejected by type checking.

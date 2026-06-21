@@ -1,6 +1,6 @@
 # TASK-1660: Add Core mode AST carriers
 
-**Status:** Planned
+**Status:** Done
 **Phase:** [PLAN-163](../PLAN-163-CORE-LAZY-MEMO-MODES.md)
 **Owner:** Phase 163
 
@@ -43,8 +43,8 @@ Add the Core Ash representation required by SPEC-101: mode types, thunk values, 
 
 ## Completion Checklist
 
-- [ ] Mode type wrappers are distinct.
-- [ ] Lazy/memo thunk carriers include body and latent row.
-- [ ] `LetMode.mode` and `LetMode.ty` can both be represented for later validation.
-- [ ] `Force` binds a forced result name from a thunk atom.
-- [ ] Task tests construct the exact enum variants and fields named in PLAN-163.
+- [x] Mode type wrappers are distinct.
+- [x] Lazy/memo thunk carriers include body and latent row.
+- [x] `LetMode.mode` and `LetMode.ty` can both be represented for later validation.
+- [x] `Force` binds a forced result name from a thunk atom.
+- [x] Task tests construct the exact enum variants and fields named in PLAN-163.

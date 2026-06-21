@@ -933,10 +933,17 @@ fn local_row_with_letcall_rows(
 ) -> Result<CoreRow, CoreLoweringError> {
     match expr {
         CoreExpr::Atom(_) | CoreExpr::Jump { .. } | CoreExpr::Trap { .. } => Ok(CoreRow::default()),
-        CoreExpr::LetMode { expr, body, .. } => Ok(union_rows(
-            &local_row_with_letcall_rows(expr, state, &with_child_path(path, 0), letcall_rows)?,
-            &local_row_with_letcall_rows(body, state, &with_child_path(path, 1), letcall_rows)?,
-        )),
+        CoreExpr::LetMode {
+            mode, expr, body, ..
+        } => match mode {
+            crate::core_ash::CoreEvalMode::Strict => Ok(union_rows(
+                &local_row_with_letcall_rows(expr, state, &with_child_path(path, 0), letcall_rows)?,
+                &local_row_with_letcall_rows(body, state, &with_child_path(path, 1), letcall_rows)?,
+            )),
+            crate::core_ash::CoreEvalMode::Lazy | crate::core_ash::CoreEvalMode::Memo => {
+                local_row_with_letcall_rows(body, state, &with_child_path(path, 1), letcall_rows)
+            }
+        },
         CoreExpr::LetVal {
             name,
             ty,
@@ -1036,10 +1043,17 @@ fn total_row_with_letcall_rows(
 ) -> Result<CoreRow, CoreLoweringError> {
     match expr {
         CoreExpr::Atom(_) => Ok(state.context.current_cont_row.clone()),
-        CoreExpr::LetMode { expr, body, .. } => Ok(union_rows(
-            &total_row_with_letcall_rows(expr, state, &with_child_path(path, 0), letcall_rows)?,
-            &total_row_with_letcall_rows(body, state, &with_child_path(path, 1), letcall_rows)?,
-        )),
+        CoreExpr::LetMode {
+            mode, expr, body, ..
+        } => match mode {
+            crate::core_ash::CoreEvalMode::Strict => Ok(union_rows(
+                &total_row_with_letcall_rows(expr, state, &with_child_path(path, 0), letcall_rows)?,
+                &total_row_with_letcall_rows(body, state, &with_child_path(path, 1), letcall_rows)?,
+            )),
+            crate::core_ash::CoreEvalMode::Lazy | crate::core_ash::CoreEvalMode::Memo => {
+                total_row_with_letcall_rows(body, state, &with_child_path(path, 1), letcall_rows)
+            }
+        },
         CoreExpr::LetVal {
             name,
             ty,
@@ -1510,7 +1524,7 @@ fn dotted_name(path: &[String], leaf: &str) -> String {
 mod tests {
     use super::*;
     use crate::core_ash::{
-        CoreCaptureSet, CoreEvalMode, CoreExpr, CoreThunkMode, CoreType, CoreValue,
+        CoreCaptureSet, CoreEffectOp, CoreEvalMode, CoreExpr, CoreThunkMode, CoreType, CoreValue,
     };
     use crate::cps::{ThunkMode, Value as LoweredValue};
 
@@ -1689,5 +1703,37 @@ mod tests {
         let lowered_row = local_row_with_letcall_rows(&expr, &state, &[], &HashMap::new())
             .expect("force row should include latent row");
         assert_eq!(lowered_row, latent_row);
+    }
+
+    #[test]
+    fn lazy_letmode_row_uses_body_row_when_initializer_is_not_forced() {
+        let expr = CoreExpr::LetMode {
+            name: "thunk".to_string(),
+            mode: CoreEvalMode::Lazy,
+            ty: CoreType::Mode {
+                mode: CoreEvalMode::Lazy,
+                inner: Box::new(CoreType::Base("Int".into())),
+                latent_row: Some(sample_row_item_row()),
+            },
+            expr: Box::new(CoreExpr::Raise {
+                op: CoreEffectOp::Capability {
+                    path: vec!["db".into()],
+                    operation: "write".into(),
+                    arg_types: vec![CoreType::Base("Int".into())],
+                    result_type: CoreType::Base("Unit".into()),
+                },
+                args: vec![],
+            }),
+            body: Box::new(CoreExpr::Atom(CoreAtom::LitInt(7))),
+        };
+
+        let state = test_lowering_state();
+        let row = local_row_with_letcall_rows(&expr, &state, &[], &HashMap::new())
+            .expect("lazy letmode local row should compute");
+        assert_eq!(row, CoreRow::default());
+
+        let total_row = total_row_with_letcall_rows(&expr, &state, &[], &HashMap::new())
+            .expect("lazy letmode total row should compute");
+        assert_eq!(total_row, CoreRow::default());
     }
 }

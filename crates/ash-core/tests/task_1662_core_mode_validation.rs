@@ -173,3 +173,24 @@ fn validates_nested_bodies_within_thunks_and_lambdas() {
         "unexpected error: {error}"
     );
 }
+
+#[test]
+fn validates_force_result_name_as_scoped_binder() {
+    let expr = CoreExpr::LetVal {
+        name: "result".into(),
+        ty: function_type(),
+        value: CoreValue::Atom(CoreAtom::LitUnit),
+        body: Box::new(CoreExpr::Force {
+            name: "result".into(),
+            thunk: CoreAtom::Var("thunk".into()),
+            body: Box::new(CoreExpr::Atom(CoreAtom::Var("result".into()))),
+        }),
+    };
+
+    let error = validate_core_program(RawCoreProgram::new(expr)).unwrap_err();
+    match error {
+        CoreValidationError::DuplicateBinding { kind, name }
+            if kind == "force" && name == "result" => {}
+        other => panic!("expected force result duplicate, got {other:?}"),
+    }
+}

@@ -1,4 +1,7 @@
-use ash_core::core_ash::{CoreAtom, CoreEvalMode, CoreExpr, CoreRow, CoreRowItem, CoreType};
+use ash_core::core_ash::{
+    CoreAtom, CoreCaptureSet, CoreEffectOp, CoreEvalMode, CoreExpr, CoreRow, CoreRowItem,
+    CoreThunkMode, CoreType, CoreValue,
+};
 use ash_core::core_ash_typecheck::{
     CoreTypeCheckEnv, TypedCoreProgram, type_check_and_lower_core_program,
 };
@@ -57,6 +60,79 @@ fn lower_program(expr: CoreExpr, env: CoreTypeCheckEnv) -> (TypedCoreProgram, Te
     let checked = type_check_and_lower_core_program(valid, &env, context)
         .expect("test fixture should type-check and lower");
     checked.into_parts()
+}
+
+#[test]
+fn letval_thunk_records_mode_latent_row_for_force_in_checked_lowering() {
+    let mut env = CoreTypeCheckEnv::default();
+    env.operations_mut().insert(CoreEffectOp::Capability {
+        path: vec!["db".into()],
+        operation: "read".into(),
+        arg_types: vec![],
+        result_type: CoreType::Base("Unit".into()),
+    });
+
+    let expr = CoreExpr::LetVal {
+        name: "memoized".into(),
+        ty: mode_type(
+            CoreEvalMode::Memo,
+            CoreType::Base("Unit".into()),
+            cap_row(&["db"], "read"),
+        ),
+        value: CoreValue::Thunk {
+            mode: CoreThunkMode::Memo,
+            result_ty: CoreType::Base("Unit".into()),
+            row: cap_row(&["db"], "read"),
+            body: Box::new(CoreExpr::Raise {
+                op: CoreEffectOp::Capability {
+                    path: vec!["db".into()],
+                    operation: "read".into(),
+                    arg_types: vec![],
+                    result_type: CoreType::Base("Unit".into()),
+                },
+                args: vec![],
+            }),
+            captures: CoreCaptureSet::default(),
+        },
+        body: Box::new(CoreExpr::Force {
+            name: "forced".into(),
+            thunk: CoreAtom::Var("memoized".into()),
+            body: Box::new(CoreExpr::Atom(CoreAtom::Var("forced".into()))),
+        }),
+    };
+
+    let (typed, lowered) = lower_program(expr, env);
+
+    assert_eq!(
+        typed.facts().mode_binding_latent_rows().get("memoized"),
+        Some(&cap_row(&["db"], "read"))
+    );
+
+    match lowered {
+        Term::LetVal { name, value, body } => {
+            assert_eq!(name, "memoized");
+            assert!(matches!(
+                value,
+                cps::Value::ThunkClosure {
+                    mode: ThunkMode::Memo,
+                    ..
+                }
+            ));
+            match *body {
+                Term::LetPrim {
+                    name,
+                    op: PrimOp::ForceThunk,
+                    args,
+                    ..
+                } => {
+                    assert_eq!(name, "forced");
+                    assert_eq!(args, vec![cps::Atom::Var("memoized".into())]);
+                }
+                other => panic!("expected force prim term, got {other:?}"),
+            }
+        }
+        other => panic!("expected top-level LetVal, got {other:?}"),
+    }
 }
 
 #[test]

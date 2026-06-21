@@ -2080,6 +2080,19 @@ fn merge_typecheck_facts(
     lhs
 }
 
+fn record_mode_binding_latent_row(ty: &CoreType, name: &str, facts: &mut CoreTypeCheckFacts) {
+    if let CoreType::Mode {
+        mode: CoreEvalMode::Lazy | CoreEvalMode::Memo,
+        latent_row: Some(row),
+        ..
+    } = ty
+    {
+        facts
+            .mode_binding_latent_rows
+            .insert(name.to_string(), row.clone());
+    }
+}
+
 fn lowering_context_with_checked_facts(
     mut context: CoreLoweringContext,
     env: &CoreTypeCheckEnv,
@@ -2115,7 +2128,8 @@ fn type_check_expr(
             body,
         } => {
             check_core_type_well_formed(ty, env)?;
-            let value_facts = check_value_against(value, ty, env, Some(name.clone()))?;
+            let mut value_facts = check_value_against(value, ty, env, Some(name.clone()))?;
+            record_mode_binding_latent_row(ty, name, &mut value_facts);
             let mut body_env = env.clone();
             body_env.values_mut().insert(name.clone(), ty.clone());
             let body_checked = type_check_expr(body, &body_env)?;
@@ -2134,7 +2148,9 @@ fn type_check_expr(
             check_core_type_well_formed(ty, env)?;
             let mut recursive_env = env.clone();
             recursive_env.values_mut().insert(name.clone(), ty.clone());
-            let value_facts = check_value_against(value, ty, &recursive_env, Some(name.clone()))?;
+            let mut value_facts =
+                check_value_against(value, ty, &recursive_env, Some(name.clone()))?;
+            record_mode_binding_latent_row(ty, name, &mut value_facts);
             let body_checked = type_check_expr(body, &recursive_env)?;
             Ok(TypedCoreExpr {
                 ty: body_checked.ty,

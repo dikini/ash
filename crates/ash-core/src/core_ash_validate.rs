@@ -152,7 +152,7 @@ fn validate_expr(
             validate_data_atoms(args)?;
             validate_expr(body, bindings)
         }
-        CoreExpr::Force { thunk, body, .. } => {
+        CoreExpr::Force { thunk, name, body } => {
             match thunk {
                 CoreAtom::Var(_) => {}
                 _ => {
@@ -162,7 +162,9 @@ fn validate_expr(
                 }
             }
             validate_data_atom(thunk)?;
-            validate_expr(body, bindings)
+            let mut body_bindings = bindings.clone();
+            validate_binding_name("force", name, &mut body_bindings)?;
+            validate_expr(body, &mut body_bindings)
         }
         CoreExpr::If {
             cond,

@@ -5,8 +5,8 @@
 //! closed instead of being accepted optimistically.
 
 use crate::core_ash::{
-    CoreAtom, CoreContRef, CoreEffectOp, CoreExpr, CoreName, CorePrimOp, CoreRow, CoreRowItem,
-    CoreType, CoreValue,
+    CoreAtom, CoreContRef, CoreEffectOp, CoreExpr, CoreHandlerClause, CoreMultiplicity, CoreName,
+    CoreParam, CorePrimOp, CoreRow, CoreRowItem, CoreType, CoreValue,
 };
 use crate::core_ash_validate::ValidCoreProgram;
 use std::collections::{HashMap, HashSet};
@@ -1077,7 +1077,7 @@ fn type_check_expr(
         }
         CoreExpr::Jump { cont, arg } => type_check_jump(cont, arg, env),
         CoreExpr::Raise { op, args } => type_check_raise(op, args, env),
-        CoreExpr::Handle { .. } => Err(unsupported("Handle")),
+        CoreExpr::Handle { clause, body } => type_check_handle(clause, body, env),
         CoreExpr::RecordDischarge { .. } => Err(unsupported("RecordDischarge")),
         CoreExpr::Trap { .. } => Err(unsupported("Trap")),
     }
@@ -1202,6 +1202,112 @@ fn type_check_raise(
 
     check_arguments(&arg_types, args, env)?;
     Ok(typed_expr(result_type, row))
+}
+
+fn type_check_handle(
+    clause: &CoreHandlerClause,
+    body: &CoreExpr,
+    env: &CoreTypeCheckEnv,
+) -> Result<TypedCoreExpr, CoreTypeCheckError> {
+    let (arg_types, op_result_ty, op_row) = effect_operation_signature(&clause.op, env)?;
+    if !env.operations().contains(&clause.op) {
+        return Err(CoreTypeCheckError::UnknownOperation {
+            detail: effect_operation_detail(&clause.op),
+        });
+    }
+
+    check_handler_params(&clause.params, &arg_types, env)?;
+    let resume_row = check_handler_resume(&clause.resume.ty, &op_result_ty, env)?;
+
+    let mut clause_env = env.clone();
+    for param in &clause.params {
+        clause_env
+            .values_mut()
+            .insert(param.name.clone(), param.ty.clone());
+    }
+    clause_env
+        .continuations_mut()
+        .insert(clause.resume.name.clone(), clause.resume.ty.clone());
+
+    let clause_checked = type_check_expr(&clause.body, &clause_env)?;
+    let expected_clause_row = normalize_core_row(&clause.row)?;
+    let actual_clause_row = normalize_core_row(&clause_checked.row)?;
+    if actual_clause_row != expected_clause_row {
+        return Err(CoreTypeCheckError::RowMismatch {
+            expected: clause.row.clone(),
+            actual: clause_checked.row,
+        });
+    }
+
+    let body_checked = type_check_expr(body, env)?;
+    let residual = handle_residual_row(&body_checked.row, &op_row, &resume_row, &clause.row)?;
+    Ok(TypedCoreExpr {
+        ty: body_checked.ty,
+        row: residual,
+        facts: merge_typecheck_facts(body_checked.facts, clause_checked.facts),
+    })
+}
+
+fn check_handler_params(
+    params: &[CoreParam],
+    expected_types: &[CoreType],
+    env: &CoreTypeCheckEnv,
+) -> Result<(), CoreTypeCheckError> {
+    if params.len() != expected_types.len() {
+        return Err(CoreTypeCheckError::ArgumentCountMismatch {
+            expected: expected_types.len(),
+            actual: params.len(),
+        });
+    }
+
+    for (param, expected_ty) in params.iter().zip(expected_types) {
+        check_core_type_well_formed(&param.ty, env)?;
+        ensure_types_equivalent(expected_ty, &param.ty, env)?;
+    }
+    Ok(())
+}
+
+fn check_handler_resume(
+    resume_ty: &CoreType,
+    op_result_ty: &CoreType,
+    env: &CoreTypeCheckEnv,
+) -> Result<CoreRow, CoreTypeCheckError> {
+    check_core_type_well_formed(resume_ty, env)?;
+    let CoreType::Cont {
+        input,
+        row,
+        multiplicity,
+        ..
+    } = resume_ty
+    else {
+        return Err(unsupported("handler resume without continuation type"));
+    };
+
+    if *multiplicity != CoreMultiplicity::Affine {
+        return Err(unsupported("handler resume with non-affine multiplicity"));
+    }
+
+    ensure_types_equivalent(op_result_ty, input, env)?;
+    Ok(row.clone())
+}
+
+fn handle_residual_row(
+    body_row: &CoreRow,
+    op_row: &CoreRow,
+    resume_row: &CoreRow,
+    clause_row: &CoreRow,
+) -> Result<CoreRow, CoreTypeCheckError> {
+    let body_without_op = subtract_core_row(body_row, op_row)?;
+    union_core_rows(&union_core_rows(&body_without_op, resume_row)?, clause_row)
+}
+
+fn subtract_core_row(lhs: &CoreRow, rhs: &CoreRow) -> Result<CoreRow, CoreTypeCheckError> {
+    let left = normalize_core_row(lhs)?;
+    let right = normalize_core_row(rhs)?;
+    Ok(CoreRow {
+        items: row_difference(&left.items, &right.items),
+        tail: left.tail,
+    })
 }
 
 fn effect_operation_signature(

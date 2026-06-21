@@ -1,6 +1,6 @@
 # TASK-1647: Type Handle clauses and affine resume
 
-**Status:** Planned
+**Status:** Complete
 **Phase:** [PLAN-162](../PLAN-162-CORE-ASH-TYPE-CHECKING.md)
 **Owner:** Phase 162
 
@@ -75,3 +75,19 @@ cargo fmt --check
 ```
 
 Expected: focused tests pass.
+
+## Completion Evidence
+
+- Added `Handle` type checking for known operation identities and handler parameter types.
+- Required affine resume continuation input to match the handled operation result type.
+- Reused Phase 161 validation for duplicate resume jumps and ordinary resume storage/passing.
+- Checked handler clause local row against the typed handler body row.
+- Computed residual local rows as `(handled_segment.local - handled_op) union resume_row union clause.row`, preserving captured resume effects and ambient role/policy/contract/resource/evidence rows.
+- Added `crates/ash-core/tests/task_1647_core_handle_affine_resume.rs` covering parameter mismatch, resume mismatch, affine validation, clause row mismatch, residual resume rows, and ambient-row preservation.
+- Verified with:
+  - `cargo test -p ash-core --test task_1647_core_handle_affine_resume`
+  - `cargo test -p ash-core --test task_1646_core_effect_operation_typing`
+  - `cargo test -p ash-core --test task_1626_core_validator_affine_resume`
+  - `cargo clippy -p ash-core --all-targets -- -D warnings`
+  - `cargo fmt --check`
+  - `git diff --check`

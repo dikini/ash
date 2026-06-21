@@ -533,7 +533,7 @@ Builds the first implementation slice for Core Ash: dedicated Core AST carriers,
 
 ## Phase 162: Core Ash Type Checking
 
-**Status:** 🧪 In progress; 7/12 implemented
+**Status:** 🧪 In progress; 8/12 implemented
 **Plan:** [PLAN-162: Core Ash Type Checking](PLAN-162-CORE-ASH-TYPE-CHECKING.md)
 **Spec:** [SPEC-100: Ash Core Type Checking](../spec/SPEC-100-CORE-TYPE-CHECKING.md)
 **Depends on:** Phase 161; SPEC-100, SPEC-099, SPEC-098b, SPEC-097b, SPEC-096b.
@@ -549,7 +549,7 @@ Implements the first annotation-led Core Ash type checker. The phase adds Core t
 | [TASK-1644](tasks/TASK-1644-core-expression-basics-typecheck.md) | Type Atom, LetVal, LetRec, LetPrim, If, and Trap expressions | ✅ Complete |
 | [TASK-1645](tasks/TASK-1645-core-call-jump-row-accounting.md) | Type LetCall, Call, and Jump with SPEC-098b row-accounting facts | ✅ Complete |
 | [TASK-1646](tasks/TASK-1646-core-effect-operation-typing.md) | Type capability/channel/process/failure Raise operations and operation signatures | ✅ Complete |
-| [TASK-1647](tasks/TASK-1647-core-handle-affine-resume-typecheck.md) | Type Handle clauses with affine resume and captured-resume row preservation | 📝 Planned |
+| [TASK-1647](tasks/TASK-1647-core-handle-affine-resume-typecheck.md) | Type Handle clauses with affine resume and captured-resume row preservation | ✅ Complete |
 | [TASK-1648](tasks/TASK-1648-core-refinement-obligations-discharge.md) | Record refinement obligations and validate discharge metadata shape | 📝 Planned |
 | [TASK-1649](tasks/TASK-1649-core-public-summary-scaffold.md) | Add public type/row summary scaffolding and private alias diagnostics | 📝 Planned |
 | [TASK-1650](tasks/TASK-1650-core-typecheck-integration-fixtures.md) | Add `.core` parse -> validate -> type-check -> lower integration fixtures | 📝 Planned |

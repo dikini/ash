@@ -1,6 +1,6 @@
 # TASK-1669: Lower Core mode forms to CPS thunk runtime
 
-**Status:** Planned
+**Status:** Done
 **Phase:** [PLAN-163](../PLAN-163-CORE-LAZY-MEMO-MODES.md)
 **Owner:** Phase 163
 
@@ -78,12 +78,12 @@ Lower `Thunk`, `LetMode`, and `Force` into CPS values and existing CPS tail term
 
 ## Completion Checklist
 
-- [ ] Effectful thunks do not lower to plain calls.
-- [ ] Force uses runtime force semantics.
-- [ ] Lowered rows match checked rows.
-- [ ] Conversion operations are documented as Core translations, not new Phase 163 builtins.
-- [ ] Lowering does not pretend to know runtime handler/provider chain state.
-- [ ] Lowering consumes checker-provided latent-row facts rather than recomputing them.
-- [ ] `CoreLoweringContext` carries `mode_binding_latent_rows`.
-- [ ] `CoreLoweringContext` exposes the exact latent-row helper methods named above.
-- [ ] Non-variable force atoms are treated as impossible after checked validation/type checking.
+- [x] Effectful thunks do not lower to plain calls.
+- [x] Force uses runtime force semantics.
+- [x] Lowered rows match checked rows.
+- [x] Conversion operations are documented as Core translations, not new Phase 163 builtins.
+- [x] Lowering does not pretend to know runtime handler/provider chain state.
+- [x] Lowering consumes checker-provided latent-row facts rather than recomputing them.
+- [x] `CoreLoweringContext` carries `mode_binding_latent_rows`.
+- [x] `CoreLoweringContext` exposes the exact latent-row helper methods named above.
+- [x] Non-variable force atoms are treated as impossible after checked validation/type checking.

@@ -625,7 +625,7 @@ Fixture/runtime tests observe repeated execution through trace counts:
 | [TASK-1666](tasks/TASK-1666-core-thunk-value-typing.md) | Type thunk values with latent rows and pure construction row | 4 | TASK-1665, TASK-1643 | Planned |
 | [TASK-1667](tasks/TASK-1667-core-letmode-force-typechecking.md) | Type LetMode and Force expressions with SPEC-101 row accounting | 5 | TASK-1666, TASK-1644 | Planned |
 | [TASK-1668](tasks/TASK-1668-core-mode-public-summaries.md) | Preserve mode and latent-row facts in public summaries and diagnostics | 3 | TASK-1667, TASK-1649 | Planned |
-| [TASK-1669](tasks/TASK-1669-core-mode-lowering.md) | Lower thunk construction, strict/lazy/memo LetMode, and Force into CPS thunk runtime forms | 5 | TASK-1664, TASK-1667 | Planned |
+| [TASK-1669](tasks/TASK-1669-core-mode-lowering.md) | Lower thunk construction, strict/lazy/memo LetMode, and Force into CPS thunk runtime forms | 5 | TASK-1664, TASK-1667 | Complete |
 | [TASK-1670](tasks/TASK-1670-core-thunk-capture-authority.md) | Verify captured handler/provider-chain authority at force time | 4 | TASK-1669 | Planned |
 | [TASK-1672](tasks/TASK-1672-core-mode-tracing-observability.md) | Add thunk construction/force/memo trace events and observability tests | 4 | TASK-1664, TASK-1669 | Planned |
 | [TASK-1671](tasks/TASK-1671-core-mode-end-to-end-fixtures.md) | Add parse -> validate -> type-check -> lower -> run fixtures and golden examples | 5 | TASK-1670, TASK-1672 | Planned |

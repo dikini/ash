@@ -90,6 +90,51 @@ pub enum TraceEvent {
         satisfied: bool,
         timestamp: DateTime<Utc>,
     },
+    /// A thunk was constructed.
+    ThunkConstructed {
+        mode: String,
+        row: Vec<String>,
+        timestamp: DateTime<Utc>,
+    },
+    /// A thunk force operation started.
+    ThunkForceStarted {
+        mode: String,
+        timestamp: DateTime<Utc>,
+    },
+    /// A thunk body evaluation started.
+    ThunkBodyEvaluationStarted {
+        mode: String,
+        timestamp: DateTime<Utc>,
+    },
+    /// A thunk body evaluation completed with a terminal outcome.
+    ThunkBodyEvaluationCompleted {
+        mode: String,
+        outcome: String,
+        timestamp: DateTime<Utc>,
+    },
+    /// A thunk force operation completed with a terminal outcome.
+    ThunkForceCompleted {
+        mode: String,
+        outcome: String,
+        timestamp: DateTime<Utc>,
+    },
+    /// Memo table was filled from an evaluated thunk outcome.
+    MemoCacheFilled {
+        outcome: String,
+        timestamp: DateTime<Utc>,
+    },
+    /// Memo table lookup hit for a thunk.
+    MemoCacheHit {
+        outcome: String,
+        timestamp: DateTime<Utc>,
+    },
+    /// Memo cached failure replay encountered.
+    MemoReplayFailure {
+        reason: String,
+        timestamp: DateTime<Utc>,
+    },
+    /// Re-entrant memo force was rejected.
+    MemoReentrantRejected { timestamp: DateTime<Utc> },
 }
 
 /// Policy decision outcomes
@@ -200,8 +245,44 @@ mod tests {
                 satisfied: true,
                 timestamp: now,
             },
+            TraceEvent::ThunkConstructed {
+                mode: "memo".to_string(),
+                row: vec!["cap db.read".to_string()],
+                timestamp: now,
+            },
+            TraceEvent::ThunkForceStarted {
+                mode: "memo".to_string(),
+                timestamp: now,
+            },
+            TraceEvent::ThunkBodyEvaluationStarted {
+                mode: "memo".to_string(),
+                timestamp: now,
+            },
+            TraceEvent::ThunkBodyEvaluationCompleted {
+                mode: "memo".to_string(),
+                outcome: "success".to_string(),
+                timestamp: now,
+            },
+            TraceEvent::ThunkForceCompleted {
+                mode: "memo".to_string(),
+                outcome: "success".to_string(),
+                timestamp: now,
+            },
+            TraceEvent::MemoCacheFilled {
+                outcome: "success".to_string(),
+                timestamp: now,
+            },
+            TraceEvent::MemoCacheHit {
+                outcome: "success".to_string(),
+                timestamp: now,
+            },
+            TraceEvent::MemoReplayFailure {
+                reason: "trap".to_string(),
+                timestamp: now,
+            },
+            TraceEvent::MemoReentrantRejected { timestamp: now },
         ];
-        assert_eq!(events.len(), 5);
+        assert_eq!(events.len(), 14);
     }
 
     #[test]

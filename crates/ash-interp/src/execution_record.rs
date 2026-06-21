@@ -262,7 +262,16 @@ fn trace_event_timestamp(event: &TraceEvent) -> DateTime<Utc> {
         | TraceEvent::Orient { timestamp, .. }
         | TraceEvent::Decide { timestamp, .. }
         | TraceEvent::Act { timestamp, .. }
-        | TraceEvent::Oblig { timestamp, .. } => *timestamp,
+        | TraceEvent::Oblig { timestamp, .. }
+        | TraceEvent::ThunkConstructed { timestamp, .. }
+        | TraceEvent::ThunkForceStarted { timestamp, .. }
+        | TraceEvent::ThunkBodyEvaluationStarted { timestamp, .. }
+        | TraceEvent::ThunkBodyEvaluationCompleted { timestamp, .. }
+        | TraceEvent::ThunkForceCompleted { timestamp, .. }
+        | TraceEvent::MemoCacheFilled { timestamp, .. }
+        | TraceEvent::MemoCacheHit { timestamp, .. }
+        | TraceEvent::MemoReplayFailure { timestamp, .. }
+        | TraceEvent::MemoReentrantRejected { timestamp } => *timestamp,
     }
 }
 

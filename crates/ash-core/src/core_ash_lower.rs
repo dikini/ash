@@ -35,6 +35,7 @@ pub struct CoreLoweringContext {
     cont_rows: HashMap<String, CoreRow>,
     function_rows: HashMap<String, CoreRow>,
     mode_rows: HashMap<String, CoreRow>,
+    mode_function_rows: HashMap<String, CoreRow>,
 }
 
 impl CoreLoweringContext {
@@ -52,6 +53,7 @@ impl CoreLoweringContext {
             cont_rows,
             function_rows: HashMap::new(),
             mode_rows: HashMap::new(),
+            mode_function_rows: HashMap::new(),
         }
     }
 
@@ -87,6 +89,18 @@ impl CoreLoweringContext {
     /// Returns the latent row for a `LetMode` binding in scope.
     pub fn mode_binding_latent_row(&self, name: &str) -> Option<&CoreRow> {
         self.mode_rows.get(name)
+    }
+
+    /// Registers the strict inner function row for a lazy/memo mode binding.
+    #[must_use]
+    pub fn with_mode_binding_function_row(mut self, name: impl Into<String>, row: CoreRow) -> Self {
+        self.mode_function_rows.insert(name.into(), row);
+        self
+    }
+
+    /// Returns the strict inner function row for a lazy/memo mode binding.
+    pub fn mode_binding_function_row(&self, name: &str) -> Option<&CoreRow> {
+        self.mode_function_rows.get(name)
     }
 }
 
@@ -190,6 +204,7 @@ fn lower_expr_with_letcall_rows(
         } => {
             let mut lexical_state = state.clone();
             record_local_function_row(name, ty, value, &mut lexical_state);
+            record_mode_binding_rows(name, ty, &mut lexical_state);
             let value_path = with_child_path(path, 0);
             let body_path = with_child_path(path, 1);
             let lowered_value = lower_value_with_letcall_rows(
@@ -214,6 +229,7 @@ fn lower_expr_with_letcall_rows(
         } => {
             let mut lexical_state = state.clone();
             record_local_function_row(name, ty, value, &mut lexical_state);
+            record_mode_binding_rows(name, ty, &mut lexical_state);
             let value_path = with_child_path(path, 0);
             let body_path = with_child_path(path, 1);
             let lowered_value = lower_value_with_letcall_rows(
@@ -340,19 +356,6 @@ fn lower_expr_with_letcall_rows(
             let expr_path = with_child_path(path, 0);
             let body_path = with_child_path(path, 1);
 
-            let body_row = total_row_with_letcall_rows(body, state, &body_path, letcall_rows)?;
-
-            let mut expr_state = state.clone();
-            let cont_name = expr_state.fresh_cont_name();
-            let lowered_expr = {
-                let guard =
-                    expr_state.with_current_cont(ContRef::Var(cont_name.clone()), body_row.clone());
-                let lowered =
-                    lower_expr_with_letcall_rows(expr, &mut expr_state, &expr_path, letcall_rows)?;
-                expr_state.restore_current_cont(guard);
-                lowered
-            };
-
             if matches!(mode, crate::core_ash::CoreEvalMode::Strict) {
                 let mut body_state = state.clone();
                 if let CoreType::Function { row, .. } = ty {
@@ -361,6 +364,23 @@ fn lower_expr_with_letcall_rows(
                         .function_rows
                         .insert(name.clone(), row.clone());
                 }
+                let body_row =
+                    total_row_with_letcall_rows(body, &body_state, &body_path, letcall_rows)?;
+
+                let mut expr_state = state.clone();
+                let cont_name = expr_state.fresh_cont_name();
+                let lowered_expr = {
+                    let guard = expr_state
+                        .with_current_cont(ContRef::Var(cont_name.clone()), body_row.clone());
+                    let lowered = lower_expr_with_letcall_rows(
+                        expr,
+                        &mut expr_state,
+                        &expr_path,
+                        letcall_rows,
+                    )?;
+                    expr_state.restore_current_cont(guard);
+                    lowered
+                };
 
                 let lowered_body =
                     lower_expr_with_letcall_rows(body, &mut body_state, &body_path, letcall_rows)?;
@@ -405,6 +425,7 @@ fn lower_expr_with_letcall_rows(
                     .context
                     .with_mode_binding_latent_row(name.clone(), latent_row.clone());
                 body_state.context = lexical_state;
+                record_mode_binding_rows(name, ty, &mut body_state);
 
                 let thunk_mode = match mode {
                     crate::core_ash::CoreEvalMode::Lazy => ThunkMode::Lazy,
@@ -434,6 +455,8 @@ fn lower_expr_with_letcall_rows(
         }
         CoreExpr::Force { name, thunk, body } => {
             let _latent_row = mode_binding_row_for_force(state, thunk)?;
+            let mut body_state = state.clone();
+            record_force_result_function_row(name, thunk, &mut body_state);
 
             let letprim = Term::LetPrim {
                 name: name.clone(),
@@ -441,7 +464,7 @@ fn lower_expr_with_letcall_rows(
                 args: vec![lower_atom(thunk)?],
                 body: Box::new(lower_expr_with_letcall_rows(
                     body,
-                    &mut state.clone(),
+                    &mut body_state,
                     &with_child_path(path, 0),
                     letcall_rows,
                 )?),
@@ -900,6 +923,38 @@ fn record_local_function_row(
     }
 }
 
+fn record_mode_binding_rows(name: &str, ty: &CoreType, state: &mut LoweringState) {
+    if let CoreType::Mode {
+        mode: crate::core_ash::CoreEvalMode::Lazy | crate::core_ash::CoreEvalMode::Memo,
+        inner,
+        latent_row,
+        ..
+    } = ty
+    {
+        if let Some(row) = latent_row {
+            state
+                .context
+                .mode_rows
+                .insert(name.to_string(), row.clone());
+        }
+        if let CoreType::Function { row, .. } = inner.as_ref() {
+            state
+                .context
+                .mode_function_rows
+                .insert(name.to_string(), row.clone());
+        }
+    }
+}
+
+fn record_force_result_function_row(name: &str, thunk: &CoreAtom, state: &mut LoweringState) {
+    let CoreAtom::Var(thunk_name) = thunk else {
+        return;
+    };
+    if let Some(row) = state.context.mode_binding_function_row(thunk_name).cloned() {
+        state.context.function_rows.insert(name.to_string(), row);
+    }
+}
+
 fn function_row_for_atom(atom: &CoreAtom, state: &LoweringState) -> Option<CoreRow> {
     let CoreAtom::Var(name) = atom else {
         return None;
@@ -934,14 +989,25 @@ fn local_row_with_letcall_rows(
     match expr {
         CoreExpr::Atom(_) | CoreExpr::Jump { .. } | CoreExpr::Trap { .. } => Ok(CoreRow::default()),
         CoreExpr::LetMode {
-            mode, expr, body, ..
+            name,
+            mode,
+            ty,
+            expr,
+            body,
         } => match mode {
             crate::core_ash::CoreEvalMode::Strict => Ok(union_rows(
                 &local_row_with_letcall_rows(expr, state, &with_child_path(path, 0), letcall_rows)?,
                 &local_row_with_letcall_rows(body, state, &with_child_path(path, 1), letcall_rows)?,
             )),
             crate::core_ash::CoreEvalMode::Lazy | crate::core_ash::CoreEvalMode::Memo => {
-                local_row_with_letcall_rows(body, state, &with_child_path(path, 1), letcall_rows)
+                let mut lexical_state = state.clone();
+                record_mode_binding_rows(name, ty, &mut lexical_state);
+                local_row_with_letcall_rows(
+                    body,
+                    &lexical_state,
+                    &with_child_path(path, 1),
+                    letcall_rows,
+                )
             }
         },
         CoreExpr::LetVal {
@@ -958,6 +1024,7 @@ fn local_row_with_letcall_rows(
         } => {
             let mut lexical_state = state.clone();
             record_local_function_row(name, ty, value, &mut lexical_state);
+            record_mode_binding_rows(name, ty, &mut lexical_state);
             local_row_with_letcall_rows(
                 body,
                 &lexical_state,
@@ -1025,10 +1092,17 @@ fn local_row_with_letcall_rows(
             &local_row_with_letcall_rows(body, state, &with_child_path(path, 0), letcall_rows)?,
             &contract_row(&discharge.contract),
         )),
-        CoreExpr::Force { thunk, body, .. } => {
+        CoreExpr::Force { name, thunk, body } => {
             let thunk_row = mode_binding_row_for_force(state, thunk)?;
+            let mut body_state = state.clone();
+            record_force_result_function_row(name, thunk, &mut body_state);
             Ok(union_rows(
-                &local_row_with_letcall_rows(body, state, &with_child_path(path, 0), letcall_rows)?,
+                &local_row_with_letcall_rows(
+                    body,
+                    &body_state,
+                    &with_child_path(path, 0),
+                    letcall_rows,
+                )?,
                 &thunk_row,
             ))
         }
@@ -1044,14 +1118,25 @@ fn total_row_with_letcall_rows(
     match expr {
         CoreExpr::Atom(_) => Ok(state.context.current_cont_row.clone()),
         CoreExpr::LetMode {
-            mode, expr, body, ..
+            name,
+            mode,
+            ty,
+            expr,
+            body,
         } => match mode {
             crate::core_ash::CoreEvalMode::Strict => Ok(union_rows(
                 &total_row_with_letcall_rows(expr, state, &with_child_path(path, 0), letcall_rows)?,
                 &total_row_with_letcall_rows(body, state, &with_child_path(path, 1), letcall_rows)?,
             )),
             crate::core_ash::CoreEvalMode::Lazy | crate::core_ash::CoreEvalMode::Memo => {
-                total_row_with_letcall_rows(body, state, &with_child_path(path, 1), letcall_rows)
+                let mut lexical_state = state.clone();
+                record_mode_binding_rows(name, ty, &mut lexical_state);
+                total_row_with_letcall_rows(
+                    body,
+                    &lexical_state,
+                    &with_child_path(path, 1),
+                    letcall_rows,
+                )
             }
         },
         CoreExpr::LetVal {
@@ -1068,6 +1153,7 @@ fn total_row_with_letcall_rows(
         } => {
             let mut lexical_state = state.clone();
             record_local_function_row(name, ty, value, &mut lexical_state);
+            record_mode_binding_rows(name, ty, &mut lexical_state);
             total_row_with_letcall_rows(
                 body,
                 &lexical_state,
@@ -1144,10 +1230,17 @@ fn total_row_with_letcall_rows(
             &total_row_with_letcall_rows(body, state, &with_child_path(path, 0), letcall_rows)?,
             &contract_row(&discharge.contract),
         )),
-        CoreExpr::Force { thunk, body, .. } => {
+        CoreExpr::Force { name, thunk, body } => {
             let thunk_row = mode_binding_row_for_force(state, thunk)?;
+            let mut body_state = state.clone();
+            record_force_result_function_row(name, thunk, &mut body_state);
             Ok(union_rows(
-                &total_row_with_letcall_rows(body, state, &with_child_path(path, 0), letcall_rows)?,
+                &total_row_with_letcall_rows(
+                    body,
+                    &body_state,
+                    &with_child_path(path, 0),
+                    letcall_rows,
+                )?,
                 &thunk_row,
             ))
         }

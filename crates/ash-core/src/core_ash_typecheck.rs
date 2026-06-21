@@ -892,13 +892,22 @@ fn collect_letcall_function_rows(
             path.pop();
             result
         }
-        CoreExpr::LetMode { expr, body, .. } => {
+        CoreExpr::LetMode {
+            name,
+            ty,
+            expr,
+            body,
+            ..
+        } => {
             path.push(0);
             let left = collect_letcall_function_rows(expr, env, path, rows);
             path.pop();
 
+            let mut body_env = env.clone();
+            body_env.values_mut().insert(name.clone(), ty.clone());
+
             path.push(1);
-            let right = collect_letcall_function_rows(body, env, path, rows);
+            let right = collect_letcall_function_rows(body, &body_env, path, rows);
             path.pop();
 
             left.and(right)
@@ -2118,11 +2127,15 @@ fn lowering_context_with_checked_facts(
 
         if let CoreType::Mode {
             mode: CoreEvalMode::Lazy | CoreEvalMode::Memo,
+            inner,
             latent_row: Some(row),
             ..
         } = ty
         {
             context = context.with_mode_binding_latent_row(name.clone(), row.clone());
+            if let CoreType::Function { row, .. } = inner.as_ref() {
+                context = context.with_mode_binding_function_row(name.clone(), row.clone());
+            }
         }
     }
 

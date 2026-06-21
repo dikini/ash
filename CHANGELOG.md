@@ -56,6 +56,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - AGENTS.md: documented native MCP server configuration for ash-mcp and rust-analyzer with persistent stdio transport, per-project activation instructions, and cross-language tool routing. Added Hermes profile at `~/.hermes/profiles/ash/config.yaml` for portable Ash project MCP setup.
 
 ### Fixed
+- Fixed Core mode checked lowering for forced function thunks so `LetMode` bindings are scoped
+  during let-call row collection and calls through forced functions preserve the checked inner
+  function row in emitted CPS `Call.row`. (TASK-1674)
 - Fixed Core Ash row handling so local function rows are scoped during row walks for `Handle` residual analysis, and row equality now canonicalizes item order before comparison so handler clause and function/continuation row checks are order-insensitive. This preserves latent local function rows for handle-body `LetVal/LetRec` calls and avoids false negatives when row items are textually permuted. (TASK-162)
 - Fixed Core Ash row equivalence to keep structural row-normalization failures as structured `CoreTypeCheckError` diagnostics (for example `AmbiguousRowReference`) instead of collapsing them to plain `RowMismatch`, including handler clause row checks. (TASK-162)
 - Fixed Core Ash row equivalence for typed row items: `CoreRowItem` variants carrying `CoreType` (channel/failure payloads, etc.) now compare embedded types via existing type-equivalence semantics, so equivalent record field permutations no longer spuriously fail row/function/continuation/handler checks. (TASK-162)

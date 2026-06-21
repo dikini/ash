@@ -400,13 +400,75 @@ fn force_binder_is_visible_for_nested_letcall_rows() {
                     body: call_body,
                     ..
                 } => {
-                    assert!(matches!(*call_body, Term::Call { .. }));
+                    match *call_body {
+                        Term::Call { row, .. } => {
+                            assert_eq!(
+                                row.items,
+                                vec![expected_cap_effect_item(&["db"], "write")],
+                                "calls through a forced function must keep the function row"
+                            );
+                        }
+                        other => panic!("expected lowered forced function call, got {other:?}"),
+                    }
                     assert!(matches!(*cont_body, Term::Jump { .. }));
                 }
                 other => panic!("expected let-call lowering to follow force, got {other:?}"),
             }
         }
         other => panic!("expected top-level force lowering, got {other:?}"),
+    }
+}
+
+#[test]
+fn letmode_force_binder_is_visible_for_nested_letcall_rows() {
+    let mut env = CoreTypeCheckEnv::default();
+    env.values_mut().insert(
+        "provided_fn".to_string(),
+        typed_fn(vec![], base("Int"), cap_row(&["db"], "write")),
+    );
+
+    let expr = CoreExpr::LetMode {
+        name: "thunked_fn".to_string(),
+        mode: CoreEvalMode::Lazy,
+        ty: mode_type(
+            CoreEvalMode::Lazy,
+            typed_fn(vec![], base("Int"), cap_row(&["db"], "write")),
+            CoreRow::default(),
+        ),
+        expr: Box::new(CoreExpr::Atom(CoreAtom::Var("provided_fn".to_string()))),
+        body: Box::new(CoreExpr::Force {
+            name: "forced".to_string(),
+            thunk: CoreAtom::Var("thunked_fn".to_string()),
+            body: Box::new(CoreExpr::LetCall {
+                name: "forced_call".to_string(),
+                func: CoreAtom::Var("forced".to_string()),
+                args: vec![],
+                body: Box::new(CoreExpr::Atom(CoreAtom::Var("forced_call".to_string()))),
+            }),
+        }),
+    };
+
+    let (typed, lowered) = lower_program(expr, env);
+
+    assert_eq!(typed.row(), &cap_row(&["db"], "write"));
+    assert_eq!(typed.ty(), &base("Int"));
+
+    match lowered {
+        Term::LetVal { body, .. } => match *body {
+            Term::LetPrim { body, .. } => match *body {
+                Term::LetCont {
+                    body: call_body, ..
+                } => match *call_body {
+                    Term::Call { row, .. } => {
+                        assert_eq!(row.items, vec![expected_cap_effect_item(&["db"], "write")])
+                    }
+                    other => panic!("expected lowered forced letmode function call, got {other:?}"),
+                },
+                other => panic!("expected nested let-call after force, got {other:?}"),
+            },
+            other => panic!("expected force after letmode binding, got {other:?}"),
+        },
+        other => panic!("expected letmode to lower to top-level LetVal, got {other:?}"),
     }
 }
 

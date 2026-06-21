@@ -630,8 +630,9 @@ Fixture/runtime tests observe repeated execution through trace counts:
 | [TASK-1672](tasks/TASK-1672-core-mode-tracing-observability.md) | Add thunk construction/force/memo trace events and observability tests | 4 | TASK-1664, TASK-1669 | Done |
 | [TASK-1671](tasks/TASK-1671-core-mode-end-to-end-fixtures.md) | Add parse -> validate -> type-check -> lower -> run fixtures and golden examples | 5 | TASK-1670, TASK-1672 | Done |
 | [TASK-1673](tasks/TASK-1673-core-lazy-memo-reference-closeout.md) | Document behavior, reconcile tracking, and close out Phase 163 | 3 | TASK-1671 | Done |
+| [TASK-1674](tasks/TASK-1674-core-force-function-row-remediation.md) | Preserve forced function rows and scoped LetMode bindings during checked lowering | 2 | TASK-1667, TASK-1669 | Done |
 
-**Total estimated hours:** 55.
+**Total estimated hours:** 57.
 
 ## TDD Policy
 
@@ -736,6 +737,7 @@ TASK-1663 -> TASK-1664   TASK-1665 -> TASK-1666 -> TASK-1667 -> TASK-1668
       |                                                |
       v                                                v
 TASK-1669 -> TASK-1670 -> TASK-1672 -> TASK-1671 -> TASK-1673
+TASK-1674 (review remediation after TASK-1673)
 ```
 
 ## References

@@ -138,7 +138,7 @@ Update this section as tasks complete:
 | [160](PLAN-160-CPS-IR-RUNTIME-EXPANSION.md) | 10 | 10 | ✅ Complete; CPS IR runtime expansion implemented, focused tests pass, reference docs updated |
 | [161](PLAN-161-CORE-ASH-IR-FOUNDATION.md) | 13 | 13 | ✅ Complete; Core Ash foundation and public Core text round-trip review remediation verified |
 | [162](PLAN-162-CORE-ASH-TYPE-CHECKING.md) | 12 | 12 | ✅ Complete; Core Ash type checker implemented with reference docs and closeout review |
-| [163](PLAN-163-CORE-LAZY-MEMO-MODES.md) | 14 | 14 | ✅ Complete; SPEC-101 Core lazy/memo mode implementation packet |
+| [163](PLAN-163-CORE-LAZY-MEMO-MODES.md) | 15 | 15 | ✅ Complete; SPEC-101 Core lazy/memo mode implementation packet plus review remediation |
 
 ---
 
@@ -558,7 +558,7 @@ Implements the first annotation-led Core Ash type checker. The phase adds Core t
 
 ## Phase 163: Core Lazy and Memo Computation Modes
 
-**Status:** ✅ Complete; 14/14 implemented
+**Status:** ✅ Complete; 15/15 implemented
 **Plan:** [PLAN-163: Core Lazy and Memo Computation Modes](PLAN-163-CORE-LAZY-MEMO-MODES.md)
 **Spec:** [SPEC-101: Lazy and Memo Computation Modes](../spec/SPEC-101-LAZY-AND-MEMO-COMPUTATION-MODES.md)
 **Depends on:** Phase 161, Phase 162; SPEC-101, SPEC-100, SPEC-099, SPEC-098b, SPEC-097b, SPEC-096b.
@@ -581,3 +581,4 @@ Implements SPEC-101 for Core Ash: explicit `Strict`/`Lazy`/`Memo` mode types, th
 | [TASK-1672](tasks/TASK-1672-core-mode-tracing-observability.md) | Add thunk construction/force/memo trace events and observability tests | ✅ Complete |
 | [TASK-1671](tasks/TASK-1671-core-mode-end-to-end-fixtures.md) | Add parse -> validate -> type-check -> lower -> run fixtures and golden examples | ✅ Complete |
 | [TASK-1673](tasks/TASK-1673-core-lazy-memo-reference-closeout.md) | Document behavior, reconcile tracking, and close out Phase 163 | ✅ Complete |
+| [TASK-1674](tasks/TASK-1674-core-force-function-row-remediation.md) | Preserve forced function rows and scoped LetMode bindings during checked lowering | ✅ Complete |

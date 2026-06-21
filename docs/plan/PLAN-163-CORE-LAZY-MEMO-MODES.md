@@ -618,7 +618,7 @@ Fixture/runtime tests observe repeated execution through trace counts:
 |------|-------------|-----------:|--------------|--------|
 | [TASK-1660](tasks/TASK-1660-core-mode-ast-carriers.md) | Add Core mode type, thunk value, LetMode, and Force AST carriers | 3 | Phase 162 | Planned |
 | [TASK-1661](tasks/TASK-1661-core-mode-text-format.md) | Parse, serialize, and round-trip `.core` mode syntax and fixtures | 4 | TASK-1660 | Planned |
-| [TASK-1662](tasks/TASK-1662-core-mode-validation.md) | Validate mode/type agreement, thunk shape, Force shape, and binder scoping | 3 | TASK-1661 | Planned |
+| [TASK-1662](tasks/TASK-1662-core-mode-validation.md) | Validate mode/type agreement, thunk shape, Force shape, and binder scoping | 3 | TASK-1661 | Done |
 | [TASK-1663](tasks/TASK-1663-cps-thunk-carrier.md) | Add CPS ThunkClosure value carrier and memo-cell state scaffolding | 4 | TASK-1660 | Planned |
 | [TASK-1664](tasks/TASK-1664-cps-force-runtime.md) | Implement CPS lazy/memo force runtime behavior, cached outcomes, and re-entrant rejection | 5 | TASK-1663 | Planned |
 | [TASK-1665](tasks/TASK-1665-core-mode-type-wellformedness.md) | Type-check mode type well-formedness and mode invariance diagnostics | 3 | TASK-1662, TASK-1641 | Planned |

@@ -1,6 +1,6 @@
 # TASK-1662: Validate Core mode forms
 
-**Status:** Planned
+**Status:** Done
 **Phase:** [PLAN-163](../PLAN-163-CORE-LAZY-MEMO-MODES.md)
 **Owner:** Phase 163
 
@@ -40,9 +40,9 @@ Add representation validation for SPEC-101 mode forms before type checking or lo
 
 ## Completion Checklist
 
-- [ ] Mode/type agreement is validated before type checking.
-- [ ] Thunk/force subexpressions are validated.
-- [ ] `Force` rejects non-variable forced atoms.
-- [ ] Thunk/lambda bodies can reference captured outer bindings.
-- [ ] Binders introduced inside nested thunk/lambda values do not leak outward.
-- [ ] Existing validation behavior is preserved.
+- [x] Mode/type agreement is validated before type checking.
+- [x] Thunk/force subexpressions are validated.
+- [x] `Force` rejects non-variable forced atoms.
+- [x] Thunk/lambda bodies can reference captured outer bindings.
+- [x] Binders introduced inside nested thunk/lambda values do not leak outward.
+- [x] Existing validation behavior is preserved.

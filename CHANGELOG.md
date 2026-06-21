@@ -35,6 +35,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   latent-row well-formedness, thunk `result_ty` as a strict inner type, immutable `LetMode`
   row-check facts, variable-only Phase 163 `Force`, and runtime thunk capture construction.
   (TASK-1662, TASK-1664 through TASK-1667, TASK-1669)
+- Hardened Phase 163 validation by requiring `LetMode` mode/type agreement and enforcing that
+  `Force` uses only `CoreAtom::Var` thunks before lowering/typechecking.
+  (TASK-1662)
 - Reconciled SPEC-097b CPS lowering with SPEC-101 `ThunkClosure` chain-capture semantics and required `LetMode.mode` to match `LetMode.ty` exactly in SPEC-101.
 - Corrected SPEC-101 lazy/memo CPS lowering to require a value-level thunk carrier with captured handler/provider chain, preserving creation-time authority semantics instead of dispatching effectful thunk bodies through the force-time chain.
 - Clarified SPEC-097b memo force row accounting so static type-checker summaries retain the thunk latent row at each force site while dynamic memo cache hits may perform no effects, aligning it with SPEC-101.

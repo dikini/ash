@@ -4,8 +4,8 @@
 //! invariants that should fail before lowering into the CPS substrate.
 
 use crate::core_ash::{
-    CoreAtom, CoreContRef, CoreEffectOp, CoreExpr, CoreMultiplicity, CoreParam, CoreRow,
-    CoreRowItem, CoreTrapReason, CoreType, CoreValue,
+    CoreAtom, CoreContRef, CoreEffectOp, CoreEvalMode, CoreExpr, CoreMultiplicity, CoreParam,
+    CoreRow, CoreRowItem, CoreTrapReason, CoreType, CoreValue,
 };
 use std::collections::HashSet;
 
@@ -66,6 +66,14 @@ pub enum CoreValidationError {
     #[error("duplicate {kind} binding `{name}`")]
     DuplicateBinding { kind: String, name: String },
 
+    /// `let-mode` uses a computation mode that does not match its annotation type.
+    #[error("`let-mode` mode `{mode}` does not match mode type `{ty}`")]
+    LetModeTypeMismatch { mode: String, ty: String },
+
+    /// `force` requires a variable thunk reference.
+    #[error("force expects a variable thunk atom, found `{atom}`")]
+    ForceRequiresVariableThunk { atom: String },
+
     /// A raised operation is malformed or not representable by the target IR.
     #[error("unsupported effect operation: {detail}")]
     UnsupportedEffectOperation { detail: String },
@@ -97,12 +105,14 @@ fn validate_expr(
         CoreExpr::Atom(atom) => validate_data_atom(atom),
         CoreExpr::LetMode {
             name,
+            mode,
             ty,
             expr,
             body,
             ..
         } => {
             validate_binding_name("mode", name, bindings)?;
+            validate_letmode_type(*mode, ty)?;
             validate_type(ty)?;
             validate_expr(expr, bindings)?;
             let mut body_bindings = bindings.clone();
@@ -143,6 +153,14 @@ fn validate_expr(
             validate_expr(body, bindings)
         }
         CoreExpr::Force { thunk, body, .. } => {
+            match thunk {
+                CoreAtom::Var(_) => {}
+                _ => {
+                    return Err(CoreValidationError::ForceRequiresVariableThunk {
+                        atom: format!("{thunk:?}"),
+                    });
+                }
+            }
             validate_data_atom(thunk)?;
             validate_expr(body, bindings)
         }
@@ -202,6 +220,36 @@ fn validate_binding_name(
     }
     bindings.insert(name.to_string());
     Ok(())
+}
+
+fn validate_letmode_type(mode: CoreEvalMode, ty: &CoreType) -> Result<(), CoreValidationError> {
+    match (mode, ty) {
+        (
+            CoreEvalMode::Strict,
+            CoreType::Mode {
+                mode: CoreEvalMode::Strict,
+                ..
+            },
+        )
+        | (
+            CoreEvalMode::Lazy,
+            CoreType::Mode {
+                mode: CoreEvalMode::Lazy,
+                ..
+            },
+        )
+        | (
+            CoreEvalMode::Memo,
+            CoreType::Mode {
+                mode: CoreEvalMode::Memo,
+                ..
+            },
+        ) => Ok(()),
+        (_, _) => Err(CoreValidationError::LetModeTypeMismatch {
+            mode: format!("{mode:?}"),
+            ty: format!("{ty:?}"),
+        }),
+    }
 }
 
 fn validate_value(

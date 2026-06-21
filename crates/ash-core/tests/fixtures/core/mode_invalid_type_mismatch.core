@@ -1,0 +1,1 @@
+(let-mode x lazy : (memo Int {}) 1 x)

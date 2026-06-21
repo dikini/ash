@@ -1,0 +1,1 @@
+(let-mode t lazy : (lazy Int {}) (lit-int 1) (force v t t))

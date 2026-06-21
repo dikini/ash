@@ -4,9 +4,9 @@
 //! atoms, types, rows, row items, and values; TASK-1623 adds expression forms.
 
 use crate::core_ash::{
-    CoreAtom, CoreContRef, CoreContractDischarge, CoreDischargeMode, CoreEffectOp, CoreEvalMode,
-    CoreExpr, CoreHandlerClause, CoreMultiplicity, CoreParam, CorePrimOp, CoreRow, CoreRowItem,
-    CoreSourceSpan, CoreThunkMode, CoreTrapReason, CoreType, CoreValue,
+    CoreAtom, CoreCaptureSet, CoreContRef, CoreContractDischarge, CoreDischargeMode, CoreEffectOp,
+    CoreEvalMode, CoreExpr, CoreHandlerClause, CoreMultiplicity, CoreParam, CorePrimOp, CoreRow,
+    CoreRowItem, CoreSourceSpan, CoreThunkMode, CoreTrapReason, CoreType, CoreValue,
 };
 use std::fmt;
 use std::fmt::Write as _;
@@ -245,6 +245,31 @@ impl Parser {
                     body: Box::new(body),
                 }
             }
+            "let-mode" => {
+                let name = self.expect_symbol()?;
+                let mode = self.parse_eval_mode()?;
+                self.expect_colon()?;
+                let ty = self.parse_type_inner()?;
+                let expr = self.parse_expr_inner()?;
+                let body = self.parse_expr_inner()?;
+                CoreExpr::LetMode {
+                    name,
+                    mode,
+                    ty,
+                    expr: Box::new(expr),
+                    body: Box::new(body),
+                }
+            }
+            "force" => {
+                let name = self.expect_symbol()?;
+                let thunk = self.parse_atom_inner()?;
+                let body = self.parse_expr_inner()?;
+                CoreExpr::Force {
+                    name,
+                    thunk,
+                    body: Box::new(body),
+                }
+            }
             "if" => {
                 let cond = self.parse_atom_inner()?;
                 let then_branch = self.parse_expr_inner()?;
@@ -333,6 +358,32 @@ impl Parser {
             TokenKind::LParen => {
                 let head = self.expect_symbol()?;
                 let ty = match head.as_str() {
+                    "strict" => {
+                        let inner = self.parse_type_inner()?;
+                        CoreType::Mode {
+                            mode: CoreEvalMode::Strict,
+                            inner: Box::new(inner),
+                            latent_row: None,
+                        }
+                    }
+                    "lazy" => {
+                        let inner = self.parse_type_inner()?;
+                        let row = self.parse_row_inner()?;
+                        CoreType::Mode {
+                            mode: CoreEvalMode::Lazy,
+                            inner: Box::new(inner),
+                            latent_row: Some(row),
+                        }
+                    }
+                    "memo" => {
+                        let inner = self.parse_type_inner()?;
+                        let row = self.parse_row_inner()?;
+                        CoreType::Mode {
+                            mode: CoreEvalMode::Memo,
+                            inner: Box::new(inner),
+                            latent_row: Some(row),
+                        }
+                    }
                     "fn" => self.parse_function_type()?,
                     "cont" => self.parse_cont_type()?,
                     "refine" => {
@@ -505,6 +556,25 @@ impl Parser {
             "discharge-marker" => CoreValue::DischargeMarker {
                 discharge: self.parse_contract_discharge_inner()?,
             },
+            "thunk" => {
+                let mode = match self.expect_symbol()?.as_str() {
+                    "lazy" => CoreThunkMode::Lazy,
+                    "memo" => CoreThunkMode::Memo,
+                    other => {
+                        return Err(self.error_here(format!("unsupported thunk mode `{other}`")));
+                    }
+                };
+                let result_ty = self.parse_type_inner()?;
+                let row = self.parse_row_inner()?;
+                let body = self.parse_expr_inner()?;
+                CoreValue::Thunk {
+                    mode,
+                    result_ty,
+                    body: Box::new(body),
+                    row,
+                    captures: CoreCaptureSet { values: Vec::new() },
+                }
+            }
             "lit-int" | "lit-string" | "lit-bool" | "lit-unit" | "prim" | "constructor" => {
                 self.pos = checkpoint;
                 return Ok(CoreValue::Atom(self.parse_atom_inner()?));
@@ -741,6 +811,17 @@ impl Parser {
                 Ok(cont)
             }
             other => Err(self.error_from_kind(other, "expected continuation reference")),
+        }
+    }
+
+    fn parse_eval_mode(&mut self) -> ParseResult<CoreEvalMode> {
+        match self.expect_symbol()?.as_str() {
+            "strict" => Ok(CoreEvalMode::Strict),
+            "lazy" => Ok(CoreEvalMode::Lazy),
+            "memo" => Ok(CoreEvalMode::Memo),
+            other => Err(self.error_here(format!(
+                "unsupported eval mode `{other}`, expected strict, lazy, or memo"
+            ))),
         }
     }
 

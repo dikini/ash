@@ -1,0 +1,1 @@
+(let-mode memoized lazy : (lazy Int {}) (lit-int 1) (force a memoized (force b memoized b)))

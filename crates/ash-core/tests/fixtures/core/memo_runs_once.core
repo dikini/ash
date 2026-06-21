@@ -1,0 +1,1 @@
+(let-mode cached memo : (memo Int {}) (lit-int 2) (force a cached (force b cached b)))

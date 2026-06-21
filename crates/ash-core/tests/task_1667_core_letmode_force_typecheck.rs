@@ -190,6 +190,38 @@ fn force_returns_inner_type_and_contributes_thunk_row() {
 }
 
 #[test]
+fn force_body_type_can_differ_from_thunk_inner_type() {
+    let force_expr = CoreExpr::Force {
+        name: "forced".into(),
+        thunk: CoreAtom::Var("lazy_fn".into()),
+        body: Box::new(CoreExpr::If {
+            cond: CoreAtom::LitBool(true),
+            then_branch: Box::new(CoreExpr::Atom(CoreAtom::LitBool(true))),
+            else_branch: Box::new(CoreExpr::Atom(CoreAtom::LitBool(false))),
+        }),
+    };
+
+    let mut env = CoreTypeCheckEnv::default();
+    env.values_mut().insert(
+        "lazy_fn",
+        CoreType::Mode {
+            mode: CoreEvalMode::Lazy,
+            inner: Box::new(CoreType::Base("Int".into())),
+            latent_row: Some(CoreRow::default()),
+        },
+    );
+
+    let typed = type_check_core_program(
+        validate_core_program(RawCoreProgram::new(force_expr)).expect("validated"),
+        &env,
+    )
+    .expect("force body should type-check with continuation-style result");
+
+    assert_eq!(typed.ty(), &CoreType::Base("Bool".into()));
+    assert_eq!(typed.row(), &CoreRow::default());
+}
+
+#[test]
 fn force_rejects_strict_mode_binding() {
     let force_expr = CoreExpr::Force {
         name: "forced".into(),

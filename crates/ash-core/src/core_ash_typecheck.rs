@@ -2280,11 +2280,11 @@ fn type_check_expr(
             let thunk_row = thunk_row.ok_or_else(|| CoreTypeCheckError::InvalidModeType {
                 detail: "forced thunk mode must carry a latent row".to_owned(),
             })?;
-            let inner_ty = result_ty;
-
             let mut body_env = env.clone();
-            body_env.values_mut().insert(name.clone(), inner_ty.clone());
-            let body_checked = type_check_expr_against(body, &inner_ty, &body_env)?;
+            body_env
+                .values_mut()
+                .insert(name.clone(), result_ty.clone());
+            let body_checked = type_check_expr(body, &body_env)?;
             let row = union_core_rows_structural(&body_checked.row, &thunk_row, env)?;
 
             Ok(TypedCoreExpr {

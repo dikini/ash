@@ -409,6 +409,21 @@ fn mark_rec_binding(value: &Value, rec_name: &Name) -> Value {
             }
             Value::Record { fields: new_fields }
         }
+        Value::ThunkClosure {
+            mode,
+            body,
+            captured_env,
+            captured_chain,
+            row,
+            memo_cell,
+        } => Value::ThunkClosure {
+            mode: *mode,
+            body: Box::new(mark_rec_binding(body.as_ref(), rec_name)),
+            captured_env: captured_env.clone(),
+            captured_chain: captured_chain.clone(),
+            row: row.clone(),
+            memo_cell: *memo_cell,
+        },
         Value::Tuple { elems } => {
             let mut new_elems = Vec::new();
             for elem in elems {
@@ -465,6 +480,25 @@ fn eval_letrec(
                 new_elems.push(mark_rec_binding(elem, name));
             }
             Value::Tuple { elems: new_elems }
+        }
+        Value::ThunkClosure {
+            mode,
+            body,
+            captured_env,
+            captured_chain,
+            row,
+            memo_cell,
+        } => {
+            let marked_body = mark_rec_binding(body.as_ref(), name);
+            let marked_thunk = Value::ThunkClosure {
+                mode: *mode,
+                body: Box::new(marked_body),
+                captured_env: captured_env.clone(),
+                captured_chain: captured_chain.clone(),
+                row: row.clone(),
+                memo_cell: *memo_cell,
+            };
+            eval_value_with_runtime(&marked_thunk, &new_env, chain, runtime)?
         }
         other => other.clone(),
     };
@@ -1224,5 +1258,53 @@ mod tests {
 
         let result = force_thunk_result(thunk, HandlerChain::new(), &mut runtime);
         assert_eq!(result, Ok(Atom::Int(23)));
+    }
+
+    #[test]
+    fn letrec_memo_thunk_allocates_memo_cell_before_binding() {
+        let op = captured_effect_op();
+        let env = Env::new().with_binding("provider".to_string(), provider_handler(41));
+        let mut chain_with_provider = HandlerChain::new();
+        chain_with_provider.push(HandlerFrame::Provider {
+            op: op.clone(),
+            handler: "provider".to_string(),
+        });
+
+        let letrec_term = Term::LetRec {
+            name: "memoized".to_string(),
+            value: Value::ThunkClosure {
+                mode: ThunkMode::Memo,
+                body: Box::new(Value::Lam {
+                    params: vec![],
+                    cont: "resume".to_string(),
+                    body: Box::new(Term::Raise {
+                        op: op.clone(),
+                        args: vec![Atom::String("resource".to_string())],
+                        resume: ContRef::Var("resume".to_string()),
+                        row: EffectRow::default(),
+                    }),
+                    captured_env: Env::new(),
+                    rec_binding: None,
+                    row: EffectRow::default(),
+                }),
+                captured_env: Env::new(),
+                captured_chain: HandlerChain::new(),
+                row: EffectRow::default(),
+                memo_cell: None,
+            },
+            body: Box::new(Term::LetPrim {
+                name: "forced".to_string(),
+                op: PrimOp::ForceThunk,
+                args: vec![Atom::Var("memoized".to_string())],
+                body: Box::new(Term::Return {
+                    value: Atom::Var("forced".to_string()),
+                }),
+            }),
+        };
+
+        let mut runtime = CpsRuntime::new();
+        let result =
+            eval_unchecked_with_runtime(&letrec_term, &env, &chain_with_provider, &mut runtime);
+        assert_eq!(result, Ok(Atom::Int(41)));
     }
 }

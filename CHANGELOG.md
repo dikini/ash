@@ -6,6 +6,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Added
+- [Phase 163](docs/plan/PLAN-163-CORE-LAZY-MEMO-MODES.md): Planned SPEC-101 Core lazy/memo computation mode implementation with 14 TDD tasks covering mode AST/text/validation, CPS thunk carriers and force runtime behavior, Core mode type checking, thunk/LetMode/Force row accounting, public summaries, Core-to-CPS lowering, captured authority tests, end-to-end examples, tracing, and closeout documentation, including an explicit runtime/lowering/testing contract for memo state ownership, `MemoCellId`, `ExpectedThunk`, `ForceThunk`, runtime helper APIs, `LetMode`, `mode_binding_latent_rows`, capture metadata text behavior, trace events, fixture observability, cross-crate runtime gates, memo-cell serde redaction, timestamp shapes, stable trace outcome strings, mandatory TASK-1664 sub-assignments, and local code touchpoints. (TASK-1660 through TASK-1673)
 - Added SPEC-101 Lazy and Memo Computation Modes, defining Core-level `lazy`/`memo` mode carriers, force semantics, row accounting, runtime memo behavior, tracing expectations, and the decision not to add new CPS IR term variants unless implementation evidence requires a value-level memo-thunk carrier.
 - [Phase 162](docs/plan/PLAN-162-CORE-ASH-TYPE-CHECKING.md): Completed the Core Ash type-checking implementation with reference documentation and closeout review, covering the annotation-led checker API, row normalization/structural solving, atom/value/expression typing, call/jump row facts, raised operation and handler checks, refinement/discharge metadata, public summaries, integration fixtures, and checked lowering row-fact preservation. (TASK-1640 through TASK-1651)
 - Added Core Ash type-check integration fixtures and a checked type-check-and-lower boundary that preserves checked continuation and external function rows before CPS lowering, with invalid fixtures for type mismatch, row mismatch, operation arity mismatch, and affine resume misuse. (TASK-1650)
@@ -29,6 +30,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Added `docs/ideas/research/PROTOCOL-GATED-TYPE-DIRECTED-LLM-EXECUTION.md`, a research note on protocol-gated type-directed LLM execution with deterministic oracles, evidence admission, replayable traces, and references to Recursive Language Models and LLM state-machine modeling work.
 
 ### Changed
+- Hardened Phase 163 planning with targeted implementation-contract clarifications for mode-type
+  latent-row well-formedness, thunk `result_ty` as a strict inner type, immutable `LetMode`
+  row-check facts, variable-only Phase 163 `Force`, and runtime thunk capture construction.
+  (TASK-1662, TASK-1664 through TASK-1667, TASK-1669)
 - Reconciled SPEC-097b CPS lowering with SPEC-101 `ThunkClosure` chain-capture semantics and required `LetMode.mode` to match `LetMode.ty` exactly in SPEC-101.
 - Corrected SPEC-101 lazy/memo CPS lowering to require a value-level thunk carrier with captured handler/provider chain, preserving creation-time authority semantics instead of dispatching effectful thunk bodies through the force-time chain.
 - Clarified SPEC-097b memo force row accounting so static type-checker summaries retain the thunk latent row at each force site while dynamic memo cache hits may perform no effects, aligning it with SPEC-101.

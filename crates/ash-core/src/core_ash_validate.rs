@@ -95,6 +95,20 @@ fn validate_expr(
 ) -> Result<(), CoreValidationError> {
     match expr {
         CoreExpr::Atom(atom) => validate_data_atom(atom),
+        CoreExpr::LetMode {
+            name,
+            ty,
+            expr,
+            body,
+            ..
+        } => {
+            validate_binding_name("mode", name, bindings)?;
+            validate_type(ty)?;
+            validate_expr(expr, bindings)?;
+            let mut body_bindings = bindings.clone();
+            body_bindings.insert(name.clone());
+            validate_expr(body, &mut body_bindings)
+        }
         CoreExpr::LetVal {
             ty, value, body, ..
         }
@@ -126,6 +140,10 @@ fn validate_expr(
             }
             validate_data_atom(func)?;
             validate_data_atoms(args)?;
+            validate_expr(body, bindings)
+        }
+        CoreExpr::Force { thunk, body, .. } => {
+            validate_data_atom(thunk)?;
             validate_expr(body, bindings)
         }
         CoreExpr::If {
@@ -192,6 +210,17 @@ fn validate_value(
 ) -> Result<(), CoreValidationError> {
     match value {
         CoreValue::Atom(atom) => validate_data_atom(atom),
+        CoreValue::Thunk {
+            result_ty,
+            body,
+            row,
+            ..
+        } => {
+            validate_type(result_ty)?;
+            validate_row(row)?;
+            let mut body_bindings = bindings.clone();
+            validate_expr(body, &mut body_bindings)
+        }
         CoreValue::Lam { params, body, row } => {
             let mut lambda_bindings = bindings.clone();
             validate_params(params, &mut lambda_bindings)?;
@@ -251,6 +280,15 @@ fn validate_type(ty: &CoreType) -> Result<(), CoreValidationError> {
         CoreType::Record(fields) => {
             for (_, field_ty) in fields {
                 validate_type(field_ty)?;
+            }
+            Ok(())
+        }
+        CoreType::Mode {
+            inner, latent_row, ..
+        } => {
+            validate_type(inner)?;
+            if let Some(row) = latent_row {
+                validate_row(row)?;
             }
             Ok(())
         }
@@ -429,6 +467,13 @@ fn count_affine_resume_uses(resume: &str, expr: &CoreExpr) -> Result<usize, Core
             reject_resume_atoms(resume, args, "passed as ordinary function argument")?;
             count_affine_resume_uses(resume, body)
         }
+        CoreExpr::LetMode { expr, body, .. } => {
+            Ok(count_affine_resume_uses(resume, expr)? + count_affine_resume_uses(resume, body)?)
+        }
+        CoreExpr::Force { thunk, body, .. } => {
+            reject_resume_atom(resume, thunk, "used as force target")?;
+            count_affine_resume_uses(resume, body)
+        }
         CoreExpr::If {
             cond,
             then_branch,
@@ -469,6 +514,15 @@ fn count_affine_resume_uses(resume: &str, expr: &CoreExpr) -> Result<usize, Core
 fn reject_resume_value(resume: &str, value: &CoreValue) -> Result<(), CoreValidationError> {
     match value {
         CoreValue::Atom(atom) => reject_resume_atom(resume, atom, "stored as ordinary value"),
+        CoreValue::Thunk { body, .. } => {
+            if count_affine_resume_uses(resume, body)? > 0 {
+                return Err(CoreValidationError::AffineResumeViolation {
+                    resume: resume.to_string(),
+                    detail: "captured by thunk value".to_string(),
+                });
+            }
+            Ok(())
+        }
         CoreValue::Lam { body, .. } => {
             if count_affine_resume_uses(resume, body)? > 0 {
                 return Err(CoreValidationError::AffineResumeViolation {

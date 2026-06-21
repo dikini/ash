@@ -866,6 +866,17 @@ fn collect_letcall_function_rows(
             path.pop();
             result
         }
+        CoreExpr::LetMode { expr, body, .. } => {
+            path.push(0);
+            let left = collect_letcall_function_rows(expr, env, path, rows);
+            path.pop();
+
+            path.push(1);
+            let right = collect_letcall_function_rows(body, env, path, rows);
+            path.pop();
+
+            left.and(right)
+        }
         CoreExpr::LetCall {
             name,
             func,
@@ -921,6 +932,12 @@ fn collect_letcall_function_rows(
             path.pop();
             Ok(())
         }
+        CoreExpr::Force { body, .. } => {
+            path.push(0);
+            let result = collect_letcall_function_rows(body, env, path, rows);
+            path.pop();
+            result
+        }
         CoreExpr::RecordDischarge { body, .. } => {
             path.push(0);
             let result = collect_letcall_function_rows(body, env, path, rows);
@@ -954,6 +971,7 @@ fn collect_letcall_function_rows_in_value(
         CoreValue::Record { .. } | CoreValue::Tuple { .. } | CoreValue::DischargeMarker { .. } => {
             Ok(())
         }
+        CoreValue::Thunk { body, .. } => collect_letcall_function_rows(body, env, path, rows),
     }
 }
 
@@ -1038,6 +1056,17 @@ pub fn check_core_type_well_formed(
                 });
             }
             check_types_well_formed(args, env)
+        }
+        CoreType::Mode {
+            mode: _,
+            inner,
+            latent_row,
+        } => {
+            check_core_type_well_formed(inner, env)?;
+            if let Some(row) = latent_row {
+                check_core_row_well_formed(row, env)?;
+            }
+            Ok(())
         }
     }
 }
@@ -1394,6 +1423,9 @@ pub fn synthesize_core_value(
                 row: CoreRow::default(),
                 facts,
             });
+        }
+        CoreValue::Thunk { .. } => {
+            return Err(unsupported("Thunk"));
         }
     };
 
@@ -1821,6 +1853,7 @@ fn collect_public_type_constructors(
                 collect_public_row_item_type_constructors(item, constructors);
             }
         }
+        CoreType::Mode { inner, .. } => collect_public_type_constructors(inner, constructors),
         CoreType::Tuple(elems) => {
             for elem in elems {
                 collect_public_type_constructors(elem, constructors);
@@ -2039,6 +2072,8 @@ fn type_check_expr(
                 facts,
             })
         }
+        CoreExpr::LetMode { .. } => Err(unsupported("LetMode")),
+        CoreExpr::Force { .. } => Err(unsupported("Force")),
         CoreExpr::Jump { cont, arg } => type_check_jump(cont, arg, env),
         CoreExpr::Raise { op, args } => type_check_raise(op, args, env),
         CoreExpr::Handle { clause, body } => type_check_handle(clause, body, env),
@@ -2551,6 +2586,8 @@ fn clause_may_complete_without_resume(expr: &CoreExpr, resume_name: &str) -> boo
         | CoreExpr::LetRec { body, .. }
         | CoreExpr::LetPrim { body, .. }
         | CoreExpr::LetCall { body, .. }
+        | CoreExpr::LetMode { body, .. }
+        | CoreExpr::Force { body, .. }
         | CoreExpr::RecordDischarge { body, .. } => {
             clause_may_complete_without_resume(body, resume_name)
         }
@@ -2715,6 +2752,7 @@ fn type_detail(ty: &CoreType) -> String {
         CoreType::Tuple(elems) => format!("tuple/{}", elems.len()),
         CoreType::Record(fields) => format!("record/{}", fields.len()),
         CoreType::App { name, args } => format!("{name}/{}", args.len()),
+        CoreType::Mode { inner, .. } => format!("mode/{}", type_detail(inner)),
     }
 }
 

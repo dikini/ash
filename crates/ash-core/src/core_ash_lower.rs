@@ -308,6 +308,12 @@ fn lower_expr_with_letcall_rows(
                 row: lower_row(&call_row),
             })
         }
+        CoreExpr::Force { name, .. } => Err(CoreLoweringError::UnsupportedForm {
+            detail: format!("Force form is not supported in this phase: {name}"),
+        }),
+        CoreExpr::LetMode { .. } => Err(CoreLoweringError::UnsupportedForm {
+            detail: "LetMode is not supported in this phase".to_string(),
+        }),
         CoreExpr::Jump { cont, arg } => {
             let row = cont_row(cont, state);
             Ok(Term::Jump {
@@ -377,6 +383,9 @@ fn lower_value_with_letcall_rows(
 ) -> Result<Value, CoreLoweringError> {
     match value {
         CoreValue::Atom(atom) => Ok(Value::Atom(lower_atom(atom)?)),
+        CoreValue::Thunk { .. } => Err(CoreLoweringError::UnsupportedForm {
+            detail: "Thunk value is not supported in this phase".to_string(),
+        }),
         CoreValue::Lam { params, body, row } => {
             let cont = state.fresh_cont_name();
             let guard = state.with_current_cont(ContRef::Var(cont.clone()), CoreRow::default());
@@ -605,6 +614,7 @@ fn lower_type_name(ty: &CoreType) -> String {
         CoreType::Function { .. } => "Function".to_string(),
         CoreType::Refinement { base, .. } => lower_type_name(base),
         CoreType::Cont { .. } => "Cont".to_string(),
+        CoreType::Mode { inner, .. } => lower_type_name(inner),
         CoreType::Tuple(elems) => {
             let elems = elems
                 .iter()
@@ -723,6 +733,10 @@ fn local_row_with_letcall_rows(
 ) -> Result<CoreRow, CoreLoweringError> {
     match expr {
         CoreExpr::Atom(_) | CoreExpr::Jump { .. } | CoreExpr::Trap { .. } => Ok(CoreRow::default()),
+        CoreExpr::LetMode { expr, body, .. } => Ok(union_rows(
+            &local_row_with_letcall_rows(expr, state, &with_child_path(path, 0), letcall_rows)?,
+            &local_row_with_letcall_rows(body, state, &with_child_path(path, 1), letcall_rows)?,
+        )),
         CoreExpr::LetVal {
             name,
             ty,
@@ -804,6 +818,9 @@ fn local_row_with_letcall_rows(
             &local_row_with_letcall_rows(body, state, &with_child_path(path, 0), letcall_rows)?,
             &contract_row(&discharge.contract),
         )),
+        CoreExpr::Force { body, .. } => {
+            local_row_with_letcall_rows(body, state, &with_child_path(path, 0), letcall_rows)
+        }
     }
 }
 
@@ -815,6 +832,10 @@ fn total_row_with_letcall_rows(
 ) -> Result<CoreRow, CoreLoweringError> {
     match expr {
         CoreExpr::Atom(_) => Ok(state.context.current_cont_row.clone()),
+        CoreExpr::LetMode { expr, body, .. } => Ok(union_rows(
+            &total_row_with_letcall_rows(expr, state, &with_child_path(path, 0), letcall_rows)?,
+            &total_row_with_letcall_rows(body, state, &with_child_path(path, 1), letcall_rows)?,
+        )),
         CoreExpr::LetVal {
             name,
             ty,
@@ -905,6 +926,9 @@ fn total_row_with_letcall_rows(
             &total_row_with_letcall_rows(body, state, &with_child_path(path, 0), letcall_rows)?,
             &contract_row(&discharge.contract),
         )),
+        CoreExpr::Force { body, .. } => {
+            total_row_with_letcall_rows(body, state, &with_child_path(path, 0), letcall_rows)
+        }
     }
 }
 

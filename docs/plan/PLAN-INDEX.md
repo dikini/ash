@@ -134,12 +134,13 @@ Update this section as tasks complete:
 | [156](PLAN-156-PARSER-BLOCKER-RESOLUTION.md) | 5 | 5 | ✅ Complete; all blockers resolved, regression tests added |
 | [157](PLAN-157-LIST-MIGRATION-HARDENING.md) | 5 | 4 | ⏸️ Deferred; TASK-1570 (Remove Value::List) remains open |
 | [158](PLAN-158-LANGUAGE-SURFACE-FIXES.md) | 5 | 3 | ⏸️ Deferred; TASK-1580 (Module-level function visibility) remains open |
-|| [159](PLAN-159-CPS-IR-INTERPRETER.md) | 14 | 14 | ✅ Complete; all tasks implemented, 82 tests pass, reference docs added, review remediation done (validation boundary, lambda closure capture, handler semantics) |
-|| [160](PLAN-160-CPS-IR-RUNTIME-EXPANSION.md) | 10 | 10 | ✅ Complete; CPS IR runtime expansion implemented, focused tests pass, reference docs updated |
-|| [161](PLAN-161-CORE-ASH-IR-FOUNDATION.md) | 13 | 13 | ✅ Complete; Core Ash foundation and public Core text round-trip review remediation verified |
-|| [162](PLAN-162-CORE-ASH-TYPE-CHECKING.md) | 12 | 12 | ✅ Complete; Core Ash type checker implemented with reference docs and closeout review |
-|
-|---
+| [159](PLAN-159-CPS-IR-INTERPRETER.md) | 14 | 14 | ✅ Complete; all tasks implemented, 82 tests pass, reference docs added, review remediation done (validation boundary, lambda closure capture, handler semantics) |
+| [160](PLAN-160-CPS-IR-RUNTIME-EXPANSION.md) | 10 | 10 | ✅ Complete; CPS IR runtime expansion implemented, focused tests pass, reference docs updated |
+| [161](PLAN-161-CORE-ASH-IR-FOUNDATION.md) | 13 | 13 | ✅ Complete; Core Ash foundation and public Core text round-trip review remediation verified |
+| [162](PLAN-162-CORE-ASH-TYPE-CHECKING.md) | 12 | 12 | ✅ Complete; Core Ash type checker implemented with reference docs and closeout review |
+| [163](PLAN-163-CORE-LAZY-MEMO-MODES.md) | 14 | 0 | 📝 Planned; SPEC-101 Core lazy/memo mode implementation packet |
+
+---
 
 ## Phase 145: Law Test Evidence Substrate
 
@@ -554,3 +555,29 @@ Implements the first annotation-led Core Ash type checker. The phase adds Core t
 | [TASK-1649](tasks/TASK-1649-core-public-summary-scaffold.md) | Add public type/row summary scaffolding and private alias diagnostics | ✅ Complete |
 | [TASK-1650](tasks/TASK-1650-core-typecheck-integration-fixtures.md) | Add `.core` parse -> validate -> type-check -> lower integration fixtures | ✅ Complete |
 | [TASK-1651](tasks/TASK-1651-core-typecheck-reference-closeout.md) | Document Core type-checker behavior and close out Phase 162 | ✅ Complete |
+
+## Phase 163: Core Lazy and Memo Computation Modes
+
+**Status:** 📝 Planned; 0/14 implemented
+**Plan:** [PLAN-163: Core Lazy and Memo Computation Modes](PLAN-163-CORE-LAZY-MEMO-MODES.md)
+**Spec:** [SPEC-101: Lazy and Memo Computation Modes](../spec/SPEC-101-LAZY-AND-MEMO-COMPUTATION-MODES.md)
+**Depends on:** Phase 161, Phase 162; SPEC-101, SPEC-100, SPEC-099, SPEC-098b, SPEC-097b, SPEC-096b.
+
+Implements SPEC-101 for Core Ash: explicit `Strict`/`Lazy`/`Memo` mode types, thunk values, `LetMode`, `Force`, type checking, CPS value-level thunk carrier, memo runtime behavior, Core-to-CPS lowering, captured handler/provider-chain authority, examples, fixtures, trace events, and closeout documentation.
+
+| Task | Description | Status |
+|------|-------------|--------|
+| [TASK-1660](tasks/TASK-1660-core-mode-ast-carriers.md) | Add Core mode type, thunk value, LetMode, and Force AST carriers | 📝 Planned |
+| [TASK-1661](tasks/TASK-1661-core-mode-text-format.md) | Parse, serialize, and round-trip `.core` mode syntax and fixtures | 📝 Planned |
+| [TASK-1662](tasks/TASK-1662-core-mode-validation.md) | Validate mode/type agreement, thunk shape, Force shape, and binder scoping | 📝 Planned |
+| [TASK-1663](tasks/TASK-1663-cps-thunk-carrier.md) | Add CPS ThunkClosure value carrier and memo-cell state scaffolding | 📝 Planned |
+| [TASK-1664](tasks/TASK-1664-cps-force-runtime.md) | Implement CPS lazy/memo force runtime behavior, cached outcomes, and re-entrant rejection | 📝 Planned |
+| [TASK-1665](tasks/TASK-1665-core-mode-type-wellformedness.md) | Type-check mode type well-formedness and mode invariance diagnostics | 📝 Planned |
+| [TASK-1666](tasks/TASK-1666-core-thunk-value-typing.md) | Type thunk values with latent rows and pure construction row | 📝 Planned |
+| [TASK-1667](tasks/TASK-1667-core-letmode-force-typechecking.md) | Type LetMode and Force expressions with SPEC-101 row accounting | 📝 Planned |
+| [TASK-1668](tasks/TASK-1668-core-mode-public-summaries.md) | Preserve mode and latent-row facts in public summaries and diagnostics | 📝 Planned |
+| [TASK-1669](tasks/TASK-1669-core-mode-lowering.md) | Lower thunk construction, strict/lazy/memo LetMode, and Force into CPS thunk runtime forms | 📝 Planned |
+| [TASK-1670](tasks/TASK-1670-core-thunk-capture-authority.md) | Verify captured handler/provider-chain authority at force time | 📝 Planned |
+| [TASK-1672](tasks/TASK-1672-core-mode-tracing-observability.md) | Add thunk construction/force/memo trace events and observability tests | 📝 Planned |
+| [TASK-1671](tasks/TASK-1671-core-mode-end-to-end-fixtures.md) | Add parse -> validate -> type-check -> lower -> run fixtures and golden examples | 📝 Planned |
+| [TASK-1673](tasks/TASK-1673-core-lazy-memo-reference-closeout.md) | Document behavior, reconcile tracking, and close out Phase 163 | 📝 Planned |

@@ -103,6 +103,38 @@ pub enum CoreType {
     Record(Vec<(CoreName, CoreType)>),
     /// Named type application.
     App { name: CoreName, args: Vec<CoreType> },
+    /// Computation mode type wrapper.
+    Mode {
+        mode: CoreEvalMode,
+        inner: Box<CoreType>,
+        latent_row: Option<CoreRow>,
+    },
+}
+
+/// Core computation mode.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum CoreEvalMode {
+    /// Strict mode (no delayed execution).
+    Strict,
+    /// Lazy mode.
+    Lazy,
+    /// Memo mode.
+    Memo,
+}
+
+/// Core thunk execution mode.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum CoreThunkMode {
+    /// Lazy thunk.
+    Lazy,
+    /// Memo thunk.
+    Memo,
+}
+
+/// Static metadata for thunk captures.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
+pub struct CoreCaptureSet {
+    pub values: Vec<CoreName>,
 }
 
 /// A Core parameter with explicit type.
@@ -223,6 +255,13 @@ pub enum CoreValue {
         body: Box<CoreExpr>,
         row: CoreRow,
     },
+    Thunk {
+        mode: CoreThunkMode,
+        result_ty: CoreType,
+        body: Box<CoreExpr>,
+        row: CoreRow,
+        captures: CoreCaptureSet,
+    },
     Record {
         fields: Vec<(CoreName, CoreAtom)>,
     },
@@ -289,6 +328,18 @@ pub enum CoreExpr {
     },
     Trap {
         reason: CoreTrapReason,
+    },
+    LetMode {
+        name: CoreName,
+        mode: CoreEvalMode,
+        ty: CoreType,
+        expr: Box<CoreExpr>,
+        body: Box<CoreExpr>,
+    },
+    Force {
+        name: CoreName,
+        thunk: CoreAtom,
+        body: Box<CoreExpr>,
     },
 }
 

@@ -4,9 +4,9 @@
 //! atoms, types, rows, row items, and values; TASK-1623 adds expression forms.
 
 use crate::core_ash::{
-    CoreAtom, CoreContRef, CoreContractDischarge, CoreDischargeMode, CoreEffectOp, CoreExpr,
-    CoreHandlerClause, CoreMultiplicity, CoreParam, CorePrimOp, CoreRow, CoreRowItem,
-    CoreSourceSpan, CoreTrapReason, CoreType, CoreValue,
+    CoreAtom, CoreContRef, CoreContractDischarge, CoreDischargeMode, CoreEffectOp, CoreEvalMode,
+    CoreExpr, CoreHandlerClause, CoreMultiplicity, CoreParam, CorePrimOp, CoreRow, CoreRowItem,
+    CoreSourceSpan, CoreThunkMode, CoreTrapReason, CoreType, CoreValue,
 };
 use std::fmt;
 use std::fmt::Write as _;
@@ -979,6 +979,19 @@ fn format_expr(expr: &CoreExpr) -> String {
             format_value(value),
             format_expr(body)
         ),
+        CoreExpr::LetMode {
+            name,
+            mode,
+            ty,
+            expr,
+            body,
+        } => format!(
+            "(let-mode {name} {} : {} {} {})",
+            format_eval_mode(*mode),
+            format_type(ty),
+            format_expr(expr),
+            format_expr(body)
+        ),
         CoreExpr::LetRec {
             name,
             ty,
@@ -1042,6 +1055,11 @@ fn format_expr(expr: &CoreExpr) -> String {
                 format_expr(body)
             )
         }
+        CoreExpr::Force { name, thunk, body } => format!(
+            "(force {name} {} {})",
+            format_atom(thunk),
+            format_expr(body)
+        ),
         CoreExpr::RecordDischarge { discharge, body } => format!(
             "(record-discharge {} {})",
             format_contract_discharge(discharge),
@@ -1057,6 +1075,19 @@ fn format_value(value: &CoreValue) -> String {
         CoreValue::Lam { params, body, row } => format!(
             "(lam {} : {} {})",
             format_param_list(params),
+            format_row(row),
+            format_expr(body)
+        ),
+        CoreValue::Thunk {
+            mode,
+            result_ty,
+            body,
+            row,
+            ..
+        } => format!(
+            "(thunk {} {} {} {})",
+            format_thunk_mode(*mode),
+            format_type(result_ty),
             format_row(row),
             format_expr(body)
         ),
@@ -1147,10 +1178,37 @@ fn format_type(ty: &CoreType) -> String {
                 .collect::<Vec<_>>()
                 .join(" ")
         ),
+        CoreType::Mode {
+            mode,
+            inner,
+            latent_row,
+        } => {
+            let mode = format_eval_mode(*mode);
+            if let Some(row) = latent_row {
+                format!("({mode} {} {})", format_type(inner), format_row(row))
+            } else {
+                format!("(strict {})", format_type(inner))
+            }
+        }
         CoreType::App { name, args } => format!(
             "(type-app {name} ({}))",
             args.iter().map(format_type).collect::<Vec<_>>().join(" ")
         ),
+    }
+}
+
+fn format_eval_mode(mode: CoreEvalMode) -> &'static str {
+    match mode {
+        CoreEvalMode::Strict => "strict",
+        CoreEvalMode::Lazy => "lazy",
+        CoreEvalMode::Memo => "memo",
+    }
+}
+
+fn format_thunk_mode(mode: CoreThunkMode) -> &'static str {
+    match mode {
+        CoreThunkMode::Lazy => "lazy",
+        CoreThunkMode::Memo => "memo",
     }
 }
 

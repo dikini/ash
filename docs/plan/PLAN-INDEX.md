@@ -599,7 +599,7 @@ Implements explicit continuation multiplicity for Core Ash and CPS IR. Existing 
 | [TASK-1681](tasks/TASK-1681-cps-cont-multiplicity-carrier.md) | Add CPS continuation, LetCont, LetContCall, and handler row/multiplicity carriers | ✅ Complete |
 | [TASK-1682](tasks/TASK-1682-cps-multishot-runtime.md) | Implement affine vs multi-shot CPS jump and LetContCall behavior | ✅ Complete |
 | [TASK-1683](tasks/TASK-1683-cps-multishot-validation.md) | Validate CPS multi-shot row legality and malformed unchecked input | ✅ Complete |
-| [TASK-1684](tasks/TASK-1684-core-cont-multiplicity-wellformedness.md) | Type-check Core continuation multiplicity well-formedness | 📝 Planned |
+| [TASK-1684](tasks/TASK-1684-core-cont-multiplicity-wellformedness.md) | Type-check Core continuation multiplicity well-formedness | ✅ Complete |
 | [TASK-1685](tasks/TASK-1685-core-handler-multishot-resume-typecheck.md) | Accept legal multi-shot handler resumes and reject illegal ones | 📝 Planned |
 | [TASK-1686](tasks/TASK-1686-core-affine-use-discipline-with-multishot.md) | Add Core LetContCall and preserve affine use discipline with multi-shot | 📝 Planned |
 | [TASK-1687](tasks/TASK-1687-core-to-cps-multiplicity-lowering.md) | Preserve multiplicity and LetContCall through Core-to-CPS lowering | 📝 Planned |

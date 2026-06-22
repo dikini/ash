@@ -1,6 +1,6 @@
 # TASK-1684: Core Continuation Multiplicity Well-Formedness
 
-**Status:** Planned
+**Status:** ✅ Complete
 **Phase:** [PLAN-164](../PLAN-164-CORE-CPS-CONTINUATION-MULTIPLICITY.md)
 **Owner:** Phase 164
 
@@ -43,6 +43,6 @@ is normalized closed empty.
 
 ## Completion Checklist
 
-- [ ] Empty-row multi-shot-pure continuation types are accepted.
-- [ ] Non-empty/open/ambiguous multi-shot-pure rows are rejected.
-- [ ] CHANGELOG has a task entry.
+- [x] Empty-row multi-shot-pure continuation types are accepted.
+- [x] Non-empty/open/ambiguous multi-shot-pure rows are rejected.
+- [x] CHANGELOG has a task entry.

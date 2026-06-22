@@ -1076,11 +1076,31 @@ pub fn check_core_type_well_formed(
             }
         }
         CoreType::Cont {
-            input, answer, row, ..
+            input,
+            answer,
+            row,
+            multiplicity,
         } => {
             check_core_type_well_formed(input, env)?;
             check_core_type_well_formed(answer, env)?;
-            check_core_row_well_formed(row, env)
+            check_core_row_well_formed(row, env)?;
+            // SPEC-102 §4/§8: MultiShotPure requires a normalized closed empty row.
+            // Affine is valid with any row.
+            if *multiplicity == CoreMultiplicity::MultiShotPure {
+                if !row.items.is_empty() {
+                    return Err(unsupported(
+                        "multi-shot-pure continuation must have a closed empty row, \
+                         but the row has non-empty items",
+                    ));
+                }
+                if row.tail.is_some() {
+                    return Err(unsupported(
+                        "multi-shot-pure continuation must have a closed empty row, \
+                         but the row has an open tail",
+                    ));
+                }
+            }
+            Ok(())
         }
         CoreType::Tuple(elems) => check_types_well_formed(elems, env),
         CoreType::Record(fields) => {

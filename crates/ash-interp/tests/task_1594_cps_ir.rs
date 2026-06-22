@@ -27,6 +27,8 @@ fn test_shallow_handler_removed_after_handling() {
             row: EffectRow::default(),
         }),
         row: EffectRow::default(),
+        resume_row: ResumeRowMetadata::InheritFromTarget,
+        resume_multiplicity: ContMultiplicity::Affine,
     };
     // handle db.read { ... } in
     //   (raise db.read "users" resume)
@@ -99,6 +101,8 @@ fn test_handler_chain_ordering() {
             row: EffectRow::default(),
         }),
         row: EffectRow::default(),
+        resume_row: ResumeRowMetadata::InheritFromTarget,
+        resume_multiplicity: ContMultiplicity::Affine,
     };
     let clause2 = HandlerClause {
         op: op1.clone(),
@@ -110,6 +114,8 @@ fn test_handler_chain_ordering() {
             row: EffectRow::default(),
         }),
         row: EffectRow::default(),
+        resume_row: ResumeRowMetadata::InheritFromTarget,
+        resume_multiplicity: ContMultiplicity::Affine,
     };
     let mut chain = HandlerChain::new();
     chain.push(HandlerFrame::Shallow {
@@ -155,6 +161,8 @@ fn test_nested_handlers() {
             row: EffectRow::default(),
         }),
         row: EffectRow::default(),
+        resume_row: ResumeRowMetadata::InheritFromTarget,
+        resume_multiplicity: ContMultiplicity::Affine,
     };
     let fs_clause = HandlerClause {
         op: fs_op.clone(),
@@ -166,6 +174,8 @@ fn test_nested_handlers() {
             row: EffectRow::default(),
         }),
         row: EffectRow::default(),
+        resume_row: ResumeRowMetadata::InheritFromTarget,
+        resume_multiplicity: ContMultiplicity::Affine,
     };
     let mut chain = HandlerChain::new();
     chain.push(HandlerFrame::Shallow {

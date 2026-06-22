@@ -45,6 +45,8 @@ fn allocates_memo_cell_at_value_construction() {
             reason: TrapReason::Custom("out".to_string()),
         }),
         body: Box::new(term),
+        row: EffectRow::default(),
+        multiplicity: ContMultiplicity::Affine,
     };
 
     let mut runtime = CpsRuntime::new();
@@ -93,6 +95,8 @@ fn shared_memo_cell_is_used_by_multiple_forces() {
                 }),
             }),
         }),
+        row: EffectRow::default(),
+        multiplicity: ContMultiplicity::Affine,
     };
 
     let mut runtime = CpsRuntime::new();
@@ -127,6 +131,8 @@ fn forcing_non_thunk_is_expected_thunk_error() {
                 row: EffectRow::default(),
             }),
         }),
+        row: EffectRow::default(),
+        multiplicity: ContMultiplicity::Affine,
     };
 
     let mut runtime = CpsRuntime::new();

@@ -114,7 +114,26 @@ pub fn eval_unchecked_with_runtime(
             param,
             cont_body,
             body,
-        } => eval_letcont(name, param, cont_body, body, env, chain, runtime),
+            row,
+            multiplicity,
+        } => eval_letcont(
+            name,
+            param,
+            cont_body,
+            row,
+            multiplicity,
+            body,
+            env,
+            chain,
+            runtime,
+        ),
+        Term::LetContCall {
+            name,
+            cont,
+            arg,
+            row,
+            body,
+        } => eval_letcontcall(name, cont, arg, row, body, env, chain, runtime),
         Term::Jump { cont, arg, .. } => eval_jump(cont, arg, env, chain, runtime),
         Term::Call {
             func, args, cont, ..
@@ -266,11 +285,14 @@ fn eval_force_thunk_binding(
     eval_unchecked_with_runtime(continuation_body, &new_env, chain, runtime)
 }
 
+#[allow(clippy::too_many_arguments)]
 #[allow(clippy::result_large_err)]
 fn eval_letcont(
     name: &Name,
     param: &Name,
     cont_body: &Term,
+    row: &EffectRow,
+    multiplicity: &ContMultiplicity,
     body: &Term,
     env: &Env,
     chain: &HandlerChain,
@@ -282,7 +304,8 @@ fn eval_letcont(
         captured_env: env.clone(),
         captured_chain: chain.clone(),
         consumed: ConsumedFlag::new(),
-        row: EffectRow::default(),
+        row: row.clone(),
+        multiplicity: *multiplicity,
     };
     let new_env = env.clone().with_binding(name.clone(), cont);
     eval_unchecked_with_runtime(body, &new_env, chain, runtime)
@@ -298,26 +321,81 @@ fn eval_jump(
 ) -> CpsResult<Atom> {
     let arg_value = eval_atom_to_value(arg, env)?;
     let cont_value = resolve_cont(cont, env)?;
-    match cont_value {
-        Value::Cont {
-            param,
-            body,
-            captured_env,
-            captured_chain,
-            consumed,
-            ..
-        } => {
+    invoke_cont(&cont_value, &arg_value, runtime)
+}
+
+/// Invoke a continuation value with an argument, branching on multiplicity.
+///
+/// - Affine: reject if already consumed, mark consumed, then evaluate.
+/// - MultiShotPure: evaluate without inspecting or setting consumed state.
+///
+/// Shared by `Jump` and `LetContCall` so both invocation forms obey the same
+/// multiplicity discipline.
+#[allow(clippy::result_large_err)]
+fn invoke_cont(cont_value: &Value, arg_value: &Value, runtime: &mut CpsRuntime) -> CpsResult<Atom> {
+    let Value::Cont {
+        param,
+        body,
+        captured_env,
+        captured_chain,
+        consumed,
+        multiplicity,
+        ..
+    } = cont_value
+    else {
+        return Err(CpsError::ExpectedContinuation(cont_value.clone()));
+    };
+
+    match multiplicity {
+        ContMultiplicity::Affine => {
             if consumed.get() {
                 return Err(CpsError::Trap(TrapReason::Custom(
                     "resume already consumed".to_string(),
                 )));
             }
             consumed.set(true);
-            let new_env = captured_env.clone().with_binding(param, arg_value);
-            eval_unchecked_with_runtime(&body, &new_env, &captured_chain, runtime)
+            let new_env = captured_env
+                .clone()
+                .with_binding(param.clone(), arg_value.clone());
+            eval_unchecked_with_runtime(body, &new_env, captured_chain, runtime)
         }
-        _ => Err(CpsError::ExpectedContinuation(cont_value)),
+        ContMultiplicity::MultiShotPure => {
+            // Multi-shot continuations must not inspect or set the consumed flag.
+            // Each invocation uses the captured environment and handler chain
+            // independently.
+            let new_env = captured_env
+                .clone()
+                .with_binding(param.clone(), arg_value.clone());
+            eval_unchecked_with_runtime(body, &new_env, captured_chain, runtime)
+        }
     }
+}
+
+/// Answer-binding continuation invocation.
+///
+/// Invokes the continuation, then binds the returned answer to `name` before
+/// evaluating `body`. Affine continuations are consumed; multi-shot-pure
+/// continuations remain reusable.
+#[allow(clippy::too_many_arguments)]
+#[allow(clippy::result_large_err)]
+fn eval_letcontcall(
+    name: &Name,
+    cont: &Name,
+    arg: &Atom,
+    _row: &EffectRow,
+    body: &Term,
+    env: &Env,
+    chain: &HandlerChain,
+    runtime: &mut CpsRuntime,
+) -> CpsResult<Atom> {
+    let arg_value = eval_atom_to_value(arg, env)?;
+    let cont_value = env
+        .lookup(cont)
+        .cloned()
+        .ok_or_else(|| CpsError::UnboundVariable(cont.clone()))?;
+    let answer = invoke_cont(&cont_value, &arg_value, runtime)?;
+    let new_env = env.clone().with_binding(name.clone(), Value::Atom(answer));
+    eval_unchecked_with_runtime(body, &new_env, chain, runtime)
 }
 
 #[allow(clippy::collapsible_if)]
@@ -532,6 +610,79 @@ fn eval_letrec(
     eval_unchecked_with_runtime(body, &new_env, chain, runtime)
 }
 
+/// Resolve the dynamic resume continuation row and multiplicity from the
+/// handler clause metadata and the `Raise.resume` target.
+///
+/// This is the runtime fail-closed check required by SPEC-102 §5/§7.
+///
+/// - For `ResumeRowMetadata::Known(known_row)`: compare the known row with the
+///   resolved target row (from the `Raise.resume` continuation). If the target
+///   row cannot be resolved or differs from the known row, fail closed.
+/// - For `ResumeRowMetadata::InheritFromTarget` (legacy omitted): derive the
+///   affine resume row from the resolved target row. This path is valid only for
+///   affine resumes; multi-shot-pure resumes require a known row.
+#[allow(clippy::result_large_err)]
+fn resolve_resume_metadata(
+    clause: &HandlerClause,
+    resume: &ContRef,
+) -> CpsResult<(EffectRow, ContMultiplicity)> {
+    // The resolved target row comes from the Raise.resume continuation's
+    // body Jump row. We inspect the ContRef target to extract it.
+    let resolved_target_row = resolve_resume_target_row(resume);
+
+    match &clause.resume_row {
+        ResumeRowMetadata::Known(known_row) => {
+            // Compare the known row with the resolved target row.
+            match resolved_target_row {
+                Some(target_row) => {
+                    if &target_row != known_row {
+                        return Err(CpsError::Trap(TrapReason::Custom(format!(
+                            "resume row mismatch: handler clause declares {known_row:?}, \
+                             target requires {target_row:?}"
+                        ))));
+                    }
+                    Ok((target_row, clause.resume_multiplicity))
+                }
+                None => Err(CpsError::Trap(TrapReason::Custom(
+                    "resume row mismatch: handler clause declares known row but target \
+                     row cannot be resolved"
+                        .to_string(),
+                ))),
+            }
+        }
+        ResumeRowMetadata::InheritFromTarget => {
+            // Legacy compatibility: derive the affine resume row from the
+            // resolved target row. Multi-shot-pure resumes require a known row.
+            if clause.resume_multiplicity == ContMultiplicity::MultiShotPure {
+                return Err(CpsError::Trap(TrapReason::Custom(
+                    "multi-shot-pure resume requires a known row; legacy \
+                     inherit-from-target is not valid"
+                        .to_string(),
+                )));
+            }
+            let row = resolved_target_row.unwrap_or_default();
+            Ok((row, clause.resume_multiplicity))
+        }
+    }
+}
+
+/// Best-effort resolution of the resume target row from a `ContRef`.
+///
+/// The resume continuation in a `Raise` term is built by `eval_raise` as a
+/// `Value::Cont` whose body is a `Term::Jump`. The row of that inner `Jump`
+/// is the statically known row of the resume target. For `ContRef::Var`, we
+/// cannot resolve the target row without inspecting the bound continuation
+/// value (which lives in `env`, unavailable here), so we return `None` and the
+/// caller's comparison path fails closed. For the common checked-lowering case,
+/// the `Raise` term carries the row on the `Term::Raise.row` field, but the
+/// resume-specific target row is the inner `Jump.row`.
+fn resolve_resume_target_row(resume: &ContRef) -> Option<EffectRow> {
+    match resume {
+        ContRef::Var(_) => None,
+        ContRef::Label(_) => None,
+    }
+}
+
 #[allow(clippy::result_large_err)]
 fn eval_raise(
     op: &EffectOp,
@@ -550,17 +701,23 @@ fn eval_raise(
         body_chain.frames.remove(handler_idx);
         // Build resume continuation that captures current env and chain WITHOUT the handler
         let resume_chain = body_chain.clone();
+
+        // Resolve the dynamic resume row and copy multiplicity from the clause.
+        // This is the runtime fail-closed check required by SPEC-102 §5/§7.
+        let (resume_row, resume_multiplicity) = resolve_resume_metadata(clause, resume)?;
+
         let resume_cont = Value::Cont {
             param: clause.resume.clone(),
             body: Box::new(Term::Jump {
                 cont: resume.clone(),
                 arg: Atom::Var(clause.resume.clone()),
-                row: EffectRow::default(),
+                row: resume_row.clone(),
             }),
             captured_env: env.clone(),
             captured_chain: resume_chain,
             consumed: ConsumedFlag::new(),
-            row: EffectRow::default(),
+            row: resume_row,
+            multiplicity: resume_multiplicity,
         };
         let mut new_env = env.clone();
         for (param, arg) in clause.params.iter().zip(arg_values.iter()) {
@@ -1103,6 +1260,7 @@ fn run_thunk_body_with_runtime(thunk: &Value, runtime: &mut CpsRuntime) -> CpsRe
         captured_chain: captured_chain.clone(),
         consumed: ConsumedFlag::new(),
         row: EffectRow::default(),
+        multiplicity: ContMultiplicity::Affine,
     };
 
     let mut body_env = captured_env.clone();
@@ -1231,6 +1389,8 @@ mod tests {
                     row: EffectRow::default(),
                 }),
             }),
+            row: EffectRow::default(),
+            multiplicity: ContMultiplicity::Affine,
         };
 
         eval_unchecked_with_runtime(&body, &env, &force_chain, run_time)

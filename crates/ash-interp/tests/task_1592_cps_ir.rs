@@ -77,6 +77,8 @@ fn test_eval_if_conditional() {
                 row: EffectRow::default(),
             }),
         }),
+        row: EffectRow::default(),
+        multiplicity: ContMultiplicity::Affine,
     };
     let result = eval_term(&term, &Env::new(), &HandlerChain::new());
     assert!(matches!(result, Err(CpsError::Trap(TrapReason::Custom(ref s))) if s == "return"));
@@ -147,6 +149,8 @@ fn test_eval_letrec_basic() {
                 row: EffectRow::default(),
             }),
         }),
+        row: EffectRow::default(),
+        multiplicity: ContMultiplicity::Affine,
     };
     let result = eval_term(&term, &Env::new(), &HandlerChain::new());
     assert!(matches!(result, Err(CpsError::Trap(TrapReason::Custom(ref s))) if s == "return"));

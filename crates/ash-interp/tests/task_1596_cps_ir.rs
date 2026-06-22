@@ -36,6 +36,8 @@ fn test_eval_letrec_simple() {
                 row: EffectRow::default(),
             }),
         }),
+        row: EffectRow::default(),
+        multiplicity: ContMultiplicity::Affine,
     };
     let result = eval_term(&term, &Env::new(), &HandlerChain::new());
     assert!(matches!(result, Err(CpsError::Trap(TrapReason::Custom(ref s))) if s == "return"));
@@ -100,6 +102,8 @@ fn test_eval_letrec_countdown() {
                 row: EffectRow::default(),
             }),
         }),
+        row: EffectRow::default(),
+        multiplicity: ContMultiplicity::Affine,
     };
     let result = eval_term(&term, &Env::new(), &HandlerChain::new());
     assert!(matches!(result, Err(CpsError::Trap(TrapReason::Custom(ref s))) if s == "return"));
@@ -155,6 +159,8 @@ fn test_eval_letrec_factorial_n1() {
                 row: EffectRow::default(),
             }),
         }),
+        row: EffectRow::default(),
+        multiplicity: ContMultiplicity::Affine,
     };
     let result = eval_term(&term, &Env::new(), &HandlerChain::new());
     // n=1: if true then jump k 1 -> returns 1 (trap with "return")
@@ -192,6 +198,8 @@ fn test_eval_letrec_identity() {
                 row: EffectRow::default(),
             }),
         }),
+        row: EffectRow::default(),
+        multiplicity: ContMultiplicity::Affine,
     };
     let result = eval_term(&term, &Env::new(), &HandlerChain::new());
     assert!(matches!(result, Err(CpsError::Trap(TrapReason::Custom(ref s))) if s == "return"));
@@ -241,6 +249,8 @@ fn test_eval_letrec_self_reference() {
                 row: EffectRow::default(),
             }),
         }),
+        row: EffectRow::default(),
+        multiplicity: ContMultiplicity::Affine,
     };
     let result = eval_term(&term, &Env::new(), &HandlerChain::new());
     // Should return 42 via the base case
@@ -304,6 +314,8 @@ fn test_eval_factorial_returns_120() {
                 row: EffectRow::default(),
             }),
         }),
+        row: EffectRow::default(),
+        multiplicity: ContMultiplicity::Affine,
     };
     let result = eval_term(&term, &Env::new(), &HandlerChain::new());
     // This should return 120 for n=5, but our simple factorial doesn't compute it correctly

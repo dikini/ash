@@ -16,6 +16,8 @@ fn make_exit_cont() -> Term {
         body: Box::new(Term::Trap {
             reason: TrapReason::Custom("unreachable".to_string()),
         }),
+        row: EffectRow::default(),
+        multiplicity: ContMultiplicity::Affine,
     }
 }
 
@@ -64,6 +66,8 @@ fn test_eval_handle_catches_raise() {
             row: EffectRow::default(),
         }),
         row: EffectRow::default(),
+        resume_row: ResumeRowMetadata::InheritFromTarget,
+        resume_multiplicity: ContMultiplicity::Affine,
     };
     let term = Term::LetCont {
         name: "exit".to_string(),
@@ -82,6 +86,8 @@ fn test_eval_handle_catches_raise() {
             cont: ContRef::Label("exit".to_string()),
             row: EffectRow::default(),
         }),
+        row: EffectRow::default(),
+        multiplicity: ContMultiplicity::Affine,
     };
     let result = eval_term(&term, &Env::new(), &HandlerChain::new());
     assert!(matches!(result, Err(CpsError::Trap(TrapReason::Custom(ref s))) if s == "return"));
@@ -109,6 +115,8 @@ fn test_eval_handle_body_no_raise() {
             row: EffectRow::default(),
         }),
         row: EffectRow::default(),
+        resume_row: ResumeRowMetadata::InheritFromTarget,
+        resume_multiplicity: ContMultiplicity::Affine,
     };
     let term = Term::LetCont {
         name: "exit".to_string(),
@@ -126,6 +134,8 @@ fn test_eval_handle_body_no_raise() {
             cont: ContRef::Label("exit".to_string()),
             row: EffectRow::default(),
         }),
+        row: EffectRow::default(),
+        multiplicity: ContMultiplicity::Affine,
     };
     let result = eval_term(&term, &Env::new(), &HandlerChain::new());
     assert!(matches!(result, Err(CpsError::Trap(TrapReason::Custom(ref s))) if s == "return"));
@@ -153,6 +163,8 @@ fn test_eval_handler_chain_find() {
             row: EffectRow::default(),
         }),
         row: EffectRow::default(),
+        resume_row: ResumeRowMetadata::InheritFromTarget,
+        resume_multiplicity: ContMultiplicity::Affine,
     };
     chain.push(HandlerFrame::Shallow {
         clause: clause.clone(),

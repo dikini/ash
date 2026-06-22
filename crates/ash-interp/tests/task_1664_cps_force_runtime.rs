@@ -1,8 +1,8 @@
 //! TASK-1664: CPS thunk force runtime behavior.
 
 use ash_core::cps::{
-    Atom, ContRef, EffectItem, EffectItemKind, EffectOp, EffectRow, Env, HandlerChain, MemoCellId,
-    PrimOp, Term, ThunkMode, Value,
+    Atom, ContMultiplicity, ContRef, EffectItem, EffectItemKind, EffectOp, EffectRow, Env,
+    HandlerChain, MemoCellId, PrimOp, Term, ThunkMode, Value,
 };
 use ash_interp::cps::{
     CachedThunkOutcome, CpsError, CpsRuntime, MemoCellState, eval_unchecked_with_runtime,
@@ -16,6 +16,8 @@ fn thunk_out_cont(body: Term) -> Term {
             value: Atom::Var("r".into()),
         }),
         body: Box::new(body),
+        row: EffectRow::default(),
+        multiplicity: ContMultiplicity::Affine,
     }
 }
 

@@ -22,6 +22,8 @@ fn program_let_val_jump() -> Term {
                 row: EffectRow::default(),
             }),
         }),
+        row: EffectRow::default(),
+        multiplicity: ContMultiplicity::Affine,
     }
 }
 
@@ -43,6 +45,8 @@ fn program_let_prim_add() -> Term {
                 row: EffectRow::default(),
             }),
         }),
+        row: EffectRow::default(),
+        multiplicity: ContMultiplicity::Affine,
     }
 }
 
@@ -78,6 +82,8 @@ fn test_eval_let_prim_sub() {
                 row: EffectRow::default(),
             }),
         }),
+        row: EffectRow::default(),
+        multiplicity: ContMultiplicity::Affine,
     };
     let result = eval_term(&term, &Env::new(), &HandlerChain::new());
     assert!(matches!(result, Err(CpsError::Trap(TrapReason::Custom(ref s))) if s == "return"));
@@ -101,6 +107,8 @@ fn test_eval_let_prim_mul() {
                 row: EffectRow::default(),
             }),
         }),
+        row: EffectRow::default(),
+        multiplicity: ContMultiplicity::Affine,
     };
     let result = eval_term(&term, &Env::new(), &HandlerChain::new());
     assert!(matches!(result, Err(CpsError::Trap(TrapReason::Custom(ref s))) if s == "return"));
@@ -124,6 +132,8 @@ fn test_eval_let_prim_eq_true() {
                 row: EffectRow::default(),
             }),
         }),
+        row: EffectRow::default(),
+        multiplicity: ContMultiplicity::Affine,
     };
     let result = eval_term(&term, &Env::new(), &HandlerChain::new());
     assert!(matches!(result, Err(CpsError::Trap(TrapReason::Custom(ref s))) if s == "return"));
@@ -147,6 +157,8 @@ fn test_eval_let_prim_eq_false() {
                 row: EffectRow::default(),
             }),
         }),
+        row: EffectRow::default(),
+        multiplicity: ContMultiplicity::Affine,
     };
     let result = eval_term(&term, &Env::new(), &HandlerChain::new());
     assert!(matches!(result, Err(CpsError::Trap(TrapReason::Custom(ref s))) if s == "return"));
@@ -168,6 +180,8 @@ fn test_eval_let_cont_jump() {
             arg: Atom::Int(42),
             row: EffectRow::default(),
         }),
+        row: EffectRow::default(),
+        multiplicity: ContMultiplicity::Affine,
     };
     let result = eval_term(&term, &Env::new(), &HandlerChain::new());
     assert!(matches!(result, Err(CpsError::UnboundLabel(ref s)) if s == "exit"));
@@ -204,6 +218,8 @@ fn test_eval_call_identity() {
                 row: EffectRow::default(),
             }),
         }),
+        row: EffectRow::default(),
+        multiplicity: ContMultiplicity::Affine,
     };
     let result = eval_term(&term, &Env::new(), &HandlerChain::new());
     assert!(matches!(result, Err(CpsError::Trap(TrapReason::Custom(ref s))) if s == "return"));
@@ -251,6 +267,8 @@ fn test_eval_call_non_lambda() {
                 row: EffectRow::default(),
             }),
         }),
+        row: EffectRow::default(),
+        multiplicity: ContMultiplicity::Affine,
     };
     let result = eval_term(&term, &Env::new(), &HandlerChain::new());
     assert!(matches!(result, Err(CpsError::ExpectedLambda(_))));
@@ -272,6 +290,8 @@ fn test_eval_jump_to_unbound_label() {
             arg: Atom::Int(42),
             row: EffectRow::default(),
         }),
+        row: EffectRow::default(),
+        multiplicity: ContMultiplicity::Affine,
     };
     let result = eval_term(&term, &Env::new(), &HandlerChain::new());
     assert!(matches!(result, Err(CpsError::UnboundLabel(ref s)) if s == "unbound"));
@@ -308,6 +328,8 @@ fn test_eval_nested_let_val() {
                 }),
             }),
         }),
+        row: EffectRow::default(),
+        multiplicity: ContMultiplicity::Affine,
     };
     let result = eval_term(&term, &Env::new(), &HandlerChain::new());
     assert!(matches!(result, Err(CpsError::Trap(TrapReason::Custom(ref s))) if s == "return"));

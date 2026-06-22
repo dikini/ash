@@ -49,6 +49,8 @@ fn trait_dictionary_term() -> Term {
                 }),
             }),
         }),
+        row: EffectRow::default(),
+        multiplicity: ContMultiplicity::Affine,
     }
 }
 
@@ -190,6 +192,8 @@ fn test_eval_jump_with_structured_value() {
                 row: EffectRow::default(),
             }),
         }),
+        row: EffectRow::default(),
+        multiplicity: ContMultiplicity::Affine,
     };
 
     let result = eval_checked(&term, &Env::new(), &HandlerChain::new()).unwrap();
@@ -507,6 +511,8 @@ fn test_eval_mutual_recursion_even_odd() {
                 }),
             }),
         }),
+        row: EffectRow::default(),
+        multiplicity: ContMultiplicity::Affine,
     };
 
     let result = eval_checked(&term, &Env::new(), &HandlerChain::new()).unwrap();
@@ -547,6 +553,8 @@ fn test_eval_call_no_dynamic_scope() {
                 }),
             }),
         }),
+        row: EffectRow::default(),
+        multiplicity: ContMultiplicity::Affine,
     };
 
     let result = eval_checked(&term, &Env::new(), &HandlerChain::new()).unwrap();

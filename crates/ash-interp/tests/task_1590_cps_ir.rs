@@ -61,6 +61,7 @@ fn test_cont_value() {
         captured_chain: HandlerChain::new(),
         consumed: ConsumedFlag::new(),
         row: EffectRow::default(),
+        multiplicity: ContMultiplicity::Affine,
     };
     match cont {
         Value::Cont { param, .. } => {
@@ -135,6 +136,8 @@ fn test_let_cont_term() {
             arg: Atom::Int(42),
             row: EffectRow::default(),
         }),
+        row: EffectRow::default(),
+        multiplicity: ContMultiplicity::Affine,
     };
     match term {
         Term::LetCont { name, param, .. } => {
@@ -220,6 +223,8 @@ fn test_handler_chain_push() {
             row: EffectRow::default(),
         }),
         row: EffectRow::default(),
+        resume_row: ResumeRowMetadata::InheritFromTarget,
+        resume_multiplicity: ContMultiplicity::Affine,
     };
     chain.push(HandlerFrame::Shallow {
         clause: clause.clone(),

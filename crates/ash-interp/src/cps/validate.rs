@@ -121,7 +121,16 @@ fn validate_term(term: &Term, ctx: &mut ValidationContext) -> Result<(), CpsVali
             param,
             cont_body,
             body,
+            row,
+            multiplicity,
         } => {
+            // Validate row and multiplicity legality for LetCont.
+            validate_row(row)?;
+            if *multiplicity == ContMultiplicity::MultiShotPure && !row.items.is_empty() {
+                return Err(CpsValidationError::InvalidSyntacticPosition(format!(
+                    "multi-shot-pure continuation must declare a closed empty row, got {row:?}"
+                )));
+            }
             let mut cont_ctx = ctx.with_binding(param.clone());
             validate_term(cont_body, &mut cont_ctx)?;
             let mut new_ctx = ctx.with_label(name.clone());
@@ -237,6 +246,23 @@ fn validate_term(term: &Term, ctx: &mut ValidationContext) -> Result<(), CpsVali
             if let Some(default_body) = default {
                 validate_term(default_body, ctx)?;
             }
+            Ok(())
+        }
+        Term::LetContCall {
+            name,
+            cont,
+            arg,
+            row,
+            body,
+        } => {
+            validate_row(row)?;
+            validate_atom(arg, ctx)?;
+            let mut new_ctx = ctx.with_binding(name.clone());
+            // The continuation being invoked must be in scope as a binding.
+            if !ctx.bindings.contains(cont) {
+                return Err(CpsValidationError::UnresolvedVariable(cont.clone()));
+            }
+            validate_term(body, &mut new_ctx)?;
             Ok(())
         }
         Term::Trap { .. } => Ok(()),

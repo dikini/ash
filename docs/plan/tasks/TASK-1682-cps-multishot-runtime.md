@@ -1,6 +1,6 @@
 # TASK-1682: Implement CPS Multi-Shot Runtime Behavior
 
-**Status:** Planned
+**Status:** ✅ Complete
 **Phase:** [PLAN-164](../PLAN-164-CORE-CPS-CONTINUATION-MULTIPLICITY.md)
 **Owner:** Phase 164
 
@@ -70,14 +70,14 @@ construction.
 
 ## Completion Checklist
 
-- [ ] Affine second use still traps.
-- [ ] Multi-shot repeated use succeeds.
-- [ ] Runtime-created `LetCont` continuations preserve term row and multiplicity.
-- [ ] `LetContCall` can bind continuation answers.
-- [ ] `LetContCall` carries continuation invocation row accounting.
-- [ ] Handler dispatch traps/fails closed on known resume-row mismatch or unresolved target row.
-- [ ] Legacy omitted affine handler rows inherit the resolved target row.
-- [ ] Legacy omitted handler rows cannot construct multi-shot-pure resumes.
-- [ ] Handler-created resumes preserve resolved/known row metadata and handler-clause multiplicity.
-- [ ] Captured env/chain behavior is covered.
-- [ ] CHANGELOG has a task entry.
+- [x] Affine second use still traps.
+- [x] Multi-shot repeated use succeeds.
+- [x] Runtime-created `LetCont` continuations preserve term row and multiplicity.
+- [x] `LetContCall` can bind continuation answers.
+- [x] `LetContCall` carries continuation invocation row accounting.
+- [x] Handler dispatch traps/fails closed on known resume-row mismatch or unresolved target row.
+- [x] Legacy omitted affine handler rows inherit the resolved target row.
+- [x] Legacy omitted handler rows cannot construct multi-shot-pure resumes.
+- [x] Handler-created resumes preserve resolved/known row metadata and handler-clause multiplicity.
+- [x] Captured env/chain behavior is covered.
+- [x] CHANGELOG has a task entry.

@@ -1,8 +1,8 @@
 //! TASK-1672: Thunk tracing and observability.
 
 use ash_core::cps::{
-    Atom, ContRef, EffectItem, EffectItemKind, EffectOp, EffectRow, Env, HandlerChain, MemoCellId,
-    PrimOp, Term, ThunkMode, Value,
+    Atom, ContMultiplicity, ContRef, EffectItem, EffectItemKind, EffectOp, EffectRow, Env,
+    HandlerChain, MemoCellId, PrimOp, Term, ThunkMode, Value,
 };
 use ash_core::provenance::TraceEvent;
 use ash_interp::cps::{CpsError, CpsRuntime, MemoCellState, eval_unchecked_with_runtime};
@@ -77,6 +77,8 @@ fn force_twice_term(thunk: Value, force_row: EffectRow) -> Term {
                 }),
             }),
         }),
+        row: EffectRow::default(),
+        multiplicity: ContMultiplicity::Affine,
     }
 }
 
@@ -101,6 +103,8 @@ fn force_once_term(thunk: Value, force_row: EffectRow) -> Term {
                 }),
             }),
         }),
+        row: EffectRow::default(),
+        multiplicity: ContMultiplicity::Affine,
     }
 }
 
@@ -121,6 +125,8 @@ fn force_variable_once_term(name: &str, force_row: EffectRow) -> Term {
                 row: force_row,
             }),
         }),
+        row: EffectRow::default(),
+        multiplicity: ContMultiplicity::Affine,
     }
 }
 

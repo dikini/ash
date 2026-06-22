@@ -586,7 +586,7 @@ Implements SPEC-101 for Core Ash: explicit `Strict`/`Lazy`/`Memo` mode types, th
 
 ## Phase 164: Core CPS Continuation Multiplicity
 
-**Status:** 📝 Planned; 1/12 complete, implementation starts at TASK-1681
+**Status:** 📝 Planned; 2/12 complete, implementation continues at TASK-1682
 **Plan:** [PLAN-164: Core CPS Continuation Multiplicity](PLAN-164-CORE-CPS-CONTINUATION-MULTIPLICITY.md)
 **Spec:** [SPEC-102: CPS Continuation Multiplicity](../spec/SPEC-102-CPS-CONTINUATION-MULTIPLICITY.md)
 **Depends on:** Phase 159, Phase 160, Phase 161, Phase 162, Phase 163; SPEC-102, SPEC-101, SPEC-100, SPEC-099, SPEC-099c, SPEC-098b, SPEC-097b, SPEC-096b.
@@ -596,8 +596,8 @@ Implements explicit continuation multiplicity for Core Ash and CPS IR. Existing 
 | Task | Description | Status |
 |------|-------------|--------|
 | [TASK-1680](tasks/TASK-1680-continuation-multiplicity-spec-plan-packet.md) | Freeze SPEC-102 and Phase 164 planning packet | ✅ Complete |
-| [TASK-1681](tasks/TASK-1681-cps-cont-multiplicity-carrier.md) | Add CPS continuation, LetCont, LetContCall, and handler row/multiplicity carriers | 📝 Planned |
-| [TASK-1682](tasks/TASK-1682-cps-multishot-runtime.md) | Implement affine vs multi-shot CPS jump and LetContCall behavior | 📝 Planned |
+| [TASK-1681](tasks/TASK-1681-cps-cont-multiplicity-carrier.md) | Add CPS continuation, LetCont, LetContCall, and handler row/multiplicity carriers | ✅ Complete |
+| [TASK-1682](tasks/TASK-1682-cps-multishot-runtime.md) | Implement affine vs multi-shot CPS jump and LetContCall behavior | ✅ Complete |
 | [TASK-1683](tasks/TASK-1683-cps-multishot-validation.md) | Validate CPS multi-shot row legality and malformed unchecked input | 📝 Planned |
 | [TASK-1684](tasks/TASK-1684-core-cont-multiplicity-wellformedness.md) | Type-check Core continuation multiplicity well-formedness | 📝 Planned |
 | [TASK-1685](tasks/TASK-1685-core-handler-multishot-resume-typecheck.md) | Accept legal multi-shot handler resumes and reject illegal ones | 📝 Planned |

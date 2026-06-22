@@ -112,6 +112,8 @@ fn test_letrec_tuple_lambdas_get_rec_binding() {
                 }),
             }),
         }),
+        row: EffectRow::default(),
+        multiplicity: ContMultiplicity::Affine,
     };
 
     let result = eval_checked(&term, &Env::new(), &HandlerChain::new()).unwrap();
@@ -151,6 +153,8 @@ fn test_call_arity_mismatch_rejected() {
                 row: EffectRow::default(),
             }),
         }),
+        row: EffectRow::default(),
+        multiplicity: ContMultiplicity::Affine,
     };
 
     let result = eval_checked(&term, &Env::new(), &HandlerChain::new());
@@ -205,6 +209,8 @@ fn test_provider_handler_arity_mismatch_rejected() {
             resume: ContRef::Label("exit".to_string()),
             row: EffectRow::default(),
         }),
+        row: EffectRow::default(),
+        multiplicity: ContMultiplicity::Affine,
     };
 
     let result = eval_checked(&term, &env, &chain);
@@ -246,6 +252,8 @@ fn test_handler_matches_full_effect_op() {
             row: EffectRow::default(),
         }),
         row: EffectRow::default(),
+        resume_row: ResumeRowMetadata::InheritFromTarget,
+        resume_multiplicity: ContMultiplicity::Affine,
     };
 
     chain.push(HandlerFrame::Shallow {
@@ -310,6 +318,8 @@ fn test_handler_clause_arity_validation() {
                 row: EffectRow::default(),
             }),
             row: EffectRow::default(),
+            resume_row: ResumeRowMetadata::InheritFromTarget,
+            resume_multiplicity: ContMultiplicity::Affine,
         },
         body: Box::new(Term::Return {
             value: Atom::Int(0),

@@ -27,6 +27,8 @@ fn test_resume_restores_handler_chain() {
             row: EffectRow::default(),
         }),
         row: EffectRow::default(),
+        resume_row: ResumeRowMetadata::InheritFromTarget,
+        resume_multiplicity: ContMultiplicity::Affine,
     };
     let term = Term::LetCont {
         name: "exit".to_string(),
@@ -45,6 +47,8 @@ fn test_resume_restores_handler_chain() {
             cont: ContRef::Label("exit".to_string()),
             row: EffectRow::default(),
         }),
+        row: EffectRow::default(),
+        multiplicity: ContMultiplicity::Affine,
     };
     let result = eval_term(&term, &Env::new(), &HandlerChain::new());
     assert_eq!(result, Ok(Atom::String("resumed".to_string())));
@@ -72,6 +76,8 @@ fn test_resume_with_value() {
             row: EffectRow::default(),
         }),
         row: EffectRow::default(),
+        resume_row: ResumeRowMetadata::InheritFromTarget,
+        resume_multiplicity: ContMultiplicity::Affine,
     };
     let term = Term::LetCont {
         name: "exit".to_string(),
@@ -90,6 +96,8 @@ fn test_resume_with_value() {
             cont: ContRef::Label("exit".to_string()),
             row: EffectRow::default(),
         }),
+        row: EffectRow::default(),
+        multiplicity: ContMultiplicity::Affine,
     };
     let result = eval_term(&term, &Env::new(), &HandlerChain::new());
     assert_eq!(result, Ok(Atom::String("transformed".to_string())));
@@ -118,6 +126,8 @@ fn test_shallow_handler_removed_on_resume() {
             row: EffectRow::default(),
         }),
         row: EffectRow::default(),
+        resume_row: ResumeRowMetadata::InheritFromTarget,
+        resume_multiplicity: ContMultiplicity::Affine,
     };
     let term = Term::LetCont {
         name: "exit".to_string(),
@@ -136,6 +146,8 @@ fn test_shallow_handler_removed_on_resume() {
             cont: ContRef::Label("exit".to_string()),
             row: EffectRow::default(),
         }),
+        row: EffectRow::default(),
+        multiplicity: ContMultiplicity::Affine,
     };
     let result = eval_term(&term, &Env::new(), &HandlerChain::new());
     assert_eq!(result, Ok(Atom::String("handled".to_string())));
@@ -154,6 +166,7 @@ fn test_resume_one_shot_enforcement() {
         captured_chain: HandlerChain::new(),
         consumed: ConsumedFlag::new(),
         row: EffectRow::default(),
+        multiplicity: ContMultiplicity::Affine,
     };
 
     // First jump should succeed

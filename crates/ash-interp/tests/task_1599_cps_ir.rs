@@ -171,6 +171,8 @@ fn test_file_roundtrip_factorial() {
                             cont: ContRef::Label("k_mul".to_string()),
                             row: EffectRow::default(),
                         }),
+                        row: EffectRow::default(),
+                        multiplicity: ContMultiplicity::Affine,
                     }),
                 }),
                 row: EffectRow::default(),

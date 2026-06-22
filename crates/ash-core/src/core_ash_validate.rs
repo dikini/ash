@@ -467,16 +467,24 @@ fn validate_data_atom(_atom: &CoreAtom) -> Result<(), CoreValidationError> {
 }
 
 fn validate_handler_resume(resume: &CoreParam, body: &CoreExpr) -> Result<(), CoreValidationError> {
-    match &resume.ty {
+    let multiplicity = match &resume.ty {
         CoreType::Cont {
             multiplicity: CoreMultiplicity::Affine,
             ..
-        } => {}
-        CoreType::Cont { .. } => {
-            return Err(CoreValidationError::AffineResumeViolation {
-                resume: resume.name.clone(),
-                detail: "Phase 161 supports only affine handler resumes".to_string(),
-            });
+        } => CoreMultiplicity::Affine,
+        CoreType::Cont {
+            multiplicity: CoreMultiplicity::MultiShotPure,
+            row,
+            ..
+        } => {
+            // SPEC-102: multi-shot-pure resumes must declare a closed empty row.
+            if !row.items.is_empty() || row.tail.is_some() {
+                return Err(CoreValidationError::AffineResumeViolation {
+                    resume: resume.name.clone(),
+                    detail: "multi-shot-pure resume must declare a closed empty row".to_string(),
+                });
+            }
+            CoreMultiplicity::MultiShotPure
         }
         _ => {
             return Err(CoreValidationError::AffineResumeViolation {
@@ -484,15 +492,16 @@ fn validate_handler_resume(resume: &CoreParam, body: &CoreExpr) -> Result<(), Co
                 detail: "handler resume parameter must have continuation type".to_string(),
             });
         }
-    }
+    };
 
     let uses = count_affine_resume_uses(&resume.name, body)?;
-    if uses > 1 {
+    if multiplicity == CoreMultiplicity::Affine && uses > 1 {
         return Err(CoreValidationError::AffineResumeViolation {
             resume: resume.name.clone(),
             detail: "resume is jumped to more than once".to_string(),
         });
     }
+    // Multi-shot-pure resumes may be used zero or more times — no limit.
     Ok(())
 }
 

@@ -2943,6 +2943,8 @@ fn check_handler_resume(
     op_result_ty: &CoreType,
     env: &CoreTypeCheckEnv,
 ) -> Result<(CoreRow, CoreType), CoreTypeCheckError> {
+    // Well-formedness check enforces multiplicity/row legality:
+    // MultiShotPure requires a normalized closed empty row (TASK-1684).
     check_core_type_well_formed(resume_ty, env)?;
     let CoreType::Cont {
         input,
@@ -2954,9 +2956,10 @@ fn check_handler_resume(
         return Err(unsupported("handler resume without continuation type"));
     };
 
-    if *multiplicity != CoreMultiplicity::Affine {
-        return Err(unsupported("handler resume with non-affine multiplicity"));
-    }
+    // Both Affine and legal MultiShotPure continuations are accepted.
+    // The well-formedness check above already rejected MultiShotPure with
+    // non-empty or open rows.
+    let _ = multiplicity;
 
     ensure_types_equivalent(op_result_ty, input, env)?;
     Ok((row.clone(), (**answer).clone()))

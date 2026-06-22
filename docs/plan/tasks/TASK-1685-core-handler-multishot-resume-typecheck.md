@@ -1,6 +1,6 @@
 # TASK-1685: Type-Check Multi-Shot Handler Resumes
 
-**Status:** Planned
+**Status:** ✅ Complete
 **Phase:** [PLAN-164](../PLAN-164-CORE-CPS-CONTINUATION-MULTIPLICITY.md)
 **Owner:** Phase 164
 
@@ -41,7 +41,7 @@ Allow handler clauses to bind legal multi-shot-pure resume continuations.
 
 ## Completion Checklist
 
-- [ ] Legal multi-shot resumes type check.
-- [ ] Illegal multi-shot resumes reject with structured diagnostics.
-- [ ] Affine behavior is unchanged.
-- [ ] CHANGELOG has a task entry.
+- [x] Legal multi-shot resumes type check.
+- [x] Illegal multi-shot resumes reject with structured diagnostics.
+- [x] Affine behavior is unchanged.
+- [x] CHANGELOG has a task entry.

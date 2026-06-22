@@ -563,10 +563,13 @@ fn handle_rejects_resume_answer_that_does_not_match_handled_result() {
 }
 
 #[test]
-fn handle_rejects_multishot_resume_before_typechecking() {
+fn handle_accepts_multishot_resume_with_empty_row() {
+    // Phase 164 (SPEC-102): multi-shot-pure resumes with a closed empty row
+    // are now legal. Previously rejected by Phase 161/162, now accepted.
     let clause = handler_clause(
         vec![param("key", string_ty())],
-        resume_param(
+        resume_param_with_answer(
+            string_ty(),
             string_ty(),
             CoreRow::default(),
             CoreMultiplicity::MultiShotPure,
@@ -575,9 +578,28 @@ fn handle_rejects_multishot_resume_before_typechecking() {
         CoreRow::default(),
     );
 
+    let typed = type_check(handle_with(clause, raise_read()), &base_env())
+        .expect("legal multi-shot-pure resume with empty row should type-check");
+    assert_eq!(typed.ty(), &string_ty());
+    assert_eq!(typed.row(), &CoreRow::default());
+}
+
+#[test]
+fn handle_rejects_multishot_resume_with_nonempty_row() {
+    let clause = handler_clause(
+        vec![param("key", string_ty())],
+        resume_param(
+            string_ty(),
+            row(vec![cap_item(&["kv"], "read")]),
+            CoreMultiplicity::MultiShotPure,
+        ),
+        resume_with(CoreAtom::Var("key".into())),
+        CoreRow::default(),
+    );
+
     assert_affine_validation_error(
         handle_with(clause, raise_read()),
-        "supports only affine handler resumes",
+        "multi-shot-pure resume must declare a closed empty row",
     );
 }
 

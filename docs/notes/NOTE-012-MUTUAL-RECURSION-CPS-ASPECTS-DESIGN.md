@@ -1,223 +1,219 @@
-# Design Exploration: Mutual Recursion, CPS, and JIT Tradeoffs
+# NOTE-012: Mutual Recursion and CPS Translation Design (Target-Aware Notes)
 
-## Source
+This note translates the Gemini discussion examples into the project’s three concrete syntactic surfaces:
 
-- Origin: `~/Downloads/[Gemini Conversation] Mutual Recursion_ Pros and Cons`
-- Conversation topic: mutual recursion and its interaction with Continuation-Passing Style (CPS), tail-call optimization (TCO), JIT strategy, and `letrec` mutual recursion in interpreters.
+- **Ash surface sketch** (human-friendly feature sketch)
+- **Core text** (validator/typecheck/lower fixture form, `.core`)
+- **CPS IR** (serializer output shape, `*.core.cps.golden` style)
 
-## 1) Purpose and Design Question
+It is scoped to the currently implemented Core/Lowering subset.
 
-The conversation was an exploration of whether, for a language design like Ash with advanced control-flow features, **mutual recursion** should be introduced directly in current direct style semantics or through/alongside a **CPS** direction.
+## 1) Even/Odd Mutual Recursion
 
-Primary concerns discussed:
-
-- Semantic clarity of mutually recursive definitions.
-- Tail recursion and tail-call semantics.
-- Runtime cost and compiler/JIT complexity.
-- Correct handling of recursive bindings (`letrec`) in CPS.
-
----
-
-## 2) Mutual Recursion: Pros and Cons
-
-### Pros
-
-- **Natural modeling of alternating state/domain layers**
-  - Useful when the domain has paired states, nested alternations, or mutually dependent roles.
-  - Examples from the discussion: parser-like structures, language grammars, and explicit state machines.
-- **Better decomposition**
-  - Can split complex logic into smaller responsibilities.
-  - Each function handles one “mode/state,” improving readability when used correctly.
-- **Separation of concern**
-  - Encodes domain alternation explicitly rather than forcing all logic into one function.
-
-### Cons
-
-- **Stack behavior risk**
-  - Calls alternate across functions and can still create deep call chains.
-  - If recursion is unbounded, stack overflow is a practical risk.
-- **Tail-call implementation complexity**
-  - In direct style, mutual calls across functions often increase compiler complexity for tail optimization.
-- **Debugging complexity**
-  - Execution path is less linear and harder to trace mentally.
-- **Tighter coupling**
-  - Mutually recursive functions can become difficult to evolve in isolation.
-
-### Quick comparison
-
-| Concern | Mutual recursion | Standard recursion |
-|---|---|---|
-| Shape | Multiple alternating function definitions | Single recursive definition |
-| Best fit | Alternating states / grammar-like control | Self-recursive patterns |
-| Cognitive load | Higher (inter-function control transfer) | Moderate |
-| Tail-call handling (direct style) | More complex | Simpler |
-
----
-
-## 3) CPS and TCO Complexity
-
-The discussion emphasized a strong shift in where complexity lives:
-
-### In direct style:
-
-- TCO is implemented as an optimization pass/pattern that must prove call position.
-- Mutual recursion can be expensive to optimize because of call-stack frame compatibility concerns.
-
-### In CPS:
-
-- Functions never return normally; control is transferred via explicit continuations.
-- Every call is structurally in tail position.
-- So TCO becomes less a compile-time “special case” and more a semantic property of the IR.
-
-### Remaining complexity in CPS:
-
-- Runtime needs to avoid native stack overflow by design.
-- Typical strategies discussed:
-  - **Trampoline loop**
-  - **Heap-allocated / safe stack techniques** for continuations.
-
-This shifts complexity from tail-position analysis toward runtime execution strategy.
-
----
-
-## 4) Direct Style Interpreter vs CPS JIT Path
-
-The thread compared a JIT-ready direct-style path with a CPS-first path:
-
-- **Direct style + JIT**
-  - Easier alignment with native CALL/RET.
-  - TCO is harder: JIT must actively transform tail positions to efficient jumps/stack rewrites.
-- **CPS IR + JIT**
-  - More convenient around advanced control features (continuations/effects/coroutines).
-  - Harder engineering effort around continuation allocation and escape analysis.
-  - Can lose some native return-prediction efficiency if continuation flow is not transformed into low-overhead jumps.
-
-### Recommendation implied by conversation
-
-- If first priority is “high-performance JIT immediately,” direct style may remain simpler.
-- If language design strongly favors first-class control constructs, CPS is structurally cleaner and more expressive; then invest in escape analysis and runtime strategy.
-
----
-
-## 5) CPS `letrec` Mutual Recursion (critical for Ash-style control features)
-
-Conversation identified `letrec` as the major blocker.
-
-### Why mutual recursion is hard in CPS
-
-Closures capture their environment at creation time. For `f` and `g` to reference each other, they must capture a common environment containing placeholders first, then later be replaced by real closures.
-
-### Safe implementation sketch from discussion
-
-1. **Pre-allocate all recursive names** in environment as mutable placeholders (`Uninitialized`, `Thunk`, or dedicated cell type).
-2. Evaluate all binding bodies **in the same extended environment** so each closure can refer to all placeholders.
-3. Once all closure values are computed, **mutate each placeholder** to the real closure (“tie the knot”).
-4. Evaluate `letrec` body with this now-complete environment.
-
-This is a classic two-phase/two-pass binding strategy and matches mutable-environment approaches already used in many CPS implementations.
-
-### Extra constraint noted
-
-- `letrec` in Scheme-like semantics expects RHSs to be function-like definitions (lambdas/closures), not arbitrary self-referential eager expressions.
-
----
-
-## 6) Ash-specific exploration notes
-
-For Ash’s planned/ongoing CPS direction, this conversation supports:
-
-- Prioritizing a **correct shared recursive binding strategy** before broadening `letrec` support.
-- Treating `letrec` multi-binding as a batch process (reserve → evaluate all → write-back → execute body).
-- Expecting this to be a necessary prerequisite for reliable mutual recursion in features that depend on continuations/coroutines/effects.
-
-## 7) Actionable next steps
-
-1. Finalize `letrec` binder representation for multi-binding in CPS.
-2. Add a regression with two or more mutually recursive closures in shared env to validate:
-   - both closures visible during capture,
-   - both callable without forcing,
-   - no uninitialized capture errors at force/entry points.
-3. Evaluate two runtime variants incrementally:
-   - trampoline-only baseline,
-   - selective native/jit optimizations once continuation escape behavior is stable.
-
-## 8) Concrete cross-layer translations
-
-To make the discussion usable for implementation, the same example can be read in three layers:
-
-- target Ash surface (conceptual),
-- Core (`.core` text), and
-- CPS IR (informal lowered form used in docs).
-
-The Core/CPS snippets are structurally faithful and intentionally schematic where projector
-spelling is implementation-specific.
-
-### 8.1 Even/Odd mutual recursion
-
-Surface (conceptual):
+### Ash surface sketch
 
 ```ash
-letrec even(n: Int) -> Bool =
-  if n == 0 then true else odd(n - 1)
+fn even(n: Int): Bool {
+  if n == 0 {
+    true
+  } else {
+    odd(n - 1)
+  }
+}
 
-letrec odd(n: Int) -> Bool =
-  if n == 0 then false else even(n - 1)
+fn odd(n: Int): Bool {
+  if n == 0 {
+    false
+  } else {
+    even(n - 1)
+  }
+}
+
+even(4)
 ```
 
-Core (conceptual):
+### Core
+
+`let-rec` is encoded as a recursive aggregate so both functions can be captured mutually.
 
 ```core
-(let-rec pair : ( (fn (Int) -> Bool {}) (fn (Int) -> Bool {}) )
+(let-rec pair : (tuple (fn (Int) -> Bool {}) (fn (Int) -> Bool {}))
   (tuple
     (lam ((n : Int)) : {}
       (let-prim n_is_zero eq (n (lit-int 0))
         (if n_is_zero
           (lit-bool true)
-          (let-prim n_1 sub (n (lit-int 1))
-            (let-prim odd_fn (pair.1 pair)
-              (call odd_fn ((n_1)))))))
+          (let-prim n1 sub (n (lit-int 1))
+            (let-prim odd_fn (tuple-get-1 pair)
+              (call odd_fn ((n1)))))))
     (lam ((n : Int)) : {}
       (let-prim n_is_zero eq (n (lit-int 0))
         (if n_is_zero
           (lit-bool false)
-          (let-prim n_1 sub (n (lit-int 1))
-            (let-prim even_fn (pair.0 pair)
-              (call even_fn ((n_1)))))))))
-  (let-prim even_fn (pair.0 pair)
-    (call even_fn ((lit-int 4)))))
+          (let-prim n1 sub (n (lit-int 1))
+            (let-prim even_fn (tuple-get-0 pair)
+              (call even_fn ((n1))))))))
+  (let-prim start_fn (tuple-get-0 pair)
+    (call start_fn ((lit-int 4)))))
 ```
 
-CPS (informal):
+### CPS (conceptual, constructor-style)
 
 ```lisp
 (LetRec (name . "pair")
-  (Tuple
-    [Lam [n] [
-      (If (Eq n 0)
-          (Jump (cont Var . "k") (arg . true))
-          (Call (tuple-get 1 pair) ((Sub n 1)) (cont Var . "k")))]
-    [Lam [n] [
-      (If (Eq n 0)
-          (Jump (cont Var . "k") (arg . false))
-          (Call (tuple-get 0 pair) ((Sub n 1)) (cont Var . "k")))]])
-  (LetPrim even_fn (tuple-get 0 pair)
-    (Call even_fn ((lit-int 4)) (cont Label . "__exit"))))
+  (value . (Tuple
+    (Lam (params "n") (cont . "__k_even")
+      (body
+        (LetPrim (name . "n_is_zero") (op . Eq)
+          (args (Var . "n") (Int . 0))
+          (body
+            (If (cond Var . "n_is_zero")
+              (then_branch
+                (Jump (cont Var . "__k_even") (arg Bool . true) (row (items))))
+              (else_branch
+                (LetPrim (name . "n1") (op . Sub)
+                  (args (Var . "n") (Int . 1))
+                  (body
+                    (LetPrim (name . "odd_fn") (op . TupleGet 1)
+                      (args (Var . "pair"))
+                      (body
+                        (Call (func Var . "odd_fn") (args (Var . "n1")) (cont Var . "__k_even") (row (items))))))))
+              (row (items)))))
+    (Lam ...)
+    ))
+  (body
+    (LetPrim (name . "start_fn") (op . TupleGet 0)
+      (args (Var . "pair"))
+      (body (Call (func Var . "start_fn") (args (Int . 4)) (cont Label . "halt") (row (items))))))))
 ```
 
-Interpretation:
+In this project, recursion stays local to the value representation; the second function is resolved via projections from the shared recursive aggregate.
 
-- The direct-style call graph alternates between two functions.
-- CPS makes the alternation explicit through `Call` edges and continuation jumps.
+## 2) Direct recursion and why CPS makes recursive flow first-class
 
-### 8.2 TCO intuition in CPS
+### Ash surface sketch
 
-- In recursive direct style, stack-safety depends on compiler proof that each recursive branch is in tail position.
-- In CPS, the same recursion is represented as repeated `Call ... <cont>` transfers, so tail behavior is explicit.
-- The remaining optimization work is in runtime scheduling (trampoline/stack strategy), not in detecting tail spots.
+```ash
+fn sum(n: Int): Int {
+  if n == 0 {
+    0
+  } else {
+    n + sum(n - 1)
+  }
+}
 
----
+sum(3)
+```
 
-## Notes
+### Core
 
-- The source file appears to contain non-textual/trailing binary suffix noise after the coherent conversation content.
-- This design note preserves the conversational content up to the mutual-recursion letrec algorithm section, where the signal is complete and internally consistent.
+```core
+(let-val sum : (fn (Int) -> Int {})
+  (lam ((n : Int)) : {}
+    (let-prim n_is_zero eq (n (lit-int 0))
+      (if n_is_zero
+        (lit-int 0)
+        (let-prim n1 sub (n (lit-int 1))
+          (let-prim rec (call sum ((n1)))
+            (let-prim out add (n rec)
+              out))))))
+  (call sum ((lit-int 3))))
+```
+
+### CPS intuition
+
+```lisp
+(LetVal (name . "sum")
+  (value .
+    (Lam (params "n") (cont . "__k_sum")
+      (body
+        (If (cond Var . "n_is_zero")
+          (then_branch (Jump (cont Var . "__k_sum") (arg Int . 0) (row (items)))
+          (else_branch
+            (LetPrim ...
+              (Call (func Var . "sum") (args (Var . "n1")) (cont Label . "__k_sum") (row (items))))))))
+  (body
+    (Call (func Var . "sum") (args (Int . 3)) (cont Label . "halt") (row (items)))))
+```
+
+Conceptually, both direct and mutual recursion become ordinary continuation-passing flow; tail-position concerns are handled by the CPS shape rather than ad-hoc flow analyses.
+
+## 3) Letrec mutual recursion in CPS runtime terms
+
+In the conversation, the key problem is the circular capture constraint:
+
+- `even` needs to capture `odd`
+- `odd` needs to capture `even`
+
+Both must see each other in the same recursive environment.
+
+### Core pattern (prototype-consistent)
+
+```core
+(let-rec pair : (tuple (fn () -> Unit {}) (fn () -> Unit {}))
+  (tuple
+    (lam () : {}
+      (call (tuple-get-1 pair) ()))
+    (lam () : {}
+      (call (tuple-get-0 pair) ())))
+  (let-prim a (tuple-get-0 pair)
+    (let-prim b (tuple-get-1 pair)
+      (trap "use-some-operation-here"))))
+```
+
+### Two-stage initialization (same idea, regardless of recursion depth)
+
+1. Allocate placeholders for recursive names in a shared environment frame.
+2. Evaluate each recursive RHS under that shared frame so each RHS captures references to all names.
+3. Replace each placeholder with the evaluated closure.
+4. Evaluate body under the frame.
+
+This is exactly the “placeholder + overwrite” pattern already used by the project’s recursive environment design.
+
+## 4) TCO and CPS (from the design discussion)
+
+### Pros/cons of mutual recursion in practice
+
+| Style | Mutual recursion | Single-function recursion |
+|---|---|---|
+| Code model | Alternating states/phases become explicit | Monolithic state-machine in one function |
+| Readability | High when state partition is natural | Easier to start, harder at scale |
+| Optimizer burden | One recursive call discipline in CPS | Similar, but still recursive-tail reasoning needed |
+| Debugging | More call-path jumps | Fewer conceptual entities |
+| Extension | Pairs well with effect handlers/continuations | Simpler one-function mental model |
+
+### TCO path
+
+In direct style, TCO is a control-flow property that needs analysis.
+
+In Core-CPS, **every call is in continuation-passing shape**, so tail-call reasoning becomes structural at IR level; the hard work shifts to backend runtime policy (trampoline vs native strategies), not recursive shape detection.
+
+### Runtime tradeoff to remember
+
+CPS is not “free lunch”:
+
+- you typically avoid recursive stack growth by trampoline or continuation stack strategy,
+- `Call/Jump`-dense control needs stronger runtime discipline,
+- but recursive and mutually recursive patterns are much easier to compile consistently.
+
+## 5) JIT-relevant note (from the same thread)
+
+For direct-style JITs, the current architecture is simpler at the backend but has explicit TCO analysis obligations.
+
+For CPS-first JITs, the allocator pressure moves to continuation escape analysis: many continuation values can become heap-resident because they are passed around structurally.
+
+Practical takeaway for this implementation slice:
+
+- keep CPS IR for clarity and effect accounting,
+- avoid adding extra escape-heavy continuation allocation without a clear strategy,
+- and preserve row/handler metadata exactly where calls/raises/resume are introduced.
+
+## 6) Current-project relevance
+
+This note intentionally maps the conversation to concrete syntax already supported by the available target surfaces:
+
+- **Core** forms for recursive aggregates and projection-based mutual references,
+- **CPS** constructor shape (especially `LetRec`, `LetCont`, `If`, `Call`, `Jump`, `Handle`) as produced by lowering,
+- and a surface sketch for intent only (useful when validating whether recursion examples are representable at the boundary).
+
+If you want, I can now add a strict “target matrix” for each example row by row: exact Core parser-ready form, exact `.core.cps.golden` form, and a short invariance check for the row effects expected at every call/handle boundary.

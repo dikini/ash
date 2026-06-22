@@ -1,6 +1,6 @@
 # TASK-1683: Validate CPS Multi-Shot Row Legality
 
-**Status:** Planned
+**Status:** ✅ Complete
 **Phase:** [PLAN-164](../PLAN-164-CORE-CPS-CONTINUATION-MULTIPLICITY.md)
 **Owner:** Phase 164
 
@@ -74,13 +74,13 @@ Reject malformed CPS input that marks non-pure continuations as multi-shot-pure.
 
 ## Completion Checklist
 
-- [ ] Invalid multi-shot rows are rejected before ordinary execution.
-- [ ] Declared-empty but effectful multi-shot continuation bodies are rejected.
-- [ ] Invalid multi-shot `LetCont` rows are rejected before ordinary execution.
-- [ ] Declared-empty but effectful multi-shot `LetCont` bodies are rejected.
-- [ ] Invalid multi-shot handler resume rows are rejected before resume construction.
-- [ ] Legacy omitted handler rows are affine-only and are not treated as `Known({})`.
-- [ ] Statically resolvable handler resume-row mismatches are rejected.
+- [x] Invalid multi-shot rows are rejected before ordinary execution.
+- [x] Declared-empty but effectful multi-shot continuation bodies are rejected.
+- [x] Invalid multi-shot `LetCont` rows are rejected before ordinary execution.
+- [x] Declared-empty but effectful multi-shot `LetCont` bodies are rejected.
+- [x] Invalid multi-shot handler resume rows are rejected before resume construction.
+- [x] Legacy omitted handler rows are affine-only and are not treated as `Known({})`.
+- [x] Statically resolvable handler resume-row mismatches are rejected.
 - [ ] `LetContCall` row under-reporting is rejected.
-- [ ] Affine non-empty rows are unaffected.
-- [ ] CHANGELOG has a task entry.
+- [x] Affine non-empty rows are unaffected.
+- [x] CHANGELOG has a task entry.

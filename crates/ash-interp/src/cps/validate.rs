@@ -125,12 +125,7 @@ fn validate_term(term: &Term, ctx: &mut ValidationContext) -> Result<(), CpsVali
             multiplicity,
         } => {
             // Validate row and multiplicity legality for LetCont.
-            validate_row(row)?;
-            if *multiplicity == ContMultiplicity::MultiShotPure && !row.items.is_empty() {
-                return Err(CpsValidationError::InvalidSyntacticPosition(format!(
-                    "multi-shot-pure continuation must declare a closed empty row, got {row:?}"
-                )));
-            }
+            validate_cont_value(row, multiplicity, cont_body)?;
             let mut cont_ctx = ctx.with_binding(param.clone());
             validate_term(cont_body, &mut cont_ctx)?;
             let mut new_ctx = ctx.with_label(name.clone());
@@ -269,6 +264,99 @@ fn validate_term(term: &Term, ctx: &mut ValidationContext) -> Result<(), CpsVali
     }
 }
 
+/// Validate continuation value legality.
+///
+/// - Multi-shot-pure continuations require a closed empty declared row.
+/// - Affine continuations are valid with any row.
+#[allow(clippy::result_large_err)]
+fn validate_cont_value(
+    row: &EffectRow,
+    multiplicity: &ContMultiplicity,
+    body: &Term,
+) -> Result<(), CpsValidationError> {
+    validate_row(row)?;
+    if *multiplicity == ContMultiplicity::MultiShotPure {
+        // Declared row must be closed empty.
+        if !row.items.is_empty() {
+            return Err(CpsValidationError::InvalidSyntacticPosition(format!(
+                "multi-shot-pure continuation must declare a closed empty row, got {row:?}"
+            )));
+        }
+        // Effective row of body must also be empty (or unresolvable -> reject).
+        let effective = effective_term_row(body);
+        if !effective.items.is_empty() {
+            return Err(CpsValidationError::InvalidSyntacticPosition(format!(
+                "multi-shot-pure continuation body has non-empty effective row {effective:?}"
+            )));
+        }
+    }
+    Ok(())
+}
+
+/// Best-effort effective row computation for a continuation body.
+///
+/// Returns the row of the innermost terminal term if statically resolvable.
+/// For `Jump`, `Call`, `Raise`, `Handle`, `If` — returns the row field.
+/// For `LetVal`, `LetPrim`, `LetCont`, `LetRec`, `LetContCall`, `RecordDischarge`
+/// — recurses into the body. For `Return` and `Trap` — returns empty.
+fn effective_term_row(term: &Term) -> EffectRow {
+    match term {
+        Term::Jump { row, .. }
+        | Term::Call { row, .. }
+        | Term::Raise { row, .. }
+        | Term::Handle { row, .. }
+        | Term::If { row, .. } => row.clone(),
+        Term::LetVal { body, .. }
+        | Term::LetPrim { body, .. }
+        | Term::LetCont { body, .. }
+        | Term::LetRec { body, .. }
+        | Term::LetContCall { body, .. }
+        | Term::RecordDischarge { body, .. } => effective_term_row(body),
+        Term::Return { .. } | Term::Trap { .. } => EffectRow::default(),
+        Term::Match { arms, default, .. } => {
+            // Return the row of the first arm, or empty if none.
+            if let Some((_, arm_body)) = arms.first() {
+                effective_term_row(arm_body)
+            } else if let Some(default_body) = default {
+                effective_term_row(default_body)
+            } else {
+                EffectRow::default()
+            }
+        }
+    }
+}
+
+/// Validate handler clause resume row/multiplicity legality.
+///
+/// - Multi-shot-pure resumes require a known closed empty row.
+/// - Legacy/inherit-from-target resumes are affine-only.
+/// - Known non-empty rows are valid only for affine.
+#[allow(clippy::result_large_err)]
+fn validate_resume_metadata(
+    resume_row: &ResumeRowMetadata,
+    resume_multiplicity: &ContMultiplicity,
+) -> Result<(), CpsValidationError> {
+    if *resume_multiplicity == ContMultiplicity::MultiShotPure {
+        match resume_row {
+            ResumeRowMetadata::Known(row) => {
+                if !row.items.is_empty() {
+                    return Err(CpsValidationError::InvalidSyntacticPosition(format!(
+                        "multi-shot-pure resume requires a known empty row, got {row:?}"
+                    )));
+                }
+            }
+            ResumeRowMetadata::InheritFromTarget => {
+                return Err(CpsValidationError::InvalidSyntacticPosition(
+                    "multi-shot-pure resume requires a known row; \
+                     legacy inherit-from-target is not valid"
+                        .to_string(),
+                ));
+            }
+        }
+    }
+    Ok(())
+}
+
 #[allow(clippy::result_large_err)]
 fn validate_value(value: &Value, ctx: &mut ValidationContext) -> Result<(), CpsValidationError> {
     match value {
@@ -289,7 +377,15 @@ fn validate_value(value: &Value, ctx: &mut ValidationContext) -> Result<(), CpsV
             validate_term(body, &mut lam_ctx)?;
             Ok(())
         }
-        Value::Cont { .. } => Ok(()),
+        Value::Cont {
+            body,
+            row,
+            multiplicity,
+            ..
+        } => {
+            validate_cont_value(row, multiplicity, body)?;
+            Ok(())
+        }
         Value::ThunkClosure {
             body,
             captured_env: _,
@@ -407,6 +503,8 @@ fn validate_handler_clause(
     ctx: &mut ValidationContext,
 ) -> Result<(), CpsValidationError> {
     validate_row(&clause.row)?;
+    // Validate resume row/multiplicity legality (SPEC-102 §6.4).
+    validate_resume_metadata(&clause.resume_row, &clause.resume_multiplicity)?;
     // Check handler parameter arity matches effect operation argument types
     if clause.params.len() != clause.op.arg_types.len() {
         return Err(CpsValidationError::HandlerArityMismatch {

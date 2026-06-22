@@ -339,8 +339,8 @@ fn invoke_cont(cont_value: &Value, arg_value: &Value, runtime: &mut CpsRuntime) 
         captured_env,
         captured_chain,
         consumed,
+        row,
         multiplicity,
-        ..
     } = cont_value
     else {
         return Err(CpsError::ExpectedContinuation(cont_value.clone()));
@@ -360,6 +360,13 @@ fn invoke_cont(cont_value: &Value, arg_value: &Value, runtime: &mut CpsRuntime) 
             eval_unchecked_with_runtime(body, &new_env, captured_chain, runtime)
         }
         ContMultiplicity::MultiShotPure => {
+            // Runtime fail-closed: multi-shot-pure with a non-empty row is
+            // invalid even if validation was bypassed (SPEC-102 §6.4.1).
+            if !row.items.is_empty() {
+                return Err(CpsError::Trap(TrapReason::Custom(format!(
+                    "multi-shot-pure continuation has non-empty declared row {row:?}"
+                ))));
+            }
             // Multi-shot continuations must not inspect or set the consumed flag.
             // Each invocation uses the captured environment and handler chain
             // independently.

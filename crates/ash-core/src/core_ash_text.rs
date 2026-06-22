@@ -288,6 +288,12 @@ impl Parser {
                 cont: self.parse_cont_ref_inner()?,
                 arg: self.parse_atom_inner()?,
             },
+            "let-cont-call" => CoreExpr::LetContCall {
+                name: self.expect_symbol()?,
+                cont: self.parse_cont_ref_inner()?,
+                arg: self.parse_atom_inner()?,
+                body: Box::new(self.parse_expr_inner()?),
+            },
             "raise" => CoreExpr::Raise {
                 op: self.parse_effect_op_inner()?,
                 args: self.parse_atom_list()?,
@@ -1122,6 +1128,17 @@ fn format_expr(expr: &CoreExpr) -> String {
         CoreExpr::Jump { cont, arg } => {
             format!("(jump {} {})", format_cont_ref(cont), format_atom(arg))
         }
+        CoreExpr::LetContCall {
+            name,
+            cont,
+            arg,
+            body,
+        } => format!(
+            "(let-cont-call {name} {} {} {})",
+            format_cont_ref(cont),
+            format_atom(arg),
+            format_expr(body)
+        ),
         CoreExpr::Raise { op, args } => {
             format!(
                 "(raise {} {})",

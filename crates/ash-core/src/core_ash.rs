@@ -314,6 +314,17 @@ pub enum CoreExpr {
         cont: CoreContRef,
         arg: CoreAtom,
     },
+    /// Answer-binding continuation invocation (SPEC-102 §8.7-8.8).
+    ///
+    /// Invokes `cont` with `arg`, binds the continuation answer to `name`,
+    /// then evaluates `body` with `name` in scope. Affine continuations are
+    /// consumed; multi-shot-pure continuations remain reusable.
+    LetContCall {
+        name: CoreName,
+        cont: CoreContRef,
+        arg: CoreAtom,
+        body: Box<CoreExpr>,
+    },
     Raise {
         op: CoreEffectOp,
         args: Vec<CoreAtom>,

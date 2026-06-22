@@ -139,7 +139,7 @@ Update this section as tasks complete:
 | [161](PLAN-161-CORE-ASH-IR-FOUNDATION.md) | 13 | 13 | ✅ Complete; Core Ash foundation and public Core text round-trip review remediation verified |
 | [162](PLAN-162-CORE-ASH-TYPE-CHECKING.md) | 12 | 12 | ✅ Complete; Core Ash type checker implemented with reference docs and closeout review |
 | [163](PLAN-163-CORE-LAZY-MEMO-MODES.md) | 15 | 15 | ✅ Complete; SPEC-101 Core lazy/memo mode implementation packet plus review remediation |
-| [164](PLAN-164-CORE-CPS-CONTINUATION-MULTIPLICITY.md) | 12 | 1 | 📝 Planned; SPEC-102 packet complete, implementation starts at TASK-1681 |
+| [164](PLAN-164-CORE-CPS-CONTINUATION-MULTIPLICITY.md) | 12 | 12 | ✅ Complete; SPEC-102 Core/CPS continuation multiplicity implemented and verified |
 
 ---
 
@@ -586,7 +586,7 @@ Implements SPEC-101 for Core Ash: explicit `Strict`/`Lazy`/`Memo` mode types, th
 
 ## Phase 164: Core CPS Continuation Multiplicity
 
-**Status:** 📝 Planned; 2/12 complete, implementation continues at TASK-1682
+**Status:** ✅ Complete; 12/12 complete and verified
 **Plan:** [PLAN-164: Core CPS Continuation Multiplicity](PLAN-164-CORE-CPS-CONTINUATION-MULTIPLICITY.md)
 **Spec:** [SPEC-102: CPS Continuation Multiplicity](../spec/SPEC-102-CPS-CONTINUATION-MULTIPLICITY.md)
 **Depends on:** Phase 159, Phase 160, Phase 161, Phase 162, Phase 163; SPEC-102, SPEC-101, SPEC-100, SPEC-099, SPEC-099c, SPEC-098b, SPEC-097b, SPEC-096b.
@@ -601,9 +601,9 @@ Implements explicit continuation multiplicity for Core Ash and CPS IR. Existing 
 | [TASK-1683](tasks/TASK-1683-cps-multishot-validation.md) | Validate CPS multi-shot row legality and malformed unchecked input | ✅ Complete |
 | [TASK-1684](tasks/TASK-1684-core-cont-multiplicity-wellformedness.md) | Type-check Core continuation multiplicity well-formedness | ✅ Complete |
 | [TASK-1685](tasks/TASK-1685-core-handler-multishot-resume-typecheck.md) | Accept legal multi-shot handler resumes and reject illegal ones | ✅ Complete |
-| [TASK-1686](tasks/TASK-1686-core-affine-use-discipline-with-multishot.md) | Add Core LetContCall and preserve affine use discipline with multi-shot | 📝 Planned |
-| [TASK-1687](tasks/TASK-1687-core-to-cps-multiplicity-lowering.md) | Preserve multiplicity and LetContCall through Core-to-CPS lowering | 📝 Planned |
-| [TASK-1688](tasks/TASK-1688-core-text-fixtures-for-continuation-multiplicity.md) | Add Core text fixtures and golden coverage for multiplicity and LetContCall | 📝 Planned |
-| [TASK-1689](tasks/TASK-1689-motivational-multishot-fixtures.md) | Add Choice/backtracking/nested/discard motivational fixtures | 📝 Planned |
-| [TASK-1690](tasks/TASK-1690-continuation-multiplicity-reference-docs.md) | Add reference docs and non-normative commentary links | 📝 Planned |
-| [TASK-1691](tasks/TASK-1691-phase-164-closeout.md) | Close out Phase 164 with verification, changelog, and index reconciliation | 📝 Planned |
+| [TASK-1686](tasks/TASK-1686-core-affine-use-discipline-with-multishot.md) | Add Core LetContCall and preserve affine use discipline with multi-shot | ✅ Complete |
+| [TASK-1687](tasks/TASK-1687-core-to-cps-multiplicity-lowering.md) | Preserve multiplicity and LetContCall through Core-to-CPS lowering | ✅ Complete |
+| [TASK-1688](tasks/TASK-1688-core-text-fixtures-for-continuation-multiplicity.md) | Add Core text fixtures and golden coverage for multiplicity and LetContCall | ✅ Complete |
+| [TASK-1689](tasks/TASK-1689-motivational-multishot-fixtures.md) | Add Choice/backtracking/nested/discard motivational fixtures | ✅ Complete |
+| [TASK-1690](tasks/TASK-1690-continuation-multiplicity-reference-docs.md) | Add reference docs and non-normative commentary links | ✅ Complete |
+| [TASK-1691](tasks/TASK-1691-phase-164-closeout.md) | Close out Phase 164 with verification, changelog, and index reconciliation | ✅ Complete |

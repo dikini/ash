@@ -1,6 +1,6 @@
 # TASK-1688: Add Core Text Fixtures for Continuation Multiplicity
 
-**Status:** Planned
+**Status:** ✅ Complete
 **Phase:** [PLAN-164](../PLAN-164-CORE-CPS-CONTINUATION-MULTIPLICITY.md)
 **Owner:** Phase 164
 
@@ -52,6 +52,6 @@ continuation invocation.
 
 ## Completion Checklist
 
-- [ ] Legal fixtures round-trip.
-- [ ] Invalid fixtures reject for the intended reason.
-- [ ] CHANGELOG has a task entry.
+- [x] Legal fixtures round-trip.
+- [x] Invalid fixtures reject for the intended reason.
+- [x] CHANGELOG has a task entry.

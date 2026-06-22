@@ -191,6 +191,7 @@ fn first_jump_row(term: &Term) -> Option<&EffectRow> {
         | Term::Raise { .. }
         | Term::Match { .. }
         | Term::Return { .. }
+        | Term::LetContCall { .. }
         | Term::Trap { .. } => None,
     }
 }
@@ -215,6 +216,7 @@ fn first_call_row(term: &Term) -> Option<&EffectRow> {
         | Term::Raise { .. }
         | Term::Match { .. }
         | Term::Return { .. }
+        | Term::LetContCall { .. }
         | Term::Trap { .. } => None,
     }
 }
@@ -239,6 +241,7 @@ fn first_handle_row(term: &Term) -> Option<&EffectRow> {
         | Term::Raise { .. }
         | Term::Match { .. }
         | Term::Return { .. }
+        | Term::LetContCall { .. }
         | Term::Trap { .. } => None,
     }
 }

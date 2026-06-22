@@ -1,6 +1,6 @@
 # TASK-1689: Add Motivational Multi-Shot Fixtures
 
-**Status:** Planned
+**Status:** ✅ Complete
 **Phase:** [PLAN-164](../PLAN-164-CORE-CPS-CONTINUATION-MULTIPLICITY.md)
 **Owner:** Phase 164
 
@@ -57,7 +57,7 @@ replace the Core motivational fixtures.
 
 ## Completion Checklist
 
-- [ ] All four motivational positive examples execute or type-check as Core fixtures.
-- [ ] Both negative examples reject for the intended reason.
-- [ ] Surface syntax remains untouched.
-- [ ] CHANGELOG has a task entry.
+- [x] All four motivational positive examples execute or type-check as Core fixtures.
+- [x] Both negative examples reject for the intended reason.
+- [x] Surface syntax remains untouched.
+- [x] CHANGELOG has a task entry.

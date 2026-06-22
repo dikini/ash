@@ -6,12 +6,14 @@
 
 use crate::core_ash::{
     CoreAtom, CoreContRef, CoreContractDischarge, CoreDischargeMode, CoreEffectOp, CoreExpr,
-    CoreHandlerClause, CorePrimOp, CoreRow, CoreRowItem, CoreTrapReason, CoreType, CoreValue,
+    CoreHandlerClause, CoreMultiplicity, CorePrimOp, CoreRow, CoreRowItem, CoreTrapReason,
+    CoreType, CoreValue,
 };
 use crate::core_ash_validate::ValidCoreProgram;
 use crate::cps::{
-    Atom, ContRef, ContractDischarge, DischargeType, EffectItem, EffectItemKind, EffectOp,
-    EffectRow, Env, HandlerChain, HandlerClause, PrimOp, Term, ThunkMode, TrapReason, Value,
+    Atom, ContMultiplicity, ContRef, ContractDischarge, DischargeType, EffectItem, EffectItemKind,
+    EffectOp, EffectRow, Env, HandlerChain, HandlerClause, PrimOp, ResumeRowMetadata, Term,
+    ThunkMode, TrapReason, Value,
 };
 use std::collections::HashMap;
 
@@ -300,6 +302,8 @@ fn lower_expr_with_letcall_rows(
                 param: name.clone(),
                 cont_body: Box::new(cont_body),
                 body: Box::new(call),
+                row: lower_row(&cont_row),
+                multiplicity: ContMultiplicity::default(),
             })
         }
         CoreExpr::If {
@@ -390,6 +394,8 @@ fn lower_expr_with_letcall_rows(
                     param: name.clone(),
                     cont_body: Box::new(lowered_body),
                     body: Box::new(lowered_expr),
+                    row: lower_row(&body_row),
+                    multiplicity: ContMultiplicity::default(),
                 })
             } else {
                 let latent_row = match mode {
@@ -478,6 +484,26 @@ fn lower_expr_with_letcall_rows(
                 cont: lower_cont_ref(cont),
                 arg: lower_atom(arg)?,
                 row: lower_row(&row),
+            })
+        }
+        CoreExpr::LetContCall {
+            name,
+            cont,
+            arg,
+            body,
+        } => {
+            let body_path = with_child_path(path, 0);
+            Ok(Term::LetContCall {
+                name: name.clone(),
+                cont: core_cont_ref_name(cont).to_string(),
+                arg: lower_atom(arg)?,
+                row: lower_row(&cont_row(cont, state)),
+                body: Box::new(lower_expr_with_letcall_rows(
+                    body,
+                    state,
+                    &body_path,
+                    letcall_rows,
+                )?),
             })
         }
         CoreExpr::Raise { op, args } => Ok(Term::Raise {
@@ -680,6 +706,12 @@ fn lower_cont_ref(cont: &CoreContRef) -> ContRef {
     }
 }
 
+fn core_cont_ref_name(cont: &CoreContRef) -> &str {
+    match cont {
+        CoreContRef::Label(name) | CoreContRef::Var(name) => name,
+    }
+}
+
 fn cont_ref_name(cont: &ContRef) -> &str {
     match cont {
         ContRef::Label(name) | ContRef::Var(name) => name,
@@ -715,7 +747,8 @@ fn lower_handler_clause_with_letcall_rows(
     letcall_rows: &HashMap<Vec<usize>, CoreRow>,
 ) -> Result<HandlerClause, CoreLoweringError> {
     let resume_row = resume_row(&clause.resume.ty);
-    let guard = state.with_current_cont(ContRef::Var(clause.resume.name.clone()), resume_row);
+    let guard =
+        state.with_current_cont(ContRef::Var(clause.resume.name.clone()), resume_row.clone());
     let body = lower_expr_with_letcall_rows(&clause.body, state, path, letcall_rows);
     state.restore_current_cont(guard);
 
@@ -729,6 +762,8 @@ fn lower_handler_clause_with_letcall_rows(
         resume: clause.resume.name.clone(),
         body: Box::new(body?),
         row: lower_row(&clause.row),
+        resume_row: resume_row_metadata(&clause.resume.ty),
+        resume_multiplicity: resume_multiplicity(&clause.resume.ty),
     })
 }
 
@@ -736,6 +771,27 @@ fn resume_row(ty: &CoreType) -> CoreRow {
     match ty {
         CoreType::Cont { row, .. } => row.clone(),
         _ => CoreRow::default(),
+    }
+}
+
+fn resume_row_metadata(ty: &CoreType) -> ResumeRowMetadata {
+    match ty {
+        CoreType::Cont { row, .. } => ResumeRowMetadata::Known(lower_row(row)),
+        _ => ResumeRowMetadata::default(),
+    }
+}
+
+fn resume_multiplicity(ty: &CoreType) -> ContMultiplicity {
+    match ty {
+        CoreType::Cont { multiplicity, .. } => lower_multiplicity(*multiplicity),
+        _ => ContMultiplicity::default(),
+    }
+}
+
+fn lower_multiplicity(multiplicity: CoreMultiplicity) -> ContMultiplicity {
+    match multiplicity {
+        CoreMultiplicity::Affine => ContMultiplicity::Affine,
+        CoreMultiplicity::MultiShotPure => ContMultiplicity::MultiShotPure,
     }
 }
 
@@ -988,6 +1044,10 @@ fn local_row_with_letcall_rows(
 ) -> Result<CoreRow, CoreLoweringError> {
     match expr {
         CoreExpr::Atom(_) | CoreExpr::Jump { .. } | CoreExpr::Trap { .. } => Ok(CoreRow::default()),
+        CoreExpr::LetContCall { cont, body, .. } => Ok(union_rows(
+            &cont_row(cont, state),
+            &local_row_with_letcall_rows(body, state, &with_child_path(path, 0), letcall_rows)?,
+        )),
         CoreExpr::LetMode {
             name,
             mode,
@@ -1209,6 +1269,10 @@ fn total_row_with_letcall_rows(
             &state.context.current_cont_row,
         )),
         CoreExpr::Jump { cont, .. } => Ok(cont_row(cont, state)),
+        CoreExpr::LetContCall { cont, body, .. } => Ok(union_rows(
+            &cont_row(cont, state),
+            &total_row_with_letcall_rows(body, state, &with_child_path(path, 0), letcall_rows)?,
+        )),
         CoreExpr::Trap { .. } => Ok(CoreRow::default()),
         CoreExpr::Raise { op, .. } => Ok(union_rows(
             &effect_op_row(op),

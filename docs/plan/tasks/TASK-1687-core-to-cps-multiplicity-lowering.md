@@ -1,6 +1,6 @@
 # TASK-1687: Preserve Multiplicity and LetContCall Through Core-to-CPS Lowering
 
-**Status:** Planned
+**Status:** ✅ Complete
 **Phase:** [PLAN-164](../PLAN-164-CORE-CPS-CONTINUATION-MULTIPLICITY.md)
 **Owner:** Phase 164
 
@@ -57,10 +57,10 @@ Lower Core continuation multiplicity and answer-binding continuation invocation 
 
 ## Completion Checklist
 
-- [ ] Lowering preserves explicit multiplicity.
-- [ ] Core continuation binders lower through CPS `Term::LetCont` row and multiplicity fields.
-- [ ] Handler resume row and multiplicity survive through known CPS handler metadata.
-- [ ] Checked lowering never emits the legacy handler row compatibility state.
-- [ ] Core answer-binding continuation invocation lowers to CPS with row accounting.
-- [ ] Runtime integration proves lowered multi-shot works.
-- [ ] CHANGELOG has a task entry.
+- [x] Lowering preserves explicit multiplicity.
+- [x] Core continuation binders lower through CPS `Term::LetCont` row and multiplicity fields.
+- [x] Handler resume row and multiplicity survive through known CPS handler metadata.
+- [x] Checked lowering never emits the legacy handler row compatibility state.
+- [x] Core answer-binding continuation invocation lowers to CPS with row accounting.
+- [x] Runtime integration proves lowered multi-shot works.
+- [x] CHANGELOG has a task entry.

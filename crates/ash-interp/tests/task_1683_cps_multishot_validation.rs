@@ -6,8 +6,8 @@
 #![allow(clippy::result_large_err)]
 
 use ash_core::cps::{
-    Atom, ContMultiplicity, ContRef, EffectItem, EffectItemKind, EffectOp, EffectRow,
-    HandlerChain, HandlerClause, ResumeRowMetadata, Term, Value, ConsumedFlag, Env,
+    Atom, ConsumedFlag, ContMultiplicity, ContRef, EffectItem, EffectItemKind, EffectOp, EffectRow,
+    Env, HandlerChain, HandlerClause, ResumeRowMetadata, Term, Value,
 };
 use ash_interp::cps::validate::{CpsValidationError, validate_cps_program};
 use ash_interp::cps::{CpsError, CpsRuntime, eval_unchecked_with_runtime};
@@ -125,7 +125,10 @@ fn accept_multishot_cont_empty_row_empty_body() {
         body: Box::new(return_term()),
     };
     let result = validate_cps_program(&term);
-    assert!(result.is_ok(), "should accept valid multishot cont: {result:?}");
+    assert!(
+        result.is_ok(),
+        "should accept valid multishot cont: {result:?}"
+    );
 }
 
 #[test]
@@ -146,7 +149,10 @@ fn accept_affine_cont_with_nonempty_row() {
         body: Box::new(return_term()),
     };
     let result = validate_cps_program(&term);
-    assert!(result.is_ok(), "affine non-empty row should be valid: {result:?}");
+    assert!(
+        result.is_ok(),
+        "affine non-empty row should be valid: {result:?}"
+    );
 }
 
 // ---------------------------------------------------------------------------

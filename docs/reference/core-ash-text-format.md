@@ -45,6 +45,7 @@ Rows are requirement rows. They record what a term requires; they are not author
 (if Atom Expr Expr)
 (call Atom (Atom...))
 (jump (label name) Atom)
+(let-cont-call name ContRef Atom Expr)
 (raise EffectOp (Atom...))
 (handle HandlerClause Expr)
 (record-discharge ContractDischarge Expr)
@@ -63,6 +64,11 @@ Mode-aware fixture forms are also supported and covered by phase-163 text tests:
 (thunk lazy ResultType Row Expr)
 (thunk memo ResultType Row Expr)
 ```
+
+Continuation multiplicity fixtures also support `(cont A Ans Row affine)`,
+`(cont A Ans {} multi-shot-pure)`, and `(let-cont-call name cont-ref atom body)`. See
+[`core-cps-continuation-multiplicity.md`](core-cps-continuation-multiplicity.md) for the Phase 164
+reference behavior.
 
 ## Values
 
@@ -110,6 +116,11 @@ The phase-163 fixture corpus lives in `crates/ash-core/tests/fixtures/core/`. Th
 Phase-163 also includes `mode_invalid_type_mismatch.core`, which is intentionally rejected during validation and therefore has no CPS golden.
 
 `invalid_duplicate_row.core` is intentionally invalid. It parses as Core text, then fails validation because duplicate row items are rejected before lowering.
+
+Phase-164 continuation multiplicity fixtures include `multishot_resume_text_roundtrip.core`,
+`affine_empty_row_remains_affine.core`, `invalid_multishot_nonempty_row.core`,
+`invalid_multishot_open_row.core`, `let_cont_call_text_roundtrip.core`, and the motivational
+`motivational_*` multi-shot fixtures.
 
 ## Implementation Boundaries
 

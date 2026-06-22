@@ -1,6 +1,6 @@
 # TASK-1690: Add Continuation Multiplicity Reference Documentation
 
-**Status:** Planned
+**Status:** ✅ Complete
 **Phase:** [PLAN-164](../PLAN-164-CORE-CPS-CONTINUATION-MULTIPLICITY.md)
 **Owner:** Phase 164
 
@@ -41,7 +41,7 @@ rationale.
 
 ## Completion Checklist
 
-- [ ] Reference docs exist and link the spec/plan.
-- [ ] Non-normative commentary is labeled as such.
-- [ ] Docs consistency test passes.
-- [ ] CHANGELOG has a task entry.
+- [x] Reference docs exist and link the spec/plan.
+- [x] Non-normative commentary is labeled as such.
+- [x] Docs consistency test passes.
+- [x] CHANGELOG has a task entry.

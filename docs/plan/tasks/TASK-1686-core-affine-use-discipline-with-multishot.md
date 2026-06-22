@@ -1,6 +1,6 @@
 # TASK-1686: Add Core LetContCall and Preserve Affine Use Discipline
 
-**Status:** Planned
+**Status:** ✅ Complete
 **Phase:** [PLAN-164](../PLAN-164-CORE-CPS-CONTINUATION-MULTIPLICITY.md)
 **Owner:** Phase 164
 
@@ -55,7 +55,7 @@ repeated affine resume use remains rejected while repeated multi-shot-pure resum
 
 ## Completion Checklist
 
-- [ ] Affine use discipline remains enforced.
-- [ ] Multi-shot repeated use is allowed only for legal multi-shot types.
-- [ ] Core can express answer-binding continuation invocation without surface syntax changes.
-- [ ] CHANGELOG has a task entry.
+- [x] Affine use discipline remains enforced.
+- [x] Multi-shot repeated use is allowed only for legal multi-shot types.
+- [x] Core can express answer-binding continuation invocation without surface syntax changes.
+- [x] CHANGELOG has a task entry.

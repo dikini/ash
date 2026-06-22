@@ -1,0 +1,1 @@
+(handle (clause (cap kv.read : (String) -> String) ((key : String)) (resume resume : (cont String String {} affine)) : {} (jump resume key)) (raise (cap kv.read : (String) -> String) ((lit-string "user:7"))))

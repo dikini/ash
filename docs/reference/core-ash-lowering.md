@@ -12,7 +12,7 @@ The lowering pass handles the Phase 161/163 fixture subset:
 - lambda, record, tuple, and discharge-marker values where the current CPS carrier can represent them;
 - `let-val`, `let-rec`, `let-prim`, `let-call`, `if`, tail `call`, and `jump`;
 - capability, channel, process, and failure `raise` operations;
-- single-clause `handle` with affine resume metadata;
+- single-clause `handle` with affine or legal multi-shot-pure resume metadata;
 - `record-discharge`;
 - `trap`;
 - `let-mode` and `force` mode forms;
@@ -55,7 +55,12 @@ Core `Raise` lowers to CPS `Raise` with the current continuation as `resume`. Th
 
 Core `Handle` lowers to CPS `Handle` with the current continuation in `Handle.cont`. `Handle.row is local residual row`: it comes from the handler clause row and excludes the outer continuation row. The total behavior is accounted for by combining this local residual row with the continuation row at the surrounding call/continuation boundary.
 
-Handler resume parameters lower as affine continuation variables. Phase 161 validation rejects duplicate direct resume jumps, ordinary argument passing, lambda capture, and record/tuple storage of the resume variable. `MultiShotPure is out of scope` for this implementation slice.
+Handler resume parameters lower to CPS handler metadata. Checked lowering emits
+`HandlerClause.resume_row = Known(row)` and maps Core `affine`/`multi-shot-pure` to CPS
+`Affine`/`MultiShotPure`. Core `(let-cont-call name cont-ref atom body)` lowers to CPS
+`Term::LetContCall` with the checked continuation row. See
+[`core-cps-continuation-multiplicity.md`](core-cps-continuation-multiplicity.md) for the Phase 164
+reference behavior.
 
 Contract discharge lowers to CPS `RecordDischarge`. `ContractViolation is trap metadata`: dynamic contract failure lowers to `Trap { reason: ContractViolation }` under the discharge record, not to a contract row item and not to a raised operation. Recoverable behavior must use an explicit failure operation upstream.
 
@@ -81,7 +86,6 @@ The following features are intentionally not implemented in this phase:
 - surface-to-Core lowering is out of scope;
 - typeclass solving is out of scope;
 - user-defined algebraic effects are out of scope;
-- MultiShotPure is out of scope;
 - Core Match is out of scope;
 - full type checker is out of scope.
 

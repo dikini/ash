@@ -178,6 +178,7 @@ fn lowers_non_tail_call_by_introducing_let_cont() {
         param,
         cont_body,
         body,
+        ..
     } = lowered
     else {
         panic!("expected LetCont for non-tail call");

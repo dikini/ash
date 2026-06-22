@@ -849,6 +849,7 @@ fn collect_letcall_function_rows(
         CoreExpr::Atom(_)
         | CoreExpr::Call { .. }
         | CoreExpr::Jump { .. }
+        | CoreExpr::LetContCall { .. }
         | CoreExpr::Trap { .. } => Ok(()),
         CoreExpr::LetVal {
             name,
@@ -2349,6 +2350,12 @@ fn type_check_expr(
             })
         }
         CoreExpr::Jump { cont, arg } => type_check_jump(cont, arg, env),
+        CoreExpr::LetContCall {
+            name,
+            cont,
+            arg,
+            body,
+        } => type_check_letcontcall(name, cont, arg, body, env),
         CoreExpr::Raise { op, args } => type_check_raise(op, args, env),
         CoreExpr::Handle { clause, body } => type_check_handle(clause, body, env),
         CoreExpr::RecordDischarge { discharge, body } => {
@@ -2970,6 +2977,10 @@ fn clause_may_complete_without_resume(expr: &CoreExpr, resume_name: &str) -> boo
         CoreExpr::Atom(_) | CoreExpr::Call { .. } | CoreExpr::Raise { .. } => true,
         CoreExpr::Trap { .. } => false,
         CoreExpr::Jump { cont, .. } => cont_ref_name(cont) != resume_name,
+        CoreExpr::LetContCall { cont, body, .. } => {
+            cont_ref_name(cont) != resume_name
+                || clause_may_complete_without_resume(body, resume_name)
+        }
         CoreExpr::LetVal { body, .. }
         | CoreExpr::LetRec { body, .. }
         | CoreExpr::LetPrim { body, .. }
@@ -3231,6 +3242,52 @@ fn type_check_jump(
         ty: *answer,
         row: CoreRow::default(),
         facts,
+    })
+}
+
+fn type_check_letcontcall(
+    name: &CoreName,
+    cont: &CoreContRef,
+    arg: &CoreAtom,
+    body: &CoreExpr,
+    env: &CoreTypeCheckEnv,
+) -> Result<TypedCoreExpr, CoreTypeCheckError> {
+    let Some(cont_ty) = env.continuations().lookup(cont_ref_name(cont)).cloned() else {
+        return Err(CoreTypeCheckError::UnknownContinuation {
+            name: cont_ref_name(cont).to_owned(),
+        });
+    };
+    check_core_type_well_formed(&cont_ty, env)?;
+    let CoreType::Cont {
+        input,
+        answer,
+        row,
+        multiplicity: _,
+    } = cont_ty
+    else {
+        return Err(unsupported("non-continuation let-cont-call target"));
+    };
+
+    let actual = type_check_atom(arg, env)?;
+    let mut facts = check_type_against_annotation(&input, &actual, env)?;
+    facts
+        .jump_continuation_rows
+        .insert(cont.clone(), row.clone());
+
+    // Bind the answer name and check the body.
+    let mut body_env = env.clone();
+    body_env
+        .values_mut()
+        .insert(name.clone(), (*answer).clone());
+    let body_checked = type_check_expr(body, &body_env)?;
+
+    // The overall row is the continuation invocation row plus the body row.
+    let combined_row = union_core_rows_structural(&row, &body_checked.row, env)?;
+
+    Ok(TypedCoreExpr {
+        ty: body_checked.ty,
+        row: combined_row,
+        facts: merge_typecheck_facts(facts, body_checked.facts),
     })
 }
 

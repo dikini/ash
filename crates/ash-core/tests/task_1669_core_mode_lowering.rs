@@ -236,6 +236,7 @@ fn strict_letmode_lowering_remains_direct_binding() {
             param,
             cont_body,
             body,
+            ..
         } => {
             assert_eq!(name, "__k0");
             assert_eq!(param, "value");

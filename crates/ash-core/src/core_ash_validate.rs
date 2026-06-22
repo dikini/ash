@@ -184,6 +184,10 @@ fn validate_expr(
             validate_data_atoms(args)
         }
         CoreExpr::Jump { arg, .. } => validate_data_atom(arg),
+        CoreExpr::LetContCall { arg, body, .. } => {
+            validate_data_atom(arg)?;
+            validate_expr(body, bindings)
+        }
         CoreExpr::Raise { op, args } => {
             validate_effect_op(op)?;
             validate_data_atoms(args)
@@ -552,6 +556,13 @@ fn count_affine_resume_uses(resume: &str, expr: &CoreExpr) -> Result<usize, Core
             Ok(usize::from(
                 matches!(cont, CoreContRef::Var(name) if name == resume),
             ))
+        }
+        CoreExpr::LetContCall {
+            cont, arg, body, ..
+        } => {
+            reject_resume_atom(resume, arg, "used as ordinary cont-call argument")?;
+            let cont_use = usize::from(matches!(cont, CoreContRef::Var(name) if name == resume));
+            Ok(cont_use + count_affine_resume_uses(resume, body)?)
         }
         CoreExpr::Raise { args, .. } => {
             reject_resume_atoms(resume, args, "passed as raised operation argument")?;

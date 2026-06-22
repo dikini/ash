@@ -1,6 +1,6 @@
 # TASK-1691: Close Out Phase 164
 
-**Status:** Planned
+**Status:** ✅ Complete
 **Phase:** [PLAN-164](../PLAN-164-CORE-CPS-CONTINUATION-MULTIPLICITY.md)
 **Owner:** Phase 164
 
@@ -29,30 +29,31 @@ packet.
 
 ## Required Verification
 
-Run:
+Passed on 2026-06-22:
 
 ```bash
-cargo fmt --check
-cargo test -p ash-core --test task_1681_cps_cont_multiplicity_carrier
-cargo test -p ash-interp --test task_1682_cps_multishot_runtime
-cargo test -p ash-core --test task_1683_cps_multishot_validation
-cargo test -p ash-core --test task_1684_core_cont_multiplicity_wellformedness
-cargo test -p ash-core --test task_1685_core_handler_multishot_resume_typecheck
-cargo test -p ash-core --test task_1686_core_affine_use_discipline_with_multishot
-cargo test -p ash-core --test task_1687_core_to_cps_multiplicity_lowering
-cargo test -p ash-core --test task_1688_core_text_continuation_multiplicity
-cargo test -p ash-core --test task_1689_motivational_multishot_fixtures
-cargo test -p ash-core --test task_1690_continuation_multiplicity_docs_consistency
-cargo test -p spec_processor spec_links
-cargo test --all
-cargo clippy --all-targets --all-features
-git diff --check
+cargo fmt --check                                             # pass
+cargo test -p ash-core --test task_1681_cps_cont_multiplicity_carrier # pass
+cargo test -p ash-interp --test task_1682_cps_multishot_runtime       # pass
+cargo test -p ash-interp --test task_1683_cps_multishot_validation    # pass
+cargo test -p ash-core --test task_1684_core_cont_multiplicity_wellformedness # pass
+cargo test -p ash-core --test task_1685_core_handler_multishot_resume_typecheck # pass
+cargo test -p ash-core --test task_1686_core_affine_use_discipline_with_multishot # pass
+cargo test -p ash-core --test task_1687_core_to_cps_multiplicity_lowering # pass
+cargo test -p ash-core --test task_1688_core_text_continuation_multiplicity # pass
+cargo test -p ash-core --test task_1689_motivational_multishot_fixtures # pass
+cargo test -p ash-core --test task_1690_continuation_multiplicity_docs_consistency # pass
+cargo test -p ash-core --test task_1630_core_docs_consistency # pass
+cargo test -p spec_processor --test spec_links_tests          # pass
+cargo test --all                                             # pass
+cargo clippy --all-targets --all-features                    # pass
+git diff --check                                             # pass
 ```
 
 ## Completion Checklist
 
-- [ ] All Phase 164 tasks complete.
-- [ ] PLAN-INDEX and PLAN-164 agree.
-- [ ] CHANGELOG has final closeout entry.
-- [ ] Full verification evidence is recorded.
-- [ ] No out-of-scope surface changes are present.
+- [x] All Phase 164 tasks complete.
+- [x] PLAN-INDEX and PLAN-164 agree.
+- [x] CHANGELOG has final closeout entry.
+- [x] Full verification evidence is recorded.
+- [x] No out-of-scope surface changes are present.

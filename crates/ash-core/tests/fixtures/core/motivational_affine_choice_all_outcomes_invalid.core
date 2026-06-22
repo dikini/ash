@@ -1,0 +1,1 @@
+(handle (clause (cap choice.pick : (Unit) -> Int) ((seed : Unit)) (resume resume : (cont Int Int {} affine)) : {} (let-cont-call left resume (lit-int 1) (let-cont-call right resume (lit-int 2) (let-prim total add (left right) total)))) (raise (cap choice.pick : (Unit) -> Int) ((lit-unit))))

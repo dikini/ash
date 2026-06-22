@@ -4,7 +4,7 @@ title: Core CPS Continuation Multiplicity
 kind: plan
 audience: [human, agent]
 authority: design
-status: planned
+status: complete
 stability: alpha
 owner: language
 last_verified: 2026-06-22
@@ -44,7 +44,8 @@ the acceptance boundary.
 
 ## Status
 
-Planned: 1/12 tasks complete. The spec/plan packet is written; implementation starts at TASK-1681.
+Complete: 12/12 tasks complete. Verification passed for focused Phase 164 suites, full workspace
+tests, and workspace clippy on 2026-06-22.
 
 ## Background
 
@@ -183,17 +184,17 @@ continuation row.
 | Task | Description | Estimate | Depends on | Status |
 |------|-------------|----------|------------|--------|
 | [TASK-1680](tasks/TASK-1680-continuation-multiplicity-spec-plan-packet.md) | Freeze SPEC-102 and Phase 164 planning packet | 2 | Phase 163 | Done |
-| [TASK-1681](tasks/TASK-1681-cps-cont-multiplicity-carrier.md) | Add CPS continuation, LetCont, LetContCall, and handler row/multiplicity carriers | 3 | TASK-1680 | Planned |
-| [TASK-1682](tasks/TASK-1682-cps-multishot-runtime.md) | Implement affine vs multi-shot CPS jump and LetContCall behavior | 4 | TASK-1681 | Planned |
-| [TASK-1683](tasks/TASK-1683-cps-multishot-validation.md) | Validate CPS multi-shot row legality and malformed unchecked input | 3 | TASK-1681 | Planned |
-| [TASK-1684](tasks/TASK-1684-core-cont-multiplicity-wellformedness.md) | Type-check Core continuation multiplicity well-formedness | 3 | TASK-1680 | Planned |
-| [TASK-1685](tasks/TASK-1685-core-handler-multishot-resume-typecheck.md) | Accept legal multi-shot handler resumes and reject illegal ones | 4 | TASK-1684 | Planned |
-| [TASK-1686](tasks/TASK-1686-core-affine-use-discipline-with-multishot.md) | Add Core LetContCall and preserve affine use discipline with multi-shot | 4 | TASK-1685 | Planned |
-| [TASK-1687](tasks/TASK-1687-core-to-cps-multiplicity-lowering.md) | Preserve multiplicity and LetContCall through Core-to-CPS lowering | 4 | TASK-1682, TASK-1685, TASK-1686 | Planned |
-| [TASK-1688](tasks/TASK-1688-core-text-fixtures-for-continuation-multiplicity.md) | Add Core text fixtures and golden coverage for multiplicity and LetContCall | 3 | TASK-1684, TASK-1686, TASK-1687 | Planned |
-| [TASK-1689](tasks/TASK-1689-motivational-multishot-fixtures.md) | Add Choice/backtracking/nested/discard motivational fixtures | 5 | TASK-1686, TASK-1687 | Planned |
-| [TASK-1690](tasks/TASK-1690-continuation-multiplicity-reference-docs.md) | Add reference docs and non-normative commentary links | 3 | TASK-1689 | Planned |
-| [TASK-1691](tasks/TASK-1691-phase-164-closeout.md) | Close out Phase 164 with verification, changelog, and index reconciliation | 2 | TASK-1690 | Planned |
+| [TASK-1681](tasks/TASK-1681-cps-cont-multiplicity-carrier.md) | Add CPS continuation, LetCont, LetContCall, and handler row/multiplicity carriers | 3 | TASK-1680 | Done |
+| [TASK-1682](tasks/TASK-1682-cps-multishot-runtime.md) | Implement affine vs multi-shot CPS jump and LetContCall behavior | 4 | TASK-1681 | Done |
+| [TASK-1683](tasks/TASK-1683-cps-multishot-validation.md) | Validate CPS multi-shot row legality and malformed unchecked input | 3 | TASK-1681 | Done |
+| [TASK-1684](tasks/TASK-1684-core-cont-multiplicity-wellformedness.md) | Type-check Core continuation multiplicity well-formedness | 3 | TASK-1680 | Done |
+| [TASK-1685](tasks/TASK-1685-core-handler-multishot-resume-typecheck.md) | Accept legal multi-shot handler resumes and reject illegal ones | 4 | TASK-1684 | Done |
+| [TASK-1686](tasks/TASK-1686-core-affine-use-discipline-with-multishot.md) | Add Core LetContCall and preserve affine use discipline with multi-shot | 4 | TASK-1685 | Done |
+| [TASK-1687](tasks/TASK-1687-core-to-cps-multiplicity-lowering.md) | Preserve multiplicity and LetContCall through Core-to-CPS lowering | 4 | TASK-1682, TASK-1685, TASK-1686 | Done |
+| [TASK-1688](tasks/TASK-1688-core-text-fixtures-for-continuation-multiplicity.md) | Add Core text fixtures and golden coverage for multiplicity and LetContCall | 3 | TASK-1684, TASK-1686, TASK-1687 | Done |
+| [TASK-1689](tasks/TASK-1689-motivational-multishot-fixtures.md) | Add Choice/backtracking/nested/discard motivational fixtures | 5 | TASK-1686, TASK-1687 | Done |
+| [TASK-1690](tasks/TASK-1690-continuation-multiplicity-reference-docs.md) | Add reference docs and non-normative commentary links | 3 | TASK-1689 | Done |
+| [TASK-1691](tasks/TASK-1691-phase-164-closeout.md) | Close out Phase 164 with verification, changelog, and index reconciliation | 2 | TASK-1690 | Done |
 
 ## Required Test Families
 

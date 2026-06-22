@@ -63,6 +63,33 @@ pub enum Atom {
     ConstructorName(Name),
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
+pub enum ContMultiplicity {
+    #[default]
+    Affine,
+    MultiShotPure,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[serde(tag = "kind", content = "row")]
+pub enum ResumeRowMetadata {
+    Known(EffectRow),
+    #[default]
+    InheritFromTarget,
+}
+
+fn is_default_effect_row(row: &EffectRow) -> bool {
+    row.items.is_empty()
+}
+
+fn is_default_cont_multiplicity(multiplicity: &ContMultiplicity) -> bool {
+    *multiplicity == ContMultiplicity::Affine
+}
+
+fn is_default_resume_row_metadata(metadata: &ResumeRowMetadata) -> bool {
+    matches!(metadata, ResumeRowMetadata::InheritFromTarget)
+}
+
 /// A value - inert data that can be bound to variables
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Value {
@@ -82,7 +109,10 @@ pub enum Value {
         captured_env: Env,
         captured_chain: HandlerChain,
         consumed: ConsumedFlag,
+        #[serde(default, skip_serializing_if = "is_default_effect_row")]
         row: EffectRow,
+        #[serde(default, skip_serializing_if = "is_default_cont_multiplicity")]
+        multiplicity: ContMultiplicity,
     },
     Record {
         fields: Vec<(Name, Value)>,
@@ -127,6 +157,18 @@ pub enum Term {
         name: Name,
         param: Name,
         cont_body: Box<Term>,
+        body: Box<Term>,
+        #[serde(default, skip_serializing_if = "is_default_effect_row")]
+        row: EffectRow,
+        #[serde(default, skip_serializing_if = "is_default_cont_multiplicity")]
+        multiplicity: ContMultiplicity,
+    },
+    LetContCall {
+        name: Name,
+        cont: Name,
+        arg: Atom,
+        #[serde(default, skip_serializing_if = "is_default_effect_row")]
+        row: EffectRow,
         body: Box<Term>,
     },
     Jump {
@@ -241,6 +283,10 @@ pub struct HandlerClause {
     pub resume: Name,
     pub body: Box<Term>,
     pub row: EffectRow,
+    #[serde(default, skip_serializing_if = "is_default_resume_row_metadata")]
+    pub resume_row: ResumeRowMetadata,
+    #[serde(default, skip_serializing_if = "is_default_cont_multiplicity")]
+    pub resume_multiplicity: ContMultiplicity,
 }
 
 /// Contract discharge metadata
@@ -453,6 +499,8 @@ mod tests {
                 reason: TrapReason::Custom("test".to_string()),
             }),
             row: EffectRow::default(),
+            resume_row: ResumeRowMetadata::default(),
+            resume_multiplicity: ContMultiplicity::default(),
         };
         chain.push(HandlerFrame::Shallow {
             clause: clause.clone(),
@@ -537,6 +585,8 @@ mod tests {
             body: Box::new(Term::Trap {
                 reason: TrapReason::Custom("test".to_string()),
             }),
+            row: EffectRow::default(),
+            multiplicity: ContMultiplicity::Affine,
         };
         assert_eq!(term, term.clone());
     }
@@ -588,6 +638,7 @@ mod tests {
             captured_chain: HandlerChain::new(),
             consumed: ConsumedFlag::new(),
             row: EffectRow::default(),
+            multiplicity: ContMultiplicity::Affine,
         };
         assert_eq!(value, value.clone());
     }

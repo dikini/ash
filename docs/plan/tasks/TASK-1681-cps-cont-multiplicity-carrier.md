@@ -1,6 +1,6 @@
 # TASK-1681: Add CPS Continuation and Invocation Carriers
 
-**Status:** Planned
+**Status:** ✅ Complete
 **Phase:** [PLAN-164](../PLAN-164-CORE-CPS-CONTINUATION-MULTIPLICITY.md)
 **Owner:** Phase 164
 
@@ -66,11 +66,11 @@ for all existing programs.
 
 ## Completion Checklist
 
-- [ ] CPS continuations carry multiplicity.
-- [ ] CPS `LetCont` carries row and multiplicity for runtime-created continuations.
-- [ ] CPS `LetContCall` exists as an IR carrier with row accounting.
-- [ ] CPS handler clauses carry resume row and multiplicity.
-- [ ] Legacy omitted handler rows deserialize to an inherit-from-target state.
-- [ ] Existing fixtures remain affine by default.
-- [ ] No runtime multi-shot behavior is claimed before TASK-1682.
-- [ ] CHANGELOG has a task entry.
+- [x] CPS continuations carry multiplicity.
+- [x] CPS `LetCont` carries row and multiplicity for runtime-created continuations.
+- [x] CPS `LetContCall` exists as an IR carrier with row accounting.
+- [x] CPS handler clauses carry resume row and multiplicity.
+- [x] Legacy omitted handler rows deserialize to an inherit-from-target state.
+- [x] Existing fixtures remain affine by default.
+- [x] No runtime multi-shot behavior is claimed before TASK-1682.
+- [x] CHANGELOG has a task entry.

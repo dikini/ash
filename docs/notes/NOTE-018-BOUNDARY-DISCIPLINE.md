@@ -292,6 +292,8 @@ Message passing crosses ownership, memory, effect, failure, and scheduling bound
 4. Reject process-local, region-local, or unsafe captured values.
 5. Defer full session/MPST typing while preserving hooks for later protocol checks.
 
+**Current decision pass:** See §5.
+
 **References:**
 
 - [NOTE-016](NOTE-016-RUNTIME-ORGANIZATION-BEHAVIOURS-REACTIVE-MODES.md)
@@ -321,6 +323,8 @@ process ends and what may survive.
 2. Add iteration subregions for long-lived services.
 3. Add real arenas/pools/slabs only when runtime evidence justifies them.
 4. Keep user-visible semantics independent of allocator strategy.
+
+**Current decision pass:** See §5.
 
 **References:**
 
@@ -779,7 +783,127 @@ effect group IO expands to cap fs.read, but groups do not grant authority
 6. How admission plans are serialized for runtime/app startup.
 7. Whether profile lifting remains explicit forever or becomes inferred under narrow rules.
 
-## 5. Cross-Cutting Boundary Contract
+## 5. Decision Pass D: Process/Channel and Memory/Region Boundaries
+
+### 5.1 Decision
+
+Target Ash should treat process communication as an ownership boundary, not a shared-memory
+shortcut.
+
+Resolved direction for the first target slice:
+
+1. **Processes are isolated by default.** A process owns its region, mailbox-visible state,
+   handlers/providers installed for it, and process-local resources.
+2. **Channel send crosses both a process boundary and a region boundary.** The sent payload
+   must be moved, copied, shared through an explicit handle, serialized, or rejected.
+3. **Owned sendable values move by default.** After a move send, the sender loses access and
+   the receiver owns the value in its region.
+4. **Copy is explicit and type/evidence-backed.** Copying requires a copyable value type or
+   an explicit serialization/copy protocol.
+5. **Sharing is not implicit.** Shared access must use an explicit immutable shared value,
+   resource handle, provider handle, or app/runtime-managed object with a declared lifetime.
+6. **Process-local and region-local values do not escape.** Raw local handles, borrowed
+   views, non-serializable host objects, local graph interpreter state, and unsafe captured
+   continuations are rejected at channel/app boundaries.
+7. **Process termination releases the process region.** Retained diagnostics, reports,
+   traces, shared handles, and supervisor state must copy or summarize what they need under a
+   separate lifetime policy.
+8. **Long-lived loops need subregions or equivalent discipline.** Per-message/request data
+   should not be retained unless placed in explicit state/resource/report structures.
+
+### 5.2 Boundary crossing modes
+
+| Mode | Meaning | Required evidence | Sender after send | Receiver after receive |
+|---|---|---|---|---|
+| move | transfer ownership | `Send`/move-safe payload | loses access | owns value |
+| copy | duplicate value | `Copy` or serialization/copy evidence | keeps original | owns duplicate |
+| share | share controlled reference/handle | `Share` or resource/provider handle contract | keeps handle/reference under rules | receives handle/reference under rules |
+| serialize | encode/decode through boundary format | `Serialize`/decode contract | keeps or moves source by protocol | owns decoded value |
+| reject | payload cannot cross | `ProcessLocal`/`RegionLocal`/unsafe capture fact | no send occurs | no receive occurs |
+
+The type names are provisional. They may become interfaces, marker traits, contracts, or
+compiler-known predicates. The semantic distinction is required either way.
+
+### 5.3 First-slice channel payload policy
+
+First slice should prefer a conservative rule:
+
+```text
+if payload is owned and sendable:
+  move
+else if payload is explicitly copyable:
+  copy
+else if payload is an admitted shared/resource handle:
+  share handle
+else if boundary requires serialization and evidence exists:
+  serialize
+else:
+  reject
+```
+
+Specific defaults:
+
+| Payload shape | Default |
+|---|---|
+| plain ADT/record/tuple/list of sendable owned values | move |
+| small scalar/copyable value | copy or move, implementation choice if semantics identical |
+| closure | reject unless capture set is sendable and callable boundary is specified |
+| continuation | reject across process boundary by default |
+| multi-shot pure continuation | still reject across process boundary until region/capture rules are specified |
+| process handle/channel endpoint | allow only if endpoint direction/lifetime permits it |
+| provider/resource handle | share only through explicit resource/provider contract |
+| borrowed view into process region | reject |
+| host object/raw handle | reject unless wrapped in admitted resource handle |
+| graph interpreter internal state | reject |
+
+### 5.4 Region lifetime rules
+
+The user-visible lifetime model should be:
+
+```text
+process region       -- released when process terminates
+iteration subregion  -- released after loop/message/request step
+state/resource       -- retained intentionally across steps
+trace/report sink    -- retained by explicit bounded policy
+shared provider/app  -- retained by admission/runtime policy
+```
+
+Important consequences:
+
+- supervisor restart creates a fresh child process region;
+- a failed child region must not stay alive through accidental closures/traces;
+- app boundaries are also memory/authority/reporting boundaries;
+- allocator strategy is implementation detail as long as these semantic lifetimes hold.
+
+### 5.5 Interaction with handlers and continuations
+
+Continuations are memory-bearing values. The process/channel boundary therefore depends on
+continuation multiplicity and capture safety:
+
+| Continuation case | Boundary decision |
+|---|---|
+| affine local resume | process-local by default; do not send |
+| discarded resume | captured region may be released when unreachable |
+| delayed resume in same process | allowed only if it does not outlive captured region facts |
+| multi-shot pure resume | reusable in one process when row/capture rules permit; not automatically sendable |
+| continuation capturing provider/resource/process-local state | reject across process/app boundary |
+
+This keeps continuation multiplicity tied to memory retention, not only control flow.
+
+### 5.6 Still to resolve
+
+1. Final names and kind of `Send`, `Copy`, `Share`, `Serialize`, `ProcessLocal`,
+   `RegionLocal`, and `ResourceHandle`.
+2. Whether closure sendability is ever allowed and how capture rows/lifetimes are checked.
+3. Whether any continuation can cross a process boundary under a future serialized/protocol
+   representation.
+4. Exact channel endpoint ownership, delegation, close, and direction rules.
+5. Guard failure behavior: consume message, leave message, fail receive, or policy-selected.
+6. Mailbox and buffer memory diagnostics.
+7. Runtime allocator strategy and whether logical regions precede real arenas.
+8. App-to-app sendability rules, especially for shared provider/resource handles.
+
+## 6. Cross-Cutting Boundary Contract
 
 Every boundary should eventually answer the same minimum questions:
 
@@ -792,7 +916,7 @@ Every boundary should eventually answer the same minimum questions:
 7. **Lifetime:** how long may the value, authority, resource, or evidence survive?
 8. **Migration:** which legacy forms lower to this boundary?
 
-## 6. Working Principle
+## 7. Working Principle
 
 The boundary rule:
 
@@ -802,7 +926,7 @@ or library must name the carrier, ownership rule, authority/evidence requirement
 classification, and lifetime policy.
 ```
 
-## 7. References
+## 8. References
 
 Internal references:
 
@@ -817,7 +941,7 @@ Internal references:
 - [SPEC-099: Core Ash](../spec/SPEC-099-CORE-LANGUAGE.md)
 - [SPEC-100: Core Type Checking](../spec/SPEC-100-CORE-TYPE-CHECKING.md)
 
-## 8. Changelog
+## 9. Changelog
 
 - 2026-06-24: Initial inventory. Lists target Ash boundaries and expands each with a
   description, affected features, design options, and references.
@@ -832,3 +956,8 @@ Internal references:
   rows are requirement facts, ambient environments carry kind-specific discharge facts,
   admission is explicit at runtime boundaries, role entailment is discharge rather than row
   normalization, and aliases/groups never grant authority.
+- 2026-06-24: Added fourth decision pass for process/channel and memory/region boundaries:
+  channel sends cross ownership and region boundaries, owned sendable values move by default,
+  copy/share/serialization require explicit evidence, process-local and region-local values
+  are rejected, process termination releases its region, and long-lived loops need
+  iteration-local retention discipline.

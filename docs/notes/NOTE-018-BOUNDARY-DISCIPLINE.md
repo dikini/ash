@@ -417,6 +417,8 @@ graphs. These are related but should not be collapsed into `workflow`.
 3. Treat graphs as blueprints interpreted by app/supervisor-started graph interpreters.
 4. Define bridge adapters explicitly rather than implicit conversions.
 
+**Current decision pass:** See §10.
+
 **References:**
 
 - [NOTE-016](NOTE-016-RUNTIME-ORGANIZATION-BEHAVIOURS-REACTIVE-MODES.md)
@@ -1298,7 +1300,86 @@ Contracts interact with other boundaries as follows:
    a named trust policy.
 8. Redaction policy for values captured in runtime contract diagnostics.
 
-## 10. Cross-Cutting Boundary Contract
+## 10. Decision Pass I: Reactive Stream and Graph Boundary
+
+### 10.1 Decision
+
+Target Ash should keep pull streams, push events, and declarative graphs as distinct
+reactive modes with explicit adapters.
+
+Resolved direction for the first target slice:
+
+1. **Pull is codata/machine-oriented.** A pull producer is demanded by a consumer through a
+   `next`-like protocol and naturally supports backpressure.
+2. **Push is operational.** Push events use channels, emit/subscribe effects, mailboxes, or
+   callbacks; buffering, dropping, replay, ordering, and fairness are runtime policies.
+3. **Graphs are declarations/data.** A graph blueprint does not run until an app/supervisor
+   starts a graph interpreter instance.
+4. **Bridge adapters are explicit.** `Producer -> channel publisher`, `channel subscriber ->
+   Producer`, `pull source -> graph input`, and `graph output -> event sink` must name their
+   buffering/backpressure/retention semantics.
+5. **Retention is declared, not inferred as unbounded history.** Stream steps, graph ticks,
+   state cells, memo caches, replay logs, and traces must have explicit lifetime/bounding
+   policy.
+6. **Reactive modes are not workflow primitives.** Workflows may govern or start them, but
+   stream and graph semantics live in libraries/runners/interpreters over process/effect
+   boundaries.
+
+### 10.2 Mode split
+
+| Mode | Primary shape | Execution owner | Memory posture | Failure posture |
+|---|---|---|---|---|
+| pull stream | `Producer<A>`, `Pipe<A, B>`, `Machine<I, O>` | consumer demand or process-backed source | step/iteration subregion plus retained producer state | `next` result/failure protocol |
+| push event | channel, `Emit<T>`, `Subscribe<T>`, mailbox | producer/runtime scheduler | explicit buffer/drop/backpressure/spill policy | send/receive/failure policy |
+| graph | `GraphDefinition` + `GraphInterpreter` | app/supervisor-started interpreter | declared state cells, windows, caches, history | graph instance failure/restart/report policy |
+
+### 10.3 Bridge adapters
+
+Reactive bridge adapters should be ordinary library/runtime components with explicit
+contracts:
+
+| Adapter | Must declare |
+|---|---|
+| pull producer to channel publisher | demand policy, channel capacity, send failure, cancellation |
+| channel subscriber to pull producer | receive mode, timeout, buffering, message retention |
+| push source to graph input | queue/drop/backpressure policy, clock/tick behavior |
+| graph output to sink | delivery guarantee, replay, failure handling |
+| pull source to graph input | sampling policy, tick source, stale value behavior |
+| graph to pull producer | snapshot/history policy and graph instance lifetime |
+
+No adapter should silently introduce unbounded buffering.
+
+### 10.4 Graph interpreter boundary
+
+A graph interpreter instance should name:
+
+```text
+GraphDefinition id
+input/output ports
+clock/scheduler policy
+state cell retention
+history/replay policy
+provider/handler environment
+failure/restart policy
+trace/report policy
+```
+
+Open graph semantics such as glitch freedom, logical time, incremental recomputation, and
+hot reload belong to graph interpreter contracts, not ordinary function evaluation.
+
+### 10.5 Still to resolve
+
+1. Standard library shapes for `Producer`, `Consumer`, `Pipe`, `Machine`, `Signal`, and
+   graph definitions.
+2. Whether `observe` remains a comonadic library/sugar form, becomes graph/stream-specific,
+   or is retired from core workflow vocabulary.
+3. Exact push buffer policy vocabulary and defaults.
+4. Clock model: host time, logical clocks, discrete ticks, or hybrid.
+5. Glitch-freedom and incremental recomputation guarantees for graph interpreters.
+6. Hot reload/migration for graph state cells and stream producers.
+7. How reactive retention contracts appear in app admission and memory diagnostics.
+
+## 11. Cross-Cutting Boundary Contract
 
 Every boundary should eventually answer the same minimum questions:
 
@@ -1311,7 +1392,7 @@ Every boundary should eventually answer the same minimum questions:
 7. **Lifetime:** how long may the value, authority, resource, or evidence survive?
 8. **Migration:** which legacy forms lower to this boundary?
 
-## 11. Working Principle
+## 12. Working Principle
 
 The boundary rule:
 
@@ -1321,7 +1402,7 @@ or library must name the carrier, ownership rule, authority/evidence requirement
 classification, and lifetime policy.
 ```
 
-## 12. References
+## 13. References
 
 Internal references:
 
@@ -1336,7 +1417,7 @@ Internal references:
 - [SPEC-099: Core Ash](../spec/SPEC-099-CORE-LANGUAGE.md)
 - [SPEC-100: Core Type Checking](../spec/SPEC-100-CORE-TYPE-CHECKING.md)
 
-## 13. Changelog
+## 14. Changelog
 
 - 2026-06-24: Initial inventory. Lists target Ash boundaries and expands each with a
   description, affected features, design options, and references.
@@ -1375,3 +1456,7 @@ Internal references:
   unit, properties remain falsification metadata, hard contracts record discharge outcomes,
   dynamic Hoare failures trap by default unless explicitly recoverable, and evidence can
   justify optimization only under explicit trust rules.
+- 2026-06-24: Added ninth decision pass for reactive stream and graph boundaries: pull is
+  codata/machine-oriented, push is operational and requires explicit buffering policy,
+  graphs are declarations interpreted by app/supervisor-started runners, bridge adapters are
+  explicit, and retention must be declared rather than inferred as unbounded history.

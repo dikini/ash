@@ -138,6 +138,8 @@ plus contracts, provider/handler discharge, and optional extern hooks.
 2. Keep `capability` as a domain-specific authoring form for authority-bearing effects.
 3. Support both, but require one canonical Core/CPS operation identity.
 
+**Current decision pass:** See §3.
+
 **References:**
 
 - [NOTE-015](NOTE-015-CURRENT-TO-TARGET-LANGUAGE-FORMS.md)
@@ -195,6 +197,8 @@ trusted handlers, or providers.
 2. Put backend-specific extern hooks inside trusted provider/handler implementations.
 3. Allow both placements under one invariant: ordinary Ash code calls typed operations, not
    raw externs.
+
+**Current decision pass:** See §3.
 
 **References:**
 
@@ -530,7 +534,153 @@ when a more precise boundary class is known.
    operation-specific result types.
 7. Blame labels and value redaction rules for contract violation diagnostics.
 
-## 3. Cross-Cutting Boundary Contract
+## 3. Decision Pass B: Effect Declaration and Extern/Host Boundaries
+
+### 3.1 Decision
+
+Target Ash should separate three things that current Ash often discusses together:
+
+```text
+operation vocabulary     -- what can be requested
+authority/admission      -- who may request it in this context
+host/provider adapter    -- how the request is implemented
+```
+
+Resolved direction for the first target slice:
+
+1. **Canonical operation identity lives below surface spelling.** Whether the source says
+   `effect`, `capability`, or a compatibility form, Core/CPS sees one canonical operation
+   identity and one row item.
+2. **`effect` is the target vocabulary for operation declarations.** It names typed
+   operation signatures, row contribution, contracts, and optional implementation hooks.
+3. **`capability` remains a restricted/domain-friendly compatibility surface.** It lowers to
+   authority-bearing effect operations plus admission/provider metadata. It is not a
+   separate semantic island.
+4. **User-defined effects are a target-language direction, but an alpha staging choice.**
+   The design vocabulary uses `effect` for ordinary algebraic-operation declarations such
+   as failure, choice, and host capabilities. Current alpha specs may restrict which
+   namespaces lower to Core/CPS until fully general user-defined resumable effects are
+   specified across the effect, type, Core, and IR specs.
+5. **Externs are implementation hooks, not ordinary Ash functions.** Ordinary Ash code calls
+   typed operations. Trusted effects, handlers, or providers own raw host/FFI adapters.
+6. **Extern placement is split by intent.** Canonical host ABI hooks may appear at the
+   effect declaration boundary; backend-specific host adapters belong in trusted
+   provider/handler implementations.
+7. **Provider installation is admission, not definition.** Declaring an effect/capability
+   does not install authority. Runtime admission installs a provider/handler frame that may
+   discharge the row item.
+
+### 3.2 Canonical lowering shape
+
+The target lowering story should be:
+
+```text
+surface declaration
+  -> canonical operation identity
+  -> row item required by callers
+  -> operation contracts
+  -> provider/handler implementation requirement
+  -> optional trusted extern adapter
+```
+
+For a capability-like declaration:
+
+```ash
+capability FsRead : read(path: String) returns String
+    requires path != "";
+```
+
+Target meaning:
+
+```text
+operation identity: cap fs.read
+row item:           {cap fs.read}
+contracts:          requires path != ""
+implementation:     admitted provider/handler for fs.read
+extern:             optional trusted host hook owned by provider/effect
+```
+
+For an authority-bearing effect-like declaration:
+
+```ash
+effect Fs {
+    read(path: String) -> String
+        requires path != "";
+}
+```
+
+Target meaning is the same canonical operation identity if the declaration is authority
+bearing:
+
+```text
+EffectOp(cap fs.read) : (String) -> String
+row {cap fs.read}
+```
+
+For a pure library algebraic effect such as choice, the canonical identity would live in a
+non-capability namespace:
+
+```text
+EffectOp(effect choice.choose) : (List<A>) -> A
+row {effect choice.choose}
+```
+
+The surface may be friendlier than the Core identity, but it must not create a second
+operation namespace with different semantics.
+
+### 3.3 Extern placement
+
+Externs should be admitted only at trusted implementation boundaries:
+
+| Placement | Use case | Visibility to ordinary Ash code |
+|---|---|---|
+| effect-level extern | canonical host ABI for a standard operation | hidden behind typed operation |
+| provider-level extern | backend-specific adapter or deployment-specific host binding | hidden behind admitted provider |
+| handler-level extern | trusted interpreter for an effect operation | hidden behind handler installation |
+| ordinary `extern fn` | compatibility or bootstrap only, not target user model | should not be directly callable as pure Ash |
+
+The invariant:
+
+```text
+ordinary Ash code calls typed operations;
+trusted implementation code calls raw externs.
+```
+
+### 3.4 Boundary failure split
+
+Effect declaration and host boundaries reuse the failure taxonomy from §2:
+
+| Cause | Boundary classification |
+|---|---|
+| operation not admitted | authority/admission failure |
+| provider missing | admission/runtime configuration failure |
+| operation precondition fails | contract violation |
+| policy denies operation | policy denial |
+| host call fails | host ABI/provider failure |
+| host result cannot decode | host ABI/provider failure, possibly contract violation if the provider broke its declared result contract |
+| user wants recoverable operation error | operation declares result/failure protocol explicitly |
+
+This preserves the key distinction:
+
+```text
+row item says the operation may be required;
+admission says whether it may run here;
+provider/handler says how it runs;
+extern says how trusted implementation reaches the host.
+```
+
+### 3.5 Still to resolve
+
+1. Exact target syntax for `effect` declarations.
+2. Whether `capability` is permanently supported as a domain form or only migration syntax.
+3. Whether effect-level externs are allowed in user-authored source, trusted packages only,
+   or compiler/runtime-owned modules only.
+4. How provider implementations are declared and typed.
+5. How operation contracts are checked at provider boundaries versus caller boundaries.
+6. How effect aliases/groups export operation identities without becoming authority bundles.
+7. How canonical operation identities are versioned across packages.
+
+## 4. Cross-Cutting Boundary Contract
 
 Every boundary should eventually answer the same minimum questions:
 
@@ -543,7 +693,7 @@ Every boundary should eventually answer the same minimum questions:
 7. **Lifetime:** how long may the value, authority, resource, or evidence survive?
 8. **Migration:** which legacy forms lower to this boundary?
 
-## 4. Working Principle
+## 5. Working Principle
 
 The boundary rule:
 
@@ -553,7 +703,7 @@ or library must name the carrier, ownership rule, authority/evidence requirement
 classification, and lifetime policy.
 ```
 
-## 5. References
+## 6. References
 
 Internal references:
 
@@ -568,10 +718,14 @@ Internal references:
 - [SPEC-099: Core Ash](../spec/SPEC-099-CORE-LANGUAGE.md)
 - [SPEC-100: Core Type Checking](../spec/SPEC-100-CORE-TYPE-CHECKING.md)
 
-## 6. Changelog
+## 7. Changelog
 
 - 2026-06-24: Initial inventory. Lists target Ash boundaries and expands each with a
   description, affected features, design options, and references.
 - 2026-06-24: Added first decision pass for the failure boundary, separating recoverable
   `fail`, traps, contract violations, authority/admission failures, policy denials, host
   adapter failures, process failure/cancellation, and workflow/app boundary reports.
+- 2026-06-24: Added second decision pass for effect declaration and extern/host boundaries:
+  `effect` is the target operation vocabulary, `capability` lowers to restricted
+  authority-bearing effect operations, canonical operation identity lives below surface
+  spelling, and raw externs remain trusted implementation hooks.

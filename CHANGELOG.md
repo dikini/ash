@@ -70,6 +70,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Added `docs/ideas/research/PROTOCOL-GATED-TYPE-DIRECTED-LLM-EXECUTION.md`, a research note on protocol-gated type-directed LLM execution with deterministic oracles, evidence admission, replayable traces, and references to Recursive Language Models and LLM state-machine modeling work.
 
 ### Changed
+- Added the second NOTE-018 decision pass for effect declaration and extern/host boundaries:
+  `effect` is the target operation vocabulary, `capability` lowers to restricted
+  authority-bearing effect operations, canonical operation identity lives below surface
+  spelling, and raw externs remain trusted implementation hooks.
 - Added the first NOTE-018 decision pass for the target Ash failure boundary, separating
   recoverable `fail`, traps, contract violations, authority/admission failures, policy
   denials, host adapter failures, process failure/cancellation, and workflow/app boundary

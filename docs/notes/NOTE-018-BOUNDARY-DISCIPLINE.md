@@ -226,6 +226,8 @@ boundary result. Target Ash needs these categories separated.
 3. Separate admission denial, policy denial, authority absence, host adapter failure, and
    process failure in diagnostics and evidence even if some share runtime carriers.
 
+**Current decision pass:** See §2.
+
 **References:**
 
 - [NOTE-015](NOTE-015-CURRENT-TO-TARGET-LANGUAGE-FORMS.md)
@@ -434,7 +436,101 @@ export/import without accidentally granting authority or losing invalidation dep
 - [SPEC-096b](../spec/SPEC-096b-TARGET-EFFECT-SYSTEM.md)
 - [SPEC-100](../spec/SPEC-100-CORE-TYPE-CHECKING.md)
 
-## 2. Cross-Cutting Boundary Contract
+## 2. Decision Pass A: Failure Boundary
+
+### 2.1 Decision
+
+Target Ash should not have one undifferentiated "failure" concept. It should classify
+abnormal outcomes by boundary first, then choose the representation appropriate to that
+boundary.
+
+Resolved direction for the first target slice:
+
+1. **Recoverable domain failure** is the ordinary `fail` effect path. It is row-accounted and
+   may be handled by user code.
+2. **Unrecoverable trap/bottom** is not row-accounted. It aborts the current computation with
+   diagnostic state.
+3. **Dynamic contract violation** defaults to structured trap/bottom, carrying contract
+   discharge and blame metadata. A surface form may explicitly lower a contract violation to a
+   recoverable `fail` path when recovery is part of the declared protocol.
+4. **Authority absence/admission denial** is a discharge/admission failure, not a raised
+   capability operation. It means the required authority was never installed.
+5. **Policy denial** is a named policy decision. It must remain distinct from missing
+   authority and from host/provider failure.
+6. **Host ABI/provider failure** belongs to the trusted adapter/provider boundary. It is not
+   proof that the Ash caller lacked authority or violated a contract.
+7. **Process failure/cancellation** belongs to process supervision and observation. It may be
+   reported through handles, monitors, joins, or supervisor events.
+8. **Workflow/app boundary failure** is a boundary reinterpretation/reporting layer over lower
+   failures, admission denials, policy denials, and process exits.
+
+The key split:
+
+```text
+row-accounted fail     -- recoverable, part of the program protocol
+trap/bottom            -- unrecoverable diagnostic abort
+admission rejection    -- cannot start/run because requirements are not discharged
+boundary report        -- workflow/app/runtime classification of lower causes
+```
+
+### 2.2 Failure taxonomy
+
+| Category | Boundary | Row/IR posture | Handler posture | Evidence/reporting |
+|---|---|---|---|---|
+| recoverable domain failure | function/effect protocol | `FailureEffect` / `fail` row item | user handler may recover | failure payload and handler trace |
+| unrecoverable trap | Core/runtime diagnostic | `Trap`, no row item | not resumable | trap reason, span, continuation/runtime context |
+| dynamic contract violation | contract boundary | default `TrapReason::ContractViolation`; optional explicit `fail` lowering | not resumable by default | contract id, discharge mode/history, values, blame |
+| authority absence | row admission boundary | no operation is admitted | no handler installed for missing authority | missing row item, admission context |
+| policy denial | policy boundary | policy decision boundary, not generic capability failure | may branch only through explicit policy protocol | policy name, decision domain, decision evidence |
+| host ABI failure | extern/provider boundary | provider/adapter failure; may map to `fail` only if operation declares it | provider-owned recovery only unless surfaced | adapter id, host error, decode/encode context |
+| process failure | process/supervision boundary | process terminal state | observed by monitor/join/supervisor | exit reason, child id, restart decision |
+| cancellation | process/runtime boundary | cancellation terminal state | cooperative cleanup, not ordinary recovery | initiator, scope, cleanup result |
+| workflow failure | workflow boundary | boundary report over lower cause | workflow-level handler/report policy | workflow id, lower cause, obligations/reports |
+| app rejection/failure | app/runtime boundary | app admission or lifecycle result | host/operator policy | app id, root supervisor/app policy, lower cause |
+
+### 2.3 Mapping current forms
+
+| Current form/source | Target classification |
+|---|---|
+| `fail` | recoverable failure effect when the surrounding profile admits it |
+| `with_error` | handler/library surface over recoverable failure effects |
+| `panic` | trap/debug abort, not domain failure |
+| failed `requires`/`ensures` | contract violation; trap by default unless explicitly recoverable |
+| missing capability/provider binding | authority/admission failure |
+| denied policy decision | policy denial with decision evidence |
+| host call throws/returns invalid data | host ABI/provider failure |
+| child process exits abnormally | process failure observed by supervisor/monitor/join |
+| cancelled process/app | cancellation boundary result |
+| workflow rejects before start | admission/requirement/policy rejection |
+| workflow aborts while running | workflow failure report over lower cause |
+
+### 2.4 Consequences
+
+This decision avoids four common conflations:
+
+1. **Authority vs correctness:** missing authority is not a contract violation.
+2. **Policy vs authority:** a policy can deny an otherwise available authority.
+3. **Host failure vs caller failure:** a trusted adapter can fail even when admission and
+   contracts were satisfied.
+4. **Recoverable failure vs trap:** user recovery is explicit and row-accounted; traps are
+   diagnostic bottom.
+
+Diagnostics should therefore avoid a generic `UnhandledEffect` or generic `RuntimeFailure`
+when a more precise boundary class is known.
+
+### 2.5 Still to resolve
+
+1. Concrete source spelling for typed recoverable failures.
+2. Whether `fail E` uses a single `FailureEffect { failure_type: E }` item or namespaced
+   failure operations.
+3. Whether `with_error` remains compatibility syntax or becomes a library handler.
+4. Exact workflow/app report schema for lower causes.
+5. How much of policy denial is represented as a row item versus boundary result.
+6. Whether provider/host failures default to trap, recoverable failure, or declared
+   operation-specific result types.
+7. Blame labels and value redaction rules for contract violation diagnostics.
+
+## 3. Cross-Cutting Boundary Contract
 
 Every boundary should eventually answer the same minimum questions:
 
@@ -447,7 +543,7 @@ Every boundary should eventually answer the same minimum questions:
 7. **Lifetime:** how long may the value, authority, resource, or evidence survive?
 8. **Migration:** which legacy forms lower to this boundary?
 
-## 3. Working Principle
+## 4. Working Principle
 
 The boundary rule:
 
@@ -457,7 +553,7 @@ or library must name the carrier, ownership rule, authority/evidence requirement
 classification, and lifetime policy.
 ```
 
-## 4. References
+## 5. References
 
 Internal references:
 
@@ -472,7 +568,10 @@ Internal references:
 - [SPEC-099: Core Ash](../spec/SPEC-099-CORE-LANGUAGE.md)
 - [SPEC-100: Core Type Checking](../spec/SPEC-100-CORE-TYPE-CHECKING.md)
 
-## 5. Changelog
+## 6. Changelog
 
 - 2026-06-24: Initial inventory. Lists target Ash boundaries and expands each with a
   description, affected features, design options, and references.
+- 2026-06-24: Added first decision pass for the failure boundary, separating recoverable
+  `fail`, traps, contract violations, authority/admission failures, policy denials, host
+  adapter failures, process failure/cancellation, and workflow/app boundary reports.

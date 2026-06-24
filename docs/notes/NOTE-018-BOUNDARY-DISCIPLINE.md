@@ -52,6 +52,8 @@ sidecar evidence declarations.
 3. Keep some domain-friendly surface forms permanently, but require their lowering to be
    specified as sugar over Core.
 
+**Current decision pass:** See §11.
+
 **References:**
 
 - [NOTE-015](NOTE-015-CURRENT-TO-TARGET-LANGUAGE-FORMS.md)
@@ -79,6 +81,8 @@ captures are legal.
 2. Preserve pure `Fn` and effectful `Fun` compatibility types during migration.
 3. Add stricter closure-capture predicates for process-local, region-local, and authority
    carrying values.
+
+**Current decision pass:** See §11.
 
 **References:**
 
@@ -447,6 +451,8 @@ export/import without accidentally granting authority or losing invalidation dep
 2. Keep aliases transparent and groups diagnostic-only.
 3. Require evidence references to be versioned and invalidated when dependencies change.
 4. Never export authority grants as mere row aliases.
+
+**Current decision pass:** See §11.
 
 **References:**
 
@@ -1379,7 +1385,123 @@ hot reload belong to graph interpreter contracts, not ordinary function evaluati
 6. Hot reload/migration for graph state cells and stream producers.
 7. How reactive retention contracts appear in app admission and memory diagnostics.
 
-## 11. Cross-Cutting Boundary Contract
+## 11. Decision Pass J: Compiler-Facing Boundaries
+
+### 11.1 Decision
+
+Target Ash should make the compiler-facing boundaries explicit:
+
+```text
+surface syntax      -> elaborated Core
+function/closure    -> row-bearing callable plus checked captures
+module/package      -> versioned public semantic summaries
+```
+
+Resolved direction for the first target slice:
+
+1. **Core owns semantics, surface owns ergonomics.** Legacy workflow/tower/capability syntax
+   may remain as compatibility or domain-friendly surface, but it must elaborate to Core
+   constructs, row facts, discharge metadata, and sidecar evidence.
+2. **Core type checking verifies elaborated facts.** Core checking does not own parsing,
+   desugaring, type-class search, proof search, or arbitrary syntax migration. Those happen
+   before Core or in separate verifier/discharge phases.
+3. **Every callable is row-bearing at the semantic boundary.** Pure functions are the empty
+   row case; compatibility `Fn`/`Fun` distinctions lower to row-bearing function or
+   continuation types.
+4. **Closure capture is checked as a boundary.** Captured values must be legal for the
+   closure's row/profile and for any later boundary the closure may cross.
+5. **Process-local, region-local, handler-chain, provider, and continuation captures are not
+   ordinary values.** They require explicit capture/sendability rules and are rejected where
+   rules are absent.
+6. **Module summaries export facts, not authority.** Public summaries carry canonical type,
+   row, effect, law/evidence, and declaration identities needed by importers, but never grant
+   runtime authority.
+7. **Aliases/groups remain transparent or diagnostic.** They may be exported for readability
+   and diagnostics, but importers must resolve to canonical row/effect identities before
+   checking and admission.
+8. **Versioning and invalidation are part of the boundary.** Public row summaries,
+   effect identities, law/proof evidence, and type-computation summaries must invalidate when
+   their dependencies change.
+
+### 11.2 Surface-to-Core lowering contract
+
+Surface lowering should produce:
+
+| Surface feature | Lowered/recorded target |
+|---|---|
+| `fn`, lambdas, calls | Core functions/calls with row-bearing callable types |
+| `do`, old `act`, old typed `do:*` | ambient sequencing plus row/profile checks |
+| `workflow` and workflow statements | governed function/app/runtime metadata plus Core body |
+| `capability`/`effect` declarations | canonical operation identities and row items |
+| `handle`/provider scopes | Core/CPS handler/provider metadata |
+| contracts | predicate refs plus discharge obligations/metadata |
+| laws/proofs/properties | sidecar evidence/test metadata, not ordinary expressions |
+| comprehensions/observe/co-comprehensions | library calls or reactive/comonadic sugar |
+
+Core should not preserve surface-only constructs as semantic islands.
+
+### 11.3 Function and closure boundary
+
+Callable semantics should track:
+
+```text
+parameters
+result
+latent row
+contracts
+capture set
+capture legality
+public summary identity
+```
+
+Closure capture rules should classify captured values at least as:
+
+| Capture kind | Default posture |
+|---|---|
+| pure data | allowed in pure/effectful closures |
+| value produced by effect | allowed only when closure row/profile admits it |
+| capability/provider/resource handle | allowed only with explicit authority/lifetime facts |
+| process-local/region-local value | rejected across process/app boundaries |
+| continuation | affine/process-local by default; stricter rules for multi-shot pure |
+| handler/provider chain | trusted/runtime capture, not ordinary user data |
+
+The target rule is not "closures are forbidden in pure code"; it is "captures must not leak
+effects, authority, memory, or control beyond their permitted boundary."
+
+### 11.4 Module/package summary boundary
+
+Public summaries should export enough for downstream checking without exposing private
+implementation facts or granting authority:
+
+```text
+public type and constructor identities
+public callable signatures and row summaries
+public effect operation identities
+public aliases/groups as transparent/diagnostic facts
+public law/proof evidence references
+public type-level computation summaries
+visibility/opacity/version metadata
+dependency invalidation keys
+```
+
+Imported summaries should be registered before dependent checking so import order does not
+change row/type/evidence results.
+
+### 11.5 Still to resolve
+
+1. Exact surface-to-Core lowering for every legacy workflow statement.
+2. Final user-facing syntax for row variables, effect declarations, handlers, and app specs.
+3. Compatibility/deprecation schedule for `workflow`, `act`, `ret`, `do:Act`,
+   `do:Proc`, and `do:Workflow`.
+4. Closure capture representation in Core summaries and diagnostics.
+5. Whether callable public summaries expose inferred rows by default or only stable
+   annotated rows.
+6. Versioning format for effect identities, row aliases/groups, evidence refs, and operation
+   contracts.
+7. Cross-package evidence cache trust and invalidation policy.
+8. Diagnostic rewrite hints from legacy forms to target forms.
+
+## 12. Cross-Cutting Boundary Contract
 
 Every boundary should eventually answer the same minimum questions:
 
@@ -1392,7 +1514,7 @@ Every boundary should eventually answer the same minimum questions:
 7. **Lifetime:** how long may the value, authority, resource, or evidence survive?
 8. **Migration:** which legacy forms lower to this boundary?
 
-## 12. Working Principle
+## 13. Working Principle
 
 The boundary rule:
 
@@ -1402,7 +1524,7 @@ or library must name the carrier, ownership rule, authority/evidence requirement
 classification, and lifetime policy.
 ```
 
-## 13. References
+## 14. References
 
 Internal references:
 
@@ -1417,7 +1539,7 @@ Internal references:
 - [SPEC-099: Core Ash](../spec/SPEC-099-CORE-LANGUAGE.md)
 - [SPEC-100: Core Type Checking](../spec/SPEC-100-CORE-TYPE-CHECKING.md)
 
-## 14. Changelog
+## 15. Changelog
 
 - 2026-06-24: Initial inventory. Lists target Ash boundaries and expands each with a
   description, affected features, design options, and references.
@@ -1460,3 +1582,7 @@ Internal references:
   codata/machine-oriented, push is operational and requires explicit buffering policy,
   graphs are declarations interpreted by app/supervisor-started runners, bridge adapters are
   explicit, and retention must be declared rather than inferred as unbounded history.
+- 2026-06-24: Added tenth decision pass for compiler-facing boundaries: surface syntax
+  elaborates to Core rather than defining semantic islands, every callable is row-bearing at
+  the semantic boundary, closure captures are checked for effect/authority/memory/control
+  leakage, and module summaries export canonical facts without granting authority.

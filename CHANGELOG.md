@@ -70,6 +70,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Added `docs/ideas/research/PROTOCOL-GATED-TYPE-DIRECTED-LLM-EXECUTION.md`, a research note on protocol-gated type-directed LLM execution with deterministic oracles, evidence admission, replayable traces, and references to Recursive Language Models and LLM state-machine modeling work.
 
 ### Changed
+- Added the tenth NOTE-018 decision pass for compiler-facing boundaries: surface syntax
+  elaborates to Core rather than defining semantic islands, every callable is row-bearing at
+  the semantic boundary, closure captures are checked for effect/authority/memory/control
+  leakage, and module summaries export canonical facts without granting authority.
 - Added the ninth NOTE-018 decision pass for reactive stream and graph boundaries: pull is
   codata/machine-oriented, push is operational and requires explicit buffering policy,
   graphs are declarations interpreted by app/supervisor-started runners, bridge adapters are

@@ -106,13 +106,203 @@ Workflow  = Comp<{Proc effects + role/policy/contract/obligation/report...}, A>
 
 This resolves the conceptual split:
 
-- `bind` and `return` are row-polymorphic structural operations.
+- the ambient computation monad sequences Ash computations;
+- `bind` and `return` are row-polymorphic structural operations of that ambient monad;
 - The row says what operations or obligations may be needed.
 - The profile says which row shapes are admissible in a context.
 - A carrier such as `Act<A>` or `Workflow<A>` may remain as library/API surface, but it is
   not a distinct semantic foundation.
 
-### 2.2 Rows are requirements, not grants
+### 2.2 Other monads are interpreted by effects and handlers
+
+Target Ash should not model `Act`, `Proc`, `Workflow`, `State`, `Either`, `Future`, or
+similar computation stories as separate nested monad transformers in the language core.
+
+The language has one ambient monad. Other "monads" are represented by:
+
+```text
+effect operations + rows + handlers/providers + contracts/evidence
+```
+
+Composition of these interpretations is handler composition:
+
+```ash
+handle
+  handle
+    computation
+  with H_inner
+with H_outer
+```
+
+The effect row is intentionally unordered. It records **what** operations or requirements
+may appear. It does not record **which handler runs first**. Handler nesting records order.
+
+For some handlers, order does not matter: disjoint operations with compatible deep handlers
+may commute. That is a special law that can be proved under conditions, not a general rule.
+In general, handler composition is order-sensitive. State outside failure is not equivalent
+to failure outside state; a shallow non-resuming handler changes what later handlers can see;
+multi-shot resumption is legal only when continuation multiplicity and rows allow it.
+
+This is the replacement for monad-transformer composition:
+
+```text
+old transformer story:  StateT s (EitherT e IO) encodes order in nested types
+target Ash story:       rows list requirements, nested handlers encode interpretation order
+```
+
+### 2.3 Example: exception and nondeterminism
+
+Consider two effect operations:
+
+```ash
+effect Exception<E> {
+    throw(e: E) -> Never;
+}
+
+effect Choice {
+    choose<A>(xs: List<A>) -> A;
+}
+```
+
+A computation that uses both has one ambient sequencing form. The binds do not select an
+`ExceptionT` or `ListT` transformer. They accumulate requirements in the row:
+
+```ash
+fn pick_inverse(xs: List<Int>) -> {choice.choose, fail DivideByZero} Int {
+    do {
+        x <- choose(xs);          -- row: {choice.choose}
+        if x == 0 {
+            throw(DivideByZero);  -- row: {fail DivideByZero}
+        };
+        return 100 / x            -- row: {}
+    }
+}
+```
+
+Schematic row progression:
+
+```text
+return v
+  : Comp<{}, Int>
+
+choose(xs)
+  : Comp<{choice.choose}, Int>
+
+throw(DivideByZero)
+  : Comp<{fail DivideByZero}, Never>
+
+bind(choose(xs), x -> if x == 0 then throw(...) else return (100 / x))
+  : Comp<{choice.choose, fail DivideByZero}, Int>
+```
+
+Now install a handler for `choice.choose`. At the row level, the handler does not reorder
+the row. It matches and peels one operation from the row, binding the rest as the residual
+tail:
+
+```text
+body row:
+  {choice.choose, fail DivideByZero | a}
+
+handler pattern:
+  {choice.choose | r}
+
+match:
+  r := {fail DivideByZero | a}
+
+after handling choice.choose:
+  residual body row = handler.row union r
+                    = handler.row union {fail DivideByZero | a}
+```
+
+If `AllChoices` is pure apart from interpreting `choice.choose`, its local handler row is
+empty:
+
+```text
+handler.row = {}
+
+handle choice.choose with AllChoices
+  body:     {choice.choose, fail DivideByZero | a}
+  residual: {fail DivideByZero | a}
+```
+
+The failure effect remains because the choice handler did not interpret it. A later
+exception handler can peel that residual row:
+
+```text
+body row:
+  {fail DivideByZero | a}
+
+handler pattern:
+  {fail DivideByZero | r}
+
+match:
+  r := {a}
+
+after handling fail DivideByZero:
+  residual body row = exception_handler.row union {a}
+```
+
+This is the row-level intuition for handler composition. Each handler removes the operation
+it interprets and propagates the unmatched tail. The row tail is not an ordering device; it
+is the still-unhandled requirement set.
+
+The row says only that the computation may choose and may fail. It does not say whether
+failure aborts the whole search or only the current branch. That is decided by handler
+nesting.
+
+Exception outside nondeterminism:
+
+```ash
+handle fail DivideByZero with ExceptionAsResult {
+    handle choice.choose with AllChoices {
+        pick_inverse([10, 0, 5])
+    }
+}
+```
+
+Interpretation: the inner `AllChoices` handler explores branches. If a branch throws, the
+throw escapes to the outer exception handler. Depending on the precise exception handler,
+one thrown branch may abort the whole search and produce `Err(DivideByZero)`.
+
+Nondeterminism outside exception:
+
+```ash
+handle choice.choose with AllChoices {
+    handle fail DivideByZero with DropFailedBranch {
+        pick_inverse([10, 0, 5])
+    }
+}
+```
+
+Interpretation: the inner exception handler catches failure per branch and can discard only
+that branch. The outer choice handler can still collect successful branch results, for
+example `[10, 20]`.
+
+Both executions start from the same row:
+
+```text
+{choice.choose, fail DivideByZero}
+```
+
+The difference is not in the row. The difference is in the handler stack:
+
+```text
+ExceptionAsResult . AllChoices      -- exception interprets failures outside the search
+AllChoices . DropFailedBranch       -- exception is interpreted inside each branch
+```
+
+This is the target Ash replacement for choosing between transformer stacks such as:
+
+```text
+ExceptT E List A     -- branch-local failures, collect successes
+ListT (Either E) A   -- failure can abort the whole list computation
+```
+
+The ambient `bind` is the same in both cases. It threads the current continuation and
+accumulates the row. The nested handlers decide how each operation is interpreted and
+whether composition order matters for that pair of effects.
+
+### 2.4 Rows are requirements, not grants
 
 This rule must remain the central diagnostic and design principle.
 
@@ -323,6 +513,10 @@ Rows should remain unordered sets of requirements. Handler/provider nesting orde
 which handler sees an operation first. The row answers **what** may be required; the handler
 stack answers **how** and **when** requirements are discharged.
 
+This means the row is not a monad-transformer stack. It does not specify composition order.
+Composition order is the operational handler stack, and handler composition is not generally
+commutative.
+
 ### 6.2 Profiles are constraints, not privileges
 
 `Act`, `Proc`, and `Workflow` profiles constrain admissible rows. They do not grant authority.
@@ -360,6 +554,16 @@ signals, but they are not proof.
 
 Surface syntax should elaborate into Core. Core type checking and CPS lowering should own
 row facts, discharge facts, continuation rows, and handler/provider behavior.
+
+### 6.8 Monad composition is handler composition
+
+The target language has one ambient monad for sequencing. Domain-specific monadic behavior
+is supplied by handlers interpreting effect operations. Therefore:
+
+- row extension adds possible operations;
+- handler nesting composes interpretations;
+- handler order is semantically visible unless proven irrelevant;
+- algebraic laws for handler composition are evidence/proof obligations, not assumptions.
 
 ## 7. To Be Resolved
 

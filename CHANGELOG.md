@@ -70,6 +70,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Added `docs/ideas/research/PROTOCOL-GATED-TYPE-DIRECTED-LLM-EXECUTION.md`, a research note on protocol-gated type-directed LLM execution with deterministic oracles, evidence admission, replayable traces, and references to Recursive Language Models and LLM state-machine modeling work.
 
 ### Changed
+- Added the third NOTE-018 decision pass for row environment and admission boundaries: rows
+  are requirement facts, ambient environments carry kind-specific discharge facts, admission
+  is explicit at runtime boundaries, role entailment is discharge rather than row
+  normalization, and aliases/groups never grant authority.
 - Added the second NOTE-018 decision pass for effect declaration and extern/host boundaries:
   `effect` is the target operation vocabulary, `capability` lowers to restricted
   authority-bearing effect operations, canonical operation identity lives below surface

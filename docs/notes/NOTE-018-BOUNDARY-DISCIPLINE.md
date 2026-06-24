@@ -111,6 +111,8 @@ roles, policies, resources, and evidence determine whether the requirement is sa
 3. Split discharge by kind: static/evidence/dynamic for contracts, admission for authority,
    ownership for resources, handler/provider frames for operations.
 
+**Current decision pass:** See §4.
+
 **References:**
 
 - [SPEC-096b](../spec/SPEC-096b-TARGET-EFFECT-SYSTEM.md)
@@ -680,7 +682,104 @@ extern says how trusted implementation reaches the host.
 6. How effect aliases/groups export operation identities without becoming authority bundles.
 7. How canonical operation identities are versioned across packages.
 
-## 4. Cross-Cutting Boundary Contract
+## 4. Decision Pass C: Row Environment and Admission Boundary
+
+### 4.1 Decision
+
+Target Ash should treat rows and admission as separate layers:
+
+```text
+requirement row      -- what the computation may need
+ambient environment  -- what this scope/context can discharge
+admission event      -- what a runtime boundary installs for an instance
+```
+
+Resolved direction for the first target slice:
+
+1. **Rows are canonical requirement facts, not authority grants.** A row item can be
+   inferred, normalized, exported, imported, and compared without installing the authority or
+   resource it names.
+2. **The ambient environment carries discharge facts.** It may contain admitted roles,
+   capability/provider bindings, owned channel endpoints, resource ownership facts, policy
+   handlers, contract evidence, failure handlers, and evidence sinks.
+3. **Discharge is kind-specific.** Capability, role, policy, contract, resource, channel,
+   process, failure, and evidence row items do not share one generic "handled effect" rule.
+4. **Admission is explicit at runtime boundaries.** Starting a workflow/app/process or
+   installing a provider/handler can add discharge facts to the environment. Merely loading
+   a declaration cannot.
+5. **Role entailment is discharge, not row normalization.** A role may discharge a capability
+   requirement when admitted, but the required row item remains `cap ...` for audit and
+   diagnostics.
+6. **Aliases and groups are not authority bundles.** They expand row spelling or improve
+   diagnostics, but they do not discharge requirements.
+7. **Open-row solving must not invent privilege.** A row variable can be constrained by use,
+   expected type, or public summary shape; it must not absorb ambient authority just because
+   authority happens to be available.
+
+### 4.2 Discharge matrix
+
+| Row item kind | Requirement means | Discharged by | Not discharged by |
+|---|---|---|---|
+| capability | operation authority may be needed | admitted capability binding, provider frame, or admitted role entailment | row alias, declaration existence, global provider presence |
+| resource | owned/borrowed resource access may be needed | ownership, borrow, split/join, provenance fact, admitted resource handle | capability authority alone |
+| role | role-specific authority/context may be needed | role admission at workflow/app/process boundary | role declaration existence |
+| policy | named policy decision may be needed | compatible named policy binding/evaluator/handler | anonymous boolean expression unless explicitly lowered |
+| contract | predicate/law/obligation must be discharged | static proof, evidence, dynamic check strategy, law proof, runtime contract handler | property test alone, silent erasure |
+| channel | endpoint operation may be needed | owned endpoint with compatible direction/message/guard facts | channel type name alone |
+| process | runtime process operation may be needed | process-capable profile/runtime context | `Act` profile or plain function context |
+| failure | recoverable failure route may be needed | failure-capable profile and handler/reporting policy | trap support alone |
+| evidence | proof/audit/report sink may be needed | available evidence sink or boundary recorder | ordinary logging capability unless admitted as evidence sink |
+
+### 4.3 Checking phases
+
+Row admission should be visible across phases:
+
+```text
+surface/Core checking
+  infer and normalize requirement rows
+  reject impossible/local violations
+  emit public summaries
+
+admission planning
+  compare root/app/workflow requirements with available grants/config
+  construct ambient discharge environment
+
+runtime execution
+  run under admitted providers/handlers/resources
+  record evidence/provenance/failure classifications
+```
+
+This prevents two bad extremes:
+
+1. compile-time rows pretending to grant authority;
+2. runtime admission hiding all requirements from type checking and module summaries.
+
+### 4.4 Diagnostics
+
+Diagnostics should name the failed discharge rule, not only the missing row item.
+
+Examples:
+
+```text
+missing capability admission: cap fs.read
+role operator is admitted, but does not entail cap fs.write
+policy production_rate has no evaluator in this app instance
+channel orders.in exists, but this process owns no receive endpoint
+contract requires non_empty_path was neither proven nor assigned a dynamic check
+effect group IO expands to cap fs.read, but groups do not grant authority
+```
+
+### 4.5 Still to resolve
+
+1. Exact `AmbientEffectEnvironment` carrier in Core/typechecker/runtime APIs.
+2. Which role/capability entailments are checked statically, dynamically, or both.
+3. How policy decision domains are typed and matched against evaluators.
+4. How resource split/join/borrow facts are represented.
+5. How public module summaries expose open rows without exposing private aliases/groups.
+6. How admission plans are serialized for runtime/app startup.
+7. Whether profile lifting remains explicit forever or becomes inferred under narrow rules.
+
+## 5. Cross-Cutting Boundary Contract
 
 Every boundary should eventually answer the same minimum questions:
 
@@ -693,7 +792,7 @@ Every boundary should eventually answer the same minimum questions:
 7. **Lifetime:** how long may the value, authority, resource, or evidence survive?
 8. **Migration:** which legacy forms lower to this boundary?
 
-## 5. Working Principle
+## 6. Working Principle
 
 The boundary rule:
 
@@ -703,7 +802,7 @@ or library must name the carrier, ownership rule, authority/evidence requirement
 classification, and lifetime policy.
 ```
 
-## 6. References
+## 7. References
 
 Internal references:
 
@@ -718,7 +817,7 @@ Internal references:
 - [SPEC-099: Core Ash](../spec/SPEC-099-CORE-LANGUAGE.md)
 - [SPEC-100: Core Type Checking](../spec/SPEC-100-CORE-TYPE-CHECKING.md)
 
-## 7. Changelog
+## 8. Changelog
 
 - 2026-06-24: Initial inventory. Lists target Ash boundaries and expands each with a
   description, affected features, design options, and references.
@@ -729,3 +828,7 @@ Internal references:
   `effect` is the target operation vocabulary, `capability` lowers to restricted
   authority-bearing effect operations, canonical operation identity lives below surface
   spelling, and raw externs remain trusted implementation hooks.
+- 2026-06-24: Added third decision pass for row environment and admission boundaries:
+  rows are requirement facts, ambient environments carry kind-specific discharge facts,
+  admission is explicit at runtime boundaries, role entailment is discharge rather than row
+  normalization, and aliases/groups never grant authority.

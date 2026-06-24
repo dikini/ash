@@ -384,6 +384,8 @@ privileged language forms.
 3. Keep behaviour syntax out of the language core unless evidence shows repeated boilerplate
    cannot be solved by libraries.
 
+**Current decision pass:** See §7.
+
 **References:**
 
 - [NOTE-016](NOTE-016-RUNTIME-ORGANIZATION-BEHAVIOURS-REACTIVE-MODES.md)
@@ -1029,7 +1031,99 @@ author it.
 7. Report/trace retention policy across app restarts and daemon lifetime.
 8. OS/control-plane caller identity beyond first-slice same-user assumptions.
 
-## 7. Cross-Cutting Boundary Contract
+## 7. Decision Pass F: Behaviour and Service-Runner Boundary
+
+### 7.1 Decision
+
+Target Ash should treat behaviours as library protocols over process/channel/effect
+operations, not as new runtime primitives.
+
+Resolved direction for the first target slice:
+
+1. **A behaviour interface defines callback shape.** It declares state, input, output,
+   callback rows, contracts, and required evidence.
+2. **A runner defines runtime meaning.** It starts a process, installs mailbox/endpoint
+   handling, calls callbacks, manages state transitions, emits lifecycle events, and returns
+   service handles.
+3. **A supervisor defines lifecycle policy.** Start, restart, shutdown, escalation, and
+   child ordering belong to supervisor specs and runner integration, not to the behaviour
+   interface itself.
+4. **Behaviour implementations are ordinary impl/evidence values.** Runners may receive
+   explicit dictionaries/evidence and may be specialized, but no new object hierarchy is
+   required.
+5. **Callback contracts compose through the runner.** The runner is responsible for checking
+   callback preconditions/postconditions at the correct message/state boundary.
+6. **Service handles are explicit boundary carriers.** A started behaviour returns typed
+   call/cast/stop/monitor handles whose sendability and authority are governed by the
+   process/channel boundary.
+7. **No target-core `behaviour` keyword is needed yet.** A later surface may add sugar, but
+   it must lower to interface + impl + runner + child spec.
+
+### 7.2 Behaviour layering
+
+The target layering should be:
+
+```text
+interface Behaviour<...>
+  callback signatures
+  callback rows
+  callback contracts
+  evidence constraints
+
+impl Behaviour for Impl
+  callback bodies
+  law/contract evidence
+
+runner::start<Impl>(args, options)
+  allocates process
+  installs mailbox/protocol
+  invokes callbacks
+  owns loop semantics
+  returns service handle
+
+supervisor child spec
+  chooses start arguments
+  chooses restart/shutdown policy
+  observes child lifecycle
+```
+
+### 7.3 Example boundary split
+
+For a GenServer-like pattern:
+
+| Piece | Owns |
+|---|---|
+| `interface GenServer<S, Req, Reply>` | callback type/row/contract shape |
+| `impl GenServer for Counter` | user-specific state transition code |
+| `gen_server::start<Counter>` | process creation, mailbox loop, request/reply protocol |
+| `ServerHandle<Req, Reply>` | typed public communication boundary |
+| supervisor child spec | restart/shutdown policy |
+| app definition | provider/resource admission and startup placement |
+
+This keeps "agent-like workflow" as composition:
+
+```text
+AgentLoop behaviour
+  + model/tool effects
+  + memory/resource handles
+  + policy/contracts
+  + runner
+  + supervisor child spec
+```
+
+### 7.4 Still to resolve
+
+1. Standard behaviour interfaces for `GenServer`, `Supervisor`, `Stage`, `Source`, `Sink`,
+   `Router`, and `AgentLoop`.
+2. Runner API shape: explicit dictionaries, type applications, module paths, or generated
+   wrappers.
+3. How callback row requirements are summarized into child specs and app admission.
+4. How callback contract blame is assigned between caller, runner, and implementation.
+5. Whether service handles are affine, shareable, serializable, or process-local by default.
+6. Whether behaviour runners can be hot-reloaded and how state migration is typed.
+7. Which lifecycle events are mandatory for traces/reports.
+
+## 8. Cross-Cutting Boundary Contract
 
 Every boundary should eventually answer the same minimum questions:
 
@@ -1042,7 +1136,7 @@ Every boundary should eventually answer the same minimum questions:
 7. **Lifetime:** how long may the value, authority, resource, or evidence survive?
 8. **Migration:** which legacy forms lower to this boundary?
 
-## 8. Working Principle
+## 9. Working Principle
 
 The boundary rule:
 
@@ -1052,7 +1146,7 @@ or library must name the carrier, ownership rule, authority/evidence requirement
 classification, and lifetime policy.
 ```
 
-## 9. References
+## 10. References
 
 Internal references:
 
@@ -1067,7 +1161,7 @@ Internal references:
 - [SPEC-099: Core Ash](../spec/SPEC-099-CORE-LANGUAGE.md)
 - [SPEC-100: Core Type Checking](../spec/SPEC-100-CORE-TYPE-CHECKING.md)
 
-## 10. Changelog
+## 11. Changelog
 
 - 2026-06-24: Initial inventory. Lists target Ash boundaries and expands each with a
   description, affected features, design options, and references.
@@ -1092,3 +1186,7 @@ Internal references:
   app, one `RuntimeKernel` may host many isolated app instances, provider lifetime is not
   authority, inter-app communication requires explicit grants, and host starts are distinct
   from Ash process spawns.
+- 2026-06-24: Added sixth decision pass for behaviour and service-runner boundaries:
+  behaviour interfaces define callback shape, runners define runtime loop semantics,
+  supervisors define lifecycle policy, service handles are explicit carriers, and no target
+  core behaviour primitive is needed yet.

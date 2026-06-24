@@ -6,6 +6,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Added
+- Documented effect-local host/FFI extern placement alternatives in NOTE-013 and NOTE-014: effect-level externs for canonical host ABIs and trusted-handler externs for backend-specific adapters, preserving the shared semantics that ordinary Ash code calls only typed effect operations while raw externs remain unsafe implementation hooks.
 - Completed Phase 164 closeout for Core/CPS continuation multiplicity: PLAN-164 and PLAN-INDEX now mark 12/12 tasks complete, TASK-1691 records full verification evidence, and no user-facing Ash surface syntax or upper-layer lowering was added. (TASK-1691)
 - Added TASK-1690 continuation multiplicity reference documentation with links to SPEC-102, PLAN-164, non-normative design notes, current `.core` spelling, lowering behavior, and Phase 164 fixture names, plus docs consistency coverage.
 - Added TASK-1689 motivational Core fixtures for multi-shot continuation use: choice/all-outcomes, backtracking/find-first, nested choice, and discarded resume examples type-check and lower, while affine repeated-resume and effectful multi-shot variants reject for the intended reasons.

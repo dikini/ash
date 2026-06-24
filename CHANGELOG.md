@@ -6,6 +6,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Added
+- Added NOTE-017, a target memory-model note defining per-process regions, explicit
+  ownership transfer across communication boundaries, process/app isolation, long-lived
+  state discipline, and future Perceus-like region/reuse optimization.
 - Added NOTE-016, a runtime-organization note separating overloaded workflow concerns into
   app definitions/instances, supervisors, behaviours, process/workflow instances, and
   pull/push/graph reactive modes, including the multi-app RuntimeKernel story.

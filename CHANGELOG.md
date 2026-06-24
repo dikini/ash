@@ -6,6 +6,11 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Added
+- Added NOTE-019, a draft Target Ash convergence map that keeps the work in notes space
+  rather than implementation-plan space, summarizing fixed points, convergence tracks,
+  dependency order, readiness gates, current design gaps, and the local row/type inference
+  budget for interfaces, impls, and ADTs across NOTE-013 through NOTE-018 and target specs
+  SPEC-095b through SPEC-102.
 - Added NOTE-018, an initial target Ash boundary-discipline inventory covering
   surface/Core, function/closure, row admission, effect declaration, handler/provider,
   extern/host, failure, contract/evidence, process/channel, memory/region, app/runtime,

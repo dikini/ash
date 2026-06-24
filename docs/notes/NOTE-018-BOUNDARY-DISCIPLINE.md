@@ -354,6 +354,8 @@ The runtime admits app instances explicitly.
 3. Export ordinary Ash values under a known app-spec name.
 4. Support multiple app sources while requiring one canonical runtime `AppDefinition`.
 
+**Current decision pass:** See §6.
+
 **References:**
 
 - [NOTE-016](NOTE-016-RUNTIME-ORGANIZATION-BEHAVIOURS-REACTIVE-MODES.md)
@@ -903,7 +905,131 @@ This keeps continuation multiplicity tied to memory retention, not only control 
 7. Runtime allocator strategy and whether logical regions precede real arenas.
 8. App-to-app sendability rules, especially for shared provider/resource handles.
 
-## 6. Cross-Cutting Boundary Contract
+## 6. Decision Pass E: App and Runtime-Kernel Boundary
+
+### 6.1 Decision
+
+Target Ash should make runtime admission explicit and keep definitions separate from running
+instances.
+
+Resolved direction for the first target slice:
+
+1. **Definitions do not run.** Loading a module, workflow, service, provider, graph, or app
+   declaration creates available artifacts, not running instances.
+2. **The RuntimeKernel is the host container and control plane.** It owns loaded artifacts,
+   provider/resource registries, schedulers, process tables, app/workflow instance tables,
+   report sinks, and daemon control surfaces.
+3. **An AppDefinition is a runtime blueprint.** It names roots, provider/resource
+   requirements, child specs, graph specs, service endpoints, report policies, and admission
+   profiles.
+4. **An AppInstance is an admitted running app.** It has identity, app-local namespaces,
+   app-local provider/resource admission, a root supervisor, process/graph/service
+   instances, and trace/report sinks.
+5. **A RuntimeKernel may host many AppInstances concurrently.** App instances are isolated by
+   default even when they share the same kernel process or host provider pool.
+6. **Provider/resource lifetime is not authority.** A runtime-global provider may exist for
+   daemon efficiency, but an app/process/workflow may use it only through its admission
+   context.
+7. **Inter-app communication is explicit.** Typed channels, service handles, router grants,
+   event topics, graph adapters, or host routing capabilities must be admitted deliberately.
+8. **Host starts and Ash spawns are different boundaries.** `ash run`/daemon start admits a
+   root app/workflow/process; Ash `spawn` creates a child under an already admitted runtime
+   context.
+
+### 6.2 Runtime layering
+
+The target runtime layering should be:
+
+```text
+RuntimeKernel
+  loaded artifacts and registries
+  provider/resource pools
+  control plane
+
+AppInstance
+  app identity and admission context
+  root supervisor
+  app-local process namespace
+  app-local graph/service namespace
+  app-local provider/resource grants
+  report/trace policy
+
+Process/Workflow/Service/Graph instance
+  scheduled execution
+  local region/state
+  installed handlers/providers
+  lifecycle events
+```
+
+This preserves the multi-app story from NOTE-016 while keeping one-shot CLI execution and
+daemon execution semantically aligned.
+
+### 6.3 Admission flow
+
+Starting an app or root entry should follow this shape:
+
+```text
+load artifacts/config
+resolve AppDefinition or one-shot entry
+check row/profile/resource/policy requirements
+construct AdmissionContext
+install admitted provider/handler/resource facts
+allocate AppInstanceId or root instance id
+start root supervisor or root computation
+record lifecycle/report metadata
+```
+
+Failure before `AdmissionContext` is established is rejection/configuration failure, not
+ordinary program failure.
+
+### 6.4 App isolation and sharing
+
+Default app rule:
+
+```text
+same RuntimeKernel does not imply shared authority, memory, namespace, or reports.
+```
+
+Allowed sharing must name:
+
+1. the shared carrier, such as channel, service handle, event topic, graph adapter, resource
+   handle, provider pool, or report sink;
+2. the admission authority that permits both sides to use it;
+3. the payload/sendability and memory-retention rules;
+4. the failure/reporting behavior if the shared carrier fails.
+
+### 6.5 App definition surface
+
+The canonical runtime representation should be `AppDefinition` regardless of authoring
+surface.
+
+Candidate authoring surfaces:
+
+| Surface | Strength | Risk |
+|---|---|---|
+| source-level `app` declaration | language-native, type-checkable, easy to reference | adds new declaration surface |
+| external manifest | good for deployment/operator config | splits language/runtime facts |
+| exported Ash value | library-friendly and compositional | may blur declaration versus execution if not constrained |
+| generated package metadata | convenient for tooling | can hide important admission facts |
+
+Recommendation for the next pass: support one canonical `AppDefinition` data model first,
+then decide whether source `app` syntax is required or whether manifests/exported values can
+author it.
+
+### 6.6 Still to resolve
+
+1. Final authoring surface for `AppDefinition`.
+2. Whether one-shot execution admits an ephemeral `AppInstance` or a smaller root-entry
+   instance.
+3. App namespace identity: globally unique, root-qualified, package-qualified, or
+   daemon-assigned.
+4. Shared provider pool metering, quotas, and failure propagation across app instances.
+5. Inter-app service dependency and startup ordering.
+6. Hot reload and migration of app instances, graph instances, and retained state.
+7. Report/trace retention policy across app restarts and daemon lifetime.
+8. OS/control-plane caller identity beyond first-slice same-user assumptions.
+
+## 7. Cross-Cutting Boundary Contract
 
 Every boundary should eventually answer the same minimum questions:
 
@@ -916,7 +1042,7 @@ Every boundary should eventually answer the same minimum questions:
 7. **Lifetime:** how long may the value, authority, resource, or evidence survive?
 8. **Migration:** which legacy forms lower to this boundary?
 
-## 7. Working Principle
+## 8. Working Principle
 
 The boundary rule:
 
@@ -926,7 +1052,7 @@ or library must name the carrier, ownership rule, authority/evidence requirement
 classification, and lifetime policy.
 ```
 
-## 8. References
+## 9. References
 
 Internal references:
 
@@ -941,7 +1067,7 @@ Internal references:
 - [SPEC-099: Core Ash](../spec/SPEC-099-CORE-LANGUAGE.md)
 - [SPEC-100: Core Type Checking](../spec/SPEC-100-CORE-TYPE-CHECKING.md)
 
-## 9. Changelog
+## 10. Changelog
 
 - 2026-06-24: Initial inventory. Lists target Ash boundaries and expands each with a
   description, affected features, design options, and references.
@@ -961,3 +1087,8 @@ Internal references:
   copy/share/serialization require explicit evidence, process-local and region-local values
   are rejected, process termination releases its region, and long-lived loops need
   iteration-local retention discipline.
+- 2026-06-24: Added fifth decision pass for app and runtime-kernel boundaries: definitions
+  do not run, `AppDefinition` is a runtime blueprint, `AppInstance` is an admitted running
+  app, one `RuntimeKernel` may host many isolated app instances, provider lifetime is not
+  authority, inter-app communication requires explicit grants, and host starts are distinct
+  from Ash process spawns.

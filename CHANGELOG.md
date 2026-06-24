@@ -70,6 +70,11 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Added `docs/ideas/research/PROTOCOL-GATED-TYPE-DIRECTED-LLM-EXECUTION.md`, a research note on protocol-gated type-directed LLM execution with deterministic oracles, evidence admission, replayable traces, and references to Recursive Language Models and LLM state-machine modeling work.
 
 ### Changed
+- Added the fifth NOTE-018 decision pass for app and runtime-kernel boundaries: definitions
+  do not run, `AppDefinition` is a runtime blueprint, `AppInstance` is an admitted running
+  app, one `RuntimeKernel` may host many isolated app instances, provider lifetime is not
+  authority, inter-app communication requires explicit grants, and host starts are distinct
+  from Ash process spawns.
 - Added the fourth NOTE-018 decision pass for process/channel and memory/region boundaries:
   channel sends cross ownership and region boundaries, owned sendable values move by
   default, copy/share/serialization require explicit evidence, process-local and

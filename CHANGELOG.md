@@ -70,6 +70,11 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Added `docs/ideas/research/PROTOCOL-GATED-TYPE-DIRECTED-LLM-EXECUTION.md`, a research note on protocol-gated type-directed LLM execution with deterministic oracles, evidence admission, replayable traces, and references to Recursive Language Models and LLM state-machine modeling work.
 
 ### Changed
+- Added the seventh NOTE-018 decision pass for handler and provider boundaries: handlers
+  interpret canonical operations by row peeling, handler order is operationally significant,
+  providers are trusted/admitted handler frames for runtime-backed operations, resume strategy
+  and continuation multiplicity constrain legality, and provider installation is admission
+  rather than declaration.
 - Added the sixth NOTE-018 decision pass for behaviour and service-runner boundaries:
   behaviour interfaces define callback shape, runners define runtime loop semantics,
   supervisors define lifecycle policy, service handles are explicit carriers, and no target

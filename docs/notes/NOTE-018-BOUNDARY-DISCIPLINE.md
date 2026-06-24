@@ -171,6 +171,8 @@ Providers install runtime-backed interpretations and may own authority or resour
 3. Distinguish pure/library handlers from authority-bearing providers in diagnostics and
    evidence.
 
+**Current decision pass:** See §8.
+
 **References:**
 
 - [NOTE-013](NOTE-013-AMBIENT-MONAD-AND-HANDLER-COMPOSITION-ALGEBRA.md)
@@ -1123,7 +1125,96 @@ AgentLoop behaviour
 6. Whether behaviour runners can be hot-reloaded and how state migration is typed.
 7. Which lifecycle events are mandatory for traces/reports.
 
-## 8. Cross-Cutting Boundary Contract
+## 8. Decision Pass G: Handler and Provider Boundary
+
+### 8.1 Decision
+
+Target Ash should treat handlers and providers as operation interpreters with different
+authority postures.
+
+Resolved direction for the first target slice:
+
+1. **Handlers interpret operation requirements.** A handler matches canonical operation
+   identity, peels the matching row item from the handled body, and contributes its own row
+   requirements to the residual computation.
+2. **Handler order is operationally significant.** Effect rows are unordered requirement
+   sets; handler nesting determines interpretation order. Commutation is a law/evidence fact,
+   not a default assumption.
+3. **Provider frames are trusted/admitted handlers for runtime-backed operations.** They may
+   own resources, authority, host adapters, pools, and provenance obligations.
+4. **Pure/library handlers and authority-bearing providers must be distinguished.** A pure
+   nondeterminism handler and a filesystem provider both interpret operations, but only the
+   provider discharges admitted authority and may touch the host.
+5. **Resume strategy is part of handler semantics.** Resume, discard, delay, or multi-shot
+   reuse determines the meaning of sequencing for the interpreted operation.
+6. **Continuation multiplicity constrains handler legality.** Affine resumes may be used at
+   most once; multi-shot resumes require pure continuation rows and safe captures.
+7. **Provider installation is an admission event.** Declaring a provider or loading it into a
+   daemon does not grant authority; installing it in an app/workflow/process environment does.
+
+### 8.2 Row transformation
+
+The handler rule should keep the row-peeling intuition explicit:
+
+```text
+body row:
+  {op, rest... | a}
+
+handler matches:
+  {op | r}
+
+match:
+  r := {rest... | a}
+
+after handling:
+  residual row = handler.row union r
+```
+
+Consequences:
+
+- a handler removes only the operation it interprets;
+- unmatched requirements remain in the residual row;
+- handler-local effects are added to the residual row;
+- the row still does not encode handler order.
+
+### 8.3 Handler/provider classes
+
+| Class | Example | Authority posture | Typical resume behavior |
+|---|---|---|---|
+| pure library handler | choice/all-results, option, validation | no host authority | discard, resume, or multi-shot under row rules |
+| state/resource handler | state cell, transaction log | owns scoped state/resource | affine/deep resume |
+| failure handler | `with_error`, branch-local failure drop | owns failure interpretation | discard or resume with default |
+| scheduling handler | delayed resume/future/timer | owns scheduler interaction | delayed affine resume |
+| provider frame | fs/http/model/tool provider | admitted authority, may own host adapter | operation-specific |
+| contract handler | dynamic Hoare check/reporting | owns dynamic check/report policy | usually trap/fail, not arbitrary resume |
+
+### 8.4 Provider authority and lifetime
+
+Provider lifetime and provider authority are separate:
+
+```text
+provider loaded        != authority granted
+provider pool exists   != app may use it
+provider installed     == admitted discharge fact for a scope
+```
+
+Provider scopes may be runtime-global, app-local, workflow-instance-local, process-local, or
+operation-local. The scope controls lifetime and sharing; the admission context controls who
+may use the provider's operations.
+
+### 8.5 Still to resolve
+
+1. Exact surface syntax for explicit handlers and provider installation.
+2. Whether providers lower to ordinary handler frames, a separate provider-chain carrier, or
+   a unified handler/provider chain with trusted metadata.
+3. How handler/provider chains are represented in Core summaries versus CPS/runtime state.
+4. Which operations support delayed resume and how scheduler interaction is typed.
+5. How handler laws are expressed as evidence, especially commutation and state/failure
+   interaction laws.
+6. How provider authority provenance is recorded and exposed in reports.
+7. How deep versus shallow handlers are spelled, if both are admitted.
+
+## 9. Cross-Cutting Boundary Contract
 
 Every boundary should eventually answer the same minimum questions:
 
@@ -1136,7 +1227,7 @@ Every boundary should eventually answer the same minimum questions:
 7. **Lifetime:** how long may the value, authority, resource, or evidence survive?
 8. **Migration:** which legacy forms lower to this boundary?
 
-## 9. Working Principle
+## 10. Working Principle
 
 The boundary rule:
 
@@ -1146,7 +1237,7 @@ or library must name the carrier, ownership rule, authority/evidence requirement
 classification, and lifetime policy.
 ```
 
-## 10. References
+## 11. References
 
 Internal references:
 
@@ -1161,7 +1252,7 @@ Internal references:
 - [SPEC-099: Core Ash](../spec/SPEC-099-CORE-LANGUAGE.md)
 - [SPEC-100: Core Type Checking](../spec/SPEC-100-CORE-TYPE-CHECKING.md)
 
-## 11. Changelog
+## 12. Changelog
 
 - 2026-06-24: Initial inventory. Lists target Ash boundaries and expands each with a
   description, affected features, design options, and references.
@@ -1190,3 +1281,8 @@ Internal references:
   behaviour interfaces define callback shape, runners define runtime loop semantics,
   supervisors define lifecycle policy, service handles are explicit carriers, and no target
   core behaviour primitive is needed yet.
+- 2026-06-24: Added seventh decision pass for handler and provider boundaries: handlers
+  interpret canonical operations by row peeling, handler order is operationally significant,
+  providers are trusted/admitted handler frames for runtime-backed operations, resume strategy
+  and continuation multiplicity constrain legality, and provider installation is admission
+  rather than declaration.

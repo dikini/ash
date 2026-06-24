@@ -265,6 +265,8 @@ unresolved. Laws and properties have different lifecycles.
 3. Represent dynamic Hoare failures as traps by default, with explicit recoverable failure
    lowering where the surface chooses it.
 
+**Current decision pass:** See §9.
+
 **References:**
 
 - [NOTE-014](NOTE-014-CONTRACT-SYSTEMS-UNIFICATION.md)
@@ -1214,7 +1216,89 @@ may use the provider's operations.
 6. How provider authority provenance is recorded and exposed in reports.
 7. How deep versus shallow handlers are spelled, if both are admitted.
 
-## 9. Cross-Cutting Boundary Contract
+## 9. Decision Pass H: Contract and Evidence Boundary
+
+### 9.1 Decision
+
+Target Ash should unify contracts through shared discharge/evidence machinery without
+collapsing their logical lifecycles.
+
+Resolved direction for the first target slice:
+
+1. **Hoare contracts are site-specific.** `requires`, `ensures`, invariants, and guards
+   attach to computation or communication boundaries and compose through sequencing.
+2. **Laws are universal obligations.** A law attaches to an interface/module/impl boundary
+   and is discharged once per implementation or exported evidence unit, not per invocation.
+3. **Properties are falsification metadata, not discharge.** A property can generate tests,
+   reports, confidence, and counterexamples, but it does not prove a law or discharge a hard
+   row obligation by itself.
+4. **No contract disappears silently.** Static proof, evidence proof, demotion to dynamic
+   check, or rejection must be recorded as discharge/evidence metadata.
+5. **Dynamic Hoare failure defaults to structured trap.** It may lower to recoverable `fail`
+   only when the surface protocol explicitly chooses recovery and row-accounts that failure.
+6. **Blame is part of the boundary.** Runtime contract failures must preserve enough
+   metadata to assign caller/callee/provider/runner responsibility once blame rules are
+   specified.
+7. **Evidence can justify optimization only under explicit trust rules.** Law/proof evidence
+   can enable specialization or contract elision; property results alone cannot.
+
+### 9.2 Lifecycle matrix
+
+| Contract/evidence form | Attachment site | Discharge timing | Runtime posture | Evidence/reporting |
+|---|---|---|---|---|
+| `requires` | function/callback/operation entry | per call or statically proven | check before body or trap/fail | predicate, arguments, discharge mode |
+| `ensures` | function/callback/operation exit | per successful return or statically proven | check after result or trap/fail | result, old values if needed, discharge mode |
+| invariant | loop/data/resource/graph boundary | per boundary step or statically proven | check at declared boundary | state snapshot and boundary id |
+| guard | channel receive/send/select boundary | per communication event | check before admission/receive behavior | message binder, endpoint, guard result |
+| obligation | workflow/app/governance boundary | admission, execution, or closeout | boundary-specific | obligation id and lifecycle event |
+| law | interface/module/impl boundary | once per implementation/evidence unit | erased after discharge | proof/test/symbolic evidence ref |
+| proof | evidence declaration | compile/load/check time | not ordinary runtime code | proof artifact and trust mode |
+| property | test/falsification harness | test time | no runtime row item | generated cases, failures, confidence |
+
+### 9.3 Discharge outcomes
+
+Every hard contract obligation should end in exactly one recorded outcome:
+
+```text
+Static      -- proven by checker/SMT/refinement
+Evidence    -- discharged by proof/law evidence/test-evidence mode where trusted
+Dynamic     -- runtime check inserted with discharge metadata
+Rejected    -- counterexample, missing evidence, invalid predicate, or policy says no demotion
+Deferred    -- accepted only where project/build policy explicitly allows unresolved evidence
+```
+
+Dynamic checks are not silent fallbacks. If a static proof is unknown and the compiler
+demotes to dynamic checking, the discharge record should say so.
+
+### 9.4 Boundary interactions
+
+Contracts interact with other boundaries as follows:
+
+- **Function boundary:** `requires` and `ensures` define caller/callee obligations.
+- **Provider boundary:** operation contracts define caller input obligations and provider
+  output obligations.
+- **Process/channel boundary:** guards and payload contracts define message admission and
+  potential receive behavior.
+- **Behaviour runner boundary:** callback contracts are checked at runner-owned
+  message/state boundaries.
+- **App/workflow boundary:** obligations, reports, policies, and closeout contracts are
+  interpreted as governance requirements.
+- **Module summary boundary:** discharged law/proof evidence must be exportable,
+  versioned, and invalidated when dependencies change.
+
+### 9.5 Still to resolve
+
+1. Caller/callee/provider/runner blame rules.
+2. Interface-to-impl precondition/postcondition variance and subsumption.
+3. Monadic Hoare logic through `bind`, handlers, and row-polymorphic sequencing.
+4. Temporal/liveness contract vocabulary for processes, workflows, streams, and graphs.
+5. Interaction with lazy/memo timing and force-site contract checks.
+6. Evidence serialization, trust modes, and cross-module/package cache invalidation.
+7. Property-to-law workflow, if any, and whether tested evidence can ever satisfy a law under
+   a named trust policy.
+8. Redaction policy for values captured in runtime contract diagnostics.
+
+## 10. Cross-Cutting Boundary Contract
 
 Every boundary should eventually answer the same minimum questions:
 
@@ -1227,7 +1311,7 @@ Every boundary should eventually answer the same minimum questions:
 7. **Lifetime:** how long may the value, authority, resource, or evidence survive?
 8. **Migration:** which legacy forms lower to this boundary?
 
-## 10. Working Principle
+## 11. Working Principle
 
 The boundary rule:
 
@@ -1237,7 +1321,7 @@ or library must name the carrier, ownership rule, authority/evidence requirement
 classification, and lifetime policy.
 ```
 
-## 11. References
+## 12. References
 
 Internal references:
 
@@ -1252,7 +1336,7 @@ Internal references:
 - [SPEC-099: Core Ash](../spec/SPEC-099-CORE-LANGUAGE.md)
 - [SPEC-100: Core Type Checking](../spec/SPEC-100-CORE-TYPE-CHECKING.md)
 
-## 12. Changelog
+## 13. Changelog
 
 - 2026-06-24: Initial inventory. Lists target Ash boundaries and expands each with a
   description, affected features, design options, and references.
@@ -1286,3 +1370,8 @@ Internal references:
   providers are trusted/admitted handler frames for runtime-backed operations, resume strategy
   and continuation multiplicity constrain legality, and provider installation is admission
   rather than declaration.
+- 2026-06-24: Added eighth decision pass for contract and evidence boundaries: Hoare
+  contracts are site-specific, laws are universal obligations discharged once per evidence
+  unit, properties remain falsification metadata, hard contracts record discharge outcomes,
+  dynamic Hoare failures trap by default unless explicitly recoverable, and evidence can
+  justify optimization only under explicit trust rules.

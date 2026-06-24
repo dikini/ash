@@ -70,6 +70,11 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Added `docs/ideas/research/PROTOCOL-GATED-TYPE-DIRECTED-LLM-EXECUTION.md`, a research note on protocol-gated type-directed LLM execution with deterministic oracles, evidence admission, replayable traces, and references to Recursive Language Models and LLM state-machine modeling work.
 
 ### Changed
+- Added the eighth NOTE-018 decision pass for contract and evidence boundaries: Hoare
+  contracts are site-specific, laws are universal obligations discharged once per evidence
+  unit, properties remain falsification metadata, hard contracts record discharge outcomes,
+  dynamic Hoare failures trap by default unless explicitly recoverable, and evidence can
+  justify optimization only under explicit trust rules.
 - Added the seventh NOTE-018 decision pass for handler and provider boundaries: handlers
   interpret canonical operations by row peeling, handler order is operationally significant,
   providers are trusted/admitted handler frames for runtime-backed operations, resume strategy

@@ -6,6 +6,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Added
+- Added NOTE-018, an initial target Ash boundary-discipline inventory covering
+  surface/Core, function/closure, row admission, effect declaration, handler/provider,
+  extern/host, failure, contract/evidence, process/channel, memory/region, app/runtime,
+  behaviour, reactive, and module-summary boundaries.
 - Added NOTE-017, a target memory-model note defining per-process regions, explicit
   ownership transfer across communication boundaries, process/app isolation, long-lived
   state discipline, and future Perceus-like region/reuse optimization.
@@ -66,6 +70,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Added `docs/ideas/research/PROTOCOL-GATED-TYPE-DIRECTED-LLM-EXECUTION.md`, a research note on protocol-gated type-directed LLM execution with deterministic oracles, evidence admission, replayable traces, and references to Recursive Language Models and LLM state-machine modeling work.
 
 ### Changed
+- Clarified NOTE-017 wording around the Rust implementation substrate versus Ash's
+  user-visible process/app/region memory semantics.
 - Hardened Phase 163 planning with targeted implementation-contract clarifications for mode-type
   latent-row well-formedness, thunk `result_ty` as a strict inner type, immutable `LetMode`
   row-check facts, variable-only Phase 163 `Force`, and runtime thunk capture construction.

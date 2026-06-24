@@ -2,10 +2,10 @@
 
 **Date:** 2026-06-24
 **Status:** Living document — exploration in progress
-**Purpose:** Define the target Ash memory story beyond "Rust handles it": per-process
-memory regions as the initial semantic model, ownership transfer across communication
-boundaries, and future region/reuse optimization inspired by Koka's Perceus. Companion to
-NOTE-016 (runtime organization) and `process-model.md`.
+**Purpose:** Define the target Ash memory model beyond "Rust handles it": per-process
+memory regions as the initial semantic model, explicit ownership transfer across
+communication boundaries, and future region/reuse optimization inspired by Koka's Perceus.
+Companion to NOTE-016 (runtime organization) and `process-model.md`.
 
 ## 0. Motivation
 
@@ -43,10 +43,10 @@ The current implementation gets memory safety from Rust. That means:
   according to their Rust representation;
 - Ash source code does not yet have a precise memory model of its own.
 
-This is acceptable for implementation safety. It is not enough for target Ash semantics,
-because the user needs to know whether an Ash process is isolated, whether a sent value is
-copied or moved, whether long-running services retain old context, and whether graph/stream
-execution is bounded.
+This is acceptable for implementation safety. It is not enough for target Ash semantics.
+Users and compiler phases need to know whether an Ash process is isolated, whether a sent
+value is copied or moved, whether long-running services retain old context, and whether
+graph/stream execution is bounded.
 
 ## 2. Initial Target: Per-Process Regions
 
@@ -102,7 +102,7 @@ The semantic options must be explicit:
 | Mode | Meaning |
 |---|---|
 | move | sender loses access; receiver owns value |
-| copy | value is duplicated; requires copyable/shareable type |
+| copy | value is duplicated; requires an explicitly copyable type |
 | share | value is shared read-only or through a controlled resource handle |
 | reject | type cannot cross the boundary |
 
@@ -254,18 +254,19 @@ A graph blueprint should not imply unbounded history unless it declares it.
 
 ## 7. Rust Implementation vs Ash Semantics
 
-Rust remains the implementation safety substrate. The target Ash memory model should sit
-above it.
+Rust remains the implementation safety substrate. The target Ash memory model sits above it:
+Rust explains why the implementation is memory-safe, while Ash explains ownership, transfer,
+sharing, cleanup, and retention at language/runtime boundaries.
 
 | Layer | Responsibility |
 |---|---|
 | Rust | concrete memory safety, allocation APIs, async runtime correctness |
 | Ash runtime | process/app regions, message ownership, cleanup, retention policy |
-| Ash type checker | Send/Share/ProcessLocal/resource boundaries, row effects |
+| Ash type checker | send/share/process-local/resource boundaries, row effects |
 | Ash optimizer | reuse, in-place update, region splitting, elision |
 | Ash user model | values move/copy/share according to explicit rules |
 
-Implementation may use:
+Implementation may use any mix of:
 
 - Rust ownership and moves;
 - arenas/bump allocators;
@@ -275,14 +276,14 @@ Implementation may use:
 - slab allocators;
 - tracing buffers with bounded retention.
 
-But these are implementation strategies. The visible story should be process/app/region
-ownership, not "whatever the Rust implementation happens to do."
+These are implementation strategies, not user-visible semantics. The visible story is
+process/app/region ownership plus explicit boundary crossing.
 
 ## 8. Future Direction: Region Discipline and Perceus-Like Reuse
 
 Koka's Perceus demonstrates that precise reference counting and reuse analysis can support
-functional programming with efficient in-place updates. Ash can take inspiration without
-committing to the same mechanism immediately.
+functional programming with efficient in-place updates. Ash can take inspiration from that
+discipline without committing to the same runtime mechanism immediately.
 
 Possible future refinements:
 
@@ -337,7 +338,7 @@ Evidence can justify optimizations:
 - a producer emits bounded-size chunks;
 - a graph node keeps only a fixed-size window.
 
-These are future optimization hooks, not first-slice requirements.
+These are future optimization and diagnostic hooks, not first-slice requirements.
 
 ## 11. Failure, Restart, and Cleanup
 
@@ -399,7 +400,7 @@ Open questions:
 
 ### 13.3 Region syntax
 
-The first slice should avoid user-visible region syntax if possible. Later work may need:
+The first slice should avoid user-visible region syntax if possible. A later slice may need:
 
 - explicit region annotations;
 - process-local declarations;
@@ -431,7 +432,8 @@ Implementation choices remain open:
 ## 14. Migration Implications
 
 Current docs and implementation should stop implying that Rust memory handling alone is the
-Ash memory model.
+Ash memory model. Rust remains the implementation substrate; Ash still needs its own
+semantic account of ownership and retention.
 
 Migration path:
 

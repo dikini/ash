@@ -17,8 +17,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   app definitions/instances, supervisors, behaviours, process/workflow instances, and
   pull/push/graph reactive modes, including the multi-app RuntimeKernel story.
 - Added NOTE-015, a current-to-target Ash language-form taxonomy summarizing which forms
-  remain core primitives, move to library/effect/contract space, stay as compatibility
-  syntax, or need further resolution, including the ambient-monad direction where other
+  remain core primitives, move to library/effect/contract space, become corpus migration
+  targets, or need further resolution, including the ambient-monad direction where other
   monadic behavior is implemented by effects plus handler composition rather than row order,
   with an exception/nondeterminism example showing row accumulation through bind and
   handler row-peeling of matched operations.
@@ -70,6 +70,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Added `docs/ideas/research/PROTOCOL-GATED-TYPE-DIRECTED-LLM-EXECUTION.md`, a research note on protocol-gated type-directed LLM execution with deterministic oracles, evidence admission, replayable traces, and references to Recursive Language Models and LLM state-machine modeling work.
 
 ### Changed
+- Clarified NOTE-015 and NOTE-018 that current/legacy Ash surface forms do not need a
+  language-level compatibility layer because remaining uses live in project-owned standard
+  library, documentation examples, and tests; target work can schedule corpus migration
+  instead.
 - Added the tenth NOTE-018 decision pass for compiler-facing boundaries: surface syntax
   elaborates to Core rather than defining semantic islands, every callable is row-bearing at
   the semantic boundary, closure captures are checked for effect/authority/memory/control

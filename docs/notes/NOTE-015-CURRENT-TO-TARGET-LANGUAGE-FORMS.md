@@ -32,9 +32,9 @@ The core target model is:
 fn + ordinary data/types + effect rows + contracts/evidence + raise/handle/provider frames
 ```
 
-`Act`, `Proc`, and `Workflow` may remain as public names, carriers, profiles, modules, or
-compatibility surfaces. From the language point of view, however, they should be expressible
-over the shared substrate:
+`Act`, `Proc`, and `Workflow` may remain as public library names, carriers, profiles, or
+modules. From the language point of view, however, they should be expressible over the
+shared substrate:
 
 ```text
 Comp<ρ, A>
@@ -79,11 +79,13 @@ Some constructs are primitive in Core/CPS but should not force large surface syn
 | contract discharge records | Compiler/evidence metadata, not ordinary user data. |
 | trusted extern boundary | Effect-owned implementation hook, not unrestricted callable escape. |
 
-### 1.3 Library or compatibility forms
+### 1.3 Library forms and corpus migration targets
 
 Most current tower/governance forms should move here. They remain useful, but their
 semantics should be explainable as library declarations, effect operations, providers,
-contracts, or row profiles.
+contracts, or row profiles. Current surface forms do not need a language-level
+compatibility layer: the only legacy users are the standard library, documentation examples,
+and tests, so migration can be handled as project corpus work.
 
 ## 2. The Central Resolved Direction
 
@@ -394,25 +396,25 @@ intended direction, current implementation posture, resolved decisions, and open
 | type holes `_` | Implemented | Keep inference aid | Yes | Interaction with partial type constructors remains type-system work. |
 | associated types/families | Implemented/advanced | Keep type-level feature | Yes | Row-bearing callable types in associated positions. |
 | sealed domains, data kinds, type functions | Implemented in later phases | Keep as type-level machinery | Mostly | Which pieces are user-facing vs compiler/library discipline. |
-| callable arrows / tower arrows | Reserved or partially designed | Prefer row-bearing function types | Direction yes | Whether old arrows remain as compatibility aliases. |
+| callable arrows / tower arrows | Reserved or partially designed | Prefer row-bearing function types | Direction yes | Migrate stdlib/docs/tests to the target spelling rather than preserving old arrows as language compatibility. |
 
 ### 4.3 Algebra and sequencing forms
 
 | Current form | Implemented/current posture | Intended target | Resolved | To resolve |
 |---|---|---|---|---|
-| `act { ... }` | Implemented as Act/migration syntax | Compatibility alias for `do {}` or Act-profile `do` | Direction yes | Deprecation schedule and diagnostics. |
-| `do:Act`, `do:Proc`, `do:Workflow` | Implemented typed-do targets | Profile annotations over unified `do` | Direction yes | Whether explicit profiles remain useful long-term. |
+| `act { ... }` | Implemented as current Act helper syntax | Remove as language syntax; migrate corpus to target `do`/library surface | Direction yes | Update stdlib/docs/tests and add target-form coverage. |
+| `do:Act`, `do:Proc`, `do:Workflow` | Implemented typed-do targets | Remove as language syntax unless profile annotations earn target status | Direction yes | Decide if explicit profile annotations remain useful; otherwise migrate corpus. |
 | `do:K` | Implemented for selected targets/evidence | Keep as general sequencing sugar over algebra/evidence | Yes | Arbitrary user monads and row-polymorphic `Comp` integration. |
 | comprehensions | Implemented/partially target-aware | Keep as sugar over `map`/`bind`/guards via evidence | Mostly | Guard/filter semantics and target inference boundaries. |
 | `return` in do | Implemented | Keep as target/unit in do, not function-level control | Yes | None central. |
-| legacy `ret` | Implemented compatibility | Compatibility alias for `return` | Yes | Removal/deprecation timeline. |
+| legacy `ret` | Implemented compatibility | Remove from target syntax; migrate corpus to `return` | Yes | Corpus migration only. |
 | `Monad<K>` evidence | Implemented for selected targets | Primary sequencing abstraction | Yes | Law evidence and arbitrary user evidence execution. |
 
 ### 4.4 Effect, capability, resource, and host boundary forms
 
 | Current form | Implemented/current posture | Intended target | Resolved | To resolve |
 |---|---|---|---|---|
-| `capability` declaration | Implemented current subsystem | Effect operation declaration sugar plus provider/admission metadata | Direction yes | Concrete target surface: keep `capability`, replace with `effect`, or support both. |
+| `capability` declaration | Implemented current subsystem | Prefer target `effect` operation declaration plus provider/admission metadata | Direction yes | Decide whether `capability` remains a domain library authoring form; no language compatibility layer required. |
 | capability operation modes `read/write/...` | Implemented vocabulary | Operation metadata or contract/resource tags | Partial | Whether modes are semantic row items or diagnostics/docs only. |
 | capability impls/providers | Implemented around current model | Handler/provider implementation for effect operations | Direction yes | Provider frame API, authority provenance, extern placement. |
 | `builtin fn` | Implemented | Keep narrow compiler-known escape hatch | Partial | Prefer stdlib/effect-owned externs where possible. |
@@ -426,7 +428,7 @@ intended direction, current implementation posture, resolved decisions, and open
 | Current form | Implemented/current posture | Intended target | Resolved | To resolve |
 |---|---|---|---|---|
 | `role` declarations | Implemented current governance | Library/governance declarations that entail row items | Direction yes | Role admission, multi-role model, invalidation of entailment evidence. |
-| `plays role` | Workflow header syntax | `role` row item/admission requirement | Yes direction | Compatibility lowering and diagnostics. |
+| `plays role` | Workflow header syntax | `role` row item/admission requirement | Yes direction | Migrate corpus to target admission/profile spelling. |
 | policy expressions | Implemented separate expression DSL | Named policy programs/evaluators discharging policy row items | Direction yes | First-class vs named-only policy boundary. |
 | `decide under policy` | Workflow statement | Policy effect/evaluator boundary plus branch/library combinator | Direction yes | Decision-domain typing and evidence reporting. |
 | `requires`, `ensures` on fn/workflow | Implemented current contracts | Contract row items/refinements/discharge records | Yes direction | Surface-to-Core predicate structuralization. |
@@ -446,11 +448,11 @@ intended direction, current implementation posture, resolved decisions, and open
 | `send`, `receive` workflow statements | Implemented workflow syntax | Channel effect operations with guard contracts | Direction yes | Queue semantics, guard failure behavior, session/protocol typing. |
 | `receive wait` | Implemented current syntax | Channel receive plus timeout/failure/process effects | Partial | Timeout as failure effect, process effect, or library combinator. |
 | `Workflow<A>` | Implemented first-class carrier | Library/governance carrier/profile over process plus contract plan | Direction yes | How much public carrier remains after row profiles mature. |
-| `workflow` keyword | Implemented legacy/core syntax | Compatibility alias for `fn` with row/profile/contracts/admission | Yes direction | Migration schedule and exact lowering. |
-| workflow headers | Implemented | Row/admission/contract summaries | Yes direction | Complete compatibility mapping. |
+| `workflow` keyword | Implemented legacy/core syntax | Remove as primitive language syntax; model as governed `fn`, app entry, or library carrier | Yes direction | Migrate stdlib/docs/tests to target forms. |
+| workflow headers | Implemented | Row/admission/contract summaries | Yes direction | Map concepts into target app/function/admission declarations for corpus migration. |
 | `observe`, `orient`, `propose` | Implemented workflow statements | Likely library/protocol/evidence operations | Partial | Whether they are core workflow vocabulary or domain libraries. |
 | `maybe`, `must` | Implemented workflow statements | Failure/contract/library combinators | Partial | Interaction with `fail`, `with_error`, and row accounting. |
-| `done` | Implemented workflow terminator | Compatibility syntax or unit/return marker | Direction likely | Exact migration rule. |
+| `done` | Implemented workflow terminator | Remove as target syntax unless it earns library/domain status | Direction likely | Migrate corpus to `return`/unit/runner-specific completion. |
 | `with expr do` | Implemented workflow statement | Scoped provider/admission/handler installation | Direction yes | Concrete handler/provider lowering. |
 | `yield` declaration/statement | Implemented current workflow/proxy area | Protocol/library operation over continuations or process effects | Partial | Relationship to CPS continuations and interaction protocols. |
 | `proxy`, `resume` | Implemented/reserved in workflow interaction area | Protocol library over continuations, channels, or workflow admission | Open | Needs dedicated interaction-protocol review. |
@@ -571,12 +573,13 @@ is supplied by handlers interpreting effect operations. Therefore:
 
 Open choice:
 
-1. keep `capability` as compatibility sugar;
+1. keep `capability` as domain-friendly sugar;
 2. introduce `effect` declarations as the canonical operation declaration form;
 3. allow both, with `capability` lowering to a restricted `effect` declaration.
 
 Recommendation: make `effect` the canonical target vocabulary and retain `capability` only
-as a compatibility or domain-friendly spelling where useful.
+as a domain-friendly spelling if it earns its keep. Otherwise, migrate the project-owned
+corpus to `effect` declarations and remove the language form.
 
 ### 7.2 External function boundary
 
@@ -624,9 +627,11 @@ review. They may be:
 1. domain library constructs;
 2. protocol effects over channels/continuations;
 3. workflow-governance helpers;
-4. compatibility syntax to retire.
+4. removal candidates to retire.
 
-They should not remain primitive merely because they are old workflow statements.
+They should not remain primitive merely because they are old workflow statements. Since the
+legacy users are project-owned corpus files, the target can choose the cleaner model and
+migrate examples/tests instead of accepting old syntax indefinitely.
 
 ### 7.6 Builtins vs stdlib
 
@@ -651,15 +656,16 @@ substrate primitive
 library surface
 effect operation declaration
 contract/evidence declaration
-compatibility syntax
-deprecation/removal candidate
+corpus migration target
+removal candidate
 ```
 
 This note is a first pass at that classification.
 
-### 8.2 Stage B: Row summaries before removal
+### 8.2 Stage B: Target replacements before corpus migration
 
-Do not remove legacy forms first. Add row summaries around current forms:
+For each current form used by the standard library, documentation examples, or tests, define
+the target replacement and add target-form coverage before migrating that corpus:
 
 - functions and closures;
 - `act`/`do` blocks;
@@ -668,17 +674,20 @@ Do not remove legacy forms first. Add row summaries around current forms:
 - process/channel operations;
 - contracts and obligations.
 
-### 8.3 Stage C: Compatibility lowering
+### 8.3 Stage C: Corpus migration
 
-Legacy forms should lower into target constructs:
+Project-owned legacy uses should be rewritten to target constructs:
 
 ```text
 workflow header      -> function row + admission/contract metadata
 capability call      -> effect operation raise/call with provider discharge
 receive guard        -> channel effect + guard contract
 oblige/check         -> obligation/contract row item + evidence state
-do:Act/do:Proc/...   -> do block checked against a row profile
+do:Act/do:Proc/...   -> do block checked against a row profile, if profiles remain
 ```
+
+This is not a promise that the language accepts both forms indefinitely. It is a scheduling
+plan for stdlib/docs/tests migration.
 
 ### 8.4 Stage D: Documentation and diagnostics
 
@@ -690,15 +699,15 @@ Diagnostics should teach the target model:
 - "process effect used outside Proc-capable profile";
 - "effect alias `IO` expands to missing concrete item `cap log.write`."
 
-### 8.5 Stage E: Deprecation only after equivalence
+### 8.5 Stage E: Remove old surface once corpus is migrated
 
-Legacy syntax should be deprecated only after:
+Old syntax can be removed once:
 
-1. target lowering exists;
-2. row summaries agree with legacy behavior;
-3. runtime behavior has equivalence tests;
-4. diagnostics have rewrite hints;
-5. reference docs describe the library/profile replacement.
+1. the target form exists;
+2. stdlib sources are migrated;
+3. documentation examples are migrated;
+4. tests cover the target form;
+5. any required historical examples are either rewritten or marked historical/non-target.
 
 ## 9. Working Principle
 

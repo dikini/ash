@@ -33,7 +33,7 @@ resolved/to-resolve contract.
 ### 1.1 Surface-to-Core boundary
 
 **Description:** The boundary between user-facing Ash syntax and Core Ash. Target Ash
-should not let legacy workflow, capability, or tower syntax define separate semantics.
+should not let current workflow, capability, or tower syntax define separate semantics.
 Surface forms elaborate into Core terms, row facts, contract discharge metadata, and
 sidecar evidence declarations.
 
@@ -42,14 +42,15 @@ sidecar evidence declarations.
 - `workflow`, `act`, `do:Act`, `do:Proc`, `do:Workflow`, `ret`, and workflow statements;
 - `capability`, role, policy, resource, law, proof, property, and proposition declarations;
 - row annotation syntax, inferred row summaries, and diagnostics;
-- source spans and rewrite hints during migration.
+- source spans and rewrite hints during stdlib/docs/test corpus migration.
 
 **Options:**
 
-1. Keep broad compatibility syntax and lower it aggressively to Core.
-2. Introduce canonical target syntax first, then deprecate legacy forms once equivalence
-   tests exist.
-3. Keep some domain-friendly surface forms permanently, but require their lowering to be
+1. Introduce canonical target syntax and migrate stdlib/docs/tests to it.
+2. Treat old project-owned uses as corpus migration work, not a language compatibility
+   contract.
+3. Keep any domain-friendly surface forms permanently only if they earn target status, and
+   require their lowering to be
    specified as sugar over Core.
 
 **Current decision pass:** See §11.
@@ -78,7 +79,8 @@ captures are legal.
 **Options:**
 
 1. Treat every function as row-bearing and infer rows unless annotated.
-2. Preserve pure `Fn` and effectful `Fun` compatibility types during migration.
+2. Collapse current pure `Fn` and effectful `Fun` distinctions into the target
+   row-bearing callable model while migrating project-owned corpus uses.
 3. Add stricter closure-capture predicates for process-local, region-local, and authority
    carrying values.
 
@@ -111,7 +113,7 @@ roles, policies, resources, and evidence determine whether the requirement is sa
 1. Discharge most row items statically when possible and leave runtime admission as a
    boundary check.
 2. Keep admission primarily runtime-owned, with the type checker producing summaries and
-   compatibility obligations.
+   boundary obligations.
 3. Split discharge by kind: static/evidence/dynamic for contracts, admission for authority,
    ownership for resources, handler/provider frames for operations.
 
@@ -549,7 +551,8 @@ when a more precise boundary class is known.
 1. Concrete source spelling for typed recoverable failures.
 2. Whether `fail E` uses a single `FailureEffect { failure_type: E }` item or namespaced
    failure operations.
-3. Whether `with_error` remains compatibility syntax or becomes a library handler.
+3. Whether `with_error` remains a target library handler form or is removed during corpus
+   migration.
 4. Exact workflow/app report schema for lower causes.
 5. How much of policy denial is represented as a row item versus boundary result.
 6. Whether provider/host failures default to trap, recoverable failure, or declared
@@ -571,13 +574,14 @@ host/provider adapter    -- how the request is implemented
 Resolved direction for the first target slice:
 
 1. **Canonical operation identity lives below surface spelling.** Whether the source says
-   `effect`, `capability`, or a compatibility form, Core/CPS sees one canonical operation
-   identity and one row item.
+   `effect`, `capability`, or a domain-friendly declaration form, Core/CPS sees one
+   canonical operation identity and one row item.
 2. **`effect` is the target vocabulary for operation declarations.** It names typed
    operation signatures, row contribution, contracts, and optional implementation hooks.
-3. **`capability` remains a restricted/domain-friendly compatibility surface.** It lowers to
-   authority-bearing effect operations plus admission/provider metadata. It is not a
-   separate semantic island.
+3. **`capability` is not a separate semantic island.** If retained, it should be a
+   restricted domain-friendly authoring form that lowers to authority-bearing effect
+   operations plus admission/provider metadata; otherwise current uses are corpus migration
+   work.
 4. **User-defined effects are a target-language direction, but an alpha staging choice.**
    The design vocabulary uses `effect` for ordinary algebraic-operation declarations such
    as failure, choice, and host capabilities. Current alpha specs may restrict which
@@ -659,7 +663,7 @@ Externs should be admitted only at trusted implementation boundaries:
 | effect-level extern | canonical host ABI for a standard operation | hidden behind typed operation |
 | provider-level extern | backend-specific adapter or deployment-specific host binding | hidden behind admitted provider |
 | handler-level extern | trusted interpreter for an effect operation | hidden behind handler installation |
-| ordinary `extern fn` | compatibility or bootstrap only, not target user model | should not be directly callable as pure Ash |
+| ordinary `extern fn` | bootstrap/trusted implementation only, not target user model | should not be directly callable as pure Ash |
 
 The invariant:
 
@@ -694,7 +698,8 @@ extern says how trusted implementation reaches the host.
 ### 3.5 Still to resolve
 
 1. Exact target syntax for `effect` declarations.
-2. Whether `capability` is permanently supported as a domain form or only migration syntax.
+2. Whether `capability` is permanently supported as a domain form or removed after
+   stdlib/docs/tests migration.
 3. Whether effect-level externs are allowed in user-authored source, trusted packages only,
    or compiler/runtime-owned modules only.
 4. How provider implementations are declared and typed.
@@ -1399,14 +1404,15 @@ module/package      -> versioned public semantic summaries
 
 Resolved direction for the first target slice:
 
-1. **Core owns semantics, surface owns ergonomics.** Legacy workflow/tower/capability syntax
-   may remain as compatibility or domain-friendly surface, but it must elaborate to Core
-   constructs, row facts, discharge metadata, and sidecar evidence.
+1. **Core owns semantics, surface owns ergonomics.** Current workflow/tower/capability
+   syntax should not be preserved as a language compatibility layer. Any old project-owned
+   uses should be migrated to target surface forms that elaborate to Core constructs, row
+   facts, discharge metadata, and sidecar evidence.
 2. **Core type checking verifies elaborated facts.** Core checking does not own parsing,
    desugaring, type-class search, proof search, or arbitrary syntax migration. Those happen
    before Core or in separate verifier/discharge phases.
 3. **Every callable is row-bearing at the semantic boundary.** Pure functions are the empty
-   row case; compatibility `Fn`/`Fun` distinctions lower to row-bearing function or
+   row case; current `Fn`/`Fun` distinctions should converge on row-bearing function or
    continuation types.
 4. **Closure capture is checked as a boundary.** Captured values must be legal for the
    closure's row/profile and for any later boundary the closure may cross.
@@ -1430,8 +1436,8 @@ Surface lowering should produce:
 | Surface feature | Lowered/recorded target |
 |---|---|
 | `fn`, lambdas, calls | Core functions/calls with row-bearing callable types |
-| `do`, old `act`, old typed `do:*` | ambient sequencing plus row/profile checks |
-| `workflow` and workflow statements | governed function/app/runtime metadata plus Core body |
+| `do`, current `act`, current typed `do:*` | migrate to target ambient sequencing plus row/profile checks |
+| current `workflow` and workflow statements | migrate to governed function/app/runtime metadata plus Core body |
 | `capability`/`effect` declarations | canonical operation identities and row items |
 | `handle`/provider scopes | Core/CPS handler/provider metadata |
 | contracts | predicate refs plus discharge obligations/metadata |
@@ -1489,17 +1495,19 @@ change row/type/evidence results.
 
 ### 11.5 Still to resolve
 
-1. Exact surface-to-Core lowering for every legacy workflow statement.
+1. Exact target replacement for every current workflow statement still used in
+   stdlib/docs/tests.
 2. Final user-facing syntax for row variables, effect declarations, handlers, and app specs.
-3. Compatibility/deprecation schedule for `workflow`, `act`, `ret`, `do:Act`,
-   `do:Proc`, and `do:Workflow`.
+3. Corpus migration schedule for `workflow`, `act`, `ret`, `do:Act`, `do:Proc`, and
+   `do:Workflow` usages in stdlib/docs/tests.
 4. Closure capture representation in Core summaries and diagnostics.
 5. Whether callable public summaries expose inferred rows by default or only stable
    annotated rows.
 6. Versioning format for effect identities, row aliases/groups, evidence refs, and operation
    contracts.
 7. Cross-package evidence cache trust and invalidation policy.
-8. Diagnostic rewrite hints from legacy forms to target forms.
+8. Diagnostic or tooling rewrite hints for migrating project-owned corpus forms to target
+   forms.
 
 ## 12. Cross-Cutting Boundary Contract
 
@@ -1512,7 +1520,7 @@ Every boundary should eventually answer the same minimum questions:
 5. **Failure:** which failure categories can arise?
 6. **Evidence:** which discharge, trace, report, or provenance record is produced?
 7. **Lifetime:** how long may the value, authority, resource, or evidence survive?
-8. **Migration:** which legacy forms lower to this boundary?
+8. **Migration:** which current corpus forms should be rewritten to this boundary?
 
 ## 13. Working Principle
 

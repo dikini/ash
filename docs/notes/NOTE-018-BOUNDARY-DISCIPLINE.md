@@ -1309,8 +1309,9 @@ fn all_choices<A, r>(body: Unit -> {choice.choose | r} A) -> {r} List<A> {
         done(value) =>
             [value]
 
-        choice.choose(xs, resume) =>
-            xs.flat_map(fn x -> all_choices(fn () -> resume(x)))
+        choice.choose =>
+            with |xs, resume| ->
+                xs.flat_map(fn x -> all_choices(fn () -> resume(x)))
     }
 }
 ```
@@ -1383,8 +1384,9 @@ provider AllChoices<A> {
         done(value) =>
             [value]
 
-        choice.choose(xs, resume) =>
-            xs.flat_map(fn x -> AllChoices(fn () -> resume(x)))
+        choice.choose =>
+            with |xs, resume| ->
+                xs.flat_map(fn x -> AllChoices(fn () -> resume(x)))
     }
 }
 
@@ -1513,13 +1515,50 @@ match scrutinee { ... }
 on computation { ... }
   scrutinee is an effectful computation/port;
   clauses are completion and operation cases;
-  operation cases receive a typed resume continuation.
+  operation cases name an operation and define an operation-clause function.
 ```
 
 `on` is deliberately match-like in shape, but it is not pattern matching over ordinary
 values. It is an eliminator for computations with rows. The completion clause handles normal
-completion; operation clauses handle canonical operation identities and receive the
-operation arguments plus a continuation for the rest of the computation.
+completion; operation clauses handle canonical operation identities. The operation-clause
+function receives the operation arguments plus a continuation for the rest of the
+computation.
+
+The operation arm shape is:
+
+```text
+operation_name =>
+    with |operation_args..., resume| -> body
+```
+
+For example:
+
+```ash
+choice.choose =>
+    with |xs, resume| ->
+        xs.flat_map(fn x -> all_choices(fn () -> resume(x)))
+```
+
+This separates the operation identity being handled from the function that implements the
+operation clause. The `with |...| -> ...` form is not an ordinary provider installation and
+does not call the operation. It defines the operation-clause function that the provider
+runtime applies to the raised operation arguments and resume continuation.
+
+The two `with` contexts are distinct:
+
+```text
+expression position:
+  with Provider { body }
+  -- install a provider around a computation
+
+on-arm right-hand side:
+  operation.name => with |args..., resume| -> body
+  -- define the operation-clause function for one operation
+```
+
+Operation clause parameters are binders, not arbitrary patterns or expressions. Dispatch is
+by resolved operation identity. If a provider needs to inspect an operation argument, it
+binds the argument and uses ordinary `match` or `if` inside the clause body.
 
 The declaration remains an ordinary `fn`. An optional `operator` spelling may be admitted
 as an intent-signaling synonym for functions that primarily bind or control effectful
@@ -1562,10 +1601,11 @@ library style, but it is not the only Frank-like authoring path.
    Frank-like nested calls and explicit scoped installation.
 6. How provider authority provenance is recorded and exposed in reports.
 7. How deep versus shallow handlers are spelled, if both are admitted.
-8. Exact grammar for `on`, including completion clause spelling and operation clause
-   binding. The baseline provider argument is an ordinary thunk function such as
-   `Unit -> {r} A`; convenience forms such as `delay(do { ... })` belong to
-   evaluation-mode/computation-thunking syntax.
+8. Exact grammar for `on`, including completion clause spelling and the final spelling of
+   operation arms. Current direction is `operation.name => with |args..., resume| -> body`.
+   The baseline provider argument is an ordinary thunk function such as `Unit -> {r} A`;
+   convenience forms such as `delay(do { ... })` belong to evaluation-mode/computation-
+   thunking syntax.
 9. Whether `operator` is accepted as a permanent synonym for `fn`, a lint/documentation
    convention, or only a future readability affordance.
 10. Authority fact spelling and discharge APIs, separate from later multiplicity/lifetime

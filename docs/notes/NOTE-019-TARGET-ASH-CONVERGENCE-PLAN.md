@@ -99,8 +99,8 @@ These are design constraints for future specs and implementation plans.
 Target Ash has one ambient monad for sequencing. Computation rows index the facts attached
 to a computation: effects, evaluation modes, failures, contracts, evidence, authority,
 runtime requirements, and related obligations. Other monadic stories are implemented by
-effects plus handlers/providers, while lazy/memo/eager behavior is represented as
-computation-row mode facts. Handler nesting composes interpretations; row order does not.
+effects plus providers, while lazy/memo/eager behavior is represented as
+computation-row mode facts. Provider nesting composes interpretations; row order does not.
 
 #### 3.1.1 `do` notation versus plain function composition
 
@@ -156,7 +156,7 @@ define separate execution paths.
 The target capability story is:
 
 ```text
-operation identity + row item + contracts + provider/handler + admission + optional extern
+operation identity + row item + contracts + provider + admission + optional extern
 ```
 
 If `capability` remains, it is a domain-friendly declaration form over this model. It is
@@ -164,8 +164,11 @@ not an independent semantic subsystem.
 
 Ordinary row spelling should name operations directly, such as `{fs.read}` or
 `{net.request}`. The authority-bearing status of an operation is discharged by
-admission/provider/handler/evidence rules, not by a `cap` prefix in the operation row item.
-The exact syntax for introducing authority/admission facts remains open.
+admission/provider/evidence rules, not by a `cap` prefix in the operation row item. A
+provider that handles an operation contributes its own authority/admission/host/provenance
+row requirements, and those requirements are introduced or discharged by the ordinary
+row-environment/admission mechanisms. The exact syntax for authority/admission facts
+remains open, and authority multiplicity/lifetime is a separate design topic.
 
 ### 3.5 Contracts share machinery, not lifecycle
 
@@ -218,7 +221,7 @@ Required convergence:
 - SPEC-095b must stop describing old forms as target obligations where NOTE-015 has moved
   them to corpus migration or library space.
 - SPEC-096b/SPEC-097b/SPEC-098b/SPEC-099/SPEC-100 must agree on row item taxonomy,
-  discharge kinds, handler/provider frames, failure classes, and public summaries.
+  discharge kinds, provider frames, failure classes, and public summaries.
 - Core checking should be the authority for row facts before CPS lowering.
 - CPS should remain the executable control/effect representation, not a second source
   language.
@@ -361,7 +364,7 @@ summary may require downstream global inference to discover which parameters are
 types, type constructors, evidence, or modes.
 ```
 
-### 4.4 Effect, handler, provider, and extern convergence
+### 4.4 Effect, provider, and extern convergence
 
 Goal: one operation identity path from declaration to runtime implementation.
 
@@ -370,17 +373,19 @@ Required convergence:
 - decide the canonical `effect` declaration syntax;
 - decide whether `capability` remains as target domain syntax or is removed after corpus
   migration;
-- define handler surface syntax and how it exposes row peeling;
+- define provider surface syntax and how it exposes row peeling, including both explicit
+  scoped installation and Frank-like `fn`/optional `operator` definitions using `on` to
+  eliminate effectful computation parameters;
 - make provider installation an admission event, not declaration side effect;
 - choose the primary extern authoring location: effect-level canonical hook,
-  provider-level adapter, handler-level adapter, or a restricted mix;
+  provider-level adapter, provider-owned lexical adapter, or a restricted mix;
 - keep ordinary Ash code from calling raw externs.
 
 Readiness gate:
 
 ```text
 For every operation-like surface, the compiler can name the canonical operation identity,
-row item, contracts, handler/provider discharge path, extern boundary, and failure classes.
+row item, contracts, provider discharge path, extern boundary, and failure classes.
 ```
 
 ### 4.5 Failure and contract convergence
@@ -499,7 +504,7 @@ buckets. It is intentionally high-level; individual specs/plans should own preci
 | Gap | Blocks | Current home |
 |---|---|---|
 | Canonical effect declaration syntax | effect/provider/capability convergence | NOTE-013, NOTE-015, NOTE-018 |
-| Handler surface and row peeling syntax | user-defined effects, handler diagnostics | NOTE-013, NOTE-018 |
+| Provider surface and row peeling syntax | user-defined effects, provider diagnostics | NOTE-013, NOTE-018 |
 | Resume strategy surface | handler composition, multi-shot use | NOTE-013, SPEC-102 |
 | Effect-local extern placement | host/FFI safety and provider authoring | NOTE-013, NOTE-014, NOTE-018 |
 | Recoverable failure spelling | failure taxonomy and runtime diagnostics | NOTE-015, NOTE-018 |
@@ -527,7 +532,7 @@ Decide the vocabulary that affects all later specs:
 
 1. effect declaration syntax;
 2. row item taxonomy and aliases/groups;
-3. handler/provider/admission distinction;
+3. provider/admission/authority distinction;
 4. failure taxonomy;
 5. contract discharge taxonomy.
 
@@ -540,7 +545,7 @@ Define how target surface forms lower:
 1. row-bearing callable syntax;
 2. `do` and profile annotations;
 3. effect declarations and operation calls;
-4. handlers/providers;
+4. providers;
 5. contracts/evidence;
 6. app/runtime declarations if source-level.
 
@@ -551,7 +556,7 @@ This makes Core the only semantic entry point.
 Define what runs and who admits it:
 
 1. app definitions and instances;
-2. provider/handler/resource installation;
+2. provider/resource installation;
 3. supervisor roots and child specs;
 4. process/service/behaviour runner lifecycle;
 5. inter-app communication and failure domains.
@@ -592,7 +597,7 @@ A future implementation plan is aligned with target Ash if it can answer:
    removal?
 3. What Core shape does the surface produce?
 4. What row items and discharge facts are produced?
-5. Which handler/provider/admission path satisfies them?
+5. Which provider/admission path satisfies them?
 6. What failure classes can occur?
 7. What evidence, report, trace, or public summary is emitted?
 8. What memory/ownership boundary is crossed?
@@ -639,6 +644,11 @@ Internal references:
 
 ## 11. Changelog
 
+- 2026-06-25: Added the handler surface convergence checkpoint for explicit scoped handlers
+  and Frank-like `fn`/optional `operator` definitions with `on` computation elimination.
+- 2026-06-25: Clarified capabilities-as-providers: providers eliminate operation rows but
+  contribute their own authority/admission requirements, with authority introduction and
+  discharge handled by ordinary row-environment/admission mechanisms.
 - 2026-06-24: Clarified that operation row items use direct operation identities rather
   than `cap` prefixes, while authority/admission syntax remains unresolved.
 - 2026-06-24: Added explicit `do` notation versus plain function composition checkpoint,

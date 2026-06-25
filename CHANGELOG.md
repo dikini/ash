@@ -80,9 +80,20 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Added `docs/ideas/research/PROTOCOL-GATED-TYPE-DIRECTED-LLM-EXECUTION.md`, a research note on protocol-gated type-directed LLM execution with deterministic oracles, evidence admission, replayable traces, and references to Recursive Language Models and LLM state-machine modeling work.
 
 ### Changed
+- Clarified the target capabilities-as-providers model: providers are the general operation
+  interpreters, authority is tracked in provider function rows and introduced/discharged
+  through ordinary row-environment or admission mechanisms, while authority
+  multiplicity/lifetime remains a separate future design topic.
+- Elaborated target Ash handler surface guidance: explicit scoped handlers and Frank-like
+  ordinary `fn` or optional `operator` definitions with an `on` computation eliminator both
+  lower to the same Core/CPS handler machinery, added concrete use-site examples for both
+  styles, made their shared row transformation and non-commutative provider composition
+  default explicit, kept `on` typed over effectful computations rather than ordinary value
+  patterns, and reserved `return` for `do` syntax rather than normal provider completion
+  clauses.
 - Clarified target Ash computation-row examples so ordinary operation requirements are
   spelled directly, such as `{fs.read}`, while capability/authority-bearing status remains
-  an unresolved admission/provider/handler concern rather than a `cap` row prefix.
+  an unresolved admission/provider concern rather than a `cap` row prefix.
 - Clarified NOTE-015 and NOTE-018 that current/legacy Ash surface forms do not need a
   language-level compatibility layer because remaining uses live in project-owned standard
   library, documentation examples, and tests; target work can schedule corpus migration

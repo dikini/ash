@@ -1295,7 +1295,7 @@ semantic category for every style. Two surface families are useful:
    install an interpreter for a scoped computation and lower to Core/CPS `Handle`.
 2. **Function-local operation elimination.** A Frank-like surface keeps ordinary callable
    declarations and uses an `on` form inside the function body to eliminate an effectful
-   computation parameter.
+   computation produced by an ordinary thunk function.
 
 Illustrative Frank-like shape:
 
@@ -1304,13 +1304,13 @@ effect Choice {
     choose<A>(xs: List<A>) -> A;
 }
 
-fn all_choices<A>(body: {choice.choose} A) -> {} List<A> {
-    on body {
+fn all_choices<A, r>(body: Unit -> {choice.choose | r} A) -> {r} List<A> {
+    on body() {
         done(value) =>
             [value]
 
         choice.choose(xs, resume) =>
-            xs.flat_map(fn x -> all_choices(resume(x)))
+            xs.flat_map(fn x -> all_choices(fn () -> resume(x)))
     }
 }
 ```
@@ -1332,17 +1332,46 @@ fn pairs() -> {choice.choose} (Int, Int) {
 }
 
 fn all_pairs() -> {} List<(Int, Int)> {
-    all_choices(pairs())
+    all_choices(pairs)
 }
 ```
 
-The provider is installed by ordinary function application. No separate provider registry,
-ambient default, or app-level provider lookup is needed for this case:
+The provider is installed by ordinary function application. The provider receives an
+ordinary function value; it calls that thunk under `on` to wrap the produced computation. No
+separate provider registry, ambient default, or app-level provider lookup is needed for this
+case:
 
 ```text
-pairs()                 : {choice.choose} (Int, Int)
-all_choices(pairs())    : {} List<(Int, Int)>
+pairs                  : Unit -> {choice.choose} (Int, Int)
+all_choices(pairs)     : {} List<(Int, Int)>
 ```
+
+Anonymous computations can be passed with ordinary anonymous functions:
+
+```ash
+fn all_pairs_inline() -> {} List<(Int, Int)> {
+    all_choices(fn () -> do {
+        x <- choose([1, 2]);
+        y <- choose([10, 20]);
+        return (x, y)
+    })
+}
+```
+
+A future or library-provided computation-thunking form such as `delay(do { ... })` may
+elaborate to the same kind of thunk:
+
+```ash
+all_choices(delay(do {
+    x <- choose([1, 2]);
+    y <- choose([10, 20]);
+    return (x, y)
+}))
+```
+
+That elaboration belongs to evaluation-mode/computation-thunking syntax, not to
+effect/provider syntax. Provider functions should not require special contextual delayed
+argument rules.
 
 The explicit scoped style should express the same installation more directly when a named
 provider value or provider expression is easier to read. The exact surface spelling remains
@@ -1350,18 +1379,18 @@ open, but a Koka-like use site would have this shape:
 
 ```ash
 provider AllChoices<A> {
-    on body {
+    on body() {
         done(value) =>
             [value]
 
         choice.choose(xs, resume) =>
-            xs.flat_map(fn x -> AllChoices(resume(x)))
+            xs.flat_map(fn x -> AllChoices(fn () -> resume(x)))
     }
 }
 
 fn all_pairs_scoped() -> {} List<(Int, Int)> {
     with AllChoices {
-        pairs()
+        pairs
     }
 }
 ```
@@ -1369,8 +1398,8 @@ fn all_pairs_scoped() -> {} List<(Int, Int)> {
 The scoped form is also provider installation at the use site:
 
 ```text
-pairs()                         : {choice.choose} (Int, Int)
-with AllChoices { pairs() }     : {} List<(Int, Int)>
+pairs                         : Unit -> {choice.choose} (Int, Int)
+with AllChoices { pairs }     : {} List<(Int, Int)>
 ```
 
 Both examples are illustrative syntax. The semantic requirement is that the visible
@@ -1390,7 +1419,7 @@ Frank-like application:
 
 ```ash
 all_choices(
-    do {
+    fn () -> do {
         log("start");
         x <- choose([1, 2]);
         return x
@@ -1433,7 +1462,7 @@ Thus the difference between the two styles is surface placement only:
 
 ```text
 Frank-like style:
-  provider is an ordinary callable receiving an effectful computation argument.
+  provider is an ordinary callable receiving a thunk that produces an effectful computation.
 
 Explicit scoped style:
   provider is visibly installed around a lexical computation body.
@@ -1497,15 +1526,15 @@ as an intent-signaling synonym for functions that primarily bind or control effe
 ports, but it must not introduce a new semantic category:
 
 ```ash
-operator all_choices<A>(body: {choice.choose} A) -> {} List<A> {
-    on body { ... }
+operator all_choices<A, r>(body: Unit -> {choice.choose | r} A) -> {r} List<A> {
+    on body() { ... }
 }
 ```
 
 elaborates like:
 
 ```text
-fn all_choices<A>(body: {choice.choose} A) -> {} List<A> { ... }
+fn all_choices<A, r>(body: Unit -> {choice.choose | r} A) -> {r} List<A> { ... }
 ```
 
 Core lowering is shared across styles:
@@ -1533,8 +1562,10 @@ library style, but it is not the only Frank-like authoring path.
    Frank-like nested calls and explicit scoped installation.
 6. How provider authority provenance is recorded and exposed in reports.
 7. How deep versus shallow handlers are spelled, if both are admitted.
-8. Exact grammar for `on`, including whether effectful computation parameters are ordinary
-   arguments, block arguments, delayed thunks, or a distinct port-shaped type.
+8. Exact grammar for `on`, including completion clause spelling and operation clause
+   binding. The baseline provider argument is an ordinary thunk function such as
+   `Unit -> {r} A`; convenience forms such as `delay(do { ... })` belong to
+   evaluation-mode/computation-thunking syntax.
 9. Whether `operator` is accepted as a permanent synonym for `fn`, a lint/documentation
    convention, or only a future readability affordance.
 10. Authority fact spelling and discharge APIs, separate from later multiplicity/lifetime

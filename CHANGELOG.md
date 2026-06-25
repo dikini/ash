@@ -95,7 +95,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   styles, made their shared row transformation and non-commutative provider composition
   default explicit, kept `on` typed over effectful computations rather than ordinary value
   patterns, and reserved `return` for `do` syntax rather than normal provider completion
-  clauses.
+  clauses. Provider examples now use ordinary thunk parameters such as `Unit -> {r} A`,
+  with convenience forms like `delay(do { ... })` deferred to evaluation-mode/computation
+  thunking syntax.
 - Clarified target Ash computation-row examples so ordinary operation requirements are
   spelled directly, such as `{fs.read}`, while capability/authority-bearing status remains
   an unresolved admission/provider concern rather than a `cap` row prefix.

@@ -376,7 +376,7 @@ Required convergence:
   admission metadata where needed;
 - define provider surface syntax and how it exposes row peeling, including both explicit
   scoped installation and Frank-like `fn`/optional `operator` definitions using `on` to
-  eliminate effectful computation parameters;
+  eliminate computations produced by ordinary thunk parameters such as `Unit -> {r} A`;
 - make provider installation an admission event, not declaration side effect;
 - choose the primary extern authoring location: effect-level canonical hook,
   provider-level adapter, provider-owned lexical adapter, or a restricted mix;

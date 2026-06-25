@@ -619,8 +619,8 @@ capability FsRead : read(path: String) returns String
 Target meaning:
 
 ```text
-operation identity: cap fs.read
-row item:           {cap fs.read}
+operation identity: fs.read
+row item:           {fs.read}
 contracts:          requires path != ""
 implementation:     admitted provider/handler for fs.read
 extern:             optional trusted host hook owned by provider/effect
@@ -639,20 +639,22 @@ Target meaning is the same canonical operation identity if the declaration is au
 bearing:
 
 ```text
-EffectOp(cap fs.read) : (String) -> String
-row {cap fs.read}
+EffectOp(fs.read) : (String) -> String
+row {fs.read}
 ```
 
-For a pure library algebraic effect such as choice, the canonical identity would live in a
-non-capability namespace:
+For a pure library algebraic effect such as choice, the canonical identity is still a
+direct operation identity:
 
 ```text
-EffectOp(effect choice.choose) : (List<A>) -> A
-row {effect choice.choose}
+EffectOp(choice.choose) : (List<A>) -> A
+row {choice.choose}
 ```
 
 The surface may be friendlier than the Core identity, but it must not create a second
-operation namespace with different semantics.
+operation namespace with different semantics. A capability is an authority-bearing effect
+operation plus admission/provider/handler discharge; it is not a `cap` prefix on ordinary
+operation row items. The syntax for introducing authority/admission facts is still open.
 
 ### 3.3 Extern placement
 
@@ -732,9 +734,9 @@ Resolved direction for the first target slice:
 4. **Admission is explicit at runtime boundaries.** Starting a workflow/app/process or
    installing a provider/handler can add discharge facts to the environment. Merely loading
    a declaration cannot.
-5. **Role entailment is discharge, not row normalization.** A role may discharge a capability
-   requirement when admitted, but the required row item remains `cap ...` for audit and
-   diagnostics.
+5. **Role entailment is discharge, not row normalization.** A role may discharge authority
+   needed for an operation when admitted, but the operation row item remains the direct
+   operation identity for audit and diagnostics.
 6. **Aliases and groups are not authority bundles.** They expand row spelling or improve
    diagnostics, but they do not discharge requirements.
 7. **Open-row solving must not invent privilege.** A row variable can be constrained by use,
@@ -745,7 +747,7 @@ Resolved direction for the first target slice:
 
 | Row item kind | Requirement means | Discharged by | Not discharged by |
 |---|---|---|---|
-| capability | operation authority may be needed | admitted capability binding, provider frame, or admitted role entailment | row alias, declaration existence, global provider presence |
+| authority/admission | operation authority may be needed | admitted provider/handler binding, explicit authority fact, or admitted role entailment | row alias, declaration existence, global provider presence |
 | resource | owned/borrowed resource access may be needed | ownership, borrow, split/join, provenance fact, admitted resource handle | capability authority alone |
 | role | role-specific authority/context may be needed | role admission at workflow/app/process boundary | role declaration existence |
 | policy | named policy decision may be needed | compatible named policy binding/evaluator/handler | anonymous boolean expression unless explicitly lowered |
@@ -786,12 +788,12 @@ Diagnostics should name the failed discharge rule, not only the missing row item
 Examples:
 
 ```text
-missing capability admission: cap fs.read
-role operator is admitted, but does not entail cap fs.write
+missing authority admission for operation fs.read
+role operator is admitted, but does not entail authority for fs.write
 policy production_rate has no evaluator in this app instance
 channel orders.in exists, but this process owns no receive endpoint
 contract requires non_empty_path was neither proven nor assigned a dynamic check
-effect group IO expands to cap fs.read, but groups do not grant authority
+effect group IO expands to fs.read, but groups do not grant authority
 ```
 
 ### 4.5 Still to resolve

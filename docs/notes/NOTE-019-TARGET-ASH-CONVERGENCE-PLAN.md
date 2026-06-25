@@ -8,7 +8,8 @@ runtime, memory, contract, effect, and library surfaces. This note is intentiona
 design dependencies so later implementation plans can be scheduled without re-opening the
 same conceptual questions.
 
-Companion to NOTE-013 through NOTE-018 and the target specs SPEC-095b through SPEC-102.
+Companion to NOTE-013 through NOTE-018, NOTE-020, and the target specs SPEC-095b through
+SPEC-102.
 
 ## 0. Motivation
 
@@ -17,7 +18,7 @@ Ash now has enough target design material to need a convergence map.
 The current design corpus says, in different places:
 
 1. the language should have one ambient computation model;
-2. effect rows describe requirements, not grants;
+2. computation rows describe requirements and computation facts, not grants;
 3. handlers and providers discharge/interpret operations;
 4. contracts, laws, evidence, and properties share discharge machinery but differ in
    lifecycle;
@@ -51,7 +52,7 @@ surface Ash
 
 At that point:
 
-- ordinary computation is `fn` plus row-bearing callable types;
+- ordinary computation is `fn` plus computation-row-bearing callable types;
 - `do` is sequencing sugar for the ambient computation model;
 - operation-like behavior is represented by effect operations, rows, handlers, providers,
   and admission;
@@ -79,7 +80,7 @@ usable substrate.
 |---|---|---|
 | Core Ash | SPEC-099, SPEC-100, Core type-checking work | Core can become the single checked direct-style semantic layer. |
 | CPS IR | SPEC-098b, SPEC-099b, CPS interpreter/runtime work | Raise/handle/provider/continuation execution has a real target substrate. |
-| Rows | SPEC-096b, SPEC-097b, row normalization/checking work in Core | Rows can be the shared accounting layer, but surface integration remains incomplete. |
+| Rows | SPEC-096b, SPEC-097b, NOTE-020, row normalization/checking work in Core | Computation rows can be the shared accounting layer for effects, modes, failures, contracts, and requirements, but surface integration remains incomplete. |
 | Continuations | SPEC-102 implemented at Core/CPS level | Handler resume multiplicity is no longer only theoretical. |
 | Lazy/memo modes | SPEC-101 implemented in Core/CPS slices | Evaluation modes can be integrated with rows and contracts rather than treated as syntax tricks. |
 | Contract vocabulary | NOTE-014, SPEC-097b, SPEC-098b, SPEC-100 | Discharge modes exist conceptually and in Core metadata, but surface lowering/blame remain gaps. |
@@ -95,9 +96,48 @@ These are design constraints for future specs and implementation plans.
 
 ### 3.1 One ambient computation model
 
-Target Ash has one ambient monad for sequencing. Rows index what a computation may require.
-Other monadic stories are implemented by effects plus handlers/providers. Handler nesting
-composes interpretations; row order does not.
+Target Ash has one ambient monad for sequencing. Computation rows index the facts attached
+to a computation: effects, evaluation modes, failures, contracts, evidence, authority,
+runtime requirements, and related obligations. Other monadic stories are implemented by
+effects plus handlers/providers, while lazy/memo/eager behavior is represented as
+computation-row mode facts. Handler nesting composes interpretations; row order does not.
+
+#### 3.1.1 `do` notation versus plain function composition
+
+Plain `fn` remains the default authoring and semantic form. In expression position, users
+can still write ordinary nested function composition:
+
+```ash
+fn name(...) -> ... = f(g(h(x, y)))
+```
+
+This is the smallest surface for pure expression trees and for code where the data flow is
+clear when read inside-out.
+
+`do` is useful for the other common shape: direct, imperative-looking sequencing. It should
+not introduce a second execution model. It is notation for the ambient monad's `bind`, with
+`return` as the ambient unit:
+
+```ash
+fn name(...) -> ... = do {
+  x <- f(x);
+  return x
+}
+```
+
+The important design constraint is therefore:
+
+```text
+do syntax is ergonomic sequencing sugar;
+function call syntax is ordinary expression composition;
+both elaborate through the same row-indexed ambient computation model.
+```
+
+Open syntax question: the examples above use `=` before the body because the goal is to
+avoid a visually noisy `fn ... { do { ... } }` nesting. The final target grammar still
+needs to decide whether expression-bodied functions use `=`, whether block-bodied
+functions can be expression bodies directly, and whether `do { ... }` is allowed as the
+whole function body without an extra outer block.
 
 ### 3.2 Rows are requirements, not authority
 
@@ -121,6 +161,11 @@ operation identity + row item + contracts + provider/handler + admission + optio
 
 If `capability` remains, it is a domain-friendly declaration form over this model. It is
 not an independent semantic subsystem.
+
+Ordinary row spelling should name operations directly, such as `{fs.read}` or
+`{net.request}`. The authority-bearing status of an operation is discharged by
+admission/provider/handler/evidence rules, not by a `cap` prefix in the operation row item.
+The exact syntax for introducing authority/admission facts remains open.
 
 ### 3.5 Contracts share machinery, not lifecycle
 
@@ -469,6 +514,7 @@ buckets. It is intentionally high-level; individual specs/plans should own preci
 | Process-region sendability | memory safety and process isolation | NOTE-017, NOTE-018 |
 | Closure capture boundary | functions, memory, authority, continuations | NOTE-017, NOTE-018 |
 | Local row/type inference budget | interface/impl/ADT ergonomics and compiler tractability | NOTE-019 |
+| Computation row taxonomy and pure predicate | row terminology, lazy/memo integration, failure/contract accounting, multi-shot-pure legality | NOTE-020 |
 | Corpus replacement map | stdlib/docs/tests migration | NOTE-015, NOTE-018 |
 
 ## 6. Suggested Decision Order
@@ -580,6 +626,7 @@ Internal references:
 - [NOTE-016: Runtime Organization, Behaviours, and Reactive Modes](NOTE-016-RUNTIME-ORGANIZATION-BEHAVIOURS-REACTIVE-MODES.md)
 - [NOTE-017: Memory Regions, Ownership, and Utilization](NOTE-017-MEMORY-REGIONS-OWNERSHIP-AND-UTILIZATION.md)
 - [NOTE-018: Boundary Discipline for Target Ash](NOTE-018-BOUNDARY-DISCIPLINE.md)
+- [NOTE-020: Computation Row Taxonomy and Pure Computation](NOTE-020-COMPUTATION-ROW-TAXONOMY.md)
 - [SPEC-095b: Target Grammar](../spec/SPEC-095b-TARGET-GRAMMAR.md)
 - [SPEC-096b: Target Effect System](../spec/SPEC-096b-TARGET-EFFECT-SYSTEM.md)
 - [SPEC-097b: Target Type System](../spec/SPEC-097b-TARGET-TYPE-SYSTEM.md)
@@ -592,5 +639,11 @@ Internal references:
 
 ## 11. Changelog
 
+- 2026-06-24: Clarified that operation row items use direct operation identities rather
+  than `cap` prefixes, while authority/admission syntax remains unresolved.
+- 2026-06-24: Added explicit `do` notation versus plain function composition checkpoint,
+  including the open expression-bodied function syntax question.
+- 2026-06-24: Linked NOTE-020 and updated convergence terminology from effect rows to
+  computation rows where NOTE-020 refines the target model.
 - 2026-06-24: Initial draft. Synthesizes target Ash convergence tracks across the recent
   notes and target specs, distinguishing semantic convergence from implementation planning.

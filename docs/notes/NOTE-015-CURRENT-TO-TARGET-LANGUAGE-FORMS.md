@@ -101,7 +101,7 @@ The target meaning is row-profile based:
 
 ```text
 Pure      = Comp<{}, A>
-Act       = Comp<{cap/resource/fail/evidence...}, A>
+Act       = Comp<{operation/resource/fail/evidence...}, A>
 Proc      = Comp<{Act effects + proc/channel...}, A>
 Workflow  = Comp<{Proc effects + role/policy/contract/obligation/report...}, A>
 ```
@@ -309,12 +309,13 @@ whether composition order matters for that pair of effects.
 This rule must remain the central diagnostic and design principle.
 
 ```ash
-fn read_config(path: String) -> {cap fs.read} String
+fn read_config(path: String) -> {fs.read} String
 ```
 
 The row above does not grant file authority. It states that running the computation requires
-`fs.read` to be discharged by admitted capability, role entailment, provider frame, workflow
-admission, or another explicit boundary.
+the `fs.read` operation to be discharged by an admitted provider/handler, role entailment,
+workflow/app admission, or another explicit boundary. The row spelling names the operation
+directly. It does not settle the separate syntax for authority or admission facts.
 
 Consequences:
 
@@ -353,15 +354,16 @@ effect Fs {
 
 The core does not need a privileged "capability subsystem" separate from effects. It needs:
 
-1. canonical operation identity: `cap Fs.read`;
-2. row contribution: `{cap Fs.read}`;
+1. canonical operation identity: `Fs.read`;
+2. row contribution: `{fs.read}`;
 3. contract contribution: e.g. `requires {path != ""}`;
 4. provider or handler discharge;
 5. optional trusted host implementation.
 
 The surface can still expose capability-like authoring forms if they are useful. Their
 lowering should be honest: they define typed effect operations and provider/admission
-paths.
+paths. Whether and how authority facts are introduced in source remains unresolved; ordinary
+operation rows should not use a superfluous `cap` prefix.
 
 ## 4. Current-to-Target Form Matrix
 
@@ -693,11 +695,11 @@ plan for stdlib/docs/tests migration.
 
 Diagnostics should teach the target model:
 
-- "missing authority for `cap fs.read`" rather than generic unhandled effect;
+- "missing authority to run operation `fs.read`" rather than generic unhandled effect;
 - "policy `P` denied action" distinct from missing authority;
 - "contract `requires P` not discharged" with static/evidence/dynamic mode;
 - "process effect used outside Proc-capable profile";
-- "effect alias `IO` expands to missing concrete item `cap log.write`."
+- "effect alias `IO` expands to missing concrete operation `log.write`."
 
 ### 8.5 Stage E: Remove old surface once corpus is migrated
 

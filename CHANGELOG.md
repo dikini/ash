@@ -6,6 +6,11 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Added
+- Added NOTE-020, a computation-row taxonomy note that broadens the target row model beyond
+  effect rows to include evaluation modes, recoverable failure, partiality, operational
+  requirements, authority/admission, resources/regions, contracts/evidence, lifecycle, and
+  trace facts, and refines pure computation as a predicate over row facts rather than an
+  empty-row synonym.
 - Added NOTE-019, a draft Target Ash convergence map that keeps the work in notes space
   rather than implementation-plan space, summarizing fixed points, convergence tracks,
   dependency order, readiness gates, current design gaps, and the local row/type inference
@@ -75,6 +80,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Added `docs/ideas/research/PROTOCOL-GATED-TYPE-DIRECTED-LLM-EXECUTION.md`, a research note on protocol-gated type-directed LLM execution with deterministic oracles, evidence admission, replayable traces, and references to Recursive Language Models and LLM state-machine modeling work.
 
 ### Changed
+- Clarified target Ash computation-row examples so ordinary operation requirements are
+  spelled directly, such as `{fs.read}`, while capability/authority-bearing status remains
+  an unresolved admission/provider/handler concern rather than a `cap` row prefix.
 - Clarified NOTE-015 and NOTE-018 that current/legacy Ash surface forms do not need a
   language-level compatibility layer because remaining uses live in project-owned standard
   library, documentation examples, and tests; target work can schedule corpus migration

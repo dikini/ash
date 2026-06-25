@@ -80,6 +80,11 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Added `docs/ideas/research/PROTOCOL-GATED-TYPE-DIRECTED-LLM-EXECUTION.md`, a research note on protocol-gated type-directed LLM execution with deterministic oracles, evidence admission, replayable traces, and references to Recursive Language Models and LLM state-machine modeling work.
 
 ### Changed
+- Settled the plain target effect declaration syntax around `effect` blocks containing `fn`
+  operation signatures, with row items and call sites using ordinary resolvable operation
+  names while canonical operation identity remains a module/name-resolution concern, and
+  clarified that current capability declarations are subsumed by effects rather than
+  preserved as target compatibility syntax.
 - Clarified the target capabilities-as-providers model: providers are the general operation
   interpreters, authority is tracked in provider function rows and introduced/discharged
   through ordinary row-environment or admission mechanisms, while authority

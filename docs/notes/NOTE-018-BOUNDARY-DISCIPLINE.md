@@ -577,11 +577,10 @@ Resolved direction for the first target slice:
    `effect`, `capability`, or a domain-friendly declaration form, Core/CPS sees one
    canonical operation identity and one row item.
 2. **`effect` is the target vocabulary for operation declarations.** It names typed
-   operation signatures, row contribution, contracts, and optional implementation hooks.
-3. **`capability` is not a separate semantic island.** If retained, it should be a
-   restricted domain-friendly authoring form that lowers to authority-bearing effect
-   operations plus admission/provider metadata; otherwise current uses are corpus migration
-   work.
+   operation function signatures and their row contribution.
+3. **`capability` is subsumed by `effect`.** The target language does not need separate
+   capability declaration syntax. Current capability declarations are corpus migration
+   work: rewrite them as effect declarations plus provider/admission metadata where needed.
 4. **User-defined effects are a target-language direction, but an alpha staging choice.**
    The design vocabulary uses `effect` for ordinary algebraic-operation declarations such
    as failure, choice, and host capabilities. Current alpha specs may restrict which
@@ -592,9 +591,9 @@ Resolved direction for the first target slice:
 6. **Extern placement is split by intent.** Canonical host ABI hooks may appear at the
    effect declaration boundary; backend-specific host adapters belong in trusted provider
    implementations.
-7. **Provider installation is admission, not definition.** Declaring an effect/capability
-   does not install authority. Runtime admission installs a provider frame that may
-   discharge the row item.
+7. **Provider installation is admission, not definition.** Declaring an effect does not
+   install authority. Runtime admission installs a provider frame that may discharge the row
+   item.
 
 ### 3.2 Canonical lowering shape
 
@@ -604,34 +603,51 @@ The target lowering story should be:
 surface declaration
   -> canonical operation identity
   -> row item required by callers
-  -> operation contracts
   -> provider implementation requirement
-  -> optional trusted extern adapter
 ```
 
-For a capability-like declaration:
+The plain target effect declaration shape is:
 
 ```ash
-capability FsRead : read(path: String) returns String
-    requires path != "";
+effect Fs {
+    fn read(path: Path) -> String;
+    fn write(path: Path, contents: String) -> Unit;
+}
 ```
 
-Target meaning:
+Effect operations use `fn` because they are callable function-shaped operations. They have a
+special lowering role, but that does not make them non-functions. The relationship should
+resemble interfaces and implementations: an effect declaration names callable signatures,
+while providers supply interpretations.
 
-```text
-operation identity: fs.read
-row item:           {fs.read}
-contracts:          requires path != ""
-implementation:     admitted provider for fs.read
-extern:             optional trusted host hook owned by provider/effect
+Calling a resolved effect operation contributes the same resolved operation identity to the
+row:
+
+```ash
+fn load(path: Path) -> {Fs.read} String {
+    Fs.read(path)
+}
 ```
+
+Rows and call sites use the same name-resolution rules. The effect syntax does not specify
+how names are imported, aliased, or canonicalized; that belongs to module loading,
+resolution, symbol naming, and aliasing. Any resolvable operation name may be used:
+
+```ash
+fn load(path: Path) -> {fs.read} String {
+    fs.read(path)
+}
+```
+
+The two spellings above are equivalent only if ordinary name resolution maps `Fs.read` and
+`fs.read` to the same operation identity in their respective scopes. After name resolution,
+Core/CPS sees one canonical operation identity and one row item.
 
 For an authority-bearing effect-like declaration:
 
 ```ash
 effect Fs {
-    read(path: String) -> String
-        requires path != "";
+    fn read(path: Path) -> String;
 }
 ```
 
@@ -652,9 +668,11 @@ row {choice.choose}
 ```
 
 The surface may be friendlier than the Core identity, but it must not create a second
-operation namespace with different semantics. A capability is an authority-bearing effect
-operation plus provider/admission discharge; it is not a `cap` prefix on ordinary operation
-row items. The syntax for introducing authority/admission facts is still open.
+operation namespace with different semantics. Authority-bearing operations are effect
+operations interpreted by providers and discharged by admission; they do not need a
+separate capability declaration form or a `cap` prefix on ordinary operation row items. The
+syntax for introducing authority/admission facts, contracts, and extern hooks is
+intentionally outside this plain effect-declaration slice.
 
 ### 3.3 Extern placement
 
@@ -700,8 +718,8 @@ extern says how trusted implementation reaches the host.
 ### 3.5 Still to resolve
 
 1. Exact target syntax for `effect` declarations.
-2. Whether `capability` is permanently supported as a domain form or removed after
-   stdlib/docs/tests migration.
+2. The corpus migration path from current capability declarations to target effect
+   declarations and provider/admission metadata.
 3. Whether effect-level externs are allowed in user-authored source, trusted packages only,
    or compiler/runtime-owned modules only.
 4. How provider implementations are declared and typed.

@@ -159,8 +159,8 @@ The target capability story is:
 operation identity + row item + contracts + provider + admission + optional extern
 ```
 
-If `capability` remains, it is a domain-friendly declaration form over this model. It is
-not an independent semantic subsystem.
+Current capability declarations are subsumed by `effect` declarations in the target model.
+They are corpus migration work, not a separate compatibility syntax.
 
 Ordinary row spelling should name operations directly, such as `{fs.read}` or
 `{net.request}`. The authority-bearing status of an operation is discharged by
@@ -370,9 +370,10 @@ Goal: one operation identity path from declaration to runtime implementation.
 
 Required convergence:
 
-- decide the canonical `effect` declaration syntax;
-- decide whether `capability` remains as target domain syntax or is removed after corpus
-  migration;
+- use the canonical plain `effect` declaration syntax with `fn` operation signatures, such
+  as `effect Fs { fn read(path: Path) -> String; }`;
+- migrate current capability declarations to target effect declarations plus provider and
+  admission metadata where needed;
 - define provider surface syntax and how it exposes row peeling, including both explicit
   scoped installation and Frank-like `fn`/optional `operator` definitions using `on` to
   eliminate effectful computation parameters;
@@ -484,7 +485,7 @@ Required convergence:
 
 - `std::act`, `std::proc`, and `std::workflow` become profile/library modules over target
   rows rather than evidence that the language has three semantic towers;
-- capability-like libraries use effect declarations and provider/admission APIs;
+- authority-bearing operation libraries use effect declarations and provider/admission APIs;
 - process/channel helpers expose boundary rules instead of hiding runtime authority;
 - examples teach target forms first;
 - tests prove target forms rather than preserving old syntax.
@@ -644,6 +645,10 @@ Internal references:
 
 ## 11. Changelog
 
+- 2026-06-25: Settled the plain effect declaration direction: `effect` blocks contain `fn`
+  operation signatures, and rows/call sites may use any resolvable operation name while
+  canonical identity remains a module/name-resolution concern; current capability
+  declarations are subsumed by effects rather than preserved as compatibility syntax.
 - 2026-06-25: Added the handler surface convergence checkpoint for explicit scoped handlers
   and Frank-like `fn`/optional `operator` definitions with `on` computation elimination.
 - 2026-06-25: Clarified capabilities-as-providers: providers eliminate operation rows but

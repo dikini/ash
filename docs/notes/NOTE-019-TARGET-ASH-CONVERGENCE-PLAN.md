@@ -370,8 +370,8 @@ Goal: one operation identity path from declaration to runtime implementation.
 
 Required convergence:
 
-- use the canonical plain `effect` declaration syntax with `fn` operation signatures, such
-  as `effect Fs { fn read(path: Path) -> String; }`;
+- use the canonical operation declaration syntax: `interface` blocks with `fn` operation
+  signatures, such as `interface Fs { fn read(path: Path) -> String; }` (NOTE-022);
 - migrate current capability declarations to target effect declarations plus provider and
   admission metadata where needed;
 - define provider surface syntax and how it exposes row peeling, including both explicit
@@ -504,9 +504,9 @@ buckets. It is intentionally high-level; individual specs/plans should own preci
 
 | Gap | Blocks | Current home |
 |---|---|---|
-| Canonical effect declaration syntax | effect/provider/capability convergence | NOTE-013, NOTE-015, NOTE-018 |
-| Provider surface and row peeling syntax | user-defined effects, provider diagnostics | NOTE-013, NOTE-018 |
-| Resume strategy surface | handler composition, multi-shot use | NOTE-013, SPEC-102 |
+| ~~Canonical effect declaration syntax~~ | ~~effect/provider/capability convergence~~ | **Resolved by NOTE-022:** interfaces are the canonical declaration form. Dispatch-side handler/admission syntax remains open. |
+| ~~Provider surface and row peeling syntax~~ | ~~user-defined effects, provider diagnostics~~ | **Resolved by NOTE-023:** handlers are functions consuming computation thunks; `on` eliminator sets up Handle frame; `handle...with` and named handler sugar are optional. Row peeling is the handler function's input/output row contract. |
+| Resume strategy surface | handler composition, multi-shot use | **Resolved by NOTE-023:** continuation is an ordinary typed parameter. Multiplicity is in the function type: affine if non-empty row, multi-shot if pure (`{}`). SPEC-102 substrate unchanged. |
 | Effect-local extern placement | host/FFI safety and provider authoring | NOTE-013, NOTE-014, NOTE-018 |
 | Recoverable failure spelling | failure taxonomy and runtime diagnostics | NOTE-015, NOTE-018 |
 | Contract blame/subsumption | interface contracts, dynamic checks | NOTE-014, NOTE-018 |
@@ -531,7 +531,7 @@ The order matters because some decisions unlock many others.
 
 Decide the vocabulary that affects all later specs:
 
-1. effect declaration syntax;
+1. effect declaration syntax — **resolved by NOTE-022:** operations are interface methods;
 2. row item taxonomy and aliases/groups;
 3. provider/admission/authority distinction;
 4. failure taxonomy;
@@ -633,6 +633,8 @@ Internal references:
 - [NOTE-017: Memory Regions, Ownership, and Utilization](NOTE-017-MEMORY-REGIONS-OWNERSHIP-AND-UTILIZATION.md)
 - [NOTE-018: Boundary Discipline for Target Ash](NOTE-018-BOUNDARY-DISCIPLINE.md)
 - [NOTE-020: Computation Row Taxonomy and Pure Computation](NOTE-020-COMPUTATION-ROW-TAXONOMY.md)
+- [NOTE-022: Effects as Interfaces — Declaration Side Unification](NOTE-022-EFFECTS-AS-INTERFACES-DECLARATION-SIDE.md)
+- [NOTE-023: Handler Surface — Dispatch Side Design](NOTE-023-HANDLER-SURFACE-DISPATCH-SIDE.md)
 - [SPEC-095b: Target Grammar](../spec/SPEC-095b-TARGET-GRAMMAR.md)
 - [SPEC-096b: Target Effect System](../spec/SPEC-096b-TARGET-EFFECT-SYSTEM.md)
 - [SPEC-097b: Target Type System](../spec/SPEC-097b-TARGET-TYPE-SYSTEM.md)
@@ -645,6 +647,13 @@ Internal references:
 
 ## 11. Changelog
 
+- 2026-06-27: Applied NOTE-023 decision: marked "Provider surface and row peeling syntax"
+  and "Resume strategy surface" as resolved in the gap register. Added NOTE-023 to
+  references.
+- 2026-06-27: Applied NOTE-022 decision: updated §3.4, §4.4, gap register, and §6.1 to
+  reference interfaces as the canonical operation declaration form. Marked "Canonical
+  effect declaration syntax" as resolved in the gap register. Decision order item 1 is now
+  resolved. Handler/provider surface, admission, resume, and extern placement remain open.
 - 2026-06-25: Settled the plain effect declaration direction: `effect` blocks contain `fn`
   operation signatures, and rows/call sites may use any resolvable operation name while
   canonical identity remains a module/name-resolution concern; current capability

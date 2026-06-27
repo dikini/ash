@@ -28,7 +28,7 @@ This spec defines the type-system obligations for the unified effect-row directi
 a computation's requirement row must be discharged by the ambient effect environment
 ```
 
-Rows are requirement sets, not authority grants. The type checker may infer, normalize, compare, and report rows, but authority is provided only by admitted roles, capability bindings, resources, policy handlers, channel endpoints, contract evidence, or runtime/workflow boundaries.
+Rows are requirement sets, not authority grants. The type checker may infer, normalize, compare, and report rows, but authority is provided only by admitted roles, effect providers, resources, policy handlers, channel endpoints, contract evidence, or runtime/workflow boundaries.
 
 This draft replaces the earlier loose statement “`{fs} <: {fs, log}`” with explicit relations:
 
@@ -40,7 +40,7 @@ This draft replaces the earlier loose statement “`{fs} <: {fs, log}`” with e
 
 ### 2.1 Existing types
 
-Current parser/core/typechecker code does not yet carry a complete effect-row type in ordinary function signatures. The live type surfaces include named types, type constructors, tuples, records, associated types, and callable types, while workflow/effect information is tracked separately in existing workflow/capability machinery.
+Current parser/core/typechecker code does not yet carry a complete effect-row type in ordinary function signatures. The live type surfaces include named types, type constructors, tuples, records, associated types, and callable types, while workflow/effect information is tracked separately in existing workflow and legacy capability machinery.
 
 The existing 4-point `Effect` lattice in `crates/ash-core/src/effect.rs` is a coarse workflow/effect classification:
 
@@ -57,7 +57,7 @@ That lattice is not a row system. The row system introduced here must preserve c
 
 ### 2.2 Migration constraint
 
-The first implementation slice should add row summaries and row checking around existing carriers. It must not require immediate deletion of `Type::Fn`, `Type::Fun`, `Act<T>`, `Proc<T>`, `Workflow<T>`, workflow headers, or current capability declarations.
+The first implementation slice should add row summaries and row checking around existing carriers. It must not require immediate deletion of `Type::Fn`, `Type::Fun`, `Act<T>`, `Proc<T>`, `Workflow<T>`, workflow headers, or current legacy capability declarations.
 
 ## 3. Type-level representation
 
@@ -85,7 +85,7 @@ Rows contain typed effect items, not bare strings.
 
 ```rust
 pub enum EffectItem {
-    Capability(CapabilityEffect),
+    Operation(OperationEffect),
     Resource(ResourceEffect),
     Role(RoleEffect),
     Policy(PolicyEffect),
@@ -98,18 +98,18 @@ pub enum EffectItem {
 }
 ```
 
-Every effect item must have a canonical identity used for duplicate elimination, row comparison, diagnostics, and module-summary export. The identity must include its namespace. For example, `cap fs.read`, `policy fs.read`, and `role fs.read` are distinct even if their textual tails match.
+Every effect item must have a canonical identity used for duplicate elimination, row comparison, diagnostics, and module-summary export. The identity must include its namespace. For example, `fs.read`, `policy fs.read`, and `role fs.read` are distinct even if their textual tails match.
 
-### 3.3 Capability effect
+### 3.3 Operation effect
 
 ```rust
-pub struct CapabilityEffect {
+pub struct OperationEffect {
     pub interface: NamePath,
     pub operation: Option<Name>,
 }
 ```
 
-A whole-interface requirement such as `cap fs` is broader than an operation-specific requirement such as `cap fs.read`. A future implementation must define whether `cap fs` expands into all known operations or remains an abstract interface requirement. It must not silently treat the two as identical.
+A whole-interface requirement such as `fs` is broader than an operation-specific requirement such as `fs.read`. A future implementation must define whether `fs` expands into all known operations or remains an abstract interface requirement. It must not silently treat the two as identical.
 
 ### 3.4 Role effect
 
@@ -119,7 +119,7 @@ pub struct RoleEffect {
 }
 ```
 
-A role effect requires role admission. It does not by itself expand into capabilities until the role definition and admission context are known.
+A role effect requires role admission. It does not by itself expand into operations until the role definition and admission context are known.
 
 ### 3.5 Policy effect
 
@@ -198,14 +198,14 @@ SPEC-095 remains the current parser-derived grammar. The target row syntax for t
 
 ```ash
 {}                                      -- empty row
-{cap fs.read}                           -- closed row
-{cap fs.read, policy production_rate}    -- multiple requirements
-{cap fs.read | r}                        -- open row
+{fs.read}                                -- closed row
+{fs.read, policy production_rate}         -- multiple requirements
+{fs.read | r}                             -- open row
 {r}                                      -- whole-row variable
 {IO}                                     -- transparent alias or group reference
 ```
 
-Rows are not ordinary record types. A parser/typechecker implementation must distinguish record type `{x: Int}` from effect row `{cap fs.read}` by grammar context or an explicit row-introducing token chosen by the syntax spec. It must also distinguish `{r}` as a row variable from `{IO}` as an alias/group reference by kind and namespace resolution.
+Rows are not ordinary record types. A parser/typechecker implementation must distinguish record type `{x: Int}` from effect row `{fs.read}` by grammar context or an explicit row-introducing token chosen by the syntax spec. It must also distinguish `{r}` as a row variable from `{IO}` as an alias/group reference by kind and namespace resolution.
 
 ### 4.2 Row variable kind
 
@@ -222,10 +222,10 @@ The implementation may infer row-variable kinds when unambiguous.
 A row variable may carry constraints:
 
 ```ash
-fn log_and_return<A, r>(x: A) -> {cap log.write | r} A { ... }
+fn log_and_return<A, r>(x: A) -> {log.write | r} A { ... }
 ```
 
-This means the resulting computation requires at least `cap log.write` plus whatever `r` requires. It does not mean `r <: {cap log.write}`.
+This means the resulting computation requires at least `log.write` plus whatever `r` requires. It does not mean `r <: {log.write}`.
 
 If explicit constraint syntax is added, it should name the intended relation directly:
 
@@ -254,8 +254,8 @@ Normalization must:
 Duplicate elimination is exact. For example:
 
 ```text
-cap fs       != cap fs.read, unless a later capability-interface rule defines expansion
-role admin   != cap fs.read, even if admin can entail fs.read
+fs           != fs.read, unless a later effect-interface rule defines expansion
+role admin   != fs.read, even if admin can entail fs.read
 ```
 
 Role entailment happens during discharge, not normalization.
@@ -275,7 +275,7 @@ This relation is useful for comparing two requirement rows, but it is not the sa
 The discharge rule is kind-specific:
 
 ```text
-Env ⊢ cap C.op discharged      if Env has admitted capability C.op
+Env ⊢ C.op discharged          if Env has admitted provider/effect C.op
                                 or Env has admitted role R and role R entails C.op
 
 Env ⊢ role R discharged        if Env has admitted role R
@@ -306,7 +306,7 @@ Requires(f_actual) ⊆ Requires(f_expected)
 Example:
 
 ```text
-(A -{cap fs.read}-> B) <: (A -{cap fs.read, cap log.write}-> B)
+(A -{fs.read}-> B) <: (A -{fs.read, log.write}-> B)
 ```
 
 The reverse is not valid. A function that requires logging cannot be used where only file-read authority was expected.
@@ -346,7 +346,7 @@ fn map<A, B, r: EffectRow>(xs: List<A>, f: A -> {r} B) -> {r} List<B> { ... }
 The result row is whatever the callback requires, plus any requirements from `map` itself. If `map` logs internally, the row must include that requirement:
 
 ```ash
-fn map_logged<A, B, r: EffectRow>(xs: List<A>, f: A -> {r} B) -> {cap log.write | r} List<B> { ... }
+fn map_logged<A, B, r: EffectRow>(xs: List<A>, f: A -> {r} B) -> {log.write | r} List<B> { ... }
 ```
 
 ### 7.2 Inference
@@ -355,7 +355,7 @@ Effect inference may infer closed rows for ordinary functions:
 
 ```ash
 fn add(a: Int, b: Int) -> Int { a + b }        -- inferred requirement row {}
-fn read(path: String) -> String { fs.read(path) } -- inferred row includes cap fs.read
+fn read(path: String) -> String { fs.read(path) } -- inferred row includes fs.read
 ```
 
 Whether the inferred row appears in the surface type, module summary, or diagnostics is an implementation detail. The semantic row must be available to checking and export/import if the function is public.
@@ -364,7 +364,7 @@ Whether the inferred row appears in the surface type, module summary, or diagnos
 
 Open-row solving must avoid accidental privilege loss or gain.
 
-For a call requiring `{cap fs.read | r}` in an environment containing `{cap fs.read, cap log.write}`, the solver may instantiate `r` with `{cap log.write}` if the expected type demands the larger row. It must not infer that `cap log.write` is required unless it is used, expected, or otherwise constrained.
+For a call requiring `{fs.read | r}` in an environment containing `{fs.read, log.write}`, the solver may instantiate `r` with `{log.write}` if the expected type demands the larger row. It must not infer that `log.write` is required unless it is used, expected, or otherwise constrained.
 
 ### 7.4 No implicit tower lifts
 
@@ -372,21 +372,22 @@ Row polymorphism does not add implicit lifts across `Pure`, `Act`, `Proc`, and `
 
 ## 8. Type checking rules by effect kind
 
-### 8.1 Capability calls
+### 8.1 Operation calls
 
-A capability operation call contributes a capability effect item.
+An effect operation call contributes an operation row item. Current capability declarations
+migrate to effect operation surfaces, but the target row item is the operation identity.
 
 ```text
-call cap C.op(args) : A
+call C.op(args) : A
 ------------------------
-row includes cap C.op
+row includes C.op
 ```
 
-If the operation is called through a binding name, the effect identity must resolve through the binding to the capability interface/operation identity. Diagnostics should show both the binding and canonical capability when helpful.
+If the operation is called through a binding name, the effect identity must resolve through the binding to the effect interface/operation identity. Diagnostics should show both the binding and canonical operation when helpful.
 
 ### 8.2 Role use
 
-A function or computation requiring a role includes a role effect. The role effect can also discharge entailed capability effects, but only when the role is admitted in the ambient environment.
+A function or computation requiring a role includes a role effect. The role effect can also discharge entailed operation effects, but only when the role is admitted in the ambient environment.
 
 The type checker must not expand role definitions at declaration sites in a way that loses the role identity. Role identity matters for audit and diagnostics.
 
@@ -439,7 +440,7 @@ Evidence and report effects must be checked against available evidence sinks or 
 Transparent aliases expand during normalization.
 
 ```ash
-effect alias IO = {cap fs.read, cap fs.write, cap log.write};
+effect alias IO = {fs.read, fs.write, log.write};
 ```
 
 Alias expansion must be cycle-checked. Cycles are rejected.
@@ -450,8 +451,8 @@ Groups preserve a name for diagnostics while expanding to concrete row items.
 
 ```ash
 effect group WorkflowIO = {
-    cap fs.read,
-    cap log.write,
+    fs.read,
+    log.write,
     evidence audit_log,
 };
 ```
@@ -459,12 +460,12 @@ effect group WorkflowIO = {
 A missing requirement diagnostic should be allowed to say:
 
 ```text
-missing WorkflowIO (specifically cap log.write)
+missing WorkflowIO (specifically log.write)
 ```
 
 ### 9.3 Authority bundles are different
 
-An authority bundle, if added, is not a transparent alias. It must have an admission rule and provenance. The type checker must not treat `effect alias Admin = {cap fs.write}` as granting write authority.
+An authority bundle, if added, is not a transparent alias. It must have an admission rule and provenance. The type checker must not treat `effect alias Admin = {fs.write}` as granting write authority.
 
 ### 9.4 Export/import
 
@@ -502,7 +503,7 @@ A conforming implementation must provide diagnostics that name the missing item 
 
 | Case | Required diagnostic content |
 |------|-----------------------------|
-| missing capability | capability/interface operation, current admitted roles/bindings, possible role/capability admission fix |
+| missing authority | effect/interface operation, current admitted roles/bindings, possible role/effect admission fix |
 | missing role | role name, execution boundary that must admit it |
 | policy not found | policy binding name and namespace searched |
 | policy decision mismatch | required decision domain and policy's available decision domain |
@@ -530,11 +531,11 @@ Generic `RowMismatch` is allowed only as an internal error category. User-facing
 - Preserve row summaries in public module exports.
 - Keep existing runtime representation unchanged.
 
-### 12.3 Slice C: Capability and role discharge
+### 12.3 Slice C: Operation and role discharge
 
-- Capability calls contribute capability effects.
-- Admitted role effects discharge entailed capabilities.
-- Missing authority diagnostics distinguish role/capability/policy failures.
+- Operation calls contribute operation effects.
+- Admitted role effects discharge entailed operations.
+- Missing authority diagnostics distinguish role/effect/policy failures.
 
 ### 12.4 Slice D: Policy and contract discharge
 
@@ -552,8 +553,8 @@ Generic `RowMismatch` is allowed only as an internal error category. User-facing
 A future implementation plan should include tests for:
 
 1. pure function inferred as empty row;
-2. capability call contributes a capability effect;
-3. role admission discharges an entailed capability;
+2. operation call contributes an operation effect;
+3. role admission discharges an entailed operation;
 4. role name alone does not grant authority when not admitted;
 5. named policy effect resolves and unknown policy fails;
 6. anonymous policy expression in a row is rejected or explicitly deferred;

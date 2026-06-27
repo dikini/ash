@@ -29,7 +29,7 @@ The target grammar unifies Ash's effect-accounting surface into one coherent syn
 
 - effect rows on function types and computation blocks;
 - a single `do { ... }` form with effect requirements inferred from the body;
-- structured effect items for capabilities, resources, roles, policies, contracts, channels, process operations, failure, and evidence;
+- structured effect items for operations, resources, roles, policies, contracts, channels, process operations, failure, and evidence;
 - transparent effect aliases and diagnostic groups;
 - row variables for polymorphism.
 
@@ -45,7 +45,7 @@ The target grammar adds the following keywords to the current 99-keyword set:
 
 | New keyword | Purpose |
 |-------------|---------|
-| `effect` | introduces effect aliases and groups |
+| `effect` | introduces row aliases and groups (operation declarations now use `interface` per NOTE-022) |
 | `alias` | transparent alias introducer (within `effect`) |
 | `group` | diagnostic group introducer (within `effect`) |
 | `handle` | effect handler boundary (already reserved, now active) |
@@ -62,12 +62,12 @@ The following keywords become deprecated compatibility aliases:
 | `do:Workflow` | `do { ... }` with inferred row |
 | `ret` | `return` |
 | `workflow` | `fn` with contract annotations and row |
-| `capabilities` | `cap` items in effect row |
-| `observes` | `cap` items in effect row |
+| `capabilities` | operation items in effect row |
+| `observes` | operation items in effect row |
 | `receives` | `channel` items in effect row |
 | `obligations` | `obligation` items in effect row |
 | `owns` | `resource` items in effect row |
-| `uses` | `cap` items in effect row |
+| `uses` | operation items in effect row |
 | `plays role` | `role` items in effect row |
 
 ### 2.2 Operators and Punctuation
@@ -83,15 +83,15 @@ Unchanged from current grammar.
 
 ### 3.2 Definition List
 
-The target definition list adds `effect_alias_definition` and `effect_group_definition`:
+The target definition list adds `effect_alias_definition` and
+`effect_group_definition`:
 
 ```ebnf
 definition = visibility (
     fn_definition
-  | builtin_fn_definition
   | type_definition
   | role_definition
-  | capability_definition
+  | legacy_capability_definition
   | interface_definition
   | impl_definition
   | law_definition
@@ -110,7 +110,31 @@ definition = visibility (
 ) ;
 ```
 
-### 3.3 Effect Alias and Group Definitions
+Note: per NOTE-022, operation declarations are no longer a separate `effect_definition`
+form; operations are declared via the existing `interface_definition` production.
+
+### 3.3 Operation Interface Declarations
+
+Per NOTE-022, operations are declared as `interface` members using ordinary `fn`
+signatures. There is no longer a distinct `effect_definition` production for operation
+declarations. The `effect_member` grammar shape is retained and applies to interface
+methods:
+
+```ebnf
+effect_member = "fn" identifier type_params? "(" parameter_list? ")" "->" type
+                contract_clause* ";" ;
+```
+
+Examples:
+
+```ash
+interface Fs {
+    fn read(path: Path) -> String;
+    fn write(path: Path, contents: String) -> Unit;
+}
+```
+
+### 3.4 Effect Alias and Group Definitions
 
 ```ebnf
 effect_alias_definition = "effect" "alias" identifier "=" effect_row ";" ;
@@ -121,11 +145,11 @@ effect_group_definition = "effect" "group" identifier "=" effect_row ";" ;
 Examples:
 
 ```ash
-effect alias IO = {cap fs.read, cap fs.write, cap log.write};
+effect alias IO = {fs.read, fs.write, log.write};
 
 effect group WorkflowIO = {
-    cap fs.read,
-    cap log.write,
+    fs.read,
+    log.write,
     evidence audit_log,
 };
 ```
@@ -151,11 +175,25 @@ primary_expr = literal
              | field_access
              | index_access
              | call_expr
+             | builtin_expr
              | "check" expr
              | "fail" [ string_literal ]
              | "raise" effect_item
              ;
 ```
+
+`builtin fn` is not a target definition form. Trusted stdlib handler/provider methods may use
+`builtin_expr` to delegate to a runtime primitive:
+
+```ebnf
+builtin_expr = "builtin" "(" runtime_primitive_symbol { "," expr } ")" ;
+
+runtime_primitive_symbol = qualified_identifier ;
+```
+
+The `runtime_primitive_symbol` production is a placeholder for a symbol/key type or equivalent
+typed literal. It is deliberately not a string literal: the compiler must validate the primitive
+key and align the surrounding handler method signature with the runtime primitive descriptor.
 
 ### 4.2 Do Block Expression
 
@@ -175,7 +213,7 @@ handler_arm = identifier "->" expr ";" ;
 Examples:
 
 ```ash
-fn read_config(path: String) -> {cap fs.read} String {
+fn read_config(path: String) -> {fs.read} String {
     do {
         contents <- fs.read(path);
         return contents
@@ -203,7 +241,78 @@ do:Workflow { ... } -- check against Workflow row profile
 During migration, `do:Act`, `do:Proc`, and `do:Workflow` are accepted as `do` with a profile
 annotation. A future deprecation spec may remove them.
 
-### 4.3 Legacy Act Block Expression
+### 4.3 Handler Expressions
+
+Per NOTE-023, the target grammar adds first-class handler expressions as eliminators for
+computation rows. The simple `handler_arm` in §4.2 covers the inline `handle ... with { ... }`
+form within a `do` block; this section documents the broader handler surface.
+
+**`on` eliminator.** An `on` expression scrutinises a row-bearing computation and dispatches
+on its operations:
+
+```ebnf
+on_expr = "on" expr "{" handler_clause+ "}" ;
+
+handler_clause = interface_ref "." operation_name "(" pattern "," identifier ")" "=>" expr
+              | "done" "(" identifier ")" "=>" expr
+              ;
+```
+
+- Each operation clause matches `Interface.method(pattern, continuation) => expr`.
+- The continuation parameter (`identifier`) is an ordinary function-typed parameter, **not** a
+  keyword. It is the resume function passed by the handler runtime.
+- A `done(value) => expr` clause completes handling when the computation returns normally.
+
+Example:
+
+```ash
+on run(req) {
+    Fs.read(path, k) => k(read_file(path)),
+    done(v) => v,
+}
+```
+
+**`handle ... with` sugar.** The `handle expr with identifier` form selects a named handler
+for the given computation:
+
+```ebnf
+handle_with_expr = "handle" expr "with" identifier ;
+```
+
+Example:
+
+```ash
+handle run(req) with fs_handler
+```
+
+**Named handler declaration.** A named handler packages a set of clauses for reuse:
+
+```ebnf
+handler_decl = "handler" identifier type_params? "for" interface_ref where_clause?
+               "{" handler_method+ "}" ;
+
+handler_method = "fn" identifier "(" parameter_list ")" "->" type "{" expr "}" ;
+```
+
+Example:
+
+```ash
+handler fs_handler for Fs {
+    fn read(path: Path) -> String { read_file(path) }
+    fn write(path: Path, contents: String) -> Unit { write_file(path, contents) }
+}
+```
+
+**Notes on continuation and multiplicity.**
+
+- The continuation parameter is an ordinary function-typed parameter; there is no special
+  `resume` keyword in the surface grammar.
+- Multiplicity is derived from the function type: a handler is **affine** when the
+  continuation's computation row is non-empty (the continuation may not be invoked more than
+  once), and **multi-shot** when the row is pure (empty). The grammar does not encode this
+  directly; it is enforced by the type system per NOTE-023.
+
+### 4.4 Legacy Act Block Expression
 
 `act { ... }` is accepted as a compatibility alias for `do { ... }`. It is not a distinct
 syntactic form in the target grammar.
@@ -248,9 +357,9 @@ Examples:
 
 ```ash
 {}                                      -- empty row
-{cap fs.read}                           -- closed row
-{cap fs.read, policy production_rate}    -- multiple requirements
-{cap fs.read | r}                        -- open row
+{fs.read}                                -- closed row
+{fs.read, policy production_rate}         -- multiple requirements
+{fs.read | r}                             -- open row
 {r}                                      -- whole-row variable
 {IO}                                     -- transparent alias or group reference
 ```
@@ -258,7 +367,7 @@ Examples:
 ### 6.3 Effect Items
 
 ```ebnf
-effect_item = capability_effect
+effect_item = operation_effect
             | resource_effect
             | role_effect
             | policy_effect
@@ -270,8 +379,8 @@ effect_item = capability_effect
             | effect_group_ref
             ;
 
-capability_effect = "cap" capability_path [ "." operation_name ] ;
-capability_path = identifier { "::" identifier } ;
+operation_effect = operation_path [ "." operation_name ] ;
+operation_path = identifier { "::" identifier } ;
 operation_name = identifier ;
 
 resource_effect = "resource" resource_path [ resource_mode ] ;
@@ -319,6 +428,14 @@ evidence_effect = "evidence" evidence_path
 effect_group_ref = identifier ;
 ```
 
+Note (NOTE-021 §7): The `requires_effect`, `ensures_effect`, `invariant_effect`,
+`law_effect`, and `guard_effect` row entries are convenience forms. Where a row
+references such a predicate, the preferred spelling is an `evidence` reference pointing
+at a named proof obligation, law, or fact binding — i.e., the canonical row item is
+`evidence <path>` and the predicate form is sugar. This keeps the computation row
+algebraic and avoids re-checking predicates at each row-position use. Direct predicate
+row items are retained as a convenience form and do not change the surface grammar above.
+
 ### 6.4 Function Type
 
 The target function type includes an effect row:
@@ -331,17 +448,36 @@ Examples:
 
 ```ash
 fn add(a: Int, b: Int) -> {} Int { a + b }
-fn read_file(path: String) -> {cap fs.read} String { ... }
-fn map<A, B, r: EffectRow>(xs: List<A>, f: A -> {r} B) -> {r} List<B> { ... }
+fn read_file(path: String) -> {fs.read} String { ... }
+fn map<A, B, r: Row>(xs: List<A>, f: A -> {r} B) -> {r} List<B> { ... }
 ```
+
+NOTE-021 introduces an expanded `where row { ... }` alternate layout for the computation
+row on function types. This is purely a layout alternative — the row's meaning is
+unchanged. Inline row syntax and `where row { ... }` are mutually exclusive on a single
+signature (per NOTE-021 §3):
+
+```ash
+fn process(req: Request) -> Response
+where
+    row {
+        http.get,
+        fail ProcessError,
+    }
+```
+
+The `where row { ... }` form is preferred when the row is long or when other `where`
+clauses (evidence rows, contract items) accompany it.
 
 ### 6.5 Type Parameters and Kinds
 
-The target grammar adds `EffectRow` as a kind atom:
+The target grammar adds `Row` as a kind atom (per NOTE-021, the source kind for
+computation-row variables is `Row`; the older spellings `EffectRow` and `Effect` are
+removed):
 
 ```ebnf
 type_param = identifier [ ":" kind ] ;
-kind = "Type" | "EffectRow" | "Effect" | "Capability" | "Resource" ;
+kind = "Type" | "Row" | "Resource" ;
 ```
 
 ## 7. Workflow Definitions
@@ -360,7 +496,7 @@ workflow_def = "fn" identifier [ type_params ] parameter_list [ "->" type ]
 Example:
 
 ```ash
-fn processor(req: Request) -> {role ai_agent, cap http.get} Response {
+fn processor(req: Request) -> {role ai_agent, http.get} Response {
     do {
         result <- http.get(req.url);
         return result
@@ -409,12 +545,12 @@ block expression or ordinary expression with the appropriate effect item in the 
 
 ### 8.1 Role Definitions
 
-The target role definition adds explicit capability entailment:
+The target role definition adds explicit operation entailment:
 
 ```ebnf
 role_definition = "role" identifier [ "(" parameter_list ")" ] "{" { role_clause } "}" ;
 
-role_clause = capability_ref ";"
+role_clause = operation_ref ";"
             | obligation_ref ";"
             | "entails" effect_item ";"
             ;
@@ -424,15 +560,16 @@ Example:
 
 ```ash
 role manager {
-    entails cap approve_transfer;
+    entails approve_transfer;
     entails policy transfer_policy;
 }
 ```
 
-### 8.2 Capability Definitions
+### 8.2 Legacy Capability Definitions
 
-Unchanged from current grammar, with the addition that capability interfaces may reference
-effect rows in operation signatures.
+Target Ash has no separate capability declaration form. Current `capability` declarations are
+legacy compatibility syntax and lower to effect operation declarations plus provider/admission
+metadata during migration.
 
 ### 8.3 Interface Definitions
 
@@ -440,7 +577,7 @@ Interface methods may carry effect rows:
 
 ```ash
 interface EffectfulMap<F> {
-    map<A, B, r: EffectRow>(F<A>, A -> {r} B) -> {r} F<B>;
+    map<A, B, r: Row>(F<A>, A -> {r} B) -> {r} F<B>;
 }
 ```
 
@@ -464,13 +601,13 @@ representation:
 | `do:Workflow { ... }` | `do { ... }` with Workflow profile |
 | `act { ... }` | `do { ... }` |
 | `ret expr` | `return expr` |
-| `capabilities: [cap]` | `cap` items in row |
+| `capabilities: [cap]` | operation items in row |
 | `plays role(R)` | `role R` in row |
-| `observes: [cap]` | `cap` items in row |
+| `observes: [cap]` | operation items in row |
 | `receives: [chan]` | `channel` items in row |
 | `obligations: [obl]` | `obligation` items in row |
 | `owns: [res]` | `resource` items in row |
-| `uses: [cap]` | `cap` items in row |
+| `uses: [cap]` | operation items in row |
 
 ### 10.2 Deprecated Forms
 
@@ -504,3 +641,4 @@ The following forms are rejected in the target grammar:
 ## 12. Changelog
 
 - 2026-06-18: Created as target-state grammar document. Defined effect row syntax, unified `do` form, effect aliases/groups, and migration compatibility.
+- 2026-06-27: Reconciled with NOTE-021 (Row kind, where row layout, evidence rows), NOTE-022 (effects as interfaces, no effect keyword for operations), NOTE-023 (handler surface grammar: on, handle...with, named handler sugar).

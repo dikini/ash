@@ -654,11 +654,11 @@ and handlers, the host boundary must still remain explicit. A capability operati
 `fs.read`, `net.listen`, or `llm.chat` is not an ordinary pure function. It is a typed effect
 operation with authority, contract, failure, and evidence obligations.
 
-The safe Ash-facing declaration is the effect operation:
+The safe Ash-facing declaration is the operation interface (per NOTE-022):
 
 ```ash
-effect Fs {
-    read(path: String) -> String
+interface Fs {
+    fn read(path: String) -> String
         requires: allowed_path(path)
         raises: FsError
         evidence: fs_trace
@@ -668,11 +668,10 @@ effect Fs {
 The runtime/host/FFI-facing declaration is deliberately smaller and more dangerous:
 
 ```ash
-effect Fs {
-    extern unsafe read_host(path: HostString) -> HostResult<HostBytes>
-        abi: "ash-host-v1"
-        symbol: "fs.read_file"
-}
+extern unsafe read_host(path: HostString) -> HostResult<HostBytes>
+    abi: "ash-host-v1"
+    symbol: "fs.read_file"
+    for Fs
 ```
 
 The semantic rule is:
@@ -686,20 +685,21 @@ handlers are the only bridge between them
 There are two candidate placements for the raw extern. The choice is surface syntax; the
 semantics are the same if both preserve the rule above.
 
-**Placement A: extern in the effect declaration.** Use this when the effect has a canonical
-host ABI hook:
+**Placement A: extern attached to the effect's interface.** Use this when the effect has a
+canonical host ABI hook:
 
 ```ash
-effect Fs {
-    read(path: String) -> String
+interface Fs {
+    fn read(path: String) -> String
         requires: allowed_path(path)
         raises: FsError
         evidence: fs_trace
-
-    extern unsafe read_host(path: HostString) -> HostResult<HostBytes>
-        abi: "ash-host-v1"
-        symbol: "fs.read_file"
 }
+
+extern unsafe read_host(path: HostString) -> HostResult<HostBytes>
+    abi: "ash-host-v1"
+    symbol: "fs.read_file"
+    for Fs
 ```
 
 Utility for the contract system:
@@ -717,8 +717,8 @@ filesystem, time, process, environment variables, standard input/output.
 backend varies:
 
 ```ash
-effect Fs {
-    read(path: String) -> String
+interface Fs {
+    fn read(path: String) -> String
         requires: allowed_path(path)
         raises: FsError
         evidence: fs_trace
@@ -1633,3 +1633,4 @@ constraints, what happens to unsupported forms — is currently undefined.
 | 2026-06-24 | Added §8 capability/effect-owned extern boundary: capabilities can be expressed as effect operations plus handlers, while raw host/FFI externs remain effect-local unsafe implementation hooks. Clarified the split between Hoare contracts, handler laws, ABI safety, and authority admission. Updated GAP 8 and open questions with the resulting failure-taxonomy and placement questions. |
 | 2026-06-24 | Expanded the effect-owned extern boundary with two placement alternatives and their contract utility: effect-level externs for canonical host ABIs, and trusted-handler externs for backend-specific adapters. Updated Open Question 8 to treat placement as a surface-syntax decision over a shared semantic invariant. |
 | 2026-06-27 | Normalized target-row wording from effect row to computation row while leaving the detailed fact/evidence/obligation model to a separate follow-up track. |
+| 2026-06-27 | Applied NOTE-022 decision: replaced all `effect Fs { ... }` declaration examples with `interface Fs { ... }`. Externs now shown as dispatch-side constructs with `for Fs` ownership annotation (Placement A) or handler-local (Placement B). The contract layering (Hoare contract, handler law, ABI safety, authority claim) is unchanged — only the declaration keyword changes. |

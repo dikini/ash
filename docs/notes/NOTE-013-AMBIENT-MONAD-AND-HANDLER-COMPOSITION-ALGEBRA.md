@@ -519,28 +519,35 @@ unsafe/minimal host ABI binding
 typed Ash effect operation + handler/provider contract
 ```
 
-One possible surface rule:
+Per NOTE-022, operation signatures are declared as interface methods, not a separate
+`effect` keyword. The interface is the type contract; externs and handler clauses are
+dispatch-side constructs. The illustrative surface (showing all pieces together for
+discussion purposes) is:
 
 ```ash
-effect Fs {
-    read(path: String) -> String
+interface Fs {
+    fn read(path: String) -> String
         requires: allowed_path(path)
         raises: FsError
         evidence: fs_trace
+}
 
-    extern unsafe read_host(path: HostString) -> HostResult<HostBytes>
-        abi: "ash-host-v1"
-        symbol: "fs.read_file"
+// extern and handler are dispatch-side constructs, shown here for discussion.
+// Their final surface syntax remains open (see NOTE-022 §8).
 
-    handler host {
-        read(path, resume) {
-            dynamic requires allowed_path(path)
+extern unsafe read_host(path: HostString) -> HostResult<HostBytes>
+    abi: "ash-host-v1"
+    symbol: "fs.read_file"
+    for Fs   // extern is owned by the Fs interface
 
-            let raw = unsafe read_host(host.encode(path))
-            match decode_file_result(raw) {
-                Ok(contents) => resume(contents)
-                Err(err) => raise FsError(err)
-            }
+handler host {
+    read(path, resume) {
+        dynamic requires allowed_path(path)
+
+        let raw = unsafe read_host(host.encode(path))
+        match decode_file_result(raw) {
+            Ok(contents) => resume(contents)
+            Err(err) => raise FsError(err)
         }
     }
 }
@@ -562,27 +569,28 @@ The extern is only an implementation hook for handlers of that effect.
 There are two plausible placements for the extern declaration. They are semantically
 equivalent at the row level but useful for different authoring cases.
 
-**Placement A: extern in the effect declaration.** The raw host hook is part of the
-effect's canonical runtime story:
+**Placement A: extern attached to the effect's interface.** The raw host hook is part of
+the effect's canonical runtime story:
 
 ```ash
-effect Fs {
-    read(path: String) -> String
+interface Fs {
+    fn read(path: String) -> String
         requires: allowed_path(path)
         raises: FsError
         evidence: fs_trace
+}
 
-    extern unsafe read_host(path: HostString) -> HostResult<HostBytes>
-        abi: "ash-host-v1"
-        symbol: "fs.read_file"
+extern unsafe read_host(path: HostString) -> HostResult<HostBytes>
+    abi: "ash-host-v1"
+    symbol: "fs.read_file"
+    for Fs
 
-    handler host {
-        read(path, resume) {
-            let raw = unsafe read_host(host.encode(path))
-            match decode_file_result(raw) {
-                Ok(contents) => resume(contents)
-                Err(err) => raise FsError(err)
-            }
+handler host {
+    read(path, resume) {
+        let raw = unsafe read_host(host.encode(path))
+        match decode_file_result(raw) {
+            Ok(contents) => resume(contents)
+            Err(err) => raise FsError(err)
         }
     }
 }
@@ -596,12 +604,12 @@ owning effect" easy to enforce and easy to audit.
 Cost: the effect declaration can become noisy if it must mention every platform-specific
 symbol, runtime version, or host calling convention.
 
-**Placement B: extern in a trusted handler.** The effect remains pure semantic surface; each
-handler owns its own backend ABI:
+**Placement B: extern in a trusted handler.** The effect interface remains pure semantic
+surface; each handler owns its own backend ABI:
 
 ```ash
-effect Fs {
-    read(path: String) -> String
+interface Fs {
+    fn read(path: String) -> String
         requires: allowed_path(path)
         raises: FsError
         evidence: fs_trace
@@ -680,11 +688,15 @@ small and local; the safe Ash effect operation is the public contract.
 
 ## 13. Open Questions
 
-1. What is the minimal surface for declaring effect operations and their signatures? (The
-   `effect` declaration, connected to SPEC-096 row items.)
+1. What is the minimal surface for declaring effect operations and their signatures? **Resolved
+   by NOTE-022:** operation signatures are declared as interface methods using the existing
+   interface/impl machinery. No separate `effect` keyword. The interface is the type contract;
+   dispatch is Handle frame nesting; authority is admission.
 
-2. What surface form do handlers take? (Koka `handle...with`, Frank `on`, or something that
-   makes the row transformation visible?)
+2. What surface form do handlers take? **Partially resolved by NOTE-023:** handlers are
+   functions consuming computation thunks, using the `on` eliminator. Named handler sugar
+   (`handler Name for Interface`) and `handle...with` scoped installation are optional sugar.
+   Remaining open: answer-type transformation in sugar form, extern placement syntax.
 
 3. How do the existing Ash algebraic classes (Functor/Applicative/Monad in
    `std/src/algebra/`) connect to the row-polymorphic structural operations? Do they become
@@ -694,11 +706,12 @@ small and local; the safe Ash effect operation is the public contract.
    §9 — where the law system meets the effect system.)
 
 5. What is the concrete surface syntax for the four resume strategies (deep, shallow,
-   multi-shot, delayed)? SPEC-102 implements the Core/CPS substrate for affine and
-   multi-shot-pure, but the surface declaration syntax remains open. The per-handler
-   multiplicity is now a typed property (`HandlerClause.resume_multiplicity`), so the
-   surface must make it visible at the handler declaration site. Shallow/delayed remain
-   operational strategies without dedicated Core/CPS multiplicity variants yet.
+   multi-shot, delayed)? **Partially resolved by NOTE-023:** the continuation is an ordinary
+   typed function parameter. Deep = call it; shallow = don't call it; multi-shot = call it
+   multiple times (legal only when the continuation's row is pure `{}`). SPEC-102 implements
+   the Core/CPS substrate for affine and multi-shot-pure. The surface makes no syntactic
+   distinction — the function type carries multiplicity. Delayed resume remains an
+   operational strategy without dedicated Core/CPS multiplicity.
 
 6. Which extern placement should be the default surface? §11.1 documents two equivalent
    semantic placements: externs directly inside `effect` for canonical host hooks, and
@@ -820,3 +833,5 @@ it is linked.
 | 2026-06-24 | Added §11.1 on current capabilities as target effect operations plus handlers, with host/FFI externs as effect-local unsafe implementation hooks. Captured the invariant that externs are not ordinary Ash functions: the public authority surface remains the typed effect operation and its row-discharge/admission path. |
 | 2026-06-24 | Expanded §11.1 with two effect-local extern placement alternatives: externs in the effect declaration for canonical host ABIs, and externs in trusted handlers for backend-specific adapters. Updated Open Question 6 to treat placement as a surface-syntax choice over the same semantics. |
 | 2026-06-27 | Normalized target-row wording to use computation rows for the type-level row concept while preserving effect operations as algebraic generators and external effect-row literature references. |
+| 2026-06-27 | Applied NOTE-022 decision: replaced all `effect Foo { ... }` declaration examples with `interface Foo { ... }` in §11.1. Externs now shown as dispatch-side constructs attached to the effect's interface (Placement A) or to trusted handlers (Placement B). Marked Open Question 1 as resolved by NOTE-022. Open Questions 2, 5, and 6 remain open as dispatch-side concerns. |
+| 2026-06-27 | Applied NOTE-023 decision: marked Open Questions 2 and 5 as partially resolved — handler surface form and resume strategy syntax are captured in NOTE-023. |

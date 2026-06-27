@@ -610,19 +610,19 @@ surface declaration
   -> provider implementation requirement
 ```
 
-The plain target effect declaration shape is:
+The plain target operation declaration shape is (per NOTE-022, operations are interface methods):
 
 ```ash
-effect Fs {
+interface Fs {
     fn read(path: Path) -> String;
     fn write(path: Path, contents: String) -> Unit;
 }
 ```
 
-Effect operations use `fn` because they are callable function-shaped operations. They have a
-special lowering role, but that does not make them non-functions. The relationship should
-resemble interfaces and implementations: an effect declaration names callable signatures,
-while providers supply interpretations.
+Operations use `fn` because they are callable function-shaped operations. They have a special
+lowering role, but that does not make them non-functions. The relationship mirrors interfaces
+and implementations: an interface names callable signatures, while handlers supply
+interpretations.
 
 Calling a resolved effect operation contributes the same resolved operation identity to the
 row:
@@ -647,10 +647,10 @@ The two spellings above are equivalent only if ordinary name resolution maps `Fs
 `fs.read` to the same operation identity in their respective scopes. After name resolution,
 Core/CPS sees one canonical operation identity and one row item.
 
-For an authority-bearing effect-like declaration:
+For an authority-bearing operation:
 
 ```ash
-effect Fs {
+interface Fs {
     fn read(path: Path) -> String;
 }
 ```
@@ -1308,7 +1308,7 @@ semantic category for every style. Two surface families are useful:
 Illustrative Frank-like shape:
 
 ```ash
-effect Choice {
+interface Choice {
     fn choose<A>(xs: List<A>) -> A;
 }
 
@@ -1939,6 +1939,12 @@ Internal references:
 
 ## 15. Changelog
 
+- 2026-06-27: Applied NOTE-022 decision: replaced `effect Fs { ... }` and
+  `effect Choice { ... }` with `interface Fs { ... }` and `interface Choice { ... }` in
+  §3.2 and the Frank-like handler example. Updated §3.2 prose to reference interfaces
+  rather than effect declarations. Extern placement prose (§3.3) updated: externs are
+  dispatch-side constructs attached to handlers or the owning interface, not declared
+  inside an `effect` block.
 - 2026-06-25: Added handler surface-style guidance: explicit scoped handlers and
   Frank-like ordinary `fn`/optional `operator` definitions with an `on` computation
   eliminator both lower to the same Core/CPS handler machinery.

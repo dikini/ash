@@ -155,14 +155,14 @@ target Ash story:       rows list requirements, nested handlers encode interpret
 
 ### 2.3 Example: exception and nondeterminism
 
-Consider two effect operations:
+Consider two effect operations declared as interfaces (per NOTE-022):
 
 ```ash
-effect Exception<E> {
+interface Exception<E> {
     fn throw(e: E) -> Never;
 }
 
-effect Choice {
+interface Choice {
     fn choose<A>(xs: List<A>) -> A;
 }
 ```
@@ -343,10 +343,10 @@ current capability declaration
   -> optional trusted runtime/host implementation boundary
 ```
 
-Illustrative target shape:
+Illustrative target shape (per NOTE-022, operations are interface methods):
 
 ```ash
-effect Fs {
+interface Fs {
     fn read(path: String) -> String
         requires { path != "" };
 }
@@ -574,13 +574,17 @@ is supplied by handlers interpreting effect operations. Therefore:
 
 ### 7.1 Surface spelling for effect declarations
 
-Resolved direction: make `effect` the canonical target vocabulary. Current `capability`
-syntax is migration input and lowers to restricted effect operation declarations plus
-provider/admission metadata. It is not retained as a separate target-language feature.
+**Resolved by NOTE-022:** operation signatures are declared as interface methods using the
+existing interface/impl machinery. No separate `effect` keyword. The interface is the type
+contract for operations — it declares signatures, carries generics, associated types, and
+where clauses. Dispatch (which handler catches a raised operation) is Handle frame nesting
+in the CPS substrate. Authority is admission evidence at installation time. Current
+`capability` syntax is migration input that lowers to interface method declarations plus
+handler/admission metadata.
 
 Effect operation members use ordinary `fn` signatures. This follows least surprise:
 operation handlers are functions, and the target grammar does not need a special bare
-signature form inside `effect` blocks.
+signature form inside interface blocks.
 
 ### 7.2 External function boundary
 
@@ -669,7 +673,7 @@ Illustrative target shape, using the existing handler direction from NOTE-018. `
 accepted as a synonym for `handler`, but examples prefer `handler`:
 
 ```ash
-effect String {
+interface String {
     fn concat(a: String, b: String) -> String;
 }
 
@@ -681,9 +685,9 @@ handler RuntimeString for String {
 ```
 
 The exact handler/provider declaration syntax is still illustrative. The semantic split is the
-important part: standard-library effects expose the safe operation interface, while trusted
+important part: standard-library interfaces expose the safe operation surface, while trusted
 stdlib handlers interpret those operations with checked runtime primitive bodies. Normal
-handlers can implement the same effect interface without `builtin(...)`, for
+handlers can implement the same interface without `builtin(...)`, for
 example as a mock, replay, sandbox, proof interpreter, or alternative runtime adapter.
 
 The remaining issues are the exact handler/provider syntax, the symbol/key type for runtime
@@ -793,6 +797,10 @@ Internal references:
 
 ## 11. Changelog
 
+- 2026-06-27: Applied NOTE-022 decision: replaced all `effect Foo { ... }` declaration
+  examples with `interface Foo { ... }` in §2.3, §4, and §7. Updated §7.1 from "make
+  `effect` the canonical target vocabulary" to "interfaces are canonical; no `effect`
+  keyword" with reference to NOTE-022. Updated §7 stdlib example to use `interface String`.
 - 2026-06-27: Linked NOTE-021 as the focused syntax note for row-heavy callables, expanded
   `where row { ... }` spelling, named predicate/proof facts, and evidence row entries.
   NOTE-021 now carries the pre-spec delta checklist for later target-spec alignment.

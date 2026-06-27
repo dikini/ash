@@ -1,7 +1,7 @@
 ---
 id: spec.ash.effect-system.target
 title: Ash Effect System — Target State
-description: Unified effect system based on row polymorphism with kind-specific discharge for capabilities, roles, policies, contracts, channels, process operations, failure, and evidence
+description: Unified effect system based on row polymorphism with kind-specific discharge for operations, roles, policies, contracts, channels, process operations, failure, and evidence
 kind: spec
 audience: [human, agent]
 authority: design
@@ -25,15 +25,15 @@ verified_against:
 
 # SPEC-096b: Ash Effect System — Target State
 
-**Status:** Draft — target semantic model for unified effect rows
+**Status:** Draft — target semantic model for unified computation rows
 **Scope:** This document defines the effect-system semantics we want Ash to have.
 It is a goal-state living document that will be refined as implementation progresses.
 **Depends on:** SPEC-095b (Target Grammar), SPEC-097b (Target Type System)
 
 ## 1. Summary
 
-Ash should move toward one effect-accounting model based on row polymorphism. Effect rows
-describe the requirements of a computation: which capabilities, roles, policies, contracts,
+Ash should move toward one effect-accounting model based on row polymorphism. Computation rows
+describe the requirements of a computation: which operations, roles, policies, contracts,
 channels, process operations, failures, and evidence/reporting effects the computation may
 use or emit.
 
@@ -43,21 +43,21 @@ effect-accounting substrate:
 
 ```text
 Pure      = computation with an empty requirement row
-Act       = capability/resource/failure/evidence effects
+Act       = operation/resource/failure/evidence effects
 Proc      = Act + process/channel/concurrency effects
 Workflow  = Proc + contract/policy/role/obligation/reporting effects
 ```
 
 A later spec may choose to collapse the public computation types into one runtime
 representation. This spec only requires that their authority and contract requirements
-become visible as effect rows.
+become visible as computation rows.
 
 ## 2. Motivation
 
 Ash currently has several related but separate mechanisms:
 
 - the four-stratum tower `Pure < Act < Proc < Workflow`;
-- capability declarations and bindings;
+- current capability declarations and bindings as migration input;
 - role authority and obligations;
 - policy declarations and policy decisions;
 - workflow contracts such as `requires` and `ensures`;
@@ -73,12 +73,20 @@ Effect rows provide a common accounting layer. They do not erase semantic differ
 A policy effect, a role effect, and a channel receive effect all appear in rows, but each
 has its own discharge rule.
 
+> **Terminology (NOTE-021, NOTE-020):** The broad type-level row concept that includes
+> operations, resources, roles, policies, contracts, channels, process, failure, and
+> evidence is a *computation row*. The term *effect row* is reserved for the syntactic
+> `{...}` between arrow and return type.
+
 ## 3. Non-goals for this draft
 
 This draft is a precision pass over the language direction. It intentionally does not specify:
 
-1. arbitrary user-defined resumable algebraic effects;
-2. a complete syntax for effect handlers;
+1. ~~arbitrary user-defined resumable algebraic effects~~ — **Updated (NOTE-022):** No longer a
+   non-goal. Operations are declared as interface methods, and user-defined effects are now part
+   of the target model. See §6.1.
+2. a complete syntax for effect handlers — the handler surface is captured in NOTE-023; this
+   spec defers the full syntactic grammar to that note;
 3. deletion of `Act<T>`, `Proc<T>`, `Workflow<T>`, or `workflow` syntax;
 4. a new runtime `Eff<A>` implementation;
 5. implicit privilege grants from aliases or groups;
@@ -91,15 +99,15 @@ responsibilities that later parser, type-system, IR, and runtime specs must refi
 
 ### 4.1 Rows describe requirements, not grants
 
-An effect row on a function or computation is a set of requirements. It says what the body
+A computation row on a function or computation is a set of requirements. It says what the body
 may need. It does not grant authority by itself.
 
 ```ash
-fn read_config(path: String) -> {cap fs.read} String { ... }
+fn read_config(path: String) -> {fs.read} String { ... }
 ```
 
 The row above means the computation requires authority to perform `fs.read`. The caller or
-admission context must provide or discharge that requirement. Merely naming `cap fs.read` in
+admission context must provide or discharge that requirement. Merely naming `fs.read` in
 a type must not create a file-system authority.
 
 ### 4.2 Ambient effect environment
@@ -110,7 +118,7 @@ that are already available or already discharged in the current scope.
 Examples of ambient facts include:
 
 - a role admitted at workflow/process start;
-- a capability binding admitted by a workflow header;
+- an operation provider or legacy capability binding admitted by a workflow header;
 - a policy handler installed around a region;
 - a proof or runtime-check strategy for a contract;
 - a channel endpoint owned by the current process;
@@ -122,12 +130,12 @@ in `R` is discharged by `E` according to that item kind's rule.
 ### 4.3 Row profiles preserve the tower
 
 The tower remains the default explanation of increasing operational power. Row profiles
-make that power explicit.
+make that power explicit by naming increasingly rich computation rows.
 
 | Profile | Row shape | Meaning |
 |---------|-----------|---------|
 | `Pure` | `{}` | no effect requirements |
-| `Act` | capability/resource/failure/evidence effects | runtime-managed effects without process or workflow governance |
+| `Act` | operation/resource/failure/evidence effects | runtime-managed effects without process or workflow governance |
 | `Proc` | `Act` effects plus process/channel effects | process identity, concurrency, message passing, observation of process failure |
 | `Workflow` | `Proc` effects plus contract/policy/role/obligation/reporting effects | governed orchestration boundary |
 
@@ -138,15 +146,19 @@ computation cannot use `channel receive` unless it is lifted or rechecked in a `
 
 All row items share row syntax, but they are not discharged uniformly.
 
-| Effect kind | Discharge mechanism |
+> **NOTE-020:** Computation rows include more than effects — resources, roles, policies,
+> contracts, channels, process operations, failure modes, and evidence are all first-class
+> row items with their own kinds and discharge rules.
+
+| Row item kind | Discharge mechanism |
 |-------------|---------------------|
-| capability | admitted capability binding or role entailment |
+| operation | admitted provider/effect binding or role entailment |
 | resource | ownership, borrow, split, join, or provenance over a runtime resource |
 | role | role admission at the execution boundary |
 | policy | named policy binding evaluated or handled by a compatible decision domain |
 | contract | static proof, evidence proof/test, or runtime contract handler |
 | channel | owned endpoint with compatible direction/message type and guard behavior |
-| process | process runtime capability such as spawn/await/join/cancel |
+| process | process runtime operation such as spawn/await/join/cancel |
 | failure | enclosing tower/profile supports the failure route and handler/reporting policy |
 | evidence/provenance | records audit, proof, test, report, or trace evidence |
 
@@ -167,7 +179,7 @@ row_contents = row_variable
 
 row_variable = identifier ;
 
-effect_item = capability_effect
+effect_item = operation_effect
             | resource_effect
             | role_effect
             | policy_effect
@@ -187,44 +199,47 @@ in the row:
 fn map<A, B, r>(xs: List<A>, f: A -> {r} B) -> {r} List<B> { ... }
 ```
 
-`{r}` is a complete row variable. `{cap fs.read | r}` is a row extension with a tail variable.
+`{r}` is a complete row variable. `{fs.read | r}` is a row extension with a tail variable.
 The parser/type checker must distinguish `{r}` from an effect group reference by kind and
 namespace resolution.
 
 A closed row has no row variable:
 
 ```ash
-fn read_file(path: String) -> {cap fs.read} String { ... }
+fn read_file(path: String) -> {fs.read} String { ... }
 ```
 
 ## 6. Effect item taxonomy
 
-### 6.1 Capability effects
+### 6.1 Operation effects
 
-Capability effects require authority to call an admitted capability interface or operation.
+Operation effects require authority to call an admitted effect operation. Operation signatures
+are declared as interface methods (NOTE-022). Current capability declarations are migration
+syntax that lowers to interface method declarations plus handler/admission metadata; the target
+language has effects, operations, providers, and admission, not a distinct capability feature.
 
 ```ebnf
-capability_effect = "cap" capability_path [ "." operation_name ] ;
-capability_path = identifier { "::" identifier } ;
+operation_effect = operation_path [ "." operation_name ] ;
+operation_path = identifier { "::" identifier } ;
 operation_name = identifier ;
 ```
 
 Examples:
 
 ```ash
-fn read_config(path: String) -> {cap fs.read} String { ... }
-fn write_log(msg: String) -> {cap log.write} Unit { ... }
+fn read_config(path: String) -> {fs.read} String { ... }
+fn write_log(msg: String) -> {log.write} Unit { ... }
 ```
 
-A capability effect is discharged by an explicit capability binding, by a role that entails
-the capability, or by a host/runtime admission fact. The type checker must not treat a
-capability name as an ordinary value binding.
+An operation effect is discharged by an explicit provider/effect binding, by a role that
+entails the operation, or by a host/runtime admission fact. The type checker must not treat
+an operation name as an ordinary value binding.
 
 ### 6.2 Resource effects
 
-Resource effects require access to a runtime resource. They are distinct from capability
-effects: a capability describes an operation surface, while a resource describes owned or
-borrowed state used by an implementation.
+Resource effects require access to a runtime resource. They are distinct from operation
+effects: an operation describes the requested effect surface, while a resource describes owned
+or borrowed state used by an implementation.
 
 ```ebnf
 resource_effect = "resource" resource_path [ resource_mode ] ;
@@ -252,10 +267,10 @@ role_effect = "role" role_path ;
 Example:
 
 ```ash
-fn approve(req: TransferRequest) -> {role manager, cap approve_transfer} Approval { ... }
+fn approve(req: TransferRequest) -> {role manager, approve_transfer} Approval { ... }
 ```
 
-Roles are not aliases for capabilities. A role can entail capability effects, policy effects,
+Roles are not aliases for operations. A role can entail operation effects, policy effects,
 or obligations, but that entailment must be checked from the role definition and admission
 context.
 
@@ -272,7 +287,7 @@ Example:
 ```ash
 policy production_rate = RateLimit { requests: 1000, window_secs: 60 };
 
-fn call_api(req: Request) -> {cap http.get, policy production_rate} Response { ... }
+fn call_api(req: Request) -> {http.get, policy production_rate} Response { ... }
 ```
 
 Policy effects preserve the SPEC-006/SPEC-007 boundary: policies are named declarations
@@ -374,7 +389,7 @@ failure_effect = "fail" [ failure_path ] ;
 Example:
 
 ```ash
-fn parse_config(path: String) -> {cap fs.read, fail ConfigError} Config { ... }
+fn parse_config(path: String) -> {fs.read, fail ConfigError} Config { ... }
 ```
 
 A `fail` effect is discharged by an enclosing failure handler, workflow failure boundary, or
@@ -394,14 +409,14 @@ evidence_effect = "evidence" evidence_path
 Examples:
 
 ```ash
-fn audited_write(msg: String) -> {cap log.write, evidence audit_log} Unit { ... }
+fn audited_write(msg: String) -> {log.write, evidence audit_log} Unit { ... }
 fn finish() -> {report workflow_summary} Unit { ... }
 ```
 
 These effects are normally discharged by workflow or runtime admission. A pure function cannot
 require evidence/report effects directly.
 
-## 7. Roles, capabilities, and authority
+## 7. Roles, effects, and authority
 
 ### 7.1 Role admission
 
@@ -410,22 +425,22 @@ runtime or workflow/process boundary decision, not a local type alias.
 
 ```ash
 role manager {
-    capabilities: [approve_transfer]
+    entails approve_transfer
 }
 ```
 
 A computation requiring `{role manager}` may run only in a context where `manager` is admitted.
 
-### 7.2 Role-to-capability entailment
+### 7.2 Role-to-operation entailment
 
-A role can entail capability effects. The entailment is derived from the role declaration and
+A role can entail operation effects. The entailment is derived from the role declaration and
 any admitted refinements.
 
 ```text
 admitted(role manager)
-role manager entails cap approve_transfer
+role manager entails approve_transfer
 ----------------------------------------
-cap approve_transfer is discharged
+approve_transfer is discharged
 ```
 
 The entailment must be explicit and auditable. If a role definition changes, downstream
@@ -433,8 +448,8 @@ row-discharge evidence must be invalidated or rechecked.
 
 ### 7.3 Authority denial
 
-Authority denial is not the same as a policy denial. If no admitted role or capability binding
-discharges a capability effect, the computation is rejected before the capability operation runs.
+Authority denial is not the same as a policy denial. If no admitted role or provider/effect
+binding discharges an operation effect, the computation is rejected before the operation runs.
 
 A later operational-semantics spec must distinguish at least:
 
@@ -450,7 +465,7 @@ Policies are represented in rows as named policy effects. They are handled by po
 at explicit boundaries.
 
 ```ash
-fn send_invoice(inv: Invoice) -> {policy invoice_policy, cap email.send} Unit { ... }
+fn send_invoice(inv: Invoice) -> {policy invoice_policy, email.send} Unit { ... }
 ```
 
 The policy effect means:
@@ -463,6 +478,26 @@ The policy effect means:
 
 A policy handler is therefore a structured runtime/admission component, not necessarily a
 user-written resumable algebraic-effect handler.
+
+### 8.1 General handler semantics (NOTE-023)
+
+Beyond policy handlers, the target model includes a uniform handler surface for any
+computation-row item. Per NOTE-023:
+
+- A **handler** is an ordinary function that consumes a computation thunk (a deferred
+  computation with its row) and produces a value.
+- The `on` eliminator installs a *Handle frame* on the computation stack, binding the
+  handler to one or more row items in the thunk's row.
+- The **continuation** exposed to the handler body is an ordinary typed parameter — it is
+  not a special-purpose construct — so handlers compose using normal function application
+  and row-subsumption rules.
+- **Multiplicity** of the continuation (linear, affine, or unrestricted) is derived from
+  the handler's function type, not from a separate annotation. This lets the type system
+  reject non-affine resumption where the row item kind forbids it.
+
+This recovers resumable algebraic-effect semantics without introducing a distinct
+handler sublanguage: handler definitions are interface implementations (NOTE-022), and
+their typing reuses the existing function and row machinery.
 
 ## 9. Contracts, guards, and discharge
 
@@ -502,12 +537,17 @@ effects to be representable in rows and to preserve their evidence status.
 
 Ash needs grouping mechanisms, but they must not blur requirements and grants.
 
+> **NOTE-021:** The terms *effect alias* and *effect group* are retained for row-level
+> grouping, but they are *computation-row* aliases/groups. The kind name for such rows is
+> `Row`. An `effect alias` is therefore a `Row`-kinded alias over a computation row, not a
+> distinct type constructor.
+
 ### 10.1 Transparent aliases
 
 A transparent alias is a pure abbreviation. It expands before row checking and grants no authority.
 
 ```ash
-effect alias IO = {cap fs.read, cap fs.write, cap log.write};
+effect alias IO = {fs.read, fs.write, log.write};
 
 fn load() -> IO Config { ... }
 ```
@@ -519,8 +559,8 @@ still expanding to row items for checking.
 
 ```ash
 effect group WorkflowIO = {
-    cap fs.read,
-    cap log.write,
+    fs.read,
+    log.write,
     evidence audit_log,
 };
 ```
@@ -530,12 +570,12 @@ and the concrete missing item.
 
 ### 10.3 Authority bundles are not aliases
 
-A role, capability bundle, or admission package may grant authority, but it is not an effect
-alias. It must have an admission rule and an audit/provenance boundary.
+An admission package may grant or entail authority, but it is not an effect alias. It must
+have an admission rule and an audit/provenance boundary.
 
 ```text
 effect alias/group = describes requirements
-role/capability admission = grants or entails authority
+role/effect admission = grants or entails authority
 ```
 
 A future spec may define authority bundles, but it must keep them separate from transparent
@@ -547,7 +587,7 @@ The target surface is a single `do { ... }` form whose effect requirements are i
 the body and checked against the enclosing row.
 
 ```ash
-fn read_config(path: String) -> {cap fs.read} String {
+fn read_config(path: String) -> {fs.read} String {
     do {
         contents <- fs.read(path);
         return contents
@@ -575,10 +615,11 @@ the public runtime representation.
 
 ### 12.2 Stage 2: Row-checked admission
 
-Use row discharge for capabilities, roles, policies, contracts, and channel/process effects.
+Use row discharge for operation providers/effects, roles, policies, contracts, and
+channel/process effects.
 
-- Capability calls require capability effects.
-- Role admission can discharge entailed capabilities.
+- Operation calls require operation effects.
+- Role admission can discharge entailed operations.
 - Policy effects reference named policy bindings.
 - Contract effects preserve static/evidence/dynamic discharge status.
 
@@ -586,7 +627,7 @@ Use row discharge for capabilities, roles, policies, contracts, and channel/proc
 
 Define `Act`, `Proc`, and `Workflow` as named row profiles over a shared substrate.
 
-- `Act` admits capability/resource/failure effects.
+- `Act` admits operation/resource/failure effects.
 - `Proc` admits process/channel effects.
 - `Workflow` admits governance/reporting effects.
 
@@ -604,10 +645,11 @@ workflow reporting, and audit evidence.
 ## 13. Open decisions for follow-on specs
 
 1. Exact parser spelling for effect rows and effect aliases/groups.
-2. Whether role/capability entailment is type-checker-only, runtime-only, or both.
+2. Whether role/effect-operation entailment is type-checker-only, runtime-only, or both.
 3. Exact policy effect decision domains and handler boundaries.
 4. Channel guard failure behavior.
-5. Whether user-defined algebraic effect handlers are in alpha or deferred.
+5. User-defined algebraic effect handlers are captured in NOTE-023. Implementation timing
+   remains to be scheduled.
 6. How row effects are represented in IR and module summaries.
 7. How effect aliases/groups are exported, imported, versioned, and invalidated.
 8. Which legacy tower syntax becomes deprecated, and when.
@@ -618,9 +660,9 @@ workflow reporting, and audit evidence.
 - [SPEC-095b: Target Grammar](SPEC-095b-TARGET-GRAMMAR.md) — target surface syntax
 - [SPEC-096a: Current Effect System](SPEC-096a-CURRENT-EFFECT-SYSTEM.md) — current 4-point lattice and tower
 - [SPEC-097a: Current Type System](SPEC-097a-CURRENT-TYPE-SYSTEM.md) — current type system without rows
-- [SPEC-097b: Target Type System](SPEC-097b-TARGET-TYPE-SYSTEM.md) — type checking for effect rows
-- [SPEC-098b: Target IR Changes](SPEC-098b-TARGET-IR.md) — IR representation for effect rows
-- [SPEC-099b: Target Operational Semantics](SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md) — runtime semantics for effect rows
+- [SPEC-097b: Target Type System](SPEC-097b-TARGET-TYPE-SYSTEM.md) — type checking for computation rows
+- [SPEC-098b: Target IR Changes](SPEC-098b-TARGET-IR.md) — IR representation for computation rows
+- [SPEC-099b: Target Operational Semantics](SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md) — runtime semantics for computation rows
 - [SPEC-006: Policy Definition Syntax](SPEC-006-POLICY-DEFINITIONS.md)
 - [SPEC-007: Policy Combinators](SPEC-007-POLICY-COMBINATORS.md)
 - [SPEC-019: Role Runtime Semantics](SPEC-019-ROLE-RUNTIME-SEMANTICS.md)
@@ -630,3 +672,4 @@ workflow reporting, and audit evidence.
 ## 15. Changelog
 
 - 2026-06-18: Created as target-state effect system document. Defined row semantics, effect item taxonomy, discharge rules, aliases/groups, and migration path.
+- 2026-06-27: Reconciled with NOTE-020 (computation row taxonomy), NOTE-021 (Row kind, evidence rows), NOTE-022 (effects as interfaces), NOTE-023 (handler surface semantics).

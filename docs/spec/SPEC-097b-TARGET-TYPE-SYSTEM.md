@@ -1,7 +1,7 @@
 ---
 id: spec.ash.type-system.target
 title: Ash Type System — Target State
-description: Type system with unified effect rows, row polymorphism, kind-specific discharge, and effect aliases/groups
+description: Type system with unified computation rows, row polymorphism, kind-specific discharge, and effect aliases/groups
 kind: spec
 audience: [human, agent]
 authority: design
@@ -22,14 +22,14 @@ verified_against:
 
 # SPEC-097b: Ash Type System — Target State
 
-**Status:** Draft — target type system for unified effect rows
+**Status:** Draft — target type system for unified computation rows
 **Scope:** This document defines the type-system semantics we want Ash to have.
 It is a goal-state living document that will be refined as implementation progresses.
 **Depends on:** SPEC-095b (Target Grammar), SPEC-096b (Target Effect System)
 
 ## 1. Summary
 
-This spec defines the type-system obligations for the unified effect-row direction in
+This spec defines the type-system obligations for the unified computation-row direction in
 SPEC-096b. The central rule is:
 
 ```text
@@ -37,9 +37,13 @@ a computation's requirement row must be discharged by the ambient effect environ
 ```
 
 Rows are requirement sets, not authority grants. The type checker may infer, normalize,
-compare, and report rows, but authority is provided only by admitted roles, capability
-bindings, resources, policy handlers, channel endpoints, contract evidence, or runtime/workflow
+compare, and report rows, but authority is provided only by admitted roles, effect providers,
+resources, policy handlers, channel endpoints, contract evidence, or runtime/workflow
 boundaries.
+
+**Terminology (NOTE-021).** Throughout this document, *computation row* denotes the broad
+type-level row concept (the requirement set carried by a computation). *Effect row* is
+reserved for referring to the syntactic row literal in source text (e.g. `{fs.read, log.write}`).
 
 This draft replaces the earlier loose statement "`{fs} <: {fs, log}`" with explicit relations:
 
@@ -54,7 +58,7 @@ This draft replaces the earlier loose statement "`{fs} <: {fs, log}`" with expli
 Current parser/core/typechecker code does not yet carry a complete effect-row type in ordinary
 function signatures. The live type surfaces include named types, type constructors, tuples,
 records, associated types, and callable types, while workflow/effect information is tracked
-separately in existing workflow/capability machinery.
+separately in existing workflow and legacy capability machinery.
 
 The existing 4-point `Effect` lattice in `crates/ash-core/src/effect.rs` is a coarse
 workflow/effect classification:
@@ -76,7 +80,7 @@ representation already has row structure.
 
 The first implementation slice should add row summaries and row checking around existing
 carriers. It must not require immediate deletion of `Type::Fn`, `Type::Fun`, `Act<T>`,
-`Proc<T>`, `Workflow<T>`, workflow headers, or current capability declarations.
+`Proc<T>`, `Workflow<T>`, workflow headers, or current legacy capability declarations.
 
 ## 3. Type-level representation
 
@@ -100,13 +104,18 @@ pub struct RowVar {
 A closed row has `tail: None`. An open row has `tail: Some(r)` and represents the listed
 requirements plus an unknown remainder.
 
+> **Kind note (NOTE-021).** The source-level kind is `Row` (e.g. `r: Row`). The Rust type
+> name (`EffectRow`) is an implementation detail and is not part of the source surface.
+
 ### 3.2 Effect item identity
 
-Rows contain typed effect items, not bare strings.
+Rows contain typed row items, not bare strings. (The Rust enum variant is named `EffectItem`
+as an implementation detail; the source-level concept is a *row item* or *computation row item*,
+per NOTE-021.)
 
 ```rust
 pub enum EffectItem {
-    Capability(CapabilityEffect),
+    Operation(OperationEffect),
     Resource(ResourceEffect),
     Role(RoleEffect),
     Policy(PolicyEffect),
@@ -119,22 +128,25 @@ pub enum EffectItem {
 }
 ```
 
-Every effect item must have a canonical identity used for duplicate elimination, row
+Every row item must have a canonical identity used for duplicate elimination, row
 comparison, diagnostics, and module-summary export. The identity must include its namespace.
-For example, `cap fs.read`, `policy fs.read`, and `role fs.read` are distinct even if their
+For example, `fs.read`, `policy fs.read`, and `role fs.read` are distinct even if their
 textual tails match.
 
-### 3.3 Capability effect
+### 3.3 Operation effect
+
+An operation effect references an interface method identity (NOTE-022). For example,
+`Fs.read` references the `read` method of the `Fs` interface.
 
 ```rust
-pub struct CapabilityEffect {
+pub struct OperationEffect {
     pub interface: NamePath,
     pub operation: Option<Name>,
 }
 ```
 
-A whole-interface requirement such as `cap fs` is broader than an operation-specific
-requirement such as `cap fs.read`. A future implementation must define whether `cap fs`
+A whole-interface requirement such as `Fs` is broader than an operation-specific
+requirement such as `Fs.read`. A future implementation must define whether `Fs`
 expands into all known operations or remains an abstract interface requirement. It must not
 silently treat the two as identical.
 
@@ -146,7 +158,7 @@ pub struct RoleEffect {
 }
 ```
 
-A role effect requires role admission. It does not by itself expand into capabilities until
+A role effect requires role admission. It does not by itself expand into operations until
 the role definition and admission context are known.
 
 ### 3.5 Policy effect
@@ -233,25 +245,26 @@ type-system packet is:
 
 ```ash
 {}                                      -- empty row
-{cap fs.read}                           -- closed row
-{cap fs.read, policy production_rate}    -- multiple requirements
-{cap fs.read | r}                        -- open row
+{fs.read}                                -- closed row
+{fs.read, policy production_rate}         -- multiple requirements
+{fs.read | r}                             -- open row
 {r}                                      -- whole-row variable
 {IO}                                     -- transparent alias or group reference
 ```
 
 Rows are not ordinary record types. A parser/typechecker implementation must distinguish
-record type `{x: Int}` from effect row `{cap fs.read}` by grammar context or an explicit
-row-introducing token chosen by the syntax spec. It must also distinguish `{r}` from an effect
-group reference by kind and namespace resolution.
+record type `{x: Int}` from the computation row `{fs.read}` by grammar context or an
+explicit row-introducing token chosen by the syntax spec. It must also distinguish `{r}`
+from an alias/group reference by kind and namespace resolution.
 
 ### 4.2 Row variable kind
 
-Row variables have a distinct kind, for example `EffectRow` or `Effect`. This spec uses
-`EffectRow` in prose to avoid confusion with the existing 4-point `Effect` lattice.
+Row variables have a distinct kind, `Row` (NOTE-021). This spec uses `Row` in source-level
+prose and examples. (Earlier drafts used `EffectRow`; the Rust type name `EffectRow` may
+persist as an implementation detail — see §3.1.)
 
 ```ash
-fn map<A, B, r: EffectRow>(xs: List<A>, f: A -> {r} B) -> {r} List<B> { ... }
+fn map<A, B, r: Row>(xs: List<A>, f: A -> {r} B) -> {r} List<B> { ... }
 ```
 
 The implementation may infer row-variable kinds when unambiguous.
@@ -261,11 +274,11 @@ The implementation may infer row-variable kinds when unambiguous.
 A row variable may carry constraints:
 
 ```ash
-fn log_and_return<A, r>(x: A) -> {cap log.write | r} A { ... }
+fn log_and_return<A, r>(x: A) -> {log.write | r} A { ... }
 ```
 
-This means the resulting computation requires at least `cap log.write` plus whatever `r`
-requires. It does not mean `r <: {cap log.write}`.
+This means the resulting computation requires at least `log.write` plus whatever `r`
+requires. It does not mean `r <: {log.write}`.
 
 If explicit constraint syntax is added, it should name the intended relation directly:
 
@@ -294,8 +307,8 @@ Normalization must:
 Duplicate elimination is exact. For example:
 
 ```text
-cap fs       != cap fs.read, unless a later capability-interface rule defines expansion
-role admin   != cap fs.read, even if admin can entail fs.read
+fs           != fs.read, unless a later effect-interface rule defines expansion
+role admin   != fs.read, even if admin can entail fs.read
 ```
 
 Role entailment happens during discharge, not normalization.
@@ -318,7 +331,7 @@ row `R`.
 The discharge rule is kind-specific:
 
 ```text
-Env ⊢ cap C.op discharged      if Env has admitted capability C.op
+Env ⊢ C.op discharged          if Env has admitted provider/effect C.op
                                 or Env has admitted role R and role R entails C.op
 
 Env ⊢ role R discharged        if Env has admitted role R
@@ -352,7 +365,7 @@ Requires(f_actual) ⊆ Requires(f_expected)
 Example:
 
 ```text
-(A -{cap fs.read}-> B) <: (A -{cap fs.read, cap log.write}-> B)
+(A -{fs.read}-> B) <: (A -{fs.read, log.write}-> B)
 ```
 
 The reverse is not valid. A function that requires logging cannot be used where only
@@ -389,14 +402,14 @@ and evidence boundary.
 A higher-order function can preserve the row of a callback.
 
 ```ash
-fn map<A, B, r: EffectRow>(xs: List<A>, f: A -> {r} B) -> {r} List<B> { ... }
+fn map<A, B, r: Row>(xs: List<A>, f: A -> {r} B) -> {r} List<B> { ... }
 ```
 
 The result row is whatever the callback requires, plus any requirements from `map` itself. If
 `map` logs internally, the row must include that requirement:
 
 ```ash
-fn map_logged<A, B, r: EffectRow>(xs: List<A>, f: A -> {r} B) -> {cap log.write | r} List<B> { ... }
+fn map_logged<A, B, r: Row>(xs: List<A>, f: A -> {r} B) -> {log.write | r} List<B> { ... }
 ```
 
 ### 7.2 Inference
@@ -405,7 +418,7 @@ Effect inference may infer closed rows for ordinary functions:
 
 ```ash
 fn add(a: Int, b: Int) -> Int { a + b }        -- inferred requirement row {}
-fn read(path: String) -> String { fs.read(path) } -- inferred row includes cap fs.read
+fn read(path: String) -> String { fs.read(path) } -- inferred row includes fs.read
 ```
 
 Whether the inferred row appears in the surface type, module summary, or diagnostics is an
@@ -416,9 +429,9 @@ the function is public.
 
 Open-row solving must avoid accidental privilege loss or gain.
 
-For a call requiring `{cap fs.read | r}` in an environment containing `{cap fs.read, cap log.write}`,
-the solver may instantiate `r` with `{cap log.write}` if the expected type demands the larger row.
-It must not infer that `cap log.write` is required unless it is used, expected, or otherwise
+For a call requiring `{fs.read | r}` in an environment containing `{fs.read, log.write}`,
+the solver may instantiate `r` with `{log.write}` if the expected type demands the larger row.
+It must not infer that `log.write` is required unless it is used, expected, or otherwise
 constrained.
 
 ### 7.4 No implicit tower lifts
@@ -429,24 +442,27 @@ rule remains required until a separate spec changes it.
 
 ## 8. Type checking rules by effect kind
 
-### 8.1 Capability calls
+### 8.1 Operation calls
 
-A capability operation call contributes a capability effect item.
+An interface method call that is not locally resolved contributes an operation row item. The
+operation identity is the resolved interface method path (NOTE-022). Current capability
+declarations migrate to interface method surfaces, but the target row item is the operation
+identity.
 
 ```text
-call cap C.op(args) : A
+call C.op(args) : A
 ------------------------
-row includes cap C.op
+row includes C.op
 ```
 
-If the operation is called through a binding name, the effect identity must resolve through the
-binding to the capability interface/operation identity. Diagnostics should show both the binding
-and canonical capability when helpful.
+If the operation is called through a binding name, the row identity must resolve through the
+binding to the interface method identity. Diagnostics should show both the binding
+and canonical interface method when helpful.
 
 ### 8.2 Role use
 
 A function or computation requiring a role includes a role effect. The role effect can also
-discharge entailed capability effects, but only when the role is admitted in the ambient
+discharge entailed operation effects, but only when the role is admitted in the ambient
 environment.
 
 The type checker must not expand role definitions at declaration sites in a way that loses the
@@ -500,6 +516,50 @@ Evidence and report effects must be checked against available evidence sinks or
 workflow/reporting boundaries. Public functions exporting evidence effects must preserve those
 effects in module summaries.
 
+### 8.8 Handler typing
+
+A handler is a function whose parameter is a computation thunk of type `Unit -> {op | r} A`
+and whose return type is the *answer type* `Ans`. The handler's output row is `{r}`: the
+peeled operations are removed from the requirement row while the residual row `r` is
+propagated to the handler's caller (NOTE-023).
+
+For each peeled operation `op` with result type `B_op` declared by the interface, the handler
+branch receives a *continuation* parameter of type `B_op -> {r} Ans`. The continuation is an
+ordinary function parameter; its row is `{r}`, the residual row after peeling. The result
+type `Ans` is shared across all branches and the handler's own return type.
+
+**Multiplicity.** The continuation's row `{r}` determines whether it may be invoked more than
+once:
+
+- When `{r}` is non-empty, the continuation is *affine*: it may be called at most once. The
+  residual operations in `{r}` are not re-entrant under the handler, so a second invocation
+  cannot be well-typed.
+- When `{r}` normalizes to `{}` (the empty row), the continuation is *multi-shot* (copyable):
+  it may be invoked zero or more times, because no residual operation can be violated by
+  re-entry.
+
+This is consistent with the SPEC-102 Core/CPS multiplicity encoding, where an empty residual
+row yields a pure continuation that the runtime may freely duplicate.
+
+```text
+handler : (Unit -> {op | r} A) -> {r} Ans
+branch_op(k : B_op -> {r} Ans) -> {r} Ans
+```
+
+Typical shapes:
+
+```ash
+-- Affine continuation (residual row non-empty)
+fn handle_fsWithLogging<A, r: Row>(
+    thunk: Unit -> {Fs.read, Log.write | r} A
+) -> {r} A { ... }
+
+-- Multi-shot continuation (residual row empty after peeling)
+fn handle_pureRetry<A>(
+    thunk: Unit -> {Retry | {}} A
+) -> A { ... }
+```
+
 ## 9. Effect aliases and groups
 
 ### 9.1 Transparent aliases
@@ -507,7 +567,7 @@ effects in module summaries.
 Transparent aliases expand during normalization.
 
 ```ash
-effect alias IO = {cap fs.read, cap fs.write, cap log.write};
+effect alias IO = {fs.read, fs.write, log.write};
 ```
 
 Alias expansion must be cycle-checked. Cycles are rejected.
@@ -518,8 +578,8 @@ Groups preserve a name for diagnostics while expanding to concrete row items.
 
 ```ash
 effect group WorkflowIO = {
-    cap fs.read,
-    cap log.write,
+    fs.read,
+    log.write,
     evidence audit_log,
 };
 ```
@@ -527,13 +587,13 @@ effect group WorkflowIO = {
 A missing requirement diagnostic should be allowed to say:
 
 ```text
-missing WorkflowIO (specifically cap log.write)
+missing WorkflowIO (specifically log.write)
 ```
 
 ### 9.3 Authority bundles are different
 
 An authority bundle, if added, is not a transparent alias. It must have an admission rule and
-provenance. The type checker must not treat `effect alias Admin = {cap fs.write}` as granting
+provenance. The type checker must not treat `effect alias Admin = {fs.write}` as granting
 write authority.
 
 ### 9.4 Export/import
@@ -551,7 +611,7 @@ ordinary type variables.
 
 ### 10.2 Interfaces
 
-Interface methods may carry effect rows, but the parser and typechecker must respect the live
+Interface methods may carry computation rows, but the parser and typechecker must respect the live
 interface method syntax. If method signatures currently use positional parameter types, a
 syntax task must update that grammar before examples with named parameters become normative.
 
@@ -559,7 +619,7 @@ Example target shape:
 
 ```ash
 interface EffectfulMap<F> {
-    map<A, B, r: EffectRow>(F<A>, A -> {r} B) -> {r} F<B>;
+    map<A, B, r: Row>(F<A>, A -> {r} B) -> {r} F<B>;
 }
 ```
 
@@ -582,7 +642,7 @@ fix. Examples:
 
 | Case | Required diagnostic content |
 |------|-----------------------------|
-| missing capability | capability/interface operation, current admitted roles/bindings, possible role/capability admission fix |
+| missing authority | effect/interface operation, current admitted roles/bindings, possible role/effect admission fix |
 | missing role | role name, execution boundary that must admit it |
 | policy not found | policy binding name and namespace searched |
 | policy decision mismatch | required decision domain and policy's available decision domain |
@@ -611,11 +671,11 @@ must classify the row item kind.
 - Preserve row summaries in public module exports.
 - Keep existing runtime representation unchanged.
 
-### 12.3 Slice C: Capability and role discharge
+### 12.3 Slice C: Operation and role discharge
 
-- Capability calls contribute capability effects.
-- Admitted role effects discharge entailed capabilities.
-- Missing authority diagnostics distinguish role/capability/policy failures.
+- Operation calls contribute operation effects.
+- Admitted role effects discharge entailed operations.
+- Missing authority diagnostics distinguish role/effect/policy failures.
 
 ### 12.4 Slice D: Policy and contract discharge
 
@@ -634,8 +694,8 @@ must classify the row item kind.
 A future implementation plan should include tests for:
 
 1. pure function inferred as empty row;
-2. capability call contributes a capability effect;
-3. role admission discharges an entailed capability;
+2. operation call contributes an operation effect;
+3. role admission discharges an entailed operation;
 4. role name alone does not grant authority when not admitted;
 5. named policy effect resolves and unknown policy fails;
 6. anonymous policy expression in a row is rejected or explicitly deferred;
@@ -727,17 +787,17 @@ The `_unsafe` suffix indicates that the conversion changes temporal behavior: ef
 
 ### 15.6 Row Accounting
 
-The total effect row is the same regardless of mode. Mode affects **when** effects fire, not **what** effects are present.
+The total computation row is the same regardless of mode. Mode affects **when** effects fire, not **what** effects are present.
 
 ```text
-let lazy x = {cap db.read} expr;  -- row of binding site: {}
-                                    -- row of x's body: {cap db.read}
-                                    -- row of force_unsafe(x): {cap db.read}
+let lazy x = {db.read} expr;  -- row of binding site: {}
+                               -- row of x's body: {db.read}
+                               -- row of force_unsafe(x): {db.read}
 
-let memo y = {cap db.read} expr;  -- row of binding site: {}
-                                    -- row of first force: {cap db.read}
-                                    -- static row of each force site: {cap db.read}
-                                    -- dynamic cache-hit row: {}
+let memo y = {db.read} expr;  -- row of binding site: {}
+                               -- row of first force: {db.read}
+                               -- static row of each force site: {db.read}
+                               -- dynamic cache-hit row: {}
 ```
 
 The checker must use the static force-site row unless a later state-sensitive analysis proves
@@ -779,3 +839,4 @@ Mode mismatch is a type error, not a performance warning. The user must explicit
 - 2026-06-18: Created as target-state type system document. Defined row semantics, effect item taxonomy, discharge rules, alias/group behavior, and acceptance criteria.
 - 2026-06-20: Added §15 Evaluation Modes. Defined strict/lazy/memo as invariant algorithmic contracts with explicit `_unsafe` conversions.
 - 2026-06-21: Clarified memo force row accounting so static force sites retain the thunk latent row while dynamic cache hits may perform no effects, and aligned CPS lowering text with SPEC-101 `ThunkClosure` chain-capture semantics.
+- 2026-06-27: Reconciled with NOTE-021 (Row kind, computation row terminology), NOTE-022 (operations as interface methods), NOTE-023 (handler typing: continuation as ordinary parameter, multiplicity via function type).

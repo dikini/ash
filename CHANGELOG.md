@@ -5,7 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
+### Changed
+- Reconciled SPEC-095b, SPEC-096b, and SPEC-097b with NOTE-021/022/023 design decisions.
+  SPEC-095b: replaced `effect` operation declarations with `interface` methods, renamed
+  `EffectRow` kind to `Row`, added handler expression grammar (`on`, `handle...with`,
+  named handler sugar), and added `where row { ... }` alternate callable layout.
+  SPEC-096b: updated non-goals (user-defined effects no longer deferred), operation
+  effects now reference interface methods, broad prose uses "computation row," and added
+  general handler semantics section cross-referencing NOTE-023. SPEC-097b: changed
+  `EffectRow` to `Row` throughout, operations reference interface methods, and added
+  handler typing section (continuation as ordinary typed parameter, multiplicity via
+  function type).
 ### Added
+- Added NOTE-023, a living note capturing the dispatch-side handler surface design:
+  handlers as ordinary functions consuming computation thunks, the `on` eliminator as dual
+  of `do`, the continuation as an ordinary function-typed parameter (not a magic keyword),
+  multiplicity derived from the function type (affine if non-empty row, multi-shot if pure),
+  one clause shape with two installation forms (explicit application and `handle...with`
+  sugar), named handler declaration sugar, and admission as a `where`-clause gate before
+  installation. Completes the declaration/dispatch separation from NOTE-022.
+- Added NOTE-022, a living note capturing the decision to unify effect operation
+  declarations with existing interface/impl machinery, eliminating the separate `effect`
+  keyword. Operation signatures are declared as interface methods, reusing generics,
+  associated types, and where clauses. The note documents the declaration/dispatch
+  separation (interfaces type-check; Handle frame nesting dispatches; admission gates
+  authority), the impact on NOTE-013/014/015/018/019, and the open dispatch-side
+  questions (handler surface, resume access, multiplicity, answer type, admission,
+  extern placement) deferred to a separate design track.
 - Added NOTE-021, a living syntax note for row-bearing callable types, expanded `where`
   rows as an alternate layout for heavy callable type rows, explicit row tails, named
   predicate/proof facts, shared `requires`/`ensures`/`law`/`proof` declaration shape, row
@@ -91,6 +117,16 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   "computation row" in prose for the type-level row concept, reserving effect/effect
   operation wording for the operation family inside rows. Specs are intentionally left for a
   later alignment stage.
+- Aligned target Ash row syntax docs so current capability-authored operations are subsumed by
+  effects and written as direct effect operation items such as `{fs.read}` instead of
+  `{cap fs.read}`, and updated target taxonomy prose to describe operation effects rather than
+  a separate target capability feature. Recorded the companion builtin boundary: `effect`
+  declarations stay pure operation interfaces whose members use ordinary `fn` signatures,
+  `handler` is the preferred surface term for operation interpreters while `provider` is a
+  synonym, there is no special target `builtin fn` declaration syntax, trusted stdlib
+  handler/provider methods call `builtin(symbol, args...)` using a typed runtime primitive
+  symbol/key, and `extern fn` stays out of scope for the current target language.
+  (TASK-1692)
 - Settled the plain target effect declaration syntax around `effect` blocks containing `fn`
   operation signatures, with row items and call sites using ordinary resolvable operation
   names while canonical operation identity remains a module/name-resolution concern, and
@@ -103,7 +139,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Elaborated target Ash handler surface guidance: explicit scoped handlers and Frank-like
   ordinary `fn` or optional `operator` definitions with an `on` computation eliminator both
   lower to the same Core/CPS handler machinery, added concrete use-site examples for both
-  styles, made their shared row transformation and non-commutative provider composition
+  styles, made their shared row transformation and non-commutative handler composition
   default explicit, kept `on` typed over effectful computations rather than ordinary value
   patterns, and reserved `return` for `do` syntax rather than normal provider completion
   clauses. Provider examples now use ordinary thunk parameters such as `Unit -> {r} A`,

@@ -61,8 +61,9 @@ interface Fs {
     fn read(path: Path) -> String;
     fn write(path: Path, contents: String) -> Unit;
 
-    law read_after_write(p: Path, c: String, eq: Eq<String>)
-      : eq.equiv(write(p, c); read(p), c)
+    -- Example law: reading immediately after writing returns the written value.
+    -- Law syntax is not yet finalized; shown here as an illustrative constraint.
+    law read_after_write
 }
 ```
 

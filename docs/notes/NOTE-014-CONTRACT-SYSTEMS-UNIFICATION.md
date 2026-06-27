@@ -665,139 +665,27 @@ interface Fs {
 }
 ```
 
-The runtime/host/FFI-facing declaration is deliberately smaller and more dangerous:
+**Host/FFI and extern placement have been consolidated in [NOTE-024](NOTE-024-HOST-FFI-AND-EXTERN.md).**
 
-```ash
-extern unsafe read_host(path: HostString) -> HostResult<HostBytes>
-    abi: "ash-host-v1"
-    symbol: "fs.read_file"
-    for Fs
-```
+The current target position (per NOTE-024): `extern` is a reserved keyword with no grammar
+production; `builtin(...)` is the only host-reaching mechanism, callable only inside trusted
+stdlib handler/provider method bodies. The prior `extern unsafe fn` two-placement proposals
+(Placement A: interface-attached, Placement B: handler-local) and the four obligation layers
+are archived in NOTE-024 §3 as the design space for a future host/FFI spec. NOTE-022
+invalidated Placement A.
 
-The semantic rule is:
-
-```
-extern declarations are effect-local implementation hooks
-effect operations are the public typed surface
-handlers are the only bridge between them
-```
-
-There are two candidate placements for the raw extern. The choice is surface syntax; the
-semantics are the same if both preserve the rule above.
-
-**Placement A: extern attached to the effect's interface.** Use this when the effect has a
-canonical host ABI hook:
-
-```ash
-interface Fs {
-    fn read(path: String) -> String
-        requires: allowed_path(path)
-        raises: FsError
-        evidence: fs_trace
-}
-
-extern unsafe read_host(path: HostString) -> HostResult<HostBytes>
-    abi: "ash-host-v1"
-    symbol: "fs.read_file"
-    for Fs
-```
-
-Utility for the contract system:
-
-- The operation contract and the raw trust boundary are visible together.
-- Documentation can say: this effect operation is implemented, at least for the host
-  runtime, by this ABI hook.
-- Auditing is straightforward: every raw extern is found under the effect whose operation it
-  helps implement.
-
-This is a good fit for built-in effects where Ash defines the canonical host service shape:
-filesystem, time, process, environment variables, standard input/output.
-
-**Placement B: extern in a trusted handler.** Use this when the effect is stable but the
-backend varies:
-
-```ash
-interface Fs {
-    fn read(path: String) -> String
-        requires: allowed_path(path)
-        raises: FsError
-        evidence: fs_trace
-}
-
-handler PosixFs for Fs
-    trusted
-    requires host posix_fs
-{
-    extern unsafe posix_read_file(path: HostCString) -> HostResult<HostBytes>
-        abi: "posix-host-v1"
-        symbol: "read_file"
-
-    read(path, resume)
-        requires: allowed_path(path)
-        ensures: result_is_decoded_file_contents
-    {
-        let raw = unsafe posix_read_file(host.to_c_string(path))
-        match decode_file_result(raw) {
-            Ok(contents) => resume(decode_utf8(contents))
-            Err(err) => raise FsError.from_host(err)
-        }
-    }
-}
-```
-
-Utility for the contract system:
-
-- The effect operation's Hoare contract remains backend-independent.
-- Each handler owns the proof/evidence that its backend satisfies the effect's theory.
-- Multiple handlers can implement the same effect with different ABI obligations: POSIX,
-  WASI, browser sandbox, mock, replay, remote provider.
-
-This is a good fit for adapter-heavy operation effects. The law says what `Fs.read` means;
-the handler proof says this particular backend realizes that meaning; the unsafe extern is
-only one tool used by that handler.
-
-Both placements require the same typing rule:
-
-```
-ordinary Ash code may call Fs.read
-ordinary Ash code may not call read_host or posix_read_file
-only trusted handlers for Fs may call Fs-owned externs
-handler installation still requires authority admission
-```
-
-So a trusted handler carries four kinds of obligations:
-
-```ash
-handler HostFs for Fs
-    requires host fs
-{
-    read(path, resume)
-        requires: allowed_path(path)
-        ensures: result_is_decoded_file_contents
-    {
-        let raw = unsafe read_host(host.encode(path))
-        match decode_file_result(raw) {
-            Ok(contents) => resume(contents)
-            Err(err) => raise FsError(err)
-        }
-    }
-
-    proof read_respects_fs_model { ... }
-}
-```
-
-This separates the contract layers:
+The contract layer separation remains relevant regardless of the host-reaching mechanism:
 
 | Layer | What it states | Mechanism |
 |-------|----------------|-----------|
 | Operation Hoare contract | caller/callee obligations such as `allowed_path(path)` | `requires` / `ensures` on the effect operation and handler clause |
 | Handler law | semantic theory, e.g. read-after-write, replay equivalence, mock equivalence | `law` on the effect, `proof` on the handler |
-| ABI safety claim | host string/bytes ownership, raw error shape, async/blocking convention | `extern unsafe`, trusted adapter, audit evidence |
+| ABI safety claim | host string/bytes ownership, raw error shape, async/blocking convention | `builtin(...)` in trusted stdlib, or future `extern unsafe` adapter (see NOTE-024) |
 | Authority claim | whether this execution may install/use the handler | row discharge/admission evidence |
 
 The key point: laws can express handler algebraic theories, but they should not pretend to
-prove the entire host ABI. The unsafe extern is a small trusted boundary. The safe effect
-operation is where Ash's Hoare contracts, laws, failure effects, and provenance attach.
+prove the entire host ABI. The safe effect operation is where Ash's Hoare contracts, laws,
+failure effects, and provenance attach.
 
 ### 8.3 Type Invariants: The Bridge
 
@@ -1519,11 +1407,10 @@ constraints, what happens to unsupported forms — is currently undefined.
    a syntax for promoting a tested property to a proven law? Or are they always separate
    declaration forms?
 
-8. **Effect-local extern placement.** §8 documents two candidate placements: externs in the
-   enclosing `effect` declaration for canonical host ABIs, and externs inside trusted
-   handlers for backend-specific adapters. Which surface should be primary? The semantic
-   invariant should hold either way: ordinary Ash code sees only the effect operation, never
-   the raw extern.
+8. **Effect-local extern placement.** **Consolidated in NOTE-024.** `extern` is a reserved
+   keyword with no grammar production in the current target language. `builtin(...)` is the
+   only host-reaching mechanism. The prior two-placement model (interface-level vs
+   handler-level) is archived in NOTE-024 §3. NOTE-022 invalidated Placement A.
 
 ## 14. References
 
@@ -1634,3 +1521,4 @@ constraints, what happens to unsupported forms — is currently undefined.
 | 2026-06-24 | Expanded the effect-owned extern boundary with two placement alternatives and their contract utility: effect-level externs for canonical host ABIs, and trusted-handler externs for backend-specific adapters. Updated Open Question 8 to treat placement as a surface-syntax decision over a shared semantic invariant. |
 | 2026-06-27 | Normalized target-row wording from effect row to computation row while leaving the detailed fact/evidence/obligation model to a separate follow-up track. |
 | 2026-06-27 | Applied NOTE-022 decision: replaced all `effect Fs { ... }` declaration examples with `interface Fs { ... }`. Externs now shown as dispatch-side constructs with `for Fs` ownership annotation (Placement A) or handler-local (Placement B). The contract layering (Hoare contract, handler law, ABI safety, authority claim) is unchanged — only the declaration keyword changes. |
+| 2026-06-27 | Consolidated host/FFI and extern placement into NOTE-024. Replaced the detailed §8 extern placement content (Placement A/B, typing rules, four obligation layers) with a pointer to NOTE-024. Preserved the contract layer separation table, updating the ABI safety mechanism column to reference `builtin(...)` and NOTE-024. Updated Open Question 8 to reference NOTE-024. The current target position: `extern` is reserved with no grammar production; `builtin(...)` is the only host-reaching mechanism. |

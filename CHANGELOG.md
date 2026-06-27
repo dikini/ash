@@ -6,6 +6,13 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Changed
+- Consolidated all host/FFI and extern placement ideas into NOTE-024. `extern` is now a
+  reserved keyword with no grammar production in SPEC-095b; `builtin(...)` is the only
+  host-reaching mechanism. Updated NOTE-013 (§11.1, open questions 5/6), NOTE-014 (§8, open
+  question 8), NOTE-018 (§3.3, §3.5), NOTE-019 (§4.4, gap register), and SPEC-BUILTIN-FN to
+  reference NOTE-024 instead of carrying inline extern placement proposals. Placement A
+  (interface-attached extern) is archived as invalidated by NOTE-022; Placement B
+  (handler-local) is archived as a future-FFI candidate.
 - Reconciled SPEC-095b, SPEC-096b, and SPEC-097b with NOTE-021/022/023 design decisions.
   SPEC-095b: replaced `effect` operation declarations with `interface` methods, renamed
   `EffectRow` kind to `Row`, added handler expression grammar (`on`, `handle...with`,
@@ -17,6 +24,13 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   handler typing section (continuation as ordinary typed parameter, multiplicity via
   function type).
 ### Added
+- Added NOTE-024, consolidating all host/FFI and extern placement ideas from NOTE-013/014/018/019
+  into a single design note. Establishes the current target position: `extern` is reserved but
+  unspecified, `builtin(...)` is the only host-reaching mechanism, `builtin fn` declaration
+  form is removed from the target surface. Documents the compilation strategy goal: reduce or
+  eliminate IPC/ABI weight by funneling all host interaction through one compiler-validated
+  path. Archives Placement A (invalidated by NOTE-022) and Placement B (future-FFI candidate)
+  with the four obligation layers and failure taxonomy.
 - Added NOTE-023, a living note capturing the dispatch-side handler surface design:
   handlers as ordinary functions consuming computation thunks, the `on` eliminator as dual
   of `do`, the continuation as an ordinary function-typed parameter (not a magic keyword),

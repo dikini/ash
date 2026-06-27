@@ -52,6 +52,7 @@ The target grammar adds the following keywords to the current 99-keyword set:
 | `raise` | raise an effect (already reserved, now active) |
 | `guard` | channel guard contract |
 | `profile` | row profile constraint |
+| `extern` | reserved for future host/FFI (no grammar production; see NOTE-024) |
 
 The following keywords become deprecated compatibility aliases:
 

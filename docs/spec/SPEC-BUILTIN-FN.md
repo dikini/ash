@@ -26,10 +26,12 @@ declarations.
 - Typechecked: the declared signature is authoritative at call sites.
 - Always available: compiled into the Ash binary, no runtime loading.
 
-This spec does **not** cover `extern fn` (reserved for future FFI). When
-implemented, a separate design note will specify the link-time resolution
-protocol, ABI boundary constraints, and effect classification rules for foreign
-code. The keyword is reserved now to avoid grammar conflicts.
+This spec does **not** cover `extern fn` (reserved for future FFI). Host/FFI and extern
+placement are consolidated in NOTE-024 (`docs/notes/NOTE-024-HOST-FFI-AND-EXTERN.md`): `extern`
+is a reserved keyword with no grammar production in the target language; `builtin(...)` is the
+only host-reaching mechanism. When FFI is implemented, a separate spec packet will specify the
+link-time resolution protocol, ABI boundary constraints, and effect classification rules. The
+keyword is reserved now to avoid grammar conflicts.
 
 ## 2. Surface Syntax
 

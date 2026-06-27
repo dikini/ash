@@ -511,155 +511,28 @@ fact with authority provenance.
 This matters for runtime/host/FFI integrations. Operations such as reading a file, opening a
 network socket, polling a timer, or calling a host LLM provider need an implementation
 boundary that the host can actually satisfy. The host boundary should be small and
-ABI-shaped; the Ash boundary should be semantic and effect-shaped:
+ABI-shaped; the Ash boundary should be semantic and effect-shaped.
+
+**Host/FFI and extern placement have been consolidated in [NOTE-024](NOTE-024-HOST-FFI-AND-EXTERN.md).**
+
+The current target position (per NOTE-024): `extern` is a reserved keyword with no grammar
+production; `builtin(...)` is the only host-reaching mechanism, callable only inside trusted
+stdlib handler/provider method bodies. The static invariant is:
 
 ```
-unsafe/minimal host ABI binding
-  wrapped by
-typed Ash effect operation + handler/provider contract
+ordinary Ash code calls typed operations (interface methods);
+trusted stdlib handler bodies call builtin(...);
+nothing else reaches the host.
 ```
 
-Per NOTE-022, operation signatures are declared as interface methods, not a separate
-`effect` keyword. The interface is the type contract; externs and handler clauses are
-dispatch-side constructs. The illustrative surface (showing all pieces together for
-discussion purposes) is:
-
-```ash
-interface Fs {
-    fn read(path: String) -> String
-        requires: allowed_path(path)
-        raises: FsError
-        evidence: fs_trace
-}
-
-// extern and handler are dispatch-side constructs, shown here for discussion.
-// Their final surface syntax remains open (see NOTE-022 §8).
-
-extern unsafe read_host(path: HostString) -> HostResult<HostBytes>
-    abi: "ash-host-v1"
-    symbol: "fs.read_file"
-    for Fs   // extern is owned by the Fs interface
-
-handler host {
-    read(path, resume) {
-        dynamic requires allowed_path(path)
-
-        let raw = unsafe read_host(host.encode(path))
-        match decode_file_result(raw) {
-            Ok(contents) => resume(contents)
-            Err(err) => raise FsError(err)
-        }
-    }
-}
-```
-
-The `extern` declaration is not the public effectful function. It is an implementation hook
-private to the effect or to trusted handlers for that effect. Ordinary Ash code calls
-`Fs.read`; the handler decides whether and how to call `read_host`.
-
-This gives the following static invariant:
-
-```
-No extern exists without an owning effect.
-No extern is directly callable by ordinary Ash code.
-The effect operation is the public typed surface.
-The extern is only an implementation hook for handlers of that effect.
-```
-
-There are two plausible placements for the extern declaration. They are semantically
-equivalent at the row level but useful for different authoring cases.
-
-**Placement A: extern attached to the effect's interface.** The raw host hook is part of
-the effect's canonical runtime story:
-
-```ash
-interface Fs {
-    fn read(path: String) -> String
-        requires: allowed_path(path)
-        raises: FsError
-        evidence: fs_trace
-}
-
-extern unsafe read_host(path: HostString) -> HostResult<HostBytes>
-    abi: "ash-host-v1"
-    symbol: "fs.read_file"
-    for Fs
-
-handler host {
-    read(path, resume) {
-        let raw = unsafe read_host(host.encode(path))
-        match decode_file_result(raw) {
-            Ok(contents) => resume(contents)
-            Err(err) => raise FsError(err)
-        }
-    }
-}
-```
-
-Utility: this is best when the effect has one canonical host ABI, or when the ABI hook is
-part of the effect's definition rather than one implementation choice. The trust boundary
-is visible at the same site as the operation signature. This makes "no extern without an
-owning effect" easy to enforce and easy to audit.
-
-Cost: the effect declaration can become noisy if it must mention every platform-specific
-symbol, runtime version, or host calling convention.
-
-**Placement B: extern in a trusted handler.** The effect interface remains pure semantic
-surface; each handler owns its own backend ABI:
-
-```ash
-interface Fs {
-    fn read(path: String) -> String
-        requires: allowed_path(path)
-        raises: FsError
-        evidence: fs_trace
-}
-
-handler PosixFs for Fs
-    trusted
-    requires host posix_fs
-{
-    extern unsafe posix_read_file(path: HostCString) -> HostResult<HostBytes>
-        abi: "posix-host-v1"
-        symbol: "read_file"
-
-    read(path, resume) {
-        let raw_path = host.to_c_string(path)
-        let raw = unsafe posix_read_file(raw_path)
-
-        match decode_file_result(raw) {
-            Ok(contents) => resume(decode_utf8(contents))
-            Err(err) => raise FsError.from_host(err)
-        }
-    }
-}
-```
-
-Utility: this is best when the same effect has many implementations: POSIX filesystem,
-WASI filesystem, browser sandbox, in-memory mock, replay log, remote provider. The effect
-signature stays stable while each handler carries the ABI details for one backend.
-
-Cost: the raw extern is less visible from the effect declaration itself, so the language
-must enforce that handler-local externs are still owned by the handled effect, are callable
-only from trusted handler code, and cannot be exported as ordinary functions.
-
-This invariant preserves the row model. Raw externs do not introduce ambient authority,
-because the only public operation still has a row item such as `fs.read`/`Fs.read`.
-The handler installation is what discharges the row item, and that
-installation carries the authority/provenance evidence.
-
-The safety obligations split into three layers:
-
-| Layer | Obligation | Discharge |
-|-------|------------|-----------|
-| ABI safety | host values, ownership, async/blocking, raw error convention are decoded safely | unsafe/trusted boundary, audit, host runtime checks |
-| Semantic correctness | operation pre/postconditions and handler theory hold | Hoare contracts and laws |
-| Authority | operation is permitted in this execution context | row discharge/admission evidence |
+The prior extern placement proposals (Placement A: interface-attached, Placement B:
+handler-local) and the safety obligation layers are archived in NOTE-024 §3 as the design
+space for a future host/FFI spec. NOTE-022 invalidated Placement A (externs do not attach to
+interfaces). Placement B remains a candidate shape for future handler-local FFI hooks.
 
 Laws can state the semantic theory of the effect and the handler. They cannot, by
 themselves, prove arbitrary host ABI safety unless the ABI layer exposes enough structure to
-reason about it. This is the same trust boundary as Rust `unsafe`: the unsafe extern is
-small and local; the safe Ash effect operation is the public contract.
+reason about it.
 
 ## 12. Key Design Decisions Surfaced
 
@@ -681,10 +554,10 @@ small and local; the safe Ash effect operation is the public contract.
    equations (State, Reader), the type system should require evidence that the handler
    satisfies those equations. This is a natural extension of the existing law/proof system.
 
-5. **Where can host externs be declared?** Recommendation: only inside an owning `effect`
-   declaration (or a deliberately unsafe internal effect). Externs are implementation hooks,
-   not ordinary callable Ash functions. This forces every host boundary to have a typed
-   effect operation, a row item, and a handler/admission path.
+5. **Where can host externs be declared?** **Consolidated in NOTE-024.** `extern` is a reserved
+   keyword with no grammar production in the current target language. `builtin(...)` is the
+   only host-reaching mechanism, callable inside trusted stdlib handler bodies. The prior
+   placement proposals are archived as the design space for a future host/FFI spec.
 
 ## 13. Open Questions
 
@@ -713,11 +586,10 @@ small and local; the safe Ash effect operation is the public contract.
    distinction — the function type carries multiplicity. Delayed resume remains an
    operational strategy without dedicated Core/CPS multiplicity.
 
-6. Which extern placement should be the default surface? §11.1 documents two equivalent
-   semantic placements: externs directly inside `effect` for canonical host hooks, and
-   externs inside trusted handlers for backend-specific adapters. The semantic requirement
-   is clear: the extern must be effect-owned and unavailable to ordinary Ash code. The
-   syntax choice decides which authoring pattern is primary.
+6. Which extern placement should be the default surface? **Consolidated in NOTE-024.** `extern`
+   is reserved but has no grammar production in the current target language. The prior
+   two-placement model (interface-level vs handler-level) is archived in NOTE-024 §3 as the
+   design space for a future host/FFI spec. NOTE-022 invalidated Placement A (interface-level).
 
 ## 14. References
 
@@ -835,3 +707,4 @@ it is linked.
 | 2026-06-27 | Normalized target-row wording to use computation rows for the type-level row concept while preserving effect operations as algebraic generators and external effect-row literature references. |
 | 2026-06-27 | Applied NOTE-022 decision: replaced all `effect Foo { ... }` declaration examples with `interface Foo { ... }` in §11.1. Externs now shown as dispatch-side constructs attached to the effect's interface (Placement A) or to trusted handlers (Placement B). Marked Open Question 1 as resolved by NOTE-022. Open Questions 2, 5, and 6 remain open as dispatch-side concerns. |
 | 2026-06-27 | Applied NOTE-023 decision: marked Open Questions 2 and 5 as partially resolved — handler surface form and resume strategy syntax are captured in NOTE-023. |
+| 2026-06-27 | Consolidated host/FFI and extern placement into NOTE-024. Replaced the detailed §11.1 extern placement content (Placement A/B, safety obligation layers) with a pointer to NOTE-024. Updated Open Questions 5 and 6 and Key Decision 5 to reference NOTE-024. The current target position: `extern` is reserved with no grammar production; `builtin(...)` is the only host-reaching mechanism. |

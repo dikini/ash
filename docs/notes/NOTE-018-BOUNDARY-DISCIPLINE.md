@@ -678,23 +678,15 @@ separate capability declaration form or a `cap` prefix on ordinary operation row
 syntax for introducing authority/admission facts, contracts, and extern hooks is
 intentionally outside this plain effect-declaration slice.
 
-### 3.3 Extern placement
+### 3.3 Host/FFI placement
 
-Externs should be admitted only at trusted implementation boundaries:
-
-| Placement | Use case | Visibility to ordinary Ash code |
-|---|---|---|
-| effect-level extern | canonical host ABI for a standard operation | hidden behind typed operation |
-| provider-level extern | backend-specific adapter or deployment-specific host binding | hidden behind admitted provider |
-| provider-owned extern | trusted interpreter for an effect operation | hidden behind provider installation |
-| ordinary `extern fn` | bootstrap/trusted implementation only, not target user model | should not be directly callable as pure Ash |
-
-The invariant:
-
-```text
-ordinary Ash code calls typed operations;
-trusted implementation code calls raw externs.
-```
+**Consolidated in [NOTE-024](NOTE-024-HOST-FFI-AND-EXTERN.md).** The current target position:
+`extern` is a reserved keyword with no grammar production; `builtin(...)` is the only
+host-reaching mechanism, callable inside trusted stdlib handler/provider method bodies. The
+prior extern placement table (effect-level, provider-level, provider-owned, ordinary
+`extern fn`) and the trust invariant are archived in NOTE-024 §3 as the design space for a
+future host/FFI spec. NOTE-022 invalidated the effect-level placement (externs do not attach
+to interfaces).
 
 ### 3.4 Boundary failure split
 
@@ -724,8 +716,9 @@ extern says how trusted implementation reaches the host.
 1. Exact target syntax for `effect` declarations.
 2. The corpus migration path from current capability declarations to target effect
    declarations and provider/admission metadata.
-3. Whether effect-level externs are allowed in user-authored source, trusted packages only,
-   or compiler/runtime-owned modules only.
+3. Whether host/FFI externs are allowed in user-authored source, trusted packages only, or
+   compiler/runtime-owned modules only. **Consolidated in NOTE-024.** `extern` is reserved
+   but unspecified; `builtin(...)` is the only host-reaching mechanism (stdlib-only).
 4. How provider implementations are declared and typed.
 5. How operation contracts are checked at provider boundaries versus caller boundaries.
 6. How effect aliases/groups export operation identities without becoming authority bundles.
@@ -1999,3 +1992,7 @@ Internal references:
   leakage, and module summaries export canonical facts without granting authority.
 - 2026-06-27: Normalized target-row wording from effect rows to computation rows and row
   entries at the boundary inventory level.
+- 2026-06-27: Consolidated host/FFI and extern placement into NOTE-024. Replaced §3.3 extern
+  placement table with a pointer to NOTE-024. Updated §3.5 item 3 to reference NOTE-024. The
+  current target position: `extern` is reserved with no grammar production; `builtin(...)` is
+  the only host-reaching mechanism.

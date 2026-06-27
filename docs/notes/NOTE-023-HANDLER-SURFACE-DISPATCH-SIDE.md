@@ -369,10 +369,10 @@ elaborates into the same row facts that Core/CPS already tracks.
 
 ## 12. Open Questions
 
-1. **Extern placement.** NOTE-013 §11.1 documented two placements (canonical host hook
-   vs trusted-handler adapter). With externs now outside the interface, the `for Fs`
-   ownership annotation and the handler-local placement both remain viable. Exact syntax
-   needs resolution.
+1. **Extern placement.** **Consolidated in NOTE-024.** `extern` is a reserved keyword with no
+   grammar production in the current target language; `builtin(...)` is the only host-reaching
+   mechanism. The prior two-placement proposals are archived in NOTE-024 §3 as future-FFI
+   design space.
 2. **Answer type parameter.** In the sugar form, `A` serves as both the computation's value
    type and the handler's answer type. Handlers like `catch_throw` change the answer type
    (`A` → `Result<A, E>`). How does the sugar form express answer-type transformation? The

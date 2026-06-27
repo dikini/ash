@@ -156,7 +156,7 @@ define separate execution paths.
 The target capability story is:
 
 ```text
-operation identity + row item + contracts + provider + admission + optional extern
+operation identity + row item + contracts + provider + admission + optional builtin host hook
 ```
 
 Current capability declarations are subsumed by `effect` declarations in the target model.
@@ -378,15 +378,20 @@ Required convergence:
   scoped installation and Frank-like `fn`/optional `operator` definitions using `on` to
   eliminate computations produced by ordinary thunk parameters such as `Unit -> {r} A`;
 - make provider installation an admission event, not declaration side effect;
-- choose the primary extern authoring location: effect-level canonical hook,
-  provider-level adapter, provider-owned lexical adapter, or a restricted mix;
 - keep ordinary Ash code from calling raw externs.
+
+Host/FFI extern placement has been consolidated in [NOTE-024](NOTE-024-HOST-FFI-AND-EXTERN.md).
+The current target position: `extern` is a reserved keyword with no grammar production;
+`builtin(...)` is the only host-reaching mechanism, callable inside trusted stdlib
+handler/provider method bodies. The prior extern authoring location options (effect-level
+canonical hook, provider-level adapter, provider-owned lexical adapter) are archived in
+NOTE-024 §3 as the design space for a future host/FFI spec.
 
 Readiness gate:
 
 ```text
 For every operation-like surface, the compiler can name the canonical operation identity,
-row item, contracts, provider discharge path, extern boundary, and failure classes.
+row item, contracts, provider discharge path, host boundary, and failure classes.
 ```
 
 ### 4.5 Failure and contract convergence
@@ -507,7 +512,7 @@ buckets. It is intentionally high-level; individual specs/plans should own preci
 | ~~Canonical effect declaration syntax~~ | ~~effect/provider/capability convergence~~ | **Resolved by NOTE-022:** interfaces are the canonical declaration form. Dispatch-side handler/admission syntax remains open. |
 | ~~Provider surface and row peeling syntax~~ | ~~user-defined effects, provider diagnostics~~ | **Resolved by NOTE-023:** handlers are functions consuming computation thunks; `on` eliminator sets up Handle frame; `handle...with` and named handler sugar are optional. Row peeling is the handler function's input/output row contract. |
 | Resume strategy surface | handler composition, multi-shot use | **Resolved by NOTE-023:** continuation is an ordinary typed parameter. Multiplicity is in the function type: affine if non-empty row, multi-shot if pure (`{}`). SPEC-102 substrate unchanged. |
-| Effect-local extern placement | host/FFI safety and provider authoring | NOTE-013, NOTE-014, NOTE-018 |
+| ~~Effect-local extern placement~~ | ~~host/FFI safety and provider authoring~~ | **Consolidated in NOTE-024:** `extern` is reserved with no grammar production; `builtin(...)` is the only host-reaching mechanism. Prior placement proposals archived as future-FFI design space. |
 | Recoverable failure spelling | failure taxonomy and runtime diagnostics | NOTE-015, NOTE-018 |
 | Contract blame/subsumption | interface contracts, dynamic checks | NOTE-014, NOTE-018 |
 | Monadic Hoare logic | modular contract checking through `bind` | NOTE-014 |
@@ -671,5 +676,8 @@ Internal references:
   computation rows where NOTE-020 refines the target model.
 - 2026-06-27: Normalized convergence wording from row facts to row entries where describing
   Core and surface summaries.
+- 2026-06-27: Consolidated host/FFI and extern placement into NOTE-024. Updated §4.4 to
+  reference NOTE-024 for extern authoring location, updated the capability story to use
+  "builtin host hook," and marked the gap register entry as consolidated.
 - 2026-06-24: Initial draft. Synthesizes target Ash convergence tracks across the recent
   notes and target specs, distinguishing semantic convergence from implementation planning.

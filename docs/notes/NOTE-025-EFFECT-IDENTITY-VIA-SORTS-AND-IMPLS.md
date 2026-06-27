@@ -4,7 +4,7 @@
 **Status:** Living document — design direction captured; revises the identity model from
 NOTE-022; open questions tracked
 **Purpose:** Establish the effect identity model: interfaces are sorts (abstract effect
-groupings), phantom types + impls are identity carriers, and handler functions are always
+groupings), impl types are identity carriers, and handler functions are always
 named values installed via function application. Record the derivation mechanism and provide
 worked examples for deep, escape, and multi-shot handlers.
 
@@ -18,13 +18,14 @@ into SPEC-095b/096b/097b. When the project moves to spec updates:
 
 - **Row item identity:** `{F::read}` (abstract, sort-parameterized) replaces `{Fs.read}`
   (concrete interface-qualified). After monomorphization, `{PosixFs::read}`.
-- **Phantom types and impls:** every effect operation identity requires a concrete impl.
-  Phantom types carry compile-time identity. This is new surface syntax.
+- **Impl types and impls:** every effect operation identity requires a concrete impl. The impl
+  type is the operation identity — it can be empty (a phantom type) or carry data. This is new
+  surface syntax.
 - **Handler derivation:** `derive handler <name>` is a new declaration inside impl bodies.
 - **Handler installation:** `handle expr with <name>` always resolves to function
   application. `<name>` is always a value-namespace function. No type-namespace resolution.
 - **SPEC-095b/097b/098b:** the `OperationEffect` identity changes from `{interface, operation}`
-  to `{impl_type, operation}` — the concrete phantom type replaces the interface as the
+  to `{impl_type, operation}` — the concrete impl type replaces the interface as the
   identity qualifier after specialization.
 
 ## 0. Motivation
@@ -39,7 +40,7 @@ The sort/impl model separates the abstraction layers:
 
 ```
 Interface = sort (abstract effect family + laws)
-Impl      = concrete identity carrier (phantom type + method bodies)
+Impl type = identity carrier (the impl type — can be empty or carry data)
 Handler   = behavior provider (named function, installed at runtime)
 ```
 
@@ -66,14 +67,17 @@ interface Fs {
 }
 ```
 
-### 1.2 Phantom type + impl as identity carrier
+### 1.2 Impl type + impl as identity carrier
 
-A phantom type is an empty type that exists solely for compile-time identity. Every effect
-operation that appears in a row must have a concrete impl behind it — for method resolution
-and type-checking. The impl type parameter is the operation identity.
+The impl type is the operation identity. It can be empty (a phantom type used purely for
+compile-time identity) or it can carry data (configuration, state, connection parameters).
+The type system does not restrict which. Every effect operation that appears in a row must
+have a concrete impl behind it — for method resolution and type-checking. The impl type
+parameter is the operation identity.
 
 ```ash
-type PosixFs = Unit;     // phantom type — compile-time identity, no runtime data
+// Phantom type — empty, identity-only. Common for pure algebraic effects.
+type PosixFs = Unit;
 
 impl Fs for PosixFs
 where requires host posix_fs
@@ -81,11 +85,21 @@ where requires host posix_fs
     fn read(path: Path) -> String { builtin(fs_read, path) }
     fn write(path: Path, contents: String) -> Unit { builtin(fs_write, path, contents) }
 }
+
+// Data-carrying type — carries runtime configuration. Identity + config in one type.
+type ConfiguredFs = { root: Path, readonly: Bool };
+
+impl Fs for ConfiguredFs {
+    fn read(path: Path) -> String { builtin(fs_read, self.root.join(path)) }
+    fn write(path: Path, contents: String) -> Unit {
+        if self.readonly { panic("readonly") } else { builtin(fs_write, path, contents) }
+    }
+}
 ```
 
-After monomorphization, `PosixFs::read` is a concrete operation identity. A different impl
-(`MemoryFs`) produces a different identity (`MemoryFs::read`). These are distinct at the IR
-level, so handlers for each can coexist in the same handler stack.
+After monomorphization, `PosixFs::read` and `ConfiguredFs::read` are distinct concrete
+operation identities. A different impl type produces a different identity, regardless of
+whether the type carries data. The Core/IR sees `EffectOp { impl_type: "PosixFs", operation: "read" }` or `EffectOp { impl_type: "ConfiguredFs", operation: "read" }`.
 
 ### 1.3 The impl method body is the default deep-handler behavior
 
@@ -106,7 +120,7 @@ fn load_config<F: Fs, r: Row>(path: Path) -> {F::read | r} String {
 ```
 
 The row item `F::read` is abstract — parameterized by the sort constraint `F: Fs`. The
-caller specializes `F` to a concrete phantom type.
+caller specializes `F` to a concrete impl type.
 
 **Concrete (after monomorphization):**
 
@@ -505,7 +519,7 @@ Handle { clause: HandlerClause { op: EffectOp { "AllSolutions", "choose" }, ...,
 Generic code with sort constraints (`F: Fs`) is monomorphized at each call site where `F` is
 concrete. The monomorphization pass:
 
-1. Resolves `F` to a concrete phantom type (e.g., `PosixFs`).
+1. Resolves `F` to a concrete impl type (e.g., `PosixFs`).
 2. Rewrites row items: `F::read` → `PosixFs::read`.
 3. Rewrites operation calls: `F.read(path)` → `PosixFs::read(path)` (raises
    `EffectOp { PosixFs, read }`).
@@ -517,7 +531,7 @@ sorts, no type parameters in row items.
 ### 5.2 The IR is unchanged
 
 The CPS IR (`Raise`, `Handle`, `HandlerClause`, `Value::Cont`) is unchanged. The only
-difference from the previous model is the *value* in `EffectOp.impl_type`: it's the phantom
+difference from the previous model is the *value* in `EffectOp.impl_type`: it's the impl
 type name (`PosixFs`) instead of the interface name (`Fs`).
 
 ### 5.3 Row accounting
@@ -531,7 +545,7 @@ effects. The residual row propagates to the handler's caller.
 | Aspect | NOTE-022 (concrete name) | NOTE-025 (sort/impl) |
 |---|---|---|
 | Row item | `Fs.read` | `F::read` (abstract), `PosixFs::read` (concrete) |
-| Identity qualifier | Interface name | Phantom type (impl type parameter) |
+| Identity qualifier | Interface name | Impl type (the `for` parameter — can be empty or data-carrying) |
 | Multiple simultaneous handlers | ❌ Same identity | ✅ Distinct identities per impl |
 | Generic code | Row polymorphism only | Type parameter `F: Fs` + row polymorphism |
 | Monomorphization | Not needed | Required — generates concrete identities |
@@ -541,9 +555,10 @@ effects. The residual row propagates to the handler's caller.
 
 ## 7. Open Questions
 
-1. **Phantom type declaration syntax.** Is `type PosixFs = Unit;` sufficient, or should there
-   be a dedicated syntax for phantom types? `type PosixFs: Fs;` (sort-annotated) vs `type
-   PosixFs = Unit;` (unannotated, inferred from impl).
+1. **Impl type declaration.** The impl type can be empty (`type PosixFs = Unit;`) or
+   data-carrying (`type ConfiguredFs = { root: Path, readonly: Bool };`). Is there a dedicated
+   syntax for empty identity-only types, or is `type Name = Unit;` sufficient? Should sort
+   annotation be available: `type PosixFs: Fs;`?
 
 2. **Derive naming convention.** `derive handler posix_fs;` — is the name always explicit,
    or can it be inferred from the impl type name? If inferred, what's the convention?
@@ -559,10 +574,10 @@ effects. The residual row propagates to the handler's caller.
    `{<F as Fs>::read | r}` for disambiguation when `F` implements multiple interfaces with
    same-named methods?
 
-6. **Impl-less phantom types.** Is it a hard error to reference `TypeName::op` without an
+6. **Impl-less types.** Is it a hard error to reference `TypeName::op` without an
    impl, or is there a diagnostic pathway?
 
-7. **Coherence.** Can two impls of the same interface for the same phantom type exist in
+7. **Coherence.** Can two impls of the same interface for the same impl type exist in
    different modules? Or is there a global uniqueness constraint (like Rust trait coherence)?
 
 8. **Dynamically dispatched handlers.** For effects where monomorphization is undesirable
@@ -573,7 +588,8 @@ effects. The residual row propagates to the handler's caller.
 
 ```text
 An interface is an effect sort: it declares signatures, generics, and laws.
-A phantom type + impl is the identity carrier: it makes operation names resolve.
+An impl type is the identity carrier: the impl type parameter is the operation identity.
+The impl type can be empty (phantom) or carry data — the type system does not restrict which.
 The impl method body is the default deep-handler behavior.
 A handler is a named function: (Unit -> {op | r} A) -> {r} Ans.
 Three ways to produce a handler: derive (compiler-synthesized), in-impl (co-located), standalone.
@@ -607,6 +623,10 @@ External references:
 ## 10. Changelog
 
 - 2026-06-27: Initial version. Establishes the sort/impl identity model: interfaces are sorts,
-  phantom types + impls are identity carriers, handler functions are named values. Records the
-  derive mechanism, handler-in-impl option, and three handler installation examples (deep,
-  escape, multi-shot). Revises the NOTE-022 concrete-name model to the sort/impl model.
+  impl types are identity carriers, handler functions are named values. Records the derive
+  mechanism, handler-in-impl option, and three handler installation examples (deep, escape,
+  multi-shot). Revises the NOTE-022 concrete-name model to the sort/impl model.
+- 2026-06-27: Corrected — the impl type is not restricted to phantom types. It can be empty
+  (identity-only) or carry data (configuration, state, connection parameters). Added a
+  data-carrying `ConfiguredFs` example. The identity comes from the type itself, not from
+  emptiness.

@@ -43,7 +43,7 @@ boundaries.
 
 **Terminology (NOTE-021).** Throughout this document, *computation row* denotes the broad
 type-level row concept (the requirement set carried by a computation). *Effect row* is
-reserved for referring to the syntactic row literal in source text (e.g. `{fs.read, log.write}`).
+reserved for referring to the syntactic row literal in source text (e.g. `{PosixFs::read, StdoutLog::write}`).
 
 This draft replaces the earlier loose statement "`{fs} <: {fs, log}`" with explicit relations:
 
@@ -130,7 +130,7 @@ pub enum EffectItem {
 
 Every row item must have a canonical identity used for duplicate elimination, row
 comparison, diagnostics, and module-summary export. The identity must include its namespace.
-For example, `fs.read`, `policy fs.read`, and `role fs.read` are distinct even if their
+For example, `PosixFs::read`, `policy PosixFs::read`, and `role PosixFs::read` are distinct even if their
 textual tails match.
 
 ### 3.3 Operation effect
@@ -156,7 +156,7 @@ generic code. It does not itself appear as a row item; row items are always
 impl-type-qualified operations.
 
 **Revision (NOTE-025):** The earlier draft used `interface: NamePath` qualified by the
-interface name (`Fs.read`). NOTE-025 revises this: the impl type is the identity qualifier,
+interface name (e.g. `Fs.read`). NOTE-025 revises this: the impl type is the identity qualifier,
 not the interface.
 
 ### 3.4 Role effect
@@ -254,15 +254,15 @@ type-system packet is:
 
 ```ash
 {}                                      -- empty row
-{fs.read}                                -- closed row
-{fs.read, policy production_rate}         -- multiple requirements
-{fs.read | r}                             -- open row
+{PosixFs::read}                                -- closed row
+{PosixFs::read, policy production_rate}         -- multiple requirements
+{PosixFs::read | r}                             -- open row
 {r}                                      -- whole-row variable
 {IO}                                     -- transparent alias or group reference
 ```
 
 Rows are not ordinary record types. A parser/typechecker implementation must distinguish
-record type `{x: Int}` from the computation row `{fs.read}` by grammar context or an
+record type `{x: Int}` from the computation row `{PosixFs::read}` by grammar context or an
 explicit row-introducing token chosen by the syntax spec. It must also distinguish `{r}`
 from an alias/group reference by kind and namespace resolution.
 
@@ -283,11 +283,11 @@ The implementation may infer row-variable kinds when unambiguous.
 A row variable may carry constraints:
 
 ```ash
-fn log_and_return<A, r>(x: A) -> {log.write | r} A { ... }
+fn log_and_return<A, r>(x: A) -> {StdoutLog::write | r} A { ... }
 ```
 
-This means the resulting computation requires at least `log.write` plus whatever `r`
-requires. It does not mean `r <: {log.write}`.
+This means the resulting computation requires at least `StdoutLog::write` plus whatever `r`
+requires. It does not mean `r <: {StdoutLog::write}`.
 
 If explicit constraint syntax is added, it should name the intended relation directly:
 
@@ -316,8 +316,8 @@ Normalization must:
 Duplicate elimination is exact. For example:
 
 ```text
-fs           != fs.read, unless a later effect-interface rule defines expansion
-role admin   != fs.read, even if admin can entail fs.read
+Fs           != PosixFs::read, unless a later effect-sort rule defines expansion
+role admin   != PosixFs::read, even if admin can entail PosixFs::read
 ```
 
 Role entailment happens during discharge, not normalization.
@@ -374,7 +374,7 @@ Requires(f_actual) ⊆ Requires(f_expected)
 Example:
 
 ```text
-(A -{fs.read}-> B) <: (A -{fs.read, log.write}-> B)
+(A -{PosixFs::read}-> B) <: (A -{PosixFs::read, StdoutLog::write}-> B)
 ```
 
 The reverse is not valid. A function that requires logging cannot be used where only
@@ -418,7 +418,7 @@ The result row is whatever the callback requires, plus any requirements from `ma
 `map` logs internally, the row must include that requirement:
 
 ```ash
-fn map_logged<A, B, r: Row>(xs: List<A>, f: A -> {r} B) -> {log.write | r} List<B> { ... }
+fn map_logged<A, B, r: Row>(xs: List<A>, f: A -> {r} B) -> {StdoutLog::write | r} List<B> { ... }
 ```
 
 ### 7.2 Inference
@@ -427,7 +427,7 @@ Effect inference may infer closed rows for ordinary functions:
 
 ```ash
 fn add(a: Int, b: Int) -> Int { a + b }        -- inferred requirement row {}
-fn read(path: String) -> String { fs.read(path) } -- inferred row includes fs.read
+fn read(path: String) -> String { PosixFs::read(path) } -- inferred row includes PosixFs::read
 ```
 
 Whether the inferred row appears in the surface type, module summary, or diagnostics is an
@@ -438,9 +438,9 @@ the function is public.
 
 Open-row solving must avoid accidental privilege loss or gain.
 
-For a call requiring `{fs.read | r}` in an environment containing `{fs.read, log.write}`,
-the solver may instantiate `r` with `{log.write}` if the expected type demands the larger row.
-It must not infer that `log.write` is required unless it is used, expected, or otherwise
+For a call requiring `{PosixFs::read | r}` in an environment containing `{PosixFs::read, StdoutLog::write}`,
+the solver may instantiate `r` with `{StdoutLog::write}` if the expected type demands the larger row.
+It must not infer that `StdoutLog::write` is required unless it is used, expected, or otherwise
 constrained.
 
 ### 7.4 No implicit tower lifts
@@ -578,7 +578,7 @@ handler handle_pureRetry<A>(
 Transparent aliases expand during normalization.
 
 ```ash
-effect alias IO = {fs.read, fs.write, log.write};
+effect alias IO = {PosixFs::read, PosixFs::write, StdoutLog::write};
 ```
 
 Alias expansion must be cycle-checked. Cycles are rejected.
@@ -589,8 +589,8 @@ Groups preserve a name for diagnostics while expanding to concrete row items.
 
 ```ash
 effect group WorkflowIO = {
-    fs.read,
-    log.write,
+    PosixFs::read,
+    StdoutLog::write,
     evidence audit_log,
 };
 ```
@@ -598,13 +598,13 @@ effect group WorkflowIO = {
 A missing requirement diagnostic should be allowed to say:
 
 ```text
-missing WorkflowIO (specifically log.write)
+missing WorkflowIO (specifically StdoutLog::write)
 ```
 
 ### 9.3 Authority bundles are different
 
 An authority bundle, if added, is not a transparent alias. It must have an admission rule and
-provenance. The type checker must not treat `effect alias Admin = {fs.write}` as granting
+provenance. The type checker must not treat `effect alias Admin = {PosixFs::write}` as granting
 write authority.
 
 ### 9.4 Export/import

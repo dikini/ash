@@ -103,11 +103,11 @@ A computation row on a function or computation is a set of requirements. It says
 may need. It does not grant authority by itself.
 
 ```ash
-fn read_config(path: String) -> {fs.read} String { ... }
+fn read_config(path: String) -> {PosixFs::read} String { ... }
 ```
 
-The row above means the computation requires authority to perform `fs.read`. The caller or
-admission context must provide or discharge that requirement. Merely naming `fs.read` in
+The row above means the computation requires authority to perform `PosixFs::read`. The caller or
+admission context must provide or discharge that requirement. Merely naming `PosixFs::read` in
 a type must not create a file-system authority.
 
 ### 4.2 Ambient effect environment
@@ -199,14 +199,14 @@ in the row:
 fn map<A, B, r>(xs: List<A>, f: A -> {r} B) -> {r} List<B> { ... }
 ```
 
-`{r}` is a complete row variable. `{fs.read | r}` is a row extension with a tail variable.
+`{r}` is a complete row variable. `{PosixFs::read | r}` is a row extension with a tail variable.
 The parser/type checker must distinguish `{r}` from an effect group reference by kind and
 namespace resolution.
 
 A closed row has no row variable:
 
 ```ash
-fn read_file(path: String) -> {fs.read} String { ... }
+fn read_file(path: String) -> {PosixFs::read} String { ... }
 ```
 
 ## 6. Effect item taxonomy
@@ -389,7 +389,7 @@ failure_effect = "fail" [ failure_path ] ;
 Example:
 
 ```ash
-fn parse_config(path: String) -> {fs.read, fail ConfigError} Config { ... }
+fn parse_config(path: String) -> {PosixFs::read, fail ConfigError} Config { ... }
 ```
 
 A `fail` effect is discharged by an enclosing failure handler, workflow failure boundary, or
@@ -409,7 +409,7 @@ evidence_effect = "evidence" evidence_path
 Examples:
 
 ```ash
-fn audited_write(msg: String) -> {log.write, evidence audit_log} Unit { ... }
+fn audited_write(msg: String) -> {StdoutLog::write, evidence audit_log} Unit { ... }
 fn finish() -> {report workflow_summary} Unit { ... }
 ```
 
@@ -547,7 +547,7 @@ Ash needs grouping mechanisms, but they must not blur requirements and grants.
 A transparent alias is a pure abbreviation. It expands before row checking and grants no authority.
 
 ```ash
-effect alias IO = {fs.read, fs.write, log.write};
+effect alias IO = {PosixFs::read, PosixFs::write, StdoutLog::write};
 
 fn load() -> IO Config { ... }
 ```
@@ -559,8 +559,8 @@ still expanding to row items for checking.
 
 ```ash
 effect group WorkflowIO = {
-    fs.read,
-    log.write,
+    PosixFs::read,
+    StdoutLog::write,
     evidence audit_log,
 };
 ```
@@ -587,9 +587,9 @@ The target surface is a single `do { ... }` form whose effect requirements are i
 the body and checked against the enclosing row.
 
 ```ash
-fn read_config(path: String) -> {fs.read} String {
+fn read_config(path: String) -> {PosixFs::read} String {
     do {
-        contents <- fs.read(path);
+        contents <- PosixFs::read(path);
         return contents
     }
 }

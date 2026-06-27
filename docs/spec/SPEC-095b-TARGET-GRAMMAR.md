@@ -146,11 +146,11 @@ effect_group_definition = "effect" "group" identifier "=" effect_row ";" ;
 Examples:
 
 ```ash
-effect alias IO = {fs.read, fs.write, log.write};
+effect alias IO = {PosixFs::read, PosixFs::write, StdoutLog::write};
 
 effect group WorkflowIO = {
-    fs.read,
-    log.write,
+    PosixFs::read,
+    StdoutLog::write,
     evidence audit_log,
 };
 ```
@@ -214,9 +214,9 @@ handler_arm = identifier "->" expr ";" ;
 Examples:
 
 ```ash
-fn read_config(path: String) -> {fs.read} String {
+fn read_config(path: String) -> {PosixFs::read} String {
     do {
-        contents <- fs.read(path);
+        contents <- PosixFs::read(path);
         return contents
     }
 }
@@ -372,9 +372,9 @@ Examples:
 
 ```ash
 {}                                      -- empty row
-{fs.read}                                -- closed row
-{fs.read, policy production_rate}         -- multiple requirements
-{fs.read | r}                             -- open row
+{PosixFs::read}                                -- closed row
+{PosixFs::read, policy production_rate}         -- multiple requirements
+{PosixFs::read | r}                             -- open row
 {r}                                      -- whole-row variable
 {IO}                                     -- transparent alias or group reference
 ```
@@ -463,7 +463,7 @@ Examples:
 
 ```ash
 fn add(a: Int, b: Int) -> {} Int { a + b }
-fn read_file(path: String) -> {fs.read} String { ... }
+fn read_file(path: String) -> {PosixFs::read} String { ... }
 fn map<A, B, r: Row>(xs: List<A>, f: A -> {r} B) -> {r} List<B> { ... }
 ```
 

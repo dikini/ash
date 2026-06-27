@@ -6,6 +6,16 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Changed
+- Reconciled NOTE-022, NOTE-023, SPEC-095b, SPEC-096b, and SPEC-097b with NOTE-025 (effect
+  identity via sorts and impls). NOTE-022: working principle updated — interface is a sort,
+  impl type is identity carrier. NOTE-023: all handler examples updated to impl-type-qualified
+  row items, named handler sugar replaced by handler-as-alias-for-fn with derive/in-impl forms,
+  open questions #2 and #5 resolved. SPEC-095b: handler clause grammar changed to
+  ImplType::method, handler declaration changed to handler-as-alias, added derive. SPEC-096b:
+  operation effect EBNF and examples updated. SPEC-097b: OperationEffect struct changed from
+  interface-qualified to impl-type-qualified, handler typing examples updated. Remaining
+  illustrative `fs.read` examples in row syntax sections are consistent with the old naming
+  and need a follow-up sweep.
 - Consolidated all host/FFI and extern placement ideas into NOTE-024. `extern` is now a
   reserved keyword with no grammar production in SPEC-095b; `builtin(...)` is the only
   host-reaching mechanism. Updated NOTE-013 (§11.1, open questions 5/6), NOTE-014 (§8, open

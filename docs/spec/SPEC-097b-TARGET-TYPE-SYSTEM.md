@@ -135,20 +135,29 @@ textual tails match.
 
 ### 3.3 Operation effect
 
-An operation effect references an interface method identity (NOTE-022). For example,
-`Fs.read` references the `read` method of the `Fs` interface.
+An operation effect references an impl-type-qualified operation identity (NOTE-025). The
+interface declares the operation signature (the sort); the impl type is the identity
+qualifier. In generic code, the row item is abstract: `F::read` where `F: Fs`. After
+monomorphization, it is concrete: `PosixFs::read`.
 
 ```rust
 pub struct OperationEffect {
-    pub interface: NamePath,
+    pub impl_type: NamePath,
     pub operation: Option<Name>,
 }
 ```
 
-A whole-interface requirement such as `Fs` is broader than an operation-specific
-requirement such as `Fs.read`. A future implementation must define whether `Fs`
-expands into all known operations or remains an abstract interface requirement. It must not
-silently treat the two as identical.
+The `impl_type` field is the concrete impl type after monomorphization (e.g., `PosixFs`).
+Different impl types produce distinct operation identities even for the same interface
+method — enabling multiple simultaneous handlers.
+
+A whole-interface sort constraint such as `F: Fs` bounds the operation set available to
+generic code. It does not itself appear as a row item; row items are always
+impl-type-qualified operations.
+
+**Revision (NOTE-025):** The earlier draft used `interface: NamePath` qualified by the
+interface name (`Fs.read`). NOTE-025 revises this: the impl type is the identity qualifier,
+not the interface.
 
 ### 3.4 Role effect
 
@@ -445,19 +454,19 @@ rule remains required until a separate spec changes it.
 ### 8.1 Operation calls
 
 An interface method call that is not locally resolved contributes an operation row item. The
-operation identity is the resolved interface method path (NOTE-022). Current capability
-declarations migrate to interface method surfaces, but the target row item is the operation
-identity.
+operation identity is impl-type-qualified after monomorphization (NOTE-025). In generic
+code, `F.read(path)` where `F: Fs` contributes `F::read`; after specialization, this becomes
+`PosixFs::read`.
 
 ```text
-call C.op(args) : A
+call F.op(args) : A     where F: Iface
 ------------------------
-row includes C.op
+row includes F::op      (abstract; becomes ImplType::op after monomorphization)
 ```
 
 If the operation is called through a binding name, the row identity must resolve through the
-binding to the interface method identity. Diagnostics should show both the binding
-and canonical interface method when helpful.
+binding to the impl-type-qualified operation identity. Diagnostics should show both the
+binding and canonical impl-type-qualified operation when helpful.
 
 ### 8.2 Role use
 
@@ -518,15 +527,17 @@ effects in module summaries.
 
 ### 8.8 Handler typing
 
-A handler is a function whose parameter is a computation thunk of type `Unit -> {op | r} A`
+A handler is a function whose parameter is a computation thunk of type `Unit -> {ImplType::op | r} A`
 and whose return type is the *answer type* `Ans`. The handler's output row is `{r}`: the
 peeled operations are removed from the requirement row while the residual row `r` is
-propagated to the handler's caller (NOTE-023).
+propagated to the handler's caller (NOTE-023). Operation identities are impl-type-qualified
+(NOTE-025).
 
-For each peeled operation `op` with result type `B_op` declared by the interface, the handler
-branch receives a *continuation* parameter of type `B_op -> {r} Ans`. The continuation is an
-ordinary function parameter; its row is `{r}`, the residual row after peeling. The result
-type `Ans` is shared across all branches and the handler's own return type.
+For each peeled operation `ImplType::op` with result type `B_op` declared by the interface,
+the handler branch receives a *continuation* parameter of type `B_op -> {r} Ans`. The
+continuation is an ordinary function parameter; its row is `{r}`, the residual row after
+peeling. The result type `Ans` is shared across all branches and the handler's own return
+type.
 
 **Multiplicity.** The continuation's row `{r}` determines whether it may be invoked more than
 once:
@@ -542,7 +553,7 @@ This is consistent with the SPEC-102 Core/CPS multiplicity encoding, where an em
 row yields a pure continuation that the runtime may freely duplicate.
 
 ```text
-handler : (Unit -> {op | r} A) -> {r} Ans
+handler : (Unit -> {ImplType::op | r} A) -> {r} Ans
 branch_op(k : B_op -> {r} Ans) -> {r} Ans
 ```
 
@@ -550,13 +561,13 @@ Typical shapes:
 
 ```ash
 -- Affine continuation (residual row non-empty)
-fn handle_fsWithLogging<A, r: Row>(
-    thunk: Unit -> {Fs.read, Log.write | r} A
+handler handle_fsWithLogging<A, r: Row>(
+    thunk: Unit -> {PosixFs::read, Log::write | r} A
 ) -> {r} A { ... }
 
 -- Multi-shot continuation (residual row empty after peeling)
-fn handle_pureRetry<A>(
-    thunk: Unit -> {Retry | {}} A
+handler handle_pureRetry<A>(
+    thunk: Unit -> {PureRetry::retry | {}} A
 ) -> A { ... }
 ```
 
@@ -840,3 +851,4 @@ Mode mismatch is a type error, not a performance warning. The user must explicit
 - 2026-06-20: Added §15 Evaluation Modes. Defined strict/lazy/memo as invariant algorithmic contracts with explicit `_unsafe` conversions.
 - 2026-06-21: Clarified memo force row accounting so static force sites retain the thunk latent row while dynamic cache hits may perform no effects, and aligned CPS lowering text with SPEC-101 `ThunkClosure` chain-capture semantics.
 - 2026-06-27: Reconciled with NOTE-021 (Row kind, computation row terminology), NOTE-022 (operations as interface methods), NOTE-023 (handler typing: continuation as ordinary parameter, multiplicity via function type).
+- 2026-06-27: Reconciled with NOTE-025 (effect identity via sorts and impls). OperationEffect identity changed from interface-qualified to impl-type-qualified. Handler typing examples updated. §3.3 and §8.1 revised.

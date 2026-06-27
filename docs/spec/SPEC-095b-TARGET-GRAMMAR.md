@@ -244,9 +244,10 @@ annotation. A future deprecation spec may remove them.
 
 ### 4.3 Handler Expressions
 
-Per NOTE-023, the target grammar adds first-class handler expressions as eliminators for
-computation rows. The simple `handler_arm` in §4.2 covers the inline `handle ... with { ... }`
-form within a `do` block; this section documents the broader handler surface.
+Per NOTE-023 (revised by NOTE-025), the target grammar adds first-class handler expressions
+as eliminators for computation rows. The simple `handler_arm` in §4.2 covers the inline
+`handle ... with { ... }` form within a `do` block; this section documents the broader
+handler surface.
 
 **`on` eliminator.** An `on` expression scrutinises a row-bearing computation and dispatches
 on its operations:
@@ -254,12 +255,13 @@ on its operations:
 ```ebnf
 on_expr = "on" expr "{" handler_clause+ "}" ;
 
-handler_clause = interface_ref "." operation_name "(" pattern "," identifier ")" "=>" expr
+handler_clause = impl_type_ref "::" operation_name "(" pattern "," identifier ")" "=>" expr
               | "done" "(" identifier ")" "=>" expr
               ;
 ```
 
-- Each operation clause matches `Interface.method(pattern, continuation) => expr`.
+- Each operation clause matches `ImplType::method(pattern, continuation) => expr`. The
+  operation identity is impl-type-qualified (NOTE-025).
 - The continuation parameter (`identifier`) is an ordinary function-typed parameter, **not** a
   keyword. It is the resume function passed by the handler runtime.
 - A `done(value) => expr` clause completes handling when the computation returns normally.
@@ -268,13 +270,14 @@ Example:
 
 ```ash
 on run(req) {
-    Fs.read(path, k) => k(read_file(path)),
+    PosixFs::read(path, k) => k(PosixFs::read(path)),
     done(v) => v,
 }
 ```
 
 **`handle ... with` sugar.** The `handle expr with identifier` form selects a named handler
-for the given computation:
+function for the given computation. The identifier resolves through normal value-name
+resolution — it must be a function whose first parameter accepts the thunk type:
 
 ```ebnf
 handle_with_expr = "handle" expr "with" identifier ;
@@ -283,26 +286,37 @@ handle_with_expr = "handle" expr "with" identifier ;
 Example:
 
 ```ash
-handle run(req) with fs_handler
+handle run(req) with posix_fs
 ```
 
-**Named handler declaration.** A named handler packages a set of clauses for reuse:
+This desugars to `posix_fs(fn () -> run(req))`. The identifier is always a value-namespace
+function (per NOTE-025 §3), never a type.
+
+**`handler` keyword alias for `fn`.** Per NOTE-023 (revised), `handler` is a pure keyword
+alias for `fn`. A handler function is declared identically to a regular function, with the
+`handler` keyword signaling intent:
 
 ```ebnf
-handler_decl = "handler" identifier type_params? "for" interface_ref where_clause?
-               "{" handler_method+ "}" ;
-
-handler_method = "fn" identifier "(" parameter_list ")" "->" type "{" expr "}" ;
+handler_fn_decl = "handler" identifier type_params? "(" parameter_list ")" "->" type
+                  where_clause? "{" expr "}" ;
 ```
 
 Example:
 
 ```ash
-handler fs_handler for Fs {
-    fn read(path: Path) -> String { read_file(path) }
-    fn write(path: Path, contents: String) -> Unit { write_file(path, contents) }
+handler posix_fs<A, r: Row>(
+    comp: Unit -> {PosixFs::read | r} A
+) -> {r} A {
+    on comp() {
+        PosixFs::read(path, resume) => resume(PosixFs::read(path))
+        done(value) => value
+    }
 }
 ```
+
+**Derive (compiler-synthesized handler from impl).** Per NOTE-025 §3, an impl body may
+declare `derive handler <name>;` — the compiler synthesizes a deep handler function from
+the impl's method bodies. The generated function is available in the value namespace.
 
 **Notes on continuation and multiplicity.**
 
@@ -643,3 +657,4 @@ The following forms are rejected in the target grammar:
 
 - 2026-06-18: Created as target-state grammar document. Defined effect row syntax, unified `do` form, effect aliases/groups, and migration compatibility.
 - 2026-06-27: Reconciled with NOTE-021 (Row kind, where row layout, evidence rows), NOTE-022 (effects as interfaces, no effect keyword for operations), NOTE-023 (handler surface grammar: on, handle...with, named handler sugar).
+- 2026-06-27: Reconciled with NOTE-025 (effect identity via sorts and impls). Handler clause identities changed from interface-qualified (`Fs.read`) to impl-type-qualified (`PosixFs::read`). Named handler sugar replaced by `handler`-as-alias-for-`fn`. Added derive mechanism. §4.3 revised.

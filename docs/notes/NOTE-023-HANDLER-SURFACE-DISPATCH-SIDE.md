@@ -49,13 +49,12 @@ The design constraints are:
 A handler is an ordinary function whose parameter is a computation thunk:
 
 ```ash
-fn posix_fs<A, r>(comp: Unit -> {Fs.read | r} A) -> {r} A {
+handler posix_fs<A, r>(comp: Unit -> {PosixFs::read | r} A) -> {r} A {
     on comp() {
         done(value) => value
 
-        Fs.read(path, resume) => {
-            let bytes = unsafe posix_read(path)
-            resume(decode_utf8(bytes))
+        PosixFs::read(path, resume) => {
+            resume(PosixFs::read(path))
         }
     }
 }
@@ -63,15 +62,18 @@ fn posix_fs<A, r>(comp: Unit -> {Fs.read | r} A) -> {r} A {
 
 Type breakdown:
 
-- `comp : Unit -> {Fs.read | r} A` — the computation to be interpreted. Its row includes the
-  operations this handler peels (`Fs.read`) plus a tail `r` for effects the handler does NOT
-  peel.
+- `comp : Unit -> {PosixFs::read | r} A` — the computation to be interpreted. Its row includes
+  the operation this handler peels (`PosixFs::read`) plus a tail `r` for effects the handler
+  does NOT peel.
 - `A` — the computation's value type AND the handler's answer type.
-- `{r}` — the residual row: the handler removes `Fs.read` from the row and contributes only
-  what its own clauses raise (nothing here, so the output row is `r`).
+- `{r}` — the residual row: the handler removes `PosixFs::read` from the row and contributes
+  only what its own clauses raise (nothing here, so the output row is `r`).
 
-The handler function's signature IS the row-peeling contract: input row `{Fs.read | r}`,
-output row `{r}`.
+The handler function's signature IS the row-peeling contract: input row
+`{PosixFs::read | r}`, output row `{r}`.
+
+**NOTE-025 revision:** Row items are impl-type-qualified (`PosixFs::read`), not
+interface-qualified (`Fs.read`). See NOTE-025 for the full identity model.
 
 ## 2. The `on` Eliminator
 
@@ -83,11 +85,16 @@ clauses).
 on comp() {
     done(value) => result_expr
 
-    Interface.method(args, resume) => result_expr
-    Interface.other_method(args, resume) => result_expr
+    ImplType::method(args, resume) => result_expr
+    ImplType::other_method(args, resume) => result_expr
     ...
 }
 ```
+
+**NOTE-025 revision:** Clause identities are impl-type-qualified (e.g., `PosixFs::read`), not
+interface-qualified. In generic code before monomorphization, this may be abstract:
+`F::read` where `F: Fs`. After monomorphization, the concrete impl type qualifies the
+operation.
 
 Lowering: `on comp()` installs a `Handle` frame in the CPS IR, then invokes `comp(())`.
 When `comp` raises an operation, the runtime searches the Handle frame's clauses for a
@@ -105,9 +112,9 @@ In each operation clause, the continuation is a parameter — not a keyword, not
 binding. The author names it:
 
 ```ash
-Fs.read(path, resume) => resume(decode_utf8(bytes))
-Fs.read(path, k)      => k(decode_utf8(bytes))
-Fs.read(path, cont)   => cont(decode_utf8(bytes))
+PosixFs::read(path, resume) => resume(decode_utf8(bytes))
+PosixFs::read(path, k)      => k(decode_utf8(bytes))
+PosixFs::read(path, cont)   => cont(decode_utf8(bytes))
 ```
 
 All three are identical. The parameter's type is derived from:
@@ -140,7 +147,7 @@ effectful function is affine — consumed on first use. Calling it twice is a ty
 This covers State, Reader, Writer, Fs, most handlers.
 
 ```ash
-Fs.read(path, resume) => {
+PosixFs::read(path, resume) => {
     resume(read_from_disk(path))    // resume : String -> {log.write, fail Error} A
     // resume(x) again here would be a type error — affine, already consumed
 }
@@ -151,7 +158,7 @@ be stored, called multiple times, passed to higher-order functions. This covers
 nondeterminism, backtracking, all-solutions search.
 
 ```ash
-Choice.choose(xs, resume) => {
+AllSolutions::choose(xs, resume) => {
     // resume : A -> {} Ans — pure, copyable
     xs.flat_map(fn x -> resume(x))  // called once per element — legal
 }
@@ -171,11 +178,11 @@ There is no Koka-clause vs Frank-clause distinction. Every operation clause has 
 shape:
 
 ```ash
-Interface.method(op_args, continuation) => body
+ImplType::method(op_args, continuation) => body
 ```
 
-- `Interface.method` — the fully-qualified operation identity, resolved through normal
-  module/name resolution (NOTE-022 §1).
+- `ImplType::method` — the impl-type-qualified operation identity, resolved through normal
+  module/name resolution and monomorphization (NOTE-025).
 - `op_args` — the operation's parameters, taken from the interface method signature.
 - `continuation` — the captured continuation, an ordinary function-typed parameter.
 - `body` — handler clause body, type-checks against the handler's answer type.
@@ -215,49 +222,82 @@ recognizable as scoped effect handling.
 
 Both forms are always available. Neither introduces a different clause shape.
 
-## 7. Named Handler Sugar
+## 7. Handler Declaration: `handler` as Alias for `fn`
 
-The common case — a named, reusable handler for one interface — has optional sugar:
-
-```ash
-handler PosixFs<A, r> for Fs
-where
-    requires host posix_fs
-{
-    fn read(path: Path, resume: String -> {r} A) -> A {
-        let bytes = unsafe posix_read(path)
-        resume(decode_utf8(bytes))
-    }
-
-    done(value) => value
-}
-```
-
-This desugars to the explicit function form:
+`handler` is a pure keyword alias for `fn` (NOTE-023 §6 design discussion, NOTE-025 §2.2).
+It carries no semantic difference — the compiler treats it identically to `fn`. It signals
+intent to humans and LLMs: "this function is meant to be used as a handler."
 
 ```ash
-fn posix_fs<A, r>(comp: Unit -> {Fs.read | r} A) -> {r} A
-where
-    requires host posix_fs
+handler posix_fs<A, r>(comp: Unit -> {PosixFs::read | r} A) -> {r} A
+where requires host posix_fs
 {
     on comp() {
         done(value) => value
+        PosixFs::read(path, resume) => resume(PosixFs::read(path))
+    }
+}
+```
 
-        Fs.read(path, resume) => {
-            let bytes = unsafe posix_read(path)
-            resume(decode_utf8(bytes))
+This IS a function. Type: `(Unit -> {PosixFs::read | r} A) -> {r} A`. Nothing special except
+the keyword. The answer type is the return type — no hidden `A`/`Ans` conflation, no
+annotation needed.
+
+**Answer-type transformation** is trivial — the return type is the answer type:
+
+```ash
+handler catch_throw<E, A, r>(comp: Unit -> {CatchIO::throw<E> | r} A) -> {r} Result<A, E> {
+    on comp() {
+        done(value) => Ok(value)
+        CatchIO::throw<E>(err, _resume) => Err(err)
+    }
+}
+```
+
+### 7.1 Derive: compiler-synthesized deep handlers
+
+When the handler's behavior is "compute result from impl, resume with it" (the deep handler
+case), the impl can declare a derivation so the compiler synthesizes the handler function:
+
+```ash
+impl Fs for PosixFs
+where requires host posix_fs
+{
+    fn read(path: Path) -> String { builtin(fs_read, path) }
+    fn write(path: Path, contents: String) -> Unit { builtin(fs_write, path, contents) }
+
+    derive handler posix_fs;
+}
+```
+
+The compiler synthesizes the deep handler (the explicit form above) from the impl's method
+bodies. See NOTE-025 §3-4 for the full derivation mechanics and worked examples for deep,
+escape, and multi-shot handlers.
+
+### 7.2 Handler defined in impl (co-located)
+
+An explicit handler can be defined inside the impl body for DX — same semantics as a
+standalone handler, but co-located with the impl it references:
+
+```ash
+impl Fs for PosixFs
+where requires host posix_fs
+{
+    fn read(path: Path) -> String { builtin(fs_read, path) }
+
+    handler posix_fs<A, r>(comp: Unit -> {PosixFs::read | r} A) -> {r} A {
+        on comp() {
+            PosixFs::read(path, resume) => {
+                log("reading {}", path);          // custom behavior in the clause
+                resume(PosixFs::read(path))
+            }
+            done(value) => value
         }
     }
 }
 ```
 
-The sugar provides:
-- A name (`PosixFs`) and a `for Interface` clause that auto-qualifies operation clauses.
-- Explicit continuation type in the method signature (visible at the declaration site).
-- A default `done` clause if omitted (identity: `done(value) => value`).
-- `where` clauses for admission constraints.
-
-The explicit function form is always available and is what everything desugars to.
+See NOTE-025 §4 for all three handler production forms (derive, in-impl, standalone).
 
 ## 8. Admission
 
@@ -267,20 +307,8 @@ installed. If admission fails, the handler never enters the dispatch stack.
 Admission uses the existing `where` clause machinery:
 
 ```ash
-handler PosixFs<A, r> for Fs
-where
-    requires host posix_fs
-{
-    ...
-}
-```
-
-or equivalently on the explicit form:
-
-```ash
-fn posix_fs<A, r>(comp: Unit -> {Fs.read | r} A) -> {r} A
-where
-    requires host posix_fs
+handler posix_fs<A, r>(comp: Unit -> {PosixFs::read | r} A) -> {r} A
+where requires host posix_fs
 {
     on comp() { ... }
 }
@@ -300,10 +328,10 @@ installation, not a runtime check during dispatch.
 Resume continues the computation. The handler threads state or resources through:
 
 ```ash
-fn with_choice<A, r>(comp: Unit -> {Choice.choose | r} A) -> {r} A {
+handler with_first<A, r>(comp: Unit -> {FirstChoice::choose | r} A) -> {r} A {
     on comp() {
         done(value) => value
-        Choice.choose(xs, resume) => resume(xs.head())
+        FirstChoice::choose(xs, resume) => resume(xs.head())
     }
 }
 ```
@@ -313,10 +341,10 @@ fn with_choice<A, r>(comp: Unit -> {Choice.choose | r} A) -> {r} A {
 The handler does not call the continuation on certain branches — it short-circuits:
 
 ```ash
-fn catch_throw<E, A, r>(comp: Unit -> {Exception.throw<E> | r} A) -> {r} Result<A, E> {
+handler catch_throw<E, A, r>(comp: Unit -> {CatchIO::throw<E> | r} A) -> {r} Result<A, E> {
     on comp() {
         done(value) => Ok(value)
-        Exception.throw(err, _resume) => Err(err)
+        CatchIO::throw<E>(err, _resume) => Err(err)
     }
 }
 ```
@@ -330,10 +358,10 @@ computation's value type: `Result<A, E>` instead of `A`.
 Resume is called multiple times. The continuation must be pure (empty row):
 
 ```ash
-fn all_choices<A>(comp: Unit -> {Choice.choose} A) -> List<A> {
+handler all_choices<A>(comp: Unit -> {AllSolutions::choose} A) -> List<A> {
     on comp() {
         done(value) => [value]
-        Choice.choose(xs, resume) =>
+        AllSolutions::choose(xs, resume) =>
             xs.flat_map(fn x -> resume(x))
     }
 }
@@ -373,27 +401,32 @@ elaborates into the same row facts that Core/CPS already tracks.
    grammar production in the current target language; `builtin(...)` is the only host-reaching
    mechanism. The prior two-placement proposals are archived in NOTE-024 §3 as future-FFI
    design space.
-2. **Answer type parameter.** In the sugar form, `A` serves as both the computation's value
-   type and the handler's answer type. Handlers like `catch_throw` change the answer type
-   (`A` → `Result<A, E>`). How does the sugar form express answer-type transformation? The
-   explicit form handles it naturally (the return type is just the function's return type).
-3. **Pattern syntax for operations with many parameters.** `Fs.read(path, resume)` works for
-   single-parameter operations. For `fn transfer(from: Account, to: Account, amount: Int)
-   -> Receipt`, the clause is `Bank.transfer(from, to, amount, resume)`. Is this readable
-   enough, or does the continuation need syntactic separation from operation arguments?
+2. **Answer type parameter.** **Resolved.** `handler` is an alias for `fn` — the answer type
+   is always the function's return type. No hidden `A`/`Ans` conflation. Answer-type
+   transformation (`A` → `Result<A, E>`, `A` → `List<A>`) is expressed in the return type.
+3. **Pattern syntax for operations with many parameters.** `PosixFs::read(path, resume)`
+   works for single-parameter operations. For `fn transfer(from: Account, to: Account,
+   amount: Int) -> Receipt`, the clause is `Bank::transfer(from, to, amount, resume)`. Is
+   this readable enough, or does the continuation need syntactic separation from operation
+   arguments?
 4. **`on` scrutinee shape.** Currently `on comp()` — always a thunk call. Should `on` accept
    arbitrary expressions that the compiler wraps in a thunk? Or should the thunk be
    explicit?
-5. **Default `done` clause.** The sugar form may omit `done`, defaulting to identity. Should
-   the explicit `on` form also allow omitting `done`, or should it be mandatory?
+5. **Default `done` clause.** **Resolved.** With `handler` as alias for `fn` (no sugar that
+   hides the signature), the `done` clause is always explicit inside `on`. Derive-generated
+   handlers always include `done(value) => value`.
 
 ## 13. Working Principle
 
 ```text
 A handler is a function that consumes a computation thunk.
+`handler` is a keyword alias for `fn` — no semantic difference.
 The continuation is an ordinary function-typed parameter.
 Multiplicity is in the function type: affine if the row is non-empty, multi-shot if pure.
-One clause shape: Interface.method(args, continuation) => body.
+The answer type is the function's return type — no annotation needed.
+One clause shape: ImplType::method(args, continuation) => body.
+Row items are impl-type-qualified (e.g., PosixFs::read), not interface-qualified (NOTE-025).
+Three handler production forms: derive (compiler-synthesized), in-impl (co-located), standalone.
 Two installation forms: explicit application and handle...with sugar.
 Authority is a where-clause gate before installation, not a runtime check during dispatch.
 ```
@@ -403,6 +436,7 @@ Authority is a where-clause gate before installation, not a runtime check during
 Internal references:
 
 - [NOTE-022: Effects as Interfaces — Declaration Side](NOTE-022-EFFECTS-AS-INTERFACES-DECLARATION-SIDE.md)
+- [NOTE-025: Effect Identity via Sorts and Impls](NOTE-025-EFFECT-IDENTITY-VIA-SORTS-AND-IMPLS.md) — revises the identity model
 - [NOTE-013: Ambient Monad and Handler Composition Algebra](NOTE-013-AMBIENT-MONAD-AND-HANDLER-COMPOSITION-ALGEBRA.md)
 - [NOTE-018: Boundary Discipline for Target Ash](NOTE-018-BOUNDARY-DISCIPLINE.md)
 - [NOTE-019: Target Ash Convergence Plan](NOTE-019-TARGET-ASH-CONVERGENCE-PLAN.md)
@@ -426,3 +460,7 @@ External references:
   `on` eliminator, continuation as ordinary typed parameter, multiplicity via function type,
   one clause shape with two installation forms, named handler sugar, admission via where
   clauses. Completes the declaration/dispatch separation from NOTE-022.
+- 2026-06-27: Revised by NOTE-025. All handler examples updated to impl-type-qualified row
+  items (`PosixFs::read` instead of `Fs.read`). Named handler sugar (§7) replaced by
+  `handler`-as-alias-for-`fn` with derive and handler-in-impl forms. Open questions #2
+  (answer type) and #5 (default done) resolved. Working principle updated.

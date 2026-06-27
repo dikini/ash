@@ -234,17 +234,23 @@ These are explicitly deferred to a separate dispatch-side design track:
 ## 9. Working Principle
 
 ```text
-The interface is a type contract for operations.
-It declares signatures, generics, associated types, and constraints.
+The interface is an effect sort: a type contract for operations.
+It declares signatures, generics, associated types, laws, and constraints.
 It does not dispatch, grant authority, or define handler behavior.
+
+The impl type is the operation identity carrier.
+Rows name impl-qualified operation identities (e.g., PosixFs::read), not
+interface-qualified ones (e.g., Fs.read). See NOTE-025 for the full model.
 
 Dispatch is Handle frame nesting in the CPS substrate.
 Authority is admission evidence at installation time.
 Handler clauses are a separate construct on the dispatch side.
-
-Rows name resolved interface method identities.
-The interface is the single declaration site for operation contracts.
 ```
+
+**Revision (NOTE-025):** This note originally stated "rows name resolved interface method
+identities." NOTE-025 revises this: the interface is the sort, the impl type is the identity
+qualifier. After monomorphization, the row item is `ImplType::operation`, not
+`Interface.operation`. This enables multiple simultaneous handlers for the same interface.
 
 ## 10. References
 
@@ -257,6 +263,7 @@ Internal references:
 - [NOTE-019: Target Ash Convergence Plan](NOTE-019-TARGET-ASH-CONVERGENCE-PLAN.md)
 - [NOTE-020: Computation Row Taxonomy and Pure Computation](NOTE-020-COMPUTATION-ROW-TAXONOMY.md)
 - [NOTE-021: Row, Callable, Where, and Fact Syntax](NOTE-021-ROW-CALLABLE-WHERE-AND-FACT-SYNTAX.md)
+- [NOTE-025: Effect Identity via Sorts and Impls](NOTE-025-EFFECT-IDENTITY-VIA-SORTS-AND-IMPLS.md) — revises the identity model
 - [SPEC-098b: Target CPS IR](../spec/SPEC-098b-TARGET-IR.md)
 - [SPEC-100: Core Type Checking](../spec/SPEC-100-CORE-TYPE-CHECKING.md)
 - [SPEC-102: CPS Continuation Multiplicity](../spec/SPEC-102-CPS-CONTINUATION-MULTIPLICITY.md)
@@ -275,3 +282,6 @@ External references:
 - 2026-06-27: Initial version. Captures the decision to unify effect operation declarations
   with interfaces, eliminating the `effect` keyword. Documents declaration/dispatch
   separation, impact on existing notes, and open dispatch-side questions.
+- 2026-06-27: Revised by NOTE-025. The identity model changes: the interface is now an effect
+  sort (abstract family), and the impl type is the operation identity qualifier. Rows name
+  `ImplType::operation`, not `Interface.operation`. Updated working principle and references.

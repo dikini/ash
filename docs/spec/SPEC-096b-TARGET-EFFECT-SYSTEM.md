@@ -214,21 +214,21 @@ fn read_file(path: String) -> {fs.read} String { ... }
 ### 6.1 Operation effects
 
 Operation effects require authority to call an admitted effect operation. Operation signatures
-are declared as interface methods (NOTE-022). Current capability declarations are migration
-syntax that lowers to interface method declarations plus handler/admission metadata; the target
-language has effects, operations, providers, and admission, not a distinct capability feature.
+are declared as interface methods (NOTE-022). The operation identity in the row is
+impl-type-qualified (NOTE-025): in generic code it is abstract (`F::read` where `F: Fs`);
+after monomorphization it is concrete (`PosixFs::read`).
 
 ```ebnf
-operation_effect = operation_path [ "." operation_name ] ;
-operation_path = identifier { "::" identifier } ;
+operation_effect = impl_type_ref "::" operation_name ;
+impl_type_ref = identifier { "::" identifier } ;
 operation_name = identifier ;
 ```
 
 Examples:
 
 ```ash
-fn read_config(path: String) -> {fs.read} String { ... }
-fn write_log(msg: String) -> {log.write} Unit { ... }
+fn read_config<F: Fs>(path: String) -> {F::read} String { ... }
+-- After specialization with F = PosixFs: {PosixFs::read}
 ```
 
 An operation effect is discharged by an explicit provider/effect binding, by a role that
@@ -673,3 +673,4 @@ workflow reporting, and audit evidence.
 
 - 2026-06-18: Created as target-state effect system document. Defined row semantics, effect item taxonomy, discharge rules, aliases/groups, and migration path.
 - 2026-06-27: Reconciled with NOTE-020 (computation row taxonomy), NOTE-021 (Row kind, evidence rows), NOTE-022 (effects as interfaces), NOTE-023 (handler surface semantics).
+- 2026-06-27: Reconciled with NOTE-025 (effect identity via sorts and impls). Operation effect identity changed from interface-qualified (`fs.read`) to impl-type-qualified (`PosixFs::read`). §6.1 examples and EBNF updated.

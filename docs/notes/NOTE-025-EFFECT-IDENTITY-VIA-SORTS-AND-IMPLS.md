@@ -61,9 +61,8 @@ interface Fs {
     fn read(path: Path) -> String;
     fn write(path: Path, contents: String) -> Unit;
 
-    law read_after_write {
-        forall p, c. write(p, c); read(p) == c
-    }
+    law read_after_write(p: Path, c: String, eq: Eq<String>)
+      : eq.equiv(write(p, c); read(p), c)
 }
 ```
 

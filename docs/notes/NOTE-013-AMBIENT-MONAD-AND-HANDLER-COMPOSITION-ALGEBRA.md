@@ -3,13 +3,13 @@
 **Date:** 2026-06-23
 **Status:** Living document — exploration in progress
 **Purpose:** Capture the theoretical framework connecting the CPS-based IR, the ambient
-continuation monad, effect rows, and handler composition as the replacement for monad
+continuation monad, computation rows, and handler composition as the replacement for monad
 transformers. Updated as new insights emerge; restructured for flow and readability later.
 
 ## 0. Motivation
 
 The surface-language overhaul aims to collapse `act`/`proc`/`workflow` into a single `fn`,
-with the tower levels expressed as effect-row profiles over a unified computation type. A
+with the tower levels expressed as computation-row profiles over a unified computation type. A
 central question arises: with eager (call-by-value) evaluation, the ambient monad does not
 need explicit sequencing for purity — but it is real and useful for library structuring.
 Instead of monad transformers (which layer effects by nesting type constructors), Ash uses
@@ -51,8 +51,8 @@ Comp<ρ, A>  ≅  (A -> {ρk} Ans) -> {ρ ∪ ρk} Ans
 ```
 
 For each fixed `ρ`, this is the **continuation monad** specialized to answer type `Ans`.
-The row `ρ` is an *index* — a parameter tracking which algebraic operations the computation
-may raise.
+The row `ρ` is an *index* — a type-level row of computation facts. In this note's handler
+examples, the relevant facts are mostly algebraic operations the computation may raise.
 
 ## 2. Bind and Return Are Row-Polymorphic, Defined Once
 
@@ -91,7 +91,7 @@ This is what collapses `act`/`proc`/`workflow` into `fn`:
 
 ```
 Pure      = Comp<{}, A>                                (empty row)
-Act       = Comp<{cap ..., resource ...}, A>            (capability/resource rows)
+Act       = Comp<{operation ..., resource ...}, A>      (operation/resource rows)
 Proc      = Comp<{... channel ..., proc ...}, A>        (Act + process effects)
 Workflow  = Comp<{... role ..., policy ...}, A>         (Proc + governance effects)
 ```
@@ -112,13 +112,13 @@ StateT s (ReaderT r IO)
 Each transformer wraps the inner monad, adding a specific effect layer. Composition is
 nested — the type encodes the stack.
 
-In Ash with effect rows:
+In Ash with computation rows:
 
 ```
-Comp<{resource state_ref read/write, resource env_ref read, cap io}, A>
+Comp<{resource state_ref read/write, resource env_ref read, io}, A>
 ```
 
-The row is **flat**. No nesting. Extending a computation's capabilities is *row extension*,
+The row is **flat**. No nesting. Extending a computation's possible operations is *row extension*,
 not wrapping.
 
 Formally: row inclusion `ρ ⊆ ρ'` induces a monad morphism:
@@ -149,17 +149,18 @@ larger row*.
 `bind` and `return` are generic (structural). But effect operations are not:
 
 ```
-fs.read   : {cap fs.read} String    — only available when ρ contains cap fs.read
+fs.read   : {fs.read} String        — only available when ρ contains fs.read
 spawn     : {proc spawn} P<A>       — only available when ρ contains proc spawn
 ```
 
 These operations lower to `Raise` nodes in the CPS IR. They are the **generators** of the
 algebraic theory denoted by the row.
 
-This is the Plotkin-Power insight (see §10 References): an effect row denotes an algebraic
-theory (a signature of operations). The computation type `Comp<ρ, A>` is the **free monad**
-over the theory denoted by `ρ`. `bind`/`return` are the free monad's structural operations.
-The effect operations are the theory's generators.
+This is the Plotkin-Power insight (see §10 References): the operation family inside a
+computation row denotes an algebraic theory (a signature of operations). The computation type
+`Comp<ρ, A>` is the **free monad** over the operation theory denoted by `ρ`.
+`bind`/`return` are the free monad's structural operations. The effect operations are the
+theory's generators.
 
 The separation:
 
@@ -216,7 +217,7 @@ case where handlers are statically determined and composed by nesting.
 **SPEC-102 makes the multiplicity explicit and typed.** The resume continuation carries a
 `ContMultiplicity` (`Affine` or `MultiShotPure`) declared on the `HandlerClause` via
 `resume_multiplicity`. The crucial legality condition is that `MultiShotPure` requires the
-resume continuation's effect row to normalize to `{}` — the post-operation continuation must
+resume continuation's row to normalize to `{}` — the post-operation continuation must
 be *pure* to be legally reusable. This is not an inference: SPEC-102 §8 states "Core producers
 must explicitly choose the multiplicity." The empty row is a legality gate, not a trigger.
 
@@ -388,7 +389,7 @@ handler sees the operation first).**
 ### 9.1 Level 1 — Free Theories (no equations on operations)
 
 Every handler is automatically sound. Any handler for a free theory (Choice, Trace, bare
-capability operations with no equational constraints) produces a valid interpretation. No
+operation requests with no equational constraints) produces a valid interpretation. No
 proof obligations.
 
 ### 9.2 Level 2 — Theories with Equations (State, Reader, Writer)
@@ -490,9 +491,9 @@ What is missing is the **equational layer**: the laws that let us prove two hand
 are equivalent, or that a particular handler satisfies its theory's equations. This is where
 the law/proof system connects to the effect system.
 
-### 11.1 Capability Effects and Host Externs
+### 11.1 Effect Operations and Host Externs
 
-This reframes the current Ash capability system cleanly:
+This reframes the current Ash capability system as target effects:
 
 ```
 current capability operation  = effect operation generator
@@ -502,10 +503,10 @@ current capability authority  = row discharge evidence
 current capability audit      = evidence/provenance effect emitted by the handler
 ```
 
-The important distinction is that an effect row records that a computation may *request* an
-operation. It does not itself grant authority. A capability is therefore not merely an
-effect operation; it is an effect operation whose handler may only be installed by an
-admission fact with authority provenance.
+The important distinction is that a computation row can record that a computation may
+*request* an operation. It does not itself grant authority. In the target language, the former
+capability concept is an effect operation whose handler may only be installed by an admission
+fact with authority provenance.
 
 This matters for runtime/host/FFI integrations. Operations such as reading a file, opening a
 network socket, polling a timer, or calling a host LLM provider need an implementation
@@ -635,8 +636,8 @@ must enforce that handler-local externs are still owned by the handled effect, a
 only from trusted handler code, and cannot be exported as ordinary functions.
 
 This invariant preserves the row model. Raw externs do not introduce ambient authority,
-because the only public operation still has a row item (`cap fs.read`, `Fs.read`, or the
-eventual spelling). The handler installation is what discharges the row item, and that
+because the only public operation still has a row item such as `fs.read`/`Fs.read`.
+The handler installation is what discharges the row item, and that
 installation carries the authority/provenance evidence.
 
 The safety obligations split into three layers:
@@ -658,7 +659,7 @@ small and local; the safe Ash effect operation is the public contract.
    `handle ... with` blocks does this naturally. Frank-style function handlers hide it
    inside function application order.
 
-2. **Should effect rows be ordered or unordered?** Recommendation: keep rows unordered
+2. **Should computation rows be ordered or unordered?** Recommendation: keep rows unordered
    (they are requirement sets). Let handler nesting order be the sole determinant of
    priority. This separates:
    - WHAT is required (row, unordered)
@@ -758,7 +759,7 @@ it is linked.
 
 - **Leijen, "Koka: Programming with Row-Polymorphic Effects"** (2014).
   Koka's effect-row system, `handler` syntax, and row-based effect inference. The
-  direct inspiration for effect rows as flat requirement sets.
+  direct inspiration for row-polymorphic operation requirements as flat requirement sets.
   https://www.microsoft.com/en-us/research/wp-content/uploads/2016/08/koka-technical.pdf
 
 - **Lindley, McBride & McLaughlin, "Do Be Do Be Do"** (2017).
@@ -786,10 +787,10 @@ it is linked.
 
 ### Internal references
 
-- **SPEC-098b** — Target CPS IR with unified effect rows, three-layer grammar,
+- **SPEC-098b** — Target CPS IR with unified computation rows, three-layer grammar,
   operation-typed raise/handle.
   `docs/spec/SPEC-098b-TARGET-IR.md`
-- **SPEC-096b** — Target effect system: effect rows as requirement sets, kind-specific
+- **SPEC-096b** — Target effect system: computation rows as requirement sets, kind-specific
   discharge, "rows are requirements, not grants."
   `docs/spec/SPEC-096b-TARGET-EFFECT-SYSTEM.md`
 - **SPEC-097b** — Target type system: row syntax, row variables, constraint kinds,
@@ -816,5 +817,6 @@ it is linked.
 |------------|--------|
 | 2026-06-23 | Initial version. Ambient monad, row extension vs. transformers, handler composition algebra, composition laws, provability levels. |
 | 2026-06-24 | Integrated SPEC-102 (now implemented): sharpened §6 resume-strategy table with concrete `Affine`/`MultiShotPure` multiplicities and the `row = {}` legality gate; added §6 consequence on multi-shot over stateful computation. Added §8.6 — multiplicity constrains which composition laws are typeable (row types the *what*, multiplicity the *how-many*, nesting the *when*). Updated §11 to reference the SPEC-102 `HandlerClause` fields (`resume_multiplicity`, `resume_row`) and `LetCont`/`LetContCall`. Updated Open Question 5 with SPEC-102 status. |
-| 2026-06-24 | Added §11.1 on capabilities as effect operations plus handlers, with host/FFI externs as effect-local unsafe implementation hooks. Captured the invariant that externs are not ordinary Ash functions: the public authority surface remains the typed effect operation and its row-discharge/admission path. |
+| 2026-06-24 | Added §11.1 on current capabilities as target effect operations plus handlers, with host/FFI externs as effect-local unsafe implementation hooks. Captured the invariant that externs are not ordinary Ash functions: the public authority surface remains the typed effect operation and its row-discharge/admission path. |
 | 2026-06-24 | Expanded §11.1 with two effect-local extern placement alternatives: externs in the effect declaration for canonical host ABIs, and externs in trusted handlers for backend-specific adapters. Updated Open Question 6 to treat placement as a surface-syntax choice over the same semantics. |
+| 2026-06-27 | Normalized target-row wording to use computation rows for the type-level row concept while preserving effect operations as algebraic generators and external effect-row literature references. |

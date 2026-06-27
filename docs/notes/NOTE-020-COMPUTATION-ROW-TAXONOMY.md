@@ -6,7 +6,8 @@
 target Ash annotation space. The note records why the change is needed, what kinds of facts
 can live in a computation row, and how this changes the definition of pure computation.
 
-Companion to NOTE-013 through NOTE-019 and SPEC-096b, SPEC-097b, SPEC-101, and SPEC-102.
+Companion to NOTE-013 through NOTE-019, NOTE-021, and SPEC-096b, SPEC-097b, SPEC-101, and
+SPEC-102.
 
 ## 0. Motivation
 
@@ -80,6 +81,16 @@ Some facts are set-like. Some are mode-like and require normalization. Some are 
 ownership-sensitive. Some are evidence obligations. The row language must know which kind
 of fact it is manipulating.
 
+NOTE-021 records the current surface-syntax direction for this model: compact inline rows
+remain available for small callable types, while large rows move to a callable `where`
+section with `row { ... }` as an alternate layout for the same callable type row; predicate-like
+artifacts are named facts, and source rows contain evidence requirements that denote the fact
+plus its proof/check/record rather than embedding predicate bodies directly.
+
+See NOTE-021's "Pre-Spec Delta" section before updating SPEC-095b, SPEC-096b, or SPEC-097b:
+the living-note terminology and row/evidence syntax intentionally differ from the current
+target specs.
+
 ## 2. Why Evaluation Modes Belong In the Row
 
 Lazy and memo computations are not separate monads in target Ash. They are computation
@@ -148,8 +159,8 @@ Does handler order matter?
 Does it cross process or app boundaries?
 ```
 
-Capability is not a computation-row prefix in the target examples. A capability is an
-authority-bearing effect operation interpreted through an admitted handler/provider and
+Current capability terminology is not a target-language computation-row category or prefix.
+It is subsumed by effect operations interpreted through admitted handlers/providers and
 checked against admission/evidence rules. Ordinary operation requirements should be spelled
 directly, such as `{fs.read}` or `{net.request}`. Rows may also need to record authority or
 admission requirements, but the syntax for introducing those facts is not yet settled.
@@ -320,7 +331,7 @@ visibly distinct enough to avoid parser ambiguity and reader confusion.
 4. Which failures are recoverable `fail` facts, which are traps, and which are bottom or
    divergence facts?
 5. Which contract/evidence facts affect value-like equivalence?
-6. Which row facts can be hidden, summarized, or discharged at module boundaries?
+6. Which row entries can be hidden, summarized, or discharged at module boundaries?
 7. What is the static criterion for multi-shot-pure continuation legality once "pure" is no
    longer equivalent to "empty row"?
 
@@ -357,6 +368,7 @@ Internal references:
 - [NOTE-017: Memory Regions, Ownership, and Utilization](NOTE-017-MEMORY-REGIONS-OWNERSHIP-AND-UTILIZATION.md)
 - [NOTE-018: Boundary Discipline for Target Ash](NOTE-018-BOUNDARY-DISCIPLINE.md)
 - [NOTE-019: Target Ash Convergence Plan](NOTE-019-TARGET-ASH-CONVERGENCE-PLAN.md)
+- [NOTE-021: Row, Callable, Where, and Fact Syntax](NOTE-021-ROW-CALLABLE-WHERE-AND-FACT-SYNTAX.md)
 - [SPEC-096b: Target Effect System](../spec/SPEC-096b-TARGET-EFFECT-SYSTEM.md)
 - [SPEC-097b: Target Type System](../spec/SPEC-097b-TARGET-TYPE-SYSTEM.md)
 - [SPEC-101: Lazy and Memo Computation Modes](../spec/SPEC-101-LAZY-AND-MEMO-COMPUTATION-MODES.md)
@@ -364,8 +376,13 @@ Internal references:
 
 ## 11. Changelog
 
+- 2026-06-27: Linked NOTE-021 as the surface-syntax companion for compact inline rows,
+  expanded `where row { ... }` rows, named fact declarations, and evidence row entries.
+  NOTE-021 now carries the pre-spec delta checklist for later target-spec alignment.
+- 2026-06-27: Normalized open-question wording from row facts to row entries to align with
+  NOTE-021's source-row/evidence terminology.
 - 2026-06-24: Clarified that ordinary operation row items are spelled directly, such as
-  `{fs.read}`, and that capability/authority-bearing status is handled through unresolved
+  `{fs.read}`, and authority-bearing status is handled through unresolved
   admission/provider/handler facts rather than a `cap` row prefix.
 - 2026-06-24: Initial draft. Introduces computation rows as the broader target Ash row
   terminology, records a first taxonomy of row fact families, and refines pure computation

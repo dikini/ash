@@ -10,7 +10,7 @@ NOTE-017 (memory regions), NOTE-013 (ambient monad and handler composition), and
 
 ## 0. Motivation
 
-The target Ash story is now centered on one ambient computation model with effect rows,
+The target Ash story is now centered on one ambient computation model with computation rows,
 handlers/providers, contracts, evidence, and explicit runtime admission. The remaining
 ambiguity is concentrated around boundaries.
 
@@ -34,7 +34,7 @@ resolved/to-resolve contract.
 
 **Description:** The boundary between user-facing Ash syntax and Core Ash. Target Ash
 should not let current workflow, capability, or tower syntax define separate semantics.
-Surface forms elaborate into Core terms, row facts, contract discharge metadata, and
+Surface forms elaborate into Core terms, row entries, contract discharge metadata, and
 sidecar evidence declarations.
 
 **Affects:**
@@ -134,17 +134,18 @@ plus contracts, provider/handler discharge, and optional extern hooks.
 
 **Affects:**
 
-- `effect` versus `capability` as canonical authoring form;
+- `effect` as canonical authoring form and current capability syntax as migration input;
 - canonical operation identity and row item spelling;
 - operation argument/result contracts;
+- trusted stdlib handler bodies that call `builtin(...)` for runtime-provided operations;
 - provider and handler implementation shape;
 - operation namespace export/import and versioning.
 
 **Options:**
 
-1. Make `effect` canonical and lower `capability` to restricted effect declarations.
-2. Keep `capability` as a domain-specific authoring form for authority-bearing effects.
-3. Support both, but require one canonical Core/CPS operation identity.
+1. Make `effect` canonical and lower current `capability` syntax to restricted effect
+   declarations during corpus migration.
+2. Require one canonical Core/CPS operation identity regardless of legacy source spelling.
 
 **Current decision pass:** See §3.
 
@@ -266,7 +267,7 @@ unresolved. Laws and properties have different lifecycles.
 
 **Options:**
 
-1. Keep properties outside the effect row as falsification metadata only.
+1. Keep properties outside the computation row as falsification metadata only.
 2. Keep laws as evidence obligations discharged once per implementation.
 3. Represent dynamic Hoare failures as traps by default, with explicit recoverable failure
    lowering where the surface chooses it.
@@ -573,9 +574,9 @@ host/provider adapter    -- how the request is implemented
 
 Resolved direction for the first target slice:
 
-1. **Canonical operation identity lives below surface spelling.** Whether the source says
-   `effect`, `capability`, or a domain-friendly declaration form, Core/CPS sees one
-   canonical operation identity and one row item.
+1. **Canonical operation identity lives below surface spelling.** Current `capability`
+   declarations migrate to `effect` declarations; Core/CPS sees one canonical operation
+   identity and one row item.
 2. **`effect` is the target vocabulary for operation declarations.** It names typed
    operation function signatures and their row contribution.
 3. **`capability` is subsumed by `effect`.** The target language does not need separate
@@ -583,14 +584,17 @@ Resolved direction for the first target slice:
    work: rewrite them as effect declarations plus provider/admission metadata where needed.
 4. **User-defined effects are a target-language direction, but an alpha staging choice.**
    The design vocabulary uses `effect` for ordinary algebraic-operation declarations such
-   as failure, choice, and host capabilities. Current alpha specs may restrict which
+   as failure, choice, and host operations. Current alpha specs may restrict which
    namespaces lower to Core/CPS until fully general user-defined resumable effects are
    specified across the effect, type, Core, and IR specs.
-5. **Externs are implementation hooks, not ordinary Ash functions.** Ordinary Ash code calls
-   typed operations. Trusted effects or providers own raw host/FFI adapters.
-6. **Extern placement is split by intent.** Canonical host ABI hooks may appear at the
-   effect declaration boundary; backend-specific host adapters belong in trusted provider
-   implementations.
+5. **Runtime builtins are calls from trusted handler bodies, not declarations.** Effect
+   declarations define the operation interface. Trusted stdlib handlers implement those
+   operations with ordinary `fn` methods whose bodies call `builtin(...)` using a typed
+   runtime primitive symbol/key. `extern fn` remains out of scope for the current target
+   language.
+6. **Externs are out of scope for the current target language.** Ordinary Ash code calls typed
+   operations. A later host/FFI design may add trusted implementation hooks, but raw extern
+   declarations are not part of the current target surface.
 7. **Provider installation is admission, not definition.** Declaring an effect does not
    install authority. Runtime admission installs a provider frame that may discharge the row
    item.
@@ -1164,112 +1168,116 @@ AgentLoop behaviour
 
 ### 8.1 Decision
 
-Target Ash should treat providers as operation interpreters. "Handler" is still useful
-terminology for the scoped algebraic-effect case, but it should not force a separate
-semantic category or a second declaration family. The important distinction is authority:
-some providers are pure/library interpreters, while others have authority requirements in
-their own rows and are installed by admission.
+Target Ash should use `handler` as the primary surface term for operation interpreters.
+This matches algebraic-effect terminology in other languages and keeps the syntax familiar.
+`provider` is a synonym for `handler`, not a separate semantic category. Documentation and
+examples should prefer `handler`; existing runtime- or admission-oriented text may still say
+provider where that is the established name for a handler registry, pool, or adapter.
+
+The important distinction is authority: some handlers are pure/library interpreters, while
+others have authority requirements in their own rows and are installed by admission.
 
 Resolved direction for the first target slice:
 
-1. **Providers interpret operation requirements.** A provider matches canonical operation
+1. **Handlers interpret operation requirements.** A handler matches canonical operation
    identity, peels the matching row item from the handled body, and contributes its own row
    requirements to the residual computation.
-2. **Provider order is operationally significant.** Effect rows are unordered requirement
-   sets; provider nesting determines interpretation order. Commutation is a law/evidence fact,
+2. **Handler order is operationally significant.** Effect rows are unordered requirement
+   sets; handler nesting determines interpretation order. Commutation is a law/evidence fact,
    not a default assumption.
-3. **Authority-bearing providers expose authority in their own rows.** A provider that
+3. **Authority-bearing handlers expose authority in their own rows.** A handler that
    implements `fs.read` against the host can eliminate `{fs.read}` from the handled body,
    but its implementation contributes its own authority/admission/host/provenance row
    requirements.
-4. **Pure/library providers and authority-bearing providers must be distinguished.** A pure
-   nondeterminism provider and a filesystem provider both interpret operations, but only the
-   authority-bearing provider may require admission and touch the host.
-5. **Resume strategy is part of provider semantics.** Resume, discard, delay, or multi-shot
+4. **Pure/library handlers and authority-bearing handlers must be distinguished.** A pure
+   nondeterminism handler and a filesystem handler both interpret operations, but only the
+   authority-bearing handler may require admission and touch the host.
+5. **Resume strategy is part of handler semantics.** Resume, discard, delay, or multi-shot
    reuse determines the meaning of sequencing for the interpreted operation.
-6. **Continuation multiplicity constrains provider legality.** Affine resumes may be used at
+6. **Continuation multiplicity constrains handler legality.** Affine resumes may be used at
    most once; multi-shot resumes require pure continuation rows and safe captures.
 7. **Authority introduction is explicit.** Authority may be introduced by an admission
    environment or by explicit authority/resource values, then discharged through the same
-   row-environment mechanisms as other requirements. A provider declaration by itself does
+   row-environment mechanisms as other requirements. A handler declaration by itself does
    not introduce authority.
 
 ### 8.2 Row transformation
 
-The provider rule should keep the row-peeling intuition explicit:
+The handler rule should keep the row-peeling intuition explicit:
 
 ```text
 body row:
   {op, rest... | a}
 
-provider matches:
+handler matches:
   {op | r}
 
 match:
   r := {rest... | a}
 
 after handling:
-  residual row = provider.row union r
+  residual row = handler.row union r
 ```
 
 Consequences:
 
-- a provider removes only the operation it interprets;
+- a handler removes only the operation it interprets;
 - unmatched requirements remain in the residual row;
-- provider-local requirements are added to the residual row;
-- the row still does not encode provider order.
+- handler-local requirements are added to the residual row;
+- the row still does not encode handler order.
 
-### 8.3 Provider classes
+### 8.3 Handler classes
 
 | Class | Example | Authority posture | Typical resume behavior |
 |---|---|---|---|
-| pure library provider | choice/all-results, option, validation | no host authority | discard, resume, or multi-shot under row rules |
-| state/resource provider | state cell, transaction log | owns scoped state/resource | affine/deep resume |
-| failure provider | `with_error`, branch-local failure drop | owns failure interpretation | discard or resume with default |
-| scheduling provider | delayed resume/future/timer | owns scheduler interaction | delayed affine resume |
-| host-backed provider | fs/http/model/tool provider | authority in provider row, may own host adapter | operation-specific |
-| contract provider | dynamic Hoare check/reporting | owns dynamic check/report policy | usually trap/fail, not arbitrary resume |
+| pure library handler | choice/all-results, option, validation | no host authority | discard, resume, or multi-shot under row rules |
+| state/resource handler | state cell, transaction log | owns scoped state/resource | affine/deep resume |
+| failure handler | `with_error`, branch-local failure drop | owns failure interpretation | discard or resume with default |
+| scheduling handler | delayed resume/future/timer | owns scheduler interaction | delayed affine resume |
+| host-backed handler | fs/http/model/tool handler | authority in handler row, may own host adapter | operation-specific |
+| contract handler | dynamic Hoare check/reporting | owns dynamic check/report policy | usually trap/fail, not arbitrary resume |
 
-### 8.4 Provider authority and lifetime
+### 8.4 Handler/provider authority and lifetime
 
-Provider lifetime and provider authority are separate:
+Handler lifetime and handler authority are separate. The same rule applies when an existing
+runtime text uses the synonym "provider":
 
 ```text
-provider loaded        != authority granted
-provider pool exists   != app may use it
-provider installed     == admitted discharge fact for a scope
+handler/provider loaded        != authority granted
+handler/provider pool exists   != app may use it
+handler/provider installed     == admitted discharge fact for a scope
 ```
 
-Provider scopes may be runtime-global, app-local, workflow-instance-local, process-local, or
-operation-local. The scope controls lifetime and sharing; the admission context controls who
-may use the provider's operations.
+Handler/provider scopes may be runtime-global, app-local, workflow-instance-local,
+process-local, or operation-local. The scope controls lifetime and sharing; the admission
+context controls who may use the handled operations.
 
-### 8.5 Authority tracking through providers
+### 8.5 Authority tracking through handlers
 
-Authority should be tracked in the provider's own computation row, using the regular row
+Authority should be tracked in the handler's own computation row, using the regular row
 requirement and discharge machinery. The handled body names operations directly; the
-provider implementation contributes whatever authority/admission/host/provenance
+handler implementation contributes whatever authority/admission/host/provenance
 requirements are needed to interpret those operations.
 
 Example shape:
 
 ```text
 body row:      {fs.read}
-provider row:  {authority fs.read, host.fs.read, records provenance}
+handler row:   {authority fs.read, host.fs.read, records provenance}
 result row:    {authority fs.read, host.fs.read, records provenance}
 ```
 
-The provider eliminates the operation requirement from the body, but it does not erase its
-own requirements. A pure provider can eliminate the same operation without authority:
+The handler eliminates the operation requirement from the body, but it does not erase its
+own requirements. A pure handler can eliminate the same operation without authority:
 
 ```text
 body row:      {fs.read}
-provider row:  {}
+handler row:   {}
 result row:    {}
 ```
 
 This lets a mock filesystem, replay log, sandbox, or proof-oriented interpreter handle
-`fs.read` without host authority, while a host filesystem provider exposes its own
+`fs.read` without host authority, while a host filesystem handler exposes its own
 authority and host-boundary requirements.
 
 Authority introduction remains deliberately general in this slice:
@@ -1301,7 +1309,7 @@ Illustrative Frank-like shape:
 
 ```ash
 effect Choice {
-    choose<A>(xs: List<A>) -> A;
+    fn choose<A>(xs: List<A>) -> A;
 }
 
 fn all_choices<A, r>(body: Unit -> {choice.choose | r} A) -> {r} List<A> {
@@ -1371,15 +1379,15 @@ all_choices(delay(do {
 ```
 
 That elaboration belongs to evaluation-mode/computation-thunking syntax, not to
-effect/provider syntax. Provider functions should not require special contextual delayed
+effect/handler syntax. Handler functions should not require special contextual delayed
 argument rules.
 
 The explicit scoped style should express the same installation more directly when a named
-provider value or provider expression is easier to read. The exact surface spelling remains
+handler value or handler expression is easier to read. The exact surface spelling remains
 open, but a Koka-like use site would have this shape:
 
 ```ash
-provider AllChoices<A> {
+handler AllChoices<A> {
     on body() {
         done(value) =>
             [value]
@@ -1397,7 +1405,7 @@ fn all_pairs_scoped() -> {} List<(Int, Int)> {
 }
 ```
 
-The scoped form is also provider installation at the use site:
+The scoped form is also handler installation at the use site:
 
 ```text
 pairs                         : Unit -> {choice.choose} (Int, Int)
@@ -1405,15 +1413,15 @@ with AllChoices { pairs }     : {} List<(Int, Int)>
 ```
 
 Both examples are illustrative syntax. The semantic requirement is that the visible
-provider installation determines which provider handles `choice.choose`; ordinary lexical
-nesting/function application determines precedence when providers are nested.
+handler installation determines which handler handles `choice.choose`; ordinary lexical
+nesting/function application determines precedence when handlers are nested.
 
-Both styles use the same row transformation. For a provider that handles `choice.choose`
-and has provider-local row `p`:
+Both styles use the same row transformation. For a handler that handles `choice.choose`
+and has handler-local row `p`:
 
 ```text
 body row:    {choice.choose | r}
-provider row: p
+handler row: p
 result row:  {r} union p
 ```
 
@@ -1446,17 +1454,17 @@ both have the same row behavior:
 ```text
 body row:    {choice.choose, log.write}
 handled op:  choice.choose
-provider row for AllChoices: {}
+handler row for AllChoices: {}
 result row:  {log.write}
 ```
 
-If the provider has authority or host requirements, those requirements are added in both
+If the handler has authority or host requirements, those requirements are added in both
 styles:
 
 ```text
 body row:    {fs.read}
 handled op:  fs.read
-provider row for HostFs: {authority fs.read, host.fs.read, records provenance}
+handler row for HostFs: {authority fs.read, host.fs.read, records provenance}
 result row:  {authority fs.read, host.fs.read, records provenance}
 ```
 
@@ -1464,30 +1472,30 @@ Thus the difference between the two styles is surface placement only:
 
 ```text
 Frank-like style:
-  provider is an ordinary callable receiving a thunk that produces an effectful computation.
+  handler is an ordinary callable receiving a thunk that produces an effectful computation.
 
 Explicit scoped style:
-  provider is visibly installed around a lexical computation body.
+  handler is visibly installed around a lexical computation body.
 
 Both:
   lower to the same Core/CPS Handle;
   eliminate handled operation rows at the installation site;
   preserve unmatched residual rows;
-  add provider-local row requirements.
+  add handler-local row requirements.
 ```
 
-Provider composition is nesting in both styles:
+Handler composition is nesting in both styles:
 
 ```ash
-provider1(provider2(provider3(body)))
+handler1(handler2(handler3(body)))
 ```
 
 and:
 
 ```ash
-with Provider1 {
-    with Provider2 {
-        with Provider3 {
+with Handler1 {
+    with Handler2 {
+        with Handler3 {
             body
         }
     }
@@ -1498,12 +1506,12 @@ have the same composition shape after lowering. The default assumption is
 non-commutativity:
 
 ```text
-provider1(provider2(body)) != provider2(provider1(body))
+handler1(handler2(body)) != handler2(handler1(body))
 ```
 
-unless the program carries explicit law/evidence that the relevant provider algebras
-commute. Such evidence may later allow the compiler to reorder or optimize providers, but
-in the absence of evidence, provider order is semantically visible and preserved.
+unless the program carries explicit law/evidence that the relevant handler algebras
+commute. Such evidence may later allow the compiler to reorder or optimize handlers, but
+in the absence of evidence, handler order is semantically visible and preserved.
 
 The important distinction from `match` is type-directed:
 
@@ -1579,7 +1587,7 @@ fn all_choices<A, r>(body: Unit -> {choice.choose | r} A) -> {r} List<A> { ... }
 Core lowering is shared across styles:
 
 ```text
-explicit scoped provider
+explicit scoped handler
 Frank-like fn/operator with on
   -> Core/CPS Handle with completion clause, operation clauses, resume metadata, and residual row
 ```
@@ -1591,15 +1599,15 @@ library style, but it is not the only Frank-like authoring path.
 
 ### 8.7 Still to resolve
 
-1. Exact surface syntax for explicit scoped providers and provider installation.
-2. Whether providers lower to ordinary Core/CPS handler frames, a separate provider-chain
-   carrier, or a unified provider chain with trusted metadata.
-3. How provider chains are represented in Core summaries versus CPS/runtime state.
+1. Exact surface syntax for explicit scoped handlers and handler installation.
+2. Whether handlers lower to ordinary Core/CPS handler frames, a separate handler-chain
+   carrier, or a unified handler chain with trusted metadata.
+3. How handler chains are represented in Core summaries versus CPS/runtime state.
 4. Which operations support delayed resume and how scheduler interaction is typed.
-5. How provider laws are expressed as evidence, especially commutation and state/failure
-   interaction laws. The default is non-commutative provider composition for both
+5. How handler laws are expressed as evidence, especially commutation and state/failure
+   interaction laws. The default is non-commutative handler composition for both
    Frank-like nested calls and explicit scoped installation.
-6. How provider authority provenance is recorded and exposed in reports.
+6. How handler authority provenance is recorded and exposed in reports.
 7. How deep versus shallow handlers are spelled, if both are admitted.
 8. Exact grammar for `on`, including completion clause spelling and the final spelling of
    operation arms. Current direction is `operation.name => with |args..., resume| -> body`.
@@ -1820,7 +1828,7 @@ Surface lowering should produce:
 | `fn`, lambdas, calls | Core functions/calls with row-bearing callable types |
 | `do`, current `act`, current typed `do:*` | migrate to target ambient sequencing plus row/profile checks |
 | current `workflow` and workflow statements | migrate to governed function/app/runtime metadata plus Core body |
-| `capability`/`effect` declarations | canonical operation identities and row items |
+| current `capability` declarations / target `effect` declarations | canonical operation identities and row items |
 | `handle`/provider scopes | Core/CPS handler/provider metadata |
 | contracts | predicate refs plus discharge obligations/metadata |
 | laws/proofs/properties | sidecar evidence/test metadata, not ordinary expressions |
@@ -1934,7 +1942,7 @@ Internal references:
 - 2026-06-25: Added handler surface-style guidance: explicit scoped handlers and
   Frank-like ordinary `fn`/optional `operator` definitions with an `on` computation
   eliminator both lower to the same Core/CPS handler machinery.
-- 2026-06-25: Clarified capabilities-as-providers direction: providers are the general
+- 2026-06-25: Clarified current-capabilities-as-effects direction: providers are the general
   operation interpreters, authority is tracked in the provider's own row and introduced or
   discharged through ordinary admission/environment mechanisms, while authority
   multiplicity/lifetime remains a separate future design topic.
@@ -1944,9 +1952,9 @@ Internal references:
   `fail`, traps, contract violations, authority/admission failures, policy denials, host
   adapter failures, process failure/cancellation, and workflow/app boundary reports.
 - 2026-06-24: Added second decision pass for effect declaration and extern/host boundaries:
-  `effect` is the target operation vocabulary, `capability` lowers to restricted
-  authority-bearing effect operations, canonical operation identity lives below surface
-  spelling, and raw externs remain trusted implementation hooks.
+  `effect` is the target operation vocabulary, current `capability` syntax is migration
+  input to effect operations, canonical operation identity lives below surface spelling, and
+  raw externs remain trusted implementation hooks.
 - 2026-06-24: Added third decision pass for row environment and admission boundaries:
   rows are requirement facts, ambient environments carry kind-specific discharge facts,
   admission is explicit at runtime boundaries, role entailment is discharge rather than row
@@ -1983,3 +1991,5 @@ Internal references:
   elaborates to Core rather than defining semantic islands, every callable is row-bearing at
   the semantic boundary, closure captures are checked for effect/authority/memory/control
   leakage, and module summaries export canonical facts without granting authority.
+- 2026-06-27: Normalized target-row wording from effect rows to computation rows and row
+  entries at the boundary inventory level.

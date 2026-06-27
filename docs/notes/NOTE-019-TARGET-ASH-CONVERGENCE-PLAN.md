@@ -147,7 +147,7 @@ resource ownership, and evidence discharge decide whether the requirement is sat
 
 ### 3.3 Core owns semantics
 
-Surface constructs must elaborate into Core terms plus row facts, discharge metadata,
+Surface constructs must elaborate into Core terms plus row entries, discharge metadata,
 public summaries, and sidecar evidence. Surface forms may be ergonomic, but they should not
 define separate execution paths.
 
@@ -222,7 +222,7 @@ Required convergence:
   them to corpus migration or library space.
 - SPEC-096b/SPEC-097b/SPEC-098b/SPEC-099/SPEC-100 must agree on row item taxonomy,
   discharge kinds, provider frames, failure classes, and public summaries.
-- Core checking should be the authority for row facts before CPS lowering.
+- Core checking should be the authority for row entries before CPS lowering.
 - CPS should remain the executable control/effect representation, not a second source
   language.
 
@@ -660,5 +660,7 @@ Internal references:
   including the open expression-bodied function syntax question.
 - 2026-06-24: Linked NOTE-020 and updated convergence terminology from effect rows to
   computation rows where NOTE-020 refines the target model.
+- 2026-06-27: Normalized convergence wording from row facts to row entries where describing
+  Core and surface summaries.
 - 2026-06-24: Initial draft. Synthesizes target Ash convergence tracks across the recent
   notes and target specs, distinguishing semantic convergence from implementation planning.

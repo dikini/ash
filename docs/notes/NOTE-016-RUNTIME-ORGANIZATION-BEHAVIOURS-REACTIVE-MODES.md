@@ -318,7 +318,7 @@ For example:
 AgentLoop =
   state: AgentState
   input: UserMessage | ToolResult | Timer | Shutdown
-  effects: {cap llm.complete, cap tool.call, resource memory write, policy agent_policy}
+  effects: {llm.complete, tool.call, resource memory write, policy agent_policy}
   runner: gen_server-like loop
   supervisor: restart transient on recoverable failure
 ```

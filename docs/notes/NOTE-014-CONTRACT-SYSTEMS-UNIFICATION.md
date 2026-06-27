@@ -1,9 +1,9 @@
-# NOTE-014: Contract Systems Unification — Hoare, Laws, Properties, and the Effect Row
+# NOTE-014: Contract Systems Unification — Hoare, Laws, Properties, and the Computation Row
 
 **Date:** 2026-06-23
 **Status:** Living document — exploration in progress
 **Purpose:** Capture the precise semantics of Ash's contract systems and how they unify
-through the effect row. Companion to NOTE-013 (ambient monad and handler composition).
+through the computation row. Companion to NOTE-013 (ambient monad and handler composition).
 Updated as new insights emerge; restructured for flow and readability later.
 
 ## 0. Motivation
@@ -18,12 +18,12 @@ Ash has two contract systems that risk conceptual schizophrenia:
    `property` (tested only). These attach to interface/module declarations. Logical shape:
    universal theorems `∀x⃗. P(x⃗)`.
 
-Both end up in the same `ContractEffect` enum in the CPS IR effect row. The danger is
+Both end up in the same `ContractEffect` enum in the CPS IR computation row. The danger is
 treating them as the same thing when they have different logical shapes, different discharge
 mechanisms, and different lifecycles.
 
 This note develops the precise story: they are NOT two arbitrary systems. They are two
-instances of the same underlying mechanism — contract requirements in the effect row —
+instances of the same underlying mechanism — contract requirements in the computation row —
 differing only in attachment site, discharge mode, and logical shape. And they compose: laws
 produce evidence that can discharge Hoare preconditions.
 
@@ -90,9 +90,9 @@ vice versa. The hoare-clauses.md design note already identified: "Hoare clauses 
 sufficient for the core contract system (requires, ensures, where). They are not sufficient
 for laws and properties."
 
-## 2. The Unification: Both Are Row Items with Different Discharge Modes
+## 2. The Unification: Both Are Computation-Row Items with Different Discharge Modes
 
-Both systems appear in the CPS IR effect row as `ContractEffect` variants (SPEC-097b §3.6,
+Both systems appear in the CPS IR computation row as `ContractEffect` variants (SPEC-097b §3.6,
 SPEC-098b §4):
 
 ```rust
@@ -135,7 +135,7 @@ The full matrix:
 ### 2.1 Properties Are NOT Row Items
 
 This is a critical design decision. Properties are advisory — they belong to the test
-harness, not to the effect row. A failing property test does not block execution; it is
+harness, not to the computation row. A failing property test does not block execution; it is
 reported as a test failure, separate from the compilation/runtime pipeline.
 
 Properties are compile-time metadata that generate test cases. They never discharge a row
@@ -752,7 +752,7 @@ Utility for the contract system:
 - Multiple handlers can implement the same effect with different ABI obligations: POSIX,
   WASI, browser sandbox, mock, replay, remote provider.
 
-This is a good fit for adapter-heavy capability effects. The law says what `Fs.read` means;
+This is a good fit for adapter-heavy operation effects. The law says what `Fs.read` means;
 the handler proof says this particular backend realizes that meaning; the unsafe extern is
 only one tool used by that handler.
 
@@ -907,7 +907,7 @@ LAYER 3: Hoare contracts (site-specific triples)
    ↓ static: refinement types, SMT-checked (may use proven law evidence)
    ↓ dynamic: Raise ContractViolation, handler-discharged
 
-LAYER 4: Effect row (the IR accounting)
+LAYER 4: Computation row (the IR accounting)
    ↓ carries all contract items until discharged
    ↓ discharge mode determines runtime representation
    ↓ RecordDischarge preserves audit trail
@@ -915,7 +915,7 @@ LAYER 4: Effect row (the IR accounting)
 
 Each layer feeds the one below. Properties and tested laws hunt for refutation. Proven laws
 produce trusted facts. Trusted facts discharge Hoare preconditions. Hoare contracts appear in
-the effect row. The row is discharged by the appropriate mechanism.
+the computation row. The row is discharged by the appropriate mechanism.
 
 The falsificationist framing resolves the apparent schizophrenia: there is one pipeline, but
 two epistemic regimes within it.
@@ -1199,8 +1199,8 @@ only laws (survived-testing) do NOT enable these optimizations — they are advi
 
 #### 11.4.6 Dead Handler Elimination
 
-If the effect row analysis (from NOTE-013) shows that an effect operation is never raised in
-a given scope (provable from the effect rows of all enclosed computations), the handler for
+If computation-row analysis (from NOTE-013) shows that an effect operation is never raised in
+a given scope (provable from the rows of all enclosed computations), the handler for
 that operation is dead code:
 
 ```
@@ -1211,8 +1211,8 @@ handle computation with {
 → entire handler frame eliminated
 ```
 
-This is row-precision analysis: the effect row tells you exactly which operations *could* be
-raised, so handlers for absent operations are dead.
+This is row-precision analysis: the computation row tells you exactly which operations *could*
+be raised, so handlers for absent operations are dead.
 
 ### 11.5 The Language Boundary and Contract Checking
 
@@ -1230,7 +1230,7 @@ CORE:    contracts are REFINEMENT TYPES + PENDING OBLIGATIONS
          → properties → metadata only, not in the term language
 
 IR (CPS): contracts are ROW ITEMS + DISCHARGE RECORDS
-         → ContractEffect variants in the effect row
+         → ContractEffect variants in the computation row
          → DischargeMode determines runtime representation
          → RecordDischarge preserves audit trail
          → properties do not exist at this level
@@ -1329,7 +1329,7 @@ must hold for whatever f produces. This is **monadic Hoare logic** (Atkey, Bach 
 McKinna). It is not just sequential composition — it involves quantification over the
 intermediate value.
 
-The effect row already accounts for this (ρ₁ ∪ ρ₂), but the contract predicates do not
+The computation row already accounts for this (ρ₁ ∪ ρ₂), but the contract predicates do not
 compose as simply as rows do. Without this, verifying a composed computation requires inlining
 and re-proving from scratch every time.
 
@@ -1350,8 +1350,8 @@ postcondition (guarantee more). Without this rule formalized, the interface→im
 inheritance from §8.2 is undefined — the type checker cannot verify that an impl satisfies its
 interface's contracts.
 
-This also interacts with the effect row: if an impl strengthens a postcondition, does the row
-change? Usually not — the postcondition is about values, not effects. But an impl that adds
+This also interacts with the computation row: if an impl strengthens a postcondition, does the
+row change? Usually not — the postcondition is about values, not effects. But an impl that adds
 effects would violate row subtyping independently.
 
 **Blocks:** interface method contracts (§8.2 \*\*), impl contract verification (§8.2 \*\*\*).
@@ -1420,7 +1420,7 @@ vs. user-defined resumable effect. The current IR models it as `TrapReason::Cont
 recoverable case. The boundary between these two needs precise definition — which failures are
 recoverable, which are terminal, and what the row/type implications are for each.
 
-**Blocks:** runtime diagnostics, handler design, the Failure effect row accounting.
+**Blocks:** runtime diagnostics, handler design, failure row accounting.
 
 ### GAP 7: Meta-Level Soundness [THEORETICAL — needed for trust in optimizer and gradual verification]
 
@@ -1458,7 +1458,7 @@ explicit, especially given the capability authority algebra in §8.2.
 The effect-owned extern model sharpens the boundary:
 
 - Authority denial belongs to the admission/row-discharge path: no handler/binding may be
-  installed for the requested capability effect.
+  installed for the requested operation effect.
 - Contract violation belongs to the operation protocol: a handler exists, but the operation's
   Hoare precondition/postcondition failed.
 - ABI failure belongs to the unsafe adapter path: the host call failed or returned data that
@@ -1583,7 +1583,7 @@ constraints, what happens to unsupported forms — is currently undefined.
 
 - **Swamy et al., "Dependent Types and Multi-Monadic Effects in F*"** (2016).
   Dependent types + effect system + SMT for proving program properties. The closest
-  industrial system to Ash's target (refinement types + effect rows + proof evidence).
+  industrial system to Ash's target (refinement types + computation rows + proof evidence).
   <https://doi.org/10.1145/2946614>
 
 - **de Moura & Bjørner, "Z3: An Efficient SMT Solver"** (2008).
@@ -1597,7 +1597,7 @@ constraints, what happens to unsupported forms — is currently undefined.
 
 - **Dimoulas et al., "Correct Monotonic Contracts"** (2015).
   Semantics of contract systems where contract satisfaction is monotonic. Relevant to the
-  interaction between contracts and the effect row.
+  interaction between contracts and the computation row.
   <https://doi.org/10.1007/s10990-015-9243-2>
 
 - **Greenberg, Pierce, & Weirich, "Contracts Made Manifest"** (2010).
@@ -1607,7 +1607,7 @@ constraints, what happens to unsupported forms — is currently undefined.
 - **Chugh, Rondon, & Jhala, "Nested Refinements: A Logic for Deductive Verification"**
   (2012).
   Liquid types / nested refinement types. Relevant to how refinement predicates compose
-  with the effect row.
+  with the computation row.
   <https://doi.org/10.1145/2398857.2378575>
 
 - **Popper, "The Logic of Scientific Discovery"** (1934/1959).
@@ -1628,7 +1628,8 @@ constraints, what happens to unsupported forms — is currently undefined.
 | 2026-06-23 | Initial version. Two-system analysis, discharge matrix, lowering rules, layering story, connection to NOTE-013 handler algebra. |
 | 2026-06-23 | Added falsificationist epistemology (§4.3-4.4). Reframed evidence as Popperian counter-evidence gathering: proofs cover a critical subset, everything else survives testing. Updated discharge matrix and layering to distinguish proven vs. survived-testing vs. refuted. |
 | 2026-06-23 | Added §8 attachment matrix: which contract types attach to which declaration forms. Interface methods and effect operations carry inherited Hoare proof obligations. Type invariants are the bridge between declaration-level and computation-site contracts. |
-| 2026-06-23 | Added §11 contract lifetimes and operational semantics: pipeline stages, monotonicity principle, per-contract-type lifecycle, contract-guided optimizations (TCO through handlers, contract LTO, inlining without checks, effect row minimization, algebraic specialization, dead handler elimination), language boundary (Surface/Core/IR/Backend), module load time as cross-module evidence boundary. |
+| 2026-06-23 | Added §11 contract lifetimes and operational semantics: pipeline stages, monotonicity principle, per-contract-type lifecycle, contract-guided optimizations (TCO through handlers, contract LTO, inlining without checks, row minimization, algebraic specialization, dead handler elimination), language boundary (Surface/Core/IR/Backend), module load time as cross-module evidence boundary. |
 | 2026-06-23 | Added §12 gaps and missing angles: blame/accountability, monadic Hoare logic, contract subsumption/variance, evaluation mode interaction, concurrent/temporal contracts, contract failure observability, meta-level soundness, contract↔capability boundary, contract lowering surface→core. |
 | 2026-06-24 | Added §8 capability/effect-owned extern boundary: capabilities can be expressed as effect operations plus handlers, while raw host/FFI externs remain effect-local unsafe implementation hooks. Clarified the split between Hoare contracts, handler laws, ABI safety, and authority admission. Updated GAP 8 and open questions with the resulting failure-taxonomy and placement questions. |
 | 2026-06-24 | Expanded the effect-owned extern boundary with two placement alternatives and their contract utility: effect-level externs for canonical host ABIs, and trusted-handler externs for backend-specific adapters. Updated Open Question 8 to treat placement as a surface-syntax decision over a shared semantic invariant. |
+| 2026-06-27 | Normalized target-row wording from effect row to computation row while leaving the detailed fact/evidence/obligation model to a separate follow-up track. |

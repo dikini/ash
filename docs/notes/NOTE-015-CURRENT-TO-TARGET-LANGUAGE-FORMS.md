@@ -3,7 +3,7 @@
 **Date:** 2026-06-24
 **Status:** Living document — exploration in progress
 **Purpose:** Summarize how current Ash language forms should map into the target Ash
-language model: a small core language with effect rows, handlers/providers, contracts,
+language model: a small core language with computation rows, handlers/providers, contracts,
 evidence, and library-level profiles replacing most privileged tower-specific syntax.
 Companion to NOTE-013 (ambient monad and handler composition) and NOTE-014 (contract
 systems unification).
@@ -29,7 +29,7 @@ separate privileged language island.
 The core target model is:
 
 ```text
-fn + ordinary data/types + effect rows + contracts/evidence + raise/handle/provider frames
+fn + ordinary data/types + computation rows + contracts/evidence + raise/handle/provider frames
 ```
 
 `Act`, `Proc`, and `Workflow` may remain as public library names, carriers, profiles, or
@@ -40,7 +40,8 @@ shared substrate:
 Comp<ρ, A>
 ```
 
-where `ρ` is an effect row describing requirements, not authority grants.
+where `ρ` is a computation row describing type-level computation requirements, not authority
+grants.
 
 ## 1. The Primitive Budget
 
@@ -72,12 +73,12 @@ Some constructs are primitive in Core/CPS but should not force large surface syn
 
 | Substrate | Surface posture |
 |---|---|
-| effect rows | Surface annotations and inferred summaries. |
+| computation rows | Surface annotations and inferred summaries. |
 | effect item identity | Canonical compiler identity; surface uses readable paths. |
 | handler/provider frames | Surface `handle`/library providers; runtime owns dispatch. |
 | continuation multiplicity | Core/CPS typing first; surface declarations later. |
 | contract discharge records | Compiler/evidence metadata, not ordinary user data. |
-| trusted extern boundary | Effect-owned implementation hook, not unrestricted callable escape. |
+| trusted runtime/host boundary | Effect-owned implementation hook, not unrestricted callable escape. |
 
 ### 1.3 Library forms and corpus migration targets
 
@@ -136,7 +137,7 @@ handle
 with H_outer
 ```
 
-The effect row is intentionally unordered. It records **what** operations or requirements
+The computation row is intentionally unordered. It records **what** operations or requirements
 may appear. It does not record **which handler runs first**. Handler nesting records order.
 
 For some handlers, order does not matter: disjoint operations with compatible deep handlers
@@ -158,11 +159,11 @@ Consider two effect operations:
 
 ```ash
 effect Exception<E> {
-    throw(e: E) -> Never;
+    fn throw(e: E) -> Never;
 }
 
 effect Choice {
-    choose<A>(xs: List<A>) -> A;
+    fn choose<A>(xs: List<A>) -> A;
 }
 ```
 
@@ -325,34 +326,34 @@ Consequences:
 - contracts require discharge records, not silent erasure;
 - provider/handler installation is operational authority, not syntax decoration.
 
-## 3. Capabilities as the Example Pattern
+## 3. Current Capabilities as the Example Pattern
 
-Capabilities show the intended move for many current constructs.
+Current capabilities show the intended move for many current constructs.
 
 Current Ash has `capability` declarations, capability references in workflow headers,
 operation modes, provider implementations, and capability calls. Target Ash should factor
 that into:
 
 ```text
-capability declaration
+current capability declaration
   -> effect operation signature
   -> row item required by callers
   -> contracts on arguments/results
   -> provider/handler implementation
-  -> optional trusted extern boundary
+  -> optional trusted runtime/host implementation boundary
 ```
 
 Illustrative target shape:
 
 ```ash
 effect Fs {
-    read(path: String) -> String
-        requires { path != "" }
-        extern "host.fs.read";
+    fn read(path: String) -> String
+        requires { path != "" };
 }
 ```
 
-The core does not need a privileged "capability subsystem" separate from effects. It needs:
+The target language does not need a privileged "capability subsystem" separate from effects.
+It needs:
 
 1. canonical operation identity: `Fs.read`;
 2. row contribution: `{fs.read}`;
@@ -360,10 +361,10 @@ The core does not need a privileged "capability subsystem" separate from effects
 4. provider or handler discharge;
 5. optional trusted host implementation.
 
-The surface can still expose capability-like authoring forms if they are useful. Their
-lowering should be honest: they define typed effect operations and provider/admission
-paths. Whether and how authority facts are introduced in source remains unresolved; ordinary
-operation rows should not use a superfluous `cap` prefix.
+Current capability-like authoring forms are migration input, not target syntax. Their lowering
+must be honest: they define typed effect operations and provider/admission paths. Whether and
+how authority facts are introduced in source remains unresolved; ordinary operation rows
+should not use a superfluous `cap` prefix.
 
 ## 4. Current-to-Target Form Matrix
 
@@ -375,7 +376,7 @@ intended direction, current implementation posture, resolved decisions, and open
 | Current form | Implemented/current posture | Intended target | Resolved | To resolve |
 |---|---|---|---|---|
 | literals, variables | Implemented ordinary expressions | Keep core | Yes | No major design issue. |
-| function definitions `fn` | Implemented, currently no full surface effect rows | Keep as primary computation declaration | Yes | Surface row annotation shape and inference/reporting policy. |
+| function definitions `fn` | Implemented, currently no full surface computation rows | Keep as primary computation declaration | Yes | Surface row annotation shape and inference/reporting policy. |
 | function expressions/closures | Implemented with current limitations | Keep core with row-bearing closure types | Mostly | Effect-safe capture and row summaries must be fully aligned. |
 | function call | Implemented | Keep core; call row = callee body row plus continuation row in CPS | Yes in Core/CPS direction | Surface-to-Core lowering remains. |
 | `let` | Implemented | Keep core | Yes | Destructuring irrefutability and diagnostics continue to mature. |
@@ -412,15 +413,15 @@ intended direction, current implementation posture, resolved decisions, and open
 | legacy `ret` | Implemented compatibility | Remove from target syntax; migrate corpus to `return` | Yes | Corpus migration only. |
 | `Monad<K>` evidence | Implemented for selected targets | Primary sequencing abstraction | Yes | Law evidence and arbitrary user evidence execution. |
 
-### 4.4 Effect, capability, resource, and host boundary forms
+### 4.4 Effect, resource, and host boundary forms
 
 | Current form | Implemented/current posture | Intended target | Resolved | To resolve |
 |---|---|---|---|---|
-| `capability` declaration | Implemented current subsystem | Prefer target `effect` operation declaration plus provider/admission metadata | Direction yes | Decide whether `capability` remains a domain library authoring form; no language compatibility layer required. |
+| `capability` declaration | Implemented current subsystem | Migrate to target `effect` operation declaration plus provider/admission metadata | Yes direction | Corpus migration and diagnostics; no target capability form. |
 | capability operation modes `read/write/...` | Implemented vocabulary | Operation metadata or contract/resource tags | Partial | Whether modes are semantic row items or diagnostics/docs only. |
-| capability impls/providers | Implemented around current model | Handler/provider implementation for effect operations | Direction yes | Provider frame API, authority provenance, extern placement. |
-| `builtin fn` | Implemented | Keep narrow compiler-known escape hatch | Partial | Prefer stdlib/effect-owned externs where possible. |
-| `external` / `extern fn` | Reserved/not fully active | Trusted effect-owned host hook | Direction yes | Surface syntax and safety boundary. |
+| capability impls/providers | Implemented around current model | Handler/provider implementation for effect operations | Direction yes | Handler/provider frame API, authority provenance, runtime primitive or future host placement. |
+| `builtin fn` | Implemented as current top-level declaration | Target removes special builtin declarations; trusted stdlib handlers use ordinary `fn` methods whose bodies call `builtin(...)` | Direction yes | Runtime primitive symbol/key type, handler syntax, trusted stdlib boundary, failure/determinism metadata, generic signatures. |
+| `external` / `extern fn` | Reserved/not fully active | Out of scope for the current target language | Yes deferred | Future host/FFI syntax and safety boundary. |
 | resources / `owns` | Implemented as workflow/header concepts | Resource row items plus ownership/borrow/provenance discharge | Direction yes | Split/join/borrow algebra and diagnostics. |
 | effect aliases/groups | Target spec only | Keep as row abbreviation/diagnostic grouping | Yes | Parser/typechecker implementation and private alias export rules. |
 | arbitrary user-defined effects | Out of current target scope | Deferred | Yes deferred | Minimal declaration surface if/when admitted. |
@@ -526,7 +527,7 @@ commutative.
 `Act`, `Proc`, and `Workflow` profiles constrain admissible rows. They do not grant authority.
 
 ```text
-Act profile accepts capability/resource/failure/evidence rows.
+Act profile accepts operation/resource/failure/evidence rows.
 Proc profile accepts Act rows plus process/channel rows.
 Workflow profile accepts Proc rows plus governance/report rows.
 ```
@@ -536,7 +537,7 @@ Workflow profile accepts Proc rows plus governance/report rows.
 An alias or group expands to row items or improves diagnostics. It must never behave like an
 admission package.
 
-### 6.4 Capabilities are effect operations plus discharge
+### 6.4 Current capabilities are subsumed by effects
 
 The current capability concept should be explained in terms of:
 
@@ -557,7 +558,7 @@ signals, but they are not proof.
 ### 6.7 Core/CPS owns the hard semantics
 
 Surface syntax should elaborate into Core. Core type checking and CPS lowering should own
-row facts, discharge facts, continuation rows, and handler/provider behavior.
+row entries, discharge records, continuation rows, and handler/provider behavior.
 
 ### 6.8 Monad composition is handler composition
 
@@ -573,15 +574,13 @@ is supplied by handlers interpreting effect operations. Therefore:
 
 ### 7.1 Surface spelling for effect declarations
 
-Open choice:
+Resolved direction: make `effect` the canonical target vocabulary. Current `capability`
+syntax is migration input and lowers to restricted effect operation declarations plus
+provider/admission metadata. It is not retained as a separate target-language feature.
 
-1. keep `capability` as domain-friendly sugar;
-2. introduce `effect` declarations as the canonical operation declaration form;
-3. allow both, with `capability` lowering to a restricted `effect` declaration.
-
-Recommendation: make `effect` the canonical target vocabulary and retain `capability` only
-as a domain-friendly spelling if it earns its keep. Otherwise, migrate the project-owned
-corpus to `effect` declarations and remove the language form.
+Effect operation members use ordinary `fn` signatures. This follows least surprise:
+operation handlers are functions, and the target grammar does not need a special bare
+signature form inside `effect` blocks.
 
 ### 7.2 External function boundary
 
@@ -621,6 +620,13 @@ NOTE-014 identifies the blockers:
 - temporal contracts for process/workflow behavior;
 - interaction with lazy/memo evaluation timing.
 
+NOTE-021 records the current surface-syntax direction for row-heavy callables and named
+contract/evidence facts: compact callables may keep inline rows such as `A -> {r} B`, while
+heavy signatures use a `where` section containing `row { ... }` plus named `requires`,
+`ensures`, `law`, and `proof` declarations that share one common declaration shape.
+Its "Pre-Spec Delta" section is the handoff checklist for later SPEC-095b/SPEC-096b/SPEC-097b
+alignment.
+
 ### 7.5 Workflow interaction vocabulary
 
 Forms such as `observe`, `orient`, `propose`, `yield`, `proxy`, and `resume` need a separate
@@ -640,11 +646,51 @@ migrate examples/tests instead of accepting old syntax indefinitely.
 The target language should reduce compiler-known builtins where a library/evidence form is
 sufficient. But some primitives remain necessary for Core/CPS, host effects, and bootstrapping.
 
-The open work is an honesty boundary:
+Resolved direction for runtime-provided standard-library operations:
 
-```text
-compiler primitive vs trusted builtin vs stdlib function vs effect-owned extern
+- `extern fn` definitions are out of scope for the current target language.
+- `effect` declarations remain interface declarations, like traits: they define typed
+  operation names and contracts, not implementations.
+- `builtin fn` is not a target declaration form. There is no special builtin member syntax.
+- Trusted standard-library handlers use ordinary `fn` methods. A method body may call the
+  trusted `builtin(...)` primitive to delegate to a runtime-provided implementation.
+- User libraries cannot manufacture new runtime functionality by redeclaring builtin syntax.
+  A builtin implementation is valid only inside the trusted stdlib boundary, and only when
+  its runtime primitive key is known to the runtime builtin table.
+- The runtime binding key is an explicit symbol-like value passed to `builtin(...)`, not a
+  string and not the public Ash module path. This requires a symbol/key type or equivalent
+  typed literal so the compiler can validate keys and signatures without introducing
+  attribute or macro syntax.
+- Missing runtime implementation, signature mismatch against the effect operation, signature
+  mismatch against the runtime primitive descriptor, or use outside the trusted stdlib boundary
+  is a check-time error.
+
+Illustrative target shape, using the existing handler direction from NOTE-018. `provider` is
+accepted as a synonym for `handler`, but examples prefer `handler`:
+
+```ash
+effect String {
+    fn concat(a: String, b: String) -> String;
+}
+
+handler RuntimeString for String {
+    fn concat(a: String, b: String) -> String {
+        builtin(string.concat, a, b)
+    }
+}
 ```
+
+The exact handler/provider declaration syntax is still illustrative. The semantic split is the
+important part: standard-library effects expose the safe operation interface, while trusted
+stdlib handlers interpret those operations with checked runtime primitive bodies. Normal
+handlers can implement the same effect interface without `builtin(...)`, for
+example as a mock, replay, sandbox, proof interpreter, or alternative runtime adapter.
+
+The remaining issues are the exact handler/provider syntax, the symbol/key type for runtime
+primitive identifiers, trusted stdlib identity, builtin failure/determinism metadata, generic
+builtin signatures, default admission/installation policy for stdlib handlers, and whether
+value-like runtime operations are automatically discharged or retain explicit internal row
+items.
 
 ## 8. Migration Strategy
 
@@ -672,7 +718,7 @@ the target replacement and add target-form coverage before migrating that corpus
 - functions and closures;
 - `act`/`do` blocks;
 - workflow headers and statements;
-- capability calls;
+- current capability calls;
 - process/channel operations;
 - contracts and obligations.
 
@@ -682,7 +728,7 @@ Project-owned legacy uses should be rewritten to target constructs:
 
 ```text
 workflow header      -> function row + admission/contract metadata
-capability call      -> effect operation raise/call with provider discharge
+current capability call -> effect operation raise/call with provider discharge
 receive guard        -> channel effect + guard contract
 oblige/check         -> obligation/contract row item + evidence state
 do:Act/do:Proc/...   -> do block checked against a row profile, if profiles remain
@@ -717,7 +763,7 @@ The design rule for future cleanup:
 
 ```text
 If a construct names authority, governance, orchestration, runtime service, or evidence,
-it should be represented as an effect row item, handler/provider/admission rule, contract
+it should be represented as a computation-row item, handler/provider/admission rule, contract
 discharge, or library declaration unless the core type system or operational semantics
 requires it as a primitive.
 ```
@@ -743,9 +789,15 @@ Internal references:
 - [SPEC-100: Core Type Checking](../spec/SPEC-100-CORE-TYPE-CHECKING.md)
 - [NOTE-013: Ambient Monad and Handler Composition Algebra](NOTE-013-AMBIENT-MONAD-AND-HANDLER-COMPOSITION-ALGEBRA.md)
 - [NOTE-014: Contract Systems Unification](NOTE-014-CONTRACT-SYSTEMS-UNIFICATION.md)
+- [NOTE-021: Row, Callable, Where, and Fact Syntax](NOTE-021-ROW-CALLABLE-WHERE-AND-FACT-SYNTAX.md)
 
 ## 11. Changelog
 
+- 2026-06-27: Linked NOTE-021 as the focused syntax note for row-heavy callables, expanded
+  `where row { ... }` spelling, named predicate/proof facts, and evidence row entries.
+  NOTE-021 now carries the pre-spec delta checklist for later target-spec alignment.
+- 2026-06-27: Normalized target-row wording from effect rows to computation rows, with
+  effect operations treated as one family of row entries rather than the whole row model.
 - 2026-06-24: Initial synthesis note. Captures current-to-target language-form taxonomy,
   resolved direction, implemented baseline, and unresolved cleanup areas for the surface
   language convergence effort.

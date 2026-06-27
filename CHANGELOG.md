@@ -6,6 +6,13 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Added
+- Added NOTE-021, a living syntax note for row-bearing callable types, expanded `where`
+  rows as an alternate layout for heavy callable type rows, explicit row tails, named
+  predicate/proof facts, shared `requires`/`ensures`/`law`/`proof` declaration shape, row
+  entries that reference evidence where evidence denotes a fact plus its proof/check/record,
+  mutually exclusive inline versus `where row { ... }` row spelling, and ordinary
+  lexical/module name-resolution rules for fact shadowing. The note includes a pre-spec delta
+  checklist for later SPEC-095b/SPEC-096b/SPEC-097b alignment.
 - Added NOTE-020, a computation-row taxonomy note that broadens the target row model beyond
   effect rows to include evaluation modes, recoverable failure, partiality, operational
   requirements, authority/admission, resources/regions, contracts/evidence, lifecycle, and
@@ -80,6 +87,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Added `docs/ideas/research/PROTOCOL-GATED-TYPE-DIRECTED-LLM-EXECUTION.md`, a research note on protocol-gated type-directed LLM execution with deterministic oracles, evidence admission, replayable traces, and references to Recursive Language Models and LLM state-machine modeling work.
 
 ### Changed
+- Normalized target-row terminology across living notes to prefer `Row` in source syntax and
+  "computation row" in prose for the type-level row concept, reserving effect/effect
+  operation wording for the operation family inside rows. Specs are intentionally left for a
+  later alignment stage.
 - Settled the plain target effect declaration syntax around `effect` blocks containing `fn`
   operation signatures, with row items and call sites using ordinary resolvable operation
   names while canonical operation identity remains a module/name-resolution concern, and

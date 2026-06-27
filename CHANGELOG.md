@@ -24,6 +24,15 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   handler typing section (continuation as ordinary typed parameter, multiplicity via
   function type).
 ### Added
+- Added NOTE-025, establishing the effect identity model via sorts and impls. Interfaces are
+  effect sorts (abstract families with laws). Phantom types + impls are identity carriers —
+  the impl type parameter is the operation identity, not the interface name. After
+  monomorphization, `F::read` (abstract) becomes `PosixFs::read` (concrete), enabling
+  multiple simultaneous handlers for the same interface with distinct identities. Records
+  three handler production forms: derive (compiler-synthesized deep handler), handler-in-impl
+  (co-located explicit), and standalone handler function. Provides worked examples for deep
+  (Fs), escape (Exception), and multi-shot (Choice) handlers. Revises the NOTE-022
+  concrete-name identity model.
 - Added NOTE-024, consolidating all host/FFI and extern placement ideas from NOTE-013/014/018/019
   into a single design note. Establishes the current target position: `extern` is reserved but
   unspecified, `builtin(...)` is the only host-reaching mechanism, `builtin fn` declaration

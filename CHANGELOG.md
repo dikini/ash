@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
+### Added
+- NOTE-026: Newtype and phantom types. Zero-cost nominal wrapper giving an existing type a
+  distinct identity while sharing its runtime representation. Unifies newtype wrappers and
+  phantom types into one mechanism. Grammar (`newtype` keyword), type-system semantics
+  (definitional equality — never equal to representation, unlike transparent alias), coercion
+  model (explicit wrap/unwrap, no automatic coercion), effect-identity interaction (distinct
+  identity, zero-cost wrapping). Worked examples: domain primitives, phantom tagging,
+  state-machine encoding, effect carriers. Deriving impls deferred (GeneralizedNewtypeDeriving
+  analog). Resolves the "phantom types/newtype deferred" item from NOTE-025 §7.1.
+
 ### Changed
 - Reconciled SPEC-095b with the handler marker (NOTE-023 §7) and bodyless type declarations
   (NOTE-025 §7.1). SPEC-095b §4.3: `handler` is no longer a pure alias for `fn` — it produces

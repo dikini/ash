@@ -574,9 +574,9 @@ type ConfiguredFs = { root: Path, readonly: Bool }; -- data-carrying: nominal re
 type List<T> = Nil | Cons { head: T, tail: List<T> }; -- nominal ADT
 ```
 
-Phantom types (`type F<A> = Unit` carrying a type parameter without equating to a
-representation) are a related but separate deferred type-system enhancement — see NOTE-025
-§7.1 "Deferred follow-up."
+Phantom types and newtype wrappers (`newtype T = T(R)`) are addressed in NOTE-026 (Newtype
+and Phantom Types), which defines the `newtype` keyword as the unified zero-cost nominal
+wrapper mechanism.
 
 ## 7. Workflow Definitions
 

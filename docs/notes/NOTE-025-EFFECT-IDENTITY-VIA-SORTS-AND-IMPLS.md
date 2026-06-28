@@ -34,8 +34,7 @@ into SPEC-095b/096b/097b. When the project moves to spec updates:
   collapse all identity-only types into one identity. The current grammar requires a body
   (`type_definition = "type" identifier [type_params] "=" type_body ";"`); the delta makes
   the `= type_body` optional. See §7 Q1. Phantom types and newtype-like nominal forms
-  carrying type parameters are a related but separate deferred type-system enhancement —
-  see §7 Q1 "Deferred follow-up."
+  carrying type parameters are addressed in NOTE-026 (Newtype and Phantom Types).
 - **Handler marker (type-level attribute):** `handler` is no longer a pure keyword alias
   for `fn`. It produces a function whose type carries a `handler` marker — a type-level
   attribute identifying handler intent, analogous to comp mode (eager/lazy/memo). Derive
@@ -619,8 +618,10 @@ already in `impl`) and coherence coupling (must the type and interface be co-loc
 `type F<A> = Unit` does not give distinct phantom identities either: the phantom parameter
 `<A>` is erased at definitional equality (`PosixFs<Int> ≡ PosixFs<String> ≡ Unit`). True
 phantom types and newtype-like nominal forms that carry type parameters without equating
-to a representation are one deferred type-system enhancement — not needed for the current
-effect model, where bodyless types suffice for identity.
+to a representation are addressed in NOTE-026 (Newtype and Phantom Types), which defines
+the `newtype` mechanism as the unified solution for both zero-cost wrappers and phantom
+types. Bodyless types (above) suffice for identity-only carriers; newtype covers the
+inhabited-wrapper case.
 
 **Worked example:**
 

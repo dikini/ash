@@ -391,6 +391,21 @@ callee_body_row union body_row
 The CPS lowering introduces a continuation for `body`; the checker must preserve enough row
 facts for lowering to materialize the CPS `Call.row` as specified by SPEC-098b and SPEC-099.
 
+If the callee result carries postcondition `Q(name)` and the checked body immediately consumes
+`name` in a continuation with precondition `R(name)`, the checker emits NOTE-030's composition
+obligation:
+
+```text
+∀name. Q(name) ⇒ R(name)
+```
+
+When this obligation is proven, the continuation precondition is discharged by the producer
+postcondition and the checker records composed contract metadata. When it is unknown, the
+active verification profile chooses rejection, deferred obligation, or dynamic demotion. A
+dynamic demotion inserts a runtime check at the continuation boundary; unrecoverable failure
+traps with `ContractViolation(ContractDiagnostic)`, while recoverable behavior must use an
+explicit `fail` effect and visible failure row item.
+
 ### 11.6 If
 
 The condition must check as `Bool`. Both branches must check against a compatible result
@@ -569,3 +584,4 @@ generic row mismatch.
 
 - 2026-06-20: Created Core Ash type-checking specification with declarative rules and an initial annotation-led algorithmic profile.
 - 2026-06-28: Reconciled with NOTE-029. Dynamic contract failure traps with `ContractViolation(ContractDiagnostic)`, trap typing remains row `{}`, and recoverability requires explicit `fail` with a visible failure row item.
+- 2026-06-28: Reconciled with NOTE-030. `LetCall`/sequencing now emits the producer-postcondition-to-continuation-precondition obligation `∀name. Q(name) ⇒ R(name)` and records composed contract metadata when discharged.

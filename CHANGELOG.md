@@ -42,6 +42,12 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   analog). Resolves the "phantom types/newtype deferred" item from NOTE-025 §7.1.
 
 ### Changed
+- Reconciled NOTE-030 into target specs. SPEC-097b now defines contract composition through
+  sequencing: rows compose by union while producer postconditions discharge continuation
+  preconditions (`∀a. Q(a) ⇒ R(a)`) and composed postconditions existentially thread the
+  intermediate value. SPEC-098b adds `ComposedContract` sidecar metadata. SPEC-099 records
+  the Core sequencing metadata boundary, and SPEC-100 emits the corresponding proof
+  obligation/dynamic fallback during `LetCall` checking.
 - Reconciled target specs with NOTE-026 through NOTE-029. SPEC-095b now promotes
   `newtype_definition` into the target grammar. SPEC-097b defines newtype identity,
   behavioral Hoare subsumption, blame polarity, denotational purity, and lazy/memo contract

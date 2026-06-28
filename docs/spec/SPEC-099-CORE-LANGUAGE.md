@@ -267,6 +267,24 @@ RecordDischarge {
 
 A function with a dynamic contract check does not automatically gain a special `ContractViolation` row item. If the check is unrecoverable, it traps and remains outside ordinary row accounting. If the check is recoverable, the lowering must use an explicit `fail` effect and include that failure item in the row.
 
+### 6.4 Contract composition metadata
+
+Per NOTE-030, Core sequencing does not need a new expression form for monadic Hoare
+composition. Existing forms such as `LetCall`, `LetVal`, `LetCont`, and the synthesized CPS
+continuation structure may carry sidecar `ComposedContract` metadata.
+
+For a producer with postcondition `Q(a)` and a continuation with precondition `R(a)`, the
+metadata records the proof obligation:
+
+```text
+∀a. Q(a) ⇒ R(a)
+```
+
+If the obligation is statically or evidence discharged, the metadata links the producer
+postcondition discharge to the continuation precondition discharge. If the obligation remains
+dynamic, the lowered Core inserts a dynamic check at the point where the continuation is
+invoked. The dynamic failure path follows §6.3.
+
 ## 7. Laws, properties, and evidence
 
 Laws and properties are compile-time metadata. They do not appear in the core expression grammar.
@@ -562,3 +580,4 @@ Core Ash does not include surface sugar as primitive syntax. It includes only th
 - 2026-06-20: Clarified CPS field synthesis, dynamic contract discharge, law evidence lowered to refinements, diagnostics, pattern-match desugaring, and `LetCont` introduction during lowering.
 - 2026-06-20: Reconciled SPEC-099 with SPEC-098b/SPEC-096b by removing `ContractViolation` as a row item/raised operation, making `Handle.row` local residual only, specifying affine continuation typing for handler resumes, treating user-defined resumable effects as out of scope, and lowering evidence to discharge metadata or sidecar records rather than ordinary values.
 - 2026-06-28: Reconciled with NOTE-027 and NOTE-029. `ContractDischarge` carries blame metadata, `TrapReason::ContractViolation` carries `ContractDiagnostic`, and dynamic contract examples preserve structured diagnostics while keeping recoverable behavior explicit through `fail`.
+- 2026-06-28: Reconciled with NOTE-030. Added §6.4 `ComposedContract` sidecar metadata for Core sequencing, including the `∀a. Q(a) ⇒ R(a)` proof obligation and dynamic continuation-boundary fallback.

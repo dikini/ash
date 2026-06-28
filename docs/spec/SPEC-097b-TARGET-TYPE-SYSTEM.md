@@ -460,6 +460,48 @@ a failed `ensures` check blames the callee or impl that promised the result. Sub
 must preserve the source contract clause so diagnostics can report which party declared the
 failed obligation.
 
+### 6.6 Contract composition through sequencing
+
+Per NOTE-030, computation rows and contract predicates compose differently. For sequencing or
+`bind`, rows compose by union, while contracts compose through a predicate-transformer rule.
+
+Given:
+
+```text
+m : Comp<ρm, A>
+  requires P
+  ensures  Q(a)
+
+k : A -> Comp<ρk, B>
+  requires R(a)
+  ensures  S(a, b)
+```
+
+The composed computation has:
+
+```text
+bind(m, k) : Comp<ρm ∪ ρk, B>
+  requires P ∧ ∀a. Q(a) ⇒ R(a)
+  ensures  ∃a. Q(a) ∧ S(a, b)
+```
+
+The central proof obligation is `∀a. Q(a) ⇒ R(a)`: the producer's postcondition must
+establish the continuation's precondition for every intermediate value the producer may
+return. If the checker proves this implication, the continuation precondition is discharged by
+the producer postcondition and the discharge is recorded. If the checker cannot prove it, the
+obligation may be rejected, deferred, or demoted to a dynamic contract check according to the
+active profile.
+
+The existential postcondition is the strongest generic summary. A public function may expose a
+simpler postcondition `T(b)` when the checker proves:
+
+```text
+∀b. (∃a. Q(a) ∧ S(a, b)) ⇒ T(b)
+```
+
+This rule applies to lowered sequencing forms such as `let a = m(); k(a)`. `bind` is
+meta-notation, not required surface syntax.
+
 ## 7. Row polymorphism
 
 ### 7.1 Higher-order functions
@@ -939,3 +981,4 @@ Mode mismatch is a type error, not a performance warning. The user must explicit
 - 2026-06-27: Reconciled with NOTE-021 (Row kind, computation row terminology), NOTE-022 (operations as interface methods), NOTE-023 (handler typing: continuation as ordinary parameter, multiplicity via function type).
 - 2026-06-27: Reconciled with NOTE-025 (effect identity via sorts and impls). OperationEffect identity changed from interface-qualified to impl-type-qualified. Handler typing examples updated. §3.3 and §8.1 revised.
 - 2026-06-28: Reconciled with NOTE-026 through NOTE-029. Added §3.9 newtype identity/representation semantics, expanded §6.5 with Hoare contract subsumption and blame polarity, and added §15.7 denotational purity plus lazy/memo contract timing.
+- 2026-06-28: Reconciled with NOTE-030. Added §6.6 contract composition through sequencing: rows compose by union, producer postconditions discharge continuation preconditions via `∀a. Q(a) ⇒ R(a)`, and composed postconditions existentially thread the intermediate value.

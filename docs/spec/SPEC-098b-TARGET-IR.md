@@ -446,6 +446,17 @@ pub struct ContractDiagnostic {
     pub handler_history: Vec<HandlerDecision>,
     pub replay: ReplayStatus,
 }
+
+pub struct ComposedContract {
+    pub producer_postcondition: DischargeRef,
+    pub continuation_precondition: DischargeRef,
+    pub intermediate_binder: Identifier,
+    pub proof_obligation: PredicateRef,
+    pub composed_postcondition: PredicateRef,
+    pub mode: DischargeMode,
+    pub evidence: Option<EvidenceRef>,
+    pub source_span: Span,
+}
 ```
 
 A contract effect cannot be silently erased from a row without recording its discharge mode.
@@ -453,6 +464,11 @@ The IR must preserve this information for audit, diagnostics, and evidence cachi
 contract failures use `ContractDiagnostic` to preserve the structured bottom payload defined
 by NOTE-029. Blame labels follow NOTE-027: `requires` failures are negative/caller-side;
 `ensures` failures are positive/callee-or-impl-side.
+
+Per NOTE-030, composed contract metadata connects a producer postcondition to a continuation
+precondition at a sequencing or `bind` boundary. The IR does not need a new term form for
+monadic Hoare composition; it needs enough sidecar metadata to show that `∀a. Q(a) ⇒ R(a)`
+was proved, evidence-discharged, or left as a dynamic check.
 
 ## 5. Raise and Handle
 
@@ -1401,3 +1417,4 @@ resolved through an additional indirection layer. Both are possible but not spec
   examples into fully normalized core examples and schematic handler patterns. Marked
   laziness section as pseudo-IR.
 - 2026-06-28: Reconciled with NOTE-027 and NOTE-029. Extended `ContractDischarge` with blame metadata, added `BlameLabel`/`ContractDiagnostic`, changed `TrapReason::ContractViolation` to carry structured diagnostics, and updated the dynamic contract example/recoverable-failure boundary.
+- 2026-06-28: Reconciled with NOTE-030. Added `ComposedContract` sidecar metadata connecting producer postconditions to continuation preconditions at sequencing/`bind` boundaries without adding a new IR term form.

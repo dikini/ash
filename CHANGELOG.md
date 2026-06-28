@@ -6,6 +6,13 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Added
+- NOTE-027: Contract blame and subsumption. Resolves NOTE-014 GAP 1 (blame) and GAP 3
+  (subsumption) — the two CRITICAL gaps blocking impl contract verification. Subsumption:
+  behavioral subtyping rule `{P} C {Q} ⊑ {P'} C {Q'} iff P ⇒ P' (precondition contravariant)
+  and Q' ⇒ Q (postcondition covariant), checked eagerly at impl definition. Blame: party
+  (Caller/Callee/Impl), polarity (Negative/Positive), module path, source span. Blame is
+  immutable through handler composition — handler decisions recorded separately. Connects to
+  GAP 6 (failure observability) with the ContractDiagnostic struct.
 - NOTE-026: Newtype and phantom types. Zero-cost nominal wrapper giving an existing type a
   distinct identity while sharing its runtime representation. Unifies newtype wrappers and
   phantom types into one mechanism. Grammar (`newtype` keyword), type-system semantics

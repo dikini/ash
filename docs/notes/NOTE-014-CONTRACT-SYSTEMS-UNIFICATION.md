@@ -1180,6 +1180,12 @@ be worked through before the contract system is well-defined. Each is tagged wit
 and the work it blocks.
 
 ### GAP 1: Blame and Accountability [CRITICAL — blocks diagnostics, blocks impl contract checking]
+**Status: Resolved in NOTE-027.** Blame labels (`BlameLabel { party, polarity, module_path,
+function_name, contract_text, source_span }`) carry diagnostic state through the IR.
+Polarity: `requires` violated → caller (negative); `ensures` violated → callee/impl
+(positive). Blame is immutable through handler composition — handler decisions (resume,
+propagate, escape) are recorded separately, never as blame. See NOTE-027 §2 (Blame
+Assignment), §3 (Blame Through Handler Composition), §4 (Diagnostic State).
 
 When a dynamic contract fires, the system needs to know WHO violated it. This is the
 Findler-Felleisen higher-order contract blame theory:
@@ -1224,6 +1230,11 @@ and re-proving from scratch every time.
 **Blocks:** modular verification, contract-aware optimization of composed computations.
 
 ### GAP 3: Contract Subsumption / Variance [CRITICAL — blocks interface→impl contract inheritance]
+**Status: Resolved in NOTE-027.** The behavioral subtyping rule is formalized as:
+`{P} C {Q} ⊑ {P'} C {Q'} iff P ⇒ P' (precondition contravariant — weakens) and Q' ⇒ Q
+(postcondition covariant — strengthens)`. Checked eagerly at impl definition time. Impl
+with no explicit contracts inherits the interface's contracts exactly. See NOTE-027 §1
+(Contract Subsumption), §1.5 (check timing), §5 (verification algorithm).
 
 We stated that impl contracts must be "stronger than" interface contracts (§8.2), but never
 formalized the subsumption rule. The standard behavioral subtyping rule is:
@@ -1522,3 +1533,4 @@ constraints, what happens to unsupported forms — is currently undefined.
 | 2026-06-27 | Normalized target-row wording from effect row to computation row while leaving the detailed fact/evidence/obligation model to a separate follow-up track. |
 | 2026-06-27 | Applied NOTE-022 decision: replaced all `effect Fs { ... }` declaration examples with `interface Fs { ... }`. Externs now shown as dispatch-side constructs with `for Fs` ownership annotation (Placement A) or handler-local (Placement B). The contract layering (Hoare contract, handler law, ABI safety, authority claim) is unchanged — only the declaration keyword changes. |
 | 2026-06-27 | Consolidated host/FFI and extern placement into NOTE-024. Replaced the detailed §8 extern placement content (Placement A/B, typing rules, four obligation layers) with a pointer to NOTE-024. Preserved the contract layer separation table, updating the ABI safety mechanism column to reference `builtin(...)` and NOTE-024. Updated Open Question 8 to reference NOTE-024. The current target position: `extern` is reserved with no grammar production; `builtin(...)` is the only host-reaching mechanism. |
+| 2026-06-28 | GAP 1 (blame) and GAP 3 (subsumption) resolved in NOTE-027. Blame labels formalized: party (Caller/Callee/Impl), polarity (Negative/Positive), module path, source span. Blame is immutable through handler composition. Subsumption rule: `P ⇒ P'` (precondition weakens) and `Q' ⇒ Q` (postcondition strengthens), checked eagerly at impl definition. Original gap descriptions preserved for context. |

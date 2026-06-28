@@ -6,6 +6,11 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Added
+- NOTE-030: Monadic Hoare logic for Ash computations. Resolves NOTE-014 GAP 2. Rows compose
+  through union (`ρm ∪ ρk`), while contracts compose through predicate transformers: producer
+  postconditions discharge continuation preconditions (`∀a. Q(a) ⇒ R(a)`), and composed
+  postconditions existentially thread the intermediate value (`∃a. Q(a) ∧ S(a, b)`). Dynamic
+  fallback follows NOTE-029 structured-bottom semantics unless explicitly mapped to `fail`.
 - NOTE-029: Structured bottom and contract diagnostics. Resolves NOTE-014 GAP 6. Default
   dynamic contract failure is structured bottom: `Trap { reason:
   ContractViolation(ContractDiagnostic) }`. `ContractViolation` is not a row item and not

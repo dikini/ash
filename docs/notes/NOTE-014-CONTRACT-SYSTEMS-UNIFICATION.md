@@ -1208,8 +1208,17 @@ semantics.
 
 ### GAP 2: Monadic Hoare Logic (Contract Composition Through bind) [ARCHITECTURAL — blocks verification of composed computations]
 
-We formalized how laws compose (NOTE-013) and how Hoare contracts compose sequentially
-(§1.1). But we have not formalized how contracts compose through `bind`:
+**Status: Resolved in NOTE-030.** Rows compose through `ρm ∪ ρk`, but contracts compose
+through predicate transformers. For `m` ensuring `Q(a)` and continuation `k(a)` requiring
+`R(a)`, the bind boundary creates the proof obligation `∀a. Q(a) ⇒ R(a)`. The generic
+composed postcondition existentially threads the intermediate value: `∃a. Q(a) ∧ S(a, b)`.
+Static proof records `ContractDischarge` metadata; failed dynamic fallback follows NOTE-029's
+structured-bottom rule. See NOTE-030 §1 (Core decision), §3 (Types and contract summaries),
+§4 (Semantics), and §5 (Worked examples).
+
+The original gap was that NOTE-013 formalized row-polymorphic `bind`, and §1.1 sketched
+ordinary sequential Hoare composition, but Ash did not yet have a rule for data-dependent
+contract composition through `bind`:
 
 ```
 f : Comp<{requires P}, A>         (precondition P, delivers A)
@@ -1218,14 +1227,15 @@ g : A -> Comp<{requires Q}, B>    (precondition Q on f's result, delivers B)
 bind(f, g) : Comp<{requires ??, ensures ??}, B>
 ```
 
-The combined precondition is `P ∧ (∀a. Q[a/x])` — you need P for the first step, and then Q
-must hold for whatever f produces. This is **monadic Hoare logic** (Atkey, Bach Poulsen,
-McKinna). It is not just sequential composition — it involves quantification over the
-intermediate value.
+NOTE-030 refines the earlier sketch. The combined row is `ρf ∪ ρg`, but the continuation
+precondition is discharged by the producer postcondition: for producer postcondition `Q(a)`
+and continuation precondition `R(a)`, the central proof obligation is `∀a. Q(a) ⇒ R(a)`.
+This is **monadic Hoare logic** / weakest-precondition reasoning, not simple sequential
+predicate concatenation.
 
-The computation row already accounts for this (ρ₁ ∪ ρ₂), but the contract predicates do not
-compose as simply as rows do. Without this, verifying a composed computation requires inlining
-and re-proving from scratch every time.
+The computation row already accounts for effects by union, but contract predicates compose
+through predicate transformers. NOTE-030 makes this modular, so composed computations do not
+need to be inlined and re-proved from scratch every time.
 
 **Blocks:** modular verification, contract-aware optimization of composed computations.
 
@@ -1550,3 +1560,4 @@ constraints, what happens to unsupported forms — is currently undefined.
 | 2026-06-28 | GAP 1 (blame) and GAP 3 (subsumption) resolved in NOTE-027. Blame labels formalized: party (Caller/Callee/Impl), polarity (Negative/Positive), module path, source span. Blame is immutable through handler composition. Subsumption rule: `P ⇒ P'` (precondition weakens) and `Q' ⇒ Q` (postcondition strengthens), checked eagerly at impl definition. Original gap descriptions preserved for context. |
 | 2026-06-28 | GAP 4 (contracts × evaluation modes) resolved in NOTE-028. Purity is denotational: `strict`/`lazy`/`memo` and the handler marker are purity-preserving attributes; impurity comes from residual/latent rows. Contract timing: strict checks at call/return, lazy checks on every force, memo checks on first force and replays cached terminal outcomes. |
 | 2026-06-28 | GAP 6 (contract failure observability and bottom behavior) resolved in NOTE-029. Default dynamic contract failure is structured bottom: `Trap { reason: ContractViolation(ContractDiagnostic) }`. `ContractViolation` is not a row item or implicit resumable effect; recoverable behavior lowers to explicit `fail` and row-accounts the failure. Diagnostics preserve blame, predicate, observed values, call chain, discharge history, handler decisions, and replay status. |
+| 2026-06-28 | GAP 2 (monadic Hoare logic) resolved in NOTE-030. Rows compose by union, while contracts compose through predicate-transformer reasoning: producer postconditions discharge continuation preconditions (`∀a. Q(a) ⇒ R(a)`), and composed postconditions existentially thread the intermediate value (`∃a. Q(a) ∧ S(a, b)`). |

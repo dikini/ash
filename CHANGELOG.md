@@ -6,6 +6,13 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Added
+- NOTE-029: Structured bottom and contract diagnostics. Resolves NOTE-014 GAP 6. Default
+  dynamic contract failure is structured bottom: `Trap { reason:
+  ContractViolation(ContractDiagnostic) }`. `ContractViolation` is not a row item and not
+  implicitly resumable; explicit recoverability lowers to `fail` and exposes `{fail ...}` in
+  the row. The diagnostic payload preserves predicate, source span, blame, observed values,
+  call chain, discharge history, handler decisions, and replay status. Lazy failures create
+  fresh diagnostics on each force; memo failures replay the first terminal diagnostic.
 - NOTE-028: Purity, evaluation modes, and contract timing. Resolves NOTE-014 GAP 4 and
   NOTE-025 §7.9. Purity is denotational: referential transparency is the language-level test.
   `strict`/`lazy`/`memo` and the handler marker are purity-preserving attributes; impurity

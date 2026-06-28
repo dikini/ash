@@ -1304,11 +1304,19 @@ This may need its own treatment (possibly NOTE-015).
 **Blocks:** Proc-level and Workflow-level contracts, the full tower.
 
 ### GAP 6: Contract Failure Observability and Bottom Behavior [CRITICAL — connects to user's first-class bottom concern]
+**Status: Resolved in NOTE-029.** Default dynamic contract failure is structured bottom:
+`Trap { reason: ContractViolation(ContractDiagnostic) }`. `ContractViolation` is not a row
+item and is not implicitly resumable. Recoverable contract behavior must lower to an explicit
+`fail` effect and expose `{fail ...}` in the row. Diagnostics preserve predicate, source span,
+blame, observed values, call chain, discharge history, handler decisions, and replay status.
+Lazy failures produce fresh diagnostics on each force; memo failures replay the first terminal
+diagnostic. See NOTE-029 §1 (Core decision), §2 (Diagnostic payload), §3 (Lowering semantics),
+and §5 (Memo and lazy replay semantics).
 
-We treat ContractViolation as a trap (bottom) or a raised effect, but have not discussed what
-diagnostic information survives the failure. The user has flagged that dynamic contract
-failure semantics are questionable and that the dynamic contract example had row/type
-inconsistency on the failure branch.
+The previous draft treated `ContractViolation` as either a trap (bottom) or a raised effect,
+which left the row/type boundary unclear. NOTE-029 resolves this: default contract failure is
+structured bottom (`Trap`), while recoverable behavior must use an explicit `fail` effect with
+row accounting. The diagnostic-survival question is answered by `ContractDiagnostic`.
 
 Contract failure IS a structured bottom — it should carry rich diagnostic state:
 
@@ -1319,11 +1327,11 @@ Contract failure IS a structured bottom — it should carry rich diagnostic stat
 - Whether a handler was installed and chose not to resume
 - Blame label (GAP 1)
 
-This also raises the boundary question (Open Question 5): `ContractViolation` as built-in trap
-vs. user-defined resumable effect. The current IR models it as `TrapReason::ContractViolation`
-(unrecoverable bottom) for the trap case, and as `Raise { op: Failure(...) }` for the
-recoverable case. The boundary between these two needs precise definition — which failures are
-recoverable, which are terminal, and what the row/type implications are for each.
+NOTE-029 resolves the boundary question: `ContractViolation` is a built-in trap reason for
+default dynamic contract failure, not a user-defined resumable effect. Recoverable contract
+behavior is explicit and lowers to `Raise { op: fail ..., ... }`; the corresponding `fail`
+item appears in the row. Thus terminal failure and recoverable failure are distinguished by
+lowering and row accounting, not by overloading `ContractViolation` itself.
 
 **Blocks:** runtime diagnostics, handler design, failure row accounting.
 
@@ -1541,3 +1549,4 @@ constraints, what happens to unsupported forms — is currently undefined.
 | 2026-06-27 | Consolidated host/FFI and extern placement into NOTE-024. Replaced the detailed §8 extern placement content (Placement A/B, typing rules, four obligation layers) with a pointer to NOTE-024. Preserved the contract layer separation table, updating the ABI safety mechanism column to reference `builtin(...)` and NOTE-024. Updated Open Question 8 to reference NOTE-024. The current target position: `extern` is reserved with no grammar production; `builtin(...)` is the only host-reaching mechanism. |
 | 2026-06-28 | GAP 1 (blame) and GAP 3 (subsumption) resolved in NOTE-027. Blame labels formalized: party (Caller/Callee/Impl), polarity (Negative/Positive), module path, source span. Blame is immutable through handler composition. Subsumption rule: `P ⇒ P'` (precondition weakens) and `Q' ⇒ Q` (postcondition strengthens), checked eagerly at impl definition. Original gap descriptions preserved for context. |
 | 2026-06-28 | GAP 4 (contracts × evaluation modes) resolved in NOTE-028. Purity is denotational: `strict`/`lazy`/`memo` and the handler marker are purity-preserving attributes; impurity comes from residual/latent rows. Contract timing: strict checks at call/return, lazy checks on every force, memo checks on first force and replays cached terminal outcomes. |
+| 2026-06-28 | GAP 6 (contract failure observability and bottom behavior) resolved in NOTE-029. Default dynamic contract failure is structured bottom: `Trap { reason: ContractViolation(ContractDiagnostic) }`. `ContractViolation` is not a row item or implicit resumable effect; recoverable behavior lowers to explicit `fail` and row-accounts the failure. Diagnostics preserve blame, predicate, observed values, call chain, discharge history, handler decisions, and replay status. |

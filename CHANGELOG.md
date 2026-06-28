@@ -6,6 +6,20 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Changed
+- Resolved all eight NOTE-025 §7 open questions and introduced the handler marker. NOTE-025:
+  §7 rewritten from Open Questions to Resolved Decisions with grammar/types/semantics/worked
+  examples for each. Key decisions: (Q1) bodyless nominal type `type PosixFs;` replaces
+  transparent alias `type PosixFs = Unit;` which collapses identity; phantom types/newtype
+  deferred. (Q2) derive naming always explicit. (Q3) derive is the total fold over all
+  operations. (Q4) multiple handlers per impl allowed. (Q5) `{F::read | r}` always sufficient
+  — strong coherence eliminates ambiguity. (Q6) impl-less reference is a hard error. (Q7)
+  global coherence stricter than Rust — per (type, op-name) uniqueness. (Q8) dynamic dispatch
+  deferred — bridge via data-carrying vtable impl type. NOTE-023: §7 fully rewritten —
+  `handler` is no longer a pure alias for `fn`; it produces a handler-marked function type
+  (type-level attribute, like comp mode). Required so derive can filter operations from
+  handlers and `handle expr with name` can validate handler intent. Added grammar
+  (`handler_decl` production), types (handler marker), subtyping (`handler fn <: fn`),
+  and worked examples. All type declarations in NOTE-025 swept to bodyless form.
 - Reconciled NOTE-022, NOTE-023, SPEC-095b, SPEC-096b, and SPEC-097b with NOTE-025 (effect
   identity via sorts and impls). NOTE-022: working principle updated — interface is a sort,
   impl type is identity carrier. NOTE-023: all handler examples updated to impl-type-qualified

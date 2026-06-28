@@ -14,8 +14,12 @@ algebra), NOTE-018 (boundary discipline), and NOTE-019 (convergence plan).
 
 This note is pre-spec. When the project moves to spec updates, reconcile:
 
-- **Handler grammar:** NOTE-023 introduces `on`, `handle...with`, and `handler Name for
-  Interface` surface forms. SPEC-095b does not yet describe them.
+- **Handler grammar:** NOTE-023 introduces `on`, `handle...with`, `handler` (with the handler
+  marker), and `derive handler` surface forms. SPEC-095b does not yet describe them.
+- **Handler marker:** `handler` is NOT a pure alias for `fn`. It produces a handler-marked
+  function type — a type-level attribute (like comp mode) identifying handler intent. This is
+  required for derive filtering (§7.4) and `handle expr with` validation (§6). The underlying
+  function type is structurally identical; the marker is erased at runtime.
 - **Continuation parameter convention:** NOTE-023 establishes the continuation as an
   ordinary function-typed parameter, not a magic keyword. SPEC-095b has no handler clause
   grammar to reconcile yet.
@@ -222,11 +226,55 @@ recognizable as scoped effect handling.
 
 Both forms are always available. Neither introduces a different clause shape.
 
-## 7. Handler Declaration: `handler` as Alias for `fn`
+**Handler marker validation.** In Form 2 (`handle...with`), name resolution checks that the
+resolved identifier carries the handler marker (§7). A plain `fn` with a compatible
+signature is rejected — see §7.3 (Subtyping). Form 1 (explicit application) does not check
+the marker: it is ordinary function application, and the handler marker coerces to plain `fn`
+(`handler fn <: fn`).
 
-`handler` is a pure keyword alias for `fn` (NOTE-023 §6 design discussion, NOTE-025 §2.2).
-It carries no semantic difference — the compiler treats it identically to `fn`. It signals
-intent to humans and LLMs: "this function is meant to be used as a handler."
+## 7. Handler Declaration: `handler` and the Handler Marker
+
+`handler` is **not** a pure keyword alias for `fn`. It is a declaration-site keyword that
+produces a function whose type carries a **handler marker** — a type-level attribute
+identifying handler intent. The underlying function type is structurally identical to the
+equivalent `fn` type, but the marker distinguishes handlers from plain functions in the type
+system. This is required so that `derive` can filter operations from handlers (§7.4) and
+`handle expr with name` can validate handler intent (§6).
+
+### 7.1 The marker as a type-level attribute
+
+The handler marker is analogous to how comp mode (eager/lazy/memo) annotates a computation
+without changing its structural type. A function type can carry a `handler` marker:
+
+```text
+-- plain function type
+(Unit -> {PosixFs::read | r} A) -> {r} A
+
+-- handler-marked function type (same structure, carries handler intent)
+handler (Unit -> {PosixFs::read | r} A) -> {r} A
+```
+
+The marker says: *"this function is intended for handler installation."* Nothing more. The
+underlying function type is structurally identical — same parameters, same row, same return
+type. The marker is erased at runtime; it carries no data.
+
+| Aspect | Comp mode (eager/lazy/memo) | Handler marker |
+|---|---|---|
+| Location | Type-level attribute | Type-level attribute |
+| Changes structure? | No | No |
+| Runtime effect | Yes (evaluation strategy) | No (erased) |
+| Purpose | Controls evaluation | Identifies intent |
+| Set at | Declaration / annotation | Declaration (`handler` keyword) |
+
+The analogy is structural — both are type-level modes that don't change the underlying type
+constructor. The divergence is that comp mode has runtime consequences while the handler
+marker is purely static. For now. If future uses (handler registries, dynamic dispatch)
+require runtime presence, the marker can gain a runtime representation later without breaking
+existing code — the type-level attribute is already there.
+
+### 7.2 Declaration site
+
+The `handler` keyword at declaration produces the marker:
 
 ```ash
 handler posix_fs<A, r>(comp: Unit -> {PosixFs::read | r} A) -> {r} A
@@ -239,11 +287,92 @@ where requires host posix_fs
 }
 ```
 
-This IS a function. Type: `(Unit -> {PosixFs::read | r} A) -> {r} A`. Nothing special except
-the keyword. The answer type is the return type — no hidden `A`/`Ans` conflation, no
-annotation needed.
+The type of `posix_fs` is `handler (Unit -> {PosixFs::read | r} A) -> {r} A` — a
+handler-marked function. A plain `fn` with the same parameters and return type has the
+unmarked type `(Unit -> {PosixFs::read | r} A) -> {r} A`.
 
-**Answer-type transformation** is trivial — the return type is the answer type:
+`derive handler <name>;` also produces a handler-marked value — the sugar expands to an
+implicit `handler <name>(...)` declaration (§7.3).
+
+### 7.3 Subtyping
+
+`handler fn <: fn` — a handler-marked function is usable anywhere a plain function is
+expected. The marker is an additive refinement: it says MORE about the function, not
+something different. So:
+
+```ash
+fn apply_thunk<A, B>(f: (Unit -> A) -> B, thunk: Unit -> A) -> B { f(thunk) }
+
+-- this works: handler-marked posix_fs coerces to plain fn
+apply_thunk(posix_fs, fn () -> load_config<PosixFs>("/etc/config"))
+```
+
+The reverse — using a plain `fn` where a handler is expected — fails at `handle expr with`:
+
+```ash
+fn utility<A, r>(comp: Unit -> {PosixFs::read | r} A) -> {r} A { ... }
+
+handle expr with utility
+-- ERROR: `utility` is not a handler. Expected a handler-marked function.
+```
+
+This catches accidental misuse: a utility function with a compatible signature cannot be
+silently installed as a handler just because the types line up.
+
+### 7.4 Why the marker is required — the derive filter
+
+The handler marker solves a concrete problem discovered when resolving NOTE-025 §7 Q3/Q4.
+Inside an impl block, operations and handlers are co-located:
+
+```ash
+impl Fs for PosixFs {
+    fn read(path: Path) -> String { ... }               // operation
+    fn write(path: Path, contents: String) -> Unit { ... } // operation
+    handler posix_fs<A, r: Row>(...) { ... }             // handler
+    handler logging_fs<A, r: Row>(...) { ... }           // handler
+}
+```
+
+`derive handler` must fold over **operations only** (§7.3 of NOTE-025: derive is the total
+fold). But handlers are syntactically just functions — without the marker, the type system
+cannot distinguish them from operations. The marker makes derive's filter a type-level check:
+members without the handler marker are operation candidates; members with the marker are
+skipped. This works even across module boundaries because the marker survives into module
+summaries.
+
+### 7.5 Grammar
+
+The `handler` keyword gets its own production in impl blocks, distinct from `impl_method`:
+
+```ebnf
+impl_member    = impl_method | handler_decl | derive_decl ;
+
+impl_method    = "fn" identifier type_params? "(" parameter_list? ")" [ "->" type ] fn_body ;
+
+handler_decl   = "handler" identifier type_params? "(" parameter_list ")"
+                 "->" type handler_body ;
+
+derive_decl    = "derive" "handler" identifier ";" ;
+
+handler_body   = "{" "on" scrutinee_call "{" handler_clause+ "}" "}" ;
+
+handler_clause = "done" "(" identifier ")" "=>" expr
+               | impl_qualified_op "(" pattern_list ")" "=>" expr ;
+```
+
+At module level, `handler` is a top-level definition producing a handler-marked function:
+
+```ebnf
+top_level_def  = ... | handler_decl | ... ;
+```
+
+The `handler` keyword is NOT folded into `impl_method` or `fn_definition`. It is a distinct
+AST node (`HandlerDecl` vs `FnDecl`) and records the handler marker in the type.
+
+### 7.6 Answer-type transformation
+
+The answer type is always the function's return type — no hidden `A`/`Ans` conflation, no
+annotation needed. Answer-type transformation is expressed in the return type:
 
 ```ash
 handler catch_throw<E, A, r>(comp: Unit -> {CatchIO::throw<E> | r} A) -> {r} Result<A, E> {
@@ -254,10 +383,17 @@ handler catch_throw<E, A, r>(comp: Unit -> {CatchIO::throw<E> | r} A) -> {r} Res
 }
 ```
 
-### 7.1 Derive: compiler-synthesized deep handlers
+The type of `catch_throw` is `handler (Unit -> {CatchIO::throw<E> | r} A) -> {r} Result<A, E>`.
+The answer type `Result<A, E>` differs from the computation's value type `A` — expressed in
+the return type, as always.
 
-When the handler's behavior is "compute result from impl, resume with it" (the deep handler
-case), the impl can declare a derivation so the compiler synthesizes the handler function:
+### 7.7. Derive: the total fold
+
+`derive handler <name>;` synthesizes the **deep handler** — the identity interpretation where
+each operation runs its impl method body and resumes with the result. It is the total,
+mechanical fold over ALL interface operations (NOTE-025 §7.3). The marker is what lets derive
+filter correctly: it folds over members without the handler marker (operations), skipping
+those with it.
 
 ```ash
 impl Fs for PosixFs
@@ -270,31 +406,60 @@ where requires host posix_fs
 }
 ```
 
-The compiler synthesizes the deep handler (the explicit form above) from the impl's method
-bodies. See NOTE-025 §3-4 for the full derivation mechanics and worked examples for deep,
-escape, and multi-shot handlers.
+The compiler synthesizes:
 
-### 7.2 Handler defined in impl (co-located)
+```ash
+handler posix_fs<A, r: Row>(
+    comp: Unit -> {PosixFs::read, PosixFs::write | r} A
+) -> {r} A
+where requires host posix_fs
+{
+    on comp() {
+        PosixFs::read(path, resume) => resume(PosixFs::read(path))
+        PosixFs::write(path, contents, resume) => resume(PosixFs::write(path, contents))
+        done(value) => value
+    }
+}
+```
+
+There is no subset derive — derive always generates clauses for all operations. Partial
+behavior requires an explicit handler (§7.8). See NOTE-025 §7.3 for the full rationale.
+
+### 7.8. Handler defined in impl (co-located)
 
 An explicit handler can be defined inside the impl body for DX — same semantics as a
-standalone handler, but co-located with the impl it references:
+standalone handler, but co-located with the impl it references. Multiple handlers per impl
+are allowed (NOTE-025 §7.4), distinguished by name and by the handler marker:
 
 ```ash
 impl Fs for PosixFs
 where requires host posix_fs
 {
     fn read(path: Path) -> String { builtin(fs_read, path) }
+    fn write(path: Path, contents: String) -> Unit { builtin(fs_write, path, contents) }
 
-    handler posix_fs<A, r>(comp: Unit -> {PosixFs::read | r} A) -> {r} A {
+    derive handler posix_fs;       // total fold — all default
+
+    handler logging_fs<A, r: Row>(comp: Unit -> {PosixFs::read, PosixFs::write | r} A) -> {r} A {
         on comp() {
             PosixFs::read(path, resume) => {
                 log("reading {}", path);          // custom behavior in the clause
                 resume(PosixFs::read(path))
             }
+            PosixFs::write(path, contents, resume) => resume(PosixFs::write(path, contents))
             done(value) => value
         }
     }
 }
+```
+
+Both `posix_fs` and `logging_fs` are handler-marked values in the value namespace. The
+non-overridden clause (`PosixFs::write`) delegates to the impl method body — exactly what
+derive would generate. The caller chooses which to install:
+
+```ash
+handle load_config<PosixFs>("/etc/config") with posix_fs      // total fold
+handle load_config<PosixFs>("/etc/config") with logging_fs    // with logging
 ```
 
 See NOTE-025 §4 for all three handler production forms (derive, in-impl, standalone).
@@ -394,6 +559,8 @@ elaborates into the same row facts that Core/CPS already tracks.
 - ~~Separate Koka vs Frank clause shapes~~ — one clause shape, two installation forms
 - ~~Separate handler/provider distinction at the grammar level~~ — a handler is a function;
   a provider is a handler with admission (a `where` clause)
+- ~~~~`handler` as pure alias for `fn`~~~~ — superseded. `handler` now carries a handler
+  marker (type-level attribute) so derive can filter and `handle expr with` can validate.
 
 ## 12. Open Questions
 
@@ -401,9 +568,10 @@ elaborates into the same row facts that Core/CPS already tracks.
    grammar production in the current target language; `builtin(...)` is the only host-reaching
    mechanism. The prior two-placement proposals are archived in NOTE-024 §3 as future-FFI
    design space.
-2. **Answer type parameter.** **Resolved.** `handler` is an alias for `fn` — the answer type
-   is always the function's return type. No hidden `A`/`Ans` conflation. Answer-type
-   transformation (`A` → `Result<A, E>`, `A` → `List<A>`) is expressed in the return type.
+2. **Answer type parameter.** **Resolved.** `handler` produces a handler-marked function —
+   the answer type is always the function's return type. No hidden `A`/`Ans` conflation.
+   Answer-type transformation (`A` → `Result<A, E>`, `A` → `List<A>`) is expressed in the
+   return type.
 3. **Pattern syntax for operations with many parameters.** `PosixFs::read(path, resume)`
    works for single-parameter operations. For `fn transfer(from: Account, to: Account,
    amount: Int) -> Receipt`, the clause is `Bank::transfer(from, to, amount, resume)`. Is
@@ -412,21 +580,26 @@ elaborates into the same row facts that Core/CPS already tracks.
 4. **`on` scrutinee shape.** Currently `on comp()` — always a thunk call. Should `on` accept
    arbitrary expressions that the compiler wraps in a thunk? Or should the thunk be
    explicit?
-5. **Default `done` clause.** **Resolved.** With `handler` as alias for `fn` (no sugar that
-   hides the signature), the `done` clause is always explicit inside `on`. Derive-generated
-   handlers always include `done(value) => value`.
+5. **Default `done` clause.** **Resolved.** With `handler` carrying the handler marker (no
+   sugar that hides the signature), the `done` clause is always explicit inside `on`.
+   Derive-generated handlers always include `done(value) => value`.
 
 ## 13. Working Principle
 
 ```text
 A handler is a function that consumes a computation thunk.
-`handler` is a keyword alias for `fn` — no semantic difference.
+`handler` carries a type-level handler marker — it is NOT a pure alias for `fn`.
+The marker is a type-level attribute (like comp mode): identifies intent, erased at runtime.
+`handler fn <: fn` — handler-marked functions coerce to plain functions, not vice versa.
+`handle expr with name` requires name to carry the handler marker.
 The continuation is an ordinary function-typed parameter.
 Multiplicity is in the function type: affine if the row is non-empty, multi-shot if pure.
 The answer type is the function's return type — no annotation needed.
 One clause shape: ImplType::method(args, continuation) => body.
 Row items are impl-type-qualified (e.g., PosixFs::read), not interface-qualified (NOTE-025).
-Three handler production forms: derive (compiler-synthesized), in-impl (co-located), standalone.
+Derive is the total fold over all operations — filters by absence of the handler marker.
+Multiple handlers per impl are allowed — distinguished by the handler marker.
+Three handler production forms: derive (total fold), in-impl (co-located), standalone.
 Two installation forms: explicit application and handle...with sugar.
 Authority is a where-clause gate before installation, not a runtime check during dispatch.
 ```
@@ -464,3 +637,10 @@ External references:
   items (`PosixFs::read` instead of `Fs.read`). Named handler sugar (§7) replaced by
   `handler`-as-alias-for-`fn` with derive and handler-in-impl forms. Open questions #2
   (answer type) and #5 (default done) resolved. Working principle updated.
+- 2026-06-28: Handler marker introduced. `handler` is no longer a pure alias for `fn` — it
+  produces a handler-marked function type (type-level attribute, like comp mode). Required
+  so derive can filter operations from handlers (the Q3/Q4 interaction from NOTE-025 §7) and
+  `handle expr with name` can validate handler intent. §7 fully rewritten with grammar
+  (handler_decl production), types (handler marker attribute), subtyping (`handler fn <: fn`),
+  worked examples (derive filtering, co-located multiple handlers), and the comp-mode analogy.
+  Pre-Spec Delta, §11, §12, §13 updated to reflect the marker.

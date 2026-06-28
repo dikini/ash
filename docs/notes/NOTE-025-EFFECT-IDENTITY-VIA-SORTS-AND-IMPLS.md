@@ -19,7 +19,7 @@ into SPEC-095b/096b/097b. When the project moves to spec updates:
 - **Row item identity:** `{F::read}` (abstract, sort-parameterized) replaces `{Fs.read}`
   (concrete interface-qualified). After monomorphization, `{PosixFs::read}`.
 - **Impl types and impls:** every effect operation identity requires a concrete impl. The impl
-  type is the operation identity — it can be empty (a phantom type) or carry data. This is new
+  type is the operation identity — it can be bodyless (nominal, no constructors) or carry data. This is new
   surface syntax.
 - **Handler derivation:** `derive handler <name>` is a new declaration inside impl bodies.
 - **Handler installation:** `handle expr with <name>` always resolves to function
@@ -27,6 +27,21 @@ into SPEC-095b/096b/097b. When the project moves to spec updates:
 - **SPEC-095b/097b/098b:** the `OperationEffect` identity changes from `{interface, operation}`
   to `{impl_type, operation}` — the concrete impl type replaces the interface as the
   identity qualifier after specialization.
+- **Bodyless type declarations (grammar delta):** `type PosixFs;` — a type declaration with
+  no `=` and no body — introduces a nominal type with no constructors. It has identity but
+  cannot be constructed. This is distinct from a transparent alias `type PosixFs = Unit;`,
+  which canonicalizes to `Unit` at definitional equality (SPEC-058/SPEC-100) and would
+  collapse all identity-only types into one identity. The current grammar requires a body
+  (`type_definition = "type" identifier [type_params] "=" type_body ";"`); the delta makes
+  the `= type_body` optional. See §7 Q1. Phantom types and newtype-like nominal forms
+  carrying type parameters are a related but separate deferred type-system enhancement —
+  see §7 Q1 "Deferred follow-up."
+- **Handler marker (type-level attribute):** `handler` is no longer a pure keyword alias
+  for `fn`. It produces a function whose type carries a `handler` marker — a type-level
+  attribute identifying handler intent, analogous to comp mode (eager/lazy/memo). Derive
+  uses it to filter operations from handlers; `handle expr with name` validates it. The
+  underlying function type is structurally identical; the marker is erased at runtime. See
+  NOTE-023 §7 for the full grammar, typing, subtyping, and worked examples.
 
 ## 0. Motivation
 
@@ -40,7 +55,7 @@ The sort/impl model separates the abstraction layers:
 
 ```
 Interface = sort (abstract effect family + laws)
-Impl type = identity carrier (the impl type — can be empty or carry data)
+Impl type = identity carrier (the impl type — bodyless nominal or data-carrying)
 Handler   = behavior provider (named function, installed at runtime)
 ```
 
@@ -69,15 +84,21 @@ interface Fs {
 
 ### 1.2 Impl type + impl as identity carrier
 
-The impl type is the operation identity. It can be empty (a phantom type used purely for
-compile-time identity) or it can carry data (configuration, state, connection parameters).
-The type system does not restrict which. Every effect operation that appears in a row must
-have a concrete impl behind it — for method resolution and type-checking. The impl type
-parameter is the operation identity.
+The impl type is the operation identity. It can be bodyless (a nominal type with no
+constructors, used purely for compile-time identity) or it can carry data (configuration,
+state, connection parameters via a record body). The type system does not restrict which.
+Every effect operation that appears in a row must have a concrete impl behind it — for
+method resolution and type-checking. The impl type parameter is the operation identity.
+
+**Important — not a transparent alias.** A bodyless type declaration `type PosixFs;` is a
+nominal type: it declares a new type with no constructors that cannot equal any other type.
+This is distinct from a transparent alias `type PosixFs = Unit;`, which canonicalizes to
+`Unit` at definitional equality (per SPEC-058/SPEC-100) and would collapse all identity-only
+types into one identity. See §7 Q1 for the full grammar delta.
 
 ```ash
-// Phantom type — empty, identity-only. Common for pure algebraic effects.
-type PosixFs = Unit;
+// Bodyless nominal type — unconstructable, identity-only. Not a transparent alias.
+type PosixFs;
 
 impl Fs for PosixFs
 where requires host posix_fs
@@ -86,7 +107,8 @@ where requires host posix_fs
     fn write(path: Path, contents: String) -> Unit { builtin(fs_write, path, contents) }
 }
 
-// Data-carrying type — carries runtime configuration. Identity + config in one type.
+// Data-carrying type — nominal record, carries runtime configuration.
+// Identity + config in one type. A record body is nominal (not a transparent alias).
 type ConfiguredFs = { root: Path, readonly: Bool };
 
 impl Fs for ConfiguredFs {
@@ -207,8 +229,8 @@ interface Fs {
     fn write(path: Path, contents: String) -> Unit;
 }
 
-type PosixFs = Unit;
-type MemoryFs = Unit;
+type PosixFs;
+type MemoryFs;
 
 impl Fs for PosixFs
 where requires host posix_fs
@@ -343,11 +365,11 @@ interface Exception {
 }
 ```
 
-#### Phantom types and impls
+#### Identity types and impls
 
 ```ash
-type Panic: Exception;
-type CatchIO: Exception;
+type Panic;
+type CatchIO;
 
 impl Exception for Panic {
     fn throw<E>(err: E) -> Unit { builtin(panic, err) }
@@ -426,11 +448,11 @@ interface Choice {
 }
 ```
 
-#### Phantom types and impls
+#### Identity types and impls
 
 ```ash
-type FirstChoice: Choice;
-type AllSolutions: Choice;
+type FirstChoice;
+type AllSolutions;
 
 impl Choice for FirstChoice {
     fn choose<A>(opts: List<A>) -> A { opts.head() }
@@ -545,7 +567,7 @@ effects. The residual row propagates to the handler's caller.
 | Aspect | NOTE-022 (concrete name) | NOTE-025 (sort/impl) |
 |---|---|---|
 | Row item | `Fs.read` | `F::read` (abstract), `PosixFs::read` (concrete) |
-| Identity qualifier | Interface name | Impl type (the `for` parameter — can be empty or data-carrying) |
+| Identity qualifier | Interface name | Impl type (the `for` parameter — bodyless nominal or data-carrying) |
 | Multiple simultaneous handlers | ❌ Same identity | ✅ Distinct identities per impl |
 | Generic code | Row polymorphism only | Type parameter `F: Fs` + row polymorphism |
 | Monomorphization | Not needed | Required — generates concrete identities |
@@ -553,47 +575,306 @@ effects. The residual row propagates to the handler's caller.
 | Interface role | Declaration site + identity qualifier | Sort (abstract family + laws) only |
 | Impl role | Not part of the effect model | Identity carrier + default behavior |
 
-## 7. Open Questions
+## 7. Resolved Decisions
 
-1. **Impl type declaration.** The impl type can be empty (`type PosixFs = Unit;`) or
-   data-carrying (`type ConfiguredFs = { root: Path, readonly: Bool };`). Is there a dedicated
-   syntax for empty identity-only types, or is `type Name = Unit;` sufficient? Should sort
-   annotation be available: `type PosixFs: Fs;`?
+All eight open questions from the initial draft are now resolved. Each decision records the
+grammar, type, semantic, and worked-example consequences.
 
-2. **Derive naming convention.** `derive handler posix_fs;` — is the name always explicit,
-   or can it be inferred from the impl type name? If inferred, what's the convention?
+### 7.1 Q1 — Impl type declaration: bodyless nominal type
 
-3. **Derive scope.** Does `derive handler` always generate clauses for ALL interface methods,
-   or can it target a subset? `derive handler { read };` for partial handlers?
+**Decision:** Empty identity-only types use `type PosixFs;` — a bodyless type declaration
+(no `=`, no body). It declares a new nominal type with no constructors: it has identity but
+cannot be constructed. This is the minimal form sufficient for the effect model.
 
-4. **Multiple handlers per impl.** Can an impl define multiple named handlers (e.g., both a
-   deep `first_choice` and a multi-shot `all_solutions` for the same `AllSolutions` type)?
-   Or one handler per impl?
+**Grammar delta.** The current grammar requires a body:
 
-5. **Sort constraints in rows.** Is `{F::read | r}` the right spelling, or should it be
-   `{<F as Fs>::read | r}` for disambiguation when `F` implements multiple interfaces with
-   same-named methods?
+```ebnf
+type_definition = "type" identifier [ type_params ] "=" type_body ";" ;
+```
 
-6. **Impl-less types.** Is it a hard error to reference `TypeName::op` without an
-   impl, or is there a diagnostic pathway?
+The delta makes `= type_body` optional:
 
-7. **Coherence.** Can two impls of the same interface for the same impl type exist in
-   different modules? Or is there a global uniqueness constraint (like Rust trait coherence)?
+```ebnf
+type_definition = "type" identifier [ type_params ] [ "=" type_body ] ";" ;
+```
 
-8. **Dynamically dispatched handlers.** For effects where monomorphization is undesirable
-   (plugin systems, dynamic loading), is there a non-monomorphic path? Boxed trait objects?
-   Or is monomorphization always required?
+Without `=`, the type is an opaque nominal unit — no representation, no constructors,
+identity-only. With `=` and a `type_body` (enum, struct, record, tuple), the existing
+nominal forms are unchanged. With `=` and an `alias_body` (a bare type), the existing
+transparent alias is unchanged.
+
+**Critical: not a transparent alias.** `type PosixFs = Unit;` is a transparent alias.
+Per SPEC-058/SPEC-100, transparent aliases canonicalize to their origin head at
+definitional equality. So `type PosixFs = Unit` makes `PosixFs ≡ Unit` — the type checker
+canonicalizes one to the other. This silently breaks the identity model: `PosixFs::read`
+and `MemoryFs::read` both canonicalize to `Unit::read` → identities collide. The bodyless
+form avoids this because a nominal type with no body is never equated to any other type.
+
+**No sort annotation at the type site.** `type PosixFs: Fs;` is rejected. The interface
+relationship lives in the `impl Fs for PosixFs` block, not the type declaration. Coupling
+type declaration to interface membership would create redundancy (the relationship is
+already in `impl`) and coherence coupling (must the type and interface be co-located?).
+
+**Deferred follow-up — phantom types and newtype.** A transparent alias
+`type F<A> = Unit` does not give distinct phantom identities either: the phantom parameter
+`<A>` is erased at definitional equality (`PosixFs<Int> ≡ PosixFs<String> ≡ Unit`). True
+phantom types and newtype-like nominal forms that carry type parameters without equating
+to a representation are one deferred type-system enhancement — not needed for the current
+effect model, where bodyless types suffice for identity.
+
+**Worked example:**
+
+```ash
+type PosixFs;        // bodyless nominal — identity-only, unconstructable
+type ConfiguredFs = { root: Path, readonly: Bool };  // data-carrying, nominal record
+```
+
+### 7.2 Q2 — Derive naming: always explicit
+
+**Decision:** `derive handler <name>;` — the name is always explicit. The compiler never
+infers the handler name from the impl type name.
+
+**Rationale.** A derived handler is a named function in the value namespace. It participates
+in normal name resolution, shadowing, and import/export. It needs an explicit name because:
+
+1. Value-namespace functions must have explicit names — there is no implicit transformation
+   rule from type-name conventions (PascalCase `PosixFs`) to value-name conventions
+   (snake_case `posix_fs`).
+2. One impl may derive multiple handlers (§7.4), so a single inferred name is insufficient.
+3. Explicit over implicit: the declaration site visually states what enters the value
+   namespace.
+
+Rust's `#[derive(Debug)]` does not name the result because the derived impl is in the type
+namespace (accessed via `<T as Debug>`). Ash's derived handler is in the value namespace —
+it is a callable function — so it must have an explicit name.
+
+**Worked example:**
+
+```ash
+impl Fs for PosixFs
+where requires host posix_fs
+{
+    fn read(path: Path) -> String { builtin(fs_read, path) }
+    fn write(path: Path, contents: String) -> Unit { builtin(fs_write, path, contents) }
+
+    derive handler posix_fs;    // explicit name — enters value namespace as `posix_fs`
+}
+```
+
+### 7.3 Q3 — Derive scope: total fold over all operations
+
+**Decision:** `derive handler` always generates clauses for ALL interface methods. It is the
+total, mechanical deep handler — the identity interpretation (semantic unit of the handler
+algebra). There is no subset derive (`derive handler { read };` is not supported).
+
+**Rationale — three angles.**
+
+1. **Semantic.** Derive is the total fold over the free monad generated by the effect
+   signature. Every operation gets `resume(ImplType::op(args))`. There are no choices to
+   make — which is exactly what makes it synthesizable. A partial derive would require the
+   compiler to make a semantic decision ("intercept these, let those escape"), which belongs
+   in explicit code.
+
+2. **Type-theoretic.** A total derive produces a handler whose residual row is just `r`:
+
+   ```
+   handler posix_fs<A, r: Row>(
+       comp: Unit -> {PosixFs::read, PosixFs::write | r} A
+   ) -> {r} A        // ← all Fs operations peeled
+   ```
+
+   A partial derive (only `read`) would have a structurally different type — `PosixFs::write`
+   survives in the residual row. This is a different position in the handler stack, not "a
+   derive that handles less." Collapsing both under `derive` muddies what the keyword
+   promises about the residual row.
+
+3. **Practical.** Partial behavior is already covered by explicit handlers (Form B/C). The
+   non-overridden clauses are trivial one-liners delegating to impl method bodies. No
+   feature gap.
+
+**Feature space coverage:**
+
+| Need | Mechanism |
+|---|---|
+| All default, no customization | `derive handler name;` (total fold) |
+| Override some, delegate rest | Explicit handler in impl (Form B) |
+| Override some, let rest escape | Explicit handler, omit clauses for escaping ops |
+| Fully custom (escape, multi-shot) | Explicit standalone handler (Form C) |
+
+### 7.4 Q4 — Multiple handlers per impl: yes, unbounded
+
+**Decision:** An impl block may define as many named handlers as needed, plus at most one
+`derive handler` (the canonical total fold). There is no "one handler per impl" limit.
+
+**Rationale.** Handlers are named functions in the value namespace, distinguishable by the
+**handler marker** — a type-level attribute on their function type (see NOTE-023 §7). An
+impl block can declare multiple `handler` blocks because they produce separate value-namespace
+bindings with distinct names. No coherence conflict arises: they don't share an identity.
+
+**How derive filters.** The derive mechanism must fold over operations only, not handlers.
+Because the handler marker is carried in the type system, derive filters by checking the
+marker: members without the marker are operation candidates; members with the marker are
+skipped. This works even across module boundaries because the marker survives into module
+summaries.
+
+**Constraint:** ordinary name uniqueness within a scope. Two handlers in the same impl block
+cannot share a name — the standard function-shadowing rule, nothing effect-specific.
+
+**Worked example — one impl, two handlers:**
+
+```ash
+impl Choice for AllSolutions {
+    fn choose<A>(opts: List<A>) -> A { opts.head() }
+
+    derive handler all_solutions_deep;   // total fold, returns A
+
+    handler all_solutions<A>(             // explicit multi-shot, returns List<A>
+        comp: Unit -> {AllSolutions::choose} A
+    ) -> List<A> {
+        on comp() {
+            AllSolutions::choose(xs, resume) => xs.flat_map(fn x -> resume(x))
+            done(value) => [value]
+        }
+    }
+}
+```
+
+Both `all_solutions_deep` and `all_solutions` are in the value namespace. The caller
+chooses which to install:
+
+```ash
+handle search<AllSolutions>(tree) with all_solutions_deep   // returns A
+handle search<AllSolutions>(tree) with all_solutions        // returns List<A>
+```
+
+### 7.5 Q5 — Sort constraints in rows: `{F::read | r}` always sufficient
+
+**Decision:** `{F::read | r}` is always sufficient. The fully-qualified `<F as Fs>::read`
+syntax is not needed and not introduced.
+
+**Rationale.** This is a consequence of the coherence decision (§7.7). Under strong coherence,
+identity is `{impl_type, operation}` with no interface field. Coherence ensures that for any
+type `T`, each operation name may be defined by at most one interface. Therefore `T::op`
+resolves to exactly one method — there is never ambiguity to disambiguate.
+
+If `PosixFs` implements both `Fs` (with `read`) and `Other` (also with `read`), coherence
+forbids this (§7.7, rule 2). The collision is prevented at the impl site, not papered over
+with verbose row syntax.
+
+The `<F as Fs>` fully-qualified syntax (Rust-style) is powerful but verbose, and only needed
+in rare disambiguation cases that strong coherence prevents entirely. If a future use case
+genuinely requires same-named operations across interfaces for one type, the fully-qualified
+syntax can be added without breaking existing code.
+
+### 7.6 Q6 — Impl-less types: hard error
+
+**Decision:** Referencing `TypeName::op` without an impl is a hard type error. There is no
+diagnostic pathway (soft warning, deferred resolution).
+
+**Rationale.** Without an impl, there is:
+- No method body — nothing to call or inline during monomorphization.
+- No operation identity — the impl type IS the identity, but the operation doesn't exist for
+  that type without an impl binding it to an interface.
+- No handler clause to synthesize — `derive handler` has nothing to derive from.
+
+The downstream monomorphization pass cannot proceed without a concrete method body. The
+error message should name both the type and the missing interface:
+
+```
+Error: Type `PosixFs` has no implementation of interface `Fs`.
+       Cannot reference operation `PosixFs::read`.
+       Hint: add `impl Fs for PosixFs { ... }`.
+```
+
+This is the same class of error as Rust's "the trait bound `T: Fs` is not satisfied."
+
+### 7.7 Q7 — Coherence: global uniqueness, stricter than Rust
+
+**Decision:** Global uniqueness, strictly stronger than Rust's trait coherence.
+
+Under the identity model `{impl_type, operation}` (no interface field, per §7.5), coherence
+must ensure:
+
+1. **Per (type, interface) pair:** at most one impl globally — same as Rust/Haskell.
+2. **Per (type, operation-name) pair:** at most one interface may declare that operation name
+   for that type — *stronger* than Rust. Rust allows `Display::fmt` and `Debug::fmt` to
+   coexist because the identity includes the trait. Ash's identity drops the interface, so
+   the collision must be prevented structurally.
+
+Rule 2 is the consequence of dropping the interface from the identity. It is unusual but
+simple to state: *"For any type T, each operation name may be defined by at most one
+interface."* After monomorphization, `T::op` must resolve to exactly one method body. Two
+impls would produce two bodies for the same identity — unsound.
+
+**Orphan rule:** follow Rust — an `impl Fs for T` must be in the same crate/module as either
+`Fs` or `T`. This prevents two independently developed modules from each defining
+`impl Fs for PosixFs` and producing a coherence conflict at link time.
+
+**Worked example — forbidden:**
+
+```ash
+interface Fs       { fn read(path: Path) -> String; }
+interface Cache    { fn read(key: Key) -> Bytes; }  // same operation name!
+
+type PosixFs;
+
+impl Fs    for PosixFs { fn read(path: Path) -> String { ... } }
+impl Cache for PosixFs { fn read(key: Key) -> Bytes { ... } }
+// ERROR: operation name `read` is already defined for type `PosixFs` by interface `Fs`.
+// Coherence rule 2: at most one interface may declare `read` for a given type.
+```
+
+This is conservative but natural for a statically monomorphic identity model.
+
+### 7.8 Q8 — Dynamic dispatch: deferred, bridge via vtable-in-method-body
+
+**Decision:** Defer dynamic dispatch. Monomorphization is the sole path. The bridge to
+runtime dynamism is a data-carrying impl type whose method bodies call through a vtable —
+no new language feature needed.
+
+**Rationale.** The current sort/impl model is statically monomorphic: the identity is a
+concrete type name known at compile time, the method body is inlined, and the handler clause
+matches on a concrete identity string. Dynamic dispatch breaks all three: the impl type isn't
+known at the call site (loaded at runtime), the method body can't be inlined (behind a
+vtable), and the handler clause must match at runtime (dynamic identity comparison).
+
+This is a fundamentally different dispatch model requiring existentials/erased types,
+runtime identity scheme, and row-system interaction (rows are compile-time). It is out of
+scope for the current design.
+
+**Bridge pattern — no new feature needed.** A plugin adapter is a concrete identity carrier
+whose method bodies delegate to a runtime vtable:
+
+```ash
+type PluginFs = { vtable: FsVtable };   // data-carrying, nominal record
+
+impl Fs for PluginFs {
+    fn read(path: Path) -> String { self.vtable.read(path) }
+    fn write(path: Path, contents: String) -> Unit { self.vtable.write(path, contents) }
+}
+```
+
+The identity `PluginFs::read` is a concrete, compile-time-known identity. The dynamism lives
+entirely inside the method body (the vtable call), not in the dispatch model. This keeps the
+identity model intact while pushing dynamism into the data layer — the same pattern Rust
+uses internally with trait objects.
 
 ## 8. Working Principle
 
 ```text
 An interface is an effect sort: it declares signatures, generics, and laws.
 An impl type is the identity carrier: the impl type parameter is the operation identity.
-The impl type can be empty (phantom) or carry data — the type system does not restrict which.
+The impl type can be bodyless (nominal, no constructors) or carry data — the type system does not restrict which.
+A bodyless type is `type T;` (nominal). It is NOT `type T = Unit;` (transparent alias — collapses identity).
 The impl method body is the default deep-handler behavior.
 A handler is a named function: (Unit -> {op | r} A) -> {r} Ans.
-Three ways to produce a handler: derive (compiler-synthesized), in-impl (co-located), standalone.
-handle expr with name is always function application — name is a function value.
+A handler function's type carries a handler marker — a type-level attribute (like comp mode).
+Three ways to produce a handler: derive (total fold), in-impl (co-located), standalone.
+derive handler <name> folds over ALL operations — filtered by absence of the handler marker.
+Multiple handlers per impl are allowed — distinguished by the handler marker.
+handle expr with name is function application — name must carry the handler marker.
+Coherence is global and stricter than Rust: per (type, op-name) uniqueness, not just per (type, interface).
+Dynamic dispatch is deferred — bridge via data-carrying vtable impl type, no new feature needed.
 Monomorphization produces concrete identities from abstract sort constraints.
 The CPS IR is unchanged — it sees concrete EffectOp identities.
 ```
@@ -626,7 +907,17 @@ External references:
   impl types are identity carriers, handler functions are named values. Records the derive
   mechanism, handler-in-impl option, and three handler installation examples (deep, escape,
   multi-shot). Revises the NOTE-022 concrete-name model to the sort/impl model.
-- 2026-06-27: Corrected — the impl type is not restricted to phantom types. It can be empty
+- 2026-06-27: Corrected — the impl type is not restricted to bodyless types. It can be empty
   (identity-only) or carry data (configuration, state, connection parameters). Added a
   data-carrying `ConfiguredFs` example. The identity comes from the type itself, not from
   emptiness.
+- 2026-06-28: Resolved all eight §7 open questions. Key decisions: (Q1) bodyless nominal
+  type `type PosixFs;` replaces transparent alias `type PosixFs = Unit;` which collapses
+  identity; no sort annotation at type site; phantom types/newtype deferred. (Q2) derive
+  naming always explicit. (Q3) derive is the total fold over all operations. (Q4) multiple
+  handlers per impl allowed — distinguished by the handler marker (see NOTE-023 §7). (Q5)
+  `{F::read | r}` always sufficient — strong coherence eliminates ambiguity. (Q6) impl-less
+  reference is a hard error. (Q7) global coherence stricter than Rust — per (type, op-name)
+  uniqueness. (Q8) dynamic dispatch deferred — bridge via data-carrying vtable impl type.
+  Updated Pre-Spec Delta with grammar delta for bodyless types and handler marker reference.
+  Swept all type declarations to bodyless form throughout.

@@ -20,6 +20,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   handlers and `handle expr with name` can validate handler intent. Added grammar
   (`handler_decl` production), types (handler marker), subtyping (`handler fn <: fn`),
   and worked examples. All type declarations in NOTE-025 swept to bodyless form.
+  Added §7.9 (parked): purity classification of type-level attributes — should comp mode
+  (eager|lazy|memo) and the handler marker mark a function as impure, or preserve purity?
 - Reconciled NOTE-022, NOTE-023, SPEC-095b, SPEC-096b, and SPEC-097b with NOTE-025 (effect
   identity via sorts and impls). NOTE-022: working principle updated — interface is a sort,
   impl type is identity carrier. NOTE-023: all handler examples updated to impl-type-qualified

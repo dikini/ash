@@ -859,6 +859,58 @@ entirely inside the method body (the vtable call), not in the dispatch model. Th
 identity model intact while pushing dynamism into the data layer — the same pattern Rust
 uses internally with trait objects.
 
+### 7.9 Parked — purity classification of type-level attributes
+
+**Status:** Open question, deferred. Surfaced by the handler marker (§7.4) but spans the
+broader attribute model.
+
+The handler marker and comp mode (eager|lazy|memo) are type-level attributes that sit
+*beside* the effect row. The current purity model (SPEC-027, SPEC-097b §6.4) defines purity
+as the empty effect row: `Requires({})`. Neither spec addresses what happens when a type-level
+attribute is attached to a function whose row is otherwise empty.
+
+The question: **should the presence of a type-level attribute mark a function as impure, or
+should it be considered pure?**
+
+The tension is between two notions of purity:
+
+- **Denotational purity** (referential transparency): can `f(x)` be replaced with its value?
+  A memoized function is referentially transparent — same input, same output — but involves
+  mutation (cache writes) operationally.
+- **Operational purity** (effect-free evaluation): does evaluating this involve any mutation,
+  divergence change, or effect interpretation? `memo` involves mutation; `lazy` changes
+  termination behavior (a function that diverges eagerly may terminate lazily); the handler
+  marker identifies a function that *manipulates* effects (interprets a row), even if its
+  own residual row is empty after peeling.
+
+Each attribute has a different profile:
+
+| Attribute | Denotationally pure? | Operationally pure? | Notes |
+|---|---|---|---|
+| `eager` (default) | yes | yes | Baseline — no question. |
+| `lazy` | yes | **no** | Changes termination. A function that diverges eagerly may terminate lazily (and vice versa). Observable. |
+| `memo` | yes | **no** | Involves mutation (cache writes). Referentially transparent but not effect-free. |
+| `handler` marker | yes | **unclear** | The handler's own row may be empty after peeling, but it *interprets* an effectful computation. Is interpretation an effect? |
+
+**Why this matters now.** The handler marker is the first type-level attribute we've attached
+to a function type beyond the effect row. As more attributes are added (the comp-mode notes
+anticipate eager|lazy|memo as core type-system concepts), the purity boundary needs a
+principled definition — not ad-hoc per-attribute rulings.
+
+**What needs resolving (future note):**
+
+1. Is purity denotational (referential transparency) or operational (no mutation/divergence
+   change)? Or are there two purity lattices — one for each?
+2. If operational, do `lazy` and `memo` break purity? If denotational, do they preserve it?
+3. Does the handler marker count as an effect? A handler with an empty residual row is
+   denotationally a pure function of its thunk argument — but it *consumes* effectful
+   computations. Is that consumption "pure"?
+4. How does this interact with the tower (Pure < Act < Proc < Workflow)? If `memo` is
+   denotationally pure but operationally impure, which tier does it belong to?
+
+**Cross-references:** SPEC-027 (Pure Functions), SPEC-097b §6.4 (empty row = least
+requirement), NOTE-023 §7 (handler marker), comp-mode notes (eager|lazy|memo).
+
 ## 8. Working Principle
 
 ```text

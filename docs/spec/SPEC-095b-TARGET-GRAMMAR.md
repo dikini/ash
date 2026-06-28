@@ -90,6 +90,7 @@ The target definition list adds `effect_alias_definition` and
 ```ebnf
 definition = visibility (
     fn_definition
+  | handler_decl          -- standalone handler at module level (NOTE-023 §7)
   | type_definition
   | role_definition
   | legacy_capability_definition
@@ -112,7 +113,10 @@ definition = visibility (
 ```
 
 Note: per NOTE-022, operation declarations are no longer a separate `effect_definition`
-form; operations are declared via the existing `interface_definition` production.
+form; operations are declared via the existing `interface_definition` production. Per
+NOTE-023 §7, `handler_decl` appears both at module level (standalone handler) and inside
+impl bodies (co-located handler, see §8.4). In both positions it produces a handler-marked
+function in the value namespace.
 
 ### 3.3 Operation Interface Declarations
 
@@ -292,31 +296,50 @@ handle run(req) with posix_fs
 This desugars to `posix_fs(fn () -> run(req))`. The identifier is always a value-namespace
 function (per NOTE-025 §3), never a type.
 
-**`handler` keyword alias for `fn`.** Per NOTE-023 (revised), `handler` is a pure keyword
-alias for `fn`. A handler function is declared identically to a regular function, with the
-`handler` keyword signaling intent:
+**`handler` declaration and the handler marker.** Per NOTE-023 §7 (revised), `handler` is
+**not** a pure keyword alias for `fn`. It is a declaration-site keyword that produces a
+function whose type carries a **handler marker** — a type-level attribute identifying
+handler intent, analogous to comp mode (eager/lazy/memo). The underlying function type is
+structurally identical to the equivalent `fn` type; the marker is erased at runtime and
+carries no data.
 
-```ebnf
-handler_fn_decl = "handler" identifier type_params? "(" parameter_list ")" "->" type
-                  where_clause? "{" expr "}" ;
-```
+The handler marker serves two purposes:
 
-Example:
+1. **Derive filtering.** Inside an impl body, `derive handler` folds over operations only —
+   members without the handler marker (operations) are folded; members with it (handlers) are
+   skipped. See §8.4 for the `impl_member` grammar.
+2. **`handle expr with` validation.** In the `handle...with` sugar, name resolution checks
+   that the resolved identifier carries the handler marker. A plain `fn` with a compatible
+   signature is rejected. See §6.4 for the marked `fn_type`.
+
+The `handler` declaration production (`handler_decl`) is documented in §8.4 (Impl
+Definitions) because it appears both at module level and as an impl member. Example:
 
 ```ash
 handler posix_fs<A, r: Row>(
-    comp: Unit -> {PosixFs::read | r} A
-) -> {r} A {
+    comp: Unit -> {PosixFs::read, PosixFs::write | r} A
+) -> {r} A
+where requires host posix_fs
+{
     on comp() {
         PosixFs::read(path, resume) => resume(PosixFs::read(path))
+        PosixFs::write(path, contents, resume) => resume(PosixFs::write(path, contents))
         done(value) => value
     }
 }
 ```
 
-**Derive (compiler-synthesized handler from impl).** Per NOTE-025 §3, an impl body may
-declare `derive handler <name>;` — the compiler synthesizes a deep handler function from
-the impl's method bodies. The generated function is available in the value namespace.
+**Subtyping.** A handler-marked function coerces to a plain function (`handler fn <: fn`).
+The reverse is not true: a plain `fn` cannot be used where a handler is required. This means
+a handler can be passed to any higher-order function expecting a plain function of the same
+signature, but `handle expr with utility` fails if `utility` is a plain `fn`.
+
+**Derive (compiler-synthesized handler from impl).** Per NOTE-025 §7.3, an impl body may
+declare `derive handler <name>;` — the compiler synthesizes the total deep handler (the
+identity fold over ALL interface operations) from the impl's method bodies. The generated
+function is handler-marked and available in the value namespace. The handler marker is what
+lets derive filter correctly: it folds over members without the marker, skipping those with
+it. See §8.4 for the `derive_decl` grammar.
 
 **Notes on continuation and multiplicity.**
 
@@ -453,11 +476,25 @@ row items are retained as a convenience form and do not change the surface gramm
 
 ### 6.4 Function Type
 
-The target function type includes an effect row:
+The target function type includes an effect row and an optional handler marker:
 
 ```ebnf
-fn_type = [ effect_row_type ] "(" [ parameter_list ] ")" [ "->" type ] ;
+fn_type = [ "handler" ] [ effect_row_type ] "(" [ parameter_list ] ")" [ "->" type ] ;
 ```
+
+The optional `handler` prefix is the **handler marker** (per NOTE-023 §7). It is a type-level
+attribute that identifies handler intent — analogous to comp mode (eager/lazy/memo). The
+underlying function type is structurally identical with or without the marker; the marker is
+erased at runtime and carries no data.
+
+- A plain function type has no marker: `(Unit -> {PosixFs::read | r} A) -> {r} A`.
+- A handler-marked type carries the marker: `handler (Unit -> {PosixFs::read | r} A) -> {r} A`.
+
+The `handler` keyword at declaration site produces the marker. It is **not** a pure alias for
+`fn` — the marker is significant for derive filtering and `handle expr with` validation (see
+§4.3). **Subtyping:** `handler fn <: fn` — a handler-marked function coerces to a plain
+function (additive refinement). The reverse is not allowed: a plain `fn` cannot be used where
+a handler is required.
 
 Examples:
 
@@ -494,6 +531,52 @@ removed):
 type_param = identifier [ ":" kind ] ;
 kind = "Type" | "Row" | "Resource" ;
 ```
+
+### 6.6 Bodyless Type Definitions
+
+Per NOTE-025 §7.1, the `type_definition` production gains an optional body. The current
+grammar (inherited from SPEC-095) requires `= type_body`:
+
+```ebnf
+-- SPEC-095 (current):
+type_definition = "type" identifier [ type_params ] "=" type_body ";" ;
+```
+
+The target delta makes `= type_body` optional:
+
+```ebnf
+-- SPEC-095b (target):
+type_definition = "type" identifier [ type_params ] [ "=" type_body ] ";" ;
+```
+
+Without `=`, the type is a **bodyless nominal type** — a new type with no constructors and no
+representation. It has identity but cannot be constructed. This is the minimal form for
+effect identity carriers (NOTE-025): an impl type that exists purely to distinguish effect
+operation identities (e.g., `PosixFs::read` vs `MemoryFs::read`) needs no data.
+
+**Critical distinction from transparent alias.** `type PosixFs = Unit;` is a transparent
+alias — it canonicalizes to `Unit` at definitional equality (per SPEC-058/SPEC-100). This
+collapses all identity-only types into one identity (`PosixFs ≡ Unit`, `MemoryFs ≡ Unit` →
+identities collide). `type PosixFs;` is a nominal type that equals no other type, preserving
+distinct identities.
+
+With `= type_body` present, the existing forms are unchanged:
+
+- `= alias_body` (a bare type): transparent alias — canonicalizes to origin head.
+- `= enum_body` / `struct_body` / `record_type` / `tuple_type`: nominal data type with
+  constructors.
+
+Examples:
+
+```ash
+type PosixFs;                                      -- bodyless: identity-only, unconstructable
+type ConfiguredFs = { root: Path, readonly: Bool }; -- data-carrying: nominal record
+type List<T> = Nil | Cons { head: T, tail: List<T> }; -- nominal ADT
+```
+
+Phantom types (`type F<A> = Unit` carrying a type parameter without equating to a
+representation) are a related but separate deferred type-system enhancement — see NOTE-025
+§7.1 "Deferred follow-up."
 
 ## 7. Workflow Definitions
 
@@ -596,6 +679,79 @@ interface EffectfulMap<F> {
 }
 ```
 
+### 8.4 Impl Definitions
+
+Per NOTE-025 and NOTE-023 §7, an impl body contains three kinds of members: operations
+(`fn`), handlers (`handler`), and derivations (`derive handler`). The `impl_member`
+production replaces the single `impl_method` form inherited from SPEC-095:
+
+```ebnf
+impl_definition = "impl" type_name "for" type_name [ where_clause ]
+                  "{" { impl_member } "}" ;
+
+impl_member = impl_method | handler_decl | derive_decl ;
+
+impl_method = "fn" identifier type_params? "(" parameter_list? ")" [ "->" type ]
+              fn_body ;
+
+handler_decl = "handler" identifier type_params? "(" parameter_list ")"
+               "->" type [ where_clause ] handler_body ;
+
+handler_body = "{" "on" expr "{" handler_clause+ "}" "}" ;
+               -- handler_clause is defined in §4.3 (on_expr)
+
+derive_decl = "derive" "handler" identifier ";" ;
+```
+
+**Operation methods (`impl_method`).** Each operation declared in the interface must have a
+corresponding `fn` method body in the impl. The method body is the default deep-handler
+behavior — what `derive handler` wraps as `resume(ImplType::op(args))`.
+
+**Handler declarations (`handler_decl`).** A named handler function defined inside the impl
+body, co-located with the operations it interprets. Its type carries the handler marker
+(§6.4). Multiple handlers per impl are allowed (NOTE-025 §7.4) — they are distinct
+value-namespace bindings with distinct names.
+
+**Derive declarations (`derive_decl`).** `derive handler <name>;` synthesizes the total deep
+handler — the identity fold over ALL interface operations (NOTE-025 §7.3). The compiler
+generates a `handler_decl` with one clause per operation: `ImplType::op(args, resume) =>
+resume(ImplType::op(args))`, plus `done(value) => value`. The generated function is
+handler-marked.
+
+**How derive filters.** Derive folds over `impl_method` members only (those without the
+handler marker). `handler_decl` members are skipped — they have the handler marker on their
+type, which distinguishes them from operations. This works across module boundaries because
+the marker survives into module summaries.
+
+Example:
+
+```ash
+type PosixFs;
+
+impl Fs for PosixFs
+where requires host posix_fs
+{
+    fn read(path: Path) -> String { builtin(fs_read, path) }
+    fn write(path: Path, contents: String) -> Unit { builtin(fs_write, path, contents) }
+
+    derive handler posix_fs;       -- total fold — all default
+
+    handler logging_fs<A, r: Row>(comp: Unit -> {PosixFs::read, PosixFs::write | r} A) -> {r} A {
+        on comp() {
+            PosixFs::read(path, resume) => {
+                log("reading {}", path);          -- custom behavior in the clause
+                resume(PosixFs::read(path))
+            }
+            PosixFs::write(path, contents, resume) => resume(PosixFs::write(path, contents))
+            done(value) => value
+        }
+    }
+}
+```
+
+Both `posix_fs` (derived) and `logging_fs` (explicit) are handler-marked values in the value
+namespace. The caller chooses which to install via `handle expr with <name>`.
+
 ## 9. Policy Expressions
 
 Unchanged from current grammar. Policy expressions remain combinators over named policy
@@ -658,3 +814,4 @@ The following forms are rejected in the target grammar:
 - 2026-06-18: Created as target-state grammar document. Defined effect row syntax, unified `do` form, effect aliases/groups, and migration compatibility.
 - 2026-06-27: Reconciled with NOTE-021 (Row kind, where row layout, evidence rows), NOTE-022 (effects as interfaces, no effect keyword for operations), NOTE-023 (handler surface grammar: on, handle...with, named handler sugar).
 - 2026-06-27: Reconciled with NOTE-025 (effect identity via sorts and impls). Handler clause identities changed from interface-qualified (`Fs.read`) to impl-type-qualified (`PosixFs::read`). Named handler sugar replaced by `handler`-as-alias-for-`fn`. Added derive mechanism. §4.3 revised.
+- 2026-06-28: Handler marker reconciliation. §4.3: `handler` is no longer a pure alias for `fn` — it produces a handler-marked function type (type-level attribute). Added subtyping (`handler fn <: fn`), derive filtering via the marker, and `handle expr with` validation. Removed stale `handler_fn_decl` production (replaced by `handler_decl` in §8.4). §6.4: `fn_type` gains optional `handler` prefix marker. §6.6 (new): bodyless `type_definition` delta (`= type_body` optional) for identity-only nominal types. §8.4 (new): `impl_definition` with `impl_member` production (`impl_method`, `handler_decl`, `derive_decl`). §3.2: `handler_decl` added to top-level definition list (standalone + in-impl positions).

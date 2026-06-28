@@ -6,6 +6,14 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Changed
+- Reconciled SPEC-095b with the handler marker (NOTE-023 §7) and bodyless type declarations
+  (NOTE-025 §7.1). SPEC-095b §4.3: `handler` is no longer a pure alias for `fn` — it produces
+  a handler-marked function type; stale `handler_fn_decl` removed, replaced by `handler_decl`
+  in §8.4; added subtyping (`handler fn <: fn`), derive filtering, `handle expr with`
+  validation. §6.4: `fn_type` gains optional `handler` prefix marker. §6.6 (new): bodyless
+  `type_definition` delta (`= type_body` optional) for identity-only nominal types. §8.4
+  (new): `impl_definition` with `impl_member` production (`impl_method`, `handler_decl`,
+  `derive_decl`). §3.2: `handler_decl` added to top-level definition list.
 - Resolved all eight NOTE-025 §7 open questions and introduced the handler marker. NOTE-025:
   §7 rewritten from Open Questions to Resolved Decisions with grammar/types/semantics/worked
   examples for each. Key decisions: (Q1) bodyless nominal type `type PosixFs;` replaces

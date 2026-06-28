@@ -6,6 +6,13 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Added
+- NOTE-028: Purity, evaluation modes, and contract timing. Resolves NOTE-014 GAP 4 and
+  NOTE-025 §7.9. Purity is denotational: referential transparency is the language-level test.
+  `strict`/`lazy`/`memo` and the handler marker are purity-preserving attributes; impurity
+  comes from residual/latent rows, not from attribute presence. Contract timing: strict checks
+  at call/return, lazy checks on every force, memo checks on first force and replays cached
+  terminal outcomes. Blame labels from NOTE-027 attach to the original provider/caller/callee,
+  not the later force site.
 - NOTE-027: Contract blame and subsumption. Resolves NOTE-014 GAP 1 (blame) and GAP 3
   (subsumption) — the two CRITICAL gaps blocking impl contract verification. Subsumption:
   behavioral subtyping rule `{P} C {Q} ⊑ {P'} C {Q'} iff P ⇒ P' (precondition contravariant)

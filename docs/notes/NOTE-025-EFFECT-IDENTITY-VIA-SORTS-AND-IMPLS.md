@@ -860,10 +860,13 @@ entirely inside the method body (the vtable call), not in the dispatch model. Th
 identity model intact while pushing dynamism into the data layer — the same pattern Rust
 uses internally with trait objects.
 
-### 7.9 Parked — purity classification of type-level attributes
+### 7.9 Resolved — purity classification of type-level attributes
 
-**Status:** Open question, deferred. Surfaced by the handler marker (§7.4) but spans the
-broader attribute model.
+**Status:** Resolved in NOTE-028. The decision is denotational: referential transparency is
+the language-level purity test. `strict`/`lazy`/`memo` and the handler marker are
+purity-preserving type attributes; impurity comes from residual/latent rows, not from the
+attribute's presence. Contract timing for lazy/memo values is also resolved there: lazy
+checks on every force, memo checks on first force and replays cached terminal outcomes.
 
 The handler marker and comp mode (eager|lazy|memo) are type-level attributes that sit
 *beside* the effect row. The current purity model (SPEC-027, SPEC-097b §6.4) defines purity
@@ -891,26 +894,28 @@ Each attribute has a different profile:
 | `eager` (default) | yes | yes | Baseline — no question. |
 | `lazy` | yes | **no** | Changes termination. A function that diverges eagerly may terminate lazily (and vice versa). Observable. |
 | `memo` | yes | **no** | Involves mutation (cache writes). Referentially transparent but not effect-free. |
-| `handler` marker | yes | **unclear** | The handler's own row may be empty after peeling, but it *interprets* an effectful computation. Is interpretation an effect? |
+| `handler` marker | yes | not necessarily | The marker is purity-preserving. Impurity comes from the handler's residual row, not from interpreting a handled computation. |
 
 **Why this matters now.** The handler marker is the first type-level attribute we've attached
 to a function type beyond the effect row. As more attributes are added (the comp-mode notes
 anticipate eager|lazy|memo as core type-system concepts), the purity boundary needs a
 principled definition — not ad-hoc per-attribute rulings.
 
-**What needs resolving (future note):**
+**Resolution (NOTE-028):**
 
-1. Is purity denotational (referential transparency) or operational (no mutation/divergence
-   change)? Or are there two purity lattices — one for each?
-2. If operational, do `lazy` and `memo` break purity? If denotational, do they preserve it?
-3. Does the handler marker count as an effect? A handler with an empty residual row is
-   denotationally a pure function of its thunk argument — but it *consumes* effectful
-   computations. Is that consumption "pure"?
-4. How does this interact with the tower (Pure < Act < Proc < Workflow)? If `memo` is
-   denotationally pure but operationally impure, which tier does it belong to?
+1. Purity is denotational: referential transparency is the language-level test.
+2. `lazy` and `memo` preserve purity when their latent row is empty. Their operational
+   mechanisms (delayed evaluation and memo cache writes) do not by themselves add Ash row
+   effects.
+3. The handler marker is purity-preserving. A handler with an empty residual row is pure at
+   the handler boundary; the marker identifies handler intent, not impurity.
+4. Tower placement follows the visible residual/latent row. `memo` with empty latent row
+   belongs in Pure despite operational cache mutation; `memo` with non-empty latent row is
+   effectful when forced.
 
-**Cross-references:** SPEC-027 (Pure Functions), SPEC-097b §6.4 (empty row = least
-requirement), NOTE-023 §7 (handler marker), comp-mode notes (eager|lazy|memo).
+**Cross-references:** NOTE-028 (Purity, Evaluation Modes, and Contract Timing), SPEC-027
+(Pure Functions), SPEC-097b §15 (evaluation modes and row accounting), NOTE-023 §7 (handler
+marker).
 
 ## 8. Working Principle
 
@@ -974,3 +979,7 @@ External references:
   uniqueness. (Q8) dynamic dispatch deferred — bridge via data-carrying vtable impl type.
   Updated Pre-Spec Delta with grammar delta for bodyless types and handler marker reference.
   Swept all type declarations to bodyless form throughout.
+- 2026-06-28: Marked §7.9 resolved by NOTE-028. Decision: purity is denotational
+  (referential transparency); `strict`/`lazy`/`memo` and the handler marker are
+  purity-preserving attributes; impurity comes from residual/latent rows, not from the
+  attribute's presence. Contract timing for lazy/memo values is resolved in NOTE-028.

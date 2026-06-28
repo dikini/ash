@@ -1256,6 +1256,12 @@ effects would violate row subtyping independently.
 **Blocks:** interface method contracts (§8.2 \*\*), impl contract verification (§8.2 \*\*\*).
 
 ### GAP 4: Interaction with Evaluation Modes [DESIGN DECISION — connects to SPEC-101 lazy/memo]
+**Status: Resolved in NOTE-028.** Purity is denotational: referential transparency is the
+language-level test. `strict`/`lazy`/`memo` and the handler marker are purity-preserving
+type attributes; impurity comes from residual/latent rows, not attributes. Contract timing:
+strict checks at call/return boundaries, lazy checks on every force, memo checks on first
+force and replays cached terminal outcomes. See NOTE-028 §1 (Purity model), §3 (Contract
+timing principle), and §4 (Contract timing by mode).
 
 SPEC-101 introduces lazy and memo computation modes. Contracts on lazy/memoized computations
 have a temporal dimension we have not addressed:
@@ -1534,3 +1540,4 @@ constraints, what happens to unsupported forms — is currently undefined.
 | 2026-06-27 | Applied NOTE-022 decision: replaced all `effect Fs { ... }` declaration examples with `interface Fs { ... }`. Externs now shown as dispatch-side constructs with `for Fs` ownership annotation (Placement A) or handler-local (Placement B). The contract layering (Hoare contract, handler law, ABI safety, authority claim) is unchanged — only the declaration keyword changes. |
 | 2026-06-27 | Consolidated host/FFI and extern placement into NOTE-024. Replaced the detailed §8 extern placement content (Placement A/B, typing rules, four obligation layers) with a pointer to NOTE-024. Preserved the contract layer separation table, updating the ABI safety mechanism column to reference `builtin(...)` and NOTE-024. Updated Open Question 8 to reference NOTE-024. The current target position: `extern` is reserved with no grammar production; `builtin(...)` is the only host-reaching mechanism. |
 | 2026-06-28 | GAP 1 (blame) and GAP 3 (subsumption) resolved in NOTE-027. Blame labels formalized: party (Caller/Callee/Impl), polarity (Negative/Positive), module path, source span. Blame is immutable through handler composition. Subsumption rule: `P ⇒ P'` (precondition weakens) and `Q' ⇒ Q` (postcondition strengthens), checked eagerly at impl definition. Original gap descriptions preserved for context. |
+| 2026-06-28 | GAP 4 (contracts × evaluation modes) resolved in NOTE-028. Purity is denotational: `strict`/`lazy`/`memo` and the handler marker are purity-preserving attributes; impurity comes from residual/latent rows. Contract timing: strict checks at call/return, lazy checks on every force, memo checks on first force and replays cached terminal outcomes. |

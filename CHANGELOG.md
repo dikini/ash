@@ -37,6 +37,14 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   analog). Resolves the "phantom types/newtype deferred" item from NOTE-025 §7.1.
 
 ### Changed
+- Reconciled target specs with NOTE-026 through NOTE-029. SPEC-095b now promotes
+  `newtype_definition` into the target grammar. SPEC-097b defines newtype identity,
+  behavioral Hoare subsumption, blame polarity, denotational purity, and lazy/memo contract
+  timing. SPEC-098b/SPEC-099/SPEC-100 now carry structured `ContractDiagnostic` payloads for
+  `ContractViolation` traps while preserving the explicit `fail` boundary for recoverable
+  contract behavior. SPEC-101 documents denotational purity and memo replay of contract
+  diagnostics. SPEC-096b clarifies that default contract failure is structured bottom, not a
+  failure row item.
 - Reconciled SPEC-095b with the handler marker (NOTE-023 §7) and bodyless type declarations
   (NOTE-025 §7.1). SPEC-095b §4.3: `handler` is no longer a pure alias for `fn` — it produces
   a handler-marked function type; stale `handler_fn_decl` removed, replaced by `handler_decl`

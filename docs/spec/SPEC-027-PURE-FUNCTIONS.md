@@ -12,6 +12,12 @@ contribute an effect grade of their own, and do not participate in the workflow 
 machinery. Recursive definitions are permitted; termination analysis is deferred and is not part of
 the core `fn` validity criterion in this spec.
 
+**Purity clarification (NOTE-028).** Purity is denotational: referential transparency is the
+language-level test. Type-level attributes such as `strict`, `lazy`, `memo`, and the handler
+marker are purity-preserving when the residual or latent row is empty. Runtime implementation
+mechanisms such as thunk allocation or memo-cache mutation do not by themselves make a term
+impure unless they are exposed as Ash-visible row effects.
+
 ## 2. Syntax
 
 ### 2.1 Function Definition

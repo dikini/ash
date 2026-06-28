@@ -81,7 +81,7 @@ Predicate ::= CorePredicateExpression
 
 Rows are requirement rows, not authority grants. A closed row has no tail. An open row has a row variable tail.
 
-`ContractViolation` is **not** a `RowItem`. Contract failures are represented by contract discharge metadata plus either `Trap { reason: ContractViolation(...) }` for unrecoverable failure or an explicit `fail`/`FailureEffect` path when a surface construct chooses recoverable failure behavior. This keeps SPEC-099 aligned with SPEC-096b and SPEC-098b: contracts are ambient-discharge items, not arbitrary raised operations.
+`ContractViolation` is **not** a `RowItem`. Contract failures are represented by contract discharge metadata plus either `Trap { reason: ContractViolation(ContractDiagnostic) }` for unrecoverable failure or an explicit `fail`/`FailureEffect` path when a surface construct chooses recoverable failure behavior. This keeps SPEC-099 aligned with SPEC-096b and SPEC-098b: contracts are ambient-discharge items, not arbitrary raised operations.
 
 ### 3.1 Refinement predicates
 
@@ -189,12 +189,13 @@ ContractDischarge ::= {
     contract: ContractItem,
     mode: DischargeMode,
     evidence: Option<RefinementEvidence>,
-    source_span: Option<SourceSpan>
+    source_span: Option<SourceSpan>,
+    blame: Option<BlameLabel>
 }
 
 DischargeMode ::= Static | Evidence | Dynamic
 
-TrapReason ::= ContractViolation(ContractItem)
+TrapReason ::= ContractViolation(ContractDiagnostic)
              | UnhandledEffect(EffectOp)
              | Panic(String)
              | NonExhaustiveMatch
@@ -250,7 +251,7 @@ Static verification uses this result discipline:
 
 ### 6.3 Dynamic contract checks
 
-A dynamic Hoare check lowers to a runtime predicate test plus contract discharge metadata. If the predicate fails, the default unrecoverable behavior is `Trap { reason: ContractViolation(contract) }`. A surface construct may instead choose an explicit recoverable failure path by lowering to `Raise { op: fail ..., ... }` and row-accounting the corresponding `fail` item.
+A dynamic Hoare check lowers to a runtime predicate test plus contract discharge metadata. If the predicate fails, the default unrecoverable behavior is `Trap { reason: ContractViolation(diagnostic) }`, where the diagnostic preserves the predicate, source span, blame label, observed values, discharge history, handler decisions, and replay status. A surface construct may instead choose an explicit recoverable failure path by lowering to `Raise { op: fail ..., ... }` and row-accounting the corresponding `fail` item.
 
 ```text
 -- Pseudocode core shape:
@@ -258,7 +259,7 @@ RecordDischarge {
     discharge: ContractDischarge { mode: Dynamic, contract: requires(P), ... },
     body: If {
         cond: not(P),
-        then_branch: Trap { reason: ContractViolation(requires(P)) },
+        then_branch: Trap { reason: ContractViolation(ContractDiagnostic { contract: requires(P), ... }) },
         else_branch: body
     }
 }
@@ -560,3 +561,4 @@ Core Ash does not include surface sugar as primitive syntax. It includes only th
 - 2026-06-20: Created formal specification for Core Ash — the canonical IR between surface syntax and CPS IR.
 - 2026-06-20: Clarified CPS field synthesis, dynamic contract discharge, law evidence lowered to refinements, diagnostics, pattern-match desugaring, and `LetCont` introduction during lowering.
 - 2026-06-20: Reconciled SPEC-099 with SPEC-098b/SPEC-096b by removing `ContractViolation` as a row item/raised operation, making `Handle.row` local residual only, specifying affine continuation typing for handler resumes, treating user-defined resumable effects as out of scope, and lowering evidence to discharge metadata or sidecar records rather than ordinary values.
+- 2026-06-28: Reconciled with NOTE-027 and NOTE-029. `ContractDischarge` carries blame metadata, `TrapReason::ContractViolation` carries `ContractDiagnostic`, and dynamic contract examples preserve structured diagnostics while keeping recoverable behavior explicit through `fail`.

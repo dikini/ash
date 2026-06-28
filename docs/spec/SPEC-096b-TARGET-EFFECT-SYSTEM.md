@@ -396,6 +396,11 @@ A `fail` effect is discharged by an enclosing failure handler, workflow failure 
 profile-specific failure policy. It must not implicitly become `None`, `Err`, an empty list,
 or another domain value.
 
+Per NOTE-029, default dynamic contract failure is not a `fail` effect: it is structured bottom
+(`Trap { reason: ContractViolation(ContractDiagnostic) }`) outside ordinary row accounting. If
+a surface construct chooses recoverable contract behavior, the lowering must map the
+diagnostic into an explicit `fail` operation and include that failure item in the row.
+
 ### 6.9 Evidence and report effects
 
 Evidence effects require an audit/provenance/reporting sink.
@@ -674,3 +679,4 @@ workflow reporting, and audit evidence.
 - 2026-06-18: Created as target-state effect system document. Defined row semantics, effect item taxonomy, discharge rules, aliases/groups, and migration path.
 - 2026-06-27: Reconciled with NOTE-020 (computation row taxonomy), NOTE-021 (Row kind, evidence rows), NOTE-022 (effects as interfaces), NOTE-023 (handler surface semantics).
 - 2026-06-27: Reconciled with NOTE-025 (effect identity via sorts and impls). Operation effect identity changed from interface-qualified (`fs.read`) to impl-type-qualified (`PosixFs::read`). §6.1 examples and EBNF updated.
+- 2026-06-28: Reconciled with NOTE-029. Clarified §6.8: default dynamic contract failure is structured bottom outside row accounting; recoverable contract behavior must lower to explicit `fail` and expose the failure item in the row.

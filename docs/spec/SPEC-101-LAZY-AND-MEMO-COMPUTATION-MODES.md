@@ -161,6 +161,9 @@ Memoization caches terminal outcomes, not only successful values:
 - divergence never fills the memo cell.
 
 Caching failure is required so repeated force does not duplicate effects before the failing point.
+If the trap reason is `ContractViolation(ContractDiagnostic)`, the memo cell preserves the
+original diagnostic and blame label. Later forces replay that terminal diagnostic; they may
+record a replay event, but they must not create a new blame event.
 
 ### 6.5 Re-Entrant Forcing
 
@@ -196,6 +199,21 @@ force thunk:
 A function that accepts or returns `Lazy A` or `Memo A` must export the latent row of the thunk body where the row is part of the mode type, function summary, or associated obligation metadata. The row must not be erased just because construction is pure.
 
 Memo thunks still expose the latent row at every force site for static checking. Although later runtime forces may hit the cache and perform no effects dynamically, a static checker must assume that a given force may be the first force unless it has a local proof of filled state. The initial Core checker should not attempt such state-sensitive refinement.
+
+### 7.1 Purity and contract timing
+
+Purity is denotational, following SPEC-097b §15.7. Constructing a `lazy` or `memo` thunk is
+pure when construction itself has row `{}`. Forcing the thunk is pure exactly when the latent
+row is `{}` at that force site.
+
+Contract checks happen at the observation boundary:
+
+- `lazy`: checks run on every force because the body re-runs on every force;
+- `memo`: checks run on first force, then the terminal outcome is cached and replayed;
+- `strict`: checks happen at the ordinary call, return, or data boundary.
+
+The memo cache cell is process-local runtime state and not an Ash-visible row effect. It does
+not make an otherwise empty-row memoized computation impure.
 
 ## 8. Explicit Conversion Operations
 
@@ -337,3 +355,4 @@ Likely task slices:
 - 2026-06-20: Initial draft. Defines Core-level lazy and memo computation semantics, typing rules, row accounting, CPS lowering through existing IR forms, and the decision not to add new CPS IR term variants for the initial design.
 - 2026-06-21: Corrected CPS lowering to require a value-level thunk carrier with captured handler/provider chain, preserving creation-time authority semantics while still avoiding new CPS tail-term variants.
 - 2026-06-21: Required `LetMode.mode` and `LetMode.ty` to agree exactly, and rejected malformed Core mode/type mismatches.
+- 2026-06-28: Reconciled with NOTE-028 and NOTE-029. Added §7.1 denotational purity and contract timing for lazy/memo modes, and clarified memo replay of `ContractViolation(ContractDiagnostic)` without creating a new blame event.

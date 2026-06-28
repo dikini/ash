@@ -405,6 +405,7 @@ pub struct ContractDischarge {
     pub mode: DischargeMode,
     pub evidence: Option<EvidenceRef>,
     pub source_span: Span,
+    pub blame: Option<BlameLabel>,
 }
 
 pub enum DischargeMode {
@@ -412,10 +413,46 @@ pub enum DischargeMode {
     Evidence,    -- discharged by proof / test / law evidence
     Dynamic,     -- discharged by runtime contract handler
 }
+
+pub struct BlameLabel {
+    pub party: BlameParty,
+    pub polarity: BlamePolarity,
+    pub module_path: NamePath,
+    pub function_name: Option<Identifier>,
+    pub source_span: Span,
+}
+
+pub enum BlameParty {
+    Caller,
+    Callee,
+    Impl,
+    Boundary,
+}
+
+pub enum BlamePolarity {
+    Negative,    -- precondition / caller-side obligation
+    Positive,    -- postcondition / callee-side obligation
+}
+
+pub struct ContractDiagnostic {
+    pub contract: ContractEffect,
+    pub predicate: PredicateRef,
+    pub contract_text: String,
+    pub source_span: Span,
+    pub blame: BlameLabel,
+    pub observed_values: Vec<ObservedValue>,
+    pub call_chain: Vec<CallFrame>,
+    pub discharge: ContractDischarge,
+    pub handler_history: Vec<HandlerDecision>,
+    pub replay: ReplayStatus,
+}
 ```
 
 A contract effect cannot be silently erased from a row without recording its discharge mode.
-The IR must preserve this information for audit, diagnostics, and evidence caching.
+The IR must preserve this information for audit, diagnostics, and evidence caching. Dynamic
+contract failures use `ContractDiagnostic` to preserve the structured bottom payload defined
+by NOTE-029. Blame labels follow NOTE-027: `requires` failures are negative/caller-side;
+`ensures` failures are positive/callee-or-impl-side.
 
 ## 5. Raise and Handle
 
@@ -431,7 +468,7 @@ pub struct EffectOp {
 }
 
 pub enum TrapReason {
-    ContractViolation(ContractEffect),
+    ContractViolation(ContractDiagnostic),
     UnhandledEffect(EffectOp),
     Panic(String),
 }
@@ -692,11 +729,22 @@ safe_divide =
                       contract: Contract(requires {b != 0}),
                       mode: Dynamic,
                       evidence: None,
-                      source_span: ... },
+                      source_span: ...,
+                      blame: Some(BlameLabel { party: Caller, polarity: Negative, ... }) },
                     body:
                       Jump { cont: k, arg: result, row: {} } },
             else_branch:
-              Trap { reason: ContractViolation(requires {b != 0}) },
+              Trap { reason: ContractViolation(ContractDiagnostic {
+                contract: Contract(requires {b != 0}),
+                predicate: b != 0,
+                contract_text: "requires: b != 0",
+                source_span: ...,
+                blame: BlameLabel { party: Caller, polarity: Negative, ... },
+                observed_values: [a, b],
+                call_chain: ...,
+                discharge: ContractDischarge { ... },
+                handler_history: [],
+                replay: Original }) },
             row: {} } } }
 ```
 
@@ -709,17 +757,19 @@ Key points:
   is `{}`.
 - The contract predicate `b != 0` is a primitive operation (`Neq`), bound via `LetPrim`.
 - On success: the contract is discharged with `mode: Dynamic` and recorded in the IR.
-- On failure: the computation traps with `Trap { reason: ContractViolation(...) }`. A trap
-  is an unrecoverable abort that does not resume. It is outside ordinary row accounting.
+- On failure: the computation traps with
+  `Trap { reason: ContractViolation(ContractDiagnostic { ... }) }`. A trap is an
+  unrecoverable abort that does not resume. It is outside ordinary row accounting.
 - The `RecordDischarge` node is a no-op at runtime but preserves the discharge status for
   audit and evidence caching. It does not appear in the effect row after discharge.
 - This example is consistent with §5.6: contracts are discharged by boundary checks, not by
   `Handle` frames.
 
-**Alternative failure semantics:** If the contract violation is recoverable, the failure
-branch can `Raise` a `Failure` effect instead of trapping. The choice between trap and recovery
-is a policy decision, not an IR invariant. If recovery is used, the function row must include
-the failure effect.
+**Alternative failure semantics:** If a surface construct chooses recoverable contract
+behavior, the failure branch must `Raise` an explicit `fail` effect instead of trapping. The
+diagnostic may be carried as the failure payload, but `ContractViolation` itself remains trap
+metadata rather than a row item. If recovery is used, the function row must include the
+corresponding `fail` effect.
 
 ## 8. Handler Patterns (Schematic Examples)
 
@@ -1350,3 +1400,4 @@ resolved through an additional indirection layer. Both are possible but not spec
   rows. Made `Raise`/`Handle` operation-typed. Added contract discharge status. Rewrote
   examples into fully normalized core examples and schematic handler patterns. Marked
   laziness section as pseudo-IR.
+- 2026-06-28: Reconciled with NOTE-027 and NOTE-029. Extended `ContractDischarge` with blame metadata, added `BlameLabel`/`ContractDiagnostic`, changed `TrapReason::ContractViolation` to carry structured diagnostics, and updated the dynamic contract example/recoverable-failure boundary.

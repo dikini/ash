@@ -245,6 +245,39 @@ pub struct EvidenceEffect {
 These effects are profile-sensitive. `proc spawn` must not type-check in a pure or `Act`-only
 profile unless the computation is explicitly lifted or checked in a `Proc`-capable environment.
 
+### 3.9 Newtype identity and representation
+
+Per SPEC-095b §6.7 and NOTE-026, a `newtype` introduces a fresh nominal type constructor and
+a value-level wrapper constructor around one inhabited representation type:
+
+```ash
+newtype CustomFs = CustomFs(PosixFs);
+newtype Tagged<Label> = Tagged(String);
+```
+
+The type checker treats the newtype as distinct from its representation:
+
+```text
+CustomFs ≠ PosixFs
+Tagged<Admin> ≠ Tagged<User>
+```
+
+This distinction is definitional. A transparent alias may canonicalize to its origin head;
+a newtype must not. At runtime, the newtype shares the representation of its wrapped type and
+does not add a layout field beyond that representation.
+
+The wrapper constructor and pattern are explicit zero-cost conversions:
+
+```ash
+let fs = CustomFs(posix);
+let CustomFs(inner) = fs;
+```
+
+There is no automatic coercion between a newtype and its representation. If a future phase adds
+unsafe coercions or derived impls, those features must preserve the nominal identity rule. Type
+parameters absent from the representation type are phantom parameters: they affect identity and
+type equality, but not runtime layout.
+
 ## 4. Row syntax and kinds
 
 ### 4.1 Proposed source syntax
@@ -393,6 +426,8 @@ context is pure.
 
 ### 6.5 Contract subsumption
 
+Contract discharge and behavioral contract subsumption are separate checks.
+
 A contract item may be removed from a residual row only when the checker records a discharge:
 
 ```text
@@ -403,6 +438,27 @@ requires {p} is discharged
 
 The type checker must not silently coerce `{requires {p}}` to `{}` without recording the mode
 and evidence boundary.
+
+When an `impl` method refines an interface method's Hoare contract, the checker must also
+verify NOTE-027's behavioral subtyping rule eagerly at the `impl` definition site:
+
+```text
+interface contract: {P} C {Q}
+impl contract:      {P'} C {Q'}
+
+{P'} C {Q'} ⊑ {P} C {Q}
+  iff
+P ⇒ P'       -- impl precondition is weaker or equal
+Q' ⇒ Q       -- impl postcondition is stronger or equal
+```
+
+The impl may accept more inputs and promise more outputs. It must not demand more from callers
+than the interface promised, and it must not guarantee less than the interface contract.
+
+Blame follows polarity. A failed `requires` check blames the caller/provider of the argument;
+a failed `ensures` check blames the callee or impl that promised the result. Subsumption checks
+must preserve the source contract clause so diagnostics can report which party declared the
+failed obligation.
 
 ## 7. Row polymorphism
 
@@ -816,7 +872,37 @@ the memo cell is already filled on that path. A cache hit may perform no dynamic
 runtime, but ordinary type-checker summaries and diagnostics must not erase the latent row
 from a force site merely because the thunk is memoized.
 
-### 15.7 CPS Lowering
+### 15.7 Purity and contract timing
+
+Purity is denotational. A type-level attribute is purity-preserving when it preserves
+referential transparency at the relevant observation boundary. `strict`, `lazy`, `memo`, and
+the handler marker are not row items and do not by themselves make a computation impure.
+
+The residual or latent row determines purity:
+
+```text
+pure(strict A)  iff the current residual row is {}
+pure(lazy A ρ)  iff ρ = {} at force sites
+pure(memo A ρ)  iff ρ = {} at force sites
+```
+
+`memo` may allocate and write a runtime cache cell, but that cache mutation is not an
+Ash-visible row effect unless a future feature exposes it as one. A handler-marked function is
+pure when applying it leaves an empty residual row; impurity comes from residual effects in the
+handler body, not from the marker.
+
+Contracts fire at observation boundaries:
+
+| Mode | Contract timing |
+|------|-----------------|
+| `strict` | check at call, return, or ordinary data boundary |
+| `lazy` | check on every force |
+| `memo` | check on first force, cache the terminal outcome, and replay success/failure/trap thereafter |
+
+For memoized contract failures, replay preserves the original diagnostic and blame label. A
+later force may record a replay event, but it must not create a new blame event.
+
+### 15.8 CPS Lowering
 
 In the CPS IR (SPEC-098b), modes become calling conventions:
 
@@ -828,7 +914,7 @@ The mode is visible in the IR as the presence or absence of thunk wrapping. For 
 thunks, the wrapper is semantically required: a bare zero-argument `Lam` does not preserve
 the creation-time authority boundary specified by SPEC-101.
 
-### 15.8 Algorithmic Implications
+### 15.9 Algorithmic Implications
 
 Some algorithms are naturally expressed in one mode:
 
@@ -852,3 +938,4 @@ Mode mismatch is a type error, not a performance warning. The user must explicit
 - 2026-06-21: Clarified memo force row accounting so static force sites retain the thunk latent row while dynamic cache hits may perform no effects, and aligned CPS lowering text with SPEC-101 `ThunkClosure` chain-capture semantics.
 - 2026-06-27: Reconciled with NOTE-021 (Row kind, computation row terminology), NOTE-022 (operations as interface methods), NOTE-023 (handler typing: continuation as ordinary parameter, multiplicity via function type).
 - 2026-06-27: Reconciled with NOTE-025 (effect identity via sorts and impls). OperationEffect identity changed from interface-qualified to impl-type-qualified. Handler typing examples updated. §3.3 and §8.1 revised.
+- 2026-06-28: Reconciled with NOTE-026 through NOTE-029. Added §3.9 newtype identity/representation semantics, expanded §6.5 with Hoare contract subsumption and blame polarity, and added §15.7 denotational purity plus lazy/memo contract timing.

@@ -313,9 +313,10 @@ passes. Core type checking defines the obligation shape and consumes their resul
 
 Dynamic contract discharge records `DischargeMode::Dynamic` and leaves an explicit runtime
 check in Core. If the check fails unrecoverably, the program traps with
-`ContractViolation(contract)`. Recoverable behavior must be represented by an explicit
-`fail` operation and corresponding failure row item. `ContractViolation` is not a row item
-and is not a raised operation.
+`ContractViolation(ContractDiagnostic)`. The diagnostic records the predicate, source span,
+blame label, observed values, discharge history, handler decisions, and replay status.
+Recoverable behavior must be represented by an explicit `fail` operation and corresponding
+failure row item. `ContractViolation` is not a row item and is not a raised operation.
 
 ## 10. Atom and Value Typing
 
@@ -458,7 +459,9 @@ has been materialized.
 ### 11.12 Trap
 
 `Trap(reason)` checks at any expected type and has row `{}`. `TrapReason` is diagnostic
-metadata. `ContractViolation` inside a trap does not create a row item.
+metadata. `ContractViolation(ContractDiagnostic)` inside a trap does not create a row item;
+recoverability requires an explicit `fail` effect whose row item is visible in the enclosing
+function or computation type.
 
 ## 12. Handler Affinity
 
@@ -565,3 +568,4 @@ generic row mismatch.
 ## Changelog
 
 - 2026-06-20: Created Core Ash type-checking specification with declarative rules and an initial annotation-led algorithmic profile.
+- 2026-06-28: Reconciled with NOTE-029. Dynamic contract failure traps with `ContractViolation(ContractDiagnostic)`, trap typing remains row `{}`, and recoverability requires explicit `fail` with a visible failure row item.

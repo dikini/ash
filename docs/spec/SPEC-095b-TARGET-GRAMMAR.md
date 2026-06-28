@@ -84,14 +84,15 @@ Unchanged from current grammar.
 
 ### 3.2 Definition List
 
-The target definition list adds `effect_alias_definition` and
-`effect_group_definition`:
+The target definition list adds `effect_alias_definition`, `effect_group_definition`,
+`handler_decl`, and `newtype_definition`:
 
 ```ebnf
 definition = visibility (
     fn_definition
   | handler_decl          -- standalone handler at module level (NOTE-023 §7)
   | type_definition
+  | newtype_definition    -- zero-cost nominal wrapper (NOTE-026)
   | role_definition
   | legacy_capability_definition
   | interface_definition
@@ -574,9 +575,41 @@ type ConfiguredFs = { root: Path, readonly: Bool }; -- data-carrying: nominal re
 type List<T> = Nil | Cons { head: T, tail: List<T> }; -- nominal ADT
 ```
 
-Phantom types and newtype wrappers (`newtype T = T(R)`) are addressed in NOTE-026 (Newtype
-and Phantom Types), which defines the `newtype` keyword as the unified zero-cost nominal
-wrapper mechanism.
+### 6.7 Newtype Definitions
+
+Per NOTE-026, `newtype` is the zero-cost nominal wrapper form. It gives an existing inhabited
+type a distinct identity and a constructor while sharing the representation of the wrapped
+type at runtime.
+
+```ebnf
+newtype_definition = "newtype" identifier [ type_params ] "=" constructor "(" type ")" ";" ;
+constructor = identifier ;
+```
+
+Examples:
+
+```ash
+newtype CustomFs = CustomFs(PosixFs);
+newtype Tagged<Label> = Tagged(String);
+newtype Edge<From, To> = Edge(Unit);
+```
+
+The constructor name is a value-level constructor. It commonly matches the type name, but the
+grammar does not require that.
+
+`newtype` differs from transparent aliasing:
+
+```ash
+type UserId = Int;            -- transparent alias: UserId ≡ Int
+newtype OrderId = OrderId(Int); -- nominal wrapper: OrderId ≠ Int, runtime representation Int
+```
+
+Type parameters that do not occur in the representation type are phantom parameters. They
+remain part of the type identity even though they do not affect runtime layout. This makes
+phantom tagging a consequence of `newtype`, not a separate grammar form.
+
+The wrapped representation type must be inhabited. A newtype over a bodyless nominal type is
+ill-formed because there is no value to wrap.
 
 ## 7. Workflow Definitions
 
@@ -815,3 +848,4 @@ The following forms are rejected in the target grammar:
 - 2026-06-27: Reconciled with NOTE-021 (Row kind, where row layout, evidence rows), NOTE-022 (effects as interfaces, no effect keyword for operations), NOTE-023 (handler surface grammar: on, handle...with, named handler sugar).
 - 2026-06-27: Reconciled with NOTE-025 (effect identity via sorts and impls). Handler clause identities changed from interface-qualified (`Fs.read`) to impl-type-qualified (`PosixFs::read`). Named handler sugar replaced by `handler`-as-alias-for-`fn`. Added derive mechanism. §4.3 revised.
 - 2026-06-28: Handler marker reconciliation. §4.3: `handler` is no longer a pure alias for `fn` — it produces a handler-marked function type (type-level attribute). Added subtyping (`handler fn <: fn`), derive filtering via the marker, and `handle expr with` validation. Removed stale `handler_fn_decl` production (replaced by `handler_decl` in §8.4). §6.4: `fn_type` gains optional `handler` prefix marker. §6.6 (new): bodyless `type_definition` delta (`= type_body` optional) for identity-only nominal types. §8.4 (new): `impl_definition` with `impl_member` production (`impl_method`, `handler_decl`, `derive_decl`). §3.2: `handler_decl` added to top-level definition list (standalone + in-impl positions).
+- 2026-06-28: Reconciled with NOTE-026. Added `newtype_definition` to the top-level definition list and §6.7 grammar for zero-cost nominal wrappers with explicit constructors, phantom parameters, inhabited representation requirement, and transparent-alias contrast.

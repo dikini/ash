@@ -111,9 +111,9 @@ mechanism:
 
 ```rust
 pub enum DischargeMode {
-    Static,      // discharged by type checker / SMT
+    Static,      // discharged by SMT / proof at compile time
     Evidence,    // discharged by proof / test / law evidence
-    Dynamic,     // discharged by runtime contract handler
+    Dynamic,     // checked at runtime; default failure is Trap, explicit recoverability uses fail
 }
 ```
 
@@ -122,11 +122,11 @@ The full matrix:
 | Contract kind | Row item | Discharge category | Mechanism | IR representation |
 |---|---|---|---|---|
 | `requires` (static) | `Contract::Requires(P)` | Ambient discharge | SMT / refinement type | Erased from runtime row; refinement on parameter types |
-| `requires` (dynamic) | `Contract::Requires(P)` | Raised operation | `Raise ContractViolation` | `Raise` node; `Failure` effect in row |
+| `requires` (dynamic) | `Contract::Requires(P)` | Runtime check | `Trap ContractViolation`; explicit recoverability uses `fail` | `RecordDischarge` + check at entry; no hidden row item by default |
 | `ensures` (static) | `Contract::Ensures(Q)` | Ambient discharge | SMT / refinement type | Erased; refinement on return type |
-| `ensures` (dynamic) | `Contract::Ensures(Q)` | Raised operation | `Raise ContractViolation` | `Raise` node at exit; `Failure` effect in row |
+| `ensures` (dynamic) | `Contract::Ensures(Q)` | Runtime check | `Trap ContractViolation`; explicit recoverability uses `fail` | `RecordDischarge` + check at exit; no hidden row item by default |
 | `invariant` (static) | `Contract::Invariant(I)` | Ambient discharge | SMT | Erased; refinement predicate |
-| `invariant` (dynamic) | `Contract::Invariant(I)` | Raised operation | `Raise ContractViolation` | `Raise` node at boundary |
+| `invariant` (dynamic) | `Contract::Invariant(I)` | Runtime check | `Trap ContractViolation`; explicit recoverability uses `fail` | `RecordDischarge` + boundary check |
 | `law` (proven) | `Contract::Law{name,pred}` | Ambient discharge | Proof (SMT/Lean/by_definition) | Erased; trusted evidence in `ContractDischarge.evidence` |
 | `law` (survived testing) | `Contract::Law{name,pred}` | Falsification evidence | QuickCheck/smallcheck/fuzzing | Erased; test evidence ref (confidence, not proof) |
 | `law` (refuted) | `Contract::Law{name,pred}` | Blocking | Counterexample found | Compile error or deferred-status |
@@ -201,30 +201,15 @@ SMT result handling:
 This is **gradual verification**: what can be proven statically is checked at compile time;
 what cannot is checked at runtime.
 
-### 3.2 Dynamic Hoare → Raise/Handle (Runtime Code)
+### 3.2 Dynamic Hoare → Runtime Check (Runtime Code)
 
 ```ash
 -- Surface
-fn safe_div(a: Int, b: Int) -> {ContractViolation} Int
+fn safe_div(a: Int, b: Int) -> Int
     dynamic requires: b != 0
     dynamic ensures: result * b == a
 {
     a / b
-}
-```
-
-Lowers to CPS IR:
-
-```
-fn safe_div(a: Int, b: Int) -> {Failure} Int {
-    if b == 0 {
-        Raise { op: ContractViolation("requires: b != 0"), resume: k }
-    };
-    let result = a / b;
-    if result * b != a {
-        Raise { op: ContractViolation("ensures: result * b == a"), resume: k }
-    };
-    Jump(k, result)
 }
 ```
 
@@ -375,14 +360,15 @@ No SMT query at the call site. The law's evidence propagates.
 
 The contract systems connect to the handler composition algebra from NOTE-013:
 
-### 6.1 Dynamic Contracts Are Handler-Dischargeable
+### 6.1 Dynamic Contracts: Trap by Default, Handler-Dischargeable Only When Recoverable
 
-Dynamic `requires`/`ensures` lower to `Raise { op: ContractViolation }`. This is a raised
-operation in the `Failure` effect category. It is handled by a `Handle` frame — a contract
-handler.
+This subsection reflects the original NOTE-013 connection: a recoverable dynamic contract
+surface can explicitly lower to a row-accounted `fail` operation and be handled like any other
+failure effect. NOTE-029 narrowed the default case: ordinary dynamic `requires`/`ensures`
+failures lower to structured bottom, not to a hidden raised operation.
 
-The contract handler's resume strategy is typically **shallow** (no resume on violation),
-analogous to Either's early exit. This means:
+For the explicit recoverable path, the failure handler's resume strategy is typically
+**shallow** (no resume on violation), analogous to Either's early exit. This means:
 
 - A contract handler inside a deep state handler preserves state on contract violation
   (analogous to `StateT(EitherT)` — ORDER A in NOTE-013 §7.2).
@@ -409,12 +395,13 @@ They are erased from the runtime row after discharge. They never become `Raise` 
 |---|---|---|---|
 | Ambient (static Hoare) | SMT / refinement | Erased; type refinement | No |
 | Ambient (proven law) | Proof certificate | Erased; trusted evidence cached | No |
-| Raised (dynamic Hoare) | Runtime handler | `Raise ContractViolation` | Yes |
+| Dynamic Hoare, default | Runtime check | `Trap { reason: ContractViolation(...) }` | No |
+| Dynamic Hoare, explicit recoverable | Runtime failure handler | `Raise { op: fail ... }` | Yes |
 | Falsification (tested law / property) | QuickCheck / smallcheck / fuzzing | Not in runtime IR (test harness) | No |
 
-This is the precise semantics. There is no ambiguity about whether a contract is checked
-statically or dynamically, or whether it involves a handler: the discharge mode determines
-it, and the IR representation follows mechanically.
+This is the precise semantics after NOTE-029. There is no ambiguity about whether a contract is
+checked statically or dynamically, or whether it involves a handler: the discharge mode and
+recoverability policy determine it, and the IR representation follows mechanically.
 
 ## 7. Surface Syntax Design Implications
 
@@ -446,18 +433,19 @@ The hoare-clauses.md note proposes `static`/`dynamic` qualifiers. The design dec
 
 - **Default is static** (SMT checks at compile time). If SMT returns `unknown`, demote to
   dynamic automatically (gradual verification).
-- **Explicit `dynamic`** forces runtime checking via the effect system.
+- **Explicit `dynamic`** forces runtime checking. Default failure is structured bottom;
+  recoverable behavior must be explicit and row-accounted as `fail`.
 - **Explicit `static`** is redundant but allowed for clarity.
 
 ```ash
 -- Static (default): SMT at compile time
 fn f(x: Int) -> Int requires: x > 0 { ... }
 
--- Dynamic: runtime check via Raise ContractViolation
-fn f(x: Int) -> {Failure} Int dynamic requires: x > 0 { ... }
+-- Dynamic: runtime check; default failure traps with ContractViolation diagnostic
+fn f(x: Int) -> Int dynamic requires: x > 0 { ... }
 
 -- Both: static check + runtime assertion (belt and suspenders)
-fn f(x: Int) -> {Failure} Int
+fn f(x: Int) -> Int
     requires: x > 0           -- static
     dynamic requires: x > 0   -- runtime
 { ... }
@@ -732,12 +720,12 @@ that already exists for method signatures.
 | Surface construct | Core/IR lowering | Row contribution |
 |---|---|---|
 | `requires: P` (static, proved) | Refinement on param types | Erased (`Static` discharge) |
-| `requires: P` (static, unknown) | Demote to dynamic | `Failure` effect |
-| `requires: P` (dynamic) | `Raise ContractViolation` at entry | `Failure` effect |
+| `requires: P` (static, unknown) | Demote to dynamic runtime check | None by default; explicit recoverability adds `fail` |
+| `requires: P` (dynamic) | `Trap ContractViolation` at entry on false predicate | None by default; explicit recoverability adds `fail` |
 | `ensures: Q` (static, proved) | Refinement on return type | Erased (`Static` discharge) |
-| `ensures: Q` (dynamic) | `Raise ContractViolation` at exit | `Failure` effect |
+| `ensures: Q` (dynamic) | `Trap ContractViolation` at exit on false predicate | None by default; explicit recoverability adds `fail` |
 | `invariant: I` (static) | Refinement predicate | Erased (`Static` discharge) |
-| `invariant: I` (dynamic) | `Raise ContractViolation` at boundary | `Failure` effect |
+| `invariant: I` (dynamic) | `Trap ContractViolation` at boundary on false predicate | None by default; explicit recoverability adds `fail` |
 | `law { ∀x⃗. P(x⃗) }` (proved) | Evidence ref in `ContractDischarge` | Erased (`Evidence` discharge) |
 | `law { ∀x⃗. P(x⃗) }` (tested) | Advisory evidence ref | Erased (advisory) |
 | `law { ∀x⃗. P(x⃗) }` (unproven) | Compile error or deferred | Blocking |
@@ -768,9 +756,9 @@ requires: P
   │
   └─ SMT unknown / explicit dynamic
        │
-       ├─ Insert Raise ContractViolation at call site
-       ├─ Failure effect in row
-       └─ Handler at runtime boundary discharges or propagates
+       ├─ Insert dynamic runtime check at call site
+       ├─ Default false predicate traps with ContractViolation diagnostic
+       └─ Explicit recoverability lowers to row-accounted fail
 ```
 
 ## 10. The Two Systems Are Not Schizophrenic — They Are Layered
@@ -789,7 +777,7 @@ LAYER 2: Proven laws (the trusted subset)
 
 LAYER 3: Hoare contracts (site-specific triples)
    ↓ static: refinement types, SMT-checked (may use proven law evidence)
-   ↓ dynamic: Raise ContractViolation, handler-discharged
+   ↓ dynamic: runtime check; default false predicate traps, explicit recoverability uses fail
 
 LAYER 4: Computation row (the IR accounting)
    ↓ carries all contract items until discharged
@@ -890,12 +878,12 @@ Type check
   │
   └─ SMT unknown → CARRIED FORWARD as pending obligation
        │
-       Lowering: demoted to Raise ContractViolation (dynamic fallback)
-                  Failure effect enters row
+       Lowering: demoted to dynamic runtime check
+                  default false predicate traps; explicit recoverability adds fail row
        │
        Module load: SMT gains imported module bodies
          │
-         ├─ now provable → ELIDE the Raise node, remove Failure effect
+         ├─ now provable → ELIDE the dynamic check
          │                  (RecordDischarge{mode: Static})
          │
          └─ still unknown → carried forward to link time
@@ -905,8 +893,8 @@ Type check
                 ├─ now provable → ELIDE (as above)
                 └─ still unknown → reaches run time as dynamic check
                      │
-                     Run time: Raise fires on violation
-                                Handler catches (if installed) or trap (bottom)
+                     Run time: false predicate traps by default
+                               or explicit recoverable fail is handled
 ```
 
 Key point: the "unknown" branch is NOT a failure. It is a gradual-verification decision —
@@ -916,16 +904,16 @@ statically dischargeable.
 #### 11.3.2 Dynamic Hoare (explicit dynamic or demoted)
 
 ```
-Lowering → Raise ContractViolation node inserted at boundary
-           Failure effect in row
+Lowering → dynamic predicate check inserted at boundary
+           default failure has no row item; explicit recoverability adds fail row
 
 Module load / Link time: may become statically provable
-  → Raise node ELIDED (dead-code elimination, §11.4.2)
-  → Failure effect removed from row
+  → dynamic check ELIDED (dead-code elimination, §11.4.2)
+  → explicit failure row removed only if recoverable path had been inserted
 
-Run time: if not elided, Raise fires on violation
-  → Handler (if installed) discharges or propagates
-  → If no handler: trap (bottom), TrapReason::ContractViolation
+Run time: if not elided, false predicate reaches the contract failure path
+  → default: trap (bottom), TrapReason::ContractViolation
+  → explicit recoverable path: row-accounted fail is handled or propagates
 ```
 
 #### 11.3.3 Laws
@@ -1022,14 +1010,14 @@ optimized to a tail call.
 
 #### 11.4.2 Dynamic Check Elision (Contract LTO)
 
-A contract demoted to `Raise ContractViolation` at compile time might be provable at module-
-load or link time (more context available). The `Raise` node is removed; the `Failure` effect
-leaves the row. This is **LTO for contracts**:
+A contract demoted to a dynamic check at compile time might be provable at module-load or link
+time (more context available). The runtime check is removed; any explicit recoverable `fail`
+row inserted for that path leaves the row. This is **LTO for contracts**:
 
 ```
-Compile time: requires P unknown → Raise ContractViolation inserted
+Compile time: requires P unknown → dynamic contract check inserted
 Module load:  caller body now visible → SMT proves P at this call site
-              → Raise node ELIDED → Failure effect removed
+              → dynamic check ELIDED → explicit failure path removed if present
               → optimization barrier lifted
 ```
 
@@ -1048,7 +1036,7 @@ fn fold<A>(xs: List<A>, init: A, op: (A,A) -> A | associative(op)) -> A
 → fold can be inlined at call site without runtime check for associativity
 
 -- Without evidence: associativity is only tested (not proven)
-→ dynamic check (or contract handler) must remain even after inlining
+→ dynamic check must remain even after inlining
 ```
 
 #### 11.4.4 Effect Row Minimization
@@ -1110,7 +1098,7 @@ SURFACE: contracts are DECLARED (requires/ensures/law/property/proof)
 CORE:    contracts are REFINEMENT TYPES + PENDING OBLIGATIONS
          → static Hoare → refinement predicates on types
          → laws → ContractEffect in the type, with discharge status
-         → dynamic Hoare → Raise ContractViolation in the term
+         → dynamic Hoare → runtime check in the term
          → properties → metadata only, not in the term language
 
 IR (CPS): contracts are ROW ITEMS + DISCHARGE RECORDS
@@ -1121,7 +1109,7 @@ IR (CPS): contracts are ROW ITEMS + DISCHARGE RECORDS
 
 BACKEND: contracts are either ERASED or EMBEDDED
          → proven/static → erased (no code generated)
-         → dynamic → Raise ContractViolation compiled to assertion + handler dispatch
+         → dynamic → lowered predicate check compiled to diagnostic trap by default
          → advisory → erased (not in binary)
          → RecordDischarge metadata optionally preserved in debug info
 ```
@@ -1376,15 +1364,16 @@ design constraints in NOTE-032.
 The attachment matrix (§8) puts capabilities and contracts as separate `EffectItem` kinds, but
 their interaction needs discussion. A capability check ("does caller have db.read authority?")
 is an authority question. A contract check ("is key != null?") is a correctness question. Both
-appear in the row, both can raise. But:
+can surface failure-like diagnostics, but the default mechanisms differ:
 
 - Capability violations are about PERMISSION (you are not allowed)
 - Contract violations are about CORRECTNESS (your inputs/outputs are wrong)
 
 These are morally different failures. Conflating them in a single `Failure` effect might lose
-information. Or it might be fine — both are handler-dischargeable, and the handler can
-distinguish by inspecting the effect's payload. But this is a design decision that should be
-explicit, especially given the capability authority algebra in §8.2.
+information. Capability denial is authority/admission failure; default dynamic contract
+violation is structured bottom; explicitly recoverable contract behavior may use row-accounted
+`fail`. This design decision should be explicit, especially given the capability authority
+algebra in §8.2.
 
 The effect-owned extern model sharpens the boundary:
 
@@ -1403,24 +1392,28 @@ taxonomy still needs concrete row/IR spelling.
 
 ### GAP 9: Contract Lowering from Surface to Core [CRITICAL — known implementation gap]
 
-**Status: Partially resolved in NOTE-031.** NOTE-031 defines the predicate well-formedness
-boundary that must run before Surface predicates become Core constraints: expression-like
-surface predicates are classified as `StaticPredicate`, `DynamicPredicate`, or rejected;
-`old(...)` becomes a boundary-local `SnapshotRef`; predicate faults are distinct from false
-predicates; and unsupported-but-pure forms remain dynamic rather than being silently erased.
-The remaining implementation work is the concrete Core AST/schema and lowering algorithm.
+**Status: Resolved in NOTE-033.** NOTE-031 defines the predicate well-formedness boundary;
+NOTE-033 completes the remaining concrete lowering artifact. Surface contract predicates now
+lower through a structured `LoweredPredicate`/`PredicateNode` schema before becoming
+`PredicateRef`s. The lowering records binder identities, boundary ownership, `SnapshotRef`s,
+predicate classification, proof fragments, dynamic runtime-check plans, diagnostic shape, and
+`ContractDischarge` metadata. Rejected predicates stop before SMT/runtime checking;
+unsupported-but-pure predicates become dynamic; `old(...)` is a snapshot reference, not a
+delayed expression; and dynamic predicate faults remain separate from false-predicate contract
+violations.
 
 The user previously identified (2026-04-10) that contract lowering from surface contracts
 (`Requirement::Arithmetic { expr: Expr }`) to core contracts (structured `{ var, constraint }`)
-is a major dependency that needs to be made explicit. This is the Surface→Core boundary
-described abstractly in §11.5 ("structuralized") but not concretely specified.
+was a major dependency that needed to be made explicit. This is the Surface→Core boundary
+described abstractly in §11.5 ("structuralized") and concretized by NOTE-033.
 
 The surface has expression-based contract predicates. The Core needs structured
-constraint/predicate representations suitable for SMT queries. Before NOTE-031, the mapping
-between these two representations — what expression forms are supported, how they translate to
-SMT-consumable constraints, what happens to unsupported forms — was undefined. NOTE-031 now
-defines the classification boundary; the remaining gap is the concrete Core predicate schema
-and lowering algorithm.
+constraint/predicate representations suitable for SMT queries. Before NOTE-031/NOTE-033, the
+mapping between these two representations — what expression forms are supported, how they
+translate to SMT-consumable constraints, what happens to unsupported forms — was previously
+undefined.
+NOTE-031 defines the classification boundary; NOTE-033 defines the concrete Core predicate
+schema and lowering algorithm.
 
 **Blocks:** concrete implementation of Surface-to-Core predicate lowering and static contract
 checking over the Core predicate schema.
@@ -1584,3 +1577,4 @@ checking over the Core predicate schema.
 | 2026-06-29 | NOTE-031 resolved the `old(x)` snapshot open question and partially resolved GAP 9. Contract predicates are now classified before lowering: SMT-safe static predicates, pure dynamic predicates, and rejected effectful/unstable predicates. `old(...)` lowers to boundary-local snapshot metadata, and predicate faults are distinct from false predicates. |
 | 2026-06-29 | GAP 7 (meta-level soundness) resolved in NOTE-032. Contract soundness is now stated as five explicit obligations over typed Core/CPS metadata: gradual verification, blame, optimizer use of evidence, dynamic demotion, and predicate-fault separation. |
 | 2026-06-29 | Swept stale dynamic-contract lowering prose in §3.2 to match NOTE-029/NOTE-032: default dynamic Hoare failure is structured bottom, while recoverability must lower through explicit row-accounted `fail`. |
+| 2026-06-29 | GAP 9 (Surface-to-Core contract lowering) resolved in NOTE-033. Surface predicates now lower through structured Core predicate artifacts with binder, snapshot, classification, proof/runtime, diagnostic, and discharge metadata. Swept related stale dynamic-contract prose in §3.2 and §6 to preserve NOTE-029's trap-vs-explicit-`fail` boundary. |

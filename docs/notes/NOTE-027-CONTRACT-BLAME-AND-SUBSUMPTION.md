@@ -240,8 +240,8 @@ strengthening means the impl takes on more obligation, and blame follows the obl
 
 ### 2.3 Blame in the IR
 
-The `ContractDischarge` struct (SPEC-098b §4.1) and the `Raise ContractViolation` node
-carry the blame label:
+The `ContractDischarge` struct (SPEC-098b §4.1) and dynamic contract diagnostics carry the
+blame label:
 
 ```rust
 // Extended ContractDischarge (SPEC-098b §4.1)
@@ -254,13 +254,13 @@ pub struct ContractDischarge {
 }
 ```
 
-For dynamic contracts, the `Raise` node carries the blame label so the runtime handler or
-trap diagnostic knows who to attribute the failure to:
+For dynamic contracts, the runtime check plan carries the blame label so the trap diagnostic
+or explicit recoverable `fail` path knows who to attribute the failure to:
 
 ```rust
-// Dynamic contract violation at runtime
-Raise {
-    op: ContractViolation {
+// Dynamic contract violation at runtime, default unrecoverable path
+Trap {
+    reason: ContractViolation(ContractDiagnostic {
         contract: ContractEffect::Requires(PredicateRef("b != 0")),
         blame: BlameLabel {
             party: Party::Caller,
@@ -269,11 +269,10 @@ Raise {
             function_name: "safe_div",
             contract_text: "requires: b != 0",
             source_span: Span { file: "math.ash", line: 12, col: 5 },
-        }
-    },
-    args: vec![ /* actual argument values for diagnostics */ ],
-    resume: k,
-    row: EffectRow,
+        },
+        observed_values: vec![ /* actual argument values for diagnostics */ ],
+        ...
+    })
 }
 ```
 
@@ -535,10 +534,10 @@ For each method `m` in `impl I for T`:
 For a call `T::m(args)` where `m` has `requires: P`:
 
 1. If `P` is static and discharged: caller's obligation is erased (SMT proved it).
-2. If `P` is dynamic: insert a `Raise ContractViolation` at the call site with
+2. If `P` is dynamic: insert a runtime check at the call site with
    `BlameLabel { party: Caller, ... }`. The caller is blamed if the precondition fails.
-3. After the call returns `result`: if `Q` is dynamic, insert a `Raise ContractViolation`
-   at the return site with `BlameLabel { party: Callee, ... }` (or `Impl` if the impl
+3. After the call returns `result`: if `Q` is dynamic, insert a runtime check at the return
+   site with `BlameLabel { party: Callee, ... }` (or `Impl` if the impl
    strengthened the postcondition).
 
 ### 5.3 Gradual verification interaction
@@ -556,11 +555,11 @@ requires: P
   │
   └─ SMT unknown / explicit dynamic
        │
-       ├─ Insert Raise ContractViolation at call site
+       ├─ Insert runtime check at call site
        │   with BlameLabel { party: Caller, polarity: Negative, ... }
-       ├─ Failure effect in row
-       └─ Handler at runtime boundary discharges or propagates
-              (blame label preserved through handler composition)
+       ├─ Default false predicate traps with ContractViolation diagnostic
+       └─ Explicit recoverability lowers to row-accounted fail
+              (blame label preserved through failure handling)
 ```
 
 ## 6. Open Questions
@@ -607,7 +606,7 @@ Blame assignment (GAP 1):
 
 Blame labels:
   BlameLabel { party, polarity, module_path, function_name, contract_text, source_span }.
-  Carried in ContractDischarge (static) and Raise ContractViolation (dynamic).
+  Carried in ContractDischarge and dynamic ContractDiagnostic / explicit fail payloads.
 
 Blame through handler composition:
   The original blame label is immutable.
@@ -616,8 +615,8 @@ Blame through handler composition:
 
 Diagnostic state:
   ContractDiagnostic { blame, actual_values, call_chain, discharge_history, handler_decisions }.
-  Trap (no handler) = terminal bottom. Raise (handler installed) = recoverable.
-  The effect row determines the boundary — same as any other effect.
+  Default dynamic false predicate = terminal bottom Trap.
+  Explicit recoverability = row-accounted fail with the same blame label.
 ```
 
 ## 8. References
@@ -635,7 +634,7 @@ Internal references:
 - [SPEC-097b: Target Type System](../spec/SPEC-097b-TARGET-TYPE-SYSTEM.md) — §6.5 contract
   subsumption (row-item discharge)
 - [SPEC-098b: Target CPS IR](../spec/SPEC-098b-TARGET-IR.md) — §4.1 ContractDischarge,
-  TrapReason, Raise node
+  TrapReason, ContractDiagnostic, and explicit `fail` path
 
 External references:
 
@@ -658,3 +657,6 @@ External references:
   (ContractDiagnostic struct). Connects to GAP 6 (failure observability) and GAP 7 (blame
   soundness). Five open questions flagged: invariant blame, newtype blame, cross-module
   evidence, concurrent blame, contract violation as impl-qualified effect.
+- 2026-06-29: Reconciled dynamic-blame examples with NOTE-029/NOTE-033. Dynamic false
+  predicates now produce `ContractDiagnostic` in a `Trap` by default; explicit recoverability
+  uses row-accounted `fail` while preserving the same blame label.

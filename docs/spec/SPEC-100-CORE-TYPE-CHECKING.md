@@ -286,13 +286,25 @@ Per NOTE-031, predicate checking produces a summary before proof or dynamic lowe
 ```
 
 where the summary records Boolean type, free names, `SnapshotRef`s for `old(path)`, diagnostic
-shape, and either `StaticPredicate` or `DynamicPredicate` classification. A rejected predicate
-does not reach the prover or runtime checker.
+shape, lowered predicate reference, predicate environment, optional dynamic runtime-check plan,
+and either `StaticPredicate` or `DynamicPredicate` classification. A rejected predicate does
+not reach the prover or runtime checker.
 
-In the current Core AST, predicates may still preserve source text for diagnostics, but the
-checker must associate that text with a structured predicate summary, scoped predicate
-environment, snapshot metadata, and source metadata. Text alone is not sufficient for public
-obligations or diagnostics.
+Per NOTE-033, the checker lowers a surface contract expression through a staged pipeline before
+proof or runtime checking:
+
+```text
+contract-position expression
+  -> scoped and typed predicate tree
+  -> `old(path)` to SnapshotRef
+  -> stability and authority checks
+  -> LoweredPredicate / PredicateRef
+  -> StaticPredicate proof obligation or DynamicPredicate RuntimeCheckPlan
+  -> ContractDischarge metadata
+```
+
+Source text may be preserved for diagnostics, but text alone is not sufficient for public
+obligations, evidence caching, optimizer checks, or dynamic execution.
 
 ### 9.2 Obligation Generation
 
@@ -338,6 +350,9 @@ faults while being evaluated produces a distinct `ContractPredicateFault` trap p
 checker must not report a predicate fault as a failed contract condition: it is a failure of
 predicate evaluation, normally blamed on the contract author or admitted predicate-function
 provider rather than on the caller/callee relation.
+
+The dynamic check's evaluator consumes a `RuntimeCheckPlan` over a `PredicateRef` and captured
+`PredicateEnvironment`; it must not re-scope or re-parse surface predicate text at runtime.
 
 ## 10. Atom and Value Typing
 
@@ -606,3 +621,4 @@ generic row mismatch.
 - 2026-06-28: Reconciled with NOTE-029. Dynamic contract failure traps with `ContractViolation(ContractDiagnostic)`, trap typing remains row `{}`, and recoverability requires explicit `fail` with a visible failure row item.
 - 2026-06-28: Reconciled with NOTE-030. `LetCall`/sequencing now emits the producer-postcondition-to-continuation-precondition obligation `∀name. Q(name) ⇒ R(name)` and records composed contract metadata when discharged.
 - 2026-06-29: Reconciled with NOTE-031. Predicate well-formedness now emits structured summaries and snapshot references before proof obligations; rejected predicates stop before prover/runtime checking; dynamic predicate faults are distinct from false-predicate contract violations.
+- 2026-06-29: Reconciled with NOTE-033. Core type checking now specifies the Surface-to-Core predicate lowering pipeline, `LoweredPredicate`/`PredicateRef` boundary, and `RuntimeCheckPlan` use for dynamic checks.

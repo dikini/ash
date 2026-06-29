@@ -213,6 +213,9 @@ pub struct PredicateSummary {
     pub snapshot_refs: Vec<SnapshotRef>,
     pub classification: PredicateClassification,
     pub proof_fragment: Option<ProofFragment>,
+    pub lowered_predicate: PredicateRef,
+    pub predicate_env: PredicateEnvRef,
+    pub dynamic_plan: Option<DynamicPredicatePlan>,
     pub diagnostic_shape: DiagnosticShape,
 }
 ```
@@ -224,6 +227,14 @@ allocation identity, or force lazy/memo values outside a contract-owned observat
 
 `old(path)` references lower to boundary-local `SnapshotRef` metadata. The path is a field path
 through a value visible at the contract boundary, not an arbitrary computation.
+
+Per NOTE-033, a `PredicateRef` points at a typed lowered predicate artifact rather than source
+text. That artifact records the owning `BoundaryId`, typed predicate binders, admitted
+predicate-function identities, the lowered predicate tree, `SnapshotRef`s, proof fragment, and
+optional dynamic runtime-check plan. The stable identity for evidence caching and optimizer
+checks is computed from the lowered tree, binder identities, snapshot references, admitted
+predicate-function identities, and relevant type encodings, not from contract source text
+alone.
 
 ### 3.7 Channel effect
 
@@ -408,7 +419,7 @@ Env ⊢ policy P discharged      if Env has a policy handler/evaluator for named
                                 in the required decision domain
 
 Env ⊢ requires {p} discharged  if p is statically proved, evidence-proved,
-                                or a runtime contract handler is available
+                                or lowered to a dynamic runtime check
 
 Env ⊢ channel receive C T discharged
                               if Env owns a receive-capable endpoint C with message type T
@@ -1032,3 +1043,5 @@ Mode mismatch is a type error, not a performance warning. The user must explicit
 - 2026-06-28: Reconciled with NOTE-026 through NOTE-029. Added §3.9 newtype identity/representation semantics, expanded §6.5 with Hoare contract subsumption and blame polarity, and added §15.7 denotational purity plus lazy/memo contract timing.
 - 2026-06-28: Reconciled with NOTE-030. Added §6.6 contract composition through sequencing: rows compose by union, producer postconditions discharge continuation preconditions via `∀a. Q(a) ⇒ R(a)`, and composed postconditions existentially thread the intermediate value.
 - 2026-06-29: Reconciled with NOTE-031. Predicate references now carry checked summaries and boundary-local snapshot metadata; predicates are classified as static or dynamic after rejecting effectful, unstable, or implicit-forcing forms.
+- 2026-06-29: Reconciled with NOTE-033. Refined `PredicateSummary` so predicate references point at typed lowered predicate artifacts with binder environments, snapshots, proof fragments, optional dynamic-check plans, diagnostics, and stable identities.
+- 2026-06-29: Swept stale contract-discharge wording so dynamic contracts lower to runtime checks by default rather than requiring hidden runtime contract handlers.

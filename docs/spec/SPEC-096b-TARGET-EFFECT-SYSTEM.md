@@ -156,7 +156,7 @@ All row items share row syntax, but they are not discharged uniformly.
 | resource | ownership, borrow, split, join, or provenance over a runtime resource |
 | role | role admission at the execution boundary |
 | policy | named policy binding evaluated or handled by a compatible decision domain |
-| contract | static proof, evidence proof/test, or runtime contract handler |
+| contract | static proof, evidence proof/test, dynamic runtime check, or explicit recoverable `fail` path |
 | channel | owned endpoint with compatible direction/message type and guard behavior |
 | process | process runtime operation such as spawn/await/join/cancel |
 | failure | enclosing tower/profile supports the failure route and handler/reporting policy |
@@ -358,6 +358,13 @@ dynamic, or rejected. Rejected predicate forms include capability calls, process
 operations, handler dispatch, time/randomness/environment observation, and implicit forcing of
 lazy or memo values outside a contract-owned observation boundary. Unsupported but pure
 predicates are dynamic rather than silently erased.
+
+Per NOTE-033, this grammar is only the surface entry point. Every accepted contract predicate
+must lower to a structured predicate artifact before it becomes a `PredicateRef`. That lowered
+artifact records the owning boundary, typed binder environment, boundary-local `SnapshotRef`s,
+admitted predicate-function identities, static/dynamic classification, proof fragment or
+dynamic runtime-check plan, diagnostic shape, and stable predicate identity. The implementation
+must not treat a source string as the predicate's semantic representation.
 
 ### 6.6 Channel effects
 
@@ -711,3 +718,4 @@ workflow reporting, and audit evidence.
 - 2026-06-27: Reconciled with NOTE-025 (effect identity via sorts and impls). Operation effect identity changed from interface-qualified (`fs.read`) to impl-type-qualified (`PosixFs::read`). §6.1 examples and EBNF updated.
 - 2026-06-28: Reconciled with NOTE-029. Clarified §6.8: default dynamic contract failure is structured bottom outside row accounting; recoverable contract behavior must lower to explicit `fail` and expose the failure item in the row.
 - 2026-06-29: Reconciled with NOTE-031. Replaced `predicate = expr` with a restricted contract-position predicate grammar, added boundary-local `old(snapshot_expr)`, and required static/dynamic/rejected predicate classification before lowering.
+- 2026-06-29: Reconciled with NOTE-033. Clarified that contract-position predicate syntax lowers through structured predicate artifacts carrying binders, snapshots, classification, proof/runtime-check metadata, diagnostics, and stable identity.

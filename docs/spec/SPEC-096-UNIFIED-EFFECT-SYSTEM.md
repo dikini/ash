@@ -118,7 +118,7 @@ All row items share row syntax, but they are not discharged uniformly.
 | resource | ownership/borrow/split/join admission |
 | role | role admission at the execution boundary |
 | policy | named policy handler/evaluator with compatible decision domain |
-| contract | static proof, evidence proof/test, or runtime contract handler |
+| contract | static proof, evidence proof/test, dynamic runtime check, or explicit recoverable `fail` path |
 | channel | owned endpoint with compatible direction/message type and guard behavior |
 | process | process runtime operation such as spawn/await/join/cancel |
 | failure | enclosing tower/profile supports the failure route and handler/reporting policy |
@@ -298,6 +298,8 @@ fn binary_search(xs: List<Int>, target: Int) -> {requires {sorted(xs)}, ensures 
 Contract predicates must define their scope. For `ensures`, `result` is bound to the normal result value. For channel guards, the received message binder must be named by the channel operation or by a later syntax spec. `old(snapshot_expr)` names a boundary-local pre-state snapshot; `snapshot_expr` is a field path through a boundary value, not an arbitrary computation.
 
 Per NOTE-031, the predicate grammar is a contract-position boundary over expression-like syntax. Before lowering, the type checker classifies each predicate as SMT-safe static, pure dynamic, or rejected. Rejected predicate forms include capability calls, process/workflow operations, handler dispatch, time/randomness/environment observation, and implicit forcing of lazy or memo values outside a contract-owned observation boundary. Unsupported but pure predicates are dynamic rather than silently erased.
+
+Per NOTE-033, the expression-like surface predicate is not the Core predicate artifact. Before a predicate becomes a `PredicateRef`, lowering must produce a structured lowered predicate object that records its boundary, typed binders, `old(...)` snapshot references, admitted predicate-function calls, classification, proof fragment, dynamic runtime-check plan when needed, diagnostic shape, and stable identity. Source text is preserved for diagnostics, not used as the executable or provable predicate representation.
 
 ### 6.6 Channel effects
 
@@ -582,3 +584,4 @@ A later runtime spec may collapse the implementation into one effectful computat
 - 2026-06-18: Tightened draft around effect requirements, kind-specific discharge, role/policy/channel semantics, and aliases/groups.
 - 2026-06-17: Initial draft.
 - 2026-06-29: Reconciled with NOTE-031. Replaced `predicate = expr` with a restricted contract-position predicate grammar, added boundary-local `old(snapshot_expr)`, and required static/dynamic/rejected predicate classification before lowering.
+- 2026-06-29: Reconciled with NOTE-033. Clarified that contract-position syntax lowers through structured predicate artifacts before becoming `PredicateRef`s; source text is diagnostic, not semantic.

@@ -6,6 +6,12 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Added
+- NOTE-033: Surface-to-Core contract lowering. Resolves NOTE-014 GAP 9 by defining the
+  concrete `LoweredPredicate`/`PredicateNode` schema, binder and snapshot environment model,
+  staged lowering algorithm, proof-obligation boundary, dynamic runtime-check plan, and
+  contract-kind-specific lowering rules for `requires`, `ensures`, invariants, channel guards,
+  laws, and bind-composition obligations. Also sweeps stale NOTE-014/NOTE-027 dynamic-contract
+  prose to preserve the NOTE-029 trap-by-default versus explicit-`fail` recoverability boundary.
 - NOTE-032: Contract soundness obligations. Resolves NOTE-014 GAP 7 by stating five
   meta-level obligations over typed Core/CPS metadata: gradual verification soundness, blame
   soundness, optimizer soundness, dynamic demotion soundness, and predicate-fault separation.
@@ -54,6 +60,14 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   analog). Resolves the "phantom types/newtype deferred" item from NOTE-025 §7.1.
 
 ### Changed
+- Reconciled NOTE-033 into target specs. SPEC-096/SPEC-096b clarify that contract-position
+  predicate syntax lowers through structured predicate artifacts before becoming
+  `PredicateRef`s. SPEC-097b refines `PredicateSummary` with lowered predicate references,
+  predicate environments, and dynamic-check plans. SPEC-098b adds `LoweredPredicate`,
+  `PredicateNode`, binder, and `RuntimeCheckPlan` sidecar shapes. SPEC-099/SPEC-100 now state
+  that Core dynamic checks evaluate lowered predicate artifacts over captured environments,
+  not source predicate text. Legacy discharge wording in SPEC-097 and the Hoare design note was
+  aligned with structured-bottom defaults and explicit recoverable `fail`.
 - Reconciled NOTE-031 into target specs. SPEC-095b/SPEC-096/SPEC-096b replace the
   `predicate = expr` placeholder with a restricted contract-position predicate grammar and
   `old(snapshot_expr)` snapshot form. SPEC-097b defines predicate summaries and static/dynamic

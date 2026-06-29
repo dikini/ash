@@ -305,25 +305,20 @@ This is **gradual verification**: what can be proven statically is checked at co
 Dynamic Hoare clauses are effects:
 
 ```text
--- Dynamic contracts add ContractViolation to the effect row
-fn safe_div(a: Int, b: Int) -> {ContractViolation} Int
+-- Dynamic contracts install runtime checks.
+-- Default false-predicate failure is structured bottom, not a row item.
+fn safe_div(a: Int, b: Int) -> Int
     dynamic requires: b != 0
     dynamic ensures: result * b == a
 ```
 
 The function body:
-1. Checks `requires` at entry → `Raise ContractViolation` if false
+1. Checks `requires` at entry → `Trap { reason: ContractViolation(...) }` if false
 2. Computes result
-3. Checks `ensures` at exit → `Raise ContractViolation` if false
+3. Checks `ensures` at exit → `Trap { reason: ContractViolation(...) }` if false
 
-The handler discharges `ContractViolation`:
-```ash
-fn with_contract_check(action: {ContractViolation} A) -> Result<A, ContractError> {
-    handle action with {
-        ContractViolation(msg) => Err(ContractError(msg))
-    }
-}
-```
+If the surface requests recoverability explicitly, the failure path must lower to a visible
+row-accounted `fail`, not to a hidden `ContractViolation` row item.
 
 ### Unified Surface Syntax
 
@@ -333,13 +328,13 @@ fn safe_div(a: Int, b: Int) -> Int
     requires: b != 0
     ensures: result * b == a
 
--- Dynamic only: checked at runtime via effect system
-fn safe_div(a: Int, b: Int) -> {ContractViolation} Int
+-- Dynamic only: checked at runtime; default failure is structured bottom
+fn safe_div(a: Int, b: Int) -> Int
     dynamic requires: b != 0
     dynamic ensures: result * b == a
 
 -- Both: checked at compile time AND runtime
-fn safe_div(a: Int, b: Int) -> {ContractViolation} Int
+fn safe_div(a: Int, b: Int) -> Int
     requires: b != 0          -- static (SMT)
     ensures: result * b == a  -- static (SMT)
     dynamic requires: b != 0  -- runtime (effect)

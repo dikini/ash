@@ -411,7 +411,7 @@ pub struct ContractDischarge {
 pub enum DischargeMode {
     Static,      -- discharged by type checker / prover
     Evidence,    -- discharged by proof / test / law evidence
-    Dynamic,     -- discharged by runtime contract handler
+    Dynamic,     -- checked by lowered runtime predicate plan
 }
 
 pub struct BlameLabel {
@@ -437,6 +437,67 @@ pub enum BlamePolarity {
 pub enum PredicateClassification {
     StaticPredicate,
     DynamicPredicate,
+}
+
+pub struct LoweredPredicate {
+    pub id: PredicateId,
+    pub source_span: Span,
+    pub contract_text: String,
+    pub boundary: BoundaryId,
+    pub env: PredicateEnvRef,
+    pub root: PredicateNode,
+    pub ty: Type,
+    pub free_vars: Vec<PredicateBinderRef>,
+    pub snapshot_refs: Vec<SnapshotRef>,
+    pub classification: PredicateClassification,
+    pub proof_fragment: Option<ProofFragment>,
+    pub dynamic_plan: Option<DynamicPredicatePlan>,
+    pub diagnostic_shape: DiagnosticShape,
+}
+
+pub enum PredicateNode {
+    BoolLit(bool),
+    IntLit(i128),
+    StringLit(String),
+    Binder(PredicateBinderRef),
+    Result(BinderRef),
+    Message(BinderRef),
+    Snapshot(SnapshotRef),
+    Field { base: Box<PredicateNode>, field: FieldId },
+    TupleIndex { base: Box<PredicateNode>, index: usize },
+    Not(Box<PredicateNode>),
+    And(Box<PredicateNode>, Box<PredicateNode>),
+    Or(Box<PredicateNode>, Box<PredicateNode>),
+    Eq(Box<PredicateNode>, Box<PredicateNode>),
+    Ne(Box<PredicateNode>, Box<PredicateNode>),
+    Lt(Box<PredicateNode>, Box<PredicateNode>),
+    Le(Box<PredicateNode>, Box<PredicateNode>),
+    Gt(Box<PredicateNode>, Box<PredicateNode>),
+    Ge(Box<PredicateNode>, Box<PredicateNode>),
+    Add(Box<PredicateNode>, Box<PredicateNode>),
+    Sub(Box<PredicateNode>, Box<PredicateNode>),
+    Mul(Box<PredicateNode>, Box<PredicateNode>),
+    Div(Box<PredicateNode>, Box<PredicateNode>),
+    Rem(Box<PredicateNode>, Box<PredicateNode>),
+    PredicateCall { callee: PredicateFunctionRef, args: Vec<PredicateNode> },
+}
+
+pub struct PredicateBinder {
+    pub id: PredicateBinderId,
+    pub name: Identifier,
+    pub kind: PredicateBinderKind,
+    pub ty: Type,
+    pub source_span: Span,
+}
+
+pub struct RuntimeCheckPlan {
+    pub predicate: PredicateRef,
+    pub evaluator: DynamicPredicatePlan,
+    pub boundary: BoundaryId,
+    pub blame: BlameLabel,
+    pub snapshots: Vec<SnapshotRef>,
+    pub diagnostic_shape: DiagnosticShape,
+    pub recoverability: Recoverability,
 }
 
 pub struct SnapshotRef {
@@ -502,6 +563,12 @@ collapse snapshots from different contract boundaries, including producer, conti
 outer function boundaries in a composed computation. Observed diagnostic values are policy
 governed: a value may be full, summarized, redacted, or unavailable without erasing the
 contract failure.
+
+Per NOTE-033, `PredicateRef`s refer to `LoweredPredicate` sidecar records. The IR must preserve
+the lowered predicate tree, binder environment, snapshot references, stable predicate identity,
+proof fragment, and `RuntimeCheckPlan` when a predicate is dynamic or demoted from an unknown
+static obligation. Core and CPS dynamic checks evaluate this lowered predicate artifact over
+the captured boundary environment; they do not re-interpret source predicate text.
 
 Predicate faults are distinct from false predicates. A false dynamic predicate produces
 `TrapReason::ContractViolation(ContractDiagnostic)` by default; a predicate evaluator trap or
@@ -1462,3 +1529,5 @@ resolved through an additional indirection layer. Both are possible but not spec
 - 2026-06-28: Reconciled with NOTE-027 and NOTE-029. Extended `ContractDischarge` with blame metadata, added `BlameLabel`/`ContractDiagnostic`, changed `TrapReason::ContractViolation` to carry structured diagnostics, and updated the dynamic contract example/recoverable-failure boundary.
 - 2026-06-28: Reconciled with NOTE-030. Added `ComposedContract` sidecar metadata connecting producer postconditions to continuation preconditions at sequencing/`bind` boundaries without adding a new IR term form.
 - 2026-06-29: Reconciled with NOTE-031. Added `SnapshotRef`, predicate classification metadata, policy-governed `ObservedValue` payloads, and `ContractPredicateFault` diagnostics distinct from false-predicate `ContractViolation` traps.
+- 2026-06-29: Reconciled with NOTE-033. Added `LoweredPredicate`, `PredicateNode`, binder, and `RuntimeCheckPlan` sidecar shapes so contract checks evaluate structured predicate artifacts rather than source text.
+- 2026-06-29: Swept stale `DischargeMode::Dynamic` wording so dynamic contract discharge points to lowered runtime predicate plans rather than hidden runtime contract handlers.

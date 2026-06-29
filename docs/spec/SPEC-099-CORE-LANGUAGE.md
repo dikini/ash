@@ -256,10 +256,10 @@ A dynamic Hoare check lowers to a runtime predicate test plus contract discharge
 ```text
 -- Pseudocode core shape:
 RecordDischarge {
-    discharge: ContractDischarge { mode: Dynamic, contract: requires(P), ... },
+    discharge: ContractDischarge { mode: Dynamic, contract: requires(PredicateRef), ... },
     body: If {
-        cond: not(P),
-        then_branch: Trap { reason: ContractViolation(ContractDiagnostic { contract: requires(P), ... }) },
+        cond: not(eval_predicate(PredicateRef, PredicateEnvironment)),
+        then_branch: Trap { reason: ContractViolation(ContractDiagnostic { contract: requires(PredicateRef), ... }) },
         else_branch: body
     }
 }
@@ -291,6 +291,12 @@ Per NOTE-031, dynamic predicate evaluation is pure observer code over a captured
 boundary environment. A dynamic check may inspect values already present at the boundary,
 `result` in postcondition position, a channel message binder in guard position, and
 boundary-local snapshot references produced from `old(path)`.
+
+Per NOTE-033, Core dynamic checks evaluate a lowered predicate artifact referenced by
+`PredicateRef`. That artifact contains the typed binder environment, lowered predicate tree,
+snapshot references, admitted predicate-function identities, and diagnostic shape. Core does
+not execute or prove predicate source text directly; source text is retained only for
+diagnostics. A rejected surface predicate never reaches this Core dynamic-check form.
 
 Dynamic predicate evaluation must not introduce capability, process, workflow, handler, time,
 randomness, environment, or global-state observations. It must not implicitly force a lazy or
@@ -600,3 +606,4 @@ Core Ash does not include surface sugar as primitive syntax. It includes only th
 - 2026-06-28: Reconciled with NOTE-027 and NOTE-029. `ContractDischarge` carries blame metadata, `TrapReason::ContractViolation` carries `ContractDiagnostic`, and dynamic contract examples preserve structured diagnostics while keeping recoverable behavior explicit through `fail`.
 - 2026-06-28: Reconciled with NOTE-030. Added §6.4 `ComposedContract` sidecar metadata for Core sequencing, including the `∀a. Q(a) ⇒ R(a)` proof obligation and dynamic continuation-boundary fallback.
 - 2026-06-29: Reconciled with NOTE-031. Added §6.5 predicate evaluation boundary: dynamic predicates are pure observer code over captured boundary environments, `old(path)` uses snapshot metadata, implicit delayed-value forcing is forbidden, and predicate faults are distinct from false-predicate violations.
+- 2026-06-29: Reconciled with NOTE-033. Dynamic contract checks now evaluate lowered predicate artifacts via `PredicateRef` and `PredicateEnvironment`; source predicate text is diagnostic only, not Core executable semantics.

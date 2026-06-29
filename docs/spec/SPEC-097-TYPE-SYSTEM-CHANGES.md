@@ -284,7 +284,7 @@ Env ⊢ policy P discharged      if Env has a policy handler/evaluator for named
                                 in the required decision domain
 
 Env ⊢ requires {p} discharged  if p is statically proved, evidence-proved,
-                                or a runtime contract handler is available
+                                or lowered to a dynamic runtime check
 
 Env ⊢ channel receive C T discharged
                               if Env owns a receive-capable endpoint C with message type T
@@ -581,3 +581,4 @@ A future implementation plan should include tests for:
 
 - 2026-06-18: Tightened row semantics, effect item taxonomy, discharge rules, alias/group behavior, and acceptance criteria.
 - 2026-06-17: Initial draft.
+- 2026-06-29: Swept stale contract-discharge wording so dynamic contracts lower to runtime checks by default rather than requiring hidden runtime contract handlers.

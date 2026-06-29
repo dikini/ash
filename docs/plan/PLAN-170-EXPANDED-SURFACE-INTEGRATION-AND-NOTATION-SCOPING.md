@@ -1,6 +1,6 @@
 # PLAN-170: Expanded Surface Integration and Notation Scoping
 
-## Status: 🟢 In Progress; boundary audit complete
+## Status: 🟢 In Progress; high-level expansion routing complete
 
 ## Overview
 
@@ -19,8 +19,8 @@ The phase deliberately avoids full macro hygiene, typed macros, generalized bind
 
 ## Goals
 
-- [ ] Audit all public parser/lowering/module-loader paths that can still accept parsed-surface structures directly.
-- [ ] Route high-level module/file lowering paths through expanded-surface validation where safe.
+- [x] Audit all public parser/lowering/module-loader paths that can still accept parsed-surface structures directly.
+- [x] Route high-level module/file lowering paths through expanded-surface validation where safe.
 - [ ] Keep low-level parser/test helpers available but explicitly fail-closed for unresolved surface-only nodes.
 - [ ] Specify notation declaration summary/export semantics, including visibility and import behavior.
 - [ ] Implement bounded imported/exported notation propagation only if module-summary carriers support it cleanly; otherwise record and test explicit non-propagation.
@@ -57,7 +57,7 @@ Tasks:
 
 Tasks:
 
-- TASK-1738: Route high-level module/file lowering through expanded-surface validation. 📝
+- TASK-1738: Route high-level module/file lowering through expanded-surface validation. ✅
 
 ### Phase 3: Scope notation across modules
 

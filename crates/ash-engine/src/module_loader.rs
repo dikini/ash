@@ -127,6 +127,21 @@ pub fn check_importable_module_file(path: &Path) -> Result<(), EngineError> {
     Ok(())
 }
 
+pub(crate) fn validate_expanded_surface_module_file(
+    path: &Path,
+    source: &str,
+) -> Result<(), EngineError> {
+    let module = parse_module_file_for_type_metadata(path, source)?;
+    ash_parser::surface::expand_surface_module(module)
+        .map(|_| ())
+        .map_err(|error| {
+            EngineError::Parse(format!(
+                "in '{}': expanded-surface validation failed: {error}",
+                path.display()
+            ))
+        })
+}
+
 fn source_contains_workflow_keyword(source: &str) -> bool {
     source.lines().any(|line| {
         let code = strip_line_comment(line);
@@ -2615,6 +2630,7 @@ pub(crate) fn collect_module_exports(
     }
 
     let source = std::fs::read_to_string(&path)?;
+    validate_expanded_surface_module_file(&path, &source)?;
     let mut exports = ModuleExports::default();
     let module_effectful_names = ash_parser::parse_surface_file(&source)
         .ok()

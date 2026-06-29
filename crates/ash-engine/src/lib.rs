@@ -1488,6 +1488,7 @@ impl Engine {
 
         let type_metadata =
             module_loader::collect_module_type_metadata_from_module_file(path, &source)?;
+        module_loader::validate_expanded_surface_module_file(path, &source)?;
         let type_count = type_metadata
             .type_defs
             .iter()

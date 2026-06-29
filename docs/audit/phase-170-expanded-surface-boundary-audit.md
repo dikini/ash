@@ -71,8 +71,8 @@ Surface-only nodes considered in this audit:
 
 ## Concrete TASK-1738 targets
 
-1. `Engine::check_module_file` should call `ash_parser::lower::expand_and_lower_surface_module` on the parsed module or an equivalent shared helper after authoritative `ModuleFile` parsing succeeds.
-2. `module_loader::collect_module_exports` should validate the full parsed module through the same gate before public callable export collection, so importing a module cannot silently skip or defer unresolved surface-only public bodies.
+1. `Engine::check_module_file` uses an equivalent engine-private expansion-validation helper after authoritative `ModuleFile` parsing succeeds. The routed helper intentionally stops at expansion validation rather than full Core lowering because whole-module Core lowering still rejects some currently accepted module/stdlib forms.
+2. `module_loader::collect_module_exports` validates the full parsed module through the same expansion-validation helper before public callable export collection, so importing a module cannot silently skip or defer unresolved surface-only public bodies.
 3. The Phase 169 comment on `lower_module_expr` should be updated if TASK-1738 routes the production module/file boundaries instead of direct module-expression lowering.
 4. Add/flip tests:
    - negative: `check_module_file` rejects a `pub fn` body containing unresolved `(<*>)`.
@@ -80,9 +80,9 @@ Surface-only nodes considered in this audit:
    - positive: `check_module_file` accepts a local notation section after expansion if the body is otherwise lowerable.
    - import negative: importing a module whose public callable contains unresolved `(<*>)` fails before closure construction or silently skipping the callable.
 
-## Current audit proof
+## Current audit proof after TASK-1738
 
-`crates/ash-engine/tests/task_1737_expanded_surface_boundary_audit.rs` records the current bypass: `Engine::check_module_file` accepts a full `ModuleFile` with a public function body containing unresolved `(<*>)`. TASK-1738 owns flipping this expectation after routing the high-level boundary.
+`crates/ash-engine/tests/task_1737_expanded_surface_boundary_audit.rs` now records the routed boundary: `Engine::check_module_file` and `check_importable_module_file` reject unresolved public-function `(<*>)` sections, while built-in and local-notation sections that expand successfully remain accepted.
 
 ## Non-targets for TASK-1738
 

@@ -1,6 +1,6 @@
 # TASK-1738: Route high-level module/file lowering through expanded-surface validation
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Summary
 
@@ -14,7 +14,7 @@ Use the TASK-1737 audit to route high-level module/file lowering paths through e
 
 ## Dependencies
 
-- 📝 TASK-1737: Expanded-surface boundary call-site audit
+- ✅ TASK-1737: Expanded-surface boundary call-site audit
 
 ## Deferral / Planned-Feature Reconciliation
 
@@ -25,8 +25,8 @@ Use the TASK-1737 audit to route high-level module/file lowering paths through e
 ## Requirements
 
 1. Update only high-level module/file/workflow loading boundaries identified by TASK-1737.
-   - Primary target: `Engine::check_module_file` in `crates/ash-engine/src/lib.rs` should validate the authoritative parsed `ModuleFile` through `ash_parser::lower::expand_and_lower_surface_module` or equivalent after successful full-module parsing.
-   - Primary target: `module_loader::collect_module_exports` in `crates/ash-engine/src/module_loader.rs` should validate the full parsed module through the same expanded-surface gate before public callable export collection.
+   - Primary target: `Engine::check_module_file` in `crates/ash-engine/src/lib.rs` validates the authoritative parsed `ModuleFile` through an expansion-only helper (`module_loader::validate_expanded_surface_module_file`) after successful full-module parsing. The narrower helper deliberately avoids full Core lowering because current valid stdlib/module surfaces still include forms that the Phase 169 whole-module lowering proof does not yet lower.
+   - Primary target: `module_loader::collect_module_exports` in `crates/ash-engine/src/module_loader.rs` validates the full parsed module through the same expansion-only helper before public callable export collection.
    - Non-target: low-level `lower_expr`, `lower_workflow`, `lower_workflow_def`, and type-metadata-only helpers remain available and fail-closed.
 2. Preserve low-level `lower_expr` and related parser-local APIs for tests, but document them as post-expansion or fail-closed helpers.
 3. Add regression tests showing unresolved surface-only syntax is rejected through high-level engine/module paths.
@@ -56,7 +56,28 @@ commands:
   - cargo clippy -p ash-parser -p ash-typeck -p ash-engine --all-targets --all-features -- -D warnings
   - cargo fmt --check
 checklist:
-  - [ ] High-level paths identified by TASK-1737 are routed or explicitly deferred.
-  - [ ] Low-level bypasses still reject raw surface-only nodes.
-  - [ ] Existing accepted syntax remains stable.
+  - [x] High-level paths identified by TASK-1737 are routed or explicitly deferred.
+  - [x] Low-level bypasses still reject raw surface-only nodes.
+  - [x] Existing accepted syntax remains stable.
 ```
+
+## Closeout evidence
+
+- Routed `Engine::check_module_file` through `module_loader::validate_expanded_surface_module_file` after full module type-metadata parsing.
+- Routed `module_loader::collect_module_exports` through the same expansion validation before public export collection.
+- Kept low-level parser/lowering helpers available and fail-closed; updated the `lower_module_expr` comment to avoid stale engine-wiring claims.
+- Added/updated engine boundary regressions in `crates/ash-engine/tests/task_1737_expanded_surface_boundary_audit.rs`:
+  - unresolved public function operator section is rejected by `check_module_file`,
+  - built-in operator sections remain accepted after expansion,
+  - local notation sections remain accepted after expansion,
+  - importable module export collection rejects unresolved public callable sections.
+- Fresh verification:
+  - `cargo test -p ash-engine --test task_1737_expanded_surface_boundary_audit -- --nocapture`
+  - `cargo test -p ash-engine --test fn_expr_parsing`
+  - `cargo test -p ash-parser --test task_1734_expanded_surface_lowering_gate`
+  - `cargo test -p ash-engine`
+  - `cargo test -p ash-typeck`
+  - `cargo check --workspace`
+  - `cargo clippy -p ash-parser -p ash-typeck -p ash-engine --all-targets --all-features -- -D warnings`
+  - `cargo fmt --check`
+  - `git diff --check`

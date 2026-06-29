@@ -2181,9 +2181,12 @@ fn is_act_like_surface_expr(expr: &Expr) -> bool {
 /// FnDef nested inside blocks, let-bindings, or function arguments are valid
 /// and are handled by `lower_expr` (which does not impose this restriction).
 ///
-/// TODO: Currently only called from tests.  The engine still uses `lower_expr`
-/// in module-scope contexts.  Wire this into the engine's module-lowering path
-/// to activate the guard in production.
+/// Low-level helper used by tests and parser/lowering experiments.
+///
+/// Production module-file boundaries validate the parsed module through surface
+/// expansion before accepting exports; they do not route individual expression
+/// snippets through this helper because module-local notation context belongs to
+/// the whole `ModuleFile`.
 pub fn lower_module_expr(expr: &Expr) -> Result<CoreExpr, LoweringError> {
     if matches!(expr, Expr::FnDef { .. }) {
         return Err(LoweringError::FnDefNotAllowedAtModuleScope);

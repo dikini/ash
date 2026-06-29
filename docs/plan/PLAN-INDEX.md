@@ -145,7 +145,7 @@ Update this section as tasks complete:
 | [167](PLAN-167-TARGET-SURFACE-SEMANTICS-GAP-CLOSURE.md) | 12 | 12 | ✅ Complete; docs-only target surface/lowering/semantics spec-hardening packet |
 | [168](PLAN-168-SURFACE-AST-NOTATION-SUBSTRATE.md) | 7 | 7 | ✅ Complete; implementation substrate handoff |
 | [169](PLAN-169-SURFACE-EXPANSION-AND-NOTATION-ELABORATION.md) | 8 | 8 | ✅ Complete; surface expansion and notation elaboration implemented with explicit deferrals |
-| [170](PLAN-170-EXPANDED-SURFACE-INTEGRATION-AND-NOTATION-SCOPING.md) | 7 | 2 | 🟢 In Progress; boundary audit complete |
+| [170](PLAN-170-EXPANDED-SURFACE-INTEGRATION-AND-NOTATION-SCOPING.md) | 7 | 3 | 🟢 In Progress; high-level expansion routing complete |
 
 ---
 
@@ -725,7 +725,7 @@ mixfix partial application, and full `SPEC-098c` lowering remain explicitly defe
 
 ## Phase 170: Expanded Surface Integration and Notation Scoping
 
-**Status:** 🟢 In Progress; boundary audit complete
+**Status:** 🟢 In Progress; high-level expansion routing complete
 **Plan:** [PLAN-170: Expanded Surface Integration and Notation Scoping](PLAN-170-EXPANDED-SURFACE-INTEGRATION-AND-NOTATION-SCOPING.md)
 **Depends on:** Phase 169 surface expansion and notation elaboration; `SPEC-095c`; `SPEC-098c`.
 
@@ -735,7 +735,7 @@ Closes the highest-value Phase 169 deferrals around expanded-surface integration
 |------|-------------|--------|
 | [TASK-1736](tasks/TASK-1736-phase-170-plan-packet.md) | Create the Phase 170 plan and task packet | ✅ Complete |
 | [TASK-1737](tasks/TASK-1737-expanded-surface-boundary-callsite-audit.md) | Audit expanded-surface boundary and direct-lowering call sites | ✅ Complete |
-| [TASK-1738](tasks/TASK-1738-expanded-surface-high-level-lowering-routing.md) | Route high-level module/file lowering through expanded-surface validation | 📝 Planned |
+| [TASK-1738](tasks/TASK-1738-expanded-surface-high-level-lowering-routing.md) | Route high-level module/file lowering through expanded-surface validation | ✅ Complete |
 | [TASK-1739](tasks/TASK-1739-notation-summary-export-design.md) | Specify notation summary/export and visibility semantics | 📝 Planned |
 | [TASK-1740](tasks/TASK-1740-bounded-notation-import-export-scope.md) | Implement bounded notation import/export propagation or explicit non-propagation | 📝 Planned |
 | [TASK-1741](tasks/TASK-1741-expansion-origin-sidecar-boundary.md) | Specify and implement the narrow source-origin sidecar boundary for expansion products | 📝 Planned |

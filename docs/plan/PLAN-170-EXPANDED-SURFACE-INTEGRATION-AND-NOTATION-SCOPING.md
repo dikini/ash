@@ -1,6 +1,6 @@
 # PLAN-170: Expanded Surface Integration and Notation Scoping
 
-## Status: 📝 Planned; task packet created
+## Status: 🟢 In Progress; boundary audit complete
 
 ## Overview
 
@@ -51,7 +51,7 @@ The phase deliberately avoids full macro hygiene, typed macros, generalized bind
 Tasks:
 
 - TASK-1736: Create the Phase 170 plan and task packet. ✅
-- TASK-1737: Audit expanded-surface boundary and direct-lowering call sites. 📝
+- TASK-1737: Audit expanded-surface boundary and direct-lowering call sites. ✅
 
 ### Phase 2: Enforce safe high-level expansion
 

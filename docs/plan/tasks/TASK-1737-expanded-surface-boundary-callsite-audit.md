@@ -1,6 +1,6 @@
 # TASK-1737: Audit expanded-surface boundary and direct-lowering call sites
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Summary
 
@@ -48,7 +48,19 @@ commands:
   - cargo fmt --check
   - git diff --check
 checklist:
-  - [ ] All public lowering APIs are classified.
-  - [ ] Engine/module-loader paths are classified.
-  - [ ] TASK-1738 has concrete targets or a documented no-op rationale.
+  - [x] All public lowering APIs are classified.
+  - [x] Engine/module-loader paths are classified.
+  - [x] TASK-1738 has concrete targets or a documented no-op rationale.
 ```
+
+## Closeout evidence
+
+- Audit artifact: `docs/audit/phase-170-expanded-surface-boundary-audit.md`.
+- Audit proof test: `crates/ash-engine/tests/task_1737_expanded_surface_boundary_audit.rs`.
+- Fresh verification:
+  - `cargo test -p ash-engine --test task_1737_expanded_surface_boundary_audit -- --nocapture`
+  - `cargo test -p ash-parser --test task_1734_expanded_surface_lowering_gate`
+  - `cargo test -p ash-engine`
+  - `cargo check --workspace`
+  - `cargo fmt --check`
+  - `git diff --check`

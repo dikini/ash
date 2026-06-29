@@ -6,6 +6,11 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::core_ash_contract::{
+    ContractDiagnostic, PredicateFaultDiagnostic, TemporalContractDiagnostic,
+    TemporalMonitorFaultDiagnostic,
+};
+
 /// A Core identifier.
 pub type CoreName = String;
 
@@ -420,6 +425,10 @@ pub struct CoreSourceSpan {
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum CoreTrapReason {
     ContractViolation(CoreName),
+    ContractViolationDiagnostic(ContractDiagnostic),
+    ContractPredicateFault(PredicateFaultDiagnostic),
+    TemporalContractViolation(TemporalContractDiagnostic),
+    TemporalMonitorFault(TemporalMonitorFaultDiagnostic),
     UnhandledEffect(CoreEffectOp),
     Panic(String),
     NonExhaustiveMatch,

@@ -1,6 +1,6 @@
 # TASK-1702: Contract System Integration Closeout
 
-**Status:** 📝 Planned
+**Status:** ✅ Complete
 **Phase:** [PLAN-165](../PLAN-165-CONTRACT-SYSTEM-IMPLEMENTATION-HANDOFF.md)
 **Owner:** Phase 165
 
@@ -20,9 +20,9 @@ Close Phase 165 by adding integration fixtures, documentation consistency checks
 
 ## Dependencies
 
-- 📝 TASK-1698: Interface/impl contract subsumption and blame
-- 📝 TASK-1699: Capability observation evidence boundary
-- 📝 TASK-1701: Temporal monitor runtime diagnostics
+- ✅ TASK-1698: Interface/impl contract subsumption and blame
+- ✅ TASK-1699: Capability observation evidence boundary
+- ✅ TASK-1701: Temporal monitor runtime diagnostics
 
 ## Requirements
 
@@ -44,13 +44,25 @@ commands:
   - bash scripts/check-docs-gate.sh
   - git diff --check
 checklist:
-  - [ ] All Phase 165 task files are complete and checked.
-  - [ ] PLAN-165 and PLAN-INDEX agree.
-  - [ ] CHANGELOG records implementation closeout.
-  - [ ] Stale-claim sweep has no live normative stale matches.
-  - [ ] Reference corpus audit is complete if reference pages changed.
+  - [x] All Phase 165 task files are complete and checked.
+  - [x] PLAN-165 and PLAN-INDEX agree.
+  - [x] CHANGELOG records implementation closeout.
+  - [x] Stale-claim sweep has no live normative stale matches.
+  - [x] Reference corpus audit is complete if reference pages changed.
 ```
 
 ## Closeout Evidence
 
-To be filled when the implementation phase closes.
+Implemented and verified the Phase 165 Core contract sidecar slice:
+
+- TASK-1694 added Core predicate, binder, snapshot, environment, and runtime-check carriers.
+- TASK-1695 added summary-level contract predicate validation/lowering with static, dynamic,
+  and rejected outcomes.
+- TASK-1696 added structured contract violation and predicate-fault diagnostic payloads.
+- TASK-1697 added discharge/evidence records and composed-contract metadata.
+- TASK-1698 added interface/impl behavioral-subtyping checks and blame polarity summaries.
+- TASK-1699 added observation-evidence sidecars without predicate authority leakage.
+- TASK-1700 added trace-contract, trace-fact, workflow-ledger, temporal-formula, and monitor-plan carriers.
+- TASK-1701 added temporal monitor result states and distinct violation/fault diagnostics.
+
+Verification evidence is recorded in the Phase 165 plan and changelog.

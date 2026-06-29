@@ -1,6 +1,6 @@
 # TASK-1697: Contract Discharge and Evidence Metadata
 
-**Status:** 📝 Planned
+**Status:** ✅ Complete
 **Phase:** [PLAN-165](../PLAN-165-CONTRACT-SYSTEM-IMPLEMENTATION-HANDOFF.md)
 **Owner:** Phase 165
 
@@ -18,7 +18,7 @@ Record static, survived-testing/evidence, dynamic, and deferred contract dischar
 
 ## Dependencies
 
-- 📝 TASK-1696: Dynamic contract traps and predicate faults
+- ✅ TASK-1696: Dynamic contract traps and predicate faults
 
 ## Requirements
 
@@ -42,9 +42,9 @@ commands:
   - cargo test -p ash-core --test task_1697_contract_discharge_evidence
   - cargo clippy -p ash-core --all-targets -- -D warnings
 checklist:
-  - [ ] Dynamic discharge records the RuntimeCheckPlan reference.
-  - [ ] Static/evidence discharge records provenance/evidence references.
-  - [ ] Composed contract metadata preserves continuation-precondition obligations.
+  - [x] Dynamic discharge records the RuntimeCheckPlan reference.
+  - [x] Static/evidence discharge records provenance/evidence references.
+  - [x] Composed contract metadata preserves continuation-precondition obligations.
 ```
 
 ## Dependencies for Next Task

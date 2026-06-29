@@ -7,6 +7,11 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
+use crate::core_ash_contract::{
+    ContractDiagnostic, PredicateFaultDiagnostic, TemporalContractDiagnostic,
+    TemporalMonitorFaultDiagnostic,
+};
+
 /// Wrapper for one-shot consumed flag - serializes as bool but uses `Rc<RefCell>` internally
 #[derive(Debug, Clone, PartialEq)]
 pub struct ConsumedFlag(Rc<RefCell<bool>>);
@@ -307,6 +312,10 @@ pub enum DischargeType {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum TrapReason {
     ContractViolation,
+    ContractViolationDiagnostic(Box<ContractDiagnostic>),
+    ContractPredicateFault(Box<PredicateFaultDiagnostic>),
+    TemporalContractViolation(Box<TemporalContractDiagnostic>),
+    TemporalMonitorFault(Box<TemporalMonitorFaultDiagnostic>),
     Custom(String),
 }
 

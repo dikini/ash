@@ -1,6 +1,6 @@
 # TASK-1701: Temporal Monitor Runtime Diagnostics
 
-**Status:** 📝 Planned
+**Status:** ✅ Complete
 **Phase:** [PLAN-165](../PLAN-165-CONTRACT-SYSTEM-IMPLEMENTATION-HANDOFF.md)
 **Owner:** Phase 165
 
@@ -17,8 +17,8 @@ Implement temporal monitor result handling and separate temporal contract violat
 
 ## Dependencies
 
-- 📝 TASK-1700: Trace contract monitor sidecars
-- 📝 TASK-1696: Dynamic contract traps and predicate faults
+- ✅ TASK-1700: Trace contract monitor sidecars
+- ✅ TASK-1696: Dynamic contract traps and predicate faults
 
 ## Requirements
 
@@ -43,9 +43,9 @@ commands:
   - cargo test -p ash-interp --test task_1701_temporal_monitor_runtime_diagnostics
   - cargo clippy -p ash-interp --all-targets -- -D warnings
 checklist:
-  - [ ] Violation and monitor fault use distinct trap payloads.
-  - [ ] Pending liveness behavior is explicit in tests.
-  - [ ] Monitor consumes facts without provider/process authority.
+  - [x] Violation and monitor fault use distinct trap payloads.
+  - [x] Pending liveness behavior is explicit in tests.
+  - [x] Monitor consumes facts without provider/process authority.
 ```
 
 ## Dependencies for Next Task

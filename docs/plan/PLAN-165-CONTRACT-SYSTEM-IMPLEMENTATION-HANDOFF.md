@@ -4,7 +4,7 @@ title: Contract System Implementation Handoff
 kind: plan
 audience: [human, agent]
 authority: design
-status: planned
+status: complete
 stability: alpha
 owner: language
 last_verified: 2026-06-29
@@ -44,7 +44,7 @@ verified_against:
 
 ## Status
 
-Planned: 1/10 tasks complete. `TASK-1693` created this handoff packet and is complete; implementation starts at `TASK-1694`.
+Complete: 10/10 tasks complete. `TASK-1693` created this handoff packet; `TASK-1694` through `TASK-1702` implemented and verified the Core contract sidecar slice.
 
 ## Background
 
@@ -95,15 +95,15 @@ TASK-1694 Core predicate/snapshot artifact carriers
 | Task | Description | Estimate | Depends on | Status |
 |------|-------------|----------|------------|--------|
 | [TASK-1693](tasks/TASK-1693-contract-system-implementation-handoff.md) | Close NOTE-014 and create this implementation handoff packet | 2h | NOTE-035 | Done |
-| [TASK-1694](tasks/TASK-1694-core-contract-predicate-artifacts.md) | Add Core predicate, snapshot, environment, and runtime-check artifact carriers | 6h | TASK-1693 | Planned |
-| [TASK-1695](tasks/TASK-1695-contract-predicate-validation-and-lowering.md) | Validate and lower contract-position predicates into Core artifacts | 8h | TASK-1694 | Planned |
-| [TASK-1696](tasks/TASK-1696-dynamic-contract-traps-and-predicate-faults.md) | Implement structured dynamic contract traps and predicate-fault diagnostics | 8h | TASK-1695 | Planned |
-| [TASK-1697](tasks/TASK-1697-contract-discharge-and-evidence-metadata.md) | Record static/evidence/dynamic discharge metadata and public summaries | 6h | TASK-1696 | Planned |
-| [TASK-1698](tasks/TASK-1698-interface-impl-contract-subsumption-and-blame.md) | Check interface-to-impl contract subsumption and preserve blame labels | 10h | TASK-1697 | Planned |
-| [TASK-1699](tasks/TASK-1699-capability-observation-evidence-boundary.md) | Add operation-produced observation evidence without predicate authority leakage | 8h | TASK-1695, TASK-1696 | Planned |
-| [TASK-1700](tasks/TASK-1700-trace-contract-monitor-sidecars.md) | Add trace-contract, trace-fact, workflow-ledger, and monitor-plan carriers | 8h | TASK-1694 | Planned |
-| [TASK-1701](tasks/TASK-1701-temporal-monitor-runtime-diagnostics.md) | Implement temporal monitor result, violation, and monitor-fault diagnostics | 10h | TASK-1700, TASK-1696 | Planned |
-| [TASK-1702](tasks/TASK-1702-contract-system-integration-closeout.md) | Add integration fixtures, docs consistency checks, PLAN-INDEX reconciliation, and closeout | 6h | TASK-1698, TASK-1699, TASK-1701 | Planned |
+| [TASK-1694](tasks/TASK-1694-core-contract-predicate-artifacts.md) | Add Core predicate, snapshot, environment, and runtime-check artifact carriers | 6h | TASK-1693 | Done |
+| [TASK-1695](tasks/TASK-1695-contract-predicate-validation-and-lowering.md) | Validate and lower contract-position predicates into Core artifacts | 8h | TASK-1694 | Done |
+| [TASK-1696](tasks/TASK-1696-dynamic-contract-traps-and-predicate-faults.md) | Implement structured dynamic contract traps and predicate-fault diagnostics | 8h | TASK-1695 | Done |
+| [TASK-1697](tasks/TASK-1697-contract-discharge-and-evidence-metadata.md) | Record static/evidence/dynamic discharge metadata and public summaries | 6h | TASK-1696 | Done |
+| [TASK-1698](tasks/TASK-1698-interface-impl-contract-subsumption-and-blame.md) | Check interface-to-impl contract subsumption and preserve blame labels | 10h | TASK-1697 | Done |
+| [TASK-1699](tasks/TASK-1699-capability-observation-evidence-boundary.md) | Add operation-produced observation evidence without predicate authority leakage | 8h | TASK-1695, TASK-1696 | Done |
+| [TASK-1700](tasks/TASK-1700-trace-contract-monitor-sidecars.md) | Add trace-contract, trace-fact, workflow-ledger, and monitor-plan carriers | 8h | TASK-1694 | Done |
+| [TASK-1701](tasks/TASK-1701-temporal-monitor-runtime-diagnostics.md) | Implement temporal monitor result, violation, and monitor-fault diagnostics | 10h | TASK-1700, TASK-1696 | Done |
+| [TASK-1702](tasks/TASK-1702-contract-system-integration-closeout.md) | Add integration fixtures, docs consistency checks, PLAN-INDEX reconciliation, and closeout | 6h | TASK-1698, TASK-1699, TASK-1701 | Done |
 
 Estimated implementation effort after the handoff packet: 70 hours.
 
@@ -211,3 +211,4 @@ Changelog/history and explicit bad-contrast examples may remain. Live normative 
 | Date       | Change |
 |------------|--------|
 | 2026-06-29 | Initial handoff plan. Closes the NOTE-014 gap-register design track and creates TASK-1693 through TASK-1702 as an ordered implementation packet. |
+| 2026-06-29 | Completed TASK-1694 through TASK-1702 as a Core contract sidecar implementation slice with targeted Rust tests and status reconciliation. |

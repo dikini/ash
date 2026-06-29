@@ -938,6 +938,18 @@ fn lower_contract_discharge(discharge: &CoreContractDischarge) -> ContractDischa
 fn lower_trap_reason(reason: &CoreTrapReason) -> TrapReason {
     match reason {
         CoreTrapReason::ContractViolation(_) => TrapReason::ContractViolation,
+        CoreTrapReason::ContractViolationDiagnostic(diagnostic) => {
+            TrapReason::ContractViolationDiagnostic(Box::new(diagnostic.clone()))
+        }
+        CoreTrapReason::ContractPredicateFault(diagnostic) => {
+            TrapReason::ContractPredicateFault(Box::new(diagnostic.clone()))
+        }
+        CoreTrapReason::TemporalContractViolation(diagnostic) => {
+            TrapReason::TemporalContractViolation(Box::new(diagnostic.clone()))
+        }
+        CoreTrapReason::TemporalMonitorFault(diagnostic) => {
+            TrapReason::TemporalMonitorFault(Box::new(diagnostic.clone()))
+        }
         CoreTrapReason::UnhandledEffect(op) => {
             TrapReason::Custom(format!("unhandled effect: {:?}", lower_effect_op(op).item))
         }

@@ -1,6 +1,6 @@
 # TASK-1699: Capability Observation Evidence Boundary
 
-**Status:** 📝 Planned
+**Status:** ✅ Complete
 **Phase:** [PLAN-165](../PLAN-165-CONTRACT-SYSTEM-IMPLEMENTATION-HANDOFF.md)
 **Owner:** Phase 165
 
@@ -17,8 +17,8 @@ Implement operation-produced observation evidence so contracts can diagnose valu
 
 ## Dependencies
 
-- 📝 TASK-1695: Contract predicate validation and lowering
-- 📝 TASK-1696: Dynamic contract traps and predicate faults
+- ✅ TASK-1695: Contract predicate validation and lowering
+- ✅ TASK-1696: Dynamic contract traps and predicate faults
 
 ## Requirements
 
@@ -44,9 +44,9 @@ commands:
   - cargo test -p ash-interp --test task_1699_capability_observation_evidence
   - cargo clippy -p ash-core -p ash-interp --all-targets -- -D warnings
 checklist:
-  - [ ] Operation-produced value inspection works.
-  - [ ] Provider authority is unavailable inside predicates.
-  - [ ] Diagnostic redaction does not erase the contract failure.
+  - [x] Operation-produced value inspection works.
+  - [x] Provider authority is unavailable inside predicates.
+  - [x] Diagnostic redaction does not erase the contract failure.
 ```
 
 ## Dependencies for Next Task

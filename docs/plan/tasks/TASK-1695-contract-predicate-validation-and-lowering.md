@@ -1,6 +1,6 @@
 # TASK-1695: Contract Predicate Validation and Lowering
 
-**Status:** 📝 Planned
+**Status:** ✅ Complete
 **Phase:** [PLAN-165](../PLAN-165-CONTRACT-SYSTEM-IMPLEMENTATION-HANDOFF.md)
 **Owner:** Phase 165
 
@@ -17,7 +17,7 @@ Validate contract-position predicates and lower accepted predicates into the Cor
 
 ## Dependencies
 
-- 📝 TASK-1694: Core predicate artifacts
+- ✅ TASK-1694: Core predicate artifacts
 
 ## Requirements
 
@@ -42,9 +42,9 @@ commands:
   - cargo test -p ash-core --test task_1695_contract_predicate_validation_lowering
   - cargo clippy -p ash-core --all-targets -- -D warnings
 checklist:
-  - [ ] Accepted static predicates produce proof obligations.
-  - [ ] Accepted dynamic predicates produce RuntimeCheckPlan.
-  - [ ] Rejected predicates fail before runtime lowering.
+  - [x] Accepted static predicates produce proof obligations.
+  - [x] Accepted dynamic predicates produce RuntimeCheckPlan.
+  - [x] Rejected predicates fail before runtime lowering.
 ```
 
 ## Dependencies for Next Task

@@ -6,6 +6,11 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Added
+- PLAN-165 implementation: adds Core contract predicate sidecar carriers, contract-position
+  predicate validation/lowering, structured contract violation and predicate-fault diagnostics,
+  discharge/evidence metadata, interface/impl subsumption checks, capability observation
+  evidence, trace-contract monitor sidecars, and temporal monitor diagnostics (TASK-1694
+  through TASK-1702).
 - Documented the notes/spec orientation-index maintenance procedure in `AGENTS.md`, including
   when to update `NOTE-INDEX.md`/`SPEC-INDEX.md`, how to use structured topics and
   cross-cutting tags, and which validation commands to run.

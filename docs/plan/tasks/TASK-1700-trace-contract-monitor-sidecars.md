@@ -1,6 +1,6 @@
 # TASK-1700: Trace Contract Monitor Sidecars
 
-**Status:** 📝 Planned
+**Status:** ✅ Complete
 **Phase:** [PLAN-165](../PLAN-165-CONTRACT-SYSTEM-IMPLEMENTATION-HANDOFF.md)
 **Owner:** Phase 165
 
@@ -17,7 +17,7 @@ Add Core/IR carriers for trace contracts, trace facts, workflow ledger facts, te
 
 ## Dependencies
 
-- 📝 TASK-1694: Core contract predicate artifacts
+- ✅ TASK-1694: Core contract predicate artifacts
 
 ## Requirements
 
@@ -41,9 +41,9 @@ commands:
   - cargo test -p ash-core --test task_1700_trace_contract_monitor_sidecars
   - cargo clippy -p ash-core --all-targets -- -D warnings
 checklist:
-  - [ ] Trace contracts do not lower to LoweredPredicate.
-  - [ ] Mixed alphabet classification is tested.
-  - [ ] Workflow ledger facts preserve source trace links.
+  - [x] Trace contracts do not lower to LoweredPredicate.
+  - [x] Mixed alphabet classification is tested.
+  - [x] Workflow ledger facts preserve source trace links.
 ```
 
 ## Dependencies for Next Task

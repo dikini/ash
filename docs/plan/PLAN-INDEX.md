@@ -140,7 +140,7 @@ Update this section as tasks complete:
 | [162](PLAN-162-CORE-ASH-TYPE-CHECKING.md) | 12 | 12 | ✅ Complete; Core Ash type checker implemented with reference docs and closeout review |
 | [163](PLAN-163-CORE-LAZY-MEMO-MODES.md) | 15 | 15 | ✅ Complete; SPEC-101 Core lazy/memo mode implementation packet plus review remediation |
 | [164](PLAN-164-CORE-CPS-CONTINUATION-MULTIPLICITY.md) | 12 | 12 | ✅ Complete; SPEC-102 Core/CPS continuation multiplicity implemented and verified |
-| [165](PLAN-165-CONTRACT-SYSTEM-IMPLEMENTATION-HANDOFF.md) | 10 | 1 | 📝 Planned; NOTE-014 contract gap register closed and implementation handoff packet created |
+| [165](PLAN-165-CONTRACT-SYSTEM-IMPLEMENTATION-HANDOFF.md) | 10 | 10 | ✅ Complete; Core contract sidecar carriers, predicate lowering, diagnostics, discharge metadata, observation evidence, and trace monitor carriers implemented |
 | [166](PLAN-166-DOCS-ORIENTATION-INDEXES.md) | 6 | 6 | ✅ Complete; notes/spec orientation indexes, lint tooling, and agent usability evals added |
 
 ---
@@ -612,7 +612,7 @@ Implements explicit continuation multiplicity for Core Ash and CPS IR. Existing 
 
 ## Phase 165: Contract System Implementation Handoff
 
-**Status:** 📝 Planned; 1/10 tasks complete
+**Status:** ✅ Complete; 10/10 tasks complete
 **Plan:** [PLAN-165: Contract System Implementation Handoff](PLAN-165-CONTRACT-SYSTEM-IMPLEMENTATION-HANDOFF.md)
 **Spec:** [SPEC-096b: Target Effect System](../spec/SPEC-096b-TARGET-EFFECT-SYSTEM.md), [SPEC-097b: Target Type System](../spec/SPEC-097b-TARGET-TYPE-SYSTEM.md), [SPEC-098b: Target IR](../spec/SPEC-098b-TARGET-IR.md), [SPEC-099: Core Language](../spec/SPEC-099-CORE-LANGUAGE.md), [SPEC-100: Core Type Checking](../spec/SPEC-100-CORE-TYPE-CHECKING.md)
 **Depends on:** Phase 161, Phase 162, Phase 163, Phase 164; NOTE-027 through NOTE-035.
@@ -622,15 +622,15 @@ Closes NOTE-014 as the resolved contract-system design gap register and hands im
 | Task | Description | Status |
 |------|-------------|--------|
 | [TASK-1693](tasks/TASK-1693-contract-system-implementation-handoff.md) | Close NOTE-014 and create the Phase 165 handoff packet | ✅ Complete |
-| [TASK-1694](tasks/TASK-1694-core-contract-predicate-artifacts.md) | Add Core predicate, snapshot, environment, and runtime-check artifact carriers | 📝 Planned |
-| [TASK-1695](tasks/TASK-1695-contract-predicate-validation-and-lowering.md) | Validate and lower contract-position predicates into Core artifacts | 📝 Planned |
-| [TASK-1696](tasks/TASK-1696-dynamic-contract-traps-and-predicate-faults.md) | Implement structured dynamic contract traps and predicate-fault diagnostics | 📝 Planned |
-| [TASK-1697](tasks/TASK-1697-contract-discharge-and-evidence-metadata.md) | Record static/evidence/dynamic discharge metadata and public summaries | 📝 Planned |
-| [TASK-1698](tasks/TASK-1698-interface-impl-contract-subsumption-and-blame.md) | Check interface-to-impl contract subsumption and preserve blame labels | 📝 Planned |
-| [TASK-1699](tasks/TASK-1699-capability-observation-evidence-boundary.md) | Add operation-produced observation evidence without predicate authority leakage | 📝 Planned |
-| [TASK-1700](tasks/TASK-1700-trace-contract-monitor-sidecars.md) | Add trace-contract, trace-fact, workflow-ledger, and monitor-plan carriers | 📝 Planned |
-| [TASK-1701](tasks/TASK-1701-temporal-monitor-runtime-diagnostics.md) | Implement temporal monitor result, violation, and monitor-fault diagnostics | 📝 Planned |
-| [TASK-1702](tasks/TASK-1702-contract-system-integration-closeout.md) | Add integration fixtures, docs consistency checks, PLAN-INDEX reconciliation, and closeout | 📝 Planned |
+| [TASK-1694](tasks/TASK-1694-core-contract-predicate-artifacts.md) | Add Core predicate, snapshot, environment, and runtime-check artifact carriers | ✅ Complete |
+| [TASK-1695](tasks/TASK-1695-contract-predicate-validation-and-lowering.md) | Validate and lower contract-position predicates into Core artifacts | ✅ Complete |
+| [TASK-1696](tasks/TASK-1696-dynamic-contract-traps-and-predicate-faults.md) | Implement structured dynamic contract traps and predicate-fault diagnostics | ✅ Complete |
+| [TASK-1697](tasks/TASK-1697-contract-discharge-and-evidence-metadata.md) | Record static/evidence/dynamic discharge metadata and public summaries | ✅ Complete |
+| [TASK-1698](tasks/TASK-1698-interface-impl-contract-subsumption-and-blame.md) | Check interface-to-impl contract subsumption and preserve blame labels | ✅ Complete |
+| [TASK-1699](tasks/TASK-1699-capability-observation-evidence-boundary.md) | Add operation-produced observation evidence without predicate authority leakage | ✅ Complete |
+| [TASK-1700](tasks/TASK-1700-trace-contract-monitor-sidecars.md) | Add trace-contract, trace-fact, workflow-ledger, and monitor-plan carriers | ✅ Complete |
+| [TASK-1701](tasks/TASK-1701-temporal-monitor-runtime-diagnostics.md) | Implement temporal monitor result, violation, and monitor-fault diagnostics | ✅ Complete |
+| [TASK-1702](tasks/TASK-1702-contract-system-integration-closeout.md) | Add integration fixtures, docs consistency checks, PLAN-INDEX reconciliation, and closeout | ✅ Complete |
 
 ## Phase 166: Docs Orientation Indexes
 

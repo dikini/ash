@@ -8,6 +8,7 @@ use crate::core_ash::{
     CoreEvalMode, CoreExpr, CoreHandlerClause, CoreMultiplicity, CoreParam, CorePrimOp, CoreRow,
     CoreRowItem, CoreSourceSpan, CoreThunkMode, CoreTrapReason, CoreType, CoreValue,
 };
+use serde::Serialize;
 use std::fmt;
 use std::fmt::Write as _;
 use std::path::Path;
@@ -743,6 +744,18 @@ impl Parser {
         let head = self.expect_symbol()?;
         let reason = match head.as_str() {
             "contract-violation" => CoreTrapReason::ContractViolation(self.expect_symbol()?),
+            "contract-violation-diagnostic" => CoreTrapReason::ContractViolationDiagnostic(
+                self.expect_json_payload("contract violation diagnostic")?,
+            ),
+            "contract-predicate-fault" => CoreTrapReason::ContractPredicateFault(
+                self.expect_json_payload("contract predicate fault diagnostic")?,
+            ),
+            "temporal-contract-violation" => CoreTrapReason::TemporalContractViolation(
+                self.expect_json_payload("temporal contract diagnostic")?,
+            ),
+            "temporal-monitor-fault" => CoreTrapReason::TemporalMonitorFault(
+                self.expect_json_payload("temporal monitor fault diagnostic")?,
+            ),
             "unhandled-effect" => CoreTrapReason::UnhandledEffect(self.parse_effect_op_inner()?),
             "panic" => CoreTrapReason::Panic(self.expect_string()?),
             "non-exhaustive-match" => CoreTrapReason::NonExhaustiveMatch,
@@ -878,6 +891,15 @@ impl Parser {
             TokenKind::String(value) => Ok(value),
             other => Err(self.error_from_kind(other, "expected string literal")),
         }
+    }
+
+    fn expect_json_payload<T>(&mut self, what: &str) -> ParseResult<T>
+    where
+        T: serde::de::DeserializeOwned,
+    {
+        let payload = self.expect_string()?;
+        serde_json::from_str(&payload)
+            .map_err(|err| self.error_here(format!("invalid {what} JSON payload: {err}")))
     }
 
     fn expect_lparen(&mut self) -> ParseResult<()> {
@@ -1430,6 +1452,22 @@ fn format_trap_reason(reason: &CoreTrapReason) -> String {
         CoreTrapReason::ContractViolation(contract) => {
             format!("(contract-violation {contract})")
         }
+        CoreTrapReason::ContractViolationDiagnostic(diagnostic) => format!(
+            "(contract-violation-diagnostic {})",
+            format_string(&json_payload(diagnostic))
+        ),
+        CoreTrapReason::ContractPredicateFault(diagnostic) => format!(
+            "(contract-predicate-fault {})",
+            format_string(&json_payload(diagnostic))
+        ),
+        CoreTrapReason::TemporalContractViolation(diagnostic) => format!(
+            "(temporal-contract-violation {})",
+            format_string(&json_payload(diagnostic))
+        ),
+        CoreTrapReason::TemporalMonitorFault(diagnostic) => format!(
+            "(temporal-monitor-fault {})",
+            format_string(&json_payload(diagnostic))
+        ),
         CoreTrapReason::UnhandledEffect(op) => {
             format!("(unhandled-effect {})", format_effect_op(op))
         }
@@ -1525,6 +1563,13 @@ fn format_string(value: &str) -> String {
     }
     escaped.push('"');
     escaped
+}
+
+fn json_payload<T>(value: &T) -> String
+where
+    T: Serialize + fmt::Debug,
+{
+    serde_json::to_string(value).unwrap_or_else(|_| format!("{value:?}"))
 }
 
 fn symbol_to_atom(symbol: String) -> CoreAtom {

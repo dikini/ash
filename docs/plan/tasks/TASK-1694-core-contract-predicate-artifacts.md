@@ -1,6 +1,6 @@
 # TASK-1694: Core Contract Predicate Artifacts
 
-**Status:** 📝 Planned
+**Status:** ✅ Complete
 **Phase:** [PLAN-165](../PLAN-165-CONTRACT-SYSTEM-IMPLEMENTATION-HANDOFF.md)
 **Owner:** Phase 165
 
@@ -41,9 +41,9 @@ commands:
   - cargo test -p ash-core --test task_1694_core_contract_predicate_artifacts
   - cargo clippy -p ash-core --all-targets -- -D warnings
 checklist:
-  - [ ] Stable identity test covers snapshots and binders.
-  - [ ] Source text is diagnostic-only in API shape.
-  - [ ] SnapshotRef is boundary-local.
+  - [x] Stable identity test covers snapshots and binders.
+  - [x] Source text is diagnostic-only in API shape.
+  - [x] SnapshotRef is boundary-local.
 ```
 
 ## Dependencies for Next Task

@@ -1,6 +1,6 @@
 # TASK-1698: Interface/Impl Contract Subsumption and Blame
 
-**Status:** 📝 Planned
+**Status:** ✅ Complete
 **Phase:** [PLAN-165](../PLAN-165-CONTRACT-SYSTEM-IMPLEMENTATION-HANDOFF.md)
 **Owner:** Phase 165
 
@@ -17,7 +17,7 @@ Check interface-to-impl contract inheritance with behavioral subtyping and prese
 
 ## Dependencies
 
-- 📝 TASK-1697: Contract discharge and evidence metadata
+- ✅ TASK-1697: Contract discharge and evidence metadata
 
 ## Requirements
 
@@ -41,11 +41,11 @@ commands:
   - cargo test -p ash-core --test task_1698_interface_impl_contract_subsumption
   - cargo clippy -p ash-core --all-targets -- -D warnings
 checklist:
-  - [ ] Precondition weakening accepted.
-  - [ ] Precondition strengthening rejected.
-  - [ ] Postcondition strengthening accepted.
-  - [ ] Postcondition weakening rejected.
-  - [ ] Blame labels survive dynamic diagnostics.
+  - [x] Precondition weakening accepted.
+  - [x] Precondition strengthening rejected.
+  - [x] Postcondition strengthening accepted.
+  - [x] Postcondition weakening rejected.
+  - [x] Blame labels survive dynamic diagnostics.
 ```
 
 ## Dependencies for Next Task

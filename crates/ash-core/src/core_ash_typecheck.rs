@@ -2376,7 +2376,10 @@ fn type_check_expr(
                 facts,
             })
         }
-        CoreExpr::Trap { .. } => Err(unsupported("Trap")),
+        CoreExpr::Trap { .. } => Ok(typed_expr(
+            CoreType::Base("Unit".into()),
+            CoreRow::default(),
+        )),
     }
 }
 

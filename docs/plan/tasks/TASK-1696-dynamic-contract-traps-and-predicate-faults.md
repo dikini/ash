@@ -1,6 +1,6 @@
 # TASK-1696: Dynamic Contract Traps and Predicate Faults
 
-**Status:** 📝 Planned
+**Status:** ✅ Complete
 **Phase:** [PLAN-165](../PLAN-165-CONTRACT-SYSTEM-IMPLEMENTATION-HANDOFF.md)
 **Owner:** Phase 165
 
@@ -18,7 +18,7 @@ Implement structured dynamic contract diagnostics and separate false-predicate v
 
 ## Dependencies
 
-- 📝 TASK-1695: Contract predicate validation and lowering
+- ✅ TASK-1695: Contract predicate validation and lowering
 
 ## Requirements
 
@@ -44,9 +44,9 @@ commands:
   - cargo test -p ash-interp --test task_1696_dynamic_contract_traps
   - cargo clippy -p ash-core -p ash-interp --all-targets -- -D warnings
 checklist:
-  - [ ] False predicate and predicate fault use distinct trap reasons.
-  - [ ] No contract trap appears as a row item.
-  - [ ] Explicit fail path remains visible when recovery is modeled.
+  - [x] False predicate and predicate fault use distinct trap reasons.
+  - [x] No contract trap appears as a row item.
+  - [x] Explicit fail path remains visible when recovery is modeled.
 ```
 
 ## Dependencies for Next Task

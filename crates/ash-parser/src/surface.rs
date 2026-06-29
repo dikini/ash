@@ -87,6 +87,8 @@ pub struct ModuleFile {
 /// A top-level definition.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Definition {
+    /// Source-level notation declaration.
+    Notation(NotationDecl),
     /// Capability definition
     Capability(CapabilityDef),
     /// Capability interface definition
@@ -123,6 +125,70 @@ pub enum Definition {
     Law(LawDef),
     /// Proof definition
     Proof(ProofDef),
+}
+
+/// Source-level notation declaration parsed before expansion.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NotationDecl {
+    /// Visibility modifier for exported notation surfaces.
+    pub visibility: Visibility,
+    /// Declared fixity and precedence.
+    pub fixity: NotationFixity,
+    /// Raw notation pattern as written in source.
+    pub pattern: NotationPattern,
+    /// Callable target path. Resolution/type checking is deferred to later phases.
+    pub target: CallablePath,
+    /// Source span covering the complete declaration.
+    pub span: Span,
+}
+
+/// Notation fixity declaration.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum NotationFixity {
+    /// Prefix notation, optionally with precedence.
+    Prefix { precedence: Option<u16> },
+    /// Binary infix notation with associativity and required precedence.
+    Infix {
+        associativity: NotationAssociativity,
+        precedence: u16,
+    },
+    /// Suffix notation, optionally with precedence.
+    Suffix { precedence: Option<u16> },
+    /// Mixfix notation; binder-introducing semantics remain deferred.
+    Mixfix,
+}
+
+/// Infix associativity for notation declarations.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum NotationAssociativity {
+    /// Left-associative infix.
+    Left,
+    /// Right-associative infix.
+    Right,
+    /// Non-associative infix.
+    Nonassoc,
+}
+
+/// Source-preserving notation pattern.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NotationPattern {
+    /// Raw pattern text between the fixity declaration and target separator.
+    pub raw: Box<str>,
+    /// Symbolic tokens found in the pattern, preserving spelling/spans for diagnostics.
+    pub tokens: Vec<RawOperatorToken>,
+    /// Source span covering the raw pattern.
+    pub span: Span,
+}
+
+/// A callable path used as the target of notation expansion.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CallablePath {
+    /// Optional module qualifier.
+    pub module: Option<Name>,
+    /// Callable name.
+    pub name: Name,
+    /// Source span covering the callable path.
+    pub span: Span,
 }
 
 /// Explicit named data-kind promotion declaration parsed as surface syntax.
@@ -1741,6 +1807,10 @@ pub enum ExpansionDiagnosticKind {
     DeferredMacroExpansion,
     /// Notation resolution is intentionally deferred in Phase 168.
     DeferredNotationResolution,
+    /// Local notation declaration duplicated an existing declaration.
+    DuplicateNotationDeclaration,
+    /// Local notation declarations conflict on precedence or associativity.
+    ConflictingNotationDeclaration,
 }
 
 /// Expansion error for syntax that cannot honestly cross the expanded-surface boundary yet.
@@ -1748,6 +1818,18 @@ pub enum ExpansionDiagnosticKind {
 pub enum ExpansionError {
     /// Boundary encountered an operator section that must be resolved before Core lowering.
     UnresolvedOperatorSection { span: Span, operator: Box<str> },
+    /// A local notation declaration duplicated an existing declaration.
+    DuplicateNotationDeclaration {
+        operator: Box<str>,
+        first_span: Span,
+        second_span: Span,
+    },
+    /// Local declarations for the same infix operator disagree on precedence or associativity.
+    ConflictingNotationDeclaration {
+        operator: Box<str>,
+        first_span: Span,
+        second_span: Span,
+    },
 }
 
 impl std::fmt::Display for ExpansionError {
@@ -1757,17 +1839,129 @@ impl std::fmt::Display for ExpansionError {
                 f,
                 "operator section `{operator}` requires notation resolution before Core lowering"
             ),
+            ExpansionError::DuplicateNotationDeclaration { operator, .. } => {
+                write!(f, "duplicate notation declaration for `{operator}`")
+            }
+            ExpansionError::ConflictingNotationDeclaration { operator, .. } => write!(
+                f,
+                "conflicting precedence or associativity for notation `{operator}`"
+            ),
         }
     }
 }
 
 impl std::error::Error for ExpansionError {}
 
+/// Local notation table built during parsed-surface expansion.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct LocalNotationTable {
+    entries: Vec<LocalNotationEntry>,
+}
+
+/// Resolved local notation row.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LocalNotationEntry {
+    /// Declared operator/pattern key.
+    pub operator: Box<str>,
+    /// Fixity for the operator.
+    pub fixity: NotationFixity,
+    /// Callable target path.
+    pub target: CallablePath,
+    /// Source span of the declaration.
+    pub span: Span,
+}
+
+impl LocalNotationTable {
+    /// Resolve a binary infix operator spelling against local notation declarations.
+    pub fn resolve_infix(&self, operator: &str) -> Option<&LocalNotationEntry> {
+        self.entries.iter().find(|entry| {
+            entry.operator.as_ref() == operator
+                && matches!(entry.fixity, NotationFixity::Infix { .. })
+        })
+    }
+
+    /// Iterate entries in source order.
+    pub fn entries(&self) -> impl Iterator<Item = &LocalNotationEntry> {
+        self.entries.iter()
+    }
+}
+
+/// Build the local notation table for a parsed module.
+pub fn build_local_notation_table(
+    module: &ModuleFile,
+) -> Result<LocalNotationTable, ExpansionError> {
+    build_local_notation_table_for_definitions(&module.definitions)
+}
+
+fn build_local_notation_table_for_definitions(
+    definitions: &[Definition],
+) -> Result<LocalNotationTable, ExpansionError> {
+    let mut table = LocalNotationTable::default();
+    collect_notation_entries(definitions, &mut table)?;
+    Ok(table)
+}
+
+fn collect_notation_entries(
+    definitions: &[Definition],
+    table: &mut LocalNotationTable,
+) -> Result<(), ExpansionError> {
+    for definition in definitions {
+        let Definition::Notation(decl) = definition else {
+            continue;
+        };
+        let operator = notation_decl_key(decl);
+        for existing in &table.entries {
+            if existing.operator == operator && existing.fixity == decl.fixity {
+                return Err(ExpansionError::DuplicateNotationDeclaration {
+                    operator,
+                    first_span: existing.span,
+                    second_span: decl.span,
+                });
+            }
+            if existing.operator == operator && same_fixity_class(&existing.fixity, &decl.fixity) {
+                return Err(ExpansionError::ConflictingNotationDeclaration {
+                    operator,
+                    first_span: existing.span,
+                    second_span: decl.span,
+                });
+            }
+        }
+        table.entries.push(LocalNotationEntry {
+            operator,
+            fixity: decl.fixity.clone(),
+            target: decl.target.clone(),
+            span: decl.span,
+        });
+    }
+    Ok(())
+}
+
+fn notation_decl_key(decl: &NotationDecl) -> Box<str> {
+    decl.pattern
+        .tokens
+        .first()
+        .map(|token| token.spelling.clone())
+        .unwrap_or_else(|| decl.pattern.raw.clone())
+}
+
+fn same_fixity_class(left: &NotationFixity, right: &NotationFixity) -> bool {
+    matches!(
+        (left, right),
+        (NotationFixity::Prefix { .. }, NotationFixity::Prefix { .. })
+            | (NotationFixity::Suffix { .. }, NotationFixity::Suffix { .. })
+            | (NotationFixity::Mixfix, NotationFixity::Mixfix)
+            | (NotationFixity::Infix { .. }, NotationFixity::Infix { .. })
+    )
+}
+
 /// Expand a parsed surface module to the explicit expanded-surface boundary.
 ///
-/// Phase 168 intentionally implements only the boundary: ordinary modules pass through unchanged,
-/// while unresolved operator sections fail closed instead of silently lowering to Core.
-pub fn expand_surface_module(module: ModuleFile) -> Result<ExpandedSurfaceModule, ExpansionError> {
+/// Phase 169 keeps macro expansion deferred but resolves local/built-in binary operator sections
+/// into ordinary callable surface expressions before the module can cross into Core lowering.
+pub fn expand_surface_module(
+    mut module: ModuleFile,
+) -> Result<ExpandedSurfaceModule, ExpansionError> {
+    elaborate_operator_sections_in_module(&mut module)?;
     if let Some(section) = find_operator_section_in_module(&module) {
         return Err(ExpansionError::UnresolvedOperatorSection {
             span: section.span,
@@ -1780,238 +1974,243 @@ pub fn expand_surface_module(module: ModuleFile) -> Result<ExpandedSurfaceModule
     })
 }
 
-fn find_operator_section_in_module(module: &ModuleFile) -> Option<&OperatorSection> {
-    module
-        .definitions
-        .iter()
-        .find_map(find_operator_section_in_definition)
-        .or_else(|| {
-            module
-                .module_decls
-                .iter()
-                .find_map(|decl| match &decl.source {
-                    crate::module::ModuleSource::Inline(definitions) => definitions
-                        .iter()
-                        .find_map(find_operator_section_in_definition),
-                    crate::module::ModuleSource::File => None,
-                })
-        })
-        .or_else(|| {
-            module
-                .workflow
-                .as_ref()
-                .and_then(find_operator_section_in_workflow_def)
-        })
-}
-
-fn find_operator_section_in_definition(definition: &Definition) -> Option<&OperatorSection> {
-    match definition {
-        Definition::Capability(def) => def
-            .constraints
-            .iter()
-            .find_map(find_operator_section_in_constraint),
-        Definition::CapabilityImplementation(def) => def
-            .operations
-            .iter()
-            .find_map(|operation| find_operator_section_in_expr(&operation.body)),
-        Definition::Policy(def) => def
-            .where_clause
-            .as_ref()
-            .and_then(find_operator_section_in_expr)
-            .or_else(|| {
-                def.fields
-                    .iter()
-                    .filter_map(|field| field.default.as_ref())
-                    .find_map(find_operator_section_in_expr)
-            }),
-        Definition::Proxy(def) => find_operator_section_in_workflow(&def.body),
-        Definition::Interface(def) => def
-            .laws
-            .iter()
-            .find_map(|law| find_operator_section_in_expr(&law.proposition)),
-        Definition::Impl(def) => def
-            .methods
-            .iter()
-            .find_map(|method| find_operator_section_in_expr(&method.body))
-            .or_else(|| def.proofs.iter().find_map(find_operator_section_in_proof)),
-        Definition::Function(def) => find_operator_section_in_contract(def.contract.as_ref())
-            .or_else(|| find_operator_section_in_expr(&def.body)),
-        Definition::Law(def) => find_operator_section_in_expr(&def.proposition),
-        Definition::Proof(def) => find_operator_section_in_proof(def),
-        _ => None,
+fn elaborate_operator_sections_in_module(module: &mut ModuleFile) -> Result<(), ExpansionError> {
+    let table = build_local_notation_table_for_definitions(&module.definitions)?;
+    for definition in &mut module.definitions {
+        elaborate_operator_sections_in_definition(definition, &table);
     }
-}
-
-fn find_operator_section_in_workflow_def(workflow: &WorkflowDef) -> Option<&OperatorSection> {
-    workflow
-        .used_bindings
-        .iter()
-        .find_map(|binding| find_operator_section_in_expr(&binding.implementation))
-        .or_else(|| {
-            workflow.header_events.iter().find_map(|event| match event {
-                WorkflowHeaderEvent::Uses(binding) => {
-                    find_operator_section_in_expr(&binding.implementation)
-                }
-                WorkflowHeaderEvent::Requires { expr, .. }
-                | WorkflowHeaderEvent::Ensures { expr, .. } => find_operator_section_in_expr(expr),
-                WorkflowHeaderEvent::PlaysRole(_)
-                | WorkflowHeaderEvent::Capabilities(_)
-                | WorkflowHeaderEvent::Owns(_) => None,
-            })
-        })
-        .or_else(|| find_operator_section_in_contract(workflow.contract.as_ref()))
-        .or_else(|| find_operator_section_in_workflow(&workflow.body))
-}
-
-fn find_operator_section_in_contract(contract: Option<&Contract>) -> Option<&OperatorSection> {
-    let contract = contract?;
-    contract
-        .requires
-        .iter()
-        .find_map(find_operator_section_in_requirement)
-        .or_else(|| {
-            contract
-                .ensures
-                .iter()
-                .find_map(|ensures| find_operator_section_in_expr(&ensures.expr))
-        })
-}
-
-fn find_operator_section_in_requirement(requirement: &Requirement) -> Option<&OperatorSection> {
-    match requirement {
-        Requirement::Arithmetic { expr } => find_operator_section_in_expr(expr),
-        Requirement::HasCapability { .. } | Requirement::HasRole(_) => None,
-    }
-}
-
-fn find_operator_section_in_proof(proof: &ProofDef) -> Option<&OperatorSection> {
-    match &proof.body {
-        ProofBody::Expr(expr) => find_operator_section_in_expr(expr),
-        ProofBody::ByTestProperty { strategies } => strategies
-            .iter()
-            .find_map(|strategy| find_operator_section_in_expr(&strategy.strategy_expr)),
-        ProofBody::ByDefinition | ProofBody::ByTest { .. } | ProofBody::ByTestSmallWorld => None,
-    }
-}
-
-fn find_operator_section_in_constraint(constraint: &Constraint) -> Option<&OperatorSection> {
-    find_operator_section_in_predicate(&constraint.predicate)
-}
-
-fn find_operator_section_in_predicate(predicate: &Predicate) -> Option<&OperatorSection> {
-    predicate
-        .args
-        .iter()
-        .find_map(find_operator_section_in_expr)
-}
-
-fn find_operator_section_in_guard(guard: &Guard) -> Option<&OperatorSection> {
-    match guard {
-        Guard::Pred(predicate) => find_operator_section_in_predicate(predicate),
-        Guard::And(left, right) | Guard::Or(left, right) => {
-            find_operator_section_in_guard(left).or_else(|| find_operator_section_in_guard(right))
+    for decl in &mut module.module_decls {
+        if let crate::module::ModuleSource::Inline(definitions) = &mut decl.source {
+            let inline_table = build_local_notation_table_for_definitions(definitions)?;
+            for definition in definitions {
+                elaborate_operator_sections_in_definition(definition, &inline_table);
+            }
         }
-        Guard::Not(inner) => find_operator_section_in_guard(inner),
-        Guard::Always | Guard::Never => None,
+    }
+    if let Some(workflow) = &mut module.workflow {
+        elaborate_operator_sections_in_workflow_def(workflow, &table);
+    }
+    Ok(())
+}
+
+fn elaborate_operator_sections_in_definition(
+    definition: &mut Definition,
+    table: &LocalNotationTable,
+) {
+    match definition {
+        Definition::Capability(def) => {
+            for constraint in &mut def.constraints {
+                for arg in &mut constraint.predicate.args {
+                    elaborate_operator_sections_in_expr(arg, table);
+                }
+            }
+        }
+        Definition::CapabilityImplementation(def) => {
+            for operation in &mut def.operations {
+                elaborate_operator_sections_in_expr(&mut operation.body, table);
+            }
+        }
+        Definition::Policy(def) => {
+            if let Some(expr) = &mut def.where_clause {
+                elaborate_operator_sections_in_expr(expr, table);
+            }
+            for field in &mut def.fields {
+                if let Some(expr) = &mut field.default {
+                    elaborate_operator_sections_in_expr(expr, table);
+                }
+            }
+        }
+        Definition::Proxy(def) => elaborate_operator_sections_in_workflow(&mut def.body, table),
+        Definition::Interface(def) => {
+            for law in &mut def.laws {
+                elaborate_operator_sections_in_expr(&mut law.proposition, table);
+            }
+        }
+        Definition::Impl(def) => {
+            for method in &mut def.methods {
+                elaborate_operator_sections_in_expr(&mut method.body, table);
+            }
+            for proof in &mut def.proofs {
+                elaborate_operator_sections_in_proof(proof, table);
+            }
+        }
+        Definition::Function(def) => {
+            elaborate_operator_sections_in_contract(def.contract.as_mut(), table);
+            elaborate_operator_sections_in_expr(&mut def.body, table);
+        }
+        Definition::Law(def) => elaborate_operator_sections_in_expr(&mut def.proposition, table),
+        Definition::Proof(def) => elaborate_operator_sections_in_proof(def, table),
+        Definition::Notation(_)
+        | Definition::CapabilityInterface(_)
+        | Definition::ResourceType(_)
+        | Definition::Type(_)
+        | Definition::DataKind(_)
+        | Definition::TypeFn(_)
+        | Definition::PropositionPredicate(_)
+        | Definition::Role(_)
+        | Definition::BuiltinFn(_)
+        | Definition::SealedDomain(_) => {}
     }
 }
 
-fn find_operator_section_in_action(action: &ActionRef) -> Option<&OperatorSection> {
-    action.args.iter().find_map(find_operator_section_in_expr)
-}
-
-fn find_operator_section_in_check_target(target: &CheckTarget) -> Option<&OperatorSection> {
-    match target {
-        CheckTarget::Obligation(obligation) => find_operator_section_in_expr(&obligation.condition),
-        CheckTarget::Policy(policy) => policy
-            .fields
-            .iter()
-            .find_map(|(_, expr)| find_operator_section_in_expr(expr)),
+fn elaborate_operator_sections_in_contract(
+    contract: Option<&mut Contract>,
+    table: &LocalNotationTable,
+) {
+    let Some(contract) = contract else {
+        return;
+    };
+    for requirement in &mut contract.requires {
+        if let Requirement::Arithmetic { expr } = requirement {
+            elaborate_operator_sections_in_expr(expr, table);
+        }
+    }
+    for ensures in &mut contract.ensures {
+        elaborate_operator_sections_in_expr(&mut ensures.expr, table);
     }
 }
 
-fn find_operator_section_in_workflow(workflow: &Workflow) -> Option<&OperatorSection> {
+fn elaborate_operator_sections_in_proof(proof: &mut ProofDef, table: &LocalNotationTable) {
+    match &mut proof.body {
+        ProofBody::Expr(expr) => elaborate_operator_sections_in_expr(expr, table),
+        ProofBody::ByTestProperty { strategies } => {
+            for strategy in strategies {
+                elaborate_operator_sections_in_expr(&mut strategy.strategy_expr, table);
+            }
+        }
+        ProofBody::ByDefinition | ProofBody::ByTest { .. } | ProofBody::ByTestSmallWorld => {}
+    }
+}
+
+fn elaborate_operator_sections_in_workflow_def(
+    workflow: &mut WorkflowDef,
+    table: &LocalNotationTable,
+) {
+    for binding in &mut workflow.used_bindings {
+        elaborate_operator_sections_in_expr(&mut binding.implementation, table);
+    }
+    for event in &mut workflow.header_events {
+        match event {
+            WorkflowHeaderEvent::Uses(binding) => {
+                elaborate_operator_sections_in_expr(&mut binding.implementation, table)
+            }
+            WorkflowHeaderEvent::Requires { expr, .. }
+            | WorkflowHeaderEvent::Ensures { expr, .. } => {
+                elaborate_operator_sections_in_expr(expr, table)
+            }
+            WorkflowHeaderEvent::PlaysRole(_)
+            | WorkflowHeaderEvent::Capabilities(_)
+            | WorkflowHeaderEvent::Owns(_) => {}
+        }
+    }
+    elaborate_operator_sections_in_contract(workflow.contract.as_mut(), table);
+    elaborate_operator_sections_in_workflow(&mut workflow.body, table);
+}
+
+fn elaborate_operator_sections_in_workflow(workflow: &mut Workflow, table: &LocalNotationTable) {
     match workflow {
         Workflow::Observe { continuation, .. } | Workflow::Propose { continuation, .. } => {
-            continuation
-                .as_deref()
-                .and_then(find_operator_section_in_workflow)
+            if let Some(continuation) = continuation {
+                elaborate_operator_sections_in_workflow(continuation, table);
+            }
         }
         Workflow::Check {
             target,
             continuation,
             ..
-        } => find_operator_section_in_check_target(target).or_else(|| {
-            continuation
-                .as_deref()
-                .and_then(find_operator_section_in_workflow)
-        }),
-        Workflow::Oblige { .. } | Workflow::Done { .. } => None,
+        } => {
+            match target {
+                CheckTarget::Obligation(obligation) => {
+                    elaborate_operator_sections_in_expr(&mut obligation.condition, table)
+                }
+                CheckTarget::Policy(policy) => {
+                    for (_, expr) in &mut policy.fields {
+                        elaborate_operator_sections_in_expr(expr, table);
+                    }
+                }
+            }
+            if let Some(continuation) = continuation {
+                elaborate_operator_sections_in_workflow(continuation, table);
+            }
+        }
+        Workflow::Oblige { .. } | Workflow::Done { .. } => {}
         Workflow::Orient {
             expr, continuation, ..
-        } => find_operator_section_in_expr(expr).or_else(|| {
-            continuation
-                .as_deref()
-                .and_then(find_operator_section_in_workflow)
-        }),
+        } => {
+            elaborate_operator_sections_in_expr(expr, table);
+            if let Some(continuation) = continuation {
+                elaborate_operator_sections_in_workflow(continuation, table);
+            }
+        }
         Workflow::Decide {
             expr,
             then_branch,
             else_branch,
             ..
-        } => find_operator_section_in_expr(expr)
-            .or_else(|| find_operator_section_in_workflow(then_branch))
-            .or_else(|| {
-                else_branch
-                    .as_deref()
-                    .and_then(find_operator_section_in_workflow)
-            }),
+        } => {
+            elaborate_operator_sections_in_expr(expr, table);
+            elaborate_operator_sections_in_workflow(then_branch, table);
+            if let Some(else_branch) = else_branch {
+                elaborate_operator_sections_in_workflow(else_branch, table);
+            }
+        }
         Workflow::Act {
             action,
             guard,
             continuation,
             ..
-        } => find_operator_section_in_action(action)
-            .or_else(|| guard.as_ref().and_then(find_operator_section_in_guard))
-            .or_else(|| {
-                continuation
-                    .as_deref()
-                    .and_then(find_operator_section_in_workflow)
-            }),
+        } => {
+            for arg in &mut action.args {
+                elaborate_operator_sections_in_expr(arg, table);
+            }
+            if let Some(guard) = guard {
+                elaborate_operator_sections_in_guard(guard, table);
+            }
+            if let Some(continuation) = continuation {
+                elaborate_operator_sections_in_workflow(continuation, table);
+            }
+        }
         Workflow::Let {
             expr, continuation, ..
-        } => find_operator_section_in_expr(expr).or_else(|| {
-            continuation
-                .as_deref()
-                .and_then(find_operator_section_in_workflow)
-        }),
+        } => {
+            elaborate_operator_sections_in_expr(expr, table);
+            if let Some(continuation) = continuation {
+                elaborate_operator_sections_in_workflow(continuation, table);
+            }
+        }
         Workflow::If {
             condition,
             then_branch,
             else_branch,
             ..
-        } => find_operator_section_in_expr(condition)
-            .or_else(|| find_operator_section_in_workflow(then_branch))
-            .or_else(|| {
-                else_branch
-                    .as_deref()
-                    .and_then(find_operator_section_in_workflow)
-            }),
+        } => {
+            elaborate_operator_sections_in_expr(condition, table);
+            elaborate_operator_sections_in_workflow(then_branch, table);
+            if let Some(else_branch) = else_branch {
+                elaborate_operator_sections_in_workflow(else_branch, table);
+            }
+        }
         Workflow::For {
             collection, body, ..
-        } => find_operator_section_in_expr(collection)
-            .or_else(|| find_operator_section_in_workflow(body)),
+        } => {
+            elaborate_operator_sections_in_expr(collection, table);
+            elaborate_operator_sections_in_workflow(body, table);
+        }
         Workflow::With { body, .. } | Workflow::Must { body, .. } => {
-            find_operator_section_in_workflow(body)
+            elaborate_operator_sections_in_workflow(body, table)
         }
         Workflow::Maybe {
             primary, fallback, ..
-        } => find_operator_section_in_workflow(primary)
-            .or_else(|| find_operator_section_in_workflow(fallback)),
-        Workflow::Seq { first, second, .. } => find_operator_section_in_workflow(first)
-            .or_else(|| find_operator_section_in_workflow(second)),
+        } => {
+            elaborate_operator_sections_in_workflow(primary, table);
+            elaborate_operator_sections_in_workflow(fallback, table);
+        }
+        Workflow::Seq { first, second, .. } => {
+            elaborate_operator_sections_in_workflow(first, table);
+            elaborate_operator_sections_in_workflow(second, table);
+        }
         Workflow::Ret { expr, .. } | Workflow::Resume { expr, .. } => {
-            find_operator_section_in_expr(expr)
+            elaborate_operator_sections_in_expr(expr, table)
         }
         Workflow::Set {
             value,
@@ -2022,123 +2221,824 @@ fn find_operator_section_in_workflow(workflow: &Workflow) -> Option<&OperatorSec
             value,
             continuation,
             ..
-        } => find_operator_section_in_expr(value).or_else(|| {
-            continuation
-                .as_deref()
-                .and_then(find_operator_section_in_workflow)
-        }),
-        Workflow::Receive { arms, .. } => arms.iter().find_map(|arm| {
-            arm.guard
-                .as_ref()
-                .and_then(find_operator_section_in_expr)
-                .or_else(|| find_operator_section_in_workflow(&arm.body))
-        }),
-        Workflow::Yield { expr, arms, .. } => find_operator_section_in_expr(expr).or_else(|| {
-            arms.iter()
-                .find_map(|arm| find_operator_section_in_workflow(&arm.body))
-        }),
+        } => {
+            elaborate_operator_sections_in_expr(value, table);
+            if let Some(continuation) = continuation {
+                elaborate_operator_sections_in_workflow(continuation, table);
+            }
+        }
+        Workflow::Receive { arms, .. } => {
+            for arm in arms {
+                if let Some(guard) = &mut arm.guard {
+                    elaborate_operator_sections_in_expr(guard, table);
+                }
+                elaborate_operator_sections_in_workflow(&mut arm.body, table);
+            }
+        }
+        Workflow::Yield { expr, arms, .. } => {
+            elaborate_operator_sections_in_expr(expr, table);
+            for arm in arms {
+                elaborate_operator_sections_in_workflow(&mut arm.body, table);
+            }
+        }
     }
 }
 
-fn find_operator_section_in_expr(expr: &Expr) -> Option<&OperatorSection> {
+fn elaborate_operator_sections_in_guard(guard: &mut Guard, table: &LocalNotationTable) {
+    match guard {
+        Guard::Pred(predicate) => {
+            for arg in &mut predicate.args {
+                elaborate_operator_sections_in_expr(arg, table);
+            }
+        }
+        Guard::And(left, right) | Guard::Or(left, right) => {
+            elaborate_operator_sections_in_guard(left, table);
+            elaborate_operator_sections_in_guard(right, table);
+        }
+        Guard::Not(inner) => elaborate_operator_sections_in_guard(inner, table),
+        Guard::Always | Guard::Never => {}
+    }
+}
+
+fn elaborate_operator_sections_in_expr(expr: &mut Expr, table: &LocalNotationTable) {
     match expr {
-        Expr::OperatorSection { section } => Some(section),
-        Expr::FieldAccess { base, .. } => find_operator_section_in_expr(base),
+        Expr::OperatorSection { section } => {
+            *expr = elaborate_operator_section(section.clone(), table);
+            if !matches!(expr, Expr::OperatorSection { .. }) {
+                elaborate_operator_sections_in_expr(expr, table);
+            }
+        }
+        Expr::FieldAccess { base, .. } => elaborate_operator_sections_in_expr(base, table),
         Expr::IndexAccess { base, index, .. } => {
-            find_operator_section_in_expr(base).or_else(|| find_operator_section_in_expr(index))
+            elaborate_operator_sections_in_expr(base, table);
+            elaborate_operator_sections_in_expr(index, table);
         }
-        Expr::Unary { operand, .. } => find_operator_section_in_expr(operand),
+        Expr::Unary { operand, .. } => elaborate_operator_sections_in_expr(operand, table),
         Expr::Binary { left, right, .. } => {
-            find_operator_section_in_expr(left).or_else(|| find_operator_section_in_expr(right))
+            elaborate_operator_sections_in_expr(left, table);
+            elaborate_operator_sections_in_expr(right, table);
         }
-        Expr::Call { args, .. } => args.iter().find_map(find_operator_section_in_expr),
+        Expr::Call { args, .. } => {
+            for arg in args {
+                elaborate_operator_sections_in_expr(arg, table);
+            }
+        }
         Expr::Match {
             scrutinee, arms, ..
-        } => find_operator_section_in_expr(scrutinee).or_else(|| {
-            arms.iter()
-                .find_map(|arm| find_operator_section_in_expr(&arm.body))
-        }),
+        } => {
+            elaborate_operator_sections_in_expr(scrutinee, table);
+            for arm in arms {
+                elaborate_operator_sections_in_expr(&mut arm.body, table);
+            }
+        }
         Expr::IfLet {
             expr,
             then_branch,
             else_branch,
             ..
-        } => find_operator_section_in_expr(expr)
-            .or_else(|| find_operator_section_in_expr(then_branch))
-            .or_else(|| find_operator_section_in_expr(else_branch)),
+        } => {
+            elaborate_operator_sections_in_expr(expr, table);
+            elaborate_operator_sections_in_expr(then_branch, table);
+            elaborate_operator_sections_in_expr(else_branch, table);
+        }
         Expr::Constructor {
             fields, payload, ..
-        } => fields
-            .iter()
-            .find_map(|(_, expr)| find_operator_section_in_expr(expr))
-            .or_else(|| match payload {
+        } => {
+            for (_, expr) in fields {
+                elaborate_operator_sections_in_expr(expr, table);
+            }
+            match payload {
                 ConstructorPayload::Tuple(items) => {
-                    items.iter().find_map(find_operator_section_in_expr)
+                    for item in items {
+                        elaborate_operator_sections_in_expr(item, table);
+                    }
                 }
-                ConstructorPayload::Record(fields) => fields
-                    .iter()
-                    .find_map(|(_, expr)| find_operator_section_in_expr(expr)),
-                ConstructorPayload::Unit => None,
-            }),
+                ConstructorPayload::Record(fields) => {
+                    for (_, expr) in fields {
+                        elaborate_operator_sections_in_expr(expr, table);
+                    }
+                }
+                ConstructorPayload::Unit => {}
+            }
+        }
         Expr::If {
             condition,
             then_branch,
             else_branch,
             ..
-        } => find_operator_section_in_expr(condition)
-            .or_else(|| find_operator_section_in_expr(then_branch))
-            .or_else(|| {
-                else_branch
-                    .as_deref()
-                    .and_then(find_operator_section_in_expr)
-            }),
-        Expr::Fail { payload, .. } => find_operator_section_in_expr(payload),
-        Expr::WithError { body, arms, .. } => find_operator_section_in_expr(body).or_else(|| {
-            arms.iter()
-                .find_map(|arm| find_operator_section_in_expr(&arm.body))
-        }),
+        } => {
+            elaborate_operator_sections_in_expr(condition, table);
+            elaborate_operator_sections_in_expr(then_branch, table);
+            if let Some(else_branch) = else_branch {
+                elaborate_operator_sections_in_expr(else_branch, table);
+            }
+        }
+        Expr::Fail { payload, .. } => elaborate_operator_sections_in_expr(payload, table),
+        Expr::WithError { body, arms, .. } => {
+            elaborate_operator_sections_in_expr(body, table);
+            for arm in arms {
+                elaborate_operator_sections_in_expr(&mut arm.body, table);
+            }
+        }
         Expr::Block {
             statements,
             tail_expr,
             ..
-        } => statements
-            .iter()
-            .find_map(|stmt| match stmt {
-                BlockStmt::Let { expr, .. } => find_operator_section_in_expr(expr),
-            })
-            .or_else(|| tail_expr.as_deref().and_then(find_operator_section_in_expr)),
-        Expr::FnDef { body, .. } => find_operator_section_in_expr(body),
-        Expr::FnApply { func, args, .. } => find_operator_section_in_expr(func)
-            .or_else(|| args.iter().find_map(find_operator_section_in_expr)),
-        Expr::ActBlock { stmts, .. } => stmts.iter().find_map(|stmt| match stmt {
-            ActStmt::Bind { value, .. } | ActStmt::Return { value, .. } => {
-                find_operator_section_in_expr(value)
+        } => {
+            for stmt in statements {
+                match stmt {
+                    BlockStmt::Let { expr, .. } => elaborate_operator_sections_in_expr(expr, table),
+                }
             }
-        }),
-        Expr::DoBlock { stmts, .. } => stmts.iter().find_map(|stmt| match stmt {
-            DoStmt::Let { value, .. }
-            | DoStmt::Bind { value, .. }
-            | DoStmt::WorkflowRequires { expr: value, .. }
-            | DoStmt::WorkflowEnsures { expr: value, .. }
-            | DoStmt::Return { value, .. } => find_operator_section_in_expr(value),
-        }),
+            if let Some(tail_expr) = tail_expr {
+                elaborate_operator_sections_in_expr(tail_expr, table);
+            }
+        }
+        Expr::FnDef { body, .. } => elaborate_operator_sections_in_expr(body, table),
+        Expr::FnApply { func, args, .. } => {
+            elaborate_operator_sections_in_expr(func, table);
+            for arg in args {
+                elaborate_operator_sections_in_expr(arg, table);
+            }
+        }
+        Expr::ActBlock { stmts, .. } => {
+            for stmt in stmts {
+                match stmt {
+                    ActStmt::Bind { value, .. } | ActStmt::Return { value, .. } => {
+                        elaborate_operator_sections_in_expr(value, table)
+                    }
+                }
+            }
+        }
+        Expr::DoBlock { stmts, .. } => {
+            for stmt in stmts {
+                match stmt {
+                    DoStmt::Let { value, .. }
+                    | DoStmt::Bind { value, .. }
+                    | DoStmt::WorkflowRequires { expr: value, .. }
+                    | DoStmt::WorkflowEnsures { expr: value, .. }
+                    | DoStmt::Return { value, .. } => {
+                        elaborate_operator_sections_in_expr(value, table)
+                    }
+                }
+            }
+        }
         Expr::Comprehension {
             result, qualifiers, ..
-        } => find_operator_section_in_expr(result).or_else(|| {
-            qualifiers.iter().find_map(|qualifier| match qualifier {
-                ComprehensionQualifier::Bind { value, .. }
-                | ComprehensionQualifier::DiscardBind { value, .. } => {
-                    find_operator_section_in_expr(value)
+        } => {
+            elaborate_operator_sections_in_expr(result, table);
+            for qualifier in qualifiers {
+                match qualifier {
+                    ComprehensionQualifier::Bind { value, .. }
+                    | ComprehensionQualifier::DiscardBind { value, .. }
+                    | ComprehensionQualifier::Let { value, .. } => {
+                        elaborate_operator_sections_in_expr(value, table)
+                    }
                 }
-                ComprehensionQualifier::Let { value, .. } => find_operator_section_in_expr(value),
-            })
-        }),
-        Expr::List { items, .. } => items.iter().find_map(find_operator_section_in_expr),
+            }
+        }
+        Expr::List { items, .. } => {
+            for item in items {
+                elaborate_operator_sections_in_expr(item, table);
+            }
+        }
         Expr::Literal(_)
         | Expr::Variable { .. }
         | Expr::Policy(_)
         | Expr::CheckObligation { .. }
-        | Expr::Panic { .. } => None,
+        | Expr::Panic { .. } => {}
+    }
+}
+
+fn elaborate_operator_section(section: OperatorSection, table: &LocalNotationTable) -> Expr {
+    let target = table.resolve_infix(section.operator.spelling.as_ref());
+    match section.kind {
+        OperatorSectionKind::Bare => match target {
+            Some(entry) => eta_local_section(section.span, entry.target.clone(), None, None),
+            None => builtin_binary_op(section.operator.spelling.as_ref())
+                .map(|op| {
+                    eta_binary_section(section.span, section.operator.clone(), op, None, None)
+                })
+                .unwrap_or(Expr::OperatorSection { section }),
+        },
+        OperatorSectionKind::Left => {
+            let Some(left) = section.left.clone().map(|expr| *expr) else {
+                return Expr::OperatorSection { section };
+            };
+            match target {
+                Some(entry) => {
+                    eta_local_section(section.span, entry.target.clone(), Some(left), None)
+                }
+                None => builtin_binary_op(section.operator.spelling.as_ref())
+                    .map(|op| {
+                        eta_binary_section(
+                            section.span,
+                            section.operator.clone(),
+                            op,
+                            Some(left),
+                            None,
+                        )
+                    })
+                    .unwrap_or(Expr::OperatorSection { section }),
+            }
+        }
+        OperatorSectionKind::Right => {
+            let Some(right) = section.right.clone().map(|expr| *expr) else {
+                return Expr::OperatorSection { section };
+            };
+            match target {
+                Some(entry) => {
+                    eta_local_section(section.span, entry.target.clone(), None, Some(right))
+                }
+                None => builtin_binary_op(section.operator.spelling.as_ref())
+                    .map(|op| {
+                        eta_binary_section(
+                            section.span,
+                            section.operator.clone(),
+                            op,
+                            None,
+                            Some(right),
+                        )
+                    })
+                    .unwrap_or(Expr::OperatorSection { section }),
+            }
+        }
+    }
+}
+
+fn builtin_binary_op(operator: &str) -> Option<BinaryOp> {
+    match operator {
+        "+" => Some(BinaryOp::Add),
+        "-" => Some(BinaryOp::Sub),
+        "*" => Some(BinaryOp::Mul),
+        "/" => Some(BinaryOp::Div),
+        "%" => Some(BinaryOp::Mod),
+        "==" => Some(BinaryOp::Eq),
+        "!=" => Some(BinaryOp::Neq),
+        "<" => Some(BinaryOp::Lt),
+        ">" => Some(BinaryOp::Gt),
+        "<=" => Some(BinaryOp::Leq),
+        ">=" => Some(BinaryOp::Geq),
+        "&&" => Some(BinaryOp::And),
+        "||" => Some(BinaryOp::Or),
+        _ => None,
+    }
+}
+
+fn eta_binary_section(
+    span: Span,
+    raw_operator: RawOperatorToken,
+    op: BinaryOp,
+    left: Option<Expr>,
+    right: Option<Expr>,
+) -> Expr {
+    let lhs_name: Name = "__section_lhs".into();
+    let rhs_name: Name = "__section_rhs".into();
+    let left_missing = left.is_none();
+    let right_missing = right.is_none();
+    let left_expr = left.unwrap_or_else(|| Expr::Variable {
+        name: lhs_name.clone(),
+        span,
+    });
+    let right_expr = right.unwrap_or_else(|| Expr::Variable {
+        name: rhs_name.clone(),
+        span,
+    });
+    let mut params = Vec::new();
+    if left_missing && right_missing {
+        params.push((lhs_name, None));
+        params.push((rhs_name, None));
+    } else if left_missing {
+        params.push((lhs_name, None));
+    } else if right_missing {
+        params.push((rhs_name, None));
+    }
+    Expr::FnDef {
+        params,
+        return_type: None,
+        body: Box::new(Expr::Binary {
+            op,
+            raw_operator: Some(raw_operator),
+            left: Box::new(left_expr),
+            right: Box::new(right_expr),
+            span,
+        }),
+        span,
+    }
+}
+
+fn eta_local_section(
+    span: Span,
+    target: CallablePath,
+    left: Option<Expr>,
+    right: Option<Expr>,
+) -> Expr {
+    let lhs_name: Name = "__section_lhs".into();
+    let rhs_name: Name = "__section_rhs".into();
+    let left_expr = left.unwrap_or_else(|| Expr::Variable {
+        name: lhs_name.clone(),
+        span,
+    });
+    let right_expr = right.unwrap_or_else(|| Expr::Variable {
+        name: rhs_name.clone(),
+        span,
+    });
+    let mut params = Vec::new();
+    if !matches!(left_expr, Expr::Variable { ref name, .. } if name == &lhs_name) {
+        params.push((rhs_name, None));
+    } else if !matches!(right_expr, Expr::Variable { ref name, .. } if name == &rhs_name) {
+        params.push((lhs_name, None));
+    } else {
+        params.push((lhs_name, None));
+        params.push((rhs_name, None));
+    }
+    Expr::FnDef {
+        params,
+        return_type: None,
+        body: Box::new(Expr::Call {
+            func: target.name,
+            module: target.module,
+            args: vec![left_expr, right_expr],
+            span,
+        }),
+        span,
+    }
+}
+
+fn find_operator_section_in_module(module: &ModuleFile) -> Option<&OperatorSection> {
+    let mut found = None;
+    visit_exprs_in_module(module, &mut |expr| {
+        if found.is_none()
+            && let Expr::OperatorSection { section } = expr
+        {
+            found = Some(section);
+        }
+    });
+    found
+}
+
+/// Visit every expression-bearing surface reachable from a module file.
+///
+/// This is the read-only expansion traversal used by notation diagnostics and by the
+/// expanded-surface fail-closed boundary. It intentionally enumerates surface variants
+/// rather than using catch-all wildcard arms so new expression-bearing variants require
+/// an explicit traversal decision.
+pub fn visit_exprs_in_module<'a, F>(module: &'a ModuleFile, visitor: &mut F)
+where
+    F: FnMut(&'a Expr),
+{
+    for definition in &module.definitions {
+        visit_exprs_in_definition(definition, visitor);
+    }
+    for decl in &module.module_decls {
+        if let crate::module::ModuleSource::Inline(definitions) = &decl.source {
+            for definition in definitions {
+                visit_exprs_in_definition(definition, visitor);
+            }
+        }
+    }
+    if let Some(workflow) = &module.workflow {
+        visit_exprs_in_workflow_def(workflow, visitor);
+    }
+}
+
+/// Visit every expression-bearing surface reachable from a definition.
+pub fn visit_exprs_in_definition<'a, F>(definition: &'a Definition, visitor: &mut F)
+where
+    F: FnMut(&'a Expr),
+{
+    match definition {
+        Definition::Capability(def) => {
+            for constraint in &def.constraints {
+                visit_exprs_in_predicate(&constraint.predicate, visitor);
+            }
+        }
+        Definition::CapabilityImplementation(def) => {
+            for operation in &def.operations {
+                visit_expr(&operation.body, visitor);
+            }
+        }
+        Definition::Policy(def) => {
+            if let Some(expr) = &def.where_clause {
+                visit_expr(expr, visitor);
+            }
+            for field in &def.fields {
+                if let Some(expr) = &field.default {
+                    visit_expr(expr, visitor);
+                }
+            }
+        }
+        Definition::Proxy(def) => visit_exprs_in_workflow(&def.body, visitor),
+        Definition::Interface(def) => {
+            for law in &def.laws {
+                visit_expr(&law.proposition, visitor);
+            }
+        }
+        Definition::Impl(def) => {
+            for method in &def.methods {
+                visit_expr(&method.body, visitor);
+            }
+            for proof in &def.proofs {
+                visit_exprs_in_proof(proof, visitor);
+            }
+        }
+        Definition::Function(def) => {
+            visit_exprs_in_contract(def.contract.as_ref(), visitor);
+            visit_expr(&def.body, visitor);
+        }
+        Definition::Law(def) => visit_expr(&def.proposition, visitor),
+        Definition::Proof(def) => visit_exprs_in_proof(def, visitor),
+        Definition::Notation(_)
+        | Definition::CapabilityInterface(_)
+        | Definition::ResourceType(_)
+        | Definition::Type(_)
+        | Definition::DataKind(_)
+        | Definition::TypeFn(_)
+        | Definition::PropositionPredicate(_)
+        | Definition::Role(_)
+        | Definition::BuiltinFn(_)
+        | Definition::SealedDomain(_) => {}
+    }
+}
+
+fn visit_exprs_in_workflow_def<'a, F>(workflow: &'a WorkflowDef, visitor: &mut F)
+where
+    F: FnMut(&'a Expr),
+{
+    for binding in &workflow.used_bindings {
+        visit_expr(&binding.implementation, visitor);
+    }
+    for event in &workflow.header_events {
+        match event {
+            WorkflowHeaderEvent::Uses(binding) => visit_expr(&binding.implementation, visitor),
+            WorkflowHeaderEvent::Requires { expr, .. }
+            | WorkflowHeaderEvent::Ensures { expr, .. } => visit_expr(expr, visitor),
+            WorkflowHeaderEvent::PlaysRole(_)
+            | WorkflowHeaderEvent::Capabilities(_)
+            | WorkflowHeaderEvent::Owns(_) => {}
+        }
+    }
+    visit_exprs_in_contract(workflow.contract.as_ref(), visitor);
+    visit_exprs_in_workflow(&workflow.body, visitor);
+}
+
+fn visit_exprs_in_contract<'a, F>(contract: Option<&'a Contract>, visitor: &mut F)
+where
+    F: FnMut(&'a Expr),
+{
+    let Some(contract) = contract else {
+        return;
+    };
+    for requirement in &contract.requires {
+        match requirement {
+            Requirement::Arithmetic { expr } => visit_expr(expr, visitor),
+            Requirement::HasCapability { .. } | Requirement::HasRole(_) => {}
+        }
+    }
+    for ensures in &contract.ensures {
+        visit_expr(&ensures.expr, visitor);
+    }
+}
+
+fn visit_exprs_in_proof<'a, F>(proof: &'a ProofDef, visitor: &mut F)
+where
+    F: FnMut(&'a Expr),
+{
+    match &proof.body {
+        ProofBody::Expr(expr) => visit_expr(expr, visitor),
+        ProofBody::ByTestProperty { strategies } => {
+            for strategy in strategies {
+                visit_expr(&strategy.strategy_expr, visitor);
+            }
+        }
+        ProofBody::ByDefinition | ProofBody::ByTest { .. } | ProofBody::ByTestSmallWorld => {}
+    }
+}
+
+fn visit_exprs_in_predicate<'a, F>(predicate: &'a Predicate, visitor: &mut F)
+where
+    F: FnMut(&'a Expr),
+{
+    for arg in &predicate.args {
+        visit_expr(arg, visitor);
+    }
+}
+
+fn visit_exprs_in_guard<'a, F>(guard: &'a Guard, visitor: &mut F)
+where
+    F: FnMut(&'a Expr),
+{
+    match guard {
+        Guard::Pred(predicate) => visit_exprs_in_predicate(predicate, visitor),
+        Guard::And(left, right) | Guard::Or(left, right) => {
+            visit_exprs_in_guard(left, visitor);
+            visit_exprs_in_guard(right, visitor);
+        }
+        Guard::Not(inner) => visit_exprs_in_guard(inner, visitor),
+        Guard::Always | Guard::Never => {}
+    }
+}
+
+fn visit_exprs_in_action<'a, F>(action: &'a ActionRef, visitor: &mut F)
+where
+    F: FnMut(&'a Expr),
+{
+    for arg in &action.args {
+        visit_expr(arg, visitor);
+    }
+}
+
+fn visit_exprs_in_check_target<'a, F>(target: &'a CheckTarget, visitor: &mut F)
+where
+    F: FnMut(&'a Expr),
+{
+    match target {
+        CheckTarget::Obligation(obligation) => visit_expr(&obligation.condition, visitor),
+        CheckTarget::Policy(policy) => {
+            for (_, expr) in &policy.fields {
+                visit_expr(expr, visitor);
+            }
+        }
+    }
+}
+
+fn visit_exprs_in_workflow<'a, F>(workflow: &'a Workflow, visitor: &mut F)
+where
+    F: FnMut(&'a Expr),
+{
+    match workflow {
+        Workflow::Observe { continuation, .. } | Workflow::Propose { continuation, .. } => {
+            if let Some(continuation) = continuation {
+                visit_exprs_in_workflow(continuation, visitor);
+            }
+        }
+        Workflow::Check {
+            target,
+            continuation,
+            ..
+        } => {
+            visit_exprs_in_check_target(target, visitor);
+            if let Some(continuation) = continuation {
+                visit_exprs_in_workflow(continuation, visitor);
+            }
+        }
+        Workflow::Oblige { .. } | Workflow::Done { .. } => {}
+        Workflow::Orient {
+            expr, continuation, ..
+        } => {
+            visit_expr(expr, visitor);
+            if let Some(continuation) = continuation {
+                visit_exprs_in_workflow(continuation, visitor);
+            }
+        }
+        Workflow::Decide {
+            expr,
+            then_branch,
+            else_branch,
+            ..
+        } => {
+            visit_expr(expr, visitor);
+            visit_exprs_in_workflow(then_branch, visitor);
+            if let Some(else_branch) = else_branch {
+                visit_exprs_in_workflow(else_branch, visitor);
+            }
+        }
+        Workflow::Act {
+            action,
+            guard,
+            continuation,
+            ..
+        } => {
+            visit_exprs_in_action(action, visitor);
+            if let Some(guard) = guard {
+                visit_exprs_in_guard(guard, visitor);
+            }
+            if let Some(continuation) = continuation {
+                visit_exprs_in_workflow(continuation, visitor);
+            }
+        }
+        Workflow::Let {
+            expr, continuation, ..
+        } => {
+            visit_expr(expr, visitor);
+            if let Some(continuation) = continuation {
+                visit_exprs_in_workflow(continuation, visitor);
+            }
+        }
+        Workflow::If {
+            condition,
+            then_branch,
+            else_branch,
+            ..
+        } => {
+            visit_expr(condition, visitor);
+            visit_exprs_in_workflow(then_branch, visitor);
+            if let Some(else_branch) = else_branch {
+                visit_exprs_in_workflow(else_branch, visitor);
+            }
+        }
+        Workflow::For {
+            collection, body, ..
+        } => {
+            visit_expr(collection, visitor);
+            visit_exprs_in_workflow(body, visitor);
+        }
+        Workflow::With { body, .. } | Workflow::Must { body, .. } => {
+            visit_exprs_in_workflow(body, visitor);
+        }
+        Workflow::Maybe {
+            primary, fallback, ..
+        } => {
+            visit_exprs_in_workflow(primary, visitor);
+            visit_exprs_in_workflow(fallback, visitor);
+        }
+        Workflow::Seq { first, second, .. } => {
+            visit_exprs_in_workflow(first, visitor);
+            visit_exprs_in_workflow(second, visitor);
+        }
+        Workflow::Ret { expr, .. } | Workflow::Resume { expr, .. } => visit_expr(expr, visitor),
+        Workflow::Set {
+            value,
+            continuation,
+            ..
+        }
+        | Workflow::Send {
+            value,
+            continuation,
+            ..
+        } => {
+            visit_expr(value, visitor);
+            if let Some(continuation) = continuation {
+                visit_exprs_in_workflow(continuation, visitor);
+            }
+        }
+        Workflow::Receive { arms, .. } => {
+            for arm in arms {
+                if let Some(guard) = &arm.guard {
+                    visit_expr(guard, visitor);
+                }
+                visit_exprs_in_workflow(&arm.body, visitor);
+            }
+        }
+        Workflow::Yield { expr, arms, .. } => {
+            visit_expr(expr, visitor);
+            for arm in arms {
+                visit_exprs_in_workflow(&arm.body, visitor);
+            }
+        }
+    }
+}
+
+/// Visit an expression and all child expressions in source order.
+pub fn visit_expr<'a, F>(expr: &'a Expr, visitor: &mut F)
+where
+    F: FnMut(&'a Expr),
+{
+    visitor(expr);
+    match expr {
+        Expr::OperatorSection { section } => {
+            if let Some(left) = &section.left {
+                visit_expr(left, visitor);
+            }
+            if let Some(right) = &section.right {
+                visit_expr(right, visitor);
+            }
+        }
+        Expr::FieldAccess { base, .. } => visit_expr(base, visitor),
+        Expr::IndexAccess { base, index, .. } => {
+            visit_expr(base, visitor);
+            visit_expr(index, visitor);
+        }
+        Expr::Unary { operand, .. } => visit_expr(operand, visitor),
+        Expr::Binary { left, right, .. } => {
+            visit_expr(left, visitor);
+            visit_expr(right, visitor);
+        }
+        Expr::Call { args, .. } => {
+            for arg in args {
+                visit_expr(arg, visitor);
+            }
+        }
+        Expr::Match {
+            scrutinee, arms, ..
+        } => {
+            visit_expr(scrutinee, visitor);
+            for arm in arms {
+                visit_expr(&arm.body, visitor);
+            }
+        }
+        Expr::IfLet {
+            expr,
+            then_branch,
+            else_branch,
+            ..
+        } => {
+            visit_expr(expr, visitor);
+            visit_expr(then_branch, visitor);
+            visit_expr(else_branch, visitor);
+        }
+        Expr::Constructor {
+            fields, payload, ..
+        } => {
+            for (_, expr) in fields {
+                visit_expr(expr, visitor);
+            }
+            match payload {
+                ConstructorPayload::Tuple(items) => {
+                    for item in items {
+                        visit_expr(item, visitor);
+                    }
+                }
+                ConstructorPayload::Record(fields) => {
+                    for (_, expr) in fields {
+                        visit_expr(expr, visitor);
+                    }
+                }
+                ConstructorPayload::Unit => {}
+            }
+        }
+        Expr::If {
+            condition,
+            then_branch,
+            else_branch,
+            ..
+        } => {
+            visit_expr(condition, visitor);
+            visit_expr(then_branch, visitor);
+            if let Some(else_branch) = else_branch {
+                visit_expr(else_branch, visitor);
+            }
+        }
+        Expr::Fail { payload, .. } => visit_expr(payload, visitor),
+        Expr::WithError { body, arms, .. } => {
+            visit_expr(body, visitor);
+            for arm in arms {
+                visit_expr(&arm.body, visitor);
+            }
+        }
+        Expr::Block {
+            statements,
+            tail_expr,
+            ..
+        } => {
+            for stmt in statements {
+                match stmt {
+                    BlockStmt::Let { expr, .. } => visit_expr(expr, visitor),
+                }
+            }
+            if let Some(tail_expr) = tail_expr {
+                visit_expr(tail_expr, visitor);
+            }
+        }
+        Expr::FnDef { body, .. } => visit_expr(body, visitor),
+        Expr::FnApply { func, args, .. } => {
+            visit_expr(func, visitor);
+            for arg in args {
+                visit_expr(arg, visitor);
+            }
+        }
+        Expr::ActBlock { stmts, .. } => {
+            for stmt in stmts {
+                match stmt {
+                    ActStmt::Bind { value, .. } | ActStmt::Return { value, .. } => {
+                        visit_expr(value, visitor)
+                    }
+                }
+            }
+        }
+        Expr::DoBlock { stmts, .. } => {
+            for stmt in stmts {
+                match stmt {
+                    DoStmt::Let { value, .. }
+                    | DoStmt::Bind { value, .. }
+                    | DoStmt::WorkflowRequires { expr: value, .. }
+                    | DoStmt::WorkflowEnsures { expr: value, .. }
+                    | DoStmt::Return { value, .. } => visit_expr(value, visitor),
+                }
+            }
+        }
+        Expr::Comprehension {
+            result, qualifiers, ..
+        } => {
+            visit_expr(result, visitor);
+            for qualifier in qualifiers {
+                match qualifier {
+                    ComprehensionQualifier::Bind { value, .. }
+                    | ComprehensionQualifier::DiscardBind { value, .. }
+                    | ComprehensionQualifier::Let { value, .. } => visit_expr(value, visitor),
+                }
+            }
+        }
+        Expr::List { items, .. } => {
+            for item in items {
+                visit_expr(item, visitor);
+            }
+        }
+        Expr::Literal(_)
+        | Expr::Variable { .. }
+        | Expr::Policy(_)
+        | Expr::CheckObligation { .. }
+        | Expr::Panic { .. } => {}
     }
 }
 
@@ -2188,6 +3088,8 @@ pub enum Expr {
     Binary {
         /// Binary operator
         op: BinaryOp,
+        /// Raw source operator token, when available from parsed syntax.
+        raw_operator: Option<RawOperatorToken>,
         /// Left operand
         left: Box<Expr>,
         /// Right operand

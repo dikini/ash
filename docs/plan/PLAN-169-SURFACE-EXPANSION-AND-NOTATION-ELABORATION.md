@@ -1,6 +1,6 @@
 # PLAN-169: Surface Expansion and Notation Elaboration
 
-## Status: 📝 Planned; task packet created
+## Status: ✅ Complete
 
 ## Overview
 
@@ -62,23 +62,23 @@ general `do`/comprehension lowering, and full origin sidecar threading as later 
 Tasks:
 
 - TASK-1728: Create the Phase 169 plan and task packet. ✅
-- TASK-1729: Add reusable surface traversal for expansion diagnostics. 📝
+- TASK-1729: Add reusable surface traversal for expansion diagnostics. ✅
 
 ### Phase 2: Preserve and declare notation
 
 Tasks:
 
-- TASK-1730: Parse and preserve minimal notation declarations. 📝
-- TASK-1731: Preserve raw built-in infix operator tokens. 📝
-- TASK-1732: Build minimal local notation-table resolution diagnostics. 📝
+- TASK-1730: Parse and preserve minimal notation declarations. ✅
+- TASK-1731: Preserve raw built-in infix operator tokens. ✅
+- TASK-1732: Build minimal local notation-table resolution diagnostics. ✅
 
 ### Phase 3: Elaborate notation before Core
 
 Tasks:
 
-- TASK-1733: Elaborate binary operator sections to callable surface forms. 📝
-- TASK-1734: Add expanded-surface-to-Core lowering gate. 📝
-- TASK-1735: Close out Phase 169 with verification and review. 📝
+- TASK-1733: Elaborate binary operator sections to callable surface forms. ✅
+- TASK-1734: Add expanded-surface-to-Core lowering gate. ✅
+- TASK-1735: Close out Phase 169 with verification and review. ✅
 
 ## Dependency graph
 

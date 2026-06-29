@@ -489,6 +489,7 @@ mod tests {
         let mut ctx = ConstraintContext::new();
         let expr = Expr::Binary {
             op: ash_parser::surface::BinaryOp::Add,
+            raw_operator: None,
             left: Box::new(Expr::Literal(Literal::Int(1))),
             right: Box::new(Expr::Literal(Literal::Int(2))),
             span: test_span(),
@@ -504,6 +505,7 @@ mod tests {
         let mut ctx = ConstraintContext::new();
         let expr = Expr::Binary {
             op: ash_parser::surface::BinaryOp::Eq,
+            raw_operator: None,
             left: Box::new(Expr::Literal(Literal::Int(1))),
             right: Box::new(Expr::Literal(Literal::Int(2))),
             span: test_span(),
@@ -518,6 +520,7 @@ mod tests {
         let mut ctx = ConstraintContext::new();
         let expr = Expr::Binary {
             op: ash_parser::surface::BinaryOp::And,
+            raw_operator: None,
             left: Box::new(Expr::Literal(Literal::Bool(true))),
             right: Box::new(Expr::Literal(Literal::Bool(false))),
             span: test_span(),

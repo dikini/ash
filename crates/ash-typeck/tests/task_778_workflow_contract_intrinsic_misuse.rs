@@ -30,6 +30,7 @@ fn call(module: Option<&str>, func: &str, args: Vec<Expr>) -> Expr {
 fn binary(left: Expr, op: BinaryOp, right: Expr) -> Expr {
     Expr::Binary {
         op,
+        raw_operator: None,
         left: Box::new(left),
         right: Box::new(right),
         span: span(),

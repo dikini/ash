@@ -425,6 +425,7 @@ mod tests {
         let env = TypeEnv::new();
         let expr = Expr::Binary {
             op: BinaryOp::Add,
+            raw_operator: None,
             left: int_lit(1),
             right: int_lit(2),
             span: Span::default(),

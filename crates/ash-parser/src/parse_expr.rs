@@ -972,19 +972,16 @@ pub(crate) fn or_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     let start_pos = input.state.pos;
     let mut left = and_expr(input)?;
 
-    loop {
-        if opt(literal_str("||")).parse_next(input)?.is_some() {
-            let right = and_expr(input)?;
-            let span = span_from(&start_pos, &input.state.pos);
-            left = Expr::Binary {
-                op: BinaryOp::Or,
-                left: Box::new(left),
-                right: Box::new(right),
-                span,
-            };
-        } else {
-            break;
-        }
+    while let Some(raw_operator) = parse_specific_raw_operator_token(input, "||") {
+        let right = and_expr(input)?;
+        let span = span_from(&start_pos, &input.state.pos);
+        left = Expr::Binary {
+            op: BinaryOp::Or,
+            raw_operator: Some(raw_operator),
+            left: Box::new(left),
+            right: Box::new(right),
+            span,
+        };
     }
 
     Ok(left)
@@ -995,19 +992,16 @@ fn and_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     let start_pos = input.state.pos;
     let mut left = in_expr(input)?;
 
-    loop {
-        if opt(literal_str("&&")).parse_next(input)?.is_some() {
-            let right = in_expr(input)?;
-            let span = span_from(&start_pos, &input.state.pos);
-            left = Expr::Binary {
-                op: BinaryOp::And,
-                left: Box::new(left),
-                right: Box::new(right),
-                span,
-            };
-        } else {
-            break;
-        }
+    while let Some(raw_operator) = parse_specific_raw_operator_token(input, "&&") {
+        let right = in_expr(input)?;
+        let span = span_from(&start_pos, &input.state.pos);
+        left = Expr::Binary {
+            op: BinaryOp::And,
+            raw_operator: Some(raw_operator),
+            left: Box::new(left),
+            right: Box::new(right),
+            span,
+        };
     }
 
     Ok(left)
@@ -1023,6 +1017,7 @@ fn in_expr(input: &mut ParseInput) -> ModalResult<Expr> {
         let span = span_from(&start_pos, &input.state.pos);
         Ok(Expr::Binary {
             op: BinaryOp::In,
+            raw_operator: None,
             left: Box::new(left),
             right: Box::new(right),
             span,
@@ -1038,28 +1033,29 @@ fn comparison_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     let left = additive_expr(input)?;
 
     // Try to match comparison operators
-    let op = alt((
-        literal_str("==").map(|_| BinaryOp::Eq),
-        literal_str("!=").map(|_| BinaryOp::Neq),
-        literal_str("<=").map(|_| BinaryOp::Leq),
-        literal_str(">=").map(|_| BinaryOp::Geq),
-        literal_str("<").map(|_| BinaryOp::Lt),
-        literal_str(">").map(|_| BinaryOp::Gt),
-    ))
-    .parse_next(input);
-
-    match op {
-        Ok(op) => {
+    match parse_binary_operator_token(
+        input,
+        &[
+            ("==", BinaryOp::Eq),
+            ("!=", BinaryOp::Neq),
+            ("<=", BinaryOp::Leq),
+            (">=", BinaryOp::Geq),
+            ("<", BinaryOp::Lt),
+            (">", BinaryOp::Gt),
+        ],
+    ) {
+        Some((op, raw_operator)) => {
             let right = additive_expr(input)?;
             let span = span_from(&start_pos, &input.state.pos);
             Ok(Expr::Binary {
                 op,
+                raw_operator: Some(raw_operator),
                 left: Box::new(left),
                 right: Box::new(right),
                 span,
             })
         }
-        Err(_) => Ok(left),
+        None => Ok(left),
     }
 }
 
@@ -1068,26 +1064,18 @@ fn additive_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     let start_pos = input.state.pos;
     let mut left = multiplicative_expr(input)?;
 
-    loop {
-        let op = alt((
-            literal_str("+").map(|_| BinaryOp::Add),
-            literal_str("-").map(|_| BinaryOp::Sub),
-        ))
-        .parse_next(input);
-
-        match op {
-            Ok(op) => {
-                let right = multiplicative_expr(input)?;
-                let span = span_from(&start_pos, &input.state.pos);
-                left = Expr::Binary {
-                    op,
-                    left: Box::new(left),
-                    right: Box::new(right),
-                    span,
-                };
-            }
-            Err(_) => break,
-        }
+    while let Some((op, raw_operator)) =
+        parse_binary_operator_token(input, &[("+", BinaryOp::Add), ("-", BinaryOp::Sub)])
+    {
+        let right = multiplicative_expr(input)?;
+        let span = span_from(&start_pos, &input.state.pos);
+        left = Expr::Binary {
+            op,
+            raw_operator: Some(raw_operator),
+            left: Box::new(left),
+            right: Box::new(right),
+            span,
+        };
     }
 
     Ok(left)
@@ -1098,27 +1086,23 @@ fn multiplicative_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     let start_pos = input.state.pos;
     let mut left = unary_expr(input)?;
 
-    loop {
-        let op = alt((
-            literal_str("*").map(|_| BinaryOp::Mul),
-            literal_str("/").map(|_| BinaryOp::Div),
-            literal_str("%").map(|_| BinaryOp::Mod),
-        ))
-        .parse_next(input);
-
-        match op {
-            Ok(op) => {
-                let right = unary_expr(input)?;
-                let span = span_from(&start_pos, &input.state.pos);
-                left = Expr::Binary {
-                    op,
-                    left: Box::new(left),
-                    right: Box::new(right),
-                    span,
-                };
-            }
-            Err(_) => break,
-        }
+    while let Some((op, raw_operator)) = parse_binary_operator_token(
+        input,
+        &[
+            ("*", BinaryOp::Mul),
+            ("/", BinaryOp::Div),
+            ("%", BinaryOp::Mod),
+        ],
+    ) {
+        let right = unary_expr(input)?;
+        let span = span_from(&start_pos, &input.state.pos);
+        left = Expr::Binary {
+            op,
+            raw_operator: Some(raw_operator),
+            left: Box::new(left),
+            right: Box::new(right),
+            span,
+        };
     }
 
     Ok(left)
@@ -1480,6 +1464,43 @@ fn starts_operator_section_placeholder(input: &str) -> bool {
         .is_some_and(|ch| ch == '_' || ch.is_ascii_alphanumeric())
 }
 
+fn parse_binary_operator_token(
+    input: &mut ParseInput,
+    operators: &[(&'static str, BinaryOp)],
+) -> Option<(BinaryOp, RawOperatorToken)> {
+    operators.iter().find_map(|(spelling, op)| {
+        parse_specific_raw_operator_token(input, spelling).map(|raw| (*op, raw))
+    })
+}
+
+fn parse_specific_raw_operator_token(
+    input: &mut ParseInput,
+    spelling: &'static str,
+) -> Option<RawOperatorToken> {
+    skip_whitespace_and_comments(input);
+    let checkpoint = input.clone();
+    let start = input.state.pos;
+    if input.input.starts_with(spelling)
+        && input
+            .input
+            .as_ref()
+            .chars()
+            .nth(spelling.chars().count())
+            .is_some_and(is_symbolic_operator_char)
+    {
+        return None;
+    }
+    if literal_str(spelling).parse_next(input).is_ok() {
+        Some(RawOperatorToken {
+            spelling: spelling.into(),
+            span: span_from(&start, &input.state.pos),
+        })
+    } else {
+        *input = checkpoint;
+        None
+    }
+}
+
 fn parse_operator_section_operand(input: &mut ParseInput) -> ModalResult<Expr> {
     let operand_start = input.state.pos;
     if let Ok(lit) = literal(input) {
@@ -1514,6 +1535,16 @@ fn parse_raw_operator_token(input: &mut ParseInput) -> Option<RawOperatorToken> 
     let start = input.state.pos;
     for operator in OPERATORS {
         if input.input.starts_with(operator) {
+            if operator.len() == 1
+                && input
+                    .input
+                    .as_ref()
+                    .chars()
+                    .nth(1)
+                    .is_some_and(is_symbolic_operator_char)
+            {
+                continue;
+            }
             let _ = literal_str(operator).parse_next(input).ok()?;
             return Some(RawOperatorToken {
                 spelling: (*operator).into(),
@@ -1521,7 +1552,45 @@ fn parse_raw_operator_token(input: &mut ParseInput) -> Option<RawOperatorToken> 
             });
         }
     }
-    None
+    let spelling: String = input
+        .input
+        .as_ref()
+        .chars()
+        .take_while(|ch| is_symbolic_operator_char(*ch))
+        .collect();
+    if spelling.is_empty() {
+        return None;
+    }
+    for ch in spelling.chars() {
+        input.state.advance(ch);
+    }
+    let _ = input.input.next_slice(spelling.len());
+    Some(RawOperatorToken {
+        spelling: spelling.into(),
+        span: span_from(&start, &input.state.pos),
+    })
+}
+
+pub(crate) fn is_symbolic_operator_char(ch: char) -> bool {
+    matches!(
+        ch,
+        '!' | '$'
+            | '%'
+            | '&'
+            | '*'
+            | '+'
+            | '-'
+            | '.'
+            | '/'
+            | '<'
+            | '='
+            | '>'
+            | '?'
+            | '@'
+            | '^'
+            | '|'
+            | '~'
+    )
 }
 
 fn parse_list_expr(input: &mut ParseInput) -> ModalResult<Expr> {

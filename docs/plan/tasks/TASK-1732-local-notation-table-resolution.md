@@ -1,6 +1,6 @@
 # TASK-1732: Build minimal local notation-table resolution diagnostics
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Summary
 
@@ -17,8 +17,8 @@ it without overclaiming.
 
 ## Dependencies
 
-- 📝 TASK-1730: Notation declaration parser and AST
-- 📝 TASK-1731: Built-in raw operator token preservation
+- ✅ TASK-1730: Notation declaration parser and AST
+- ✅ TASK-1731: Built-in raw operator token preservation
 
 ## Deferral / Planned-Feature Reconciliation
 
@@ -42,6 +42,13 @@ it without overclaiming.
 3. Reject precedence/associativity conflicts for the same operator spelling.
 4. Preserve target callable paths without typechecking them in this task.
 5. Document imported/exported notation as deferred if not implemented.
+
+## Scope note
+
+Notation tables are local to one module definition scope. Inline-module notation declarations are
+validated and used only while expanding that inline module; they do not leak into the parent module,
+and parent notation declarations do not implicitly propagate into inline modules. Imported/exported
+notation propagation remains deferred.
 
 ## Current state
 
@@ -71,10 +78,18 @@ commands:
   - cargo fmt --check
   - git diff --check
 checklist:
-  - [ ] Local notation table is deterministic.
-  - [ ] Duplicate/conflict diagnostics are stable.
-  - [ ] Imported/exported notation status is honest.
+  - [x] Local notation table is deterministic.
+  - [x] Duplicate/conflict diagnostics are stable.
+  - [x] Imported/exported notation status is honest.
 ```
+
+## Implementation evidence
+
+Implemented in Phase 169 final diff. Verified with:
+
+- `cargo test -p ash-parser --test task_1732_local_notation_table_resolution`
+- `cargo test -p ash-parser`
+- `cargo check --workspace`
 
 ## Dispatch
 

@@ -52,6 +52,7 @@ fn fn1(name: &str, body: Expr) -> Expr {
 }
 fn binary(left: Expr, op: BinaryOp, right: Expr) -> Expr {
     Expr::Binary {
+        raw_operator: None,
         op,
         left: Box::new(left),
         right: Box::new(right),

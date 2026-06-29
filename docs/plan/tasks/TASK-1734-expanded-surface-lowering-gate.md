@@ -1,6 +1,6 @@
 # TASK-1734: Add expanded-surface-to-Core lowering gate
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Summary
 
@@ -42,6 +42,15 @@ from bypassing expansion.
 4. Add tests proving elaborated operator sections can proceed through the high-level gate.
 5. Update call sites conservatively; do not rewrite unrelated lowering semantics.
 
+## Scope note
+
+This task adds and tests the high-level expanded-surface validation/lowering gate in `ash-parser`.
+It does not claim a complete module-to-Core product or a repository-wide replacement of every legacy
+`lower_expr` helper callsite; existing low-level parser/typechecker/engine helper paths remain valid
+only where they already operate on expression fragments or legacy workflow carriers. Future full
+`SPEC-098c` lowering work should promote concrete module-loader entrypoints to consume expanded
+surface carriers directly.
+
 ## Current state
 
 `lower_expr` rejects raw operator sections, but high-level lowering boundaries do not yet uniformly
@@ -71,10 +80,19 @@ commands:
   - cargo fmt --check
   - git diff --check
 checklist:
-  - [ ] High-level lowering requires expansion.
-  - [ ] Low-level helpers remain honest and fail closed.
-  - [ ] Existing engine/module-loading tests still pass.
+  - [x] High-level lowering requires expansion.
+  - [x] Low-level helpers remain honest and fail closed.
+  - [x] Existing engine/module-loading tests still pass.
 ```
+
+## Implementation evidence
+
+Implemented in Phase 169 final diff. Verified with:
+
+- `cargo test -p ash-parser --test task_1734_expanded_surface_lowering_gate`
+- `cargo test -p ash-parser`
+- `cargo test -p ash-engine`
+- `cargo check --workspace`
 
 ## Dispatch
 

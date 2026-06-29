@@ -144,7 +144,7 @@ Update this section as tasks complete:
 | [166](PLAN-166-DOCS-ORIENTATION-INDEXES.md) | 6 | 6 | ✅ Complete; notes/spec orientation indexes, lint tooling, and agent usability evals added |
 | [167](PLAN-167-TARGET-SURFACE-SEMANTICS-GAP-CLOSURE.md) | 12 | 12 | ✅ Complete; docs-only target surface/lowering/semantics spec-hardening packet |
 | [168](PLAN-168-SURFACE-AST-NOTATION-SUBSTRATE.md) | 7 | 7 | ✅ Complete; implementation substrate handoff |
-| [169](PLAN-169-SURFACE-EXPANSION-AND-NOTATION-ELABORATION.md) | 8 | 1 | 📝 Planned; task packet created, implementation pending |
+| [169](PLAN-169-SURFACE-EXPANSION-AND-NOTATION-ELABORATION.md) | 8 | 8 | ✅ Complete; surface expansion and notation elaboration implemented with explicit deferrals |
 
 ---
 
@@ -714,10 +714,10 @@ mixfix partial application, and full `SPEC-098c` lowering remain explicitly defe
 | Task | Description | Status |
 |------|-------------|--------|
 | [TASK-1728](tasks/TASK-1728-phase-169-plan-packet.md) | Create the Phase 169 plan and task packet | ✅ Complete |
-| [TASK-1729](tasks/TASK-1729-surface-expansion-traversal-api.md) | Add reusable surface traversal for expansion diagnostics | 📝 Planned |
-| [TASK-1730](tasks/TASK-1730-notation-declaration-parser-ast.md) | Parse and preserve minimal notation declarations | 📝 Planned |
-| [TASK-1731](tasks/TASK-1731-built-in-operator-token-normalization.md) | Preserve raw built-in infix operator tokens | 📝 Planned |
-| [TASK-1732](tasks/TASK-1732-local-notation-table-resolution.md) | Build minimal local notation-table resolution diagnostics | 📝 Planned |
-| [TASK-1733](tasks/TASK-1733-operator-section-elaboration.md) | Elaborate binary operator sections to callable surface forms | 📝 Planned |
-| [TASK-1734](tasks/TASK-1734-expanded-surface-lowering-gate.md) | Add expanded-surface-to-Core lowering gate | 📝 Planned |
-| [TASK-1735](tasks/TASK-1735-phase-169-closeout.md) | Close out Phase 169 with verification and review | 📝 Planned |
+| [TASK-1729](tasks/TASK-1729-surface-expansion-traversal-api.md) | Add reusable surface traversal for expansion diagnostics | ✅ Complete |
+| [TASK-1730](tasks/TASK-1730-notation-declaration-parser-ast.md) | Parse and preserve minimal notation declarations | ✅ Complete |
+| [TASK-1731](tasks/TASK-1731-built-in-operator-token-normalization.md) | Preserve raw built-in infix operator tokens | ✅ Complete |
+| [TASK-1732](tasks/TASK-1732-local-notation-table-resolution.md) | Build minimal local notation-table resolution diagnostics | ✅ Complete |
+| [TASK-1733](tasks/TASK-1733-operator-section-elaboration.md) | Elaborate binary operator sections to callable surface forms | ✅ Complete |
+| [TASK-1734](tasks/TASK-1734-expanded-surface-lowering-gate.md) | Add expanded-surface-to-Core lowering gate | ✅ Complete |
+| [TASK-1735](tasks/TASK-1735-phase-169-closeout.md) | Close out Phase 169 with verification and review | ✅ Complete |

@@ -18,8 +18,8 @@
 
 use ash_parser::module::ModuleDecl;
 use ash_parser::surface::{
-    Definition, FnDef, ImplMethodDef, InterfaceDef, InterfaceMethodSig, ModuleFile, Type,
-    WorkflowDef,
+    BuiltinFnDef, Definition, FnDef, ImplMethodDef, InterfaceDef, InterfaceMethodSig, ModuleFile,
+    Type, WorkflowDef,
 };
 use lsp_types::{Hover, HoverContents, MarkupContent, MarkupKind};
 
@@ -254,8 +254,26 @@ fn impl_method_hover(method: &ImplMethodDef, interface_name: &str) -> Hover {
     )
 }
 
+fn builtin_fn_hover(def: &BuiltinFnDef) -> Hover {
+    let params = def
+        .params
+        .iter()
+        .map(|param| format!("{}: {}", param.name, type_to_string(&param.ty)))
+        .collect::<Vec<_>>()
+        .join(", ");
+    let ret = type_to_string(&def.return_type);
+    markdown(
+        format!("builtin fn {}({params}) -> {ret}", def.name),
+        Some("Builtin function (runtime-provided)".to_string()),
+    )
+}
+
 fn definition_hover(definition: &Definition) -> Hover {
     match definition {
+        Definition::Notation(def) => markdown(
+            format!("notation {} = {}", def.pattern.raw, def.target.name),
+            Some("Notation declaration".to_string()),
+        ),
         Definition::Capability(def) => {
             let params = def
                 .params
@@ -330,19 +348,7 @@ fn definition_hover(definition: &Definition) -> Hover {
             Some(format!("Methods: {}", def.methods.len())),
         ),
         Definition::Function(def) => fn_hover(def),
-        Definition::BuiltinFn(def) => {
-            let params = def
-                .params
-                .iter()
-                .map(|param| format!("{}: {}", param.name, type_to_string(&param.ty)))
-                .collect::<Vec<_>>()
-                .join(", ");
-            let ret = type_to_string(&def.return_type);
-            markdown(
-                format!("builtin fn {}({params}) -> {ret}", def.name),
-                Some("Builtin function (runtime-provided)".to_string()),
-            )
-        }
+        Definition::BuiltinFn(def) => builtin_fn_hover(def),
         Definition::SealedDomain(def) => markdown(
             format!("sealed type domain {}", def.name),
             Some(format!("Constructors: {}", def.constructors.len())),
@@ -398,6 +404,7 @@ fn top_level_hover(token: &str, module: &ModuleFile) -> Option<Hover> {
                     }
                     _ => {
                         let name_matches = match definition {
+                            Definition::Notation(def) => def.pattern.raw.as_ref() == token,
                             Definition::Capability(def) => def.name.as_ref() == token,
                             Definition::CapabilityInterface(def) => def.name.as_ref() == token,
                             Definition::CapabilityImplementation(def) => def.name.as_ref() == token,
@@ -443,6 +450,7 @@ fn top_level_hover(token: &str, module: &ModuleFile) -> Option<Hover> {
             }
             _ => {
                 let name_matches = match definition {
+                    Definition::Notation(def) => def.pattern.raw.as_ref() == token,
                     Definition::Capability(def) => def.name.as_ref() == token,
                     Definition::CapabilityInterface(def) => def.name.as_ref() == token,
                     Definition::CapabilityImplementation(def) => def.name.as_ref() == token,

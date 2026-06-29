@@ -1,12 +1,13 @@
 # TASK-1733: Elaborate binary operator sections to callable surface forms
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Summary
 
 Elaborate binary operator sections `(+), (x +), (+ x)` from parsed-surface `Expr::OperatorSection` into
-ordinary callable surface expressions after built-in or local notation resolution, preserving origin
-metadata and fail-closed behavior for unresolved or unsupported operators.
+ordinary callable surface expressions after built-in or local notation resolution, preserving source
+spans on generated forms and fail-closed behavior for unresolved or unsupported operators. Full
+origin sidecar threading remains deferred to the later source-origin metadata packet.
 
 ## Specification Reference
 
@@ -16,8 +17,8 @@ metadata and fail-closed behavior for unresolved or unsupported operators.
 
 ## Dependencies
 
-- 📝 TASK-1729: Reusable expansion traversal
-- 📝 TASK-1732: Local notation-table resolution diagnostics
+- ✅ TASK-1729: Reusable expansion traversal
+- ✅ TASK-1732: Local notation-table resolution diagnostics
 
 ## Deferral / Planned-Feature Reconciliation
 
@@ -38,7 +39,7 @@ metadata and fail-closed behavior for unresolved or unsupported operators.
 1. Resolve bare, left, and right binary sections against built-in operators and local notation targets.
 2. Elaborate to ordinary callable surface expressions or closures that the existing lowerer/typechecker
    can consume.
-3. Preserve `SurfaceOrigin::OperatorSection` or an equivalent origin marker on generated nodes.
+3. Preserve source spans on generated nodes; full origin sidecar threading is deferred.
 4. Preserve latent authority by relying on the resolved callable's later type/row checking.
 5. Keep unresolved or unsupported sections fail-closed before Core lowering.
 
@@ -72,10 +73,20 @@ commands:
   - cargo fmt --check
   - git diff --check
 checklist:
-  - [ ] Bare/left/right binary sections elaborate.
-  - [ ] Unresolved sections still fail closed.
-  - [ ] Generated forms preserve origin metadata.
+  - [x] Bare/left/right binary sections elaborate.
+  - [x] Unresolved sections still fail closed.
+  - [x] Generated forms preserve section source spans; full origin sidecars are explicitly deferred.
 ```
+
+## Implementation evidence
+
+Implemented in Phase 169 final diff. Verified with:
+
+- `cargo test -p ash-parser --test task_1733_operator_section_elaboration`
+- `cargo test -p ash-parser --test task_1724_operator_section_boundary`
+- `cargo test -p ash-parser --test task_1725_expanded_surface_boundary`
+- `cargo test -p ash-typeck`
+- `cargo check --workspace`
 
 ## Dispatch
 

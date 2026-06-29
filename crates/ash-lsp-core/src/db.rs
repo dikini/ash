@@ -347,6 +347,12 @@ fn index_definition(index: &mut SymbolIndex, def: &ash_parser::surface::Definiti
     use ash_parser::surface::Definition;
 
     let (name, kind, line, column) = match def {
+        Definition::Notation(n) => (
+            n.pattern.raw.as_ref().to_string(),
+            SymbolKind::Function,
+            n.span.line,
+            n.span.column,
+        ),
         Definition::Function(f) => (
             f.name.as_ref().to_string(),
             SymbolKind::Function,

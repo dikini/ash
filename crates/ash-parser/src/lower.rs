@@ -18,9 +18,10 @@ use ash_core::RoleObligationRef as CoreRoleObligationRef;
 
 use crate::capability_export::{CapabilityResolutionContext, ModuleId};
 use crate::surface::{
-    BinaryOp, BlockStmt, CapabilityDef, CheckTarget, EffectType, Expr, Guard, Literal,
-    ObligationRef, Pattern, PolicyExpr, Predicate, StreamPattern, Type, UnaryOp,
-    Workflow as SurfaceWorkflow, WorkflowDef, YieldArm,
+    BinaryOp, BlockStmt, CapabilityDef, CheckTarget, EffectType, ExpandedSurfaceModule, Expr,
+    Guard, Literal, ModuleFile, ObligationRef, Pattern, PolicyExpr, Predicate, StreamPattern, Type,
+    UnaryOp, Workflow as SurfaceWorkflow, WorkflowDef, YieldArm, expand_surface_module,
+    visit_exprs_in_module,
 };
 
 thread_local! {
@@ -2188,6 +2189,28 @@ pub fn lower_module_expr(expr: &Expr) -> Result<CoreExpr, LoweringError> {
         return Err(LoweringError::FnDefNotAllowedAtModuleScope);
     }
     lower_expr(expr)
+}
+
+/// Lower a module only after it has crossed the expanded-surface boundary.
+///
+/// This gate intentionally lowers expression-bearing surfaces for validation rather than claiming a
+/// complete module-to-Core product. It prevents parsed-surface-only notation or operator sections
+/// from bypassing expansion at high-level module boundaries.
+pub fn lower_expanded_surface_module(module: &ExpandedSurfaceModule) -> Result<(), LoweringError> {
+    let mut result = Ok(());
+    visit_exprs_in_module(&module.module, &mut |expr| {
+        if result.is_ok() {
+            result = lower_expr(expr).map(|_| ());
+        }
+    });
+    result
+}
+
+/// Expand a parsed module, then validate expression lowering through the expanded-surface gate.
+pub fn expand_and_lower_surface_module(module: ModuleFile) -> Result<(), LoweringError> {
+    let expanded = expand_surface_module(module)
+        .map_err(|err| LoweringError::UnsupportedFeature(err.to_string()))?;
+    lower_expanded_surface_module(&expanded)
 }
 
 /// Lower a surface FnDef expression to core FnDef.

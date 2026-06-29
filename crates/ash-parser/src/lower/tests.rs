@@ -125,6 +125,7 @@ fn test_lower_expr_variable() {
 fn test_lower_expr_binary() {
     let surface = SurfaceExpr::Binary {
         op: BinaryOp::Add,
+        raw_operator: None,
         left: Box::new(SurfaceExpr::Literal(SurfaceLiteral::Int(1))),
         right: Box::new(SurfaceExpr::Literal(SurfaceLiteral::Int(2))),
         span: dummy_span(),
@@ -469,6 +470,7 @@ fn test_lower_fn_contract_stage1_predicates() {
             SurfaceRequirement::Arithmetic {
                 expr: SurfaceExpr::Binary {
                     op: BinaryOp::Geq,
+                    raw_operator: None,
                     left: Box::new(var_expr("n")),
                     right: Box::new(int_expr(0)),
                     span: dummy_span(),
@@ -477,6 +479,7 @@ fn test_lower_fn_contract_stage1_predicates() {
             SurfaceRequirement::Arithmetic {
                 expr: SurfaceExpr::Binary {
                     op: BinaryOp::Neq,
+                    raw_operator: None,
                     left: Box::new(var_expr("d")),
                     right: Box::new(int_expr(0)),
                     span: dummy_span(),
@@ -485,8 +488,10 @@ fn test_lower_fn_contract_stage1_predicates() {
             SurfaceRequirement::Arithmetic {
                 expr: SurfaceExpr::Binary {
                     op: BinaryOp::Eq,
+                    raw_operator: None,
                     left: Box::new(SurfaceExpr::Binary {
                         op: BinaryOp::Mod,
+                        raw_operator: None,
                         left: Box::new(var_expr("n")),
                         right: Box::new(int_expr(2)),
                         span: dummy_span(),
@@ -499,6 +504,7 @@ fn test_lower_fn_contract_stage1_predicates() {
         ensures: vec![EnsuresClause {
             expr: SurfaceExpr::Binary {
                 op: BinaryOp::Geq,
+                raw_operator: None,
                 left: Box::new(var_expr("result")),
                 right: Box::new(int_expr(0)),
                 span: dummy_span(),
@@ -546,6 +552,7 @@ fn test_lower_fn_contract_rejects_non_value_ensures() {
         ensures: vec![EnsuresClause {
             expr: SurfaceExpr::Binary {
                 op: BinaryOp::Geq,
+                raw_operator: None,
                 left: Box::new(var_expr("state")),
                 right: Box::new(int_expr(0)),
                 span: dummy_span(),

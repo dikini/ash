@@ -26,25 +26,27 @@ fn ordinary_module_crosses_expanded_surface_boundary_as_no_op() {
 
 #[test]
 fn operator_section_is_rejected_at_expanded_surface_boundary() {
-    let module = ash_parser::parse_surface_file("fn plus_one(x: Int) -> Int { (+ x) }")
+    let module = ash_parser::parse_surface_file("fn plus_one(x: Int) -> Int { (<*> x) }")
         .expect("operator section parses as surface syntax");
     let err = expand_surface_module(module).expect_err("operator section must not silently expand");
     match err {
         ExpansionError::UnresolvedOperatorSection { operator, span } => {
-            assert_eq!(operator.as_ref(), "+");
+            assert_eq!(operator.as_ref(), "<*>");
             assert!(span.start < span.end);
         }
+        other => panic!("unexpected expansion error: {other:?}"),
     }
 }
 
 #[test]
 fn operator_section_in_function_contract_is_rejected_at_expanded_surface_boundary() {
-    let module = ash_parser::parse_surface_file("fn checked(x: Int) -> Int requires: (+ x) { x }")
-        .expect("function contract operator section parses as surface syntax");
+    let module =
+        ash_parser::parse_surface_file("fn checked(x: Int) -> Int requires: (<*> x) { x }")
+            .expect("function contract operator section parses as surface syntax");
     let err = expand_surface_module(module).expect_err("contract section must not expand");
     assert!(matches!(
         err,
-        ExpansionError::UnresolvedOperatorSection { operator, .. } if operator.as_ref() == "+"
+        ExpansionError::UnresolvedOperatorSection { operator, .. } if operator.as_ref() == "<*>"
     ));
 }
 
@@ -52,41 +54,41 @@ fn operator_section_in_function_contract_is_rejected_at_expanded_surface_boundar
 fn operator_section_in_capability_implementation_is_rejected_at_expanded_surface_boundary() {
     let module = ash_parser::parse_surface_file(
         "capability impl NoopKV for KVStore {
-             observe get(key: String) returns Option<String> { (+ key) }
+             observe get(key: String) returns Option<String> { (<*> key) }
          }",
     )
     .expect("capability implementation operator section parses as surface syntax");
     let err = expand_surface_module(module).expect_err("capability impl section must not expand");
     assert!(matches!(
         err,
-        ExpansionError::UnresolvedOperatorSection { operator, .. } if operator.as_ref() == "+"
+        ExpansionError::UnresolvedOperatorSection { operator, .. } if operator.as_ref() == "<*>"
     ));
 }
 
 #[test]
 fn operator_section_in_workflow_body_is_rejected_at_expanded_surface_boundary() {
-    let module = ash_parser::parse_surface_file("workflow main { ret (+ 1) }")
+    let module = ash_parser::parse_surface_file("workflow main { ret (<*> 1) }")
         .expect("workflow operator section parses as surface syntax");
     let err = expand_surface_module(module).expect_err("workflow body section must not expand");
     assert!(matches!(
         err,
-        ExpansionError::UnresolvedOperatorSection { operator, .. } if operator.as_ref() == "+"
+        ExpansionError::UnresolvedOperatorSection { operator, .. } if operator.as_ref() == "<*>"
     ));
 }
 
 #[test]
 fn direct_operator_section_expr_remains_surface_only() {
-    let parsed = parse_expr_complete("(+ x)");
+    let parsed = parse_expr_complete("(<*> x)");
     assert!(matches!(parsed, Expr::OperatorSection { .. }));
 }
 
 #[test]
 fn lower_expr_rejects_unresolved_operator_section() {
-    let parsed = parse_expr_complete("(+ x)");
+    let parsed = parse_expr_complete("(<*> x)");
     let err = lower_expr(&parsed).expect_err("operator section must not lower before expansion");
     assert!(matches!(
         err,
         LoweringError::UnsupportedFeature(message)
-            if message.contains("operator section `+` must be resolved")
+            if message.contains("operator section `<*>` must be resolved")
     ));
 }

@@ -504,6 +504,7 @@ fn parse_fn_scrutinee(input: &mut ParseInput) -> ModalResult<Expr> {
         let span = crate::token::Span::default();
         result = Expr::Binary {
             op,
+            raw_operator: None,
             left: Box::new(result),
             right: Box::new(right),
             span,

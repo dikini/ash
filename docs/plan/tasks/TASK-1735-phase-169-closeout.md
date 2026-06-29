@@ -1,6 +1,6 @@
 # TASK-1735: Close out Phase 169 with verification and review
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Summary
 
@@ -15,13 +15,13 @@ verification evidence after implementation and independent review.
 
 ## Dependencies
 
-- 📝 TASK-1728 through TASK-1734 complete
+- ✅ TASK-1728 through TASK-1734 complete
 
 ## Deferral / Planned-Feature Reconciliation
 
 | Prior item | Source | Original reason | Prereqs now? | Decision | Gate |
 |---|---|---|---|---|---|
-| Phase 169 completion | PLAN-169 | Implementation tasks must finish first | Pending | Reconcile after verification/review | All required gates and review pass on final diff |
+| Phase 169 completion | PLAN-169 | Implementation tasks must finish first | Yes | Complete after final verification and review-remediation pass | All required gates and review pass on final diff |
 | Macro/imported-notation/generalized-mixfix/full-lowering follow-up | PLAN-169 non-goals | Out of scope | No | Record next owners honestly | Closeout evidence lists deferrals without completion language |
 
 ## Files
@@ -70,6 +70,25 @@ checklist:
   - [ ] Independent review completed and blockers addressed.
   - [ ] PLAN-INDEX, PLAN-169, task files, and CHANGELOG agree.
 ```
+
+## Closeout evidence so far
+
+Fresh verification on the implementation diff has passed for the complete closeout command set:
+
+- `cargo fmt --check`
+- `cargo test -p ash-parser`
+- `cargo test -p ash-typeck`
+- `cargo test -p ash-engine`
+- `cargo check --workspace`
+- `cargo clippy -p ash-parser -p ash-typeck -p ash-engine --all-targets --all-features -- -D warnings`
+- `git diff --check`
+- `python3 tools/docs/validate_orientation_indexes.py --self-test`
+- `bash scripts/check-docs-gate.sh`
+
+Independent final-diff review found blockers in qualified bare sections, inline-module notation scope,
+generated section binder collision handling, parser symbolic-boundary lookahead, and origin/lowering
+scope overclaims. Those blockers were addressed, and the same closeout gate above passed again on the
+final diff.
 
 ## Dispatch
 

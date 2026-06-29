@@ -6,6 +6,11 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Added
+- PLAN-169 implementation: adds reusable surface expression traversal, notation declaration
+  parser/AST carriers, raw built-in binary operator token preservation, local notation-table
+  duplicate/conflict diagnostics, binary operator-section elaboration for built-ins and local
+  notation, and expanded-surface lowering gates while keeping macro expansion, imported notation,
+  generalized mixfix, and full `SPEC-098c` lowering deferred (TASK-1729 through TASK-1734).
 - PLAN-169 surface expansion and notation elaboration packet with tasks for reusable expansion
   traversal, notation declaration parsing, built-in operator-token preservation, local notation-table
   diagnostics, binary operator-section elaboration, expanded-surface-to-Core lowering gates, and

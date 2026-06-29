@@ -11,7 +11,9 @@ use winnow::token::take_while;
 use crate::combinators::keyword;
 use crate::input::ParseInput;
 use crate::module::{ModuleDecl, ModuleSource};
-use crate::parse_expr::{expr, parse_fn_expr_body_pub, parse_if_let_expr};
+use crate::parse_expr::{
+    expr, is_symbolic_operator_char, parse_fn_expr_body_pub, parse_if_let_expr,
+};
 use crate::parse_utils::{
     parse_kind_annotation, skip_whitespace_and_comments, starts_with_kind_syntax,
 };
@@ -19,15 +21,16 @@ use crate::parse_visibility;
 use crate::parse_workflow::{parse_capabilities_clause, workflow_def};
 use crate::surface::{
     AssociatedFamilyDecreases, AssociatedTypeBinding, AssociatedTypeDecl, AssociatedTypeKind,
-    BlockStmt, BuiltinFnDef, CapabilityDef, CapabilityImplementationDef,
+    BlockStmt, BuiltinFnDef, CallablePath, CapabilityDef, CapabilityImplementationDef,
     CapabilityImplementationDependency, CapabilityImplementationDependencyKind,
     CapabilityImplementationOperation, CapabilityInterfaceDef, CapabilityOperationMode,
     CapabilityOperationSig, CapabilityRef, Constraint, Contract, DataKindDef, Definition,
     DomainConstructor, DomainField, DomainSlot, EffectType, Expr, FnDef, ImplDef, ImplMethodDef,
     InterfaceDef, InterfaceEvidenceConstraint, InterfaceMethodSig, InterfaceTypeParam, LawDef,
-    MatchArm, Name, Param, Pattern, Predicate, ProofBody, ProofDef, PropertyStrategyBinding,
-    PropositionClause, PropositionClauseKind, PropositionPredicateDecl, PropositionPredicateParam,
-    PropositionTail, ProxyDef, ResourceField, ResourceTypeDef, RoleDef, SealedDomainDef, Type,
+    MatchArm, Name, NotationAssociativity, NotationDecl, NotationFixity, NotationPattern, Param,
+    Pattern, Predicate, ProofBody, ProofDef, PropertyStrategyBinding, PropositionClause,
+    PropositionClauseKind, PropositionPredicateDecl, PropositionPredicateParam, PropositionTail,
+    ProxyDef, RawOperatorToken, ResourceField, ResourceTypeDef, RoleDef, SealedDomainDef, Type,
     TypeBody, TypeDef, TypeField, TypeFnDecreases, TypeFnDef, TypeFnEquation, TypeFnParam,
     TypeParam, TypePattern, VariantDef, VariantPayload, Visibility, WhereBound, Workflow, YieldArm,
 };
@@ -166,6 +169,11 @@ fn parse_definitions(input: &mut ParseInput) -> ModalResult<Vec<Definition>> {
             break;
         }
 
+        if starts_with_notation_definition(input) {
+            definitions.push(parse_notation_definition(input)?);
+            continue;
+        }
+
         if starts_with_keyword(input, "role") {
             definitions.push(parse_role_definition(input)?);
             continue;
@@ -277,6 +285,185 @@ fn parse_definitions(input: &mut ParseInput) -> ModalResult<Vec<Definition>> {
     }
 
     Ok(definitions)
+}
+
+fn starts_with_notation_definition(input: &ParseInput<'_>) -> bool {
+    starts_with_visible_keyword(input, "prefix")
+        || starts_with_visible_keyword(input, "infixl")
+        || starts_with_visible_keyword(input, "infixr")
+        || starts_with_visible_keyword(input, "infix")
+        || starts_with_visible_keyword(input, "suffix")
+        || starts_with_visible_keyword(input, "mixfix")
+}
+
+fn parse_notation_definition(input: &mut ParseInput) -> ModalResult<Definition> {
+    let start_pos = input.state.pos;
+    let visibility = parse_visibility(input)?;
+    skip_whitespace_and_comments(input);
+
+    let fixity = if starts_with_keyword(input, "prefix") {
+        let _ = keyword("prefix").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        NotationFixity::Prefix {
+            precedence: parse_optional_precedence(input)?,
+        }
+    } else if starts_with_keyword(input, "infixl") {
+        let _ = keyword("infixl").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        NotationFixity::Infix {
+            associativity: NotationAssociativity::Left,
+            precedence: parse_required_precedence(input)?,
+        }
+    } else if starts_with_keyword(input, "infixr") {
+        let _ = keyword("infixr").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        NotationFixity::Infix {
+            associativity: NotationAssociativity::Right,
+            precedence: parse_required_precedence(input)?,
+        }
+    } else if starts_with_keyword(input, "infix") {
+        let _ = keyword("infix").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        NotationFixity::Infix {
+            associativity: NotationAssociativity::Nonassoc,
+            precedence: parse_required_precedence(input)?,
+        }
+    } else if starts_with_keyword(input, "suffix") {
+        let _ = keyword("suffix").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        NotationFixity::Suffix {
+            precedence: parse_optional_precedence(input)?,
+        }
+    } else {
+        let _ = keyword("mixfix").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        NotationFixity::Mixfix
+    };
+
+    let pattern = parse_notation_pattern(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str("=").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let target = parse_callable_path(input)?;
+    skip_whitespace_and_comments(input);
+    if input.input.starts_with(';') {
+        let _ = literal_str(";").parse_next(input)?;
+    }
+
+    Ok(Definition::Notation(NotationDecl {
+        visibility,
+        fixity,
+        pattern,
+        target,
+        span: crate::input::span_from(&start_pos, &input.state.pos),
+    }))
+}
+
+fn parse_optional_precedence(input: &mut ParseInput) -> ModalResult<Option<u16>> {
+    if !input
+        .input
+        .chars()
+        .next()
+        .is_some_and(|ch| ch.is_ascii_digit())
+    {
+        return Ok(None);
+    }
+    parse_required_precedence(input).map(Some)
+}
+
+fn parse_required_precedence(input: &mut ParseInput) -> ModalResult<u16> {
+    let digits: &str = take_while(1.., |ch: char| ch.is_ascii_digit()).parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    digits
+        .parse()
+        .map_err(|_| winnow::error::ErrMode::Cut(winnow::error::ContextError::new()))
+}
+
+fn parse_notation_pattern(input: &mut ParseInput) -> ModalResult<NotationPattern> {
+    skip_whitespace_and_comments(input);
+    let start = input.state.pos;
+    let mut raw = String::new();
+    while let Some(ch) = input.input.chars().next() {
+        if (ch == '=' && raw.chars().last().is_some_and(char::is_whitespace))
+            || ch == ';'
+            || ch == '{'
+            || ch == '}'
+            || ch == '\n'
+        {
+            break;
+        }
+        let _ = input.input.next_token();
+        input.state.advance(ch);
+        raw.push(ch);
+    }
+    let raw_trimmed = raw.trim();
+    if raw_trimmed.is_empty() {
+        return Err(winnow::error::ErrMode::Cut(
+            winnow::error::ContextError::new(),
+        ));
+    }
+    let span = crate::input::span_from(&start, &input.state.pos);
+    let tokens = collect_notation_pattern_tokens(raw_trimmed, span);
+    Ok(NotationPattern {
+        raw: raw_trimmed.into(),
+        tokens,
+        span,
+    })
+}
+
+fn collect_notation_pattern_tokens(raw: &str, pattern_span: Span) -> Vec<RawOperatorToken> {
+    let mut tokens = Vec::new();
+    let mut cursor = 0usize;
+    while cursor < raw.len() {
+        let rest = &raw[cursor..];
+        let Some(ch) = rest.chars().next() else {
+            break;
+        };
+        if is_symbolic_operator_char(ch) {
+            let spelling: String = rest
+                .chars()
+                .take_while(|ch| is_symbolic_operator_char(*ch))
+                .collect();
+            tokens.push(RawOperatorToken {
+                spelling: spelling.clone().into(),
+                span: Span {
+                    start: pattern_span.start + cursor,
+                    end: pattern_span.start + cursor + spelling.len(),
+                    line: pattern_span.line,
+                    column: pattern_span.column + cursor,
+                },
+            });
+            cursor += spelling.len();
+        } else {
+            cursor += ch.len_utf8();
+        }
+    }
+    tokens
+}
+
+fn parse_callable_path(input: &mut ParseInput) -> ModalResult<CallablePath> {
+    let start = input.state.pos;
+    let first: Name = callable_path_segment(input)?.into();
+    skip_whitespace_and_comments(input);
+    let (module, name) = if input.input.starts_with("::") {
+        let _ = literal_str("::").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        let name: Name = callable_path_segment(input)?.into();
+        (Some(first), name)
+    } else {
+        (None, first)
+    };
+    Ok(CallablePath {
+        module,
+        name,
+        span: crate::input::span_from(&start, &input.state.pos),
+    })
+}
+
+fn callable_path_segment<'a>(input: &mut ParseInput<'a>) -> ModalResult<&'a str> {
+    let segment =
+        take_while(1.., |ch: char| ch == '_' || ch.is_ascii_alphanumeric()).parse_next(input)?;
+    Ok(segment)
 }
 
 fn parse_resource_type_definition(input: &mut ParseInput) -> ModalResult<Definition> {
@@ -3031,6 +3218,11 @@ pub fn module_file(input: &mut ParseInput) -> ModalResult<crate::surface::Module
         if starts_with_visible_keyword(input, "mod") {
             let decl = parse_module_decl(input)?;
             module_decls.push(decl);
+            continue;
+        }
+
+        if starts_with_notation_definition(input) {
+            definitions.push(parse_notation_definition(input)?);
             continue;
         }
 

@@ -135,8 +135,10 @@ fn test_chained_int_addition() {
     let env = TypeEnv::with_builtin_types();
     let expr = Expr::Binary {
         op: BinaryOp::Add,
+        raw_operator: None,
         left: Box::new(Expr::Binary {
             op: BinaryOp::Add,
+            raw_operator: None,
             left: Box::new(Expr::Literal(Literal::Int(1))),
             right: Box::new(Expr::Literal(Literal::Int(2))),
             span: test_span(),
@@ -156,8 +158,10 @@ fn test_chained_int_arithmetic() {
     let env = TypeEnv::with_builtin_types();
     let expr = Expr::Binary {
         op: BinaryOp::Add,
+        raw_operator: None,
         left: Box::new(Expr::Binary {
             op: BinaryOp::Sub,
+            raw_operator: None,
             left: Box::new(Expr::Literal(Literal::Int(10))),
             right: Box::new(Expr::Literal(Literal::Int(3))),
             span: test_span(),
@@ -177,14 +181,17 @@ fn test_chained_comparison() {
     let env = TypeEnv::with_builtin_types();
     let expr = Expr::Binary {
         op: BinaryOp::And,
+        raw_operator: None,
         left: Box::new(Expr::Binary {
             op: BinaryOp::Lt,
+            raw_operator: None,
             left: Box::new(Expr::Literal(Literal::Int(1))),
             right: Box::new(Expr::Literal(Literal::Int(2))),
             span: test_span(),
         }),
         right: Box::new(Expr::Binary {
             op: BinaryOp::Gt,
+            raw_operator: None,
             left: Box::new(Expr::Literal(Literal::Int(3))),
             right: Box::new(Expr::Literal(Literal::Int(4))),
             span: test_span(),
@@ -207,8 +214,10 @@ fn test_chained_logical_or() {
     let env = TypeEnv::with_builtin_types();
     let expr = Expr::Binary {
         op: BinaryOp::Or,
+        raw_operator: None,
         left: Box::new(Expr::Binary {
             op: BinaryOp::Or,
+            raw_operator: None,
             left: Box::new(Expr::Literal(Literal::Bool(true))),
             right: Box::new(Expr::Literal(Literal::Bool(false))),
             span: test_span(),
@@ -233,8 +242,10 @@ fn test_chained_equality() {
     let env = TypeEnv::with_builtin_types();
     let expr = Expr::Binary {
         op: BinaryOp::Eq,
+        raw_operator: None,
         left: Box::new(Expr::Binary {
             op: BinaryOp::Eq,
+            raw_operator: None,
             left: Box::new(Expr::Literal(Literal::Int(1))),
             right: Box::new(Expr::Literal(Literal::Int(1))),
             span: test_span(),
@@ -263,9 +274,11 @@ fn test_arithmetic_precedence() {
     let env = TypeEnv::with_builtin_types();
     let expr = Expr::Binary {
         op: BinaryOp::Add,
+        raw_operator: None,
         left: Box::new(Expr::Literal(Literal::Int(1))),
         right: Box::new(Expr::Binary {
             op: BinaryOp::Mul,
+            raw_operator: None,
             left: Box::new(Expr::Literal(Literal::Int(2))),
             right: Box::new(Expr::Literal(Literal::Int(3))),
             span: test_span(),
@@ -284,8 +297,10 @@ fn test_logical_precedence() {
     let env = TypeEnv::with_builtin_types();
     let expr = Expr::Binary {
         op: BinaryOp::Or,
+        raw_operator: None,
         left: Box::new(Expr::Binary {
             op: BinaryOp::And,
+            raw_operator: None,
             left: Box::new(Expr::Literal(Literal::Bool(true))),
             right: Box::new(Expr::Literal(Literal::Bool(false))),
             span: test_span(),
@@ -309,14 +324,17 @@ fn test_arithmetic_then_comparison() {
     let env = TypeEnv::with_builtin_types();
     let expr = Expr::Binary {
         op: BinaryOp::Lt,
+        raw_operator: None,
         left: Box::new(Expr::Binary {
             op: BinaryOp::Add,
+            raw_operator: None,
             left: Box::new(Expr::Literal(Literal::Int(1))),
             right: Box::new(Expr::Literal(Literal::Int(2))),
             span: test_span(),
         }),
         right: Box::new(Expr::Binary {
             op: BinaryOp::Mul,
+            raw_operator: None,
             left: Box::new(Expr::Literal(Literal::Int(3))),
             right: Box::new(Expr::Literal(Literal::Int(4))),
             span: test_span(),
@@ -335,14 +353,17 @@ fn test_comparison_then_logical() {
     let env = TypeEnv::with_builtin_types();
     let expr = Expr::Binary {
         op: BinaryOp::And,
+        raw_operator: None,
         left: Box::new(Expr::Binary {
             op: BinaryOp::Lt,
+            raw_operator: None,
             left: Box::new(Expr::Literal(Literal::Int(1))),
             right: Box::new(Expr::Literal(Literal::Int(2))),
             span: test_span(),
         }),
         right: Box::new(Expr::Binary {
             op: BinaryOp::Gt,
+            raw_operator: None,
             left: Box::new(Expr::Literal(Literal::Int(3))),
             right: Box::new(Expr::Literal(Literal::Int(4))),
             span: test_span(),
@@ -365,8 +386,10 @@ fn test_complex_mixed_expression() {
     let env = TypeEnv::with_builtin_types();
     let arithmetic = Expr::Binary {
         op: BinaryOp::Mul,
+        raw_operator: None,
         left: Box::new(Expr::Binary {
             op: BinaryOp::Add,
+            raw_operator: None,
             left: Box::new(Expr::Literal(Literal::Int(1))),
             right: Box::new(Expr::Literal(Literal::Int(2))),
             span: test_span(),
@@ -377,6 +400,7 @@ fn test_complex_mixed_expression() {
 
     let comparison = Expr::Binary {
         op: BinaryOp::Gt,
+        raw_operator: None,
         left: Box::new(arithmetic),
         right: Box::new(Expr::Literal(Literal::Int(5))),
         span: test_span(),
@@ -384,6 +408,7 @@ fn test_complex_mixed_expression() {
 
     let expr = Expr::Binary {
         op: BinaryOp::And,
+        raw_operator: None,
         left: Box::new(comparison),
         right: Box::new(Expr::Literal(Literal::Bool(true))),
         span: test_span(),
@@ -408,6 +433,7 @@ fn test_add_int_to_string() {
     let env = TypeEnv::with_builtin_types();
     let expr = Expr::Binary {
         op: BinaryOp::Add,
+        raw_operator: None,
         left: Box::new(Expr::Literal(Literal::Int(1))),
         right: Box::new(Expr::Literal(Literal::String("a".into()))),
         span: test_span(),
@@ -430,6 +456,7 @@ fn test_and_int_bool() {
     let env = TypeEnv::with_builtin_types();
     let expr = Expr::Binary {
         op: BinaryOp::And,
+        raw_operator: None,
         left: Box::new(Expr::Literal(Literal::Int(1))),
         right: Box::new(Expr::Literal(Literal::Bool(true))),
         span: test_span(),
@@ -449,6 +476,7 @@ fn test_compare_int_string() {
     let env = TypeEnv::with_builtin_types();
     let expr = Expr::Binary {
         op: BinaryOp::Lt,
+        raw_operator: None,
         left: Box::new(Expr::Literal(Literal::Int(1))),
         right: Box::new(Expr::Literal(Literal::String("a".into()))),
         span: test_span(),
@@ -508,8 +536,10 @@ fn test_error_recovery_in_binary_left() {
     let env = TypeEnv::with_builtin_types();
     let expr = Expr::Binary {
         op: BinaryOp::Add,
+        raw_operator: None,
         left: Box::new(Expr::Binary {
             op: BinaryOp::Add,
+            raw_operator: None,
             left: Box::new(Expr::Literal(Literal::Int(1))),
             right: Box::new(Expr::Literal(Literal::String("a".into()))),
             span: test_span(),
@@ -536,9 +566,11 @@ fn test_error_recovery_in_binary_right() {
     let env = TypeEnv::with_builtin_types();
     let expr = Expr::Binary {
         op: BinaryOp::Add,
+        raw_operator: None,
         left: Box::new(Expr::Literal(Literal::Int(1))),
         right: Box::new(Expr::Binary {
             op: BinaryOp::Add,
+            raw_operator: None,
             left: Box::new(Expr::Literal(Literal::String("a".into()))),
             right: Box::new(Expr::Literal(Literal::Int(2))),
             span: test_span(),
@@ -565,6 +597,7 @@ fn test_error_recovery_with_variables() {
 
     let expr = Expr::Binary {
         op: BinaryOp::Add,
+        raw_operator: None,
         left: Box::new(Expr::Variable {
             name: "x".into(),
             span: ash_parser::token::Span::default(),
@@ -830,18 +863,21 @@ fn well_typed_int_expr() -> impl Strategy<Value = Expr> {
         prop_oneof![
             (inner.clone(), inner.clone()).prop_map(|(l, r)| Expr::Binary {
                 op: BinaryOp::Add,
+                raw_operator: None,
                 left: Box::new(l),
                 right: Box::new(r),
                 span: test_span(),
             }),
             (inner.clone(), inner.clone()).prop_map(|(l, r)| Expr::Binary {
                 op: BinaryOp::Sub,
+                raw_operator: None,
                 left: Box::new(l),
                 right: Box::new(r),
                 span: test_span(),
             }),
             (inner.clone(), inner.clone()).prop_map(|(l, r)| Expr::Binary {
                 op: BinaryOp::Mul,
+                raw_operator: None,
                 left: Box::new(l),
                 right: Box::new(r),
                 span: test_span(),
@@ -865,12 +901,14 @@ fn well_typed_bool_expr() -> impl Strategy<Value = Expr> {
         prop_oneof![
             (inner.clone(), inner.clone()).prop_map(|(l, r)| Expr::Binary {
                 op: BinaryOp::And,
+                raw_operator: None,
                 left: Box::new(l),
                 right: Box::new(r),
                 span: test_span(),
             }),
             (inner.clone(), inner.clone()).prop_map(|(l, r)| Expr::Binary {
                 op: BinaryOp::Or,
+                raw_operator: None,
                 left: Box::new(l),
                 right: Box::new(r),
                 span: test_span(),
@@ -990,6 +1028,7 @@ fn test_arithmetic_operations_preserve_int_type() {
 
     for op in ops {
         let expr = Expr::Binary {
+            raw_operator: None,
             op,
             left: Box::new(Expr::Literal(Literal::Int(5))),
             right: Box::new(Expr::Literal(Literal::Int(3))),
@@ -1015,6 +1054,7 @@ fn test_logical_operations_preserve_bool_type() {
 
     for op in ops {
         let expr = Expr::Binary {
+            raw_operator: None,
             op,
             left: Box::new(Expr::Literal(Literal::Bool(true))),
             right: Box::new(Expr::Literal(Literal::Bool(false))),
@@ -1051,6 +1091,7 @@ fn test_comparison_operations_produce_bool() {
 
     for op in ops {
         let expr = Expr::Binary {
+            raw_operator: None,
             op,
             left: Box::new(Expr::Literal(Literal::Int(5))),
             right: Box::new(Expr::Literal(Literal::Int(3))),

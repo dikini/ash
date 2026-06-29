@@ -1,6 +1,6 @@
 # TASK-1729: Add reusable surface traversal for expansion diagnostics
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Summary
 
@@ -69,10 +69,19 @@ commands:
   - cargo fmt --check
   - git diff --check
 checklist:
-  - [ ] Traversal covers module/workflow/contract/capability expression surfaces.
-  - [ ] `expand_surface_module` uses the traversal API.
-  - [ ] No surface-only operator section reaches lowering through tested sites.
+  - [x] Traversal covers module/workflow/contract/capability expression surfaces.
+  - [x] `expand_surface_module` uses the traversal API.
+  - [x] No surface-only operator section reaches lowering through tested sites.
 ```
+
+## Implementation evidence
+
+Implemented in Phase 169 final diff. Verified with:
+
+- `cargo test -p ash-parser --test task_1729_surface_expansion_traversal`
+- `cargo test -p ash-parser --test task_1725_expanded_surface_boundary`
+- `cargo test -p ash-parser`
+- `cargo check --workspace`
 
 ## Dispatch
 

@@ -219,6 +219,7 @@ fn test_policy_def_construction() {
         ],
         where_clause: Some(Expr::Binary {
             op: BinaryOp::Leq,
+            raw_operator: None,
             left: Box::new(Expr::Variable {
                 name: "min".into(),
                 span: crate::token::Span::default(),
@@ -714,6 +715,7 @@ fn test_expr_unary() {
 fn test_expr_binary() {
     let expr = Expr::Binary {
         op: BinaryOp::Add,
+        raw_operator: None,
         left: Box::new(Expr::Literal(Literal::Int(1))),
         right: Box::new(Expr::Literal(Literal::Int(2))),
         span: Span::new(0, 5, 1, 1),

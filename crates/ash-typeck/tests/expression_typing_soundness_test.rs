@@ -397,6 +397,7 @@ fn test_binary_op_with_env_variables() {
     // x + y should work when both are bound to Int
     let expr = Expr::Binary {
         op: ash_parser::surface::BinaryOp::Add,
+        raw_operator: None,
         left: Box::new(Expr::Variable {
             name: "x".into(),
             span: ash_parser::token::Span::default(),

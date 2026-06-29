@@ -275,6 +275,7 @@ fn len_and_head_in_same_env() {
     // len([1, 2, 3]) + head([4, 5, 6]) should typecheck as Int + Int
     let expr = Expr::Binary {
         op: ash_parser::surface::BinaryOp::Add,
+        raw_operator: None,
         left: Box::new(Expr::Call {
             func: "len".into(),
             module: None,

@@ -1,6 +1,6 @@
 # TASK-1731: Preserve raw built-in infix operator tokens
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Summary
 
@@ -69,10 +69,18 @@ commands:
   - cargo fmt --check
   - git diff --check
 checklist:
-  - [ ] Built-in binary semantics are unchanged.
-  - [ ] Raw token spelling is available to expansion diagnostics.
-  - [ ] Downstream exhaustive matches are updated deliberately.
+  - [x] Built-in binary semantics are unchanged.
+  - [x] Raw token spelling is available to expansion diagnostics.
+  - [x] Downstream exhaustive matches are updated deliberately.
 ```
+
+## Implementation evidence
+
+Implemented in Phase 169 final diff. Verified with:
+
+- `cargo test -p ash-parser --test task_1731_builtin_operator_token_preservation`
+- `cargo test -p ash-parser`
+- `cargo check --workspace`
 
 ## Dispatch
 

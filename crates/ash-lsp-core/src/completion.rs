@@ -61,6 +61,8 @@ fn keyword_completions() -> Vec<CompletionItem> {
 
 fn definition_name(current_token: Option<&str>, def: &Definition) -> Option<String> {
     match def {
+        Definition::Notation(n) if Some(n.pattern.raw.as_ref()) == current_token => None,
+        Definition::Notation(n) => Some(n.pattern.raw.as_ref().to_string()),
         Definition::Function(f) if Some(f.name.as_ref()) == current_token => None, // skip self
         Definition::Function(f) => Some(f.name.as_ref().to_string()),
         Definition::Capability(c) if Some(c.name.as_ref()) == current_token => None,
@@ -115,6 +117,7 @@ const fn definition_kind(def: &Definition) -> CompletionItemKind {
         Definition::CapabilityImplementation(_) | Definition::Impl(_) => CompletionItemKind::CLASS,
         Definition::SealedDomain(_) | Definition::DataKind(_) => CompletionItemKind::ENUM,
         Definition::Law(_) | Definition::Proof(_) => CompletionItemKind::PROPERTY,
+        Definition::Notation(_) => CompletionItemKind::OPERATOR,
     }
 }
 

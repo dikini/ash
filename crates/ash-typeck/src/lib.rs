@@ -2922,6 +2922,7 @@ mod tests {
         let workflow = Workflow::Ret {
             expr: Expr::Binary {
                 op: ash_parser::surface::BinaryOp::Add,
+                raw_operator: None,
                 left: Box::new(Expr::Literal(Literal::String("Hello, ".into()))),
                 right: Box::new(Expr::Variable {
                     name: "name".into(),
@@ -2948,6 +2949,7 @@ mod tests {
         let workflow = Workflow::Ret {
             expr: Expr::Binary {
                 op: ash_parser::surface::BinaryOp::Add,
+                raw_operator: None,
                 left: Box::new(Expr::Variable {
                     name: "x".into(),
                     span: ash_parser::token::Span::default(),

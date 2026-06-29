@@ -1,6 +1,6 @@
 # TASK-1730: Parse and preserve minimal notation declarations
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Summary
 
@@ -67,10 +67,18 @@ commands:
   - cargo fmt --check
   - git diff --check
 checklist:
-  - [ ] Notation declarations parse into durable AST carriers.
-  - [ ] Raw operator/pattern spelling and spans are preserved.
-  - [ ] Unsupported binder-introducing forms fail closed or are explicitly deferred.
+  - [x] Notation declarations parse into durable AST carriers.
+  - [x] Raw operator/pattern spelling and spans are preserved.
+  - [x] Unsupported binder-introducing forms fail closed or are explicitly deferred.
 ```
+
+## Implementation evidence
+
+Implemented in Phase 169 final diff. Verified with:
+
+- `cargo test -p ash-parser --test task_1730_notation_declaration_parser_ast`
+- `cargo test -p ash-parser`
+- `cargo check --workspace`
 
 ## Dispatch
 

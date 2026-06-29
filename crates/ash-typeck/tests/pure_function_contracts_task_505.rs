@@ -84,6 +84,7 @@ fn fn_ensures_rejects_non_result_predicates() {
             ensures: vec![EnsuresClause {
                 expr: Expr::Binary {
                     op: ash_parser::surface::BinaryOp::Geq,
+                    raw_operator: None,
                     left: Box::new(Expr::Variable {
                         name: "state".into(),
                         span: ash_parser::token::Span::default(),
@@ -118,6 +119,7 @@ fn fn_ensures_rejects_non_result_equalities() {
             ensures: vec![EnsuresClause {
                 expr: Expr::Binary {
                     op: ash_parser::surface::BinaryOp::Eq,
+                    raw_operator: None,
                     left: Box::new(Expr::Variable {
                         name: "n".into(),
                         span: ash_parser::token::Span::default(),
@@ -151,6 +153,7 @@ fn fn_contract_rejects_unknown_variables() {
             requires: vec![SurfaceRequirement::Arithmetic {
                 expr: Expr::Binary {
                     op: ash_parser::surface::BinaryOp::Gt,
+                    raw_operator: None,
                     left: Box::new(Expr::Variable {
                         name: "ghost".into(),
                         span: ash_parser::token::Span::default(),
@@ -184,6 +187,7 @@ fn fn_contract_boundary_is_stored_with_runtime_postconditions() {
             requires: vec![SurfaceRequirement::Arithmetic {
                 expr: Expr::Binary {
                     op: ash_parser::surface::BinaryOp::Geq,
+                    raw_operator: None,
                     left: Box::new(Expr::Variable {
                         name: "n".into(),
                         span: ash_parser::token::Span::default(),
@@ -195,6 +199,7 @@ fn fn_contract_boundary_is_stored_with_runtime_postconditions() {
             ensures: vec![EnsuresClause {
                 expr: Expr::Binary {
                     op: ash_parser::surface::BinaryOp::Eq,
+                    raw_operator: None,
                     left: Box::new(Expr::Variable {
                         name: "n".into(),
                         span: ash_parser::token::Span::default(),
@@ -243,6 +248,7 @@ fn valid_stage1_fn_contract_typechecks() {
                 SurfaceRequirement::Arithmetic {
                     expr: Expr::Binary {
                         op: ash_parser::surface::BinaryOp::Neq,
+                        raw_operator: None,
                         left: Box::new(Expr::Variable {
                             name: "n".into(),
                             span: ash_parser::token::Span::default(),
@@ -254,8 +260,10 @@ fn valid_stage1_fn_contract_typechecks() {
                 SurfaceRequirement::Arithmetic {
                     expr: Expr::Binary {
                         op: ash_parser::surface::BinaryOp::Eq,
+                        raw_operator: None,
                         left: Box::new(Expr::Binary {
                             op: ash_parser::surface::BinaryOp::Mod,
+                            raw_operator: None,
                             left: Box::new(Expr::Variable {
                                 name: "n".into(),
                                 span: ash_parser::token::Span::default(),
@@ -271,6 +279,7 @@ fn valid_stage1_fn_contract_typechecks() {
             ensures: vec![EnsuresClause {
                 expr: Expr::Binary {
                     op: ash_parser::surface::BinaryOp::Geq,
+                    raw_operator: None,
                     left: Box::new(Expr::Variable {
                         name: "result".into(),
                         span: ash_parser::token::Span::default(),
@@ -307,6 +316,7 @@ fn workflow_call_site_must_prove_fn_preconditions() {
             requires: vec![SurfaceRequirement::Arithmetic {
                 expr: Expr::Binary {
                     op: ash_parser::surface::BinaryOp::Neq,
+                    raw_operator: None,
                     left: Box::new(Expr::Variable {
                         name: "n".into(),
                         span: ash_parser::token::Span::default(),
@@ -374,6 +384,7 @@ fn workflow_call_site_accepts_proven_fn_preconditions() {
             requires: vec![SurfaceRequirement::Arithmetic {
                 expr: Expr::Binary {
                     op: ash_parser::surface::BinaryOp::Neq,
+                    raw_operator: None,
                     left: Box::new(Expr::Variable {
                         name: "n".into(),
                         span: ash_parser::token::Span::default(),
@@ -442,6 +453,7 @@ fn qualified_workflow_call_site_must_prove_fn_preconditions() {
             requires: vec![SurfaceRequirement::Arithmetic {
                 expr: Expr::Binary {
                     op: ash_parser::surface::BinaryOp::Neq,
+                    raw_operator: None,
                     left: Box::new(Expr::Variable {
                         name: "n".into(),
                         span: ash_parser::token::Span::default(),
@@ -503,6 +515,7 @@ fn branch_assumptions_can_prove_stage1_preconditions() {
             requires: vec![SurfaceRequirement::Arithmetic {
                 expr: Expr::Binary {
                     op: ash_parser::surface::BinaryOp::Neq,
+                    raw_operator: None,
                     left: Box::new(Expr::Variable {
                         name: "n".into(),
                         span: ash_parser::token::Span::default(),
@@ -536,6 +549,7 @@ fn branch_assumptions_can_prove_stage1_preconditions() {
         body: Workflow::If {
             condition: Expr::Binary {
                 op: ash_parser::surface::BinaryOp::Gt,
+                raw_operator: None,
                 left: Box::new(Expr::Variable {
                     name: "x".into(),
                     span: ash_parser::token::Span::default(),
@@ -583,8 +597,10 @@ fn arithmetic_let_facts_can_prove_stage1_modulo_preconditions() {
             requires: vec![SurfaceRequirement::Arithmetic {
                 expr: Expr::Binary {
                     op: ash_parser::surface::BinaryOp::Eq,
+                    raw_operator: None,
                     left: Box::new(Expr::Binary {
                         op: ash_parser::surface::BinaryOp::Mod,
+                        raw_operator: None,
                         left: Box::new(Expr::Variable {
                             name: "n".into(),
                             span: ash_parser::token::Span::default(),
@@ -621,6 +637,7 @@ fn arithmetic_let_facts_can_prove_stage1_modulo_preconditions() {
             },
             expr: Expr::Binary {
                 op: ash_parser::surface::BinaryOp::Add,
+                raw_operator: None,
                 left: Box::new(Expr::Literal(Literal::Int(1))),
                 right: Box::new(Expr::Literal(Literal::Int(2))),
                 span: span(),

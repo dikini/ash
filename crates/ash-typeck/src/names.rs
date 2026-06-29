@@ -1113,6 +1113,7 @@ mod tests {
 
         let expr = Expr::Binary {
             op: ash_parser::surface::BinaryOp::Add,
+            raw_operator: None,
             left: Box::new(Expr::Variable {
                 name: "x".into(),
                 span: ash_parser::token::Span::default(),
@@ -1134,6 +1135,7 @@ mod tests {
 
         let expr = Expr::Binary {
             op: ash_parser::surface::BinaryOp::Add,
+            raw_operator: None,
             left: Box::new(Expr::Variable {
                 name: "x".into(),
                 span: ash_parser::token::Span::default(),

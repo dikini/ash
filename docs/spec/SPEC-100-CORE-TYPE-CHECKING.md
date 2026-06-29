@@ -266,18 +266,33 @@ checking itself must not silently erase a requirement.
 
 ### 9.1 Predicate Well-Formedness
 
-A refinement predicate is well-formed when:
+A refinement or contract predicate is well-formed when:
 
 - all referenced names are in the predicate environment;
 - the predicate has Boolean shape;
 - predicate binders such as `result`, channel message names, or law parameters are introduced
   by the corresponding contract/evidence context;
-- the predicate is pure unless a later spec admits effectful predicates explicitly;
+- the predicate has local row `{}`;
+- the predicate does not call capabilities, perform process/workflow operations, install or
+  dispatch handlers, observe time/randomness/environment/global mutable state, inspect
+  allocation identity, or implicitly force lazy/memo values;
+- row-empty operations are also stable observers;
 - the predicate can be represented as an obligation with source and binder metadata.
 
-In the current Core AST, predicates may be textual. The checker must still associate the text
-with a scoped predicate environment and source metadata. Text alone is not sufficient for
-public obligations or diagnostics.
+Per NOTE-031, predicate checking produces a summary before proof or dynamic lowering:
+
+```text
+Γp ⊢ pred ⇓ PredicateSummary
+```
+
+where the summary records Boolean type, free names, `SnapshotRef`s for `old(path)`, diagnostic
+shape, and either `StaticPredicate` or `DynamicPredicate` classification. A rejected predicate
+does not reach the prover or runtime checker.
+
+In the current Core AST, predicates may still preserve source text for diagnostics, but the
+checker must associate that text with a structured predicate summary, scoped predicate
+environment, snapshot metadata, and source metadata. Text alone is not sufficient for public
+obligations or diagnostics.
 
 ### 9.2 Obligation Generation
 
@@ -317,6 +332,12 @@ check in Core. If the check fails unrecoverably, the program traps with
 blame label, observed values, discharge history, handler decisions, and replay status.
 Recoverable behavior must be represented by an explicit `fail` operation and corresponding
 failure row item. `ContractViolation` is not a row item and is not a raised operation.
+
+A dynamic predicate that returns `false` follows this rule. A dynamic predicate that traps or
+faults while being evaluated produces a distinct `ContractPredicateFault` trap payload. The
+checker must not report a predicate fault as a failed contract condition: it is a failure of
+predicate evaluation, normally blamed on the contract author or admitted predicate-function
+provider rather than on the caller/callee relation.
 
 ## 10. Atom and Value Typing
 
@@ -549,7 +570,8 @@ distinguish at least:
 - raised operation arity/type mismatch;
 - row mismatch or unsolved row variable;
 - missing or invalid discharge;
-- contract/refinement predicate not well-scoped;
+- contract/refinement predicate not well-scoped, not Boolean, unstable, effectful, or
+  implicitly forcing;
 - disproved or invalid evidence;
 - unsupported `MultiShotPure` use;
 - affine resume violation;
@@ -571,17 +593,16 @@ generic row mismatch.
 
 ## 17. Open Questions
 
-1. Should Core eventually carry structured predicate ASTs instead of textual predicates plus
-   scoped metadata?
-2. How much path-sensitive affine analysis belongs in the Core checker versus a later
+1. How much path-sensitive affine analysis belongs in the Core checker versus a later
    validation pass?
-3. Should public Core summaries preserve diagnostic group names in addition to normalized
+2. Should public Core summaries preserve diagnostic group names in addition to normalized
    concrete row items?
-4. Should continuation answer type compatibility eventually admit subtyping, or remain exact?
-5. Which implementation phase should first materialize role entailment as discharge facts?
+3. Should continuation answer type compatibility eventually admit subtyping, or remain exact?
+4. Which implementation phase should first materialize role entailment as discharge facts?
 
 ## Changelog
 
 - 2026-06-20: Created Core Ash type-checking specification with declarative rules and an initial annotation-led algorithmic profile.
 - 2026-06-28: Reconciled with NOTE-029. Dynamic contract failure traps with `ContractViolation(ContractDiagnostic)`, trap typing remains row `{}`, and recoverability requires explicit `fail` with a visible failure row item.
 - 2026-06-28: Reconciled with NOTE-030. `LetCall`/sequencing now emits the producer-postcondition-to-continuation-precondition obligation `∀name. Q(name) ⇒ R(name)` and records composed contract metadata when discharged.
+- 2026-06-29: Reconciled with NOTE-031. Predicate well-formedness now emits structured summaries and snapshot references before proof obligations; rejected predicates stop before prover/runtime checking; dynamic predicate faults are distinct from false-predicate contract violations.

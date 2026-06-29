@@ -434,6 +434,36 @@ pub enum BlamePolarity {
     Positive,    -- postcondition / callee-side obligation
 }
 
+pub enum PredicateClassification {
+    StaticPredicate,
+    DynamicPredicate,
+}
+
+pub struct SnapshotRef {
+    pub boundary: BoundaryId,
+    pub root: Identifier,
+    pub path: Vec<Identifier>,
+    pub source_span: Span,
+}
+
+pub enum ObservedValue {
+    Full(ValueRef),
+    Summary(ValueSummary),
+    Redacted(RedactionReason),
+    Unavailable(UnavailabilityReason),
+}
+
+pub struct PredicateFaultDiagnostic {
+    pub predicate: PredicateRef,
+    pub contract_text: String,
+    pub source_span: Span,
+    pub blame: BlameLabel,
+    pub fault: PredicateFault,
+    pub observed_values: Vec<ObservedValue>,
+    pub snapshot_refs: Vec<SnapshotRef>,
+    pub replay: ReplayStatus,
+}
+
 pub struct ContractDiagnostic {
     pub contract: ContractEffect,
     pub predicate: PredicateRef,
@@ -441,6 +471,8 @@ pub struct ContractDiagnostic {
     pub source_span: Span,
     pub blame: BlameLabel,
     pub observed_values: Vec<ObservedValue>,
+    pub snapshot_refs: Vec<SnapshotRef>,
+    pub predicate_classification: PredicateClassification,
     pub call_chain: Vec<CallFrame>,
     pub discharge: ContractDischarge,
     pub handler_history: Vec<HandlerDecision>,
@@ -465,6 +497,16 @@ contract failures use `ContractDiagnostic` to preserve the structured bottom pay
 by NOTE-029. Blame labels follow NOTE-027: `requires` failures are negative/caller-side;
 `ensures` failures are positive/callee-or-impl-side.
 
+Per NOTE-031, `old(path)` lowers to boundary-local `SnapshotRef` metadata. The IR must not
+collapse snapshots from different contract boundaries, including producer, continuation, and
+outer function boundaries in a composed computation. Observed diagnostic values are policy
+governed: a value may be full, summarized, redacted, or unavailable without erasing the
+contract failure.
+
+Predicate faults are distinct from false predicates. A false dynamic predicate produces
+`TrapReason::ContractViolation(ContractDiagnostic)` by default; a predicate evaluator trap or
+fault produces `TrapReason::ContractPredicateFault(PredicateFaultDiagnostic)`.
+
 Per NOTE-030, composed contract metadata connects a producer postcondition to a continuation
 precondition at a sequencing or `bind` boundary. The IR does not need a new term form for
 monadic Hoare composition; it needs enough sidecar metadata to show that `∀a. Q(a) ⇒ R(a)`
@@ -485,6 +527,7 @@ pub struct EffectOp {
 
 pub enum TrapReason {
     ContractViolation(ContractDiagnostic),
+    ContractPredicateFault(PredicateFaultDiagnostic),
     UnhandledEffect(EffectOp),
     Panic(String),
 }
@@ -1418,3 +1461,4 @@ resolved through an additional indirection layer. Both are possible but not spec
   laziness section as pseudo-IR.
 - 2026-06-28: Reconciled with NOTE-027 and NOTE-029. Extended `ContractDischarge` with blame metadata, added `BlameLabel`/`ContractDiagnostic`, changed `TrapReason::ContractViolation` to carry structured diagnostics, and updated the dynamic contract example/recoverable-failure boundary.
 - 2026-06-28: Reconciled with NOTE-030. Added `ComposedContract` sidecar metadata connecting producer postconditions to continuation preconditions at sequencing/`bind` boundaries without adding a new IR term form.
+- 2026-06-29: Reconciled with NOTE-031. Added `SnapshotRef`, predicate classification metadata, policy-governed `ObservedValue` payloads, and `ContractPredicateFault` diagnostics distinct from false-predicate `ContractViolation` traps.

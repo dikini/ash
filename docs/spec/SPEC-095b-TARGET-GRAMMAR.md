@@ -444,7 +444,28 @@ law_effect = "law" identifier "{" predicate "}" ;
 obligation_effect = "obligation" obligation_path ;
 guard_effect = "guard" "{" predicate "}" ;
 
-predicate = expr ;
+predicate          = predicate_or ;
+predicate_or       = predicate_and { "||" predicate_and } ;
+predicate_and      = predicate_not { "&&" predicate_not } ;
+predicate_not      = [ "!" ] predicate_cmp ;
+predicate_cmp      = predicate_add [ cmp_op predicate_add ] ;
+predicate_add      = predicate_mul { ("+" | "-") predicate_mul } ;
+predicate_mul      = predicate_unary { ("*" | "/" | "%") predicate_unary } ;
+predicate_unary    = literal
+                   | identifier
+                   | "result"
+                   | "message"
+                   | "old" "(" snapshot_expr ")"
+                   | predicate_call
+                   | field_projection
+                   | tuple_projection
+                   | "(" predicate ")"
+                   ;
+predicate_call     = predicate_function "(" [ predicate_args ] ")" ;
+predicate_function = identifier | qualified_identifier ;
+predicate_args     = predicate { "," predicate } ;
+snapshot_expr      = identifier { "." identifier } ;
+cmp_op             = "==" | "!=" | "<" | "<=" | ">" | ">=" ;
 
 channel_effect = channel_message_effect
                | channel_close_effect
@@ -474,6 +495,11 @@ at a named proof obligation, law, or fact binding — i.e., the canonical row it
 `evidence <path>` and the predicate form is sugar. This keeps the computation row
 algebraic and avoids re-checking predicates at each row-position use. Direct predicate
 row items are retained as a convenience form and do not change the surface grammar above.
+Per NOTE-031, this grammar is a contract-position grammar, not permission to run arbitrary
+Ash expressions while checking a contract. The type checker classifies parsed predicates as
+static, dynamic, or rejected before lowering. Source-level quantifiers are not introduced by
+this grammar; `forall`/`exists` in contract proofs remain internal proof metadata unless a
+later grammar revision admits them explicitly.
 
 ### 6.4 Function Type
 
@@ -849,3 +875,4 @@ The following forms are rejected in the target grammar:
 - 2026-06-27: Reconciled with NOTE-025 (effect identity via sorts and impls). Handler clause identities changed from interface-qualified (`Fs.read`) to impl-type-qualified (`PosixFs::read`). Named handler sugar replaced by `handler`-as-alias-for-`fn`. Added derive mechanism. §4.3 revised.
 - 2026-06-28: Handler marker reconciliation. §4.3: `handler` is no longer a pure alias for `fn` — it produces a handler-marked function type (type-level attribute). Added subtyping (`handler fn <: fn`), derive filtering via the marker, and `handle expr with` validation. Removed stale `handler_fn_decl` production (replaced by `handler_decl` in §8.4). §6.4: `fn_type` gains optional `handler` prefix marker. §6.6 (new): bodyless `type_definition` delta (`= type_body` optional) for identity-only nominal types. §8.4 (new): `impl_definition` with `impl_member` production (`impl_method`, `handler_decl`, `derive_decl`). §3.2: `handler_decl` added to top-level definition list (standalone + in-impl positions).
 - 2026-06-28: Reconciled with NOTE-026. Added `newtype_definition` to the top-level definition list and §6.7 grammar for zero-cost nominal wrappers with explicit constructors, phantom parameters, inhabited representation requirement, and transparent-alias contrast.
+- 2026-06-29: Reconciled with NOTE-031. Replaced the contract-position `predicate = expr` placeholder with a restricted predicate grammar including `old(snapshot_expr)`, predicate calls, projections, boolean/numeric operators, and explicit deferral of source-level quantifier syntax.

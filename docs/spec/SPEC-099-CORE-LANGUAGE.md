@@ -285,6 +285,24 @@ postcondition discharge to the continuation precondition discharge. If the oblig
 dynamic, the lowered Core inserts a dynamic check at the point where the continuation is
 invoked. The dynamic failure path follows §6.3.
 
+### 6.5 Predicate evaluation boundary
+
+Per NOTE-031, dynamic predicate evaluation is pure observer code over a captured contract
+boundary environment. A dynamic check may inspect values already present at the boundary,
+`result` in postcondition position, a channel message binder in guard position, and
+boundary-local snapshot references produced from `old(path)`.
+
+Dynamic predicate evaluation must not introduce capability, process, workflow, handler, time,
+randomness, environment, or global-state observations. It must not implicitly force a lazy or
+memo value merely to decide a predicate. If the program itself reaches a force boundary, the
+contract check may inspect the strict result at that boundary according to SPEC-097b and
+SPEC-101 timing rules.
+
+If a dynamic predicate returns `false`, the default failure path is §6.3's
+`ContractViolation(ContractDiagnostic)`. If predicate evaluation traps or faults, Core uses a
+distinct `ContractPredicateFault` trap payload; that fault is not evidence that the predicate
+was false.
+
 ## 7. Laws, properties, and evidence
 
 Laws and properties are compile-time metadata. They do not appear in the core expression grammar.
@@ -581,3 +599,4 @@ Core Ash does not include surface sugar as primitive syntax. It includes only th
 - 2026-06-20: Reconciled SPEC-099 with SPEC-098b/SPEC-096b by removing `ContractViolation` as a row item/raised operation, making `Handle.row` local residual only, specifying affine continuation typing for handler resumes, treating user-defined resumable effects as out of scope, and lowering evidence to discharge metadata or sidecar records rather than ordinary values.
 - 2026-06-28: Reconciled with NOTE-027 and NOTE-029. `ContractDischarge` carries blame metadata, `TrapReason::ContractViolation` carries `ContractDiagnostic`, and dynamic contract examples preserve structured diagnostics while keeping recoverable behavior explicit through `fail`.
 - 2026-06-28: Reconciled with NOTE-030. Added §6.4 `ComposedContract` sidecar metadata for Core sequencing, including the `∀a. Q(a) ⇒ R(a)` proof obligation and dynamic continuation-boundary fallback.
+- 2026-06-29: Reconciled with NOTE-031. Added §6.5 predicate evaluation boundary: dynamic predicates are pure observer code over captured boundary environments, `old(path)` uses snapshot metadata, implicit delayed-value forcing is forbidden, and predicate faults are distinct from false-predicate violations.

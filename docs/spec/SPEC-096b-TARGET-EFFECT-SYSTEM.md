@@ -315,7 +315,28 @@ law_effect = "law" identifier "{" predicate "}" ;
 obligation_effect = "obligation" obligation_path ;
 guard_effect = "guard" "{" predicate "}" ;
 
-predicate = expr ;
+predicate          = predicate_or ;
+predicate_or       = predicate_and { "||" predicate_and } ;
+predicate_and      = predicate_not { "&&" predicate_not } ;
+predicate_not      = [ "!" ] predicate_cmp ;
+predicate_cmp      = predicate_add [ cmp_op predicate_add ] ;
+predicate_add      = predicate_mul { ("+" | "-") predicate_mul } ;
+predicate_mul      = predicate_unary { ("*" | "/" | "%") predicate_unary } ;
+predicate_unary    = literal
+                   | identifier
+                   | "result"
+                   | "message"
+                   | "old" "(" snapshot_expr ")"
+                   | predicate_call
+                   | field_projection
+                   | tuple_projection
+                   | "(" predicate ")"
+                   ;
+predicate_call     = predicate_function "(" [ predicate_args ] ")" ;
+predicate_function = identifier | qualified_identifier ;
+predicate_args     = predicate { "," predicate } ;
+snapshot_expr      = identifier { "." identifier } ;
+cmp_op             = "==" | "!=" | "<" | "<=" | ">" | ">=" ;
 ```
 
 Examples:
@@ -327,7 +348,16 @@ fn binary_search(xs: List<Int>, target: Int) -> {requires {sorted(xs)}, ensures 
 
 Contract predicates must define their scope. For `ensures`, `result` is bound to the normal
 result value. For channel guards, the received message binder must be named by the channel
-operation or by a later syntax spec.
+operation or by a later syntax spec. `old(snapshot_expr)` names a boundary-local pre-state
+snapshot; `snapshot_expr` is a field path through a boundary value, not an arbitrary
+computation.
+
+Per NOTE-031, the predicate grammar is a contract-position boundary over expression-like
+syntax. Before lowering, the type checker classifies each predicate as SMT-safe static, pure
+dynamic, or rejected. Rejected predicate forms include capability calls, process/workflow
+operations, handler dispatch, time/randomness/environment observation, and implicit forcing of
+lazy or memo values outside a contract-owned observation boundary. Unsupported but pure
+predicates are dynamic rather than silently erased.
 
 ### 6.6 Channel effects
 
@@ -680,3 +710,4 @@ workflow reporting, and audit evidence.
 - 2026-06-27: Reconciled with NOTE-020 (computation row taxonomy), NOTE-021 (Row kind, evidence rows), NOTE-022 (effects as interfaces), NOTE-023 (handler surface semantics).
 - 2026-06-27: Reconciled with NOTE-025 (effect identity via sorts and impls). Operation effect identity changed from interface-qualified (`fs.read`) to impl-type-qualified (`PosixFs::read`). §6.1 examples and EBNF updated.
 - 2026-06-28: Reconciled with NOTE-029. Clarified §6.8: default dynamic contract failure is structured bottom outside row accounting; recoverable contract behavior must lower to explicit `fail` and expose the failure item in the row.
+- 2026-06-29: Reconciled with NOTE-031. Replaced `predicate = expr` with a restricted contract-position predicate grammar, added boundary-local `old(snapshot_expr)`, and required static/dynamic/rejected predicate classification before lowering.

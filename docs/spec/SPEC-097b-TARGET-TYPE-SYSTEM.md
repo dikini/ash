@@ -199,6 +199,32 @@ Predicate references must preserve source scope, binder information, and dischar
 A predicate printed in a row is not enough; the type checker must know which names are legal
 inside it.
 
+Per NOTE-031, a predicate reference also carries a checked predicate summary:
+
+```rust
+pub enum PredicateClassification {
+    StaticPredicate,
+    DynamicPredicate,
+}
+
+pub struct PredicateSummary {
+    pub ty: Type,                         // must be Bool
+    pub free_vars: Vec<Name>,
+    pub snapshot_refs: Vec<SnapshotRef>,
+    pub classification: PredicateClassification,
+    pub proof_fragment: Option<ProofFragment>,
+    pub diagnostic_shape: DiagnosticShape,
+}
+```
+
+A rejected predicate is not represented as a `PredicateRef`; it is a type-checking diagnostic.
+The checker rejects predicates that require authority, perform process/workflow operations,
+install or dispatch handlers, observe time/randomness/environment/global mutable state, inspect
+allocation identity, or force lazy/memo values outside a contract-owned observation boundary.
+
+`old(path)` references lower to boundary-local `SnapshotRef` metadata. The path is a field path
+through a value visible at the contract boundary, not an arbitrary computation.
+
 ### 3.7 Channel effect
 
 ```rust
@@ -597,6 +623,25 @@ to their contract kind.
 A contract predicate that itself requires effects must be rejected unless a later spec admits
 effectful predicates explicitly.
 
+Per NOTE-031, predicate well-formedness is stricter than row emptiness:
+
+```text
+Γp ⊢ e : Bool
+row(e) = {}
+no_forces(e)
+no_authority(e)
+no_handler_dispatch(e)
+stable_observer(e)
+---------------------------------
+Γp ⊢ e ⇓ PredicateSummary
+```
+
+The `stable_observer` premise rejects row-empty but operationally unstable observations such as
+time, randomness, pointer/allocation identity, and force-count inspection. Well-formed
+predicates are classified as SMT-safe static predicates or pure dynamic predicates. Pure forms
+outside the current proof fragment are dynamic, not invalid. Rejected predicates stop before
+SMT, dynamic lowering, or runtime checking.
+
 ### 8.5 Channels
 
 A send operation contributes a `channel send` effect. A receive operation contributes a
@@ -944,6 +989,10 @@ Contracts fire at observation boundaries:
 For memoized contract failures, replay preserves the original diagnostic and blame label. A
 later force may record a replay event, but it must not create a new blame event.
 
+Predicate evaluation must not introduce an implicit force. A predicate may inspect a strict
+value that is already present at the boundary, or the strict result produced by a force owned by
+that boundary. It must not force a lazy or memo value merely to decide whether a contract holds.
+
 ### 15.8 CPS Lowering
 
 In the CPS IR (SPEC-098b), modes become calling conventions:
@@ -982,3 +1031,4 @@ Mode mismatch is a type error, not a performance warning. The user must explicit
 - 2026-06-27: Reconciled with NOTE-025 (effect identity via sorts and impls). OperationEffect identity changed from interface-qualified to impl-type-qualified. Handler typing examples updated. §3.3 and §8.1 revised.
 - 2026-06-28: Reconciled with NOTE-026 through NOTE-029. Added §3.9 newtype identity/representation semantics, expanded §6.5 with Hoare contract subsumption and blame polarity, and added §15.7 denotational purity plus lazy/memo contract timing.
 - 2026-06-28: Reconciled with NOTE-030. Added §6.6 contract composition through sequencing: rows compose by union, producer postconditions discharge continuation preconditions via `∀a. Q(a) ⇒ R(a)`, and composed postconditions existentially thread the intermediate value.
+- 2026-06-29: Reconciled with NOTE-031. Predicate references now carry checked summaries and boundary-local snapshot metadata; predicates are classified as static or dynamic after rejecting effectful, unstable, or implicit-forcing forms.

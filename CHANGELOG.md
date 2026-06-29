@@ -48,6 +48,13 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   analog). Resolves the "phantom types/newtype deferred" item from NOTE-025 §7.1.
 
 ### Changed
+- Reconciled NOTE-031 into target specs. SPEC-095b/SPEC-096/SPEC-096b replace the
+  `predicate = expr` placeholder with a restricted contract-position predicate grammar and
+  `old(snapshot_expr)` snapshot form. SPEC-097b defines predicate summaries and static/dynamic
+  classification after rejecting effectful, unstable, or implicit-forcing predicates.
+  SPEC-098b adds `SnapshotRef`, predicate classification metadata, policy-governed observed
+  values, and `ContractPredicateFault`. SPEC-099/SPEC-100 define dynamic predicate evaluation
+  as pure observer code over captured boundary environments before proof/runtime checking.
 - Reconciled NOTE-030 into target specs. SPEC-097b now defines contract composition through
   sequencing: rows compose by union while producer postconditions discharge continuation
   preconditions (`∀a. Q(a) ⇒ R(a)`) and composed postconditions existentially thread the

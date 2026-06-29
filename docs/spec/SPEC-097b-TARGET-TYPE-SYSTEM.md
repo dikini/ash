@@ -231,6 +231,20 @@ not perform the operation that produced it or use hidden provider/role admission
 admission failure, operation failure, predicate false, and predicate evaluator fault remain
 distinct typing/diagnostic classes.
 
+Per NOTE-035, trace contracts are checked by a separate trace-contract judgment:
+
+```text
+Γtrace ⊢ formula ⇓ TraceContract
+```
+
+`Γtrace` contains event schemas, process/channel/resource identities, timer facts, workflow
+ledger fact schemas, evidence/provenance policies, redaction rules, and monitor scope
+boundaries. The checker rejects formulas that mention facts outside the monitor scope or
+require authority not represented as a recorded fact. A formula that mentions only operational
+trace facts is `Proc`-like; a formula that mentions obligation/evidence/commitment facts is
+`Workflow`-like. This is classification by ambient feature profile, not by a separate
+`Proc<A>` or `Workflow<A>` constructor.
+
 `old(path)` references lower to boundary-local `SnapshotRef` metadata. The path is a field path
 through a value visible at the contract boundary, not an arbitrary computation.
 
@@ -1052,3 +1066,4 @@ Mode mismatch is a type error, not a performance warning. The user must explicit
 - 2026-06-29: Reconciled with NOTE-033. Refined `PredicateSummary` so predicate references point at typed lowered predicate artifacts with binder environments, snapshots, proof fragments, optional dynamic-check plans, diagnostics, and stable identities.
 - 2026-06-29: Swept stale contract-discharge wording so dynamic contracts lower to runtime checks by default rather than requiring hidden runtime contract handlers.
 - 2026-06-29: Reconciled with NOTE-034. Predicate well-formedness now explicitly separates authority-bearing operation calls from ordinary operation-produced values that contracts may inspect.
+- 2026-06-29: Reconciled with NOTE-035. Added trace-contract well-formedness over `Γtrace`, with `Proc`/`Workflow` treated as semantic anchors classified by referenced facts rather than separate contract mechanisms.

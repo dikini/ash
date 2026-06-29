@@ -6,6 +6,11 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Added
+- NOTE-035: Temporal and concurrent contracts. Resolves NOTE-014 GAP 5 by defining trace
+  contracts over the ambient computation model, treating `Pure`/`Act`/`Proc`/`Workflow` as
+  semantic anchors rather than separate contract systems. `Proc` anchors operational trace
+  facts; `Workflow` anchors obligation/evidence/commitment interpretation over those facts;
+  runtime monitors are the default temporal discharge path.
 - NOTE-034: Contract-capability boundary. Resolves NOTE-014 GAP 8 by separating
   authority-bearing operation/capability observations from authority-free contract predicates,
   defining the observation-before-contract pattern, observation provenance sidecars,
@@ -65,6 +70,12 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   analog). Resolves the "phantom types/newtype deferred" item from NOTE-025 §7.1.
 
 ### Changed
+- Reconciled NOTE-035 into target specs. SPEC-096/SPEC-096b add trace-contract row-item
+  spelling and weaken old `Proc`/`Workflow` wording into semantic anchors. SPEC-097b adds
+  `Γtrace` well-formedness for temporal formulas. SPEC-098b adds `TraceContract`,
+  `TraceFactKind`, monitor-discharge, and temporal diagnostic payloads. SPEC-099/SPEC-100 now
+  state that Core records trace/ledger facts and type-checks temporal contracts as monitor
+  plans rather than value-level predicates.
 - Reconciled NOTE-034 into target specs. SPEC-096/SPEC-096b now state that operation effects
   are authority-bearing and cannot be performed by contract predicates. SPEC-097b allows
   operation-produced values in predicate environments while rejecting operation calls.

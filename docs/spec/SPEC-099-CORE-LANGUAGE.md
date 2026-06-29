@@ -316,6 +316,25 @@ If a dynamic predicate returns `false`, the default failure path is §6.3's
 distinct `ContractPredicateFault` trap payload; that fault is not evidence that the predicate
 was false.
 
+### 6.6 Trace contracts and monitor sidecars
+
+Per NOTE-035, Core may record trace facts and attach monitor sidecars without adding separate
+`Proc` or `Workflow` expression families. The ambient computation emits operational facts
+such as spawn/send/receive/cancel/restart and interpreted workflow facts such as obligation
+discharge, evidence acceptance, commitment, and stage commit. Trace contracts consume those
+facts through `TraceContract`/`MonitorPlan` metadata.
+
+The `Proc` and `Workflow` labels are semantic anchors over the fact alphabet: operational
+trace contracts are `Proc`-like, normative/evidential trace contracts are `Workflow`-like, and
+mixed contracts may mention both. Runtime monitors consume recorded facts; they do not perform
+capability, process, or workflow operations.
+
+If a monitor observes a temporal violation, Core traps with
+`TemporalContractViolation(TemporalContractDiagnostic)` by default. If the monitor evaluator
+faults, Core traps with `TemporalMonitorFault(TemporalMonitorFaultDiagnostic)`. Recoverable
+temporal behavior must lower through an explicit row-accounted path such as `fail` or a
+declared compensation operation.
+
 ## 7. Laws, properties, and evidence
 
 Laws and properties are compile-time metadata. They do not appear in the core expression grammar.
@@ -615,3 +634,4 @@ Core Ash does not include surface sugar as primitive syntax. It includes only th
 - 2026-06-29: Reconciled with NOTE-031. Added §6.5 predicate evaluation boundary: dynamic predicates are pure observer code over captured boundary environments, `old(path)` uses snapshot metadata, implicit delayed-value forcing is forbidden, and predicate faults are distinct from false-predicate violations.
 - 2026-06-29: Reconciled with NOTE-033. Dynamic contract checks now evaluate lowered predicate artifacts via `PredicateRef` and `PredicateEnvironment`; source predicate text is diagnostic only, not Core executable semantics.
 - 2026-06-29: Reconciled with NOTE-034. Clarified that operation-produced values may be inspected by predicates, but predicate evaluators receive no provider handle or authority environment.
+- 2026-06-29: Reconciled with NOTE-035. Added trace-contract monitor sidecar semantics, treating `Proc`/`Workflow` as semantic anchors over operational versus normative fact alphabets rather than separate Core term families.

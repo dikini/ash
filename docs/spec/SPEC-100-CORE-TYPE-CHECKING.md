@@ -361,6 +361,26 @@ provider rather than on the caller/callee relation.
 The dynamic check's evaluator consumes a `RuntimeCheckPlan` over a `PredicateRef` and captured
 `PredicateEnvironment`; it must not re-scope or re-parse surface predicate text at runtime.
 
+### 9.5 Trace Contract Strategy
+
+Per NOTE-035, trace contracts use a separate staged judgment:
+
+```text
+Γtrace ⊢ formula ⇓ TraceContract
+```
+
+The checker builds `Γtrace` from event schemas, process/channel/resource identities, timer
+facts, workflow ledger fact schemas, evidence/provenance policies, redaction rules, and
+monitor scope boundaries. It then classifies the formula's alphabet, type-checks the temporal
+formula, chooses `StaticModelChecked`, `StaticProved`, `EvidenceSurvivedTesting`,
+`RuntimeMonitor`, or `Deferred` discharge, and records monitor metadata.
+
+`Proc` and `Workflow` are not separate type-checking universes here. A formula is `Proc`-like
+when it mentions operational trace facts, `Workflow`-like when it mentions
+obligation/evidence/commitment/stage facts, and mixed when it relates both. Unknown temporal
+proofs demote to `RuntimeMonitor` or remain deferred; they do not become value-level
+`RuntimeCheckPlan`s.
+
 ## 10. Atom and Value Typing
 
 ### 10.1 Atoms
@@ -630,3 +650,4 @@ generic row mismatch.
 - 2026-06-29: Reconciled with NOTE-031. Predicate well-formedness now emits structured summaries and snapshot references before proof obligations; rejected predicates stop before prover/runtime checking; dynamic predicate faults are distinct from false-predicate contract violations.
 - 2026-06-29: Reconciled with NOTE-033. Core type checking now specifies the Surface-to-Core predicate lowering pipeline, `LoweredPredicate`/`PredicateRef` boundary, and `RuntimeCheckPlan` use for dynamic checks.
 - 2026-06-29: Reconciled with NOTE-034. Predicate authority checks now reject capability calls while allowing operation-produced values in the predicate environment, preserving separate diagnostics for admission failure, operation failure, predicate false, and predicate fault.
+- 2026-06-29: Reconciled with NOTE-035. Added trace-contract checking over `Γtrace`, monitor discharge classification, and the rule that unknown temporal proofs demote to monitor plans rather than value-level runtime predicates.

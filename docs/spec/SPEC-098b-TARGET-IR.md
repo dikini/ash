@@ -562,6 +562,64 @@ pub struct ComposedContract {
     pub evidence: Option<EvidenceRef>,
     pub source_span: Span,
 }
+
+pub struct TraceContract {
+    pub id: TraceContractId,
+    pub source_span: Span,
+    pub contract_text: String,
+    pub boundary: BoundaryId,
+    pub alphabet: TraceAlphabet,
+    pub formula: TemporalFormula,
+    pub interpretation: TraceInterpretation,
+    pub discharge: TraceContractDischarge,
+    pub diagnostic_shape: TemporalDiagnosticShape,
+}
+
+pub enum TraceInterpretation {
+    Operational,
+    Normative,
+    Mixed,
+}
+
+pub enum TraceContractDischarge {
+    StaticModelChecked { evidence: EvidenceRef },
+    StaticProved { evidence: EvidenceRef },
+    EvidenceSurvivedTesting { evidence: EvidenceRef },
+    RuntimeMonitor { plan: MonitorPlanRef },
+    Deferred { reason: DeferralReason },
+}
+
+pub enum TraceFactKind {
+    Process(ProcessEvent),
+    Channel(ChannelEvent),
+    Resource(ResourceEvent),
+    Operation(OperationEvent),
+    Contract(ContractEvent),
+    Workflow(WorkflowLedgerFact),
+    Evidence(EvidenceEvent),
+    Time(TimerEvent),
+}
+
+pub struct TemporalContractDiagnostic {
+    pub contract: TraceContractRef,
+    pub source_span: Span,
+    pub violated_formula: TemporalFormulaRef,
+    pub trace_window: TraceWindowRef,
+    pub monitor_state: MonitorStateRef,
+    pub observed_facts: Vec<TraceFactRef>,
+    pub interpretation: TraceInterpretation,
+    pub discharge: TraceContractDischarge,
+    pub replay: ReplayStatus,
+}
+
+pub struct TemporalMonitorFaultDiagnostic {
+    pub contract: TraceContractRef,
+    pub source_span: Span,
+    pub fault: MonitorFault,
+    pub trace_window: TraceWindowRef,
+    pub monitor_state: Option<MonitorStateRef>,
+    pub replay: ReplayStatus,
+}
 ```
 
 A contract effect cannot be silently erased from a row without recording its discharge mode.
@@ -598,6 +656,13 @@ precondition at a sequencing or `bind` boundary. The IR does not need a new term
 monadic Hoare composition; it needs enough sidecar metadata to show that `∀a. Q(a) ⇒ R(a)`
 was proved, evidence-discharged, or left as a dynamic check.
 
+Per NOTE-035, temporal/concurrent contracts lower to `TraceContract` sidecars rather than
+value-level `LoweredPredicate`s. Operational trace facts are `Proc`-like, workflow ledger facts
+are `Workflow`-like, and mixed alphabets are valid in the ambient computation model. Runtime
+monitor plans are the default discharge path; static proof/model-check evidence may discharge
+bounded fragments. Monitor violation and monitor fault diagnostics are distinct, just as false
+predicates and predicate faults are distinct.
+
 ## 5. Raise and Handle
 
 ### 5.1 Effect Operation
@@ -614,6 +679,8 @@ pub struct EffectOp {
 pub enum TrapReason {
     ContractViolation(ContractDiagnostic),
     ContractPredicateFault(PredicateFaultDiagnostic),
+    TemporalContractViolation(TemporalContractDiagnostic),
+    TemporalMonitorFault(TemporalMonitorFaultDiagnostic),
     UnhandledEffect(EffectOp),
     Panic(String),
 }
@@ -1551,3 +1618,4 @@ resolved through an additional indirection layer. Both are possible but not spec
 - 2026-06-29: Reconciled with NOTE-033. Added `LoweredPredicate`, `PredicateNode`, binder, and `RuntimeCheckPlan` sidecar shapes so contract checks evaluate structured predicate artifacts rather than source text.
 - 2026-06-29: Swept stale `DischargeMode::Dynamic` wording so dynamic contract discharge points to lowered runtime predicate plans rather than hidden runtime contract handlers.
 - 2026-06-29: Reconciled with NOTE-034. Added `ObservationEvidence` sidecar shape and clarified that operation-produced values may inform contract diagnostics without granting predicate evaluators authority.
+- 2026-06-29: Reconciled with NOTE-035. Added trace-contract, trace-fact, monitor-discharge, and temporal diagnostic sidecar shapes; monitor violations and monitor faults are separate trap payloads.

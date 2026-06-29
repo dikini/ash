@@ -1276,6 +1276,17 @@ evaluation mode system.
 
 ### GAP 5: Concurrent / Distributed / Temporal Contracts [ARCHITECTURAL — needed for Proc/Workflow levels]
 
+**Status: Resolved in NOTE-035.** Temporal/concurrent contracts are trace contracts over the
+ambient computation model, not separate `Proc` and `Workflow` contract systems. `Pure`, `Act`,
+`Proc`, and `Workflow` are ordered semantic anchors: a `Proc`-like contract mentions
+operational trace facts such as spawn, send, receive, fail, cancel, restart, acquire, release,
+or timeout; a `Workflow`-like contract mentions interpreted facts such as obligations,
+commitments, accepted evidence, stage commits, compensation, roles, or policy. Mixed contracts
+are allowed when their alphabet is mixed. Runtime monitors are the default discharge mechanism;
+static proof/model checking may discharge bounded finite-state fragments. Monitors consume
+recorded trace/evidence/timer facts and do not acquire capability, process, or workflow
+authority.
+
 Everything in NOTE-014 assumes sequential, single-threaded computation. But the tower's Proc
 and Workflow levels span multiple processes and agents. There, contracts look fundamentally
 different:
@@ -1288,12 +1299,11 @@ different:
   **liveness** properties, not safety properties.
 - **Policy contracts**: "only authorized roles can invoke this" — governance, not correctness.
 
-These are not Hoare triples and not universal theorems. They are **temporal logic** properties
-(LTL/CTL). The discharge mechanism is runtime monitoring, not SMT or QuickCheck. This is a
-third contract paradigm that does not fit neatly into either System A or System B as currently
-defined.
-
-This may need its own treatment (possibly NOTE-015).
+These are not Hoare triples and not universal theorems. They are trace contracts with temporal
+interpretation. NOTE-035 resolves the older "third paradigm" framing by treating temporal
+contracts as monitorable contracts over ambient trace facts. Workflow adds normative/evidential
+interpretation over those facts rather than requiring a separate workflow-only contract
+mechanism.
 
 **Blocks:** Proc-level and Workflow-level contracts, the full tower.
 
@@ -1592,3 +1602,4 @@ checking over the Core predicate schema.
 | 2026-06-29 | Swept stale dynamic-contract lowering prose in §3.2 to match NOTE-029/NOTE-032: default dynamic Hoare failure is structured bottom, while recoverability must lower through explicit row-accounted `fail`. |
 | 2026-06-29 | GAP 9 (Surface-to-Core contract lowering) resolved in NOTE-033. Surface predicates now lower through structured Core predicate artifacts with binder, snapshot, classification, proof/runtime, diagnostic, and discharge metadata. Swept related stale dynamic-contract prose in §3.2 and §6 to preserve NOTE-029's trap-vs-explicit-`fail` boundary. |
 | 2026-06-29 | GAP 8 resolved in NOTE-034. Separated authority-bearing capability observations from authority-free contract predicates, added the observation-before-contract pattern, and introduced observation provenance as diagnostic/evidence metadata rather than predicate authority. |
+| 2026-06-29 | GAP 5 resolved in NOTE-035. Temporal/concurrent contracts are trace contracts over the ambient computation model: `Proc` anchors operational trace facts, `Workflow` anchors normative/evidential interpretation over those facts, runtime monitors are the default discharge mechanism, and monitor violations/faults receive structured diagnostics. |

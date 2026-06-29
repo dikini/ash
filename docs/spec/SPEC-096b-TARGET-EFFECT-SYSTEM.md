@@ -312,6 +312,7 @@ contract_effect = requires_effect
                 | law_effect
                 | obligation_effect
                 | guard_effect
+                | trace_contract_effect
                 ;
 
 requires_effect = "requires" "{" predicate "}" ;
@@ -320,6 +321,8 @@ invariant_effect = "invariant" "{" predicate "}" ;
 law_effect = "law" identifier "{" predicate "}" ;
 obligation_effect = "obligation" obligation_path ;
 guard_effect = "guard" "{" predicate "}" ;
+trace_contract_effect = "trace" trace_contract_path ;
+trace_contract_path = identifier { "::" identifier } ;
 
 predicate          = predicate_or ;
 predicate_or       = predicate_and { "||" predicate_and } ;
@@ -372,6 +375,13 @@ admitted predicate-function identities, static/dynamic classification, proof fra
 dynamic runtime-check plan, diagnostic shape, and stable predicate identity. The implementation
 must not treat a source string as the predicate's semantic representation.
 
+Per NOTE-035, temporal/concurrent contracts are trace contracts over the ambient computation
+model. `Pure`, `Act`, `Proc`, and `Workflow` are semantic anchors rather than separate contract
+mechanisms: operational trace facts are `Proc`-like, obligation/evidence/commitment facts are
+`Workflow`-like, and mixed contracts may mention both. The row item records the trace-contract
+obligation; runtime monitor plans, static model-check evidence, or deferred trace obligations
+are recorded as discharge metadata.
+
 ### 6.6 Channel effects
 
 Channel effects require authority over a typed channel endpoint.
@@ -417,8 +427,9 @@ fn start_worker() -> {proc spawn} P<Unit> { ... }
 fn wait_worker(p: P<A>) -> {proc await} A { ... }
 ```
 
-Process effects imply a `Proc`-capable profile. They must not be silently accepted in pure or
-`Act`-only contexts.
+Process effects imply a process-capable ambient profile. They must not be silently accepted in
+profiles that lack process-runtime support. Per NOTE-035, this is a semantic anchor rather than
+a requirement that the source term have a separate `Proc<A>` constructor.
 
 ### 6.8 Failure effects
 
@@ -726,3 +737,4 @@ workflow reporting, and audit evidence.
 - 2026-06-29: Reconciled with NOTE-031. Replaced `predicate = expr` with a restricted contract-position predicate grammar, added boundary-local `old(snapshot_expr)`, and required static/dynamic/rejected predicate classification before lowering.
 - 2026-06-29: Reconciled with NOTE-033. Clarified that contract-position predicate syntax lowers through structured predicate artifacts carrying binders, snapshots, classification, proof/runtime-check metadata, diagnostics, and stable identity.
 - 2026-06-29: Reconciled with NOTE-034. Clarified that operation/capability effects are authority-bearing and cannot be performed by contract predicates; operation results may flow into contracts only as ordinary values plus provenance metadata.
+- 2026-06-29: Reconciled with NOTE-035. Added trace-contract row-item spelling and clarified that `Pure`/`Act`/`Proc`/`Workflow` are semantic anchors over one ambient computation model rather than separate contract mechanisms.

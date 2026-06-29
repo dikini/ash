@@ -1,6 +1,6 @@
 # PLAN-168: Surface AST, Notation, and Lowering Substrate
 
-## Status: 📝 Planned
+## Status: ✅ Completed
 
 ## Overview
 
@@ -24,14 +24,14 @@ operational-semantics phases can build on.
 
 ## Goals
 
-- [ ] Map the current parser AST and lowering surfaces against `SPEC-095c` and `SPEC-098c`.
-- [ ] Establish an implementation plan for source-preserving surface syntax carriers.
-- [ ] Preserve operator-like tokens and grouped infix shape before semantic notation resolution.
-- [ ] Define a fail-closed implementation boundary for binary infix operator sections.
-- [ ] Create an explicit parsed-surface-AST to expanded-surface-AST boundary while keeping full
+- [x] Map the current parser AST and lowering surfaces against `SPEC-095c` and `SPEC-098c`.
+- [x] Establish an implementation plan for source-preserving surface syntax carriers.
+- [x] Preserve operator-like tokens and grouped infix shape before semantic notation resolution.
+- [x] Define a fail-closed implementation boundary for binary infix operator sections.
+- [x] Create an explicit parsed-surface-AST to expanded-surface-AST boundary while keeping full
       macro expansion deferred.
-- [ ] Inventory current surface-to-Core lowering and identify exact follow-on implementation tasks.
-- [ ] Reconcile plan/task/changelog status and verification evidence at closeout.
+- [x] Inventory current surface-to-Core lowering and identify exact follow-on implementation tasks.
+- [x] Reconcile plan/task/changelog status and verification evidence at closeout.
 
 ## Non-goals
 
@@ -49,23 +49,23 @@ operational-semantics phases can build on.
 
 Tasks:
 
-- TASK-1721: Audit current parser AST and lowering seams against Phase 167 specs. 📝
-- TASK-1722: Design the source-preserving surface syntax carrier slice. 📝
+- TASK-1721: Audit current parser AST and lowering seams against Phase 167 specs. ✅
+- TASK-1722: Design the source-preserving surface syntax carrier slice. ✅
 
 ### Phase 2: Preserve notation-relevant surface shape
 
 Tasks:
 
-- TASK-1723: Preserve notation/operator token shape before resolution. 📝
-- TASK-1724: Add the binary infix operator-section AST boundary or fail-closed diagnostics. 📝
+- TASK-1723: Preserve notation/operator token shape before resolution. ✅
+- TASK-1724: Add the binary infix operator-section AST boundary or fail-closed diagnostics. ✅
 
 ### Phase 3: Stage expansion and lowering handoff
 
 Tasks:
 
-- TASK-1725: Introduce an expanded-surface-AST boundary without full macro expansion. 📝
-- TASK-1726: Inventory and scope surface-to-Core lowering implementation seams. 📝
-- TASK-1727: Close out Phase 168 with verification, status reconciliation, and follow-on plan notes. 📝
+- TASK-1725: Introduce an expanded-surface-AST boundary without full macro expansion. ✅
+- TASK-1726: Inventory and scope surface-to-Core lowering implementation seams. ✅
+- TASK-1727: Close out Phase 168 with verification, status reconciliation, and follow-on plan notes. ✅
 
 ## Dependency graph
 
@@ -111,16 +111,66 @@ its own verification block.
 
 ## Acceptance criteria
 
-- [ ] Current parser/lowering gaps against `SPEC-095c`/`SPEC-098c` are recorded in a durable audit
+- [x] Current parser/lowering gaps against `SPEC-095c`/`SPEC-098c` are recorded in a durable audit
       artifact.
-- [ ] Source-preserving carrier requirements are mapped to concrete Rust modules and public/private
+- [x] Source-preserving carrier requirements are mapped to concrete Rust modules and public/private
       API boundaries.
-- [ ] Notation-relevant operator token/grouping shape is either preserved by AST carriers or rejected
+- [x] Notation-relevant operator token/grouping shape is either preserved by AST carriers or rejected
       explicitly until the carrier exists.
-- [ ] Binary infix operator sections have an implementation boundary: parsed representation or
+- [x] Binary infix operator sections have an implementation boundary: parsed representation or
       fail-closed diagnostics with focused tests.
-- [ ] Expanded-surface-AST staging exists as a named boundary, even if macro expansion is a no-op or
+- [x] Expanded-surface-AST staging exists as a named boundary, even if macro expansion is a no-op or
       explicit deferral in this phase.
-- [ ] Surface-to-Core lowering follow-on tasks are concrete enough for implementation without
+- [x] Surface-to-Core lowering follow-on tasks are concrete enough for implementation without
       redoing Phase 167's spec audit.
-- [ ] `PLAN-INDEX.md`, this plan, task files, and `CHANGELOG.md` agree on Phase 168 status.
+- [x] `PLAN-INDEX.md`, this plan, task files, and `CHANGELOG.md` agree on Phase 168 status.
+
+## Closeout evidence
+
+TASK-1727 completed Phase 168 with the following implementation artifacts:
+
+- `docs/audit/phase-168-surface-ast-lowering-inventory.md` records the parser AST and lowering gap
+  audit from TASK-1721.
+- `docs/design/phase-168-source-preserving-surface-carriers.md` records the source-preserving carrier
+  design from TASK-1722.
+- `RawOperatorToken`, `OperatorSection`, `OperatorSectionKind`, `SurfaceOrigin`,
+  `ParsedSurfaceModule`, and `ExpandedSurfaceModule` were added in `crates/ash-parser/src/surface.rs`.
+- `Expr::OperatorSection` plus parser support for `(+), (x +), (+ x)` were added in
+  `crates/ash-parser/src/parse_expr.rs`.
+- `expand_surface_module` now names the parsed-surface to expanded-surface boundary and rejects
+  unresolved operator sections across expression-bearing module surfaces instead of checking only
+  function/impl/proof bodies.
+- `lower_expr` rejects unresolved operator sections instead of leaking surface-only notation into
+  Core.
+- `docs/audit/phase-168-surface-to-core-lowering-inventory.md` records the `SPEC-098c` lowering-family
+  matrix and next-packet ordering.
+
+Focused verification during implementation:
+
+```bash
+cargo test -p ash-parser --test task_1723_notation_token_preservation --test task_1724_operator_section_boundary --test task_1725_expanded_surface_boundary
+cargo test -p ash-parser
+cargo test -p ash-typeck
+cargo test -p ash-engine
+cargo fmt --check
+cargo clippy -p ash-parser -p ash-typeck -p ash-engine --all-targets --all-features -- -D warnings
+git diff --check
+python3 tools/docs/validate_orientation_indexes.py --self-test
+bash scripts/check-docs-gate.sh
+```
+
+Independent review remediation addressed:
+
+- underscore-leading identifiers in parenthesized expressions such as `(_foo)` no longer hard-error
+  as placeholder sections;
+- expanded-surface operator-section detection now traverses contracts, capability implementation
+  bodies, policies, laws, proof strategy expressions, workflow headers/bodies, proxy bodies, inline
+  modules, and nested expression forms before Core lowering.
+
+Deferred honestly:
+
+- Full macro expansion and hygiene.
+- General user-defined notation declarations and type-directed notation resolution.
+- Generalized mixfix sections such as `(_ + _)`.
+- Full `SPEC-098c` surface-to-Core lowering; next owners are listed in
+  `docs/audit/phase-168-surface-to-core-lowering-inventory.md`.

@@ -12,7 +12,8 @@ use crate::parse_pattern::pattern;
 use crate::parse_utils::skip_whitespace_and_comments;
 use crate::surface::{
     ActStmt, BinaryOp, BlockStmt, ComprehensionQualifier, ConstructorPayload, DoStmt, DoTarget,
-    Expr, Literal, MatchArm, Name, Pattern, Type, UnaryOp,
+    Expr, Literal, MatchArm, Name, OperatorSection, OperatorSectionKind, Pattern, RawOperatorToken,
+    Type, UnaryOp,
 };
 use crate::token::Span;
 
@@ -1177,6 +1178,19 @@ fn unary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
 fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     let start_pos = input.state.pos;
 
+    // Try operator sections before ordinary parenthesized expressions.
+    {
+        let saved = input.clone();
+        match parse_operator_section_expr(input) {
+            Ok(section) => return Ok(section),
+            Err(winnow::error::ErrMode::Cut(err)) => {
+                return Err(winnow::error::ErrMode::Cut(err));
+            }
+            Err(_) => {}
+        }
+        *input = saved;
+    }
+
     // Try parenthesized expression first
     if let Ok(e) = delimited(literal_str("("), expr, literal_str(")")).parse_next(input) {
         return Ok(e);
@@ -1393,6 +1407,121 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     }
 
     Ok(expr)
+}
+
+fn parse_operator_section_expr(input: &mut ParseInput) -> ModalResult<Expr> {
+    let section_start = input.state.pos;
+    let _ = literal_str("(").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    if starts_operator_section_placeholder(&input.input) {
+        return Err(winnow::error::ErrMode::Cut(
+            winnow::error::ContextError::new(),
+        ));
+    }
+
+    if let Some(operator) = parse_raw_operator_token(input) {
+        skip_whitespace_and_comments(input);
+        if literal_str(")").parse_next(input).is_ok() {
+            let span = span_from(&section_start, &input.state.pos);
+            return Ok(Expr::OperatorSection {
+                section: OperatorSection {
+                    kind: OperatorSectionKind::Bare,
+                    operator,
+                    left: None,
+                    right: None,
+                    span,
+                },
+            });
+        }
+        let right = expr(input)?;
+        skip_whitespace_and_comments(input);
+        let _ = literal_str(")").parse_next(input)?;
+        let span = span_from(&section_start, &input.state.pos);
+        return Ok(Expr::OperatorSection {
+            section: OperatorSection {
+                kind: OperatorSectionKind::Right,
+                operator,
+                left: None,
+                right: Some(Box::new(right)),
+                span,
+            },
+        });
+    }
+
+    let left = parse_operator_section_operand(input)?;
+    skip_whitespace_and_comments(input);
+    let Some(operator) = parse_raw_operator_token(input) else {
+        return Err(winnow::error::ErrMode::Backtrack(
+            winnow::error::ContextError::new(),
+        ));
+    };
+    skip_whitespace_and_comments(input);
+    let _ = literal_str(")").parse_next(input)?;
+    let span = span_from(&section_start, &input.state.pos);
+    Ok(Expr::OperatorSection {
+        section: OperatorSection {
+            kind: OperatorSectionKind::Left,
+            operator,
+            left: Some(Box::new(left)),
+            right: None,
+            span,
+        },
+    })
+}
+
+fn starts_operator_section_placeholder(input: &str) -> bool {
+    let mut chars = input.chars();
+    if chars.next() != Some('_') {
+        return false;
+    }
+    !chars
+        .next()
+        .is_some_and(|ch| ch == '_' || ch.is_ascii_alphanumeric())
+}
+
+fn parse_operator_section_operand(input: &mut ParseInput) -> ModalResult<Expr> {
+    let operand_start = input.state.pos;
+    if let Ok(lit) = literal(input) {
+        return Ok(Expr::Literal(lit));
+    }
+    let (name, span) = expr_name_with_span(input)?;
+    let mut expr = Expr::Variable {
+        name: name.into(),
+        span,
+    };
+    loop {
+        if opt(literal_str(".")).parse_next(input)?.is_some() {
+            let field = parse_field_name(input)?;
+            let span = span_from(&operand_start, &input.state.pos);
+            expr = Expr::FieldAccess {
+                base: Box::new(expr),
+                field: field.into(),
+                span,
+            };
+            continue;
+        }
+        break;
+    }
+    Ok(expr)
+}
+
+fn parse_raw_operator_token(input: &mut ParseInput) -> Option<RawOperatorToken> {
+    const OPERATORS: &[&str] = &[
+        "==", "!=", "<=", ">=", "||", "&&", "+", "-", "*", "/", "%", "<", ">", "|>",
+    ];
+    skip_whitespace_and_comments(input);
+    let start = input.state.pos;
+    for operator in OPERATORS {
+        if input.input.starts_with(operator) {
+            let _ = literal_str(operator).parse_next(input).ok()?;
+            return Some(RawOperatorToken {
+                spelling: (*operator).into(),
+                span: span_from(&start, &input.state.pos),
+            });
+        }
+    }
+    None
 }
 
 fn parse_list_expr(input: &mut ParseInput) -> ModalResult<Expr> {

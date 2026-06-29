@@ -677,7 +677,7 @@ Closes the target-spec gaps identified by the 2026-06-29 audit before parser, ma
 
 ## Phase 168: Surface AST, Notation, and Lowering Substrate
 
-**Status:** 📝 Planned; implementation substrate handoff
+**Status:** ✅ Complete; implementation substrate handoff
 **Plan:** [PLAN-168: Surface AST, Notation, and Lowering Substrate](PLAN-168-SURFACE-AST-NOTATION-SUBSTRATE.md)
 **Depends on:** Phase 167 target surface and semantics gap closure; `SPEC-095c`; `SPEC-098c`.
 
@@ -689,10 +689,10 @@ surface-to-Core lowering implementation packet.
 
 | Task | Description | Status |
 |------|-------------|--------|
-| [TASK-1721](tasks/TASK-1721-parser-ast-lowering-inventory.md) | Audit current parser AST and lowering seams against Phase 167 specs | 📝 Planned |
-| [TASK-1722](tasks/TASK-1722-source-preserving-surface-carriers.md) | Design the source-preserving surface syntax carrier slice | 📝 Planned |
-| [TASK-1723](tasks/TASK-1723-notation-token-preservation.md) | Preserve notation/operator token shape before resolution | 📝 Planned |
-| [TASK-1724](tasks/TASK-1724-operator-section-boundary.md) | Add the binary infix operator-section AST boundary or fail-closed diagnostics | 📝 Planned |
-| [TASK-1725](tasks/TASK-1725-expanded-surface-ast-boundary.md) | Introduce an expanded-surface-AST boundary without full macro expansion | 📝 Planned |
-| [TASK-1726](tasks/TASK-1726-surface-to-core-lowering-inventory.md) | Inventory and scope surface-to-Core lowering implementation seams | 📝 Planned |
-| [TASK-1727](tasks/TASK-1727-phase-168-closeout.md) | Close out Phase 168 with verification and status reconciliation | 📝 Planned |
+| [TASK-1721](tasks/TASK-1721-parser-ast-lowering-inventory.md) | Audit current parser AST and lowering seams against Phase 167 specs | ✅ Complete |
+| [TASK-1722](tasks/TASK-1722-source-preserving-surface-carriers.md) | Design the source-preserving surface syntax carrier slice | ✅ Complete |
+| [TASK-1723](tasks/TASK-1723-notation-token-preservation.md) | Preserve notation/operator token shape before resolution | ✅ Complete |
+| [TASK-1724](tasks/TASK-1724-operator-section-boundary.md) | Add the binary infix operator-section AST boundary or fail-closed diagnostics | ✅ Complete |
+| [TASK-1725](tasks/TASK-1725-expanded-surface-ast-boundary.md) | Introduce an expanded-surface-AST boundary without full macro expansion | ✅ Complete |
+| [TASK-1726](tasks/TASK-1726-surface-to-core-lowering-inventory.md) | Inventory and scope surface-to-Core lowering implementation seams | ✅ Complete |
+| [TASK-1727](tasks/TASK-1727-phase-168-closeout.md) | Close out Phase 168 with verification and status reconciliation | ✅ Complete |

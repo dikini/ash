@@ -300,6 +300,7 @@ fn contains_policy(expr: &Expr) -> bool {
         }
         Expr::Variable { .. }
         | Expr::Literal(_)
+        | Expr::OperatorSection { .. }
         | Expr::CheckObligation { .. }
         | Expr::Panic { .. } => false,
         Expr::Fail { payload, .. } => contains_policy(payload),

@@ -691,6 +691,15 @@ impl CapabilityChecker {
         // but may contain observe/act calls in expressions in the future.
         // For now, we traverse expressions without capability checks.
         match expr {
+            Expr::OperatorSection { section } => {
+                if let Some(left) = &section.left {
+                    self.verify_expr(left)?;
+                }
+                if let Some(right) = &section.right {
+                    self.verify_expr(right)?;
+                }
+                Ok(())
+            }
             Expr::Literal(_) => Ok(()),
             Expr::Variable { .. } => Ok(()),
             Expr::FieldAccess { base, .. } => self.verify_expr(base),

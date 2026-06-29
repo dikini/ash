@@ -1,6 +1,6 @@
 # TASK-1723: Preserve notation/operator token shape before resolution
 
-## Status: 📝 Planned
+## Status: ✅ Completed
 
 ## Summary
 

@@ -589,6 +589,14 @@ impl NameResolver {
     /// Resolve names in an expression
     fn resolve_expr(&mut self, expr: &Expr) {
         match expr {
+            Expr::OperatorSection { section } => {
+                if let Some(left) = &section.left {
+                    self.resolve_expr(left);
+                }
+                if let Some(right) = &section.right {
+                    self.resolve_expr(right);
+                }
+            }
             Expr::Variable { name, span, .. } => {
                 if !self.is_bound(name) {
                     self.errors

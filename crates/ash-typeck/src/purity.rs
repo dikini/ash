@@ -97,6 +97,14 @@ fn check_purity_recursive(
     errors: &mut Vec<PurityError>,
 ) {
     match expr {
+        Expr::OperatorSection { section } => {
+            if let Some(left) = &section.left {
+                check_purity_recursive(env, left, allow_effects, errors);
+            }
+            if let Some(right) = &section.right {
+                check_purity_recursive(env, right, allow_effects, errors);
+            }
+        }
         Expr::Policy(_) => {
             errors.push(PurityError {
                 kind: PurityViolation::PolicyExpression,

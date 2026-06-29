@@ -1857,6 +1857,10 @@ pub fn lower_expr_with_context(
 /// Lower a surface expression to core IR.
 pub fn lower_expr(expr: &Expr) -> Result<CoreExpr, LoweringError> {
     match expr {
+        Expr::OperatorSection { section } => Err(LoweringError::UnsupportedFeature(format!(
+            "operator section `{}` must be resolved before Core lowering",
+            section.operator.spelling
+        ))),
         Expr::Literal(lit) => Ok(CoreExpr::Literal(lower_literal(lit)?)),
 
         Expr::Variable { name, .. } => Ok(CoreExpr::Variable {

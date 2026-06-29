@@ -1,6 +1,6 @@
 # TASK-1724: Add the binary infix operator-section AST boundary or fail-closed diagnostics
 
-## Status: 📝 Planned
+## Status: ✅ Completed
 
 ## Summary
 

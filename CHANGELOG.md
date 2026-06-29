@@ -6,6 +6,11 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Added
+- PLAN-168 implementation: adds source-preserving surface carrier substrate, raw operator-token and
+  binary infix operator-section AST carriers, a parsed-surface to expanded-surface boundary that
+  rejects unresolved operator sections across expression-bearing module surfaces before Core
+  lowering, focused parser/lowering tests, and surface-to-Core lowering follow-on inventories
+  (TASK-1721 through TASK-1727).
 - PLAN-168 surface AST, notation, and lowering substrate packet with tasks for parser/lowering
   inventory, source-preserving carrier design, notation-token preservation, operator-section
   boundaries, expanded-surface-AST staging, surface-to-Core lowering inventory, and closeout.

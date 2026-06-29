@@ -1,6 +1,6 @@
 # TASK-1727: Close out Phase 168 with verification and status reconciliation
 
-## Status: 📝 Planned
+## Status: ✅ Completed
 
 ## Summary
 
@@ -17,7 +17,7 @@ surface-to-Core completion unless the earlier tasks actually implemented it.
 
 ## Dependencies
 
-- 📝 TASK-1726: Surface-to-Core lowering inventory
+- ✅ TASK-1726: Surface-to-Core lowering inventory
 
 ## Deferral / Planned-Feature Reconciliation
 
@@ -62,15 +62,17 @@ commands:
   - python3 tools/docs/validate_orientation_indexes.py --self-test
   - bash scripts/check-docs-gate.sh
   - cargo fmt --check
+  - cargo clippy -p ash-parser -p ash-typeck -p ash-engine --all-targets --all-features -- -D warnings
   - cargo test -p ash-parser
+  - cargo test -p ash-typeck
   - cargo test -p ash-engine
   - python3 -c 'from pathlib import Path; p=Path("docs/plan/PLAN-168-SURFACE-AST-NOTATION-SUBSTRATE.md"); s=p.read_text(); assert "## Closeout evidence" in s and "TASK-1727" in s'
 checklist:
-  - [ ] Focused parser/lowering tests pass.
-  - [ ] Docs gate passes.
-  - [ ] Phase plan, PLAN-INDEX, task files, and changelog agree.
-  - [ ] Deferred macro/notation/lowering work is named honestly.
-  - [ ] Independent review completed and blockers addressed.
+  - [x] Focused parser/lowering tests pass.
+  - [x] Docs gate passes.
+  - [x] Phase plan, PLAN-INDEX, task files, and changelog agree.
+  - [x] Deferred macro/notation/lowering work is named honestly.
+  - [x] Independent review completed; review-triggered parser and expanded-boundary blockers addressed.
 ```
 
 ## Dispatch

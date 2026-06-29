@@ -77,6 +77,14 @@ impl<'a> ProofCallCollector<'a> {
 
     pub(super) fn visit_expr(&mut self, expr: &Expr) {
         match expr {
+            Expr::OperatorSection { section } => {
+                if let Some(left) = &section.left {
+                    self.visit_expr(left);
+                }
+                if let Some(right) = &section.right {
+                    self.visit_expr(right);
+                }
+            }
             Expr::Literal(_)
             | Expr::Variable { .. }
             | Expr::CheckObligation { .. }
@@ -313,6 +321,14 @@ impl ProofFuelChecker {
             return;
         }
         match expr {
+            Expr::OperatorSection { section } => {
+                if let Some(left) = &section.left {
+                    self.visit_expr(left);
+                }
+                if let Some(right) = &section.right {
+                    self.visit_expr(right);
+                }
+            }
             Expr::Literal(_)
             | Expr::Variable { .. }
             | Expr::Policy(_)

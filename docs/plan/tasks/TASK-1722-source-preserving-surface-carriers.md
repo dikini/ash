@@ -1,6 +1,6 @@
 # TASK-1722: Design the source-preserving surface syntax carrier slice
 
-## Status: 📝 Planned
+## Status: ✅ Completed
 
 ## Summary
 
@@ -16,7 +16,7 @@ future macro system.
 
 ## Dependencies
 
-- 📝 TASK-1721: Parser AST and lowering inventory
+- ✅ TASK-1721: Parser AST and lowering inventory
 
 ## Deferral / Planned-Feature Reconciliation
 
@@ -57,9 +57,9 @@ commands:
   - bash scripts/check-docs-gate.sh
   - python3 -c 'from pathlib import Path; s=Path("docs/design/phase-168-source-preserving-surface-carriers.md").read_text(); assert "Current" in s and "Target" in s and "non-goals" in s.lower()'
 checklist:
-  - [ ] Carrier design artifact exists.
-  - [ ] Module/API boundary is explicit.
-  - [ ] Full macro system remains explicitly deferred.
+  - [x] Carrier design artifact exists.
+  - [x] Module/API boundary is explicit.
+  - [x] Full macro system remains explicitly deferred.
 ```
 
 ## Dispatch

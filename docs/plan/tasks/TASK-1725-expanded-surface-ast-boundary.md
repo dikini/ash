@@ -1,6 +1,6 @@
 # TASK-1725: Introduce an expanded-surface-AST boundary without full macro expansion
 
-## Status: 📝 Planned
+## Status: ✅ Completed
 
 ## Summary
 

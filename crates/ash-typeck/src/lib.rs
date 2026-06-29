@@ -509,6 +509,18 @@ fn validate_interface_calls_in_expr(
     expr: &ash_parser::surface::Expr,
 ) -> Result<(), TypeCheckError> {
     match expr {
+        ash_parser::surface::Expr::OperatorSection { section } => {
+            if let Some(left) = &section.left {
+                validate_interface_calls_in_expr(env, left)?;
+            }
+            if let Some(right) = &section.right {
+                validate_interface_calls_in_expr(env, right)?;
+            }
+            Err(TypeCheckError::TypeError(format!(
+                "operator section `{}` requires notation resolution before type checking",
+                section.operator.spelling
+            )))
+        }
         ash_parser::surface::Expr::Literal(_) | ash_parser::surface::Expr::Variable { .. } => {
             Ok(())
         }
@@ -1804,6 +1816,18 @@ fn validate_fn_call_preconditions_expr(
     >,
 ) -> Result<(), TypeCheckError> {
     match expr {
+        ash_parser::surface::Expr::OperatorSection { section } => {
+            if let Some(left) = &section.left {
+                validate_fn_call_preconditions_expr(env, left, facts, assumptions)?;
+            }
+            if let Some(right) = &section.right {
+                validate_fn_call_preconditions_expr(env, right, facts, assumptions)?;
+            }
+            Err(TypeCheckError::TypeError(format!(
+                "operator section `{}` requires notation resolution before type checking",
+                section.operator.spelling
+            )))
+        }
         ash_parser::surface::Expr::Unary { operand, .. }
         | ash_parser::surface::Expr::FieldAccess { base: operand, .. } => {
             validate_fn_call_preconditions_expr(env, operand, facts, assumptions)

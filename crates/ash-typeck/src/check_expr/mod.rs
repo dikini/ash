@@ -72,6 +72,15 @@ pub use result::{CheckResult, DoElaborationResult, WorkflowForm, WorkflowTypedAr
 /// along with any substitutions and errors.
 pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
     match expr {
+        Expr::OperatorSection { section } => {
+            CheckResult::error(ConstructorError::UnsupportedExpression {
+                kind: format!(
+                    "operator section `{}` requires notation resolution before type checking",
+                    section.operator.spelling
+                ),
+                span: section.span,
+            })
+        }
         Expr::Literal(lit) => check_literal(lit),
         Expr::Variable { name, .. } => {
             if name.as_ref() == "()" {
@@ -2851,6 +2860,7 @@ fn check_capability_binding_operation_call(
 /// Get the span from an expression
 fn get_expr_span(expr: &Expr) -> Span {
     match expr {
+        Expr::OperatorSection { section } => section.span,
         Expr::Literal(_) => Span::default(),
         Expr::Variable { .. } => Span::default(),
         Expr::FieldAccess { span, .. } => *span,

@@ -185,6 +185,14 @@ pub(super) fn collect_do_notation_diagnostics(
             }
         }
         Expr::Policy(policy) => collect_policy_do_notation_diagnostics(env, policy, diagnostics),
+        Expr::OperatorSection { section } => {
+            if let Some(left) = &section.left {
+                collect_do_notation_diagnostics(env, left, diagnostics);
+            }
+            if let Some(right) = &section.right {
+                collect_do_notation_diagnostics(env, right, diagnostics);
+            }
+        }
         Expr::Literal(_)
         | Expr::Variable { .. }
         | Expr::CheckObligation { .. }

@@ -1,6 +1,6 @@
 # TASK-1726: Inventory and scope surface-to-Core lowering implementation seams
 
-## Status: 📝 Planned
+## Status: ✅ Completed
 
 ## Summary
 
@@ -16,7 +16,7 @@ trying to lower every target surface form in Phase 168.
 
 ## Dependencies
 
-- 📝 TASK-1725: Expanded surface AST boundary
+- ✅ TASK-1725: Expanded surface AST boundary
 
 ## Deferral / Planned-Feature Reconciliation
 
@@ -59,9 +59,9 @@ commands:
   - bash scripts/check-docs-gate.sh
   - python3 -c 'from pathlib import Path; s=Path("docs/audit/phase-168-surface-to-core-lowering-inventory.md").read_text(); assert "SPEC-098c" in s and "lowering-family matrix" in s.lower()'
 checklist:
-  - [ ] Lowering inventory artifact exists.
-  - [ ] Every `SPEC-098c` lowering family is classified.
-  - [ ] Next lowering phase/task ordering is explicit.
+  - [x] Lowering inventory artifact exists.
+  - [x] Every `SPEC-098c` lowering family is classified.
+  - [x] Next lowering phase/task ordering is explicit.
 ```
 
 ## Dispatch

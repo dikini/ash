@@ -48,6 +48,24 @@ pub fn display_workflow_def(def: &WorkflowDef) -> String {
 #[allow(clippy::too_many_lines)]
 fn render_expr(expr: &Expr) -> String {
     match expr {
+        Expr::OperatorSection { section } => {
+            let mut out = String::from("OperatorSection {\n");
+            push_field(&mut out, 2, "kind", &format!("{:?}", section.kind));
+            push_field(
+                &mut out,
+                2,
+                "operator",
+                &format!("{:?}", section.operator.spelling),
+            );
+            if let Some(left) = &section.left {
+                push_field(&mut out, 2, "left", &render_expr(left));
+            }
+            if let Some(right) = &section.right {
+                push_field(&mut out, 2, "right", &render_expr(right));
+            }
+            out.push('}');
+            out
+        }
         Expr::Literal(literal) => format!("Literal({literal:?})"),
         Expr::Variable { name, .. } => format!("Variable({name:?})"),
         Expr::FieldAccess { base, field, .. } => {

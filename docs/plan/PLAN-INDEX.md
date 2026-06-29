@@ -143,6 +143,8 @@ Update this section as tasks complete:
 | [165](PLAN-165-CONTRACT-SYSTEM-IMPLEMENTATION-HANDOFF.md) | 10 | 10 | ✅ Complete; Core contract sidecar carriers, predicate lowering, diagnostics, discharge metadata, observation evidence, and trace monitor carriers implemented |
 | [166](PLAN-166-DOCS-ORIENTATION-INDEXES.md) | 6 | 6 | ✅ Complete; notes/spec orientation indexes, lint tooling, and agent usability evals added |
 | [167](PLAN-167-TARGET-SURFACE-SEMANTICS-GAP-CLOSURE.md) | 12 | 12 | ✅ Complete; docs-only target surface/lowering/semantics spec-hardening packet |
+| [168](PLAN-168-SURFACE-AST-NOTATION-SUBSTRATE.md) | 7 | 7 | ✅ Complete; implementation substrate handoff |
+| [169](PLAN-169-SURFACE-EXPANSION-AND-NOTATION-ELABORATION.md) | 8 | 1 | 📝 Planned; task packet created, implementation pending |
 
 ---
 
@@ -696,3 +698,26 @@ surface-to-Core lowering implementation packet.
 | [TASK-1725](tasks/TASK-1725-expanded-surface-ast-boundary.md) | Introduce an expanded-surface-AST boundary without full macro expansion | ✅ Complete |
 | [TASK-1726](tasks/TASK-1726-surface-to-core-lowering-inventory.md) | Inventory and scope surface-to-Core lowering implementation seams | ✅ Complete |
 | [TASK-1727](tasks/TASK-1727-phase-168-closeout.md) | Close out Phase 168 with verification and status reconciliation | ✅ Complete |
+
+## Phase 169: Surface Expansion and Notation Elaboration
+
+**Status:** 📝 Planned; implementation packet ready
+**Plan:** [PLAN-169: Surface Expansion and Notation Elaboration](PLAN-169-SURFACE-EXPANSION-AND-NOTATION-ELABORATION.md)
+**Depends on:** Phase 168 surface AST, notation, and lowering substrate; `SPEC-095c`; `SPEC-098c`.
+
+Turns the Phase 168 surface substrate into the first usable expansion and notation elaboration pass.
+The packet adds reusable expansion traversal, notation declaration parsing, raw built-in operator-token
+preservation, local notation-table diagnostics, binary operator-section elaboration, and a high-level
+expanded-surface-to-Core lowering gate. Macro hygiene, imported notation propagation, generalized
+mixfix partial application, and full `SPEC-098c` lowering remain explicitly deferred.
+
+| Task | Description | Status |
+|------|-------------|--------|
+| [TASK-1728](tasks/TASK-1728-phase-169-plan-packet.md) | Create the Phase 169 plan and task packet | ✅ Complete |
+| [TASK-1729](tasks/TASK-1729-surface-expansion-traversal-api.md) | Add reusable surface traversal for expansion diagnostics | 📝 Planned |
+| [TASK-1730](tasks/TASK-1730-notation-declaration-parser-ast.md) | Parse and preserve minimal notation declarations | 📝 Planned |
+| [TASK-1731](tasks/TASK-1731-built-in-operator-token-normalization.md) | Preserve raw built-in infix operator tokens | 📝 Planned |
+| [TASK-1732](tasks/TASK-1732-local-notation-table-resolution.md) | Build minimal local notation-table resolution diagnostics | 📝 Planned |
+| [TASK-1733](tasks/TASK-1733-operator-section-elaboration.md) | Elaborate binary operator sections to callable surface forms | 📝 Planned |
+| [TASK-1734](tasks/TASK-1734-expanded-surface-lowering-gate.md) | Add expanded-surface-to-Core lowering gate | 📝 Planned |
+| [TASK-1735](tasks/TASK-1735-phase-169-closeout.md) | Close out Phase 169 with verification and review | 📝 Planned |

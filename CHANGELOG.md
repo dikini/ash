@@ -6,6 +6,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Added
+- PLAN-169 surface expansion and notation elaboration packet with tasks for reusable expansion
+  traversal, notation declaration parsing, built-in operator-token preservation, local notation-table
+  diagnostics, binary operator-section elaboration, expanded-surface-to-Core lowering gates, and
+  closeout review (TASK-1728 through TASK-1735).
 - PLAN-168 implementation: adds source-preserving surface carrier substrate, raw operator-token and
   binary infix operator-section AST carriers, a parsed-surface to expanded-surface boundary that
   rejects unresolved operator sections across expression-bearing module surfaces before Core

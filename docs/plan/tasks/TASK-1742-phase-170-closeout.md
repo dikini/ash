@@ -1,6 +1,6 @@
 # TASK-1742: Close out Phase 170 with verification, changelog, index reconciliation, and review
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Summary
 
@@ -14,9 +14,9 @@ Close out Phase 170 by reconciling docs/status/changelog, running broad verifica
 
 ## Dependencies
 
-- 📝 TASK-1738: High-level expanded-surface routing
-- 📝 TASK-1740: Notation import/export or non-propagation behavior
-- 📝 TASK-1741: Origin sidecar boundary
+- ✅ TASK-1738: High-level expanded-surface routing
+- ✅ TASK-1740: Notation import/export or non-propagation behavior
+- ✅ TASK-1741: Origin sidecar boundary
 
 ## Deferral / Planned-Feature Reconciliation
 
@@ -54,8 +54,32 @@ commands:
   - python3 tools/docs/validate_orientation_indexes.py --self-test
   - bash scripts/check-docs-gate.sh
 checklist:
-  - [ ] Phase 170 implementation tasks are complete or explicitly deferred.
-  - [ ] CHANGELOG.md has final implementation entry.
-  - [ ] PLAN-INDEX and task files agree.
-  - [ ] Independent review findings are resolved or explicitly accepted.
+  - [x] Phase 170 implementation tasks are complete or explicitly deferred.
+  - [x] CHANGELOG.md has final implementation entry.
+  - [x] PLAN-INDEX and task files agree.
+  - [x] Independent review findings are resolved or explicitly accepted.
 ```
+
+## Closeout evidence
+
+- Reconciled Phase 170 task statuses across `PLAN-170`, `PLAN-INDEX.md`, and TASK-1736 through TASK-1742.
+- Confirmed Phase 170 completed 7/7 tasks.
+- CHANGELOG.md includes implementation entries for the boundary audit/routing, notation scoping/non-propagation, origin sidecars, and final closeout.
+- Explicitly retained follow-on ownership for macro hygiene, generalized mixfix, imported/exported notation propagation, broad SPEC-098c lowering, and Core/runtime origin provenance.
+- Independent review was requested for high-level lowering bypasses, notation leakage, authority overclaims, and origin sidecar overclaims; no blocker is accepted into closeout.
+
+Fresh verification:
+
+```bash
+cargo fmt --check
+cargo test -p ash-parser
+cargo test -p ash-typeck
+cargo test -p ash-engine
+cargo check --workspace
+cargo clippy -p ash-parser -p ash-typeck -p ash-engine --all-targets --all-features -- -D warnings
+git diff --check
+python3 tools/docs/validate_orientation_indexes.py --self-test
+bash scripts/check-docs-gate.sh
+```
+
+Focused Phase 170 tests, `cargo test -p ash-engine --lib`, parser/typeck tests, workspace check, clippy, formatting, diff, and docs gates exited 0. The full `cargo test -p ash-engine` integration sweep is blocked in this environment by pre-existing `performance_baseline::baseline_provider_creation` latency drift: the same test fails after stashing the current Phase 170 diff at HEAD `55b9f974`, so it is not caused by the closeout remediation. The Phase 170 stdlib-import performance regression was fixed and `performance_baseline::baseline_stdlib_import` now passes locally.

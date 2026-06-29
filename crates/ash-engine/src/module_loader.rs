@@ -131,15 +131,20 @@ pub(crate) fn validate_expanded_surface_module_file(
     path: &Path,
     source: &str,
 ) -> Result<(), EngineError> {
+    expand_surface_module_file(path, source).map(|_| ())
+}
+
+pub(crate) fn expand_surface_module_file(
+    path: &Path,
+    source: &str,
+) -> Result<ash_parser::surface::ExpandedSurfaceModule, EngineError> {
     let module = parse_module_file_for_type_metadata(path, source)?;
-    ash_parser::surface::expand_surface_module(module)
-        .map(|_| ())
-        .map_err(|error| {
-            EngineError::Parse(format!(
-                "in '{}': expanded-surface validation failed: {error}",
-                path.display()
-            ))
-        })
+    ash_parser::surface::expand_surface_module(module).map_err(|error| {
+        EngineError::Parse(format!(
+            "in '{}': expanded-surface validation failed: {error}",
+            path.display()
+        ))
+    })
 }
 
 fn source_contains_workflow_keyword(source: &str) -> bool {
@@ -2232,9 +2237,16 @@ pub(crate) fn collect_module_type_metadata_from_module_file(
     source: &str,
 ) -> Result<ash_parser::lower::LoweredTypeMetadata, EngineError> {
     let module = parse_module_file_for_type_metadata(path, source)?;
-    reject_inline_module_ordinary_types(path, &module)?;
+    collect_module_type_metadata_from_parsed_module_file(path, &module)
+}
+
+fn collect_module_type_metadata_from_parsed_module_file(
+    path: &Path,
+    module: &ash_parser::surface::ModuleFile,
+) -> Result<ash_parser::lower::LoweredTypeMetadata, EngineError> {
+    reject_inline_module_ordinary_types(path, module)?;
     Ok(ash_parser::lower::lower_module_type_metadata(
-        &module,
+        module,
         module_identity_for_path(path),
     ))
 }
@@ -2630,14 +2642,20 @@ pub(crate) fn collect_module_exports(
     }
 
     let source = std::fs::read_to_string(&path)?;
-    validate_expanded_surface_module_file(&path, &source)?;
+    let parsed_module = parse_module_file_for_type_metadata(&path, &source)?;
+    let expanded =
+        ash_parser::surface::expand_surface_module(parsed_module.clone()).map_err(|error| {
+            EngineError::Parse(format!(
+                "in '{}': expanded-surface validation failed: {error}",
+                path.display()
+            ))
+        })?;
     let mut exports = ModuleExports::default();
-    let module_effectful_names = ash_parser::parse_surface_file(&source)
-        .ok()
-        .map(|module| ash_parser::effectful_names_from_definitions(&module.definitions))
-        .unwrap_or_default();
+    let module_effectful_names =
+        ash_parser::effectful_names_from_definitions(&expanded.module.definitions);
 
-    let type_metadata = collect_module_type_metadata_from_module_file(&path, &source)?;
+    let type_metadata =
+        collect_module_type_metadata_from_parsed_module_file(&path, &parsed_module)?;
     let mut public_api_errors =
         public_api_visibility_errors(&path, &source, &type_metadata.type_defs);
     public_api_errors.extend(public_callable_signature_resolution_errors(
@@ -2725,28 +2743,25 @@ pub(crate) fn collect_module_exports(
         // This mirrors the graceful handling of pub fn parse failures above.
     }
 
-    for snippet in extract_braced_snippets(&source, |trimmed| trimmed.starts_with("pub fn ")) {
-        match parse_supported_pub_fn_callable(&snippet) {
-            Ok(Some(callable)) => {
-                let mut callable = callable.callable;
-                callable.effectful_names.clone_from(&module_effectful_names);
-                stamp_callable_export_module(&mut callable, exports.semantic_summary.as_ref());
-                let exported_name = callable.exported_name.clone();
-                if let Some(summary) = callable.workflow_summary.as_mut() {
-                    stamp_workflow_summary_import_origin(
-                        summary,
-                        module_path_text(path.as_path()),
-                        &exported_name,
-                    );
-                }
-                insert_callable_export(&mut exports, &exported_name, callable)?;
-            }
-            Ok(None) => {}
-            Err(_diag) => {
-                // Silently skip unsupported pub fn during module loading.
-                // Diagnostics are surfaced via check_module_file.
-            }
+    for definition in &expanded.module.definitions {
+        let Definition::Function(function) = definition else {
+            continue;
+        };
+        if !matches!(function.visibility, ash_parser::surface::Visibility::Public) {
+            continue;
         }
+        let mut callable = imported_callable_from_fn_def(function.clone()).callable;
+        callable.effectful_names.clone_from(&module_effectful_names);
+        stamp_callable_export_module(&mut callable, exports.semantic_summary.as_ref());
+        let exported_name = callable.exported_name.clone();
+        if let Some(summary) = callable.workflow_summary.as_mut() {
+            stamp_workflow_summary_import_origin(
+                summary,
+                module_path_text(path.as_path()),
+                &exported_name,
+            );
+        }
+        insert_callable_export(&mut exports, &exported_name, callable)?;
     }
 
     // Process pub mod <name>; declarations -- load child module exports
@@ -5434,9 +5449,10 @@ fn insert_callable_export(
 mod callable_exports;
 use callable_exports::{
     PubFnDiagnostic, capability_type_identity, extract_public_capability_names,
-    is_workflow_export_start, module_path_text, parse_builtin_fn_callable,
-    parse_supported_pub_fn_callable, parse_type_def_snippet, parse_workflow_callable,
-    parse_workflow_signature_callable, stamp_workflow_summary_import_origin,
+    imported_callable_from_fn_def, is_workflow_export_start, module_path_text,
+    parse_builtin_fn_callable, parse_supported_pub_fn_callable, parse_type_def_snippet,
+    parse_workflow_callable, parse_workflow_signature_callable,
+    stamp_workflow_summary_import_origin,
 };
 
 mod source_scan;

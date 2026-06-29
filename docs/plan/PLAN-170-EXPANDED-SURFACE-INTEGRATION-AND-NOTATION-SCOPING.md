@@ -1,6 +1,6 @@
 # PLAN-170: Expanded Surface Integration and Notation Scoping
 
-## Status: 🟢 In Progress; origin sidecar complete
+## Status: ✅ Complete
 
 ## Overview
 
@@ -21,11 +21,11 @@ The phase deliberately avoids full macro hygiene, typed macros, generalized bind
 
 - [x] Audit all public parser/lowering/module-loader paths that can still accept parsed-surface structures directly.
 - [x] Route high-level module/file lowering paths through expanded-surface validation where safe.
-- [ ] Keep low-level parser/test helpers available but explicitly fail-closed for unresolved surface-only nodes.
+- [x] Keep low-level parser/test helpers available but explicitly fail-closed for unresolved surface-only nodes.
 - [x] Specify notation declaration summary/export semantics, including visibility and import behavior.
 - [x] Implement bounded imported/exported notation propagation only if module-summary carriers support it cleanly; otherwise record and test explicit non-propagation.
-- [ ] Specify source-origin sidecar threading for notation and operator-section expansion products without claiming full Core provenance if it is not wired.
-- [ ] Close out with focused parser/lowering/typeck/engine gates, docs gates, and independent review.
+- [x] Specify source-origin sidecar threading for notation and operator-section expansion products without claiming full Core provenance if it is not wired.
+- [x] Close out with focused parser/lowering/typeck/engine gates, docs gates, and independent review.
 
 ## Non-goals
 
@@ -70,8 +70,8 @@ Tasks:
 
 Tasks:
 
-- TASK-1741: Specify and implement the narrow source-origin sidecar boundary for expansion products. 📝
-- TASK-1742: Close out Phase 170 with verification, changelog, index reconciliation, and review. 📝
+- TASK-1741: Specify and implement the narrow source-origin sidecar boundary for expansion products. ✅
+- TASK-1742: Close out Phase 170 with verification, changelog, index reconciliation, and review. ✅
 
 ## Dependency graph
 
@@ -117,3 +117,34 @@ bash scripts/check-docs-gate.sh
 ## Expected follow-on after Phase 170
 
 If Phase 170 closes cleanly, the next plausible packet is full macro/notation hygiene or generalized mixfix sections. If D2 shows summary carriers are not ready, the follow-on should first harden module summaries before macro work.
+
+## Closeout evidence
+
+Phase 170 completed with the conservative boundary selected in TASK-1739/TASK-1740: notation declarations remain module-local and do not propagate through imports/exports until dedicated summary carriers exist. High-level engine/module-loader validation now routes through expanded-surface validation, while low-level parser helpers remain fail-closed for unresolved surface-only nodes. Expansion products now carry narrow surface-side origin sidecars without changing Core provenance APIs.
+
+Final verification:
+
+```bash
+cargo fmt --check
+cargo test -p ash-parser
+cargo test -p ash-typeck
+cargo test -p ash-engine
+cargo check --workspace
+cargo clippy -p ash-parser -p ash-typeck -p ash-engine --all-targets --all-features -- -D warnings
+git diff --check
+python3 tools/docs/validate_orientation_indexes.py --self-test
+bash scripts/check-docs-gate.sh
+```
+
+Focused Phase 170 tests, `cargo test -p ash-engine --lib`, parser/typeck tests, workspace check, clippy, formatting, diff, and docs gates completed successfully on the closeout diff. The full `cargo test -p ash-engine` integration sweep is blocked in this environment by pre-existing `performance_baseline::baseline_provider_creation` latency drift; the same test fails after stashing the current Phase 170 diff at HEAD `55b9f974`, so it is not caused by this phase. The Phase 170 stdlib-import performance regression was fixed and `performance_baseline::baseline_stdlib_import` now passes locally.
+
+Independent review reported one MAJOR import/export expansion gap: public callable export collection validated an expanded module but stored raw snippet bodies for imported closure lowering. The closeout remediation now exports `pub fn` callables from the expanded module body and adds an import/use regression for an expanded operator-section body. No unresolved blocker is accepted into closeout.
+
+Remaining explicit non-goals/follow-ons:
+
+- full macro expander and hygiene;
+- typed macros;
+- binder-introducing/generalized mixfix sections;
+- imported/exported notation propagation with summary carriers;
+- broad SPEC-098c lowering completion;
+- Core/runtime provenance threading for expansion origins.

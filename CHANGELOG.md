@@ -6,6 +6,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Added
+- Phase 170 closeout review remediation exports public callable bodies from the expanded module so imported closures use the same expanded operator-section body accepted by module validation (TASK-1742).
+- Phase 170 is closed out with high-level expanded-surface routing, explicit notation non-propagation, surface-side expansion origin sidecars, reconciled task/status docs, and clean parser/typeck/engine/docs gates (TASK-1742).
 - Phase 170 expanded-surface modules now carry narrow origin sidecars for generated operator-section and notation-expansion products without changing Core provenance APIs (TASK-1741).
 - Phase 170 notation non-propagation is now regression-tested: imported `pub` notation remains inactive in caller scopes while its callable target remains directly importable (TASK-1740).
 - Phase 170 notation summary/export design records the conservative module-local decision: notation declarations do not propagate across imports, exports, or re-exports until dedicated summary carriers exist (TASK-1739).

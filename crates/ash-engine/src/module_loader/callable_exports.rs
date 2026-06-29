@@ -280,28 +280,32 @@ pub(super) fn parse_pub_fn_callable(
         ));
     };
 
+    Ok(Some(imported_callable_from_fn_def(function)))
+}
+
+pub(super) fn imported_callable_from_fn_def(
+    function: ash_parser::surface::FnDef,
+) -> ImportedCallableExport {
     let name = function.name.to_string();
     let params = function
         .params
         .iter()
         .map(|param| param.name.to_string())
         .collect::<Vec<_>>();
-
     let workflow_summary = workflow_returning_pub_fn_summary(&function);
+    let body = function.body.clone();
 
-    Ok(Some(ImportedCallableExport {
+    ImportedCallableExport {
         callable: InlineCallable {
             exported_name: name,
             params,
             effectful_names: HashSet::new(),
-            kind: CallableKind::User {
-                body: function.body.clone(),
-            },
+            kind: CallableKind::User { body },
             signature: Some(CallableSignature::Function(function)),
             exporting_modules: HashSet::new(),
             workflow_summary,
         },
-    }))
+    }
 }
 
 /// Conservative public-summary adapter for parser-only module export collection.

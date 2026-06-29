@@ -10,6 +10,18 @@ fn write_module(source: &str) -> (tempfile::TempDir, std::path::PathBuf) {
     (dir, path)
 }
 
+fn write_pair(
+    provider_source: &str,
+    caller_source: &str,
+) -> (tempfile::TempDir, std::path::PathBuf) {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let provider = dir.path().join("provider.ash");
+    let caller = dir.path().join("caller.ash");
+    std::fs::write(&provider, provider_source).expect("write provider");
+    std::fs::write(&caller, caller_source).expect("write caller");
+    (dir, caller)
+}
+
 #[test]
 fn check_module_file_rejects_unresolved_section_in_pub_fn_body() {
     let (_dir, path) = write_module(
@@ -86,4 +98,28 @@ pub fn unresolved_section() -> Int {
         err.to_string().contains("operator section `<*>`"),
         "unexpected error: {err}"
     );
+}
+
+#[tokio::test]
+async fn imported_public_callable_uses_expanded_section_body() {
+    let (_dir, caller) = write_pair(
+        r"
+pub fn add_one(x: Int) -> Int {
+    let f = (1 +);
+    f(x)
+}
+",
+        r"
+use provider::{add_one}
+workflow main { ret add_one(2) }
+",
+    );
+    let engine = Engine::new().build().expect("engine builds");
+
+    let value = engine
+        .run_file(&caller)
+        .await
+        .expect("imported callable body should be the expanded body");
+
+    assert_eq!(value.to_string(), "3");
 }

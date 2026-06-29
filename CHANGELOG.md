@@ -87,6 +87,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   rather than a pure `fn` alias.
 
 ### Changed
+- Expanded TASK-1707's orientation-index evaluation evidence with the late fast before/after
+  subagent run, recording search count, opened-doc count, character budget, correctness, and
+  confidence deltas.
 - Closed NOTE-014 as the resolved contract-system gap register. Its status now points to
   NOTE-027 through NOTE-035 for design resolution and PLAN-165 for implementation sequencing.
 - Reconciled NOTE-035 into target specs. SPEC-096/SPEC-096b add trace-contract row-item

@@ -124,3 +124,18 @@ Net result:
 - Final indexed workflow found the needed doc sets from two index files, about 35k characters, with
   only one noisy broad search. That is roughly a 63%-69% reduction in direct repository text read
   for orientation before opening the selected authority docs.
+
+### Late fast before/after evaluation
+
+A final read-only subagent ran a narrower two-pass comparison after the phase was committed. This
+run measured only two representative tasks and reported metrics in table form:
+
+| Pass | Searches | Docs read/opened | Approx chars read | Correctness | Confidence |
+|---|---:|---:|---:|---|---:|
+| Before indexes | 2 | 4 | 20,142 | Partial: found some anchor notes/specs, missed `NOTE-031`, `NOTE-034`, and `PLAN-165` in at least one scenario. | 0.75 |
+| After indexes | 0 | 2 | 33,781 | Complete guided paths: found the relevant notes, `PLAN-165`, and the contract spec bundle. | 0.95 |
+
+This fast run shows the same trade-off as the broader evaluation: reading the two indexes can cost
+more up-front characters than a shallow baseline probe, but it avoids missed authority documents and
+raises confidence substantially. The practical benefit is precision: partial discovery becomes a
+complete guided read path before implementation work starts.

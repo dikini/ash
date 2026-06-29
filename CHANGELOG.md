@@ -6,6 +6,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Added
+- Phase 170 notation non-propagation is now regression-tested: imported `pub` notation remains inactive in caller scopes while its callable target remains directly importable (TASK-1740).
 - Phase 170 notation summary/export design records the conservative module-local decision: notation declarations do not propagate across imports, exports, or re-exports until dedicated summary carriers exist (TASK-1739).
 - Phase 170 high-level expansion routing validates module-file checks and module export collection through surface expansion before accepting public callable bodies, with regressions for unresolved sections and positive built-in/local-notation sections (TASK-1738).
 - Phase 170 boundary audit: documents expanded-surface bypass risks in parser lowerers and engine/module-loader paths, adds an audit proof for `check_module_file`, and patches TASK-1738 with concrete high-level routing targets (TASK-1737).

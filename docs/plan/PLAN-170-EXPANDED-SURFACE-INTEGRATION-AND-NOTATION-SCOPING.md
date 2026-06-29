@@ -1,6 +1,6 @@
 # PLAN-170: Expanded Surface Integration and Notation Scoping
 
-## Status: 🟢 In Progress; notation export design complete
+## Status: 🟢 In Progress; notation non-propagation complete
 
 ## Overview
 
@@ -23,7 +23,7 @@ The phase deliberately avoids full macro hygiene, typed macros, generalized bind
 - [x] Route high-level module/file lowering paths through expanded-surface validation where safe.
 - [ ] Keep low-level parser/test helpers available but explicitly fail-closed for unresolved surface-only nodes.
 - [x] Specify notation declaration summary/export semantics, including visibility and import behavior.
-- [ ] Implement bounded imported/exported notation propagation only if module-summary carriers support it cleanly; otherwise record and test explicit non-propagation.
+- [x] Implement bounded imported/exported notation propagation only if module-summary carriers support it cleanly; otherwise record and test explicit non-propagation.
 - [ ] Specify source-origin sidecar threading for notation and operator-section expansion products without claiming full Core provenance if it is not wired.
 - [ ] Close out with focused parser/lowering/typeck/engine gates, docs gates, and independent review.
 
@@ -64,7 +64,7 @@ Tasks:
 Tasks:
 
 - TASK-1739: Specify notation summary/export and visibility semantics. ✅
-- TASK-1740: Implement bounded notation import/export propagation or explicit non-propagation. 📝
+- TASK-1740: Implement bounded notation import/export propagation or explicit non-propagation. ✅
 
 ### Phase 4: Preserve origin and close out
 

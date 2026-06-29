@@ -1,6 +1,6 @@
 # TASK-1740: Implement bounded notation import/export propagation or explicit non-propagation
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Summary
 
@@ -15,7 +15,7 @@ Implement the TASK-1739 decision: preserve explicit non-propagation for notation
 
 ## Dependencies
 
-- 📝 TASK-1739: Notation summary/export semantics design
+- ✅ TASK-1739: Notation summary/export semantics design
 
 ## Deferral / Planned-Feature Reconciliation
 
@@ -53,7 +53,25 @@ commands:
   - cargo clippy -p ash-parser -p ash-typeck -p ash-engine --all-targets --all-features -- -D warnings
   - cargo fmt --check
 checklist:
-  - [ ] Scope matrix positive cases pass.
-  - [ ] Scope matrix negative leakage cases pass.
-  - [ ] Imported/exported behavior matches TASK-1739 exactly: notation does not propagate across imports/exports.
+  - [x] Scope matrix positive cases pass.
+  - [x] Scope matrix negative leakage cases pass.
+  - [x] Imported/exported behavior matches TASK-1739 exactly: notation does not propagate across imports/exports.
 ```
+
+## Closeout evidence
+
+- Implemented the TASK-1739 non-propagation decision as explicit regression coverage, without adding notation module-summary carriers.
+- Added `crates/ash-engine/tests/task_1740_notation_non_propagation.rs`:
+  - imported `pub infixl` notation is not active in the caller scope,
+  - the exported callable target remains usable through ordinary direct-call syntax.
+- Extended `crates/ash-parser/tests/task_1732_local_notation_table_resolution.rs` with a local `pub infixl` case proving `pub` notation remains active locally.
+- Existing parent/inline no-leakage tests remain in `task_1732_local_notation_table_resolution.rs`.
+- Fresh verification:
+  - `cargo test -p ash-parser --test task_1732_local_notation_table_resolution`
+  - `cargo test -p ash-parser`
+  - `cargo test -p ash-typeck`
+  - `cargo test -p ash-engine`
+  - `cargo check --workspace`
+  - `cargo clippy -p ash-parser -p ash-typeck -p ash-engine --all-targets --all-features -- -D warnings`
+  - `cargo fmt --check`
+  - `git diff --check`

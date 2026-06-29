@@ -20,6 +20,18 @@ fn local_notation_table_resolves_declared_infix_target() {
 }
 
 #[test]
+fn public_notation_declaration_is_still_only_a_local_table_entry() {
+    let module = ash_parser::parse_surface_file("pub infixl 6 <+> = combine")
+        .expect("public notation declaration parses");
+    let table = build_local_notation_table(&module).expect("local notation table builds");
+    let entry = table
+        .resolve_infix("<+>")
+        .expect("public notation is active locally");
+    assert_eq!(entry.operator.as_ref(), "<+>");
+    assert_eq!(entry.target.name.as_ref(), "combine");
+}
+
+#[test]
 fn duplicate_local_notation_declarations_fail_closed() {
     let module = ash_parser::parse_surface_file(
         r#"

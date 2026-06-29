@@ -6,6 +6,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Added
+- Phase 170 expanded-surface modules now carry narrow origin sidecars for generated operator-section and notation-expansion products without changing Core provenance APIs (TASK-1741).
 - Phase 170 notation non-propagation is now regression-tested: imported `pub` notation remains inactive in caller scopes while its callable target remains directly importable (TASK-1740).
 - Phase 170 notation summary/export design records the conservative module-local decision: notation declarations do not propagate across imports, exports, or re-exports until dedicated summary carriers exist (TASK-1739).
 - Phase 170 high-level expansion routing validates module-file checks and module export collection through surface expansion before accepting public callable bodies, with regressions for unresolved sections and positive built-in/local-notation sections (TASK-1738).

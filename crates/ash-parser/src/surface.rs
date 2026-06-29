@@ -1785,6 +1785,17 @@ pub struct ExpandedSurfaceModule {
     pub module: ModuleFile,
     /// Boundary diagnostics collected or rejected during expansion.
     pub diagnostics: Vec<ExpansionDiagnostic>,
+    /// Narrow surface-side origin sidecars for nodes generated during expansion.
+    pub origins: Vec<ExpandedSurfaceOrigin>,
+}
+
+/// Origin sidecar for a generated surface node in an expanded module.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ExpandedSurfaceOrigin {
+    /// Span of the generated surface node.
+    pub generated_span: Span,
+    /// Expansion origin that produced the generated node.
+    pub origin: SurfaceOrigin,
 }
 
 /// Diagnostic emitted by the parsed-surface to expanded-surface boundary.
@@ -1961,7 +1972,8 @@ fn same_fixity_class(left: &NotationFixity, right: &NotationFixity) -> bool {
 pub fn expand_surface_module(
     mut module: ModuleFile,
 ) -> Result<ExpandedSurfaceModule, ExpansionError> {
-    elaborate_operator_sections_in_module(&mut module)?;
+    let mut origins = Vec::new();
+    elaborate_operator_sections_in_module(&mut module, &mut origins)?;
     if let Some(section) = find_operator_section_in_module(&module) {
         return Err(ExpansionError::UnresolvedOperatorSection {
             span: section.span,
@@ -1971,24 +1983,28 @@ pub fn expand_surface_module(
     Ok(ExpandedSurfaceModule {
         module,
         diagnostics: Vec::new(),
+        origins,
     })
 }
 
-fn elaborate_operator_sections_in_module(module: &mut ModuleFile) -> Result<(), ExpansionError> {
+fn elaborate_operator_sections_in_module(
+    module: &mut ModuleFile,
+    origins: &mut Vec<ExpandedSurfaceOrigin>,
+) -> Result<(), ExpansionError> {
     let table = build_local_notation_table_for_definitions(&module.definitions)?;
     for definition in &mut module.definitions {
-        elaborate_operator_sections_in_definition(definition, &table);
+        elaborate_operator_sections_in_definition(definition, &table, origins);
     }
     for decl in &mut module.module_decls {
         if let crate::module::ModuleSource::Inline(definitions) = &mut decl.source {
             let inline_table = build_local_notation_table_for_definitions(definitions)?;
             for definition in definitions {
-                elaborate_operator_sections_in_definition(definition, &inline_table);
+                elaborate_operator_sections_in_definition(definition, &inline_table, origins);
             }
         }
     }
     if let Some(workflow) = &mut module.workflow {
-        elaborate_operator_sections_in_workflow_def(workflow, &table);
+        elaborate_operator_sections_in_workflow_def(workflow, &table, origins);
     }
     Ok(())
 }
@@ -1996,50 +2012,55 @@ fn elaborate_operator_sections_in_module(module: &mut ModuleFile) -> Result<(), 
 fn elaborate_operator_sections_in_definition(
     definition: &mut Definition,
     table: &LocalNotationTable,
+    origins: &mut Vec<ExpandedSurfaceOrigin>,
 ) {
     match definition {
         Definition::Capability(def) => {
             for constraint in &mut def.constraints {
                 for arg in &mut constraint.predicate.args {
-                    elaborate_operator_sections_in_expr(arg, table);
+                    elaborate_operator_sections_in_expr(arg, table, origins);
                 }
             }
         }
         Definition::CapabilityImplementation(def) => {
             for operation in &mut def.operations {
-                elaborate_operator_sections_in_expr(&mut operation.body, table);
+                elaborate_operator_sections_in_expr(&mut operation.body, table, origins);
             }
         }
         Definition::Policy(def) => {
             if let Some(expr) = &mut def.where_clause {
-                elaborate_operator_sections_in_expr(expr, table);
+                elaborate_operator_sections_in_expr(expr, table, origins);
             }
             for field in &mut def.fields {
                 if let Some(expr) = &mut field.default {
-                    elaborate_operator_sections_in_expr(expr, table);
+                    elaborate_operator_sections_in_expr(expr, table, origins);
                 }
             }
         }
-        Definition::Proxy(def) => elaborate_operator_sections_in_workflow(&mut def.body, table),
+        Definition::Proxy(def) => {
+            elaborate_operator_sections_in_workflow(&mut def.body, table, origins)
+        }
         Definition::Interface(def) => {
             for law in &mut def.laws {
-                elaborate_operator_sections_in_expr(&mut law.proposition, table);
+                elaborate_operator_sections_in_expr(&mut law.proposition, table, origins);
             }
         }
         Definition::Impl(def) => {
             for method in &mut def.methods {
-                elaborate_operator_sections_in_expr(&mut method.body, table);
+                elaborate_operator_sections_in_expr(&mut method.body, table, origins);
             }
             for proof in &mut def.proofs {
-                elaborate_operator_sections_in_proof(proof, table);
+                elaborate_operator_sections_in_proof(proof, table, origins);
             }
         }
         Definition::Function(def) => {
-            elaborate_operator_sections_in_contract(def.contract.as_mut(), table);
-            elaborate_operator_sections_in_expr(&mut def.body, table);
+            elaborate_operator_sections_in_contract(def.contract.as_mut(), table, origins);
+            elaborate_operator_sections_in_expr(&mut def.body, table, origins);
         }
-        Definition::Law(def) => elaborate_operator_sections_in_expr(&mut def.proposition, table),
-        Definition::Proof(def) => elaborate_operator_sections_in_proof(def, table),
+        Definition::Law(def) => {
+            elaborate_operator_sections_in_expr(&mut def.proposition, table, origins)
+        }
+        Definition::Proof(def) => elaborate_operator_sections_in_proof(def, table, origins),
         Definition::Notation(_)
         | Definition::CapabilityInterface(_)
         | Definition::ResourceType(_)
@@ -2056,26 +2077,31 @@ fn elaborate_operator_sections_in_definition(
 fn elaborate_operator_sections_in_contract(
     contract: Option<&mut Contract>,
     table: &LocalNotationTable,
+    origins: &mut Vec<ExpandedSurfaceOrigin>,
 ) {
     let Some(contract) = contract else {
         return;
     };
     for requirement in &mut contract.requires {
         if let Requirement::Arithmetic { expr } = requirement {
-            elaborate_operator_sections_in_expr(expr, table);
+            elaborate_operator_sections_in_expr(expr, table, origins);
         }
     }
     for ensures in &mut contract.ensures {
-        elaborate_operator_sections_in_expr(&mut ensures.expr, table);
+        elaborate_operator_sections_in_expr(&mut ensures.expr, table, origins);
     }
 }
 
-fn elaborate_operator_sections_in_proof(proof: &mut ProofDef, table: &LocalNotationTable) {
+fn elaborate_operator_sections_in_proof(
+    proof: &mut ProofDef,
+    table: &LocalNotationTable,
+    origins: &mut Vec<ExpandedSurfaceOrigin>,
+) {
     match &mut proof.body {
-        ProofBody::Expr(expr) => elaborate_operator_sections_in_expr(expr, table),
+        ProofBody::Expr(expr) => elaborate_operator_sections_in_expr(expr, table, origins),
         ProofBody::ByTestProperty { strategies } => {
             for strategy in strategies {
-                elaborate_operator_sections_in_expr(&mut strategy.strategy_expr, table);
+                elaborate_operator_sections_in_expr(&mut strategy.strategy_expr, table, origins);
             }
         }
         ProofBody::ByDefinition | ProofBody::ByTest { .. } | ProofBody::ByTestSmallWorld => {}
@@ -2085,33 +2111,38 @@ fn elaborate_operator_sections_in_proof(proof: &mut ProofDef, table: &LocalNotat
 fn elaborate_operator_sections_in_workflow_def(
     workflow: &mut WorkflowDef,
     table: &LocalNotationTable,
+    origins: &mut Vec<ExpandedSurfaceOrigin>,
 ) {
     for binding in &mut workflow.used_bindings {
-        elaborate_operator_sections_in_expr(&mut binding.implementation, table);
+        elaborate_operator_sections_in_expr(&mut binding.implementation, table, origins);
     }
     for event in &mut workflow.header_events {
         match event {
             WorkflowHeaderEvent::Uses(binding) => {
-                elaborate_operator_sections_in_expr(&mut binding.implementation, table)
+                elaborate_operator_sections_in_expr(&mut binding.implementation, table, origins)
             }
             WorkflowHeaderEvent::Requires { expr, .. }
             | WorkflowHeaderEvent::Ensures { expr, .. } => {
-                elaborate_operator_sections_in_expr(expr, table)
+                elaborate_operator_sections_in_expr(expr, table, origins)
             }
             WorkflowHeaderEvent::PlaysRole(_)
             | WorkflowHeaderEvent::Capabilities(_)
             | WorkflowHeaderEvent::Owns(_) => {}
         }
     }
-    elaborate_operator_sections_in_contract(workflow.contract.as_mut(), table);
-    elaborate_operator_sections_in_workflow(&mut workflow.body, table);
+    elaborate_operator_sections_in_contract(workflow.contract.as_mut(), table, origins);
+    elaborate_operator_sections_in_workflow(&mut workflow.body, table, origins);
 }
 
-fn elaborate_operator_sections_in_workflow(workflow: &mut Workflow, table: &LocalNotationTable) {
+fn elaborate_operator_sections_in_workflow(
+    workflow: &mut Workflow,
+    table: &LocalNotationTable,
+    origins: &mut Vec<ExpandedSurfaceOrigin>,
+) {
     match workflow {
         Workflow::Observe { continuation, .. } | Workflow::Propose { continuation, .. } => {
             if let Some(continuation) = continuation {
-                elaborate_operator_sections_in_workflow(continuation, table);
+                elaborate_operator_sections_in_workflow(continuation, table, origins);
             }
         }
         Workflow::Check {
@@ -2121,25 +2152,25 @@ fn elaborate_operator_sections_in_workflow(workflow: &mut Workflow, table: &Loca
         } => {
             match target {
                 CheckTarget::Obligation(obligation) => {
-                    elaborate_operator_sections_in_expr(&mut obligation.condition, table)
+                    elaborate_operator_sections_in_expr(&mut obligation.condition, table, origins)
                 }
                 CheckTarget::Policy(policy) => {
                     for (_, expr) in &mut policy.fields {
-                        elaborate_operator_sections_in_expr(expr, table);
+                        elaborate_operator_sections_in_expr(expr, table, origins);
                     }
                 }
             }
             if let Some(continuation) = continuation {
-                elaborate_operator_sections_in_workflow(continuation, table);
+                elaborate_operator_sections_in_workflow(continuation, table, origins);
             }
         }
         Workflow::Oblige { .. } | Workflow::Done { .. } => {}
         Workflow::Orient {
             expr, continuation, ..
         } => {
-            elaborate_operator_sections_in_expr(expr, table);
+            elaborate_operator_sections_in_expr(expr, table, origins);
             if let Some(continuation) = continuation {
-                elaborate_operator_sections_in_workflow(continuation, table);
+                elaborate_operator_sections_in_workflow(continuation, table, origins);
             }
         }
         Workflow::Decide {
@@ -2148,10 +2179,10 @@ fn elaborate_operator_sections_in_workflow(workflow: &mut Workflow, table: &Loca
             else_branch,
             ..
         } => {
-            elaborate_operator_sections_in_expr(expr, table);
-            elaborate_operator_sections_in_workflow(then_branch, table);
+            elaborate_operator_sections_in_expr(expr, table, origins);
+            elaborate_operator_sections_in_workflow(then_branch, table, origins);
             if let Some(else_branch) = else_branch {
-                elaborate_operator_sections_in_workflow(else_branch, table);
+                elaborate_operator_sections_in_workflow(else_branch, table, origins);
             }
         }
         Workflow::Act {
@@ -2161,21 +2192,21 @@ fn elaborate_operator_sections_in_workflow(workflow: &mut Workflow, table: &Loca
             ..
         } => {
             for arg in &mut action.args {
-                elaborate_operator_sections_in_expr(arg, table);
+                elaborate_operator_sections_in_expr(arg, table, origins);
             }
             if let Some(guard) = guard {
-                elaborate_operator_sections_in_guard(guard, table);
+                elaborate_operator_sections_in_guard(guard, table, origins);
             }
             if let Some(continuation) = continuation {
-                elaborate_operator_sections_in_workflow(continuation, table);
+                elaborate_operator_sections_in_workflow(continuation, table, origins);
             }
         }
         Workflow::Let {
             expr, continuation, ..
         } => {
-            elaborate_operator_sections_in_expr(expr, table);
+            elaborate_operator_sections_in_expr(expr, table, origins);
             if let Some(continuation) = continuation {
-                elaborate_operator_sections_in_workflow(continuation, table);
+                elaborate_operator_sections_in_workflow(continuation, table, origins);
             }
         }
         Workflow::If {
@@ -2184,33 +2215,33 @@ fn elaborate_operator_sections_in_workflow(workflow: &mut Workflow, table: &Loca
             else_branch,
             ..
         } => {
-            elaborate_operator_sections_in_expr(condition, table);
-            elaborate_operator_sections_in_workflow(then_branch, table);
+            elaborate_operator_sections_in_expr(condition, table, origins);
+            elaborate_operator_sections_in_workflow(then_branch, table, origins);
             if let Some(else_branch) = else_branch {
-                elaborate_operator_sections_in_workflow(else_branch, table);
+                elaborate_operator_sections_in_workflow(else_branch, table, origins);
             }
         }
         Workflow::For {
             collection, body, ..
         } => {
-            elaborate_operator_sections_in_expr(collection, table);
-            elaborate_operator_sections_in_workflow(body, table);
+            elaborate_operator_sections_in_expr(collection, table, origins);
+            elaborate_operator_sections_in_workflow(body, table, origins);
         }
         Workflow::With { body, .. } | Workflow::Must { body, .. } => {
-            elaborate_operator_sections_in_workflow(body, table)
+            elaborate_operator_sections_in_workflow(body, table, origins)
         }
         Workflow::Maybe {
             primary, fallback, ..
         } => {
-            elaborate_operator_sections_in_workflow(primary, table);
-            elaborate_operator_sections_in_workflow(fallback, table);
+            elaborate_operator_sections_in_workflow(primary, table, origins);
+            elaborate_operator_sections_in_workflow(fallback, table, origins);
         }
         Workflow::Seq { first, second, .. } => {
-            elaborate_operator_sections_in_workflow(first, table);
-            elaborate_operator_sections_in_workflow(second, table);
+            elaborate_operator_sections_in_workflow(first, table, origins);
+            elaborate_operator_sections_in_workflow(second, table, origins);
         }
         Workflow::Ret { expr, .. } | Workflow::Resume { expr, .. } => {
-            elaborate_operator_sections_in_expr(expr, table)
+            elaborate_operator_sections_in_expr(expr, table, origins)
         }
         Workflow::Set {
             value,
@@ -2222,73 +2253,85 @@ fn elaborate_operator_sections_in_workflow(workflow: &mut Workflow, table: &Loca
             continuation,
             ..
         } => {
-            elaborate_operator_sections_in_expr(value, table);
+            elaborate_operator_sections_in_expr(value, table, origins);
             if let Some(continuation) = continuation {
-                elaborate_operator_sections_in_workflow(continuation, table);
+                elaborate_operator_sections_in_workflow(continuation, table, origins);
             }
         }
         Workflow::Receive { arms, .. } => {
             for arm in arms {
                 if let Some(guard) = &mut arm.guard {
-                    elaborate_operator_sections_in_expr(guard, table);
+                    elaborate_operator_sections_in_expr(guard, table, origins);
                 }
-                elaborate_operator_sections_in_workflow(&mut arm.body, table);
+                elaborate_operator_sections_in_workflow(&mut arm.body, table, origins);
             }
         }
         Workflow::Yield { expr, arms, .. } => {
-            elaborate_operator_sections_in_expr(expr, table);
+            elaborate_operator_sections_in_expr(expr, table, origins);
             for arm in arms {
-                elaborate_operator_sections_in_workflow(&mut arm.body, table);
+                elaborate_operator_sections_in_workflow(&mut arm.body, table, origins);
             }
         }
     }
 }
 
-fn elaborate_operator_sections_in_guard(guard: &mut Guard, table: &LocalNotationTable) {
+fn elaborate_operator_sections_in_guard(
+    guard: &mut Guard,
+    table: &LocalNotationTable,
+    origins: &mut Vec<ExpandedSurfaceOrigin>,
+) {
     match guard {
         Guard::Pred(predicate) => {
             for arg in &mut predicate.args {
-                elaborate_operator_sections_in_expr(arg, table);
+                elaborate_operator_sections_in_expr(arg, table, origins);
             }
         }
         Guard::And(left, right) | Guard::Or(left, right) => {
-            elaborate_operator_sections_in_guard(left, table);
-            elaborate_operator_sections_in_guard(right, table);
+            elaborate_operator_sections_in_guard(left, table, origins);
+            elaborate_operator_sections_in_guard(right, table, origins);
         }
-        Guard::Not(inner) => elaborate_operator_sections_in_guard(inner, table),
+        Guard::Not(inner) => elaborate_operator_sections_in_guard(inner, table, origins),
         Guard::Always | Guard::Never => {}
     }
 }
 
-fn elaborate_operator_sections_in_expr(expr: &mut Expr, table: &LocalNotationTable) {
+fn elaborate_operator_sections_in_expr(
+    expr: &mut Expr,
+    table: &LocalNotationTable,
+    origins: &mut Vec<ExpandedSurfaceOrigin>,
+) {
     match expr {
         Expr::OperatorSection { section } => {
-            *expr = elaborate_operator_section(section.clone(), table);
+            let (elaborated, origin) = elaborate_operator_section(section.clone(), table);
+            *expr = elaborated;
+            if let Some(origin) = origin {
+                origins.push(origin);
+            }
             if !matches!(expr, Expr::OperatorSection { .. }) {
-                elaborate_operator_sections_in_expr(expr, table);
+                elaborate_operator_sections_in_expr(expr, table, origins);
             }
         }
-        Expr::FieldAccess { base, .. } => elaborate_operator_sections_in_expr(base, table),
+        Expr::FieldAccess { base, .. } => elaborate_operator_sections_in_expr(base, table, origins),
         Expr::IndexAccess { base, index, .. } => {
-            elaborate_operator_sections_in_expr(base, table);
-            elaborate_operator_sections_in_expr(index, table);
+            elaborate_operator_sections_in_expr(base, table, origins);
+            elaborate_operator_sections_in_expr(index, table, origins);
         }
-        Expr::Unary { operand, .. } => elaborate_operator_sections_in_expr(operand, table),
+        Expr::Unary { operand, .. } => elaborate_operator_sections_in_expr(operand, table, origins),
         Expr::Binary { left, right, .. } => {
-            elaborate_operator_sections_in_expr(left, table);
-            elaborate_operator_sections_in_expr(right, table);
+            elaborate_operator_sections_in_expr(left, table, origins);
+            elaborate_operator_sections_in_expr(right, table, origins);
         }
         Expr::Call { args, .. } => {
             for arg in args {
-                elaborate_operator_sections_in_expr(arg, table);
+                elaborate_operator_sections_in_expr(arg, table, origins);
             }
         }
         Expr::Match {
             scrutinee, arms, ..
         } => {
-            elaborate_operator_sections_in_expr(scrutinee, table);
+            elaborate_operator_sections_in_expr(scrutinee, table, origins);
             for arm in arms {
-                elaborate_operator_sections_in_expr(&mut arm.body, table);
+                elaborate_operator_sections_in_expr(&mut arm.body, table, origins);
             }
         }
         Expr::IfLet {
@@ -2297,25 +2340,25 @@ fn elaborate_operator_sections_in_expr(expr: &mut Expr, table: &LocalNotationTab
             else_branch,
             ..
         } => {
-            elaborate_operator_sections_in_expr(expr, table);
-            elaborate_operator_sections_in_expr(then_branch, table);
-            elaborate_operator_sections_in_expr(else_branch, table);
+            elaborate_operator_sections_in_expr(expr, table, origins);
+            elaborate_operator_sections_in_expr(then_branch, table, origins);
+            elaborate_operator_sections_in_expr(else_branch, table, origins);
         }
         Expr::Constructor {
             fields, payload, ..
         } => {
             for (_, expr) in fields {
-                elaborate_operator_sections_in_expr(expr, table);
+                elaborate_operator_sections_in_expr(expr, table, origins);
             }
             match payload {
                 ConstructorPayload::Tuple(items) => {
                     for item in items {
-                        elaborate_operator_sections_in_expr(item, table);
+                        elaborate_operator_sections_in_expr(item, table, origins);
                     }
                 }
                 ConstructorPayload::Record(fields) => {
                     for (_, expr) in fields {
-                        elaborate_operator_sections_in_expr(expr, table);
+                        elaborate_operator_sections_in_expr(expr, table, origins);
                     }
                 }
                 ConstructorPayload::Unit => {}
@@ -2327,17 +2370,17 @@ fn elaborate_operator_sections_in_expr(expr: &mut Expr, table: &LocalNotationTab
             else_branch,
             ..
         } => {
-            elaborate_operator_sections_in_expr(condition, table);
-            elaborate_operator_sections_in_expr(then_branch, table);
+            elaborate_operator_sections_in_expr(condition, table, origins);
+            elaborate_operator_sections_in_expr(then_branch, table, origins);
             if let Some(else_branch) = else_branch {
-                elaborate_operator_sections_in_expr(else_branch, table);
+                elaborate_operator_sections_in_expr(else_branch, table, origins);
             }
         }
-        Expr::Fail { payload, .. } => elaborate_operator_sections_in_expr(payload, table),
+        Expr::Fail { payload, .. } => elaborate_operator_sections_in_expr(payload, table, origins),
         Expr::WithError { body, arms, .. } => {
-            elaborate_operator_sections_in_expr(body, table);
+            elaborate_operator_sections_in_expr(body, table, origins);
             for arm in arms {
-                elaborate_operator_sections_in_expr(&mut arm.body, table);
+                elaborate_operator_sections_in_expr(&mut arm.body, table, origins);
             }
         }
         Expr::Block {
@@ -2347,25 +2390,27 @@ fn elaborate_operator_sections_in_expr(expr: &mut Expr, table: &LocalNotationTab
         } => {
             for stmt in statements {
                 match stmt {
-                    BlockStmt::Let { expr, .. } => elaborate_operator_sections_in_expr(expr, table),
+                    BlockStmt::Let { expr, .. } => {
+                        elaborate_operator_sections_in_expr(expr, table, origins)
+                    }
                 }
             }
             if let Some(tail_expr) = tail_expr {
-                elaborate_operator_sections_in_expr(tail_expr, table);
+                elaborate_operator_sections_in_expr(tail_expr, table, origins);
             }
         }
-        Expr::FnDef { body, .. } => elaborate_operator_sections_in_expr(body, table),
+        Expr::FnDef { body, .. } => elaborate_operator_sections_in_expr(body, table, origins),
         Expr::FnApply { func, args, .. } => {
-            elaborate_operator_sections_in_expr(func, table);
+            elaborate_operator_sections_in_expr(func, table, origins);
             for arg in args {
-                elaborate_operator_sections_in_expr(arg, table);
+                elaborate_operator_sections_in_expr(arg, table, origins);
             }
         }
         Expr::ActBlock { stmts, .. } => {
             for stmt in stmts {
                 match stmt {
                     ActStmt::Bind { value, .. } | ActStmt::Return { value, .. } => {
-                        elaborate_operator_sections_in_expr(value, table)
+                        elaborate_operator_sections_in_expr(value, table, origins)
                     }
                 }
             }
@@ -2378,7 +2423,7 @@ fn elaborate_operator_sections_in_expr(expr: &mut Expr, table: &LocalNotationTab
                     | DoStmt::WorkflowRequires { expr: value, .. }
                     | DoStmt::WorkflowEnsures { expr: value, .. }
                     | DoStmt::Return { value, .. } => {
-                        elaborate_operator_sections_in_expr(value, table)
+                        elaborate_operator_sections_in_expr(value, table, origins)
                     }
                 }
             }
@@ -2386,20 +2431,20 @@ fn elaborate_operator_sections_in_expr(expr: &mut Expr, table: &LocalNotationTab
         Expr::Comprehension {
             result, qualifiers, ..
         } => {
-            elaborate_operator_sections_in_expr(result, table);
+            elaborate_operator_sections_in_expr(result, table, origins);
             for qualifier in qualifiers {
                 match qualifier {
                     ComprehensionQualifier::Bind { value, .. }
                     | ComprehensionQualifier::DiscardBind { value, .. }
                     | ComprehensionQualifier::Let { value, .. } => {
-                        elaborate_operator_sections_in_expr(value, table)
+                        elaborate_operator_sections_in_expr(value, table, origins)
                     }
                 }
             }
         }
         Expr::List { items, .. } => {
             for item in items {
-                elaborate_operator_sections_in_expr(item, table);
+                elaborate_operator_sections_in_expr(item, table, origins);
             }
         }
         Expr::Literal(_)
@@ -2410,59 +2455,108 @@ fn elaborate_operator_sections_in_expr(expr: &mut Expr, table: &LocalNotationTab
     }
 }
 
-fn elaborate_operator_section(section: OperatorSection, table: &LocalNotationTable) -> Expr {
+fn elaborate_operator_section(
+    section: OperatorSection,
+    table: &LocalNotationTable,
+) -> (Expr, Option<ExpandedSurfaceOrigin>) {
     let target = table.resolve_infix(section.operator.spelling.as_ref());
     match section.kind {
         OperatorSectionKind::Bare => match target {
-            Some(entry) => eta_local_section(section.span, entry.target.clone(), None, None),
-            None => builtin_binary_op(section.operator.spelling.as_ref())
-                .map(|op| {
-                    eta_binary_section(section.span, section.operator.clone(), op, None, None)
-                })
-                .unwrap_or(Expr::OperatorSection { section }),
+            Some(entry) => notation_section_expansion(section.span, entry, None, None),
+            None => match builtin_binary_op(section.operator.spelling.as_ref()) {
+                Some(op) => builtin_section_expansion(
+                    section.span,
+                    section.operator.clone(),
+                    op,
+                    None,
+                    None,
+                ),
+                None => (Expr::OperatorSection { section }, None),
+            },
         },
         OperatorSectionKind::Left => {
             let Some(left) = section.left.clone().map(|expr| *expr) else {
-                return Expr::OperatorSection { section };
+                return (Expr::OperatorSection { section }, None);
             };
             match target {
-                Some(entry) => {
-                    eta_local_section(section.span, entry.target.clone(), Some(left), None)
-                }
-                None => builtin_binary_op(section.operator.spelling.as_ref())
-                    .map(|op| {
-                        eta_binary_section(
-                            section.span,
-                            section.operator.clone(),
-                            op,
-                            Some(left),
-                            None,
-                        )
-                    })
-                    .unwrap_or(Expr::OperatorSection { section }),
+                Some(entry) => notation_section_expansion(section.span, entry, Some(left), None),
+                None => match builtin_binary_op(section.operator.spelling.as_ref()) {
+                    Some(op) => builtin_section_expansion(
+                        section.span,
+                        section.operator.clone(),
+                        op,
+                        Some(left),
+                        None,
+                    ),
+                    None => (Expr::OperatorSection { section }, None),
+                },
             }
         }
         OperatorSectionKind::Right => {
             let Some(right) = section.right.clone().map(|expr| *expr) else {
-                return Expr::OperatorSection { section };
+                return (Expr::OperatorSection { section }, None);
             };
             match target {
-                Some(entry) => {
-                    eta_local_section(section.span, entry.target.clone(), None, Some(right))
-                }
-                None => builtin_binary_op(section.operator.spelling.as_ref())
-                    .map(|op| {
-                        eta_binary_section(
-                            section.span,
-                            section.operator.clone(),
-                            op,
-                            None,
-                            Some(right),
-                        )
-                    })
-                    .unwrap_or(Expr::OperatorSection { section }),
+                Some(entry) => notation_section_expansion(section.span, entry, None, Some(right)),
+                None => match builtin_binary_op(section.operator.spelling.as_ref()) {
+                    Some(op) => builtin_section_expansion(
+                        section.span,
+                        section.operator.clone(),
+                        op,
+                        None,
+                        Some(right),
+                    ),
+                    None => (Expr::OperatorSection { section }, None),
+                },
             }
         }
+    }
+}
+
+fn builtin_section_expansion(
+    span: Span,
+    raw_operator: RawOperatorToken,
+    op: BinaryOp,
+    left: Option<Expr>,
+    right: Option<Expr>,
+) -> (Expr, Option<ExpandedSurfaceOrigin>) {
+    let operator_span = raw_operator.span;
+    let expr = eta_binary_section(span, raw_operator, op, left, right);
+    (
+        expr,
+        Some(ExpandedSurfaceOrigin {
+            generated_span: span,
+            origin: SurfaceOrigin::OperatorSection {
+                section_span: span,
+                operator_span,
+            },
+        }),
+    )
+}
+
+fn notation_section_expansion(
+    span: Span,
+    entry: &LocalNotationEntry,
+    left: Option<Expr>,
+    right: Option<Expr>,
+) -> (Expr, Option<ExpandedSurfaceOrigin>) {
+    let expr = eta_local_section(span, entry.target.clone(), left, right);
+    (
+        expr,
+        Some(ExpandedSurfaceOrigin {
+            generated_span: span,
+            origin: SurfaceOrigin::NotationExpansion {
+                notation_span: entry.span,
+                target: render_callable_path(&entry.target).into_boxed_str(),
+            },
+        }),
+    )
+}
+
+fn render_callable_path(path: &CallablePath) -> String {
+    match &path.module {
+        Some(module) => format!("{}::{}", module.as_ref(), path.name.as_ref()),
+        None => path.name.to_string(),
     }
 }
 

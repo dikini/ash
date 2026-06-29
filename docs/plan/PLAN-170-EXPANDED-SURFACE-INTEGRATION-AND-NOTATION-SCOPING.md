@@ -1,6 +1,6 @@
 # PLAN-170: Expanded Surface Integration and Notation Scoping
 
-## Status: 🟢 In Progress; notation non-propagation complete
+## Status: 🟢 In Progress; origin sidecar complete
 
 ## Overview
 

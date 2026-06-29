@@ -1,6 +1,6 @@
 # TASK-1741: Specify and implement the narrow source-origin sidecar boundary for expansion products
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Summary
 
@@ -16,7 +16,7 @@ Specify and, if safe, implement a narrow source-origin sidecar boundary for nota
 ## Dependencies
 
 - ✅ TASK-1736: Phase 170 packet created
-- 📝 TASK-1737: Boundary audit informs where origin metadata can be preserved
+- ✅ TASK-1737: Boundary audit informs where origin metadata can be preserved
 
 ## Deferral / Planned-Feature Reconciliation
 
@@ -52,7 +52,23 @@ commands:
   - cargo fmt --check
   - git diff --check
 checklist:
-  - [ ] Origin metadata boundary is specified.
-  - [ ] Implemented metadata, if any, has positive tests.
-  - [ ] Any Core-origin deferral is explicit and indexed in docs.
+  - [x] Origin metadata boundary is specified.
+  - [x] Implemented metadata, if any, has positive tests.
+  - [x] Any Core-origin deferral is explicit and indexed in docs.
 ```
+
+## Closeout evidence
+
+- Design note: `docs/design/phase-170-expansion-origin-sidecar-boundary.md`.
+- Implemented `ExpandedSurfaceModule::origins` with `ExpandedSurfaceOrigin` entries for generated surface nodes.
+- Built-in operator-section expansion records `SurfaceOrigin::OperatorSection { section_span, operator_span }`.
+- Local notation-section expansion records `SurfaceOrigin::NotationExpansion { notation_span, target }`.
+- Core-origin threading remains explicitly deferred; no Core public API changes were made.
+- Fresh verification:
+  - `cargo test -p ash-parser --test task_1733_operator_section_elaboration -- --nocapture`
+  - `cargo test -p ash-parser --test task_1734_expanded_surface_lowering_gate -- --nocapture`
+  - `cargo test -p ash-parser`
+  - `cargo check --workspace`
+  - `cargo clippy -p ash-parser --all-targets --all-features -- -D warnings`
+  - `cargo fmt --check`
+  - `git diff --check`

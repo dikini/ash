@@ -24,6 +24,7 @@ fn direct_expanded_gate_rejects_raw_sections_if_caller_constructs_invalid_carrie
     let raw = ExpandedSurfaceModule {
         module,
         diagnostics: Vec::new(),
+        origins: Vec::new(),
     };
     let err = lower_expanded_surface_module(&raw)
         .expect_err("raw section in expanded carrier is rejected");

@@ -145,7 +145,7 @@ Update this section as tasks complete:
 | [167](PLAN-167-TARGET-SURFACE-SEMANTICS-GAP-CLOSURE.md) | 12 | 12 | ✅ Complete; docs-only target surface/lowering/semantics spec-hardening packet |
 | [168](PLAN-168-SURFACE-AST-NOTATION-SUBSTRATE.md) | 7 | 7 | ✅ Complete; implementation substrate handoff |
 | [169](PLAN-169-SURFACE-EXPANSION-AND-NOTATION-ELABORATION.md) | 8 | 8 | ✅ Complete; surface expansion and notation elaboration implemented with explicit deferrals |
-| [170](PLAN-170-EXPANDED-SURFACE-INTEGRATION-AND-NOTATION-SCOPING.md) | 7 | 5 | 🟢 In Progress; notation non-propagation complete |
+| [170](PLAN-170-EXPANDED-SURFACE-INTEGRATION-AND-NOTATION-SCOPING.md) | 7 | 6 | 🟢 In Progress; origin sidecar complete |
 
 ---
 
@@ -725,7 +725,7 @@ mixfix partial application, and full `SPEC-098c` lowering remain explicitly defe
 
 ## Phase 170: Expanded Surface Integration and Notation Scoping
 
-**Status:** 🟢 In Progress; notation non-propagation complete
+**Status:** 🟢 In Progress; origin sidecar complete
 **Plan:** [PLAN-170: Expanded Surface Integration and Notation Scoping](PLAN-170-EXPANDED-SURFACE-INTEGRATION-AND-NOTATION-SCOPING.md)
 **Depends on:** Phase 169 surface expansion and notation elaboration; `SPEC-095c`; `SPEC-098c`.
 

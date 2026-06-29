@@ -1,4 +1,4 @@
-use ash_parser::surface::{Expr, expand_surface_module};
+use ash_parser::surface::{Expr, Spanned, SurfaceOrigin, expand_surface_module};
 
 fn first_function_body(module: &ash_parser::surface::ModuleFile) -> &Expr {
     let ash_parser::surface::Definition::Function(def) = &module.definitions[0] else {
@@ -31,6 +31,26 @@ fn built_in_bare_section_elaborates_to_eta_expanded_function() {
         }
         other => panic!("expected eta-expanded function, got {other:?}"),
     }
+}
+
+#[test]
+fn built_in_section_records_operator_section_origin_sidecar() {
+    let module =
+        ash_parser::parse_surface_file("fn op() -> Int { (+) }").expect("bare section parses");
+    let expanded = expand_surface_module(module).expect("built-in section elaborates");
+    assert_eq!(expanded.origins.len(), 1);
+    let origin = &expanded.origins[0];
+    assert_eq!(
+        origin.generated_span,
+        first_function_body(&expanded.module).span()
+    );
+    assert!(matches!(
+        &origin.origin,
+        SurfaceOrigin::OperatorSection {
+            section_span,
+            operator_span
+        } if section_span == &origin.generated_span && operator_span.start < operator_span.end
+    ));
 }
 
 #[test]
@@ -69,6 +89,34 @@ fn local_notation_section_elaborates_to_declared_callable_target() {
         }
         other => panic!("expected local notation eta function, got {other:?}"),
     }
+}
+
+#[test]
+fn local_notation_section_records_notation_expansion_origin_sidecar() {
+    let module = ash_parser::parse_surface_file(
+        r#"
+        infixl 6 <+> = combine
+        fn section(x: Int) -> Int { (x <+>) }
+        "#,
+    )
+    .expect("local notation section parses");
+    let expanded = expand_surface_module(module).expect("local notation section elaborates");
+    let body = {
+        let ash_parser::surface::Definition::Function(def) = &expanded.module.definitions[1] else {
+            panic!("expected function definition")
+        };
+        unwrap_block_tail(&def.body)
+    };
+    assert_eq!(expanded.origins.len(), 1);
+    let origin = &expanded.origins[0];
+    assert_eq!(origin.generated_span, body.span());
+    assert!(matches!(
+        &origin.origin,
+        SurfaceOrigin::NotationExpansion {
+            notation_span,
+            target
+        } if target.as_ref() == "combine" && notation_span.start < notation_span.end
+    ));
 }
 
 #[test]

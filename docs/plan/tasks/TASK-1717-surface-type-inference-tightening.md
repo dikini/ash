@@ -1,6 +1,6 @@
 # TASK-1717: Tighten surface type inference for rows, evidence, handlers, operation identity, and notation
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Summary
 
@@ -13,7 +13,7 @@ Tighten surface type inference for rows, evidence, handlers, operation identity,
 
 ## Dependencies
 
-- 📝 TASK-1716: Specify lowering for contracts, evidence, trace contracts, and notation erasure (planned)
+- ✅ TASK-1716: Specify lowering for contracts, evidence, trace contracts, and notation erasure (complete)
 
 ## Deferral / Planned-Feature Reconciliation
 
@@ -60,9 +60,9 @@ commands:
   - bash scripts/check-docs-gate.sh
   - python3 -c 'from pathlib import Path; s=Path("docs/spec/SPEC-097b-TARGET-TYPE-SYSTEM.md").read_text(); assert "handler" in s and "<:" in s; assert "operator section" in s; assert "where row" in s'
 checklist:
-  - [ ] Row inference/defaulting specified.
-  - [ ] Handler marker subtyping specified.
-  - [ ] Notation and operator-section typing specified.
+  - [x] Row inference/defaulting specified.
+  - [x] Handler marker subtyping specified.
+  - [x] Notation and operator-section typing specified.
 ```
 
 

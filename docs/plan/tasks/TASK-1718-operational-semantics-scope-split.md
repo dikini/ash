@@ -1,6 +1,6 @@
 # TASK-1718: Rewrite SPEC-099b scope and preserve Phase 159 interpreter semantics as context
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Summary
 
@@ -13,7 +13,7 @@ Rewrite SPEC-099b scope and preserve Phase 159 interpreter semantics as context.
 
 ## Dependencies
 
-- 📝 TASK-1717: Tighten surface type inference for rows, evidence, handlers, operation identity, and notation (planned)
+- ✅ TASK-1717: Tighten surface type inference for rows, evidence, handlers, operation identity, and notation (complete)
 
 ## Deferral / Planned-Feature Reconciliation
 
@@ -60,9 +60,9 @@ commands:
   - bash scripts/check-docs-gate.sh
   - python3 -c 'from pathlib import Path; s=Path("docs/spec/SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md").read_text(); assert "Phase 159" in s; assert "full contract discharge" not in s.lower() or "deferred" not in s.lower()'
 checklist:
-  - [ ] SPEC-099b scope is current target semantics.
-  - [ ] Phase 159 interpreter semantics are preserved as context.
-  - [ ] Contract discharge is no longer live-deferred.
+  - [x] SPEC-099b scope is current target semantics.
+  - [x] Phase 159 interpreter semantics are preserved as context.
+  - [x] Contract discharge is no longer live-deferred.
 ```
 
 

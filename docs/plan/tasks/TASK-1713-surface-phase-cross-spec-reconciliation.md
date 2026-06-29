@@ -1,6 +1,6 @@
 # TASK-1713: Reconcile Phase 1 cross-references and stale claims
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Summary
 
@@ -13,7 +13,7 @@ Reconcile Phase 1 cross-references and stale claims. This is a documentation-onl
 
 ## Dependencies
 
-- 📝 TASK-1712: Specify operator sections as callable sugar (planned)
+- ✅ TASK-1712: Specify operator sections as callable sugar (complete)
 
 ## Deferral / Planned-Feature Reconciliation
 
@@ -64,9 +64,9 @@ commands:
   - python3 -c 'from pathlib import Path; specs="
 ".join(p.read_text() for p in Path("docs/spec").glob("SPEC-09*b*.md")); assert "requires ->" not in specs; assert "SPEC-095c" in Path("docs/spec/SPEC-INDEX.md").read_text()'
 checklist:
-  - [ ] Phase 1 stale-claim sweep completed.
-  - [ ] SPEC-INDEX read paths updated.
-  - [ ] Residual follow-ups are documented.
+  - [x] Phase 1 stale-claim sweep completed.
+  - [x] SPEC-INDEX read paths updated.
+  - [x] Residual follow-ups are documented.
 ```
 
 

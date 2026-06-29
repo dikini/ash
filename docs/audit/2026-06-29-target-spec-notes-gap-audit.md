@@ -529,3 +529,16 @@ The contract sidecar/type-checking story is strong enough to keep implementation
 surface and operational layers are not yet hard enough for the next parser/macro/lowering phase.
 The next spec packet should focus on `SPEC-095c`, `SPEC-098b` lowering expansion, and a rewritten
 or split `SPEC-099b`.
+
+
+## 13. Phase 167 closeout
+
+Phase 167 implemented the documentation-only closure path recommended by this audit:
+
+- `SPEC-095b` now removes stale inline contract-handler target syntax, reconciles trace-contract row syntax, and reserves user-defined notation/operator sections.
+- `SPEC-095c` now owns source-preserving AST, macro expansion, notation, and operator sections.
+- `SPEC-098c` now owns expanded-surface-AST-to-Core lowering.
+- `SPEC-097b` now includes surface inference rules for rows, evidence, handler markers, operation identity, notation, and operator sections.
+- `SPEC-099b` now owns target Core/CPS operational semantics, including provider frames, structured traps, contracts, lazy/memo forcing, trace facts, and temporal monitors.
+
+Implementation of these specs remains future work; this audit is closed for documentation gap coverage.

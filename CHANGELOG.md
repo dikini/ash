@@ -6,6 +6,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Added
+- Phase 167 target surface and semantics specs: adds `SPEC-095c` for source-preserving
+  AST/macros/notation/operator sections, `SPEC-098c` for surface-to-Core lowering, target
+  grammar drift fixes in `SPEC-095b`, surface inference tightening in `SPEC-097b`, and a
+  rewritten target operational semantics in `SPEC-099b`.
 - PLAN-167 target surface and semantics gap-closure packet with docs-only tasks for target
   grammar drift, source-preserving AST/macros/notation, operator sections, surface-to-Core
   lowering, type inference tightening, and operational semantics rewrite.

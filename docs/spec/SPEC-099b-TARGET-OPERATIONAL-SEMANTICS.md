@@ -1,348 +1,236 @@
 ---
 id: spec.ash.operational-semantics.target
-title: Ash CPS IR Operational Semantics
-description: Big-step operational semantics for the CPS IR interpreter
+title: Ash Target Operational Semantics
 kind: spec
 audience: [human, agent]
 authority: design
 status: draft
 stability: alpha
 owner: language
-last_verified: 2026-06-19
+last_verified: 2026-06-29
 verified_against:
   specs:
+    - docs/spec/SPEC-095c-SURFACE-AST-MACROS-AND-NOTATION.md
     - docs/spec/SPEC-098b-TARGET-IR.md
-    - docs/plan/PLAN-159-CPS-IR-INTERPRETER.md
+    - docs/spec/SPEC-098c-SURFACE-TO-CORE-LOWERING.md
+    - docs/spec/SPEC-100-CORE-TYPE-CHECKING.md
+    - docs/spec/SPEC-101-LAZY-AND-MEMO-COMPUTATION-MODES.md
+  audits:
+    - docs/audit/2026-06-29-target-spec-notes-gap-audit.md
 ---
 
-# SPEC-099b: Ash CPS IR Operational Semantics
+# SPEC-099b: Ash Target Operational Semantics
 
-**Status:** Draft — CPS IR operational semantics for the isolated prototype
-**Scope:** This document defines the big-step operational semantics of the CPS IR interpreter implemented in Phase 159.
-**Depends on:** SPEC-098b (Target IR), PLAN-159 (CPS IR Interpreter)
+**Status:** Draft — target Core/CPS operational semantics.
+**Scope:** This document defines target operational behavior after surface expansion and
+surface-to-Core lowering. It includes Core big-step rules, Core/CPS small-step rules, provider-frame
+dispatch, structured traps, dynamic contracts, lazy/memo forcing, trace facts, and temporal
+monitors.
+**Depends on:** SPEC-098b, SPEC-098c, SPEC-100, SPEC-101.
 
-## §1 Syntax
+## 1. Relationship to Phase 159
 
-### §1.1 Atoms
+The Phase 159 CPS interpreter semantics remain useful implementation context for continuation
+capture, `LetCont`, `Jump`, `Call`, `LetRec`, and shallow handler execution. They are not the full
+target semantics. Target semantics now also covers Core terms before CPS, provider frames as runtime
+authority, structured diagnostic traps, contract sidecars, trace facts, and monitor behavior.
 
-```text
-a ::= Int(i) | Float(f) | String(s) | Bool(b) | Null | Var(x)
-```
+## 2. Machine state
 
-Atoms are primitive values or variable references. Variables are resolved in the environment.
-
-### §1.2 Values
-
-```text
-v ::= Atom(a)
-    | Lam { params: [x, ...], cont: k, body: t, row: ρ }
-    | Cont { param: x, body: t, captured_env: η, row: ρ }
-```
-
-Values are inert data. `Lam` represents a function closure; `Cont` represents a continuation closure that captures its definition environment.
-
-### §1.3 Terms
+A target state is:
 
 ```text
-t ::= LetVal { name: x, value: v, body: t }
-    | LetPrim { name: x, op: ⊙, args: [a, ...], body: t }
-    | LetCont { name: k, param: x, cont_body: t, body: t }
-    | Jump { cont: κ, arg: a, row: ρ }
-    | Call { func: a, args: [a, ...], cont: κ, row: ρ }
-    | If { cond: a, then_branch: t, else_branch: t, row: ρ }
-    | LetRec { name: x, value: v, body: t }
-    | Raise { op: ε, args: [a, ...], resume: κ, row: ρ }
-    | Handle { clause: h, body: t, cont: κ, row: ρ }
-    | RecordDischarge { discharge: d, body: t }
-    | Trap { reason: r }
+Σ ::= ⟨term, η, χ, μ, τ, Ω⟩
 ```
 
-Terms perform computation. All control flow is explicit via `Jump` and `Call`.
+where:
 
-### §1.4 Continuation References
+- `η` is the value environment;
+- `χ` is the handler/provider frame stack;
+- `μ` is the lazy/memo store;
+- `τ` is the trace ledger;
+- `Ω` is the active monitor set.
+
+Outcomes are values, structured traps, or stuck states for malformed unchecked input. Checked Core
+programs should not reach stuck states except through explicitly unchecked/foreign boundaries.
+
+## 3. Core big-step semantics
+
+Core big-step judgment:
 
 ```text
-κ ::= Label(k) | Var(x)
+Γ; Σ ⊢ e ⇓ outcome
 ```
 
-Labels are bound by `LetCont`; variables are bound in the environment.
-
-### §1.5 Effect Rows
+Big-step rules summarize checked Core behavior before CPS expansion:
 
 ```text
-ρ ::= EffectRow { items: [ι, ...] }
+Γ; Σ ⊢ v ⇓ Value(v)
+Γ; Σ ⊢ e1 ⇓ Value(v)    Γ[x↦v]; Σ ⊢ e2 ⇓ o
+------------------------------------------------
+Γ; Σ ⊢ let x = e1 in e2 ⇓ o
 
-ι ::= EffectItem { namespace: ns, name: n, kind: τ }
-
-τ ::= Capability | Role | Policy | Contract | Channel | Alias | Group
+Γ; Σ ⊢ m ⇓ Value(v)    Γ[x↦v]; Σ ⊢ k ⇓ o
+------------------------------------------------
+Γ; Σ ⊢ bind x <- m; k ⇓ o
 ```
 
-Effect rows track the effects a computation may perform. Rows are validated for duplicates.
+Rows compose by row union through sequencing, but contract summaries compose through the Hoare
+predicate-transformer obligations described in SPEC-097b.
 
-## §2 Core Term Rules
+## 4. Core/CPS small-step semantics
 
-### §2.1 LetVal
+Small-step judgment:
 
 ```text
-eval(v, η) = v'
------------------------------------
-⟨LetVal(x, v, t), η, χ⟩ ⇓ ⟨t, η[x ↦ v'], χ⟩
+Σ -> Σ'
 ```
 
-Bind a value in the environment and continue.
-
-### §2.2 LetPrim
+Representative rules:
 
 ```text
-eval(aᵢ, η) = aᵢ'  for each i
-eval_prim(⊙, [a₁', ..., aₙ']) = a'
------------------------------------
-⟨LetPrim(x, ⊙, [a₁, ..., aₙ], t), η, χ⟩ ⇓ ⟨t, η[x ↦ Atom(a')], χ⟩
+⟨LetVal(x, v, t), η, χ, μ, τ, Ω⟩
+  -> ⟨t, η[x↦eval(v,η)], χ, μ, τ, Ω⟩
+
+⟨Jump(k, a, ρ), η, χ, μ, τ, Ω⟩
+  -> ⟨body(k), captured_env(k)[param(k)↦eval(a,η)], χ, μ, τ, Ω⟩
+
+⟨Call(f, args, k, ρ), η, χ, μ, τ, Ω⟩
+  -> ⟨body(f), call_env(f,args,k,η), χ, μ, τ, Ω⟩
 ```
 
-Evaluate arguments (resolving variables), apply the primitive operation, bind the result, and continue.
+Small-step owns control behavior, handler/provider-frame traversal, forced thunks, trace emission,
+and monitor advancement. Big-step rules may be derived for pure checked fragments.
 
-### §2.3 LetCont
+## 5. Handler and provider frames
+
+Frame stack entries include:
 
 ```text
-c = Cont { param: x, body: t₁, captured_env: η, row: ρ }
------------------------------------
-⟨LetCont(k, x, t₁, t₂), η, χ⟩ ⇓ ⟨t₂, η[k ↦ c], χ⟩
+Frame ::= HandlerFrame { op, clause, resume_policy, origin }
+        | ProviderFrame { op, provider, authority, origin }
+        | MonitorFrame { monitor_id, origin }
 ```
 
-Create a continuation closure capturing the current environment, bind it, and continue.
-
-### §2.4 Jump
+Operation dispatch searches innermost to outermost. Handler frames provide program-level handling.
+Provider frames provide runtime authority for operations admitted at a boundary.
 
 ```text
-eval(a, η) = a'
-lookup(κ, η) = Cont { param: x, body: t, captured_env: η', ... }
------------------------------------
-⟨Jump(κ, a, ρ), η, χ⟩ ⇓ ⟨t, η'[x ↦ Atom(a')], χ⟩
+lookup_op(op, HandlerFrame(op, clause) :: χ) = Handler(clause)
+lookup_op(op, ProviderFrame(op, provider) :: χ) = Provider(provider)
+lookup_op(op, frame :: χ) = lookup_op(op, χ)      if frame does not match op
 ```
 
-Evaluate the argument, resolve the continuation, and execute the continuation body in the **captured** environment extended with the argument.
+Provider frames are not skipped. They are the runtime authority representation for provider-backed
+operations. A provider call may emit trace facts and may return success, operational failure, or a
+structured trap depending on the boundary contract.
 
-### §2.5 Call
+## 6. Structured traps and bottom
+
+Trap is operational bottom:
 
 ```text
-eval(a_f, η) = Var(x) or a_f
-eval(aᵢ, η) = aᵢ'  for each i
-lookup(func, η) = Lam { params: [p₁, ..., pₙ], cont: k, body: t, ... }
-lookup(κ, η) = c
-η' = η[p₁ ↦ Atom(a₁'), ..., pₙ ↦ Atom(aₙ')]
-η'' = η'[k ↦ c]  if k ∉ dom(η')
------------------------------------
-⟨Call(a_f, [a₁, ..., aₙ], κ, ρ), η, χ⟩ ⇓ ⟨t, η'', χ⟩
+⟨Trap(reason), η, χ, μ, τ, Ω⟩ -> Outcome::Trap(reason)
 ```
 
-Evaluate function and arguments. Create a new environment with parameters bound. Bind the continuation parameter **only if not already present** to preserve outer continuation references in nested continuations. Execute the lambda body.
+Trap has any expected result type but contributes no local row. The reason is structured, not a
+string. Relevant reasons include:
 
-### §2.6 Answer Type Discipline
+- `ContractViolation(ContractDiagnostic)`;
+- `ContractPredicateFault(PredicateFaultDiagnostic)`;
+- `TemporalContractViolation(TemporalDiagnostic)`;
+- `TemporalMonitorFault(TemporalDiagnostic)`;
+- ordinary operational bottom reasons from Core/CPS.
 
-All CPS terms are in **fixed answer type** discipline (Answer type): every term eventually reduces to a `Jump` to a continuation. There is no implicit return. The final result is produced by jumping to an exit continuation that traps with the result value.
+Trap propagation preserves the original payload, source origin, blame label, and diagnostic data.
 
-## §3 Conditionals and Data Rules
+## 7. Dynamic contracts
 
-### §3.1 If
+Dynamic contract checks execute runtime check plans produced by SPEC-098c/SPEC-100.
 
 ```text
-eval(a, η) = Bool(true)
------------------------------------
-⟨If(a, t₁, t₂, ρ), η, χ⟩ ⇓ ⟨t₁, η, χ⟩
+run_check(plan, η, snapshots) = true
+---------------------------------------
+⟨CheckContract(plan, body), η, χ, μ, τ, Ω⟩ -> ⟨body, η, χ, μ, τ, Ω⟩
 
-eval(a, η) = Bool(false)
------------------------------------
-⟨If(a, t₁, t₂, ρ), η, χ⟩ ⇓ ⟨t₂, η, χ⟩
+run_check(plan, η, snapshots) = false
+---------------------------------------
+⟨CheckContract(plan, body), η, χ, μ, τ, Ω⟩ -> Trap(ContractViolation(diag(plan)))
 
-eval(a, η) ≠ Bool(_)
------------------------------------
-⟨If(a, t₁, t₂, ρ), η, χ⟩ ⇓ Stuck(InvalidCondition)
+run_check(plan, η, snapshots) = fault
+---------------------------------------
+⟨CheckContract(plan, body), η, χ, μ, τ, Ω⟩ -> Trap(ContractPredicateFault(diag(fault)))
 ```
 
-Evaluate the condition. If true, take the then branch; if false, take the else branch. Non-boolean conditions are an error.
+A false predicate and a predicate evaluator fault are distinct. Default dynamic contract failure is
+structured bottom. Recoverable behavior requires explicit `fail` in the row and an ordinary handler
+for that failure.
 
-### §3.2 RecordDischarge
+## 8. Lazy and memo forcing
+
+Strict values evaluate at binding time. Lazy values evaluate at each force. Memo values evaluate on
+the first force and replay the terminal result thereafter.
 
 ```text
------------------------------------
-⟨RecordDischarge(d, t), η, χ⟩ ⇓ ⟨t, η, χ⟩
+force(lazy thunk)  -> evaluate thunk each time
+force(memo empty)  -> evaluate thunk; store Value or Trap
+force(memo stored) -> replay stored Value or Trap
 ```
 
-RecordDischarge is an administrative term that passes through to its body. In the full implementation, it would track contract discharge metadata.
+Contract checks attached to lazy computations run at each force. Contract checks attached to memo
+computations run at first force; replay preserves the stored terminal diagnostic and blame label if
+the first force trapped.
 
-## §4 Handler Rules
+## 9. Trace facts and temporal monitors
 
-### §4.1 Raise (Handled)
+Trace-producing operations append facts to the trace ledger:
 
 ```text
-lookup_handler(ε, χ) = Some(Clause { op: ε, params: [p₁, ..., pₙ], resume: r, body: t, ... })
-eval(aᵢ, η) = aᵢ'  for each i
-lookup(κ, η) = c
-η' = η[p₁ ↦ Atom(a₁'), ..., pₙ ↦ Atom(aₙ')]
-η'' = η'[r ↦ c]
------------------------------------
-⟨Raise(ε, [a₁, ..., aₙ], κ, ρ), η, χ⟩ ⇓ ⟨t, η'', χ⟩
+emit(fact, τ) = τ · fact
+advance(Ω, fact) = Ω'
 ```
 
-Find the innermost handler for the effect. Evaluate arguments, resolve the resume continuation, bind parameters and resume, then execute the handler body.
+After each emitted fact, active monitors advance. Monitor outcomes are distinct:
 
-### §4.2 Raise (Unhandled)
+- satisfied/ongoing monitor state continues;
+- violated formula traps with `TemporalContractViolation`;
+- ill-formed monitor state, missing alphabet data, or monitor execution failure traps with
+  `TemporalMonitorFault`.
 
-```text
-lookup_handler(ε, χ) = None
------------------------------------
-⟨Raise(ε, [a₁, ..., aₙ], κ, ρ), η, χ⟩ ⇓ Stuck(UnhandledEffect(ε))
-```
+Trace contracts are not handlers. They observe the ledger generated by lowered trace events and
+provider/runtime boundaries.
 
-If no handler is found, the computation is stuck with an unhandled effect error.
+## 10. Surface anchors
 
-### §4.3 Handle
+`Pure`, `Act`, `Proc`, and `Workflow` are semantic anchors over the same computation model. They
+constrain rows, interpretation, trace obligations, and observation boundaries; they do not introduce
+separate operational languages.
 
-```text
-lookup(κ, η) = c
-χ' = χ :: Shallow(Clause { op: ε, ... })
------------------------------------
-⟨Handle(Clause { op: ε, ... }, t, κ, ρ), η, χ⟩ ⇓ ⟨t, η[r ↦ c], χ'⟩
-```
+## 11. Phase 159 interpreter context
 
-Install a shallow handler frame on the handler chain. Bind the resume continuation in the environment. Execute the body with the extended handler chain.
+The Phase 159 interpreter rules are retained as implementation context with these correspondences:
 
-### §4.4 Shallow Handler Removal
+| Phase 159 concept | Target role |
+|---|---|
+| `LetVal`, `LetPrim`, `LetCont`, `Jump`, `Call`, `If`, `LetRec` | CPS small-step term forms |
+| continuation capture | still required for `Jump`/`Call` semantics |
+| shallow handler frames | one handler-frame policy in the target frame stack |
+| provider persistence | represented by explicit provider frames |
+| `Trap(reason)` | structured operational bottom with typed payloads |
 
-Shallow handler frames are removed after handling a single effect. The handler frame is pushed when `Handle` is entered and is not re-pushed after `Raise` is handled. This means a second `Raise` of the same effect will not find the same handler.
+Older Phase 159-only limitations such as isolated interpreter scope, scaffold-only row checking, and
+missing contract/monitor behavior are historical implementation boundaries, not target semantics.
 
-### §4.5 Provider Frame Persistence
+## 12. See also
 
-Provider frames persist across resumes. When a provider frame is installed, it remains on the handler chain until explicitly removed or the computation completes.
+- [SPEC-095c: Surface AST, Macro Expansion, and Notation](SPEC-095c-SURFACE-AST-MACROS-AND-NOTATION.md)
+- [SPEC-098b: Target IR](SPEC-098b-TARGET-IR.md)
+- [SPEC-098c: Surface-to-Core Lowering](SPEC-098c-SURFACE-TO-CORE-LOWERING.md)
+- [SPEC-100: Core Type Checking](SPEC-100-CORE-TYPE-CHECKING.md)
+- [SPEC-101: Lazy and Memo Computation Modes](SPEC-101-LAZY-AND-MEMO-COMPUTATION-MODES.md)
+- [PLAN-159: CPS IR Interpreter](../plan/PLAN-159-CPS-IR-INTERPRETER.md)
 
-### §4.6 Resume Construction
+## 13. Changelog
 
-The resume continuation `c` passed to a handler clause is the continuation captured at the point of the `Raise`. When the handler invokes `resume` with a value, execution continues from the point after the `Raise` with the result value.
-
-### §4.7 One-Shot Resume
-
-Resume continuations are one-shot: they may be invoked at most once. Invoking a resume continuation more than once is undefined behavior in the current implementation.
-
-### §4.8 Row Transformation
-
-When a handler is installed, the effect row of the body is transformed to include the handler's effect item. When a handler handles an effect, the effect item is removed from the row. Provider frames add their effect item to the row and it persists until the provider frame is removed. This is the row transformation rule.
-
-## §5 Recursion Rules
-
-### §5.1 LetRec
-
-```text
-η' = η[x ↦ Null]
-v' = eval(v, η')
-η'' = η'[x ↦ v']
------------------------------------
-⟨LetRec(x, v, t), η, χ⟩ ⇓ ⟨t, η'', χ⟩
-```
-
-Bind the recursive name to `Null` as a placeholder, evaluate the value in the environment with the placeholder, then backfill the placeholder with the actual value. This allows the value to reference itself recursively.
-
-### §5.2 Recursive Call Example
-
-```text
-letrec fact = (lam [n] k
-  letprim is_zero = eq n 0 in
-  if is_zero then
-    (jump k 1)
-  else
-    letprim n_minus_1 = sub n 1 in
-    letcont k_mul [result]
-      (letprim prod = mul n result in (jump k prod))
-    in (call fact [n_minus_1] k_mul))
-in (call fact [5] exit)
-```
-
-The `LetRec` binds `fact` to the lambda. The lambda body references `fact` recursively. The continuation parameter `k` is preserved across recursive calls by the non-overwriting binding rule in `Call`.
-
-## §6 Advanced and Row-Checker Rules
-
-### §6.1 Trap
-
-```text
------------------------------------
-⟨Trap(r), η, χ⟩ ⇓ Stuck(Trap(r))
-```
-
-Trap immediately halts computation with the given reason.
-
-### §6.2 Row Validation
-
-```text
-validate_row(ρ) = Ok(())  if all items in ρ have distinct (namespace, name) pairs
-validate_row(ρ) = Err(DuplicateItem(ns, n))  otherwise
-```
-
-Effect rows are validated for duplicate items. Two items are duplicates if they share the same namespace and name, regardless of kind.
-
-### §6.3 Handler Chain Lookup
-
-```text
-lookup_handler(ε, []) = None
-
-lookup_handler(ε, Shallow(Clause { op: ε', ... }) :: χ) =
-  if ε.item == ε'.item then Some(Clause { op: ε', ... })
-  else lookup_handler(ε, χ)
-
-lookup_handler(ε, Provider { op: ε', ... } :: χ) =
-  lookup_handler(ε, χ)  // provider frames don't have clauses
-```
-
-Handlers are searched from the innermost (top of stack) to outermost. Provider frames are skipped during clause lookup.
-
-## §7 Worked Example: Factorial in CPS
-
-```text
-letcont exit [v] (trap return) in
-letrec fact = (lam [n] k
-  letprim is_zero = eq n 0 in
-  if is_zero then
-    (jump k 1)
-  else
-    letprim n_minus_1 = sub n 1 in
-    letcont k_mul [result]
-      (letprim prod = mul n result in (jump k prod))
-    in (call fact [n_minus_1] k_mul))
-in (call fact [5] exit)
-```
-
-**Execution trace:**
-
-1. `exit` bound as continuation with body `trap return`
-2. `fact` bound to lambda via `LetRec` (placeholder → backfill)
-3. `Call fact [5] exit`: `n=5`, `k=exit`
-4. `is_zero = eq 5 0 = false`
-5. `If` takes else branch
-6. `n_minus_1 = sub 5 1 = 4`
-7. `k_mul` bound as continuation capturing env with `n=5`, `k=exit`
-8. `Call fact [4] k_mul`: `n=4`, `k=k_mul` (but `exit` preserved for `k_mul` body)
-9. ... recursion continues until `n=0` ...
-10. Base case: `jump k 1` where `k` is the innermost continuation
-11. Continuations unwind, multiplying results, until `exit` is reached with `120`
-
-## §8 Deferrals
-
-The following features are explicitly deferred outside PLAN-159 scope:
-
-- Legacy AST lowering to CPS IR
-- Lean 4 differential testing
-- Bytecode compilation
-- JIT compilation
-- Mutual recursion (single `LetRec` only)
-- Full row polymorphism (scaffold only)
-- Effect aliases
-- Full contract discharge
-
-## §9 See Also
-
-- [SPEC-098b: Target IR](SPEC-098b-TARGET-IR.md) — CPS IR syntax and types
-- [PLAN-159: CPS IR Interpreter](../plan/PLAN-159-CPS-IR-INTERPRETER.md) — implementation plan
-- [PLAN-INDEX](../plan/PLAN-INDEX.md) — task tracking
-
-## §10 Changelog
-
-- 2026-06-19: Rewrote with actual CPS IR semantics matching Phase 159 implementation. Added §2-7 with concrete rules for all term forms. Documented continuation capture, handler chain semantics, and LetRec backfill.
+- 2026-06-29: Recast as target Core/CPS operational semantics. Added Core big-step, Core/CPS small-step, provider-frame dispatch, structured traps, dynamic contracts, lazy/memo forcing, trace facts, temporal monitors, and Phase 159 context boundaries.
+- 2026-06-19: Initial Phase 159 CPS interpreter semantics for the isolated prototype.

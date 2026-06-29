@@ -1,6 +1,6 @@
 # TASK-1715: Specify lowering for callables, rows, do, handlers, and impls
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Summary
 
@@ -13,7 +13,7 @@ Specify lowering for callables, rows, do, handlers, and impls. This is a documen
 
 ## Dependencies
 
-- 📝 TASK-1714: Create surface-to-Core lowering spec scaffold (planned)
+- ✅ TASK-1714: Create surface-to-Core lowering spec scaffold (complete)
 
 ## Deferral / Planned-Feature Reconciliation
 
@@ -60,9 +60,9 @@ commands:
   - bash scripts/check-docs-gate.sh
   - python3 -c 'from pathlib import Path; s=Path("docs/spec/SPEC-098c-SURFACE-TO-CORE-LOWERING.md").read_text(); assert "where row" in s; assert "handle expr with" in s; assert "ImplType::op" in s'
 checklist:
-  - [ ] Callable/row lowering specified.
-  - [ ] Handler lowering specified.
-  - [ ] Impl operation identity lowering specified.
+  - [x] Callable/row lowering specified.
+  - [x] Handler lowering specified.
+  - [x] Impl operation identity lowering specified.
 ```
 
 

@@ -142,7 +142,7 @@ Update this section as tasks complete:
 | [164](PLAN-164-CORE-CPS-CONTINUATION-MULTIPLICITY.md) | 12 | 12 | ✅ Complete; SPEC-102 Core/CPS continuation multiplicity implemented and verified |
 | [165](PLAN-165-CONTRACT-SYSTEM-IMPLEMENTATION-HANDOFF.md) | 10 | 10 | ✅ Complete; Core contract sidecar carriers, predicate lowering, diagnostics, discharge metadata, observation evidence, and trace monitor carriers implemented |
 | [166](PLAN-166-DOCS-ORIENTATION-INDEXES.md) | 6 | 6 | ✅ Complete; notes/spec orientation indexes, lint tooling, and agent usability evals added |
-| [167](PLAN-167-TARGET-SURFACE-SEMANTICS-GAP-CLOSURE.md) | 12 | 0 | 📝 Planned; docs-only target surface/lowering/semantics spec-hardening packet |
+| [167](PLAN-167-TARGET-SURFACE-SEMANTICS-GAP-CLOSURE.md) | 12 | 12 | ✅ Complete; docs-only target surface/lowering/semantics spec-hardening packet |
 
 ---
 
@@ -360,11 +360,11 @@ Fix the type system limitation where imported types cannot be used in local type
 
 || Task | Description | Status |
 ||------|-------------|--------|
-|| [TASK-1540](tasks/TASK-1540-parser-import-first-pass.md) | Modify parser to collect imports before type definitions | 📝 Planned |
-|| [TASK-1541](tasks/TASK-1541-typeenv-imported-type-registration.md) | Modify TypeEnv to register imported types before local types | 📝 Planned |
-|| [TASK-1542](tasks/TASK-1542-type-name-resolution-imported.md) | Update type name resolution to check imported types | 📝 Planned |
-|| [TASK-1543](tasks/TASK-1543-type-inference-leakage-diagnostics.md) | Add diagnostics for type inference leakage | 📝 Planned |
-|| [TASK-1544](tasks/TASK-1544-phase-154-closeout.md) | Close out Phase 154 with verification and documentation | 📝 Planned |
+|| [TASK-1540](tasks/TASK-1540-parser-import-first-pass.md) | Modify parser to collect imports before type definitions | ✅ Complete |
+|| [TASK-1541](tasks/TASK-1541-typeenv-imported-type-registration.md) | Modify TypeEnv to register imported types before local types | ✅ Complete |
+|| [TASK-1542](tasks/TASK-1542-type-name-resolution-imported.md) | Update type name resolution to check imported types | ✅ Complete |
+|| [TASK-1543](tasks/TASK-1543-type-inference-leakage-diagnostics.md) | Add diagnostics for type inference leakage | ✅ Complete |
+|| [TASK-1544](tasks/TASK-1544-phase-154-closeout.md) | Close out Phase 154 with verification and documentation | ✅ Complete |
 
 ## Phase 155: Let Destructors for Records and Tuples
 
@@ -653,7 +653,7 @@ Adds agent-oriented indexes for design notes and specs. The indexes combine a st
 
 ## Phase 167: Target Surface and Semantics Gap Closure
 
-**Status:** 📝 Planned; docs-only spec-hardening packet
+**Status:** ✅ Complete; docs-only spec-hardening packet
 **Plan:** [PLAN-167: Target Surface and Semantics Gap Closure](PLAN-167-TARGET-SURFACE-SEMANTICS-GAP-CLOSURE.md)
 **Audit:** [Target spec gaps against notes](../audit/2026-06-29-target-spec-notes-gap-audit.md)
 **Depends on:** Phase 166 docs orientation indexes; Phase 165 contract system implementation handoff; target specs SPEC-095b through SPEC-100.
@@ -662,15 +662,15 @@ Closes the target-spec gaps identified by the 2026-06-29 audit before parser, ma
 
 | Task | Description | Status |
 |------|-------------|--------|
-| [TASK-1709](tasks/TASK-1709-target-grammar-drift-patch.md) | Patch target grammar drift in SPEC-095b | 📝 Planned |
-| [TASK-1710](tasks/TASK-1710-surface-ast-macro-substrate.md) | Create SPEC-095c syntax-tree layers and macro boundaries | 📝 Planned |
-| [TASK-1711](tasks/TASK-1711-notation-declarations.md) | Specify prefix/infix/suffix/mixfix notation declarations | 📝 Planned |
-| [TASK-1712](tasks/TASK-1712-operator-sections.md) | Specify operator sections as callable sugar | 📝 Planned |
-| [TASK-1713](tasks/TASK-1713-surface-phase-cross-spec-reconciliation.md) | Reconcile Phase 1 cross-references and stale claims | 📝 Planned |
-| [TASK-1714](tasks/TASK-1714-surface-to-core-lowering-spec-scaffold.md) | Create surface-to-Core lowering spec scaffold | 📝 Planned |
-| [TASK-1715](tasks/TASK-1715-lower-callables-rows-handlers-impls.md) | Specify lowering for callables, rows, do, handlers, and impls | 📝 Planned |
-| [TASK-1716](tasks/TASK-1716-lower-contracts-evidence-trace-notation.md) | Specify lowering for contracts, evidence, trace contracts, and notation erasure | 📝 Planned |
-| [TASK-1717](tasks/TASK-1717-surface-type-inference-tightening.md) | Tighten surface type inference for rows, evidence, handlers, operation identity, and notation | 📝 Planned |
-| [TASK-1718](tasks/TASK-1718-operational-semantics-scope-split.md) | Rewrite SPEC-099b scope and preserve Phase 159 interpreter semantics as context | 📝 Planned |
-| [TASK-1719](tasks/TASK-1719-target-big-small-step-semantics.md) | Add target Core big-step and Core/CPS small-step semantics | 📝 Planned |
-| [TASK-1720](tasks/TASK-1720-operational-contracts-traces-closeout.md) | Integrate contracts, traces, monitors, lazy/memo semantics, and close out Phase 167 | 📝 Planned |
+| [TASK-1709](tasks/TASK-1709-target-grammar-drift-patch.md) | Patch target grammar drift in SPEC-095b | ✅ Complete |
+| [TASK-1710](tasks/TASK-1710-surface-ast-macro-substrate.md) | Create SPEC-095c syntax-tree layers and macro boundaries | ✅ Complete |
+| [TASK-1711](tasks/TASK-1711-notation-declarations.md) | Specify prefix/infix/suffix/mixfix notation declarations | ✅ Complete |
+| [TASK-1712](tasks/TASK-1712-operator-sections.md) | Specify operator sections as callable sugar | ✅ Complete |
+| [TASK-1713](tasks/TASK-1713-surface-phase-cross-spec-reconciliation.md) | Reconcile Phase 1 cross-references and stale claims | ✅ Complete |
+| [TASK-1714](tasks/TASK-1714-surface-to-core-lowering-spec-scaffold.md) | Create surface-to-Core lowering spec scaffold | ✅ Complete |
+| [TASK-1715](tasks/TASK-1715-lower-callables-rows-handlers-impls.md) | Specify lowering for callables, rows, do, handlers, and impls | ✅ Complete |
+| [TASK-1716](tasks/TASK-1716-lower-contracts-evidence-trace-notation.md) | Specify lowering for contracts, evidence, trace contracts, and notation erasure | ✅ Complete |
+| [TASK-1717](tasks/TASK-1717-surface-type-inference-tightening.md) | Tighten surface type inference for rows, evidence, handlers, operation identity, and notation | ✅ Complete |
+| [TASK-1718](tasks/TASK-1718-operational-semantics-scope-split.md) | Rewrite SPEC-099b scope and preserve Phase 159 interpreter semantics as context | ✅ Complete |
+| [TASK-1719](tasks/TASK-1719-target-big-small-step-semantics.md) | Add target Core big-step and Core/CPS small-step semantics | ✅ Complete |
+| [TASK-1720](tasks/TASK-1720-operational-contracts-traces-closeout.md) | Integrate contracts, traces, monitors, lazy/memo semantics, and close out Phase 167 | ✅ Complete |

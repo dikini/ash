@@ -1,6 +1,6 @@
 # TASK-1714: Create surface-to-Core lowering spec scaffold
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Summary
 
@@ -13,7 +13,7 @@ Create surface-to-Core lowering spec scaffold. This is a documentation-only task
 
 ## Dependencies
 
-- 📝 TASK-1713: Reconcile Phase 1 cross-references and stale claims (planned)
+- ✅ TASK-1713: Reconcile Phase 1 cross-references and stale claims (complete)
 
 ## Deferral / Planned-Feature Reconciliation
 
@@ -60,9 +60,9 @@ commands:
   - bash scripts/check-docs-gate.sh
   - python3 -c 'from pathlib import Path; s=Path("docs/spec/SPEC-098c-SURFACE-TO-CORE-LOWERING.md").read_text(); assert "expanded surface AST" in s; assert "Core AST" in s; assert "sidecar" in s'
 checklist:
-  - [ ] SPEC-098c exists.
-  - [ ] Lowering boundary is explicit.
-  - [ ] SPEC-098b points to SPEC-098c.
+  - [x] SPEC-098c exists.
+  - [x] Lowering boundary is explicit.
+  - [x] SPEC-098b points to SPEC-098c.
 ```
 
 

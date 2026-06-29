@@ -1,6 +1,6 @@
 # PLAN-167: Target Surface and Semantics Gap Closure
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Overview
 
@@ -30,14 +30,14 @@ The audit records five top-level gaps:
 
 ## Goals
 
-- [ ] Patch immediate `SPEC-095b` target grammar drift without overloading the grammar spec.
-- [ ] Add a companion `SPEC-095c` for surface AST, macros, notation, and operator sections.
-- [ ] Add a general surface-to-Core lowering spec that consumes the expanded surface AST.
-- [ ] Tighten surface type-inference rules affected by rows, facts/evidence, handler markers,
+- [x] Patch immediate `SPEC-095b` target grammar drift without overloading the grammar spec.
+- [x] Add a companion `SPEC-095c` for surface AST, macros, notation, and operator sections.
+- [x] Add a general surface-to-Core lowering spec that consumes the expanded surface AST.
+- [x] Tighten surface type-inference rules affected by rows, facts/evidence, handler markers,
       operation identities, notation, and operator sections.
-- [ ] Rewrite or split target operational semantics so `SPEC-099b` owns current target behavior,
+- [x] Rewrite or split target operational semantics so `SPEC-099b` owns current target behavior,
       not only Phase 159 interpreter behavior.
-- [ ] Keep `docs/spec/SPEC-INDEX.md`, `CHANGELOG.md`, and the audit cross-references current.
+- [x] Keep `docs/spec/SPEC-INDEX.md`, `CHANGELOG.md`, and the audit cross-references current.
 
 ## Non-goals
 
@@ -57,11 +57,11 @@ is gone before Core.
 
 Tasks:
 
-- TASK-1709: Patch target grammar drift in `SPEC-095b`.
-- TASK-1710: Create `SPEC-095c` with syntax-tree layers and macro expansion boundaries.
-- TASK-1711: Add notation declarations and expansion rules to `SPEC-095c`.
-- TASK-1712: Add operator sections and callable-section typing to `SPEC-095c`.
-- TASK-1713: Reconcile Phase 1 cross-references and stale claims.
+- TASK-1709: Patch target grammar drift in `SPEC-095b`. ✅
+- TASK-1710: Create `SPEC-095c` with syntax-tree layers and macro expansion boundaries. ✅
+- TASK-1711: Add notation declarations and expansion rules to `SPEC-095c`. ✅
+- TASK-1712: Add operator sections and callable-section typing to `SPEC-095c`. ✅
+- TASK-1713: Reconcile Phase 1 cross-references and stale claims. ✅
 
 ### Phase 2: Surface-to-Core lowering and type inference
 
@@ -70,10 +70,10 @@ expanded AST, not raw parse syntax.
 
 Tasks:
 
-- TASK-1714: Create the surface-to-Core lowering spec scaffold and pipeline invariants.
-- TASK-1715: Specify lowering for callables, rows, `do`, handlers, and impl operation identity.
-- TASK-1716: Specify lowering for facts, evidence, contracts, trace contracts, notation, and macros.
-- TASK-1717: Tighten surface type inference in `SPEC-097b` for the new surface/lowering rules.
+- TASK-1714: Create the surface-to-Core lowering spec scaffold and pipeline invariants. ✅
+- TASK-1715: Specify lowering for callables, rows, `do`, handlers, and impl operation identity. ✅
+- TASK-1716: Specify lowering for facts, evidence, contracts, trace contracts, notation, and macros. ✅
+- TASK-1717: Tighten surface type inference in `SPEC-097b` for the new surface/lowering rules. ✅
 
 ### Phase 3: Target operational semantics
 
@@ -81,8 +81,8 @@ This phase rewrites the semantics layer after the surface and lowering boundarie
 
 Tasks:
 
-- TASK-1718: Rewrite `SPEC-099b` scope and preserve Phase 159 interpreter semantics as context.
-- TASK-1719: Add target Core big-step and Core/CPS small-step semantics.
+- TASK-1718: Rewrite `SPEC-099b` scope and preserve Phase 159 interpreter semantics as context. ✅
+- TASK-1719: Add target Core big-step and Core/CPS small-step semantics. ✅
 - TASK-1720: Integrate contracts, providers, traces, monitors, lazy/memo timing, and closeout.
 
 ## Dependency graph
@@ -121,23 +121,23 @@ spec.
 
 ## Acceptance criteria
 
-- [ ] `SPEC-095b` no longer teaches stale inline contract-handler syntax as target syntax.
-- [ ] `SPEC-095b` reconciles trace contract syntax with `SPEC-096b` or explicitly defers it.
-- [ ] `SPEC-095b` no longer claims a closed operator future.
-- [ ] `SPEC-095c` defines a source-preserving surface AST and macro/notation substrate suitable
+- [x] `SPEC-095b` no longer teaches stale inline contract-handler syntax as target syntax.
+- [x] `SPEC-095b` reconciles trace contract syntax with `SPEC-096b` or explicitly defers it.
+- [x] `SPEC-095b` no longer claims a closed operator future.
+- [x] `SPEC-095c` defines a source-preserving surface AST and macro/notation substrate suitable
       for a future `syn`-like library.
-- [ ] `SPEC-095c` defines prefix, infix, suffix, mixfix notation and binary infix operator
+- [x] `SPEC-095c` defines prefix, infix, suffix, mixfix notation and binary infix operator
       sections as callable sugar.
-- [ ] The lowering spec consumes expanded surface AST and erases macros, notation, and sections
+- [x] The lowering spec consumes expanded surface AST and erases macros, notation, and sections
       before Core.
-- [ ] `SPEC-097b` states the surface type-inference rules needed by rows, evidence, handlers,
+- [x] `SPEC-097b` states the surface type-inference rules needed by rows, evidence, handlers,
       operation identity, notation, and sections.
-- [ ] `SPEC-099b` no longer presents Phase 159 CPS-interpreter semantics as the full target
+- [x] `SPEC-099b` no longer presents Phase 159 CPS-interpreter semantics as the full target
       semantics.
-- [ ] Target operational semantics includes provider frames, structured traps, contract checks,
+- [x] Target operational semantics includes provider frames, structured traps, contract checks,
       lazy/memo force timing, trace facts, and temporal monitor behavior.
-- [ ] `docs/spec/SPEC-INDEX.md` has read paths for target surface syntax/AST/lowering/semantics.
-- [ ] `CHANGELOG.md` records the spec-hardening packet.
+- [x] `docs/spec/SPEC-INDEX.md` has read paths for target surface syntax/AST/lowering/semantics.
+- [x] `CHANGELOG.md` records the spec-hardening packet.
 
 ## Closeout evidence
 
@@ -148,3 +148,9 @@ At closeout, record:
 - stale-claim searches run;
 - gaps from the audit that are closed, partially closed, or deliberately deferred;
 - any follow-up implementation packets created from the hardened specs.
+
+## Closeout evidence
+
+- Implemented on 2026-06-29.
+- Documentation-only verification: `git diff --check`, `python3 tools/docs/validate_orientation_indexes.py --self-test`, and `bash scripts/check-docs-gate.sh`.
+- Audit gaps A-E are closed at spec-planning level; implementation remains future work.

@@ -1,6 +1,6 @@
 # TASK-1712: Specify operator sections as callable sugar
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Summary
 
@@ -13,7 +13,7 @@ Specify operator sections as callable sugar. This is a documentation-only task i
 
 ## Dependencies
 
-- 📝 TASK-1711: Specify prefix/infix/suffix/mixfix notation declarations (planned)
+- ✅ TASK-1711: Specify prefix/infix/suffix/mixfix notation declarations (complete)
 
 ## Deferral / Planned-Feature Reconciliation
 
@@ -66,9 +66,9 @@ commands:
   - bash scripts/check-docs-gate.sh
   - python3 -c 'from pathlib import Path; s=Path("docs/spec/SPEC-095c-SURFACE-AST-MACROS-AND-NOTATION.md").read_text(); assert "OperatorSection" in s; assert "Left" in s and "Right" in s and "Bare" in s; assert "binary infix" in s'
 checklist:
-  - [ ] Operator section forms are specified.
-  - [ ] Section typing preserves rows.
-  - [ ] Generalized mixfix sections are explicitly deferred.
+  - [x] Operator section forms are specified.
+  - [x] Section typing preserves rows.
+  - [x] Generalized mixfix sections are explicitly deferred.
 ```
 
 

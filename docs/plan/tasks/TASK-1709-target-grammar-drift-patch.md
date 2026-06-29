@@ -1,6 +1,6 @@
 # TASK-1709: Patch target grammar drift in SPEC-095b
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Summary
 
@@ -63,9 +63,9 @@ commands:
   - bash scripts/check-docs-gate.sh
   - python3 -c 'from pathlib import Path; s=Path("docs/spec/SPEC-095b-TARGET-GRAMMAR.md").read_text(); assert "No new operators" not in s; assert "requires ->" not in s'
 checklist:
-  - [ ] Inline contract-handler syntax is no longer live target syntax.
-  - [ ] Trace contract syntax is reconciled or explicitly deferred.
-  - [ ] Operator future is open and points to SPEC-095c.
+  - [x] Inline contract-handler syntax is no longer live target syntax.
+  - [x] Trace contract syntax is reconciled or explicitly deferred.
+  - [x] Operator future is open and points to SPEC-095c.
 ```
 
 

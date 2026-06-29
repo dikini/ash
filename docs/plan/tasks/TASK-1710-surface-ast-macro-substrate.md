@@ -1,6 +1,6 @@
 # TASK-1710: Create SPEC-095c syntax-tree layers and macro boundaries
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Summary
 
@@ -13,7 +13,7 @@ Create SPEC-095c syntax-tree layers and macro boundaries. This is a documentatio
 
 ## Dependencies
 
-- 📝 TASK-1709: Patch target grammar drift in SPEC-095b (planned)
+- ✅ TASK-1709: Patch target grammar drift in SPEC-095b (complete)
 
 ## Deferral / Planned-Feature Reconciliation
 
@@ -62,10 +62,10 @@ commands:
   - bash scripts/check-docs-gate.sh
   - python3 -c 'from pathlib import Path; p=Path("docs/spec/SPEC-095c-SURFACE-AST-MACROS-AND-NOTATION.md"); s=p.read_text(); assert "source-preserving" in s; assert "macro expansion" in s; assert "expanded surface AST" in s'
 checklist:
-  - [ ] SPEC-095c exists.
-  - [ ] AST layers are explicit.
-  - [ ] Macro expansion boundary is explicit.
-  - [ ] SPEC-INDEX links SPEC-095c.
+  - [x] SPEC-095c exists.
+  - [x] AST layers are explicit.
+  - [x] Macro expansion boundary is explicit.
+  - [x] SPEC-INDEX links SPEC-095c.
 ```
 
 

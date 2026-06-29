@@ -1,6 +1,6 @@
 # TASK-1711: Specify prefix/infix/suffix/mixfix notation declarations
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Summary
 
@@ -13,7 +13,7 @@ Specify prefix/infix/suffix/mixfix notation declarations. This is a documentatio
 
 ## Dependencies
 
-- 📝 TASK-1710: Create SPEC-095c syntax-tree layers and macro boundaries (planned)
+- ✅ TASK-1710: Create SPEC-095c syntax-tree layers and macro boundaries (complete)
 
 ## Deferral / Planned-Feature Reconciliation
 
@@ -59,9 +59,9 @@ commands:
   - bash scripts/check-docs-gate.sh
   - python3 -c 'from pathlib import Path; s=Path("docs/spec/SPEC-095c-SURFACE-AST-MACROS-AND-NOTATION.md").read_text(); assert "prefix" in s and "infix" in s and "suffix" in s and "mixfix" in s; assert "gone before Core" in s'
 checklist:
-  - [ ] All four notation categories are specified.
-  - [ ] Notation expands to callable syntax.
-  - [ ] Authority/row preservation is stated.
+  - [x] All four notation categories are specified.
+  - [x] Notation expands to callable syntax.
+  - [x] Authority/row preservation is stated.
 ```
 
 

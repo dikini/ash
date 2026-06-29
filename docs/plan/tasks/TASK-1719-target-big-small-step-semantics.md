@@ -1,6 +1,6 @@
 # TASK-1719: Add target Core big-step and Core/CPS small-step semantics
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Summary
 
@@ -13,7 +13,7 @@ Add target Core big-step and Core/CPS small-step semantics. This is a documentat
 
 ## Dependencies
 
-- 📝 TASK-1718: Rewrite SPEC-099b scope and preserve Phase 159 interpreter semantics as context (planned)
+- ✅ TASK-1718: Rewrite SPEC-099b scope and preserve Phase 159 interpreter semantics as context (complete)
 
 ## Deferral / Planned-Feature Reconciliation
 
@@ -58,9 +58,9 @@ commands:
   - bash scripts/check-docs-gate.sh
   - python3 -c 'from pathlib import Path; s=Path("docs/spec/SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md").read_text(); assert "small-step" in s; assert "big-step" in s; assert "provider" in s'
 checklist:
-  - [ ] Core big-step semantics specified.
-  - [ ] Core/CPS small-step semantics specified.
-  - [ ] Provider-frame dispatch reconciled.
+  - [x] Core big-step semantics specified.
+  - [x] Core/CPS small-step semantics specified.
+  - [x] Provider-frame dispatch reconciled.
 ```
 
 

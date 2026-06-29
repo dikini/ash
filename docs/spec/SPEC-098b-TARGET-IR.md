@@ -834,20 +834,26 @@ This aligns with SPEC-096b's "rows are requirements, not grants" rule.
 
 ### 6.1 Target Lowering
 
+Surface-to-Core lowering is specified by [SPEC-098c](SPEC-098c-SURFACE-TO-CORE-LOWERING.md). This
+IR spec owns the Core/CPS carriers and the Core-to-CPS lowering boundary, not raw parser syntax.
+
 ```text
-surface AST (with effect rows)
+expanded surface AST (SPEC-095c)
     |
     v
-lower.rs -- lowers to unified CPS IR
+surface-to-Core lowering (SPEC-098c)
+    |
+    v
+Core AST + sidecars (SPEC-098b / SPEC-100)
+    |
+    v
+Core-to-CPS lowering
     |
     v
 core CPS AST (Atom/Value/Term with EffectRow)
     |
     v
-type checker (with row discharge and answer type discipline)
-    |
-    v
-interpreter (with continuation chain and handler frames)
+interpreter (with continuation chain, provider frames, handler frames, traps, and monitors)
 ```
 
 ### 6.2 CPS Lowering Rules
@@ -860,7 +866,7 @@ interpreter (with continuation chain and handler frames)
 | `let x = v in e` | `LetVal { name: x, value: [v], body: [e] }` |
 | `let x = a + b in e` | `LetPrim { name: x, op: Add, args: [a, b], body: [e] }` |
 | `if c then t else e` | `If { cond: c, then_branch: [t], else_branch: [e], row: ρ }` |
-| `handle E with { ... }` | `Handle { clause: C, body: [lowered], cont: k, row: ρ_residual }` |
+| `handle expr with h` | handler-marked callable application/installation, then `Handle { clause: C, body: [lowered], cont: k, row: ρ_residual }` |
 | `raise E(args)` | `Raise { op: O, args: [lowered], resume: k, row: ρ_op }` |
 
 ## 7. CPS Lowering Examples

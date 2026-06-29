@@ -1053,7 +1053,70 @@ fn map<A, B>(f: A -> B, lazy xs: List<A>) -> lazy List<B> { ... }
 
 Mode mismatch is a type error, not a performance warning. The user must explicitly convert.
 
+## 15.10 Surface inference for AST, notation, and lowering
+
+Surface type inference runs after macro expansion and notation resolution but before Core lowering.
+It supplies the products required by [SPEC-098c](SPEC-098c-SURFACE-TO-CORE-LOWERING.md). Core type
+checking in SPEC-100 remains annotation-led and does not become a full HM-style surface inference
+engine.
+
+### 15.10.1 Callable row inference and defaulting
+
+A callable has one normalized row summary, regardless of whether the source used an inline row or a
+`where row` block. If both are absent, local/private callables may infer a row from their body.
+Exported callables must publish an explicit or inferred public summary before module export. Empty
+rows default only when the body contains no row requirements and the expected callable type does not
+supply a non-empty row.
+
+### 15.10.2 Facts and evidence
+
+Fact declarations introduce stable fact identities. Evidence declarations refer to facts/proofs and
+may satisfy row evidence requirements. A local proof does not silently add public authority; export
+summaries must state which evidence requirements are discharged, assumed, dynamically checked, or
+left as obligations.
+
+### 15.10.3 Handler marker subtyping
+
+The handler marker is a type-level callable attribute, not a row item:
+
+```text
+handler τ <: τ
+τ ≮: handler τ
+```
+
+A handler-marked callable may be used where an ordinary callable is expected. An ordinary callable
+cannot be installed as a handler without explicit handler construction or derivation.
+
+### 15.10.4 Operation identity specialization
+
+Operation calls through generic impl variables contribute abstract identities such as `F::read`.
+Concrete impl calls contribute concrete identities such as `PosixFs::read`. Specialization may
+rewrite abstract identities to concrete identities, but the row item remains the operation identity,
+not the representation of the impl type.
+
+### 15.10.5 Notation and operator-section typing
+
+Notation is typed after expansion to ordinary callable syntax. If an infix notation resolves to:
+
+```text
+op : (A, B) -> {r} C
+```
+
+then binary operator sections type as:
+
+```text
+(a op) : B -> {r} C
+(op b) : A -> {r} C
+(op)   : (A, B) -> {r} C
+```
+
+The latent row `{r}` is preserved. In contract predicates, notation expansion does not make an
+effectful callable admissible; the resolved callable must still satisfy predicate-function
+admission.
+
 ## 16. Changelog
+
+- 2026-06-29: Added surface inference rules for normalized rows, fact/evidence summaries, handler marker subtyping, operation identity specialization, and notation/operator-section typing.
 
 - 2026-06-18: Created as target-state type system document. Defined row semantics, effect item taxonomy, discharge rules, alias/group behavior, and acceptance criteria.
 - 2026-06-20: Added §15 Evaluation Modes. Defined strict/lazy/memo as invariant algorithmic contracts with explicit `_unsafe` conversions.

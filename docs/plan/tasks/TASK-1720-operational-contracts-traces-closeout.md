@@ -1,6 +1,6 @@
 # TASK-1720: Integrate contracts, traces, monitors, lazy/memo semantics, and close out Phase 167
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Summary
 
@@ -13,7 +13,7 @@ Integrate contracts, traces, monitors, lazy/memo semantics, and close out Phase 
 
 ## Dependencies
 
-- 📝 TASK-1719: Add target Core big-step and Core/CPS small-step semantics (planned)
+- ✅ TASK-1719: Add target Core big-step and Core/CPS small-step semantics (complete)
 
 ## Deferral / Planned-Feature Reconciliation
 
@@ -69,10 +69,10 @@ commands:
   - bash scripts/check-docs-gate.sh
   - python3 -c 'from pathlib import Path; s=Path("docs/spec/SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md").read_text(); assert "ContractViolation" in s; assert "PredicateFault" in s or "predicate fault" in s; assert "Temporal" in s or "monitor" in s'
 checklist:
-  - [ ] Dynamic contract operational behavior specified.
-  - [ ] Trace/monitor operational behavior specified.
-  - [ ] Lazy/memo contract timing specified.
-  - [ ] Phase 167 closeout surfaces reconciled.
+  - [x] Dynamic contract operational behavior specified.
+  - [x] Trace/monitor operational behavior specified.
+  - [x] Lazy/memo contract timing specified.
+  - [x] Phase 167 closeout surfaces reconciled.
 ```
 
 

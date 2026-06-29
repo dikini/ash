@@ -8,12 +8,13 @@ authority: design
 status: draft
 stability: alpha
 owner: language
-last_verified: 2026-06-18
+last_verified: 2026-06-29
 verified_against:
   specs:
     - docs/spec/SPEC-095a-CURRENT-GRAMMAR.md
     - docs/spec/SPEC-096-TARGET-EFFECT-SYSTEM.md
     - docs/spec/SPEC-097-TARGET-TYPE-SYSTEM.md
+    - docs/spec/SPEC-095c-SURFACE-AST-MACROS-AND-NOTATION.md
 ---
 
 # SPEC-095b: Ash Surface Syntax Grammar — Target State
@@ -73,8 +74,14 @@ The following keywords become deprecated compatibility aliases:
 
 ### 2.2 Operators and Punctuation
 
-No new operators. The existing arrow `->` remains the function arrow. The pipe
-operator `|>` remains reserved but not active.
+This target grammar adds no new built-in operators beyond the current parser surface. The existing
+arrow `->` remains the function arrow, and the pipe operator `|>` remains reserved but not active as
+a built-in operator in this document.
+
+User-defined prefix, infix, suffix, and mixfix notation, including binary infix operator sections,
+is reserved for [SPEC-095c](SPEC-095c-SURFACE-AST-MACROS-AND-NOTATION.md). Parser and AST work must
+therefore preserve operator-like tokens and grouping at the surface layer instead of assuming a
+closed operator set. Notation expands to ordinary callable syntax before Core lowering.
 
 ## 3. Module Structure
 
@@ -210,11 +217,14 @@ do_profile = ":" identifier ;
 do_stmt = "let" identifier "=" expr ";"
         | identifier "<-" expr ";"
         | "return" expr ";"
-        | "handle" effect_item "with" "{" { handler_arm } "}" ";"
+        | expr ";"
         ;
-
-handler_arm = identifier "->" expr ";" ;
 ```
+
+`handle effect_item with { ... }` is obsolete compatibility syntax, not target syntax. In target
+Ash, handlers are ordinary handler-marked callables installed with `handle expr with handler_name`,
+and default dynamic contract failure is structured bottom rather than a resumable handler arm.
+Recoverable contract behavior must be modeled through an explicit `fail` row item and handler.
 
 Examples:
 
@@ -226,11 +236,12 @@ fn read_config(path: String) -> {PosixFs::read} String {
     }
 }
 
-fn safe_divide(a: Int, b: Int) -> {} Int {
+fn safe_divide(a: Int, b: Int) -> {evidence nonzero_divisor} Int
+where row {
+    fact nonzero_divisor: requires { b != 0 };
+    evidence nonzero_divisor;
+} {
     do {
-        handle requires {b != 0} with {
-            requires -> if b != 0 then () else return 0
-        };
         return a / b
     }
 }
@@ -249,10 +260,9 @@ annotation. A future deprecation spec may remove them.
 
 ### 4.3 Handler Expressions
 
-Per NOTE-023 (revised by NOTE-025), the target grammar adds first-class handler expressions
-as eliminators for computation rows. The simple `handler_arm` in §4.2 covers the inline
-`handle ... with { ... }` form within a `do` block; this section documents the broader
-handler surface.
+Per NOTE-023 (revised by NOTE-025), the target grammar adds first-class handler expressions and
+handler-marked callables as eliminators for computation rows. Inline `handle effect_item with { ... }`
+from older sketches is legacy compatibility syntax and is not part of the target grammar.
 
 **`on` eliminator.** An `on` expression scrutinises a row-bearing computation and dispatches
 on its operations:
@@ -435,6 +445,7 @@ contract_effect = requires_effect
                 | law_effect
                 | obligation_effect
                 | guard_effect
+                | trace_contract_effect
                 ;
 
 requires_effect = "requires" "{" predicate "}" ;
@@ -443,6 +454,8 @@ invariant_effect = "invariant" "{" predicate "}" ;
 law_effect = "law" identifier "{" predicate "}" ;
 obligation_effect = "obligation" obligation_path ;
 guard_effect = "guard" "{" predicate "}" ;
+trace_contract_effect = "trace" trace_contract_path ;
+trace_contract_path = identifier { "::" identifier } ;
 
 predicate          = predicate_or ;
 predicate_or       = predicate_and { "||" predicate_and } ;
@@ -689,7 +702,6 @@ workflow_stmt = let_stmt
               | "match" expr "{" { match_arm } "}"
               | "for" pattern "in" expr "do" "{" { workflow_stmt } "}"
               | "done" ";"
-              | "handle" effect_item "with" "{" { handler_arm } "}" ";"
               ;
 ```
 
@@ -866,10 +878,13 @@ The following forms are rejected in the target grammar:
 - [SPEC-096b: Target Effect System](SPEC-096b-TARGET-EFFECT-SYSTEM.md)
 - [SPEC-097b: Target Type System](SPEC-097b-TARGET-TYPE-SYSTEM.md)
 - [SPEC-098b: Target IR Changes](SPEC-098b-TARGET-IR.md)
+- [SPEC-095c: Surface AST, Macro Expansion, and Notation](SPEC-095c-SURFACE-AST-MACROS-AND-NOTATION.md)
+- [SPEC-098c: Surface-to-Core Lowering](SPEC-098c-SURFACE-TO-CORE-LOWERING.md)
 - [SPEC-099b: Target Operational Semantics](SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md)
 
 ## 12. Changelog
 
+- 2026-06-29: Removed stale inline contract-handler target syntax, added trace-contract row syntax, and reserved user-defined notation/operator sections for SPEC-095c.
 - 2026-06-18: Created as target-state grammar document. Defined effect row syntax, unified `do` form, effect aliases/groups, and migration compatibility.
 - 2026-06-27: Reconciled with NOTE-021 (Row kind, where row layout, evidence rows), NOTE-022 (effects as interfaces, no effect keyword for operations), NOTE-023 (handler surface grammar: on, handle...with, named handler sugar).
 - 2026-06-27: Reconciled with NOTE-025 (effect identity via sorts and impls). Handler clause identities changed from interface-qualified (`Fs.read`) to impl-type-qualified (`PosixFs::read`). Named handler sugar replaced by `handler`-as-alias-for-`fn`. Added derive mechanism. §4.3 revised.

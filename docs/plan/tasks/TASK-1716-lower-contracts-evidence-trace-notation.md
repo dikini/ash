@@ -1,6 +1,6 @@
 # TASK-1716: Specify lowering for contracts, evidence, trace contracts, and notation erasure
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Summary
 
@@ -13,7 +13,7 @@ Specify lowering for contracts, evidence, trace contracts, and notation erasure.
 
 ## Dependencies
 
-- 📝 TASK-1715: Specify lowering for callables, rows, do, handlers, and impls (planned)
+- ✅ TASK-1715: Specify lowering for callables, rows, do, handlers, and impls (complete)
 
 ## Deferral / Planned-Feature Reconciliation
 
@@ -59,9 +59,9 @@ commands:
   - bash scripts/check-docs-gate.sh
   - python3 -c 'from pathlib import Path; s=Path("docs/spec/SPEC-098c-SURFACE-TO-CORE-LOWERING.md").read_text(); assert "LoweredPredicate" in s; assert "TraceContract" in s; assert "operator section" in s'
 checklist:
-  - [ ] Fact/evidence lowering specified.
-  - [ ] Contract and trace-contract lowering specified.
-  - [ ] Macro/notation/section erasure before Core specified.
+  - [x] Fact/evidence lowering specified.
+  - [x] Contract and trace-contract lowering specified.
+  - [x] Macro/notation/section erasure before Core specified.
 ```
 
 

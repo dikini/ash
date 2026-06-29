@@ -6,6 +6,13 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Added
+- PLAN-167 target surface and semantics gap-closure packet with docs-only tasks for target
+  grammar drift, source-preserving AST/macros/notation, operator sections, surface-to-Core
+  lowering, type inference tightening, and operational semantics rewrite.
+- Target spec/notes gap audit in
+  `docs/audit/2026-06-29-target-spec-notes-gap-audit.md`, preserving follow-up work on
+  operational semantics, surface AST/macros/notation, operator sections, type inference,
+  lowering to Core, and contract integration.
 - PLAN-165 implementation: adds Core contract predicate sidecar carriers, contract-position
   predicate validation/lowering, structured contract violation and predicate-fault diagnostics,
   discharge/evidence metadata, interface/impl subsumption checks, capability observation

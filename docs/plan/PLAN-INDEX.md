@@ -142,6 +142,7 @@ Update this section as tasks complete:
 | [164](PLAN-164-CORE-CPS-CONTINUATION-MULTIPLICITY.md) | 12 | 12 | ✅ Complete; SPEC-102 Core/CPS continuation multiplicity implemented and verified |
 | [165](PLAN-165-CONTRACT-SYSTEM-IMPLEMENTATION-HANDOFF.md) | 10 | 10 | ✅ Complete; Core contract sidecar carriers, predicate lowering, diagnostics, discharge metadata, observation evidence, and trace monitor carriers implemented |
 | [166](PLAN-166-DOCS-ORIENTATION-INDEXES.md) | 6 | 6 | ✅ Complete; notes/spec orientation indexes, lint tooling, and agent usability evals added |
+| [167](PLAN-167-TARGET-SURFACE-SEMANTICS-GAP-CLOSURE.md) | 12 | 0 | 📝 Planned; docs-only target surface/lowering/semantics spec-hardening packet |
 
 ---
 
@@ -649,3 +650,27 @@ Adds agent-oriented indexes for design notes and specs. The indexes combine a st
 | [TASK-1706](tasks/TASK-1706-orientation-index-lint-tooling.md) | Add validator tooling and wire it into docs gate | ✅ Complete |
 | [TASK-1707](tasks/TASK-1707-agent-usability-evaluation.md) | Record independent before/after agent discovery evaluations | ✅ Complete |
 | [TASK-1708](tasks/TASK-1708-docs-orientation-index-closeout.md) | Reconcile status surfaces and run verification | ✅ Complete |
+
+## Phase 167: Target Surface and Semantics Gap Closure
+
+**Status:** 📝 Planned; docs-only spec-hardening packet
+**Plan:** [PLAN-167: Target Surface and Semantics Gap Closure](PLAN-167-TARGET-SURFACE-SEMANTICS-GAP-CLOSURE.md)
+**Audit:** [Target spec gaps against notes](../audit/2026-06-29-target-spec-notes-gap-audit.md)
+**Depends on:** Phase 166 docs orientation indexes; Phase 165 contract system implementation handoff; target specs SPEC-095b through SPEC-100.
+
+Closes the target-spec gaps identified by the 2026-06-29 audit before parser, macro, lowering, or semantics implementation proceeds. The packet is documentation-only: it patches target grammar drift, adds a source-preserving surface AST/macro/notation spec, specifies surface-to-Core lowering, tightens surface inference, and rewrites target operational semantics.
+
+| Task | Description | Status |
+|------|-------------|--------|
+| [TASK-1709](tasks/TASK-1709-target-grammar-drift-patch.md) | Patch target grammar drift in SPEC-095b | 📝 Planned |
+| [TASK-1710](tasks/TASK-1710-surface-ast-macro-substrate.md) | Create SPEC-095c syntax-tree layers and macro boundaries | 📝 Planned |
+| [TASK-1711](tasks/TASK-1711-notation-declarations.md) | Specify prefix/infix/suffix/mixfix notation declarations | 📝 Planned |
+| [TASK-1712](tasks/TASK-1712-operator-sections.md) | Specify operator sections as callable sugar | 📝 Planned |
+| [TASK-1713](tasks/TASK-1713-surface-phase-cross-spec-reconciliation.md) | Reconcile Phase 1 cross-references and stale claims | 📝 Planned |
+| [TASK-1714](tasks/TASK-1714-surface-to-core-lowering-spec-scaffold.md) | Create surface-to-Core lowering spec scaffold | 📝 Planned |
+| [TASK-1715](tasks/TASK-1715-lower-callables-rows-handlers-impls.md) | Specify lowering for callables, rows, do, handlers, and impls | 📝 Planned |
+| [TASK-1716](tasks/TASK-1716-lower-contracts-evidence-trace-notation.md) | Specify lowering for contracts, evidence, trace contracts, and notation erasure | 📝 Planned |
+| [TASK-1717](tasks/TASK-1717-surface-type-inference-tightening.md) | Tighten surface type inference for rows, evidence, handlers, operation identity, and notation | 📝 Planned |
+| [TASK-1718](tasks/TASK-1718-operational-semantics-scope-split.md) | Rewrite SPEC-099b scope and preserve Phase 159 interpreter semantics as context | 📝 Planned |
+| [TASK-1719](tasks/TASK-1719-target-big-small-step-semantics.md) | Add target Core big-step and Core/CPS small-step semantics | 📝 Planned |
+| [TASK-1720](tasks/TASK-1720-operational-contracts-traces-closeout.md) | Integrate contracts, traces, monitors, lazy/memo semantics, and close out Phase 167 | 📝 Planned |

@@ -674,3 +674,25 @@ Closes the target-spec gaps identified by the 2026-06-29 audit before parser, ma
 | [TASK-1718](tasks/TASK-1718-operational-semantics-scope-split.md) | Rewrite SPEC-099b scope and preserve Phase 159 interpreter semantics as context | ✅ Complete |
 | [TASK-1719](tasks/TASK-1719-target-big-small-step-semantics.md) | Add target Core big-step and Core/CPS small-step semantics | ✅ Complete |
 | [TASK-1720](tasks/TASK-1720-operational-contracts-traces-closeout.md) | Integrate contracts, traces, monitors, lazy/memo semantics, and close out Phase 167 | ✅ Complete |
+
+## Phase 168: Surface AST, Notation, and Lowering Substrate
+
+**Status:** 📝 Planned; implementation substrate handoff
+**Plan:** [PLAN-168: Surface AST, Notation, and Lowering Substrate](PLAN-168-SURFACE-AST-NOTATION-SUBSTRATE.md)
+**Depends on:** Phase 167 target surface and semantics gap closure; `SPEC-095c`; `SPEC-098c`.
+
+Introduces the first implementation substrate for the newly specified surface layer without trying
+to implement the full macro system at once. The phase inventories live parser/lowering seams,
+designs a source-preserving carrier slice, preserves notation-relevant token/grouping shape,
+establishes an operator-section boundary, stages expanded surface AST, and scopes the follow-on
+surface-to-Core lowering implementation packet.
+
+| Task | Description | Status |
+|------|-------------|--------|
+| [TASK-1721](tasks/TASK-1721-parser-ast-lowering-inventory.md) | Audit current parser AST and lowering seams against Phase 167 specs | 📝 Planned |
+| [TASK-1722](tasks/TASK-1722-source-preserving-surface-carriers.md) | Design the source-preserving surface syntax carrier slice | 📝 Planned |
+| [TASK-1723](tasks/TASK-1723-notation-token-preservation.md) | Preserve notation/operator token shape before resolution | 📝 Planned |
+| [TASK-1724](tasks/TASK-1724-operator-section-boundary.md) | Add the binary infix operator-section AST boundary or fail-closed diagnostics | 📝 Planned |
+| [TASK-1725](tasks/TASK-1725-expanded-surface-ast-boundary.md) | Introduce an expanded-surface-AST boundary without full macro expansion | 📝 Planned |
+| [TASK-1726](tasks/TASK-1726-surface-to-core-lowering-inventory.md) | Inventory and scope surface-to-Core lowering implementation seams | 📝 Planned |
+| [TASK-1727](tasks/TASK-1727-phase-168-closeout.md) | Close out Phase 168 with verification and status reconciliation | 📝 Planned |

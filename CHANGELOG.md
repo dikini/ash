@@ -6,6 +6,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Added
+- PLAN-168 surface AST, notation, and lowering substrate packet with tasks for parser/lowering
+  inventory, source-preserving carrier design, notation-token preservation, operator-section
+  boundaries, expanded-surface-AST staging, surface-to-Core lowering inventory, and closeout.
 - Phase 167 target surface and semantics specs: adds `SPEC-095c` for source-preserving
   AST/macros/notation/operator sections, `SPEC-098c` for surface-to-Core lowering, target
   grammar drift fixes in `SPEC-095b`, surface inference tightening in `SPEC-097b`, and a

@@ -701,7 +701,7 @@ surface-to-Core lowering implementation packet.
 
 ## Phase 169: Surface Expansion and Notation Elaboration
 
-**Status:** 📝 Planned; implementation packet ready
+**Status:** ✅ Complete
 **Plan:** [PLAN-169: Surface Expansion and Notation Elaboration](PLAN-169-SURFACE-EXPANSION-AND-NOTATION-ELABORATION.md)
 **Depends on:** Phase 168 surface AST, notation, and lowering substrate; `SPEC-095c`; `SPEC-098c`.
 

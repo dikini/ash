@@ -6,6 +6,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Added
+- PLAN-170 expanded-surface integration and notation scoping packet with tasks for lowering-boundary audits, high-level expansion routing, notation summary/export semantics, bounded import/export propagation or explicit non-propagation, source-origin sidecar boundaries, and closeout review (TASK-1736 through TASK-1742).
 - PLAN-169 implementation: adds reusable surface expression traversal, notation declaration
   parser/AST carriers, raw built-in binary operator token preservation, local notation-table
   duplicate/conflict diagnostics, binary operator-section elaboration for built-ins and local

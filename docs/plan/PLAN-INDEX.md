@@ -145,6 +145,7 @@ Update this section as tasks complete:
 | [167](PLAN-167-TARGET-SURFACE-SEMANTICS-GAP-CLOSURE.md) | 12 | 12 | ✅ Complete; docs-only target surface/lowering/semantics spec-hardening packet |
 | [168](PLAN-168-SURFACE-AST-NOTATION-SUBSTRATE.md) | 7 | 7 | ✅ Complete; implementation substrate handoff |
 | [169](PLAN-169-SURFACE-EXPANSION-AND-NOTATION-ELABORATION.md) | 8 | 8 | ✅ Complete; surface expansion and notation elaboration implemented with explicit deferrals |
+| [170](PLAN-170-EXPANDED-SURFACE-INTEGRATION-AND-NOTATION-SCOPING.md) | 7 | 1 | 📝 Planned; expanded-surface integration and notation scoping packet created |
 
 ---
 
@@ -721,3 +722,21 @@ mixfix partial application, and full `SPEC-098c` lowering remain explicitly defe
 | [TASK-1733](tasks/TASK-1733-operator-section-elaboration.md) | Elaborate binary operator sections to callable surface forms | ✅ Complete |
 | [TASK-1734](tasks/TASK-1734-expanded-surface-lowering-gate.md) | Add expanded-surface-to-Core lowering gate | ✅ Complete |
 | [TASK-1735](tasks/TASK-1735-phase-169-closeout.md) | Close out Phase 169 with verification and review | ✅ Complete |
+
+## Phase 170: Expanded Surface Integration and Notation Scoping
+
+**Status:** 📝 Planned; task packet created
+**Plan:** [PLAN-170: Expanded Surface Integration and Notation Scoping](PLAN-170-EXPANDED-SURFACE-INTEGRATION-AND-NOTATION-SCOPING.md)
+**Depends on:** Phase 169 surface expansion and notation elaboration; `SPEC-095c`; `SPEC-098c`.
+
+Closes the highest-value Phase 169 deferrals around expanded-surface integration and notation scoping. The packet audits direct lowering paths, routes high-level module/file lowering through expansion where safe, specifies notation summary/export semantics, either implements bounded propagation or records explicit non-propagation, defines the narrow origin sidecar boundary, and closes out with verification/review. Full macro hygiene, typed macros, generalized mixfix partial application, and broad `SPEC-098c` lowering remain out of scope.
+
+| Task | Description | Status |
+|------|-------------|--------|
+| [TASK-1736](tasks/TASK-1736-phase-170-plan-packet.md) | Create the Phase 170 plan and task packet | ✅ Complete |
+| [TASK-1737](tasks/TASK-1737-expanded-surface-boundary-callsite-audit.md) | Audit expanded-surface boundary and direct-lowering call sites | 📝 Planned |
+| [TASK-1738](tasks/TASK-1738-expanded-surface-high-level-lowering-routing.md) | Route high-level module/file lowering through expanded-surface validation | 📝 Planned |
+| [TASK-1739](tasks/TASK-1739-notation-summary-export-design.md) | Specify notation summary/export and visibility semantics | 📝 Planned |
+| [TASK-1740](tasks/TASK-1740-bounded-notation-import-export-scope.md) | Implement bounded notation import/export propagation or explicit non-propagation | 📝 Planned |
+| [TASK-1741](tasks/TASK-1741-expansion-origin-sidecar-boundary.md) | Specify and implement the narrow source-origin sidecar boundary for expansion products | 📝 Planned |
+| [TASK-1742](tasks/TASK-1742-phase-170-closeout.md) | Close out Phase 170 with verification, changelog, index reconciliation, and review | 📝 Planned |

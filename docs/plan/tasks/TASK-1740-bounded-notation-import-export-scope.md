@@ -4,7 +4,7 @@
 
 ## Summary
 
-Implement the TASK-1739 decision. If notation summary carriers are ready, add bounded imported/exported notation propagation. If not, formalize non-propagation with diagnostics/docs and negative leakage tests.
+Implement the TASK-1739 decision: preserve explicit non-propagation for notation declarations across imports/exports, while keeping local notation behavior and no-leakage invariants covered by tests.
 
 ## Specification Reference
 
@@ -21,22 +21,23 @@ Implement the TASK-1739 decision. If notation summary carriers are ready, add bo
 
 | Prior item | Source | Original reason | Prereqs now? | Decision | Gate |
 |---|---|---|---|---|---|
-| Imported/exported notation propagation | PLAN-169 non-goal | Needed summary carrier design | Depends on TASK-1739 | Implement bounded propagation only if carriers are ready; otherwise add explicit non-propagation tests | Scope matrix tests pass |
+| Imported/exported notation propagation | PLAN-169 non-goal | Needed summary carrier design | TASK-1739 concluded carriers are not ready for honest propagation | Preserve explicit non-propagation; add negative tests proving imported/exported notation is not active | Scope matrix tests pass |
 
 ## Requirements
 
 1. Follow the TASK-1739 decision exactly; do not silently broaden notation semantics.
-2. If implementing propagation, extend module summary/export carriers with notation metadata and visibility rules.
-3. If preserving non-propagation, add explicit tests proving imported notation is not active and diagnostics remain stable.
-4. Preserve local and inline-module no-leakage behavior from Phase 169.
-5. Add conflict tests for any imported notation behavior that is implemented.
+2. Add explicit tests proving imported/exported notation is not active and diagnostics remain stable.
+3. Preserve local and inline-module no-leakage behavior from Phase 169.
+4. Keep local `pub` notation usable only in its declaring module.
+5. Prove ordinary callable imports remain usable by direct call syntax even when notation aliases do not propagate.
 6. Ensure notation targets remain ordinary callable paths; no authority is granted by notation aliases.
+7. Do not add notation metadata to module-summary/export carriers in this task.
 
 ## TDD Steps
 
 1. Add scope matrix tests before code changes.
-2. Implement the minimal chosen behavior.
-3. Add negative leakage tests for all non-supported cases.
+2. Implement the minimal non-propagation enforcement/fixtures if current behavior is not already explicit.
+3. Add negative leakage tests for imported/exported notation and parent/inline boundaries.
 4. Run parser, typeck, engine, and workspace checks.
 
 ## Verification
@@ -54,5 +55,5 @@ commands:
 checklist:
   - [ ] Scope matrix positive cases pass.
   - [ ] Scope matrix negative leakage cases pass.
-  - [ ] Imported/exported behavior matches TASK-1739 exactly.
+  - [ ] Imported/exported behavior matches TASK-1739 exactly: notation does not propagate across imports/exports.
 ```

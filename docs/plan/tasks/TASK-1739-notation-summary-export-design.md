@@ -1,6 +1,6 @@
 # TASK-1739: Specify notation summary/export and visibility semantics
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Summary
 
@@ -16,7 +16,7 @@ Design the module-summary, visibility, import, and export semantics for notation
 ## Dependencies
 
 - ✅ TASK-1736: Phase 170 packet created
-- 📝 TASK-1737: Boundary audit may identify module-summary consumers
+- ✅ TASK-1737: Boundary audit identified module-summary consumers
 
 ## Deferral / Planned-Feature Reconciliation
 
@@ -50,7 +50,17 @@ commands:
   - python3 tools/docs/validate_orientation_indexes.py --self-test
   - bash scripts/check-docs-gate.sh
 checklist:
-  - [ ] Design note covers local, inline, imported, exported, and re-exported cases.
-  - [ ] Decision is explicit: implement bounded propagation or preserve non-propagation.
-  - [ ] TASK-1740 test matrix is concrete.
+  - [x] Design note covers local, inline, imported, exported, and re-exported cases.
+  - [x] Decision is explicit: preserve non-propagation.
+  - [x] TASK-1740 test matrix is concrete.
 ```
+
+## Closeout evidence
+
+- Design note: `docs/design/phase-170-notation-summary-export-semantics.md`.
+- Decision: Phase 170 preserves explicit non-propagation; notation remains module-local until summary carriers can transport notation metadata honestly.
+- TASK-1740 patched with the selected non-propagation branch and concrete scope-matrix tests.
+- Fresh verification:
+  - `git diff --check`
+  - `python3 tools/docs/validate_orientation_indexes.py --self-test`
+  - `bash scripts/check-docs-gate.sh`

@@ -6,6 +6,11 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Added
+- PLAN-165: Contract system implementation handoff. Closes NOTE-014 as a design gap register
+  and turns NOTE-027 through NOTE-035 into an ordered implementation packet with TASK-1693
+  through TASK-1702 covering Core predicate artifacts, dynamic diagnostics, discharge metadata,
+  subsumption/blame, capability observation evidence, trace contracts, temporal monitors, and
+  closeout verification.
 - NOTE-035: Temporal and concurrent contracts. Resolves NOTE-014 GAP 5 by defining trace
   contracts over the ambient computation model, treating `Pure`/`Act`/`Proc`/`Workflow` as
   semantic anchors rather than separate contract systems. `Proc` anchors operational trace
@@ -70,6 +75,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   analog). Resolves the "phantom types/newtype deferred" item from NOTE-025 §7.1.
 
 ### Changed
+- Closed NOTE-014 as the resolved contract-system gap register. Its status now points to
+  NOTE-027 through NOTE-035 for design resolution and PLAN-165 for implementation sequencing.
 - Reconciled NOTE-035 into target specs. SPEC-096/SPEC-096b add trace-contract row-item
   spelling and weaken old `Proc`/`Workflow` wording into semantic anchors. SPEC-097b adds
   `Γtrace` well-formedness for temporal formulas. SPEC-098b adds `TraceContract`,

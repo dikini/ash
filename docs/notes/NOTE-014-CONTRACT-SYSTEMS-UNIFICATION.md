@@ -1,9 +1,11 @@
 # NOTE-014: Contract Systems Unification — Hoare, Laws, Properties, and the Computation Row
 
 **Date:** 2026-06-23
-**Status:** Living document — exploration in progress
+**Status:** Closed as design gap register — resolved by NOTE-027 through NOTE-035; implementation handoff tracked by PLAN-165
 **Purpose:** Capture the precise semantics of Ash's contract systems and how they unify
 through the computation row. Companion to NOTE-013 (ambient monad and handler composition).
+The design gaps recorded in §12 are resolved; implementation sequencing now lives in
+PLAN-165.
 Updated as new insights emerge; restructured for flow and readability later.
 
 ## 0. Motivation
@@ -1603,3 +1605,4 @@ checking over the Core predicate schema.
 | 2026-06-29 | GAP 9 (Surface-to-Core contract lowering) resolved in NOTE-033. Surface predicates now lower through structured Core predicate artifacts with binder, snapshot, classification, proof/runtime, diagnostic, and discharge metadata. Swept related stale dynamic-contract prose in §3.2 and §6 to preserve NOTE-029's trap-vs-explicit-`fail` boundary. |
 | 2026-06-29 | GAP 8 resolved in NOTE-034. Separated authority-bearing capability observations from authority-free contract predicates, added the observation-before-contract pattern, and introduced observation provenance as diagnostic/evidence metadata rather than predicate authority. |
 | 2026-06-29 | GAP 5 resolved in NOTE-035. Temporal/concurrent contracts are trace contracts over the ambient computation model: `Proc` anchors operational trace facts, `Workflow` anchors normative/evidential interpretation over those facts, runtime monitors are the default discharge mechanism, and monitor violations/faults receive structured diagnostics. |
+| 2026-06-29 | Closed NOTE-014 as a design gap register. All nine gaps now resolve to NOTE-027 through NOTE-035, and implementation sequencing is handed off to PLAN-165. |

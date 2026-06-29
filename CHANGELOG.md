@@ -101,6 +101,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   analog). Resolves the "phantom types/newtype deferred" item from NOTE-025 §7.1.
 
 ### Fixed
+- Reconciled Phase 167 post-review closeout drift by marking TASK-1720 complete in the
+  phase-owned plan and consolidating duplicate closeout evidence sections.
 - Repaired post-index agent-review findings: `PLAN-165` now references the actual NOTE-031
   filename, and NOTE-025 consistently describes `handler` as a type-level function marker
   rather than a pure `fn` alias.

@@ -83,7 +83,7 @@ Tasks:
 
 - TASK-1718: Rewrite `SPEC-099b` scope and preserve Phase 159 interpreter semantics as context. ✅
 - TASK-1719: Add target Core big-step and Core/CPS small-step semantics. ✅
-- TASK-1720: Integrate contracts, providers, traces, monitors, lazy/memo timing, and closeout.
+- TASK-1720: Integrate contracts, providers, traces, monitors, lazy/memo timing, and closeout. ✅
 
 ## Dependency graph
 
@@ -141,16 +141,7 @@ spec.
 
 ## Closeout evidence
 
-At closeout, record:
-
-- exact files changed;
-- docs gate output;
-- stale-claim searches run;
-- gaps from the audit that are closed, partially closed, or deliberately deferred;
-- any follow-up implementation packets created from the hardened specs.
-
-## Closeout evidence
-
 - Implemented on 2026-06-29.
 - Documentation-only verification: `git diff --check`, `python3 tools/docs/validate_orientation_indexes.py --self-test`, and `bash scripts/check-docs-gate.sh`.
 - Audit gaps A-E are closed at spec-planning level; implementation remains future work.
+- Post-review remediation on 2026-06-29 reconciled the phase-local task list and removed the stale closeout-evidence template.

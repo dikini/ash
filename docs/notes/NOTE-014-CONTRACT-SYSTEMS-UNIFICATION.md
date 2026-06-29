@@ -1395,23 +1395,35 @@ taxonomy still needs concrete row/IR spelling.
 
 ### GAP 9: Contract Lowering from Surface to Core [CRITICAL — known implementation gap]
 
+**Status: Partially resolved in NOTE-031.** NOTE-031 defines the predicate well-formedness
+boundary that must run before Surface predicates become Core constraints: expression-like
+surface predicates are classified as `StaticPredicate`, `DynamicPredicate`, or rejected;
+`old(...)` becomes a boundary-local `SnapshotRef`; predicate faults are distinct from false
+predicates; and unsupported-but-pure forms remain dynamic rather than being silently erased.
+The remaining implementation work is the concrete Core AST/schema and lowering algorithm.
+
 The user previously identified (2026-04-10) that contract lowering from surface contracts
 (`Requirement::Arithmetic { expr: Expr }`) to core contracts (structured `{ var, constraint }`)
 is a major dependency that needs to be made explicit. This is the Surface→Core boundary
 described abstractly in §11.5 ("structuralized") but not concretely specified.
 
 The surface has expression-based contract predicates. The Core needs structured
-constraint/predicate representations suitable for SMT queries. The mapping between these two
-representations — what expression forms are supported, how they translate to SMT-consumable
-constraints, what happens to unsupported forms — is currently undefined.
+constraint/predicate representations suitable for SMT queries. Before NOTE-031, the mapping
+between these two representations — what expression forms are supported, how they translate to
+SMT-consumable constraints, what happens to unsupported forms — was undefined. NOTE-031 now
+defines the classification boundary; the remaining gap is the concrete Core predicate schema
+and lowering algorithm.
 
-**Blocks:** any actual implementation of static contract checking.
+**Blocks:** concrete implementation of Surface-to-Core predicate lowering and static contract
+checking over the Core predicate schema.
 
 ## 13. Open Questions
 
 1. **`old(x)` in postconditions.** How do we snapshot pre-state for `ensures` clauses that
-   reference the pre-call value? This needs a state-snapshot mechanism, possibly connected
-   to the resource effect system.
+   reference the pre-call value? **Resolved in NOTE-031.** `old(...)` is boundary-local and
+   lowers to a `SnapshotRef` captured before the body governed by the postcondition runs.
+   Snapshot expressions are initially limited to boundary paths such as `old(x)` and
+   `old(x.field)`, not arbitrary computations.
 
 2. **Refinement types + row polymorphism interaction.** How do refinements interact with
    open rows? E.g., `fn f<A | P>(x: A) -> {r} B` — does the refinement `P` constrain the
@@ -1561,3 +1573,4 @@ constraints, what happens to unsupported forms — is currently undefined.
 | 2026-06-28 | GAP 4 (contracts × evaluation modes) resolved in NOTE-028. Purity is denotational: `strict`/`lazy`/`memo` and the handler marker are purity-preserving attributes; impurity comes from residual/latent rows. Contract timing: strict checks at call/return, lazy checks on every force, memo checks on first force and replays cached terminal outcomes. |
 | 2026-06-28 | GAP 6 (contract failure observability and bottom behavior) resolved in NOTE-029. Default dynamic contract failure is structured bottom: `Trap { reason: ContractViolation(ContractDiagnostic) }`. `ContractViolation` is not a row item or implicit resumable effect; recoverable behavior lowers to explicit `fail` and row-accounts the failure. Diagnostics preserve blame, predicate, observed values, call chain, discharge history, handler decisions, and replay status. |
 | 2026-06-28 | GAP 2 (monadic Hoare logic) resolved in NOTE-030. Rows compose by union, while contracts compose through predicate-transformer reasoning: producer postconditions discharge continuation preconditions (`∀a. Q(a) ⇒ R(a)`), and composed postconditions existentially thread the intermediate value (`∃a. Q(a) ∧ S(a, b)`). |
+| 2026-06-29 | NOTE-031 resolved the `old(x)` snapshot open question and partially resolved GAP 9. Contract predicates are now classified before lowering: SMT-safe static predicates, pure dynamic predicates, and rejected effectful/unstable predicates. `old(...)` lowers to boundary-local snapshot metadata, and predicate faults are distinct from false predicates. |

@@ -6,6 +6,12 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Added
+- NOTE-031: Contract predicate well-formedness and snapshot semantics. Resolves the `old(x)`
+  snapshot open question from NOTE-014 and settles NOTE-030's initial public predicate-language
+  boundary for existentials. Contract predicates are classified as SMT-safe static predicates,
+  pure dynamic predicates, or rejected effectful/unstable predicates. `old(...)` lowers to
+  boundary-local snapshot metadata, predicates must not implicitly force lazy/memo values, and
+  predicate faults are distinct from false predicates.
 - NOTE-030: Monadic Hoare logic for Ash computations. Resolves NOTE-014 GAP 2. Rows compose
   through union (`ρm ∪ ρk`), while contracts compose through predicate transformers: producer
   postconditions discharge continuation preconditions (`∀a. Q(a) ⇒ R(a)`), and composed

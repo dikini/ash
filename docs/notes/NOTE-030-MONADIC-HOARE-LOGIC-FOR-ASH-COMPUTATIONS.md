@@ -450,9 +450,10 @@ boundaries.
    dynamic fallback for hard quantified obligations.
 2. **Evidence granularity.** Should `ComposedContract` store the full proof object, a compact
    evidence reference, or only a source-span link to the producer/continuation contracts?
-3. **Predicate language for existentials.** The generic postcondition uses `∃a`. If the public
-   predicate language avoids existential syntax, this remains internal proof metadata rather
-   than source syntax.
+3. **Predicate language for existentials.** **Resolved for the initial predicate language in
+   NOTE-031.** Source predicates do not gain `forall` or `exists` syntax. The generic
+   postcondition's `∃a` remains internal proof metadata unless a later surface syntax admits
+   quantifiers explicitly.
 4. **Associativity of evidence.** Bind reassociation is semantically valid, but evidence trees
    may differ. We need a canonical evidence normalization if optimizers reassociate large
    composed computations.
@@ -471,6 +472,9 @@ boundaries.
   — contract timing across strict/lazy/memo observation boundaries.
 - [NOTE-029: Structured Bottom and Contract Diagnostics](NOTE-029-STRUCTURED-BOTTOM-AND-CONTRACT-DIAGNOSTICS.md)
   — structured bottom, diagnostics, and explicit `fail` boundary.
+- [NOTE-031: Contract Predicate Well-Formedness and Snapshot Semantics](NOTE-031-CONTRACT-PREDICATE-WELL-FORMEDNESS-AND-SNAPSHOTS.md)
+  — predicate classification, boundary-local snapshots, dynamic predicate faults, and the
+  decision that source-level existentials remain deferred.
 - [SPEC-097b: Target Type System](../spec/SPEC-097b-TARGET-TYPE-SYSTEM.md)
   — target row typing, contract subsumption, and evaluation modes.
 - [SPEC-098b: Target IR](../spec/SPEC-098b-TARGET-IR.md)
@@ -501,3 +505,4 @@ boundaries.
 | Date | Change |
 |------|--------|
 | 2026-06-28 | Initial note. Resolves NOTE-014 GAP 2 by defining contract composition through `bind` as predicate-transformer reasoning: rows union, continuation preconditions are discharged by producer postconditions, and final postconditions existentially thread the intermediate value. |
+| 2026-06-29 | Cross-referenced NOTE-031. The public predicate language does not expose existential syntax initially; NOTE-030's `∃a` remains internal proof metadata. |

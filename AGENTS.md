@@ -100,10 +100,34 @@ uuid = { workspace = true }
 
 ## Documentation Workflow
 
-- `docs/specs/` stores canonical behavior and invariant specs.
-- `docs/plans/` stores implementation and alignment plans.
+- `docs/spec/` stores canonical behavior and invariant specs.
+- `docs/plan/` stores implementation and alignment plans.
 - `docs/reference/` stores frozen contract and behavior references needed to work locally.
 - `docs/notes/` stores per-subsystem future opportunities, cleanup notes, and non-blocking follow-up observations.
+
+### Notes/spec index maintenance
+
+Keep the orientation indexes current whenever notes or specs change. They are agent-facing maps,
+not normative sources, and they prevent stale or historical documents from being treated as current
+authority.
+
+1. When adding, renaming, superseding, promoting, or closing a note/spec, update
+   `docs/notes/NOTE-INDEX.md` or `docs/spec/SPEC-INDEX.md` in the same change.
+2. Use structured topics for placement and unstructured tags for cross-cutting retrieval concerns
+   such as `grammar`, `semantics`, `references`, `diagnostics`, `runtime`, `authority`, and
+   `testing`.
+3. Add or revise read paths when a recurring task would otherwise require broad search, especially
+   grammar changes, current-vs-target planning, contract work, Core/CPS work, and trace/monitor
+   work.
+4. If an evaluation or review finds a missed document, stale path, wrong authority label, or common
+   wrong turn, repair the index and record the finding in the relevant task/plan evidence.
+5. Verify index health before completion:
+
+   ```bash
+   python3 tools/docs/validate_orientation_indexes.py --self-test
+   bash scripts/check-docs-gate.sh
+   ```
+
 ## Core Principles
 
 ### 1. Always Use Available Skills

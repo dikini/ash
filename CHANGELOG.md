@@ -6,6 +6,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Added
+- Documented the notes/spec orientation-index maintenance procedure in `AGENTS.md`, including
+  when to update `NOTE-INDEX.md`/`SPEC-INDEX.md`, how to use structured topics and
+  cross-cutting tags, and which validation commands to run.
 - PLAN-166: Docs orientation indexes. Adds `docs/notes/NOTE-INDEX.md` and
   `docs/spec/SPEC-INDEX.md` with topic ontologies, cross-cutting tags, read paths,
   status/role metadata, and independent before/after agent usability evaluation evidence.

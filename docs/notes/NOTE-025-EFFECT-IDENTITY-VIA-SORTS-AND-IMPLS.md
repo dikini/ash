@@ -165,11 +165,19 @@ forall A, r: Row. (Unit -> {op | r} A) -> {r} Ans
 Where `op` is the concrete operation identity (after specialization), `A` is the computation's
 value type, and `Ans` is the handler's answer type (which may differ from `A`).
 
-### 2.2 `handler` as keyword alias for `fn`
+### 2.2 `handler` as a type-level marker
 
-`handler` is a pure keyword alias for `fn` (per NOTE-023). It carries no semantic difference.
-It signals intent to humans and LLMs: "this function is meant to be used as a handler." The
-compiler treats it identically to `fn`.
+`handler` is not a pure keyword alias for `fn`. Per NOTE-023 §7, it constructs a function
+whose type carries a handler marker: a type-level attribute that records handler intent while
+leaving the underlying function shape structurally identical. The marker is erased at runtime,
+but it remains visible to the type checker and derive machinery.
+
+This distinction matters for two operations:
+
+- `derive handler <name>` filters helper functions from operation interpreters by checking
+  whether a candidate function carries the handler marker.
+- `handle expr with <name>` validates that the resolved value is handler-marked, rather than
+  accepting any structurally compatible function by accident.
 
 ### 2.3 Three ways to produce a handler function
 
@@ -983,3 +991,5 @@ External references:
   (referential transparency); `strict`/`lazy`/`memo` and the handler marker are
   purity-preserving attributes; impurity comes from residual/latent rows, not from the
   attribute's presence. Contract timing for lazy/memo values is resolved in NOTE-028.
+- 2026-06-29: Reconciled §2.2 with the resolved pre-spec delta and NOTE-023 §7: `handler`
+  is a type-level marker on function types, not a pure keyword alias for `fn`.

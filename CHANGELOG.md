@@ -12,6 +12,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Docs orientation index lint tooling. Adds `tools/docs/validate_orientation_indexes.py` and
   wires it into `scripts/check-docs-gate.sh` so docs gate validates index coverage,
   table shape, link targets, topic vocabulary, and tag vocabulary.
+
 - PLAN-165: Contract system implementation handoff. Closes NOTE-014 as a design gap register
   and turns NOTE-027 through NOTE-035 into an ordered implementation packet with TASK-1693
   through TASK-1702 covering Core predicate artifacts, dynamic diagnostics, discharge metadata,
@@ -79,6 +80,11 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   identity, zero-cost wrapping). Worked examples: domain primitives, phantom tagging,
   state-machine encoding, effect carriers. Deriving impls deferred (GeneralizedNewtypeDeriving
   analog). Resolves the "phantom types/newtype deferred" item from NOTE-025 §7.1.
+
+### Fixed
+- Repaired post-index agent-review findings: `PLAN-165` now references the actual NOTE-031
+  filename, and NOTE-025 consistently describes `handler` as a type-level function marker
+  rather than a pure `fn` alias.
 
 ### Changed
 - Closed NOTE-014 as the resolved contract-system gap register. Its status now points to

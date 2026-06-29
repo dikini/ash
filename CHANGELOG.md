@@ -6,6 +6,12 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Added
+- PLAN-166: Docs orientation indexes. Adds `docs/notes/NOTE-INDEX.md` and
+  `docs/spec/SPEC-INDEX.md` with topic ontologies, cross-cutting tags, read paths,
+  status/role metadata, and independent before/after agent usability evaluation evidence.
+- Docs orientation index lint tooling. Adds `tools/docs/validate_orientation_indexes.py` and
+  wires it into `scripts/check-docs-gate.sh` so docs gate validates index coverage,
+  table shape, link targets, topic vocabulary, and tag vocabulary.
 - PLAN-165: Contract system implementation handoff. Closes NOTE-014 as a design gap register
   and turns NOTE-027 through NOTE-035 into an ordered implementation packet with TASK-1693
   through TASK-1702 covering Core predicate artifacts, dynamic diagnostics, discharge metadata,

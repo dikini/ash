@@ -65,4 +65,7 @@ print(f'docs-gate: markdown links checked={checked} missing=0')
 PY
 fi
 
+echo "docs-gate: validating docs orientation indexes"
+python3 tools/docs/validate_orientation_indexes.py
+
 echo "docs-gate: OK"

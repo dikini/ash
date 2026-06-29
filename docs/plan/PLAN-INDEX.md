@@ -141,6 +141,7 @@ Update this section as tasks complete:
 | [163](PLAN-163-CORE-LAZY-MEMO-MODES.md) | 15 | 15 | ✅ Complete; SPEC-101 Core lazy/memo mode implementation packet plus review remediation |
 | [164](PLAN-164-CORE-CPS-CONTINUATION-MULTIPLICITY.md) | 12 | 12 | ✅ Complete; SPEC-102 Core/CPS continuation multiplicity implemented and verified |
 | [165](PLAN-165-CONTRACT-SYSTEM-IMPLEMENTATION-HANDOFF.md) | 10 | 1 | 📝 Planned; NOTE-014 contract gap register closed and implementation handoff packet created |
+| [166](PLAN-166-DOCS-ORIENTATION-INDEXES.md) | 6 | 6 | ✅ Complete; notes/spec orientation indexes, lint tooling, and agent usability evals added |
 
 ---
 
@@ -630,3 +631,21 @@ Closes NOTE-014 as the resolved contract-system design gap register and hands im
 | [TASK-1700](tasks/TASK-1700-trace-contract-monitor-sidecars.md) | Add trace-contract, trace-fact, workflow-ledger, and monitor-plan carriers | 📝 Planned |
 | [TASK-1701](tasks/TASK-1701-temporal-monitor-runtime-diagnostics.md) | Implement temporal monitor result, violation, and monitor-fault diagnostics | 📝 Planned |
 | [TASK-1702](tasks/TASK-1702-contract-system-integration-closeout.md) | Add integration fixtures, docs consistency checks, PLAN-INDEX reconciliation, and closeout | 📝 Planned |
+
+## Phase 166: Docs Orientation Indexes
+
+**Status:** ✅ Complete; 6/6 tasks complete
+**Plan:** [PLAN-166: Docs Orientation Indexes](PLAN-166-DOCS-ORIENTATION-INDEXES.md)
+**Spec:** Documentation infrastructure / navigational metadata
+**Depends on:** Phase 165 handoff packet; existing notes/spec corpus.
+
+Adds agent-oriented indexes for design notes and specs. The indexes combine a structured topic ontology with unstructured tags for cross-cutting concerns such as `grammar`, `semantics`, `references`, `diagnostics`, and `authority`. A docs-gate validator now checks index coverage, link shape, topic/tag vocabulary, and table structure.
+
+| Task | Description | Status |
+|------|-------------|--------|
+| [TASK-1703](tasks/TASK-1703-docs-orientation-index-plan.md) | Create the Phase 166 plan and task packet | ✅ Complete |
+| [TASK-1704](tasks/TASK-1704-notes-orientation-index.md) | Create `docs/notes/NOTE-INDEX.md` | ✅ Complete |
+| [TASK-1705](tasks/TASK-1705-specs-orientation-index.md) | Create `docs/spec/SPEC-INDEX.md` | ✅ Complete |
+| [TASK-1706](tasks/TASK-1706-orientation-index-lint-tooling.md) | Add validator tooling and wire it into docs gate | ✅ Complete |
+| [TASK-1707](tasks/TASK-1707-agent-usability-evaluation.md) | Record independent before/after agent discovery evaluations | ✅ Complete |
+| [TASK-1708](tasks/TASK-1708-docs-orientation-index-closeout.md) | Reconcile status surfaces and run verification | ✅ Complete |

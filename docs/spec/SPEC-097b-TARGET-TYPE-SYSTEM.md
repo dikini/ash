@@ -225,6 +225,12 @@ The checker rejects predicates that require authority, perform process/workflow 
 install or dispatch handlers, observe time/randomness/environment/global mutable state, inspect
 allocation identity, or force lazy/memo values outside a contract-owned observation boundary.
 
+Per NOTE-034, values produced by authority-bearing operations may still be bound in the
+predicate environment as ordinary values. The predicate may inspect such a value, but it may
+not perform the operation that produced it or use hidden provider/role admission. Capability
+admission failure, operation failure, predicate false, and predicate evaluator fault remain
+distinct typing/diagnostic classes.
+
 `old(path)` references lower to boundary-local `SnapshotRef` metadata. The path is a field path
 through a value visible at the contract boundary, not an arbitrary computation.
 
@@ -1045,3 +1051,4 @@ Mode mismatch is a type error, not a performance warning. The user must explicit
 - 2026-06-29: Reconciled with NOTE-031. Predicate references now carry checked summaries and boundary-local snapshot metadata; predicates are classified as static or dynamic after rejecting effectful, unstable, or implicit-forcing forms.
 - 2026-06-29: Reconciled with NOTE-033. Refined `PredicateSummary` so predicate references point at typed lowered predicate artifacts with binder environments, snapshots, proof fragments, optional dynamic-check plans, diagnostics, and stable identities.
 - 2026-06-29: Swept stale contract-discharge wording so dynamic contracts lower to runtime checks by default rather than requiring hidden runtime contract handlers.
+- 2026-06-29: Reconciled with NOTE-034. Predicate well-formedness now explicitly separates authority-bearing operation calls from ordinary operation-produced values that contracts may inspect.

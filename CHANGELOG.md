@@ -6,6 +6,11 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Added
+- NOTE-034: Contract-capability boundary. Resolves NOTE-014 GAP 8 by separating
+  authority-bearing operation/capability observations from authority-free contract predicates,
+  defining the observation-before-contract pattern, observation provenance sidecars,
+  predicate-function authority admission rules, and diagnostic separation between admission
+  failure, operation failure, predicate false, and predicate evaluator fault.
 - NOTE-033: Surface-to-Core contract lowering. Resolves NOTE-014 GAP 9 by defining the
   concrete `LoweredPredicate`/`PredicateNode` schema, binder and snapshot environment model,
   staged lowering algorithm, proof-obligation boundary, dynamic runtime-check plan, and
@@ -60,6 +65,12 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   analog). Resolves the "phantom types/newtype deferred" item from NOTE-025 §7.1.
 
 ### Changed
+- Reconciled NOTE-034 into target specs. SPEC-096/SPEC-096b now state that operation effects
+  are authority-bearing and cannot be performed by contract predicates. SPEC-097b allows
+  operation-produced values in predicate environments while rejecting operation calls.
+  SPEC-098b adds `ObservationEvidence` sidecar metadata. SPEC-099/SPEC-100 clarify that Core
+  predicate evaluators inspect captured values and provenance but receive no provider handle or
+  authority environment.
 - Reconciled NOTE-033 into target specs. SPEC-096/SPEC-096b clarify that contract-position
   predicate syntax lowers through structured predicate artifacts before becoming
   `PredicateRef`s. SPEC-097b refines `PredicateSummary` with lowered predicate references,

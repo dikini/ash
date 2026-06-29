@@ -1361,6 +1361,16 @@ design constraints in NOTE-032.
 
 ### GAP 8: The Contract ↔ Capability Boundary [DESIGN DECISION — needed for Failure effect clarity]
 
+**Status: Resolved in NOTE-034.** Capability/operation effects are authority-bearing
+operations; contract predicates are authority-free observers. A predicate may inspect ordinary
+boundary values, including values previously produced by capability operations, but it must not
+perform capability operations itself. Capability admission failure, capability operation
+failure, predicate false, and predicate evaluator fault remain separate diagnostic classes.
+Capability-produced values may carry `ObservationEvidence`/provenance sidecars into contract
+diagnostics subject to redaction policy. The positive pattern is observation-before-contract:
+do the authority-bearing observation in ordinary program code, bind its result as a value, and
+let the predicate consume that value without acquiring authority.
+
 The attachment matrix (§8) puts capabilities and contracts as separate `EffectItem` kinds, but
 their interaction needs discussion. A capability check ("does caller have db.read authority?")
 is an authority question. A contract check ("is key != null?") is a correctness question. Both
@@ -1385,8 +1395,11 @@ The effect-owned extern model sharpens the boundary:
   could not be decoded into the Ash operation's declared type.
 
 These may all lower through `Failure`-like runtime reporting, but their causes should remain
-distinct in diagnostics and evidence. This gap is therefore narrowed, not closed: the failure
-taxonomy still needs concrete row/IR spelling.
+distinct in diagnostics and evidence. NOTE-034 closes the row/IR spelling for the
+contract-capability boundary: operation admission remains operation-row discharge; operation
+failure remains operation-owned failure/result semantics; default false contract predicates
+trap with `ContractViolation`; and explicit recoverability uses row-accounted `fail`.
+Observation provenance is diagnostic/evidence sidecar metadata, not predicate authority.
 
 **Blocks:** Failure effect taxonomy, capability-contract interaction semantics.
 
@@ -1578,3 +1591,4 @@ checking over the Core predicate schema.
 | 2026-06-29 | GAP 7 (meta-level soundness) resolved in NOTE-032. Contract soundness is now stated as five explicit obligations over typed Core/CPS metadata: gradual verification, blame, optimizer use of evidence, dynamic demotion, and predicate-fault separation. |
 | 2026-06-29 | Swept stale dynamic-contract lowering prose in §3.2 to match NOTE-029/NOTE-032: default dynamic Hoare failure is structured bottom, while recoverability must lower through explicit row-accounted `fail`. |
 | 2026-06-29 | GAP 9 (Surface-to-Core contract lowering) resolved in NOTE-033. Surface predicates now lower through structured Core predicate artifacts with binder, snapshot, classification, proof/runtime, diagnostic, and discharge metadata. Swept related stale dynamic-contract prose in §3.2 and §6 to preserve NOTE-029's trap-vs-explicit-`fail` boundary. |
+| 2026-06-29 | GAP 8 resolved in NOTE-034. Separated authority-bearing capability observations from authority-free contract predicates, added the observation-before-contract pattern, and introduced observation provenance as diagnostic/evidence metadata rather than predicate authority. |

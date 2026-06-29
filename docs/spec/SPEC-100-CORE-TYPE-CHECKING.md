@@ -306,6 +306,13 @@ contract-position expression
 Source text may be preserved for diagnostics, but text alone is not sufficient for public
 obligations, evidence caching, optimizer checks, or dynamic execution.
 
+Per NOTE-034, authority checks reject operation/capability calls inside predicates while
+allowing operation-produced values already present in the predicate environment. The required
+order is: type-check/admit the operation in ordinary program semantics, bind its result as a
+value, then allow the predicate to inspect that value without acquiring authority. The checker
+must keep capability admission failure, capability operation failure, predicate false, and
+predicate evaluator fault as separate outcomes.
+
 ### 9.2 Obligation Generation
 
 Checking a plain value of type `T` against a refinement type `T | P` requires producing an
@@ -622,3 +629,4 @@ generic row mismatch.
 - 2026-06-28: Reconciled with NOTE-030. `LetCall`/sequencing now emits the producer-postcondition-to-continuation-precondition obligation `∀name. Q(name) ⇒ R(name)` and records composed contract metadata when discharged.
 - 2026-06-29: Reconciled with NOTE-031. Predicate well-formedness now emits structured summaries and snapshot references before proof obligations; rejected predicates stop before prover/runtime checking; dynamic predicate faults are distinct from false-predicate contract violations.
 - 2026-06-29: Reconciled with NOTE-033. Core type checking now specifies the Surface-to-Core predicate lowering pipeline, `LoweredPredicate`/`PredicateRef` boundary, and `RuntimeCheckPlan` use for dynamic checks.
+- 2026-06-29: Reconciled with NOTE-034. Predicate authority checks now reject capability calls while allowing operation-produced values in the predicate environment, preserving separate diagnostics for admission failure, operation failure, predicate false, and predicate fault.

@@ -192,6 +192,12 @@ fn write_log(msg: String) -> {log.write} Unit { ... }
 
 An operation effect is discharged by an explicit provider/effect binding, by a role that entails the operation, or by a host/runtime admission fact. The type checker must not treat an operation name as an ordinary value binding.
 
+Per NOTE-034, operation effects are authority-bearing and remain separate from contract
+predicate evaluation. A contract predicate may inspect ordinary values produced by operation
+effects, but it must not perform or discharge an operation effect itself. If an operation result
+is later used by a contract, provenance/evidence metadata may flow to diagnostics without
+granting the predicate evaluator authority.
+
 ### 6.2 Resource effects
 
 Resource effects require access to a runtime resource. They are distinct from operation effects: an operation describes the requested effect surface, while a resource describes owned or borrowed state used by an implementation.
@@ -585,3 +591,4 @@ A later runtime spec may collapse the implementation into one effectful computat
 - 2026-06-17: Initial draft.
 - 2026-06-29: Reconciled with NOTE-031. Replaced `predicate = expr` with a restricted contract-position predicate grammar, added boundary-local `old(snapshot_expr)`, and required static/dynamic/rejected predicate classification before lowering.
 - 2026-06-29: Reconciled with NOTE-033. Clarified that contract-position syntax lowers through structured predicate artifacts before becoming `PredicateRef`s; source text is diagnostic, not semantic.
+- 2026-06-29: Reconciled with NOTE-034. Clarified that operation/capability effects are authority-bearing and cannot be performed by contract predicates; operation results may flow into contracts only as ordinary values plus provenance metadata.

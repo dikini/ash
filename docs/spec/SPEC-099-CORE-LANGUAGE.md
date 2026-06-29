@@ -304,6 +304,13 @@ memo value merely to decide a predicate. If the program itself reaches a force b
 contract check may inspect the strict result at that boundary according to SPEC-097b and
 SPEC-101 timing rules.
 
+Per NOTE-034, Core separates authority-bearing observations from contract checks. An operation
+may run in ordinary Core before a contract boundary, produce a value, and attach observation
+evidence to that value. The later contract check may inspect the value through its captured
+predicate environment, and diagnostics may reference the observation evidence subject to
+policy. The predicate evaluator itself receives no provider handle and no authority
+environment.
+
 If a dynamic predicate returns `false`, the default failure path is §6.3's
 `ContractViolation(ContractDiagnostic)`. If predicate evaluation traps or faults, Core uses a
 distinct `ContractPredicateFault` trap payload; that fault is not evidence that the predicate
@@ -607,3 +614,4 @@ Core Ash does not include surface sugar as primitive syntax. It includes only th
 - 2026-06-28: Reconciled with NOTE-030. Added §6.4 `ComposedContract` sidecar metadata for Core sequencing, including the `∀a. Q(a) ⇒ R(a)` proof obligation and dynamic continuation-boundary fallback.
 - 2026-06-29: Reconciled with NOTE-031. Added §6.5 predicate evaluation boundary: dynamic predicates are pure observer code over captured boundary environments, `old(path)` uses snapshot metadata, implicit delayed-value forcing is forbidden, and predicate faults are distinct from false-predicate violations.
 - 2026-06-29: Reconciled with NOTE-033. Dynamic contract checks now evaluate lowered predicate artifacts via `PredicateRef` and `PredicateEnvironment`; source predicate text is diagnostic only, not Core executable semantics.
+- 2026-06-29: Reconciled with NOTE-034. Clarified that operation-produced values may be inspected by predicates, but predicate evaluators receive no provider handle or authority environment.

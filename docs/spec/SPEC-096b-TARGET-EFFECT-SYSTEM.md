@@ -235,6 +235,12 @@ An operation effect is discharged by an explicit provider/effect binding, by a r
 entails the operation, or by a host/runtime admission fact. The type checker must not treat
 an operation name as an ordinary value binding.
 
+Per NOTE-034, operation effects are authority-bearing and remain separate from contract
+predicate evaluation. A contract predicate may inspect ordinary values produced by operation
+effects, but it must not perform, admit, or discharge an operation effect itself. If an
+operation result is later used by a contract, provenance/evidence metadata may flow to
+diagnostics without granting the predicate evaluator authority.
+
 ### 6.2 Resource effects
 
 Resource effects require access to a runtime resource. They are distinct from operation
@@ -719,3 +725,4 @@ workflow reporting, and audit evidence.
 - 2026-06-28: Reconciled with NOTE-029. Clarified §6.8: default dynamic contract failure is structured bottom outside row accounting; recoverable contract behavior must lower to explicit `fail` and expose the failure item in the row.
 - 2026-06-29: Reconciled with NOTE-031. Replaced `predicate = expr` with a restricted contract-position predicate grammar, added boundary-local `old(snapshot_expr)`, and required static/dynamic/rejected predicate classification before lowering.
 - 2026-06-29: Reconciled with NOTE-033. Clarified that contract-position predicate syntax lowers through structured predicate artifacts carrying binders, snapshots, classification, proof/runtime-check metadata, diagnostics, and stable identity.
+- 2026-06-29: Reconciled with NOTE-034. Clarified that operation/capability effects are authority-bearing and cannot be performed by contract predicates; operation results may flow into contracts only as ordinary values plus provenance metadata.

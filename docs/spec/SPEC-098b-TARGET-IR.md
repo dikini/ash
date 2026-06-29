@@ -514,6 +514,18 @@ pub enum ObservedValue {
     Unavailable(UnavailabilityReason),
 }
 
+pub struct ObservationEvidence {
+    pub id: ObservationId,
+    pub op: EffectOp,
+    pub boundary: BoundaryId,
+    pub result: ValueRef,
+    pub args: Vec<ObservedValue>,
+    pub authority: AuthorityEvidenceRef,
+    pub source_span: Span,
+    pub policy: ObservationPolicy,
+    pub replay: ReplayStatus,
+}
+
 pub struct PredicateFaultDiagnostic {
     pub predicate: PredicateRef,
     pub contract_text: String,
@@ -569,6 +581,13 @@ the lowered predicate tree, binder environment, snapshot references, stable pred
 proof fragment, and `RuntimeCheckPlan` when a predicate is dynamic or demoted from an unknown
 static obligation. Core and CPS dynamic checks evaluate this lowered predicate artifact over
 the captured boundary environment; they do not re-interpret source predicate text.
+
+Per NOTE-034, values produced by operation/capability effects may carry `ObservationEvidence`
+sidecar metadata into contract diagnostics. This metadata records the authority/evidence used
+to produce an ordinary value; it is not authority for predicate evaluation. Contract
+diagnostics may include, summarize, redact, or omit observation evidence according to policy.
+Authority/admission denial, operation failure, predicate false, and predicate evaluator fault
+must remain distinct diagnostic classes.
 
 Predicate faults are distinct from false predicates. A false dynamic predicate produces
 `TrapReason::ContractViolation(ContractDiagnostic)` by default; a predicate evaluator trap or
@@ -1531,3 +1550,4 @@ resolved through an additional indirection layer. Both are possible but not spec
 - 2026-06-29: Reconciled with NOTE-031. Added `SnapshotRef`, predicate classification metadata, policy-governed `ObservedValue` payloads, and `ContractPredicateFault` diagnostics distinct from false-predicate `ContractViolation` traps.
 - 2026-06-29: Reconciled with NOTE-033. Added `LoweredPredicate`, `PredicateNode`, binder, and `RuntimeCheckPlan` sidecar shapes so contract checks evaluate structured predicate artifacts rather than source text.
 - 2026-06-29: Swept stale `DischargeMode::Dynamic` wording so dynamic contract discharge points to lowered runtime predicate plans rather than hidden runtime contract handlers.
+- 2026-06-29: Reconciled with NOTE-034. Added `ObservationEvidence` sidecar shape and clarified that operation-produced values may inform contract diagnostics without granting predicate evaluators authority.

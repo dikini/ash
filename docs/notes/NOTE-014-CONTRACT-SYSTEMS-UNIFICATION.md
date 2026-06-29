@@ -228,20 +228,16 @@ fn safe_div(a: Int, b: Int) -> {Failure} Int {
 }
 ```
 
-The `ContractViolation` is a `Raise` node — it is an algebraic operation request, in the
-"raised operations" category (SPEC-098b §5.6). It is matched by a `Handle` frame:
+The original draft modeled `ContractViolation` as a `Raise` node, but NOTE-029 replaced that
+default boundary. Default dynamic Hoare failure is structured bottom:
 
-```ash
-fn with_contract_check<A>(action: {Failure} A) -> Result<A, ContractError> {
-    handle action with {
-        ContractViolation(msg) => Err(ContractError(msg))
-    }
-}
+```text
+Trap { reason: ContractViolation(ContractDiagnostic) }
 ```
 
-This connects directly to NOTE-013: dynamic contracts are handler-dischargeable effects. The
-contract handler is a handler for the `Failure`/`Contract` effect category, with its own
-resume strategy (typically: do not resume on violation, like Either's early exit).
+Recoverable contract behavior is explicit and row-accounted: the surface construct must lower
+to `fail ContractError` or another visible failure item. This preserves the separation between
+ordinary effect handlers and terminal contract-bottom diagnostics.
 
 ## 4. How Laws and Properties Lower
 
@@ -1347,7 +1343,18 @@ lowering and row accounting, not by overloading `ContractViolation` itself.
 
 ### GAP 7: Meta-Level Soundness [THEORETICAL — needed for trust in optimizer and gradual verification]
 
-There are soundness theorems ABOUT the contract system that we assume but have not stated:
+**Status: Resolved in NOTE-032.** Contract soundness is stated as a family of five
+meta-obligations over typed Core and CPS metadata: gradual verification soundness, blame
+soundness, optimizer soundness, dynamic demotion soundness, and predicate-fault separation.
+The obligations require static discharge to be scoped by predicate/boundary/snapshot evidence,
+blame labels to match violated Hoare polarity and subsumption ownership, optimizers to
+preserve evidence and diagnostic boundaries, dynamic demotion to check the same obligation at
+the same semantic boundary, and `ContractPredicateFault` to remain distinct from false
+contract predicates. See NOTE-032 §1 (Core decision), §4-§8 (the five obligations), and §9
+(worked examples).
+
+Earlier versions assumed soundness theorems about the contract system without stating them.
+NOTE-032 makes the assumed family explicit:
 
 - **Gradual verification soundness**: if SMT proves P statically, then no runtime check for P
   will ever fire. (If this fails, the SMT result was wrong.)
@@ -1358,8 +1365,9 @@ There are soundness theorems ABOUT the contract system that we assume but have n
   contract. (Not party Y.)
 
 These are meta-theorems — proofs about the proof system. They matter because the whole
-optimization story (§11.4) and gradual verification flow (§9.3) rest on their validity. They
-should be stated (even if proofs are deferred) before we trust the system.
+optimization story (§11.4) and gradual verification flow (§9.3) rest on their validity. The
+proofs themselves remain future mechanization work, but the obligations are now stated as
+design constraints in NOTE-032.
 
 **Blocks:** trust in contract-guided optimization, trust in gradual verification.
 
@@ -1574,3 +1582,5 @@ checking over the Core predicate schema.
 | 2026-06-28 | GAP 6 (contract failure observability and bottom behavior) resolved in NOTE-029. Default dynamic contract failure is structured bottom: `Trap { reason: ContractViolation(ContractDiagnostic) }`. `ContractViolation` is not a row item or implicit resumable effect; recoverable behavior lowers to explicit `fail` and row-accounts the failure. Diagnostics preserve blame, predicate, observed values, call chain, discharge history, handler decisions, and replay status. |
 | 2026-06-28 | GAP 2 (monadic Hoare logic) resolved in NOTE-030. Rows compose by union, while contracts compose through predicate-transformer reasoning: producer postconditions discharge continuation preconditions (`∀a. Q(a) ⇒ R(a)`), and composed postconditions existentially thread the intermediate value (`∃a. Q(a) ∧ S(a, b)`). |
 | 2026-06-29 | NOTE-031 resolved the `old(x)` snapshot open question and partially resolved GAP 9. Contract predicates are now classified before lowering: SMT-safe static predicates, pure dynamic predicates, and rejected effectful/unstable predicates. `old(...)` lowers to boundary-local snapshot metadata, and predicate faults are distinct from false predicates. |
+| 2026-06-29 | GAP 7 (meta-level soundness) resolved in NOTE-032. Contract soundness is now stated as five explicit obligations over typed Core/CPS metadata: gradual verification, blame, optimizer use of evidence, dynamic demotion, and predicate-fault separation. |
+| 2026-06-29 | Swept stale dynamic-contract lowering prose in §3.2 to match NOTE-029/NOTE-032: default dynamic Hoare failure is structured bottom, while recoverability must lower through explicit row-accounted `fail`. |

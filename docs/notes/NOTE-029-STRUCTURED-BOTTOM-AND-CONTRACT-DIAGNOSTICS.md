@@ -389,10 +389,11 @@ between trap and recoverable effect. NOTE-029 resolves it:
 - recoverability requires explicit `fail` and row accounting;
 - memo replay preserves the original diagnostic and blame.
 
-### 7.2 GAP 7 still open
+### 7.2 GAP 7 resolved in NOTE-032
 
-Blame soundness and optimizer soundness remain meta-theorems. NOTE-029 specifies the data that
-must be preserved for those theorems to be meaningful, but it does not prove them.
+Blame soundness and optimizer soundness are now stated as part of NOTE-032's five
+meta-obligations. NOTE-029 specifies the diagnostic data that must be preserved for those
+obligations to be meaningful; NOTE-032 states the obligations over that data.
 
 ### 7.3 GAP 5 still open
 
@@ -470,3 +471,6 @@ External references:
   recoverability lowers to `fail` and row-accounts the failure. Defines `ContractDiagnostic`
   payload, value capture policy, handler decision history, lazy fresh diagnostics, and memo
   replay of cached terminal failures.
+- 2026-06-29: Cross-referenced NOTE-032. GAP 7 is now resolved by explicit meta-level
+  obligations; NOTE-029 remains the diagnostic-data substrate for blame and optimizer
+  soundness.

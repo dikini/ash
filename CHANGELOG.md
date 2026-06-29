@@ -6,6 +6,12 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Added
+- NOTE-032: Contract soundness obligations. Resolves NOTE-014 GAP 7 by stating five
+  meta-level obligations over typed Core/CPS metadata: gradual verification soundness, blame
+  soundness, optimizer soundness, dynamic demotion soundness, and predicate-fault separation.
+  Static discharge is scoped by predicate/boundary/snapshot evidence; optimizers must preserve
+  evidence and diagnostic boundaries; dynamic demotion checks the same obligation at the same
+  semantic boundary; `ContractPredicateFault` remains distinct from false contract predicates.
 - NOTE-031: Contract predicate well-formedness and snapshot semantics. Resolves the `old(x)`
   snapshot open question from NOTE-014 and settles NOTE-030's initial public predicate-language
   boundary for existentials. Contract predicates are classified as SMT-safe static predicates,

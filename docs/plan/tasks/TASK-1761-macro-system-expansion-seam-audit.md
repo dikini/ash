@@ -1,6 +1,6 @@
 # TASK-1761: Audit macro-system expansion seams and split-risk decisions
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -30,9 +30,9 @@ Audit the Phase 172 implementation and decide whether summary import, token-tree
 
 ### Functional Requirements
 
-- [ ] Map every parser/engine/typeck/LSP consumer of MacroDef/MacroInvocation
-- [ ] Classify split risks for each requested Phase 173 track
-- [ ] Produce concrete go/split decision gates
+- [x] Map every parser/engine/typeck/LSP consumer of MacroDef/MacroInvocation
+- [x] Classify split risks for each requested Phase 173 track
+- [x] Produce concrete go/split decision gates
 
 ### Property Requirements
 
@@ -82,10 +82,20 @@ commands:
   - git diff --check
   - python3 tools/docs/validate_orientation_indexes.py --self-test
 checklist:
-- [ ] Map every parser/engine/typeck/LSP consumer of MacroDef/MacroInvocation
-- [ ] Classify split risks for each requested Phase 173 track
-- [ ] Produce concrete go/split decision gates
+- [x] Map every parser/engine/typeck/LSP consumer of MacroDef/MacroInvocation
+- [x] Classify split risks for each requested Phase 173 track
+- [x] Produce concrete go/split decision gates
 ```
+
+## Completion Evidence
+
+- Added `docs/audit/phase-173-macro-system-expansion-audit.md`.
+- Mapped parser, lowering, engine/module-loader, typechecker, and LSP consumers of `MacroDef`, `MacroInvocation`, and `Expr::MacroInvocation`.
+- Classified Phase 173 tracks as hard-gated rather than plan-splitting: summary carriers before activation, token-tree carriers before bracket/brace execution, hygiene metadata before binder-introducing templates, typed signature/checking carriers before inference.
+- Recorded the closeout decision: keep PLAN-173 as one phase, but preserve task ordering as mandatory split gates.
+- Verification:
+  - `git diff --check`
+  - `python3 tools/docs/validate_orientation_indexes.py --self-test`
 
 ## Notes
 

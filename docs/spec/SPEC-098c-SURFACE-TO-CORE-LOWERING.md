@@ -7,7 +7,7 @@ authority: design
 status: draft
 stability: alpha
 owner: language
-last_verified: 2026-06-29
+last_verified: 2026-06-30
 verified_against:
   specs:
     - docs/spec/SPEC-095b-TARGET-GRAMMAR.md
@@ -47,6 +47,8 @@ expanded surface AST
 Lowering assumes:
 
 - macros have expanded;
+- macro summary resolution, token-tree reparse, binder hygiene validation, and typed macro checking
+  have either completed or rejected;
 - notation and operator sections have become calls or closures;
 - source origins are preserved;
 - row items are normalized but may still contain variables/obligations for type checking;
@@ -192,6 +194,23 @@ mismatches, recursive/depth-overflowing expansions, imported macro activation, a
 templates must reject before Core. Macro expansion metadata is source-side diagnostic metadata only;
 it does not create rows, authority, contracts, failures, proof evidence, or runtime constructs.
 
+Phase 173 extends the pre-lowering macro boundary but does not move macros into Core:
+
+- macro summaries are consumed before lowering and are never encoded as callable summaries;
+- imported/exported macro activation must fail closed before export acceptance if a macro summary is
+  missing, ambiguous, malformed, or conflicts with a callable export;
+- delimiter-preserving token-tree output must reparse through one audited surface boundary before
+  lowering, and the reparsed surface must pass the same residual-macro and notation checks as source;
+- binder-introducing macro output must carry validated hygiene metadata before any generated binder
+  can lower to Core;
+- typed macro signatures and bounded inference obligations must be discharged before expansion
+  output is accepted as expanded surface.
+
+Lowering must reject any residual `MacroDecl` that is required for execution, any residual
+`MacroInvocation`, any token-tree carrier not explicitly reparsed, any unvalidated generated binder,
+and any unresolved macro type obligation. It must not erase those carriers, convert them to ordinary
+calls, or accept them through public export summaries.
+
 ```ash
 a <+> b   => combine(a, b)
 (a <+>)   => fn (b) -> combine(a, b)
@@ -229,6 +248,7 @@ of these products, lowering must reject the program before Core.
 
 ## 13. Changelog
 
+- 2026-06-30: Added Phase 173 macro lowering boundary rules for macro summaries, token-tree reparse, binder hygiene validation, and typed macro obligations.
 - 2026-06-30: Added Phase 172 parser-first expression macro MVP lowering boundary: supported local macros must expand before Core, while unsupported macro constructs and declarations remain rejected before Core/export/typecheck acceptance.
 - 2026-06-30: Clarified Phase 171 fail-closed lowering boundary for parsed macro invocation carriers and authority-neutral generated helper binders.
 - 2026-06-29: Created to define expanded-surface-AST-to-Core lowering, including handlers, impl operation identity, facts/evidence, contracts, trace contracts, notation, and operator sections.

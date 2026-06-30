@@ -7,7 +7,7 @@ authority: design
 status: draft
 stability: alpha
 owner: language
-last_verified: 2026-06-29
+last_verified: 2026-06-30
 verified_against:
   specs:
     - docs/spec/SPEC-095b-TARGET-GRAMMAR.md
@@ -35,7 +35,7 @@ source origins for diagnostics and tooling.
 ## 2. Non-goals
 
 - This spec does not implement parser, macro expander, or lowering code.
-- This spec does not define typed macros.
+- This spec does not define arbitrary procedural macros or full macro-by-example matching.
 - This spec does not make binder-introducing mixfix notation part of the initial notation model.
 - This spec does not add new Core operators. Notation expands to ordinary callable syntax.
 
@@ -171,6 +171,128 @@ The MVP is fail-closed outside its subset:
 Supported template bodies are limited to binder-free parsed expressions. Generated expansion nodes
 retain stable expansion identity and origin-chain metadata; notation/operator-section products inside
 macro output record the macro expansion as their parent origin.
+
+### 6.2 Phase 173 macro summary carriers
+
+Public macro activation is a syntax-phase import/export feature, not callable export. A module may
+publish macro summaries only through an explicit macro-summary carrier:
+
+```text
+MacroSummary ::= {
+  module_path,
+  name,
+  visibility,
+  params,
+  input_kind,
+  output_kind,
+  template_fingerprint,
+  hygiene_policy,
+  typed_signature?,
+  origin_span
+}
+
+input_kind  ::= ExprArgs | TokenTree(delimiters)
+output_kind ::= Expr | TokenTree | ReparseExpr
+```
+
+Macro summaries do not create functions, values, rows, authority, contracts, failures, proof
+evidence, providers, or runtime effects. They are consumed only by the macro expansion phase. A
+macro declaration is importable only when export collection has produced a well-formed
+`MacroSummary`; ordinary callable summaries, raw source snippets, and reparsed body strings must not
+activate macros.
+
+Imported macro activation is fail-closed:
+
+- missing, duplicate, ambiguous, malformed, or version-incompatible macro summaries reject before
+  expansion;
+- importing a callable with the same name as a macro does not activate the macro;
+- importing a macro does not create a callable binding;
+- re-export requires a fresh macro summary, not accidental forwarding through callable export state;
+- positive import/export behavior must be paired with negative tests proving no callable leakage and
+  no activation from malformed summaries.
+
+### 6.3 Token-tree invocation carriers
+
+Bracketed and braced macro invocations require delimiter-preserving token-tree carriers before they
+can execute:
+
+```text
+TokenTree     ::= Token(span, kind, spelling)
+                | Group(open_span, close_span, delimiter, [TokenTree])
+MacroInvokeTt ::= name "!" TokenTreeGroup
+delimiter     ::= Paren | Bracket | Brace
+```
+
+A token-tree carrier must preserve delimiter kind, open/close spans, nested groups, token spelling,
+and enough raw text fallback for diagnostics. A raw substring alone is not an executable token-tree
+carrier. Implementations may keep a raw-body field for diagnostics, but executable bracket/brace
+macros must operate on structured token trees.
+
+Unsupported token-tree shapes reject before the expanded-surface boundary. Token-tree output may
+enter ordinary surface syntax only through a single audited reparse boundary. That boundary must
+record macro origin metadata, run the same expanded-surface validation as parsed source, and reject
+any residual macro invocation or unresolved notation/operator syntax that the target phase does not
+explicitly support.
+
+### 6.4 Binder hygiene metadata
+
+Binder-introducing macros are allowed only when every introduced binding and reference carries
+explicit hygiene metadata:
+
+```text
+HygieneScope ::= DefinitionSite(expansion_id)
+               | CallSite(call_span)
+               | Generated(expansion_id, local_id)
+
+HygienicIdent ::= {
+  spelling,
+  scope,
+  origin_span,
+  generated: bool
+}
+```
+
+The expansion validator must enforce both capture directions:
+
+- a generated binder cannot capture caller variables unless the macro summary explicitly marks a
+  call-site lookup position;
+- a caller/source binder cannot capture generated identifiers;
+- definition-site references resolve only through the macro definition environment recorded in the
+  macro summary;
+- generated identifiers are not source-spellable identifiers and must remain distinguishable in
+  diagnostics and LSP-facing surfaces;
+- binder-introducing templates that lack complete hygiene metadata reject before expansion output is
+  accepted.
+
+Phase 173 supports only expression-local binder-introducing templates. Macro-generated module
+declarations, arbitrary item generation, and runtime/provider authority introduction remain out of
+scope.
+
+### 6.5 Typed macro signatures and bounded inference
+
+Typed macros attach syntax-phase type obligations to macro inputs and expansion output:
+
+```text
+MacroTypeSig ::= "macro" name "(" TypedParamList? ")" "=>" OutputKind ":" Type
+TypedParam   ::= name ":" MacroParamType
+MacroParamType ::= Type | TokenTreeKind
+```
+
+Typed macro checking happens after macro summary resolution and before expansion output is accepted
+as expanded surface. A typed macro diagnostic is a macro/type diagnostic, not an arbitrary later Core
+failure. The checker must reject:
+
+- missing required annotations on public/imported macros;
+- argument/template type mismatches;
+- output whose expanded surface cannot satisfy the declared output type or kind;
+- typed summaries that conflict across imports/re-exports;
+- any attempt to derive authority, rows, contracts, failures, proof evidence, or runtime effects from
+  macro metadata itself.
+
+Bounded inference may fill omitted local macro signature parts only when the principal result is
+unique from annotated arguments and the template body. Imported/exported summaries must be explicit
+or previously inferred at their definition site. Ambiguous inference rejects and asks for an
+annotation; it must not default to a convenient type.
 
 ## 7. Notation declarations
 
@@ -338,6 +460,7 @@ fixity-resolution pass once imports are resolved.
 ## 11. Desugaring invariants
 
 - Macro expansion is complete before Core lowering.
+- Macro summaries are syntax-phase metadata; they do not define callables or public authority.
 - Notation and operator sections are erased before Core lowering.
 - Expanded nodes retain source-origin metadata, including stable expansion identity for generated
   nodes and parent-origin chains for nested expansion products.
@@ -357,6 +480,7 @@ fixity-resolution pass once imports are resolved.
 
 ## 13. Changelog
 
+- 2026-06-30: Added Phase 173 contracts for explicit macro summaries, delimiter-preserving token-tree carriers, binder hygiene metadata, typed macro signatures, and bounded macro inference.
 - 2026-06-30: Added Phase 172 parser-first expression macro MVP constraints: local `MacroDecl`, parenthesized `name!(...)` execution only, local-only scope, fail-closed unsupported forms, authority-neutral syntax substitution, and origin-chain preservation.
 - 2026-06-30: Clarified Phase 171 conservative hygiene invariants: fail-closed macro invocation carriers, local-only notation unless summary carriers exist, expansion identity/origin chains, generated identifier separation, and no Core macro/notation leakage.
 - 2026-06-29: Created as the target surface AST, macro expansion, notation, and operator-section substrate.

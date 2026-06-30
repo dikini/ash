@@ -1060,6 +1060,27 @@ It supplies the products required by [SPEC-098c](SPEC-098c-SURFACE-TO-CORE-LOWER
 checking in SPEC-100 remains annotation-led and does not become a full HM-style surface inference
 engine.
 
+### 15.10.0 Macro type checking boundary
+
+Typed macro checking is a surface-phase obligation. It runs after macro summary resolution and before
+expanded surface is accepted for ordinary surface inference. Macro metadata is syntax-phase metadata:
+it does not grant rows, authority, contracts, failures, proof evidence, or runtime provider effects.
+
+Typed macro checking must produce or reject these products:
+
+| Product | Required property |
+|---|---|
+| Macro argument summary | Every expression argument has the declared type, and every token-tree argument has the declared token-tree kind. |
+| Macro output summary | Expanded output has the declared output kind and, for expression output, the declared surface type. |
+| Macro obligation diagnostics | Type or kind mismatches report at macro declaration, summary, or invocation spans before Core lowering. |
+| Public/imported typed summary | Exported and imported macros carry explicit typed summaries; ordinary callable summaries cannot stand in for them. |
+
+Bounded macro type inference may infer omitted local signature parts only when a unique principal
+summary follows from annotated parameters and the template body. Ambiguous, recursive, imported, or
+cross-module inference rejects and requires annotations. Inference must not default row, authority,
+contract, failure, proof, evidence, or provider requirements from macro metadata; those requirements
+come only from the expanded ordinary surface expression.
+
 ### 15.10.1 Callable row inference and defaulting
 
 A callable has one normalized row summary, regardless of whether the source used an inline row or a

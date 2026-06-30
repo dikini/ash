@@ -26,7 +26,7 @@ The phase is intentionally still parser-first and fail-closed. It must not becom
 ## Goals
 
 - [x] Create the Phase 173 plan and task packet.
-- [ ] Audit the Phase 172 implementation and decide the exact sequencing/possible split points for summary import, token trees, binder hygiene, and typed checking.
+- [x] Audit the Phase 172 implementation and decide the exact sequencing/possible split points for summary import, token trees, binder hygiene, and typed checking.
 - [ ] Patch specs so imported macro activation, token-tree carriers, binder hygiene, and typed macro checking have implementation-grade contracts before code changes.
 - [ ] Add explicit macro summary carriers for public macro declarations and export collection without treating macros as callables.
 - [ ] Activate imported/exported macros only through those summaries, with positive import tests and negative leakage/re-export tests.
@@ -66,7 +66,7 @@ The phase is intentionally still parser-first and fail-closed. It must not becom
 ### Phase 1: Planning, audit, and spec contracts
 
 - TASK-1760: Create the Phase 173 plan and task packet. ✅
-- TASK-1761: Audit macro-system expansion seams and split-risk decisions. 📝
+- TASK-1761: Audit macro-system expansion seams and split-risk decisions. ✅
 - TASK-1762: Amend macro specs for summaries, token trees, binder hygiene, and typed checking. 📝
 
 ### Phase 2: Imported/exported macro activation

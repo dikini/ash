@@ -148,7 +148,7 @@ Update this section as tasks complete:
 | [170](PLAN-170-EXPANDED-SURFACE-INTEGRATION-AND-NOTATION-SCOPING.md) | 7 | 7 | ✅ Complete |
 | [171](PLAN-171-MACRO-NOTATION-HYGIENE-AND-EXPANSION-BOUNDARIES.md) | 8 | 8 | ✅ Complete |
 | [172](PLAN-172-PARSER-FIRST-MACRO-EXECUTION-MVP.md) | 9 | 9 | ✅ Complete |
-| [173](PLAN-173-MACRO-SUMMARIES-TOKEN-TREES-HYGIENIC-BINDERS-TYPED-MACROS.md) | 14 | 2 | 🟢 In Progress; audit gate complete |
+| [173](PLAN-173-MACRO-SUMMARIES-TOKEN-TREES-HYGIENIC-BINDERS-TYPED-MACROS.md) | 14 | 3 | 🟢 In Progress; spec contracts complete |
 
 ---
 
@@ -785,7 +785,7 @@ Implements the first conservative executable macro slice. The phase remains pars
 
 ## Phase 173: Macro Summaries, Token Trees, Hygienic Binders, and Typed Macros
 
-**Status:** 🟢 In Progress; audit gate complete
+**Status:** 🟢 In Progress; spec contracts complete
 **Plan:** [PLAN-173: Macro Summaries, Token Trees, Hygienic Binders, and Typed Macros](PLAN-173-MACRO-SUMMARIES-TOKEN-TREES-HYGIENIC-BINDERS-TYPED-MACROS.md)
 **Depends on:** Phase 172 parser-first macro execution MVP; `SPEC-095c`; `SPEC-098c`; `SPEC-097b`.
 
@@ -795,7 +795,7 @@ Extends the Phase 172 local expression-macro MVP into the next conservative macr
 |------|-------------|--------|
 | [TASK-1760](tasks/TASK-1760-phase-173-plan-packet.md) | Create the Phase 173 macro-system expansion plan packet | ✅ Complete |
 | [TASK-1761](tasks/TASK-1761-macro-system-expansion-seam-audit.md) | Audit macro-system expansion seams and split-risk decisions | ✅ Complete |
-| [TASK-1762](tasks/TASK-1762-macro-system-spec-amendments.md) | Amend macro specs for summaries, token trees, binder hygiene, and typed checking | 📝 Planned |
+| [TASK-1762](tasks/TASK-1762-macro-system-spec-amendments.md) | Amend macro specs for summaries, token trees, binder hygiene, and typed checking | ✅ Complete |
 | [TASK-1763](tasks/TASK-1763-macro-summary-carriers.md) | Add macro summary carrier design and export collection | 📝 Planned |
 | [TASK-1764](tasks/TASK-1764-imported-exported-macro-activation.md) | Implement bounded imported/exported macro activation | 📝 Planned |
 | [TASK-1765](tasks/TASK-1765-delimiter-preserving-token-tree-carriers.md) | Add delimiter-preserving macro token-tree carriers | 📝 Planned |

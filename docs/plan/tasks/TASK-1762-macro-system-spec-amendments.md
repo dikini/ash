@@ -1,6 +1,6 @@
 # TASK-1762: Amend macro specs for summaries, token trees, binder hygiene, and typed checking
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -16,7 +16,7 @@ Patch SPEC-095c/SPEC-098c/SPEC-097b so Phase 173 implementation has precise synt
 ## Dependencies
 
 - ✅ TASK-1760: Phase 173 plan packet (complete)
-- 📝 TASK-1761: Macro-system expansion seam audit (planned)
+- ✅ TASK-1761: Macro-system expansion seam audit (complete)
 
 ## Deferral / Planned-Feature Reconciliation
 
@@ -31,9 +31,9 @@ Patch SPEC-095c/SPEC-098c/SPEC-097b so Phase 173 implementation has precise synt
 
 ### Functional Requirements
 
-- [ ] Grammar for macro summaries and token-tree carriers is explicit
-- [ ] Binder hygiene invariants are stated without prose-only restrictions
-- [ ] Typed macro checking/inference obligations are bounded
+- [x] Grammar for macro summaries and token-tree carriers is explicit
+- [x] Binder hygiene invariants are stated without prose-only restrictions
+- [x] Typed macro checking/inference obligations are bounded
 
 ### Property Requirements
 
@@ -83,10 +83,21 @@ commands:
   - bash scripts/check-docs-gate.sh
   - git diff --check
 checklist:
-- [ ] Grammar for macro summaries and token-tree carriers is explicit
-- [ ] Binder hygiene invariants are stated without prose-only restrictions
-- [ ] Typed macro checking/inference obligations are bounded
+- [x] Grammar for macro summaries and token-tree carriers is explicit
+- [x] Binder hygiene invariants are stated without prose-only restrictions
+- [x] Typed macro checking/inference obligations are bounded
 ```
+
+## Completion Evidence
+
+- `SPEC-095c` now defines Phase 173 macro-summary carriers, token-tree invocation carriers, binder hygiene metadata, typed macro signatures, and bounded macro inference rules.
+- `SPEC-098c` now records the pre-lowering macro boundary for summary resolution, token-tree reparse, binder hygiene validation, and typed macro obligations.
+- `SPEC-097b` now records the typed macro checking surface-phase boundary and rejects row/authority/contract/failure/proof/provider inference from macro metadata.
+- `SPEC-INDEX` now points the grammar/type/lowering read paths at the Phase 173 macro-carrier contracts.
+- Verification:
+  - `python3 tools/docs/validate_orientation_indexes.py --self-test`
+  - `bash scripts/check-docs-gate.sh`
+  - `git diff --check`
 
 ## Notes
 

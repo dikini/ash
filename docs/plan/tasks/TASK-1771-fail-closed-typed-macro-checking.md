@@ -16,8 +16,8 @@ Check macro invocation argument/template/result types before accepting expansion
 ## Dependencies
 
 - ✅ TASK-1760: Phase 173 plan packet (complete)
-- 📝 TASK-1761: Macro-system expansion seam audit (planned)
-- 📝 TASK-1762: Macro-system spec amendments (planned)
+- ✅ TASK-1761: Macro-system expansion seam audit (complete)
+- ✅ TASK-1762: Macro-system spec amendments (complete)
 - 📝 TASK-1770: Typed macro signature carriers (planned)
 
 ## Deferral / Planned-Feature Reconciliation

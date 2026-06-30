@@ -33,7 +33,7 @@ fn assert_name_type(ty: &Type, expected: &str) {
 fn inferred_macro_summary_remains_syntax_phase_while_expansion_removes_invocation_carrier() {
     let module = ash_parser::parse_surface_file(
         r"
-pub macro inc(x: Int) => add(x, 1);
+pub macro inc(x: Int) => x + 1;
 fn use_macro(n: Int) -> Int { inc!(n) }
 ",
     )
@@ -57,11 +57,9 @@ fn use_macro(n: Int) -> Int { inc!(n) }
     );
 
     let expanded = expand_surface_module(module).expect("supported macro expands");
-    let Expr::Call { func, args, .. } = first_function_body(&expanded.module) else {
+    let Expr::Binary { .. } = first_function_body(&expanded.module) else {
         panic!("expected macro invocation to expand before lowerable boundary")
     };
-    assert_eq!(func.as_ref(), "add");
-    assert_eq!(args.len(), 2);
 }
 
 #[test]

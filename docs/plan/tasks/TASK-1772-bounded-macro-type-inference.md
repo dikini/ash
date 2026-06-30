@@ -34,7 +34,7 @@ Infer macro parameter/result summaries only where the existing typechecker can p
 
 ### Functional Requirements
 
-- [x] Simple annotated-identity/literal/bounded-call templates infer stable summaries
+- [x] Simple annotated-identity/literal/operator templates infer stable summaries
 - [x] Ambiguous templates do not fabricate typed summaries and remain annotation-required for typed diagnostics
 - [x] Inference summaries serialize through imports without losing diagnostics
 
@@ -49,8 +49,8 @@ Infer macro parameter/result summaries only where the existing typechecker can p
 ### Step 1: Inspect current state / write failing evidence
 
 **Files:**
-- `crates/ash-typeck/src/lib.rs`
-- `crates/ash-typeck/tests/task_1772_macro_type_inference.rs`
+- `crates/ash-parser/src/surface.rs`
+- `crates/ash-parser/tests/task_1772_macro_type_inference.rs`
 - `crates/ash-engine/tests/task_1772_imported_macro_inference.rs`
 
 Current state must be measured from live code before editing. For implementation tasks, write failing parser/engine/typeck tests that demonstrate the exact missing behavior or boundary leak.
@@ -89,14 +89,15 @@ commands:
   - cargo fmt --check
   - git diff --check
 checklist:
-- [x] Simple annotated-identity/literal/bounded-call templates infer stable summaries
+- [x] Simple annotated-identity/literal/operator templates infer stable summaries
 - [x] Ambiguous templates do not fabricate typed summaries and remain annotation-required for typed diagnostics
 - [x] Inference summaries serialize through imports without losing diagnostics
 ```
 
 ## Completion Evidence
 
-- Inferred missing macro result summaries from literal templates, annotated identity templates, and bounded unqualified builtin calls (`add`/`sub`/`mul`/`div`/`mod`, equality, and boolean `not`).
+- Inferred missing macro result summaries from literal templates, annotated identity templates, unary operators, binary arithmetic/comparison/logical operators, and fully annotated anonymous functions.
+- Ordinary call expressions remain uninferred unless a later typed/callable-summary substrate can prove a unique callable identity; this prevents unqualified names like `add`/`not` from fabricating public macro summaries before ordinary resolution/typechecking.
 - Preserved explicit parameter annotations while filling unambiguous missing result annotations in `LocalMacroEntry::typed_signature`.
 - Public macro summary collection now exports the inferred local macro signature rather than only the source-written annotation carrier.
 - Ambiguous unannotated identity templates do not fabricate typed summaries; they remain annotation-required for typed diagnostics.
@@ -105,7 +106,7 @@ checklist:
 
 Fresh verification on final TASK-1772 diff:
 
-- `cargo test -p ash-parser --test task_1772_macro_type_inference -- --nocapture` — 4 passed.
+- `cargo test -p ash-parser --test task_1772_macro_type_inference -- --nocapture` — 7 passed, including negative regressions for ordinary call inference.
 - `cargo test -p ash-engine --test task_1772_imported_macro_inference -- --nocapture` — 2 passed.
 - `cargo test -p ash-parser` — passed, including parser doctests.
 - `cargo test -p ash-typeck` — passed, including typeck doctests.

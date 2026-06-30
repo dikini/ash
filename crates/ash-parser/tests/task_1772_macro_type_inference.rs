@@ -1,4 +1,4 @@
-use ash_parser::surface::{Type, collect_public_macro_summaries};
+use ash_parser::surface::{MacroSummary, Type, collect_public_macro_summaries};
 
 fn assert_name_type(ty: &Type, expected: &str) {
     assert!(
@@ -7,16 +7,21 @@ fn assert_name_type(ty: &Type, expected: &str) {
     );
 }
 
-fn public_macro_signature(
-    source: &str,
-    name: &str,
-) -> ash_parser::surface::MacroTypeSignatureSummary {
+fn public_macro_summary(source: &str, name: &str) -> MacroSummary {
     let module = ash_parser::parse_surface_file(source).expect("module parses");
     let summaries = collect_public_macro_summaries(&module, "test").expect("summaries collect");
     summaries
         .into_iter()
         .find(|summary| summary.name.as_ref() == name)
-        .and_then(|summary| summary.typed_signature)
+        .expect("macro summary exists")
+}
+
+fn public_macro_signature(
+    source: &str,
+    name: &str,
+) -> ash_parser::surface::MacroTypeSignatureSummary {
+    public_macro_summary(source, name)
+        .typed_signature
         .expect("macro has inferred typed signature")
 }
 
@@ -43,20 +48,48 @@ fn infers_identity_result_from_annotated_parameter() {
 }
 
 #[test]
-fn infers_bounded_builtin_call_result_from_annotated_parameter() {
-    let signature = public_macro_signature("pub macro inc(x: Int) => add(x, 1);", "inc");
+fn infers_bounded_binary_operator_result_from_annotated_parameter() {
+    let signature = public_macro_signature("pub macro inc(x: Int) => x + 1;", "inc");
 
     assert_name_type(&signature.return_type.expect("return inferred"), "Int");
 }
 
 #[test]
+fn ordinary_calls_do_not_fabricate_inferred_results() {
+    let signature = public_macro_signature("pub macro inc(x: Int) => add(x, 1);", "inc");
+
+    assert_eq!(signature.param_types.len(), 1);
+    assert_name_type(
+        signature.param_types[0]
+            .as_ref()
+            .expect("param type preserved"),
+        "Int",
+    );
+    assert!(signature.return_type.is_none());
+}
+
+#[test]
+fn wrong_arity_call_stays_uninferred_even_with_typed_arguments() {
+    let signature = public_macro_signature("pub macro bad_add(x: Int) => add(x);", "bad_add");
+
+    assert_eq!(signature.param_types.len(), 1);
+    assert!(signature.return_type.is_none());
+}
+
+#[test]
+fn module_qualified_calls_stay_uninferred() {
+    let signature = public_macro_signature(
+        "pub macro call_math(x: Int) => math::add(x, 1);",
+        "call_math",
+    );
+
+    assert_eq!(signature.param_types.len(), 1);
+    assert!(signature.return_type.is_none());
+}
+
+#[test]
 fn ambiguous_unannotated_identity_does_not_fabricate_summary() {
-    let module = ash_parser::parse_surface_file("pub macro id(x) => x;").expect("module parses");
-    let summaries = collect_public_macro_summaries(&module, "test").expect("summaries collect");
-    let summary = summaries
-        .into_iter()
-        .find(|summary| summary.name.as_ref() == "id")
-        .expect("macro summary exists");
+    let summary = public_macro_summary("pub macro id(x) => x;", "id");
 
     assert!(summary.typed_signature.is_none());
 }

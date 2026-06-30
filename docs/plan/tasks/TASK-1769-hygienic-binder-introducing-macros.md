@@ -1,6 +1,6 @@
 # TASK-1769: Implement bounded hygienic binder-introducing macro expansion
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -18,7 +18,7 @@ Allow a narrow expression-local binder-introducing macro subset once TASK-1768 p
 - ✅ TASK-1760: Phase 173 plan packet (complete)
 - ✅ TASK-1761: Macro-system expansion seam audit (complete)
 - ✅ TASK-1762: Macro-system spec amendments (complete)
-- 📝 TASK-1768: Binder hygiene metadata model (planned)
+- ✅ TASK-1768: Binder hygiene metadata model (complete)
 
 ## Deferral / Planned-Feature Reconciliation
 
@@ -33,9 +33,9 @@ Allow a narrow expression-local binder-introducing macro subset once TASK-1768 p
 
 ### Functional Requirements
 
-- [ ] Let/fn-style expression binders can be generated hygienically in the bounded subset
-- [ ] Generated binders do not capture caller variables
-- [ ] Caller binders do not capture generated identifiers
+- [x] Let/fn-style expression binders can be generated hygienically in the bounded subset
+- [x] Generated binders do not capture caller variables
+- [x] Caller binders do not capture generated identifiers
 
 ### Property Requirements
 
@@ -88,10 +88,19 @@ commands:
   - cargo fmt --check
   - git diff --check
 checklist:
-- [ ] Let/fn-style expression binders can be generated hygienically in the bounded subset
-- [ ] Generated binders do not capture caller variables
-- [ ] Caller binders do not capture generated identifiers
+- [x] Let/fn-style expression binders can be generated hygienically in the bounded subset
+- [x] Generated binders do not capture caller variables
+- [x] Caller binders do not capture generated identifiers
 ```
+
+## Completion Evidence
+
+- Implemented bounded anonymous-function macro template expansion in `crates/ash-parser/src/surface.rs`.
+- Renamed generated function parameters to non-source-spellable `$ash_generated_macro_<id>_<name>_<n>` names and rewrote generated binder uses consistently.
+- Preserved call-site argument variables during template substitution so generated binders cannot capture caller names.
+- Kept broader block/let binder macro bodies fail-closed before parser lowering or engine acceptance.
+- Added parser regressions in `crates/ash-parser/tests/task_1769_hygienic_binder_macros.rs`.
+- Added engine boundary regressions in `crates/ash-engine/tests/task_1769_binder_macro_boundaries.rs`.
 
 ## Notes
 

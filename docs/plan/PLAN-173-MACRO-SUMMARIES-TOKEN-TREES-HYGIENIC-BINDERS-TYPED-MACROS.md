@@ -1,6 +1,6 @@
 # PLAN-173: Macro Summaries, Token Trees, Hygienic Binders, and Typed Macros
 
-## Status: 🟢 In Progress; binder hygiene metadata model complete
+## Status: 🟢 In Progress; bounded hygienic binder macros complete
 
 ## Overview
 
@@ -34,7 +34,7 @@ The phase is intentionally still parser-first and fail-closed. It must not becom
 - [x] Parse and validate bracket/brace invocations without executing unsupported token-tree shapes accidentally.
 - [x] Add a bounded token-tree expansion/reparse seam for macro templates that explicitly opt into token-tree output.
 - [x] Add definition-site/call-site/generated identifier metadata sufficient for binder-introducing macro templates.
-- [ ] Execute a bounded hygienic binder-introducing macro subset with capture-resistant tests.
+- [x] Execute a bounded hygienic binder-introducing macro subset with capture-resistant tests.
 - [ ] Add typed macro signature carriers and fail-closed checking of macro arguments/templates before expansion is accepted.
 - [ ] Add bounded macro type inference for unannotated local/imported macro templates where inference is unambiguous.
 - [ ] Validate parser, engine/module-loader, typechecker, lowering, LSP-facing consumers, and docs/status surfaces before closeout.
@@ -83,7 +83,7 @@ The phase is intentionally still parser-first and fail-closed. It must not becom
 ### Phase 4: Hygienic binder-introducing macros
 
 - TASK-1768: Add binder hygiene metadata model and validation rules. ✅
-- TASK-1769: Implement bounded hygienic binder-introducing macro expansion. 📝
+- TASK-1769: Implement bounded hygienic binder-introducing macro expansion. ✅
 
 ### Phase 5: Typed macro checking and inference
 

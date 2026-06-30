@@ -3136,11 +3136,11 @@ fn expand_macro_invocation(
             actual: args.len(),
         });
     }
-    ensure_macro_template_supported(&entry.body, entry)?;
-    let mut expanded = substitute_macro_template(&entry.body, &entry.params, args);
     let expansion_id = ExpansionId(
         u32::try_from(origins.len() + 1).expect("surface expansion origin count exceeds u32"),
     );
+    ensure_macro_template_supported(&entry.body, entry)?;
+    let mut expanded = substitute_macro_template(&entry.body, &entry.params, args, expansion_id);
     let macro_origin = SurfaceOrigin::MacroExpansion {
         call_span: invocation.span,
         expansion_id: entry.name.clone(),
@@ -3223,18 +3223,43 @@ fn render_macro_token_tree(tree: &MacroTokenTree, out: &mut String) {
     }
 }
 
-fn substitute_macro_template(template: &Expr, params: &[Name], args: &[Expr]) -> Expr {
-    let parameter_index = match template {
-        Expr::Variable { name, .. } => params.iter().position(|param| param == name),
-        _ => None,
-    };
-    if let Some(index) = parameter_index {
-        return args[index].clone();
+fn substitute_macro_template(
+    template: &Expr,
+    params: &[Name],
+    args: &[Expr],
+    expansion_id: ExpansionId,
+) -> Expr {
+    substitute_macro_template_scoped(template, params, args, &[], expansion_id, &mut 0)
+}
+
+fn substitute_macro_template_scoped(
+    template: &Expr,
+    params: &[Name],
+    args: &[Expr],
+    binders: &[(Name, Name)],
+    expansion_id: ExpansionId,
+    generated_index: &mut usize,
+) -> Expr {
+    if let Expr::Variable { name, span } = template {
+        if let Some((_, generated)) = binders.iter().rev().find(|(source, _)| source == name) {
+            return Expr::Variable {
+                name: generated.clone(),
+                span: *span,
+            };
+        }
+        if let Some(index) = params.iter().position(|param| param == name) {
+            return args[index].clone();
+        }
     }
+
+    let mut subst = |expr: &Expr| {
+        substitute_macro_template_scoped(expr, params, args, binders, expansion_id, generated_index)
+    };
+
     match template {
         Expr::Unary { op, operand, span } => Expr::Unary {
             op: *op,
-            operand: Box::new(substitute_macro_template(operand, params, args)),
+            operand: Box::new(subst(operand)),
             span: *span,
         },
         Expr::Binary {
@@ -3246,8 +3271,8 @@ fn substitute_macro_template(template: &Expr, params: &[Name], args: &[Expr]) ->
         } => Expr::Binary {
             op: *op,
             raw_operator: raw_operator.clone(),
-            left: Box::new(substitute_macro_template(left, params, args)),
-            right: Box::new(substitute_macro_template(right, params, args)),
+            left: Box::new(subst(left)),
+            right: Box::new(subst(right)),
             span: *span,
         },
         Expr::Call {
@@ -3258,10 +3283,7 @@ fn substitute_macro_template(template: &Expr, params: &[Name], args: &[Expr]) ->
         } => Expr::Call {
             func: func.clone(),
             module: module.clone(),
-            args: call_args
-                .iter()
-                .map(|arg| substitute_macro_template(arg, params, args))
-                .collect(),
+            args: call_args.iter().map(subst).collect(),
             span: *span,
         },
         Expr::FnApply {
@@ -3269,21 +3291,18 @@ fn substitute_macro_template(template: &Expr, params: &[Name], args: &[Expr]) ->
             args: apply_args,
             span,
         } => Expr::FnApply {
-            func: Box::new(substitute_macro_template(func, params, args)),
-            args: apply_args
-                .iter()
-                .map(|arg| substitute_macro_template(arg, params, args))
-                .collect(),
+            func: Box::new(subst(func)),
+            args: apply_args.iter().map(subst).collect(),
             span: *span,
         },
         Expr::FieldAccess { base, field, span } => Expr::FieldAccess {
-            base: Box::new(substitute_macro_template(base, params, args)),
+            base: Box::new(subst(base)),
             field: field.clone(),
             span: *span,
         },
         Expr::IndexAccess { base, index, span } => Expr::IndexAccess {
-            base: Box::new(substitute_macro_template(base, params, args)),
-            index: Box::new(substitute_macro_template(index, params, args)),
+            base: Box::new(subst(base)),
+            index: Box::new(subst(index)),
             span: *span,
         },
         Expr::Constructor {
@@ -3295,13 +3314,27 @@ fn substitute_macro_template(template: &Expr, params: &[Name], args: &[Expr]) ->
             name: name.clone(),
             fields: fields
                 .iter()
-                .map(|(name, expr)| (name.clone(), substitute_macro_template(expr, params, args)))
+                .map(|(name, expr)| (name.clone(), subst(expr)))
                 .collect(),
-            payload: substitute_constructor_payload(payload, params, args),
+            payload: substitute_constructor_payload(
+                payload,
+                params,
+                args,
+                binders,
+                expansion_id,
+                generated_index,
+            ),
             span: *span,
         },
         Expr::OperatorSection { section } => Expr::OperatorSection {
-            section: substitute_operator_section(section, params, args),
+            section: substitute_operator_section(
+                section,
+                params,
+                args,
+                binders,
+                expansion_id,
+                generated_index,
+            ),
         },
         Expr::MacroInvocation { invocation } => Expr::MacroInvocation {
             invocation: MacroInvocation {
@@ -3310,12 +3343,10 @@ fn substitute_macro_template(template: &Expr, params: &[Name], args: &[Expr]) ->
                 raw_body: invocation.raw_body.clone(),
                 body: invocation.body.clone(),
                 token_trees: invocation.token_trees.clone(),
-                args: invocation.args.as_ref().map(|macro_args| {
-                    macro_args
-                        .iter()
-                        .map(|arg| substitute_macro_template(arg, params, args))
-                        .collect()
-                }),
+                args: invocation
+                    .args
+                    .as_ref()
+                    .map(|macro_args| macro_args.iter().map(subst).collect()),
                 span: invocation.span,
             },
         },
@@ -3325,24 +3356,62 @@ fn substitute_macro_template(template: &Expr, params: &[Name], args: &[Expr]) ->
             else_branch,
             span,
         } => Expr::If {
-            condition: Box::new(substitute_macro_template(condition, params, args)),
-            then_branch: Box::new(substitute_macro_template(then_branch, params, args)),
-            else_branch: else_branch
-                .as_ref()
-                .map(|expr| Box::new(substitute_macro_template(expr, params, args))),
+            condition: Box::new(subst(condition)),
+            then_branch: Box::new(subst(then_branch)),
+            else_branch: else_branch.as_ref().map(|expr| Box::new(subst(expr))),
             span: *span,
         },
         Expr::Fail { payload, span } => Expr::Fail {
-            payload: Box::new(substitute_macro_template(payload, params, args)),
+            payload: Box::new(subst(payload)),
             span: *span,
         },
         Expr::List { items, span } => Expr::List {
-            items: items
-                .iter()
-                .map(|item| substitute_macro_template(item, params, args))
-                .collect(),
+            items: items.iter().map(subst).collect(),
             span: *span,
         },
+        Expr::Block {
+            statements,
+            tail_expr,
+            span,
+        } if statements.is_empty() => Expr::Block {
+            statements: Vec::new(),
+            tail_expr: tail_expr.as_ref().map(|expr| Box::new(subst(expr))),
+            span: *span,
+        },
+        Expr::FnDef {
+            params: fn_params,
+            return_type,
+            body,
+            span,
+        } => {
+            let mut scoped_binders = binders.to_vec();
+            let mut generated_params = Vec::with_capacity(fn_params.len());
+            for (name, ty) in fn_params {
+                let generated: Name = format!(
+                    "$ash_generated_macro_{}_{}_{}",
+                    expansion_id.0,
+                    name.as_ref(),
+                    *generated_index
+                )
+                .into();
+                *generated_index += 1;
+                scoped_binders.push((name.clone(), generated.clone()));
+                generated_params.push((generated, ty.clone()));
+            }
+            Expr::FnDef {
+                params: generated_params,
+                return_type: return_type.clone(),
+                body: Box::new(substitute_macro_template_scoped(
+                    body,
+                    params,
+                    args,
+                    &scoped_binders,
+                    expansion_id,
+                    generated_index,
+                )),
+                span: *span,
+            }
+        }
         other => other.clone(),
     }
 }
@@ -3351,19 +3420,22 @@ fn substitute_constructor_payload(
     payload: &ConstructorPayload,
     params: &[Name],
     args: &[Expr],
+    binders: &[(Name, Name)],
+    expansion_id: ExpansionId,
+    generated_index: &mut usize,
 ) -> ConstructorPayload {
+    let mut subst = |expr: &Expr| {
+        substitute_macro_template_scoped(expr, params, args, binders, expansion_id, generated_index)
+    };
     match payload {
         ConstructorPayload::Unit => ConstructorPayload::Unit,
-        ConstructorPayload::Tuple(items) => ConstructorPayload::Tuple(
-            items
-                .iter()
-                .map(|item| substitute_macro_template(item, params, args))
-                .collect(),
-        ),
+        ConstructorPayload::Tuple(items) => {
+            ConstructorPayload::Tuple(items.iter().map(subst).collect())
+        }
         ConstructorPayload::Record(fields) => ConstructorPayload::Record(
             fields
                 .iter()
-                .map(|(name, expr)| (name.clone(), substitute_macro_template(expr, params, args)))
+                .map(|(name, expr)| (name.clone(), subst(expr)))
                 .collect(),
         ),
     }
@@ -3373,18 +3445,18 @@ fn substitute_operator_section(
     section: &OperatorSection,
     params: &[Name],
     args: &[Expr],
+    binders: &[(Name, Name)],
+    expansion_id: ExpansionId,
+    generated_index: &mut usize,
 ) -> OperatorSection {
+    let mut subst = |expr: &Expr| {
+        substitute_macro_template_scoped(expr, params, args, binders, expansion_id, generated_index)
+    };
     OperatorSection {
         kind: section.kind.clone(),
         operator: section.operator.clone(),
-        left: section
-            .left
-            .as_ref()
-            .map(|expr| Box::new(substitute_macro_template(expr, params, args))),
-        right: section
-            .right
-            .as_ref()
-            .map(|expr| Box::new(substitute_macro_template(expr, params, args))),
+        left: section.left.as_ref().map(|expr| Box::new(subst(expr))),
+        right: section.right.as_ref().map(|expr| Box::new(subst(expr))),
         span: section.span,
     }
 }
@@ -3393,6 +3465,14 @@ fn ensure_macro_template_supported(
     template: &Expr,
     entry: &LocalMacroEntry,
 ) -> Result<(), ExpansionError> {
+    ensure_macro_template_supported_scoped(template, entry, &[])
+}
+
+fn ensure_macro_template_supported_scoped(
+    template: &Expr,
+    entry: &LocalMacroEntry,
+    binders: &[Name],
+) -> Result<(), ExpansionError> {
     match template {
         Expr::Match { span, .. } => unsupported_macro_template(entry, *span, "match"),
         Expr::IfLet { span, .. } => unsupported_macro_template(entry, *span, "if-let"),
@@ -3400,14 +3480,30 @@ fn ensure_macro_template_supported(
         Expr::WithError { span, .. } => unsupported_macro_template(entry, *span, "with_error"),
         Expr::Fail { span, .. } => unsupported_macro_template(entry, *span, "fail"),
         Expr::Block { span, .. } => unsupported_macro_template(entry, *span, "block"),
-        Expr::FnDef { span, .. } => unsupported_macro_template(entry, *span, "function/binder"),
         Expr::ActBlock { span, .. } => unsupported_macro_template(entry, *span, "act block"),
         Expr::DoBlock { span, .. } => unsupported_macro_template(entry, *span, "do block"),
         Expr::Comprehension { span, .. } => {
             unsupported_macro_template(entry, *span, "comprehension")
         }
+        Expr::FnDef { params, body, .. } => {
+            let mut scoped_binders = binders.to_vec();
+            scoped_binders.extend(params.iter().map(|(name, _)| name.clone()));
+            match body.as_ref() {
+                Expr::Block {
+                    statements,
+                    tail_expr: Some(tail),
+                    span,
+                } if statements.is_empty() => {
+                    ensure_macro_template_supported_scoped(tail, entry, &scoped_binders)
+                }
+                Expr::Block { span, .. } => unsupported_macro_template(entry, *span, "block"),
+                body => ensure_macro_template_supported_scoped(body, entry, &scoped_binders),
+            }
+        }
         Expr::Variable { span, name } => {
-            if entry.params.iter().any(|param| param == name) {
+            if entry.params.iter().any(|param| param == name)
+                || binders.iter().any(|binder| binder == name)
+            {
                 Ok(())
             } else {
                 unsupported_macro_template(entry, *span, "free variable")
@@ -3416,7 +3512,7 @@ fn ensure_macro_template_supported(
         Expr::MacroInvocation { invocation } => {
             if let Some(args) = &invocation.args {
                 for arg in args {
-                    ensure_macro_template_supported(arg, entry)?;
+                    ensure_macro_template_supported_scoped(arg, entry, binders)?;
                 }
             }
             Ok(())
@@ -3425,7 +3521,7 @@ fn ensure_macro_template_supported(
             let mut error = None;
             visit_expr(template, &mut |expr| {
                 if error.is_none() && !std::ptr::eq(expr, template) {
-                    error = ensure_macro_template_supported(expr, entry).err();
+                    error = ensure_macro_template_supported_scoped(expr, entry, binders).err();
                 }
             });
             error.map_or(Ok(()), Err)
@@ -4181,9 +4277,14 @@ fn push_binder_hygiene(metadata: &mut Vec<IdentifierHygieneMetadata>, name: Name
 }
 
 fn generated_identifier_expansion_id(name: &str) -> Option<ExpansionId> {
-    let rest = name.strip_prefix("$ash_generated_section_")?;
-    let (id, _) = rest.split_once('_')?;
-    id.parse::<u32>().ok().map(ExpansionId)
+    for prefix in ["$ash_generated_section_", "$ash_generated_macro_"] {
+        let Some(rest) = name.strip_prefix(prefix) else {
+            continue;
+        };
+        let (id, _) = rest.split_once('_')?;
+        return id.parse::<u32>().ok().map(ExpansionId);
+    }
+    None
 }
 
 fn elaborate_operator_section(

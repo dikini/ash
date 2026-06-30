@@ -11,6 +11,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Phase 170 notation summary/export design now matches the implemented fail-closed local-table behavior for duplicate notation declarations (TASK-1742).
 
 ### Added
+- Bounded hygienic binder-introducing macro expansion for anonymous function templates, with generated binder renaming, capture-resistance regressions, and fail-closed rejection of broader block-binder shapes before engine acceptance (TASK-1769).
 - Syntax-side identifier hygiene metadata on expanded surface modules, distinguishing definition-site, call-site, and generated identifiers without granting runtime authority or lowering effects (TASK-1768).
 - Bounded token-tree macro expansion through a single parser-owned reparse boundary, with macro diagnostics for invalid token-tree input and validation against residual macro bypasses (TASK-1767).
 - Structured macro invocation body carriers distinguish parenthesized expression-argument macros from bracket/brace token-tree macro carriers while keeping bracket/brace execution fail-closed before the reparse seam (TASK-1766).

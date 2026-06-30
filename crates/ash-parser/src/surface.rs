@@ -2083,6 +2083,19 @@ impl LocalMacroTable {
     pub fn entries(&self) -> impl Iterator<Item = &LocalMacroEntry> {
         self.entries.iter()
     }
+
+    /// Insert an imported syntax-phase macro row into the expansion table.
+    pub fn insert_imported(&mut self, entry: LocalMacroEntry) -> Result<(), ExpansionError> {
+        if let Some(existing) = self.resolve(entry.name.as_ref()) {
+            return Err(ExpansionError::DuplicateMacroDeclaration {
+                name: entry.name.clone(),
+                first_span: existing.span,
+                second_span: entry.span,
+            });
+        }
+        self.entries.push(entry);
+        Ok(())
+    }
 }
 
 /// Build the local macro table for a parsed module.
@@ -2276,11 +2289,21 @@ fn same_fixity_class(left: &NotationFixity, right: &NotationFixity) -> bool {
 ///
 /// Phase 169 keeps macro expansion deferred but resolves local/built-in binary operator sections
 /// into ordinary callable surface expressions before the module can cross into Core lowering.
-pub fn expand_surface_module(
+pub fn expand_surface_module(module: ModuleFile) -> Result<ExpandedSurfaceModule, ExpansionError> {
+    expand_surface_module_with_imported_macros(module, Vec::new())
+}
+
+/// Expand a parsed surface module with additional imported macro entries.
+///
+/// Imported entries must already have been gated by explicit macro summaries in
+/// the engine/module-loader layer. They are syntax-phase rows only and do not
+/// create callables or runtime bindings.
+pub fn expand_surface_module_with_imported_macros(
     mut module: ModuleFile,
+    imported_macros: Vec<LocalMacroEntry>,
 ) -> Result<ExpandedSurfaceModule, ExpansionError> {
     let mut origins = Vec::new();
-    expand_macros_in_module(&mut module, &mut origins)?;
+    expand_macros_in_module(&mut module, &mut origins, imported_macros)?;
     elaborate_operator_sections_in_module(&mut module, &mut origins)?;
     if let Some(section) = find_operator_section_in_module(&module) {
         return Err(ExpansionError::UnresolvedOperatorSection {
@@ -2306,8 +2329,12 @@ const MACRO_EXPANSION_DEPTH_LIMIT: usize = 16;
 fn expand_macros_in_module(
     module: &mut ModuleFile,
     origins: &mut Vec<ExpandedSurfaceOrigin>,
+    imported_macros: Vec<LocalMacroEntry>,
 ) -> Result<(), ExpansionError> {
-    let table = build_local_macro_table_for_definitions(&module.definitions)?;
+    let mut table = build_local_macro_table_for_definitions(&module.definitions)?;
+    for entry in imported_macros {
+        table.insert_imported(entry)?;
+    }
     let notation_table = build_local_notation_table_for_definitions(&module.definitions)?;
     for definition in &mut module.definitions {
         expand_macros_in_definition(definition, &table, &notation_table, origins, 0)?;

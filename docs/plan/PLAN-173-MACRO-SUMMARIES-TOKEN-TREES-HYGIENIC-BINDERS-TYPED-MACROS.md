@@ -29,7 +29,7 @@ The phase is intentionally still parser-first and fail-closed. It must not becom
 - [x] Audit the Phase 172 implementation and decide the exact sequencing/possible split points for summary import, token trees, binder hygiene, and typed checking.
 - [x] Patch specs so imported macro activation, token-tree carriers, binder hygiene, and typed macro checking have implementation-grade contracts before code changes.
 - [x] Add explicit macro summary carriers for public macro declarations and export collection without treating macros as callables.
-- [ ] Activate imported/exported macros only through those summaries, with positive import tests and negative leakage/re-export tests.
+- [x] Activate imported/exported macros only through those summaries, with positive import tests and negative leakage/re-export tests.
 - [ ] Replace raw bracket/brace diagnostic substrings with delimiter-preserving token-tree carriers that remain syntax-first and source-preserving.
 - [ ] Parse and validate bracket/brace invocations without executing unsupported token-tree shapes accidentally.
 - [ ] Add a bounded token-tree expansion/reparse seam for macro templates that explicitly opt into token-tree output.
@@ -72,7 +72,7 @@ The phase is intentionally still parser-first and fail-closed. It must not becom
 ### Phase 2: Imported/exported macro activation
 
 - TASK-1763: Add macro summary carrier design and export collection. ✅
-- TASK-1764: Implement bounded imported/exported macro activation. 📝
+- TASK-1764: Implement bounded imported/exported macro activation. ✅
 
 ### Phase 3: Token-tree and delimiter parsing
 

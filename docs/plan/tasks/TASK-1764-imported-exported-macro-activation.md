@@ -1,6 +1,6 @@
 # TASK-1764: Implement bounded imported/exported macro activation
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -33,9 +33,9 @@ Use explicit macro summaries to activate imported/exported macros in downstream 
 
 ### Functional Requirements
 
-- [ ] Imported public macro can expand at an authorized call site
-- [ ] Private/non-exported macros remain inaccessible
-- [ ] Callable imports cannot accidentally activate macro syntax
+- [x] Imported public macro can expand at an authorized call site
+- [x] Private/non-exported macros remain inaccessible
+- [x] Callable imports cannot accidentally activate macro syntax
 
 ### Property Requirements
 
@@ -89,10 +89,27 @@ commands:
   - cargo fmt --check
   - git diff --check
 checklist:
-- [ ] Imported public macro can expand at an authorized call site
-- [ ] Private/non-exported macros remain inaccessible
-- [ ] Callable imports cannot accidentally activate macro syntax
+- [x] Imported public macro can expand at an authorized call site
+- [x] Private/non-exported macros remain inaccessible
+- [x] Callable imports cannot accidentally activate macro syntax
 ```
+
+## Completion Evidence
+
+- Added `expand_surface_module_with_imported_macros` and explicit imported `LocalMacroEntry` table insertion in `crates/ash-parser/src/surface.rs`.
+- Added engine/module-loader macro activation gated by `MacroSummary` plus internal AST template exports; callable imports with the same spelling do not activate macro syntax.
+- Added cycle-safe imported macro collection that reuses the module-loader cache/visiting set so macro activation does not reintroduce import recursion.
+- Added regressions in `crates/ash-engine/tests/task_1764_imported_exported_macro_activation.rs` for named imports, aliases, private macro non-leakage, and callable non-activation.
+- Verification:
+  - `cargo test -p ash-engine --test task_1764_imported_exported_macro_activation -- --nocapture`
+  - `cargo test -p ash-engine --test module_file_check_tests constrained_public_interface_import_seeding_does_not_recurse_forever_on_cycles -- --nocapture`
+  - `cargo test -p ash-parser`
+  - `cargo test -p ash-typeck`
+  - `cargo test -p ash-engine`
+  - `cargo check --workspace`
+  - `cargo clippy --workspace --all-targets --all-features -- -D warnings`
+  - `cargo fmt --check`
+  - `git diff --check`
 
 ## Notes
 

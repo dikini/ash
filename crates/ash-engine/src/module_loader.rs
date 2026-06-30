@@ -40,7 +40,7 @@ use ash_parser::parse_type_def::{
 use ash_parser::parse_use::parse_use;
 use ash_parser::parse_workflow::workflow_def;
 use ash_parser::surface::{
-    Definition, Expr, InterfaceDef, MacroSummary, Type, Workflow, WorkflowDef,
+    Definition, Expr, InterfaceDef, LocalMacroEntry, MacroSummary, Type, Workflow, WorkflowDef,
 };
 use std::cell::{Cell, RefCell};
 use std::collections::{HashMap, HashSet};
@@ -122,6 +122,7 @@ pub fn check_importable_module_file(path: &Path) -> Result<(), EngineError> {
         && exports.type_function_summaries.is_empty()
         && exports.associated_family_summaries.is_empty()
         && exports.macro_summaries.is_empty()
+        && exports.macro_templates.is_empty()
         && exports.child_modules.is_empty()
     {
         return Err(EngineError::Parse(format!(
@@ -144,12 +145,74 @@ pub(crate) fn expand_surface_module_file(
     source: &str,
 ) -> Result<ash_parser::surface::ExpandedSurfaceModule, EngineError> {
     let module = parse_module_file_for_type_metadata(path, source)?;
-    ash_parser::surface::expand_surface_module(module).map_err(|error| {
-        EngineError::Parse(format!(
-            "in '{}': expanded-surface validation failed: {error}",
-            path.display()
-        ))
-    })
+    let imported_macros = collect_imported_macro_entries(path, source)?;
+    ash_parser::surface::expand_surface_module_with_imported_macros(module, imported_macros)
+        .map_err(|error| {
+            EngineError::Parse(format!(
+                "in '{}': expanded-surface validation failed: {error}",
+                path.display()
+            ))
+        })
+}
+
+fn collect_imported_macro_entries(
+    path: &Path,
+    source: &str,
+) -> Result<Vec<LocalMacroEntry>, EngineError> {
+    let mut module_cache = HashMap::new();
+    let mut visiting = HashSet::new();
+    visiting.insert(path.canonicalize().unwrap_or_else(|_| path.to_path_buf()));
+    collect_imported_macro_entries_with_state(path, source, &mut module_cache, &mut visiting)
+}
+
+fn collect_imported_macro_entries_with_state(
+    path: &Path,
+    source: &str,
+    module_cache: &mut HashMap<PathBuf, ModuleExports>,
+    visiting: &mut HashSet<PathBuf>,
+) -> Result<Vec<LocalMacroEntry>, EngineError> {
+    let entry_root = path.parent().ok_or_else(|| {
+        EngineError::Configuration(format!("module path '{}' has no parent", path.display()))
+    })?;
+    let crate_root = discover_crate_root(entry_root);
+    let mut imported_macros = Vec::new();
+    for import in parse_module_imports(source)? {
+        let (module_segments, search_roots) =
+            import_resolution_roots(&import.module_segments, entry_root, crate_root.as_deref())?;
+        let module_path =
+            resolve_module_path(&module_segments, &search_roots)?.ok_or_else(|| {
+                EngineError::Parse(format!(
+                    "module '{}' not found",
+                    import.module_segments.join("::")
+                ))
+            })?;
+        let exports = collect_module_exports(module_path.as_path(), module_cache, visiting)?;
+        for selection in import.selections {
+            match selection {
+                ImportSelection::Glob => {
+                    imported_macros.extend(exports.macro_templates.values().cloned());
+                }
+                ImportSelection::Named { name, alias } => {
+                    if exports.macro_summaries.contains_key(&name) {
+                        let mut entry = exports
+                            .macro_templates
+                            .get(&name)
+                            .ok_or_else(|| {
+                                EngineError::Parse(format!(
+                                    "macro summary '{name}' has no expansion template"
+                                ))
+                            })?
+                            .clone();
+                        if let Some(alias) = alias {
+                            entry.name = alias.into();
+                        }
+                        imported_macros.push(entry);
+                    }
+                }
+            }
+        }
+    }
+    Ok(imported_macros)
 }
 
 fn source_contains_workflow_keyword(source: &str) -> bool {
@@ -251,6 +314,8 @@ pub(crate) struct ModuleExports {
     pub(crate) callables: HashMap<String, InlineCallable>,
     /// Syntax-phase macro summaries keyed by exported public macro name.
     pub(crate) macro_summaries: HashMap<String, MacroSummary>,
+    /// Syntax-phase macro templates keyed by exported public macro name.
+    pub(crate) macro_templates: HashMap<String, LocalMacroEntry>,
     /// Core-owned ordinary type semantic summary lowered from the parsed `ModuleFile`.
     pub(crate) semantic_summary: Option<ModuleSemanticSummary>,
     /// Source-visible public type-function summary heads keyed by exported name.
@@ -532,7 +597,7 @@ pub fn load_ordinary_source(path: &Path, source: &str) -> Result<LoadedOrdinaryF
                         imported_callables.insert(exported_name, callable);
                     } else if let Some(summary) = exports.macro_summaries.get(&name) {
                         let mut summary = summary.clone();
-                        summary.name = exported_name.into();
+                        summary.name = exported_name.clone().into();
                         imported_macro_summaries.push(summary);
                     } else if let Some(summary) = exports.type_function_summaries.get(&name) {
                         push_selected_type_function_semantic_summary(
@@ -2654,16 +2719,22 @@ pub(crate) fn collect_module_exports(
     if let Some(exports) = cache.get(&path) {
         return Ok(exports.clone());
     }
+    visiting.insert(canonical.clone());
 
     let source = std::fs::read_to_string(&path)?;
     let parsed_module = parse_module_file_for_type_metadata(&path, &source)?;
-    let expanded =
-        ash_parser::surface::expand_surface_module(parsed_module.clone()).map_err(|error| {
-            EngineError::Parse(format!(
-                "in '{}': expanded-surface validation failed: {error}",
-                path.display()
-            ))
-        })?;
+    let imported_macros =
+        collect_imported_macro_entries_with_state(&path, &source, cache, visiting)?;
+    let expanded = ash_parser::surface::expand_surface_module_with_imported_macros(
+        parsed_module.clone(),
+        imported_macros,
+    )
+    .map_err(|error| {
+        EngineError::Parse(format!(
+            "in '{}': expanded-surface validation failed: {error}",
+            path.display()
+        ))
+    })?;
     let mut exports = ModuleExports::default();
     let module_effectful_names =
         ash_parser::effectful_names_from_definitions(&expanded.module.definitions);
@@ -2860,6 +2931,7 @@ pub(crate) fn collect_module_exports(
         rewrite_exported_callable_signature_aliases(&mut exports, target_summary.as_ref());
     }
 
+    visiting.remove(&canonical);
     cache.insert(path.clone(), exports.clone());
     Ok(exports)
 }
@@ -3260,8 +3332,21 @@ fn attach_public_macro_summaries(
                 path.display()
             ))
         })?;
+    let templates = ash_parser::surface::build_local_macro_table(module).map_err(|error| {
+        EngineError::Parse(format!(
+            "in '{}': invalid public macro template table: {error}",
+            path.display()
+        ))
+    })?;
     for summary in summaries {
-        insert_macro_summary_export(exports, summary)?;
+        let name = summary.name.to_string();
+        let template = templates.resolve(&name).ok_or_else(|| {
+            EngineError::Parse(format!(
+                "in '{}': public macro summary '{name}' has no template",
+                path.display()
+            ))
+        })?;
+        insert_macro_summary_export(exports, summary, template.clone())?;
     }
     Ok(())
 }
@@ -3269,6 +3354,7 @@ fn attach_public_macro_summaries(
 fn insert_macro_summary_export(
     exports: &mut ModuleExports,
     summary: MacroSummary,
+    template: LocalMacroEntry,
 ) -> Result<(), EngineError> {
     let name = summary.name.to_string();
     if exports
@@ -3278,6 +3364,15 @@ fn insert_macro_summary_export(
     {
         return Err(EngineError::Parse(format!(
             "duplicate public macro summary '{name}'"
+        )));
+    }
+    if exports
+        .macro_templates
+        .insert(name.clone(), template)
+        .is_some()
+    {
+        return Err(EngineError::Parse(format!(
+            "duplicate public macro template '{name}'"
         )));
     }
     Ok(())

@@ -1,6 +1,6 @@
 # TASK-1771: Implement fail-closed typed macro checking
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -18,7 +18,7 @@ Check macro invocation argument/template/result types before accepting expansion
 - ✅ TASK-1760: Phase 173 plan packet (complete)
 - ✅ TASK-1761: Macro-system expansion seam audit (complete)
 - ✅ TASK-1762: Macro-system spec amendments (complete)
-- 📝 TASK-1770: Typed macro signature carriers (planned)
+- ✅ TASK-1770: Typed macro signature carriers (complete)
 
 ## Deferral / Planned-Feature Reconciliation
 
@@ -33,9 +33,9 @@ Check macro invocation argument/template/result types before accepting expansion
 
 ### Functional Requirements
 
-- [ ] Argument type mismatches reject before expansion acceptance
-- [ ] Template result mismatches point at macro definition and call site
-- [ ] Imported typed macro summaries are checked in caller modules
+- [x] Argument type mismatches reject before expansion acceptance
+- [x] Template result mismatches point at macro definition and call site
+- [x] Imported typed macro summaries are checked in caller modules
 
 ### Property Requirements
 
@@ -89,10 +89,32 @@ commands:
   - cargo fmt --check
   - git diff --check
 checklist:
-- [ ] Argument type mismatches reject before expansion acceptance
-- [ ] Template result mismatches point at macro definition and call site
-- [ ] Imported typed macro summaries are checked in caller modules
+- [x] Argument type mismatches reject before expansion acceptance
+- [x] Template result mismatches point at macro definition and call site
+- [x] Imported typed macro summaries are checked in caller modules
 ```
+
+## Completion Evidence
+
+- Added `ExpansionError::MacroTypeMismatch` for macro-specific typed-signature failures before expansion acceptance.
+- Added conservative bounded type inference for typed macro arguments and template results in `crates/ash-parser/src/surface.rs`.
+- Checked explicit argument annotations at call sites when the argument's bounded type is known.
+- Checked explicit macro result annotations against the template body under typed macro parameter assumptions.
+- Preserved imported `LocalMacroEntry::typed_signature` rows so caller modules check imported typed macros before downstream typechecking/Core acceptance.
+- Added parser regressions in `crates/ash-parser/tests/task_1771_typed_macro_checking.rs`.
+- Added engine/module-boundary regressions in `crates/ash-engine/tests/task_1771_typed_macro_boundaries.rs`.
+
+Fresh verification on final TASK-1771 diff:
+
+- `cargo test -p ash-parser --test task_1771_typed_macro_checking -- --nocapture` — 3 passed.
+- `cargo test -p ash-engine --test task_1771_typed_macro_boundaries -- --nocapture` — 2 passed.
+- `cargo test -p ash-parser` — passed, including parser doctests.
+- `cargo test -p ash-typeck` — passed, including typeck doctests.
+- `cargo test -p ash-engine` — passed, including engine doctests.
+- `cargo check --workspace` — passed.
+- `cargo clippy --workspace --all-targets --all-features -- -D warnings` — passed.
+- `cargo fmt --check && git diff --check` — passed.
+- `python3 tools/docs/validate_orientation_indexes.py --self-test && bash scripts/check-docs-gate.sh` — passed.
 
 ## Notes
 

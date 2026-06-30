@@ -11,6 +11,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Phase 170 notation summary/export design now matches the implemented fail-closed local-table behavior for duplicate notation declarations (TASK-1742).
 
 ### Added
+- Fail-closed typed macro checking for annotated macro arguments and template results before expansion acceptance, including imported typed macro summary checks in caller modules (TASK-1771).
 - Syntax-phase typed macro signature carriers for macro parameter and result annotations, preserving public macro signatures through summary collection while keeping untyped Phase 172 macros accepted (TASK-1770).
 - Bounded hygienic binder-introducing macro expansion for anonymous function templates, with generated binder renaming, capture-resistance regressions, and fail-closed rejection of broader block-binder shapes before engine acceptance (TASK-1769).
 - Syntax-side identifier hygiene metadata on expanded surface modules, distinguishing definition-site, call-site, and generated identifiers without granting runtime authority or lowering effects (TASK-1768).

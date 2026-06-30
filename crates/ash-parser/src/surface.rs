@@ -2059,6 +2059,14 @@ pub enum ExpansionError {
         name: Box<str>,
         reason: Box<str>,
     },
+    /// A typed macro signature check failed before accepting expansion output.
+    MacroTypeMismatch {
+        span: Span,
+        name: Box<str>,
+        expected: Box<str>,
+        actual: Box<str>,
+        position: Box<str>,
+    },
     /// Recursive macro expansion exceeded the conservative explicit depth bound.
     MacroExpansionDepthExceeded {
         span: Span,
@@ -2112,6 +2120,16 @@ impl std::fmt::Display for ExpansionError {
                     "macro `{name}` uses unsupported template syntax: {reason}"
                 )
             }
+            ExpansionError::MacroTypeMismatch {
+                name,
+                expected,
+                actual,
+                position,
+                ..
+            } => write!(
+                f,
+                "macro `{name}` typed signature mismatch at {position}: expected {expected}, got {actual}"
+            ),
             ExpansionError::MacroExpansionDepthExceeded { name, depth, .. } => write!(
                 f,
                 "macro expansion depth limit exceeded while expanding `{name}!` at depth {depth}"
@@ -2141,6 +2159,8 @@ pub struct LocalMacroEntry {
     pub params: Vec<Name>,
     /// Parsed expression template body.
     pub body: Expr,
+    /// Optional syntax-phase typed macro signature carrier.
+    pub typed_signature: Option<MacroTypeSignatureSummary>,
     /// Source span of the declaration.
     pub span: Span,
 }
@@ -2251,6 +2271,7 @@ fn collect_macro_entries(
             name: decl.name.clone(),
             params: decl.params.clone(),
             body: decl.body.clone(),
+            typed_signature: decl.typed_signature.clone(),
             span: decl.span,
         });
     }
@@ -3140,6 +3161,7 @@ fn expand_macro_invocation(
             actual: args.len(),
         });
     }
+    check_typed_macro_signature(entry, args, invocation.span)?;
     let expansion_id = ExpansionId(
         u32::try_from(origins.len() + 1).expect("surface expansion origin count exceeds u32"),
     );
@@ -3196,6 +3218,189 @@ fn reparse_macro_token_tree_args(
         });
     }
     Ok(args)
+}
+
+fn check_typed_macro_signature(
+    entry: &LocalMacroEntry,
+    args: &[Expr],
+    call_span: Span,
+) -> Result<(), ExpansionError> {
+    let Some(signature) = &entry.typed_signature else {
+        return Ok(());
+    };
+
+    let param_env: Vec<(&Name, &Type)> = entry
+        .params
+        .iter()
+        .zip(signature.param_types.iter())
+        .filter_map(|(name, ty)| ty.as_ref().map(|ty| (name, ty)))
+        .collect();
+
+    for (index, expected) in signature.param_types.iter().enumerate() {
+        let Some(expected) = expected else {
+            continue;
+        };
+        let Some(actual) = infer_bounded_macro_expr_type(&args[index], &[]) else {
+            continue;
+        };
+        if &actual != expected {
+            return Err(ExpansionError::MacroTypeMismatch {
+                span: args[index].span(),
+                name: entry.name.clone(),
+                expected: format_type(expected).into_boxed_str(),
+                actual: format_type(&actual).into_boxed_str(),
+                position: format!("argument {} at call site", index + 1).into_boxed_str(),
+            });
+        }
+    }
+
+    if let Some(expected) = &signature.return_type {
+        let Some(actual) = infer_bounded_macro_expr_type(&entry.body, &param_env) else {
+            return Err(ExpansionError::MacroTypeMismatch {
+                span: entry.body.span(),
+                name: entry.name.clone(),
+                expected: format_type(expected).into_boxed_str(),
+                actual: "unknown template result type".into(),
+                position: "template result at macro definition".into(),
+            });
+        };
+        if &actual != expected {
+            return Err(ExpansionError::MacroTypeMismatch {
+                span: call_span,
+                name: entry.name.clone(),
+                expected: format_type(expected).into_boxed_str(),
+                actual: format_type(&actual).into_boxed_str(),
+                position: "template result at macro definition".into(),
+            });
+        }
+    }
+
+    Ok(())
+}
+
+fn infer_bounded_macro_expr_type(expr: &Expr, env: &[(&Name, &Type)]) -> Option<Type> {
+    match expr {
+        Expr::Literal(Literal::Int(_)) => Some(Type::Name("Int".into())),
+        Expr::Literal(Literal::String(_)) => Some(Type::Name("String".into())),
+        Expr::Literal(Literal::Bool(_)) => Some(Type::Name("Bool".into())),
+        Expr::Literal(Literal::Null) => Some(Type::Name("Null".into())),
+        Expr::Variable { name, .. } => env
+            .iter()
+            .rev()
+            .find(|(param, _)| *param == name)
+            .map(|(_, ty)| (*ty).clone()),
+        Expr::Unary { op, operand, .. } => match op {
+            UnaryOp::Neg => match infer_bounded_macro_expr_type(operand, env) {
+                Some(Type::Name(name)) if name.as_ref() == "Int" => Some(Type::Name("Int".into())),
+                _ => None,
+            },
+            UnaryOp::Not => match infer_bounded_macro_expr_type(operand, env) {
+                Some(Type::Name(name)) if name.as_ref() == "Bool" => {
+                    Some(Type::Name("Bool".into()))
+                }
+                _ => None,
+            },
+        },
+        Expr::Binary {
+            op, left, right, ..
+        } => infer_bounded_macro_binary_type(op, left, right, env),
+        Expr::FnDef {
+            params,
+            return_type,
+            ..
+        } => Some(Type::Fn(
+            params
+                .iter()
+                .map(|(_, ty)| ty.as_ref().map(|ty| Type::Name(ty.clone())))
+                .collect::<Option<Vec<_>>>()?,
+            Box::new(Type::Name(return_type.as_ref()?.clone())),
+        )),
+        _ => None,
+    }
+}
+
+fn infer_bounded_macro_binary_type(
+    op: &BinaryOp,
+    left: &Expr,
+    right: &Expr,
+    env: &[(&Name, &Type)],
+) -> Option<Type> {
+    let left_ty = infer_bounded_macro_expr_type(left, env)?;
+    let right_ty = infer_bounded_macro_expr_type(right, env)?;
+    match op {
+        BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul | BinaryOp::Div | BinaryOp::Mod
+            if is_named_type(&left_ty, "Int") && is_named_type(&right_ty, "Int") =>
+        {
+            Some(Type::Name("Int".into()))
+        }
+        BinaryOp::Eq
+        | BinaryOp::Neq
+        | BinaryOp::Lt
+        | BinaryOp::Leq
+        | BinaryOp::Gt
+        | BinaryOp::Geq
+            if left_ty == right_ty =>
+        {
+            Some(Type::Name("Bool".into()))
+        }
+        BinaryOp::And | BinaryOp::Or
+            if is_named_type(&left_ty, "Bool") && is_named_type(&right_ty, "Bool") =>
+        {
+            Some(Type::Name("Bool".into()))
+        }
+        _ => None,
+    }
+}
+
+fn is_named_type(ty: &Type, expected: &str) -> bool {
+    matches!(ty, Type::Name(name) if name.as_ref() == expected)
+}
+
+fn format_type(ty: &Type) -> String {
+    match ty {
+        Type::Name(name) => name.to_string(),
+        Type::Hole { .. } => "_".to_string(),
+        Type::List(inner) => format!("[{}]", format_type(inner)),
+        Type::Tuple(items) => format!(
+            "({})",
+            items.iter().map(format_type).collect::<Vec<_>>().join(", ")
+        ),
+        Type::Record(fields) => format!(
+            "{{{}}}",
+            fields
+                .iter()
+                .map(|(name, ty)| format!("{name}: {}", format_type(ty)))
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
+        Type::Capability(name) => format!("Capability<{name}>"),
+        Type::Constructor { name, args } => format!(
+            "{}<{}>",
+            name,
+            args.iter().map(format_type).collect::<Vec<_>>().join(", ")
+        ),
+        Type::Associated { base, name } => format!("{}::{name}", format_type(base)),
+        Type::AssociatedFamilyProjection {
+            interface,
+            args,
+            member,
+            ..
+        } => format!(
+            "<{}<{}>>::{}",
+            interface,
+            args.iter().map(format_type).collect::<Vec<_>>().join(", "),
+            member
+        ),
+        Type::Fn(params, ret) => format!(
+            "Fn({}) -> {}",
+            params
+                .iter()
+                .map(format_type)
+                .collect::<Vec<_>>()
+                .join(", "),
+            format_type(ret)
+        ),
+    }
 }
 
 fn render_macro_token_trees(trees: &[MacroTokenTree]) -> String {

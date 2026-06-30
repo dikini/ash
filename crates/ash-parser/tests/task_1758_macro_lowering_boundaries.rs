@@ -58,6 +58,7 @@ fn direct_expanded_gate_rejects_raw_macro_carriers_if_caller_constructs_invalid_
         module,
         diagnostics: Vec::new(),
         origins: Vec::new(),
+        hygiene: Vec::new(),
     };
 
     let err = lower_expanded_surface_module(&raw)

@@ -1,6 +1,6 @@
 # TASK-1768: Add binder hygiene metadata model and validation rules
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -18,6 +18,7 @@ Define and implement the metadata needed for hygienic binder-introducing macros:
 - ✅ TASK-1760: Phase 173 plan packet (complete)
 - ✅ TASK-1761: Macro-system expansion seam audit (complete)
 - ✅ TASK-1762: Macro-system spec amendments (complete)
+- ✅ TASK-1767: Bounded token-tree expansion and reparse boundary (complete)
 
 ## Deferral / Planned-Feature Reconciliation
 
@@ -32,9 +33,9 @@ Define and implement the metadata needed for hygienic binder-introducing macros:
 
 ### Functional Requirements
 
-- [ ] Binder metadata distinguishes definition-site/call-site/generated identifiers
-- [ ] Source/generated capture attempts have negative tests
-- [ ] Metadata remains syntax-side and authority-neutral
+- [x] Binder metadata distinguishes definition-site/call-site/generated identifiers
+- [x] Source/generated capture attempts have negative tests
+- [x] Metadata remains syntax-side and authority-neutral
 
 ### Property Requirements
 
@@ -87,10 +88,22 @@ commands:
   - cargo fmt --check
   - git diff --check
 checklist:
-- [ ] Binder metadata distinguishes definition-site/call-site/generated identifiers
-- [ ] Source/generated capture attempts have negative tests
-- [ ] Metadata remains syntax-side and authority-neutral
+- [x] Binder metadata distinguishes definition-site/call-site/generated identifiers
+- [x] Source/generated capture attempts have negative tests
+- [x] Metadata remains syntax-side and authority-neutral
 ```
+
+## Completion Evidence
+
+- Added `IdentifierHygieneContext` and `IdentifierHygieneMetadata` syntax-side sidecars on `ExpandedSurfaceModule`.
+- Classified definition-site binders, call-site variable occurrences, and generated operator-section binders without changing Core/lowering authority semantics.
+- Generated binder sidecars carry `ExpansionId` links parsed from fenced generated spellings; source binders remain source-spellable but never acquire generated expansion identity.
+- Added `crates/ash-parser/tests/task_1768_binder_hygiene_metadata.rs` covering context distinctions, source/generated non-capture, and syntax-side/origin-only metadata.
+- Regression coverage retained existing generated identifier and macro-origin hygiene tests.
+- Verification:
+  - `cargo test -p ash-parser --test task_1768_binder_hygiene_metadata -- --nocapture`
+  - `cargo test -p ash-parser --test task_1746_generated_identifier_hygiene -- --nocapture`
+  - `cargo test -p ash-parser --test task_1757_macro_origin_hygiene -- --nocapture`
 
 ## Notes
 

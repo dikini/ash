@@ -1,6 +1,6 @@
 # TASK-1773: Close out Phase 173 with cross-boundary validation, review, and status reconciliation
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -32,9 +32,9 @@ Run focused and broad gates, add cross-boundary regression coverage, address ind
 
 ### Functional Requirements
 
-- [ ] Parser/engine/typeck/LSP broad gates pass
-- [ ] Independent review findings are resolved
-- [ ] Status surfaces and changelog agree
+- [x] Parser/engine/typeck/LSP broad gates pass
+- [x] Independent review findings are resolved
+- [x] Status surfaces and changelog agree
 
 ### Property Requirements
 
@@ -92,10 +92,29 @@ commands:
   - python3 tools/docs/validate_orientation_indexes.py --self-test
   - bash scripts/check-docs-gate.sh
 checklist:
-- [ ] Parser/engine/typeck/LSP broad gates pass
-- [ ] Independent review findings are resolved
-- [ ] Status surfaces and changelog agree
+- [x] Parser/engine/typeck/LSP broad gates pass
+- [x] Independent review findings are resolved
+- [x] Status surfaces and changelog agree
 ```
+
+## Completion Evidence
+
+- Added parser closeout regressions in `crates/ash-parser/tests/task_1773_phase_173_boundaries.rs` for inferred syntax-phase summaries, expansion boundary removal of macro invocation carriers, and no fabricated typed metadata for ambiguous unannotated macros.
+- Added engine/module-loader closeout regressions in `crates/ash-engine/tests/task_1773_phase_173_boundaries.rs` proving imported macro summaries do not create runtime callable bindings or transport private template helper callables.
+- Reconciled `PLAN-173`, `PLAN-INDEX.md`, this task file, and `CHANGELOG.md` to mark Phase 173 complete.
+
+Verification on TASK-1773 closeout diff:
+
+- `cargo test -p ash-parser --test task_1773_phase_173_boundaries -- --nocapture` — 2 passed.
+- `cargo test -p ash-engine --test task_1773_phase_173_boundaries -- --nocapture` — 2 passed.
+- `cargo test -p ash-parser` — passed, including parser doctests.
+- `cargo test -p ash-typeck` — passed, including typeck doctests.
+- `cargo test -p ash-engine` — passed, including engine doctests.
+- `cargo test -p ash-lsp-core` — passed, including LSP-core doctests.
+- `cargo check --workspace` — passed.
+- `cargo clippy --workspace --all-targets --all-features -- -D warnings` — passed.
+- `cargo fmt --check && git diff --check` — passed.
+- `python3 tools/docs/validate_orientation_indexes.py --self-test && bash scripts/check-docs-gate.sh` — passed.
 
 ## Notes
 

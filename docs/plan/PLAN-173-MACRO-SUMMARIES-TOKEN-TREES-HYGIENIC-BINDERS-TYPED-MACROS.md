@@ -1,6 +1,6 @@
 # PLAN-173: Macro Summaries, Token Trees, Hygienic Binders, and Typed Macros
 
-## Status: 🟢 In Progress; bounded macro type inference complete
+## Status: ✅ Complete
 
 ## Overview
 
@@ -38,7 +38,7 @@ The phase is intentionally still parser-first and fail-closed. It must not becom
 - [x] Add typed macro signature carriers for macro parameters/results.
 - [x] Add fail-closed checking of macro arguments/templates before expansion is accepted.
 - [x] Add bounded macro type inference for unannotated local/imported macro templates where inference is unambiguous.
-- [ ] Validate parser, engine/module-loader, typechecker, lowering, LSP-facing consumers, and docs/status surfaces before closeout.
+- [x] Validate parser, engine/module-loader, typechecker, lowering, LSP-facing consumers, and docs/status surfaces before closeout.
 
 ## Non-goals
 
@@ -94,7 +94,7 @@ The phase is intentionally still parser-first and fail-closed. It must not becom
 
 ### Phase 6: Cross-boundary validation and closeout
 
-- TASK-1773: Close out Phase 173 with cross-boundary validation, review, and status reconciliation. 📝
+- TASK-1773: Close out Phase 173 with cross-boundary validation, review, and status reconciliation. ✅
 
 ## Dependency graph
 
@@ -159,15 +159,21 @@ bash scripts/check-docs-gate.sh
 
 ## Acceptance criteria
 
-- [ ] Specs describe macro summaries, token-tree carriers, binder hygiene, typed checking, and inference without overclaiming full procedural/macros-by-example semantics.
-- [ ] Public macro summaries can be exported/imported only through explicit macro summary carriers.
-- [ ] Imported/re-exported macro activation has positive execution tests and negative callable-leakage tests.
+- [x] Specs describe macro summaries, token-tree carriers, binder hygiene, typed checking, and inference without overclaiming full procedural/macros-by-example semantics.
+- [x] Public macro summaries can be exported/imported only through explicit macro summary carriers.
+- [x] Imported/re-exported macro activation has positive execution tests and negative callable-leakage tests.
 - [x] Bracket/brace invocations preserve delimiter/token-tree structure and reject unsupported executable shapes fail-closed.
 - [x] Token-tree expansion reparses into ordinary surface syntax through a single audited boundary and cannot bypass expanded-surface validation.
-- [ ] Binder-introducing macro templates preserve definition-site/call-site/generated identifier metadata and pass capture-resistance regressions.
-- [ ] Typed macro signatures and inferred macro summaries are checked before expansion output is accepted.
-- [ ] Parser, engine/module-loader, typechecker, lowering, and LSP-facing consumers agree on macro syntax, summaries, diagnostics, and boundaries.
-- [ ] PLAN-INDEX, this plan, task files, specs, and CHANGELOG agree on Phase 173 status.
+- [x] Binder-introducing macro templates preserve definition-site/call-site/generated identifier metadata and pass capture-resistance regressions.
+- [x] Typed macro signatures and inferred macro summaries are checked before expansion output is accepted.
+- [x] Parser, engine/module-loader, typechecker, lowering, and LSP-facing consumers agree on macro syntax, summaries, diagnostics, and boundaries.
+- [x] PLAN-INDEX, this plan, task files, specs, and CHANGELOG agree on Phase 173 status.
+
+## Closeout evidence
+
+- Added parser closeout regressions in `crates/ash-parser/tests/task_1773_phase_173_boundaries.rs` for inferred syntax-phase summaries, macro invocation expansion at the parser boundary, and ambiguous unannotated macro non-fabrication.
+- Added engine/module-loader closeout regressions in `crates/ash-engine/tests/task_1773_phase_173_boundaries.rs` proving macro imports do not create runtime callable bindings and do not transport private template helpers as callable authority.
+- Verified broad parser, typechecker, engine, LSP-facing, workspace, clippy, formatting, whitespace, and docs gates during TASK-1773 closeout.
 
 ## Packet creation evidence
 

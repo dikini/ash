@@ -785,7 +785,7 @@ Implements the first conservative executable macro slice. The phase remains pars
 
 ## Phase 173: Macro Summaries, Token Trees, Hygienic Binders, and Typed Macros
 
-**Status:** 🟢 In Progress; bounded macro type inference complete
+**Status:** ✅ Complete
 **Plan:** [PLAN-173: Macro Summaries, Token Trees, Hygienic Binders, and Typed Macros](PLAN-173-MACRO-SUMMARIES-TOKEN-TREES-HYGIENIC-BINDERS-TYPED-MACROS.md)
 **Depends on:** Phase 172 parser-first macro execution MVP; `SPEC-095c`; `SPEC-098c`; `SPEC-097b`.
 
@@ -806,4 +806,4 @@ Extends the Phase 172 local expression-macro MVP into the next conservative macr
 | [TASK-1770](tasks/TASK-1770-typed-macro-signature-carriers.md) | Add typed macro signature carriers | ✅ Complete |
 | [TASK-1771](tasks/TASK-1771-fail-closed-typed-macro-checking.md) | Implement fail-closed typed macro checking | ✅ Complete |
 | [TASK-1772](tasks/TASK-1772-bounded-macro-type-inference.md) | Implement bounded macro type inference | ✅ Complete |
-| [TASK-1773](tasks/TASK-1773-phase-173-cross-boundary-closeout.md) | Close out Phase 173 with cross-boundary validation, review, and status reconciliation | 📝 Planned |
+| [TASK-1773](tasks/TASK-1773-phase-173-cross-boundary-closeout.md) | Close out Phase 173 with cross-boundary validation, review, and status reconciliation | ✅ Complete |

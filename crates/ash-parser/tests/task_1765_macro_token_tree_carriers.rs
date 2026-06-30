@@ -103,16 +103,18 @@ fn parenthesized_macro_invocation_preserves_token_trees_alongside_structured_arg
 }
 
 #[test]
-fn token_tree_carriers_remain_fail_closed_before_expansion_boundary() {
+fn token_tree_carriers_require_the_expansion_boundary_before_lowering() {
     let module = ash_parser::parse_surface_file(
         "macro inc(x) => add(x, 1); fn use_macro(n: Int) -> Int { inc![n] }",
     )
     .expect("source parses");
 
-    let err = expand_surface_module(module).expect_err("unsupported token-tree input rejects");
+    let expanded = expand_surface_module(module).expect("token-tree input reparses and expands");
     assert!(
-        err.to_string()
-            .contains("macro invocation `inc!` uses unsupported Phase 172 MVP syntax"),
-        "unexpected error: {err}"
+        expanded
+            .module
+            .definitions
+            .iter()
+            .any(|definition| matches!(definition, Definition::Function(_)))
     );
 }

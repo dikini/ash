@@ -75,17 +75,13 @@ fn use_macro(n: Int) -> Int { inc!(n) }
 }
 
 #[test]
-fn bracket_and_brace_macro_invocations_reject_as_unsupported_mvp_forms() {
+fn bracket_and_brace_macro_invocations_expand_after_token_tree_reparse_boundary() {
     for source in [
         "macro inc(x) => add(x, 1); fn use_macro(n: Int) -> Int { inc![n] }",
         "macro inc(x) => add(x, 1); fn use_macro(n: Int) -> Int { inc!{n} }",
     ] {
         let module = ash_parser::parse_surface_file(source).expect("module parses");
-        let err = expand_surface_module(module).expect_err("unsupported macro form rejects");
-        assert!(matches!(
-            err,
-            ExpansionError::UnsupportedMacroInvocation { ref name, .. } if name.as_ref() == "inc"
-        ));
+        expand_surface_module(module).expect("token-tree macro form expands");
     }
 }
 

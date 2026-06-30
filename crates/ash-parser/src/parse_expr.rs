@@ -2009,7 +2009,7 @@ fn parse_inline_constructor_delimiter(input: &mut ParseInput, delimiter: char) -
 }
 
 /// Parse function call arguments
-fn parse_args(input: &mut ParseInput) -> ModalResult<Vec<Expr>> {
+pub(crate) fn parse_args(input: &mut ParseInput) -> ModalResult<Vec<Expr>> {
     let first = expr(input)?;
     let mut args = vec![first];
 

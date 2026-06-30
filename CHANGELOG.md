@@ -11,6 +11,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Phase 170 notation summary/export design now matches the implemented fail-closed local-table behavior for duplicate notation declarations (TASK-1742).
 
 ### Added
+- Bounded token-tree macro expansion through a single parser-owned reparse boundary, with macro diagnostics for invalid token-tree input and validation against residual macro bypasses (TASK-1767).
 - Structured macro invocation body carriers distinguish parenthesized expression-argument macros from bracket/brace token-tree macro carriers while keeping bracket/brace execution fail-closed before the reparse seam (TASK-1766).
 - Delimiter-preserving macro token-tree carriers with nested group/spelling/span preservation and fail-closed unsupported bracket/brace execution boundaries (TASK-1765).
 - Bounded imported/exported macro activation through explicit macro summaries, with alias support, private macro non-leakage, callable non-activation, and cycle-safe import traversal (TASK-1764).

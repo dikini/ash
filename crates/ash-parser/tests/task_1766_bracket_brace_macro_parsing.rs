@@ -175,18 +175,13 @@ fn parenthesized_invocation_still_uses_structured_expression_args() {
 }
 
 #[test]
-fn bracket_and_brace_structured_carriers_remain_non_executable_before_task_1767() {
+fn bracket_and_brace_structured_carriers_execute_only_after_task_1767_reparse_boundary() {
     for source in [
         "macro inc(x) => add(x, 1); fn add(x: Int, y: Int) -> Int { x + y } fn use_macro(n: Int) -> Int { inc![n] }",
         "macro inc(x) => add(x, 1); fn add(x: Int, y: Int) -> Int { x + y } fn use_macro(n: Int) -> Int { inc!{n} }",
     ] {
         let module = ash_parser::parse_surface_file(source).expect("module parses");
-        let err =
-            expand_surface_module(module).expect_err("unsupported structured carriers reject");
-        assert!(
-            err.to_string()
-                .contains("macro invocation `inc!` uses unsupported Phase 172 MVP syntax"),
-            "unexpected error: {err}"
-        );
+        expand_surface_module(module)
+            .expect("structured token-tree carriers expand through TASK-1767 boundary");
     }
 }

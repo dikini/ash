@@ -1,6 +1,6 @@
 # TASK-1767: Add bounded token-tree expansion and reparse boundaries
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -18,8 +18,8 @@ Implement the first executable token-tree macro subset by routing macro output t
 - ✅ TASK-1760: Phase 173 plan packet (complete)
 - ✅ TASK-1761: Macro-system expansion seam audit (complete)
 - ✅ TASK-1762: Macro-system spec amendments (complete)
-- 📝 TASK-1765: Token-tree carriers (planned)
-- 📝 TASK-1766: Bracket/brace macro parsing (planned)
+- ✅ TASK-1765: Token-tree carriers (complete)
+- ✅ TASK-1766: Bracket/brace macro parsing (complete)
 
 ## Deferral / Planned-Feature Reconciliation
 
@@ -34,9 +34,9 @@ Implement the first executable token-tree macro subset by routing macro output t
 
 ### Functional Requirements
 
-- [ ] Expansion output reparses exactly once through the audited boundary
-- [ ] Invalid output is a macro diagnostic
-- [ ] Token-tree expansion cannot bypass expanded-surface validation
+- [x] Expansion output reparses exactly once through the audited boundary
+- [x] Invalid output is a macro diagnostic
+- [x] Token-tree expansion cannot bypass expanded-surface validation
 
 ### Property Requirements
 
@@ -89,10 +89,23 @@ commands:
   - cargo fmt --check
   - git diff --check
 checklist:
-- [ ] Expansion output reparses exactly once through the audited boundary
-- [ ] Invalid output is a macro diagnostic
-- [ ] Token-tree expansion cannot bypass expanded-surface validation
+- [x] Expansion output reparses exactly once through the audited boundary
+- [x] Invalid output is a macro diagnostic
+- [x] Token-tree expansion cannot bypass expanded-surface validation
 ```
+
+## Completion Evidence
+
+- Added a single parser-owned token-tree reparse seam in `crates/ash-parser/src/surface.rs` for bracket/brace macro inputs.
+- Added `ExpansionError::MacroTokenTreeReparseFailed` so invalid token-tree input fails as a macro diagnostic before Core lowering or engine module acceptance.
+- Reparsed token-tree macro arguments re-enter ordinary macro expansion and expanded-surface validation, so residual macro carriers cannot bypass validation.
+- Added `crates/ash-parser/tests/task_1767_token_tree_expansion.rs` covering bracket/brace execution, invalid token-tree diagnostics, and residual-macro validation.
+- Updated prior Phase 172/173 boundary regressions to reflect that bracket/brace token-tree macro input is now executable only through this reparse seam.
+- Verification:
+  - `cargo test -p ash-parser --test task_1767_token_tree_expansion -- --nocapture`
+  - `cargo test -p ash-parser --test task_1766_bracket_brace_macro_parsing -- --nocapture`
+  - `cargo test -p ash-parser --test task_1755_macro_registry_scope -- --nocapture`
+  - `cargo test -p ash-engine --test task_1758_macro_execution_boundaries -- --nocapture`
 
 ## Notes
 

@@ -2010,6 +2010,12 @@ pub enum ExpansionError {
     UnknownMacroInvocation { span: Span, name: Box<str> },
     /// A macro invocation used syntax outside the Phase 172 executable MVP subset.
     UnsupportedMacroInvocation { span: Span, name: Box<str> },
+    /// Token-tree macro input failed to reparse through the audited boundary.
+    MacroTokenTreeReparseFailed {
+        span: Span,
+        name: Box<str>,
+        reason: Box<str>,
+    },
     /// A macro invocation provided the wrong number of expression arguments.
     MacroArityMismatch {
         span: Span,
@@ -2056,6 +2062,10 @@ impl std::fmt::Display for ExpansionError {
             ExpansionError::UnsupportedMacroInvocation { name, .. } => write!(
                 f,
                 "macro invocation `{name}!` uses unsupported Phase 172 MVP syntax"
+            ),
+            ExpansionError::MacroTokenTreeReparseFailed { name, reason, .. } => write!(
+                f,
+                "macro invocation `{name}!` token-tree input failed to reparse: {reason}"
             ),
             ExpansionError::MacroArityMismatch {
                 name,
@@ -3076,13 +3086,20 @@ fn expand_macro_invocation(
             name: invocation.name.clone(),
         });
     };
-    if invocation.delimiter != MacroDelimiter::Paren || invocation.args.is_none() {
-        return Err(ExpansionError::UnsupportedMacroInvocation {
-            span: invocation.span,
-            name: invocation.name.clone(),
-        });
-    }
-    let args = invocation.args.as_ref().expect("checked Some above");
+    let reparsed_args;
+    let args =
+        match invocation.delimiter {
+            MacroDelimiter::Paren => invocation.args.as_ref().ok_or_else(|| {
+                ExpansionError::UnsupportedMacroInvocation {
+                    span: invocation.span,
+                    name: invocation.name.clone(),
+                }
+            })?,
+            MacroDelimiter::Bracket | MacroDelimiter::Brace => {
+                reparsed_args = reparse_macro_token_tree_args(invocation)?;
+                &reparsed_args
+            }
+        };
     if args.len() != entry.params.len() {
         return Err(ExpansionError::MacroArityMismatch {
             span: invocation.span,
@@ -3121,6 +3138,61 @@ fn expand_macro_invocation(
         Some(&macro_origin),
     );
     Ok(expanded)
+}
+
+fn reparse_macro_token_tree_args(
+    invocation: &MacroInvocation,
+) -> Result<Vec<Expr>, ExpansionError> {
+    let source = render_macro_token_trees(&invocation.token_trees);
+    if source.trim().is_empty() {
+        return Ok(Vec::new());
+    }
+    let mut input = crate::input::new_input(&source);
+    let args = crate::parse_expr::parse_args(&mut input).map_err(|error| {
+        ExpansionError::MacroTokenTreeReparseFailed {
+            span: invocation.span,
+            name: invocation.name.clone(),
+            reason: format!("{error}").into_boxed_str(),
+        }
+    })?;
+    crate::parse_utils::skip_whitespace_and_comments(&mut input);
+    if !input.input.is_empty() {
+        return Err(ExpansionError::MacroTokenTreeReparseFailed {
+            span: invocation.span,
+            name: invocation.name.clone(),
+            reason: "trailing tokens after reparsed macro arguments".into(),
+        });
+    }
+    Ok(args)
+}
+
+fn render_macro_token_trees(trees: &[MacroTokenTree]) -> String {
+    let mut out = String::new();
+    for tree in trees {
+        if !out.is_empty() {
+            out.push(' ');
+        }
+        render_macro_token_tree(tree, &mut out);
+    }
+    out
+}
+
+fn render_macro_token_tree(tree: &MacroTokenTree, out: &mut String) {
+    match tree {
+        MacroTokenTree::Token { spelling, .. } => out.push_str(spelling),
+        MacroTokenTree::Group {
+            delimiter, tokens, ..
+        } => {
+            let (open, close) = match delimiter {
+                MacroDelimiter::Paren => ('(', ')'),
+                MacroDelimiter::Bracket => ('[', ']'),
+                MacroDelimiter::Brace => ('{', '}'),
+            };
+            out.push(open);
+            out.push_str(&render_macro_token_trees(tokens));
+            out.push(close);
+        }
+    }
 }
 
 fn substitute_macro_template(template: &Expr, params: &[Name], args: &[Expr]) -> Expr {

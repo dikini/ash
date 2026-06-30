@@ -91,22 +91,22 @@ fn use_macro(n: Int) -> Int { inc!(n) }
 }
 
 #[test]
-fn unsupported_macro_syntax_rejects_before_high_level_acceptance() {
+fn invalid_token_tree_macro_syntax_rejects_before_high_level_acceptance() {
     let (_dir, path) = write_one(
         r"
 macro inc(x) => add(x, 1);
 fn add(x: Int, y: Int) -> Int { x + y }
-fn use_macro(n: Int) -> Int { inc![n] }
+fn use_macro(n: Int) -> Int { inc![n +] }
 ",
     );
 
     let engine = Engine::new().build().expect("engine builds");
     let err = engine
         .check_module_file(&path)
-        .expect_err("unsupported macro syntax must fail closed");
+        .expect_err("invalid token-tree macro syntax must fail closed");
     assert!(
         err.to_string()
-            .contains("macro invocation `inc!` uses unsupported Phase 172 MVP syntax"),
+            .contains("macro invocation `inc!` token-tree input failed to reparse"),
         "unexpected error: {err}"
     );
 }

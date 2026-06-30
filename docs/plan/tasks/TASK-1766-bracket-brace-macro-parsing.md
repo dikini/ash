@@ -1,6 +1,6 @@
 # TASK-1766: Parse bracket and brace macro invocations into structured carriers
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -18,7 +18,7 @@ Teach the parser to build structured carriers for `m![...]` and `m!{...}` while 
 - ✅ TASK-1760: Phase 173 plan packet (complete)
 - ✅ TASK-1761: Macro-system expansion seam audit (complete)
 - ✅ TASK-1762: Macro-system spec amendments (complete)
-- 📝 TASK-1765: Token-tree carriers (planned)
+- ✅ TASK-1765: Token-tree carriers (complete)
 
 ## Deferral / Planned-Feature Reconciliation
 
@@ -33,9 +33,9 @@ Teach the parser to build structured carriers for `m![...]` and `m!{...}` while 
 
 ### Functional Requirements
 
-- [ ] Nested delimiter groups parse without losing spans
-- [ ] Parenthesized expression macros still use structured Expr args
-- [ ] Bracket/brace carriers do not execute until TASK-1767 owns the expansion seam
+- [x] Nested delimiter groups parse without losing spans
+- [x] Parenthesized expression macros still use structured Expr args
+- [x] Bracket/brace carriers do not execute until TASK-1767 owns the expansion seam
 
 ### Property Requirements
 
@@ -88,10 +88,20 @@ commands:
   - cargo fmt --check
   - git diff --check
 checklist:
-- [ ] Nested delimiter groups parse without losing spans
-- [ ] Parenthesized expression macros still use structured Expr args
-- [ ] Bracket/brace carriers do not execute until TASK-1767 owns the expansion seam
+- [x] Nested delimiter groups parse without losing spans
+- [x] Parenthesized expression macros still use structured Expr args
+- [x] Bracket/brace carriers do not execute until TASK-1767 owns the expansion seam
 ```
+
+## Completion Evidence
+
+- Added `MacroInvocationBody` in `crates/ash-parser/src/surface.rs` to distinguish executable parenthesized expression-argument invocations from bracket/brace token-tree carriers.
+- Parser now classifies parenthesized MVP invocations as `ExprArgs` and bracket/brace or otherwise unsupported token-tree shapes as `TokenTrees`.
+- Added `crates/ash-parser/tests/task_1766_bracket_brace_macro_parsing.rs` covering bracket and brace structured body carriers, nested delimiter spans, parenthesized structured expression args, and fail-closed non-execution before TASK-1767.
+- Verification:
+  - `cargo test -p ash-parser --test task_1766_bracket_brace_macro_parsing -- --nocapture`
+  - `cargo test -p ash-parser --test task_1758_macro_lowering_boundaries -- --nocapture`
+  - `cargo check -p ash-parser`
 
 ## Notes
 

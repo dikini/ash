@@ -1,6 +1,6 @@
 # PLAN-173: Macro Summaries, Token Trees, Hygienic Binders, and Typed Macros
 
-## Status: 🟢 In Progress; delimiter-preserving token-tree carriers complete
+## Status: 🟢 In Progress; bracket/brace structured macro carriers complete
 
 ## Overview
 
@@ -31,7 +31,7 @@ The phase is intentionally still parser-first and fail-closed. It must not becom
 - [x] Add explicit macro summary carriers for public macro declarations and export collection without treating macros as callables.
 - [x] Activate imported/exported macros only through those summaries, with positive import tests and negative leakage/re-export tests.
 - [x] Replace raw bracket/brace diagnostic substrings with delimiter-preserving token-tree carriers that remain syntax-first and source-preserving.
-- [ ] Parse and validate bracket/brace invocations without executing unsupported token-tree shapes accidentally.
+- [x] Parse and validate bracket/brace invocations without executing unsupported token-tree shapes accidentally.
 - [ ] Add a bounded token-tree expansion/reparse seam for macro templates that explicitly opt into token-tree output.
 - [ ] Add definition-site/call-site/generated identifier metadata sufficient for binder-introducing macro templates.
 - [ ] Execute a bounded hygienic binder-introducing macro subset with capture-resistant tests.
@@ -77,7 +77,7 @@ The phase is intentionally still parser-first and fail-closed. It must not becom
 ### Phase 3: Token-tree and delimiter parsing
 
 - TASK-1765: Add delimiter-preserving macro token-tree carriers. ✅
-- TASK-1766: Parse bracket and brace macro invocations into structured carriers. 📝
+- TASK-1766: Parse bracket and brace macro invocations into structured carriers. ✅
 - TASK-1767: Add bounded token-tree expansion and reparse boundaries. 📝
 
 ### Phase 4: Hygienic binder-introducing macros

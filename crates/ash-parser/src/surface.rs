@@ -1868,6 +1868,15 @@ pub enum MacroTokenTree {
     },
 }
 
+/// Structured body carrier for a macro invocation.
+#[derive(Debug, Clone, PartialEq)]
+pub enum MacroInvocationBody {
+    /// Parenthesized invocation parsed as expression arguments for the Phase 172 MVP subset.
+    ExprArgs(Vec<Expr>),
+    /// Delimiter-preserving token-tree body for bracket/brace and unsupported token-tree shapes.
+    TokenTrees(Vec<MacroTokenTree>),
+}
+
 /// Parsed macro invocation payload preserved only for fail-closed diagnostics.
 #[derive(Debug, Clone, PartialEq)]
 pub struct MacroInvocation {
@@ -1877,6 +1886,8 @@ pub struct MacroInvocation {
     pub delimiter: MacroDelimiter,
     /// Raw delimited body text inside the invocation delimiter.
     pub raw_body: Box<str>,
+    /// Structured invocation body for syntax-phase macro consumers.
+    pub body: MacroInvocationBody,
     /// Delimiter-preserving token-tree body for syntax-phase consumers.
     pub token_trees: Vec<MacroTokenTree>,
     /// Structured expression arguments for the executable parenthesized MVP subset.
@@ -3197,6 +3208,7 @@ fn substitute_macro_template(template: &Expr, params: &[Name], args: &[Expr]) ->
                 name: invocation.name.clone(),
                 delimiter: invocation.delimiter,
                 raw_body: invocation.raw_body.clone(),
+                body: invocation.body.clone(),
                 token_trees: invocation.token_trees.clone(),
                 args: invocation.args.as_ref().map(|macro_args| {
                     macro_args

@@ -12,8 +12,8 @@ use crate::parse_pattern::pattern;
 use crate::parse_utils::skip_whitespace_and_comments;
 use crate::surface::{
     ActStmt, BinaryOp, BlockStmt, ComprehensionQualifier, ConstructorPayload, DoStmt, DoTarget,
-    Expr, Literal, MacroDelimiter, MacroInvocation, MacroTokenTree, MatchArm, Name,
-    OperatorSection, OperatorSectionKind, Pattern, RawOperatorToken, Type, UnaryOp,
+    Expr, Literal, MacroDelimiter, MacroInvocation, MacroInvocationBody, MacroTokenTree, MatchArm,
+    Name, OperatorSection, OperatorSectionKind, Pattern, RawOperatorToken, Type, UnaryOp,
 };
 use crate::token::Span;
 
@@ -1453,6 +1453,10 @@ fn parse_macro_invocation_after_bang(
     body_start_pos.advance(open);
     let token_trees = parse_macro_token_trees(raw_body_text, body_start_pos);
     let args = parse_macro_invocation_args(delimiter, raw_body_text);
+    let body = match (&args, delimiter) {
+        (Some(args), MacroDelimiter::Paren) => MacroInvocationBody::ExprArgs(args.clone()),
+        _ => MacroInvocationBody::TokenTrees(token_trees.clone()),
+    };
     let raw_body = raw_body_text.into();
     for ch in source[..end_byte].chars() {
         input.state.advance(ch);
@@ -1464,6 +1468,7 @@ fn parse_macro_invocation_after_bang(
             name,
             delimiter,
             raw_body,
+            body,
             token_trees,
             args,
             span,

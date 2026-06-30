@@ -148,7 +148,7 @@ Update this section as tasks complete:
 | [170](PLAN-170-EXPANDED-SURFACE-INTEGRATION-AND-NOTATION-SCOPING.md) | 7 | 7 | ✅ Complete |
 | [171](PLAN-171-MACRO-NOTATION-HYGIENE-AND-EXPANSION-BOUNDARIES.md) | 8 | 8 | ✅ Complete |
 | [172](PLAN-172-PARSER-FIRST-MACRO-EXECUTION-MVP.md) | 9 | 9 | ✅ Complete |
-| [173](PLAN-173-MACRO-SUMMARIES-TOKEN-TREES-HYGIENIC-BINDERS-TYPED-MACROS.md) | 14 | 6 | 🟢 In Progress; delimiter-preserving token-tree carriers complete |
+| [173](PLAN-173-MACRO-SUMMARIES-TOKEN-TREES-HYGIENIC-BINDERS-TYPED-MACROS.md) | 14 | 7 | 🟢 In Progress; bracket/brace structured macro carriers complete |
 
 ---
 
@@ -785,7 +785,7 @@ Implements the first conservative executable macro slice. The phase remains pars
 
 ## Phase 173: Macro Summaries, Token Trees, Hygienic Binders, and Typed Macros
 
-**Status:** 🟢 In Progress; delimiter-preserving token-tree carriers complete
+**Status:** 🟢 In Progress; bracket/brace structured macro carriers complete
 **Plan:** [PLAN-173: Macro Summaries, Token Trees, Hygienic Binders, and Typed Macros](PLAN-173-MACRO-SUMMARIES-TOKEN-TREES-HYGIENIC-BINDERS-TYPED-MACROS.md)
 **Depends on:** Phase 172 parser-first macro execution MVP; `SPEC-095c`; `SPEC-098c`; `SPEC-097b`.
 
@@ -799,7 +799,7 @@ Extends the Phase 172 local expression-macro MVP into the next conservative macr
 | [TASK-1763](tasks/TASK-1763-macro-summary-carriers.md) | Add macro summary carrier design and export collection | ✅ Complete |
 | [TASK-1764](tasks/TASK-1764-imported-exported-macro-activation.md) | Implement bounded imported/exported macro activation | ✅ Complete |
 | [TASK-1765](tasks/TASK-1765-delimiter-preserving-token-tree-carriers.md) | Add delimiter-preserving macro token-tree carriers | ✅ Complete |
-| [TASK-1766](tasks/TASK-1766-bracket-brace-macro-parsing.md) | Parse bracket and brace macro invocations into structured carriers | 📝 Planned |
+| [TASK-1766](tasks/TASK-1766-bracket-brace-macro-parsing.md) | Parse bracket and brace macro invocations into structured carriers | ✅ Complete |
 | [TASK-1767](tasks/TASK-1767-bounded-token-tree-expansion-reparse.md) | Add bounded token-tree expansion and reparse boundaries | 📝 Planned |
 | [TASK-1768](tasks/TASK-1768-binder-hygiene-metadata-model.md) | Add binder hygiene metadata model and validation rules | 📝 Planned |
 | [TASK-1769](tasks/TASK-1769-hygienic-binder-introducing-macros.md) | Implement bounded hygienic binder-introducing macro expansion | 📝 Planned |

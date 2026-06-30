@@ -1862,6 +1862,10 @@ pub fn lower_expr(expr: &Expr) -> Result<CoreExpr, LoweringError> {
             "operator section `{}` must be resolved before Core lowering",
             section.operator.spelling
         ))),
+        Expr::MacroInvocation { invocation } => Err(LoweringError::UnsupportedFeature(format!(
+            "macro invocation `{}!` is unsupported until macro expansion is implemented",
+            invocation.name
+        ))),
         Expr::Literal(lit) => Ok(CoreExpr::Literal(lower_literal(lit)?)),
 
         Expr::Variable { name, .. } => Ok(CoreExpr::Variable {

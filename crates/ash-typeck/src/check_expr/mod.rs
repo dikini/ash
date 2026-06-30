@@ -81,6 +81,15 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
                 span: section.span,
             })
         }
+        Expr::MacroInvocation { invocation } => {
+            CheckResult::error(ConstructorError::UnsupportedExpression {
+                kind: format!(
+                    "macro invocation `{}!` is unsupported until macro expansion is implemented",
+                    invocation.name
+                ),
+                span: invocation.span,
+            })
+        }
         Expr::Literal(lit) => check_literal(lit),
         Expr::Variable { name, .. } => {
             if name.as_ref() == "()" {
@@ -2868,6 +2877,7 @@ fn get_expr_span(expr: &Expr) -> Span {
         Expr::Unary { span, .. } => *span,
         Expr::Binary { span, .. } => *span,
         Expr::Call { span, .. } => *span,
+        Expr::MacroInvocation { invocation } => invocation.span,
         Expr::Match { span, .. } => *span,
         Expr::Policy(_) => Span::default(),
         Expr::IfLet { span, .. } => *span,

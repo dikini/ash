@@ -111,6 +111,24 @@ fn render_expr(expr: &Expr) -> String {
             out.push('}');
             out
         }
+        Expr::MacroInvocation { invocation } => {
+            let mut out = String::from("MacroInvocation {\n");
+            push_field(&mut out, 2, "name", &format!("{:?}", invocation.name));
+            push_field(
+                &mut out,
+                2,
+                "delimiter",
+                &format!("{:?}", invocation.delimiter),
+            );
+            push_field(
+                &mut out,
+                2,
+                "raw_body",
+                &format!("{:?}", invocation.raw_body),
+            );
+            out.push('}');
+            out
+        }
         Expr::Match {
             scrutinee, arms, ..
         } => {

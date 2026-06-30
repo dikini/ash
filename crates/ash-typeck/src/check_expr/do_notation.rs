@@ -97,6 +97,7 @@ pub(super) fn collect_do_notation_diagnostics(
                 collect_do_notation_diagnostics(env, arg, diagnostics);
             }
         }
+        Expr::MacroInvocation { .. } => {}
         Expr::Binary { left, right, .. }
         | Expr::IndexAccess {
             base: left,

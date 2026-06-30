@@ -146,6 +146,7 @@ Update this section as tasks complete:
 | [168](PLAN-168-SURFACE-AST-NOTATION-SUBSTRATE.md) | 7 | 7 | ✅ Complete; implementation substrate handoff |
 | [169](PLAN-169-SURFACE-EXPANSION-AND-NOTATION-ELABORATION.md) | 8 | 8 | ✅ Complete; surface expansion and notation elaboration implemented with explicit deferrals |
 | [170](PLAN-170-EXPANDED-SURFACE-INTEGRATION-AND-NOTATION-SCOPING.md) | 7 | 7 | ✅ Complete |
+| [171](PLAN-171-MACRO-NOTATION-HYGIENE-AND-EXPANSION-BOUNDARIES.md) | 8 | 8 | ✅ Complete |
 
 ---
 
@@ -740,3 +741,22 @@ Closes the highest-value Phase 169 deferrals around expanded-surface integration
 | [TASK-1740](tasks/TASK-1740-bounded-notation-import-export-scope.md) | Implement bounded notation import/export propagation or explicit non-propagation | ✅ Complete |
 | [TASK-1741](tasks/TASK-1741-expansion-origin-sidecar-boundary.md) | Specify and implement the narrow source-origin sidecar boundary for expansion products | ✅ Complete |
 | [TASK-1742](tasks/TASK-1742-phase-170-closeout.md) | Close out Phase 170 with verification, changelog, index reconciliation, and review | ✅ Complete |
+
+## Phase 171: Macro/Notation Hygiene and Expansion Boundaries
+
+**Status:** ✅ Complete
+**Plan:** [PLAN-171: Macro/Notation Hygiene and Expansion Boundaries](PLAN-171-MACRO-NOTATION-HYGIENE-AND-EXPANSION-BOUNDARIES.md)
+**Depends on:** Phase 170 expanded surface integration and notation scoping; `SPEC-095c`; `SPEC-098c`.
+
+Builds the conservative hygiene substrate required before full macro execution or generalized mixfix work. The packet audits live hygiene/origin/scope seams, adds narrow expansion identity and origin-chain carriers, fences source/generated identifier capture, hardens local-only notation and macro scope boundaries, adds a fail-closed macro invocation boundary, and validates high-level parser/engine/typechecker boundaries with positive visibility and negative leakage tests. Full macro execution, typed macros, imported notation propagation, and binder-introducing mixfix remain out of scope unless a later task proves the required carriers.
+
+| Task | Description | Status |
+|------|-------------|--------|
+| [TASK-1743](tasks/TASK-1743-phase-171-plan-packet.md) | Create the Phase 171 plan and task packet | ✅ Complete |
+| [TASK-1744](tasks/TASK-1744-hygiene-origin-scope-audit.md) | Audit hygiene, origin, and scope boundary seams | ✅ Complete |
+| [TASK-1745](tasks/TASK-1745-expansion-identity-origin-chain.md) | Add expansion identity and origin-chain carriers for generated surface nodes | ✅ Complete |
+| [TASK-1746](tasks/TASK-1746-generated-identifier-hygiene-fences.md) | Implement source/generated identifier hygiene fences | ✅ Complete |
+| [TASK-1747](tasks/TASK-1747-notation-macro-scope-boundaries.md) | Harden notation and macro scope-table boundaries | ✅ Complete |
+| [TASK-1748](tasks/TASK-1748-fail-closed-macro-invocation-boundary.md) | Add fail-closed macro invocation boundary without macro execution | ✅ Complete |
+| [TASK-1749](tasks/TASK-1749-cross-boundary-hygiene-validation.md) | Add cross-boundary hygiene and negative-leakage validation tests | ✅ Complete |
+| [TASK-1750](tasks/TASK-1750-phase-171-closeout.md) | Close out Phase 171 with verification, changelog, index reconciliation, and review | ✅ Complete |

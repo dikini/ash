@@ -121,6 +121,12 @@ Macros are syntax-to-syntax transformations over token trees or parsed surface A
 macro model is hygiene-ready: generated identifiers carry call-site/definition-site metadata and an
 expansion id even if full hygiene is implemented later.
 
+Until a real macro expander exists, parsed macro invocations may be preserved as durable surface
+carriers for diagnostics, but they are fail-closed: they must not be accepted by the expanded-surface
+boundary, type checking, export collection, or Core lowering. Preserving a macro invocation shape is
+not macro execution and grants no rows, capabilities, contracts, failures, proof evidence, or runtime
+authority.
+
 Macro expansion occurs before notation resolution unless a macro explicitly quotes raw tokens. Macro
 output must be parsed or re-associated using the active notation table before type checking.
 
@@ -140,6 +146,11 @@ FixityDecl   ::= "prefix" precedence?
 
 The declaration creates no Core primitive. It registers a notation pattern for the current module or
 exported surface and expands uses to calls of the target callable.
+
+Implementations that do not carry notation summaries across module boundaries must keep notation
+module-local and fail closed for imported notation use. Re-exporting or importing the target callable
+does not activate the source notation unless an explicit future carrier transports the notation table
+and proves both positive visibility and negative leakage behavior.
 
 In short: notation is source-level sugar and is gone before Core.
 
@@ -286,10 +297,14 @@ fixity-resolution pass once imports are resolved.
 
 - Macro expansion is complete before Core lowering.
 - Notation and operator sections are erased before Core lowering.
-- Expanded nodes retain source-origin metadata.
+- Expanded nodes retain source-origin metadata, including stable expansion identity for generated
+  nodes and parent-origin chains for nested expansion products.
+- Generated identifiers are syntax metadata, not source identifiers. Generated names must be
+  distinguishable from source-spellable identifiers so expansion cannot accidentally capture or be
+  captured by source bindings.
 - Contract predicate checking runs after macro/notation expansion and before predicate lowering.
 - Core sees ordinary calls, closures, handlers, rows, facts/evidence, and sidecars; it does not see
-  custom operator syntax.
+  custom operator syntax or macro invocations.
 
 ## 12. See also
 
@@ -300,4 +315,5 @@ fixity-resolution pass once imports are resolved.
 
 ## 13. Changelog
 
+- 2026-06-30: Clarified Phase 171 conservative hygiene invariants: fail-closed macro invocation carriers, local-only notation unless summary carriers exist, expansion identity/origin chains, generated identifier separation, and no Core macro/notation leakage.
 - 2026-06-29: Created as the target surface AST, macro expansion, notation, and operator-section substrate.

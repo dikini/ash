@@ -109,6 +109,7 @@ impl<'a> ProofCallCollector<'a> {
                     self.visit_expr(arg);
                 }
             }
+            Expr::MacroInvocation { .. } => {}
             Expr::List { items, .. } => {
                 for item in items {
                     self.visit_expr(item);
@@ -350,6 +351,7 @@ impl ProofFuelChecker {
                     self.visit_expr(arg);
                 }
             }
+            Expr::MacroInvocation { .. } => {}
             Expr::Match {
                 scrutinee,
                 arms,

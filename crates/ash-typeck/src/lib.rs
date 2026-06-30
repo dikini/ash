@@ -585,6 +585,12 @@ fn validate_interface_calls_in_expr(
 
             Ok(())
         }
+        ash_parser::surface::Expr::MacroInvocation { invocation } => {
+            Err(TypeCheckError::TypeError(format!(
+                "macro invocation `{}!` is unsupported until macro expansion is implemented",
+                invocation.name
+            )))
+        }
         ash_parser::surface::Expr::Match {
             scrutinee, arms, ..
         } => validate_match_expr(env, scrutinee, arms),
@@ -1871,6 +1877,12 @@ fn validate_fn_call_preconditions_expr(
             }
 
             Ok(())
+        }
+        ash_parser::surface::Expr::MacroInvocation { invocation } => {
+            Err(TypeCheckError::TypeError(format!(
+                "macro invocation `{}!` is unsupported until macro expansion is implemented",
+                invocation.name
+            )))
         }
         ash_parser::surface::Expr::Match {
             scrutinee, arms, ..

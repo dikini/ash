@@ -231,6 +231,7 @@ fn check_purity_recursive(
                 }
             }
         }
+        Expr::MacroInvocation { .. } => {}
         Expr::Match {
             scrutinee, arms, ..
         } => {

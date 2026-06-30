@@ -631,6 +631,7 @@ impl NameResolver {
                     self.resolve_expr(arg);
                 }
             }
+            Expr::MacroInvocation { .. } => {}
 
             Expr::Policy(policy_expr) => {
                 self.resolve_policy_expr(policy_expr);

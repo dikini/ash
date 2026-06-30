@@ -12,8 +12,8 @@ use crate::parse_pattern::pattern;
 use crate::parse_utils::skip_whitespace_and_comments;
 use crate::surface::{
     ActStmt, BinaryOp, BlockStmt, ComprehensionQualifier, ConstructorPayload, DoStmt, DoTarget,
-    Expr, Literal, MatchArm, Name, OperatorSection, OperatorSectionKind, Pattern, RawOperatorToken,
-    Type, UnaryOp,
+    Expr, Literal, MacroDelimiter, MacroInvocation, MatchArm, Name, OperatorSection,
+    OperatorSectionKind, Pattern, RawOperatorToken, Type, UnaryOp,
 };
 use crate::token::Span;
 
@@ -1258,6 +1258,18 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     let (name, name_span) = expr_name_with_span(input)?;
     let name_str: Name = name.into();
 
+    {
+        let before_bang = input.clone();
+        if opt(literal_str("!")).parse_next(input)?.is_some() {
+            if let Ok(invocation) =
+                parse_macro_invocation_after_bang(input, name_str.clone(), &start_pos)
+            {
+                return Ok(invocation);
+            }
+        }
+        *input = before_bang;
+    }
+
     if opt(literal_str("::")).parse_next(input)?.is_some() {
         let second = identifier(input)?;
         let second_name: Name = second.into();
@@ -1391,6 +1403,65 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     }
 
     Ok(expr)
+}
+
+fn parse_macro_invocation_after_bang(
+    input: &mut ParseInput,
+    name: Name,
+    start_pos: &Position,
+) -> ModalResult<Expr> {
+    skip_whitespace_and_comments(input);
+    let source = input.input.as_ref();
+    let Some(open) = source.chars().next() else {
+        return Err(winnow::error::ErrMode::Cut(
+            winnow::error::ContextError::new(),
+        ));
+    };
+    let (close, delimiter) = match open {
+        '(' => (')', MacroDelimiter::Paren),
+        '[' => (']', MacroDelimiter::Bracket),
+        '{' => ('}', MacroDelimiter::Brace),
+        _ => {
+            return Err(winnow::error::ErrMode::Cut(
+                winnow::error::ContextError::new(),
+            ));
+        }
+    };
+
+    let mut depth = 0usize;
+    let mut end_byte = None;
+    for (idx, ch) in source.char_indices() {
+        if ch == open {
+            depth += 1;
+        } else if ch == close {
+            depth = depth.saturating_sub(1);
+            if depth == 0 {
+                end_byte = Some(idx + ch.len_utf8());
+                break;
+            }
+        }
+    }
+    let Some(end_byte) = end_byte else {
+        return Err(winnow::error::ErrMode::Cut(
+            winnow::error::ContextError::new(),
+        ));
+    };
+    let raw_body_start = open.len_utf8();
+    let raw_body_end = end_byte - close.len_utf8();
+    let raw_body = source[raw_body_start..raw_body_end].into();
+    for ch in source[..end_byte].chars() {
+        input.state.advance(ch);
+    }
+    let _ = input.input.next_slice(end_byte);
+    let span = span_from(start_pos, &input.state.pos);
+    Ok(Expr::MacroInvocation {
+        invocation: MacroInvocation {
+            name,
+            delimiter,
+            raw_body,
+            span,
+        },
+    })
 }
 
 fn parse_operator_section_expr(input: &mut ParseInput) -> ModalResult<Expr> {

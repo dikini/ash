@@ -176,6 +176,10 @@ operational outcomes in SPEC-099b.
 Macros must not reach Core. Notation uses lower after expansion as ordinary callable calls. Operator
 sections lower to callable values or eta-expanded closures before Core.
 
+If the current implementation preserves macro invocation syntax as a parsed surface carrier before a
+macro expander exists, lowering must reject that carrier explicitly. It must not erase the invocation,
+guess an expansion, lower it as an ordinary call, or admit it through public export summaries.
+
 ```ash
 a <+> b   => combine(a, b)
 (a <+>)   => fn (b) -> combine(a, b)
@@ -185,6 +189,8 @@ a <+> b   => combine(a, b)
 
 The lowered call/closure keeps `Origin::NotationExpansion` or `Origin::OperatorSection` metadata.
 Rows and authority requirements come from the resolved target callable; notation cannot erase them.
+Generated helper binders introduced by notation or operator-section lowering are surface hygiene
+metadata only; they do not create authority, row, contract, failure, or proof evidence.
 
 ## 11. Type inference interface
 
@@ -211,4 +217,5 @@ of these products, lowering must reject the program before Core.
 
 ## 13. Changelog
 
+- 2026-06-30: Clarified Phase 171 fail-closed lowering boundary for parsed macro invocation carriers and authority-neutral generated helper binders.
 - 2026-06-29: Created to define expanded-surface-AST-to-Core lowering, including handlers, impl operation identity, facts/evidence, contracts, trace contracts, notation, and operator sections.

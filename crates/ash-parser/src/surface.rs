@@ -1745,6 +1745,30 @@ pub struct OperatorSection {
     pub span: Span,
 }
 
+/// Delimiter shape preserved for a fail-closed macro invocation.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum MacroDelimiter {
+    /// Parenthesized invocation, e.g. `m!(...)`.
+    Paren,
+    /// Bracketed invocation, e.g. `m![...]`.
+    Bracket,
+    /// Braced invocation, e.g. `m!{...}`.
+    Brace,
+}
+
+/// Parsed macro invocation payload preserved only for fail-closed diagnostics.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MacroInvocation {
+    /// Unqualified macro name before `!`.
+    pub name: Name,
+    /// Delimiter used by the invocation.
+    pub delimiter: MacroDelimiter,
+    /// Raw delimited body text inside the invocation delimiter.
+    pub raw_body: Box<str>,
+    /// Span covering the full invocation.
+    pub span: Span,
+}
+
 /// Origin metadata for surface nodes that are copied, expanded, or desugared.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SurfaceOrigin {
@@ -1792,11 +1816,19 @@ pub struct ExpandedSurfaceModule {
 /// Origin sidecar for a generated surface node in an expanded module.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ExpandedSurfaceOrigin {
+    /// Stable identity assigned in expansion traversal order.
+    pub expansion_id: ExpansionId,
     /// Span of the generated surface node.
     pub generated_span: Span,
     /// Expansion origin that produced the generated node.
     pub origin: SurfaceOrigin,
+    /// Parent expansion origin when this node is generated inside another expansion product.
+    pub parent: Option<Box<SurfaceOrigin>>,
 }
+
+/// Stable surface-side identity for an expansion product.
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+pub struct ExpansionId(pub u32);
 
 /// Diagnostic emitted by the parsed-surface to expanded-surface boundary.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -1841,6 +1873,8 @@ pub enum ExpansionError {
         first_span: Span,
         second_span: Span,
     },
+    /// Macro invocation is parsed for diagnostics but macro execution is deferred.
+    DeferredMacroInvocation { span: Span, name: Box<str> },
 }
 
 impl std::fmt::Display for ExpansionError {
@@ -1856,6 +1890,10 @@ impl std::fmt::Display for ExpansionError {
             ExpansionError::ConflictingNotationDeclaration { operator, .. } => write!(
                 f,
                 "conflicting precedence or associativity for notation `{operator}`"
+            ),
+            ExpansionError::DeferredMacroInvocation { name, .. } => write!(
+                f,
+                "macro invocation `{name}!` is unsupported until macro expansion is implemented"
             ),
         }
     }
@@ -1978,6 +2016,12 @@ pub fn expand_surface_module(
         return Err(ExpansionError::UnresolvedOperatorSection {
             span: section.span,
             operator: section.operator.spelling.clone(),
+        });
+    }
+    if let Some(invocation) = find_macro_invocation_in_module(&module) {
+        return Err(ExpansionError::DeferredMacroInvocation {
+            span: invocation.span,
+            name: invocation.name.clone(),
         });
     }
     Ok(ExpandedSurfaceModule {
@@ -2300,38 +2344,77 @@ fn elaborate_operator_sections_in_expr(
     table: &LocalNotationTable,
     origins: &mut Vec<ExpandedSurfaceOrigin>,
 ) {
+    elaborate_operator_sections_in_expr_with_parent(expr, table, origins, None);
+}
+
+fn elaborate_operator_sections_in_expr_with_parent(
+    expr: &mut Expr,
+    table: &LocalNotationTable,
+    origins: &mut Vec<ExpandedSurfaceOrigin>,
+    parent_origin: Option<&SurfaceOrigin>,
+) {
     match expr {
         Expr::OperatorSection { section } => {
-            let (elaborated, origin) = elaborate_operator_section(section.clone(), table);
+            let expansion_id = next_expansion_id(origins);
+            let (elaborated, origin) =
+                elaborate_operator_section(section.clone(), table, expansion_id);
             *expr = elaborated;
             if let Some(origin) = origin {
-                origins.push(origin);
-            }
-            if !matches!(expr, Expr::OperatorSection { .. }) {
-                elaborate_operator_sections_in_expr(expr, table, origins);
+                let nested_parent = origin.origin.clone();
+                push_expanded_origin(origins, origin, parent_origin.cloned());
+                if !matches!(expr, Expr::OperatorSection { .. }) {
+                    elaborate_operator_sections_in_expr_with_parent(
+                        expr,
+                        table,
+                        origins,
+                        Some(&nested_parent),
+                    );
+                }
+            } else if !matches!(expr, Expr::OperatorSection { .. }) {
+                elaborate_operator_sections_in_expr_with_parent(
+                    expr,
+                    table,
+                    origins,
+                    parent_origin,
+                );
             }
         }
-        Expr::FieldAccess { base, .. } => elaborate_operator_sections_in_expr(base, table, origins),
+        Expr::FieldAccess { base, .. } => {
+            elaborate_operator_sections_in_expr_with_parent(base, table, origins, parent_origin)
+        }
         Expr::IndexAccess { base, index, .. } => {
-            elaborate_operator_sections_in_expr(base, table, origins);
-            elaborate_operator_sections_in_expr(index, table, origins);
+            elaborate_operator_sections_in_expr_with_parent(base, table, origins, parent_origin);
+            elaborate_operator_sections_in_expr_with_parent(index, table, origins, parent_origin);
         }
-        Expr::Unary { operand, .. } => elaborate_operator_sections_in_expr(operand, table, origins),
+        Expr::Unary { operand, .. } => {
+            elaborate_operator_sections_in_expr_with_parent(operand, table, origins, parent_origin)
+        }
         Expr::Binary { left, right, .. } => {
-            elaborate_operator_sections_in_expr(left, table, origins);
-            elaborate_operator_sections_in_expr(right, table, origins);
+            elaborate_operator_sections_in_expr_with_parent(left, table, origins, parent_origin);
+            elaborate_operator_sections_in_expr_with_parent(right, table, origins, parent_origin);
         }
         Expr::Call { args, .. } => {
             for arg in args {
-                elaborate_operator_sections_in_expr(arg, table, origins);
+                elaborate_operator_sections_in_expr_with_parent(arg, table, origins, parent_origin);
             }
         }
+        Expr::MacroInvocation { .. } => {}
         Expr::Match {
             scrutinee, arms, ..
         } => {
-            elaborate_operator_sections_in_expr(scrutinee, table, origins);
+            elaborate_operator_sections_in_expr_with_parent(
+                scrutinee,
+                table,
+                origins,
+                parent_origin,
+            );
             for arm in arms {
-                elaborate_operator_sections_in_expr(&mut arm.body, table, origins);
+                elaborate_operator_sections_in_expr_with_parent(
+                    &mut arm.body,
+                    table,
+                    origins,
+                    parent_origin,
+                );
             }
         }
         Expr::IfLet {
@@ -2340,25 +2423,50 @@ fn elaborate_operator_sections_in_expr(
             else_branch,
             ..
         } => {
-            elaborate_operator_sections_in_expr(expr, table, origins);
-            elaborate_operator_sections_in_expr(then_branch, table, origins);
-            elaborate_operator_sections_in_expr(else_branch, table, origins);
+            elaborate_operator_sections_in_expr_with_parent(expr, table, origins, parent_origin);
+            elaborate_operator_sections_in_expr_with_parent(
+                then_branch,
+                table,
+                origins,
+                parent_origin,
+            );
+            elaborate_operator_sections_in_expr_with_parent(
+                else_branch,
+                table,
+                origins,
+                parent_origin,
+            );
         }
         Expr::Constructor {
             fields, payload, ..
         } => {
             for (_, expr) in fields {
-                elaborate_operator_sections_in_expr(expr, table, origins);
+                elaborate_operator_sections_in_expr_with_parent(
+                    expr,
+                    table,
+                    origins,
+                    parent_origin,
+                );
             }
             match payload {
                 ConstructorPayload::Tuple(items) => {
                     for item in items {
-                        elaborate_operator_sections_in_expr(item, table, origins);
+                        elaborate_operator_sections_in_expr_with_parent(
+                            item,
+                            table,
+                            origins,
+                            parent_origin,
+                        );
                     }
                 }
                 ConstructorPayload::Record(fields) => {
                     for (_, expr) in fields {
-                        elaborate_operator_sections_in_expr(expr, table, origins);
+                        elaborate_operator_sections_in_expr_with_parent(
+                            expr,
+                            table,
+                            origins,
+                            parent_origin,
+                        );
                     }
                 }
                 ConstructorPayload::Unit => {}
@@ -2370,17 +2478,39 @@ fn elaborate_operator_sections_in_expr(
             else_branch,
             ..
         } => {
-            elaborate_operator_sections_in_expr(condition, table, origins);
-            elaborate_operator_sections_in_expr(then_branch, table, origins);
+            elaborate_operator_sections_in_expr_with_parent(
+                condition,
+                table,
+                origins,
+                parent_origin,
+            );
+            elaborate_operator_sections_in_expr_with_parent(
+                then_branch,
+                table,
+                origins,
+                parent_origin,
+            );
             if let Some(else_branch) = else_branch {
-                elaborate_operator_sections_in_expr(else_branch, table, origins);
+                elaborate_operator_sections_in_expr_with_parent(
+                    else_branch,
+                    table,
+                    origins,
+                    parent_origin,
+                );
             }
         }
-        Expr::Fail { payload, .. } => elaborate_operator_sections_in_expr(payload, table, origins),
+        Expr::Fail { payload, .. } => {
+            elaborate_operator_sections_in_expr_with_parent(payload, table, origins, parent_origin)
+        }
         Expr::WithError { body, arms, .. } => {
-            elaborate_operator_sections_in_expr(body, table, origins);
+            elaborate_operator_sections_in_expr_with_parent(body, table, origins, parent_origin);
             for arm in arms {
-                elaborate_operator_sections_in_expr(&mut arm.body, table, origins);
+                elaborate_operator_sections_in_expr_with_parent(
+                    &mut arm.body,
+                    table,
+                    origins,
+                    parent_origin,
+                );
             }
         }
         Expr::Block {
@@ -2390,27 +2520,42 @@ fn elaborate_operator_sections_in_expr(
         } => {
             for stmt in statements {
                 match stmt {
-                    BlockStmt::Let { expr, .. } => {
-                        elaborate_operator_sections_in_expr(expr, table, origins)
-                    }
+                    BlockStmt::Let { expr, .. } => elaborate_operator_sections_in_expr_with_parent(
+                        expr,
+                        table,
+                        origins,
+                        parent_origin,
+                    ),
                 }
             }
             if let Some(tail_expr) = tail_expr {
-                elaborate_operator_sections_in_expr(tail_expr, table, origins);
+                elaborate_operator_sections_in_expr_with_parent(
+                    tail_expr,
+                    table,
+                    origins,
+                    parent_origin,
+                );
             }
         }
-        Expr::FnDef { body, .. } => elaborate_operator_sections_in_expr(body, table, origins),
+        Expr::FnDef { body, .. } => {
+            elaborate_operator_sections_in_expr_with_parent(body, table, origins, parent_origin)
+        }
         Expr::FnApply { func, args, .. } => {
-            elaborate_operator_sections_in_expr(func, table, origins);
+            elaborate_operator_sections_in_expr_with_parent(func, table, origins, parent_origin);
             for arg in args {
-                elaborate_operator_sections_in_expr(arg, table, origins);
+                elaborate_operator_sections_in_expr_with_parent(arg, table, origins, parent_origin);
             }
         }
         Expr::ActBlock { stmts, .. } => {
             for stmt in stmts {
                 match stmt {
                     ActStmt::Bind { value, .. } | ActStmt::Return { value, .. } => {
-                        elaborate_operator_sections_in_expr(value, table, origins)
+                        elaborate_operator_sections_in_expr_with_parent(
+                            value,
+                            table,
+                            origins,
+                            parent_origin,
+                        )
                     }
                 }
             }
@@ -2423,7 +2568,12 @@ fn elaborate_operator_sections_in_expr(
                     | DoStmt::WorkflowRequires { expr: value, .. }
                     | DoStmt::WorkflowEnsures { expr: value, .. }
                     | DoStmt::Return { value, .. } => {
-                        elaborate_operator_sections_in_expr(value, table, origins)
+                        elaborate_operator_sections_in_expr_with_parent(
+                            value,
+                            table,
+                            origins,
+                            parent_origin,
+                        )
                     }
                 }
             }
@@ -2431,20 +2581,30 @@ fn elaborate_operator_sections_in_expr(
         Expr::Comprehension {
             result, qualifiers, ..
         } => {
-            elaborate_operator_sections_in_expr(result, table, origins);
+            elaborate_operator_sections_in_expr_with_parent(result, table, origins, parent_origin);
             for qualifier in qualifiers {
                 match qualifier {
                     ComprehensionQualifier::Bind { value, .. }
                     | ComprehensionQualifier::DiscardBind { value, .. }
                     | ComprehensionQualifier::Let { value, .. } => {
-                        elaborate_operator_sections_in_expr(value, table, origins)
+                        elaborate_operator_sections_in_expr_with_parent(
+                            value,
+                            table,
+                            origins,
+                            parent_origin,
+                        )
                     }
                 }
             }
         }
         Expr::List { items, .. } => {
             for item in items {
-                elaborate_operator_sections_in_expr(item, table, origins);
+                elaborate_operator_sections_in_expr_with_parent(
+                    item,
+                    table,
+                    origins,
+                    parent_origin,
+                );
             }
         }
         Expr::Literal(_)
@@ -2455,14 +2615,36 @@ fn elaborate_operator_sections_in_expr(
     }
 }
 
+fn push_expanded_origin(
+    origins: &mut Vec<ExpandedSurfaceOrigin>,
+    mut origin: ExpandedSurfaceOrigin,
+    parent: Option<SurfaceOrigin>,
+) {
+    origin.expansion_id = next_expansion_id(origins);
+    origin.parent = parent.map(Box::new);
+    origins.push(origin);
+}
+
+fn next_expansion_id(origins: &[ExpandedSurfaceOrigin]) -> ExpansionId {
+    ExpansionId(
+        origins
+            .len()
+            .try_into()
+            .expect("expansion origin count exceeded u32::MAX"),
+    )
+}
+
 fn elaborate_operator_section(
     section: OperatorSection,
     table: &LocalNotationTable,
+    expansion_id: ExpansionId,
 ) -> (Expr, Option<ExpandedSurfaceOrigin>) {
     let target = table.resolve_infix(section.operator.spelling.as_ref());
     match section.kind {
         OperatorSectionKind::Bare => match target {
-            Some(entry) => notation_section_expansion(section.span, entry, None, None),
+            Some(entry) => {
+                notation_section_expansion(section.span, entry, None, None, expansion_id)
+            }
             None => match builtin_binary_op(section.operator.spelling.as_ref()) {
                 Some(op) => builtin_section_expansion(
                     section.span,
@@ -2470,6 +2652,7 @@ fn elaborate_operator_section(
                     op,
                     None,
                     None,
+                    expansion_id,
                 ),
                 None => (Expr::OperatorSection { section }, None),
             },
@@ -2479,7 +2662,9 @@ fn elaborate_operator_section(
                 return (Expr::OperatorSection { section }, None);
             };
             match target {
-                Some(entry) => notation_section_expansion(section.span, entry, Some(left), None),
+                Some(entry) => {
+                    notation_section_expansion(section.span, entry, Some(left), None, expansion_id)
+                }
                 None => match builtin_binary_op(section.operator.spelling.as_ref()) {
                     Some(op) => builtin_section_expansion(
                         section.span,
@@ -2487,6 +2672,7 @@ fn elaborate_operator_section(
                         op,
                         Some(left),
                         None,
+                        expansion_id,
                     ),
                     None => (Expr::OperatorSection { section }, None),
                 },
@@ -2497,7 +2683,9 @@ fn elaborate_operator_section(
                 return (Expr::OperatorSection { section }, None);
             };
             match target {
-                Some(entry) => notation_section_expansion(section.span, entry, None, Some(right)),
+                Some(entry) => {
+                    notation_section_expansion(section.span, entry, None, Some(right), expansion_id)
+                }
                 None => match builtin_binary_op(section.operator.spelling.as_ref()) {
                     Some(op) => builtin_section_expansion(
                         section.span,
@@ -2505,6 +2693,7 @@ fn elaborate_operator_section(
                         op,
                         None,
                         Some(right),
+                        expansion_id,
                     ),
                     None => (Expr::OperatorSection { section }, None),
                 },
@@ -2519,17 +2708,20 @@ fn builtin_section_expansion(
     op: BinaryOp,
     left: Option<Expr>,
     right: Option<Expr>,
+    expansion_id: ExpansionId,
 ) -> (Expr, Option<ExpandedSurfaceOrigin>) {
     let operator_span = raw_operator.span;
-    let expr = eta_binary_section(span, raw_operator, op, left, right);
+    let expr = eta_binary_section(span, raw_operator, op, left, right, expansion_id);
     (
         expr,
         Some(ExpandedSurfaceOrigin {
+            expansion_id: ExpansionId(0),
             generated_span: span,
             origin: SurfaceOrigin::OperatorSection {
                 section_span: span,
                 operator_span,
             },
+            parent: None,
         }),
     )
 }
@@ -2539,16 +2731,19 @@ fn notation_section_expansion(
     entry: &LocalNotationEntry,
     left: Option<Expr>,
     right: Option<Expr>,
+    expansion_id: ExpansionId,
 ) -> (Expr, Option<ExpandedSurfaceOrigin>) {
-    let expr = eta_local_section(span, entry.target.clone(), left, right);
+    let expr = eta_local_section(span, entry.target.clone(), left, right, expansion_id);
     (
         expr,
         Some(ExpandedSurfaceOrigin {
+            expansion_id: ExpansionId(0),
             generated_span: span,
             origin: SurfaceOrigin::NotationExpansion {
                 notation_span: entry.span,
                 target: render_callable_path(&entry.target).into_boxed_str(),
             },
+            parent: None,
         }),
     )
 }
@@ -2585,9 +2780,10 @@ fn eta_binary_section(
     op: BinaryOp,
     left: Option<Expr>,
     right: Option<Expr>,
+    expansion_id: ExpansionId,
 ) -> Expr {
-    let lhs_name: Name = "__section_lhs".into();
-    let rhs_name: Name = "__section_rhs".into();
+    let lhs_name: Name = generated_section_name(expansion_id, "lhs").into();
+    let rhs_name: Name = generated_section_name(expansion_id, "rhs").into();
     let left_missing = left.is_none();
     let right_missing = right.is_none();
     let left_expr = left.unwrap_or_else(|| Expr::Variable {
@@ -2626,9 +2822,10 @@ fn eta_local_section(
     target: CallablePath,
     left: Option<Expr>,
     right: Option<Expr>,
+    expansion_id: ExpansionId,
 ) -> Expr {
-    let lhs_name: Name = "__section_lhs".into();
-    let rhs_name: Name = "__section_rhs".into();
+    let lhs_name: Name = generated_section_name(expansion_id, "lhs").into();
+    let rhs_name: Name = generated_section_name(expansion_id, "rhs").into();
     let left_expr = left.unwrap_or_else(|| Expr::Variable {
         name: lhs_name.clone(),
         span,
@@ -2659,6 +2856,10 @@ fn eta_local_section(
     }
 }
 
+fn generated_section_name(expansion_id: ExpansionId, role: &str) -> String {
+    format!("$ash_generated_section_{}_{}", expansion_id.0, role)
+}
+
 fn find_operator_section_in_module(module: &ModuleFile) -> Option<&OperatorSection> {
     let mut found = None;
     visit_exprs_in_module(module, &mut |expr| {
@@ -2666,6 +2867,18 @@ fn find_operator_section_in_module(module: &ModuleFile) -> Option<&OperatorSecti
             && let Expr::OperatorSection { section } = expr
         {
             found = Some(section);
+        }
+    });
+    found
+}
+
+fn find_macro_invocation_in_module(module: &ModuleFile) -> Option<&MacroInvocation> {
+    let mut found = None;
+    visit_exprs_in_module(module, &mut |expr| {
+        if found.is_none()
+            && let Expr::MacroInvocation { invocation } = expr
+        {
+            found = Some(invocation);
         }
     });
     found
@@ -3013,6 +3226,7 @@ where
                 visit_expr(arg, visitor);
             }
         }
+        Expr::MacroInvocation { .. } => {}
         Expr::Match {
             scrutinee, arms, ..
         } => {
@@ -3201,6 +3415,11 @@ pub enum Expr {
         args: Vec<Expr>,
         /// Source span
         span: Span,
+    },
+    /// Macro invocation parsed for future macro work but rejected before Core lowering.
+    MacroInvocation {
+        /// Macro invocation payload.
+        invocation: MacroInvocation,
     },
 
     /// Match expression: match scrutinee { arms... }
@@ -3775,6 +3994,7 @@ impl Spanned for Expr {
             Expr::Unary { span, .. } => *span,
             Expr::Binary { span, .. } => *span,
             Expr::Call { span, .. } => *span,
+            Expr::MacroInvocation { invocation } => invocation.span,
             Expr::Match { span, .. } => *span,
             Expr::Policy(policy_expr) => policy_expr.span(),
             Expr::IfLet { span, .. } => *span,

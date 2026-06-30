@@ -785,7 +785,7 @@ Implements the first conservative executable macro slice. The phase remains pars
 
 ## Phase 173: Macro Summaries, Token Trees, Hygienic Binders, and Typed Macros
 
-**Status:** 🟢 In Progress; bounded hygienic binder macros complete
+**Status:** 🟢 In Progress; typed macro signature carriers complete
 **Plan:** [PLAN-173: Macro Summaries, Token Trees, Hygienic Binders, and Typed Macros](PLAN-173-MACRO-SUMMARIES-TOKEN-TREES-HYGIENIC-BINDERS-TYPED-MACROS.md)
 **Depends on:** Phase 172 parser-first macro execution MVP; `SPEC-095c`; `SPEC-098c`; `SPEC-097b`.
 
@@ -803,7 +803,7 @@ Extends the Phase 172 local expression-macro MVP into the next conservative macr
 | [TASK-1767](tasks/TASK-1767-bounded-token-tree-expansion-reparse.md) | Add bounded token-tree expansion and reparse boundaries | ✅ Complete |
 | [TASK-1768](tasks/TASK-1768-binder-hygiene-metadata-model.md) | Add binder hygiene metadata model and validation rules | ✅ Complete |
 | [TASK-1769](tasks/TASK-1769-hygienic-binder-introducing-macros.md) | Implement bounded hygienic binder-introducing macro expansion | ✅ Complete |
-| [TASK-1770](tasks/TASK-1770-typed-macro-signature-carriers.md) | Add typed macro signature carriers | 📝 Planned |
+| [TASK-1770](tasks/TASK-1770-typed-macro-signature-carriers.md) | Add typed macro signature carriers | ✅ Complete |
 | [TASK-1771](tasks/TASK-1771-fail-closed-typed-macro-checking.md) | Implement fail-closed typed macro checking | 📝 Planned |
 | [TASK-1772](tasks/TASK-1772-bounded-macro-type-inference.md) | Implement bounded macro type inference | 📝 Planned |
 | [TASK-1773](tasks/TASK-1773-phase-173-cross-boundary-closeout.md) | Close out Phase 173 with cross-boundary validation, review, and status reconciliation | 📝 Planned |

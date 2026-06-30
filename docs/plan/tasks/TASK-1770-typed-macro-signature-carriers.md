@@ -1,6 +1,6 @@
 # TASK-1770: Add typed macro signature carriers
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -32,9 +32,9 @@ Add syntax carriers for typed macro parameters/results and preserve them through
 
 ### Functional Requirements
 
-- [ ] Typed macro signatures parse and round-trip in surface carriers
-- [ ] Summaries preserve typed macro signatures
-- [ ] Untyped Phase 172 macros remain accepted where still in scope
+- [x] Typed macro signatures parse and round-trip in surface carriers
+- [x] Summaries preserve typed macro signatures
+- [x] Untyped Phase 172 macros remain accepted where still in scope
 
 ### Property Requirements
 
@@ -87,10 +87,18 @@ commands:
   - cargo fmt --check
   - git diff --check
 checklist:
-- [ ] Typed macro signatures parse and round-trip in surface carriers
-- [ ] Summaries preserve typed macro signatures
-- [ ] Untyped Phase 172 macros remain accepted where still in scope
+- [x] Typed macro signatures parse and round-trip in surface carriers
+- [x] Summaries preserve typed macro signatures
+- [x] Untyped Phase 172 macros remain accepted where still in scope
 ```
+
+## Completion Evidence
+
+- Added `MacroTypeSignatureSummary` with parameter type annotations and optional return type.
+- Added optional `typed_signature` carriers to parsed `MacroDef` values.
+- Parsed typed macro signatures with `macro name(x: T, y) -> R => body;` syntax while preserving untyped Phase 172 `macro name(x) => body;` syntax.
+- Preserved typed signatures through `collect_public_macro_summaries`.
+- Added parser regressions in `crates/ash-parser/tests/task_1770_typed_macro_signature_carriers.rs`.
 
 ## Notes
 

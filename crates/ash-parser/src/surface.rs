@@ -138,6 +138,8 @@ pub struct MacroDef {
     pub name: Name,
     /// Macro parameter names.
     pub params: Vec<Name>,
+    /// Optional syntax-phase typed macro signature carrier.
+    pub typed_signature: Option<MacroTypeSignatureSummary>,
     /// Parsed expression template body.
     pub body: Expr,
     /// Source span covering the complete declaration.
@@ -149,7 +151,7 @@ pub struct MacroDef {
 /// Macro summaries are not callable summaries: they carry only expansion-phase
 /// metadata and must not grant rows, authority, contracts, failures, proof
 /// evidence, providers, or runtime effects.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct MacroSummary {
     /// Module path that produced the summary.
     pub module_path: Box<str>,
@@ -209,11 +211,13 @@ pub struct MacroTemplateFingerprint {
     pub body_span: Span,
 }
 
-/// Placeholder for future typed macro signatures.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+/// Syntax-phase typed macro signature carrier.
+#[derive(Debug, Clone, PartialEq)]
 pub struct MacroTypeSignatureSummary {
-    /// Source text of the typed signature, once TASK-1770 owns the carrier.
-    pub signature_text: Box<str>,
+    /// Macro parameter type annotations, aligned with `MacroDef::params`.
+    pub param_types: Vec<Option<Type>>,
+    /// Optional macro result type annotation.
+    pub return_type: Option<Type>,
     /// Source span covering the signature.
     pub span: Span,
 }
@@ -2213,7 +2217,7 @@ fn collect_public_macro_summaries_for_definitions(
                 body_span: decl.body.span(),
             },
             hygiene_policy: MacroHygienePolicy::BinderFreeExpression,
-            typed_signature: None,
+            typed_signature: decl.typed_signature.clone(),
             origin_span: decl.span,
         });
     }

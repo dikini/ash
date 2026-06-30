@@ -27,12 +27,13 @@ use crate::surface::{
     CapabilityOperationSig, CapabilityRef, Constraint, Contract, DataKindDef, Definition,
     DomainConstructor, DomainField, DomainSlot, EffectType, Expr, FnDef, ImplDef, ImplMethodDef,
     InterfaceDef, InterfaceEvidenceConstraint, InterfaceMethodSig, InterfaceTypeParam, LawDef,
-    MacroDef, MatchArm, Name, NotationAssociativity, NotationDecl, NotationFixity, NotationPattern,
-    Param, Pattern, Predicate, ProofBody, ProofDef, PropertyStrategyBinding, PropositionClause,
-    PropositionClauseKind, PropositionPredicateDecl, PropositionPredicateParam, PropositionTail,
-    ProxyDef, RawOperatorToken, ResourceField, ResourceTypeDef, RoleDef, SealedDomainDef, Type,
-    TypeBody, TypeDef, TypeField, TypeFnDecreases, TypeFnDef, TypeFnEquation, TypeFnParam,
-    TypeParam, TypePattern, VariantDef, VariantPayload, Visibility, WhereBound, Workflow, YieldArm,
+    MacroDef, MacroTypeSignatureSummary, MatchArm, Name, NotationAssociativity, NotationDecl,
+    NotationFixity, NotationPattern, Param, Pattern, Predicate, ProofBody, ProofDef,
+    PropertyStrategyBinding, PropositionClause, PropositionClauseKind, PropositionPredicateDecl,
+    PropositionPredicateParam, PropositionTail, ProxyDef, RawOperatorToken, ResourceField,
+    ResourceTypeDef, RoleDef, SealedDomainDef, Type, TypeBody, TypeDef, TypeField, TypeFnDecreases,
+    TypeFnDef, TypeFnEquation, TypeFnParam, TypeParam, TypePattern, VariantDef, VariantPayload,
+    Visibility, WhereBound, Workflow, YieldArm,
 };
 use crate::token::Span;
 
@@ -372,9 +373,28 @@ fn parse_macro_definition(input: &mut ParseInput) -> ModalResult<Definition> {
     skip_whitespace_and_comments(input);
     let name = identifier(input)?;
     skip_whitespace_and_comments(input);
+    let signature_start = input.state.pos;
     let _ = literal_str("(").parse_next(input)?;
-    let params = parse_macro_param_names(input)?;
+    let (params, param_types) = parse_macro_params(input)?;
     let _ = literal_str(")").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let return_type = if input.input.starts_with("->") {
+        let _ = literal_str("->").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        Some(parse_surface_type(input)?)
+    } else {
+        None
+    };
+    let signature_span = crate::input::span_from(&signature_start, &input.state.pos);
+    let typed_signature = if param_types.iter().any(Option::is_some) || return_type.is_some() {
+        Some(MacroTypeSignatureSummary {
+            param_types,
+            return_type,
+            span: signature_span,
+        })
+    } else {
+        None
+    };
     skip_whitespace_and_comments(input);
     let _ = literal_str("=>").parse_next(input)?;
     skip_whitespace_and_comments(input);
@@ -386,27 +406,37 @@ fn parse_macro_definition(input: &mut ParseInput) -> ModalResult<Definition> {
         visibility,
         name: name.into(),
         params,
+        typed_signature,
         body,
         span: crate::input::span_from(&start_pos, &input.state.pos),
     }))
 }
 
-fn parse_macro_param_names(input: &mut ParseInput) -> ModalResult<Vec<Name>> {
+fn parse_macro_params(input: &mut ParseInput) -> ModalResult<(Vec<Name>, Vec<Option<Type>>)> {
     skip_whitespace_and_comments(input);
     let mut params = Vec::new();
+    let mut param_types = Vec::new();
     if input.input.starts_with(")") {
-        return Ok(params);
+        return Ok((params, param_types));
     }
 
     loop {
         params.push(identifier(input)?.into());
+        skip_whitespace_and_comments(input);
+        if input.input.starts_with(':') {
+            let _ = literal_str(":").parse_next(input)?;
+            skip_whitespace_and_comments(input);
+            param_types.push(Some(parse_surface_type(input)?));
+        } else {
+            param_types.push(None);
+        }
         if consume_comma_separator(input) {
             continue;
         }
         break;
     }
     skip_whitespace_and_comments(input);
-    Ok(params)
+    Ok((params, param_types))
 }
 
 fn parse_optional_precedence(input: &mut ParseInput) -> ModalResult<Option<u16>> {

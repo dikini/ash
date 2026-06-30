@@ -144,6 +144,80 @@ pub struct MacroDef {
     pub span: Span,
 }
 
+/// Syntax-phase summary for an importable public macro declaration.
+///
+/// Macro summaries are not callable summaries: they carry only expansion-phase
+/// metadata and must not grant rows, authority, contracts, failures, proof
+/// evidence, providers, or runtime effects.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MacroSummary {
+    /// Module path that produced the summary.
+    pub module_path: Box<str>,
+    /// Source-visible macro name.
+    pub name: Name,
+    /// Visibility retained from the source declaration.
+    pub visibility: Visibility,
+    /// Macro parameter names.
+    pub params: Vec<Name>,
+    /// Accepted invocation input shape.
+    pub input_kind: MacroInputKind,
+    /// Expansion output shape.
+    pub output_kind: MacroOutputKind,
+    /// Conservative template identity used to detect malformed or stale carriers.
+    pub template_fingerprint: MacroTemplateFingerprint,
+    /// Hygiene policy guaranteed by the summarized template.
+    pub hygiene_policy: MacroHygienePolicy,
+    /// Typed macro signature metadata. Phase 173 starts with no typed summaries.
+    pub typed_signature: Option<MacroTypeSignatureSummary>,
+    /// Source span covering the macro declaration.
+    pub origin_span: Span,
+}
+
+/// Syntax accepted by a macro summary's invocation site.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum MacroInputKind {
+    /// Parenthesized expression arguments, the Phase 172 executable subset.
+    ExprArgs,
+    /// Delimiter-preserving token trees. Later Phase 173 tasks populate this.
+    TokenTree { delimiter: MacroDelimiter },
+}
+
+/// Syntax produced by macro expansion.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum MacroOutputKind {
+    /// Parsed expression output.
+    Expr,
+    /// Token-tree output that remains syntax-phase metadata.
+    TokenTree,
+    /// Token-tree output that must cross one audited surface reparse boundary.
+    ReparseExpr,
+}
+
+/// Conservative hygiene policy for a summarized macro template.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum MacroHygienePolicy {
+    /// Binder-free expression substitution only.
+    BinderFreeExpression,
+}
+
+/// Stable-enough local fingerprint for a parsed expression-template summary.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct MacroTemplateFingerprint {
+    /// Number of declared macro parameters.
+    pub param_count: usize,
+    /// Span of the parsed template body.
+    pub body_span: Span,
+}
+
+/// Placeholder for future typed macro signatures.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct MacroTypeSignatureSummary {
+    /// Source text of the typed signature, once TASK-1770 owns the carrier.
+    pub signature_text: Box<str>,
+    /// Source span covering the signature.
+    pub span: Span,
+}
+
 /// Source-level notation declaration parsed before expansion.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NotationDecl {
@@ -1763,7 +1837,7 @@ pub struct OperatorSection {
 }
 
 /// Delimiter shape preserved for a fail-closed macro invocation.
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum MacroDelimiter {
     /// Parenthesized invocation, e.g. `m!(...)`.
     Paren,
@@ -2014,6 +2088,53 @@ impl LocalMacroTable {
 /// Build the local macro table for a parsed module.
 pub fn build_local_macro_table(module: &ModuleFile) -> Result<LocalMacroTable, ExpansionError> {
     build_local_macro_table_for_definitions(&module.definitions)
+}
+
+/// Collect explicit syntax-phase summaries for public macro declarations.
+///
+/// This is export metadata only. It does not activate imported macros and does
+/// not expose macros as callables.
+pub fn collect_public_macro_summaries(
+    module: &ModuleFile,
+    module_path: impl Into<Box<str>>,
+) -> Result<Vec<MacroSummary>, ExpansionError> {
+    collect_public_macro_summaries_for_definitions(&module.definitions, module_path.into())
+}
+
+fn collect_public_macro_summaries_for_definitions(
+    definitions: &[Definition],
+    module_path: Box<str>,
+) -> Result<Vec<MacroSummary>, ExpansionError> {
+    let table = build_local_macro_table_for_definitions(definitions)?;
+    let mut summaries = Vec::new();
+    for definition in definitions {
+        let Definition::Macro(decl) = definition else {
+            continue;
+        };
+        if !matches!(decl.visibility, Visibility::Public) {
+            continue;
+        }
+        let entry = table
+            .resolve(decl.name.as_ref())
+            .expect("macro table was built from the same definitions");
+        ensure_macro_template_supported(&decl.body, entry)?;
+        summaries.push(MacroSummary {
+            module_path: module_path.clone(),
+            name: decl.name.clone(),
+            visibility: decl.visibility.clone(),
+            params: decl.params.clone(),
+            input_kind: MacroInputKind::ExprArgs,
+            output_kind: MacroOutputKind::Expr,
+            template_fingerprint: MacroTemplateFingerprint {
+                param_count: decl.params.len(),
+                body_span: decl.body.span(),
+            },
+            hygiene_policy: MacroHygienePolicy::BinderFreeExpression,
+            typed_signature: None,
+            origin_span: decl.span,
+        });
+    }
+    Ok(summaries)
 }
 
 fn build_local_macro_table_for_definitions(

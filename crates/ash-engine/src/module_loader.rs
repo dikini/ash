@@ -39,7 +39,9 @@ use ash_parser::parse_type_def::{
 };
 use ash_parser::parse_use::parse_use;
 use ash_parser::parse_workflow::workflow_def;
-use ash_parser::surface::{Definition, Expr, InterfaceDef, Type, Workflow, WorkflowDef};
+use ash_parser::surface::{
+    Definition, Expr, InterfaceDef, MacroSummary, Type, Workflow, WorkflowDef,
+};
 use std::cell::{Cell, RefCell};
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
@@ -93,6 +95,8 @@ pub struct LoadedOrdinaryFile {
     pub imported_type_function_heads: Vec<(String, TypeComputationHeadId)>,
     /// Imported callable bodies keyed by the imported name.
     pub imported_callables: HashMap<String, InlineCallable>,
+    /// Imported syntax-phase macro summaries. These do not activate macros yet.
+    pub imported_macro_summaries: Vec<MacroSummary>,
 }
 
 /// Check whether a source file is a valid importable module surface.
@@ -117,6 +121,7 @@ pub fn check_importable_module_file(path: &Path) -> Result<(), EngineError> {
         && exports.callables.is_empty()
         && exports.type_function_summaries.is_empty()
         && exports.associated_family_summaries.is_empty()
+        && exports.macro_summaries.is_empty()
         && exports.child_modules.is_empty()
     {
         return Err(EngineError::Parse(format!(
@@ -244,6 +249,8 @@ pub(crate) struct ModuleExports {
     pub(crate) type_defs: HashMap<String, CoreTypeDef>,
     pub(crate) constructor_defs: HashMap<String, CoreTypeDef>,
     pub(crate) callables: HashMap<String, InlineCallable>,
+    /// Syntax-phase macro summaries keyed by exported public macro name.
+    pub(crate) macro_summaries: HashMap<String, MacroSummary>,
     /// Core-owned ordinary type semantic summary lowered from the parsed `ModuleFile`.
     pub(crate) semantic_summary: Option<ModuleSemanticSummary>,
     /// Source-visible public type-function summary heads keyed by exported name.
@@ -419,6 +426,7 @@ pub fn load_ordinary_source(path: &Path, source: &str) -> Result<LoadedOrdinaryF
     let mut imported_summary_keys = HashSet::new();
     let mut imported_type_function_heads = Vec::new();
     let mut imported_callables = HashMap::new();
+    let mut imported_macro_summaries = Vec::new();
 
     let crate_root = discover_crate_root(entry_root);
     for import in imports {
@@ -467,6 +475,7 @@ pub fn load_ordinary_source(path: &Path, source: &str) -> Result<LoadedOrdinaryF
                         }
                         imported_callables.insert(k, v);
                     }
+                    imported_macro_summaries.extend(exports.macro_summaries.values().cloned());
                 }
                 ImportSelection::Named { name, alias } => {
                     let exported_name = alias.as_ref().map_or_else(|| name.clone(), Clone::clone);
@@ -521,6 +530,10 @@ pub fn load_ordinary_source(path: &Path, source: &str) -> Result<LoadedOrdinaryF
                             *module = module_segments.join("::");
                         }
                         imported_callables.insert(exported_name, callable);
+                    } else if let Some(summary) = exports.macro_summaries.get(&name) {
+                        let mut summary = summary.clone();
+                        summary.name = exported_name.into();
+                        imported_macro_summaries.push(summary);
                     } else if let Some(summary) = exports.type_function_summaries.get(&name) {
                         push_selected_type_function_semantic_summary(
                             &mut imported_semantic_summaries,
@@ -570,6 +583,7 @@ pub fn load_ordinary_source(path: &Path, source: &str) -> Result<LoadedOrdinaryF
         imported_semantic_summaries,
         imported_type_function_heads,
         imported_callables,
+        imported_macro_summaries,
     })
 }
 
@@ -2680,6 +2694,7 @@ pub(crate) fn collect_module_exports(
     )?);
     attach_public_type_function_summaries(&mut exports, &type_metadata, &path)?;
     attach_public_associated_family_summaries(&mut exports, &type_metadata, &path, &source)?;
+    attach_public_macro_summaries(&mut exports, &parsed_module, &path)?;
     attach_public_interface_identity_summaries(&mut exports, &path, &source)?;
     attach_public_proposition_summaries(&mut exports, &type_metadata, &path, &source)?;
     if let Some(summary) = exports.semantic_summary.as_ref() {
@@ -3230,6 +3245,42 @@ fn missing_pub_use_target_error(name: &str) -> EngineError {
     EngineError::Parse(format!(
         "pub use target '{name}' not found in re-exported module"
     ))
+}
+
+fn attach_public_macro_summaries(
+    exports: &mut ModuleExports,
+    module: &ash_parser::surface::ModuleFile,
+    path: &Path,
+) -> Result<(), EngineError> {
+    let module_path = module_path_text(path).to_string();
+    let summaries = ash_parser::surface::collect_public_macro_summaries(module, module_path)
+        .map_err(|error| {
+            EngineError::Parse(format!(
+                "in '{}': invalid public macro summary: {error}",
+                path.display()
+            ))
+        })?;
+    for summary in summaries {
+        insert_macro_summary_export(exports, summary)?;
+    }
+    Ok(())
+}
+
+fn insert_macro_summary_export(
+    exports: &mut ModuleExports,
+    summary: MacroSummary,
+) -> Result<(), EngineError> {
+    let name = summary.name.to_string();
+    if exports
+        .macro_summaries
+        .insert(name.clone(), summary)
+        .is_some()
+    {
+        return Err(EngineError::Parse(format!(
+            "duplicate public macro summary '{name}'"
+        )));
+    }
+    Ok(())
 }
 
 fn exportable_module_semantic_summary(

@@ -1,6 +1,6 @@
 # TASK-1763: Add macro summary carrier design and export collection
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -32,9 +32,9 @@ Add syntax-phase macro summaries for public macro declarations without making ma
 
 ### Functional Requirements
 
-- [ ] Public macros produce macro summaries
-- [ ] Macro summaries are distinct from callable exports
-- [ ] Malformed summaries fail closed
+- [x] Public macros produce macro summaries
+- [x] Macro summaries are distinct from callable exports
+- [x] Malformed summaries fail closed
 
 ### Property Requirements
 
@@ -88,10 +88,29 @@ commands:
   - cargo fmt --check
   - git diff --check
 checklist:
-- [ ] Public macros produce macro summaries
-- [ ] Macro summaries are distinct from callable exports
-- [ ] Malformed summaries fail closed
+- [x] Public macros produce macro summaries
+- [x] Macro summaries are distinct from callable exports
+- [x] Malformed summaries fail closed
 ```
+
+## Completion Evidence
+
+- Added parser-owned `MacroSummary` carriers plus input/output/hygiene/fingerprint metadata in `crates/ash-parser/src/surface.rs`.
+- Added `collect_public_macro_summaries` so public macros produce explicit syntax-phase summaries while private macros remain local-only.
+- Added engine export/import transport for macro summaries in `ModuleExports` and `LoadedOrdinaryFile` without inserting macros into `imported_callables` or activating macro invocation resolution.
+- Added malformed-summary rejection for unsupported public macro templates before importable-module acceptance.
+- Added regressions:
+  - `crates/ash-parser/tests/task_1763_macro_summary_carriers.rs`
+  - `crates/ash-engine/tests/task_1763_macro_summary_exports.rs`
+- Verification:
+  - `cargo test -p ash-parser --test task_1763_macro_summary_carriers -- --nocapture`
+  - `cargo test -p ash-engine --test task_1763_macro_summary_exports -- --nocapture`
+  - `cargo test -p ash-parser`
+  - `cargo test -p ash-typeck`
+  - `cargo test -p ash-engine`
+  - `cargo check --workspace`
+  - `cargo fmt --check`
+  - `git diff --check`
 
 ## Notes
 

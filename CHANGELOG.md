@@ -11,6 +11,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Phase 170 notation summary/export design now matches the implemented fail-closed local-table behavior for duplicate notation declarations (TASK-1742).
 
 ### Added
+- Parser and engine macro-summary carriers for public macros, including syntax-phase metadata transport, callable-export separation, and fail-closed malformed public summary rejection (TASK-1763).
 - Phase 173 macro-system spec contracts for explicit macro summaries, delimiter-preserving token-tree carriers, binder hygiene metadata, typed macro signatures, bounded macro inference, and fail-closed pre-Core lowering boundaries (TASK-1762).
 - Phase 173 macro-system expansion seam audit mapping parser, lowering, engine/module-loader, typechecker, and LSP macro consumers, with hard go/split gates for summary carriers, token-tree parsing, binder hygiene metadata, typed macro checking, and inference (TASK-1761).
 - PLAN-173 macro-system expansion packet covering macro summary carriers, imported/exported macro activation, delimiter-preserving token-tree/bracket/brace parsing, hygienic binder-introducing macros, typed macro checking, bounded macro type inference, and closeout validation (TASK-1760 through TASK-1773).

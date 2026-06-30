@@ -11,6 +11,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Phase 170 notation summary/export design now matches the implemented fail-closed local-table behavior for duplicate notation declarations (TASK-1742).
 
 ### Added
+- PLAN-173 macro-system expansion packet covering macro summary carriers, imported/exported macro activation, delimiter-preserving token-tree/bracket/brace parsing, hygienic binder-introducing macros, typed macro checking, bounded macro type inference, and closeout validation (TASK-1760 through TASK-1773).
 - Phase 172 parser-first macro execution MVP closeout, with reconciled plan/task/spec status and focused/broad verification for local expression macro expansion, fail-closed unsupported/imported forms, origin/hygiene metadata, and parser/typeck/engine boundaries (TASK-1759).
 - Cross-boundary Phase 172 macro execution tests covering high-level engine/module checking, callable import/export behavior, parser lowering gates, direct expanded-surface macro-carrier rejection, and imported/unsupported macro fail-closed behavior (TASK-1758).
 - Macro expansion origin/hygiene metadata hardening for Phase 172, including macro-parented notation/operator origin sidecars and generated helper-name fencing regressions without Core/runtime provenance schema changes (TASK-1757).

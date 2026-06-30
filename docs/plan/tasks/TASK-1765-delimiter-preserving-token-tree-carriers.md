@@ -1,6 +1,6 @@
 # TASK-1765: Add delimiter-preserving macro token-tree carriers
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -32,9 +32,9 @@ Replace raw bracket/brace diagnostic text with structured delimiter/token-tree c
 
 ### Functional Requirements
 
-- [ ] Carriers preserve delimiter kind, spans, nested groups, and token spelling
-- [ ] Raw text remains only as diagnostic fallback
-- [ ] Unsupported carriers still reject at expanded boundary
+- [x] Carriers preserve delimiter kind, spans, nested groups, and token spelling
+- [x] Raw text remains only as diagnostic fallback
+- [x] Unsupported carriers still reject at expanded boundary
 
 ### Property Requirements
 
@@ -87,10 +87,22 @@ commands:
   - cargo fmt --check
   - git diff --check
 checklist:
-- [ ] Carriers preserve delimiter kind, spans, nested groups, and token spelling
-- [ ] Raw text remains only as diagnostic fallback
-- [ ] Unsupported carriers still reject at expanded boundary
+- [x] Carriers preserve delimiter kind, spans, nested groups, and token spelling
+- [x] Raw text remains only as diagnostic fallback
+- [x] Unsupported carriers still reject at expanded boundary
 ```
+
+## Completion Evidence
+
+- Added `MacroTokenTree` carriers in `crates/ash-parser/src/surface.rs` with token spelling/spans and nested delimiter groups.
+- Added `MacroInvocation::token_trees` so parser consumers can inspect structured token-tree bodies while keeping `raw_body` only as diagnostic/source fallback.
+- Added parser token-tree construction in `crates/ash-parser/src/parse_expr.rs` without executing bracket/brace shapes.
+- Added regressions in `crates/ash-parser/tests/task_1765_macro_token_tree_carriers.rs` for nested delimiter preservation, token spellings/spans, parenthesized structured-arg coexistence, and fail-closed unsupported token-tree expansion.
+- Verification:
+  - `cargo test -p ash-parser --test task_1765_macro_token_tree_carriers -- --nocapture`
+  - `cargo test -p ash-parser --test task_1758_macro_lowering_boundaries -- --nocapture`
+  - `cargo test -p ash-parser`
+  - `cargo check --workspace`
 
 ## Notes
 

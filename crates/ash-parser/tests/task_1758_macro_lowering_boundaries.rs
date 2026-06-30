@@ -46,6 +46,7 @@ fn direct_expanded_gate_rejects_raw_macro_carriers_if_caller_constructs_invalid_
             name: "inc".into(),
             delimiter: MacroDelimiter::Paren,
             raw_body: "n".into(),
+            token_trees: Vec::new(),
             args: Some(Vec::new()),
             span: Span::new(0, 1, 1, 1),
         },

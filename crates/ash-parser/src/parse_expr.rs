@@ -12,8 +12,8 @@ use crate::parse_pattern::pattern;
 use crate::parse_utils::skip_whitespace_and_comments;
 use crate::surface::{
     ActStmt, BinaryOp, BlockStmt, ComprehensionQualifier, ConstructorPayload, DoStmt, DoTarget,
-    Expr, Literal, MacroDelimiter, MacroInvocation, MatchArm, Name, OperatorSection,
-    OperatorSectionKind, Pattern, RawOperatorToken, Type, UnaryOp,
+    Expr, Literal, MacroDelimiter, MacroInvocation, MacroTokenTree, MatchArm, Name,
+    OperatorSection, OperatorSectionKind, Pattern, RawOperatorToken, Type, UnaryOp,
 };
 use crate::token::Span;
 
@@ -1449,6 +1449,9 @@ fn parse_macro_invocation_after_bang(
     let raw_body_start = open.len_utf8();
     let raw_body_end = end_byte - close.len_utf8();
     let raw_body_text = &source[raw_body_start..raw_body_end];
+    let mut body_start_pos = input.state.pos;
+    body_start_pos.advance(open);
+    let token_trees = parse_macro_token_trees(raw_body_text, body_start_pos);
     let args = parse_macro_invocation_args(delimiter, raw_body_text);
     let raw_body = raw_body_text.into();
     for ch in source[..end_byte].chars() {
@@ -1461,10 +1464,90 @@ fn parse_macro_invocation_after_bang(
             name,
             delimiter,
             raw_body,
+            token_trees,
             args,
             span,
         },
     })
+}
+
+fn parse_macro_token_trees(raw_body: &str, start_pos: Position) -> Vec<MacroTokenTree> {
+    let mut parser = MacroTokenTreeParser {
+        source: raw_body,
+        byte_index: 0,
+        pos: start_pos,
+    };
+    parser.parse_until(None)
+}
+
+struct MacroTokenTreeParser<'a> {
+    source: &'a str,
+    byte_index: usize,
+    pos: Position,
+}
+
+impl MacroTokenTreeParser<'_> {
+    fn parse_until(&mut self, close: Option<char>) -> Vec<MacroTokenTree> {
+        let mut trees = Vec::new();
+        while let Some(ch) = self.peek_char() {
+            if Some(ch) == close {
+                break;
+            }
+            if ch.is_whitespace() {
+                self.bump_char(ch);
+                continue;
+            }
+            if let Some((delimiter, close_ch)) = macro_group_delimiter(ch) {
+                let group_start = self.pos;
+                self.bump_char(ch);
+                let tokens = self.parse_until(Some(close_ch));
+                if self.peek_char() == Some(close_ch) {
+                    self.bump_char(close_ch);
+                }
+                let span = span_from(&group_start, &self.pos);
+                trees.push(MacroTokenTree::Group {
+                    delimiter,
+                    tokens,
+                    span,
+                });
+                continue;
+            }
+
+            let token_start = self.pos;
+            let spelling_start = self.byte_index;
+            while let Some(token_ch) = self.peek_char() {
+                if token_ch.is_whitespace()
+                    || Some(token_ch) == close
+                    || macro_group_delimiter(token_ch).is_some()
+                {
+                    break;
+                }
+                self.bump_char(token_ch);
+            }
+            let spelling = self.source[spelling_start..self.byte_index].into();
+            let span = span_from(&token_start, &self.pos);
+            trees.push(MacroTokenTree::Token { spelling, span });
+        }
+        trees
+    }
+
+    fn peek_char(&self) -> Option<char> {
+        self.source[self.byte_index..].chars().next()
+    }
+
+    fn bump_char(&mut self, ch: char) {
+        self.byte_index += ch.len_utf8();
+        self.pos.advance(ch);
+    }
+}
+
+fn macro_group_delimiter(ch: char) -> Option<(MacroDelimiter, char)> {
+    match ch {
+        '(' => Some((MacroDelimiter::Paren, ')')),
+        '[' => Some((MacroDelimiter::Bracket, ']')),
+        '{' => Some((MacroDelimiter::Brace, '}')),
+        _ => None,
+    }
 }
 
 fn parse_macro_invocation_args(delimiter: MacroDelimiter, raw_body: &str) -> Option<Vec<Expr>> {

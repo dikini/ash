@@ -1,6 +1,6 @@
 # PLAN-173: Macro Summaries, Token Trees, Hygienic Binders, and Typed Macros
 
-## Status: 🟢 In Progress; planning packet complete
+## Status: 🟢 In Progress; delimiter-preserving token-tree carriers complete
 
 ## Overview
 
@@ -30,7 +30,7 @@ The phase is intentionally still parser-first and fail-closed. It must not becom
 - [x] Patch specs so imported macro activation, token-tree carriers, binder hygiene, and typed macro checking have implementation-grade contracts before code changes.
 - [x] Add explicit macro summary carriers for public macro declarations and export collection without treating macros as callables.
 - [x] Activate imported/exported macros only through those summaries, with positive import tests and negative leakage/re-export tests.
-- [ ] Replace raw bracket/brace diagnostic substrings with delimiter-preserving token-tree carriers that remain syntax-first and source-preserving.
+- [x] Replace raw bracket/brace diagnostic substrings with delimiter-preserving token-tree carriers that remain syntax-first and source-preserving.
 - [ ] Parse and validate bracket/brace invocations without executing unsupported token-tree shapes accidentally.
 - [ ] Add a bounded token-tree expansion/reparse seam for macro templates that explicitly opt into token-tree output.
 - [ ] Add definition-site/call-site/generated identifier metadata sufficient for binder-introducing macro templates.
@@ -76,7 +76,7 @@ The phase is intentionally still parser-first and fail-closed. It must not becom
 
 ### Phase 3: Token-tree and delimiter parsing
 
-- TASK-1765: Add delimiter-preserving macro token-tree carriers. 📝
+- TASK-1765: Add delimiter-preserving macro token-tree carriers. ✅
 - TASK-1766: Parse bracket and brace macro invocations into structured carriers. 📝
 - TASK-1767: Add bounded token-tree expansion and reparse boundaries. 📝
 
@@ -161,7 +161,7 @@ bash scripts/check-docs-gate.sh
 - [ ] Specs describe macro summaries, token-tree carriers, binder hygiene, typed checking, and inference without overclaiming full procedural/macros-by-example semantics.
 - [ ] Public macro summaries can be exported/imported only through explicit macro summary carriers.
 - [ ] Imported/re-exported macro activation has positive execution tests and negative callable-leakage tests.
-- [ ] Bracket/brace invocations preserve delimiter/token-tree structure and reject unsupported executable shapes fail-closed.
+- [x] Bracket/brace invocations preserve delimiter/token-tree structure and reject unsupported executable shapes fail-closed.
 - [ ] Token-tree expansion reparses into ordinary surface syntax through a single audited boundary and cannot bypass expanded-surface validation.
 - [ ] Binder-introducing macro templates preserve definition-site/call-site/generated identifier metadata and pass capture-resistance regressions.
 - [ ] Typed macro signatures and inferred macro summaries are checked before expansion output is accepted.

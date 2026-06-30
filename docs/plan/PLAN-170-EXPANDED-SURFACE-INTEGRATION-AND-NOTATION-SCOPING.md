@@ -136,7 +136,7 @@ python3 tools/docs/validate_orientation_indexes.py --self-test
 bash scripts/check-docs-gate.sh
 ```
 
-Focused Phase 170 tests, `cargo test -p ash-engine --lib`, parser/typeck tests, workspace check, clippy, formatting, diff, and docs gates completed successfully on the closeout diff. The full `cargo test -p ash-engine` integration sweep is blocked in this environment by pre-existing `performance_baseline::baseline_provider_creation` latency drift; the same test fails after stashing the current Phase 170 diff at HEAD `55b9f974`, so it is not caused by this phase. The Phase 170 stdlib-import performance regression was fixed and `performance_baseline::baseline_stdlib_import` now passes locally.
+Focused Phase 170 tests, full `cargo test -p ash-engine`, parser/typeck tests, workspace check, clippy, formatting, diff, and docs gates completed successfully on the closeout diff. The Phase 170 stdlib-import performance regression was fixed and `performance_baseline::baseline_stdlib_import` passes locally.
 
 Independent review reported one MAJOR import/export expansion gap: public callable export collection validated an expanded module but stored raw snippet bodies for imported closure lowering. The closeout remediation now exports `pub fn` callables from the expanded module body and adds an import/use regression for an expanded operator-section body. No unresolved blocker is accepted into closeout.
 

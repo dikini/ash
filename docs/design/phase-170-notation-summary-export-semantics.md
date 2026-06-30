@@ -71,8 +71,8 @@ A public notation whose target callable is private should be rejected before sum
 
 Only local declarations in a single module participate in one table. The existing local table rules apply:
 
-- duplicate notation declarations for the same spelling/fixity/target are accepted as one effective entry only if the implementation treats them as identical;
-- conflicting declarations for the same spelling/fixity with different targets or fixity metadata are rejected;
+- duplicate notation declarations for the same operator spelling are rejected during local-table construction, including same-target repeats;
+- conflicting declarations for the same operator spelling with different targets, precedence, or associativity are rejected;
 - inline modules have independent tables and therefore do not conflict with parent tables.
 
 No local-vs-imported or imported-vs-imported conflicts can arise in Phase 170 because imported notation is not active.

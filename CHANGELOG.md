@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
+### Fixed
+- Phase 170 closeout remediation preserves legacy mixed `pub workflow` plus `pub fn` module exports while keeping expanded-module callable exports authoritative when available (TASK-1742).
+- Phase 170 notation summary/export design now matches the implemented fail-closed local-table behavior for duplicate notation declarations (TASK-1742).
+
 ### Added
 - Phase 170 closeout review remediation exports public callable bodies from the expanded module so imported closures use the same expanded operator-section body accepted by module validation (TASK-1742).
 - Phase 170 is closed out with high-level expanded-surface routing, explicit notation non-propagation, surface-side expansion origin sidecars, reconciled task/status docs, and clean parser/typeck/engine/docs gates (TASK-1742).

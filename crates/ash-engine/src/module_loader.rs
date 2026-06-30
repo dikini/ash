@@ -2764,6 +2764,21 @@ pub(crate) fn collect_module_exports(
         insert_callable_export(&mut exports, &exported_name, callable)?;
     }
 
+    // If a legacy `pub workflow` forces `parse_module_file_for_type_metadata` to
+    // use the compatibility projection, that projection removes `pub fn`
+    // snippets too. Keep the expanded-module path authoritative when it exists,
+    // but preserve the older snippet fallback for mixed legacy-workflow modules.
+    for snippet in extract_braced_snippets(&source, |trimmed| trimmed.starts_with("pub fn ")) {
+        let Ok(Some(callable)) = parse_supported_pub_fn_callable(&snippet) else {
+            continue;
+        };
+        let mut callable = callable.callable;
+        callable.effectful_names.clone_from(&module_effectful_names);
+        stamp_callable_export_module(&mut callable, exports.semantic_summary.as_ref());
+        let exported_name = callable.exported_name.clone();
+        insert_callable_export(&mut exports, &exported_name, callable)?;
+    }
+
     // Process pub mod <name>; declarations -- load child module exports
     let module_root = path.parent().ok_or_else(|| {
         EngineError::Configuration(format!("module path '{}' has no parent", path.display()))

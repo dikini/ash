@@ -176,9 +176,21 @@ operational outcomes in SPEC-099b.
 Macros must not reach Core. Notation uses lower after expansion as ordinary callable calls. Operator
 sections lower to callable values or eta-expanded closures before Core.
 
-If the current implementation preserves macro invocation syntax as a parsed surface carrier before a
-macro expander exists, lowering must reject that carrier explicitly. It must not erase the invocation,
-guess an expansion, lower it as an ordinary call, or admit it through public export summaries.
+If the implementation preserves macro invocation syntax as a parsed surface carrier before that
+invocation has been expanded, lowering must reject that carrier explicitly. It must not erase the
+invocation, guess an expansion, lower it as an ordinary call, or admit it through public export
+summaries.
+
+The Phase 172 parser-first expression macro MVP may expand a narrow local subset before this lowering
+boundary: a local `MacroDecl` with a parsed expression template may expand an unqualified
+parenthesized `name!(ExprList?)` invocation into ordinary expanded surface expressions. The final
+Core product still contains no macro declarations and no macro invocations; implementations may keep
+source-side `MacroDecl` templates in an expanded-surface wrapper for diagnostics so long as executable
+residual macro invocations are rejected before lowering. Unsupported macro declarations,
+bracketed/braced invocations, qualified macro-like paths, missing or duplicate macro names, arity
+mismatches, recursive/depth-overflowing expansions, imported macro activation, and binder-introducing
+templates must reject before Core. Macro expansion metadata is source-side diagnostic metadata only;
+it does not create rows, authority, contracts, failures, proof evidence, or runtime constructs.
 
 ```ash
 a <+> b   => combine(a, b)
@@ -217,5 +229,6 @@ of these products, lowering must reject the program before Core.
 
 ## 13. Changelog
 
+- 2026-06-30: Added Phase 172 parser-first expression macro MVP lowering boundary: supported local macros must expand before Core, while unsupported macro constructs and declarations remain rejected before Core/export/typecheck acceptance.
 - 2026-06-30: Clarified Phase 171 fail-closed lowering boundary for parsed macro invocation carriers and authority-neutral generated helper binders.
 - 2026-06-29: Created to define expanded-surface-AST-to-Core lowering, including handlers, impl operation identity, facts/evidence, contracts, trace contracts, notation, and operator sections.

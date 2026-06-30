@@ -268,11 +268,24 @@ fn builtin_fn_hover(def: &BuiltinFnDef) -> Hover {
     )
 }
 
+#[allow(clippy::too_many_lines)]
 fn definition_hover(definition: &Definition) -> Hover {
     match definition {
         Definition::Notation(def) => markdown(
             format!("notation {} = {}", def.pattern.raw, def.target.name),
             Some("Notation declaration".to_string()),
+        ),
+        Definition::Macro(def) => markdown(
+            format!(
+                "macro {}({})",
+                def.name,
+                def.params
+                    .iter()
+                    .map(std::string::ToString::to_string)
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ),
+            Some("Parser-first expression macro declaration".to_string()),
         ),
         Definition::Capability(def) => {
             let params = def
@@ -373,6 +386,7 @@ fn module_hover(module: &ModuleDecl) -> Hover {
     )
 }
 
+#[allow(clippy::too_many_lines)]
 fn top_level_hover(token: &str, module: &ModuleFile) -> Option<Hover> {
     if let Some(workflow) = &module.workflow {
         if workflow.name.as_ref() == token {
@@ -405,6 +419,7 @@ fn top_level_hover(token: &str, module: &ModuleFile) -> Option<Hover> {
                     _ => {
                         let name_matches = match definition {
                             Definition::Notation(def) => def.pattern.raw.as_ref() == token,
+                            Definition::Macro(def) => def.name.as_ref() == token,
                             Definition::Capability(def) => def.name.as_ref() == token,
                             Definition::CapabilityInterface(def) => def.name.as_ref() == token,
                             Definition::CapabilityImplementation(def) => def.name.as_ref() == token,
@@ -451,6 +466,7 @@ fn top_level_hover(token: &str, module: &ModuleFile) -> Option<Hover> {
             _ => {
                 let name_matches = match definition {
                     Definition::Notation(def) => def.pattern.raw.as_ref() == token,
+                    Definition::Macro(def) => def.name.as_ref() == token,
                     Definition::Capability(def) => def.name.as_ref() == token,
                     Definition::CapabilityInterface(def) => def.name.as_ref() == token,
                     Definition::CapabilityImplementation(def) => def.name.as_ref() == token,

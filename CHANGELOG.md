@@ -6,10 +6,20 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Fixed
+- Rejected free variables in Phase 172 executable macro templates and preserved nested macro-to-macro origin parentage, preventing call-site capture and origin-chain loss found during closeout review (TASK-1759).
 - Phase 170 closeout remediation preserves legacy mixed `pub workflow` plus `pub fn` module exports while keeping expanded-module callable exports authoritative when available (TASK-1742).
 - Phase 170 notation summary/export design now matches the implemented fail-closed local-table behavior for duplicate notation declarations (TASK-1742).
 
 ### Added
+- Phase 172 parser-first macro execution MVP closeout, with reconciled plan/task/spec status and focused/broad verification for local expression macro expansion, fail-closed unsupported/imported forms, origin/hygiene metadata, and parser/typeck/engine boundaries (TASK-1759).
+- Cross-boundary Phase 172 macro execution tests covering high-level engine/module checking, callable import/export behavior, parser lowering gates, direct expanded-surface macro-carrier rejection, and imported/unsupported macro fail-closed behavior (TASK-1758).
+- Macro expansion origin/hygiene metadata hardening for Phase 172, including macro-parented notation/operator origin sidecars and generated helper-name fencing regressions without Core/runtime provenance schema changes (TASK-1757).
+- Fail-closed Phase 172 expression-template macro expansion before notation elaboration, including exact arity checking, template substitution, unsupported-template diagnostics, recursion-depth diagnostics, and regressions for macro output re-entering notation expansion (TASK-1756).
+- Local macro registry validation for Phase 172, including duplicate local macro rejection, explicit unknown/unsupported macro invocation diagnostics, and engine regressions proving `pub macro` declarations are not imported as callables or activated across module boundaries (TASK-1755).
+- Parser surface now includes Phase 172 macro declaration carriers and structured parenthesized macro invocation arguments, with parser regressions for declaration shape, non-executable bracket/brace carriers, and qualified-path rejection (TASK-1754).
+- SPEC-095c and SPEC-098c now describe the Phase 172 parser-first expression macro MVP: local `MacroDecl`, parenthesized `name!(...)` execution only, local-only scope, fail-closed unsupported macro forms, authority-neutral expansion, and a macro-free Core lowering boundary (TASK-1753).
+- Phase 172 macro execution MVP audit artifact defining the safe parser-first subset, template whitelist, fail-closed unsupported forms, scope model, and task/file ownership for implementation (TASK-1752).
+- PLAN-172 parser-first macro execution MVP packet with tasks for macro seam audit, spec amendments, parsed macro declarations, local macro registry, fail-closed expression-template expansion, macro origin/hygiene metadata, cross-boundary leakage tests, and closeout review (TASK-1751 through TASK-1759).
 - Phase 171 is closed out as a conservative hygiene/origin/scope-boundary packet with review-remediated parent-origin chaining, source/generated identifier fences, local-only notation scope, fail-closed macro invocation carriers, cross-boundary regression coverage, reconciled specs/status docs, and clean parser/typeck/engine/workspace/docs gates (TASK-1743 through TASK-1750).
 - SPEC-095c and SPEC-098c now record the conservative Phase 171 hygiene and lowering boundary: macro invocation carriers are fail-closed, notation remains local unless explicit summary carriers exist, generated identifiers are separated from source-spellable identifiers, and hygiene metadata is authority-neutral (TASK-1750).
 - Cross-boundary Phase 171 validation now proves local notation expansion, expansion-origin metadata, generated identifier hygiene, callable import preservation, imported-notation non-activation, and macro fail-closed rejection agree across parser, engine/module-loader, and typechecker-facing paths (TASK-1749).

@@ -35,6 +35,7 @@ fn find_definition_span<'a>(token: &str, definitions: &'a [Definition]) -> Optio
     for def in definitions {
         let name_matches = match def {
             Definition::Notation(n) => n.pattern.raw.as_ref() == token,
+            Definition::Macro(m) => m.name.as_ref() == token,
             Definition::Function(f) => f.name.as_ref() == token,
             Definition::Capability(c) => c.name.as_ref() == token,
             Definition::Policy(p) => p.name.as_ref() == token,
@@ -57,6 +58,7 @@ fn find_definition_span<'a>(token: &str, definitions: &'a [Definition]) -> Optio
         if name_matches {
             return Some(match def {
                 Definition::Notation(n) => &n.span,
+                Definition::Macro(m) => &m.span,
                 Definition::Function(f) => &f.span,
                 Definition::Capability(c) => &c.span,
                 Definition::Policy(p) => &p.span,

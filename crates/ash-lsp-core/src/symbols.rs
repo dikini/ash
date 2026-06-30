@@ -113,6 +113,12 @@ fn definition_symbol(definition: &Definition) -> Option<DocumentSymbol> {
             &def.span,
             None,
         )),
+        Definition::Macro(def) => Some(symbol(
+            def.name.to_string(),
+            SymbolKind::FUNCTION,
+            &def.span,
+            None,
+        )),
         Definition::Capability(def) => Some(symbol(
             def.name.to_string(),
             SymbolKind::FUNCTION,
@@ -227,6 +233,7 @@ pub fn document_symbols(module: &ModuleFile) -> Vec<DocumentSymbol> {
     for definition in &module.definitions {
         let start = match definition {
             Definition::Notation(def) => def.span.start,
+            Definition::Macro(def) => def.span.start,
             Definition::Capability(def) => def.span.start,
             Definition::Policy(def) => def.span.start,
             Definition::Role(def) => def.span.start,

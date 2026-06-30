@@ -1863,7 +1863,7 @@ pub fn lower_expr(expr: &Expr) -> Result<CoreExpr, LoweringError> {
             section.operator.spelling
         ))),
         Expr::MacroInvocation { invocation } => Err(LoweringError::UnsupportedFeature(format!(
-            "macro invocation `{}!` is unsupported until macro expansion is implemented",
+            "unexpanded macro invocation carrier `{}!` reached lowering",
             invocation.name
         ))),
         Expr::Literal(lit) => Ok(CoreExpr::Literal(lower_literal(lit)?)),

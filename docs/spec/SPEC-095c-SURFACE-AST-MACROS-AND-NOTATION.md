@@ -130,6 +130,48 @@ authority.
 Macro expansion occurs before notation resolution unless a macro explicitly quotes raw tokens. Macro
 output must be parsed or re-associated using the active notation table before type checking.
 
+### 6.1 Phase 172 parser-first expression macro MVP
+
+The first executable macro slice is intentionally smaller than a full macro system. It is a
+parser-first expression macro MVP: macro declarations and executable invocations are ordinary parsed
+surface syntax, and expansion substitutes parsed expression arguments into a parsed expression
+template before notation resolution.
+
+```text
+MacroDecl      ::= visibility? "macro" name "(" ParamList? ")" "=>" Expr ";"
+MacroInvokeMvp ::= name "!" "(" ExprList? ")"
+```
+
+The MVP supports only local expression-position invocations with unqualified names and parenthesized
+expression arguments:
+
+```ash
+macro inc(x) => add(x, 1);
+
+fn example(n: Int) -> Int {
+  inc!(n)
+}
+```
+
+Expansion is syntax-only and authority-neutral. A macro declaration does not define a callable,
+capability, contract, row, failure, proof, or runtime effect. Rows and authority requirements come
+only from the ordinary expression produced by expansion and checked later.
+
+The MVP is fail-closed outside its subset:
+
+- bracketed and braced invocations such as `m![...]` and `m!{...}` remain diagnostic carriers unless
+  a later token-tree parser task implements them;
+- qualified macro-like paths such as `module::m!(x)` are not part of this carrier;
+- macro declarations are local to the module or inline-module scope that declares them; imports,
+  re-exports, and ordinary callable visibility do not activate macros downstream;
+- duplicate, missing, arity-mismatched, recursive, or unsupported-template macros are rejected before
+  Core lowering;
+- binder-introducing templates are rejected until a later phase specifies binder hygiene.
+
+Supported template bodies are limited to binder-free parsed expressions. Generated expansion nodes
+retain stable expansion identity and origin-chain metadata; notation/operator-section products inside
+macro output record the macro expansion as their parent origin.
+
 ## 7. Notation declarations
 
 Notation declarations bind syntactic sugar to callable targets. They are items in the surface AST:
@@ -315,5 +357,6 @@ fixity-resolution pass once imports are resolved.
 
 ## 13. Changelog
 
+- 2026-06-30: Added Phase 172 parser-first expression macro MVP constraints: local `MacroDecl`, parenthesized `name!(...)` execution only, local-only scope, fail-closed unsupported forms, authority-neutral syntax substitution, and origin-chain preservation.
 - 2026-06-30: Clarified Phase 171 conservative hygiene invariants: fail-closed macro invocation carriers, local-only notation unless summary carriers exist, expansion identity/origin chains, generated identifier separation, and no Core macro/notation leakage.
 - 2026-06-29: Created as the target surface AST, macro expansion, notation, and operator-section substrate.

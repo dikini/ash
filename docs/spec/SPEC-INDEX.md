@@ -192,7 +192,7 @@ Common tags include: `grammar`, `syntax`, `semantics`, `type-system`, `effect-sy
 | [SPEC-095-ASH-SURFACE-GRAMMAR.md](SPEC-095-ASH-SURFACE-GRAMMAR.md) | draft | language-surface | grammar, surface | normative spec | — |
 | [SPEC-095a-CURRENT-GRAMMAR.md](SPEC-095a-CURRENT-GRAMMAR.md) | active | language-surface | current-state, grammar, surface | current-state spec | — |
 | [SPEC-095b-TARGET-GRAMMAR.md](SPEC-095b-TARGET-GRAMMAR.md) | draft | language-surface | grammar, surface, target-state | target-state spec | SPEC-095c; NOTE-015; NOTE-021; parser plans/tasks |
-| [SPEC-095c-SURFACE-AST-MACROS-AND-NOTATION.md](SPEC-095c-SURFACE-AST-MACROS-AND-NOTATION.md) | draft | language-surface | grammar, syntax, semantics, target-state, tooling | target-state spec | SPEC-095b; SPEC-097b; SPEC-098c; PLAN-167; PLAN-171 |
+| [SPEC-095c-SURFACE-AST-MACROS-AND-NOTATION.md](SPEC-095c-SURFACE-AST-MACROS-AND-NOTATION.md) | draft | language-surface | grammar, syntax, semantics, target-state, tooling | target-state spec | SPEC-095b; SPEC-097b; SPEC-098c; PLAN-167; PLAN-171; PLAN-172 |
 | [SPEC-096-UNIFIED-EFFECT-SYSTEM.md](SPEC-096-UNIFIED-EFFECT-SYSTEM.md) | draft | contracts | authority, contract, effect-system | normative spec | — |
 | [SPEC-096a-CURRENT-EFFECT-SYSTEM.md](SPEC-096a-CURRENT-EFFECT-SYSTEM.md) | active | effect-system | authority, current-state, effect-system | current-state spec | — |
 | [SPEC-096b-TARGET-EFFECT-SYSTEM.md](SPEC-096b-TARGET-EFFECT-SYSTEM.md) | draft | effect-system | authority, effect-system, target-state | target-state spec | NOTE-013; NOTE-020; NOTE-022; NOTE-034; NOTE-035 |
@@ -202,7 +202,7 @@ Common tags include: `grammar`, `syntax`, `semantics`, `type-system`, `effect-sy
 | [SPEC-098-IR-CHANGES.md](SPEC-098-IR-CHANGES.md) | draft | core-ir | authority, core-ir, effect-system, semantics | normative spec | — |
 | [SPEC-098a-CURRENT-IR.md](SPEC-098a-CURRENT-IR.md) | active | core-ir | core-ir, current-state, semantics | current-state spec | — |
 | [SPEC-098b-TARGET-IR.md](SPEC-098b-TARGET-IR.md) | draft | core-ir | core-ir, semantics, target-state | target-state spec | SPEC-098c; SPEC-099b; SPEC-100; PLAN-165 |
-| [SPEC-098c-SURFACE-TO-CORE-LOWERING.md](SPEC-098c-SURFACE-TO-CORE-LOWERING.md) | draft | core-ir | core-ir, grammar, semantics, target-state | target-state spec | SPEC-095c; SPEC-097b; SPEC-098b; SPEC-100; PLAN-167; PLAN-171 |
+| [SPEC-098c-SURFACE-TO-CORE-LOWERING.md](SPEC-098c-SURFACE-TO-CORE-LOWERING.md) | draft | core-ir | core-ir, grammar, semantics, target-state | target-state spec | SPEC-095c; SPEC-097b; SPEC-098b; SPEC-100; PLAN-167; PLAN-171; PLAN-172 |
 | [SPEC-099-CORE-LANGUAGE.md](SPEC-099-CORE-LANGUAGE.md) | draft | core-ir | core-ir, semantics | normative spec | SPEC-098b; SPEC-100; SPEC-101; SPEC-102 |
 | [SPEC-099-OPERATIONAL-SEMANTICS.md](SPEC-099-OPERATIONAL-SEMANTICS.md) | draft | core-ir | authority, core-ir, effect-system, semantics | normative spec | — |
 | [SPEC-099a-CURRENT-OPERATIONAL-SEMANTICS.md](SPEC-099a-CURRENT-OPERATIONAL-SEMANTICS.md) | active | core-ir | core-ir, current-state, semantics | current-state spec | — |

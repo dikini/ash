@@ -27,8 +27,8 @@ use crate::surface::{
     CapabilityOperationSig, CapabilityRef, Constraint, Contract, DataKindDef, Definition,
     DomainConstructor, DomainField, DomainSlot, EffectType, Expr, FnDef, ImplDef, ImplMethodDef,
     InterfaceDef, InterfaceEvidenceConstraint, InterfaceMethodSig, InterfaceTypeParam, LawDef,
-    MatchArm, Name, NotationAssociativity, NotationDecl, NotationFixity, NotationPattern, Param,
-    Pattern, Predicate, ProofBody, ProofDef, PropertyStrategyBinding, PropositionClause,
+    MacroDef, MatchArm, Name, NotationAssociativity, NotationDecl, NotationFixity, NotationPattern,
+    Param, Pattern, Predicate, ProofBody, ProofDef, PropertyStrategyBinding, PropositionClause,
     PropositionClauseKind, PropositionPredicateDecl, PropositionPredicateParam, PropositionTail,
     ProxyDef, RawOperatorToken, ResourceField, ResourceTypeDef, RoleDef, SealedDomainDef, Type,
     TypeBody, TypeDef, TypeField, TypeFnDecreases, TypeFnDef, TypeFnEquation, TypeFnParam,
@@ -171,6 +171,11 @@ fn parse_definitions(input: &mut ParseInput) -> ModalResult<Vec<Definition>> {
 
         if starts_with_notation_definition(input) {
             definitions.push(parse_notation_definition(input)?);
+            continue;
+        }
+
+        if starts_with_visible_keyword(input, "macro") {
+            definitions.push(parse_macro_definition(input)?);
             continue;
         }
 
@@ -357,6 +362,51 @@ fn parse_notation_definition(input: &mut ParseInput) -> ModalResult<Definition> 
         target,
         span: crate::input::span_from(&start_pos, &input.state.pos),
     }))
+}
+
+fn parse_macro_definition(input: &mut ParseInput) -> ModalResult<Definition> {
+    let start_pos = input.state.pos;
+    let visibility = parse_visibility(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = keyword("macro").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let name = identifier(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str("(").parse_next(input)?;
+    let params = parse_macro_param_names(input)?;
+    let _ = literal_str(")").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str("=>").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let body = expr(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str(";").parse_next(input)?;
+
+    Ok(Definition::Macro(MacroDef {
+        visibility,
+        name: name.into(),
+        params,
+        body,
+        span: crate::input::span_from(&start_pos, &input.state.pos),
+    }))
+}
+
+fn parse_macro_param_names(input: &mut ParseInput) -> ModalResult<Vec<Name>> {
+    skip_whitespace_and_comments(input);
+    let mut params = Vec::new();
+    if input.input.starts_with(")") {
+        return Ok(params);
+    }
+
+    loop {
+        params.push(identifier(input)?.into());
+        if consume_comma_separator(input) {
+            continue;
+        }
+        break;
+    }
+    skip_whitespace_and_comments(input);
+    Ok(params)
 }
 
 fn parse_optional_precedence(input: &mut ParseInput) -> ModalResult<Option<u16>> {
@@ -3223,6 +3273,11 @@ pub fn module_file(input: &mut ParseInput) -> ModalResult<crate::surface::Module
 
         if starts_with_notation_definition(input) {
             definitions.push(parse_notation_definition(input)?);
+            continue;
+        }
+
+        if starts_with_visible_keyword(input, "macro") {
+            definitions.push(parse_macro_definition(input)?);
             continue;
         }
 

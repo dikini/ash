@@ -147,6 +147,7 @@ Update this section as tasks complete:
 | [169](PLAN-169-SURFACE-EXPANSION-AND-NOTATION-ELABORATION.md) | 8 | 8 | ✅ Complete; surface expansion and notation elaboration implemented with explicit deferrals |
 | [170](PLAN-170-EXPANDED-SURFACE-INTEGRATION-AND-NOTATION-SCOPING.md) | 7 | 7 | ✅ Complete |
 | [171](PLAN-171-MACRO-NOTATION-HYGIENE-AND-EXPANSION-BOUNDARIES.md) | 8 | 8 | ✅ Complete |
+| [172](PLAN-172-PARSER-FIRST-MACRO-EXECUTION-MVP.md) | 9 | 9 | ✅ Complete |
 
 ---
 
@@ -760,3 +761,23 @@ Builds the conservative hygiene substrate required before full macro execution o
 | [TASK-1748](tasks/TASK-1748-fail-closed-macro-invocation-boundary.md) | Add fail-closed macro invocation boundary without macro execution | ✅ Complete |
 | [TASK-1749](tasks/TASK-1749-cross-boundary-hygiene-validation.md) | Add cross-boundary hygiene and negative-leakage validation tests | ✅ Complete |
 | [TASK-1750](tasks/TASK-1750-phase-171-closeout.md) | Close out Phase 171 with verification, changelog, index reconciliation, and review | ✅ Complete |
+
+## Phase 172: Parser-First Macro Execution MVP
+
+**Status:** ✅ Complete
+**Plan:** [PLAN-172: Parser-First Macro Execution MVP](PLAN-172-PARSER-FIRST-MACRO-EXECUTION-MVP.md)
+**Depends on:** Phase 171 macro/notation hygiene and expansion boundaries; `SPEC-095c`; `SPEC-098c`.
+
+Implements the first conservative executable macro slice. The phase remains parser-first and fail-closed: only local expression-position `name!(...)` macros with parsed expression arguments and whitelisted expression-template bodies may expand. Bracket/brace invocations, token-tree rewriting, typed macros, binder-introducing macros, imported/exported macro activation, and Core/runtime macro forms remain out of scope. Positive visibility and negative leakage tests must prove that supported local macros execute while unsupported macro syntax cannot bypass parser, engine/module-loader, typechecker, or Core-lowering boundaries.
+
+| Task | Description | Status |
+|------|-------------|--------|
+| [TASK-1751](tasks/TASK-1751-phase-172-plan-packet.md) | Create the Phase 172 parser-first macro execution MVP plan packet | ✅ Complete |
+| [TASK-1752](tasks/TASK-1752-macro-execution-mvp-audit.md) | Audit macro execution seams and define the safe MVP subset | ✅ Complete |
+| [TASK-1753](tasks/TASK-1753-macro-mvp-spec-amendments.md) | Amend macro specs for parser-first expression macro MVP | ✅ Complete |
+| [TASK-1754](tasks/TASK-1754-macro-declaration-parse-carriers.md) | Add parsed macro declaration and structured invocation-argument carriers | ✅ Complete |
+| [TASK-1755](tasks/TASK-1755-macro-registry-scope-validation.md) | Add local macro registry and scope-boundary validation | ✅ Complete |
+| [TASK-1756](tasks/TASK-1756-expression-template-macro-expansion.md) | Implement fail-closed expression-template macro expansion | ✅ Complete |
+| [TASK-1757](tasks/TASK-1757-macro-origin-hygiene-metadata.md) | Preserve macro expansion origin and hygiene metadata through notation expansion | ✅ Complete |
+| [TASK-1758](tasks/TASK-1758-macro-execution-cross-boundary-tests.md) | Add cross-boundary macro execution and negative-leakage tests | ✅ Complete |
+| [TASK-1759](tasks/TASK-1759-phase-172-closeout.md) | Close out Phase 172 with verification, review, and status reconciliation | ✅ Complete |

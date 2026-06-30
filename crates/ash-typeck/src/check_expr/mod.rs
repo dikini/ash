@@ -84,7 +84,7 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
         Expr::MacroInvocation { invocation } => {
             CheckResult::error(ConstructorError::UnsupportedExpression {
                 kind: format!(
-                    "macro invocation `{}!` is unsupported until macro expansion is implemented",
+                    "unexpanded macro invocation carrier `{}!` reached type checking",
                     invocation.name
                 ),
                 span: invocation.span,

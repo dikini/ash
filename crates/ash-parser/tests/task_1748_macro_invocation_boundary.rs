@@ -37,10 +37,8 @@ fn macro_invocation_fails_expanded_surface_boundary_before_core() {
     let err = expand_surface_module(module).expect_err("macro invocation must not cross expansion");
 
     assert!(
-        err.to_string().contains("macro invocation `make_id!`")
-            && err
-                .to_string()
-                .contains("unsupported until macro expansion"),
+        err.to_string()
+            .contains("unknown local macro invocation `make_id!`"),
         "unexpected error: {err}"
     );
 }
@@ -54,8 +52,7 @@ fn direct_core_lowering_rejects_macro_invocation_carrier() {
     let err = lower_expr(expr).expect_err("macro invocation must not lower to Core");
 
     assert!(matches!(err, LoweringError::UnsupportedFeature(message)
-        if message.contains("macro invocation `make_id!`")
-            && message.contains("unsupported until macro expansion")));
+        if message.contains("unexpanded macro invocation carrier `make_id!` reached lowering")));
 }
 
 #[test]

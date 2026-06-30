@@ -26,10 +26,8 @@ pub fn use_macro() -> Int {
         .expect_err("macro invocation must not be accepted by module validation");
 
     assert!(
-        err.to_string().contains("macro invocation `make_id!`")
-            && err
-                .to_string()
-                .contains("unsupported until macro expansion"),
+        err.to_string()
+            .contains("unknown local macro invocation `make_id!`"),
         "unexpected error: {err}"
     );
 }
@@ -48,10 +46,8 @@ pub fn use_macro() -> Int {
         .expect_err("public callable with macro invocation must not become importable");
 
     assert!(
-        err.to_string().contains("macro invocation `make_id!`")
-            && err
-                .to_string()
-                .contains("unsupported until macro expansion"),
+        err.to_string()
+            .contains("unknown local macro invocation `make_id!`"),
         "unexpected error: {err}"
     );
 }

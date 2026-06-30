@@ -587,7 +587,7 @@ fn validate_interface_calls_in_expr(
         }
         ash_parser::surface::Expr::MacroInvocation { invocation } => {
             Err(TypeCheckError::TypeError(format!(
-                "macro invocation `{}!` is unsupported until macro expansion is implemented",
+                "unexpanded macro invocation carrier `{}!` reached type checking",
                 invocation.name
             )))
         }
@@ -1880,7 +1880,7 @@ fn validate_fn_call_preconditions_expr(
         }
         ash_parser::surface::Expr::MacroInvocation { invocation } => {
             Err(TypeCheckError::TypeError(format!(
-                "macro invocation `{}!` is unsupported until macro expansion is implemented",
+                "unexpanded macro invocation carrier `{}!` reached type checking",
                 invocation.name
             )))
         }

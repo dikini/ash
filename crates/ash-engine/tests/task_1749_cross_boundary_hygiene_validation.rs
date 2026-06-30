@@ -126,7 +126,10 @@ pub fn use_macro() -> Int {
         .expect("engine builds")
         .check_module_file(&path)
         .expect_err("engine rejects macro invocation before acceptance");
-    assert!(err.to_string().contains("macro invocation `make_id!`"));
+    assert!(
+        err.to_string()
+            .contains("unknown local macro invocation `make_id!`")
+    );
 
     let parsed = ash_parser::parse_surface_file(source).expect("macro carrier parses");
     let ash_parser::surface::Definition::Function(def) = &parsed.definitions[0] else {
@@ -134,10 +137,9 @@ pub fn use_macro() -> Int {
     };
     let result = ash_typeck::check_expr::check_expr(&ash_typeck::TypeEnv::new(), &def.body);
     assert!(
-        result
-            .errors
-            .iter()
-            .any(|error| error.to_string().contains("macro invocation `make_id!`")),
+        result.errors.iter().any(|error| error
+            .to_string()
+            .contains("unexpanded macro invocation carrier `make_id!` reached type checking")),
         "typechecker diagnostics should reject macro invocation: {:?}",
         result.errors
     );

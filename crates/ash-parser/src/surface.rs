@@ -89,6 +89,8 @@ pub struct ModuleFile {
 pub enum Definition {
     /// Source-level notation declaration.
     Notation(NotationDecl),
+    /// Parser-first expression macro declaration.
+    Macro(MacroDef),
     /// Capability definition
     Capability(CapabilityDef),
     /// Capability interface definition
@@ -125,6 +127,21 @@ pub enum Definition {
     Law(LawDef),
     /// Proof definition
     Proof(ProofDef),
+}
+
+/// Parser-first expression macro declaration.
+#[derive(Debug, Clone, PartialEq)]
+pub struct MacroDef {
+    /// Visibility modifier retained for scope/export validation.
+    pub visibility: Visibility,
+    /// Local macro name.
+    pub name: Name,
+    /// Macro parameter names.
+    pub params: Vec<Name>,
+    /// Parsed expression template body.
+    pub body: Expr,
+    /// Source span covering the complete declaration.
+    pub span: Span,
 }
 
 /// Source-level notation declaration parsed before expansion.
@@ -1757,7 +1774,7 @@ pub enum MacroDelimiter {
 }
 
 /// Parsed macro invocation payload preserved only for fail-closed diagnostics.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct MacroInvocation {
     /// Unqualified macro name before `!`.
     pub name: Name,
@@ -1765,6 +1782,8 @@ pub struct MacroInvocation {
     pub delimiter: MacroDelimiter,
     /// Raw delimited body text inside the invocation delimiter.
     pub raw_body: Box<str>,
+    /// Structured expression arguments for the executable parenthesized MVP subset.
+    pub args: Option<Vec<Expr>>,
     /// Span covering the full invocation.
     pub span: Span,
 }
@@ -1873,6 +1892,35 @@ pub enum ExpansionError {
         first_span: Span,
         second_span: Span,
     },
+    /// A local macro declaration duplicated an existing declaration.
+    DuplicateMacroDeclaration {
+        name: Box<str>,
+        first_span: Span,
+        second_span: Span,
+    },
+    /// A macro invocation did not resolve to a local macro declaration.
+    UnknownMacroInvocation { span: Span, name: Box<str> },
+    /// A macro invocation used syntax outside the Phase 172 executable MVP subset.
+    UnsupportedMacroInvocation { span: Span, name: Box<str> },
+    /// A macro invocation provided the wrong number of expression arguments.
+    MacroArityMismatch {
+        span: Span,
+        name: Box<str>,
+        expected: usize,
+        actual: usize,
+    },
+    /// A macro template used syntax outside the expression-template MVP whitelist.
+    UnsupportedMacroTemplate {
+        span: Span,
+        name: Box<str>,
+        reason: Box<str>,
+    },
+    /// Recursive macro expansion exceeded the conservative explicit depth bound.
+    MacroExpansionDepthExceeded {
+        span: Span,
+        name: Box<str>,
+        depth: usize,
+    },
     /// Macro invocation is parsed for diagnostics but macro execution is deferred.
     DeferredMacroInvocation { span: Span, name: Box<str> },
 }
@@ -1891,15 +1939,115 @@ impl std::fmt::Display for ExpansionError {
                 f,
                 "conflicting precedence or associativity for notation `{operator}`"
             ),
+            ExpansionError::DuplicateMacroDeclaration { name, .. } => {
+                write!(f, "duplicate macro declaration for `{name}`")
+            }
+            ExpansionError::UnknownMacroInvocation { name, .. } => {
+                write!(f, "unknown local macro invocation `{name}!`")
+            }
+            ExpansionError::UnsupportedMacroInvocation { name, .. } => write!(
+                f,
+                "macro invocation `{name}!` uses unsupported Phase 172 MVP syntax"
+            ),
+            ExpansionError::MacroArityMismatch {
+                name,
+                expected,
+                actual,
+                ..
+            } => write!(
+                f,
+                "macro invocation `{name}!` expected {expected} argument(s), got {actual}"
+            ),
+            ExpansionError::UnsupportedMacroTemplate { name, reason, .. } => {
+                write!(
+                    f,
+                    "macro `{name}` uses unsupported template syntax: {reason}"
+                )
+            }
+            ExpansionError::MacroExpansionDepthExceeded { name, depth, .. } => write!(
+                f,
+                "macro expansion depth limit exceeded while expanding `{name}!` at depth {depth}"
+            ),
             ExpansionError::DeferredMacroInvocation { name, .. } => write!(
                 f,
-                "macro invocation `{name}!` is unsupported until macro expansion is implemented"
+                "unexpanded macro invocation carrier `{name}!` reached an expanded-surface boundary"
             ),
         }
     }
 }
 
 impl std::error::Error for ExpansionError {}
+
+/// Local macro table built during parsed-surface expansion.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct LocalMacroTable {
+    entries: Vec<LocalMacroEntry>,
+}
+
+/// Resolved local macro declaration row.
+#[derive(Debug, Clone, PartialEq)]
+pub struct LocalMacroEntry {
+    /// Local macro name.
+    pub name: Name,
+    /// Macro parameter names.
+    pub params: Vec<Name>,
+    /// Parsed expression template body.
+    pub body: Expr,
+    /// Source span of the declaration.
+    pub span: Span,
+}
+
+impl LocalMacroTable {
+    /// Resolve an unqualified macro invocation name against local declarations.
+    pub fn resolve(&self, name: &str) -> Option<&LocalMacroEntry> {
+        self.entries
+            .iter()
+            .find(|entry| entry.name.as_ref() == name)
+    }
+
+    /// Iterate entries in source order.
+    pub fn entries(&self) -> impl Iterator<Item = &LocalMacroEntry> {
+        self.entries.iter()
+    }
+}
+
+/// Build the local macro table for a parsed module.
+pub fn build_local_macro_table(module: &ModuleFile) -> Result<LocalMacroTable, ExpansionError> {
+    build_local_macro_table_for_definitions(&module.definitions)
+}
+
+fn build_local_macro_table_for_definitions(
+    definitions: &[Definition],
+) -> Result<LocalMacroTable, ExpansionError> {
+    let mut table = LocalMacroTable::default();
+    collect_macro_entries(definitions, &mut table)?;
+    Ok(table)
+}
+
+fn collect_macro_entries(
+    definitions: &[Definition],
+    table: &mut LocalMacroTable,
+) -> Result<(), ExpansionError> {
+    for definition in definitions {
+        let Definition::Macro(decl) = definition else {
+            continue;
+        };
+        if let Some(existing) = table.resolve(decl.name.as_ref()) {
+            return Err(ExpansionError::DuplicateMacroDeclaration {
+                name: decl.name.clone(),
+                first_span: existing.span,
+                second_span: decl.span,
+            });
+        }
+        table.entries.push(LocalMacroEntry {
+            name: decl.name.clone(),
+            params: decl.params.clone(),
+            body: decl.body.clone(),
+            span: decl.span,
+        });
+    }
+    Ok(())
+}
 
 /// Local notation table built during parsed-surface expansion.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -2011,6 +2159,7 @@ pub fn expand_surface_module(
     mut module: ModuleFile,
 ) -> Result<ExpandedSurfaceModule, ExpansionError> {
     let mut origins = Vec::new();
+    expand_macros_in_module(&mut module, &mut origins)?;
     elaborate_operator_sections_in_module(&mut module, &mut origins)?;
     if let Some(section) = find_operator_section_in_module(&module) {
         return Err(ExpansionError::UnresolvedOperatorSection {
@@ -2028,6 +2177,987 @@ pub fn expand_surface_module(
         module,
         diagnostics: Vec::new(),
         origins,
+    })
+}
+
+const MACRO_EXPANSION_DEPTH_LIMIT: usize = 16;
+
+fn expand_macros_in_module(
+    module: &mut ModuleFile,
+    origins: &mut Vec<ExpandedSurfaceOrigin>,
+) -> Result<(), ExpansionError> {
+    let table = build_local_macro_table_for_definitions(&module.definitions)?;
+    let notation_table = build_local_notation_table_for_definitions(&module.definitions)?;
+    for definition in &mut module.definitions {
+        expand_macros_in_definition(definition, &table, &notation_table, origins, 0)?;
+    }
+    for decl in &mut module.module_decls {
+        if let crate::module::ModuleSource::Inline(definitions) = &mut decl.source {
+            let inline_table = build_local_macro_table_for_definitions(definitions)?;
+            let inline_notation_table = build_local_notation_table_for_definitions(definitions)?;
+            for definition in definitions {
+                expand_macros_in_definition(
+                    definition,
+                    &inline_table,
+                    &inline_notation_table,
+                    origins,
+                    0,
+                )?;
+            }
+        }
+    }
+    if let Some(workflow) = &mut module.workflow {
+        expand_macros_in_workflow_def(workflow, &table, &notation_table, origins, 0)?;
+    }
+    Ok(())
+}
+
+fn expand_macros_in_definition(
+    definition: &mut Definition,
+    table: &LocalMacroTable,
+    notation_table: &LocalNotationTable,
+    origins: &mut Vec<ExpandedSurfaceOrigin>,
+    depth: usize,
+) -> Result<(), ExpansionError> {
+    match definition {
+        Definition::Function(def) => {
+            expand_macros_in_expr(&mut def.body, table, notation_table, origins, depth)
+        }
+        Definition::Macro(_) => Ok(()),
+        Definition::Law(def) => {
+            expand_macros_in_expr(&mut def.proposition, table, notation_table, origins, depth)
+        }
+        Definition::CapabilityImplementation(def) => {
+            for operation in &mut def.operations {
+                expand_macros_in_expr(&mut operation.body, table, notation_table, origins, depth)?;
+            }
+            Ok(())
+        }
+        Definition::Impl(def) => {
+            for method in &mut def.methods {
+                expand_macros_in_expr(&mut method.body, table, notation_table, origins, depth)?;
+            }
+            for proof in &mut def.proofs {
+                expand_macros_in_proof(proof, table, notation_table, origins, depth)?;
+            }
+            Ok(())
+        }
+        Definition::Proof(def) => {
+            expand_macros_in_proof(def, table, notation_table, origins, depth)
+        }
+        Definition::Policy(def) => {
+            if let Some(expr) = &mut def.where_clause {
+                expand_macros_in_expr(expr, table, notation_table, origins, depth)?;
+            }
+            for field in &mut def.fields {
+                if let Some(expr) = &mut field.default {
+                    expand_macros_in_expr(expr, table, notation_table, origins, depth)?;
+                }
+            }
+            Ok(())
+        }
+        Definition::Capability(def) => {
+            for constraint in &mut def.constraints {
+                for arg in &mut constraint.predicate.args {
+                    expand_macros_in_expr(arg, table, notation_table, origins, depth)?;
+                }
+            }
+            Ok(())
+        }
+        Definition::Proxy(def) => {
+            expand_macros_in_workflow(&mut def.body, table, notation_table, origins, depth)
+        }
+        Definition::Interface(def) => {
+            for law in &mut def.laws {
+                expand_macros_in_expr(&mut law.proposition, table, notation_table, origins, depth)?;
+            }
+            Ok(())
+        }
+        Definition::Notation(_)
+        | Definition::CapabilityInterface(_)
+        | Definition::ResourceType(_)
+        | Definition::Type(_)
+        | Definition::DataKind(_)
+        | Definition::TypeFn(_)
+        | Definition::PropositionPredicate(_)
+        | Definition::Role(_)
+        | Definition::BuiltinFn(_)
+        | Definition::SealedDomain(_) => Ok(()),
+    }
+}
+
+fn expand_macros_in_proof(
+    proof: &mut ProofDef,
+    table: &LocalMacroTable,
+    notation_table: &LocalNotationTable,
+    origins: &mut Vec<ExpandedSurfaceOrigin>,
+    depth: usize,
+) -> Result<(), ExpansionError> {
+    match &mut proof.body {
+        ProofBody::Expr(expr) => expand_macros_in_expr(expr, table, notation_table, origins, depth),
+        ProofBody::ByTestProperty { strategies } => {
+            for strategy in strategies {
+                expand_macros_in_expr(
+                    &mut strategy.strategy_expr,
+                    table,
+                    notation_table,
+                    origins,
+                    depth,
+                )?;
+            }
+            Ok(())
+        }
+        ProofBody::ByDefinition | ProofBody::ByTest { .. } | ProofBody::ByTestSmallWorld => Ok(()),
+    }
+}
+
+fn expand_macros_in_workflow_def(
+    workflow: &mut WorkflowDef,
+    table: &LocalMacroTable,
+    notation_table: &LocalNotationTable,
+    origins: &mut Vec<ExpandedSurfaceOrigin>,
+    depth: usize,
+) -> Result<(), ExpansionError> {
+    for binding in &mut workflow.used_bindings {
+        expand_macros_in_expr(
+            &mut binding.implementation,
+            table,
+            notation_table,
+            origins,
+            depth,
+        )?;
+    }
+    for event in &mut workflow.header_events {
+        match event {
+            WorkflowHeaderEvent::Uses(binding) => {
+                expand_macros_in_expr(
+                    &mut binding.implementation,
+                    table,
+                    notation_table,
+                    origins,
+                    depth,
+                )?;
+            }
+            WorkflowHeaderEvent::Requires { expr, .. }
+            | WorkflowHeaderEvent::Ensures { expr, .. } => {
+                expand_macros_in_expr(expr, table, notation_table, origins, depth)?;
+            }
+            WorkflowHeaderEvent::PlaysRole(_)
+            | WorkflowHeaderEvent::Capabilities(_)
+            | WorkflowHeaderEvent::Owns(_) => {}
+        }
+    }
+    expand_macros_in_workflow(&mut workflow.body, table, notation_table, origins, depth)
+}
+
+fn expand_macros_in_workflow(
+    workflow: &mut Workflow,
+    table: &LocalMacroTable,
+    notation_table: &LocalNotationTable,
+    origins: &mut Vec<ExpandedSurfaceOrigin>,
+    depth: usize,
+) -> Result<(), ExpansionError> {
+    match workflow {
+        Workflow::Observe { continuation, .. } | Workflow::Propose { continuation, .. } => {
+            if let Some(continuation) = continuation {
+                expand_macros_in_workflow(continuation, table, notation_table, origins, depth)?;
+            }
+        }
+        Workflow::Check {
+            target,
+            continuation,
+            ..
+        } => {
+            match target {
+                CheckTarget::Obligation(obligation) => {
+                    expand_macros_in_expr(
+                        &mut obligation.condition,
+                        table,
+                        notation_table,
+                        origins,
+                        depth,
+                    )?;
+                }
+                CheckTarget::Policy(policy) => {
+                    for (_, expr) in &mut policy.fields {
+                        expand_macros_in_expr(expr, table, notation_table, origins, depth)?;
+                    }
+                }
+            }
+            if let Some(continuation) = continuation {
+                expand_macros_in_workflow(continuation, table, notation_table, origins, depth)?;
+            }
+        }
+        Workflow::Oblige { .. } | Workflow::Done { .. } => {}
+        Workflow::Orient {
+            expr, continuation, ..
+        } => {
+            expand_macros_in_expr(expr, table, notation_table, origins, depth)?;
+            if let Some(continuation) = continuation {
+                expand_macros_in_workflow(continuation, table, notation_table, origins, depth)?;
+            }
+        }
+        Workflow::Decide {
+            expr,
+            then_branch,
+            else_branch,
+            ..
+        } => {
+            expand_macros_in_expr(expr, table, notation_table, origins, depth)?;
+            expand_macros_in_workflow(then_branch, table, notation_table, origins, depth)?;
+            if let Some(else_branch) = else_branch {
+                expand_macros_in_workflow(else_branch, table, notation_table, origins, depth)?;
+            }
+        }
+        Workflow::Act {
+            action,
+            guard,
+            continuation,
+            ..
+        } => {
+            for arg in &mut action.args {
+                expand_macros_in_expr(arg, table, notation_table, origins, depth)?;
+            }
+            if let Some(guard) = guard {
+                expand_macros_in_guard(guard, table, notation_table, origins, depth)?;
+            }
+            if let Some(continuation) = continuation {
+                expand_macros_in_workflow(continuation, table, notation_table, origins, depth)?;
+            }
+        }
+        Workflow::Let {
+            expr, continuation, ..
+        } => {
+            expand_macros_in_expr(expr, table, notation_table, origins, depth)?;
+            if let Some(continuation) = continuation {
+                expand_macros_in_workflow(continuation, table, notation_table, origins, depth)?;
+            }
+        }
+        Workflow::If {
+            condition,
+            then_branch,
+            else_branch,
+            ..
+        } => {
+            expand_macros_in_expr(condition, table, notation_table, origins, depth)?;
+            expand_macros_in_workflow(then_branch, table, notation_table, origins, depth)?;
+            if let Some(else_branch) = else_branch {
+                expand_macros_in_workflow(else_branch, table, notation_table, origins, depth)?;
+            }
+        }
+        Workflow::For {
+            collection, body, ..
+        } => {
+            expand_macros_in_expr(collection, table, notation_table, origins, depth)?;
+            expand_macros_in_workflow(body, table, notation_table, origins, depth)?;
+        }
+        Workflow::With { body, .. } | Workflow::Must { body, .. } => {
+            expand_macros_in_workflow(body, table, notation_table, origins, depth)?;
+        }
+        Workflow::Maybe {
+            primary, fallback, ..
+        } => {
+            expand_macros_in_workflow(primary, table, notation_table, origins, depth)?;
+            expand_macros_in_workflow(fallback, table, notation_table, origins, depth)?;
+        }
+        Workflow::Seq { first, second, .. } => {
+            expand_macros_in_workflow(first, table, notation_table, origins, depth)?;
+            expand_macros_in_workflow(second, table, notation_table, origins, depth)?;
+        }
+        Workflow::Ret { expr, .. } | Workflow::Resume { expr, .. } => {
+            expand_macros_in_expr(expr, table, notation_table, origins, depth)?;
+        }
+        Workflow::Set {
+            value,
+            continuation,
+            ..
+        }
+        | Workflow::Send {
+            value,
+            continuation,
+            ..
+        } => {
+            expand_macros_in_expr(value, table, notation_table, origins, depth)?;
+            if let Some(continuation) = continuation {
+                expand_macros_in_workflow(continuation, table, notation_table, origins, depth)?;
+            }
+        }
+        Workflow::Receive { arms, .. } => {
+            for arm in arms {
+                if let Some(guard) = &mut arm.guard {
+                    expand_macros_in_expr(guard, table, notation_table, origins, depth)?;
+                }
+                expand_macros_in_workflow(&mut arm.body, table, notation_table, origins, depth)?;
+            }
+        }
+        Workflow::Yield { expr, arms, .. } => {
+            expand_macros_in_expr(expr, table, notation_table, origins, depth)?;
+            for arm in arms {
+                expand_macros_in_workflow(&mut arm.body, table, notation_table, origins, depth)?;
+            }
+        }
+    }
+    Ok(())
+}
+
+fn expand_macros_in_guard(
+    guard: &mut Guard,
+    table: &LocalMacroTable,
+    notation_table: &LocalNotationTable,
+    origins: &mut Vec<ExpandedSurfaceOrigin>,
+    depth: usize,
+) -> Result<(), ExpansionError> {
+    match guard {
+        Guard::Always | Guard::Never => {}
+        Guard::Pred(predicate) => {
+            for arg in &mut predicate.args {
+                expand_macros_in_expr(arg, table, notation_table, origins, depth)?;
+            }
+        }
+        Guard::And(left, right) | Guard::Or(left, right) => {
+            expand_macros_in_guard(left, table, notation_table, origins, depth)?;
+            expand_macros_in_guard(right, table, notation_table, origins, depth)?;
+        }
+        Guard::Not(inner) => {
+            expand_macros_in_guard(inner, table, notation_table, origins, depth)?;
+        }
+    }
+    Ok(())
+}
+
+fn expand_macros_in_expr(
+    expr: &mut Expr,
+    table: &LocalMacroTable,
+    notation_table: &LocalNotationTable,
+    origins: &mut Vec<ExpandedSurfaceOrigin>,
+    depth: usize,
+) -> Result<(), ExpansionError> {
+    expand_macros_in_expr_with_parent(expr, table, notation_table, origins, depth, None)
+}
+
+fn expand_macros_in_expr_with_parent(
+    expr: &mut Expr,
+    table: &LocalMacroTable,
+    notation_table: &LocalNotationTable,
+    origins: &mut Vec<ExpandedSurfaceOrigin>,
+    depth: usize,
+    parent: Option<&SurfaceOrigin>,
+) -> Result<(), ExpansionError> {
+    match expr {
+        Expr::MacroInvocation { invocation } => {
+            let expanded =
+                expand_macro_invocation(invocation, table, notation_table, origins, depth, parent)?;
+            *expr = expanded;
+            Ok(())
+        }
+        Expr::OperatorSection { section } => {
+            if let Some(left) = &mut section.left {
+                expand_macros_in_expr_with_parent(
+                    left,
+                    table,
+                    notation_table,
+                    origins,
+                    depth,
+                    parent,
+                )?;
+            }
+            if let Some(right) = &mut section.right {
+                expand_macros_in_expr_with_parent(
+                    right,
+                    table,
+                    notation_table,
+                    origins,
+                    depth,
+                    parent,
+                )?;
+            }
+            Ok(())
+        }
+        Expr::FieldAccess { base, .. } => {
+            expand_macros_in_expr_with_parent(base, table, notation_table, origins, depth, parent)
+        }
+        Expr::IndexAccess { base, index, .. } => {
+            expand_macros_in_expr_with_parent(base, table, notation_table, origins, depth, parent)?;
+            expand_macros_in_expr_with_parent(index, table, notation_table, origins, depth, parent)
+        }
+        Expr::Unary { operand, .. } => expand_macros_in_expr_with_parent(
+            operand,
+            table,
+            notation_table,
+            origins,
+            depth,
+            parent,
+        ),
+        Expr::Binary { left, right, .. } => {
+            expand_macros_in_expr_with_parent(left, table, notation_table, origins, depth, parent)?;
+            expand_macros_in_expr_with_parent(right, table, notation_table, origins, depth, parent)
+        }
+        Expr::Call { args, .. } | Expr::List { items: args, .. } => {
+            for arg in args {
+                expand_macros_in_expr_with_parent(
+                    arg,
+                    table,
+                    notation_table,
+                    origins,
+                    depth,
+                    parent,
+                )?;
+            }
+            Ok(())
+        }
+        Expr::Constructor {
+            fields, payload, ..
+        } => {
+            for (_, expr) in fields {
+                expand_macros_in_expr_with_parent(
+                    expr,
+                    table,
+                    notation_table,
+                    origins,
+                    depth,
+                    parent,
+                )?;
+            }
+            match payload {
+                ConstructorPayload::Tuple(items) => {
+                    for item in items {
+                        expand_macros_in_expr_with_parent(
+                            item,
+                            table,
+                            notation_table,
+                            origins,
+                            depth,
+                            parent,
+                        )?;
+                    }
+                }
+                ConstructorPayload::Record(fields) => {
+                    for (_, expr) in fields {
+                        expand_macros_in_expr_with_parent(
+                            expr,
+                            table,
+                            notation_table,
+                            origins,
+                            depth,
+                            parent,
+                        )?;
+                    }
+                }
+                ConstructorPayload::Unit => {}
+            }
+            Ok(())
+        }
+        Expr::FnApply { func, args, .. } => {
+            expand_macros_in_expr_with_parent(func, table, notation_table, origins, depth, parent)?;
+            for arg in args {
+                expand_macros_in_expr_with_parent(
+                    arg,
+                    table,
+                    notation_table,
+                    origins,
+                    depth,
+                    parent,
+                )?;
+            }
+            Ok(())
+        }
+        Expr::If {
+            condition,
+            then_branch,
+            else_branch,
+            ..
+        } => {
+            expand_macros_in_expr_with_parent(
+                condition,
+                table,
+                notation_table,
+                origins,
+                depth,
+                parent,
+            )?;
+            expand_macros_in_expr_with_parent(
+                then_branch,
+                table,
+                notation_table,
+                origins,
+                depth,
+                parent,
+            )?;
+            if let Some(else_branch) = else_branch {
+                expand_macros_in_expr_with_parent(
+                    else_branch,
+                    table,
+                    notation_table,
+                    origins,
+                    depth,
+                    parent,
+                )?;
+            }
+            Ok(())
+        }
+        Expr::Match {
+            scrutinee, arms, ..
+        } => {
+            expand_macros_in_expr_with_parent(
+                scrutinee,
+                table,
+                notation_table,
+                origins,
+                depth,
+                parent,
+            )?;
+            for arm in arms {
+                expand_macros_in_expr_with_parent(
+                    &mut arm.body,
+                    table,
+                    notation_table,
+                    origins,
+                    depth,
+                    parent,
+                )?;
+            }
+            Ok(())
+        }
+        Expr::IfLet {
+            expr,
+            then_branch,
+            else_branch,
+            ..
+        } => {
+            expand_macros_in_expr_with_parent(expr, table, notation_table, origins, depth, parent)?;
+            expand_macros_in_expr_with_parent(
+                then_branch,
+                table,
+                notation_table,
+                origins,
+                depth,
+                parent,
+            )?;
+            expand_macros_in_expr_with_parent(
+                else_branch,
+                table,
+                notation_table,
+                origins,
+                depth,
+                parent,
+            )
+        }
+        Expr::Fail { payload, .. } => expand_macros_in_expr_with_parent(
+            payload,
+            table,
+            notation_table,
+            origins,
+            depth,
+            parent,
+        ),
+        Expr::WithError { body, arms, .. } => {
+            expand_macros_in_expr_with_parent(body, table, notation_table, origins, depth, parent)?;
+            for arm in arms {
+                expand_macros_in_expr_with_parent(
+                    &mut arm.body,
+                    table,
+                    notation_table,
+                    origins,
+                    depth,
+                    parent,
+                )?;
+            }
+            Ok(())
+        }
+        Expr::Block {
+            statements,
+            tail_expr,
+            ..
+        } => {
+            for stmt in statements {
+                match stmt {
+                    BlockStmt::Let { expr, .. } => {
+                        expand_macros_in_expr_with_parent(
+                            expr,
+                            table,
+                            notation_table,
+                            origins,
+                            depth,
+                            parent,
+                        )?;
+                    }
+                }
+            }
+            if let Some(tail_expr) = tail_expr {
+                expand_macros_in_expr_with_parent(
+                    tail_expr,
+                    table,
+                    notation_table,
+                    origins,
+                    depth,
+                    parent,
+                )?;
+            }
+            Ok(())
+        }
+        Expr::FnDef { body, .. } => {
+            expand_macros_in_expr_with_parent(body, table, notation_table, origins, depth, parent)
+        }
+        Expr::ActBlock { stmts, .. } => {
+            for stmt in stmts {
+                match stmt {
+                    ActStmt::Bind { value, .. } | ActStmt::Return { value, .. } => {
+                        expand_macros_in_expr_with_parent(
+                            value,
+                            table,
+                            notation_table,
+                            origins,
+                            depth,
+                            parent,
+                        )?;
+                    }
+                }
+            }
+            Ok(())
+        }
+        Expr::DoBlock { stmts, .. } => {
+            for stmt in stmts {
+                match stmt {
+                    DoStmt::Let { value, .. }
+                    | DoStmt::Bind { value, .. }
+                    | DoStmt::WorkflowRequires { expr: value, .. }
+                    | DoStmt::WorkflowEnsures { expr: value, .. }
+                    | DoStmt::Return { value, .. } => {
+                        expand_macros_in_expr_with_parent(
+                            value,
+                            table,
+                            notation_table,
+                            origins,
+                            depth,
+                            parent,
+                        )?;
+                    }
+                }
+            }
+            Ok(())
+        }
+        Expr::Comprehension {
+            result, qualifiers, ..
+        } => {
+            expand_macros_in_expr_with_parent(
+                result,
+                table,
+                notation_table,
+                origins,
+                depth,
+                parent,
+            )?;
+            for qualifier in qualifiers {
+                match qualifier {
+                    ComprehensionQualifier::Bind { value, .. }
+                    | ComprehensionQualifier::DiscardBind { value, .. }
+                    | ComprehensionQualifier::Let { value, .. } => {
+                        expand_macros_in_expr_with_parent(
+                            value,
+                            table,
+                            notation_table,
+                            origins,
+                            depth,
+                            parent,
+                        )?;
+                    }
+                }
+            }
+            Ok(())
+        }
+        Expr::Literal(_)
+        | Expr::Variable { .. }
+        | Expr::Policy(_)
+        | Expr::CheckObligation { .. }
+        | Expr::Panic { .. } => Ok(()),
+    }
+}
+
+fn expand_macro_invocation(
+    invocation: &MacroInvocation,
+    table: &LocalMacroTable,
+    notation_table: &LocalNotationTable,
+    origins: &mut Vec<ExpandedSurfaceOrigin>,
+    depth: usize,
+    parent: Option<&SurfaceOrigin>,
+) -> Result<Expr, ExpansionError> {
+    if depth >= MACRO_EXPANSION_DEPTH_LIMIT {
+        return Err(ExpansionError::MacroExpansionDepthExceeded {
+            span: invocation.span,
+            name: invocation.name.clone(),
+            depth,
+        });
+    }
+    let Some(entry) = table.resolve(invocation.name.as_ref()) else {
+        return Err(ExpansionError::UnknownMacroInvocation {
+            span: invocation.span,
+            name: invocation.name.clone(),
+        });
+    };
+    if invocation.delimiter != MacroDelimiter::Paren || invocation.args.is_none() {
+        return Err(ExpansionError::UnsupportedMacroInvocation {
+            span: invocation.span,
+            name: invocation.name.clone(),
+        });
+    }
+    let args = invocation.args.as_ref().expect("checked Some above");
+    if args.len() != entry.params.len() {
+        return Err(ExpansionError::MacroArityMismatch {
+            span: invocation.span,
+            name: invocation.name.clone(),
+            expected: entry.params.len(),
+            actual: args.len(),
+        });
+    }
+    ensure_macro_template_supported(&entry.body, entry)?;
+    let mut expanded = substitute_macro_template(&entry.body, &entry.params, args);
+    let expansion_id = ExpansionId(
+        u32::try_from(origins.len() + 1).expect("surface expansion origin count exceeds u32"),
+    );
+    let macro_origin = SurfaceOrigin::MacroExpansion {
+        call_span: invocation.span,
+        expansion_id: entry.name.clone(),
+    };
+    origins.push(ExpandedSurfaceOrigin {
+        expansion_id,
+        generated_span: invocation.span,
+        origin: macro_origin.clone(),
+        parent: parent.cloned().map(Box::new),
+    });
+    expand_macros_in_expr_with_parent(
+        &mut expanded,
+        table,
+        notation_table,
+        origins,
+        depth + 1,
+        Some(&macro_origin),
+    )?;
+    elaborate_operator_sections_in_expr_with_parent(
+        &mut expanded,
+        notation_table,
+        origins,
+        Some(&macro_origin),
+    );
+    Ok(expanded)
+}
+
+fn substitute_macro_template(template: &Expr, params: &[Name], args: &[Expr]) -> Expr {
+    let parameter_index = match template {
+        Expr::Variable { name, .. } => params.iter().position(|param| param == name),
+        _ => None,
+    };
+    if let Some(index) = parameter_index {
+        return args[index].clone();
+    }
+    match template {
+        Expr::Unary { op, operand, span } => Expr::Unary {
+            op: *op,
+            operand: Box::new(substitute_macro_template(operand, params, args)),
+            span: *span,
+        },
+        Expr::Binary {
+            op,
+            raw_operator,
+            left,
+            right,
+            span,
+        } => Expr::Binary {
+            op: *op,
+            raw_operator: raw_operator.clone(),
+            left: Box::new(substitute_macro_template(left, params, args)),
+            right: Box::new(substitute_macro_template(right, params, args)),
+            span: *span,
+        },
+        Expr::Call {
+            func,
+            module,
+            args: call_args,
+            span,
+        } => Expr::Call {
+            func: func.clone(),
+            module: module.clone(),
+            args: call_args
+                .iter()
+                .map(|arg| substitute_macro_template(arg, params, args))
+                .collect(),
+            span: *span,
+        },
+        Expr::FnApply {
+            func,
+            args: apply_args,
+            span,
+        } => Expr::FnApply {
+            func: Box::new(substitute_macro_template(func, params, args)),
+            args: apply_args
+                .iter()
+                .map(|arg| substitute_macro_template(arg, params, args))
+                .collect(),
+            span: *span,
+        },
+        Expr::FieldAccess { base, field, span } => Expr::FieldAccess {
+            base: Box::new(substitute_macro_template(base, params, args)),
+            field: field.clone(),
+            span: *span,
+        },
+        Expr::IndexAccess { base, index, span } => Expr::IndexAccess {
+            base: Box::new(substitute_macro_template(base, params, args)),
+            index: Box::new(substitute_macro_template(index, params, args)),
+            span: *span,
+        },
+        Expr::Constructor {
+            name,
+            fields,
+            payload,
+            span,
+        } => Expr::Constructor {
+            name: name.clone(),
+            fields: fields
+                .iter()
+                .map(|(name, expr)| (name.clone(), substitute_macro_template(expr, params, args)))
+                .collect(),
+            payload: substitute_constructor_payload(payload, params, args),
+            span: *span,
+        },
+        Expr::OperatorSection { section } => Expr::OperatorSection {
+            section: substitute_operator_section(section, params, args),
+        },
+        Expr::MacroInvocation { invocation } => Expr::MacroInvocation {
+            invocation: MacroInvocation {
+                name: invocation.name.clone(),
+                delimiter: invocation.delimiter,
+                raw_body: invocation.raw_body.clone(),
+                args: invocation.args.as_ref().map(|macro_args| {
+                    macro_args
+                        .iter()
+                        .map(|arg| substitute_macro_template(arg, params, args))
+                        .collect()
+                }),
+                span: invocation.span,
+            },
+        },
+        Expr::If {
+            condition,
+            then_branch,
+            else_branch,
+            span,
+        } => Expr::If {
+            condition: Box::new(substitute_macro_template(condition, params, args)),
+            then_branch: Box::new(substitute_macro_template(then_branch, params, args)),
+            else_branch: else_branch
+                .as_ref()
+                .map(|expr| Box::new(substitute_macro_template(expr, params, args))),
+            span: *span,
+        },
+        Expr::Fail { payload, span } => Expr::Fail {
+            payload: Box::new(substitute_macro_template(payload, params, args)),
+            span: *span,
+        },
+        Expr::List { items, span } => Expr::List {
+            items: items
+                .iter()
+                .map(|item| substitute_macro_template(item, params, args))
+                .collect(),
+            span: *span,
+        },
+        other => other.clone(),
+    }
+}
+
+fn substitute_constructor_payload(
+    payload: &ConstructorPayload,
+    params: &[Name],
+    args: &[Expr],
+) -> ConstructorPayload {
+    match payload {
+        ConstructorPayload::Unit => ConstructorPayload::Unit,
+        ConstructorPayload::Tuple(items) => ConstructorPayload::Tuple(
+            items
+                .iter()
+                .map(|item| substitute_macro_template(item, params, args))
+                .collect(),
+        ),
+        ConstructorPayload::Record(fields) => ConstructorPayload::Record(
+            fields
+                .iter()
+                .map(|(name, expr)| (name.clone(), substitute_macro_template(expr, params, args)))
+                .collect(),
+        ),
+    }
+}
+
+fn substitute_operator_section(
+    section: &OperatorSection,
+    params: &[Name],
+    args: &[Expr],
+) -> OperatorSection {
+    OperatorSection {
+        kind: section.kind.clone(),
+        operator: section.operator.clone(),
+        left: section
+            .left
+            .as_ref()
+            .map(|expr| Box::new(substitute_macro_template(expr, params, args))),
+        right: section
+            .right
+            .as_ref()
+            .map(|expr| Box::new(substitute_macro_template(expr, params, args))),
+        span: section.span,
+    }
+}
+
+fn ensure_macro_template_supported(
+    template: &Expr,
+    entry: &LocalMacroEntry,
+) -> Result<(), ExpansionError> {
+    match template {
+        Expr::Match { span, .. } => unsupported_macro_template(entry, *span, "match"),
+        Expr::IfLet { span, .. } => unsupported_macro_template(entry, *span, "if-let"),
+        Expr::If { span, .. } => unsupported_macro_template(entry, *span, "if"),
+        Expr::WithError { span, .. } => unsupported_macro_template(entry, *span, "with_error"),
+        Expr::Fail { span, .. } => unsupported_macro_template(entry, *span, "fail"),
+        Expr::Block { span, .. } => unsupported_macro_template(entry, *span, "block"),
+        Expr::FnDef { span, .. } => unsupported_macro_template(entry, *span, "function/binder"),
+        Expr::ActBlock { span, .. } => unsupported_macro_template(entry, *span, "act block"),
+        Expr::DoBlock { span, .. } => unsupported_macro_template(entry, *span, "do block"),
+        Expr::Comprehension { span, .. } => {
+            unsupported_macro_template(entry, *span, "comprehension")
+        }
+        Expr::Variable { span, name } => {
+            if entry.params.iter().any(|param| param == name) {
+                Ok(())
+            } else {
+                unsupported_macro_template(entry, *span, "free variable")
+            }
+        }
+        Expr::MacroInvocation { invocation } => {
+            if let Some(args) = &invocation.args {
+                for arg in args {
+                    ensure_macro_template_supported(arg, entry)?;
+                }
+            }
+            Ok(())
+        }
+        _ => {
+            let mut error = None;
+            visit_expr(template, &mut |expr| {
+                if error.is_none() && !std::ptr::eq(expr, template) {
+                    error = ensure_macro_template_supported(expr, entry).err();
+                }
+            });
+            error.map_or(Ok(()), Err)
+        }
+    }
+}
+
+fn unsupported_macro_template(
+    entry: &LocalMacroEntry,
+    span: Span,
+    reason: &'static str,
+) -> Result<(), ExpansionError> {
+    Err(ExpansionError::UnsupportedMacroTemplate {
+        span,
+        name: entry.name.clone(),
+        reason: reason.into(),
     })
 }
 
@@ -2105,6 +3235,7 @@ fn elaborate_operator_sections_in_definition(
             elaborate_operator_sections_in_expr(&mut def.proposition, table, origins)
         }
         Definition::Proof(def) => elaborate_operator_sections_in_proof(def, table, origins),
+        Definition::Macro(_) => {}
         Definition::Notation(_)
         | Definition::CapabilityInterface(_)
         | Definition::ResourceType(_)
@@ -2862,26 +3993,43 @@ fn generated_section_name(expansion_id: ExpansionId, role: &str) -> String {
 
 fn find_operator_section_in_module(module: &ModuleFile) -> Option<&OperatorSection> {
     let mut found = None;
-    visit_exprs_in_module(module, &mut |expr| {
-        if found.is_none()
-            && let Expr::OperatorSection { section } = expr
-        {
-            found = Some(section);
-        }
+    visit_expanded_boundary_exprs_in_module(module, &mut |expr| match expr {
+        Expr::OperatorSection { section } if found.is_none() => found = Some(section),
+        _ => {}
     });
     found
 }
 
 fn find_macro_invocation_in_module(module: &ModuleFile) -> Option<&MacroInvocation> {
     let mut found = None;
-    visit_exprs_in_module(module, &mut |expr| {
-        if found.is_none()
-            && let Expr::MacroInvocation { invocation } = expr
-        {
-            found = Some(invocation);
-        }
+    visit_expanded_boundary_exprs_in_module(module, &mut |expr| match expr {
+        Expr::MacroInvocation { invocation } if found.is_none() => found = Some(invocation),
+        _ => {}
     });
     found
+}
+
+fn visit_expanded_boundary_exprs_in_module<'a, F>(module: &'a ModuleFile, visitor: &mut F)
+where
+    F: FnMut(&'a Expr),
+{
+    for definition in &module.definitions {
+        if !matches!(definition, Definition::Macro(_)) {
+            visit_exprs_in_definition(definition, visitor);
+        }
+    }
+    for decl in &module.module_decls {
+        if let crate::module::ModuleSource::Inline(definitions) = &decl.source {
+            for definition in definitions {
+                if !matches!(definition, Definition::Macro(_)) {
+                    visit_exprs_in_definition(definition, visitor);
+                }
+            }
+        }
+    }
+    if let Some(workflow) = &module.workflow {
+        visit_exprs_in_workflow_def(workflow, visitor);
+    }
 }
 
 /// Visit every expression-bearing surface reachable from a module file.
@@ -2955,6 +4103,7 @@ where
         }
         Definition::Law(def) => visit_expr(&def.proposition, visitor),
         Definition::Proof(def) => visit_exprs_in_proof(def, visitor),
+        Definition::Macro(def) => visit_expr(&def.body, visitor),
         Definition::Notation(_)
         | Definition::CapabilityInterface(_)
         | Definition::ResourceType(_)

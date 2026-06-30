@@ -353,6 +353,12 @@ fn index_definition(index: &mut SymbolIndex, def: &ash_parser::surface::Definiti
             n.span.line,
             n.span.column,
         ),
+        Definition::Macro(m) => (
+            m.name.as_ref().to_string(),
+            SymbolKind::Function,
+            m.span.line,
+            m.span.column,
+        ),
         Definition::Function(f) => (
             f.name.as_ref().to_string(),
             SymbolKind::Function,

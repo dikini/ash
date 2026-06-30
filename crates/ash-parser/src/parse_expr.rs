@@ -1448,7 +1448,9 @@ fn parse_macro_invocation_after_bang(
     };
     let raw_body_start = open.len_utf8();
     let raw_body_end = end_byte - close.len_utf8();
-    let raw_body = source[raw_body_start..raw_body_end].into();
+    let raw_body_text = &source[raw_body_start..raw_body_end];
+    let args = parse_macro_invocation_args(delimiter, raw_body_text);
+    let raw_body = raw_body_text.into();
     for ch in source[..end_byte].chars() {
         input.state.advance(ch);
     }
@@ -1459,9 +1461,27 @@ fn parse_macro_invocation_after_bang(
             name,
             delimiter,
             raw_body,
+            args,
             span,
         },
     })
+}
+
+fn parse_macro_invocation_args(delimiter: MacroDelimiter, raw_body: &str) -> Option<Vec<Expr>> {
+    if delimiter != MacroDelimiter::Paren {
+        return None;
+    }
+    if raw_body.trim().is_empty() {
+        return Some(Vec::new());
+    }
+    let mut args_input = crate::input::new_input(raw_body);
+    let args = parse_args(&mut args_input).ok()?;
+    skip_whitespace_and_comments(&mut args_input);
+    if args_input.input.is_empty() {
+        Some(args)
+    } else {
+        None
+    }
 }
 
 fn parse_operator_section_expr(input: &mut ParseInput) -> ModalResult<Expr> {

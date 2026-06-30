@@ -63,6 +63,8 @@ fn definition_name(current_token: Option<&str>, def: &Definition) -> Option<Stri
     match def {
         Definition::Notation(n) if Some(n.pattern.raw.as_ref()) == current_token => None,
         Definition::Notation(n) => Some(n.pattern.raw.as_ref().to_string()),
+        Definition::Macro(m) if Some(m.name.as_ref()) == current_token => None,
+        Definition::Macro(m) => Some(m.name.as_ref().to_string()),
         Definition::Function(f) if Some(f.name.as_ref()) == current_token => None, // skip self
         Definition::Function(f) => Some(f.name.as_ref().to_string()),
         Definition::Capability(c) if Some(c.name.as_ref()) == current_token => None,
@@ -102,6 +104,7 @@ fn definition_name(current_token: Option<&str>, def: &Definition) -> Option<Stri
 const fn definition_kind(def: &Definition) -> CompletionItemKind {
     match def {
         Definition::Function(_)
+        | Definition::Macro(_)
         | Definition::BuiltinFn(_)
         | Definition::TypeFn(_)
         | Definition::PropositionPredicate(_) => CompletionItemKind::FUNCTION,

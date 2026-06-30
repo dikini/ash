@@ -2237,7 +2237,7 @@ fn collect_public_macro_summaries_for_definitions(
                 body_span: decl.body.span(),
             },
             hygiene_policy: MacroHygienePolicy::BinderFreeExpression,
-            typed_signature: decl.typed_signature.clone(),
+            typed_signature: entry.typed_signature.clone(),
             origin_span: decl.span,
         });
     }
@@ -2267,11 +2267,17 @@ fn collect_macro_entries(
                 second_span: decl.span,
             });
         }
+        let typed_signature = infer_macro_type_signature(
+            decl.typed_signature.clone(),
+            &decl.params,
+            &decl.body,
+            decl.span,
+        );
         table.entries.push(LocalMacroEntry {
             name: decl.name.clone(),
             params: decl.params.clone(),
             body: decl.body.clone(),
-            typed_signature: decl.typed_signature.clone(),
+            typed_signature,
             span: decl.span,
         });
     }
@@ -3220,6 +3226,38 @@ fn reparse_macro_token_tree_args(
     Ok(args)
 }
 
+fn infer_macro_type_signature(
+    explicit: Option<MacroTypeSignatureSummary>,
+    params: &[Name],
+    body: &Expr,
+    span: Span,
+) -> Option<MacroTypeSignatureSummary> {
+    let mut signature = explicit.unwrap_or_else(|| MacroTypeSignatureSummary {
+        param_types: vec![None; params.len()],
+        return_type: None,
+        span,
+    });
+
+    if signature.return_type.is_none() {
+        let param_env: Vec<(&Name, &Type)> = params
+            .iter()
+            .zip(signature.param_types.iter())
+            .filter_map(|(name, ty)| ty.as_ref().map(|ty| (name, ty)))
+            .collect();
+        signature.return_type = infer_bounded_macro_expr_type(body, &param_env);
+    }
+
+    if explicit_signature_has_information(&signature) {
+        Some(signature)
+    } else {
+        None
+    }
+}
+
+fn explicit_signature_has_information(signature: &MacroTypeSignatureSummary) -> bool {
+    signature.return_type.is_some() || signature.param_types.iter().any(Option::is_some)
+}
+
 fn check_typed_macro_signature(
     entry: &LocalMacroEntry,
     args: &[Expr],
@@ -3304,6 +3342,9 @@ fn infer_bounded_macro_expr_type(expr: &Expr, env: &[(&Name, &Type)]) -> Option<
         Expr::Binary {
             op, left, right, ..
         } => infer_bounded_macro_binary_type(op, left, right, env),
+        Expr::Call {
+            func, module, args, ..
+        } => infer_bounded_macro_call_type(func, module.as_ref(), args, env),
         Expr::FnDef {
             params,
             return_type,
@@ -3350,6 +3391,37 @@ fn infer_bounded_macro_binary_type(
         }
         _ => None,
     }
+}
+
+fn infer_bounded_macro_call_type(
+    func: &Name,
+    module: Option<&Name>,
+    args: &[Expr],
+    env: &[(&Name, &Type)],
+) -> Option<Type> {
+    if module.is_some() {
+        return None;
+    }
+    let arg_types = args
+        .iter()
+        .map(|arg| infer_bounded_macro_expr_type(arg, env))
+        .collect::<Option<Vec<_>>>()?;
+    match func.as_ref() {
+        "add" | "sub" | "mul" | "div" | "mod"
+            if arg_types.len() == 2 && all_named_types(&arg_types, "Int") =>
+        {
+            Some(Type::Name("Int".into()))
+        }
+        "eq" | "neq" if arg_types.len() == 2 && arg_types[0] == arg_types[1] => {
+            Some(Type::Name("Bool".into()))
+        }
+        "not" if all_named_types(&arg_types, "Bool") => Some(Type::Name("Bool".into())),
+        _ => None,
+    }
+}
+
+fn all_named_types(types: &[Type], expected: &str) -> bool {
+    !types.is_empty() && types.iter().all(|ty| is_named_type(ty, expected))
 }
 
 fn is_named_type(ty: &Type, expected: &str) -> bool {

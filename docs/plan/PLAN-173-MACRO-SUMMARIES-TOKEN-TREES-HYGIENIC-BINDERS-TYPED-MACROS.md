@@ -1,6 +1,6 @@
 # PLAN-173: Macro Summaries, Token Trees, Hygienic Binders, and Typed Macros
 
-## Status: 🟢 In Progress; fail-closed typed macro checking complete
+## Status: 🟢 In Progress; bounded macro type inference complete
 
 ## Overview
 
@@ -37,7 +37,7 @@ The phase is intentionally still parser-first and fail-closed. It must not becom
 - [x] Execute a bounded hygienic binder-introducing macro subset with capture-resistant tests.
 - [x] Add typed macro signature carriers for macro parameters/results.
 - [x] Add fail-closed checking of macro arguments/templates before expansion is accepted.
-- [ ] Add bounded macro type inference for unannotated local/imported macro templates where inference is unambiguous.
+- [x] Add bounded macro type inference for unannotated local/imported macro templates where inference is unambiguous.
 - [ ] Validate parser, engine/module-loader, typechecker, lowering, LSP-facing consumers, and docs/status surfaces before closeout.
 
 ## Non-goals
@@ -90,7 +90,7 @@ The phase is intentionally still parser-first and fail-closed. It must not becom
 
 - TASK-1770: Add typed macro signature carriers. ✅
 - TASK-1771: Implement fail-closed typed macro checking. ✅
-- TASK-1772: Implement bounded macro type inference. 📝
+- TASK-1772: Implement bounded macro type inference. ✅
 
 ### Phase 6: Cross-boundary validation and closeout
 

@@ -20,6 +20,7 @@ Implemented today:
 - `ash-lsp-core` VFS, incremental text edit application, position helpers, and per-URI/per-version analysis cache.
 - Parser + lint diagnostic aggregation. Typecheck diagnostics are not yet wired into the LSP diagnostic pipeline.
 - Keyword/top-level hover, document symbols, same-file token/name based goto-definition, and keyword/top-level definition completion.
+- Macro-aware local tooling presentation: macro completions and symbols are not presented as ordinary runtime functions; macro hover displays syntax-phase typed signatures when present; same-file `m!(...)` goto prefers a macro declaration over a same-named function.
 - `ash-lsp` stdio transport, one-shot TCP `--port` mode, basic lifecycle notifications, diagnostic publishing, hover, document symbols, definition, and completion.
 
 Not implemented by the local MVP:

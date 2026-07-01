@@ -1,6 +1,6 @@
 # TASK-1782: Reconcile specs, docs, and indexes for Phase 174 boundaries
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -15,7 +15,7 @@ Update the canonical documentation surfaces so Phase 174's macro-aware tooling a
 
 ## Dependencies
 
-- 📝 TASK-1775 through TASK-1781
+- ✅ TASK-1775 through TASK-1781 (all complete)
 
 ## Deferral / Planned-Feature Reconciliation
 
@@ -77,11 +77,15 @@ commands:
   - git diff --check
   - cargo fmt --check
 checklist:
-  - [ ] Relevant specs/docs reflect Phase 174 behavior
-  - [ ] No stale macro-as-function tooling wording remains in docs
-  - [ ] CHANGELOG records implementation changes
+  - [x] Relevant specs/docs reflect Phase 174 behavior
+  - [x] No stale macro-as-function tooling wording remains in docs
+  - [x] CHANGELOG records implementation changes
 ```
 
 ## Dependencies for Next Task
 
 TASK-1783 depends on reconciled status/docs surfaces.
+
+## Completion Evidence
+
+- Updated SPEC-095c, SPEC-038, SPEC-INDEX, CHANGELOG, audits, and Phase 174 plan/status surfaces for the implemented boundaries.

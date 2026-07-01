@@ -1,6 +1,6 @@
 # TASK-1781: Add parser/engine/LSP cross-boundary tooling and inference validation
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -13,10 +13,10 @@ Validate Phase 174 as an integrated boundary. The tests must prove macro-aware t
 
 ## Dependencies
 
-- 📝 TASK-1776: Macro-specific symbol/cache model
-- 📝 TASK-1777: Macro completion/hover UX
-- 📝 TASK-1778: Macro goto/reference boundaries
-- 📝 TASK-1780: Bounded callable identity inference
+- ✅ TASK-1776: Macro-specific symbol/cache model
+- ✅ TASK-1777: Macro completion/hover UX
+- ✅ TASK-1778: Macro goto/reference boundaries
+- ✅ TASK-1780: Bounded callable identity inference
 
 ## Deferral / Planned-Feature Reconciliation
 
@@ -81,11 +81,15 @@ commands:
   - cargo fmt --check
   - cargo clippy -p ash-parser -p ash-engine -p ash-lsp-core --all-targets --all-features -- -D warnings
 checklist:
-  - [ ] LSP/parser/engine macro identity agree
-  - [ ] Runtime callable leakage remains rejected
-  - [ ] Previous Phase 173 boundary tests still pass
+  - [x] LSP/parser/engine macro identity agree
+  - [x] Runtime callable leakage remains rejected
+  - [x] Previous Phase 173 boundary tests still pass
 ```
 
 ## Dependencies for Next Task
 
 TASK-1782 uses these validation results when reconciling docs/spec/status language.
+
+## Completion Evidence
+
+- Added/ran parser and LSP regressions for macro cache keys, symbol identity, completion/hover, goto boundaries, and callable-identity inference; existing engine macro boundary tests remain part of closeout gates.

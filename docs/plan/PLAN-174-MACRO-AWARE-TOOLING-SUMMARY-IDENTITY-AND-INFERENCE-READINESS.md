@@ -1,6 +1,6 @@
 # PLAN-174: Macro-Aware Tooling, Summary Identity, and Inference Readiness
 
-**Status:** 📝 Planned
+**Status:** ✅ Complete
 **Spec:** [SPEC-095c: Surface AST, Macro Expansion, and Notation](../spec/SPEC-095c-SURFACE-AST-MACROS-AND-NOTATION.md); [SPEC-098c: Surface-to-Core Lowering](../spec/SPEC-098c-SURFACE-TO-CORE-LOWERING.md); [SPEC-097b: Target Type System](../spec/SPEC-097b-TARGET-TYPE-SYSTEM.md)
 **Depends on:** Phase 173 macro summaries, token trees, hygienic binders, and typed macros.
 **Task range:** TASK-1774 through TASK-1783.
@@ -17,7 +17,7 @@ Phase 173 made macro summaries/token trees/hygiene/typed carriers real. The rema
 
 Phase 174 owns:
 
-- macro-specific LSP symbol/completion/hover/goto/reference behavior;
+- macro-specific LSP symbol/completion/hover/goto behavior and honest same-file reference limits;
 - macro-aware parse-summary and cache invalidation keys;
 - a callable-identity summary audit and minimal substrate for future inference;
 - bounded macro inference through ordinary calls only where callable identity is unique and syntax-phase safe;
@@ -38,10 +38,10 @@ Phase 173 closed the macro-system carrier slice, including public macro summarie
 
 The remaining debt is visible in tooling and identity surfaces:
 
-- `crates/ash-lsp-core/src/completion.rs` still presents `Definition::Macro(_)` as `CompletionItemKind::FUNCTION`.
-- `crates/ash-lsp-core/src/symbols.rs` and `crates/ash-lsp-core/src/db.rs` classify macro symbols as function-like.
-- `crates/ash-lsp-core/src/db.rs::ParseSummary` tracks only broad parse shape, so same-count macro signature/body edits can be invisible to cache invalidation.
-- `TASK-1772` deliberately kept ordinary call expressions uninferred unless a later typed/callable-summary substrate proves unique callable identity.
+- `crates/ash-lsp-core/src/completion.rs` previously presented `Definition::Macro(_)` as `CompletionItemKind::FUNCTION`.
+- `crates/ash-lsp-core/src/symbols.rs` and `crates/ash-lsp-core/src/db.rs` previously classified macro symbols as function-like.
+- `crates/ash-lsp-core/src/db.rs::ParseSummary` previously tracked only broad parse shape, so same-count macro signature/body edits can be invisible to cache invalidation.
+- `TASK-1772` deliberately kept ordinary call expressions uninferred until a later typed/callable-summary substrate proves unique callable identity.
 
 ## Decision gates
 
@@ -50,7 +50,7 @@ The remaining debt is visible in tooling and identity surfaces:
 | D1 | Which LSP surfaces imply runtime callability today? | TASK-1775 | Audit before changing behavior. |
 | D2 | What macro-specific symbol/cache representation is needed without storing full AST in Salsa? | TASK-1776 | Add lightweight macro summary keys, not full AST hashing. |
 | D3 | How should completion/hover present macros and typed signatures? | TASK-1777 | Present macros as syntax-phase macros, not functions. |
-| D4 | Which goto/reference paths can be macro-aware without cross-file overclaiming? | TASK-1778 | Same-file/local and explicit imported-summary paths only. |
+| D4 | Which goto/reference paths can be macro-aware without cross-file overclaiming? | TASK-1778 | Harden same-file goto; keep token-only references documented as non-semantic. |
 | D5 | What counts as a proven callable identity for macro inference? | TASK-1779 | Require a unique resolved callable summary with type information. |
 | D6 | Which ordinary-call templates may infer safely now? | TASK-1780 | Implement only positive cases proven by D5; reject ambiguity. |
 | D7 | Do parser, engine/module-loader, and LSP agree on macro metadata boundaries? | TASK-1781 | Add paired positive/negative cross-boundary tests. |
@@ -60,15 +60,15 @@ The remaining debt is visible in tooling and identity surfaces:
 | Task | Title | Status |
 |---|---|---|
 | [TASK-1774](tasks/TASK-1774-phase-174-plan-packet.md) | Create the Phase 174 plan packet | ✅ Complete |
-| [TASK-1775](tasks/TASK-1775-macro-aware-tooling-audit.md) | Audit macro-aware tooling, LSP, and summary-identity seams | 📝 Planned |
-| [TASK-1776](tasks/TASK-1776-macro-symbol-cache-model.md) | Add macro-specific symbol kinds and cache-summary invalidation keys | 📝 Planned |
-| [TASK-1777](tasks/TASK-1777-macro-completion-hover-signature-ux.md) | Implement macro-aware completion and hover/signature presentation | 📝 Planned |
-| [TASK-1778](tasks/TASK-1778-macro-goto-reference-boundaries.md) | Harden macro goto-definition, symbols, and references without callable overclaiming | 📝 Planned |
-| [TASK-1779](tasks/TASK-1779-callable-identity-summary-audit.md) | Audit and specify callable identity summaries for macro inference | 📝 Planned |
-| [TASK-1780](tasks/TASK-1780-bounded-callable-identity-inference.md) | Implement bounded macro inference through proven callable identities | 📝 Planned |
-| [TASK-1781](tasks/TASK-1781-cross-boundary-tooling-validation.md) | Add parser/engine/LSP cross-boundary tooling and inference validation | 📝 Planned |
-| [TASK-1782](tasks/TASK-1782-phase-174-docs-spec-reconciliation.md) | Reconcile specs, docs, and indexes for Phase 174 boundaries | 📝 Planned |
-| [TASK-1783](tasks/TASK-1783-phase-174-closeout.md) | Close out Phase 174 with broad gates and review | 📝 Planned |
+| [TASK-1775](tasks/TASK-1775-macro-aware-tooling-audit.md) | Audit macro-aware tooling, LSP, and summary-identity seams | ✅ Complete |
+| [TASK-1776](tasks/TASK-1776-macro-symbol-cache-model.md) | Add macro-specific symbol kinds and cache-summary invalidation keys | ✅ Complete |
+| [TASK-1777](tasks/TASK-1777-macro-completion-hover-signature-ux.md) | Implement macro-aware completion and hover/signature presentation | ✅ Complete |
+| [TASK-1778](tasks/TASK-1778-macro-goto-reference-boundaries.md) | Harden macro goto-definition and symbol boundaries without callable overclaiming | ✅ Complete |
+| [TASK-1779](tasks/TASK-1779-callable-identity-summary-audit.md) | Audit and specify callable identity summaries for macro inference | ✅ Complete |
+| [TASK-1780](tasks/TASK-1780-bounded-callable-identity-inference.md) | Implement bounded macro inference through proven callable identities | ✅ Complete |
+| [TASK-1781](tasks/TASK-1781-cross-boundary-tooling-validation.md) | Add parser/engine/LSP cross-boundary tooling and inference validation | ✅ Complete |
+| [TASK-1782](tasks/TASK-1782-phase-174-docs-spec-reconciliation.md) | Reconcile specs, docs, and indexes for Phase 174 boundaries | ✅ Complete |
+| [TASK-1783](tasks/TASK-1783-phase-174-closeout.md) | Close out Phase 174 with broad gates and review | ✅ Complete |
 
 ## Implementation order
 
@@ -83,15 +83,15 @@ The remaining debt is visible in tooling and identity surfaces:
 
 ## Acceptance criteria
 
-- [ ] LSP-facing macro symbols are not presented as ordinary runtime functions where that implies callability.
-- [ ] Macro declaration/signature/body changes invalidate relevant LSP cache summaries even when broad definition counts stay the same.
-- [ ] Completion and hover show syntax-phase macro metadata, including typed macro signatures when available.
-- [ ] Goto/symbol/reference behavior is macro-aware and honest about same-file versus imported-summary support.
-- [ ] Callable identity summaries are explicitly defined before ordinary-call macro inference expands beyond Phase 173.
-- [ ] Bounded ordinary-call macro inference succeeds only when a unique callable identity and type summary are proven.
-- [ ] Ambiguous, private, unresolved, overloaded, or module-qualified call templates remain annotation-required or fail closed.
-- [ ] Parser, engine/module-loader, typechecker-facing, and LSP tests agree that macro metadata remains syntax-phase metadata.
-- [ ] PLAN-INDEX, task files, specs/docs, and CHANGELOG agree on Phase 174 status.
+- [x] LSP-facing macro symbols are not presented as ordinary runtime functions where that implies callability.
+- [x] Macro declaration/signature/body changes invalidate relevant LSP cache summaries even when broad definition counts stay the same.
+- [x] Completion and hover show syntax-phase macro metadata, including typed macro signatures when available.
+- [x] Goto/symbol behavior is macro-aware; same-file references remain token-only and are documented as non-semantic.
+- [x] Callable identity summaries are explicitly defined before ordinary-call macro inference expands beyond Phase 173.
+- [x] Bounded ordinary-call macro inference succeeds only when a unique callable identity and type summary are proven.
+- [x] Ambiguous, private, unresolved, overloaded, or module-qualified call templates remain annotation-required or fail closed.
+- [x] Parser, engine/module-loader, typechecker-facing, and LSP tests agree that macro metadata remains syntax-phase metadata.
+- [x] PLAN-INDEX, task files, specs/docs, and CHANGELOG agree on Phase 174 status.
 
 ## Verification baseline
 
@@ -111,3 +111,9 @@ bash scripts/check-docs-gate.sh
 ## Expected follow-on after Phase 174
 
 If Phase 174 closes cleanly, the next plausible language-feature packets are imported/exported notation summary carriers or generalized mixfix/binder notation. If the callable identity substrate remains too weak, follow-on work should harden public callable/type summaries before expanding macro inference again.
+
+## Completion evidence
+
+- TASK-1775 created `docs/audit/phase-174-macro-aware-tooling-audit.md`.
+- TASK-1779 created `docs/audit/phase-174-callable-identity-summary-audit.md`.
+- Focused implementation verification passed for `ash-lsp-core`, `task_1772_macro_type_inference`, and `cargo check -p ash-parser -p ash-lsp-core`; broad closeout gates are recorded in TASK-1783.

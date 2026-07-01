@@ -18,12 +18,12 @@
 
 use ash_parser::module::ModuleDecl;
 use ash_parser::surface::{
-    BuiltinFnDef, Definition, FnDef, ImplMethodDef, InterfaceDef, InterfaceMethodSig, ModuleFile,
-    Type, WorkflowDef,
+    BuiltinFnDef, Definition, FnDef, ImplMethodDef, InterfaceDef, InterfaceMethodSig, MacroDef,
+    MacroTypeSignatureSummary, ModuleFile, Type, WorkflowDef,
 };
 use lsp_types::{Hover, HoverContents, MarkupContent, MarkupKind};
 
-use crate::position::{offset_from_line_col, token_at_offset};
+use crate::position::{is_ident_char, offset_from_line_col, token_at_offset};
 
 fn type_to_string(ty: &Type) -> String {
     match ty {
@@ -97,6 +97,42 @@ fn markdown(code: String, detail: Option<String>) -> Hover {
         }),
         range: None,
     }
+}
+
+fn is_macro_invocation_at(source: &str, offset: usize) -> bool {
+    let mut end = offset;
+    while let Some(next) = source[end..].chars().next() {
+        if !is_ident_char(next) {
+            break;
+        }
+        end += next.len_utf8();
+    }
+
+    source[end..]
+        .chars()
+        .find(|ch| !ch.is_whitespace())
+        .is_some_and(|ch| ch == '!')
+}
+
+fn is_macro_declaration_name_at(source: &str, offset: usize) -> bool {
+    let mut start = offset;
+    while start > 0 {
+        let Some(prev) = source[..start].chars().next_back() else {
+            break;
+        };
+        let prev_start = start - prev.len_utf8();
+        if !is_ident_char(prev) {
+            break;
+        }
+        start = prev_start;
+    }
+    let Some(prefix) = source.get(..start) else {
+        return false;
+    };
+    prefix
+        .split(|ch: char| !is_ident_char(ch))
+        .rfind(|word| !word.is_empty())
+        .is_some_and(|word| word == "macro")
 }
 
 fn keyword_hover(token: &str) -> Option<Hover> {
@@ -268,6 +304,44 @@ fn builtin_fn_hover(def: &BuiltinFnDef) -> Hover {
     )
 }
 
+fn macro_signature_to_string(signature: &MacroTypeSignatureSummary) -> String {
+    let params = signature
+        .param_types
+        .iter()
+        .map(|ty| {
+            ty.as_ref()
+                .map(type_to_string)
+                .unwrap_or_else(|| "_".to_string())
+        })
+        .collect::<Vec<_>>()
+        .join(", ");
+    let ret = signature
+        .return_type
+        .as_ref()
+        .map(type_to_string)
+        .unwrap_or_else(|| "_".to_string());
+    format!("({params}) -> {ret}")
+}
+
+fn macro_hover(def: &MacroDef) -> Hover {
+    let params = def
+        .params
+        .iter()
+        .map(std::string::ToString::to_string)
+        .collect::<Vec<_>>()
+        .join(", ");
+    let detail = def.typed_signature.as_ref().map_or_else(
+        || "Syntax-phase macro declaration".to_string(),
+        |signature| {
+            format!(
+                "Syntax-phase macro declaration; typed signature {}",
+                macro_signature_to_string(signature)
+            )
+        },
+    );
+    markdown(format!("macro {}({params})", def.name), Some(detail))
+}
+
 #[allow(clippy::too_many_lines)]
 fn definition_hover(definition: &Definition) -> Hover {
     match definition {
@@ -275,18 +349,7 @@ fn definition_hover(definition: &Definition) -> Hover {
             format!("notation {} = {}", def.pattern.raw, def.target.name),
             Some("Notation declaration".to_string()),
         ),
-        Definition::Macro(def) => markdown(
-            format!(
-                "macro {}({})",
-                def.name,
-                def.params
-                    .iter()
-                    .map(std::string::ToString::to_string)
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            ),
-            Some("Parser-first expression macro declaration".to_string()),
-        ),
+        Definition::Macro(def) => macro_hover(def),
         Definition::Capability(def) => {
             let params = def
                 .params
@@ -387,7 +450,7 @@ fn module_hover(module: &ModuleDecl) -> Hover {
 }
 
 #[allow(clippy::too_many_lines)]
-fn top_level_hover(token: &str, module: &ModuleFile) -> Option<Hover> {
+fn top_level_hover(token: &str, module: &ModuleFile, include_macros: bool) -> Option<Hover> {
     if let Some(workflow) = &module.workflow {
         if workflow.name.as_ref() == token {
             return Some(workflow_hover(workflow));
@@ -419,7 +482,7 @@ fn top_level_hover(token: &str, module: &ModuleFile) -> Option<Hover> {
                     _ => {
                         let name_matches = match definition {
                             Definition::Notation(def) => def.pattern.raw.as_ref() == token,
-                            Definition::Macro(def) => def.name.as_ref() == token,
+                            Definition::Macro(def) => include_macros && def.name.as_ref() == token,
                             Definition::Capability(def) => def.name.as_ref() == token,
                             Definition::CapabilityInterface(def) => def.name.as_ref() == token,
                             Definition::CapabilityImplementation(def) => def.name.as_ref() == token,
@@ -466,7 +529,7 @@ fn top_level_hover(token: &str, module: &ModuleFile) -> Option<Hover> {
             _ => {
                 let name_matches = match definition {
                     Definition::Notation(def) => def.pattern.raw.as_ref() == token,
-                    Definition::Macro(def) => def.name.as_ref() == token,
+                    Definition::Macro(def) => include_macros && def.name.as_ref() == token,
                     Definition::Capability(def) => def.name.as_ref() == token,
                     Definition::CapabilityInterface(def) => def.name.as_ref() == token,
                     Definition::CapabilityImplementation(def) => def.name.as_ref() == token,
@@ -498,7 +561,9 @@ fn top_level_hover(token: &str, module: &ModuleFile) -> Option<Hover> {
 pub fn hover_at(module: &ModuleFile, source: &str, line: u32, col: u32) -> Option<Hover> {
     let offset = offset_from_line_col(source, line, col)?;
     let token = token_at_offset(source, offset)?;
-    keyword_hover(token).or_else(|| top_level_hover(token, module))
+    let macro_context =
+        is_macro_invocation_at(source, offset) || is_macro_declaration_name_at(source, offset);
+    keyword_hover(token).or_else(|| top_level_hover(token, module, macro_context))
 }
 
 #[cfg(test)]
@@ -545,5 +610,34 @@ mod tests {
         let source = "workflow main { done }";
         let module = parse_surface_file(source).expect("parse ok");
         assert!(hover_at(&module, source, 0, 8).is_none());
+    }
+
+    #[test]
+    fn test_macro_hover_shows_syntax_phase_signature() {
+        let source = "macro id(x: Int) -> Int => x;";
+        let module = parse_surface_file(source).expect("parse ok");
+        let hover = hover_at(&module, source, 0, 7).expect("hover exists");
+        let HoverContents::Markup(markup) = hover.contents else {
+            panic!("expected markdown hover");
+        };
+        assert!(markup.value.contains("macro id(x)"));
+        assert!(markup.value.contains("Syntax-phase macro declaration"));
+        assert!(markup.value.contains("typed signature (Int) -> Int"));
+        assert!(!markup.value.contains("function authority"));
+    }
+
+    #[test]
+    fn test_hover_ordinary_call_prefers_function_over_same_named_macro() {
+        let source = "macro id(x) => x;\nfn id() -> Int { 1 }\nworkflow main { let y = id() done }";
+        let module = parse_surface_file(source).expect("parse ok");
+        let line2_start = source.rfind('\n').unwrap() + 1;
+        let id_offset = source[line2_start..].find("id()").unwrap() + line2_start;
+        let col = u32::try_from(id_offset - line2_start).unwrap();
+        let hover = hover_at(&module, source, 2, col).expect("hover exists");
+        let HoverContents::Markup(markup) = hover.contents else {
+            panic!("expected markdown hover");
+        };
+        assert!(markup.value.contains("fn id() -> Int"));
+        assert!(!markup.value.contains("Syntax-phase macro"));
     }
 }

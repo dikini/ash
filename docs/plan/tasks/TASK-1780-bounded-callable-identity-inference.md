@@ -1,6 +1,6 @@
 # TASK-1780: Implement bounded macro inference through proven callable identities
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -14,7 +14,7 @@ Extend bounded macro type inference beyond Phase 173's literal/operator/annotate
 
 ## Dependencies
 
-- 📝 TASK-1779: Callable identity summary audit
+- ✅ TASK-1779: Callable identity summary audit
 
 ## Deferral / Planned-Feature Reconciliation
 
@@ -79,11 +79,15 @@ commands:
   - cargo fmt --check
   - cargo clippy -p ash-parser -p ash-engine --all-targets --all-features -- -D warnings
 checklist:
-  - [ ] Positive callable identity inference cases pass
-  - [ ] Ambiguous and invalid ordinary calls remain fail-closed
-  - [ ] Prior typed macro regressions still pass
+  - [x] Positive callable identity inference cases pass
+  - [x] Ambiguous and invalid ordinary calls remain fail-closed
+  - [x] Prior typed macro regressions still pass
 ```
 
 ## Dependencies for Next Task
 
 TASK-1781 validates this inference behavior across parser, engine/module-loader, and LSP-facing consumers.
+
+## Completion Evidence
+
+- Bounded macro inference now uses unique local annotated `fn`/`builtin fn` summaries; unresolved, ambiguous, wrong-arity, and module-qualified ordinary calls remain uninferred.

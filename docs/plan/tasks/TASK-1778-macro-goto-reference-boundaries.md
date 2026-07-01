@@ -1,10 +1,10 @@
-# TASK-1778: Harden macro goto-definition, symbols, and references without callable overclaiming
+# TASK-1778: Harden macro goto-definition and symbol boundaries without callable overclaiming
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
-Make goto-definition, document symbols, workspace/same-file symbols, and reference-style scans macro-aware without pretending that macro summaries are ordinary runtime callables. This task should make local macro navigation useful and explicitly document what imported-summary navigation does and does not support.
+Make goto-definition, document symbols, and workspace/same-file symbols macro-aware without pretending that macro summaries are ordinary runtime callables. Same-file reference scans remain token-only in this LSP MVP and must be documented as non-semantic rather than overclaimed. This task should make local macro navigation useful and explicitly document what imported-summary navigation does and does not support.
 
 ## Specification Reference
 
@@ -14,8 +14,8 @@ Make goto-definition, document symbols, workspace/same-file symbols, and referen
 
 ## Dependencies
 
-- 📝 TASK-1775: Macro-aware tooling audit
-- 📝 TASK-1776: Macro-specific symbol/cache model
+- ✅ TASK-1775: Macro-aware tooling audit
+- ✅ TASK-1776: Macro-specific symbol/cache model
 
 ## Deferral / Planned-Feature Reconciliation
 
@@ -30,7 +30,7 @@ Make goto-definition, document symbols, workspace/same-file symbols, and referen
 
 1. Update `crates/ash-lsp-core/src/symbols.rs` and `crates/ash-lsp-core/src/db.rs` document-symbol construction to use the macro-specific symbol kind.
 2. Update `crates/ash-lsp-core/src/goto.rs` so local macro names resolve to macro declarations without sharing ordinary callable semantics.
-3. Add or update reference tests to cover macro declaration uses and avoid matching unrelated function names where possible.
+3. Add or update goto tests to cover macro declaration uses and avoid matching unrelated function names where possible.
 4. Document imported macro summary navigation limits in code comments or docs if cross-file support is not implemented.
 
 ### Property Requirements
@@ -45,9 +45,9 @@ Make goto-definition, document symbols, workspace/same-file symbols, and referen
 
 Add tests proving `macro m(x) => x;` appears as a macro symbol and `fn m()` appears as a function symbol.
 
-### Step 2: Write failing goto/reference tests
+### Step 2: Write failing goto tests and document reference limits
 
-Add tests for goto from `m!(1)` to `macro m(x) => x;`, plus a negative test that `fn m()` is not selected as the macro target.
+Add tests for goto from `m!(1)` to `macro m(x) => x;`, plus negative tests that ordinary `m()` calls are not resolved to same-named syntax-phase macros. Document same-file references as token-only until a name-resolution-backed LSP phase owns semantic reference splitting.
 
 ### Step 3: Implement navigation changes
 
@@ -78,11 +78,15 @@ commands:
   - cargo fmt --check
   - cargo clippy -p ash-lsp-core --all-targets --all-features -- -D warnings
 checklist:
-  - [ ] Macro document symbols use macro-specific identity
-  - [ ] Goto from macro invocation resolves to macro declaration where supported
-  - [ ] Tests prevent macro/function identity confusion
+  - [x] Macro document symbols use macro-specific identity
+  - [x] Goto from macro invocation resolves to macro declaration where supported
+  - [x] Tests prevent macro/function identity confusion
 ```
 
 ## Dependencies for Next Task
 
 This task completes the core LSP-facing macro identity work needed before cross-boundary validation in TASK-1781.
+
+## Completion Evidence
+
+- Document symbols/workspace symbols avoid LSP function kind for macros, same-file `m!(...)` goto prefers macro declarations over same-named functions, ordinary calls prefer functions over same-named macros, and token-only references are explicitly not overclaimed as semantic macro/function splitting.

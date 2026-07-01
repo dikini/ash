@@ -104,10 +104,10 @@ fn definition_name(current_token: Option<&str>, def: &Definition) -> Option<Stri
 const fn definition_kind(def: &Definition) -> CompletionItemKind {
     match def {
         Definition::Function(_)
-        | Definition::Macro(_)
         | Definition::BuiltinFn(_)
         | Definition::TypeFn(_)
         | Definition::PropositionPredicate(_) => CompletionItemKind::FUNCTION,
+        Definition::Macro(_) => CompletionItemKind::SNIPPET,
         Definition::Capability(_) | Definition::Role(_) | Definition::Proxy(_) => {
             CompletionItemKind::CLASS
         }
@@ -131,9 +131,15 @@ fn collect_definitions(
 ) {
     for def in definitions {
         if let Some(name) = definition_name(current_token, def) {
+            let detail = if matches!(def, Definition::Macro(_)) {
+                Some("syntax-phase macro".to_string())
+            } else {
+                None
+            };
             items.push(CompletionItem {
                 label: name,
                 kind: Some(definition_kind(def)),
+                detail,
                 insert_text_format: Some(InsertTextFormat::PLAIN_TEXT),
                 ..CompletionItem::default()
             });
@@ -274,5 +280,28 @@ mod tests {
             labels.iter().any(|l| l.contains("Store.get")),
             "interface method should be present"
         );
+    }
+
+    #[test]
+    fn test_macro_completion_is_syntax_phase_not_function() {
+        let source = "macro id(x) => x;\nfn helper() -> Int { 1 }";
+        let module = parse_surface_file(source).expect("parse ok");
+        let CompletionResponse::Array(items) = completions(&module, source, 0, 0) else {
+            panic!("expected array response");
+        };
+
+        let macro_item = items
+            .iter()
+            .find(|item| item.label == "id")
+            .expect("macro completion");
+        assert_eq!(macro_item.kind, Some(CompletionItemKind::SNIPPET));
+        assert_eq!(macro_item.detail.as_deref(), Some("syntax-phase macro"));
+
+        let fn_item = items
+            .iter()
+            .find(|item| item.label == "helper")
+            .expect("function completion");
+        assert_eq!(fn_item.kind, Some(CompletionItemKind::FUNCTION));
+        assert_ne!(fn_item.detail.as_deref(), Some("syntax-phase macro"));
     }
 }

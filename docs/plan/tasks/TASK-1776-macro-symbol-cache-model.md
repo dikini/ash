@@ -1,6 +1,6 @@
 # TASK-1776: Add macro-specific symbol kinds and cache-summary invalidation keys
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -14,7 +14,7 @@ Introduce a macro-specific LSP symbol/cache model so macro declaration edits, ty
 ## Dependencies
 
 - ✅ TASK-1774: Phase 174 plan packet (complete)
-- 📝 TASK-1775: Macro-aware tooling audit
+- ✅ TASK-1775: Macro-aware tooling audit
 
 ## Deferral / Planned-Feature Reconciliation
 
@@ -76,11 +76,15 @@ commands:
   - cargo fmt --check
   - cargo clippy -p ash-lsp-core --all-targets --all-features -- -D warnings
 checklist:
-  - [ ] Macro symbol kind added
-  - [ ] Macro-sensitive parse summary added
-  - [ ] Same-count macro edits invalidate cache summaries
+  - [x] Macro symbol kind added
+  - [x] Macro-sensitive parse summary added
+  - [x] Same-count macro edits invalidate cache summaries
 ```
 
 ## Dependencies for Next Task
 
 TASK-1777 and TASK-1778 depend on the macro symbol/cache model from this task.
+
+## Completion Evidence
+
+- Added `ParseSummary::macro_count`, lightweight `MacroSummaryKey` cache data, and internal `SymbolKind::Macro`; added db regressions for same-count macro edits and macro symbol identity.

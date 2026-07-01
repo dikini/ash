@@ -50,9 +50,10 @@ Common tags include: `grammar`, `syntax`, `semantics`, `type-system`, `effect-sy
 
 1. [SPEC-095a](SPEC-095a-CURRENT-GRAMMAR.md) for current parser behavior.
 2. [SPEC-095b](SPEC-095b-TARGET-GRAMMAR.md) for target syntax.
-3. [SPEC-095c](SPEC-095c-SURFACE-AST-MACROS-AND-NOTATION.md) for source-preserving AST, macros, notation, operator sections, and Phase 173 macro carriers.
-4. [PLAN-173](../plan/PLAN-173-MACRO-SUMMARIES-TOKEN-TREES-HYGIENIC-BINDERS-TYPED-MACROS.md) for macro summary, token-tree, hygiene, and typed-macro task sequencing.
-5. Relevant design notes tagged `grammar` in [NOTE-INDEX](../notes/NOTE-INDEX.md).
+3. [SPEC-095c](SPEC-095c-SURFACE-AST-MACROS-AND-NOTATION.md) for source-preserving AST, macros, notation, operator sections, and Phase 173/174 macro carriers/tooling boundaries.
+4. [PLAN-174](../plan/PLAN-174-MACRO-AWARE-TOOLING-SUMMARY-IDENTITY-AND-INFERENCE-READINESS.md) for macro-aware tooling, summary identity, and callable-identity inference readiness.
+5. [PLAN-173](../plan/PLAN-173-MACRO-SUMMARIES-TOKEN-TREES-HYGIENIC-BINDERS-TYPED-MACROS.md) for macro summary, token-tree, hygiene, and typed-macro task sequencing.
+6. Relevant design notes tagged `grammar` in [NOTE-INDEX](../notes/NOTE-INDEX.md).
 
 ### Target handler/effect/operation syntax
 

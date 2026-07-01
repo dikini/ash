@@ -17,8 +17,11 @@
 //!    `ParseSummary`, not on the AST itself.
 
 use ash_parser::ParseError;
-use ash_parser::surface::ModuleFile;
+use ash_parser::module::ModuleDecl;
+use ash_parser::surface::{Definition, Expr, MacroTypeSignatureSummary, ModuleFile, Type};
 use dashmap::DashMap;
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 /// Input: a source file tracked by the LSP VFS.
@@ -53,6 +56,32 @@ pub struct ParseSummary {
     pub module_decl_count: usize,
     /// Whether a workflow is present.
     pub has_workflow: bool,
+    /// Number of macro declarations visible in this parsed surface.
+    pub macro_count: usize,
+    /// Lightweight syntax-phase macro keys that affect LSP cache validity.
+    pub macro_summary_keys: Vec<MacroSummaryKey>,
+}
+
+/// Lightweight syntax-phase macro key used for LSP cache invalidation.
+///
+/// This intentionally stores strings and compact hashes instead of full AST
+/// nodes so the salsa-tracked parse summary remains `Eq + Hash`. The key is
+/// syntax-phase metadata only; it does not carry callable authority, rows,
+/// contracts, providers, or runtime effects.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct MacroSummaryKey {
+    /// Macro declaration name.
+    pub name: String,
+    /// Public/private visibility spelling.
+    pub visibility: String,
+    /// Number of macro parameters.
+    pub param_count: usize,
+    /// Macro parameter names in declaration order.
+    pub param_names: Vec<String>,
+    /// Compact typed-signature shape, when present.
+    pub typed_signature: Option<String>,
+    /// Stable-enough template fingerprint for cache invalidation.
+    pub template_hash: u64,
 }
 
 /// Side-cache entry for the actual AST.
@@ -73,19 +102,15 @@ pub struct ParsedModule {
 pub fn parse_summary(db: &dyn salsa::Database, file: SourceFile) -> ParseSummary {
     let text = file.text(db);
     match ash_parser::parse_surface_file(&text) {
-        Ok(module) => ParseSummary {
-            succeeded: true,
-            error_count: 0,
-            definition_count: module.definitions.len(),
-            module_decl_count: module.module_decls.len(),
-            has_workflow: module.workflow.is_some(),
-        },
+        Ok(module) => parse_summary_from_module(&module),
         Err(errors) => ParseSummary {
             succeeded: false,
             error_count: errors.len(),
             definition_count: 0,
             module_decl_count: 0,
             has_workflow: false,
+            macro_count: 0,
+            macro_summary_keys: Vec::new(),
         },
     }
 }
@@ -119,6 +144,8 @@ pub enum SymbolKind {
     Workflow,
     /// A function definition.
     Function,
+    /// A syntax-phase macro definition.
+    Macro,
     /// A type definition.
     Type,
     /// An interface definition.
@@ -333,13 +360,129 @@ pub fn build_symbol_index(db: &dyn salsa::Database, file: SourceFile) -> SymbolI
 }
 
 fn compute_summary_from_cache(parsed: &ParsedModule) -> ParseSummary {
+    let mut summary = parse_summary_from_module(&parsed.module);
+    summary.succeeded = parsed.errors.is_empty();
+    summary.error_count = parsed.errors.len();
+    summary
+}
+
+fn parse_summary_from_module(module: &ModuleFile) -> ParseSummary {
+    let macro_summary_keys = macro_summary_keys(module);
     ParseSummary {
-        succeeded: parsed.errors.is_empty(),
-        error_count: parsed.errors.len(),
-        definition_count: parsed.module.definitions.len(),
-        module_decl_count: parsed.module.module_decls.len(),
-        has_workflow: parsed.module.workflow.is_some(),
+        succeeded: true,
+        error_count: 0,
+        definition_count: module.definitions.len(),
+        module_decl_count: module.module_decls.len(),
+        has_workflow: module.workflow.is_some(),
+        macro_count: macro_summary_keys.len(),
+        macro_summary_keys,
     }
+}
+
+fn macro_summary_keys(module: &ModuleFile) -> Vec<MacroSummaryKey> {
+    let mut keys = Vec::new();
+    collect_macro_summary_keys(&module.definitions, &mut keys);
+    collect_module_macro_summary_keys(&module.module_decls, &mut keys);
+    keys.sort_by(|left, right| {
+        left.name
+            .cmp(&right.name)
+            .then_with(|| left.param_count.cmp(&right.param_count))
+            .then_with(|| left.param_names.cmp(&right.param_names))
+            .then_with(|| left.visibility.cmp(&right.visibility))
+            .then_with(|| left.typed_signature.cmp(&right.typed_signature))
+            .then_with(|| left.template_hash.cmp(&right.template_hash))
+    });
+    keys
+}
+
+fn collect_module_macro_summary_keys(modules: &[ModuleDecl], keys: &mut Vec<MacroSummaryKey>) {
+    for module in modules {
+        if let Some(definitions) = module.definitions() {
+            collect_macro_summary_keys(definitions, keys);
+        }
+    }
+}
+
+fn collect_macro_summary_keys(definitions: &[Definition], keys: &mut Vec<MacroSummaryKey>) {
+    for definition in definitions {
+        if let Definition::Macro(decl) = definition {
+            keys.push(MacroSummaryKey {
+                name: decl.name.to_string(),
+                visibility: format!("{:?}", decl.visibility),
+                param_count: decl.params.len(),
+                param_names: decl.params.iter().map(ToString::to_string).collect(),
+                typed_signature: decl.typed_signature.as_ref().map(format_macro_signature),
+                template_hash: hash_expr_template(&decl.body),
+            });
+        }
+    }
+}
+
+fn format_macro_signature(signature: &MacroTypeSignatureSummary) -> String {
+    let params = signature
+        .param_types
+        .iter()
+        .map(|ty| ty.as_ref().map_or_else(|| "_".to_string(), format_type))
+        .collect::<Vec<_>>()
+        .join(", ");
+    let ret = signature
+        .return_type
+        .as_ref()
+        .map_or_else(|| "_".to_string(), format_type);
+    format!("({params}) -> {ret}")
+}
+
+fn format_type(ty: &Type) -> String {
+    match ty {
+        Type::Name(name) => name.to_string(),
+        Type::Hole { .. } => "_".to_string(),
+        Type::List(inner) => format!("[{}]", format_type(inner)),
+        Type::Tuple(items) => format!(
+            "({})",
+            items.iter().map(format_type).collect::<Vec<_>>().join(", ")
+        ),
+        Type::Record(fields) => format!(
+            "{{{}}}",
+            fields
+                .iter()
+                .map(|(name, ty)| format!("{name}: {}", format_type(ty)))
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
+        Type::Capability(name) => format!("Capability<{name}>"),
+        Type::Constructor { name, args } => format!(
+            "{}<{}>",
+            name,
+            args.iter().map(format_type).collect::<Vec<_>>().join(", ")
+        ),
+        Type::Associated { base, name } => format!("{}::{name}", format_type(base)),
+        Type::AssociatedFamilyProjection {
+            interface,
+            args,
+            member,
+            ..
+        } => format!(
+            "<{}<{}>>::{}",
+            interface,
+            args.iter().map(format_type).collect::<Vec<_>>().join(", "),
+            member
+        ),
+        Type::Fn(params, ret) => format!(
+            "Fn({}) -> {}",
+            params
+                .iter()
+                .map(format_type)
+                .collect::<Vec<_>>()
+                .join(", "),
+            format_type(ret)
+        ),
+    }
+}
+
+fn hash_expr_template(expr: &Expr) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    format!("{expr:?}").hash(&mut hasher);
+    hasher.finish()
 }
 
 #[allow(clippy::too_many_lines)]
@@ -355,7 +498,7 @@ fn index_definition(index: &mut SymbolIndex, def: &ash_parser::surface::Definiti
         ),
         Definition::Macro(m) => (
             m.name.as_ref().to_string(),
-            SymbolKind::Function,
+            SymbolKind::Macro,
             m.span.line,
             m.span.column,
         ),
@@ -530,6 +673,49 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_summary_tracks_macro_signature_and_template_shape() {
+        let mut db = AshLspDatabase::new();
+        let file = SourceFile::new(
+            &db,
+            "file:///test.ash".to_string(),
+            "pub macro id(x: Int) => x;".to_string(),
+            1,
+        );
+
+        let summary1 = parse_summary(&db, file);
+        assert_eq!(summary1.definition_count, 1);
+        assert_eq!(summary1.macro_count, 1);
+        assert_eq!(
+            summary1.macro_summary_keys[0].typed_signature.as_deref(),
+            Some("(Int) -> _")
+        );
+        assert_eq!(
+            summary1.macro_summary_keys[0].param_names,
+            vec!["x".to_string()]
+        );
+
+        file.set_text(&mut db)
+            .to("pub macro id(x: Bool) => !x;".to_string());
+
+        let summary2 = parse_summary(&db, file);
+        assert_eq!(summary2.definition_count, 1);
+        assert_eq!(summary2.macro_count, 1);
+        assert_ne!(
+            summary1.macro_summary_keys, summary2.macro_summary_keys,
+            "same-count macro signature/template edits must invalidate LSP parse summaries"
+        );
+
+        file.set_text(&mut db)
+            .to("pub macro id(y: Int) => y;".to_string());
+
+        let summary3 = parse_summary(&db, file);
+        assert_ne!(
+            summary1.macro_summary_keys, summary3.macro_summary_keys,
+            "same-count macro parameter-name edits must invalidate LSP parse summaries"
+        );
+    }
+
+    #[test]
     fn test_get_module_caches_ast() {
         let db = AshLspDatabase::new();
         let file = SourceFile::new(
@@ -615,5 +801,21 @@ mod tests {
         assert_eq!(index.document_symbols.len(), 1);
         assert_eq!(index.document_symbols[0].name, "main");
         assert_eq!(index.document_symbols[0].kind, SymbolKind::Workflow);
+    }
+
+    #[test]
+    fn test_build_symbol_index_marks_macros_as_macros() {
+        let db = AshLspDatabase::new();
+        let file = SourceFile::new(
+            &db,
+            "file:///test.ash".to_string(),
+            "macro id(x) => x;".to_string(),
+            1,
+        );
+
+        let index = build_symbol_index(&db, file);
+        assert_eq!(index.document_symbols.len(), 1);
+        assert_eq!(index.document_symbols[0].name, "id");
+        assert_eq!(index.document_symbols[0].kind, SymbolKind::Macro);
     }
 }

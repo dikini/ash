@@ -1,6 +1,6 @@
 # TASK-1775: Audit macro-aware tooling, LSP, and summary-identity seams
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -74,11 +74,15 @@ commands:
   - python3 -c 'from pathlib import Path; s=Path("docs/audit/phase-174-macro-aware-tooling-audit.md").read_text(); assert "completion.rs" in s and "hover.rs" in s and "goto.rs" in s and "symbols.rs" in s and "db.rs" in s and "MacroSummary" in s and "ParseSummary" in s and "TASK-1780" in s'
   - git diff --check
 checklist:
-  - [ ] Audit artifact created
-  - [ ] All LSP macro surfaces classified
-  - [ ] Cache identity and callable identity gaps assigned
+  - [x] Audit artifact created
+  - [x] All LSP macro surfaces classified
+  - [x] Cache identity and callable identity gaps assigned
 ```
 
 ## Dependencies for Next Task
 
 This task outputs the ownership map for TASK-1776 through TASK-1781.
+
+## Completion Evidence
+
+- Created `docs/audit/phase-174-macro-aware-tooling-audit.md`; mapped LSP macro-as-function surfaces, parse-summary gaps, goto/reference limits, and callable-identity prerequisites.

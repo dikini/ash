@@ -2161,6 +2161,8 @@ pub struct LocalMacroEntry {
     pub body: Expr,
     /// Optional syntax-phase typed macro signature carrier.
     pub typed_signature: Option<MacroTypeSignatureSummary>,
+    /// Local callable identities available while checking this template.
+    callable_env: Vec<CallableTypeSummary>,
     /// Source span of the declaration.
     pub span: Span,
 }
@@ -2267,17 +2269,20 @@ fn collect_macro_entries(
                 second_span: decl.span,
             });
         }
+        let callable_env = collect_local_callable_type_summaries(definitions);
         let typed_signature = infer_macro_type_signature(
             decl.typed_signature.clone(),
             &decl.params,
             &decl.body,
             decl.span,
+            &callable_env,
         );
         table.entries.push(LocalMacroEntry {
             name: decl.name.clone(),
             params: decl.params.clone(),
             body: decl.body.clone(),
             typed_signature,
+            callable_env: callable_env.clone(),
             span: decl.span,
         });
     }
@@ -3226,25 +3231,75 @@ fn reparse_macro_token_tree_args(
     Ok(args)
 }
 
+#[derive(Debug, Clone, PartialEq)]
+struct CallableTypeSummary {
+    name: Name,
+    param_types: Vec<Type>,
+    return_type: Type,
+    ambiguous: bool,
+}
+
+fn collect_local_callable_type_summaries(definitions: &[Definition]) -> Vec<CallableTypeSummary> {
+    let mut summaries = Vec::<CallableTypeSummary>::new();
+    for definition in definitions {
+        let summary = match definition {
+            Definition::Function(def)
+                if def.return_type.is_some() && matches!(def.visibility, Visibility::Public) =>
+            {
+                Some(CallableTypeSummary {
+                    name: def.name.clone(),
+                    param_types: def.params.iter().map(|param| param.ty.clone()).collect(),
+                    return_type: def
+                        .return_type
+                        .clone()
+                        .expect("guard above checked return type"),
+                    ambiguous: false,
+                })
+            }
+            Definition::BuiltinFn(def) if matches!(def.visibility, Visibility::Public) => {
+                Some(CallableTypeSummary {
+                    name: def.name.clone(),
+                    param_types: def.params.iter().map(|param| param.ty.clone()).collect(),
+                    return_type: def.return_type.clone(),
+                    ambiguous: false,
+                })
+            }
+            _ => None,
+        };
+        let Some(summary) = summary else {
+            continue;
+        };
+        if let Some(existing) = summaries
+            .iter_mut()
+            .find(|existing| existing.name == summary.name)
+        {
+            existing.ambiguous = true;
+        } else {
+            summaries.push(summary);
+        }
+    }
+    summaries
+}
+
 fn infer_macro_type_signature(
     explicit: Option<MacroTypeSignatureSummary>,
     params: &[Name],
     body: &Expr,
     span: Span,
+    callable_env: &[CallableTypeSummary],
 ) -> Option<MacroTypeSignatureSummary> {
     let mut signature = explicit.unwrap_or_else(|| MacroTypeSignatureSummary {
         param_types: vec![None; params.len()],
         return_type: None,
         span,
     });
-
     if signature.return_type.is_none() {
         let param_env: Vec<(&Name, &Type)> = params
             .iter()
             .zip(signature.param_types.iter())
             .filter_map(|(name, ty)| ty.as_ref().map(|ty| (name, ty)))
             .collect();
-        signature.return_type = infer_bounded_macro_expr_type(body, &param_env);
+        signature.return_type = infer_bounded_macro_expr_type(body, &param_env, callable_env);
     }
 
     if explicit_signature_has_information(&signature) {
@@ -3290,7 +3345,7 @@ fn check_typed_macro_signature(
         let Some(expected) = expected else {
             continue;
         };
-        let Some(actual) = infer_bounded_macro_expr_type(&args[index], &[]) else {
+        let Some(actual) = infer_bounded_macro_expr_type(&args[index], &[], &[]) else {
             return Err(ExpansionError::MacroTypeMismatch {
                 span: args[index].span(),
                 name: entry.name.clone(),
@@ -3311,7 +3366,9 @@ fn check_typed_macro_signature(
     }
 
     if let Some(expected) = &signature.return_type {
-        let Some(actual) = infer_bounded_macro_expr_type(&entry.body, &param_env) else {
+        let Some(actual) =
+            infer_bounded_macro_expr_type(&entry.body, &param_env, &entry.callable_env)
+        else {
             return Err(ExpansionError::MacroTypeMismatch {
                 span: entry.body.span(),
                 name: entry.name.clone(),
@@ -3334,7 +3391,11 @@ fn check_typed_macro_signature(
     Ok(())
 }
 
-fn infer_bounded_macro_expr_type(expr: &Expr, env: &[(&Name, &Type)]) -> Option<Type> {
+fn infer_bounded_macro_expr_type(
+    expr: &Expr,
+    env: &[(&Name, &Type)],
+    callable_env: &[CallableTypeSummary],
+) -> Option<Type> {
     match expr {
         Expr::Literal(Literal::Int(_)) => Some(Type::Name("Int".into())),
         Expr::Literal(Literal::String(_)) => Some(Type::Name("String".into())),
@@ -3346,11 +3407,11 @@ fn infer_bounded_macro_expr_type(expr: &Expr, env: &[(&Name, &Type)]) -> Option<
             .find(|(param, _)| *param == name)
             .map(|(_, ty)| (*ty).clone()),
         Expr::Unary { op, operand, .. } => match op {
-            UnaryOp::Neg => match infer_bounded_macro_expr_type(operand, env) {
+            UnaryOp::Neg => match infer_bounded_macro_expr_type(operand, env, callable_env) {
                 Some(Type::Name(name)) if name.as_ref() == "Int" => Some(Type::Name("Int".into())),
                 _ => None,
             },
-            UnaryOp::Not => match infer_bounded_macro_expr_type(operand, env) {
+            UnaryOp::Not => match infer_bounded_macro_expr_type(operand, env, callable_env) {
                 Some(Type::Name(name)) if name.as_ref() == "Bool" => {
                     Some(Type::Name("Bool".into()))
                 }
@@ -3359,8 +3420,10 @@ fn infer_bounded_macro_expr_type(expr: &Expr, env: &[(&Name, &Type)]) -> Option<
         },
         Expr::Binary {
             op, left, right, ..
-        } => infer_bounded_macro_binary_type(op, left, right, env),
-        Expr::Call { .. } => None,
+        } => infer_bounded_macro_binary_type(op, left, right, env, callable_env),
+        Expr::Call {
+            func, module, args, ..
+        } => infer_bounded_macro_call_type(func, module.as_ref(), args, env, callable_env),
         Expr::FnDef {
             params,
             return_type,
@@ -3376,14 +3439,38 @@ fn infer_bounded_macro_expr_type(expr: &Expr, env: &[(&Name, &Type)]) -> Option<
     }
 }
 
+fn infer_bounded_macro_call_type(
+    func: &Name,
+    module: Option<&Name>,
+    args: &[Expr],
+    env: &[(&Name, &Type)],
+    callable_env: &[CallableTypeSummary],
+) -> Option<Type> {
+    if module.is_some() {
+        return None;
+    }
+    let summary = callable_env.iter().find(|summary| summary.name == *func)?;
+    if summary.ambiguous || summary.param_types.len() != args.len() {
+        return None;
+    }
+    for (arg, expected) in args.iter().zip(&summary.param_types) {
+        let actual = infer_bounded_macro_expr_type(arg, env, callable_env)?;
+        if &actual != expected {
+            return None;
+        }
+    }
+    Some(summary.return_type.clone())
+}
+
 fn infer_bounded_macro_binary_type(
     op: &BinaryOp,
     left: &Expr,
     right: &Expr,
     env: &[(&Name, &Type)],
+    callable_env: &[CallableTypeSummary],
 ) -> Option<Type> {
-    let left_ty = infer_bounded_macro_expr_type(left, env)?;
-    let right_ty = infer_bounded_macro_expr_type(right, env)?;
+    let left_ty = infer_bounded_macro_expr_type(left, env, callable_env)?;
+    let right_ty = infer_bounded_macro_expr_type(right, env, callable_env)?;
     match op {
         BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul | BinaryOp::Div | BinaryOp::Mod
             if is_named_type(&left_ty, "Int") && is_named_type(&right_ty, "Int") =>

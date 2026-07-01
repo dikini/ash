@@ -113,12 +113,11 @@ fn definition_symbol(definition: &Definition) -> Option<DocumentSymbol> {
             &def.span,
             None,
         )),
-        Definition::Macro(def) => Some(symbol(
-            def.name.to_string(),
-            SymbolKind::FUNCTION,
-            &def.span,
-            None,
-        )),
+        Definition::Macro(def) => {
+            let mut symbol = symbol(def.name.to_string(), SymbolKind::OPERATOR, &def.span, None);
+            symbol.detail = Some("syntax-phase macro".to_string());
+            Some(symbol)
+        }
         Definition::Capability(def) => Some(symbol(
             def.name.to_string(),
             SymbolKind::FUNCTION,
@@ -539,6 +538,17 @@ mod tests {
         assert_eq!(symbols.len(), 2);
         assert_eq!(symbols[0].name, "first");
         assert_eq!(symbols[1].name, "later");
+    }
+
+    #[test]
+    fn test_document_symbols_marks_macro_as_operator_detail() {
+        let module = parse_surface_file("macro id(x) => x;").expect("parse ok");
+        let symbols = document_symbols(&module);
+
+        assert_eq!(symbols.len(), 1);
+        assert_eq!(symbols[0].name, "id");
+        assert_eq!(symbols[0].kind, SymbolKind::OPERATOR);
+        assert_eq!(symbols[0].detail.as_deref(), Some("syntax-phase macro"));
     }
 
     fn write_ash(dir: &Path, name: &str, content: &str) -> PathBuf {

@@ -1,6 +1,6 @@
 # TASK-1779: Audit and specify callable identity summaries for macro inference
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -14,7 +14,7 @@ Define what it means for an ordinary call expression inside a macro template to 
 
 ## Dependencies
 
-- 📝 TASK-1775: Macro-aware tooling audit
+- ✅ TASK-1775: Macro-aware tooling audit
 
 ## Deferral / Planned-Feature Reconciliation
 
@@ -74,11 +74,15 @@ commands:
   - python3 -c 'from pathlib import Path; s=Path("docs/audit/phase-174-callable-identity-summary-audit.md").read_text(); assert "TASK-1772" in s and "TASK-1780" in s and "MacroSummary" in s and "local" in s and "builtin" in s and "imported" in s and "overloaded" in s and "private" in s and "unresolved" in s'
   - git diff --check
 checklist:
-  - [ ] Callable identity audit created
-  - [ ] Safe positive cases and fail-closed negatives identified
-  - [ ] TASK-1780 patched with exact implementation gates if needed
+  - [x] Callable identity audit created
+  - [x] Safe positive cases and fail-closed negatives identified
+  - [x] TASK-1780 patched with exact implementation gates if needed
 ```
 
 ## Dependencies for Next Task
 
 TASK-1780 depends on this task's positive/negative decision table.
+
+## Completion Evidence
+
+- Created `docs/audit/phase-174-callable-identity-summary-audit.md` with proof categories for local, builtin, imported, overloaded, private, unresolved, and `MacroSummary` cases.

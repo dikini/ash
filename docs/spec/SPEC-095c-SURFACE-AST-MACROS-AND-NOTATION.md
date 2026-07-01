@@ -294,6 +294,13 @@ unique from annotated arguments and the template body. Imported/exported summari
 or previously inferred at their definition site. Ambiguous inference rejects and asks for an
 annotation; it must not default to a convenient type.
 
+A Phase 174 callable-identity proof may use a same-definition-list local callable summary only when
+exactly one ordinary `fn` or `builtin fn` with complete parameter and return annotations matches the
+call name, arity, and already-inferred argument types. This proof is syntax-phase type evidence only:
+it does not export the callable, does not activate imports, and does not turn `MacroSummary` into a
+callable summary. Unresolved, duplicate, overloaded/interface, module-qualified, private-cross-module,
+or argument-mismatched calls remain annotation-required and fail closed.
+
 ## 7. Notation declarations
 
 Notation declarations bind syntactic sugar to callable targets. They are items in the surface AST:

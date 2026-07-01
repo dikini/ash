@@ -69,8 +69,63 @@ fn ordinary_calls_do_not_fabricate_inferred_results() {
 }
 
 #[test]
+fn infers_result_through_unique_local_callable_identity() {
+    let signature = public_macro_signature(
+        "pub fn add(a: Int, b: Int) -> Int { a + b }\npub macro inc(x: Int) => add(x, 1);",
+        "inc",
+    );
+
+    assert_name_type(&signature.return_type.expect("return inferred"), "Int");
+}
+
+#[test]
+fn ambiguous_local_callable_identity_stays_uninferred() {
+    let signature = public_macro_signature(
+        "pub fn add(a: Int, b: Int) -> Int { a + b }\npub fn add(a: Int, b: Int) -> Int { a + b }\npub macro inc(x: Int) => add(x, 1);",
+        "inc",
+    );
+
+    assert!(signature.return_type.is_none());
+}
+
+#[test]
 fn wrong_arity_call_stays_uninferred_even_with_typed_arguments() {
-    let signature = public_macro_signature("pub macro bad_add(x: Int) => add(x);", "bad_add");
+    let signature = public_macro_signature(
+        "pub fn add(a: Int, b: Int) -> Int { a + b }\npub macro bad_add(x: Int) => add(x);",
+        "bad_add",
+    );
+
+    assert_eq!(signature.param_types.len(), 1);
+    assert!(signature.return_type.is_none());
+}
+
+#[test]
+fn wrong_argument_type_to_proven_callable_stays_uninferred() {
+    let signature = public_macro_signature(
+        "pub fn len(x: String) -> Int { 1 }\npub macro bad_len(x: Int) => len(x);",
+        "bad_len",
+    );
+
+    assert_eq!(signature.param_types.len(), 1);
+    assert!(signature.return_type.is_none());
+}
+
+#[test]
+fn private_callable_identity_stays_uninferred_for_public_macro_summary() {
+    let signature = public_macro_signature(
+        "fn add(a: Int, b: Int) -> Int { a + b }\npub macro inc(x: Int) => add(x, 1);",
+        "inc",
+    );
+
+    assert!(signature.return_type.is_none());
+}
+
+#[test]
+fn macro_summary_name_is_not_callable_identity_proof() {
+    let signature = public_macro_signature(
+        "pub macro add(x: Int) -> Int => x;\npub macro inc(x: Int) => add(x, 1);",
+        "inc",
+    );
 
     assert_eq!(signature.param_types.len(), 1);
     assert!(signature.return_type.is_none());

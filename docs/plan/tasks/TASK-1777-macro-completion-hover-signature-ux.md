@@ -1,6 +1,6 @@
 # TASK-1777: Implement macro-aware completion and hover/signature presentation
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -14,8 +14,8 @@ Update LSP completion and hover so macros are presented as syntax-phase macros, 
 
 ## Dependencies
 
-- 📝 TASK-1775: Macro-aware tooling audit
-- 📝 TASK-1776: Macro-specific symbol/cache model
+- ✅ TASK-1775: Macro-aware tooling audit
+- ✅ TASK-1776: Macro-specific symbol/cache model
 
 ## Deferral / Planned-Feature Reconciliation
 
@@ -77,11 +77,15 @@ commands:
   - cargo fmt --check
   - cargo clippy -p ash-lsp-core --all-targets --all-features -- -D warnings
 checklist:
-  - [ ] Macro completions are macro-specific
-  - [ ] Macro hover shows typed signatures when present
-  - [ ] Ordinary function completion/hover behavior remains intact
+  - [x] Macro completions are macro-specific
+  - [x] Macro hover shows typed signatures when present
+  - [x] Ordinary function completion/hover behavior remains intact
 ```
 
 ## Dependencies for Next Task
 
 TASK-1778 depends on the same macro-specific symbol vocabulary and should reuse the helper formatting introduced here where useful.
+
+## Completion Evidence
+
+- Macro completions now use syntax-phase detail/kind instead of ordinary function presentation; macro hover renders `MacroTypeSignatureSummary` metadata.

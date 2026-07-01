@@ -35,7 +35,7 @@ fn find_definition_span<'a>(token: &str, definitions: &'a [Definition]) -> Optio
     for def in definitions {
         let name_matches = match def {
             Definition::Notation(n) => n.pattern.raw.as_ref() == token,
-            Definition::Macro(m) => m.name.as_ref() == token,
+            Definition::Macro(_) | Definition::Law(_) => false,
             Definition::Function(f) => f.name.as_ref() == token,
             Definition::Capability(c) => c.name.as_ref() == token,
             Definition::Policy(p) => p.name.as_ref() == token,
@@ -52,7 +52,7 @@ fn find_definition_span<'a>(token: &str, definitions: &'a [Definition]) -> Optio
             Definition::Impl(i) => i.interface.as_ref() == token,
             Definition::BuiltinFn(b) => b.name.as_ref() == token,
             Definition::SealedDomain(d) => d.name.as_ref() == token,
-            Definition::Law(_) => false,
+
             Definition::Proof(p) => p.name.as_ref() == token,
         };
         if name_matches {
@@ -87,6 +87,65 @@ fn find_definition_span<'a>(token: &str, definitions: &'a [Definition]) -> Optio
     None
 }
 
+fn find_macro_definition_span<'a>(token: &str, definitions: &'a [Definition]) -> Option<&'a Span> {
+    definitions.iter().find_map(|def| match def {
+        Definition::Macro(m) if m.name.as_ref() == token => Some(&m.span),
+        _ => None,
+    })
+}
+
+fn is_macro_invocation_at(source: &str, offset: usize) -> bool {
+    if source.get(offset..).is_none() {
+        return false;
+    }
+
+    let mut start = offset;
+    while start > 0 {
+        let Some(prev) = source[..start].chars().next_back() else {
+            break;
+        };
+        let prev_start = start - prev.len_utf8();
+        if !is_ident_char(prev) {
+            break;
+        }
+        start = prev_start;
+    }
+
+    let mut end = offset;
+    while let Some(next) = source[end..].chars().next() {
+        if !is_ident_char(next) {
+            break;
+        }
+        end += next.len_utf8();
+    }
+
+    source[end..]
+        .chars()
+        .find(|ch| !ch.is_whitespace())
+        .is_some_and(|ch| ch == '!')
+}
+
+fn is_macro_declaration_name_at(source: &str, offset: usize) -> bool {
+    let mut start = offset;
+    while start > 0 {
+        let Some(prev) = source[..start].chars().next_back() else {
+            break;
+        };
+        let prev_start = start - prev.len_utf8();
+        if !is_ident_char(prev) {
+            break;
+        }
+        start = prev_start;
+    }
+    let Some(prefix) = source.get(..start) else {
+        return false;
+    };
+    prefix
+        .split(|ch: char| !is_ident_char(ch))
+        .rfind(|word| !word.is_empty())
+        .is_some_and(|word| word == "macro")
+}
+
 fn check_sub_def_names<'a>(token: &str, def: &'a Definition) -> Option<&'a Span> {
     match def {
         Definition::Interface(i) => i
@@ -118,6 +177,17 @@ fn find_module_decl_span<'a>(token: &str, decls: &'a [ModuleDecl]) -> Option<&'a
     None
 }
 
+fn find_macro_decl_span<'a>(token: &str, decls: &'a [ModuleDecl]) -> Option<&'a Span> {
+    for decl in decls {
+        if let Some(defs) = decl.definitions()
+            && let Some(span) = find_macro_definition_span(token, defs)
+        {
+            return Some(span);
+        }
+    }
+    None
+}
+
 /// Perform go-to-definition at the given cursor position.
 ///
 /// Returns `None` if the cursor is not on an identifier or no matching
@@ -132,6 +202,21 @@ pub fn goto_definition(
 ) -> Option<GotoDefinitionResponse> {
     let offset = offset_from_line_col(source, line, col)?;
     let token = token_at_offset(source, offset)?;
+
+    // Macro invocations are syntax-phase uses (`m!(...)`), so prefer a macro
+    // declaration over an ordinary function with the same spelling. Cross-file
+    // imported-summary navigation remains out of scope until a real source
+    // location is available.
+    if (is_macro_invocation_at(source, offset) || is_macro_declaration_name_at(source, offset))
+        && let Some(span) = find_macro_decl_span(token, &module.module_decls)
+            .or_else(|| find_macro_definition_span(token, &module.definitions))
+    {
+        let range = span_to_range(source, span)?;
+        return Some(GotoDefinitionResponse::Scalar(Location {
+            uri: uri.clone(),
+            range,
+        }));
+    }
 
     // Check workflow entry.
     if let Some(ref wf) = module.workflow
@@ -294,6 +379,45 @@ mod tests {
         let col = u32::try_from(helper_offset - line1_start).unwrap();
         let result = goto_definition(&module, source, &parse_uri(), 1, col);
         assert!(result.is_some(), "should resolve reference to function");
+    }
+
+    #[test]
+    fn test_goto_macro_invocation_prefers_macro_over_same_named_function() {
+        let source =
+            "fn id() -> Int { 1 }\nmacro id(x) => x;\nworkflow main { let y = id!(1) done }";
+        let module = parse_surface_file(source).expect("parse ok");
+        let line2_start = source.rfind('\n').unwrap() + 1;
+        let id_offset = source[line2_start..].find("id!").unwrap() + line2_start;
+        let col = u32::try_from(id_offset - line2_start).unwrap();
+
+        let result = goto_definition(&module, source, &parse_uri(), 2, col)
+            .expect("macro invocation resolves");
+        let GotoDefinitionResponse::Scalar(location) = result else {
+            panic!("expected scalar location");
+        };
+        assert_eq!(
+            location.range.start.line, 1,
+            "should select macro declaration line"
+        );
+    }
+
+    #[test]
+    fn test_goto_ordinary_call_prefers_function_over_same_named_macro() {
+        let source = "macro id(x) => x;\nfn id() -> Int { 1 }\nworkflow main { let y = id() done }";
+        let module = parse_surface_file(source).expect("parse ok");
+        let line2_start = source.rfind('\n').unwrap() + 1;
+        let id_offset = source[line2_start..].find("id()").unwrap() + line2_start;
+        let col = u32::try_from(id_offset - line2_start).unwrap();
+
+        let result =
+            goto_definition(&module, source, &parse_uri(), 2, col).expect("ordinary call resolves");
+        let GotoDefinitionResponse::Scalar(location) = result else {
+            panic!("expected scalar location");
+        };
+        assert_eq!(
+            location.range.start.line, 1,
+            "ordinary calls must not resolve to a same-named syntax-phase macro"
+        );
     }
 
     #[test]

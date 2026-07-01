@@ -34,7 +34,7 @@ fn inferred_macro_summary_remains_syntax_phase_while_expansion_removes_invocatio
     let module = ash_parser::parse_surface_file(
         r"
 pub macro inc(x: Int) => x + 1;
-fn use_macro(n: Int) -> Int { inc!(n) }
+fn use_macro() -> Int { inc!(1) }
 ",
     )
     .expect("module parses");

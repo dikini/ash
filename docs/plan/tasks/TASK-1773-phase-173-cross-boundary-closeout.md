@@ -116,6 +116,12 @@ Verification on TASK-1773 closeout diff:
 - `cargo fmt --check && git diff --check` — passed.
 - `python3 tools/docs/validate_orientation_indexes.py --self-test && bash scripts/check-docs-gate.sh` — passed.
 
+Post-closeout TASK-1771 remediation review:
+
+- Tightened typed macro closeout after review so annotated argument positions reject unknown bounded types fail-closed, malformed imported signature arity rejects instead of panicking, and imported macro summaries validate typed-signature equality against their paired expansion templates before export/import activation.
+- Re-ran focused parser/engine regressions: `cargo test -p ash-parser --test task_1771_typed_macro_checking -- --nocapture` (5 passed), `cargo test -p ash-engine --test task_1771_typed_macro_boundaries -- --nocapture` (3 passed), `cargo test -p ash-engine module_loader::tests::task_1771_rejects_imported_macro_summary_template_signature_mismatch -- --nocapture` (1 passed), `cargo test -p ash-parser --test task_1773_phase_173_boundaries -- --nocapture` (2 passed), and `cargo test -p ash-engine --test task_1773_phase_173_boundaries -- --nocapture` (2 passed).
+- Re-ran the broad closeout gate after remediation: `cargo fmt --check`, `cargo test -p ash-parser`, `cargo test -p ash-typeck`, `cargo test -p ash-engine`, `cargo test -p ash-lsp-core`, `cargo check --workspace`, `cargo clippy --workspace --all-targets --all-features -- -D warnings`, `git diff --check`, `python3 tools/docs/validate_orientation_indexes.py --self-test`, and `bash scripts/check-docs-gate.sh` all passed on the final code diff. A stale corrupted `target/debug/deps` test artifact produced an `Exec format error` during the first broad run and was cleared with `cargo clean -p ash-typeck`; the final rerun passed.
+
 ## Notes
 
 Keep Phase 173 conservative. If this task discovers that its scope requires a broader macro system than specified, stop and patch PLAN-173/TASK-1761 with a split recommendation before implementation continues.

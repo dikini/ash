@@ -6,6 +6,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Fixed
+- Made typed macro checking fail closed for unknown annotated arguments, malformed imported signature arity, and imported macro summary/template typed-signature mismatches; result mismatch diagnostics now use the macro template span (TASK-1771).
 - Tightened bounded macro type inference so ordinary call expressions do not fabricate public macro typed summaries from unqualified names without a proven callable identity; added negative parser regressions for unqualified, wrong-arity, and module-qualified calls (TASK-1772).
 - Rejected free variables in Phase 172 executable macro templates and preserved nested macro-to-macro origin parentage, preventing call-site capture and origin-chain loss found during closeout review (TASK-1759).
 - Phase 170 closeout remediation preserves legacy mixed `pub workflow` plus `pub fn` module exports while keeping expanded-module callable exports authoritative when available (TASK-1742).

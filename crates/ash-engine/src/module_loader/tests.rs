@@ -1277,3 +1277,30 @@ fn task_860_imported_summary_merge_preserves_associated_family_payloads() {
     );
     assert_eq!(summaries[0].exported_associated_families, vec![family]);
 }
+
+#[test]
+fn task_1771_rejects_imported_macro_summary_template_signature_mismatch() {
+    let module = ash_parser::parse_surface_file("pub macro id_int(x: Int) -> Int => x;")
+        .expect("module parses");
+    let mut summary = ash_parser::surface::collect_public_macro_summaries(&module, "provider")
+        .expect("summary collects")
+        .pop()
+        .expect("public macro summary exists");
+    summary
+        .typed_signature
+        .as_mut()
+        .expect("typed summary exists")
+        .return_type = Some(Type::Name("String".into()));
+    let table =
+        ash_parser::surface::build_local_macro_table(&module).expect("local macro table builds");
+    let template = table.resolve("id_int").expect("template exists").clone();
+    let mut exports = ModuleExports::default();
+
+    let err = insert_macro_summary_export(&mut exports, summary, template)
+        .expect_err("summary/template signature mismatch rejects");
+    let message = err.to_string();
+    assert!(
+        message.contains("typed signature does not match template"),
+        "unexpected error: {message}"
+    );
+}

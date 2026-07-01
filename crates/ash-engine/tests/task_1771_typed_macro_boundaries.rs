@@ -33,6 +33,28 @@ fn imported_typed_macro_argument_mismatch_rejects_in_caller_module() {
 }
 
 #[test]
+fn imported_typed_macro_unknown_argument_rejects_fail_closed_in_caller_module() {
+    let (_dir, caller) = write_pair(
+        "\npub macro inc(x: Int) -> Int => x;\n",
+        "\nuse provider::{inc}\nfn use_macro(n: Int) -> Int { inc!(n) }\n",
+    );
+
+    let engine = Engine::new().build().expect("engine builds");
+    let err = engine
+        .check_module_file(&caller)
+        .expect_err("imported typed macro unknown arg rejects in caller");
+    let message = err.to_string();
+    assert!(
+        message.contains("macro `inc` typed signature mismatch at argument 1 at call site"),
+        "unexpected error: {message}"
+    );
+    assert!(
+        message.contains("got unknown argument type"),
+        "unexpected error: {message}"
+    );
+}
+
+#[test]
 fn imported_typed_macro_matching_signature_checks_successfully() {
     let (_dir, caller) = write_pair(
         "\npub macro id_int(x: Int) -> Int => x;\n",

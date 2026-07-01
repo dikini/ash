@@ -1,4 +1,7 @@
-use ash_parser::surface::expand_surface_module;
+use ash_parser::surface::{
+    Type, build_local_macro_table, expand_surface_module,
+    expand_surface_module_with_imported_macros,
+};
 
 #[test]
 fn typed_macro_argument_mismatch_rejects_before_expansion_acceptance() {
@@ -22,6 +25,59 @@ fn use_macro() -> Int { inc!("not-int") }
     );
     assert!(
         message.contains("got String"),
+        "unexpected error: {message}"
+    );
+}
+
+#[test]
+fn typed_macro_unknown_argument_type_rejects_fail_closed() {
+    let module = ash_parser::parse_surface_file(
+        r#"
+macro inc(x: Int) -> Int => x;
+fn use_macro(n: Int) -> Int { inc!(n) }
+"#,
+    )
+    .expect("module parses before typed macro check");
+
+    let err = expand_surface_module(module).expect_err("unknown typed macro arg rejects");
+    let message = err.to_string();
+    assert!(
+        message.contains("macro `inc` typed signature mismatch at argument 1 at call site"),
+        "unexpected error: {message}"
+    );
+    assert!(
+        message.contains("expected Int"),
+        "unexpected error: {message}"
+    );
+    assert!(
+        message.contains("got unknown argument type"),
+        "unexpected error: {message}"
+    );
+}
+
+#[test]
+fn malformed_imported_typed_signature_rejects_instead_of_panicking() {
+    let provider = ash_parser::parse_surface_file("pub macro inc(x: Int) -> Int => x;")
+        .expect("provider parses");
+    let table = build_local_macro_table(&provider).expect("provider macro table builds");
+    let mut imported = table
+        .resolve("inc")
+        .expect("provider macro entry exists")
+        .clone();
+    imported
+        .typed_signature
+        .as_mut()
+        .expect("typed signature exists")
+        .param_types
+        .push(Some(Type::Name("Int".into())));
+
+    let caller =
+        ash_parser::parse_surface_file("fn use_macro() -> Int { inc!(1) }").expect("caller parses");
+    let err = expand_surface_module_with_imported_macros(caller, vec![imported])
+        .expect_err("malformed imported typed signature rejects");
+    let message = err.to_string();
+    assert!(
+        message.contains("typed signature has 2 parameter(s), but macro declares 1 parameter(s)"),
         "unexpected error: {message}"
     );
 }

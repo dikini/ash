@@ -3261,11 +3261,23 @@ fn explicit_signature_has_information(signature: &MacroTypeSignatureSummary) -> 
 fn check_typed_macro_signature(
     entry: &LocalMacroEntry,
     args: &[Expr],
-    call_span: Span,
+    _call_span: Span,
 ) -> Result<(), ExpansionError> {
     let Some(signature) = &entry.typed_signature else {
         return Ok(());
     };
+    if signature.param_types.len() != entry.params.len() {
+        return Err(ExpansionError::UnsupportedMacroTemplate {
+            span: signature.span,
+            name: entry.name.clone(),
+            reason: format!(
+                "typed signature has {} parameter(s), but macro declares {} parameter(s)",
+                signature.param_types.len(),
+                entry.params.len()
+            )
+            .into_boxed_str(),
+        });
+    }
 
     let param_env: Vec<(&Name, &Type)> = entry
         .params
@@ -3279,7 +3291,13 @@ fn check_typed_macro_signature(
             continue;
         };
         let Some(actual) = infer_bounded_macro_expr_type(&args[index], &[]) else {
-            continue;
+            return Err(ExpansionError::MacroTypeMismatch {
+                span: args[index].span(),
+                name: entry.name.clone(),
+                expected: format_type(expected).into_boxed_str(),
+                actual: "unknown argument type".into(),
+                position: format!("argument {} at call site", index + 1).into_boxed_str(),
+            });
         };
         if &actual != expected {
             return Err(ExpansionError::MacroTypeMismatch {
@@ -3304,7 +3322,7 @@ fn check_typed_macro_signature(
         };
         if &actual != expected {
             return Err(ExpansionError::MacroTypeMismatch {
-                span: call_span,
+                span: entry.body.span(),
                 name: entry.name.clone(),
                 expected: format_type(expected).into_boxed_str(),
                 actual: format_type(&actual).into_boxed_str(),

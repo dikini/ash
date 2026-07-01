@@ -34,7 +34,7 @@ Check macro invocation argument/template/result types before accepting expansion
 ### Functional Requirements
 
 - [x] Argument type mismatches reject before expansion acceptance
-- [x] Template result mismatches point at macro definition and call site
+- [x] Template result mismatches point at macro definition/template body context
 - [x] Imported typed macro summaries are checked in caller modules
 
 ### Property Requirements
@@ -90,7 +90,7 @@ commands:
   - git diff --check
 checklist:
 - [x] Argument type mismatches reject before expansion acceptance
-- [x] Template result mismatches point at macro definition and call site
+- [x] Template result mismatches point at macro definition/template body context
 - [x] Imported typed macro summaries are checked in caller modules
 ```
 
@@ -98,16 +98,18 @@ checklist:
 
 - Added `ExpansionError::MacroTypeMismatch` for macro-specific typed-signature failures before expansion acceptance.
 - Added conservative bounded type inference for typed macro arguments and template results in `crates/ash-parser/src/surface.rs`.
-- Checked explicit argument annotations at call sites when the argument's bounded type is known.
-- Checked explicit macro result annotations against the template body under typed macro parameter assumptions.
-- Preserved imported `LocalMacroEntry::typed_signature` rows so caller modules check imported typed macros before downstream typechecking/Core acceptance.
+- Checked explicit argument annotations at call sites fail-closed: known mismatches reject, and unknown bounded argument types reject instead of being skipped.
+- Checked explicit macro result annotations against the template body under typed macro parameter assumptions, using the template body span for result mismatches.
+- Validated imported macro summaries against their paired expansion templates, including typed-signature equality, before exporting or activating imported macros.
+- Rejected malformed imported typed-signature/template arity mismatches before expansion instead of panicking.
 - Added parser regressions in `crates/ash-parser/tests/task_1771_typed_macro_checking.rs`.
-- Added engine/module-boundary regressions in `crates/ash-engine/tests/task_1771_typed_macro_boundaries.rs`.
+- Added engine/module-boundary regressions in `crates/ash-engine/tests/task_1771_typed_macro_boundaries.rs` and `crates/ash-engine/src/module_loader/tests.rs`.
 
 Fresh verification on final TASK-1771 diff:
 
-- `cargo test -p ash-parser --test task_1771_typed_macro_checking -- --nocapture` — 3 passed.
-- `cargo test -p ash-engine --test task_1771_typed_macro_boundaries -- --nocapture` — 2 passed.
+- `cargo test -p ash-parser --test task_1771_typed_macro_checking -- --nocapture` — 5 passed.
+- `cargo test -p ash-engine --test task_1771_typed_macro_boundaries -- --nocapture` — 3 passed.
+- `cargo test -p ash-engine module_loader::tests::task_1771_rejects_imported_macro_summary_template_signature_mismatch -- --nocapture` — passed.
 - `cargo test -p ash-parser` — passed, including parser doctests.
 - `cargo test -p ash-typeck` — passed, including typeck doctests.
 - `cargo test -p ash-engine` — passed, including engine doctests.

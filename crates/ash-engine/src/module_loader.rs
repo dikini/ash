@@ -31,6 +31,7 @@ use ash_core::workflow_carrier::{
     ProjectionKind, PublicWorkflowSummary, SourceOrigin, WorkflowBinder, WorkflowForm,
     WorkflowNodeId, WorkflowScope, lower_workflow_form,
 };
+use ash_parser::Spanned;
 use ash_parser::input::new_input;
 use ash_parser::parse_module::{parse_builtin_fn_definition, parse_fn_definition};
 use ash_parser::parse_type_def::{
@@ -190,10 +191,22 @@ fn collect_imported_macro_entries_with_state(
         for selection in import.selections {
             match selection {
                 ImportSelection::Glob => {
-                    imported_macros.extend(exports.macro_templates.values().cloned());
+                    for summary in exports.macro_summaries.values() {
+                        let template = exports
+                            .macro_templates
+                            .get(summary.name.as_ref())
+                            .ok_or_else(|| {
+                                EngineError::Parse(format!(
+                                    "macro summary '{}' has no expansion template",
+                                    summary.name
+                                ))
+                            })?;
+                        validate_macro_summary_template(summary, template)?;
+                        imported_macros.push(template.clone());
+                    }
                 }
                 ImportSelection::Named { name, alias } => {
-                    if exports.macro_summaries.contains_key(&name) {
+                    if let Some(summary) = exports.macro_summaries.get(&name) {
                         let mut entry = exports
                             .macro_templates
                             .get(&name)
@@ -203,6 +216,7 @@ fn collect_imported_macro_entries_with_state(
                                 ))
                             })?
                             .clone();
+                        validate_macro_summary_template(summary, &entry)?;
                         if let Some(alias) = alias {
                             entry.name = alias.into();
                         }
@@ -3357,6 +3371,7 @@ fn insert_macro_summary_export(
     template: LocalMacroEntry,
 ) -> Result<(), EngineError> {
     let name = summary.name.to_string();
+    validate_macro_summary_template(&summary, &template)?;
     if exports
         .macro_summaries
         .insert(name.clone(), summary)
@@ -3373,6 +3388,37 @@ fn insert_macro_summary_export(
     {
         return Err(EngineError::Parse(format!(
             "duplicate public macro template '{name}'"
+        )));
+    }
+    Ok(())
+}
+
+fn validate_macro_summary_template(
+    summary: &MacroSummary,
+    template: &LocalMacroEntry,
+) -> Result<(), EngineError> {
+    let name = summary.name.as_ref();
+    if summary.name != template.name {
+        return Err(EngineError::Parse(format!(
+            "macro summary '{name}' names template '{}'",
+            template.name
+        )));
+    }
+    if summary.params != template.params {
+        return Err(EngineError::Parse(format!(
+            "macro summary '{name}' parameter list does not match template"
+        )));
+    }
+    if summary.template_fingerprint.param_count != template.params.len()
+        || summary.template_fingerprint.body_span != template.body.span()
+    {
+        return Err(EngineError::Parse(format!(
+            "macro summary '{name}' template fingerprint does not match template"
+        )));
+    }
+    if summary.typed_signature != template.typed_signature {
+        return Err(EngineError::Parse(format!(
+            "macro summary '{name}' typed signature does not match template"
         )));
     }
     Ok(())

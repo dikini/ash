@@ -14,6 +14,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Phase 170 notation summary/export design now matches the implemented fail-closed local-table behavior for duplicate notation declarations (TASK-1742).
 
 ### Added
+- PLAN-174 macro-aware tooling, summary identity, and inference-readiness packet, with tasks for LSP macro presentation/cache identity, callable identity audits, bounded ordinary-call macro inference, cross-boundary validation, docs/spec reconciliation, and closeout (TASK-1774 through TASK-1783).
 - Phase 173 closeout adds parser and engine cross-boundary regressions proving inferred macro summaries remain syntax-phase metadata, ambiguous macros do not fabricate typed summaries, macro imports do not create runtime callable bindings, and private template helpers are not transported through macro summaries (TASK-1773).
 - Bounded macro type inference for literal, annotated-identity, operator, and fully annotated anonymous-function templates, preserving inferred syntax-phase summaries through public macro imports without fabricating ambiguous unannotated summaries (TASK-1772).
 - Fail-closed typed macro checking for annotated macro arguments and template results before expansion acceptance, including imported typed macro summary checks in caller modules (TASK-1771).

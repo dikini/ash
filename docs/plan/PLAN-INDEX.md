@@ -148,7 +148,8 @@ Update this section as tasks complete:
 | [170](PLAN-170-EXPANDED-SURFACE-INTEGRATION-AND-NOTATION-SCOPING.md) | 7 | 7 | ✅ Complete |
 | [171](PLAN-171-MACRO-NOTATION-HYGIENE-AND-EXPANSION-BOUNDARIES.md) | 8 | 8 | ✅ Complete |
 | [172](PLAN-172-PARSER-FIRST-MACRO-EXECUTION-MVP.md) | 9 | 9 | ✅ Complete |
-| [173](PLAN-173-MACRO-SUMMARIES-TOKEN-TREES-HYGIENIC-BINDERS-TYPED-MACROS.md) | 14 | 9 | 🟢 In Progress; binder hygiene metadata model complete |
+| [173](PLAN-173-MACRO-SUMMARIES-TOKEN-TREES-HYGIENIC-BINDERS-TYPED-MACROS.md) | 14 | 14 | ✅ Complete |
+| [174](PLAN-174-MACRO-AWARE-TOOLING-SUMMARY-IDENTITY-AND-INFERENCE-READINESS.md) | 10 | 1 | 📝 Planned |
 
 ---
 
@@ -807,3 +808,24 @@ Extends the Phase 172 local expression-macro MVP into the next conservative macr
 | [TASK-1771](tasks/TASK-1771-fail-closed-typed-macro-checking.md) | Implement fail-closed typed macro checking | ✅ Complete |
 | [TASK-1772](tasks/TASK-1772-bounded-macro-type-inference.md) | Implement bounded macro type inference | ✅ Complete |
 | [TASK-1773](tasks/TASK-1773-phase-173-cross-boundary-closeout.md) | Close out Phase 173 with cross-boundary validation, review, and status reconciliation | ✅ Complete |
+
+## Phase 174: Macro-Aware Tooling, Summary Identity, and Inference Readiness
+
+**Status:** 📝 Planned
+**Plan:** [PLAN-174: Macro-Aware Tooling, Summary Identity, and Inference Readiness](PLAN-174-MACRO-AWARE-TOOLING-SUMMARY-IDENTITY-AND-INFERENCE-READINESS.md)
+**Depends on:** Phase 173 macro summaries, token trees, hygienic binders, and typed macros; `SPEC-095c`; `SPEC-098c`; `SPEC-097b`.
+
+Hardens the tooling and identity seams left after Phase 173. The phase makes LSP-facing macro presentation, symbol identity, cache invalidation, and navigation macro-aware without treating macro summaries as runtime callables. It also audits callable identity summaries and implements only bounded macro inference through ordinary calls when a unique callable identity and type summary are proven.
+
+| Task | Description | Status |
+|------|-------------|--------|
+| [TASK-1774](tasks/TASK-1774-phase-174-plan-packet.md) | Create the Phase 174 macro-aware tooling and inference-readiness plan packet | ✅ Complete |
+| [TASK-1775](tasks/TASK-1775-macro-aware-tooling-audit.md) | Audit macro-aware tooling, LSP, and summary-identity seams | 📝 Planned |
+| [TASK-1776](tasks/TASK-1776-macro-symbol-cache-model.md) | Add macro-specific symbol kinds and cache-summary invalidation keys | 📝 Planned |
+| [TASK-1777](tasks/TASK-1777-macro-completion-hover-signature-ux.md) | Implement macro-aware completion and hover/signature presentation | 📝 Planned |
+| [TASK-1778](tasks/TASK-1778-macro-goto-reference-boundaries.md) | Harden macro goto-definition, symbols, and references without callable overclaiming | 📝 Planned |
+| [TASK-1779](tasks/TASK-1779-callable-identity-summary-audit.md) | Audit and specify callable identity summaries for macro inference | 📝 Planned |
+| [TASK-1780](tasks/TASK-1780-bounded-callable-identity-inference.md) | Implement bounded macro inference through proven callable identities | 📝 Planned |
+| [TASK-1781](tasks/TASK-1781-cross-boundary-tooling-validation.md) | Add parser/engine/LSP cross-boundary tooling and inference validation | 📝 Planned |
+| [TASK-1782](tasks/TASK-1782-phase-174-docs-spec-reconciliation.md) | Reconcile specs, docs, and indexes for Phase 174 boundaries | 📝 Planned |
+| [TASK-1783](tasks/TASK-1783-phase-174-closeout.md) | Close out Phase 174 with broad gates and review | 📝 Planned |

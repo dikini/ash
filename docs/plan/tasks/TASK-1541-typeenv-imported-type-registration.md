@@ -1,6 +1,6 @@
 # TASK-1541: TypeEnv Imported Type Registration
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -14,12 +14,18 @@ Modify TypeEnv to register imported types before local types are processed. This
 
 ## Acceptance Criteria
 
-- [ ] TypeEnv has API to register imported types early
-- [ ] Imported types are available during local type definition processing
-- [ ] Type unification works with imported types
-- [ ] No regressions in existing type tests
+- [x] TypeEnv has API to register imported types early
+- [x] Imported types are available during local type definition processing
+- [x] Type unification works with imported types
+- [x] No regressions in existing type tests
 
 ## Verification
 
 - `cargo test -p ash-typeck` passes
 - New TypeEnv tests for imported type registration pass
+
+
+## Completion Evidence
+
+- Imported public type identities and callable-signature opaque type summaries are registered before local summary validation in `Engine::check_module_file` and ordinary-file import loading.
+- Primary regression coverage: `cargo test -p ash-engine --test task_1540_type_annotation_quirks -- --nocapture`.

@@ -1505,16 +1505,15 @@ impl Engine {
                 )
             })
             .collect();
-        let mut errors = module_loader::public_callable_signature_visibility_errors(
-            &source,
-            &type_metadata.type_defs,
-        );
-        errors.extend(module_loader::public_callable_signature_resolution_errors(
+        let mut errors = module_loader::public_callable_signature_resolution_errors(
             path,
             &source,
             &type_metadata.type_defs,
-        ));
+        );
         errors.extend(module_loader::public_imported_type_visibility_errors(
+            path, &source,
+        ));
+        errors.extend(module_loader::public_opaque_import_constructor_errors(
             path, &source,
         ));
         errors.extend(module_loader::public_representation_visibility_errors(

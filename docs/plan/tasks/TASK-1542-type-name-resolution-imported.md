@@ -1,6 +1,6 @@
 # TASK-1542: Type Name Resolution with Imported Types
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -14,13 +14,19 @@ Update type name resolution to check imported types when resolving type names in
 
 ## Acceptance Criteria
 
-- [ ] Type name resolution checks imported types
-- [ ] `fn` parameter types can use imported types
-- [ ] `fn` return types can use imported types
-- [ ] Record field types can use imported types
-- [ ] No regressions in existing resolution tests
+- [x] Type name resolution checks imported types
+- [x] `fn` parameter types can use imported types
+- [x] `fn` return types can use imported types
+- [x] Record field types can use imported types
+- [x] No regressions in existing resolution tests
 
 ## Verification
 
 - `cargo test -p ash-typeck` passes
 - New resolution tests for imported types pass
+
+
+## Completion Evidence
+
+- Resolution now treats imported public types and imported callable signature types as known in public type definitions, record fields, fn parameters, and fn returns.
+- Primary regression coverage: `cargo test -p ash-engine --test task_1540_type_annotation_quirks -- --nocapture`.

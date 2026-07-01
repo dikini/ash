@@ -1,6 +1,6 @@
 # SPEC-090: Fix Type Annotation Quirks in fn Expressions with Imported Types
 
-**Status:** Draft
+**Status:** Implemented MVP (Phase 154)
 **Date:** 2026-06-17
 **Amends:** [SPEC-057](SPEC-057-UNIFIED-TYPE-MODULE-PIPELINE-AND-SEMANTIC-SUMMARIES.md), [SPEC-072](SPEC-072-TOWER-CALLABLE-TYPE-AND-CLOSURE-SYNTAX.md)
 **Builds on:** [ASSESSMENT-002](../assessments/ASSESSMENT-002-TYPE-ANNOTATION-QUIRKS.md)
@@ -239,18 +239,17 @@ pub fn ints() -> Strategy<Int> {
 
 | File | Change |
 |------|--------|
-| `crates/ash-parser/src/parse_module.rs` | Two-pass processing: imports first, then types |
-| `crates/ash-typeck/src/type_env.rs` | Register imported types before local types |
-| `crates/ash-typeck/src/check.rs` | Type name resolution with imported types |
-| `crates/ash-typeck/src/diagnostics.rs` | Better error messages for type leakage |
+| `crates/ash-engine/src/module_loader.rs` | Import-first visibility collection, opaque callable-signature type summaries, constructor-leak diagnostics |
+| `crates/ash-engine/src/lib.rs` | Registers imported type identities before local module summary validation in `Engine::check_module_file` |
+| `crates/ash-engine/tests/task_1540_type_annotation_quirks.rs` | Acceptance regressions for C90-1 through C90-5 |
 
 ### Order of Changes
 
-1. Modify parser to collect imports before type definitions
-2. Modify TypeEnv to register imported types early
-3. Update type name resolution to check imported types
-4. Add diagnostic for type inference leakage
-5. Verify all tests pass
+1. Resolve imports before local public API/type validation in the engine module-loader.
+2. Register imported type identities and selected opaque callable-signature identities before local summary validation.
+3. Treat imported public types and imported callable-signature types as known in type definitions and callable annotations.
+4. Diagnose unresolved signature types with import hints when a sibling module exports the missing type.
+5. Verify focused Phase 154 regressions and engine/typeck gates.
 
 ## 6. Relationship to Other Specs
 
@@ -262,7 +261,7 @@ pub fn ints() -> Strategy<Int> {
 
 ## 7. Closeout Criteria
 
-- [ ] C90-1 through C90-5 all pass
-- [ ] No regressions in existing type tests
-- [ ] PLAN-154 and PLAN-INDEX updated
-- [ ] CHANGELOG.md records the fix
+- [x] C90-1 through C90-5 all pass
+- [x] No regressions in existing type tests
+- [x] PLAN-154 and PLAN-INDEX updated
+- [x] CHANGELOG.md records the fix

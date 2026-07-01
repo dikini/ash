@@ -825,11 +825,11 @@ async fn stdlib_predicate_builtin_resolves() {
     assert_eq!(result.expect("checked above"), ash_core::Value::Bool(true));
 }
 
-/// A public callable must not expose a private ordinary type in its signature;
-/// Phase 109 imports type identities through semantic summaries rather than
-/// allowing private ordinary type leakage through public APIs.
+/// A public callable may expose a private ordinary type as an opaque,
+/// publicly-nameable identity; Phase 154 keeps constructors hidden while
+/// allowing smart-constructor signatures to cross module boundaries.
 #[test]
-fn public_callable_private_plain_type_signature_is_rejected() {
+fn public_callable_private_plain_type_signature_imports_opaque_identity() {
     let temp = TempDir::new().expect("tempdir");
     let dir = temp.path();
 
@@ -849,13 +849,14 @@ fn public_callable_private_plain_type_signature_is_rejected() {
     );
 
     let engine = build_engine();
-    let err = engine
+    let workflow = engine
         .parse_file(dir.join("main.ash"))
-        .expect_err("private ordinary type leak should be rejected at module boundary");
+        .expect("private ordinary type signature should import as opaque identity");
     assert!(
-        err.to_string().contains("public callable 'passthrough'")
-            && err.to_string().contains("private ordinary type 'Hidden'"),
-        "diagnostic should identify the public callable private type leak: {err}"
+        workflow
+            .imported_builtin_signatures
+            .contains_key("passthrough"),
+        "callable import should still carry its signature"
     );
 }
 

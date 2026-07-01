@@ -187,7 +187,7 @@ Common tags include: `grammar`, `syntax`, `semantics`, `type-system`, `effect-sy
 | [SPEC-087-QUICKCHECK-V1-ORDINARY-STRATEGY-SEMANTICS.md](SPEC-087-QUICKCHECK-V1-ORDINARY-STRATEGY-SEMANTICS.md) | Planned | testing | core-ir, evidence, semantics, testing | normative spec | — |
 | [SPEC-088-CLOSURE-REFINEMENT-AND-EFFECT-SAFE-CAPTURE.md](SPEC-088-CLOSURE-REFINEMENT-AND-EFFECT-SAFE-CAPTURE.md) | Draft | effect-system | authority, effect-system | normative spec | — |
 | [SPEC-089-LIST-BUILTIN-TO-STDLIB.md](SPEC-089-LIST-BUILTIN-TO-STDLIB.md) | Draft | general | orientation | normative spec | — |
-| [SPEC-090-TYPE-ANNOTATION-QUIRKS.md](SPEC-090-TYPE-ANNOTATION-QUIRKS.md) | Draft | core-ir | core-ir, semantics, type-system | normative spec | — |
+| [SPEC-090-TYPE-ANNOTATION-QUIRKS.md](SPEC-090-TYPE-ANNOTATION-QUIRKS.md) | Implemented MVP (Phase 154) | type-system | diagnostics, implemented, references, type-system | implemented spec | [PLAN-154](../plan/PLAN-154-TYPE-ANNOTATION-QUIRKS.md) |
 | [SPEC-091-LET-DESTRUCTORS.md](SPEC-091-LET-DESTRUCTORS.md) | Draft | general | orientation | normative spec | — |
 | [SPEC-092-PARSER-BLOCKER-RESOLUTION.md](SPEC-092-PARSER-BLOCKER-RESOLUTION.md) | Draft | language-surface | grammar, surface | normative spec | — |
 | [SPEC-094-LANGUAGE-SURFACE-FIX.md](SPEC-094-LANGUAGE-SURFACE-FIX.md) | 📝 Draft | language-surface | grammar, surface | normative spec | — |

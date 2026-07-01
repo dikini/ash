@@ -1,6 +1,6 @@
 # PLAN-154: Fix Type Annotation Quirks in fn Expressions with Imported Types
 
-**Status:** 📝 Planned
+**Status:** ✅ Complete
 **Spec:** [SPEC-090: Type Annotation Quirks](../spec/SPEC-090-TYPE-ANNOTATION-QUIRKS.md)
 **Amends:** [PLAN-151](PLAN-151-QUICKCHECK-V1-ORDINARY-STRATEGY-SEMANTICS.md) (TASK-1511), [PLAN-152](PLAN-152-CLOSURE-REFINEMENT-AND-TOWER-DOCUMENTATION.md)
 **Builds on:** [ASSESSMENT-002](../assessments/ASSESSMENT-002-TYPE-ANNOTATION-QUIRKS.md)
@@ -39,11 +39,11 @@ Pass 3: Expression Type Checking — Typecheck expressions with full type enviro
 
 | Task | Description | Status |
 |---|---|---|
-| [TASK-1540](tasks/TASK-1540-parser-import-first-pass.md) | Modify parser to collect imports before type definitions | 📝 Planned |
-| [TASK-1541](tasks/TASK-1541-typeenv-imported-type-registration.md) | Modify TypeEnv to register imported types before local types | 📝 Planned |
-| [TASK-1542](tasks/TASK-1542-type-name-resolution-imported.md) | Update type name resolution to check imported types | 📝 Planned |
-| [TASK-1543](tasks/TASK-1543-type-inference-leakage-diagnostics.md) | Add diagnostics for type inference leakage | 📝 Planned |
-| [TASK-1544](tasks/TASK-1544-phase-154-closeout.md) | Close out Phase 154 with verification and documentation | 📝 Planned |
+| [TASK-1540](tasks/TASK-1540-parser-import-first-pass.md) | Modify parser to collect imports before type definitions | ✅ Complete |
+| [TASK-1541](tasks/TASK-1541-typeenv-imported-type-registration.md) | Modify TypeEnv to register imported types before local types | ✅ Complete |
+| [TASK-1542](tasks/TASK-1542-type-name-resolution-imported.md) | Update type name resolution to check imported types | ✅ Complete |
+| [TASK-1543](tasks/TASK-1543-type-inference-leakage-diagnostics.md) | Add diagnostics for type inference leakage | ✅ Complete |
+| [TASK-1544](tasks/TASK-1544-phase-154-closeout.md) | Close out Phase 154 with verification and documentation | ✅ Complete |
 
 ## Implementation Order
 
@@ -76,4 +76,4 @@ This phase unblocks Phase 151's TASK-1511 by enabling:
 - `fn` return annotations with imported types like `Strategy<Int>`
 - Smart constructors for opaque types
 
-The risk is low: changes are localized to parser and typechecker, not runtime.
+The implementation landed in the engine/module-loader semantic-summary boundary: imported type names are registered before local type validation, callable-signature private types become opaque public identities, and constructor misuse remains rejected without changing runtime value representation.

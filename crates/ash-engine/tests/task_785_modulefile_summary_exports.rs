@@ -130,7 +130,7 @@ fn malformed_type_declaration_does_not_fall_back_to_type_snippets() {
 }
 
 #[test]
-fn check_module_file_rejects_public_callable_signature_exposing_private_ordinary_type() {
+fn check_module_file_allows_public_callable_signature_private_type_as_opaque() {
     let dir = tempfile::tempdir().expect("tempdir");
     let module = dir.path().join("leaky.ash");
 
@@ -149,36 +149,17 @@ pub workflow leak_ret(x: Secret) -> Int { ret 0 }
     let engine = Engine::new().build().expect("engine builds");
     let result = engine
         .check_module_file(&module)
-        .expect("module parses but reports export visibility errors");
+        .expect("module parses and exposes private signature types opaquely");
 
     assert!(
-        result
-            .errors
-            .iter()
-            .any(|error| error.contains("leak") && error.contains("Secret")),
-        "pub fn signature should reject private ordinary type exposure: {:?}",
-        result.errors
-    );
-    assert!(
-        result
-            .errors
-            .iter()
-            .any(|error| error.contains("leak_flow") && error.contains("Secret")),
-        "pub workflow signature should reject private ordinary type exposure: {:?}",
-        result.errors
-    );
-    assert!(
-        result
-            .errors
-            .iter()
-            .any(|error| error.contains("leak_ret") && error.contains("Secret")),
-        "pub workflow ret-form signature should reject private ordinary type exposure: {:?}",
+        result.errors.is_empty(),
+        "Phase 154 should permit private callable-signature types as opaque nameable identities: {:?}",
         result.errors
     );
 }
 
 #[test]
-fn importable_export_collection_rejects_public_callable_private_type_leak() {
+fn importable_export_collection_exports_public_callable_private_type_as_opaque() {
     let dir = tempfile::tempdir().expect("tempdir");
     let module = dir.path().join("leaky.ash");
     std::fs::write(
@@ -189,22 +170,26 @@ pub fn leak(x: Secret) -> Int { 0 }
     )
     .expect("write module");
 
-    let err = check_importable_module_file(&module)
-        .expect_err("importable module check should reject public callable private type leak");
-    let msg = err.to_string();
-    assert!(
-        msg.contains("leak") && msg.contains("Secret"),
-        "importable module diagnostic should mention leak and Secret: {msg}"
-    );
+    check_importable_module_file(&module)
+        .expect("Phase 154 permits private callable-signature types as opaque exports");
 
     let caller = dir.path().join("caller.ash");
     std::fs::write(&caller, "use leaky::{leak}\nworkflow main { ret 0 }\n").expect("write caller");
-    let err = load_ordinary_file(&caller)
-        .expect_err("export collection should reject public callable private type leak");
-    let msg = err.to_string();
+    let loaded = load_ordinary_file(&caller)
+        .expect("export collection should import callable plus opaque signature type");
     assert!(
-        msg.contains("leak") && msg.contains("Secret"),
-        "export collection diagnostic should mention leak and Secret: {msg}"
+        loaded
+            .imported_semantic_summaries
+            .iter()
+            .any(|summary| summary
+                .exported_types
+                .iter()
+                .any(|ty| ty.exported_name == "Secret"
+                    && matches!(
+                        ty.representation,
+                        ash_core::semantic_summary::TypeRepresentationSummary::Opaque { .. }
+                    ))),
+        "callable signature should transport Secret as an opaque nameable type"
     );
 }
 

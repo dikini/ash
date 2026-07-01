@@ -129,7 +129,7 @@ Update this section as tasks complete:
 | [151](PLAN-151-QUICKCHECK-V1-ORDINARY-STRATEGY-SEMANTICS.md) | 13 | 13 | ✅ Complete; closeout done, 13/13 tasks verified |
 | [152](PLAN-152-CLOSURE-REFINEMENT-AND-TOWER-DOCUMENTATION.md) | 10 | 10 | ✅ Complete; closeout done, 10/10 tasks verified |
 | [153](PLAN-153-LIST-BUILTIN-TO-STDLIB.md) | 10 | 10 | ✅ Complete; List builtins migrated to pure Ash stdlib |
-| [154](PLAN-154-TYPE-ANNOTATION-QUIRKS.md) | 5 | 0 | 📝 Planned; spec/plan only, no implementation |
+| [154](PLAN-154-TYPE-ANNOTATION-QUIRKS.md) | 5 | 5 | ✅ Complete; imported type annotations and opaque callable-signature types |
 | [155](PLAN-155-LET-DESTRUCTORS.md) | 10 | 10 | ✅ Complete; closeout done, 10/10 tasks verified |
 | [156](PLAN-156-PARSER-BLOCKER-RESOLUTION.md) | 5 | 5 | ✅ Complete; all blockers resolved, regression tests added |
 | [157](PLAN-157-LIST-MIGRATION-HARDENING.md) | 5 | 4 | ⏸️ Deferred; TASK-1570 (Remove Value::List) remains open |
@@ -360,7 +360,7 @@ Replace Rust-implemented list builtins with pure Ash implementations in `std/src
 
 ## Phase 154: Fix Type Annotation Quirks with Imported Types
 
-**Status:** 📝 Planned; 0/5 implemented — spec/plan only, no implementation
+**Status:** ✅ Complete; 5/5 implemented — imported type annotations and opaque callable-signature types
 **Plan:** [PLAN-154: Type Annotation Quirks](PLAN-154-TYPE-ANNOTATION-QUIRKS.md)
 **Spec:** [SPEC-090: Type Annotation Quirks](../spec/SPEC-090-TYPE-ANNOTATION-QUIRKS.md)
 

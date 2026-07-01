@@ -1,6 +1,6 @@
 # SPEC-081: Law Test Evidence Substrate
 
-**Status:** Planned
+**Status:** Implemented MVP (Phase 145); symbolic/solver proof evidence remains deferred to non-test evidence families
 **Date:** 2026-06-15
 **Builds on:** [SPEC-077](SPEC-077-ASH-TEST-RUNNER-SYNTHESIZED-AND-SMALLWORLD-COMPLETION.md), [SPEC-078](SPEC-078-STANDARD-ALGEBRA-LIBRARY-AND-MONAD-REMEDIATION.md), [SPEC-080](SPEC-080-INTERFACE-EVIDENCE-CONSTRAINTS.md)
 **Plan:** [PLAN-145](../plan/PLAN-145-LAW-TEST-EVIDENCE-SUBSTRATE.md)

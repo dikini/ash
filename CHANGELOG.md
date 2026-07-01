@@ -6,6 +6,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Changed
+- Reconciled stale spec status surfaces for SPEC-081, SPEC-082, SPEC-086, SPEC-087, SPEC-088, SPEC-089, SPEC-091, SPEC-092, SPEC-094, SPEC-099, SPEC-100, SPEC-101, and SPEC-102 while preserving deferred-tail caveats (TASK-1805).
 - Reconciled WorkflowForm-era docs as historical/no-revival material and routed future workflow work to ambient computation facts (TASK-1804).
 - Promoted NOTE-020 from draft computation-row taxonomy to partially realized target-spec background, adding Core/CPS carrier cross-references, explanatory `Ash<rho, A>` wording, pure/total/value-like clarification, and follow-up seeds for remaining target-conformance deltas (TASK-1803).
 - Completed Phase 176 closeout after broad verification and independent review remediation, reconciling final 9/9 task status across PLAN-176, PLAN-INDEX, and TASK-1802 (TASK-1802).

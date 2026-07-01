@@ -1,6 +1,6 @@
 # SPEC-089: Move List Builtins to Standard Library
 
-**Status:** Draft
+**Status:** Implemented MVP (Phase 153; Phase 176 runtime cleanup removed legacy `Value::List`)
 **Date:** 2026-06-17
 **Amends:** [SPEC-031](SPEC-031-FIRST-CLASS-FUNCTIONS.md), [SPEC-072](SPEC-072-TOWER-CALLABLE-TYPE-AND-CLOSURE-SYNTAX.md)
 **Builds on:** [SPEC-088](SPEC-088-CLOSURE-REFINEMENT-AND-EFFECT-SAFE-CAPTURE.md), [ASSESSMENT-001](../assessments/ASSESSMENT-001-NATIVE-LIST-IMPLEMENTATION.md)

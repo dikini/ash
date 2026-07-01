@@ -4,7 +4,7 @@ title: Ash Core Type Checking
 kind: spec
 audience: [human, agent]
 authority: design
-status: draft
+status: implemented-mvp
 stability: alpha
 last_verified: 2026-06-20
 verified_against:
@@ -17,7 +17,7 @@ verified_against:
 
 # SPEC-100: Ash Core Type Checking
 
-**Status:** Draft -- Core-specific type-checking contract for SPEC-099.
+**Status:** Implemented MVP (Phase 162) / design-level formal spec -- Core type-checking slice implemented, with target conformance follow-ups tracked separately.
 **Scope:** Declarative and algorithmic type checking for Core Ash terms after surface elaboration and before Core-to-CPS lowering.
 **Depends on:** SPEC-096b (Target Effect System), SPEC-097b (Target Type System), SPEC-098b (Target IR), SPEC-099 (Core Language).
 

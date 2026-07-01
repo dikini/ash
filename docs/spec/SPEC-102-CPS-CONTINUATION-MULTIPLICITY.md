@@ -4,7 +4,7 @@ title: CPS Continuation Multiplicity
 kind: spec
 audience: [human, agent]
 authority: design
-status: draft
+status: implemented-mvp
 stability: alpha
 owner: language
 last_verified: 2026-06-22
@@ -21,7 +21,7 @@ verified_against:
 
 # SPEC-102: CPS Continuation Multiplicity
 
-**Status:** Draft
+**Status:** Implemented MVP (Phase 164)
 **Scope:** Core Ash continuation types, CPS IR continuation values, handler resume semantics, Core type checking, and Core-to-CPS lowering.
 **Depends on:** SPEC-096b, SPEC-097b, SPEC-098b, SPEC-099, SPEC-099c, SPEC-100, SPEC-101.
 **Amends:** SPEC-098b, SPEC-099, SPEC-099c, and SPEC-100.

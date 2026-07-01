@@ -1,6 +1,6 @@
 # SPEC-087: QuickCheck v1 Ordinary Strategy Semantics
 
-**Status:** Planned
+**Status:** Implemented MVP (Phase 151; Phase 176 recursive-combinator cleanup); bounded recursive generation remains fail-closed/deferred
 **Date:** 2026-06-15
 **Builds on:** [SPEC-081](SPEC-081-LAW-TEST-EVIDENCE-SUBSTRATE.md), [SPEC-082](SPEC-082-PROPERTY-GENERATION-AND-SHRINKING-SUBSTRATE.md), [SPEC-086](SPEC-086-QUICKCHECK-ARBITRARY-STRATEGY.md)
 **Design note:** [DESIGN-NOTE: QuickCheck v1 Ordinary Strategy Semantics](../design/DESIGN-NOTE-QUICKCHECK-V1-ORDINARY-STRATEGY-SEMANTICS.md)

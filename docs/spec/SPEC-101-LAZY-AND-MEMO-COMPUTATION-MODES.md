@@ -4,7 +4,7 @@ title: Lazy and Memo Computation Modes
 kind: spec
 audience: [human, agent]
 authority: design
-status: draft
+status: implemented-mvp
 stability: alpha
 last_verified: 2026-06-20
 verified_against:
@@ -18,7 +18,7 @@ verified_against:
 
 # SPEC-101: Lazy and Memo Computation Modes
 
-**Status:** Draft
+**Status:** Implemented MVP (Phase 163)
 **Scope:** Core Ash representation, typing, operational behavior, and Core-to-CPS lowering for `lazy` and `memo` computation modes.
 **Depends on:** SPEC-096b, SPEC-097b, SPEC-098b, SPEC-099, SPEC-100.
 **Amends:** SPEC-097b, SPEC-098b, SPEC-099, and SPEC-100. This spec requires a value-level thunk carrier with captured handler/provider chain, but does not require new SPEC-098b CPS tail-term variants.

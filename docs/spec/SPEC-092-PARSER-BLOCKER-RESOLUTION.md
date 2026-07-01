@@ -1,6 +1,6 @@
 # SPEC-092: Parser Blocker Resolution for List Migration
 
-**Status:** Draft
+**Status:** Implemented MVP (Phase 156)
 **Date:** 2026-06-17
 **Amends:** [SPEC-089](SPEC-089-LIST-BUILTIN-TO-STDLIB.md) (List Builtin to Stdlib)
 **Plan:** [PLAN-156](../plan/PLAN-156-PARSER-BLOCKER-RESOLUTION.md)

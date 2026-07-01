@@ -1,6 +1,6 @@
 # SPEC-086: QuickCheck Arbitrary and Strategy Property Testing
 
-**Status:** Planned
+**Status:** Implemented MVP (Phase 150); hardened by SPEC-087 / Phase 151
 **Date:** 2026-06-15
 **Builds on:** [SPEC-081](SPEC-081-LAW-TEST-EVIDENCE-SUBSTRATE.md), [SPEC-082](SPEC-082-PROPERTY-GENERATION-AND-SHRINKING-SUBSTRATE.md)
 **Design note:** [DESIGN-NOTE: QuickCheck-Style Property Testing and Future Evidence Families](../design/DESIGN-NOTE-QUICKCHECK-PROPERTY-TESTING.md)

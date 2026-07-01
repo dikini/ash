@@ -4,13 +4,13 @@ title: Ash Core Language — Canonical IR
 kind: spec
 audience: [human, agent]
 authority: design
-status: draft
+status: implemented-mvp
 stability: alpha
 ---
 
 # SPEC-099: Ash Core Language — Canonical IR
 
-**Status:** Draft — formal specification of the minimal core language
+**Status:** Implemented MVP (Phase 161) / design-level formal spec — Core substrate implemented, with target conformance follow-ups tracked separately
 **Scope:** The canonical IR that surface syntax desugars to. Core Ash lowers mechanically to the target CPS IR in SPEC-098b.
 **Depends on:** SPEC-096b (Target Effect System), SPEC-097b (Target Type System), SPEC-098b (Target IR)
 

@@ -1,6 +1,6 @@
 # SPEC-082: Property Generation and Shrinking Substrate
 
-**Status:** Planned
+**Status:** Implemented MVP (Phase 146); broader generator/shrinker expansion remains follow-up work
 **Date:** 2026-06-15
 **Builds on:** [SPEC-081](SPEC-081-LAW-TEST-EVIDENCE-SUBSTRATE.md)
 **Plan:** [PLAN-146: Property Generation and Shrinking Substrate](../plan/PLAN-146-PROPERTY-GENERATION-AND-SHRINKING-SUBSTRATE.md)

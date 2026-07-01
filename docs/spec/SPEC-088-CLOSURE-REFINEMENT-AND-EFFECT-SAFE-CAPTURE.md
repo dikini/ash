@@ -1,6 +1,6 @@
 # SPEC-088: Closure Refinement and Effect-Safe Capture
 
-**Status:** Draft
+**Status:** Implemented MVP (Phase 152); broader cross-stratum closure serialization remains out of scope
 **Date:** 2026-06-17
 **Amends:** [SPEC-031](SPEC-031-FIRST-CLASS-FUNCTIONS.md), [SPEC-072](SPEC-072-TOWER-CALLABLE-TYPE-AND-CLOSURE-SYNTAX.md)
 **Builds on:** [SPEC-087](SPEC-087-QUICKCHECK-V1-ORDINARY-STRATEGY-SEMANTICS.md)

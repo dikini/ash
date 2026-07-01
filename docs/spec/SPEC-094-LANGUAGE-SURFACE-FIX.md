@@ -1,6 +1,6 @@
 # SPEC-094: Language Surface Fix Specification
 
-**Status:** 📝 Draft
+**Status:** Implemented MVP (Phase 158; Phase 176 reconciled deferred list/surface tail)
 **Scope:** Fix three language surface issues blocking idiomatic pure ADT usage
 **Related:** PLAN-153 (List Builtin to Stdlib), PLAN-157 (List Migration Hardening)
 

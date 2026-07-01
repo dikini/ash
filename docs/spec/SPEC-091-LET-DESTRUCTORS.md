@@ -1,6 +1,6 @@
 # SPEC-091: Let Destructors for Records and Tuples
 
-**Status:** Draft
+**Status:** Implemented MVP (Phase 155)
 **Date:** 2026-06-17
 **Amends:** [SPEC-072](SPEC-072-TOWER-CALLABLE-TYPE-AND-CLOSURE-SYNTAX.md)
 **Builds on:** [ASSESSMENT-002](../assessments/ASSESSMENT-002-TYPE-ANNOTATION-QUIRKS.md)

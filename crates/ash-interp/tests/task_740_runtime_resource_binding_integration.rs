@@ -74,9 +74,9 @@ fn proc_join_expr(left: ProcessHandle, right: ProcessHandle) -> Expr {
 }
 
 fn extract_handles(value: Value) -> Vec<ProcessHandle> {
-    let Value::List(items) = value else {
-        panic!("expected process handle list, got {value:?}");
-    };
+    let items = value
+        .list_to_vec()
+        .unwrap_or_else(|| panic!("expected process handle list, got {value:?}"));
     items
         .into_iter()
         .map(|item| match item {

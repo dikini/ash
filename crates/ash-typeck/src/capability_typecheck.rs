@@ -206,9 +206,9 @@ impl TypeMatcher for Type {
             (Type::Ref, Value::Ref(_)) => true,
 
             // List type - element type must match all elements
-            (Type::List(elem_type), Value::List(elements)) => {
-                elements.iter().all(|e| elem_type.matches(e))
-            }
+            (Type::List(elem_type), value) if value.is_list() => value
+                .list_to_vec()
+                .is_some_and(|elements| elements.iter().all(|e| elem_type.matches(e))),
 
             // Record type - all fields must be present with matching types
             (Type::Record(fields), Value::Record(record)) => fields
@@ -397,11 +397,11 @@ mod tests {
         let schema = CapabilitySchema::read_only(Type::List(Box::new(Type::Int)));
 
         // Valid list of ints
-        let valid = Value::List(Box::new(vec![Value::Int(1), Value::Int(2), Value::Int(3)]));
+        let valid = Value::list_from_vec(vec![Value::Int(1), Value::Int(2), Value::Int(3)]);
         assert!(schema.validate_input(&valid).is_ok());
 
         // Invalid - mixed types
-        let invalid = Value::List(Box::new(vec![Value::Int(1), Value::String("two".into())]));
+        let invalid = Value::list_from_vec(vec![Value::Int(1), Value::String("two".into())]);
         assert!(schema.validate_input(&invalid).is_err());
     }
 

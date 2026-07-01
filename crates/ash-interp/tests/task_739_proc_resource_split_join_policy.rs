@@ -50,7 +50,7 @@ fn proc_scatter_expr(items: Vec<Value>, mapper: Expr) -> Expr {
     Expr::Call {
         func: "scatter".to_string(),
         module: Some("proc".to_string()),
-        arguments: vec![Expr::Literal(Value::List(Box::new(items))), mapper],
+        arguments: vec![Expr::Literal(Value::list_from_vec(items)), mapper],
     }
 }
 
@@ -102,9 +102,9 @@ fn process_resource(
 }
 
 fn extract_handles(value: Value) -> Vec<ProcessHandle> {
-    let Value::List(items) = value else {
-        panic!("expected process handle list, got {value:?}");
-    };
+    let items = value
+        .list_to_vec()
+        .unwrap_or_else(|| panic!("expected process handle list, got {value:?}"));
     items
         .into_iter()
         .map(|item| match item {

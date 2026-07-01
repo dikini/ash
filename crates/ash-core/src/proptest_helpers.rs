@@ -57,7 +57,7 @@ pub fn arb_value() -> impl proptest::strategy::Strategy<Value = Value> {
         10,  // Items per collection
         |inner| {
             prop_oneof![
-                prop::collection::vec(inner.clone(), 0..10).prop_map(|v| Value::List(Box::new(v))),
+                prop::collection::vec(inner.clone(), 0..10).prop_map(Value::list_from_vec),
                 prop::collection::hash_map("[a-z]+".prop_map(String::from), inner, 0..10)
                     .prop_map(|m| Value::Record(Box::new(m))),
             ]

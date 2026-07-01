@@ -46,11 +46,9 @@ pub fn extract_tool_calls(response: &Value) -> Result<Vec<ToolCallValue>, Capabi
     match tool_calls_opt {
         None => Ok(Vec::new()),
         Some(tool_calls_value) => {
-            let Value::List(tool_calls_list) = tool_calls_value else {
-                return Err(CapabilityError::InvalidArgument(
-                    "tool_calls must be a List when Some".to_string(),
-                ));
-            };
+            let tool_calls_list = tool_calls_value.list_to_vec().ok_or_else(|| {
+                CapabilityError::InvalidArgument("tool_calls must be a List when Some".to_string())
+            })?;
 
             tool_calls_list.iter().map(parse_tool_call_value).collect()
         }
@@ -250,7 +248,7 @@ mod tests {
         fields.insert("content".to_string(), Value::unit_variant("None"));
         fields.insert(
             "tool_calls".to_string(),
-            Value::variant("Some", vec![("0", Value::List(Box::new(tool_calls)))]),
+            Value::variant("Some", vec![("0", Value::list_from_vec(tool_calls))]),
         );
         fields.insert(
             "finish_reason".to_string(),
@@ -313,7 +311,7 @@ mod tests {
         fields.insert("content".to_string(), Value::unit_variant("None"));
         fields.insert(
             "tool_calls".to_string(),
-            Value::variant("Some", vec![("0", Value::List(Box::new(tool_calls)))]),
+            Value::variant("Some", vec![("0", Value::list_from_vec(tool_calls))]),
         );
         fields.insert("finish_reason".to_string(), Value::unit_variant("None"));
         fields.insert("usage".to_string(), Value::unit_variant("None"));

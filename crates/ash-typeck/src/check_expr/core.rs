@@ -97,7 +97,7 @@ fn core_value_type(env: &TypeEnv, value: &ash_core::Value) -> Type {
         ash_core::Value::String(_) => Type::String,
         ash_core::Value::Bool(_) => Type::Bool,
         ash_core::Value::Null => Type::Null,
-        ash_core::Value::List(_) => Type::List(Box::new(Type::Var(TypeVar::fresh()))),
+        value if value.is_list() => Type::List(Box::new(Type::Var(TypeVar::fresh()))),
         ash_core::Value::Record(fields) => Type::Record(
             fields
                 .keys()
@@ -417,7 +417,8 @@ fn core_value_to_surface_literal(value: &ash_core::Value) -> Option<Literal> {
         ash_core::Value::String(value) => Some(Literal::String(value.clone().into_boxed_str())),
         ash_core::Value::Bool(value) => Some(Literal::Bool(*value)),
         ash_core::Value::Null => Some(Literal::Null),
-        ash_core::Value::List(values) => values
+        value if value.is_list() => value
+            .list_to_vec()?
             .iter()
             .map(core_value_to_surface_literal)
             .collect::<Option<Vec<_>>>()

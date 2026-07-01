@@ -14,8 +14,8 @@ Implement the ordinary `Strategy<A>` value shape, helper-first `GenContext`, det
 
 ## Dependencies
 
-- 📝 TASK-1497: Live syntax and seam audit (planned)
-- 📝 TASK-1498: Stdlib module split and prelude (planned)
+- ✅ TASK-1497: Live syntax and seam audit
+- ✅ TASK-1498: Stdlib module split and prelude
 
 ## Deferral / Planned-Feature Reconciliation
 

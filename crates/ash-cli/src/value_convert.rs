@@ -35,7 +35,7 @@ pub fn json_to_value(json: serde_json::Value) -> Value {
         }
         serde_json::Value::String(s) => Value::String(s),
         serde_json::Value::Array(arr) => {
-            Value::List(Box::new(arr.into_iter().map(json_to_value).collect()))
+            Value::list_from_vec(arr.into_iter().map(json_to_value).collect())
         }
         serde_json::Value::Object(obj) => {
             let fields: std::collections::HashMap<String, Value> = obj
@@ -65,7 +65,14 @@ pub fn value_to_json(value: &Value) -> serde_json::Value {
         Value::Bool(b) => serde_json::Value::Bool(*b),
         Value::Int(i) => serde_json::Value::Number((*i).into()),
         Value::String(s) => serde_json::Value::String(s.clone()),
-        Value::List(items) => serde_json::Value::Array(items.iter().map(value_to_json).collect()),
+        value if value.is_list() => serde_json::Value::Array(
+            value
+                .list_to_vec()
+                .expect("is_list only returns true for convertible lists")
+                .iter()
+                .map(value_to_json)
+                .collect(),
+        ),
         Value::Record(fields) => {
             let map: serde_json::Map<String, serde_json::Value> = fields
                 .iter()
@@ -160,13 +167,9 @@ mod tests {
     fn test_json_array() {
         let json = serde_json::json!([1, 2, 3]);
         let value = json_to_value(json);
-        match value {
-            Value::List(items) => {
-                assert_eq!(items.len(), 3);
-                assert_eq!(items[0], Value::Int(1));
-            }
-            _ => panic!("Expected List"),
-        }
+        let items = value.list_to_vec().expect("Expected List");
+        assert_eq!(items.len(), 3);
+        assert_eq!(items[0], Value::Int(1));
     }
 
     #[test]

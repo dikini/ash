@@ -22,7 +22,7 @@ fn invoke_expr(binding_name: &str, operation: &str, args: Vec<Value>) -> Expr {
         arguments: vec![
             Expr::Literal(Value::String(binding_name.to_string())),
             Expr::Literal(Value::String(operation.to_string())),
-            Expr::Literal(Value::List(Box::new(args))),
+            Expr::Literal(Value::list_from_vec(args)),
         ],
     }
 }
@@ -126,10 +126,10 @@ async fn mock_internal_kv_can_substitute_for_host_provider_binding() {
         )
         .await
         .expect("host-backed kv binding executes"),
-        Value::List(Box::new(vec![
+        Value::list_from_vec(vec![
             Value::ActEnvToken,
             Value::String("prod-value".to_string()),
-        ]))
+        ])
     );
 
     runtime_state
@@ -175,10 +175,10 @@ async fn mock_internal_kv_can_substitute_for_host_provider_binding() {
         )
         .await
         .expect("mock implementation binding executes"),
-        Value::List(Box::new(vec![
+        Value::list_from_vec(vec![
             Value::ActEnvToken,
             Value::String("mock-value".to_string()),
-        ]))
+        ])
     );
 }
 
@@ -271,10 +271,10 @@ async fn logging_cache_adapter_invokes_inner_key_value_dependency() {
         )
         .await
         .expect("adapter invokes inner dependency alias"),
-        Value::List(Box::new(vec![
+        Value::list_from_vec(vec![
             Value::ActEnvToken,
             Value::String("inner-value".to_string()),
-        ]))
+        ])
     );
 }
 
@@ -341,7 +341,7 @@ async fn recording_adapter_pilot_returns_replayable_envelope_without_persistent_
         )
         .await
         .expect("recording pilot returns envelope"),
-        Value::List(Box::new(vec![
+        Value::list_from_vec(vec![
             Value::ActEnvToken,
             Value::variant(
                 "RecordedCall",
@@ -351,6 +351,6 @@ async fn recording_adapter_pilot_returns_replayable_envelope_without_persistent_
                     ("label", Value::String("session-a".to_string())),
                 ],
             ),
-        ]))
+        ])
     );
 }

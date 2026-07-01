@@ -39,10 +39,10 @@ pub(super) fn eval_split(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
             let addr = Value::InstanceAddr(instance.addr);
             let control = instance.control.map(Value::ControlLink);
             // Return as a tuple: (addr, control)
-            Ok(Value::List(Box::new(vec![
+            Ok(Value::list_from_vec(vec![
                 addr,
                 control.unwrap_or(Value::Null),
-            ])))
+            ]))
         }
         _ => Err(EvalError::TypeMismatch {
             expected: "Instance".to_string(),

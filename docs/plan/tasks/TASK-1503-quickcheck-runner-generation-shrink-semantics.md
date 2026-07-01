@@ -14,8 +14,8 @@ Wire the runner to execute ordinary strategy generation, split per-parameter con
 
 ## Dependencies
 
-- 📝 TASK-1501: QuickCheck with-block override parser and typechecker support (planned)
-- 📝 TASK-1502: QuickCheck combinators, recursion, and weights (planned)
+- ✅ TASK-1501: QuickCheck with-block override parser and typechecker support
+- ✅ TASK-1502: QuickCheck combinators, recursion, and weights (recursive execution re-scoped by Phase 176)
 
 ## Deferral / Planned-Feature Reconciliation
 

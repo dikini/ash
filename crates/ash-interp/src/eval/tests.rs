@@ -78,11 +78,11 @@ fn test_eval_field_access_not_record() {
 fn test_eval_index_list() {
     let ctx = Context::new();
     let expr = Expr::IndexAccess {
-        expr: Box::new(Expr::Literal(Value::List(Box::new(vec![
+        expr: Box::new(Expr::Literal(Value::list_from_vec(vec![
             Value::Int(10),
             Value::Int(20),
             Value::Int(30),
-        ])))),
+        ]))),
         index: Box::new(Expr::Literal(Value::Int(1))),
     };
     assert_eq!(eval_expr(&expr, &ctx).unwrap(), Value::Int(20));
@@ -92,7 +92,7 @@ fn test_eval_index_list() {
 fn test_eval_index_out_of_bounds() {
     let ctx = Context::new();
     let expr = Expr::IndexAccess {
-        expr: Box::new(Expr::Literal(Value::List(Box::new(vec![Value::Int(10)])))),
+        expr: Box::new(Expr::Literal(Value::list_from_vec(vec![Value::Int(10)]))),
         index: Box::new(Expr::Literal(Value::Int(5))),
     };
     assert!(eval_expr(&expr, &ctx).is_err());
@@ -225,11 +225,11 @@ fn test_eval_binary_in_list() {
     let expr = Expr::Binary {
         op: BinaryOp::In,
         left: Box::new(Expr::Literal(Value::Int(2))),
-        right: Box::new(Expr::Literal(Value::List(Box::new(vec![
+        right: Box::new(Expr::Literal(Value::list_from_vec(vec![
             Value::Int(1),
             Value::Int(2),
             Value::Int(3),
-        ])))),
+        ]))),
     };
     assert_eq!(eval_expr(&expr, &ctx).unwrap(), Value::Bool(true));
 }
@@ -240,10 +240,10 @@ fn test_eval_call_len() {
     let expr = Expr::Call {
         func: "len".to_string(),
         module: None,
-        arguments: vec![Expr::Literal(Value::List(Box::new(vec![
+        arguments: vec![Expr::Literal(Value::list_from_vec(vec![
             Value::Int(1),
             Value::Int(2),
-        ])))],
+        ]))],
     };
     assert_eq!(eval_expr(&expr, &ctx).unwrap(), Value::Int(2));
 }
@@ -255,13 +255,13 @@ fn test_eval_call_append() {
         func: "append".to_string(),
         module: None,
         arguments: vec![
-            Expr::Literal(Value::List(Box::new(vec![Value::Int(1)]))),
+            Expr::Literal(Value::list_from_vec(vec![Value::Int(1)])),
             Expr::Literal(Value::Int(2)),
         ],
     };
     assert_eq!(
         eval_expr(&expr, &ctx).unwrap(),
-        Value::List(Box::new(vec![Value::Int(1), Value::Int(2)]))
+        Value::list_from_vec(vec![Value::Int(1), Value::Int(2)])
     );
 }
 
@@ -272,13 +272,13 @@ fn test_eval_call_concat() {
         func: "concat".to_string(),
         module: None,
         arguments: vec![
-            Expr::Literal(Value::List(Box::new(vec![Value::Int(1)]))),
-            Expr::Literal(Value::List(Box::new(vec![Value::Int(2)]))),
+            Expr::Literal(Value::list_from_vec(vec![Value::Int(1)])),
+            Expr::Literal(Value::list_from_vec(vec![Value::Int(2)])),
         ],
     };
     assert_eq!(
         eval_expr(&expr, &ctx).unwrap(),
-        Value::List(Box::new(vec![Value::Int(1), Value::Int(2)]))
+        Value::list_from_vec(vec![Value::Int(1), Value::Int(2)])
     );
 }
 
@@ -662,11 +662,11 @@ fn test_eval_match_list_destructure() {
     ];
 
     let expr = Expr::Match {
-        scrutinee: Box::new(Expr::Literal(Value::List(Box::new(vec![
+        scrutinee: Box::new(Expr::Literal(Value::list_from_vec(vec![
             Value::Int(1),
             Value::Int(2),
             Value::Int(3),
-        ])))),
+        ]))),
         arms,
     };
 
@@ -703,10 +703,10 @@ fn test_eval_match_tuple_destructure() {
     }];
 
     let expr = Expr::Match {
-        scrutinee: Box::new(Expr::Literal(Value::List(Box::new(vec![
+        scrutinee: Box::new(Expr::Literal(Value::list_from_vec(vec![
             Value::Int(1),
             Value::Int(2),
-        ])))),
+        ]))),
         arms,
     };
 
@@ -921,16 +921,14 @@ fn test_eval_split_returns_tuple() {
     let result = eval_expr(&split_expr, &ctx).unwrap();
 
     // Should return a tuple (InstanceAddr, ControlLink)
-    match result {
-        Value::List(tuple) => {
-            assert_eq!(tuple.len(), 2);
-            // First element should be InstanceAddr
-            assert!(matches!(tuple[0], Value::InstanceAddr(_)));
-            // Second element should be ControlLink
-            assert!(matches!(tuple[1], Value::ControlLink(_)));
-        }
-        _ => panic!("Expected tuple (List), got {:?}", result),
-    }
+    let tuple = result
+        .list_to_vec()
+        .unwrap_or_else(|| panic!("Expected tuple (List), got {:?}", result));
+    assert_eq!(tuple.len(), 2);
+    // First element should be InstanceAddr
+    assert!(matches!(tuple[0], Value::InstanceAddr(_)));
+    // Second element should be ControlLink
+    assert!(matches!(tuple[1], Value::ControlLink(_)));
 }
 
 #[test]
@@ -1772,10 +1770,10 @@ fn task650_let_list_destructure() {
             ],
             None,
         ),
-        expr: Box::new(Expr::Literal(Value::List(Box::new(vec![
+        expr: Box::new(Expr::Literal(Value::list_from_vec(vec![
             Value::Int(1),
             Value::Int(2),
-        ])))),
+        ]))),
         body: Box::new(Expr::Variable {
             name: "a".to_string(),
             span: ash_core::ast::Span::default(),
@@ -2115,18 +2113,18 @@ fn test_filter_keep_greater_than_3() {
         }),
         right: Box::new(Expr::Literal(Value::Int(3))),
     });
-    let list = Value::List(Box::new(vec![
+    let list = Value::list_from_vec(vec![
         Value::Int(1),
         Value::Int(4),
         Value::Int(2),
         Value::Int(5),
         Value::Int(6),
         Value::Int(3),
-    ]));
+    ]);
     let result = eval_function_call("filter", None, &[list, closure], &ctx).unwrap();
     assert_eq!(
         result,
-        Value::List(Box::new(vec![Value::Int(4), Value::Int(5), Value::Int(6)]))
+        Value::list_from_vec(vec![Value::Int(4), Value::Int(5), Value::Int(6)])
     );
 }
 
@@ -2142,9 +2140,9 @@ fn test_filter_keeps_nothing() {
         }),
         right: Box::new(Expr::Literal(Value::Int(100))),
     });
-    let list = Value::List(Box::new(vec![Value::Int(1), Value::Int(2), Value::Int(3)]));
+    let list = Value::list_from_vec(vec![Value::Int(1), Value::Int(2), Value::Int(3)]);
     let result = eval_function_call("filter", None, &[list, closure], &ctx).unwrap();
-    assert_eq!(result, Value::List(Box::default()));
+    assert_eq!(result, Value::list_nil());
 }
 
 #[test]
@@ -2159,11 +2157,11 @@ fn test_filter_keeps_everything() {
         }),
         right: Box::new(Expr::Literal(Value::Int(0))),
     });
-    let list = Value::List(Box::new(vec![Value::Int(1), Value::Int(2), Value::Int(3)]));
+    let list = Value::list_from_vec(vec![Value::Int(1), Value::Int(2), Value::Int(3)]);
     let result = eval_function_call("filter", None, &[list, closure], &ctx).unwrap();
     assert_eq!(
         result,
-        Value::List(Box::new(vec![Value::Int(1), Value::Int(2), Value::Int(3),]))
+        Value::list_from_vec(vec![Value::Int(1), Value::Int(2), Value::Int(3),])
     );
 }
 
@@ -2181,11 +2179,11 @@ fn test_map_double_elements() {
         }),
         right: Box::new(Expr::Literal(Value::Int(2))),
     });
-    let list = Value::List(Box::new(vec![Value::Int(1), Value::Int(2), Value::Int(3)]));
+    let list = Value::list_from_vec(vec![Value::Int(1), Value::Int(2), Value::Int(3)]);
     let result = eval_function_call("map", None, &[list, closure], &ctx).unwrap();
     assert_eq!(
         result,
-        Value::List(Box::new(vec![Value::Int(2), Value::Int(4), Value::Int(6),]))
+        Value::list_from_vec(vec![Value::Int(2), Value::Int(4), Value::Int(6),])
     );
 }
 
@@ -2201,17 +2199,17 @@ fn test_map_string_transform() {
         }),
         right: Box::new(Expr::Literal(Value::String("!".to_string()))),
     });
-    let list = Value::List(Box::new(vec![
+    let list = Value::list_from_vec(vec![
         Value::String("a".to_string()),
         Value::String("b".to_string()),
-    ]));
+    ]);
     let result = eval_function_call("map", None, &[list, closure], &ctx).unwrap();
     assert_eq!(
         result,
-        Value::List(Box::new(vec![
+        Value::list_from_vec(vec![
             Value::String("a!".to_string()),
             Value::String("b!".to_string()),
-        ]))
+        ])
     );
 }
 
@@ -2229,7 +2227,7 @@ fn test_filter_wrong_first_arg_type() {
 #[test]
 fn test_filter_wrong_second_arg_type() {
     let ctx = Context::new();
-    let list = Value::List(Box::new(vec![Value::Int(1)]));
+    let list = Value::list_from_vec(vec![Value::Int(1)]);
     // filter(list, 99) → TypeMismatch
     let result = eval_function_call("filter", None, &[list, Value::Int(99)], &ctx);
     assert!(result.is_err());
@@ -2252,7 +2250,7 @@ fn test_map_wrong_first_arg_type() {
 #[test]
 fn test_map_wrong_second_arg_type() {
     let ctx = Context::new();
-    let list = Value::List(Box::new(vec![Value::Int(1)]));
+    let list = Value::list_from_vec(vec![Value::Int(1)]);
     // map(list, true) → TypeMismatch
     let result = eval_function_call("map", None, &[list, Value::Bool(true)], &ctx);
     assert!(result.is_err());
@@ -2272,7 +2270,7 @@ fn test_filter_wrong_arity_too_many() {
     let result = eval_function_call(
         "filter",
         None,
-        &[Value::List(Box::default()), closure, Value::Int(1)],
+        &[Value::list_nil(), closure, Value::Int(1)],
         &ctx,
     );
     assert!(result.is_err());
@@ -2292,7 +2290,7 @@ fn test_map_wrong_arity_too_many() {
     let result = eval_function_call(
         "map",
         None,
-        &[Value::List(Box::default()), closure, Value::Int(1)],
+        &[Value::list_nil(), closure, Value::Int(1)],
         &ctx,
     );
     assert!(result.is_err());
@@ -2309,7 +2307,7 @@ fn test_filter_closure_wrong_param_count() {
         body: Box::new(Expr::Literal(Value::Bool(true))),
         env: Arc::new(EnvFrame::new()),
     };
-    let list = Value::List(Box::new(vec![Value::Int(1)]));
+    let list = Value::list_from_vec(vec![Value::Int(1)]);
     let result = eval_function_call("filter", None, &[list, closure], &ctx);
     assert!(result.is_err());
 }
@@ -2325,7 +2323,7 @@ fn test_map_closure_wrong_param_count() {
         body: Box::new(Expr::Literal(Value::Int(0))),
         env: Arc::new(EnvFrame::new()),
     };
-    let list = Value::List(Box::new(vec![Value::Int(1)]));
+    let list = Value::list_from_vec(vec![Value::Int(1)]);
     let result = eval_function_call("map", None, &[list, closure], &ctx);
     assert!(result.is_err());
 }
@@ -2350,7 +2348,7 @@ fn proc_scatter_expr(items: Vec<Value>, mapper: Expr) -> Expr {
     Expr::Call {
         func: "scatter".to_string(),
         module: Some("proc".to_string()),
-        arguments: vec![Expr::Literal(Value::List(Box::new(items))), mapper],
+        arguments: vec![Expr::Literal(Value::list_from_vec(items)), mapper],
     }
 }
 
@@ -2377,9 +2375,9 @@ async fn force_proc_in_context(ctx: &Context, proc_value: Value) -> EvalResult<V
 }
 
 fn expect_handle_list(value: Value, expected_len: usize) -> Vec<ProcessHandle> {
-    let Value::List(items) = value else {
-        panic!("expected ordered handle list, got {value:?}");
-    };
+    let items = value
+        .list_to_vec()
+        .unwrap_or_else(|| panic!("expected ordered handle list, got {value:?}"));
     assert_eq!(items.len(), expected_len, "expected {expected_len} handles");
     items
         .iter()

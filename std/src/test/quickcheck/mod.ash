@@ -52,6 +52,8 @@ pub use combinator::{
     append_shrink,
     prepend_shrink,
     RecursiveConfig,
+    recursive,
+    recursive_with,
     recursive_config,
     default_recursive_config,
 };

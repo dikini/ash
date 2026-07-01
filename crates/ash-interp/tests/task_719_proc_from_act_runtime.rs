@@ -26,7 +26,7 @@ fn invoke_expr() -> Expr {
         arguments: vec![
             Expr::Literal(Value::String("sensor".to_string())),
             Expr::Literal(Value::String("read".to_string())),
-            Expr::Literal(Value::List(Box::default())),
+            Expr::Literal(Value::list_nil()),
         ],
     }
 }

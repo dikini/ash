@@ -44,7 +44,7 @@ fn chat_args_values() -> Vec<Value> {
     vec![
         Value::String("test".to_string()),
         Value::String("gpt-4o".to_string()),
-        Value::List(Box::new(vec![user_message("Hello")])),
+        Value::list_from_vec(vec![user_message("Hello")]),
         Value::unit_variant("None"),
     ]
 }
@@ -226,12 +226,10 @@ async fn test_engine_executes_llm_list_models() {
     );
 
     let value = result.unwrap();
-    match &value {
-        Value::List(models) => {
-            assert_eq!(models.len(), 2, "Should list 2 models");
-        }
-        other => panic!("Expected List from list_models, got: {other:?}"),
-    }
+    let models = value
+        .list_to_vec()
+        .unwrap_or_else(|| panic!("Expected List from list_models, got: {value:?}"));
+    assert_eq!(models.len(), 2, "Should list 2 models");
 }
 
 /// Test that engine dispatches `llm:embed` action.
@@ -264,7 +262,7 @@ async fn test_engine_executes_llm_embed() {
     let embed_args = vec![
         Value::String("test".to_string()),
         Value::String("text-embedding-3-small".to_string()),
-        Value::List(Box::new(vec![Value::String("hello".to_string())])),
+        Value::list_from_vec(vec![Value::String("hello".to_string())]),
     ];
 
     let workflow = Workflow::Act {
@@ -285,12 +283,10 @@ async fn test_engine_executes_llm_embed() {
     );
 
     let value = result.unwrap();
-    match &value {
-        Value::List(embeddings) => {
-            assert_eq!(embeddings.len(), 1, "Should have 1 embedding");
-        }
-        other => panic!("Expected List from embed, got: {other:?}"),
-    }
+    let embeddings = value
+        .list_to_vec()
+        .unwrap_or_else(|| panic!("Expected List from embed, got: {value:?}"));
+    assert_eq!(embeddings.len(), 1, "Should have 1 embedding");
 }
 
 /// Test that engine-built-with-llm-capabilities rejects unknown LLM actions.

@@ -53,6 +53,9 @@ pub(super) fn operational_eval_error_for_resource_policy(
 }
 
 pub(super) fn value_type_name(value: &Value) -> &'static str {
+    if value.is_list() {
+        return "List";
+    }
     match value {
         Value::Int(_) => "Int",
         Value::Float(_) => "Float",
@@ -61,7 +64,6 @@ pub(super) fn value_type_name(value: &Value) -> &'static str {
         Value::Null => "Null",
         Value::Time(_) => "Time",
         Value::Ref(_) => "Ref",
-        Value::List(_) => "List",
         Value::Record(_) => "Record",
         Value::Cap(_) => "Cap",
         Value::Variant { .. } => "Variant",

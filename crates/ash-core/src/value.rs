@@ -101,8 +101,6 @@ pub enum Value {
     Time(chrono::DateTime<chrono::Utc>),
     /// Reference to external resource
     Ref(String),
-    /// List of values (boxed to reduce enum size)
-    List(Box<Vec<Value>>),
     /// Record (map) (boxed to reduce enum size)
     Record(Box<HashMap<String, Value>>),
     /// Capability reference
@@ -267,13 +265,6 @@ impl Value {
                     .max_by_key(|e| crate::value::effect_level_rank(e));
                 max_effect.unwrap_or_else(|| "Pure".to_string())
             }
-            Value::List(items) => {
-                let max_effect = items
-                    .iter()
-                    .map(|v| v.effect_level())
-                    .max_by_key(|e| crate::value::effect_level_rank(e));
-                max_effect.unwrap_or_else(|| "Pure".to_string())
-            }
             Value::Cap(_) => "Act".to_string(),
             Value::Closure { .. } => {
                 if self.is_pure() {
@@ -311,6 +302,73 @@ impl Value {
         Value::Variant {
             name: name.into(),
             fields: Box::new(vec![]),
+        }
+    }
+
+    /// Create the canonical empty list runtime value.
+    #[must_use]
+    pub fn list_nil() -> Self {
+        Self::unit_variant("Nil")
+    }
+
+    /// Create the canonical non-empty list runtime value.
+    #[must_use]
+    pub fn list_cons(head: Value, tail: Value) -> Self {
+        Self::variant("Cons", vec![("head", head), ("tail", tail)])
+    }
+
+    /// Convert a vector into the canonical nested `Cons`/`Nil` runtime list.
+    #[must_use]
+    pub fn list_from_vec(values: Vec<Value>) -> Self {
+        values
+            .into_iter()
+            .rev()
+            .fold(Self::list_nil(), |tail, head| Self::list_cons(head, tail))
+    }
+
+    /// Convert a canonical nested `Cons`/`Nil` runtime list into a vector.
+    #[must_use]
+    pub fn is_list(&self) -> bool {
+        match self {
+            Value::Variant { name, fields } if name == "Nil" => fields.is_empty(),
+            Value::Variant { name, fields } if name == "Cons" => {
+                let Some(tail) = fields
+                    .iter()
+                    .find(|(field, _)| field == "tail")
+                    .map(|(_, v)| v)
+                else {
+                    return false;
+                };
+                tail.is_list()
+            }
+            _ => false,
+        }
+    }
+
+    /// Convert a canonical nested `Cons`/`Nil` runtime list into a vector.
+    #[must_use]
+    pub fn list_to_vec(&self) -> Option<Vec<Value>> {
+        let mut result = Vec::new();
+        let mut current = self;
+        loop {
+            match current {
+                Value::Variant { name, fields } if name == "Nil" && fields.is_empty() => {
+                    return Some(result);
+                }
+                Value::Variant { name, fields } if name == "Cons" => {
+                    let head = fields
+                        .iter()
+                        .find(|(field, _)| field == "head")
+                        .map(|(_, value)| value)?;
+                    let tail = fields
+                        .iter()
+                        .find(|(field, _)| field == "tail")
+                        .map(|(_, value)| value)?;
+                    result.push(head.clone());
+                    current = tail;
+                }
+                _ => return None,
+            }
         }
     }
 
@@ -361,9 +419,14 @@ impl std::fmt::Display for Value {
             Value::Null => write!(f, "null"),
             Value::Time(t) => write!(f, "{}", t),
             Value::Ref(r) => write!(f, "&{}", r),
-            Value::List(l) => {
+            list if list.is_list() => {
                 write!(f, "[")?;
-                for (i, v) in l.iter().enumerate() {
+                for (i, v) in list
+                    .list_to_vec()
+                    .expect("is_list only returns true for convertible lists")
+                    .iter()
+                    .enumerate()
+                {
                     if i > 0 {
                         write!(f, ", ")?;
                     }
@@ -466,16 +529,19 @@ impl Serialize for Value {
                 &serde_helper::SerializableValue::Ref(v.clone()),
                 serializer,
             ),
-            Value::List(v) => serde::Serialize::serialize(
-                &serde_helper::SerializableValue::List(v.clone()),
-                serializer,
-            ),
             Value::Record(v) => serde::Serialize::serialize(
                 &serde_helper::SerializableValue::Record(v.clone()),
                 serializer,
             ),
             Value::Cap(v) => serde::Serialize::serialize(
                 &serde_helper::SerializableValue::Cap(v.clone()),
+                serializer,
+            ),
+            Value::Variant { .. } if self.is_list() => serde::Serialize::serialize(
+                &serde_helper::SerializableValue::SerializedList(Box::new(
+                    self.list_to_vec()
+                        .expect("is_list only returns true for convertible lists"),
+                )),
                 serializer,
             ),
             Value::Variant { name, fields } => serde::Serialize::serialize(
@@ -516,7 +582,7 @@ impl<'de> Deserialize<'de> for Value {
             serde_helper::SerializableValue::Null => Value::Null,
             serde_helper::SerializableValue::Time(v) => Value::Time(v),
             serde_helper::SerializableValue::Ref(v) => Value::Ref(v),
-            serde_helper::SerializableValue::List(v) => Value::List(v),
+            serde_helper::SerializableValue::SerializedList(v) => Value::list_from_vec(*v),
             serde_helper::SerializableValue::Record(v) => Value::Record(v),
             serde_helper::SerializableValue::Cap(v) => Value::Cap(v),
             serde_helper::SerializableValue::Variant { name, fields } => {
@@ -542,7 +608,8 @@ mod serde_helper {
         Null,
         Time(chrono::DateTime<chrono::Utc>),
         Ref(String),
-        List(Box<Vec<Value>>),
+        #[serde(rename = "List")]
+        SerializedList(Box<Vec<Value>>),
         Record(Box<HashMap<String, Value>>),
         Cap(String),
         Variant {
@@ -582,8 +649,7 @@ mod tests {
             8,  // Items per collection
             |inner| {
                 prop_oneof![
-                    prop::collection::vec(inner.clone(), 0..8)
-                        .prop_map(|v| Value::List(Box::new(v))),
+                    prop::collection::vec(inner.clone(), 0..8).prop_map(Value::list_from_vec),
                     prop::collection::hash_map("[a-z]+".prop_map(String::from), inner, 0..8)
                         .prop_map(|m| Value::Record(Box::new(m))),
                 ]
@@ -602,7 +668,6 @@ mod tests {
                 Value::Null => "Null",
                 Value::Time(_) => "Time",
                 Value::Ref(_) => "Ref",
-                Value::List(_) => "List",
                 Value::Record(_) => "Record",
                 Value::Cap(_) => "Cap",
                 Value::Variant { .. } => "Variant",

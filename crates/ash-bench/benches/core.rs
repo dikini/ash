@@ -103,14 +103,14 @@ fn bench_value_creation(c: &mut Criterion) {
     group.bench_function("create_list_small", |b| {
         b.iter(|| {
             let list: Vec<Value> = (0..10).map(|i| Value::Int(i)).collect();
-            black_box(Value::List(Box::new(list)))
+            black_box(Value::list_from_vec(list))
         });
     });
     
     group.bench_function("create_list_large", |b| {
         b.iter(|| {
             let list: Vec<Value> = (0..1000).map(|i| Value::Int(i)).collect();
-            black_box(Value::List(Box::new(list)))
+            black_box(Value::list_from_vec(list))
         });
     });
     
@@ -136,8 +136,8 @@ fn bench_value_operations(c: &mut Criterion) {
         b.iter(|| black_box(v1 == v2));
     });
     
-    let list1 = Value::List(Box::new((0..100).map(|i| Value::Int(i)).collect()));
-    let list2 = Value::List(Box::new((0..100).map(|i| Value::Int(i)).collect()));
+    let list1 = Value::list_from_vec((0..100).map(|i| Value::Int(i)).collect());
+    let list2 = Value::list_from_vec((0..100).map(|i| Value::Int(i)).collect());
     group.bench_function("equality_list_100", |b| {
         b.iter(|| black_box(&list1 == &list2));
     });
@@ -210,7 +210,7 @@ fn bench_pattern_matching(c: &mut Criterion) {
         Pattern::Variable { name: "a".to_string(), span: Span::default() },
         Pattern::Variable { name: "b".to_string(), span: Span::default() },
     ]);
-    let tuple_value = Value::List(Box::new(vec![Value::Int(1), Value::Int(2)]));
+    let tuple_value = Value::list_from_vec(vec![Value::Int(1), Value::Int(2)]);
     
     group.bench_function("bindings_tuple_2", |b| {
         b.iter(|| black_box(tuple_pattern.bindings()));

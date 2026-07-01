@@ -31,7 +31,7 @@ use async_openai::types::{CreateEmbeddingRequest, CreateEmbeddingResponse, Embed
 ///
 /// # Errors
 /// Returns `CapabilityError::InvalidArgument` if args are missing or have wrong types.
-pub fn extract_embed_args(args: &[Value]) -> Result<(&str, &str, &[Value]), CapabilityError> {
+pub fn extract_embed_args(args: &[Value]) -> Result<(&str, &str, Vec<Value>), CapabilityError> {
     if args.len() < 3 {
         return Err(CapabilityError::InvalidArgument(
             "embed requires provider, model, and texts args".to_string(),
@@ -46,14 +46,9 @@ pub fn extract_embed_args(args: &[Value]) -> Result<(&str, &str, &[Value]), Capa
         .as_string()
         .ok_or_else(|| CapabilityError::InvalidArgument("model must be a string".to_string()))?;
 
-    let texts = match &args[2] {
-        Value::List(t) => t.as_slice(),
-        _ => {
-            return Err(CapabilityError::InvalidArgument(
-                "texts must be a list".to_string(),
-            ));
-        }
-    };
+    let texts = args[2]
+        .list_to_vec()
+        .ok_or_else(|| CapabilityError::InvalidArgument("texts must be a list".to_string()))?;
 
     // Validate that texts is non-empty
     if texts.is_empty() {
@@ -113,7 +108,7 @@ fn embedding_to_value(embedding: &Embedding) -> Value {
     fields.insert("index".to_string(), Value::Int(i64::from(embedding.index)));
     fields.insert(
         "embedding".to_string(),
-        Value::List(Box::new(embedding_values)),
+        Value::list_from_vec(embedding_values),
     );
 
     Value::Record(Box::new(fields))
@@ -155,7 +150,7 @@ pub fn embed_response_to_value(
 
     let embedding_values: Vec<Value> = embeddings.iter().map(embedding_to_value).collect();
 
-    Ok(Value::List(Box::new(embedding_values)))
+    Ok(Value::list_from_vec(embedding_values))
 }
 
 /// Convert texts from Ash Values to String vector
@@ -188,10 +183,10 @@ mod tests {
         let args = vec![
             Value::String("openai".to_string()),
             Value::String("text-embedding-3-small".to_string()),
-            Value::List(Box::new(vec![
+            Value::list_from_vec(vec![
                 Value::String("Hello".to_string()),
                 Value::String("World".to_string()),
-            ])),
+            ]),
         ];
 
         let result = extract_embed_args(&args);
@@ -225,7 +220,7 @@ mod tests {
         let args = vec![
             Value::Int(42),
             Value::String("model".to_string()),
-            Value::List(Box::new(vec![Value::String("text".to_string())])),
+            Value::list_from_vec(vec![Value::String("text".to_string())]),
         ];
 
         let result = extract_embed_args(&args);
@@ -243,7 +238,7 @@ mod tests {
         let args = vec![
             Value::String("openai".to_string()),
             Value::Int(42),
-            Value::List(Box::new(vec![Value::String("text".to_string())])),
+            Value::list_from_vec(vec![Value::String("text".to_string())]),
         ];
 
         let result = extract_embed_args(&args);
@@ -279,7 +274,7 @@ mod tests {
         let args = vec![
             Value::String("openai".to_string()),
             Value::String("model".to_string()),
-            Value::List(Box::default()),
+            Value::list_nil(),
         ];
 
         let result = extract_embed_args(&args);
@@ -362,7 +357,10 @@ mod tests {
 
         let value = result.unwrap();
         match value {
-            Value::List(embeddings) => {
+            value if value.is_list() => {
+                let embeddings = value
+                    .list_to_vec()
+                    .expect("is_list only returns true for convertible lists");
                 // E1: result.length == texts.length
                 assert_eq!(embeddings.len(), 2);
 
@@ -374,7 +372,10 @@ mod tests {
 
                         // Check embedding values - now Float per SPEC-029
                         match fields.get("embedding") {
-                            Some(Value::List(values)) => {
+                            Some(value) if value.is_list() => {
+                                let values = value
+                                    .list_to_vec()
+                                    .expect("is_list only returns true for convertible lists");
                                 assert_eq!(values.len(), 3);
                                 // Use approximate comparison for float values (f32 -> f64 conversion)
                                 match (&values[0], &values[1], &values[2]) {
@@ -531,7 +532,10 @@ mod tests {
 
         let result = embed_response_to_value(response).unwrap();
         match result {
-            Value::List(embeddings) => {
+            value if value.is_list() => {
+                let embeddings = value
+                    .list_to_vec()
+                    .expect("is_list only returns true for convertible lists");
                 // E1: result.length == texts.length
                 assert_eq!(
                     embeddings.len(),
@@ -562,7 +566,10 @@ mod tests {
 
         let result = embed_response_to_value(response).unwrap();
         match result {
-            Value::List(embeddings) => {
+            value if value.is_list() => {
+                let embeddings = value
+                    .list_to_vec()
+                    .expect("is_list only returns true for convertible lists");
                 // E2: result[i].index == i for all i
                 for (i, emb) in embeddings.iter().enumerate() {
                     match emb {

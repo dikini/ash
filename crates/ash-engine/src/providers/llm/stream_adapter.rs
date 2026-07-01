@@ -148,7 +148,7 @@ pub fn stream_chunk_to_value(chunk: &CreateChatCompletionStreamResponse) -> Opti
             |calls| {
                 let tool_call_values: Vec<Value> =
                     calls.into_iter().map(tool_call_chunk_to_value).collect();
-                Value::variant("Some", vec![("0", Value::List(Box::new(tool_call_values)))])
+                Value::variant("Some", vec![("0", Value::list_from_vec(tool_call_values))])
             },
         );
         (content, tool_calls)
@@ -238,7 +238,7 @@ impl ChatStream {
 
 /// Chat stream extraction result: (provider, model, messages, params)
 type ChatStreamArgsResult<'a> =
-    Result<(&'a str, &'a str, &'a [Value], Option<&'a Value>), CapabilityError>;
+    Result<(&'a str, &'a str, Vec<Value>, Option<&'a Value>), CapabilityError>;
 
 /// Extract `chat_stream` action arguments
 ///
@@ -257,7 +257,7 @@ type ChatStreamArgsResult<'a> =
 /// let args = vec![
 ///     Value::String("openai".to_string()),
 ///     Value::String("gpt-4o".to_string()),
-///     Value::List(Box::default()),
+///     Value::list_nil(),
 /// ];
 /// let result = extract_chat_stream_args(&args);
 /// assert!(result.is_ok());
@@ -277,14 +277,9 @@ pub fn extract_chat_stream_args(args: &[Value]) -> ChatStreamArgsResult<'_> {
         CapabilityError::InvalidArgument("chat_stream model must be a string".to_string())
     })?;
 
-    let messages = match &args[2] {
-        Value::List(m) => m.as_slice(),
-        _ => {
-            return Err(CapabilityError::InvalidArgument(
-                "chat_stream messages must be a list".to_string(),
-            ));
-        }
-    };
+    let messages = args[2].list_to_vec().ok_or_else(|| {
+        CapabilityError::InvalidArgument("chat_stream messages must be a list".to_string())
+    })?;
 
     let params = args.get(3);
 
@@ -412,9 +407,7 @@ mod tests {
         match fields.get("delta_tool_calls").unwrap() {
             Value::Variant { name, fields } => {
                 assert_eq!(name, "Some");
-                let Value::List(tool_calls) = &fields[0].1 else {
-                    panic!("Expected List");
-                };
+                let tool_calls = fields[0].1.list_to_vec().expect("Expected List");
                 assert_eq!(tool_calls.len(), 1);
 
                 // Check the tool call delta structure
@@ -684,7 +677,7 @@ mod tests {
         let args = vec![
             Value::String("openai".to_string()),
             Value::String("gpt-4o".to_string()),
-            Value::List(Box::default()),
+            Value::list_nil(),
         ];
         let result = extract_chat_stream_args(&args);
         assert!(result.is_ok());
@@ -702,7 +695,7 @@ mod tests {
         let args = vec![
             Value::String("openai".to_string()),
             Value::String("gpt-4o".to_string()),
-            Value::List(Box::default()),
+            Value::list_nil(),
             params,
         ];
         let result = extract_chat_stream_args(&args);
@@ -744,7 +737,7 @@ mod tests {
         let args = vec![
             Value::Int(42),
             Value::String("gpt-4o".to_string()),
-            Value::List(Box::default()),
+            Value::list_nil(),
         ];
         let result = extract_chat_stream_args(&args);
         assert!(result.is_err());
@@ -761,7 +754,7 @@ mod tests {
         let args = vec![
             Value::String("openai".to_string()),
             Value::Int(42),
-            Value::List(Box::default()),
+            Value::list_nil(),
         ];
         let result = extract_chat_stream_args(&args);
         assert!(result.is_err());
@@ -795,7 +788,7 @@ mod tests {
         let args = vec![
             Value::String(String::new()),
             Value::String("gpt-4o".to_string()),
-            Value::List(Box::default()),
+            Value::list_nil(),
         ];
         // Empty string is still a valid string, so this should succeed
         let result = extract_chat_stream_args(&args);
@@ -808,7 +801,7 @@ mod tests {
         let args = vec![
             Value::String("openai".to_string()),
             Value::String(String::new()),
-            Value::List(Box::default()),
+            Value::list_nil(),
         ];
         // Empty string is still a valid string, so this should succeed
         let result = extract_chat_stream_args(&args);

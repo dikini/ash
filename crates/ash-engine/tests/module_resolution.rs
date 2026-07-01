@@ -432,7 +432,7 @@ async fn stdlib_act_guard_permits_allowed_policy() {
         .expect("allowed guard should force successfully");
     assert_eq!(
         forced,
-        Value::List(Box::new(vec![Value::ActEnvToken, Value::Int(7)]))
+        Value::list_from_vec(vec![Value::ActEnvToken, Value::Int(7)])
     );
 }
 
@@ -462,10 +462,10 @@ async fn stdlib_act_guard_denies_rejected_policy() {
         .expect("denied guard should force its failure Act");
     assert_eq!(
         forced,
-        Value::List(Box::new(vec![
+        Value::list_from_vec(vec![
             Value::ActEnvToken,
             Value::String("policy denied".to_string())
-        ]))
+        ])
     );
 }
 

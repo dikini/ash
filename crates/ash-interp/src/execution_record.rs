@@ -346,7 +346,7 @@ impl ExecutionRecord {
 
         Self::merge_parallel_terminal(
             branches,
-            ExecutionTerminal::Return(Value::List(Box::new(values))),
+            ExecutionTerminal::Return(Value::list_from_vec(values)),
         )
     }
 

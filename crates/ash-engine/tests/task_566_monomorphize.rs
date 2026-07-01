@@ -109,10 +109,10 @@ fn task566_monomorphize_recursive_generic_impl() {
     env.register_impl(&serialize_int_impl()).unwrap();
     env.register_impl(&serialize_list_generic_impl()).unwrap();
 
-    let list_arg = Expr::Literal(ash_core::Value::List(Box::new(vec![
+    let list_arg = Expr::Literal(ash_core::Value::list_from_vec(vec![
         ash_core::Value::Int(1),
         ash_core::Value::Int(2),
-    ])));
+    ]));
 
     let mut workflow = Workflow::Ret {
         expr: Expr::Call {

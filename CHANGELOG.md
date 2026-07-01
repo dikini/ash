@@ -5,7 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
+### Changed
+- Completed Phase 176 closeout after broad verification and independent review remediation, reconciling final 9/9 task status across PLAN-176, PLAN-INDEX, and TASK-1802 (TASK-1802).
+- Reconciled historical Phase 151/152/157/158 status surfaces so old `Value::List`, closure-visibility, and QuickCheck recursive-combinator deferrals point at Phase 176 outcomes rather than stale planned/deferred wording (TASK-1801).
+- Re-scoped QuickCheck recursive combinators by landing the SPEC-087 public names/config in ordinary Ash, exporting them through `test::quickcheck`, and routing execution through a visible fail-closed helper pending parser/type-metadata support for bounded recursive generation (TASK-1800).
+- Documented the Phase 176 QuickCheck recursive-combinator audit: the SPEC-087 `recursive`/`recursive_with` API and config shape are retained, the size-descending ordinary-Ash helper remains the future design, and TASK-1800 lands a fail-closed guard until parser/type-metadata support is ready (TASK-1799).
+- Removed the legacy `Value::List` runtime representation in favor of canonical `Cons`/`Nil` list values, preserving list serialization and migrating construction, pattern, interpreter, engine, CLI, test, and benchmark call sites to semantic helpers (TASK-1797).
+
 ### Fixed
+- Fixed module-level pure helper visibility inside closures by giving local function closures module callable environments and transporting imported public callable private-helper runtime dependencies in isolated per-module families without leaking those helpers into caller bindings (TASK-1798).
 - Clarified typed macro summary comments and strengthened TASK-1771 result-mismatch regression coverage to assert the template-body diagnostic span directly (TASK-1771).
 - Made typed macro checking fail closed for unknown annotated arguments, malformed imported signature arity, and imported macro summary/template typed-signature mismatches; result mismatch diagnostics now use the macro template span (TASK-1771).
 - Tightened bounded macro type inference so ordinary call expressions do not fabricate public macro typed summaries from unqualified names without a proven callable identity; added negative parser regressions for unqualified, wrong-arity, and module-qualified calls (TASK-1772).
@@ -14,6 +22,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Phase 170 notation summary/export design now matches the implemented fail-closed local-table behavior for duplicate notation declarations (TASK-1742).
 
 ### Added
+- PLAN-176 deferred cleanup after target-language redesign packet, with audit-first tasks for `Value::List` removal, module-level function visibility inside closures, recursive QuickCheck combinators, stale status reconciliation, and closeout validation (TASK-1794 through TASK-1802).
 - Phase 154 imported type annotation support: module checks now seed imported type identities before local type validation, permit smart-constructor private types as opaque nameable callable-signature identities, reject downstream opaque constructor use, and emit missing-import hints for unresolved signature types (TASK-1540 through TASK-1544).
 - Phase 175 semantic identity substrate for macros and tooling: parser-facing macro/callable identity carriers, importable macro origin identity with alias preservation, LSP compact identity keys, and same-file macro/function reference splitting without making macros runtime-callable (TASK-1785 through TASK-1792).
 - PLAN-175 name-resolution-backed semantic identity packet for macros and tooling, with tasks for canonical macro identity, parser/LSP identity threading, semantic same-file references, imported macro navigation preparation, non-callability validation, docs reconciliation, and closeout (TASK-1784 through TASK-1793).

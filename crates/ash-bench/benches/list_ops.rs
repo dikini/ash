@@ -13,7 +13,7 @@ fn list_ops_benchmark(c: &mut Criterion) {
     
     c.bench_function("list_len_empty", |b| {
         b.iter(|| {
-            // len([]) should be O(1) with Value::List, O(1) with Cons/Nil
+            // len([]) should remain O(1) with the canonical Cons/Nil list
             // (pattern match on Nil is immediate)
             black_box(0)
         })

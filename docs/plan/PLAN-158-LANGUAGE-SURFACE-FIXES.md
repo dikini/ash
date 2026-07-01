@@ -1,6 +1,6 @@
 # PLAN-158: Language Surface Fixes
 
-**Status:** ⏸️ Deferred; TASK-1580 (Module-level function visibility) remains open
+**Status:** ✅ Complete; TASK-1580 completed by Phase 176
 **Spec:** [SPEC-094: Language Surface Fix Specification](../spec/SPEC-094-LANGUAGE-SURFACE-FIX.md)
 **Builds on:** [PLAN-157](PLAN-157-LIST-MIGRATION-HARDENING.md)
 **Task range:** TASK-1580 through TASK-1584
@@ -14,7 +14,7 @@ Fix three language surface issues that prevent idiomatic usage of pure algebraic
 
 During Phase 157 (List Migration Hardening), three language limitations were identified:
 
-1. **Module-level functions not visible in closures**: When a closure defined in a workflow calls a module-level function, the interpreter fails with `UndefinedVariable`. **Status: Deferred** - requires power tower lifting in parser.
+1. **Module-level functions not visible in closures**: When a closure calls a module-level function, the interpreter used to fail with `UndefinedVariable`. **Status: Fixed by Phase 176 TASK-1798** via module callable environments for local functions and hidden imported same-module runtime dependencies.
 2. **Function vs capability name collision**: The lowerer treats function calls (like `reverse(list)`) as capability lookups, causing "unresolved symbolic capability" errors. **Status: Fixed**.
 3. **Closure expression parsing limitations**: `fn(x) { x }` cannot be parsed in general expression positions like function arguments. **Status: Fixed**.
 
@@ -22,7 +22,7 @@ During Phase 157 (List Migration Hardening), three language limitations were ide
 
 | Task | Description | Status |
 |---|---|---|
-| [TASK-1580](tasks/TASK-1580-closure-module-function-visibility.md) | Fix module-level function visibility inside closures | 📝 Deferred; Requires power tower lifting in parser (distinguish pure fn calls from Act) |
+| [TASK-1580](tasks/TASK-1580-closure-module-function-visibility.md) | Fix module-level function visibility inside closures | ✅ Complete via TASK-1798 |
 | [TASK-1581](tasks/TASK-1581-function-vs-capability-resolution.md) | Distinguish function calls from capability calls in lowerer | ✅ Complete |
 | [TASK-1582](tasks/TASK-1582-closure-expression-parsing.md) | Enable `fn` expression parsing in all expression contexts | ✅ Complete |
 | [TASK-1583](tasks/TASK-1583-verification-and-regression-tests.md) | Add verification tests and ensure no regressions | ✅ Complete |
@@ -51,13 +51,11 @@ During Phase 157 (List Migration Hardening), three language limitations were ide
 **Test added:**
 - `crates/ash-engine/tests/fn_expr_parsing.rs` - Verifies `fn(x) { x + 1 }` works as `map()` argument
 
-### TASK-1580: Module-Level Function Visibility (Deferred)
+### TASK-1580: Module-Level Function Visibility (Phase 176 Fixed)
 
-**Problem:** Module-level functions are not accessible from within closures defined in workflows.
+**Problem:** Module-level functions were not accessible from closures because closure runtime environments lacked module callable bindings.
 
-**Root Cause:** The parser treats `f(5)` where `f` is a local variable as a workflow action (Act), not a function call. This is because the parser doesn't track local variables and can't distinguish between function calls and capability calls.
-
-**Why Deferred:** Fixing this requires power tower lifting in the parser - the parser needs to understand the distinction between pure functions (bottom of tower), Act/Proc (middle), and Workflow (top). When a pure function call appears in a workflow context, it needs to be lifted into the workflow level. This is a significant architectural change that requires careful design.
+**Fix:** Phase 176 TASK-1798 gives local function closures shared module callable environments and transports imported public callable private-helper dependencies without leaking private helper names into caller bindings.
 
 ## Verification
 
@@ -68,13 +66,18 @@ During Phase 157 (List Migration Hardening), three language limitations were ide
 
 ## Known Limitations
 
-1. **Module-level function visibility in closures (TASK-1580):** Deferred to future phase. Workaround: inline the function body or pass functions as arguments.
-2. **Power tower lifting:** The parser currently doesn't distinguish between tower levels. A future phase needs to implement proper lifting of pure expressions into workflow contexts.
+1. **Module-level function visibility in closures (TASK-1580):** Fixed by Phase 176 TASK-1798.
+2. **Power tower lifting:** Broader parser-level tower inference remains separate future work and is not required for the TASK-1798 runtime callable-environment fix.
 
 ## Closeout Criteria
 
 - ✅ TASK-1581 implemented and tested
 - ✅ TASK-1582 implemented and tested
-- ✅ TASK-1580 documented and deferred
+- ✅ TASK-1580 fixed by Phase 176 and documented here
 - ✅ Documentation updated
 - ✅ No regressions in existing tests
+
+
+## Phase 176 reconciliation note
+
+TASK-1801 updated this historical plan to point TASK-1580 at the Phase 176 implementation outcome instead of preserving stale deferred wording. See `TASK-1798-module-function-visibility-in-closures.md` for the current tests and implementation evidence.

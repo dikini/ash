@@ -166,7 +166,7 @@ impl CapabilityProvider for LlmProvider {
                 let (provider_name, model, messages, params) = extract_chat_args(args)?;
 
                 // Convert messages
-                let chat_messages = values_to_chat_messages(messages)?;
+                let chat_messages = values_to_chat_messages(&messages)?;
 
                 // Build request
                 let request = build_chat_request(model, chat_messages, params)?;
@@ -188,10 +188,10 @@ impl CapabilityProvider for LlmProvider {
                     extract_chat_with_tools_args(args)?;
 
                 // Convert messages
-                let chat_messages = values_to_chat_messages(messages)?;
+                let chat_messages = values_to_chat_messages(&messages)?;
 
                 // Convert tool definitions
-                let chat_tools = values_to_chat_tools(tools)?;
+                let chat_tools = values_to_chat_tools(&tools)?;
 
                 // Build request with tools
                 let request =
@@ -213,7 +213,7 @@ impl CapabilityProvider for LlmProvider {
                 let (provider_name, model, messages, params) = extract_chat_stream_args(args)?;
 
                 // Convert messages
-                let chat_messages = values_to_chat_messages(messages)?;
+                let chat_messages = values_to_chat_messages(&messages)?;
 
                 // Build request with streaming enabled
                 let mut request = build_chat_request(model, chat_messages, params)?;
@@ -295,7 +295,7 @@ impl CapabilityProvider for LlmProvider {
                 let (provider_name, model, texts) = extract_embed_args(args)?;
 
                 // Convert texts to strings
-                let text_strings = texts_to_strings(texts)?;
+                let text_strings = texts_to_strings(&texts)?;
 
                 // Build request
                 let request = build_embed_request(model, text_strings)?;

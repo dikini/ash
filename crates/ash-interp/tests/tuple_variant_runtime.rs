@@ -114,7 +114,7 @@ fn nested_tuple_variant_patterns_extract_payloads() {
                     ("_0".into(), Value::Int(9)),
                     (
                         "_1".into(),
-                        Value::List(Box::new(vec![Value::Int(12), Value::Int(34)])),
+                        Value::list_from_vec(vec![Value::Int(12), Value::Int(34)]),
                     ),
                 ]),
             },

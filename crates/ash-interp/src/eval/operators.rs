@@ -98,7 +98,12 @@ pub(super) fn eval_binary_op(op: BinaryOp, left: Value, right: Value) -> EvalRes
 
         // Membership
         BinaryOp::In => match right {
-            Value::List(list) => Ok(Value::Bool(list.contains(&left))),
+            value if value.is_list() => Ok(Value::Bool(
+                value
+                    .list_to_vec()
+                    .expect("is_list only returns true for convertible lists")
+                    .contains(&left),
+            )),
             Value::String(s) => match left.as_string() {
                 Some(substr) => Ok(Value::Bool(s.contains(substr))),
                 None => Err(EvalError::TypeMismatch {

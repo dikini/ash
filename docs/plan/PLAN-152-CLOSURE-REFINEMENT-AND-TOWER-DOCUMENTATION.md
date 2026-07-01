@@ -1,8 +1,8 @@
 # PLAN-152: Closure Refinement and Tower Documentation
 
-**Status:** 📝 Planned
+**Status:** ✅ Complete; Phase 176 reconciled stale planned rows
 **Spec:** [SPEC-088: Closure Refinement and Effect-Safe Capture](../spec/SPEC-088-CLOSURE-REFINEMENT-AND-EFFECT-SAFE-CAPTURE.md)
-**Amends:** [PLAN-151](PLAN-151-QUICKCHECK-V1-ORDINARY-STRATEGY-SEMANTICS.md) — leaves Phase 151 open
+**Amends:** [PLAN-151](PLAN-151-QUICKCHECK-V1-ORDINARY-STRATEGY-SEMANTICS.md) — Phase 151 status reconciled by Phase 176
 **Builds on:** [SPEC-031](../spec/SPEC-031-FIRST-CLASS-FUNCTIONS.md), [SPEC-072](../spec/SPEC-072-TOWER-CALLABLE-TYPE-AND-CLOSURE-SYNTAX.md)
 **Task range:** TASK-1520 through TASK-1529
 
@@ -37,11 +37,11 @@ Replace the blanket "no closures in pure functions" restriction with a precise c
 
 | Task | Description | Status |
 |---|---|---|
-| [TASK-1520](tasks/TASK-1520-closure-refinement-audit-and-capture-channels.md) | Audit current closure creation points, identify capture channels, and document effect leakage scenarios | 📝 Planned |
-| [TASK-1521](tasks/TASK-1521-effect-level-type-system-design.md) | Design `EffectLevel` enum, closure type extension, and capture analysis algorithm | 📝 Planned |
-| [TASK-1522](tasks/TASK-1522-typechecker-capture-analysis.md) | Implement typechecker capture analysis: extract effect level from types, check captures, emit diagnostics | 📝 Planned |
-| [TASK-1523](tasks/TASK-1523-runtime-capture-enforcement.md) | Update runtime to remove blanket ban, add fallback enforcement, or trust typechecker | 📝 Planned |
-| [TASK-1524](tasks/TASK-1524-tower-examples-and-quickcheck-verification.md) | Verify all tower examples and deferred QuickCheck combinators work with refined closures | 📝 Planned |
+| [TASK-1520](tasks/TASK-1520-closure-refinement-audit-and-capture-channels.md) | Audit current closure creation points, identify capture channels, and document effect leakage scenarios | ✅ Complete |
+| [TASK-1521](tasks/TASK-1521-effect-level-type-system-design.md) | Design `EffectLevel` enum, closure type extension, and capture analysis algorithm | ✅ Complete |
+| [TASK-1522](tasks/TASK-1522-typechecker-capture-analysis.md) | Implement typechecker capture analysis: extract effect level from types, check captures, emit diagnostics | ✅ Complete |
+| [TASK-1523](tasks/TASK-1523-runtime-capture-enforcement.md) | Update runtime to remove blanket ban, add fallback enforcement, or trust typechecker | ✅ Complete |
+| [TASK-1524](tasks/TASK-1524-tower-examples-and-quickcheck-verification.md) | Verify all tower examples and deferred QuickCheck combinators work with refined closures | ✅ Complete / Phase 176 re-scoped QuickCheck recursion |
 | [TASK-1525](tasks/TASK-1525-reference-functions-and-closures.md) | Write `reference/language/functions.md` with closure syntax, capture rules, and examples | ✅ Complete |
 | [TASK-1526](tasks/TASK-1526-reference-tower-strata.md) | Write `reference/language/tower.md` with stratum examples, callable arrows, and boundary rules | ✅ Complete |
 | [TASK-1527](tasks/TASK-1527-update-record-docs-with-closure-fields.md) | Update `reference/language/types/records.md` with closure field examples and capture rules | ✅ Complete |
@@ -81,7 +81,7 @@ Every implementation task must include:
 
 ## Notes
 
-This phase leaves Phase 151 open. Phase 151's TASK-1511 (deferred combinators) and TASK-1512 (record docs) may benefit from Phase 152's closure refinement, but they remain independent tasks with their own completion criteria.
+Phase 176 reconciled the historical status drift in this file: TASK-1520 through TASK-1529 are complete in their own task files and PLAN-INDEX. Phase 151's TASK-1511 recursive-combinator remainder is now explicitly re-scoped by TASK-1799/TASK-1800 rather than left as stale closure-visibility blocker text.
 
 The closure refinement enables:
 - `fn make_adder(n) { fn(x) { n + x } }` — pure closures with pure captures
@@ -93,3 +93,8 @@ Documentation tasks write the missing language reference for:
 - Tower strata (Pure, Act, Proc, Workflow with examples)
 - Record types with closure fields (update existing docs)
 - Cookbook patterns (practical examples at each stratum)
+
+
+## Phase 176 reconciliation note
+
+TASK-1801 updated this historical plan so its task table matches PLAN-INDEX and the individual TASK-1520 through TASK-1529 files. QuickCheck recursive combinators are not claimed as fully behaviorally implemented here; TASK-1800 records the current fail-closed re-scope.

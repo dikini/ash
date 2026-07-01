@@ -40,7 +40,7 @@ fn test_read_only_can_project_context() {
     let harness = AgentHarness::new(capability, config);
 
     let mut state_map = std::collections::HashMap::new();
-    state_map.insert("obligations".to_string(), Value::List(Box::new(vec![])));
+    state_map.insert("obligations".to_string(), Value::list_from_vec(vec![]));
     let state = Value::Record(Box::new(state_map));
 
     let result = harness.project_context(&state);
@@ -116,7 +116,7 @@ fn test_projection_policy_full() {
     let harness = AgentHarness::new(capability, config);
 
     let mut state_map = std::collections::HashMap::new();
-    state_map.insert("obligations".to_string(), Value::List(Box::new(vec![])));
+    state_map.insert("obligations".to_string(), Value::list_from_vec(vec![]));
     state_map.insert(
         "bindings".to_string(),
         Value::Record(Box::new(std::collections::HashMap::new())),
@@ -140,7 +140,7 @@ fn test_projection_policy_obligations() {
 
     let harness = AgentHarness::new(capability, config);
 
-    let obligations = Value::List(Box::new(vec![Value::String("obl1".to_string())]));
+    let obligations = Value::list_from_vec(vec![Value::String("obl1".to_string())]);
     let mut state_map = std::collections::HashMap::new();
     state_map.insert("obligations".to_string(), obligations.clone());
     state_map.insert(
@@ -171,7 +171,7 @@ fn test_projection_policy_minimal() {
     let harness = AgentHarness::new(capability, config);
 
     let mut state_map = std::collections::HashMap::new();
-    state_map.insert("obligations".to_string(), Value::List(Box::new(vec![])));
+    state_map.insert("obligations".to_string(), Value::list_from_vec(vec![]));
     state_map.insert(
         "bindings".to_string(),
         Value::Record(Box::new(std::collections::HashMap::new())),

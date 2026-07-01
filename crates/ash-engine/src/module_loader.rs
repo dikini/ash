@@ -296,6 +296,10 @@ pub struct InlineCallable {
     pub exporting_modules: HashSet<ModuleIdentity>,
     /// Public first-class workflow summary for imported `Workflow<A>` exports.
     pub workflow_summary: Option<PublicWorkflowSummary>,
+    /// Module-local user callables needed when this callable constructs a closure
+    /// that refers to sibling helpers. These are runtime-only dependencies and
+    /// are not inserted into the caller's source-visible import environment.
+    pub module_runtime_callables: HashMap<String, Box<Self>>,
 }
 
 /// Declared signature preserved for imported callables.
@@ -3003,6 +3007,10 @@ pub(crate) fn collect_module_exports(
     let mut exports = ModuleExports::default();
     let module_effectful_names =
         ash_parser::effectful_names_from_definitions(&expanded.module.definitions);
+    let module_runtime_callables = module_runtime_callables_from_definitions(
+        &expanded.module.definitions,
+        &module_effectful_names,
+    );
 
     let type_metadata =
         collect_module_type_metadata_from_parsed_module_file(&path, &parsed_module)?;
@@ -3106,6 +3114,9 @@ pub(crate) fn collect_module_exports(
         }
         let mut callable = imported_callable_from_fn_def(function.clone()).callable;
         callable.effectful_names.clone_from(&module_effectful_names);
+        callable
+            .module_runtime_callables
+            .clone_from(&module_runtime_callables);
         stamp_callable_export_module(&mut callable, exports.semantic_summary.as_ref());
         let exported_name = callable.exported_name.clone();
         if let Some(summary) = callable.workflow_summary.as_mut() {
@@ -3128,6 +3139,9 @@ pub(crate) fn collect_module_exports(
         };
         let mut callable = callable.callable;
         callable.effectful_names.clone_from(&module_effectful_names);
+        callable
+            .module_runtime_callables
+            .clone_from(&module_runtime_callables);
         stamp_callable_export_module(&mut callable, exports.semantic_summary.as_ref());
         let exported_name = callable.exported_name.clone();
         insert_callable_export(&mut exports, &exported_name, callable)?;
@@ -5952,6 +5966,24 @@ fn insert_callable_export(
     }
     exports.callables.insert(name.to_string(), callable);
     Ok(())
+}
+
+fn module_runtime_callables_from_definitions(
+    definitions: &[Definition],
+    module_effectful_names: &HashSet<String>,
+) -> HashMap<String, Box<InlineCallable>> {
+    definitions
+        .iter()
+        .filter_map(|definition| {
+            let Definition::Function(function) = definition else {
+                return None;
+            };
+            let mut callable = imported_callable_from_fn_def(function.clone()).callable;
+            callable.effectful_names.clone_from(module_effectful_names);
+            callable.module_runtime_callables.clear();
+            Some((function.name.to_string(), Box::new(callable)))
+        })
+        .collect()
 }
 
 mod callable_exports;

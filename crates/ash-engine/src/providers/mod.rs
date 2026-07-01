@@ -457,7 +457,7 @@ impl CapabilityProvider for FsProvider {
                         entry.file_name().to_string_lossy().into_owned(),
                     ));
                 }
-                Ok(Value::List(Box::new(result)))
+                Ok(Value::list_from_vec(result))
             }
             _ => Err(CapabilityError::NotAvailable(format!(
                 "Unknown observe action: {action_name}"

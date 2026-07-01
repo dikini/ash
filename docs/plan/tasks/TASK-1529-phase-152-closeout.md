@@ -54,4 +54,4 @@ git diff --check
 
 ## Notes
 
-Phase 152 leaves Phase 151 open. Phase 151's TASK-1511 and TASK-1512 may benefit from Phase 152's work but remain independent.
+Phase 152 originally left Phase 151 open. Phase 176 later reconciled Phase 151/TASK-1511 status: the recursive public API/config is present with fail-closed execution, while real bounded generation remains parser/type-metadata follow-up work.

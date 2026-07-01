@@ -90,8 +90,10 @@ fn extract_process_handles(value: Value) -> (ProcessHandle, ProcessHandle) {
             };
             (left, right)
         }
-        Value::List(items) => {
-            let items = *items;
+        value if value.is_list() => {
+            let items = value
+                .list_to_vec()
+                .expect("is_list only returns true for convertible lists");
             let [left, right]: [Value; 2] = items.try_into().unwrap_or_else(|items: Vec<Value>| {
                 panic!("expected two process handles, got {items:?}")
             });
@@ -190,8 +192,11 @@ async fn phase98_proc_par_await_join_example_builds_source_level_observers_that_
                 Some(&Value::Int(1))
             );
         }
-        Value::List(items) => {
-            assert_eq!(*items, vec![Value::Int(41), Value::Int(1)]);
+        value if value.is_list() => {
+            let items = value
+                .list_to_vec()
+                .expect("is_list only returns true for convertible lists");
+            assert_eq!(items, vec![Value::Int(41), Value::Int(1)]);
         }
         other => panic!("expected join observer pair payload, got {other:?}"),
     }
@@ -215,7 +220,7 @@ async fn phase98_proc_scatter_gather_example_forces_to_ordered_values() {
         .expect("scatter/gather proc should force successfully");
     assert_eq!(
         forced,
-        Value::List(Box::new(vec![Value::Int(2), Value::Int(3), Value::Int(4)]))
+        Value::list_from_vec(vec![Value::Int(2), Value::Int(3), Value::Int(4)])
     );
 }
 

@@ -1,6 +1,6 @@
 # TASK-1580: Fix Module-Level Function Visibility Inside Closures
 
-**Status:** 📝 Planned
+**Status:** ✅ Complete via Phase 176 TASK-1798
 **Phase:** [PLAN-158](../PLAN-158-LANGUAGE-SURFACE-FIXES.md)
 **Owner:** Phase 158
 
@@ -49,3 +49,8 @@ Option C: Store module-level functions in the top-level `EnvFrame` so they're na
 ## Notes
 
 This is the deepest fix of the three issues. May require changes to how module-level bindings are stored in the runtime environment.
+
+
+## Phase 176 completion note
+
+TASK-1798 completed this deferred item. Local closures can call sibling module pure helpers, imported public callables carry hidden same-module private helper runtime dependencies, and private helpers do not leak into caller bindings. The implementation uses explicit module callable environments rather than broad parser tower lifting.

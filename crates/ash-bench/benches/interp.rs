@@ -192,7 +192,7 @@ fn bench_serialization(c: &mut Criterion) {
     });
     
     // Value serialization
-    let value = Value::List(Box::new((0..100).map(|i| Value::Int(i)).collect()));
+    let value = Value::list_from_vec((0..100).map(|i| Value::Int(i)).collect());
     
     group.bench_function("serialize_value_list_100", |b| {
         b.iter(|| {

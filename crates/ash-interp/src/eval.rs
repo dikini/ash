@@ -417,9 +417,9 @@ async fn maybe_execute_proc_admission_capture_async(
         Value::ProcParCapture { left, right } => {
             let handles =
                 admit_proc_children_async(runtime_ctx, vec![*left, *right], "par").await?;
-            Ok(Value::List(Box::new(
+            Ok(Value::list_from_vec(
                 handles.into_iter().map(Value::ProcessHandle).collect(),
-            )))
+            ))
         }
         Value::ProcScatterCapture { items, mapper } => {
             let mut child_procs = Vec::with_capacity(items.len());
@@ -430,9 +430,9 @@ async fn maybe_execute_proc_admission_capture_async(
                 child_procs.push(mapped);
             }
             let handles = admit_proc_children_async(runtime_ctx, child_procs, "scatter").await?;
-            Ok(Value::List(Box::new(
+            Ok(Value::list_from_vec(
                 handles.into_iter().map(Value::ProcessHandle).collect(),
-            )))
+            ))
         }
         other => Ok(other),
     }
@@ -455,7 +455,7 @@ async fn maybe_execute_proc_wait_all_capture_async(
         Value::ProcGatherCapture { handles } => {
             let values =
                 observe_terminal_processes_wait_all_async(&handles, runtime_ctx, "gather").await?;
-            Ok(Value::List(Box::new(values)))
+            Ok(Value::list_from_vec(values))
         }
         other => Ok(other),
     }
@@ -560,22 +560,19 @@ fn runtime_invoke(args: &[Value], ctx: &Context) -> EvalResult<Value> {
         }
     };
 
-    let invoke_args = match &args[2] {
-        Value::List(items) => (*items).clone(),
-        other => {
-            return Err(EvalError::TypeMismatch {
-                expected: "list".to_string(),
-                actual: format!("{other:?}"),
-            });
-        }
-    };
+    let invoke_args = args[2]
+        .list_to_vec()
+        .ok_or_else(|| EvalError::TypeMismatch {
+            expected: "list".to_string(),
+            actual: format!("{:?}", args[2]),
+        })?;
 
     let body = Expr::Literal(act_result(Value::Variant {
         name: "__InvokeCapture".to_string(),
         fields: Box::new(vec![
             ("provider".to_string(), Value::String(provider)),
             ("action".to_string(), Value::String(action)),
-            ("args".to_string(), Value::List(invoke_args)),
+            ("args".to_string(), Value::list_from_vec(invoke_args)),
         ]),
     }));
 
@@ -587,14 +584,13 @@ fn runtime_invoke(args: &[Value], ctx: &Context) -> EvalResult<Value> {
 }
 
 fn act_result(value: Value) -> Value {
-    Value::List(Box::new(vec![Value::ActEnvToken, value]))
+    Value::list_from_vec(vec![Value::ActEnvToken, value])
 }
 
 fn matches_normalized_act_result(value: &Value) -> bool {
-    let Value::List(items) = value else {
-        return false;
-    };
-    items.len() == 2 && matches!(items[0], Value::ActEnvToken)
+    value
+        .list_to_vec()
+        .is_some_and(|items| items.len() == 2 && matches!(items[0], Value::ActEnvToken))
 }
 
 fn runtime_proc_unit(args: &[Value], ctx: &Context) -> EvalResult<Value> {
@@ -838,21 +834,12 @@ fn runtime_proc_scatter(args: &[Value], ctx: &Context) -> EvalResult<Value> {
             callee: Some("proc::scatter".to_string()),
         });
     }
-    let items = match &args[0] {
-        Value::List(items) => (**items).clone(),
-        other => {
-            // Try to convert Cons/Nil variant to a Vec
-            match crate::list_helpers::list_to_vec(other) {
-                Some(items) => items,
-                None => {
-                    return Err(EvalError::TypeMismatch {
-                        expected: "List<A>".to_string(),
-                        actual: value_type_name(other).to_string(),
-                    });
-                }
-            }
-        }
-    };
+    let items = args[0]
+        .list_to_vec()
+        .ok_or_else(|| EvalError::TypeMismatch {
+            expected: "List<A>".to_string(),
+            actual: value_type_name(&args[0]).to_string(),
+        })?;
     if !matches!(&args[1], Value::Closure { .. }) {
         return Err(EvalError::TypeMismatch {
             expected: "A -> Proc<B>".to_string(),
@@ -909,12 +896,12 @@ fn runtime_proc_gather(args: &[Value], ctx: &Context) -> EvalResult<Value> {
             callee: Some("proc::gather".to_string()),
         });
     }
-    let Value::List(handles) = &args[0] else {
-        return Err(EvalError::TypeMismatch {
+    let handles = args[0]
+        .list_to_vec()
+        .ok_or_else(|| EvalError::TypeMismatch {
             expected: "List<P<A>>".to_string(),
             actual: value_type_name(&args[0]).to_string(),
-        });
-    };
+        })?;
     let mut gathered_handles = Vec::with_capacity(handles.len());
     for handle in handles.iter() {
         let Value::ProcessHandle(handle) = handle else {
@@ -936,18 +923,18 @@ fn runtime_proc_gather(args: &[Value], ctx: &Context) -> EvalResult<Value> {
 }
 
 fn maybe_execute_invoke_capture(value: Value, runtime_ctx: &Context) -> EvalResult<Value> {
-    let Value::List(items) = value else {
+    let Some(items) = value.list_to_vec() else {
         return Ok(value);
     };
     if items.len() != 2 || !matches!(items[0], Value::ActEnvToken) {
-        return Ok(Value::List(items));
+        return Ok(Value::list_from_vec(items));
     }
 
     let Value::Variant { name, fields } = &items[1] else {
-        return Ok(Value::List(items));
+        return Ok(Value::list_from_vec(items));
     };
     if name != "__InvokeCapture" {
-        return Ok(Value::List(items));
+        return Ok(Value::list_from_vec(items));
     }
 
     let provider = fields
@@ -973,10 +960,7 @@ fn maybe_execute_invoke_capture(value: Value, runtime_ctx: &Context) -> EvalResu
     let args = fields
         .iter()
         .find(|(field, _)| field == "args")
-        .and_then(|(_, value)| match value {
-            Value::List(items) => Some((**items).clone()),
-            _ => None,
-        })
+        .and_then(|(_, value)| value.list_to_vec())
         .ok_or_else(|| {
             EvalError::ExecutionFailed("invoke capture missing list args".to_string())
         })?;
@@ -1069,7 +1053,7 @@ fn maybe_execute_invoke_capture(value: Value, runtime_ctx: &Context) -> EvalResu
     .join()
     .map_err(|_| EvalError::ExecutionFailed("invoke dispatch thread panicked".to_string()))??;
 
-    Ok(Value::List(Box::new(vec![Value::ActEnvToken, invoked])))
+    Ok(Value::list_from_vec(vec![Value::ActEnvToken, invoked]))
 }
 
 fn runtime_unit(args: &[Value], ctx: &Context) -> EvalResult<Value> {
@@ -1444,12 +1428,15 @@ fn eval_expr_force_async<'a>(expr: &'a Expr, ctx: &'a Context) -> EvalBoxFuture<
                                 value: Box::new(Value::Record(fields)),
                             })
                     }
-                    Value::List(items) => {
+                    value if value.is_list() => {
+                        let items = value
+                            .list_to_vec()
+                            .expect("is_list only returns true for convertible lists");
                         let idx = field
                             .parse::<usize>()
                             .map_err(|_| EvalError::TypeMismatch {
                                 expected: "record".to_string(),
-                                actual: format!("{:?}", Value::List(items.clone())),
+                                actual: format!("{:?}", value),
                             })?;
                         items.get(idx).cloned().ok_or(EvalError::IndexOutOfBounds {
                             index: idx as i64,
@@ -1469,7 +1456,10 @@ fn eval_expr_force_async<'a>(expr: &'a Expr, ctx: &'a Context) -> EvalBoxFuture<
                     Value::Int(i) => {
                         let idx = i as usize;
                         match collection {
-                            Value::List(list) => {
+                            value if value.is_list() => {
+                                let list = value
+                                    .list_to_vec()
+                                    .expect("is_list only returns true for convertible lists");
                                 list.get(idx).cloned().ok_or(EvalError::IndexOutOfBounds {
                                     index: i,
                                     len: list.len(),
@@ -1742,10 +1732,10 @@ fn eval_expr_force_async<'a>(expr: &'a Expr, ctx: &'a Context) -> EvalBoxFuture<
                     Value::Instance(instance) => {
                         let addr = Value::InstanceAddr(instance.addr);
                         let control = instance.control.map(Value::ControlLink);
-                        Ok(Value::List(Box::new(vec![
+                        Ok(Value::list_from_vec(vec![
                             addr,
                             control.unwrap_or(Value::Null),
-                        ])))
+                        ]))
                     }
                     _ => Err(EvalError::TypeMismatch {
                         expected: "Instance".to_string(),
@@ -1866,17 +1856,17 @@ async fn maybe_execute_invoke_capture_async(
     value: Value,
     runtime_ctx: &Context,
 ) -> EvalResult<Value> {
-    let Value::List(items) = value else {
+    let Some(items) = value.list_to_vec() else {
         return Ok(value);
     };
     if items.len() != 2 || !matches!(items[0], Value::ActEnvToken) {
-        return Ok(Value::List(items));
+        return Ok(Value::list_from_vec(items));
     }
     let Value::Variant { name, fields } = &items[1] else {
-        return Ok(Value::List(items));
+        return Ok(Value::list_from_vec(items));
     };
     if name != "__InvokeCapture" {
-        return Ok(Value::List(items));
+        return Ok(Value::list_from_vec(items));
     }
 
     let provider = fields
@@ -1902,10 +1892,7 @@ async fn maybe_execute_invoke_capture_async(
     let args = fields
         .iter()
         .find(|(field, _)| field == "args")
-        .and_then(|(_, value)| match value {
-            Value::List(items) => Some((**items).clone()),
-            _ => None,
-        })
+        .and_then(|(_, value)| value.list_to_vec())
         .ok_or_else(|| {
             EvalError::ExecutionFailed("invoke capture missing list args".to_string())
         })?;
@@ -1932,7 +1919,7 @@ async fn maybe_execute_invoke_capture_async(
             .execute(&provider, &action, &args)
             .await
             .map_err(|err| operational_eval_error_for_message(err.to_string(), runtime_ctx))?;
-        return Ok(Value::List(Box::new(vec![Value::ActEnvToken, invoked])));
+        return Ok(Value::list_from_vec(vec![Value::ActEnvToken, invoked]));
     }
 
     if let Some(runtime_state) = runtime_ctx.runtime_state()
@@ -1965,7 +1952,7 @@ async fn maybe_execute_invoke_capture_async(
                     .map_err(|err| {
                         operational_eval_error_for_message(err.to_string(), runtime_ctx)
                     })?;
-                return Ok(Value::List(Box::new(vec![Value::ActEnvToken, invoked])));
+                return Ok(Value::list_from_vec(vec![Value::ActEnvToken, invoked]));
             }
         }
     }
@@ -2055,7 +2042,7 @@ async fn maybe_execute_invoke_capture_async(
             ));
         }
     };
-    Ok(Value::List(Box::new(vec![Value::ActEnvToken, invoked])))
+    Ok(Value::list_from_vec(vec![Value::ActEnvToken, invoked]))
 }
 
 async fn execute_implementation_operation_body_async(
@@ -2148,7 +2135,7 @@ async fn execute_implementation_operation_body_async(
     if matches_normalized_act_result(&value) {
         Ok(value)
     } else {
-        Ok(Value::List(Box::new(vec![Value::ActEnvToken, value])))
+        Ok(Value::list_from_vec(vec![Value::ActEnvToken, value]))
     }
 }
 
@@ -2189,12 +2176,15 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
                     }
                     Ok(removed.unwrap())
                 }
-                Value::List(items) => {
+                value if value.is_list() => {
+                    let items = value
+                        .list_to_vec()
+                        .expect("is_list only returns true for convertible lists");
                     let idx = field
                         .parse::<usize>()
                         .map_err(|_| EvalError::TypeMismatch {
                             expected: "record".to_string(),
-                            actual: format!("{:?}", Value::List(items.clone())),
+                            actual: format!("{:?}", value),
                         })?;
                     items.get(idx).cloned().ok_or(EvalError::IndexOutOfBounds {
                         index: idx as i64,
@@ -2216,7 +2206,10 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
                 Value::Int(i) => {
                     let idx = i as usize;
                     match collection {
-                        Value::List(list) => {
+                        value if value.is_list() => {
+                            let list = value
+                                .list_to_vec()
+                                .expect("is_list only returns true for convertible lists");
                             if idx < list.len() {
                                 Ok(list[idx].clone())
                             } else {
@@ -2714,15 +2707,12 @@ pub fn eval_function_call(
                 return builtin_arity_error("process::run", 2, args.len());
             }
             let cmd = expect_string_arg(args, 0, "string")?;
-            let list = match &args[1] {
-                Value::List(items) => items,
-                other => {
-                    return Err(EvalError::TypeMismatch {
-                        expected: "list".to_string(),
-                        actual: format!("{other:?}"),
-                    });
-                }
-            };
+            let list = args[1]
+                .list_to_vec()
+                .ok_or_else(|| EvalError::TypeMismatch {
+                    expected: "list".to_string(),
+                    actual: format!("{:?}", args[1]),
+                })?;
 
             let mut command = std::process::Command::new(cmd);
             for item in list.iter() {
@@ -2771,18 +2761,17 @@ pub fn eval_function_call(
                 return builtin_arity_error("len", 1, args.len());
             }
             match &args[0] {
-                Value::List(list) => Ok(Value::Int(list.len() as i64)),
                 Value::String(s) => Ok(Value::Int(s.len() as i64)),
-                other => {
-                    // Try Cons/Nil variant representation
-                    match crate::list_helpers::list_len(other) {
-                        Some(len) => Ok(Value::Int(len as i64)),
-                        None => Err(EvalError::TypeMismatch {
-                            expected: "list or string".to_string(),
-                            actual: format!("{:?}", args[0]),
-                        }),
-                    }
-                }
+                value if value.is_list() => Ok(Value::Int(
+                    value
+                        .list_to_vec()
+                        .expect("is_list only returns true for convertible lists")
+                        .len() as i64,
+                )),
+                _ => Err(EvalError::TypeMismatch {
+                    expected: "list or string".to_string(),
+                    actual: format!("{:?}", args[0]),
+                }),
             }
         }
 
@@ -2790,55 +2779,31 @@ pub fn eval_function_call(
             if args.len() != 1 {
                 return builtin_arity_error("head", 1, args.len());
             }
-            match &args[0] {
-                Value::List(list) => {
-                    if list.is_empty() {
-                        Err(EvalError::ExecutionFailed("head on empty list".to_string()))
-                    } else {
-                        Ok(list[0].clone())
-                    }
-                }
-                other => {
-                    // Try Cons/Nil variant representation
-                    match crate::list_helpers::list_head(other) {
-                        Some(head) => Ok(head.clone()),
-                        None => Err(EvalError::TypeMismatch {
-                            expected: "list".to_string(),
-                            actual: format!("{:?}", args[0]),
-                        }),
-                    }
-                }
-            }
+            let list = args[0]
+                .list_to_vec()
+                .ok_or_else(|| EvalError::TypeMismatch {
+                    expected: "list".to_string(),
+                    actual: format!("{:?}", args[0]),
+                })?;
+            list.first()
+                .cloned()
+                .ok_or_else(|| EvalError::ExecutionFailed("head on empty list".to_string()))
         }
 
         (_, "tail") => {
             if args.len() != 1 {
                 return builtin_arity_error("tail", 1, args.len());
             }
-            match &args[0] {
-                Value::List(list) => {
-                    if list.is_empty() {
-                        Err(EvalError::ExecutionFailed("tail on empty list".to_string()))
-                    } else {
-                        Ok(Value::List(Box::new(list[1..].to_vec())))
-                    }
-                }
-                other => {
-                    // Try Cons/Nil variant representation
-                    match crate::list_helpers::list_tail(other) {
-                        Some(tail) => {
-                            // Convert back to Value::List for backward compatibility
-                            match crate::list_helpers::list_to_vec(tail) {
-                                Some(vec) => Ok(Value::List(Box::new(vec))),
-                                None => Ok(tail.clone()),
-                            }
-                        }
-                        None => Err(EvalError::TypeMismatch {
-                            expected: "list".to_string(),
-                            actual: format!("{:?}", args[0]),
-                        }),
-                    }
-                }
+            let list = args[0]
+                .list_to_vec()
+                .ok_or_else(|| EvalError::TypeMismatch {
+                    expected: "list".to_string(),
+                    actual: format!("{:?}", args[0]),
+                })?;
+            if list.is_empty() {
+                Err(EvalError::ExecutionFailed("tail on empty list".to_string()))
+            } else {
+                Ok(Value::list_from_vec(list[1..].to_vec()))
             }
         }
 
@@ -2847,18 +2812,20 @@ pub fn eval_function_call(
                 return builtin_arity_error("append", 2, args.len());
             }
             match (&args[0], &args[1]) {
-                (Value::List(list), elem) => {
-                    let mut new_list = list.to_vec();
+                (value, elem) if value.is_list() => {
+                    let mut new_list = value
+                        .list_to_vec()
+                        .expect("is_list only returns true for convertible lists");
                     new_list.push(elem.clone());
-                    Ok(Value::List(Box::new(new_list)))
+                    Ok(Value::list_from_vec(new_list))
                 }
                 (other, elem) => {
                     // Try Cons/Nil variant representation
                     match crate::list_helpers::list_append(other, elem.clone()) {
                         Some(result) => {
-                            // Convert back to Value::List for backward compatibility
+                            // Return the canonical list representation
                             match crate::list_helpers::list_to_vec(&result) {
-                                Some(vec) => Ok(Value::List(Box::new(vec))),
+                                Some(vec) => Ok(Value::list_from_vec(vec)),
                                 None => Ok(result),
                             }
                         }
@@ -2876,18 +2843,24 @@ pub fn eval_function_call(
                 return builtin_arity_error("concat", 2, args.len());
             }
             match (&args[0], &args[1]) {
-                (Value::List(l1), Value::List(l2)) => {
-                    let mut new_list = l1.to_vec();
-                    new_list.extend(l2.iter().cloned());
-                    Ok(Value::List(Box::new(new_list)))
+                (left, right) if left.is_list() && right.is_list() => {
+                    let mut new_list = left
+                        .list_to_vec()
+                        .expect("is_list only returns true for convertible lists");
+                    new_list.extend(
+                        right
+                            .list_to_vec()
+                            .expect("is_list only returns true for convertible lists"),
+                    );
+                    Ok(Value::list_from_vec(new_list))
                 }
                 (other1, other2) => {
                     // Try Cons/Nil variant representation
                     match crate::list_helpers::list_concat(other1, other2) {
                         Some(result) => {
-                            // Convert back to Value::List for backward compatibility
+                            // Return the canonical list representation
                             match crate::list_helpers::list_to_vec(&result) {
-                                Some(vec) => Ok(Value::List(Box::new(vec))),
+                                Some(vec) => Ok(Value::list_from_vec(vec)),
                                 None => Ok(result),
                             }
                         }
@@ -2905,7 +2878,7 @@ pub fn eval_function_call(
                 return builtin_arity_error("filter", 2, args.len());
             }
             match (&args[0], &args[1]) {
-                (Value::List(list), Value::Closure { params, body, env }) => {
+                (value, Value::Closure { params, body, env }) if value.is_list() => {
                     if params.len() != 1 {
                         return Err(EvalError::WrongArity {
                             expected: params.len(),
@@ -2914,7 +2887,11 @@ pub fn eval_function_call(
                         });
                     }
                     let mut result = Vec::new();
-                    for item in list.iter() {
+                    for item in value
+                        .list_to_vec()
+                        .expect("is_list only returns true for convertible lists")
+                        .iter()
+                    {
                         let mut call_env = ash_core::env_frame::EnvFrame::with_parent(env.clone());
                         call_env.insert(params[0].0.clone(), item.clone());
                         let call_ctx =
@@ -2930,7 +2907,7 @@ pub fn eval_function_call(
                             }
                         }
                     }
-                    Ok(Value::List(Box::new(result)))
+                    Ok(Value::list_from_vec(result))
                 }
                 (other, Value::Closure { params, body, env }) => {
                     // Try Cons/Nil variant representation
@@ -2967,7 +2944,7 @@ pub fn eval_function_call(
                             }
                         }
                     }
-                    Ok(Value::List(Box::new(result)))
+                    Ok(Value::list_from_vec(result))
                 }
                 _ => Err(EvalError::TypeMismatch {
                     expected: "list, function".to_string(),
@@ -2981,7 +2958,7 @@ pub fn eval_function_call(
                 return builtin_arity_error("map", 2, args.len());
             }
             match (&args[0], &args[1]) {
-                (Value::List(list), Value::Closure { params, body, env }) => {
+                (value, Value::Closure { params, body, env }) if value.is_list() => {
                     if params.len() != 1 {
                         return Err(EvalError::WrongArity {
                             expected: params.len(),
@@ -2989,6 +2966,9 @@ pub fn eval_function_call(
                             callee: None,
                         });
                     }
+                    let list = value
+                        .list_to_vec()
+                        .expect("is_list only returns true for convertible lists");
                     let mut result = Vec::new();
                     for item in list.iter() {
                         let mut call_env = ash_core::env_frame::EnvFrame::with_parent(env.clone());
@@ -2997,7 +2977,7 @@ pub fn eval_function_call(
                             call_context_from_env(std::sync::Arc::new(call_env), ctx, false);
                         result.push(eval_expr(body, &call_ctx)?);
                     }
-                    Ok(Value::List(Box::new(result)))
+                    Ok(Value::list_from_vec(result))
                 }
                 (other, Value::Closure { params, body, env }) => {
                     // Try Cons/Nil variant representation
@@ -3025,7 +3005,7 @@ pub fn eval_function_call(
                             call_context_from_env(std::sync::Arc::new(call_env), ctx, false);
                         result.push(eval_expr(body, &call_ctx)?);
                     }
-                    Ok(Value::List(Box::new(result)))
+                    Ok(Value::list_from_vec(result))
                 }
                 _ => Err(EvalError::TypeMismatch {
                     expected: "list, function".to_string(),
@@ -3069,7 +3049,7 @@ pub fn eval_function_call(
                 Value::Record(fields) => {
                     let keys: Vec<Value> =
                         fields.keys().map(|k| Value::String(k.clone())).collect();
-                    Ok(Value::List(Box::new(keys)))
+                    Ok(Value::list_from_vec(keys))
                 }
                 _ => Err(EvalError::TypeMismatch {
                     expected: "record".to_string(),
@@ -3085,7 +3065,7 @@ pub fn eval_function_call(
             match &args[0] {
                 Value::Record(fields) => {
                     let values: Vec<Value> = fields.values().cloned().collect();
-                    Ok(Value::List(Box::new(values)))
+                    Ok(Value::list_from_vec(values))
                 }
                 _ => Err(EvalError::TypeMismatch {
                     expected: "record".to_string(),
@@ -3120,7 +3100,7 @@ pub fn eval_function_call(
             if args.len() != 1 {
                 return builtin_arity_error("is_list", 1, args.len());
             }
-            Ok(Value::Bool(matches!(args[0], Value::List(_))))
+            Ok(Value::Bool(args[0].is_list()))
         }
 
         (_, "is_record") => {

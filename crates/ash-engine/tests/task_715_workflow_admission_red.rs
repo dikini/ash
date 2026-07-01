@@ -135,7 +135,7 @@ fn forced_invoke_workflow(provider_name: &str, action_name: &str) -> Workflow {
                 arguments: vec![
                     Expr::Literal(Value::String(provider_name.to_string())),
                     Expr::Literal(Value::String(action_name.to_string())),
-                    Expr::Literal(Value::List(Box::default())),
+                    Expr::Literal(Value::list_nil()),
                 ],
             }),
             args: vec![Expr::Literal(Value::ActEnvToken)],

@@ -120,7 +120,10 @@ fn eval_predicate(pred: &Predicate, ctx: &Context) -> Result<bool, EvalError> {
             let element = eval_expr(&pred.arguments[1], ctx)?;
 
             match collection {
-                Value::List(list) => Ok(list.contains(&element)),
+                value if value.is_list() => Ok(value
+                    .list_to_vec()
+                    .expect("is_list only returns true for convertible lists")
+                    .contains(&element)),
                 Value::String(s) => match element.as_string() {
                     Some(substr) => Ok(s.contains(substr)),
                     None => Err(EvalError::TypeMismatch {
@@ -159,7 +162,10 @@ fn eval_predicate(pred: &Predicate, ctx: &Context) -> Result<bool, EvalError> {
             }
             let value = eval_expr(&pred.arguments[0], ctx)?;
             match value {
-                Value::List(list) => Ok(list.is_empty()),
+                value if value.is_list() => Ok(value
+                    .list_to_vec()
+                    .expect("is_list only returns true for convertible lists")
+                    .is_empty()),
                 Value::String(s) => Ok(s.is_empty()),
                 Value::Record(r) => Ok(r.is_empty()),
                 _ => Err(EvalError::TypeMismatch {
@@ -388,7 +394,7 @@ mod tests {
         let pred = Predicate {
             name: "contains".to_string(),
             arguments: vec![
-                Expr::Literal(Value::List(Box::new(vec![Value::Int(1), Value::Int(2)]))),
+                Expr::Literal(Value::list_from_vec(vec![Value::Int(1), Value::Int(2)])),
                 Expr::Literal(Value::Int(1)),
             ],
         };
@@ -397,7 +403,7 @@ mod tests {
         let pred = Predicate {
             name: "contains".to_string(),
             arguments: vec![
-                Expr::Literal(Value::List(Box::new(vec![Value::Int(1), Value::Int(2)]))),
+                Expr::Literal(Value::list_from_vec(vec![Value::Int(1), Value::Int(2)])),
                 Expr::Literal(Value::Int(3)),
             ],
         };
@@ -441,13 +447,13 @@ mod tests {
 
         let pred = Predicate {
             name: "is_empty".to_string(),
-            arguments: vec![Expr::Literal(Value::List(Box::default()))],
+            arguments: vec![Expr::Literal(Value::list_nil())],
         };
         assert!(eval_predicate(&pred, &ctx).unwrap());
 
         let pred = Predicate {
             name: "is_empty".to_string(),
-            arguments: vec![Expr::Literal(Value::List(Box::new(vec![Value::Int(1)])))],
+            arguments: vec![Expr::Literal(Value::list_from_vec(vec![Value::Int(1)]))],
         };
         assert!(!eval_predicate(&pred, &ctx).unwrap());
     }

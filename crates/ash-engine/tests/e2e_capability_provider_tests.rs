@@ -157,12 +157,12 @@ impl CapabilityProvider for AdvertisingProvider {
         // With unified trait, constraints contain predicates with names
         if let Some(constraint) = _constraints.first() {
             if constraint.predicate.name == "get_capabilities" {
-                return Ok(Value::List(Box::new(
+                return Ok(Value::list_from_vec(
                     self.advertised_caps
                         .iter()
                         .map(|c| Value::String(c.clone()))
                         .collect(),
-                )));
+                ));
             }
         }
         Ok(Value::Null)

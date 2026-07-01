@@ -683,6 +683,7 @@ fn test_build_imported_closures_preserves_effectful_bind_rhs_for_user_callables(
             signature: None,
             exporting_modules: HashSet::new(),
             workflow_summary: None,
+            module_runtime_callables: HashMap::new(),
         },
     );
 

@@ -980,7 +980,7 @@ mod tests {
                     span: crate::ast::Span::default(),
                 },
             ]),
-            expr: Expr::Literal(Value::List(Box::new(vec![Value::Int(1), Value::Int(2)]))),
+            expr: Expr::Literal(Value::list_from_vec(vec![Value::Int(1), Value::Int(2)])),
             continuation: Box::new(Workflow::Done),
         };
 
@@ -1006,7 +1006,7 @@ mod tests {
                 }],
                 Some("tail".to_string()),
             ),
-            collection: Expr::Literal(Value::List(Box::default())),
+            collection: Expr::Literal(Value::list_nil()),
             body: Box::new(Workflow::Done),
         };
 

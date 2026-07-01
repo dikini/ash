@@ -116,9 +116,12 @@ impl ProcessProvider {
     /// Extract arguments list from second argument
     fn extract_args(args: &[Value]) -> Result<Vec<String>, CapabilityError> {
         match args.get(1) {
-            Some(Value::List(items)) => {
+            Some(value) if value.is_list() => {
                 let mut result = Vec::new();
-                for item in items.iter() {
+                let items = value
+                    .list_to_vec()
+                    .expect("is_list only returns true for convertible lists");
+                for item in &items {
                     match item {
                         Value::String(s) => result.push(s.clone()),
                         _ => {
@@ -334,10 +337,10 @@ mod tests {
     fn test_extract_args_valid() {
         let args = [
             Value::String("echo".to_string()),
-            Value::List(Box::new(vec![
+            Value::list_from_vec(vec![
                 Value::String("hello".to_string()),
                 Value::String("world".to_string()),
-            ])),
+            ]),
         ];
         let result = ProcessProvider::extract_args(&args).unwrap();
         assert_eq!(result, vec!["hello", "world"]);
@@ -365,7 +368,7 @@ mod tests {
                 "run",
                 &[
                     Value::String("echo".to_string()),
-                    Value::List(Box::new(vec![Value::String("hello".to_string())])),
+                    Value::list_from_vec(vec![Value::String("hello".to_string())]),
                 ],
             )
             .await
@@ -422,9 +425,7 @@ mod tests {
                 "run",
                 &[
                     Value::String("ls".to_string()),
-                    Value::List(Box::new(vec![Value::String(
-                        "/nonexistent_path_xyz".to_string(),
-                    )])),
+                    Value::list_from_vec(vec![Value::String("/nonexistent_path_xyz".to_string())]),
                 ],
             )
             .await

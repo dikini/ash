@@ -24,7 +24,7 @@ fn invoke_expr(binding_name: &str, operation: &str, args: Vec<Value>) -> Expr {
         arguments: vec![
             Expr::Literal(Value::String(binding_name.to_string())),
             Expr::Literal(Value::String(operation.to_string())),
-            Expr::Literal(Value::List(Box::new(args))),
+            Expr::Literal(Value::list_from_vec(args)),
         ],
     }
 }
@@ -174,7 +174,7 @@ async fn registered_implementation_operation_body_executes_with_params_and_depen
 
     assert_eq!(
         result,
-        Value::List(Box::new(vec![
+        Value::list_from_vec(vec![
             Value::ActEnvToken,
             Value::Variant {
                 name: "BodyResult".to_string(),
@@ -183,7 +183,7 @@ async fn registered_implementation_operation_body_executes_with_params_and_depen
                     ("prefix".to_string(), Value::String("pfx".to_string())),
                 ]),
             }
-        ]))
+        ])
     );
 }
 
@@ -286,10 +286,7 @@ async fn host_provider_binding_behavior_remains_unchanged() {
         .expect("host provider invoke should still dispatch");
     assert_eq!(
         result,
-        Value::List(Box::new(vec![
-            Value::ActEnvToken,
-            Value::String("host".to_string())
-        ]))
+        Value::list_from_vec(vec![Value::ActEnvToken, Value::String("host".to_string())])
     );
 }
 
@@ -349,10 +346,7 @@ async fn operation_body_can_invoke_only_explicit_capability_dependency_aliases()
         .expect("body may invoke dependency alias admitted for the implementation");
     assert_eq!(
         result,
-        Value::List(Box::new(vec![
-            Value::ActEnvToken,
-            Value::String("tick".to_string())
-        ]))
+        Value::list_from_vec(vec![Value::ActEnvToken, Value::String("tick".to_string())])
     );
 }
 
@@ -492,10 +486,7 @@ async fn capability_dependency_alias_variable_resolves_to_declared_alias() {
         .expect("capability dependency variable resolves to declared alias");
     assert_eq!(
         result,
-        Value::List(Box::new(vec![
-            Value::ActEnvToken,
-            Value::String("tick".to_string())
-        ]))
+        Value::list_from_vec(vec![Value::ActEnvToken, Value::String("tick".to_string())])
     );
 }
 
@@ -538,9 +529,9 @@ async fn pure_closure_results_are_returned_without_implicit_act_forcing() {
     let result = eval_invoke_act(invoke_expr("kv", "make_closure", vec![]), &ctx)
         .await
         .expect("pure closure result should be transported");
-    let Value::List(items) = result else {
-        panic!("expected Act result wrapper");
-    };
+    let items = result
+        .list_to_vec()
+        .unwrap_or_else(|| panic!("expected Act result wrapper"));
     assert!(matches!(
         items.as_slice(),
         [Value::ActEnvToken, Value::Closure { .. }]
@@ -646,7 +637,7 @@ async fn implementation_dependency_can_invoke_nested_implementation_binding_by_a
                 span: Default::default(),
             },
             Expr::Literal(Value::String("read".to_string())),
-            Expr::Literal(Value::List(Box::default())),
+            Expr::Literal(Value::list_nil()),
         ],
     };
     runtime_state
@@ -683,10 +674,7 @@ async fn implementation_dependency_can_invoke_nested_implementation_binding_by_a
         .expect("outer body may invoke nested implementation dependency by alias");
     assert_eq!(
         result,
-        Value::List(Box::new(vec![
-            Value::ActEnvToken,
-            Value::String("inner".to_string())
-        ]))
+        Value::list_from_vec(vec![Value::ActEnvToken, Value::String("inner".to_string())])
     );
     assert_ne!(inner_binding_id, outer_binding_id);
 }

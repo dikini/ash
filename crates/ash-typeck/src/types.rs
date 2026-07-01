@@ -396,9 +396,9 @@ impl Type {
             // Type variables match anything during inference
             (Type::Var(_), _) => true,
 
-            (Type::List(elem_type), Value::List(items)) => {
-                items.iter().all(|item| elem_type.matches(item))
-            }
+            (Type::List(elem_type), value) if value.is_list() => value
+                .list_to_vec()
+                .is_some_and(|items| items.iter().all(|item| elem_type.matches(item))),
 
             (Type::Record(fields), Value::Record(record)) => fields.iter().all(|(name, ty)| {
                 record
@@ -1350,8 +1350,8 @@ mod tests {
         use ash_core::Value;
 
         let schema = Type::List(Box::new(Type::Int));
-        assert!(schema.matches(&Value::List(Box::new(vec![Value::Int(1), Value::Int(2)]))));
-        assert!(!schema.matches(&Value::List(Box::new(vec![Value::String("a".into())]))));
+        assert!(schema.matches(&Value::list_from_vec(vec![Value::Int(1), Value::Int(2)])));
+        assert!(!schema.matches(&Value::list_from_vec(vec![Value::String("a".into())])));
     }
 
     #[test]

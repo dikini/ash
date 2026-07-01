@@ -1,6 +1,6 @@
 # TASK-1501: Property-test proof evidence with source-visible strategy overrides
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 

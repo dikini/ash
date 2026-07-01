@@ -2,13 +2,13 @@
 
 use super::{
     CallableKind, CallableSignature, CoreTypeBody, CoreTypeDef, CoreTypeExpr, CoreVisibility,
-    CoverageEvidence, Definition, EngineError, Expr, HashSet, InlineCallable, OpenPostcondition,
-    Parser, Path, ProcContractSummary, ProcFailureSummary, ProcLowerSummary, ProcProvenanceSummary,
-    ProcResourceAuthoritySummary, ProjectionEvent, ProjectionEventKind, ProjectionKind,
-    PublicWorkflowSummary, SourceOrigin, Type, Workflow, WorkflowBinder, WorkflowDef, WorkflowForm,
-    WorkflowNodeId, WorkflowScope, convert_type_def, extract_semicolon_snippets,
-    legacy_workflow_def_to_workflow_form, lower_workflow_form, new_input,
-    parse_builtin_fn_definition, parse_fn_definition, parse_type_def, workflow_def,
+    CoverageEvidence, Definition, EngineError, Expr, HashMap, HashSet, InlineCallable,
+    OpenPostcondition, Parser, Path, ProcContractSummary, ProcFailureSummary, ProcLowerSummary,
+    ProcProvenanceSummary, ProcResourceAuthoritySummary, ProjectionEvent, ProjectionEventKind,
+    ProjectionKind, PublicWorkflowSummary, SourceOrigin, Type, Workflow, WorkflowBinder,
+    WorkflowDef, WorkflowForm, WorkflowNodeId, WorkflowScope, convert_type_def,
+    extract_semicolon_snippets, legacy_workflow_def_to_workflow_form, lower_workflow_form,
+    new_input, parse_builtin_fn_definition, parse_fn_definition, parse_type_def, workflow_def,
 };
 
 pub(super) fn extract_public_capability_names(source: &str) -> Vec<String> {
@@ -158,6 +158,7 @@ pub(super) fn parse_workflow_signature_callable(snippet: &str) -> Option<Importe
             signature: Some(CallableSignature::Function(fn_def)),
             exporting_modules: HashSet::new(),
             workflow_summary: None,
+            module_runtime_callables: HashMap::new(),
         },
     })
 }
@@ -304,6 +305,7 @@ pub(super) fn imported_callable_from_fn_def(
             signature: Some(CallableSignature::Function(function)),
             exporting_modules: HashSet::new(),
             workflow_summary,
+            module_runtime_callables: HashMap::new(),
         },
     }
 }
@@ -526,6 +528,7 @@ pub(super) fn parse_builtin_fn_callable(
             signature: Some(CallableSignature::Builtin(builtin)),
             exporting_modules: HashSet::new(),
             workflow_summary: None,
+            module_runtime_callables: HashMap::new(),
         },
     }))
 }
@@ -574,6 +577,7 @@ pub(super) fn extract_callable_from_workflow(
             signature,
             exporting_modules: HashSet::new(),
             workflow_summary: Some(workflow_summary),
+            module_runtime_callables: HashMap::new(),
         },
     }))
 }

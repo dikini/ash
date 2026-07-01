@@ -104,11 +104,11 @@ fn is_known_builtin_unknown_qualified() {
 #[test]
 fn dispatch_builtin_unqualified_len_returns_correct_value() {
     let ctx = Context::new();
-    let args = vec![Value::List(Box::new(vec![
+    let args = vec![Value::list_from_vec(vec![
         Value::Int(1),
         Value::Int(2),
         Value::Int(3),
-    ]))];
+    ])];
     let result = dispatch_builtin("len", &args, &ctx)
         .expect("dispatch should find len")
         .expect("len should succeed");
@@ -252,7 +252,7 @@ fn dispatch_table_all_implemented_entries_dispatch_correctly() {
             "string::concat" => vec![Value::String("a".into())],
             "string::is_empty" => vec![Value::String("".into())],
             "regex::matches" => vec![Value::String("a+".into()), Value::String("aaa".into())],
-            "len" => vec![Value::List(Box::default())],
+            "len" => vec![Value::list_nil()],
             "is_null" => vec![Value::Null],
             _ => vec![],
         };
@@ -268,11 +268,11 @@ fn dispatch_table_all_implemented_entries_dispatch_correctly() {
 #[test]
 fn dispatch_builtin_unqualified_len_still_works() {
     let ctx = Context::new();
-    let args = vec![Value::List(Box::new(vec![
+    let args = vec![Value::list_from_vec(vec![
         Value::Int(1),
         Value::Int(2),
         Value::Int(3),
-    ]))];
+    ])];
     let result = dispatch_builtin("len", &args, &ctx)
         .expect("dispatch should find len")
         .expect("len should succeed");
@@ -285,10 +285,10 @@ fn eval_function_call_unqualified_len_still_works_via_expr() {
     let expr = Expr::Call {
         func: "len".to_string(),
         module: None,
-        arguments: vec![Expr::Literal(Value::List(Box::new(vec![
+        arguments: vec![Expr::Literal(Value::list_from_vec(vec![
             Value::Int(5),
             Value::Int(6),
-        ])))],
+        ]))],
     };
     let result = eval_expr(&expr, &ctx).expect("unqualified len should succeed");
     assert_eq!(result, Value::Int(2));

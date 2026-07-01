@@ -39,7 +39,7 @@ fn chat_args(messages: Vec<Value>) -> Vec<Value> {
     vec![
         Value::String("test".to_string()),
         Value::String("gpt-4o".to_string()),
-        Value::List(Box::new(messages)),
+        Value::list_from_vec(messages),
         // params = None variant (no optional params)
         Value::unit_variant("None"),
     ]
@@ -254,20 +254,18 @@ async fn test_list_models_success_mock() {
     );
 
     let value = result.unwrap();
-    match &value {
-        Value::List(items) => {
-            // Should contain the two model IDs
-            let model_ids: Vec<&str> = items.iter().filter_map(|v| v.as_string()).collect();
-            assert!(
-                model_ids.contains(&"gpt-4o"),
-                "Should contain gpt-4o, got: {model_ids:?}"
-            );
-            assert!(
-                model_ids.contains(&"gpt-4o-mini"),
-                "Should contain gpt-4o-mini, got: {model_ids:?}"
-            );
-            assert_eq!(model_ids.len(), 2);
-        }
-        other => panic!("Expected Value::List, got: {other:?}"),
-    }
+    let items = value
+        .list_to_vec()
+        .unwrap_or_else(|| panic!("Expected list value, got: {value:?}"));
+    // Should contain the two model IDs
+    let model_ids: Vec<&str> = items.iter().filter_map(|v| v.as_string()).collect();
+    assert!(
+        model_ids.contains(&"gpt-4o"),
+        "Should contain gpt-4o, got: {model_ids:?}"
+    );
+    assert!(
+        model_ids.contains(&"gpt-4o-mini"),
+        "Should contain gpt-4o-mini, got: {model_ids:?}"
+    );
+    assert_eq!(model_ids.len(), 2);
 }

@@ -23,7 +23,7 @@ fn invoke_expr(binding_name: &str, operation: &str, args: Vec<Value>) -> Expr {
         arguments: vec![
             Expr::Literal(Value::String(binding_name.to_string())),
             Expr::Literal(Value::String(operation.to_string())),
-            Expr::Literal(Value::List(Box::new(args))),
+            Expr::Literal(Value::list_from_vec(args)),
         ],
     }
 }
@@ -102,10 +102,10 @@ async fn workflow_kv_pilot_substitutes_internal_binding_for_host_binding() {
         )
         .await
         .expect("host-backed kv binding executes"),
-        Value::List(Box::new(vec![
+        Value::list_from_vec(vec![
             Value::ActEnvToken,
             Value::String("prod-value".to_string()),
-        ]))
+        ])
     );
 
     let StandardPilotBinding {
@@ -131,10 +131,10 @@ async fn workflow_kv_pilot_substitutes_internal_binding_for_host_binding() {
         )
         .await
         .expect("internal WorkflowKV implementation executes"),
-        Value::List(Box::new(vec![
+        Value::list_from_vec(vec![
             Value::ActEnvToken,
             Value::String("internal-value".to_string()),
-        ]))
+        ])
     );
 
     let binding = runtime_state
@@ -236,10 +236,7 @@ async fn frozen_clock_pilot_is_deterministic_without_host_time_provider() {
         eval_invoke_act(invoke_expr("clock", "epoch_millis", vec![]), &ctx)
             .await
             .expect("internal frozen clock implementation executes"),
-        Value::List(Box::new(vec![
-            Value::ActEnvToken,
-            Value::Int(1_700_000_000_000),
-        ]))
+        Value::list_from_vec(vec![Value::ActEnvToken, Value::Int(1_700_000_000_000),])
     );
 
     assert!(

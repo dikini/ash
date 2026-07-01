@@ -112,7 +112,7 @@ fn json_value_to_core_value(value: &Value) -> Result<CoreValue, String> {
             .iter()
             .map(json_value_to_core_value)
             .collect::<Result<Vec<_>, _>>()
-            .map(|values| CoreValue::List(Box::new(values))),
+            .map(CoreValue::list_from_vec),
         Value::Object(values) => values
             .iter()
             .map(|(name, value)| Ok((name.clone(), json_value_to_core_value(value)?)))
@@ -128,7 +128,9 @@ fn core_value_to_json(value: CoreValue) -> Result<Value, String> {
         CoreValue::Int(value) => Ok(json!(value)),
         CoreValue::Float(value) => Ok(json!(value)),
         CoreValue::String(value) => Ok(json!(value)),
-        CoreValue::List(values) => values
+        value if value.is_list() => value
+            .list_to_vec()
+            .expect("is_list only returns true for convertible lists")
             .into_iter()
             .map(core_value_to_json)
             .collect::<Result<Vec<_>, _>>()

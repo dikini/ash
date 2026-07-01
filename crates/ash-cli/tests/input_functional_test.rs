@@ -35,15 +35,13 @@ fn test_json_array_conversion() {
     let json = serde_json::json!([1, 2, 3]);
     let value = json_to_value(json);
 
-    match value {
-        Value::List(items) => {
-            assert_eq!(items.len(), 3);
-            assert_eq!(items[0], Value::Int(1));
-            assert_eq!(items[1], Value::Int(2));
-            assert_eq!(items[2], Value::Int(3));
-        }
-        _ => panic!("Expected List, got {:?}", value),
-    }
+    let items = value
+        .list_to_vec()
+        .unwrap_or_else(|| panic!("Expected List, got {:?}", value));
+    assert_eq!(items.len(), 3);
+    assert_eq!(items[0], Value::Int(1));
+    assert_eq!(items[1], Value::Int(2));
+    assert_eq!(items[2], Value::Int(3));
 }
 
 #[test]

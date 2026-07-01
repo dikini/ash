@@ -1,6 +1,6 @@
 # TASK-1511: Implement Deferred QuickCheck Combinators in Ordinary Ash
 
-## Status: ✅ Complete
+## Status: ✅ Complete / Phase 176 Reconciled
 
 ## Description
 
@@ -26,16 +26,17 @@ The following combinators have been implemented in ordinary Ash:
    - Prepends extra shrink candidates to a strategy's shrink list
    - Uses `concat` from list module
 
-## Deferred Combinators
+## Phase 176 recursive-combinator reconciliation
 
-The following combinators remain deferred due to language limitations:
+Phase 176 re-opened this deferred item under TASK-1799/TASK-1800. The stale blocker is no longer just closure visibility: TASK-1798 proves module-level helper visibility inside closures. The current disposition is:
 
-5. 📝 **`recursive<T>(base: Strategy<T>, rec: (Strategy<T>) -> Strategy<T>, config: RecursiveConfig) -> Strategy<T>`**
-   - **Blocker**: Requires self-referential values (recursive value binding)
-   - The language cannot express `let self_ref = Strategy { gen: fn(ctx) { rec(self_ref).gen(ctx) } }`
+5. ✅/📝 **`recursive<T>(base: Strategy<T>, rec: (Strategy<T>) -> Strategy<T>) -> Strategy<T>`**
+   - Public SPEC-087 name is present and importable.
+   - Execution is explicitly fail-closed through private `recursive_deferred` until parser/type-metadata support can accept the required ordinary-Ash size-descending helper implementation.
 
-6. 📝 **`recursive_with<T>(base: Strategy<T>, rec: (Strategy<T>) -> Strategy<T>, max_depth: Int, breadth: Int) -> Strategy<T>`**
-   - **Blocker**: Same as `recursive`
+6. ✅/📝 **`recursive_with<T>(base: Strategy<T>, rec: (Strategy<T>) -> Strategy<T>, config: RecursiveConfig) -> Strategy<T>`**
+   - Public SPEC-087 name and `RecursiveConfig { base_weight, expand_weight, size_step }` are present and importable.
+   - Real bounded recursive generation remains deferred; no hidden Rust fallback or self-referential value binding was introduced.
 
 ## Language Limitations Encountered
 
@@ -59,9 +60,9 @@ match condition {
 
 **Current state:** Cannot create recursive values like `let self_ref = Strategy { gen: fn(ctx) { rec(self_ref).gen(ctx) } }`.
 
-**Impact:** The `recursive` combinator cannot be implemented.
+**Impact:** Self-referential value implementations of `recursive` cannot be implemented. Phase 176 preserved the SPEC-087 public API and config shape, but routes execution through a fail-closed guard.
 
-**Workaround:** Use `GenContext` size to limit recursion depth, but this requires passing the recursive strategy as an argument, which changes the API.
+**Workaround:** Use the Phase 176 public names for import/type surface coverage only. Real bounded generation should use an ordinary-Ash size-descending helper once parser/type-metadata support accepts the required fn-body helper shapes; do not add a hidden Rust fallback.
 
 ## Verification
 
@@ -83,13 +84,10 @@ match condition {
 - ✅ Language feature: list concatenation via `concat` (Phase 153 complete)
 - ✅ Language feature: type annotation quirks fixed (Phase 154 complete)
 - ✅ Language feature: `fn` expressions in struct literals (TASK-1510 complete)
-- 📝 Language feature: closures with variable capture (TASK-1580 deferred)
-- 📝 Language feature: self-referential values (not yet planned)
+- ✅ Language feature: closures with variable capture/module-helper visibility for this use case (TASK-1798)
+- 📝 Language/parser substrate: fn-body helper shapes needed for bounded recursive generation still need follow-up parser/type-metadata support
+- 📝 Language feature: self-referential values (not required for the Phase 176 chosen API, still not planned)
 
 ## Notes
 
-The goal of **no builtins for combinators** is partially achieved. All implemented combinators are ordinary Ash functions. The `recursive` combinator requires either:
-1. Self-referential value support in the language, or
-2. A different API design that passes the recursive strategy explicitly
-
-Both options are documented for future phases.
+The goal of **no builtins for combinators** is partially achieved. All implemented combinators are ordinary Ash functions. The recursive combinators now have their final public names and config shape, but execution remains fail-closed. The next implementation path is parser/type-metadata support for the ordinary-Ash size-descending helper design documented in `../../audit/PHASE-176-quickcheck-recursive-combinator-audit.md`, not a hidden Rust fallback.

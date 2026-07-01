@@ -49,7 +49,7 @@ pub fn extract_list_models_arg(args: &[Value]) -> Result<&str, CapabilityError> 
 /// * `client` - async-openai client for the provider
 ///
 /// # Returns
-/// `Value::List` of model ID strings
+/// Runtime list value of model ID strings
 ///
 /// # Errors
 /// Returns `CapabilityError` on API or network failures.
@@ -66,7 +66,7 @@ pub async fn list_models(client: &Client<OpenAIConfig>) -> Result<Value, Capabil
         .map(|m| Value::String(m.id))
         .collect();
 
-    Ok(Value::List(Box::new(model_ids)))
+    Ok(Value::list_from_vec(model_ids))
 }
 
 #[cfg(test)]

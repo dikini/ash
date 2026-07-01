@@ -111,9 +111,9 @@ impl CapabilityProvider for TaskLocalListProvider {
         let marker = TASK_MARKER.try_with(|value| *value).map_err(|_| {
             CapabilityError::ExecutionFailed("task-local marker missing".to_string())
         })?;
-        Ok(Value::List(Box::new(vec![Value::String(
+        Ok(Value::list_from_vec(vec![Value::String(
             marker.to_string(),
-        )])))
+        )]))
     }
 }
 
@@ -183,7 +183,7 @@ async fn workflow_bridge_attaches_hidden_runtime_act_env_for_expression_forcing(
 
     assert_eq!(
         result,
-        Value::List(Box::new(vec![Value::ActEnvToken, Value::Int(7)]))
+        Value::list_from_vec(vec![Value::ActEnvToken, Value::Int(7)])
     );
 }
 
@@ -206,7 +206,7 @@ async fn invoke_forced_via_workflow_bridge_dispatches_through_hidden_runtime_act
                 arguments: vec![
                     Expr::Literal(Value::String("sensor".to_string())),
                     Expr::Literal(Value::String("read".to_string())),
-                    Expr::Literal(Value::List(Box::new(vec![Value::Int(1), Value::Int(2)]))),
+                    Expr::Literal(Value::list_from_vec(vec![Value::Int(1), Value::Int(2)])),
                 ],
             }),
             args: vec![Expr::Literal(Value::ActEnvToken)],
@@ -228,10 +228,7 @@ async fn invoke_forced_via_workflow_bridge_dispatches_through_hidden_runtime_act
 
     assert_eq!(
         result,
-        Value::List(Box::new(vec![
-            Value::ActEnvToken,
-            Value::String("done".to_string())
-        ]))
+        Value::list_from_vec(vec![Value::ActEnvToken, Value::String("done".to_string())])
     );
 }
 
@@ -248,7 +245,7 @@ async fn invoke_with_tokio_dependent_provider_dispatches_under_the_simplest_help
                 arguments: vec![
                     Expr::Literal(Value::String("sleepy".to_string())),
                     Expr::Literal(Value::String("nap".to_string())),
-                    Expr::Literal(Value::List(Box::default())),
+                    Expr::Literal(Value::list_nil()),
                 ],
             }),
             args: vec![Expr::Literal(Value::ActEnvToken)],
@@ -268,10 +265,7 @@ async fn invoke_with_tokio_dependent_provider_dispatches_under_the_simplest_help
 
     assert_eq!(
         result,
-        Value::List(Box::new(vec![
-            Value::ActEnvToken,
-            Value::String("slept".to_string())
-        ]))
+        Value::list_from_vec(vec![Value::ActEnvToken, Value::String("slept".to_string())])
     );
 }
 
@@ -289,7 +283,7 @@ async fn eval_expr_async_force_path_dispatches_tokio_provider_without_helper_run
             arguments: vec![
                 Expr::Literal(Value::String("sleepy".to_string())),
                 Expr::Literal(Value::String("nap".to_string())),
-                Expr::Literal(Value::List(Box::default())),
+                Expr::Literal(Value::list_nil()),
             ],
         }),
         args: vec![Expr::Literal(Value::ActEnvToken)],
@@ -301,10 +295,7 @@ async fn eval_expr_async_force_path_dispatches_tokio_provider_without_helper_run
 
     assert_eq!(
         result,
-        Value::List(Box::new(vec![
-            Value::ActEnvToken,
-            Value::String("slept".to_string())
-        ]))
+        Value::list_from_vec(vec![Value::ActEnvToken, Value::String("slept".to_string())])
     );
 }
 
@@ -321,7 +312,7 @@ async fn workflow_ret_uses_async_force_path_for_task_local_provider() {
                 arguments: vec![
                     Expr::Literal(Value::String("tasklocal".to_string())),
                     Expr::Literal(Value::String("mark".to_string())),
-                    Expr::Literal(Value::List(Box::default())),
+                    Expr::Literal(Value::list_nil()),
                 ],
             }),
             args: vec![Expr::Literal(Value::ActEnvToken)],
@@ -345,10 +336,10 @@ async fn workflow_ret_uses_async_force_path_for_task_local_provider() {
 
     assert_eq!(
         result,
-        Value::List(Box::new(vec![
+        Value::list_from_vec(vec![
             Value::ActEnvToken,
             Value::String("workflow-task-local".to_string())
-        ]))
+        ])
     );
 }
 
@@ -370,7 +361,7 @@ async fn workflow_ret_unary_uses_async_force_path_for_task_local_provider() {
                             arguments: vec![
                                 Expr::Literal(Value::String("tasklocal".to_string())),
                                 Expr::Literal(Value::String("mark".to_string())),
-                                Expr::Literal(Value::List(Box::default())),
+                                Expr::Literal(Value::list_nil()),
                             ],
                         }),
                         args: vec![Expr::Literal(Value::ActEnvToken)],
@@ -417,7 +408,7 @@ async fn workflow_let_uses_async_force_path_for_task_local_provider() {
                 arguments: vec![
                     Expr::Literal(Value::String("tasklocal".to_string())),
                     Expr::Literal(Value::String("mark".to_string())),
-                    Expr::Literal(Value::List(Box::default())),
+                    Expr::Literal(Value::list_nil()),
                 ],
             }),
             args: vec![Expr::Literal(Value::ActEnvToken)],
@@ -447,10 +438,10 @@ async fn workflow_let_uses_async_force_path_for_task_local_provider() {
 
     assert_eq!(
         result,
-        Value::List(Box::new(vec![
+        Value::list_from_vec(vec![
             Value::ActEnvToken,
             Value::String("workflow-let-task-local".to_string())
-        ]))
+        ])
     );
 }
 
@@ -467,7 +458,7 @@ async fn workflow_orient_uses_async_force_path_for_task_local_provider() {
                 arguments: vec![
                     Expr::Literal(Value::String("tasklocal".to_string())),
                     Expr::Literal(Value::String("mark".to_string())),
-                    Expr::Literal(Value::List(Box::default())),
+                    Expr::Literal(Value::list_nil()),
                 ],
             }),
             args: vec![Expr::Literal(Value::ActEnvToken)],
@@ -513,7 +504,7 @@ async fn workflow_foreach_uses_async_force_path_for_task_local_provider() {
                 arguments: vec![
                     Expr::Literal(Value::String("tasklist".to_string())),
                     Expr::Literal(Value::String("mark".to_string())),
-                    Expr::Literal(Value::List(Box::default())),
+                    Expr::Literal(Value::list_nil()),
                 ],
             }),
             args: vec![Expr::Literal(Value::ActEnvToken)],
@@ -543,9 +534,9 @@ async fn workflow_foreach_uses_async_force_path_for_task_local_provider() {
 
     assert_eq!(
         result,
-        Value::List(Box::new(vec![Value::String(
+        Value::list_from_vec(vec![Value::String(
             "workflow-foreach-task-local".to_string()
-        )]))
+        )])
     );
 }
 
@@ -575,7 +566,7 @@ async fn workflow_check_condition_uses_async_force_path_for_task_local_provider(
                                 arguments: vec![
                                     Expr::Literal(Value::String("tasklocal".to_string())),
                                     Expr::Literal(Value::String("mark".to_string())),
-                                    Expr::Literal(Value::List(Box::default())),
+                                    Expr::Literal(Value::list_nil()),
                                 ],
                             }),
                             args: vec![Expr::Literal(Value::ActEnvToken)],
@@ -645,7 +636,7 @@ async fn workflow_decide_uses_async_force_path_for_task_local_provider() {
                 arguments: vec![
                     Expr::Literal(Value::String("tasklocal".to_string())),
                     Expr::Literal(Value::String("mark".to_string())),
-                    Expr::Literal(Value::List(Box::default())),
+                    Expr::Literal(Value::list_nil()),
                 ],
             }),
             args: vec![Expr::Literal(Value::ActEnvToken)],
@@ -702,7 +693,7 @@ async fn denied_guard_does_not_force_guarded_provider_act() {
                     arguments: vec![
                         Expr::Literal(Value::String("counting".to_string())),
                         Expr::Literal(Value::String("run".to_string())),
-                        Expr::Literal(Value::List(Box::default())),
+                        Expr::Literal(Value::list_nil()),
                     ],
                 },
             ],
@@ -717,10 +708,10 @@ async fn denied_guard_does_not_force_guarded_provider_act() {
     assert_eq!(calls.load(Ordering::SeqCst), 0);
     assert_eq!(
         result,
-        Value::List(Box::new(vec![
+        Value::list_from_vec(vec![
             Value::ActEnvToken,
             Value::String("policy denied".to_string()),
-        ]))
+        ])
     );
 }
 
@@ -741,7 +732,7 @@ async fn workflow_spawn_init_uses_async_force_path_for_task_local_provider() {
                 arguments: vec![
                     Expr::Literal(Value::String("tasklocal".to_string())),
                     Expr::Literal(Value::String("mark".to_string())),
-                    Expr::Literal(Value::List(Box::default())),
+                    Expr::Literal(Value::list_nil()),
                 ],
             }),
             args: vec![Expr::Literal(Value::ActEnvToken)],
@@ -789,7 +780,7 @@ async fn workflow_set_uses_async_force_path_for_task_local_provider() {
                 arguments: vec![
                     Expr::Literal(Value::String("tasklocal".to_string())),
                     Expr::Literal(Value::String("mark".to_string())),
-                    Expr::Literal(Value::List(Box::default())),
+                    Expr::Literal(Value::list_nil()),
                 ],
             }),
             args: vec![Expr::Literal(Value::ActEnvToken)],
@@ -820,10 +811,10 @@ async fn workflow_set_uses_async_force_path_for_task_local_provider() {
         .expect("sample set value");
     assert_eq!(
         stored,
-        Value::List(Box::new(vec![
+        Value::list_from_vec(vec![
             Value::ActEnvToken,
             Value::String("workflow-set-task-local".to_string())
-        ]))
+        ])
     );
 }
 
@@ -846,7 +837,7 @@ async fn workflow_send_uses_async_force_path_for_task_local_provider() {
                 arguments: vec![
                     Expr::Literal(Value::String("tasklocal".to_string())),
                     Expr::Literal(Value::String("mark".to_string())),
-                    Expr::Literal(Value::List(Box::default())),
+                    Expr::Literal(Value::list_nil()),
                 ],
             }),
             args: vec![Expr::Literal(Value::ActEnvToken)],
@@ -872,10 +863,10 @@ async fn workflow_send_uses_async_force_path_for_task_local_provider() {
     assert_eq!(result, Value::Null);
     assert_eq!(
         provider.sent_values(),
-        vec![Value::List(Box::new(vec![
+        vec![Value::list_from_vec(vec![
             Value::ActEnvToken,
             Value::String("workflow-send-task-local".to_string())
-        ]))]
+        ])]
     );
 }
 
@@ -898,7 +889,7 @@ async fn workflow_yield_request_uses_async_force_path_for_task_local_provider() 
                 arguments: vec![
                     Expr::Literal(Value::String("tasklocal".to_string())),
                     Expr::Literal(Value::String("mark".to_string())),
-                    Expr::Literal(Value::List(Box::default())),
+                    Expr::Literal(Value::list_nil()),
                 ],
             }),
             args: vec![Expr::Literal(Value::ActEnvToken)],
@@ -932,10 +923,10 @@ async fn workflow_yield_request_uses_async_force_path_for_task_local_provider() 
         Err(ash_interp::error::ExecError::YieldSuspended { request, .. }) => {
             assert_eq!(
                 *request,
-                Value::List(Box::new(vec![
+                Value::list_from_vec(vec![
                     Value::ActEnvToken,
                     Value::String("workflow-yield-task-local".to_string())
-                ]))
+                ])
             );
         }
         other => {
@@ -976,7 +967,7 @@ async fn workflow_proxy_resume_response_uses_async_force_path_for_task_local_pro
                 arguments: vec![
                     Expr::Literal(Value::String("tasklocal".to_string())),
                     Expr::Literal(Value::String("mark".to_string())),
-                    Expr::Literal(Value::List(Box::default())),
+                    Expr::Literal(Value::list_nil()),
                 ],
             }),
             args: vec![Expr::Literal(Value::ActEnvToken)],
@@ -1003,10 +994,10 @@ async fn workflow_proxy_resume_response_uses_async_force_path_for_task_local_pro
 
     assert_eq!(
         result,
-        Value::List(Box::new(vec![
+        Value::list_from_vec(vec![
             Value::ActEnvToken,
             Value::String("workflow-proxy-resume-task-local".to_string())
-        ]))
+        ])
     );
 }
 
@@ -1031,7 +1022,7 @@ async fn workflow_split_uses_async_force_path_for_task_local_provider() {
                     arguments: vec![
                         Expr::Literal(Value::String("tasklocal".to_string())),
                         Expr::Literal(Value::String("mark".to_string())),
-                        Expr::Literal(Value::List(Box::default())),
+                        Expr::Literal(Value::list_nil()),
                     ],
                 }),
                 args: vec![Expr::Literal(Value::ActEnvToken)],
@@ -1092,7 +1083,7 @@ async fn workflow_ret_constructor_uses_async_force_path_for_task_local_provider(
                         arguments: vec![
                             Expr::Literal(Value::String("tasklocal".to_string())),
                             Expr::Literal(Value::String("mark".to_string())),
-                            Expr::Literal(Value::List(Box::default())),
+                            Expr::Literal(Value::list_nil()),
                         ],
                     }),
                     args: vec![Expr::Literal(Value::ActEnvToken)],
@@ -1122,10 +1113,10 @@ async fn workflow_ret_constructor_uses_async_force_path_for_task_local_provider(
             name: "Tagged".to_string(),
             fields: Box::new(vec![(
                 "value".to_string(),
-                Value::List(Box::new(vec![
+                Value::list_from_vec(vec![
                     Value::ActEnvToken,
                     Value::String("workflow-constructor-task-local".to_string()),
-                ])),
+                ]),
             )]),
         }
     );
@@ -1149,7 +1140,7 @@ async fn workflow_ret_call_uses_async_force_path_for_task_local_provider() {
                         arguments: vec![
                             Expr::Literal(Value::String("tasklocal".to_string())),
                             Expr::Literal(Value::String("mark".to_string())),
-                            Expr::Literal(Value::List(Box::default())),
+                            Expr::Literal(Value::list_nil()),
                         ],
                     }),
                     args: vec![Expr::Literal(Value::ActEnvToken)],
@@ -1176,10 +1167,10 @@ async fn workflow_ret_call_uses_async_force_path_for_task_local_provider() {
     let mut expected = std::collections::HashMap::new();
     expected.insert(
         "value".to_string(),
-        Value::List(Box::new(vec![
+        Value::list_from_vec(vec![
             Value::ActEnvToken,
             Value::String("workflow-call-task-local".to_string()),
-        ])),
+        ]),
     );
     assert_eq!(result, Value::Record(Box::new(expected)));
 }
@@ -1203,7 +1194,7 @@ async fn workflow_ret_field_access_uses_async_force_path_for_task_local_provider
                             arguments: vec![
                                 Expr::Literal(Value::String("tasklocal".to_string())),
                                 Expr::Literal(Value::String("mark".to_string())),
-                                Expr::Literal(Value::List(Box::default())),
+                                Expr::Literal(Value::list_nil()),
                             ],
                         }),
                         args: vec![Expr::Literal(Value::ActEnvToken)],
@@ -1231,10 +1222,10 @@ async fn workflow_ret_field_access_uses_async_force_path_for_task_local_provider
 
     assert_eq!(
         result,
-        Value::List(Box::new(vec![
+        Value::list_from_vec(vec![
             Value::ActEnvToken,
             Value::String("workflow-field-task-local".to_string()),
-        ]))
+        ])
     );
 }
 
@@ -1257,7 +1248,7 @@ async fn workflow_ret_match_uses_async_force_path_for_task_local_provider() {
                             arguments: vec![
                                 Expr::Literal(Value::String("tasklocal".to_string())),
                                 Expr::Literal(Value::String("mark".to_string())),
-                                Expr::Literal(Value::List(Box::default())),
+                                Expr::Literal(Value::list_nil()),
                             ],
                         }),
                         args: vec![Expr::Literal(Value::ActEnvToken)],
@@ -1297,10 +1288,10 @@ async fn workflow_ret_match_uses_async_force_path_for_task_local_provider() {
 
     assert_eq!(
         result,
-        Value::List(Box::new(vec![
+        Value::list_from_vec(vec![
             Value::ActEnvToken,
             Value::String("workflow-match-task-local".to_string()),
-        ]))
+        ])
     );
 }
 
@@ -1330,7 +1321,7 @@ async fn workflow_ret_iflet_uses_async_force_path_for_task_local_provider() {
                             arguments: vec![
                                 Expr::Literal(Value::String("tasklocal".to_string())),
                                 Expr::Literal(Value::String("mark".to_string())),
-                                Expr::Literal(Value::List(Box::default())),
+                                Expr::Literal(Value::list_nil()),
                             ],
                         }),
                         args: vec![Expr::Literal(Value::ActEnvToken)],
@@ -1362,10 +1353,10 @@ async fn workflow_ret_iflet_uses_async_force_path_for_task_local_provider() {
 
     assert_eq!(
         result,
-        Value::List(Box::new(vec![
+        Value::list_from_vec(vec![
             Value::ActEnvToken,
             Value::String("workflow-iflet-task-local".to_string()),
-        ]))
+        ])
     );
 }
 
@@ -1409,7 +1400,7 @@ fn tasklocal_invoke_force_expr() -> Expr {
             arguments: vec![
                 Expr::Literal(Value::String("tasklocal".to_string())),
                 Expr::Literal(Value::String("mark".to_string())),
-                Expr::Literal(Value::List(Box::default())),
+                Expr::Literal(Value::list_nil()),
             ],
         }),
         args: vec![Expr::Literal(Value::ActEnvToken)],
@@ -1488,7 +1479,7 @@ async fn spawned_registered_child_body_has_hidden_runtime_act_env() {
                         arguments: vec![
                             Expr::Literal(Value::String("sensor".to_string())),
                             Expr::Literal(Value::String("read".to_string())),
-                            Expr::Literal(Value::List(Box::default())),
+                            Expr::Literal(Value::list_nil()),
                         ],
                     }),
                     args: vec![Expr::Literal(Value::ActEnvToken)],
@@ -1554,9 +1545,9 @@ async fn spawned_registered_child_body_has_hidden_runtime_act_env() {
 
     assert_eq!(
         completion.terminal_result(),
-        Some(&Ok(Value::List(Box::new(vec![
+        Some(&Ok(Value::list_from_vec(vec![
             Value::ActEnvToken,
             Value::String("spawned child invoked".to_string()),
-        ]))))
+        ])))
     );
 }

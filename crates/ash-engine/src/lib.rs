@@ -1086,27 +1086,42 @@ impl Engine {
         let (mut local_closures, mut local_param_counts) =
             (imported_closures, imported_param_counts);
 
+        let mut imported_env = EnvFrame::new();
+        for (name, value) in &local_closures {
+            imported_env.insert(name.clone(), value.clone());
+        }
+        let mut module_env = EnvFrame::with_parent(std::sync::Arc::new(imported_env));
+        let mut late_slots = HashMap::new();
+        let mut function_specs = Vec::new();
+
         for def_item in &program.definitions {
             if let ash_parser::surface::Definition::Function(fn_def) = def_item
                 && let Ok(body_expr) = lower_expr_with_context(&fn_def.body, &lowering_ctx)
             {
-                let mut env_frame = EnvFrame::new();
-                let slot = env_frame.insert_late(fn_def.name.to_string());
+                let name = fn_def.name.to_string();
+                let slot = module_env.insert_late(name.clone());
                 let params: Vec<(String, Option<String>)> = fn_def
                     .params
                     .iter()
                     .map(|p| (p.name.to_string(), None))
                     .collect();
-                local_param_counts.insert(fn_def.name.to_string(), params.len());
-                let env_frame = std::sync::Arc::new(env_frame);
-                let closure = Value::Closure {
-                    params,
-                    body: Box::new(body_expr),
-                    env: env_frame.clone(),
-                };
-                slot.set_late(closure.clone());
-                local_closures.insert(fn_def.name.to_string(), closure);
+                local_param_counts.insert(name.clone(), params.len());
+                late_slots.insert(name.clone(), slot);
+                function_specs.push((name, params, body_expr));
             }
+        }
+
+        let module_env = std::sync::Arc::new(module_env);
+        for (name, params, body_expr) in function_specs {
+            let closure = Value::Closure {
+                params,
+                body: Box::new(body_expr),
+                env: module_env.clone(),
+            };
+            if let Some(slot) = late_slots.get(&name) {
+                slot.set_late(closure.clone());
+            }
+            local_closures.insert(name, closure);
         }
 
         for helper in &program.helper_workflows {
@@ -2612,7 +2627,72 @@ fn build_imported_closures(
         name: String,
         params: Vec<(String, Option<String>)>,
         body: ash_core::Expr,
-        shared_env: bool,
+    }
+
+    fn user_closure_spec(
+        name: String,
+        callable: &module_loader::InlineCallable,
+        body: &ash_parser::surface::Expr,
+    ) -> Option<ClosureSpec> {
+        let lowering_ctx =
+            ash_parser::LoweringContext::with_effectful_names(callable.effectful_names.clone());
+        let body = match ash_parser::lower_expr_with_context(body, &lowering_ctx) {
+            Ok(expr) => expr,
+            Err(e) => {
+                eprintln!("warning: failed to lower imported callable '{name}': {e}");
+                return None;
+            }
+        };
+        Some(ClosureSpec {
+            name,
+            params: callable.params.iter().map(|p| (p.clone(), None)).collect(),
+            body,
+        })
+    }
+
+    fn original_callable_name(name: &str, callable: &module_loader::InlineCallable) -> String {
+        match callable.signature.as_ref() {
+            Some(module_loader::CallableSignature::Function(function)) => function.name.to_string(),
+            _ => name.to_string(),
+        }
+    }
+
+    fn closure_with_module_family(
+        export_spec: ClosureSpec,
+        mut family_specs: HashMap<String, ClosureSpec>,
+    ) -> Value {
+        family_specs
+            .entry(export_spec.name.clone())
+            .or_insert_with(|| ClosureSpec {
+                name: export_spec.name.clone(),
+                params: export_spec.params.clone(),
+                body: export_spec.body.clone(),
+            });
+
+        let mut module_env = ash_core::env_frame::EnvFrame::new();
+        let mut late_slots = HashMap::new();
+        for spec in family_specs.values() {
+            let slot = module_env.insert_late(spec.name.clone());
+            late_slots.insert(spec.name.clone(), slot);
+        }
+        let module_env = std::sync::Arc::new(module_env);
+
+        for spec in family_specs.into_values() {
+            let closure = Value::Closure {
+                params: spec.params,
+                body: Box::new(spec.body),
+                env: module_env.clone(),
+            };
+            if let Some(slot) = late_slots.get(&spec.name) {
+                slot.set_late(closure);
+            }
+        }
+
+        Value::Closure {
+            params: export_spec.params,
+            body: Box::new(export_spec.body),
+            env: module_env,
+        }
     }
 
     // Resolved once; builtin_dispatch_table() uses OnceLock so this is a
@@ -2625,7 +2705,6 @@ fn build_imported_closures(
     let mut fn_signatures = HashMap::new();
     let mut builtin_signatures = HashMap::new();
     let mut workflow_summaries = HashMap::new();
-    let mut specs = Vec::new();
 
     for (name, callable) in imported_callables {
         let params: Vec<(String, Option<String>)> =
@@ -2649,16 +2728,36 @@ fn build_imported_closures(
 
         let body_expr = match &callable.kind {
             CallableKind::User { body } => {
-                let lowering_ctx = ash_parser::LoweringContext::with_effectful_names(
-                    callable.effectful_names.clone(),
-                );
-                match ash_parser::lower_expr_with_context(body, &lowering_ctx) {
-                    Ok(expr) => expr,
-                    Err(e) => {
-                        eprintln!("warning: failed to lower imported callable '{name}': {e}");
+                let Some(export_spec) = user_closure_spec(name.clone(), callable, body) else {
+                    continue;
+                };
+                let original_name = original_callable_name(name, callable);
+                let mut family_specs = HashMap::new();
+                for (module_name, module_callable) in &callable.module_runtime_callables {
+                    let CallableKind::User { body } = &module_callable.kind else {
                         continue;
+                    };
+                    if let Some(spec) =
+                        user_closure_spec(module_name.clone(), module_callable, body)
+                    {
+                        family_specs.insert(module_name.clone(), spec);
                     }
                 }
+                if !family_specs.contains_key(&original_name) {
+                    family_specs.insert(
+                        original_name.clone(),
+                        ClosureSpec {
+                            name: original_name,
+                            params: export_spec.params.clone(),
+                            body: export_spec.body.clone(),
+                        },
+                    );
+                }
+                closures.insert(
+                    name.clone(),
+                    closure_with_module_family(export_spec, family_specs),
+                );
+                continue;
             }
             CallableKind::Builtin { module } => {
                 let dispatch_name = match callable.signature.as_ref() {
@@ -2698,39 +2797,12 @@ fn build_imported_closures(
                 }
             }
         };
-
-        specs.push(ClosureSpec {
-            name: name.clone(),
-            params,
-            body: body_expr,
-            shared_env: matches!(&callable.kind, CallableKind::User { .. }),
-        });
-    }
-
-    let mut shared_env = ash_core::env_frame::EnvFrame::new();
-    let mut late_slots = HashMap::new();
-    for spec in &specs {
-        if spec.shared_env {
-            let slot = shared_env.insert_late(spec.name.clone());
-            late_slots.insert(spec.name.clone(), slot);
-        }
-    }
-    let shared_env = std::sync::Arc::new(shared_env);
-
-    for spec in specs {
         let closure = Value::Closure {
-            params: spec.params,
-            body: Box::new(spec.body),
-            env: if spec.shared_env {
-                shared_env.clone()
-            } else {
-                std::sync::Arc::new(ash_core::env_frame::EnvFrame::new())
-            },
+            params,
+            body: Box::new(body_expr),
+            env: std::sync::Arc::new(ash_core::env_frame::EnvFrame::new()),
         };
-        if let Some(slot) = late_slots.get(&spec.name) {
-            slot.set_late(closure.clone());
-        }
-        closures.insert(spec.name, closure);
+        closures.insert(name.clone(), closure);
     }
 
     (

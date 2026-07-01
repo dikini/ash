@@ -428,7 +428,7 @@ async fn builtin_fn_record_keys_dispatches_via_unqualified_name() {
     engine.check(&mut workflow).expect("typecheck");
     let result = engine.execute(&workflow).await.expect("execute");
     assert!(
-        matches!(result, ash_core::Value::List(_)),
+        result.is_list(),
         "keys() should return a List, got: {result:?}"
     );
 }

@@ -68,7 +68,7 @@ fn chat_args(messages: Vec<Value>) -> Vec<Value> {
     vec![
         Value::String("test".to_string()),
         Value::String("gpt-4o".to_string()),
-        Value::List(Box::new(messages)),
+        Value::list_from_vec(messages),
         Value::unit_variant("None"),
     ]
 }
@@ -79,8 +79,8 @@ fn chat_with_tools_args(messages: Vec<Value>, tools: Vec<Value>) -> Vec<Value> {
     vec![
         Value::String("test".to_string()),
         Value::String("gpt-4o".to_string()),
-        Value::List(Box::new(messages)),
-        Value::List(Box::new(tools)),
+        Value::list_from_vec(messages),
+        Value::list_from_vec(tools),
         Value::unit_variant("None"),
     ]
 }
@@ -106,9 +106,7 @@ fn embed_args(texts: &[&str]) -> Vec<Value> {
     vec![
         Value::String("test".to_string()),
         Value::String("text-embedding-3-small".to_string()),
-        Value::List(Box::new(
-            texts.iter().map(|s| Value::String(s.to_string())).collect(),
-        )),
+        Value::list_from_vec(texts.iter().map(|s| Value::String(s.to_string())).collect()),
     ]
 }
 
@@ -269,9 +267,10 @@ async fn test_chat_with_tools_mock() {
                 }) => {
                     assert_eq!(name, "Some");
                     // Extract the list from the Some variant
-                    if let Some((_, Value::List(tool_list))) =
-                        tool_fields.iter().find(|(k, _)| k == "0")
-                    {
+                    if let Some((_, tool_value)) = tool_fields.iter().find(|(k, _)| k == "0") {
+                        let tool_list = tool_value
+                            .list_to_vec()
+                            .expect("Expected tool_calls to contain a List");
                         assert_eq!(tool_list.len(), 1);
                         // Verify the tool call structure
                         match &tool_list[0] {
@@ -437,36 +436,37 @@ async fn test_embeddings_mock() {
     let value = result.unwrap();
 
     // Verify response is a list of embeddings
-    match &value {
-        Value::List(embeddings) => {
-            assert_eq!(embeddings.len(), 2, "Should have 2 embeddings");
+    let embeddings = value
+        .list_to_vec()
+        .unwrap_or_else(|| panic!("Expected List of embeddings, got: {value:?}"));
+    assert_eq!(embeddings.len(), 2, "Should have 2 embeddings");
 
-            // Verify first embedding structure
-            match &embeddings[0] {
-                Value::Record(fields) => {
-                    // Check index
-                    match fields.get("index") {
-                        Some(Value::Int(idx)) => assert_eq!(*idx, 0),
-                        other => panic!("Expected index Int(0), got: {other:?}"),
-                    }
+    // Verify first embedding structure
+    match &embeddings[0] {
+        Value::Record(fields) => {
+            // Check index
+            match fields.get("index") {
+                Some(Value::Int(idx)) => assert_eq!(*idx, 0),
+                other => panic!("Expected index Int(0), got: {other:?}"),
+            }
 
-                    // Check embedding vector
-                    match fields.get("embedding") {
-                        Some(Value::List(vec)) => {
-                            assert_eq!(vec.len(), 5, "Embedding should have 5 dimensions");
-                            // Verify first value is approximately 0.1
-                            match &vec[0] {
-                                Value::Float(f) => assert!((f - 0.1).abs() < 0.001),
-                                other => panic!("Expected Float, got: {other:?}"),
-                            }
-                        }
-                        other => panic!("Expected embedding List, got: {other:?}"),
+            // Check embedding vector
+            match fields.get("embedding") {
+                Some(value) if value.is_list() => {
+                    let vec = value
+                        .list_to_vec()
+                        .expect("is_list only returns true for convertible lists");
+                    assert_eq!(vec.len(), 5, "Embedding should have 5 dimensions");
+                    // Verify first value is approximately 0.1
+                    match &vec[0] {
+                        Value::Float(f) => assert!((f - 0.1).abs() < 0.001),
+                        other => panic!("Expected Float, got: {other:?}"),
                     }
                 }
-                other => panic!("Expected embedding Record, got: {other:?}"),
+                other => panic!("Expected embedding List, got: {other:?}"),
             }
         }
-        other => panic!("Expected List of embeddings, got: {other:?}"),
+        other => panic!("Expected embedding Record, got: {other:?}"),
     }
 }
 
@@ -643,7 +643,7 @@ async fn test_multi_provider_routing() {
     let primary_args = vec![
         Value::String("primary".to_string()),
         Value::String("gpt-4o".to_string()),
-        Value::List(Box::new(vec![user_message("Hi")])),
+        Value::list_from_vec(vec![user_message("Hi")]),
         Value::unit_variant("None"),
     ];
 
@@ -669,7 +669,7 @@ async fn test_multi_provider_routing() {
     let secondary_args = vec![
         Value::String("secondary".to_string()),
         Value::String("gpt-4o-mini".to_string()),
-        Value::List(Box::new(vec![user_message("Hi")])),
+        Value::list_from_vec(vec![user_message("Hi")]),
         Value::unit_variant("None"),
     ];
 
@@ -739,16 +739,14 @@ async fn test_list_models_mock() {
     );
 
     let value = result.unwrap();
-    match &value {
-        Value::List(models) => {
-            let model_ids: Vec<&str> = models.iter().filter_map(|v| v.as_string()).collect();
-            assert!(model_ids.contains(&"gpt-4o"));
-            assert!(model_ids.contains(&"gpt-4o-mini"));
-            assert!(model_ids.contains(&"text-embedding-3-small"));
-            assert_eq!(model_ids.len(), 3);
-        }
-        other => panic!("Expected Value::List, got: {other:?}"),
-    }
+    let models = value
+        .list_to_vec()
+        .unwrap_or_else(|| panic!("Expected list value, got: {value:?}"));
+    let model_ids: Vec<&str> = models.iter().filter_map(|v| v.as_string()).collect();
+    assert!(model_ids.contains(&"gpt-4o"));
+    assert!(model_ids.contains(&"gpt-4o-mini"));
+    assert!(model_ids.contains(&"text-embedding-3-small"));
+    assert_eq!(model_ids.len(), 3);
 }
 
 // ---------------------------------------------------------------------------
@@ -872,12 +870,10 @@ async fn test_embed_single_text() {
     );
 
     let value = result.unwrap();
-    match &value {
-        Value::List(embeddings) => {
-            assert_eq!(embeddings.len(), 1);
-        }
-        other => panic!("Expected List, got: {other:?}"),
-    }
+    let embeddings = value
+        .list_to_vec()
+        .unwrap_or_else(|| panic!("Expected List, got: {value:?}"));
+    assert_eq!(embeddings.len(), 1);
 }
 
 // ---------------------------------------------------------------------------

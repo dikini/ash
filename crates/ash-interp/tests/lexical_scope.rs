@@ -32,11 +32,11 @@ async fn lexical_scope_let_bindings_visible_in_later_statements() {
             name: "items".to_string(),
             span: ash_core::ast::Span::default(),
         },
-        expr: Expr::Literal(Value::List(Box::new(vec![
+        expr: Expr::Literal(Value::list_from_vec(vec![
             Value::Int(1),
             Value::Int(2),
             Value::Int(3),
-        ]))),
+        ])),
         continuation: Box::new(Workflow::Let {
             pattern: Pattern::Variable {
                 name: "first".to_string(),
@@ -362,7 +362,7 @@ async fn pattern_matching_introduces_bindings() {
             ],
             None,
         ),
-        expr: Expr::Literal(Value::List(Box::new(vec![Value::Int(1), Value::Int(2)]))),
+        expr: Expr::Literal(Value::list_from_vec(vec![Value::Int(1), Value::Int(2)])),
         continuation: Box::new(Workflow::Ret {
             expr: Expr::Binary {
                 op: ash_core::BinaryOp::Add,

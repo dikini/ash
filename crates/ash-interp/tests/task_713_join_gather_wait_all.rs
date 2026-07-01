@@ -53,17 +53,16 @@ fn proc_gather_expr(handles: Vec<ProcessHandle>) -> Expr {
     Expr::Call {
         func: "gather".to_string(),
         module: Some("proc".to_string()),
-        arguments: vec![Expr::Literal(Value::List(Box::new(
+        arguments: vec![Expr::Literal(Value::list_from_vec(
             handles.into_iter().map(Value::ProcessHandle).collect(),
-        )))],
+        ))],
     }
 }
 
 fn extract_list(value: Value) -> Vec<Value> {
-    let Value::List(items) = value else {
-        panic!("expected list value, got {value:?}");
-    };
-    *items
+    value
+        .list_to_vec()
+        .unwrap_or_else(|| panic!("expected list value, got {value:?}"))
 }
 
 #[tokio::test]

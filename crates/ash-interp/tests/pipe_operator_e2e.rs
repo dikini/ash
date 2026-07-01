@@ -24,13 +24,13 @@ use ash_typeck::types::Type;
 fn mock_read_dir_closure() -> Value {
     Value::Closure {
         params: vec![("_path".to_string(), None)],
-        body: Box::new(Expr::Literal(Value::List(Box::new(vec![
+        body: Box::new(Expr::Literal(Value::list_from_vec(vec![
             Value::String("readme.md".to_string()),
             Value::String("main.rs".to_string()),
             Value::String("docs".to_string()),
             Value::String("guide.md".to_string()),
             Value::String("Cargo.toml".to_string()),
-        ])))),
+        ]))),
         env: Arc::new(EnvFrame::new()),
     }
 }
@@ -122,14 +122,12 @@ async fn pipe_operator_e2e_read_dir_filter_md_files() {
     .expect("execution should succeed");
 
     // Verify: only .md files should remain
-    match result {
-        Value::List(files) => {
-            assert_eq!(files.len(), 2, "expected 2 .md files, got {:?}", files);
-            assert_eq!(files[0], Value::String("readme.md".to_string()));
-            assert_eq!(files[1], Value::String("guide.md".to_string()));
-        }
-        other => panic!("expected List, got {:?}", other),
-    }
+    let files = result
+        .list_to_vec()
+        .unwrap_or_else(|| panic!("expected List, got {:?}", result));
+    assert_eq!(files.len(), 2, "expected 2 .md files, got {:?}", files);
+    assert_eq!(files[0], Value::String("readme.md".to_string()));
+    assert_eq!(files[1], Value::String("guide.md".to_string()));
 }
 
 /// Test that pipe operator examples use explicit closures rather than
@@ -171,12 +169,12 @@ async fn pipe_operator_explicit_closure_ordering() {
     let mut ctx = Context::new();
     ctx.set(
         "paths".to_string(),
-        Value::List(Box::new(vec![
+        Value::list_from_vec(vec![
             Value::String("src/main.rs".to_string()),
             Value::String("tests/test.rs".to_string()),
             Value::String("src/lib.rs".to_string()),
             Value::String("Cargo.toml".to_string()),
-        ])),
+        ]),
     );
 
     let runtime_state = RuntimeState::new();
@@ -195,12 +193,10 @@ async fn pipe_operator_explicit_closure_ordering() {
     .await
     .expect("execution should succeed");
 
-    match result {
-        Value::List(files) => {
-            assert_eq!(files.len(), 2, "expected 2 src/ files, got {:?}", files);
-            assert_eq!(files[0], Value::String("src/main.rs".to_string()));
-            assert_eq!(files[1], Value::String("src/lib.rs".to_string()));
-        }
-        other => panic!("expected List, got {:?}", other),
-    }
+    let files = result
+        .list_to_vec()
+        .unwrap_or_else(|| panic!("expected List, got {:?}", result));
+    assert_eq!(files.len(), 2, "expected 2 src/ files, got {:?}", files);
+    assert_eq!(files[0], Value::String("src/main.rs".to_string()));
+    assert_eq!(files[1], Value::String("src/lib.rs".to_string()));
 }

@@ -294,18 +294,16 @@ fn test_fs_provider_read_dir_observe() {
     let result = tokio_test::block_on(async { provider.observe(&[constraint]).await });
 
     let files = result.expect("observe read_dir should succeed");
-    match files {
-        Value::List(entries) => {
-            let names: Vec<String> = entries
-                .iter()
-                .map(|v| match v {
-                    Value::String(s) => s.clone(),
-                    _ => panic!("expected string file names in list"),
-                })
-                .collect();
-            assert!(names.contains(&"alpha.txt".to_string()));
-            assert!(names.contains(&"beta.txt".to_string()));
-        }
-        _ => panic!("expected Value::List, got {files:?}"),
-    }
+    let entries = files
+        .list_to_vec()
+        .unwrap_or_else(|| panic!("expected list value, got {files:?}"));
+    let names: Vec<String> = entries
+        .iter()
+        .map(|v| match v {
+            Value::String(s) => s.clone(),
+            _ => panic!("expected string file names in list"),
+        })
+        .collect();
+    assert!(names.contains(&"alpha.txt".to_string()));
+    assert!(names.contains(&"beta.txt".to_string()));
 }

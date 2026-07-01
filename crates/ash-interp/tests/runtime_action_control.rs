@@ -83,7 +83,7 @@ fn invoke_expr() -> Expr {
         arguments: vec![
             Expr::Literal(Value::String("sensor".to_string())),
             Expr::Literal(Value::String("read".to_string())),
-            Expr::Literal(Value::List(Box::new(vec![Value::Int(1), Value::Int(2)]))),
+            Expr::Literal(Value::list_from_vec(vec![Value::Int(1), Value::Int(2)])),
         ],
     }
 }
@@ -1182,9 +1182,9 @@ async fn workflow_can_transport_and_reapply_effectful_closures() {
 
     assert_eq!(
         forced,
-        Value::List(Box::new(vec![
+        Value::list_from_vec(vec![
             Value::ActEnvToken,
             Value::String("read-result".to_string())
-        ]))
+        ])
     );
 }

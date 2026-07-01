@@ -79,30 +79,19 @@ fn match_pattern_recursive(
         }
 
         Pattern::Tuple(patterns) => {
-            // Tuple pattern matches list of same length
-            match value {
-                Value::List(values) if values.len() == patterns.len() => {
-                    for (p, v) in patterns.iter().zip(values.iter()) {
-                        match_pattern_recursive(p, v, bindings)?;
-                    }
-                    Ok(())
+            // Tuple pattern matches list of same length.
+            if let Some(values) = value.list_to_vec()
+                && values.len() == patterns.len()
+            {
+                for (p, v) in patterns.iter().zip(values.iter()) {
+                    match_pattern_recursive(p, v, bindings)?;
                 }
-                _ => {
-                    // Try matching as Cons/Nil list representation
-                    if let Some(values) = crate::list_helpers::list_to_vec(value)
-                        && values.len() == patterns.len()
-                    {
-                        for (p, v) in patterns.iter().zip(values.iter()) {
-                            match_pattern_recursive(p, v, bindings)?;
-                        }
-                        return Ok(());
-                    }
-                    Err(PatternError::MatchFailed {
-                        expected: format!("tuple of {} elements", patterns.len()),
-                        actual: format!("{:?}", value),
-                    })
-                }
+                return Ok(());
             }
+            Err(PatternError::MatchFailed {
+                expected: format!("tuple of {} elements", patterns.len()),
+                actual: format!("{:?}", value),
+            })
         }
 
         Pattern::Record(field_patterns) => {
@@ -126,76 +115,33 @@ fn match_pattern_recursive(
         }
 
         Pattern::List(prefix_patterns, rest_binding) => {
-            // List pattern matches list with at least prefix_patterns.len() elements
-            // If no rest_binding and prefix is empty, this is [] which only matches empty lists
-            match value {
-                Value::List(values) => {
-                    if values.len() < prefix_patterns.len() {
-                        return Err(PatternError::ListLengthMismatch {
-                            expected: prefix_patterns.len(),
-                            actual: values.len(),
-                        });
-                    }
-                    // If no rest binding, the list must be exactly the prefix length
-                    if rest_binding.is_none() && values.len() != prefix_patterns.len() {
-                        return Err(PatternError::ListLengthMismatch {
-                            expected: prefix_patterns.len(),
-                            actual: values.len(),
-                        });
-                    }
-
-                    // Match prefix elements
-                    for (p, v) in prefix_patterns.iter().zip(values.iter()) {
-                        match_pattern_recursive(p, v, bindings)?;
-                    }
-
-                    // Bind rest if specified
-                    if let Some(rest_name) = rest_binding {
-                        let rest_values: Vec<Value> = values[prefix_patterns.len()..].to_vec();
-                        bindings.insert(rest_name.clone(), Value::List(Box::new(rest_values)));
-                    }
-
-                    Ok(())
-                }
-                _ => {
-                    // Try matching as Cons/Nil list representation
-                    if let Some(values) = crate::list_helpers::list_to_vec(value) {
-                        if values.len() < prefix_patterns.len() {
-                            return Err(PatternError::ListLengthMismatch {
-                                expected: prefix_patterns.len(),
-                                actual: values.len(),
-                            });
-                        }
-                        // If no rest binding, the list must be exactly the prefix length
-                        if rest_binding.is_none() && values.len() != prefix_patterns.len() {
-                            return Err(PatternError::ListLengthMismatch {
-                                expected: prefix_patterns.len(),
-                                actual: values.len(),
-                            });
-                        }
-
-                        // Match prefix elements
-                        for (p, v) in prefix_patterns.iter().zip(values.iter()) {
-                            match_pattern_recursive(p, v, bindings)?;
-                        }
-
-                        // Bind rest if specified
-                        if let Some(rest_name) = rest_binding {
-                            let rest_values: Vec<Value> = values[prefix_patterns.len()..].to_vec();
-                            bindings.insert(
-                                rest_name.clone(),
-                                crate::list_helpers::vec_to_list(rest_values),
-                            );
-                        }
-
-                        return Ok(());
-                    }
-                    Err(PatternError::MatchFailed {
-                        expected: "list".to_string(),
-                        actual: format!("{:?}", value),
-                    })
-                }
+            // List pattern matches list with at least prefix_patterns.len() elements.
+            let Some(values) = value.list_to_vec() else {
+                return Err(PatternError::MatchFailed {
+                    expected: "list".to_string(),
+                    actual: format!("{:?}", value),
+                });
+            };
+            if values.len() < prefix_patterns.len() {
+                return Err(PatternError::ListLengthMismatch {
+                    expected: prefix_patterns.len(),
+                    actual: values.len(),
+                });
             }
+            if rest_binding.is_none() && values.len() != prefix_patterns.len() {
+                return Err(PatternError::ListLengthMismatch {
+                    expected: prefix_patterns.len(),
+                    actual: values.len(),
+                });
+            }
+            for (p, v) in prefix_patterns.iter().zip(values.iter()) {
+                match_pattern_recursive(p, v, bindings)?;
+            }
+            if let Some(rest_name) = rest_binding {
+                let rest_values: Vec<Value> = values[prefix_patterns.len()..].to_vec();
+                bindings.insert(rest_name.clone(), Value::list_from_vec(rest_values));
+            }
+            Ok(())
         }
 
         Pattern::Variant { name, fields } => {
@@ -325,7 +271,7 @@ mod tests {
                 span: ash_core::ast::Span::default(),
             },
         ]);
-        let value = Value::List(Box::new(vec![Value::Int(1), Value::Int(2)]));
+        let value = Value::list_from_vec(vec![Value::Int(1), Value::Int(2)]);
         let bindings = match_pattern(&pattern, &value).unwrap();
 
         assert_eq!(bindings.get("x"), Some(&Value::Int(1)));
@@ -338,7 +284,7 @@ mod tests {
             name: "x".to_string(),
             span: ash_core::ast::Span::default(),
         }]);
-        let value = Value::List(Box::new(vec![Value::Int(1), Value::Int(2)]));
+        let value = Value::list_from_vec(vec![Value::Int(1), Value::Int(2)]);
         assert!(match_pattern(&pattern, &value).is_err());
     }
 
@@ -418,7 +364,7 @@ mod tests {
             ],
             None,
         );
-        let value = Value::List(Box::new(vec![Value::Int(1), Value::Int(2)]));
+        let value = Value::list_from_vec(vec![Value::Int(1), Value::Int(2)]);
         let bindings = match_pattern(&pattern, &value).unwrap();
 
         assert_eq!(bindings.get("a"), Some(&Value::Int(1)));
@@ -434,13 +380,13 @@ mod tests {
             }],
             Some("tail".to_string()),
         );
-        let value = Value::List(Box::new(vec![Value::Int(1), Value::Int(2), Value::Int(3)]));
+        let value = Value::list_from_vec(vec![Value::Int(1), Value::Int(2), Value::Int(3)]);
         let bindings = match_pattern(&pattern, &value).unwrap();
 
         assert_eq!(bindings.get("head"), Some(&Value::Int(1)));
         assert_eq!(
             bindings.get("tail"),
-            Some(&Value::List(Box::new(vec![Value::Int(2), Value::Int(3)])))
+            Some(&Value::list_from_vec(vec![Value::Int(2), Value::Int(3)]))
         );
     }
 
@@ -459,7 +405,7 @@ mod tests {
             ],
             None,
         );
-        let value = Value::List(Box::new(vec![Value::Int(1)]));
+        let value = Value::list_from_vec(vec![Value::Int(1)]);
         assert!(match_pattern(&pattern, &value).is_err());
     }
 
@@ -484,7 +430,7 @@ mod tests {
 
         let mut fields = HashMap::new();
         fields.insert("x".to_string(), Value::Int(42));
-        let value = Value::List(Box::new(vec![Value::Record(Box::new(fields)), Value::Null]));
+        let value = Value::list_from_vec(vec![Value::Record(Box::new(fields)), Value::Null]);
 
         let bindings = match_pattern(&pattern, &value).unwrap();
         assert_eq!(bindings.get("inner"), Some(&Value::Int(42)));
@@ -493,7 +439,7 @@ mod tests {
     #[test]
     fn test_match_empty_list() {
         let pattern = Pattern::List(vec![], None);
-        let value = Value::List(Box::default());
+        let value = Value::list_nil();
         let bindings = match_pattern(&pattern, &value).unwrap();
         assert!(bindings.is_empty());
     }
@@ -501,11 +447,11 @@ mod tests {
     #[test]
     fn test_match_empty_list_with_rest() {
         let pattern = Pattern::List(vec![], Some("rest".to_string()));
-        let value = Value::List(Box::new(vec![Value::Int(1), Value::Int(2)]));
+        let value = Value::list_from_vec(vec![Value::Int(1), Value::Int(2)]);
         let bindings = match_pattern(&pattern, &value).unwrap();
         assert_eq!(
             bindings.get("rest"),
-            Some(&Value::List(Box::new(vec![Value::Int(1), Value::Int(2)])))
+            Some(&Value::list_from_vec(vec![Value::Int(1), Value::Int(2)]))
         );
     }
 
@@ -638,7 +584,7 @@ mod tests {
             name: "Some".to_string(),
             fields: Box::new(vec![(
                 "value".to_string(),
-                Value::List(Box::new(vec![Value::Int(1), Value::Int(2)])),
+                Value::list_from_vec(vec![Value::Int(1), Value::Int(2)]),
             )]),
         };
         let bindings = match_pattern(&pattern, &value).unwrap();

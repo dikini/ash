@@ -944,8 +944,8 @@ fn execute_workflow_inner_observed<'a>(
                     .await
                     .map_err(ExecError::Eval)?;
 
-                match coll_val {
-                    Value::List(items) => {
+                match coll_val.list_to_vec() {
+                    Some(items) => {
                         let mut last_result = Value::Null;
 
                         for item in items.iter() {
@@ -979,7 +979,7 @@ fn execute_workflow_inner_observed<'a>(
 
                         Ok(last_result)
                     }
-                    _ => Err(ExecError::Eval(EvalError::TypeMismatch {
+                    None => Err(ExecError::Eval(EvalError::TypeMismatch {
                         expected: "list".to_string(),
                         actual: format!("{:?}", coll_val),
                     })),
@@ -2820,7 +2820,7 @@ mod tests {
                     span: ash_core::ast::Span::default(),
                 },
             ]),
-            expr: Expr::Literal(Value::List(Box::new(vec![Value::Int(1), Value::Int(2)]))),
+            expr: Expr::Literal(Value::list_from_vec(vec![Value::Int(1), Value::Int(2)])),
             continuation: Box::new(Workflow::Ret {
                 expr: Expr::Binary {
                     op: BinaryOp::Add,
@@ -2910,11 +2910,11 @@ mod tests {
                 name: "x".to_string(),
                 span: ash_core::ast::Span::default(),
             },
-            collection: Expr::Literal(Value::List(Box::new(vec![
+            collection: Expr::Literal(Value::list_from_vec(vec![
                 Value::Int(1),
                 Value::Int(2),
                 Value::Int(3),
-            ]))),
+            ])),
             body: Box::new(Workflow::Ret {
                 expr: Expr::Variable {
                     name: "x".to_string(),
@@ -3086,7 +3086,7 @@ mod tests {
                     span: ash_core::ast::Span::default(),
                 },
             ]),
-            expr: Expr::Literal(Value::List(Box::new(vec![Value::Int(10), Value::Int(20)]))),
+            expr: Expr::Literal(Value::list_from_vec(vec![Value::Int(10), Value::Int(20)])),
             continuation: Box::new(Workflow::If {
                 condition: Expr::Binary {
                     op: BinaryOp::Lt,

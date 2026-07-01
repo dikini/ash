@@ -80,7 +80,7 @@ fn task1023_act_tower_runtime_public_unit_preserves_act_opacity() {
     assert_closure_param(&act, "__act_env");
     assert_eq!(
         force_act_closure(act),
-        Value::List(Box::new(vec![Value::ActEnvToken, Value::Int(7)]))
+        Value::list_from_vec(vec![Value::ActEnvToken, Value::Int(7)])
     );
 }
 
@@ -95,10 +95,7 @@ fn task1023_act_tower_runtime_public_bind_sequences_without_exposing_actenv() {
     assert_closure_param(&act, "__act_env");
     assert_eq!(
         force_act_closure(act),
-        Value::List(Box::new(vec![
-            Value::ActEnvToken,
-            Value::String("done".to_string())
-        ]))
+        Value::list_from_vec(vec![Value::ActEnvToken, Value::String("done".to_string())])
     );
 }
 

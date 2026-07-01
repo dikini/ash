@@ -132,8 +132,8 @@ Update this section as tasks complete:
 | [154](PLAN-154-TYPE-ANNOTATION-QUIRKS.md) | 5 | 5 | ✅ Complete; imported type annotations and opaque callable-signature types |
 | [155](PLAN-155-LET-DESTRUCTORS.md) | 10 | 10 | ✅ Complete; closeout done, 10/10 tasks verified |
 | [156](PLAN-156-PARSER-BLOCKER-RESOLUTION.md) | 5 | 5 | ✅ Complete; all blockers resolved, regression tests added |
-| [157](PLAN-157-LIST-MIGRATION-HARDENING.md) | 5 | 4 | ⏸️ Deferred; TASK-1570 (Remove Value::List) remains open |
-| [158](PLAN-158-LANGUAGE-SURFACE-FIXES.md) | 5 | 3 | ⏸️ Deferred; TASK-1580 (Module-level function visibility) remains open |
+| [157](PLAN-157-LIST-MIGRATION-HARDENING.md) | 5 | 5 | ✅ Complete; TASK-1570 completed by Phase 176 |
+| [158](PLAN-158-LANGUAGE-SURFACE-FIXES.md) | 5 | 5 | ✅ Complete; TASK-1580 completed by Phase 176 |
 | [159](PLAN-159-CPS-IR-INTERPRETER.md) | 14 | 14 | ✅ Complete; all tasks implemented, 82 tests pass, reference docs added, review remediation done (validation boundary, lambda closure capture, handler semantics) |
 | [160](PLAN-160-CPS-IR-RUNTIME-EXPANSION.md) | 10 | 10 | ✅ Complete; CPS IR runtime expansion implemented, focused tests pass, reference docs updated |
 | [161](PLAN-161-CORE-ASH-IR-FOUNDATION.md) | 13 | 13 | ✅ Complete; Core Ash foundation and public Core text round-trip review remediation verified |
@@ -151,6 +151,7 @@ Update this section as tasks complete:
 | [173](PLAN-173-MACRO-SUMMARIES-TOKEN-TREES-HYGIENIC-BINDERS-TYPED-MACROS.md) | 14 | 14 | ✅ Complete |
 | [174](PLAN-174-MACRO-AWARE-TOOLING-SUMMARY-IDENTITY-AND-INFERENCE-READINESS.md) | 10 | 10 | ✅ Complete |
 | [175](PLAN-175-NAME-RESOLUTION-BACKED-SEMANTIC-IDENTITY-FOR-MACROS-AND-TOOLING.md) | 10 | 10 | ✅ Complete |
+| [176](PLAN-176-DEFERRED-CLEANUP-AFTER-TARGET-REDESIGN.md) | 9 | 9 | ✅ Complete; deferred cleanup after target-language redesign closed with review remediation |
 
 ---
 
@@ -288,11 +289,11 @@ Hardens the Phase 150 QuickCheck MVP into the ordinary-Ash v1 model with pure `S
 || [TASK-1499](tasks/TASK-1499-gencontext-rng-and-strategy-value-core.md) | Implement helper-first `GenContext`, ordinary strategy value core, stable RNG/split helpers, and golden vectors | ✅ Complete |
 || [TASK-1500](tasks/TASK-1500-arbitrary-evidence-resolution-no-bridges.md) | Resolve minimal `Arbitrary<A>` through ordinary in-scope evidence and remove/quarantine hidden fallback bridges | ✅ Complete |
 || [TASK-1501](tasks/TASK-1501-quickcheck-with-override-parser-typecheck.md) | Make `by test property` / `quickcheck` first-class proof evidence: extend parser, AST, and runner schema with source-visible `Strategy<T>` overrides; `property` and `quickcheck` are synonymous | ✅ Complete |
-|| [TASK-1502](tasks/TASK-1502-quickcheck-combinators-recursion-and-weights.md) | Implement choice, weighted choice, map/project helpers, shrink wrappers, and bounded recursive combinators | ✅ Stdlib Surface Complete / Ordinary Ash |
+|| [TASK-1502](tasks/TASK-1502-quickcheck-combinators-recursion-and-weights.md) | Implement choice, weighted choice, map/project helpers, shrink wrappers, and recursive public API/config; bounded recursive execution re-scoped fail-closed by TASK-1800 | ✅ Complete / Phase 176 Reconciled |
 || [TASK-1503](tasks/TASK-1503-quickcheck-runner-generation-shrink-semantics.md) | Wire generation, per-parameter split paths, stop-first execution, failure-class shrink, and generator/shrinker errors | ✅ Complete |
 || [TASK-1504](tasks/TASK-1504-quickcheck-seed-replay-and-aggregate-evidence.md) | Implement random seed default, replay overrides, source-seed linting, run records, aggregate pass history, and sticky active findings | ✅ Complete |
 || [TASK-1512](tasks/TASK-1512-record-types-reference-documentation.md) | Add reference documentation for Ash record types at `reference/language/types/records.md`, clarifying terminology and usage | ✅ Complete |
-|| [TASK-1511](tasks/TASK-1511-deferred-combinators-ordinary-ash.md) | Implement deferred QuickCheck combinators (`one_of`, `recursive`, `append_shrink`, etc.) in ordinary Ash. Blocked on language features: let destructors, imported type unification, list primitives, closures | ✅ Complete; 4/6 combinators implemented, recursive deferred |
+|| [TASK-1511](tasks/TASK-1511-deferred-combinators-ordinary-ash.md) | Implement deferred QuickCheck combinators in ordinary Ash; Phase 176 landed recursive public names/config plus fail-closed execution guard, with real bounded generation deferred to parser/type-metadata substrate | ✅ Complete / Phase 176 Reconciled |
 || [TASK-1505](tasks/TASK-1505-quickcheck-v1-final-surface-fixtures-and-docs.md) | Add no-Cargo fixtures and user docs for ordinary strategies, overrides, recursion, shrinking, seeds, and evidence history | ✅ Complete |
 || [TASK-1510](tasks/TASK-1510-parser-fn-expressions-in-multi-field-struct-literals.md) | Fix parser support for `fn` expressions and closures in multi-field struct literals, unblocking ordinary Ash QuickCheck combinator patterns | ✅ Complete |
 || [TASK-1506](tasks/TASK-1506-quickcheck-v1-closeout-and-review.md) | Close out Phase 151 with broad verification, independent review, and status/changelog/reference reconciliation | ✅ Complete |
@@ -422,7 +423,7 @@ Resolve parser blockers that prevent Phase 153 (List Builtin to Stdlib) from pro
 
 ## Phase 157: List Migration Hardening and Cleanup
 
-**Status:** ⏸️ Deferred; TASK-1570 (Remove Value::List) remains open
+**Status:** ✅ Complete; TASK-1570 completed by Phase 176
 **Plan:** [PLAN-157: List Migration Hardening and Cleanup](PLAN-157-LIST-MIGRATION-HARDENING.md)
 **Spec:** [SPEC-089: List Builtin to Stdlib](../spec/SPEC-089-LIST-BUILTIN-TO-STDLIB.md)
 **Builds on:** [PLAN-153](PLAN-153-LIST-BUILTIN-TO-STDLIB.md) (List Builtin to Stdlib)
@@ -433,7 +434,7 @@ Harden the Phase 153 list migration by completing the removal of `Value::List` f
 
 || Task | Description | Status |
 ||------|-------------|--------|
-|| [TASK-1570](tasks/TASK-1570-remove-value-list-enum.md) | Remove `Value::List` variant from `ash_core::Value` enum entirely | ⏸️ Deferred; High risk (368 references), will be addressed in future phase |
+|| [TASK-1570](tasks/TASK-1570-remove-value-list-enum.md) | Remove `Value::List` variant from `ash_core::Value` enum entirely | ✅ Complete via TASK-1797 |
 || [TASK-1571](tasks/TASK-1571-fix-quickcheck-combinator-test.md) | Fix pre-existing `one_of` test failure in `phase151_quickcheck_stdlib` | ✅ Complete |
 || [TASK-1572](tasks/TASK-1572-list-algebra-property-tests.md) | Add property tests for list algebraic laws (Functor, Semigroup, Monoid) | ✅ Complete; 8 tests pass |
 || [TASK-1573](tasks/TASK-1573-list-performance-benchmarks.md) | Add performance benchmarks for list operations | ✅ Complete; Placeholder benchmark added |
@@ -441,7 +442,7 @@ Harden the Phase 153 list migration by completing the removal of `Value::List` f
 
 ## Phase 158: Language Surface Fixes
 
-**Status:** ⏸️ Deferred; TASK-1580 (Module-level function visibility) remains open
+**Status:** ✅ Complete; TASK-1580 completed by Phase 176
 **Plan:** [PLAN-158: Language Surface Fixes](PLAN-158-LANGUAGE-SURFACE-FIXES.md)
 **Spec:** [SPEC-094: Language Surface Fix Specification](../spec/SPEC-094-LANGUAGE-SURFACE-FIX.md)
 **Builds on:** [PLAN-157](PLAN-157-LIST-MIGRATION-HARDENING.md)
@@ -452,7 +453,7 @@ Fix three language surface issues that prevent idiomatic usage of pure algebraic
 
 || Task | Description | Status |
 ||------|-------------|--------|
-|| [TASK-1580](tasks/TASK-1580-closure-module-function-visibility.md) | Fix module-level function visibility inside closures | ⏸️ Deferred; Requires power tower lifting in parser (distinguish pure fn calls from Act) |
+|| [TASK-1580](tasks/TASK-1580-closure-module-function-visibility.md) | Fix module-level function visibility inside closures | ✅ Complete via TASK-1798 |
 || [TASK-1581](tasks/TASK-1581-function-vs-capability-resolution.md) | Distinguish function calls from capability calls in lowerer | ✅ Complete |
 || [TASK-1582](tasks/TASK-1582-closure-expression-parsing.md) | Enable `fn` expression parsing in all expression contexts | ✅ Complete |
 || [TASK-1583](tasks/TASK-1583-verification-and-regression-tests.md) | Add verification tests and ensure no regressions | ✅ Complete |
@@ -851,3 +852,30 @@ Introduces a conservative name-resolution-backed semantic identity substrate for
 | [TASK-1791](tasks/TASK-1791-identity-non-callability-validation.md) | Validate identity threading does not make macros runtime-callable | ✅ Complete |
 | [TASK-1792](tasks/TASK-1792-phase-175-docs-spec-reconciliation.md) | Reconcile specs, docs, indexes, and changelog for Phase 175 | ✅ Complete |
 | [TASK-1793](tasks/TASK-1793-phase-175-closeout.md) | Close out Phase 175 with broad gates and independent review | ✅ Complete |
+
+## Phase 176: Deferred Cleanup after Target-Language Redesign
+
+**Status:** ✅ Complete (9/9 tasks complete)
+**Plan:** [PLAN-176: Deferred Cleanup after Target-Language Redesign](PLAN-176-DEFERRED-CLEANUP-AFTER-TARGET-REDESIGN.md)
+**Depends on:** Phase 175 closeout; target-language redesign/spec-hardening sequence through Phases 167-175; prior deferred cleanup rows in Phases 151, 152, 157, and 158.
+
+Retires or re-scopes deferred cleanup candidates that were intentionally left behind before the target-language redesign: `Value::List` removal, module-level pure function visibility inside closures, remaining ordinary-Ash QuickCheck recursive combinators, and stale Phase 152 status drift. The phase is audit-first: every old deferral must receive a current disposition before implementation claims completion.
+
+| Task | Description | Status |
+|------|-------------|--------|
+| [TASK-1794](tasks/TASK-1794-phase-176-plan-packet.md) | Create the Phase 176 deferred-cleanup planning packet | ✅ Complete |
+| [TASK-1795](tasks/TASK-1795-deferred-cleanup-readiness-audit.md) | Audit deferred cleanup candidates and prerequisite substrate | ✅ Complete |
+| [TASK-1796](tasks/TASK-1796-value-list-reference-classification.md) | Classify every `Value::List` reference before removal | ✅ Complete |
+| [TASK-1797](tasks/TASK-1797-remove-value-list-runtime-variant.md) | Remove `Value::List` and route all list values through `Cons`/`Nil` | ✅ Complete |
+| [TASK-1798](tasks/TASK-1798-module-function-visibility-in-closures.md) | Fix module-level pure function visibility inside closures | ✅ Complete |
+| [TASK-1799](tasks/TASK-1799-quickcheck-recursive-combinator-design-audit.md) | Re-audit recursive QuickCheck combinator design against live language features | ✅ Complete |
+| [TASK-1800](tasks/TASK-1800-quickcheck-recursive-combinators.md) | Implement or explicitly re-scope recursive QuickCheck combinators | ✅ Complete / Re-scoped |
+| [TASK-1801](tasks/TASK-1801-stale-phase-status-reconciliation.md) | Reconcile stale Phase 151/152/157/158 status surfaces | ✅ Complete |
+| [TASK-1802](tasks/TASK-1802-phase-176-closeout.md) | Close out Phase 176 with broad gates and independent review | ✅ Complete |
+
+- TASK-1800 landed SPEC-087 public QuickCheck recursive names/config and explicitly re-scoped execution through a fail-closed private helper pending parser/type-metadata support for bounded ordinary-Ash recursion.
+
+- TASK-1801 reconciled historical status surfaces for Phase 151/TASK-1511, Phase 152, Phase 157/TASK-1570, and Phase 158/TASK-1580 against Phase 176 outcomes.
+
+
+- TASK-1802 closed Phase 176 after broad gates, `Value::List` absence verification, and independent review remediation for imported private-helper isolation, QuickCheck fail-closed honesty, and final status-count drift.

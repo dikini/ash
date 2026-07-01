@@ -516,12 +516,12 @@ async fn step_inner(
                 } => {
                     let ctx = Context::with_bindings(env.clone());
                     let coll_val = eval_expr(&collection, &ctx).map_err(ExecError::Eval)?;
-                    match coll_val {
-                        Value::List(items) => {
+                    match coll_val.list_to_vec() {
+                        Some(items) => {
                             if items.is_empty() {
                                 finish_with_value(config, Value::Null)
                             } else {
-                                let mut iter = *items;
+                                let mut iter = items;
                                 let first = iter.remove(0);
                                 let bindings = match_pattern(&pattern, &first).map_err(|_| {
                                     ExecError::PatternMatchFailed {
@@ -551,7 +551,7 @@ async fn step_inner(
                                 Ok(StepOutcome::Progress)
                             }
                         }
-                        _ => Err(ExecError::Eval(EvalError::TypeMismatch {
+                        None => Err(ExecError::Eval(EvalError::TypeMismatch {
                             expected: "list".to_string(),
                             actual: format!("{coll_val:?}"),
                         })),
@@ -1154,11 +1154,11 @@ mod tests {
                 name: "x".to_string(),
                 span: Span::default(),
             },
-            collection: Expr::Literal(Value::List(Box::new(vec![
+            collection: Expr::Literal(Value::list_from_vec(vec![
                 Value::Int(1),
                 Value::Int(2),
                 Value::Int(3),
-            ]))),
+            ])),
             body: Box::new(Workflow::Let {
                 pattern: Pattern::Variable {
                     name: "sum".to_string(),
@@ -1203,7 +1203,7 @@ mod tests {
                 name: "x".to_string(),
                 span: Span::default(),
             },
-            collection: Expr::Literal(Value::List(Box::new(vec![Value::Int(10), Value::Int(20)]))),
+            collection: Expr::Literal(Value::list_from_vec(vec![Value::Int(10), Value::Int(20)])),
             body: Box::new(Workflow::Ret {
                 expr: Expr::Variable {
                     name: "x".to_string(),
@@ -1616,7 +1616,7 @@ mod tests {
                 name: "x".to_string(),
                 span: Span::default(),
             },
-            collection: Expr::Literal(Value::List(Box::new(vec![Value::Int(10), Value::Int(20)]))),
+            collection: Expr::Literal(Value::list_from_vec(vec![Value::Int(10), Value::Int(20)])),
             body: Box::new(Workflow::Ret {
                 expr: Expr::Variable {
                     name: "x".to_string(),

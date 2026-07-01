@@ -7,8 +7,9 @@ pub type Weighted<T> = Weighted {
 };
 
 pub type RecursiveConfig = RecursiveConfig {
-    max_depth: Int,
-    breadth: Int,
+    base_weight: Int,
+    expand_weight: Int,
+    size_step: Int,
 };
 
 -- | Map a function over a strategy's generated values.
@@ -130,13 +131,29 @@ fn index_strategies<T>(strategies: List<Strategy<T>>, index: Int) -> Strategy<T>
     }
 }
 
--- | Default recursive config: max_depth=5, breadth=3.
+-- | Default recursive config: base_weight=1, expand_weight=3, size_step=1.
 pub fn default_recursive_config() -> RecursiveConfig {
-    RecursiveConfig { max_depth: 5, breadth: 3 }
+    RecursiveConfig { base_weight: 1, expand_weight: 3, size_step: 1 }
 }
 
--- | Create a recursive config with explicit parameters.
-pub fn recursive_config(max_depth: Int, breadth: Int) -> RecursiveConfig {
-    RecursiveConfig { max_depth: max_depth, breadth: breadth }
+-- | Create a recursive config with explicit weights and size descent step.
+pub fn recursive_config(base_weight: Int, expand_weight: Int, size_step: Int) -> RecursiveConfig {
+    RecursiveConfig { base_weight: base_weight, expand_weight: expand_weight, size_step: size_step }
+}
+
+-- | Reserve the SPEC-087 recursive strategy API using the default config.
+-- | Phase 176 keeps execution fail-closed until bounded generation can be
+-- | expressed without parser/type-metadata workarounds.
+pub fn recursive<T>(base: Strategy<T>, step: (Strategy<T>) -> Strategy<T>) -> Strategy<T> {
+    recursive_with(base, step, default_recursive_config())
+}
+
+-- | Reserve the SPEC-087 recursive strategy API using explicit generation weights.
+pub fn recursive_with<T>(base: Strategy<T>, step: (Strategy<T>) -> Strategy<T>, config: RecursiveConfig) -> Strategy<T> {
+    recursive_deferred(config)
+}
+
+fn recursive_deferred<T>(config: RecursiveConfig) -> Strategy<T> {
+    recursive_with_bounded_recursive_strategies_remain_deferred_pending_fn_body_match_type_metadata_parser_support(config)
 }
 

@@ -40,7 +40,7 @@ fn invoke_expr_for(provider: &str, action: &str) -> Expr {
         arguments: vec![
             Expr::Literal(Value::String(provider.to_string())),
             Expr::Literal(Value::String(action.to_string())),
-            Expr::Literal(Value::List(Box::new(vec![Value::Int(1), Value::Int(2)]))),
+            Expr::Literal(Value::list_from_vec(vec![Value::Int(1), Value::Int(2)])),
         ],
     }
 }
@@ -113,10 +113,7 @@ async fn invoke_dispatch_returns_closure_with_captured_state() {
 
     assert_eq!(
         applied,
-        Value::List(Box::new(vec![
-            Value::ActEnvToken,
-            Value::String("done".to_string())
-        ]))
+        Value::list_from_vec(vec![Value::ActEnvToken, Value::String("done".to_string())])
     );
 }
 
@@ -172,10 +169,10 @@ async fn admitted_host_provider_sync_invoke_uses_projected_runtime_surface_not_m
 
     assert_eq!(
         applied,
-        Value::List(Box::new(vec![
+        Value::list_from_vec(vec![
             Value::ActEnvToken,
             Value::String("projected".to_string())
-        ]))
+        ])
     );
 }
 
@@ -275,10 +272,10 @@ async fn alias_invoke_uses_projected_binding_alias_not_manual_act_env_provider()
 
     assert_eq!(
         applied,
-        Value::List(Box::new(vec![
+        Value::list_from_vec(vec![
             Value::ActEnvToken,
             Value::String("projected".to_string())
-        ]))
+        ])
     );
 }
 

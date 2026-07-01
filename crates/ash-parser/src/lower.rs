@@ -654,7 +654,7 @@ fn lower_constraint_value(
                 .iter()
                 .map(lower_constraint_value)
                 .collect::<Result<Vec<_>, _>>()?;
-            Ok(CoreExpr::Literal(ash_core::Value::List(Box::new(
+            Ok(CoreExpr::Literal(ash_core::Value::list_from_vec(
                 elements
                     .into_iter()
                     .map(|e| match e {
@@ -662,7 +662,7 @@ fn lower_constraint_value(
                         _ => ash_core::Value::Null,
                     })
                     .collect(),
-            ))))
+            )))
         }
         crate::surface::ConstraintValue::Object(obj) => {
             // Objects are lowered as record literals (HashMap)
@@ -2345,7 +2345,7 @@ fn lower_literal(lit: &Literal) -> Result<ash_core::Value, LoweringError> {
                 .iter()
                 .map(lower_literal)
                 .collect::<Result<Vec<_>, _>>()?;
-            Ok(Value::List(Box::new(lowered)))
+            Ok(Value::list_from_vec(lowered))
         }
     }
 }

@@ -1,6 +1,6 @@
 # TASK-1570: Remove Value::List from ash_core::Value Enum
 
-**Status:** 📝 Planned
+**Status:** ✅ Complete via Phase 176 TASK-1797
 **Phase:** [PLAN-157](../PLAN-157-LIST-MIGRATION-HARDENING.md)
 **Owner:** Phase 157
 
@@ -39,3 +39,8 @@ This is a high-risk change that touches many files. The approach should be:
 2. Update each file systematically
 3. Run tests after each major component
 4. Commit incrementally
+
+
+## Phase 176 completion note
+
+TASK-1797 completed this deferred item: `Value::List` was removed from `ash_core::Value`, constructor/pattern call sites were migrated to canonical list helpers over `Cons`/`Nil`, serialized list compatibility was preserved, and repository verification found no remaining `Value::List` references in Rust source under `crates/`.

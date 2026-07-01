@@ -104,7 +104,7 @@ async fn e2e_tail_returns_remaining_elements() {
     let caller = write_caller(tmp.path(), "use list::{tail}", "ret tail([1, 2, 3])");
     assert_eq!(
         engine_e2e(&caller).await,
-        Value::List(Box::new(vec![Value::Int(2), Value::Int(3)]))
+        Value::list_from_vec(vec![Value::Int(2), Value::Int(3)])
     );
 }
 
@@ -115,7 +115,7 @@ async fn e2e_append_adds_element() {
     let caller = write_caller(tmp.path(), "use list::{append}", "ret append([1, 2], 3)");
     assert_eq!(
         engine_e2e(&caller).await,
-        Value::List(Box::new(vec![Value::Int(1), Value::Int(2), Value::Int(3)]))
+        Value::list_from_vec(vec![Value::Int(1), Value::Int(2), Value::Int(3)])
     );
 }
 
@@ -130,12 +130,12 @@ async fn e2e_concat_merges_lists() {
     );
     assert_eq!(
         engine_e2e(&caller).await,
-        Value::List(Box::new(vec![
+        Value::list_from_vec(vec![
             Value::Int(1),
             Value::Int(2),
             Value::Int(3),
             Value::Int(4),
-        ]))
+        ])
     );
 }
 
@@ -182,7 +182,7 @@ async fn e2e_concat_two_tails() {
     );
     assert_eq!(
         engine_e2e(&caller).await,
-        Value::List(Box::new(vec![Value::Int(2), Value::Int(4), Value::Int(5)]))
+        Value::list_from_vec(vec![Value::Int(2), Value::Int(4), Value::Int(5)])
     );
 }
 
@@ -207,7 +207,7 @@ async fn e2e_qualified_list_len_via_expr() {
 fn dispatch_map_doubles_elements() {
     // map([1, 2, 3], |x| x * 2) => [2, 4, 6]
     let ctx = Context::new();
-    let list = Value::List(Box::new(vec![Value::Int(1), Value::Int(2), Value::Int(3)]));
+    let list = Value::list_from_vec(vec![Value::Int(1), Value::Int(2), Value::Int(3)]);
     let double_fn = make_closure(
         "x",
         Expr::Binary {
@@ -224,7 +224,7 @@ fn dispatch_map_doubles_elements() {
         .expect("map should succeed");
     assert_eq!(
         result,
-        Value::List(Box::new(vec![Value::Int(2), Value::Int(4), Value::Int(6)]))
+        Value::list_from_vec(vec![Value::Int(2), Value::Int(4), Value::Int(6)])
     );
 }
 
@@ -232,12 +232,12 @@ fn dispatch_map_doubles_elements() {
 fn dispatch_filter_keeps_matching() {
     // filter([1, 2, 3, 4], |x| x > 2) => [3, 4]
     let ctx = Context::new();
-    let list = Value::List(Box::new(vec![
+    let list = Value::list_from_vec(vec![
         Value::Int(1),
         Value::Int(2),
         Value::Int(3),
         Value::Int(4),
-    ]));
+    ]);
     let gt2_fn = make_closure(
         "x",
         Expr::Binary {
@@ -254,7 +254,7 @@ fn dispatch_filter_keeps_matching() {
         .expect("filter should succeed");
     assert_eq!(
         result,
-        Value::List(Box::new(vec![Value::Int(3), Value::Int(4)]))
+        Value::list_from_vec(vec![Value::Int(3), Value::Int(4)])
     );
 }
 
@@ -262,12 +262,12 @@ fn dispatch_filter_keeps_matching() {
 fn dispatch_map_then_filter_composition() {
     // map([1,2,3,4], double) then filter(result, gt5)
     let ctx = Context::new();
-    let input = Value::List(Box::new(vec![
+    let input = Value::list_from_vec(vec![
         Value::Int(1),
         Value::Int(2),
         Value::Int(3),
         Value::Int(4),
-    ]));
+    ]);
     let double_fn = make_closure(
         "x",
         Expr::Binary {
@@ -284,12 +284,12 @@ fn dispatch_map_then_filter_composition() {
         .expect("map should succeed");
     assert_eq!(
         doubled,
-        Value::List(Box::new(vec![
+        Value::list_from_vec(vec![
             Value::Int(2),
             Value::Int(4),
             Value::Int(6),
             Value::Int(8),
-        ]))
+        ])
     );
 
     // Now filter the doubled list
@@ -309,7 +309,7 @@ fn dispatch_map_then_filter_composition() {
         .expect("filter should succeed");
     assert_eq!(
         result,
-        Value::List(Box::new(vec![Value::Int(6), Value::Int(8)]))
+        Value::list_from_vec(vec![Value::Int(6), Value::Int(8)])
     );
 }
 
@@ -317,7 +317,7 @@ fn dispatch_map_then_filter_composition() {
 fn dispatch_qualified_map_via_eval_expr() {
     // eval_expr with qualified list::map call
     let ctx = Context::new();
-    let list = Value::List(Box::new(vec![Value::Int(10), Value::Int(20)]));
+    let list = Value::list_from_vec(vec![Value::Int(10), Value::Int(20)]);
     let negate_fn = make_closure(
         "x",
         Expr::Unary {
@@ -336,7 +336,7 @@ fn dispatch_qualified_map_via_eval_expr() {
     let result = eval_expr(&expr, &ctx).expect("list::map should succeed");
     assert_eq!(
         result,
-        Value::List(Box::new(vec![Value::Int(-10), Value::Int(-20)]))
+        Value::list_from_vec(vec![Value::Int(-10), Value::Int(-20)])
     );
 }
 
@@ -344,12 +344,12 @@ fn dispatch_qualified_map_via_eval_expr() {
 fn dispatch_filter_with_equality_predicate() {
     // filter([1, 2, 1, 3], |x| x == 1) => [1, 1]
     let ctx = Context::new();
-    let list = Value::List(Box::new(vec![
+    let list = Value::list_from_vec(vec![
         Value::Int(1),
         Value::Int(2),
         Value::Int(1),
         Value::Int(3),
-    ]));
+    ]);
     let eq1_fn = make_closure(
         "x",
         Expr::Binary {
@@ -366,14 +366,14 @@ fn dispatch_filter_with_equality_predicate() {
         .expect("filter should succeed");
     assert_eq!(
         result,
-        Value::List(Box::new(vec![Value::Int(1), Value::Int(1)]))
+        Value::list_from_vec(vec![Value::Int(1), Value::Int(1)])
     );
 }
 
 #[test]
 fn dispatch_map_on_empty_list() {
     let ctx = Context::new();
-    let list = Value::List(Box::default());
+    let list = Value::list_nil();
     let any_fn = make_closure(
         "x",
         Expr::Variable {
@@ -384,16 +384,16 @@ fn dispatch_map_on_empty_list() {
     let result = dispatch_builtin("map", &[list, any_fn], &ctx)
         .expect("dispatch should find map")
         .expect("map should succeed");
-    assert_eq!(result, Value::List(Box::default()));
+    assert_eq!(result, Value::list_nil());
 }
 
 #[test]
 fn dispatch_filter_on_empty_list() {
     let ctx = Context::new();
-    let list = Value::List(Box::default());
+    let list = Value::list_nil();
     let any_fn = make_closure("x", Expr::Literal(Value::Bool(true)));
     let result = dispatch_builtin("filter", &[list, any_fn], &ctx)
         .expect("dispatch should find filter")
         .expect("filter should succeed");
-    assert_eq!(result, Value::List(Box::default()));
+    assert_eq!(result, Value::list_nil());
 }

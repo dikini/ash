@@ -18,7 +18,7 @@ fn invoke_expr() -> Expr {
         arguments: vec![
             Expr::Literal(Value::String("sensor".to_string())),
             Expr::Literal(Value::String("read".to_string())),
-            Expr::Literal(Value::List(Box::new(vec![Value::Int(1), Value::Int(2)]))),
+            Expr::Literal(Value::list_from_vec(vec![Value::Int(1), Value::Int(2)])),
         ],
     }
 }
@@ -93,7 +93,7 @@ fn lowered_single_return_act_block_executes_via_closures() {
     let forced = force_act_value(act_value);
     assert_eq!(
         forced,
-        Value::List(Box::new(vec![Value::ActEnvToken, Value::Int(7)]))
+        Value::list_from_vec(vec![Value::ActEnvToken, Value::Int(7)])
     );
 }
 
@@ -168,10 +168,7 @@ async fn effectful_closure_composition_round_trips_through_force() {
 
     assert_eq!(
         composed,
-        Value::List(Box::new(vec![
-            Value::ActEnvToken,
-            Value::String("done".to_string())
-        ]))
+        Value::list_from_vec(vec![Value::ActEnvToken, Value::String("done".to_string())])
     );
 }
 
@@ -186,6 +183,6 @@ fn lowered_nested_act_block_executes_left_to_right() {
     let forced = force_act_value(act_value);
     assert_eq!(
         forced,
-        Value::List(Box::new(vec![Value::ActEnvToken, Value::Int(11)]))
+        Value::list_from_vec(vec![Value::ActEnvToken, Value::Int(11)])
     );
 }

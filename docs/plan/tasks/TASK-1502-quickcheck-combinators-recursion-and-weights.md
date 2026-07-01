@@ -1,6 +1,6 @@
 # TASK-1502: QuickCheck combinators, recursion, and weights
 
-## Status: 🚧 Partial / Runner-Side MVP
+## Status: ✅ Complete / Phase 176 Reconciled
 
 ## Description
 

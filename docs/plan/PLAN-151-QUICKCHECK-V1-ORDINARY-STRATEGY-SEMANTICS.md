@@ -1,6 +1,6 @@
 # PLAN-151: QuickCheck v1 Ordinary Strategy Semantics
 
-**Status:** 📝 Planned
+**Status:** ✅ Complete / Phase 176 Reconciled
 **Spec:** [SPEC-087: QuickCheck v1 Ordinary Strategy Semantics](../spec/SPEC-087-QUICKCHECK-V1-ORDINARY-STRATEGY-SEMANTICS.md)
 **Design note:** [DESIGN-NOTE: QuickCheck v1 Ordinary Strategy Semantics](../design/DESIGN-NOTE-QUICKCHECK-V1-ORDINARY-STRATEGY-SEMANTICS.md)
 **Builds on:** [PLAN-150](PLAN-150-QUICKCHECK-ARBITRARY-STRATEGY.md)
@@ -37,18 +37,18 @@ Replace the Phase 150 metadata/runner-bridge QuickCheck MVP with the target ordi
 
 | Task | Description | Status |
 |---|---|---|
-| [TASK-1497](tasks/TASK-1497-quickcheck-v1-live-syntax-and-seam-audit.md) | Audit live Ash syntax, callable fields, interface evidence, parser `with` seams, runner bridges, and cache identity seams before implementation. | 📝 Planned |
-| [TASK-1498](tasks/TASK-1498-quickcheck-stdlib-module-split-and-prelude.md) | Split `test::quickcheck` into canonical submodules, define prelude contents, and expose alpha root aliases. | 📝 Planned |
-| [TASK-1499](tasks/TASK-1499-gencontext-rng-and-strategy-value-core.md) | Implement helper-first `GenContext`, ordinary `Strategy<A>` value semantics, stable RNG/split helpers, and golden vectors. | 📝 Planned |
-| [TASK-1500](tasks/TASK-1500-arbitrary-evidence-resolution-no-bridges.md) | Implement minimal `Arbitrary<A>` evidence resolution through ordinary in-scope imports and remove/quarantine hidden fallback registries. | 📝 Planned |
-| [TASK-1501](tasks/TASK-1501-quickcheck-with-override-parser-typecheck.md) | Implement `by test quickcheck with { ... }` parser/typechecker support for pure `Strategy<T>` expressions. | 📝 Planned |
-| [TASK-1502](tasks/TASK-1502-quickcheck-combinators-recursion-and-weights.md) | Implement function-based combinators: choice, weighted choice, map/project helpers, shrink wrappers, and bounded recursion. | 📝 Planned |
-| [TASK-1503](tasks/TASK-1503-quickcheck-runner-generation-shrink-semantics.md) | Wire generation, per-parameter split paths, stop-first execution, failure-class-preserving shrink, and generator/shrinker error handling. | 📝 Planned |
+| [TASK-1497](tasks/TASK-1497-quickcheck-v1-live-syntax-and-seam-audit.md) | Audit live Ash syntax, callable fields, interface evidence, parser `with` seams, runner bridges, and cache identity seams before implementation. | ✅ Complete |
+| [TASK-1498](tasks/TASK-1498-quickcheck-stdlib-module-split-and-prelude.md) | Split `test::quickcheck` into canonical submodules, define prelude contents, and expose alpha root aliases. | ✅ Complete |
+| [TASK-1499](tasks/TASK-1499-gencontext-rng-and-strategy-value-core.md) | Implement helper-first `GenContext`, ordinary `Strategy<A>` value semantics, stable RNG/split helpers, and golden vectors. | ✅ Complete |
+| [TASK-1500](tasks/TASK-1500-arbitrary-evidence-resolution-no-bridges.md) | Implement minimal `Arbitrary<A>` evidence resolution through ordinary in-scope imports and remove/quarantine hidden fallback registries. | ✅ Complete |
+| [TASK-1501](tasks/TASK-1501-quickcheck-with-override-parser-typecheck.md) | Implement `by test quickcheck with { ... }` parser/typechecker support for pure `Strategy<T>` expressions. | ✅ Complete |
+| [TASK-1502](tasks/TASK-1502-quickcheck-combinators-recursion-and-weights.md) | Implement function-based combinators: choice, weighted choice, map/project helpers, shrink wrappers, and bounded recursion. | ✅ Complete / Recursive execution re-scoped by TASK-1800 |
+| [TASK-1503](tasks/TASK-1503-quickcheck-runner-generation-shrink-semantics.md) | Wire generation, per-parameter split paths, stop-first execution, failure-class-preserving shrink, and generator/shrinker error handling. | ✅ Complete |
 | [TASK-1504](tasks/TASK-1504-quickcheck-seed-replay-and-aggregate-evidence.md) | Implement random seed default, external replay override, source-seed linting, run records, aggregate pass history, sticky errors, and active findings. | ✅ Complete |
 | [TASK-1505](tasks/TASK-1505-quickcheck-v1-final-surface-fixtures-and-docs.md) | Add no-Cargo final-surface fixtures and user docs for ordinary strategies, overrides, recursion, shrinking, seeds, and evidence history. | ✅ Complete |
 | [TASK-1510](tasks/TASK-1510-parser-fn-expressions-in-multi-field-struct-literals.md) | Fix parser support for `fn` expressions and closures in multi-field struct literals, unblocking ordinary Ash QuickCheck combinator patterns. | ✅ Complete |
-| [TASK-1511](tasks/TASK-1511-deferred-combinators-ordinary-ash.md) | Implement deferred QuickCheck combinators (`one_of`, `recursive`, `append_shrink`, etc.) in ordinary Ash. Blocked on language features: let destructors, imported type unification, list primitives, closures. | 📝 Planned / Blocked |
-| [TASK-1506](tasks/TASK-1506-quickcheck-v1-closeout-and-review.md) | Close out Phase 151 with broad verification, independent review, and status/changelog/reference reconciliation. | 📝 Planned |
+| [TASK-1511](tasks/TASK-1511-deferred-combinators-ordinary-ash.md) | Implement deferred QuickCheck combinators (`one_of`, `recursive`, `append_shrink`, etc.) in ordinary Ash. Phase 176 landed public recursive names/config and a fail-closed execution guard; real bounded generation remains parser/type-metadata follow-up. | ✅ Complete / Phase 176 Reconciled |
+| [TASK-1506](tasks/TASK-1506-quickcheck-v1-closeout-and-review.md) | Close out Phase 151 with broad verification, independent review, and status/changelog/reference reconciliation. | ✅ Complete |
 ## Implementation Order
 
 1. TASK-1497 is mandatory and blocks code changes.
@@ -73,3 +73,8 @@ Every implementation task must include focused Rust tests, no-Cargo `$ASH_UNDER_
 - Final-surface examples run through `$ASH_UNDER_TEST test ...` without `cargo run` as user-facing evidence.
 - Evidence-history output distinguishes latest run outcome, aggregate pass history, counterexamples, sticky errors, and nondeterminism.
 - CHANGELOG.md records the implemented phase.
+
+
+## Phase 176 reconciliation note
+
+Phase 176 reconciled stale status text for TASK-1511 and the recursive combinator slice. The SPEC-087 public recursive names and `RecursiveConfig` shape are present, importable, and guarded by a fail-closed runtime boundary. Bounded recursive generation itself remains deferred to parser/type-metadata substrate work; this is not a hidden Rust fallback and not a self-referential value implementation.

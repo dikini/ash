@@ -317,7 +317,10 @@ fn value_to_type(v: &ash_core::Value) -> Type {
         ash_core::Value::Time(_) => Type::Time,
         ash_core::Value::Ref(_) => Type::Ref,
         ash_core::Value::Float(_) => Type::Float,
-        ash_core::Value::List(items) => {
+        value if value.is_list() => {
+            let items = value
+                .list_to_vec()
+                .expect("is_list only returns true for convertible lists");
             let item_ty = items.first().map_or_else(
                 || Type::Var(ash_typeck::types::TypeVar::fresh()),
                 value_to_type,

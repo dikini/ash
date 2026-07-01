@@ -21,7 +21,7 @@ fn dispatch_builtin_process_run_echo() {
     let ctx = Context::new();
     let args = vec![
         Value::String("echo".into()),
-        Value::List(Box::new(vec![Value::String("hello".into())])),
+        Value::list_from_vec(vec![Value::String("hello".into())]),
     ];
     let result = dispatch_builtin("process::run", &args, &ctx)
         .expect("dispatch should find process::run")
@@ -34,10 +34,10 @@ fn dispatch_builtin_process_run_with_multiple_args() {
     let ctx = Context::new();
     let args = vec![
         Value::String("echo".into()),
-        Value::List(Box::new(vec![
+        Value::list_from_vec(vec![
             Value::String("hello".into()),
             Value::String("world".into()),
-        ])),
+        ]),
     ];
     let result = dispatch_builtin("process::run", &args, &ctx)
         .expect("dispatch should find process::run")
@@ -48,7 +48,7 @@ fn dispatch_builtin_process_run_with_multiple_args() {
 #[test]
 fn dispatch_builtin_process_run_empty_args() {
     let ctx = Context::new();
-    let args = vec![Value::String("echo".into()), Value::List(Box::default())];
+    let args = vec![Value::String("echo".into()), Value::list_nil()];
     let result = dispatch_builtin("process::run", &args, &ctx)
         .expect("dispatch should find process::run")
         .expect("process::run should succeed");
@@ -72,7 +72,7 @@ fn dispatch_builtin_process_run_nonexistent_command() {
     let ctx = Context::new();
     let args = vec![
         Value::String("nonexistent_command_xyz_12345".into()),
-        Value::List(Box::default()),
+        Value::list_nil(),
     ];
     let result = dispatch_builtin("process::run", &args, &ctx)
         .expect("dispatch should find process::run")
@@ -92,7 +92,7 @@ fn eval_function_call_process_run_via_expr() {
         module: Some("process".to_string()),
         arguments: vec![
             Expr::Literal(Value::String("echo".into())),
-            Expr::Literal(Value::List(Box::new(vec![Value::String("hello".into())]))),
+            Expr::Literal(Value::list_from_vec(vec![Value::String("hello".into())])),
         ],
     };
     let result = eval_expr(&expr, &ctx).expect("process::run should succeed");

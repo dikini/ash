@@ -1562,7 +1562,7 @@ mod tests {
         let mailbox = create_test_mailbox(vec![MailboxEntry::new(
             "test",
             "channel",
-            Value::List(Box::new(vec![Value::Int(1), Value::Int(2)])),
+            Value::list_from_vec(vec![Value::Int(1), Value::Int(2)]),
         )]);
         let stream_ctx = StreamContext::new();
         let cap_ctx = CapabilityContext::new();

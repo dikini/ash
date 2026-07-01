@@ -199,13 +199,10 @@ pub fn value_to_chat_message(
             let tool_calls = get_field(value, "tool_calls")
                 .and_then(|v| parse_option_field(v).ok()?)
                 .and_then(|opt_v| {
-                    if let Value::List(calls) = opt_v {
-                        let parsed: Result<Vec<_>, _> =
-                            calls.iter().map(parse_tool_call_from_value).collect();
-                        parsed.ok()
-                    } else {
-                        None
-                    }
+                    let calls = opt_v.list_to_vec()?;
+                    let parsed: Result<Vec<_>, _> =
+                        calls.iter().map(parse_tool_call_from_value).collect();
+                    parsed.ok()
                 });
 
             let msg = ChatCompletionRequestAssistantMessage {
@@ -419,7 +416,10 @@ fn validate_params(params: &HashMap<String, Value>) -> Result<(), CapabilityErro
                 // Validate stop sequences
                 match value {
                     Value::String(_) => {} // Single string is valid
-                    Value::List(items) => {
+                    value if value.is_list() => {
+                        let items = value
+                            .list_to_vec()
+                            .expect("is_list only returns true for convertible lists");
                         if items.len() > 4 {
                             return Err(CapabilityError::InvalidArgument(format!(
                                 "stop can have at most 4 sequences, got {}",
@@ -511,7 +511,7 @@ pub fn build_chat_request(
                     "stop" => {
                         if let Some(s) = value.as_string() {
                             request.stop = Some(async_openai::types::Stop::String(s.to_string()));
-                        } else if let Value::List(stops) = value {
+                        } else if let Some(stops) = value.list_to_vec() {
                             let stop_strings: Vec<String> = stops
                                 .iter()
                                 .filter_map(|v| v.as_string().map(std::string::ToString::to_string))
@@ -602,7 +602,7 @@ pub fn chat_response_to_value(
                 Value::Record(Box::new(fields))
             })
             .collect();
-        Value::List(Box::new(tc_values))
+        Value::list_from_vec(tc_values)
     }));
 
     // Extract finish_reason
@@ -651,19 +651,11 @@ fn usage_to_value(usage: Option<&CompletionUsage>) -> Value {
 
 /// Chat action extraction result: (provider, model, messages, params)
 type ChatArgsResult<'a> =
-    Result<(&'a str, &'a str, &'a [Value], Option<&'a Value>), CapabilityError>;
+    Result<(&'a str, &'a str, Vec<Value>, Option<&'a Value>), CapabilityError>;
 
 /// Chat-with-tools extraction result: (provider, model, messages, tools, params)
-type ChatWithToolsArgsResult<'a> = Result<
-    (
-        &'a str,
-        &'a str,
-        &'a [Value],
-        &'a [Value],
-        Option<&'a Value>,
-    ),
-    CapabilityError,
->;
+type ChatWithToolsArgsResult<'a> =
+    Result<(&'a str, &'a str, Vec<Value>, Vec<Value>, Option<&'a Value>), CapabilityError>;
 
 /// Extract chat action arguments
 ///
@@ -686,14 +678,9 @@ pub fn extract_chat_args(args: &[Value]) -> ChatArgsResult<'_> {
         .as_string()
         .ok_or_else(|| CapabilityError::InvalidArgument("model must be a string".to_string()))?;
 
-    let messages = match &args[2] {
-        Value::List(m) => m.as_slice(),
-        _ => {
-            return Err(CapabilityError::InvalidArgument(
-                "messages must be a list".to_string(),
-            ));
-        }
-    };
+    let messages = args[2]
+        .list_to_vec()
+        .ok_or_else(|| CapabilityError::InvalidArgument("messages must be a list".to_string()))?;
 
     let params = args.get(3);
 
@@ -722,23 +709,13 @@ pub fn extract_chat_with_tools_args(args: &[Value]) -> ChatWithToolsArgsResult<'
         .as_string()
         .ok_or_else(|| CapabilityError::InvalidArgument("model must be a string".to_string()))?;
 
-    let messages = match &args[2] {
-        Value::List(m) => m.as_slice(),
-        _ => {
-            return Err(CapabilityError::InvalidArgument(
-                "messages must be a list".to_string(),
-            ));
-        }
-    };
+    let messages = args[2]
+        .list_to_vec()
+        .ok_or_else(|| CapabilityError::InvalidArgument("messages must be a list".to_string()))?;
 
-    let tools = match &args[3] {
-        Value::List(t) => t.as_slice(),
-        _ => {
-            return Err(CapabilityError::InvalidArgument(
-                "tools must be a list".to_string(),
-            ));
-        }
-    };
+    let tools = args[3]
+        .list_to_vec()
+        .ok_or_else(|| CapabilityError::InvalidArgument("tools must be a list".to_string()))?;
 
     let params = args.get(4);
 
@@ -1108,7 +1085,7 @@ mod tests {
     fn test_validate_params_stop_too_many() {
         let stops: Vec<Value> = (0..5).map(|i| Value::String(format!("stop{i}"))).collect();
         let mut params = HashMap::new();
-        params.insert("stop".to_string(), Value::List(Box::new(stops)));
+        params.insert("stop".to_string(), Value::list_from_vec(stops));
         let result = validate_params(&params);
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("at most 4"));
@@ -1121,7 +1098,7 @@ mod tests {
             Value::String("stop2".to_string()),
         ];
         let mut params = HashMap::new();
-        params.insert("stop".to_string(), Value::List(Box::new(stops)));
+        params.insert("stop".to_string(), Value::list_from_vec(stops));
         assert!(validate_params(&params).is_ok());
     }
 
@@ -1132,7 +1109,7 @@ mod tests {
         let args = vec![
             Value::String("openai".to_string()),
             Value::String("gpt-4o".to_string()),
-            Value::List(Box::new(vec![create_test_message("User", "Hi")])),
+            Value::list_from_vec(vec![create_test_message("User", "Hi")]),
         ];
         let result = extract_chat_args(&args);
         assert!(result.is_ok());
@@ -1149,7 +1126,7 @@ mod tests {
         let args = vec![
             Value::String("openai".to_string()),
             Value::String("gpt-4o".to_string()),
-            Value::List(Box::new(vec![create_test_message("User", "Hi")])),
+            Value::list_from_vec(vec![create_test_message("User", "Hi")]),
             params,
         ];
         let result = extract_chat_args(&args);
@@ -1174,8 +1151,8 @@ mod tests {
         let args = vec![
             Value::String("openai".to_string()),
             Value::String("gpt-4o".to_string()),
-            Value::List(Box::new(vec![create_test_message("User", "Hi")])),
-            Value::List(Box::new(vec![])),
+            Value::list_from_vec(vec![create_test_message("User", "Hi")]),
+            Value::list_from_vec(vec![]),
         ];
         let result = extract_chat_with_tools_args(&args);
         assert!(result.is_ok());
@@ -1192,7 +1169,7 @@ mod tests {
         let args = vec![
             Value::String("openai".to_string()),
             Value::String("gpt-4o".to_string()),
-            Value::List(Box::new(vec![])),
+            Value::list_from_vec(vec![]),
         ];
         let result = extract_chat_with_tools_args(&args);
         assert!(result.is_err());
@@ -1204,7 +1181,7 @@ mod tests {
         let args = vec![
             Value::String("openai".to_string()),
             Value::String("gpt-4o".to_string()),
-            Value::List(Box::new(vec![])),
+            Value::list_from_vec(vec![]),
             Value::String("not a list".to_string()),
         ];
         let result = extract_chat_with_tools_args(&args);

@@ -94,6 +94,83 @@ fn find_macro_definition_span<'a>(token: &str, definitions: &'a [Definition]) ->
     })
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum SameFileIdentity {
+    Macro {
+        name: String,
+        line: usize,
+        column: usize,
+    },
+    Callable {
+        name: String,
+        line: usize,
+        column: usize,
+        kind: CallableIdentityKind,
+    },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CallableIdentityKind {
+    Function,
+    BuiltinFn,
+}
+
+fn collect_callable_definition_spans<'a>(
+    token: &str,
+    definitions: &'a [Definition],
+    matches: &mut Vec<(&'a Span, CallableIdentityKind)>,
+) {
+    for def in definitions {
+        match def {
+            Definition::Function(f) if f.name.as_ref() == token => {
+                matches.push((&f.span, CallableIdentityKind::Function));
+            }
+            Definition::BuiltinFn(b) if b.name.as_ref() == token => {
+                matches.push((&b.span, CallableIdentityKind::BuiltinFn));
+            }
+            _ => {}
+        }
+    }
+}
+
+fn macro_identity(module: &ModuleFile, token: &str) -> Option<SameFileIdentity> {
+    find_macro_decl_span(token, &module.module_decls)
+        .or_else(|| find_macro_definition_span(token, &module.definitions))
+        .map(|span| SameFileIdentity::Macro {
+            name: token.to_string(),
+            line: span.line,
+            column: span.column,
+        })
+}
+
+fn collect_callable_matches<'a>(
+    module: &'a ModuleFile,
+    token: &str,
+) -> Vec<(&'a Span, CallableIdentityKind)> {
+    let mut matches = Vec::new();
+    collect_callable_definition_spans(token, &module.definitions, &mut matches);
+    for decl in &module.module_decls {
+        if let Some(defs) = decl.definitions() {
+            collect_callable_definition_spans(token, defs, &mut matches);
+        }
+    }
+    matches
+}
+
+fn callable_identity(module: &ModuleFile, token: &str) -> Option<SameFileIdentity> {
+    let matches = collect_callable_matches(module, token);
+    if matches.len() != 1 {
+        return None;
+    }
+    let (span, kind) = matches[0];
+    Some(SameFileIdentity::Callable {
+        name: token.to_string(),
+        line: span.line,
+        column: span.column,
+        kind,
+    })
+}
+
 fn is_macro_invocation_at(source: &str, offset: usize) -> bool {
     if source.get(offset..).is_none() {
         return false;
@@ -125,6 +202,20 @@ fn is_macro_invocation_at(source: &str, offset: usize) -> bool {
         .is_some_and(|ch| ch == '!')
 }
 
+fn is_ordinary_call_at(source: &str, offset: usize) -> bool {
+    let mut end = offset;
+    while let Some(next) = source[end..].chars().next() {
+        if !is_ident_char(next) {
+            break;
+        }
+        end += next.len_utf8();
+    }
+    source[end..]
+        .chars()
+        .find(|ch| !ch.is_whitespace())
+        .is_some_and(|ch| ch == '(')
+}
+
 fn is_macro_declaration_name_at(source: &str, offset: usize) -> bool {
     let mut start = offset;
     while start > 0 {
@@ -144,6 +235,53 @@ fn is_macro_declaration_name_at(source: &str, offset: usize) -> bool {
         .split(|ch: char| !is_ident_char(ch))
         .rfind(|word| !word.is_empty())
         .is_some_and(|word| word == "macro")
+}
+
+fn is_callable_declaration_name_at(source: &str, offset: usize) -> bool {
+    let mut start = offset;
+    while start > 0 {
+        let Some(prev) = source[..start].chars().next_back() else {
+            break;
+        };
+        let prev_start = start - prev.len_utf8();
+        if !is_ident_char(prev) {
+            break;
+        }
+        start = prev_start;
+    }
+    let Some(prefix) = source.get(..start) else {
+        return false;
+    };
+    let words = prefix
+        .split(|ch: char| !is_ident_char(ch))
+        .filter(|word| !word.is_empty())
+        .collect::<Vec<_>>();
+    words.last().is_some_and(|word| *word == "fn")
+}
+
+fn same_file_identity_at(
+    module: &ModuleFile,
+    source: &str,
+    token: &str,
+    offset: usize,
+) -> Option<SameFileIdentity> {
+    if is_macro_invocation_at(source, offset) || is_macro_declaration_name_at(source, offset) {
+        return macro_identity(module, token);
+    }
+    if is_ordinary_call_at(source, offset) || is_callable_declaration_name_at(source, offset) {
+        return callable_identity(module, token);
+    }
+    None
+}
+
+fn is_ambiguous_callable_reference_at(
+    module: &ModuleFile,
+    source: &str,
+    token: &str,
+    offset: usize,
+) -> bool {
+    (is_ordinary_call_at(source, offset) || is_callable_declaration_name_at(source, offset))
+        && collect_callable_matches(module, token).len() > 1
 }
 
 fn check_sub_def_names<'a>(token: &str, def: &'a Definition) -> Option<&'a Span> {
@@ -257,7 +395,7 @@ pub fn goto_definition(
 /// Cross-file references are deferred.
 #[must_use]
 pub fn find_references(
-    _module: &ModuleFile,
+    module: &ModuleFile,
     source: &str,
     uri: &lsp_types::Uri,
     line: u32,
@@ -271,6 +409,12 @@ pub fn find_references(
         Some(t) => t,
         None => return Vec::new(),
     };
+    let target_identity = same_file_identity_at(module, source, token, offset);
+    if target_identity.is_none()
+        && is_ambiguous_callable_reference_at(module, source, token, offset)
+    {
+        return Vec::new();
+    }
 
     let mut locations = Vec::new();
     let mut prev_was_ident = false;
@@ -291,8 +435,15 @@ pub fn find_references(
             }
         }
 
-        if source.get(idx..end) == Some(token)
-            && let Some((start_line, start_col)) = line_col_from_offset(source, idx)
+        if source.get(idx..end) != Some(token) {
+            continue;
+        }
+        if let Some(identity) = target_identity.as_ref()
+            && same_file_identity_at(module, source, token, idx).as_ref() != Some(identity)
+        {
+            continue;
+        }
+        if let Some((start_line, start_col)) = line_col_from_offset(source, idx)
             && let Some((end_line, end_col)) = line_col_from_offset(source, end)
         {
             locations.push(Location {
@@ -438,6 +589,48 @@ mod tests {
         // "help" is a substring of "helper" but not a standalone token.
         let refs = find_references(&module, source, &parse_uri(), 0, 5);
         assert_eq!(refs.len(), 1, "should only match the full identifier");
+    }
+
+    #[test]
+    fn test_find_references_splits_macro_invocation_from_same_named_function() {
+        let source = "fn id() -> Int { 1 }\nmacro id(x) => x;\nworkflow main { let a = id!(1) let b = id() done }";
+        let module = parse_surface_file(source).expect("parse ok");
+        let line2_start = source.rfind('\n').unwrap() + 1;
+        let macro_offset = source[line2_start..].find("id!").unwrap() + line2_start;
+        let macro_col = u32::try_from(macro_offset - line2_start).unwrap();
+        let macro_refs = find_references(&module, source, &parse_uri(), 2, macro_col);
+        assert_eq!(
+            macro_refs.len(),
+            2,
+            "macro refs include declaration and invocation only"
+        );
+        assert!(macro_refs.iter().all(|loc| loc.range.start.line != 0));
+
+        let call_offset = source[line2_start..].find("id() ").unwrap() + line2_start;
+        let call_col = u32::try_from(call_offset - line2_start).unwrap();
+        let call_refs = find_references(&module, source, &parse_uri(), 2, call_col);
+        assert_eq!(
+            call_refs.len(),
+            2,
+            "callable refs include function declaration and ordinary call only"
+        );
+        assert!(call_refs.iter().all(|loc| loc.range.start.line != 1));
+    }
+
+    #[test]
+    fn test_find_references_ambiguous_duplicate_callable_fails_closed() {
+        let source =
+            "fn id() -> Int { 1 }\nfn id(x: Int) -> Int { x }\nworkflow main { let a = id() done }";
+        let module = parse_surface_file(source).expect("parse ok");
+        let line2_start = source.rfind('\n').unwrap() + 1;
+        let call_offset = source[line2_start..].find("id()").unwrap() + line2_start;
+        let call_col = u32::try_from(call_offset - line2_start).unwrap();
+
+        let refs = find_references(&module, source, &parse_uri(), 2, call_col);
+        assert!(
+            refs.is_empty(),
+            "duplicate callable declarations are ambiguous, so semantic references fail closed"
+        );
     }
 
     #[test]

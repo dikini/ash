@@ -21,6 +21,7 @@ Implemented today:
 - Parser + lint diagnostic aggregation. Typecheck diagnostics are not yet wired into the LSP diagnostic pipeline.
 - Keyword/top-level hover, document symbols, same-file token/name based goto-definition, and keyword/top-level definition completion.
 - Macro-aware local tooling presentation: macro completions and symbols are not presented as ordinary runtime functions; macro hover displays syntax-phase typed signatures when present; same-file `m!(...)` goto prefers a macro declaration over a same-named function.
+- Phase 175 local semantic identity: compact parser/LSP identity keys distinguish syntax-phase macro declarations from ordinary `fn`/`builtin fn` callable declarations, and same-file references split `m!(...)` macro uses from `m()` callable uses when identity is proven. Identity-free names keep the older limited lexical fallback.
 - `ash-lsp` stdio transport, one-shot TCP `--port` mode, basic lifecycle notifications, diagnostic publishing, hover, document symbols, definition, and completion.
 
 Not implemented by the local MVP:
@@ -184,9 +185,9 @@ Capabilities are grouped by **priority**. The MVP must ship Priority 1 and 2; Pr
 | Capability | LSP Method | Notes |
 |------------|------------|-------|
 | **Hover** | `textDocument/hover` | Implemented today for keyword and top-level declaration docs; expression-level type info from `TypeEnv` remains pending. |
-| **Go to Definition** | `textDocument/definition` | Implemented today as same-file token/name lookup over parsed declarations. `NameBinder`/`TypeEnv` semantic resolution and cross-file navigation remain pending. |
+| **Go to Definition** | `textDocument/definition` | Implemented today as same-file token/name lookup over parsed declarations with macro/callable identity splitting for supported `m!(...)` versus `m()` cases. `NameBinder`/`TypeEnv` semantic resolution and cross-file navigation remain pending. |
 | **Completion** | `textDocument/completion` | Implemented today for keywords/snippets and top-level definition names. Context-aware variables, type-position suggestions, record fields, and current-language-surface refresh remain pending. |
-| **Find References** | `textDocument/references` | Requires a cross-file reference index built by scanning `ModuleFile` for name usages. |
+| **Find References** | `textDocument/references` | Implemented for same-file lexical references, with Phase 175 semantic filtering for supported macro/callable identity collisions. Cross-file references still require a workspace reference index. |
 
 ### 6.3 Priority 3 — Polish (Week 4–5)
 

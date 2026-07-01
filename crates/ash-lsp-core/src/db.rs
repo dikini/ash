@@ -72,6 +72,8 @@ pub struct ParseSummary {
 pub struct MacroSummaryKey {
     /// Macro declaration name.
     pub name: String,
+    /// Compact syntax-phase macro identity key.
+    pub identity_key: SymbolIdentityKey,
     /// Public/private visibility spelling.
     pub visibility: String,
     /// Number of macro parameters.
@@ -135,6 +137,39 @@ pub struct Symbol {
     pub line: usize,
     /// The column of the symbol's definition (1-indexed).
     pub column: usize,
+    /// Compact semantic identity key when this symbol participates in resolved
+    /// same-file navigation.
+    pub identity_key: Option<SymbolIdentityKey>,
+}
+
+/// Compact symbol identity key suitable for LSP summaries and indexes.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct SymbolIdentityKey {
+    /// Identity class.
+    pub kind: SymbolIdentityKind,
+    /// Name visible at the current file/use site.
+    pub local_name: String,
+    /// Origin module path for imported summaries, when known.
+    pub origin_module: Option<String>,
+    /// Exported origin name before aliasing, when known.
+    pub origin_name: String,
+    /// Declaration line used to distinguish same-file same-name declarations.
+    pub origin_line: usize,
+    /// Declaration column used to distinguish same-file same-name declarations.
+    pub origin_column: usize,
+    /// Declaration arity.
+    pub param_count: usize,
+}
+
+/// Semantic class for a compact symbol identity key.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum SymbolIdentityKind {
+    /// Syntax-phase macro identity.
+    Macro,
+    /// Runtime-callable ordinary function identity.
+    Function,
+    /// Runtime-callable builtin function identity.
+    BuiltinFn,
 }
 
 /// Kinds of symbols tracked in the index.
@@ -315,6 +350,7 @@ pub fn build_symbol_index(db: &dyn salsa::Database, file: SourceFile) -> SymbolI
             kind: SymbolKind::Workflow,
             line: workflow.span.line,
             column: workflow.span.column,
+            identity_key: None,
         });
         index.definitions.push((
             name,
@@ -339,6 +375,7 @@ pub fn build_symbol_index(db: &dyn salsa::Database, file: SourceFile) -> SymbolI
             kind: SymbolKind::Module,
             line: module_decl.span.line,
             column: module_decl.span.column,
+            identity_key: None,
         });
         index.definitions.push((
             name,
@@ -386,6 +423,7 @@ fn macro_summary_keys(module: &ModuleFile) -> Vec<MacroSummaryKey> {
     keys.sort_by(|left, right| {
         left.name
             .cmp(&right.name)
+            .then_with(|| left.identity_key.cmp(&right.identity_key))
             .then_with(|| left.param_count.cmp(&right.param_count))
             .then_with(|| left.param_names.cmp(&right.param_names))
             .then_with(|| left.visibility.cmp(&right.visibility))
@@ -408,6 +446,15 @@ fn collect_macro_summary_keys(definitions: &[Definition], keys: &mut Vec<MacroSu
         if let Definition::Macro(decl) = definition {
             keys.push(MacroSummaryKey {
                 name: decl.name.to_string(),
+                identity_key: SymbolIdentityKey {
+                    kind: SymbolIdentityKind::Macro,
+                    local_name: decl.name.to_string(),
+                    origin_module: None,
+                    origin_name: decl.name.to_string(),
+                    origin_line: decl.span.line,
+                    origin_column: decl.span.column,
+                    param_count: decl.params.len(),
+                },
                 visibility: format!("{:?}", decl.visibility),
                 param_count: decl.params.len(),
                 param_names: decl.params.iter().map(ToString::to_string).collect(),
@@ -612,11 +659,43 @@ fn index_definition(index: &mut SymbolIndex, def: &ash_parser::surface::Definiti
         ),
     };
 
+    let identity_key = match def {
+        Definition::Macro(m) => Some(SymbolIdentityKey {
+            kind: SymbolIdentityKind::Macro,
+            local_name: m.name.to_string(),
+            origin_module: None,
+            origin_name: m.name.to_string(),
+            origin_line: m.span.line,
+            origin_column: m.span.column,
+            param_count: m.params.len(),
+        }),
+        Definition::Function(f) => Some(SymbolIdentityKey {
+            kind: SymbolIdentityKind::Function,
+            local_name: f.name.to_string(),
+            origin_module: None,
+            origin_name: f.name.to_string(),
+            origin_line: f.span.line,
+            origin_column: f.span.column,
+            param_count: f.params.len(),
+        }),
+        Definition::BuiltinFn(b) => Some(SymbolIdentityKey {
+            kind: SymbolIdentityKind::BuiltinFn,
+            local_name: b.name.to_string(),
+            origin_module: None,
+            origin_name: b.name.to_string(),
+            origin_line: b.span.line,
+            origin_column: b.span.column,
+            param_count: b.params.len(),
+        }),
+        _ => None,
+    };
+
     index.document_symbols.push(Symbol {
         name: name.clone(),
         kind,
         line,
         column,
+        identity_key,
     });
     index.definitions.push((
         name,
@@ -693,6 +772,11 @@ mod tests {
             summary1.macro_summary_keys[0].param_names,
             vec!["x".to_string()]
         );
+        assert_eq!(
+            summary1.macro_summary_keys[0].identity_key.kind,
+            SymbolIdentityKind::Macro
+        );
+        assert_eq!(summary1.macro_summary_keys[0].identity_key.local_name, "id");
 
         file.set_text(&mut db)
             .to("pub macro id(x: Bool) => !x;".to_string());

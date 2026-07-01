@@ -1,6 +1,6 @@
 # TASK-1785: Audit macro/callable identity surfaces and current name-resolution seams
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -70,9 +70,9 @@ commands:
   - python3 -c 'from pathlib import Path; s=Path("docs/audit/phase-175-semantic-identity-surface-audit.md").read_text(); assert "MacroSummary" in s and "CallableTypeSummary" in s and "goto.rs" in s and "references" in s'
   - git diff --check
 checklist:
-  - [ ] Audit artifact created
-  - [ ] Identity surfaces classified
-  - [ ] Downstream task ownership checked
+  - [x] Audit artifact created
+  - [x] Identity surfaces classified
+  - [x] Downstream task ownership checked
 ```
 
 ## Dependencies for Next Task
@@ -82,3 +82,7 @@ This task feeds the following Phase 175 tasks according to the dependency table 
 ## Notes
 
 Do not implement identity carriers in this audit task.
+
+## Completion Evidence
+
+- Created `docs/audit/phase-175-semantic-identity-surface-audit.md` and confirmed implementation order remains valid.

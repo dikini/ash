@@ -1,6 +1,6 @@
 # TASK-1790: Prepare imported macro navigation via summary identities without overclaiming
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -72,11 +72,15 @@ commands:
   - cargo test -p ash-parser imported_macro_identity -- --nocapture
   - cargo test -p ash-lsp-core -- --nocapture
 checklist:
-  - [ ] Imported summary identity metadata transported
-  - [ ] Aliases do not collapse distinct identities incorrectly
-  - [ ] No cross-file navigation overclaim
+  - [x] Imported summary identity metadata transported
+  - [x] Aliases do not collapse distinct identities incorrectly
+  - [x] No cross-file navigation overclaim
 ```
 
 ## Dependencies for Next Task
 
 This task feeds the following Phase 175 tasks according to the dependency table in PLAN-175.
+
+## Completion Evidence
+
+- Prepared imported macro identity by preserving origin module/exported name across local aliases while keeping cross-file navigation unsupported.

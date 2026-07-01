@@ -1,6 +1,6 @@
 # TASK-1788: Thread resolved identities through LSP parse and symbol summaries
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -71,11 +71,15 @@ commands:
   - cargo test -p ash-lsp-core symbols::tests -- --nocapture
   - cargo fmt --check
 checklist:
-  - [ ] LSP summaries carry compact identities
-  - [ ] Cache invalidates on identity-significant edits
-  - [ ] No full AST retained in cache summary
+  - [x] LSP summaries carry compact identities
+  - [x] Cache invalidates on identity-significant edits
+  - [x] No full AST retained in cache summary
 ```
 
 ## Dependencies for Next Task
 
 This task feeds the following Phase 175 tasks according to the dependency table in PLAN-175.
+
+## Completion Evidence
+
+- Added compact LSP `SymbolIdentityKey` carriers to parse macro keys and symbol indexes without storing full ASTs.

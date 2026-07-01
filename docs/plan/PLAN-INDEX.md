@@ -150,7 +150,7 @@ Update this section as tasks complete:
 | [172](PLAN-172-PARSER-FIRST-MACRO-EXECUTION-MVP.md) | 9 | 9 | ✅ Complete |
 | [173](PLAN-173-MACRO-SUMMARIES-TOKEN-TREES-HYGIENIC-BINDERS-TYPED-MACROS.md) | 14 | 14 | ✅ Complete |
 | [174](PLAN-174-MACRO-AWARE-TOOLING-SUMMARY-IDENTITY-AND-INFERENCE-READINESS.md) | 10 | 10 | ✅ Complete |
-| [175](PLAN-175-NAME-RESOLUTION-BACKED-SEMANTIC-IDENTITY-FOR-MACROS-AND-TOOLING.md) | 10 | 1 | 🟢 Planned |
+| [175](PLAN-175-NAME-RESOLUTION-BACKED-SEMANTIC-IDENTITY-FOR-MACROS-AND-TOOLING.md) | 10 | 10 | ✅ Complete |
 
 ---
 
@@ -833,7 +833,7 @@ Hardens the tooling and identity seams left after Phase 173. The phase makes LSP
 
 ## Phase 175: Name-Resolution-Backed Semantic Identity for Macros and Tooling
 
-**Status:** 🟢 Planned (1/10 tasks complete)
+**Status:** ✅ Complete (10/10 tasks complete)
 **Plan:** [PLAN-175: Name-Resolution-Backed Semantic Identity for Macros and Tooling](PLAN-175-NAME-RESOLUTION-BACKED-SEMANTIC-IDENTITY-FOR-MACROS-AND-TOOLING.md)
 **Depends on:** Phase 174 macro-aware tooling, summary identity, and inference readiness; `SPEC-095c`; `SPEC-038`; `SPEC-098c`; `SPEC-097b`.
 
@@ -842,12 +842,12 @@ Introduces a conservative name-resolution-backed semantic identity substrate for
 | Task | Description | Status |
 |------|-------------|--------|
 | [TASK-1784](tasks/TASK-1784-phase-175-plan-packet.md) | Create the Phase 175 semantic-identity plan packet | ✅ Complete |
-| [TASK-1785](tasks/TASK-1785-identity-surface-audit.md) | Audit macro/callable identity surfaces and current name-resolution seams | 📝 Planned |
-| [TASK-1786](tasks/TASK-1786-canonical-macro-identity-model.md) | Define canonical macro declaration identity and callable identity boundaries | 📝 Planned |
-| [TASK-1787](tasks/TASK-1787-parser-local-name-resolution-identities.md) | Add parser-local resolved macro/callable identity carriers | 📝 Planned |
-| [TASK-1788](tasks/TASK-1788-lsp-summary-identity-threading.md) | Thread resolved identities through LSP parse and symbol summaries | 📝 Planned |
-| [TASK-1789](tasks/TASK-1789-semantic-same-file-references.md) | Replace token-only same-file references with semantic macro/function splitting | 📝 Planned |
-| [TASK-1790](tasks/TASK-1790-imported-macro-navigation-prep.md) | Prepare imported macro navigation via summary identities without overclaiming | 📝 Planned |
-| [TASK-1791](tasks/TASK-1791-identity-non-callability-validation.md) | Validate identity threading does not make macros runtime-callable | 📝 Planned |
-| [TASK-1792](tasks/TASK-1792-phase-175-docs-spec-reconciliation.md) | Reconcile specs, docs, indexes, and changelog for Phase 175 | 📝 Planned |
-| [TASK-1793](tasks/TASK-1793-phase-175-closeout.md) | Close out Phase 175 with broad gates and independent review | 📝 Planned |
+| [TASK-1785](tasks/TASK-1785-identity-surface-audit.md) | Audit macro/callable identity surfaces and current name-resolution seams | ✅ Complete |
+| [TASK-1786](tasks/TASK-1786-canonical-macro-identity-model.md) | Define canonical macro declaration identity and callable identity boundaries | ✅ Complete |
+| [TASK-1787](tasks/TASK-1787-parser-local-name-resolution-identities.md) | Add parser-local resolved macro/callable identity carriers | ✅ Complete |
+| [TASK-1788](tasks/TASK-1788-lsp-summary-identity-threading.md) | Thread resolved identities through LSP parse and symbol summaries | ✅ Complete |
+| [TASK-1789](tasks/TASK-1789-semantic-same-file-references.md) | Replace token-only same-file references with semantic macro/function splitting | ✅ Complete |
+| [TASK-1790](tasks/TASK-1790-imported-macro-navigation-prep.md) | Prepare imported macro navigation via summary identities without overclaiming | ✅ Complete |
+| [TASK-1791](tasks/TASK-1791-identity-non-callability-validation.md) | Validate identity threading does not make macros runtime-callable | ✅ Complete |
+| [TASK-1792](tasks/TASK-1792-phase-175-docs-spec-reconciliation.md) | Reconcile specs, docs, indexes, and changelog for Phase 175 | ✅ Complete |
+| [TASK-1793](tasks/TASK-1793-phase-175-closeout.md) | Close out Phase 175 with broad gates and independent review | ✅ Complete |

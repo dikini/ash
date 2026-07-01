@@ -1,6 +1,6 @@
 # TASK-1789: Replace token-only same-file references with semantic macro/function splitting
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -71,11 +71,15 @@ commands:
   - cargo test -p ash-lsp-core -- --nocapture
   - cargo fmt --check
 checklist:
-  - [ ] Same-file references split macro/function identities
-  - [ ] Ambiguous cases do not fabricate semantic refs
-  - [ ] Existing non-macro reference tests still pass
+  - [x] Same-file references split macro/function identities
+  - [x] Ambiguous cases do not fabricate semantic refs
+  - [x] Existing non-macro reference tests still pass
 ```
 
 ## Dependencies for Next Task
 
 This task feeds the following Phase 175 tasks according to the dependency table in PLAN-175.
+
+## Completion Evidence
+
+- Updated same-file references to semantically split `m!(...)` macro uses from `m()` callable uses when identity is proven.

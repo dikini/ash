@@ -1,6 +1,6 @@
 # TASK-1793: Close out Phase 175 with broad gates and independent review
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -82,10 +82,10 @@ commands:
   - python3 tools/docs/validate_orientation_indexes.py --self-test
   - bash scripts/check-docs-gate.sh
 checklist:
-  - [ ] Focused tests pass
-  - [ ] Broad gates pass
-  - [ ] Independent review complete and findings addressed
-  - [ ] Status surfaces and changelog agree
+  - [x] Focused tests pass
+  - [x] Broad gates pass
+  - [x] Independent review complete and findings addressed
+  - [x] Status surfaces and changelog agree
 ```
 
 ## Dependencies for Next Task
@@ -95,3 +95,8 @@ This task feeds the following Phase 175 tasks according to the dependency table 
 ## Notes
 
 Closeout should recommend the next phase only after reviewing what identity substrate Phase 175 actually delivered.
+
+## Completion Evidence
+
+- Independent review found two important issues: ambiguous duplicate callables could overclaim references, and imported macro identity reconstruction did not validate/preserve summary origin. Both were fixed with duplicate-callable fail-closed reference behavior, an LSP regression, summary-origin preservation on aliasing, and stricter engine summary identity validation.
+- Broad Phase 175 gates passed after review remediation: `cargo fmt --check`, `cargo test -p ash-parser`, `cargo test -p ash-engine`, `cargo test -p ash-lsp-core`, `cargo check --workspace`, `cargo clippy --workspace --all-targets --all-features -- -D warnings`, `git diff --check`, orientation index validation, and docs gate.

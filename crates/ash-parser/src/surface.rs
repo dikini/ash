@@ -146,6 +146,86 @@ pub struct MacroDef {
     pub span: Span,
 }
 
+/// Syntax-phase identity for a macro declaration or imported macro summary.
+///
+/// This is tooling/expansion metadata only. It is deliberately separate from
+/// [`CallableDeclarationIdentity`] and must not grant runtime callability,
+/// effect rows, provider authority, contracts, or proof evidence.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct MacroDeclarationIdentity {
+    /// Where the identity was proven.
+    pub origin: MacroIdentityOrigin,
+    /// Name visible at the current use site. Imported aliases change this field
+    /// without changing the exported origin name.
+    pub local_name: Name,
+    /// Source span covering the declaration in the source that produced the
+    /// identity, when available.
+    pub origin_span: Span,
+    /// Arity included so summaries can reject stale or malformed carriers.
+    pub param_count: usize,
+}
+
+/// Provenance for a syntax-phase macro identity.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum MacroIdentityOrigin {
+    /// Declaration proven in the current parsed file/module.
+    Local,
+    /// Declaration summarized from an imported module.
+    Imported {
+        /// Module path that exported the macro summary.
+        module_path: Box<str>,
+        /// Name exported by the origin module before local import aliasing.
+        exported_name: Name,
+    },
+}
+
+impl MacroDeclarationIdentity {
+    /// Build a local syntax-phase macro identity.
+    #[must_use]
+    pub fn local(name: Name, span: Span, param_count: usize) -> Self {
+        Self {
+            origin: MacroIdentityOrigin::Local,
+            local_name: name,
+            origin_span: span,
+            param_count,
+        }
+    }
+
+    /// Build an imported syntax-phase macro identity from an export summary and
+    /// the name visible at the current import site.
+    #[must_use]
+    pub fn imported(summary: &MacroSummary, local_name: Name) -> Self {
+        let mut identity = summary.identity.clone();
+        identity.local_name = local_name;
+        identity
+    }
+}
+
+/// Callable declaration identity for ordinary functions and builtin functions.
+///
+/// Unlike [`MacroDeclarationIdentity`], this names runtime-callable source
+/// declarations. Macro identities must never be coerced into this shape.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct CallableDeclarationIdentity {
+    /// Callable name visible in the current file.
+    pub name: Name,
+    /// Callable declaration kind.
+    pub kind: CallableDeclarationKind,
+    /// Source span covering the declaration.
+    pub origin_span: Span,
+    /// Declared parameter count.
+    pub param_count: usize,
+}
+
+/// Runtime-callable declaration kind.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum CallableDeclarationKind {
+    /// User-defined Ash function.
+    Function,
+    /// Bodyless builtin function.
+    BuiltinFn,
+}
+
 /// Syntax-phase summary for an importable public macro declaration.
 ///
 /// Macro summaries are not callable summaries: they carry only expansion-phase
@@ -157,6 +237,8 @@ pub struct MacroSummary {
     pub module_path: Box<str>,
     /// Source-visible macro name.
     pub name: Name,
+    /// Canonical syntax-phase identity for this public macro summary.
+    pub identity: MacroDeclarationIdentity,
     /// Visibility retained from the source declaration.
     pub visibility: Visibility,
     /// Macro parameter names.
@@ -2161,6 +2243,8 @@ pub struct LocalMacroEntry {
     pub body: Expr,
     /// Optional syntax-phase typed macro signature carrier.
     pub typed_signature: Option<MacroTypeSignatureSummary>,
+    /// Canonical syntax-phase identity for this macro row.
+    pub identity: MacroDeclarationIdentity,
     /// Local callable identities available while checking this template.
     callable_env: Vec<CallableTypeSummary>,
     /// Source span of the declaration.
@@ -2210,6 +2294,39 @@ pub fn collect_public_macro_summaries(
     collect_public_macro_summaries_for_definitions(&module.definitions, module_path.into())
 }
 
+/// Collect same-file syntax-phase macro declaration identities.
+pub fn collect_local_macro_identities(
+    module: &ModuleFile,
+) -> Result<Vec<MacroDeclarationIdentity>, ExpansionError> {
+    Ok(build_local_macro_table(module)?
+        .entries()
+        .map(|entry| entry.identity.clone())
+        .collect())
+}
+
+/// Resolve a same-file syntax-phase macro declaration identity by local name.
+pub fn resolve_local_macro_identity(
+    module: &ModuleFile,
+    name: &str,
+) -> Result<Option<MacroDeclarationIdentity>, ExpansionError> {
+    Ok(build_local_macro_table(module)?
+        .resolve(name)
+        .map(|entry| entry.identity.clone()))
+}
+
+/// Collect unique same-file callable declaration identities for public ordinary
+/// functions and builtin functions.
+///
+/// This deliberately excludes macro declarations and ambiguous duplicate names.
+#[must_use]
+pub fn collect_local_callable_identities(module: &ModuleFile) -> Vec<CallableDeclarationIdentity> {
+    collect_local_callable_type_summaries(&module.definitions)
+        .into_iter()
+        .filter(|summary| !summary.ambiguous)
+        .map(|summary| summary.identity)
+        .collect()
+}
+
 fn collect_public_macro_summaries_for_definitions(
     definitions: &[Definition],
     module_path: Box<str>,
@@ -2230,6 +2347,15 @@ fn collect_public_macro_summaries_for_definitions(
         summaries.push(MacroSummary {
             module_path: module_path.clone(),
             name: decl.name.clone(),
+            identity: MacroDeclarationIdentity {
+                origin: MacroIdentityOrigin::Imported {
+                    module_path: module_path.clone(),
+                    exported_name: decl.name.clone(),
+                },
+                local_name: decl.name.clone(),
+                origin_span: decl.span,
+                param_count: decl.params.len(),
+            },
             visibility: decl.visibility.clone(),
             params: decl.params.clone(),
             input_kind: MacroInputKind::ExprArgs,
@@ -2282,6 +2408,11 @@ fn collect_macro_entries(
             params: decl.params.clone(),
             body: decl.body.clone(),
             typed_signature,
+            identity: MacroDeclarationIdentity::local(
+                decl.name.clone(),
+                decl.span,
+                decl.params.len(),
+            ),
             callable_env: callable_env.clone(),
             span: decl.span,
         });
@@ -3233,6 +3364,7 @@ fn reparse_macro_token_tree_args(
 
 #[derive(Debug, Clone, PartialEq)]
 struct CallableTypeSummary {
+    identity: CallableDeclarationIdentity,
     name: Name,
     param_types: Vec<Type>,
     return_type: Type,
@@ -3247,6 +3379,12 @@ fn collect_local_callable_type_summaries(definitions: &[Definition]) -> Vec<Call
                 if def.return_type.is_some() && matches!(def.visibility, Visibility::Public) =>
             {
                 Some(CallableTypeSummary {
+                    identity: CallableDeclarationIdentity {
+                        name: def.name.clone(),
+                        kind: CallableDeclarationKind::Function,
+                        origin_span: def.span,
+                        param_count: def.params.len(),
+                    },
                     name: def.name.clone(),
                     param_types: def.params.iter().map(|param| param.ty.clone()).collect(),
                     return_type: def
@@ -3258,6 +3396,12 @@ fn collect_local_callable_type_summaries(definitions: &[Definition]) -> Vec<Call
             }
             Definition::BuiltinFn(def) if matches!(def.visibility, Visibility::Public) => {
                 Some(CallableTypeSummary {
+                    identity: CallableDeclarationIdentity {
+                        name: def.name.clone(),
+                        kind: CallableDeclarationKind::BuiltinFn,
+                        origin_span: def.span,
+                        param_count: def.params.len(),
+                    },
                     name: def.name.clone(),
                     param_types: def.params.iter().map(|param| param.ty.clone()).collect(),
                     return_type: def.return_type.clone(),

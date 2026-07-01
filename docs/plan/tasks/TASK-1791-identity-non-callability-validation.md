@@ -1,6 +1,6 @@
 # TASK-1791: Validate identity threading does not make macros runtime-callable
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -73,11 +73,15 @@ commands:
   - cargo test -p ash-lsp-core -- --nocapture
   - cargo check -p ash-parser -p ash-engine -p ash-lsp-core
 checklist:
-  - [ ] Macro identities do not enter callable envs
-  - [ ] Imported macro identities do not become callable exports
-  - [ ] LSP identity behavior has negative leakage tests
+  - [x] Macro identities do not enter callable envs
+  - [x] Imported macro identities do not become callable exports
+  - [x] LSP identity behavior has negative leakage tests
 ```
 
 ## Dependencies for Next Task
 
 This task feeds the following Phase 175 tasks according to the dependency table in PLAN-175.
+
+## Completion Evidence
+
+- Validated non-callability with parser and engine negative tests, including existing Phase 173/174 macro-summary leakage regressions.

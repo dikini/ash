@@ -1,6 +1,6 @@
 # PLAN-175: Name-Resolution-Backed Semantic Identity for Macros and Tooling
 
-**Status:** 🟢 Planned (1/10 tasks complete)
+**Status:** ✅ Complete (10/10 tasks complete)
 **Spec:** [SPEC-095c: Surface AST, Macro Expansion, and Notation](../spec/SPEC-095c-SURFACE-AST-MACROS-AND-NOTATION.md); [SPEC-038: Language Server](../spec/SPEC-038-LANGUAGE-SERVER.md); [SPEC-098c: Surface-to-Core Lowering](../spec/SPEC-098c-SURFACE-TO-CORE-LOWERING.md); [SPEC-097b: Target Type System](../spec/SPEC-097b-TARGET-TYPE-SYSTEM.md)
 **Depends on:** Phase 174 macro-aware tooling, summary identity, and bounded callable identity inference readiness.
 **Task range:** TASK-1784 through TASK-1793.
@@ -68,15 +68,15 @@ The remaining debt is identity resolution rather than presentation:
 | Task | Title | Status |
 |---|---|---|
 | [TASK-1784](tasks/TASK-1784-phase-175-plan-packet.md) | Create the Phase 175 semantic-identity plan packet | ✅ Complete |
-| [TASK-1785](tasks/TASK-1785-identity-surface-audit.md) | Audit macro/callable identity surfaces and current name-resolution seams | 📝 Planned |
-| [TASK-1786](tasks/TASK-1786-canonical-macro-identity-model.md) | Define canonical macro declaration identity and callable identity boundaries | 📝 Planned |
-| [TASK-1787](tasks/TASK-1787-parser-local-name-resolution-identities.md) | Add parser-local resolved macro/callable identity carriers | 📝 Planned |
-| [TASK-1788](tasks/TASK-1788-lsp-summary-identity-threading.md) | Thread resolved identities through LSP parse and symbol summaries | 📝 Planned |
-| [TASK-1789](tasks/TASK-1789-semantic-same-file-references.md) | Replace token-only same-file references with semantic macro/function splitting | 📝 Planned |
-| [TASK-1790](tasks/TASK-1790-imported-macro-navigation-prep.md) | Prepare imported macro navigation via summary identities without overclaiming | 📝 Planned |
-| [TASK-1791](tasks/TASK-1791-identity-non-callability-validation.md) | Validate identity threading does not make macros runtime-callable | 📝 Planned |
-| [TASK-1792](tasks/TASK-1792-phase-175-docs-spec-reconciliation.md) | Reconcile specs, docs, indexes, and changelog for Phase 175 | 📝 Planned |
-| [TASK-1793](tasks/TASK-1793-phase-175-closeout.md) | Close out Phase 175 with broad gates and independent review | 📝 Planned |
+| [TASK-1785](tasks/TASK-1785-identity-surface-audit.md) | Audit macro/callable identity surfaces and current name-resolution seams | ✅ Complete |
+| [TASK-1786](tasks/TASK-1786-canonical-macro-identity-model.md) | Define canonical macro declaration identity and callable identity boundaries | ✅ Complete |
+| [TASK-1787](tasks/TASK-1787-parser-local-name-resolution-identities.md) | Add parser-local resolved macro/callable identity carriers | ✅ Complete |
+| [TASK-1788](tasks/TASK-1788-lsp-summary-identity-threading.md) | Thread resolved identities through LSP parse and symbol summaries | ✅ Complete |
+| [TASK-1789](tasks/TASK-1789-semantic-same-file-references.md) | Replace token-only same-file references with semantic macro/function splitting | ✅ Complete |
+| [TASK-1790](tasks/TASK-1790-imported-macro-navigation-prep.md) | Prepare imported macro navigation via summary identities without overclaiming | ✅ Complete |
+| [TASK-1791](tasks/TASK-1791-identity-non-callability-validation.md) | Validate identity threading does not make macros runtime-callable | ✅ Complete |
+| [TASK-1792](tasks/TASK-1792-phase-175-docs-spec-reconciliation.md) | Reconcile specs, docs, indexes, and changelog for Phase 175 | ✅ Complete |
+| [TASK-1793](tasks/TASK-1793-phase-175-closeout.md) | Close out Phase 175 with broad gates and independent review | ✅ Complete |
 
 ## Implementation order
 
@@ -92,14 +92,14 @@ The remaining debt is identity resolution rather than presentation:
 
 ## Acceptance criteria
 
-- [ ] Canonical macro declaration identity is defined separately from callable identity.
-- [ ] Parser-local macro/callable references can carry resolved identity where resolution is proven.
-- [ ] LSP summaries and symbol indexes can compare compact identities without full AST retention.
-- [ ] Same-file references distinguish `m!(...)` macro uses from `m()` callable uses by semantic identity, not token spelling.
-- [ ] Imported macro navigation is prepared through summary identities but does not claim full workspace references.
-- [ ] Macro identities remain syntax-phase metadata and do not create runtime callable bindings.
-- [ ] Negative tests cover same-name macro/function collisions, aliases, private macros, imported summaries, and unresolved identifiers.
-- [ ] PLAN-INDEX, task files, specs/docs, and CHANGELOG agree on Phase 175 status.
+- [x] Canonical macro declaration identity is defined separately from callable identity.
+- [x] Parser-local macro/callable references can carry resolved identity where resolution is proven.
+- [x] LSP summaries and symbol indexes can compare compact identities without full AST retention.
+- [x] Same-file references distinguish `m!(...)` macro uses from `m()` callable uses by semantic identity, not token spelling.
+- [x] Imported macro navigation is prepared through summary identities but does not claim full workspace references.
+- [x] Macro identities remain syntax-phase metadata and do not create runtime callable bindings.
+- [x] Negative tests cover same-name macro/function collisions, aliases, private macros, imported summaries, and unresolved identifiers.
+- [x] PLAN-INDEX, task files, specs/docs, and CHANGELOG agree on Phase 175 status including final closeout.
 
 ## Verification baseline
 
@@ -122,3 +122,7 @@ If Phase 175 closes cleanly, the next plausible packets are richer macro inferen
 ## Completion evidence
 
 - TASK-1784 created and registered this Phase 175 planning packet, task files TASK-1784 through TASK-1793, PLAN-INDEX entries, and a CHANGELOG planning entry.
+
+- TASK-1785 through TASK-1792 implemented canonical syntax-phase macro identities, callable identity separation, parser-local identity helpers, LSP compact identity keys, semantic same-file macro/callable reference splitting, imported alias identity preparation, non-callability validation, and spec/changelog reconciliation.
+
+- TASK-1793 closed Phase 175 after broad gates and independent review remediation.

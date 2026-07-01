@@ -1,6 +1,6 @@
 # TASK-1786: Define canonical macro declaration identity and callable identity boundaries
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -72,11 +72,15 @@ commands:
   - cargo clippy -p ash-parser --all-targets --all-features -- -D warnings
   - cargo fmt --check
 checklist:
-  - [ ] Identity type implemented and documented
-  - [ ] Same-name separation tests pass
-  - [ ] No macro identity accepted as callable identity
+  - [x] Identity type implemented and documented
+  - [x] Same-name separation tests pass
+  - [x] No macro identity accepted as callable identity
 ```
 
 ## Dependencies for Next Task
 
 This task feeds the following Phase 175 tasks according to the dependency table in PLAN-175.
+
+## Completion Evidence
+
+- Added parser-facing `MacroDeclarationIdentity`, `MacroIdentityOrigin`, `CallableDeclarationIdentity`, and `CallableDeclarationKind` with macro/callable separation tests.

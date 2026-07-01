@@ -181,6 +181,7 @@ publish macro summaries only through an explicit macro-summary carrier:
 MacroSummary ::= {
   module_path,
   name,
+  identity: MacroDeclarationIdentity,
   visibility,
   params,
   input_kind,
@@ -195,11 +196,28 @@ input_kind  ::= ExprArgs | TokenTree(delimiters)
 output_kind ::= Expr | TokenTree | ReparseExpr
 ```
 
-Macro summaries do not create functions, values, rows, authority, contracts, failures, proof
+Macro summaries are explicit syntax-phase metadata. They do not carry rows, contracts, proof
 evidence, providers, or runtime effects. They are consumed only by the macro expansion phase. A
 macro declaration is importable only when export collection has produced a well-formed
 `MacroSummary`; ordinary callable summaries, raw source snippets, and reparsed body strings must not
 activate macros.
+
+Phase 175 adds canonical syntax-phase macro identity metadata:
+
+```text
+MacroDeclarationIdentity ::= {
+  origin: Local | Imported { module_path, exported_name },
+  local_name,
+  origin_span,
+  param_count,
+}
+```
+
+`MacroDeclarationIdentity` is comparable tooling/expansion metadata only. It is intentionally
+separate from ordinary callable identity. Imported aliases change `local_name` while preserving the
+origin module/exported name pair. Same-file macro invocations may compare these identities for
+navigation and reference grouping, but the identity must not be accepted as a callable binding,
+effect source, provider authority, contract evidence, proof evidence, or runtime export.
 
 Imported macro activation is fail-closed:
 

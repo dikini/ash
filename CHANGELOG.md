@@ -14,6 +14,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Phase 170 notation summary/export design now matches the implemented fail-closed local-table behavior for duplicate notation declarations (TASK-1742).
 
 ### Added
+- Phase 175 semantic identity substrate for macros and tooling: parser-facing macro/callable identity carriers, importable macro origin identity with alias preservation, LSP compact identity keys, and same-file macro/function reference splitting without making macros runtime-callable (TASK-1785 through TASK-1792).
 - PLAN-175 name-resolution-backed semantic identity packet for macros and tooling, with tasks for canonical macro identity, parser/LSP identity threading, semantic same-file references, imported macro navigation preparation, non-callability validation, docs reconciliation, and closeout (TASK-1784 through TASK-1793).
 - Phase 174 macro-aware tooling implementation: LSP parse summaries now carry lightweight macro summary keys, internal symbol indexes distinguish syntax-phase macros, completions/hover/document symbols avoid ordinary function presentation for macros, and same-file macro invocation goto prefers macro declarations over same-named functions (TASK-1776, TASK-1777, TASK-1778, TASK-1781).
 - Phase 174 callable-identity inference readiness: bounded macro inference can use a unique same-definition-list public local `fn`/`builtin fn` type summary while unresolved, private, ambiguous, wrong-arity, type-mismatched, module-qualified, and macro-summary-derived calls remain fail-closed (TASK-1779, TASK-1780).
@@ -275,6 +276,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   handler typing section (continuation as ordinary typed parameter, multiplicity via
   function type).
 ### Added
+- Phase 175 semantic identity substrate for macros and tooling: parser-facing macro/callable identity carriers, importable macro origin identity with alias preservation, LSP compact identity keys, and same-file macro/function reference splitting without making macros runtime-callable (TASK-1785 through TASK-1792).
 - Added NOTE-025, establishing the effect identity model via sorts and impls. Interfaces are
   effect sorts (abstract families with laws). Phantom types + impls are identity carriers —
   the impl type parameter is the operation identity, not the interface name. After
@@ -538,6 +540,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Custom `.cps` grammar parser/serializer with lowercase keywords and fixture contract. The current `serde-lexpr` implementation provides safe AST round-trips and file I/O. A custom parser/serializer is deferred until an external producer/consumer requires the specific lowercase syntax. (TASK-1599, TASK-1600)
 
 ### Added
+- Phase 175 semantic identity substrate for macros and tooling: parser-facing macro/callable identity carriers, importable macro origin identity with alias preservation, LSP compact identity keys, and same-file macro/function reference splitting without making macros runtime-callable (TASK-1785 through TASK-1792).
 - [Phase 151](docs/plan/PLAN-151-QUICKCHECK-V1-ORDINARY-STRATEGY-SEMANTICS.md): Planned QuickCheck v1 ordinary strategy semantics with SPEC-087, pure `Strategy<A>` values, helper-first `GenContext`, ordinary `Arbitrary<A>` evidence, pure strategy overrides, stable RNG/split, bounded recursive/weighted combinators, explicit shrink semantics, random seed/replay policy, aggregate empirical evidence history, and TASK-1497 through TASK-1506.
 - [Phase 148](docs/plan/PLAN-148-FLAKY-TEST-QUARANTINE-AND-DISTRIBUTED-ORCHESTRATION.md): Implemented local `ash test` retries/flake classification, quarantine metadata, deterministic shard selection, shard JSON result merge, schema-versioned flake/shard/merge JSON, and no-Cargo fixtures (TASK-1474 through TASK-1481).
 - [Phase 147](docs/plan/PLAN-147-LAW-COVERAGE-AND-MUTATION-TESTING.md): Implemented opt-in `ash test --coverage` and `--mutation` reporting with law/test coverage JSON, bounded law-proposition mutation rows, killed/survived/deferred/error mutation totals, no-Cargo final-surface fixtures, and reference docs (TASK-1466 through TASK-1473).
@@ -650,6 +653,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - [TASK-515](docs/plan/tasks/TASK-515-ash-test-runner-docs-and-phase-verification.md): Closed Phase 76B documentation and verification for the narrow structured snapshot runner substrate, recording focused runner and CLI smoke evidence while preserving deferred limitations for live checked snapshot production from ordinary CLI source files, richer oracles, richer domains, and broader synthesized execution.
 
 ### Added
+- Phase 175 semantic identity substrate for macros and tooling: parser-facing macro/callable identity carriers, importable macro origin identity with alias preservation, LSP compact identity keys, and same-file macro/function reference splitting without making macros runtime-callable (TASK-1785 through TASK-1792).
 - [TASK-1046](docs/plan/tasks/TASK-1046-stdlib-monoid-semigroup-constraint.md): Migrated `std::algebra::Monoid` to require `Semigroup` evidence through `where A: Semigroup`, with final stdlib engine coverage proving String/List Monoid implementations discharge the requirement and a missing-evidence negative test for `Monoid<String>` without `Semigroup<String>`.
 - [TASK-1045](docs/plan/tasks/TASK-1045-stdlib-applicative-functor-constraint.md): Migrated `std::algebra::Applicative` to require `Functor` evidence through `where F: Functor`, with final stdlib engine coverage proving Option/Result Applicative implementations discharge the requirement and a missing-evidence negative test for `Applicative<Option>` without `Functor<Option>`.
 - [TASK-1044](docs/plan/tasks/TASK-1044-stdlib-monad-applicative-constraint.md): Migrated `std::algebra::Monad` to require `Applicative` evidence through `where M: Applicative`, with final stdlib engine coverage proving the surface constraint is preserved and existing Option/Result Monad implementations discharge the requirement via their Applicative evidence.
@@ -828,6 +832,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Fixed `scripts/check-changelog-staged.sh` so docs-only or `.github/`-only staged commits skip cleanly under `set -euo pipefail` instead of exiting before the no-relevant-files check, and added focused regression coverage to the pre-commit gate.
 
 ### Added
+- Phase 175 semantic identity substrate for macros and tooling: parser-facing macro/callable identity carriers, importable macro origin identity with alias preservation, LSP compact identity keys, and same-file macro/function reference splitting without making macros runtime-callable (TASK-1785 through TASK-1792).
 - [DESIGN-041](docs/design/DESIGN-041-RUNTIME-REGIME-AND-OS-SURFACE.md): Added a draft runtime-regime design note defining Ash's OS-facing execution surface for alpha. The note proposes one shared `RuntimeKernel` with two host-lifetime modes, one-shot `ash run` and long-lived local `ashd`; distinguishes workflow definitions, workflow instances, and process trees; defines root/library/config/state/cache/log directory roles; preserves explicit workflow admission over file-presence execution; separates provider/resource lifetime from authority; and identifies future spec packets for runtime roots, one-shot execution, daemon/control plane, instance lifecycle, provider/resource scope, and observability.
 - [DESIGN-040](docs/design/DESIGN-040-ALPHA-ALGEBRAIC-TOWER.md): Added and revised the draft alpha algebraic tower design note. The note records the release-direction requirement that `Act`, `Proc`, and `Workflow` expose Ash-visible public algebra, type evidence, and construction APIs while keeping runtime mechanics opaque; requires full generalized monadic `<-` lowering through accepted user/library `Monad<K>` evidence with static specialization/monomorphization; demotes OODA-specific forms toward libraries/templates rather than primitive IR by default; incorporates the FUTURE-005 compiled-execution direction as alpha scope for a mature executable pure/effectful TCIR/AMIR/bytecode/VM spine while keeping JIT as design pressure rather than an alpha target; excludes arbitrary algebraic effect handlers from alpha; and identifies spec-update pressure across do-notation, Act, Proc, Workflow, HKT/holes, inference, lowering, bytecode/IR, big-step/small-step semantics, and OODA-heavy specs.
 - [TASK-910](docs/plan/tasks/TASK-910-hkt-diagnostics-and-acceptance-matrix.md): Added the SPEC-067 HKT diagnostics, acceptance, and non-interference matrix. Focused parser, typechecker, and engine tests now map HKT-1 through HKT-8 to concrete evidence for Functor/Applicative/Monad constructor binders, constructor-variable application, `Monad<Option>` and partial `Monad<Result<_, E>>` evidence shape, wrong-kind/overlap/missing-evidence diagnostics, and public-summary transport without private interface or evidence leakage.
@@ -1551,6 +1556,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   reconciled to the canonical tuple-variant form `RuntimeError(Int, String)`.
 
 ### Added
+- Phase 175 semantic identity substrate for macros and tooling: parser-facing macro/callable identity carriers, importable macro origin identity with alias preservation, LSP compact identity keys, and same-file macro/function reference splitting without making macros runtime-callable (TASK-1785 through TASK-1792).
 
 - Small-step interpreter with compressed IR (Stmt/Frame/Config) and full
   async execution engine (TASK-604).  Runs workflows via structural
@@ -1779,6 +1785,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   synthesis/small-world exploration); TASK-563 status updated to `Complete`.
 
 ### Added
+- Phase 175 semantic identity substrate for macros and tooling: parser-facing macro/callable identity carriers, importable macro origin identity with alias preservation, LSP compact identity keys, and same-file macro/function reference splitting without making macros runtime-callable (TASK-1785 through TASK-1792).
 
 - Engine: associated type substitution in monomorphized bodies (TASK-568):
   - `monomorphize_expr` now normalizes `method_info.return_type` and `method_info.params`
@@ -1927,6 +1934,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Resolved all build errors and clippy warnings introduced in commit 09143dd (TASK-556 parser work) and pre-existing in ash-engine. Fixes include: unused import in `llm_e2e_usability_tests.rs`, needless borrow in `ash-interp/src/eval.rs`, `#[ignore]` without reason in `execute.rs`, clone-on-copy and single-match-else in `module_loader.rs`, collapsible-if and collapsible-match in `chat.rs`, casting and doc-markdown issues in `embeddings.rs`, too-many-lines in `provider.rs`, needless-pass-by-value/map-or/box-default/manual-string-new/doc-markdown in `stream_adapter.rs` and `stream_storage.rs`, PartialEq-without-Eq and doc-markdown in `tool_dispatch.rs`, used-underscore-binding/collapsible-if/option-if-let-else/doc-markdown in `lib.rs`, and test-code cleanups in `llm_integration_tests.rs`, `llm_engine_integration.rs`, and `ast.rs`.
 
 ### Added
+- Phase 175 semantic identity substrate for macros and tooling: parser-facing macro/callable identity carriers, importable macro origin identity with alias preservation, LSP compact identity keys, and same-file macro/function reference splitting without making macros runtime-callable (TASK-1785 through TASK-1792).
 
 - **SPEC-031: First-Class Functions and Closure Values** — Plan for Phase 80:
   - SPEC-031 v0.4 (approved): `fn(params) { body }` as expression producing `Value::Closure`, named local fn desugars to `let name = fn(...)`, `|x| => body` closure syntax, `Arc<EnvFrame>` shared scope capture, `BindingSlot::Late` for recursion, `Expr::FnApply` for user calls, `Type::Fn`/`Type::Fun` three-vertex enforcement.
@@ -2025,6 +2033,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Pure-functions phase bookkeeping is now aligned with the verified repository state: PLAN-023 is marked complete, Phase 75 in PLAN-INDEX is marked complete, and the remaining pure-functions task records no longer show stale planned status.
 
 ### Added
+- Phase 175 semantic identity substrate for macros and tooling: parser-facing macro/callable identity carriers, importable macro origin identity with alias preservation, LSP compact identity keys, and same-file macro/function reference splitting without making macros runtime-callable (TASK-1785 through TASK-1792).
 
 - Drafted [DESIGN-021: Ash Test Runner V1](docs/design/DESIGN-021-ASH-TEST-RUNNER-V1.md), defining a fail-contained `ash test` runner integrated with the CLI, a dedicated Ash test library phase for assertions/helpers, v1 support for unit/integration/e2e/property/small-world execution, explicit authored vs synthesized test labeling, and contracts/policies/obligations as opt-in metadata sources for synthesized tests together with recommended test metadata structure in the codebase.
 - Planned [PLAN-024: Ash Test Runner V1](docs/plan/PLAN-024-ASH-TEST-RUNNER-V1.md), added Phase 76 to [PLAN-INDEX](docs/plan/PLAN-INDEX.md), and authored [TASK-509](docs/plan/tasks/TASK-509-ash-test-runner-substrate.md) through [TASK-515](docs/plan/tasks/TASK-515-ash-test-runner-docs-and-phase-verification.md) to land the runner substrate, Ash test library surface, authored test metadata/discovery model, synthesized tests from contracts/policies/obligations, bounded property/small-world execution, and final verification/bookkeeping.
@@ -2047,6 +2056,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Fixed `ash-parser` capability definition property generators to validate identifiers through the parser's real `identifier` acceptance path instead of a stale duplicated keyword list. This removes false proptest failures on reserved words such as `do`.
 
 ### Added
+- Phase 175 semantic identity substrate for macros and tooling: parser-facing macro/callable identity carriers, importable macro origin identity with alias preservation, LSP compact identity keys, and same-file macro/function reference splitting without making macros runtime-callable (TASK-1785 through TASK-1792).
 
 - Planned Phase 74 as the stdlib `io` v1 implementation phase. Added [Stdlib `io` V1 Design](docs/plans/2026-04-10-stdlib-io-v1-design.md), [Stdlib IO V1 Implementation Plan](docs/plans/2026-04-10-stdlib-io-v1-implementation-plan.md), [PLAN-022](docs/plan/PLAN-022-STDLIB-IO-V1.md), and [TASK-493](docs/plan/tasks/TASK-493-freeze-stdlib-io-contract.md) through [TASK-500](docs/plan/tasks/TASK-500-stdlib-io-docs-and-verification.md) to land the first top-level `io` stdlib family with pure path values, capability-backed stdio/filesystem modules, provider/runtime wiring, and end-to-end examples.
 
@@ -2495,6 +2505,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   - Removed inefficient `prop_filter` that was rejecting duplicate patterns
 
 ### Added
+- Phase 175 semantic identity substrate for macros and tooling: parser-facing macro/callable identity carriers, importable macro origin identity with alias preservation, LSP compact identity keys, and same-file macro/function reference splitting without making macros runtime-callable (TASK-1785 through TASK-1792).
 
 - **Phase 47: Spec Compliance Fixes (Post-46 Audit)**
   - **Critical Runtime Contract Fixes (47.1):**
@@ -2623,6 +2634,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   - Updated `docs/spec/README.md` with correct spec file mappings matching actual SPEC files
 
 ### Added
+- Phase 175 semantic identity substrate for macros and tooling: parser-facing macro/callable identity carriers, importable macro origin identity with alias preservation, LSP compact identity keys, and same-file macro/function reference splitting without making macros runtime-callable (TASK-1785 through TASK-1792).
 
 - **Trace Flags Implementation (TASK-254)**
   - Implemented `--lineage` flag to include data lineage information in trace output
@@ -2739,6 +2751,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Cleaned up documentation in `kind.rs` to avoid unnecessary `ignore` attributes on code blocks.
 
 ### Added
+- Phase 175 semantic identity substrate for macros and tooling: parser-facing macro/callable identity carriers, importable macro origin identity with alias preservation, LSP compact identity keys, and same-file macro/function reference splitting without making macros runtime-callable (TASK-1785 through TASK-1792).
 
 - Role-convergence design and planning scaffold for TASK-216 through TASK-220. `docs/plans/2026-03-23-role-contract-simplification-design.md` now records the simplified role model, `docs/plans/2026-03-23-role-convergence-implementation-plan.md` turns that design into an implementation sequence, and `docs/plan/PLAN-INDEX.md` plus TASK-216 through TASK-220 now track the follow-up parser/core/runtime/example work needed to remove legacy role-supervision residue.
 - Follow-up blocker-remediation planning for the remaining role-convergence gaps after TASK-220. `docs/plans/2026-03-23-role-convergence-blocker-remediation-design.md` now records the narrowed design for replacing placeholder role-obligation lowering and reconciling touched docs/examples with the canonical surface, while `docs/plans/2026-03-23-role-convergence-blocker-remediation-plan.md`, `docs/plan/PLAN-INDEX.md`, and TASK-221 through TASK-224 break that work into focused self-contained implementation tasks.
@@ -2875,6 +2888,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Canonicalized the spec contracts for `check`, `decide`, and `receive` across SPEC-001, SPEC-002, SPEC-003, SPEC-004, SPEC-017, and SPEC-018 (TASK-156). `check` is now obligation-only, `decide` always names an explicit policy, and `receive` is documented as an epistemic mailbox-input form with one authoritative surface grammar.
 
 ### Added
+- Phase 175 semantic identity substrate for macros and tooling: parser-facing macro/callable identity carriers, importable macro origin identity with alias preservation, LSP compact identity keys, and same-file macro/function reference splitting without making macros runtime-callable (TASK-1785 through TASK-1792).
 
 - Formal proofs for semantic properties (Phase 19, TASK-149 through TASK-155):
   - `Ash/Proofs/Pattern.lean` - Pattern match determinism and totality proofs
@@ -3202,11 +3216,13 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Added
+- Phase 175 semantic identity substrate for macros and tooling: parser-facing macro/callable identity carriers, importable macro origin identity with alias preservation, LSP compact identity keys, and same-file macro/function reference splitting without making macros runtime-callable (TASK-1785 through TASK-1792).
 - Review findings resolution tracking in review.md for SPEC-098b target CPS IR.
 
 ## [Unreleased]
 
 ### Added
+- Phase 175 semantic identity substrate for macros and tooling: parser-facing macro/callable identity carriers, importable macro origin identity with alias preservation, LSP compact identity keys, and same-file macro/function reference splitting without making macros runtime-callable (TASK-1785 through TASK-1792).
 - SPEC-098b target CPS IR review reached PASS verdict after 19 revisions.
   The target CPS IR is structurally sound as an isolated draft.
 

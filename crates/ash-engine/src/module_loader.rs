@@ -41,7 +41,8 @@ use ash_parser::parse_type_def::{
 use ash_parser::parse_use::parse_use;
 use ash_parser::parse_workflow::workflow_def;
 use ash_parser::surface::{
-    Definition, Expr, InterfaceDef, LocalMacroEntry, MacroSummary, Type, Workflow, WorkflowDef,
+    Definition, Expr, InterfaceDef, LocalMacroEntry, MacroDeclarationIdentity, MacroIdentityOrigin,
+    MacroSummary, Type, Workflow, WorkflowDef,
 };
 use std::cell::{Cell, RefCell};
 use std::collections::{HashMap, HashSet};
@@ -202,7 +203,10 @@ fn collect_imported_macro_entries_with_state(
                                 ))
                             })?;
                         validate_macro_summary_template(summary, template)?;
-                        imported_macros.push(template.clone());
+                        let mut entry = template.clone();
+                        entry.identity =
+                            MacroDeclarationIdentity::imported(summary, summary.name.clone());
+                        imported_macros.push(entry);
                     }
                 }
                 ImportSelection::Named { name, alias } => {
@@ -217,9 +221,9 @@ fn collect_imported_macro_entries_with_state(
                             })?
                             .clone();
                         validate_macro_summary_template(summary, &entry)?;
-                        if let Some(alias) = alias {
-                            entry.name = alias.into();
-                        }
+                        let local_name = alias.map_or_else(|| summary.name.clone(), Into::into);
+                        entry.name = local_name.clone();
+                        entry.identity = MacroDeclarationIdentity::imported(summary, local_name);
                         imported_macros.push(entry);
                     }
                 }
@@ -3403,6 +3407,25 @@ fn validate_macro_summary_template(
             "macro summary '{name}' names template '{}'",
             template.name
         )));
+    }
+    if summary.identity.local_name != summary.name
+        || summary.identity.param_count != summary.params.len()
+        || summary.identity.origin_span != summary.origin_span
+    {
+        return Err(EngineError::Parse(format!(
+            "macro summary '{name}' identity does not match exported macro shape"
+        )));
+    }
+    match &summary.identity.origin {
+        MacroIdentityOrigin::Imported {
+            module_path,
+            exported_name,
+        } if module_path == &summary.module_path && exported_name == &summary.name => {}
+        _ => {
+            return Err(EngineError::Parse(format!(
+                "macro summary '{name}' identity does not match exported macro origin"
+            )));
+        }
     }
     if summary.params != template.params {
         return Err(EngineError::Parse(format!(

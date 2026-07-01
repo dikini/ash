@@ -1,6 +1,6 @@
 # TASK-1787: Add parser-local resolved macro/callable identity carriers
 
-## Status: 📝 Planned
+## Status: ✅ Complete
 
 ## Description
 
@@ -71,11 +71,15 @@ commands:
   - cargo test -p ash-parser --test task_1772_macro_type_inference -- --nocapture
   - cargo fmt --check
 checklist:
-  - [ ] Macro invocation identities resolve locally
-  - [ ] Ordinary callable identities remain separate
-  - [ ] Ambiguous/unresolved cases have no fabricated identity
+  - [x] Macro invocation identities resolve locally
+  - [x] Ordinary callable identities remain separate
+  - [x] Ambiguous/unresolved cases have no fabricated identity
 ```
 
 ## Dependencies for Next Task
 
 This task feeds the following Phase 175 tasks according to the dependency table in PLAN-175.
+
+## Completion Evidence
+
+- Added parser-local macro and callable identity collection/resolution helpers and fail-closed absent-name coverage.

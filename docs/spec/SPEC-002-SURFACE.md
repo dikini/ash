@@ -243,8 +243,9 @@ maybe_stmt      ::= "maybe" workflow "else" workflow
 must_stmt       ::= "must" workflow
 ```
 
-**Canonical workflow-form contracts**:
+**Legacy/current-state workflow-form contracts**:
 
+- This subsection preserves legacy/current-state workflow-form terminology. It is not a target-state WorkflowForm revival; future workflow-fact work belongs to ambient computation rows, Core/CPS carriers, trace/monitor sidecars, obligations, evidence, and provenance.
 - `check` is reserved for obligation references. Policy instances are not valid `check` targets.
 - `decide` is the policy gate, so `under <policy>` is required in the surface syntax.
 - `receive` is the authoritative surface form for stream/mailbox intake in the core workflow language; neighboring specs should defer to this grammar when referring to workflow-level `receive`.
@@ -327,7 +328,7 @@ type PointTuple = (Int, Int);
 type IntList = List<Int>;
 ```
 
-See [SPEC-020](../SPEC-020-ADT-TYPES.md) for detailed ADT semantics and typing rules.
+See [SPEC-020](SPEC-020-ADT-TYPES.md) for detailed ADT semantics and typing rules.
 
 ### 3.7 Function Definitions
 
@@ -451,7 +452,7 @@ Ok { value: Some { value: x } }  -- Nested pattern matching
 Err { error: e }            -- Matches Err, binds error field to e
 ```
 
-See [SPEC-001](../SPEC-001-IR.md) for IR representation and [SPEC-004](../SPEC-004-SEMANTICS.md) for pattern matching semantics.
+See [SPEC-001](SPEC-001-IR.md) for IR representation and [SPEC-004](SPEC-004-SEMANTICS.md) for pattern matching semantics.
 
 ### 3.10 Guards
 
@@ -555,8 +556,8 @@ A surface statement list `[s1; s2; ...; sn; done?]` lowers right-associatively:
   - Lower to `SEQ si cont` where `cont` is the lowered remainder
 
 This establishes that earlier bindings are lexically visible in later statements of the same block.
-See [SPEC-003](../SPEC-003-TYPE-SYSTEM.md) for type-environment consequences, [SPEC-004](../SPEC-004-SEMANTICS.md)
-and [SPEC-025](../SPEC-025-SMALL-STEP-OPERATIONAL-SEMANTICS.md) for operational semantics over the
+See [SPEC-003](SPEC-003-TYPE-SYSTEM.md) for type-environment consequences, [SPEC-004](SPEC-004-SEMANTICS.md)
+and [SPEC-025](SPEC-025-SMALL-STEP-OPERATIONAL-SEMANTICS.md) for operational semantics over the
 canonical lowered form.
 
 ## 5. Error Recovery
@@ -639,7 +640,7 @@ workflow find_user(id: Int) {
 - Nested patterns: `Ok { value: data }` binds the inner value
 - Guarded patterns: `Err { error: e }` binds the error field
 
-See [SPEC-020](../SPEC-020-ADT-TYPES.md) for detailed ADT semantics.
+See [SPEC-020](SPEC-020-ADT-TYPES.md) for detailed ADT semantics.
 
 ## 7. Pretty Printing
 
@@ -652,7 +653,7 @@ The surface language has canonical formatting:
 
 ## 8. Related Documents
 
-- [SPEC-001](../SPEC-001-IR.md): IR - Core intermediate representation
-- [SPEC-003](../SPEC-003-TYPE-SYSTEM.md): Type System - Type checking and inference
-- [SPEC-004](../SPEC-004-SEMANTICS.md): Operational Semantics - Runtime behavior
-- [SPEC-020](../SPEC-020-ADT-TYPES.md): ADT Types - Algebraic data type specifications
+- [SPEC-001](SPEC-001-IR.md): IR - Core intermediate representation
+- [SPEC-003](SPEC-003-TYPE-SYSTEM.md): Type System - Type checking and inference
+- [SPEC-004](SPEC-004-SEMANTICS.md): Operational Semantics - Runtime behavior
+- [SPEC-020](SPEC-020-ADT-TYPES.md): ADT Types - Algebraic data type specifications

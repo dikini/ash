@@ -1,31 +1,39 @@
 # NOTE-010: Workflow Form Pre-Typecheck Question Backlog
 
-**Status:** Exploratory / Q&A backlog with initial decisions
+**Status:** Historical / superseded — WorkflowForm-era Q&A backlog; retained for context, not future implementation
 **Date:** 2026-04-29
-**Related:** [DESIGN-033](../design/DESIGN-033-WORKFLOW-CONTRACT-OPERATOR-LIFTING.md), [SPEC-056](../spec/SPEC-056-FIRST-CLASS-WORKFLOW-CARRIER.md), [PLAN-104](../plan/PLAN-104-FIRST-CLASS-WORKFLOW-CARRIER.md)
+**Related:** [DESIGN-033](../design/DESIGN-033-WORKFLOW-CONTRACT-OPERATOR-LIFTING.md), [SPEC-056](../spec/SPEC-056-FIRST-CLASS-WORKFLOW-CARRIER.md), [PLAN-104](../plan/PLAN-104-FIRST-CLASS-WORKFLOW-CARRIER.md), [NOTE-020](NOTE-020-COMPUTATION-ROW-TAXONOMY.md), [SPEC-096b](../spec/SPEC-096b-TARGET-EFFECT-SYSTEM.md), [SPEC-098b](../spec/SPEC-098b-TARGET-IR.md), [SPEC-099](../spec/SPEC-099-CORE-LANGUAGE.md)
 
 ## Purpose
 
-This note preserves the open questions that must be answered before the first-class workflow carrier design can be hardened into implementation-grade pre-typecheck, constraint-checking, and verification work.
+This note preserves the WorkflowForm-era open questions that shaped the first-class workflow carrier MVP. It is historical context after the target effect/type/Core/CPS redesign, not an implementation backlog for reviving `WorkflowForm`.
 
-Use this note as a future guided Q&A backlog: ask one question at a time, discuss the answer, record the decision, then move to the next question. The order below is intentionally dependency-aware; earlier answers constrain later ones.
+Use this note only to understand earlier design pressures and to migrate useful workflow-governance facts into the ambient computation model. Future work belongs to computation rows, Core/CPS carriers, trace/monitor sidecars, obligations, evidence, provenance, and compatibility translation for legacy workflow declarations.
 
-## Current Working Model
+## Post-target reconciliation: no WorkflowForm revival
 
-The current first-principles model is:
+`WorkflowForm` is not revived as a primary source syntax, type constructor, Core term, CPS term, or runtime carrier. The target model uses one ambient computation with rows and sidecar facts. Workflow-like behavior remains real, but it is represented through row families, contract/evidence carriers, trace and monitor metadata, admission/authority facts, and provenance/reporting obligations.
+
+The `WorkflowForm` grammar and zipper questions below are therefore historical. They may identify facts that still need homes in target specs, but they do not require implementing `WorkflowForm`. If a future task cites this note, the task should be framed as **ambient workflow-fact reconciliation**, not WorkflowForm implementation.
+
+There is no new WorkflowForm implementation backlog from this note.
+
+## Historical Working Model
+
+The WorkflowForm-era first-principles model was:
 
 ```text
 Workflow<A> = Proc<A> × Contract<A> × AlignmentEvidence
 ```
 
-or, in current spec terminology:
+or, in SPEC-056-era terminology:
 
 ```text
 Workflow<A> = Proc<A> × WorkflowContract<A> × AlignmentEvidence
 WorkflowContract<A> = AdmissionEnvelope + ContractPlan<A>
 ```
 
-The product is synchronized, not a pair of unrelated lowered values. A workflow expression lowers to one preserved compositional form:
+Historically, the product was described as synchronized, not a pair of unrelated lowered values. A workflow expression lowers to one preserved compositional form:
 
 ```text
 Surface workflow syntax -> WorkflowForm<A>
@@ -37,9 +45,9 @@ Static discharge, dynamic residualization, simplification, no-op erasure, and pr
 
 ## Initial Decision Pass: 2026-04-30
 
-The following decisions are now promoted into SPEC-056 and should be treated as the current baseline for Phase 108 planning:
+The following decisions were promoted into SPEC-056 for Phase 108 planning. They are retained as historical context and compatibility evidence after the ambient computation redesign:
 
-1. `WorkflowForm` is primary. Carrier records such as `{ body, contract, evidence }` are implementation views derived from the preserved form, not independent artifacts.
+1. Historical SPEC-056 decision: `WorkflowForm` was primary for that MVP slice. Target planning now supersedes this with ambient computation rows, Core/CPS carriers, sidecars, obligations, evidence, and provenance; do not use this item as a revival mandate.
 2. First-slice `WorkflowForm` grammar is `Unit`, `Bind`, `FromProc`, `FromAct`, `Requires`, `Ensures`, and `Scope`. `Then` is derived from `Bind`; `Fail` and `WithError` remain inherited lower failure behavior for now.
 3. Stable alignment uses `WorkflowNodeId`, `ProjectionKind`, `ProjectionEvent`, and `AlignmentKey = WorkflowNodeId × ProjectionKind`. Events carry source-origin metadata for source spans, synthetic desugarings, and imported summaries.
 4. `ContractPlan<A>` is staged and aligned with `WorkflowForm`, including dependent `BindContract` frames and lower Proc/Act summary nodes.
@@ -52,7 +60,7 @@ The following decisions are now promoted into SPEC-056 and should be treated as 
 11. First-slice workflow contract syntax uses legacy-compatible colon forms inside `do:Workflow`: `requires: expr;` and `ensures: expr;`. Direct calls to `workflow::requires(expr)` and `workflow::ensures(expr)` are compiler-known intrinsic elaborations, not evidence that `Requirement` or `OpenPostcondition` are ordinary first-class value types.
 12. The current workflow declaration surface remains accepted but becomes deprecated. It must warn, then translate its role/capability/resource/`requires:`/`ensures:` clauses and body into the same `WorkflowForm` path used by first-class workflow expressions.
 
-Remaining questions below are retained as refinement prompts. Items already answered by this decision pass should be read as historical context unless they expose additional implementation details not yet covered by SPEC-056.
+Remaining questions below are retained as historical refinement prompts. Items already answered by this decision pass should be read as compatibility context unless they expose workflow facts that still need an ambient-row/Core/CPS home.
 
 ## Q&A Method
 

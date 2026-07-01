@@ -6,6 +6,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Changed
+- Reconciled WorkflowForm-era docs as historical/no-revival material and routed future workflow work to ambient computation facts (TASK-1804).
+- Promoted NOTE-020 from draft computation-row taxonomy to partially realized target-spec background, adding Core/CPS carrier cross-references, explanatory `Ash<rho, A>` wording, pure/total/value-like clarification, and follow-up seeds for remaining target-conformance deltas (TASK-1803).
 - Completed Phase 176 closeout after broad verification and independent review remediation, reconciling final 9/9 task status across PLAN-176, PLAN-INDEX, and TASK-1802 (TASK-1802).
 - Reconciled historical Phase 151/152/157/158 status surfaces so old `Value::List`, closure-visibility, and QuickCheck recursive-combinator deferrals point at Phase 176 outcomes rather than stale planned/deferred wording (TASK-1801).
 - Re-scoped QuickCheck recursive combinators by landing the SPEC-087 public names/config in ordinary Ash, exporting them through `test::quickcheck`, and routing execution through a visible fail-closed helper pending parser/type-metadata support for bounded recursive generation (TASK-1800).

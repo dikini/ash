@@ -1,6 +1,6 @@
 # SPEC-056: First-Class Workflow Carrier
 
-**Status:** Implemented MVP
+**Status:** Implemented MVP / historical WorkflowForm carrier language superseded for target planning
 **Date:** 2026-04-29
 **Promotes:** [DESIGN-033](../design/DESIGN-033-WORKFLOW-CONTRACT-OPERATOR-LIFTING.md)
 **Builds on:** [SPEC-048](SPEC-048-PROC-LIBRARY.md), [SPEC-049](SPEC-049-PROCESS-RUNTIME-SEMANTICS.md), [SPEC-050](SPEC-050-OPERATIONAL-BOTTOM-AND-SCOPED-HANDLING.md), [SPEC-051](SPEC-051-WORKFLOW-SEMANTICS.md), [SPEC-054](SPEC-054-GENERALIZED-TYPED-DO-NOTATION.md), [SPEC-055](SPEC-055-MONAD-COMPREHENSION-SYNTAX.md)
@@ -8,18 +8,26 @@
 **Plan:** [PLAN-104](../plan/PLAN-104-FIRST-CLASS-WORKFLOW-CARRIER.md)
 **Implementation Tasks:** [TASK-768](../plan/tasks/TASK-768-first-class-workflow-spec-plan-packet.md) through [TASK-779](../plan/tasks/TASK-779-first-class-workflow-closeout.md)
 
+## Post-target reconciliation: WorkflowForm is not revived
+
+This spec records the Phase 104/108-era first-class workflow MVP. Its `WorkflowForm` language is historical compatibility and implementation-slice evidence, not a target-state mandate.
+
+WorkflowForm is not revived as a primary syntax, type, Core term, CPS term, or runtime carrier. Target-state planning should route workflow-like facts through the ambient computation model: computation rows, Core/CPS carriers, trace and monitor sidecars, contract/evidence artifacts, obligations, admission/authority facts, provenance, and reporting metadata.
+
+Legacy workflow declarations and the first-class workflow MVP may still translate through compatibility paths described here, but new implementation work should be framed as ambient workflow-fact reconciliation. Do not create a new WorkflowForm implementation backlog from this spec.
+
 ## 1. Summary
 
 Ash adds `Workflow<A>` as a first-class computation constructor and monadic target.
 
-The semantic model is a synchronized product, not a sum or pair of independently maintained artifacts:
+The historical MVP semantic model was described as a synchronized product, not a sum or pair of independently maintained artifacts:
 
 ```text
 Workflow<A> = synchronized_product(Proc<A>, WorkflowContract<A>) via WorkflowForm<A>
 WorkflowContract<A> = AdmissionEnvelope + ContractPlan<A>
 ```
 
-`Proc<A>` owns the process computation. `WorkflowContract<A>` owns the governance projection: admission envelope, staged contract plan, coverage evidence, failure/reporting boundary, and provenance obligations. `Workflow<A>` is the aligned carrier whose projections are derived from the same preserved `WorkflowForm<A>`.
+`Proc<A>` owns the process computation. `WorkflowContract<A>` owns the governance projection: admission envelope, staged contract plan, coverage evidence, failure/reporting boundary, and provenance obligations. In this historical MVP, `Workflow<A>` was described as an aligned carrier whose projections are derived from the same preserved `WorkflowForm<A>`; target-state docs supersede that carrier story with ambient workflow facts.
 
 This spec defines the first implementation slice for first-class workflows:
 
@@ -27,7 +35,7 @@ This spec defines the first implementation slice for first-class workflows:
 2. A compiler-known qualified `workflow` namespace with Monad-shaped operations analogous to `proc`.
 3. Compiler-known `do:Workflow` target resolution through the existing SPEC-054 typed-do machinery.
 4. `[...]: Workflow` comprehensions through the existing SPEC-055 comprehension machinery.
-5. A blocking workflow-form/projection semantic gate: `WorkflowForm`, stable node/alignment identities, projection events, staged `ContractPlan`, obligation vocabulary, and equality strata.
+5. Historical blocking workflow-form/projection semantic gate: `WorkflowForm`, stable node/alignment identities, projection events, staged `ContractPlan`, obligation vocabulary, and equality strata. Target-state follow-up must migrate any still-useful facts into ambient rows/Core/CPS/sidecar carriers, not revive `WorkflowForm`.
 6. Internal coverage/evidence carriers sufficient to prove that a workflow contract governs its body.
 7. Structure-preserving workflow forms whose Proc and Contract projections are interpreted by a zipper over aligned events.
 8. Sequential workflow composition first: `unit`, `bind`, `then`, explicit lifts from `Proc`/`Act`, and initial contract-injection forms such as `requires` and `ensures`.
@@ -77,7 +85,7 @@ In scope for the first implementation slice:
 
 - Public type constructor `Workflow<A>`.
 - Internal semantic carriers for `WorkflowContract<A>`, `AdmissionEnvelope`, `ContractPlan<A>`, and `CoverageEvidence` sufficient for sequential workflow composition.
-- Structure-preserving `WorkflowForm` lowering with Proc/Contract/check/resource/failure/provenance projections.
+- Historical structure-preserving `WorkflowForm` lowering with Proc/Contract/check/resource/failure/provenance projections; target planning treats these as workflow facts to reconcile into ambient rows/Core/CPS/sidecars.
 - Public `workflow` namespace operations:
   - `workflow::unit`
   - `workflow::bind`
@@ -86,7 +94,7 @@ In scope for the first implementation slice:
   - `workflow::from_act`
   - `workflow::requires`
   - `workflow::ensures`
-- Closed first-slice `WorkflowForm` grammar, projection-event vocabulary, alignment identity model, staged `ContractPlan`, obligation vocabulary, and equality strata before Rust carrier implementation begins.
+- Closed first-slice `WorkflowForm` grammar, projection-event vocabulary, alignment identity model, staged `ContractPlan`, obligation vocabulary, and equality strata before the historical Rust carrier implementation began. This is not a new target implementation mandate.
 - Compiler-known `Workflow` typed-do dictionary.
 - `do:Workflow { ... }` typed elaboration.
 - `[...]: Workflow` comprehension typed elaboration.

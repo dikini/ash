@@ -1,13 +1,39 @@
 # NOTE-020: Computation Row Taxonomy and Pure Computation
 
 **Date:** 2026-06-24
-**Status:** Draft note -- taxonomy and terminology refinement
+**Status:** Promoted / partially realized -- taxonomy reflected in target specs and Core/CPS carriers; retained as explanatory background
 **Purpose:** Replace the narrower "effect row" framing with "computation row" as the
 target Ash annotation space. The note records why the change is needed, what kinds of facts
 can live in a computation row, and how this changes the definition of pure computation.
 
-Companion to NOTE-013 through NOTE-019, NOTE-021, and SPEC-096b, SPEC-097b, SPEC-101, and
-SPEC-102.
+Companion to NOTE-013 through NOTE-019, NOTE-021, SPEC-096b, SPEC-097b, SPEC-098b,
+SPEC-099, SPEC-100, SPEC-101, and SPEC-102. The taxonomy is now partially realized by the
+Core row carriers in `crates/ash-core/src/core_ash.rs` and the CPS effect/handler carriers
+in `crates/ash-core/src/cps.rs`.
+
+## Post-target-spec reconciliation
+
+NOTE-020 no longer owns a standalone implementation backlog. Its central distinction —
+computation rows are broader than source effect rows — has been promoted into the target
+effect and type specs and partially realized in the implementation. `SPEC-096b` and
+`SPEC-097b` use *computation row* for the broad type-level requirement set, `SPEC-098b`
+threads rows and contract metadata through the target IR, and `SPEC-099` records rows,
+refinements, traps, and contract discharge metadata in Core.
+
+The live implementation has two relevant carrier layers:
+
+- `crates/ash-core/src/core_ash.rs` defines `CoreRow`, `CoreRowItem`, row-bearing function
+  and continuation types, `CoreType::Refinement`, `CoreType::Mode`, contract discharge
+  metadata, and structured trap reasons.
+- `crates/ash-core/src/cps.rs` defines CPS `EffectRow`, `EffectItem`, `EffectOp`,
+  `HandlerClause`, row-bearing CPS terms, continuations, thunk closures, and handler chains.
+
+Those carriers do not mean every target-state rule is finished. NOTE-020 is not a new implementation backlog by itself. In particular, CPS row
+items are narrower than the richer Core row taxonomy, Core refinement predicates still keep
+a textual predicate field in some carriers, and the target specs still need final wording
+that separates pure, total, and value-like computations. Those are target-conformance
+deltas for future tasks, not evidence that NOTE-020 itself is obsolete or a new
+implementation mandate.
 
 ## 0. Motivation
 
@@ -39,17 +65,18 @@ An effect row becomes one family inside the larger computation-row model.
 
 ## 1. Central Model
 
-Target Ash still has one ambient computation constructor:
+Target Ash is easiest to explain with one ambient computation notation:
 
 ```text
 Ash<rho, A>
 ```
 
-where:
+This is explanatory semantic notation, not a concrete source syntax commitment and not a
+claim that Core literally exposes an `Ash` type constructor. In this notation:
 
 - `A` is the produced value type;
 - `rho` is a computation row;
-- ordinary surface functions elaborate to functions returning `Ash<rho, A>`.
+- ordinary surface functions elaborate into row-bearing Core/CPS computation carriers.
 
 For example:
 
@@ -111,13 +138,15 @@ even though mode participates in the same questions as effects:
 - what is equivalent to a plain value;
 - what is legal to duplicate in a continuation.
 
-The better model is:
+The better explanatory model is:
 
 ```text
 Ash<rho, A>
 ```
 
-with evaluation facts inside `rho`:
+with evaluation facts accounted for by the computation annotation space. In target prose
+this can be shown as facts inside `rho`; in implementation, Core currently represents
+mode through `CoreType::Mode` plus an optional latent row:
 
 ```text
 Ash<{eval eager}, A>
@@ -173,7 +202,10 @@ The previous shorthand:
 pure = empty row
 ```
 
-is too strong and too weak.
+is too strong and too weak when read as the final semantic definition. Target specs may
+still use empty-row profile language during migration, but that shorthand should mean
+"no listed operational/authority requirements" rather than "plain value, total, eager,
+and contract-free".
 
 It is too strong because pure computations may still carry meaningful computation facts:
 
@@ -240,17 +272,21 @@ Examples:
 
 ## 5. Consequences for Function Types
 
-The ordinary surface form remains convenient sugar:
+The ordinary surface form remains convenient sugar over row-bearing computation carriers:
 
 ```ash
 fn f(x: A) -> {rho} B
 ```
 
-Semantic boundary:
+Explanatory semantic boundary:
 
 ```text
 A -> Ash<rho, B>
 ```
+
+Again, `Ash<rho, B>` is explanatory semantic notation; Core and CPS use explicit row
+fields on functions, continuations, thunks, raises, and handlers rather than requiring a
+source-visible `Ash` constructor.
 
 Pure ordinary functions are not defined by `rho = {}`. They are defined by the `is_pure`
 predicate over `rho`:
@@ -309,31 +345,39 @@ fn div(x: Int, y: Int) -> {fail DivideByZero} Int
 fn read(path: Path) -> {fs.read} String
 ```
 
-Advanced libraries can still name computation values explicitly:
+Advanced libraries may eventually name computation values explicitly, but the following is
+illustrative notation rather than current Ash syntax:
 
-```ash
-type Susp<rho, A> = Ash<rho, A>
-type Thunk<rho, A> = Unit -> Ash<rho, A>
+```text
+Susp<rho, A>  ≈ Ash<rho, A>
+Thunk<rho, A> ≈ Unit -> Ash<rho, A>
 ```
 
-Whether type-level sugar such as `Unit -{rho}-> A` exists should be decided separately.
-The main grammar constraint is that sugar and sugarless computation types should remain
-visibly distinct enough to avoid parser ambiguity and reader confusion.
+Whether source-level sugar such as `Unit -{rho}-> A`, an explicit computation type, or no
+public constructor exists should be decided separately. The main grammar constraint is that
+real syntax should remain visibly distinct enough to avoid parser ambiguity and reader
+confusion.
 
-## 8. Open Design Questions
+## 8. Remaining target-conformance deltas
 
-1. What is the final surface spelling for computation rows now that they include more than
-   effects?
-2. Which row fact families are admitted in ordinary function signatures versus Core-only
-   summaries?
-3. What exact mode algebra combines eager, lazy, and memo facts through `bind`, `force`,
-   handlers, and continuations?
-4. Which failures are recoverable `fail` facts, which are traps, and which are bottom or
-   divergence facts?
-5. Which contract/evidence facts affect value-like equivalence?
-6. Which row entries can be hidden, summarized, or discharged at module boundaries?
-7. What is the static criterion for multi-shot-pure continuation legality once "pure" is no
-   longer equivalent to "empty row"?
+These are follow-up seeds, not work required merely to keep NOTE-020 current:
+
+1. Align the downstream CPS/runtime row taxonomy with the richer `CoreRowItem` taxonomy where
+   execution needs more than capability/role/policy/contract/channel/group categories.
+2. Replace textual refinement predicate fields with structured predicate artifacts where
+   Core/typechecking/runtime diagnostics need binder, snapshot, classification, and discharge
+   metadata.
+3. Sweep target specs for final pure/total/value-like wording so empty-row profile shorthand
+   does not overclaim semantic purity, totality, or value equivalence.
+4. Decide which row fact families are admitted in ordinary function signatures versus Core-only
+   summaries.
+5. Define the exact mode algebra for eager, lazy, and memo facts through `bind`, `force`,
+   handlers, and continuations.
+6. Decide which failures are recoverable `fail` facts, which are traps, and which are bottom or
+   divergence facts.
+7. Decide which row entries can be hidden, summarized, or discharged at module boundaries.
+8. Define the static criterion for multi-shot-pure continuation legality once "pure" is no
+   longer equivalent to "empty row".
 
 ## 9. Working Principle
 
@@ -371,11 +415,21 @@ Internal references:
 - [NOTE-021: Row, Callable, Where, and Fact Syntax](NOTE-021-ROW-CALLABLE-WHERE-AND-FACT-SYNTAX.md)
 - [SPEC-096b: Target Effect System](../spec/SPEC-096b-TARGET-EFFECT-SYSTEM.md)
 - [SPEC-097b: Target Type System](../spec/SPEC-097b-TARGET-TYPE-SYSTEM.md)
+- [SPEC-098b: Target IR](../spec/SPEC-098b-TARGET-IR.md)
+- [SPEC-099: Core Language](../spec/SPEC-099-CORE-LANGUAGE.md)
+- [SPEC-100: Core Type Checking](../spec/SPEC-100-CORE-TYPE-CHECKING.md)
 - [SPEC-101: Lazy and Memo Computation Modes](../spec/SPEC-101-LAZY-AND-MEMO-COMPUTATION-MODES.md)
 - [SPEC-102: CPS Continuation Multiplicity](../spec/SPEC-102-CPS-CONTINUATION-MULTIPLICITY.md)
+- `crates/ash-core/src/core_ash.rs`
+- `crates/ash-core/src/cps.rs`
 
 ## 11. Changelog
 
+- 2026-07-01: Promoted NOTE-020 from draft taxonomy to promoted/partially realized
+  background, added target-spec and live Core/CPS carrier cross-references, clarified
+  `Ash<rho, A>` as explanatory semantic notation, narrowed `pure = empty row` to a
+  migration/profile shorthand, and converted open questions into target-conformance
+  follow-up seeds.
 - 2026-06-27: Linked NOTE-021 as the surface-syntax companion for compact inline rows,
   expanded `where row { ... }` rows, named fact declarations, and evidence row entries.
   NOTE-021 now carries the pre-spec delta checklist for later target-spec alignment.

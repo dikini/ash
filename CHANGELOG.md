@@ -14,6 +14,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Phase 170 notation summary/export design now matches the implemented fail-closed local-table behavior for duplicate notation declarations (TASK-1742).
 
 ### Added
+- PLAN-175 name-resolution-backed semantic identity packet for macros and tooling, with tasks for canonical macro identity, parser/LSP identity threading, semantic same-file references, imported macro navigation preparation, non-callability validation, docs reconciliation, and closeout (TASK-1784 through TASK-1793).
 - Phase 174 macro-aware tooling implementation: LSP parse summaries now carry lightweight macro summary keys, internal symbol indexes distinguish syntax-phase macros, completions/hover/document symbols avoid ordinary function presentation for macros, and same-file macro invocation goto prefers macro declarations over same-named functions (TASK-1776, TASK-1777, TASK-1778, TASK-1781).
 - Phase 174 callable-identity inference readiness: bounded macro inference can use a unique same-definition-list public local `fn`/`builtin fn` type summary while unresolved, private, ambiguous, wrong-arity, type-mismatched, module-qualified, and macro-summary-derived calls remain fail-closed (TASK-1779, TASK-1780).
 - Phase 174 audit artifacts for macro-aware tooling seams and callable identity proof categories, plus spec/index reconciliation for macro tooling and inference boundaries (TASK-1775, TASK-1782).

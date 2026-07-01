@@ -1,5 +1,5 @@
 use ash_parser::surface::{
-    Type, build_local_macro_table, expand_surface_module,
+    ExpansionError, Type, build_local_macro_table, expand_surface_module,
     expand_surface_module_with_imported_macros,
 };
 
@@ -84,13 +84,12 @@ fn malformed_imported_typed_signature_rejects_instead_of_panicking() {
 
 #[test]
 fn typed_macro_template_result_mismatch_rejects_with_definition_context() {
-    let module = ash_parser::parse_surface_file(
-        r#"
+    let source = r#"
 macro bad(x: Int) -> String => x;
 fn use_macro() -> String { bad!(1) }
-"#,
-    )
-    .expect("module parses before typed macro check");
+"#;
+    let module =
+        ash_parser::parse_surface_file(source).expect("module parses before typed macro check");
 
     let err = expand_surface_module(module).expect_err("typed macro result mismatch rejects");
     let message = err.to_string();
@@ -105,6 +104,21 @@ fn use_macro() -> String { bad!(1) }
         "unexpected error: {message}"
     );
     assert!(message.contains("got Int"), "unexpected error: {message}");
+
+    match err {
+        ExpansionError::MacroTypeMismatch { span, position, .. } => {
+            assert_eq!(position.as_ref(), "template result at macro definition");
+            let template_body_start = source
+                .find("=> x")
+                .expect("fixture contains macro template body")
+                + "=> ".len();
+            assert_eq!(
+                span.start, template_body_start,
+                "result mismatch should point at the template body, not the call site"
+            );
+        }
+        other => panic!("unexpected expansion error: {other:?}"),
+    }
 }
 
 #[test]

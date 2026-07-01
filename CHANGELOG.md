@@ -6,6 +6,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Fixed
+- Clarified typed macro summary comments and strengthened TASK-1771 result-mismatch regression coverage to assert the template-body diagnostic span directly (TASK-1771).
 - Made typed macro checking fail closed for unknown annotated arguments, malformed imported signature arity, and imported macro summary/template typed-signature mismatches; result mismatch diagnostics now use the macro template span (TASK-1771).
 - Tightened bounded macro type inference so ordinary call expressions do not fabricate public macro typed summaries from unqualified names without a proven callable identity; added negative parser regressions for unqualified, wrong-arity, and module-qualified calls (TASK-1772).
 - Rejected free variables in Phase 172 executable macro templates and preserved nested macro-to-macro origin parentage, preventing call-site capture and origin-chain loss found during closeout review (TASK-1759).

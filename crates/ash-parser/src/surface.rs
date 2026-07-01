@@ -169,7 +169,7 @@ pub struct MacroSummary {
     pub template_fingerprint: MacroTemplateFingerprint,
     /// Hygiene policy guaranteed by the summarized template.
     pub hygiene_policy: MacroHygienePolicy,
-    /// Typed macro signature metadata. Phase 173 starts with no typed summaries.
+    /// Optional syntax-phase typed macro signature metadata.
     pub typed_signature: Option<MacroTypeSignatureSummary>,
     /// Source span covering the macro declaration.
     pub origin_span: Span,

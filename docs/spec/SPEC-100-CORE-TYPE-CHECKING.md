@@ -6,7 +6,7 @@ audience: [human, agent]
 authority: design
 status: implemented-mvp
 stability: alpha
-last_verified: 2026-06-20
+last_verified: 2026-07-02
 verified_against:
   specs:
     - docs/spec/SPEC-096b-TARGET-EFFECT-SYSTEM.md
@@ -130,6 +130,11 @@ The checker validates all Core types recursively:
 Core may carry type variables and row variables, but it does not introduce implicit binders.
 All variables must be introduced by the module/type scheme, function scheme, or surrounding
 elaboration metadata.
+
+**Current source bridge note (Phase 178).** Core callable function types can now receive explicit
+source callable rows lowered from inline `-> {row} T` and expanded `where row { ... }` syntax through
+the engine summary bridge. The Core checker treats these rows as annotation metadata to validate and
+compare, not as provider, admission, handler, role, or resource authority.
 
 ## 6. Type Equality and Subtyping
 
@@ -644,6 +649,9 @@ generic row mismatch.
 
 ## Changelog
 
+- 2026-07-02: Reconciled Phase 178 source-to-Core callable row metadata: explicit source rows can
+  populate Core function rows, but Core checking still consumes them as requirements rather than
+  runtime authority.
 - 2026-06-20: Created Core Ash type-checking specification with declarative rules and an initial annotation-led algorithmic profile.
 - 2026-06-28: Reconciled with NOTE-029. Dynamic contract failure traps with `ContractViolation(ContractDiagnostic)`, trap typing remains row `{}`, and recoverability requires explicit `fail` with a visible failure row item.
 - 2026-06-28: Reconciled with NOTE-030. `LetCall`/sequencing now emits the producer-postcondition-to-continuation-precondition obligation `∀name. Q(name) ⇒ R(name)` and records composed contract metadata when discharged.

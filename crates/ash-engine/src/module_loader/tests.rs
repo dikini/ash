@@ -15,6 +15,7 @@ use ash_core::type_ir::{
     PromotedConstructorApp, TypeEqualityProposition, TypeFunctionEquation,
     TypeFunctionSourceAnchors, TypeProposition, TypePropositionTerm,
 };
+use ash_parser::surface::ComputationRowItem;
 
 fn task896_module(id: usize) -> ModuleIdentity {
     ModuleIdentity::new(
@@ -240,6 +241,88 @@ fn task896_promoted_summary_named(
             )),
         )
         .with_exported_type_function(task896_promoted_type_function(&module, &kind, &ctor))
+}
+
+#[test]
+fn task1819_pub_fn_inline_row_populates_callable_row_summary() {
+    let exported = parse_supported_pub_fn_callable(
+        "pub fn read(path: Path) -> {PosixFs::read} String { path }",
+    )
+    .expect("pub fn parses")
+    .expect("pub fn export is produced");
+
+    let row = exported
+        .callable
+        .row_requirement
+        .as_ref()
+        .expect("inline callable row should populate row summary");
+    assert_eq!(row.source, CallableRowRequirementSource::InlineReturn);
+    assert_eq!(row.row.items.len(), 1);
+    assert!(matches!(
+        &row.row.items[0],
+        ComputationRowItem::Operation { path, .. }
+            if path.iter().map(std::convert::AsRef::as_ref).collect::<Vec<_>>()
+                == ["PosixFs", "read"]
+    ));
+}
+
+#[test]
+fn task1819_pub_fn_where_row_populates_callable_row_summary() {
+    let exported = parse_supported_pub_fn_callable(
+        "pub fn read(path: Path) -> String where row { PosixFs::read } { path }",
+    )
+    .expect("pub fn parses")
+    .expect("pub fn export is produced");
+
+    let row = exported
+        .callable
+        .row_requirement
+        .as_ref()
+        .expect("expanded where row should populate row summary");
+    assert_eq!(row.source, CallableRowRequirementSource::WhereRow);
+    assert_eq!(row.row.items.len(), 1);
+    assert!(matches!(
+        &row.row.items[0],
+        ComputationRowItem::Operation { path, .. }
+            if path.iter().map(std::convert::AsRef::as_ref).collect::<Vec<_>>()
+                == ["PosixFs", "read"]
+    ));
+}
+
+#[test]
+fn task1819_rowless_pub_fn_keeps_empty_callable_row_summary() {
+    let exported = parse_supported_pub_fn_callable("pub fn pure(x: Int) -> Int { x }")
+        .expect("pub fn parses")
+        .expect("pub fn export is produced");
+
+    assert!(
+        exported.callable.row_requirement.is_none(),
+        "rowless callables should not fabricate row metadata"
+    );
+}
+
+#[test]
+fn task1819_builtin_where_row_populates_callable_row_summary() {
+    let exported = parse_builtin_fn_callable(
+        "pub builtin fn read(path: Path) -> String where row { PosixFs::read };",
+        "io".to_string(),
+    )
+    .expect("builtin fn parses")
+    .expect("builtin fn export is produced");
+
+    let row = exported
+        .callable
+        .row_requirement
+        .as_ref()
+        .expect("builtin where row should populate row summary");
+    assert_eq!(row.source, CallableRowRequirementSource::WhereRow);
+    assert_eq!(row.row.items.len(), 1);
+    assert!(matches!(
+        &row.row.items[0],
+        ComputationRowItem::Operation { path, .. }
+            if path.iter().map(std::convert::AsRef::as_ref).collect::<Vec<_>>()
+                == ["PosixFs", "read"]
+    ));
 }
 
 #[allow(clippy::too_many_lines)]

@@ -153,6 +153,7 @@ Update this section as tasks complete:
 | [175](PLAN-175-NAME-RESOLUTION-BACKED-SEMANTIC-IDENTITY-FOR-MACROS-AND-TOOLING.md) | 10 | 10 | ✅ Complete |
 | [176](PLAN-176-DEFERRED-CLEANUP-AFTER-TARGET-REDESIGN.md) | 9 | 9 | ✅ Complete; deferred cleanup after target-language redesign closed with review remediation |
 | [177](PLAN-177-TARGET-ASH-ROW-SYNTAX-AND-CORE-CPS-ALIGNMENT.md) | 11 | 11 | ✅ Complete; target row syntax review remediation complete |
+| [178](PLAN-178-SOURCE-TO-CORE-ROW-LOWERING-BRIDGE.md) | 9 | 9 | ✅ Complete; explicit source rows lower into Core callable metadata with review remediation |
 
 ---
 
@@ -903,3 +904,24 @@ Starts the next target-Ash implementation packet by connecting source-facing com
 | [TASK-1814](tasks/TASK-1814-row-syntax-core-cps-cross-boundary-tests.md) | Add parser/engine/Core/CPS cross-boundary row preservation tests | ✅ Complete |
 | [TASK-1815](tasks/TASK-1815-phase-177-closeout.md) | Close out Phase 177 with gates, review, and status reconciliation | ✅ Complete |
 | [TASK-1816](tasks/TASK-1816-phase-177-row-syntax-review-remediation.md) | Remediate Phase 177 row syntax review findings | ✅ Complete |
+
+## Phase 178: Source-to-Core Row Lowering Bridge
+
+**Status:** ✅ Complete (9/9 tasks complete; source-to-Core explicit row bridge closed with review remediation)
+**Plan:** [PLAN-178: Source-to-Core Row Lowering Bridge](PLAN-178-SOURCE-TO-CORE-ROW-LOWERING-BRIDGE.md)
+**Depends on:** Phase 177 closeout and TASK-1816 row syntax review remediation.
+**Specs/notes:** `SPEC-095b`, `SPEC-096b`, `SPEC-097b`, `SPEC-098b`, `SPEC-098c`, `SPEC-099`, `SPEC-100`, `NOTE-020`, `NOTE-021`, and `NOTE-025`.
+
+Bridges Phase 177's parsed and validated target row syntax into the source-to-typechecker/Core lowering path. The phase is bounded to explicit row preservation: it audits the rowless `Type::Fn`/source-to-Core loss boundary, threads parsed callable rows into function/type summaries, lowers supported explicit rows into Core callable rows, and proves row requirements remain authority-neutral. Row-polymorphic inference and provider/admission runtime wiring remain out of scope.
+
+| Task | Description | Status |
+|------|-------------|--------|
+| [TASK-1817](tasks/TASK-1817-phase-178-plan-packet.md) | Create the Phase 178 source-to-Core row lowering bridge packet | ✅ Complete |
+| [TASK-1818](tasks/TASK-1818-source-to-core-row-loss-audit.md) | Audit source-to-typechecker/Core row-loss boundaries | ✅ Complete |
+| [TASK-1819](tasks/TASK-1819-row-bearing-callable-summary-carriers.md) | Add row-bearing callable summary carriers | ✅ Complete |
+| [TASK-1820](tasks/TASK-1820-thread-parsed-rows-into-type-summaries.md) | Thread parsed rows into function/type summaries | ✅ Complete |
+| [TASK-1821](tasks/TASK-1821-lower-source-rows-to-core-callable-rows.md) | Lower source rows into Core callable rows | ✅ Complete |
+| [TASK-1822](tasks/TASK-1822-row-requirements-authority-neutrality-tests.md) | Prove row requirements do not install authority | ✅ Complete |
+| [TASK-1823](tasks/TASK-1823-parser-engine-typecheck-core-row-preservation.md) | Add parser -> engine/typecheck -> Core row preservation tests | ✅ Complete |
+| [TASK-1824](tasks/TASK-1824-phase-178-docs-spec-reconciliation.md) | Reconcile docs/spec/status for Phase 178 boundaries | ✅ Complete |
+| [TASK-1825](tasks/TASK-1825-phase-178-closeout.md) | Close out Phase 178 with gates and review | ✅ Complete |

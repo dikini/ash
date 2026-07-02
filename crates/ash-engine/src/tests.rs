@@ -655,8 +655,14 @@ fn test_process_program_definitions_preserves_effectful_bind_rhs_for_local_funct
     };
 
     let engine = Engine::new().build().expect("engine builds");
-    let (closures, _, _) = engine
-        .process_program_definitions(&program, HashMap::new(), HashMap::new())
+    let (closures, _, _, _, _) = engine
+        .process_program_definitions(
+            &program,
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+        )
         .expect("program lowering should succeed");
 
     let closure = closures
@@ -681,13 +687,15 @@ fn test_build_imported_closures_preserves_effectful_bind_rhs_for_user_callables(
                 body: effectful_act_block_body("read"),
             },
             signature: None,
+            row_requirement: None,
             exporting_modules: HashSet::new(),
             workflow_summary: None,
             module_runtime_callables: HashMap::new(),
         },
     );
 
-    let (closures, _, _, _, _) = build_imported_closures(&imported_callables);
+    let (closures, _, _, _, _, _, _) =
+        build_imported_closures(&imported_callables).expect("imported closures should build");
     let closure = closures
         .get("demo")
         .expect("imported callable should lower into a closure");
@@ -741,6 +749,8 @@ fn test_bind_imported_callable_types_uses_imported_pub_fn_signature() {
         imported_param_counts: HashMap::from([(String::from("bind"), 2_usize)]),
         imported_fn_signatures: HashMap::from([(String::from("bind"), function)]),
         imported_builtin_signatures: HashMap::new(),
+        callable_row_requirements: HashMap::new(),
+        core_callable_types: HashMap::new(),
         imported_workflow_summaries: HashMap::new(),
         warnings: Vec::new(),
     };

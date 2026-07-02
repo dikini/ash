@@ -288,6 +288,10 @@ pub struct InlineCallable {
     pub kind: CallableKind,
     /// Full declared type signature for imported callables.
     pub signature: Option<CallableSignature>,
+    /// Explicit callable row requirement metadata parsed from the source
+    /// signature. This is requirement metadata only; it does not install
+    /// provider, admission, handler, or runtime authority.
+    pub row_requirement: Option<CallableRowRequirementSummary>,
     /// Modules that have exported or re-exported this callable.
     ///
     /// This lets alias-rewrite passes update callables from the module whose
@@ -300,6 +304,73 @@ pub struct InlineCallable {
     /// that refers to sibling helpers. These are runtime-only dependencies and
     /// are not inserted into the caller's source-visible import environment.
     pub module_runtime_callables: HashMap<String, Box<Self>>,
+}
+
+/// Source location category for an explicit callable row requirement.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CallableRowRequirementSource {
+    /// Inline callable row after the function arrow: `-> { ... } T`.
+    InlineReturn,
+    /// Expanded callable row from `where row { ... }`.
+    WhereRow,
+}
+
+/// Explicit row requirement carried with an imported/exported callable.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CallableRowRequirementSummary {
+    /// Whether the row came from inline syntax or an expanded `where row` block.
+    pub source: CallableRowRequirementSource,
+    /// Source-preserving row payload.
+    pub row: ash_parser::surface::ComputationRow,
+}
+
+pub(crate) fn callable_row_requirement_from_fn_def(
+    function: &ash_parser::surface::FnDef,
+) -> Option<CallableRowRequirementSummary> {
+    callable_inline_return_row(function.return_type.as_ref())
+        .map(|row| CallableRowRequirementSummary {
+            source: CallableRowRequirementSource::InlineReturn,
+            row: row.clone(),
+        })
+        .or_else(|| {
+            function
+                .proposition_tail
+                .as_ref()
+                .and_then(|tail| tail.row.as_ref())
+                .map(|row| CallableRowRequirementSummary {
+                    source: CallableRowRequirementSource::WhereRow,
+                    row: row.row.clone(),
+                })
+        })
+}
+
+pub(crate) fn callable_row_requirement_from_builtin(
+    builtin: &ash_parser::surface::BuiltinFnDef,
+) -> Option<CallableRowRequirementSummary> {
+    callable_inline_return_row(Some(&builtin.return_type))
+        .map(|row| CallableRowRequirementSummary {
+            source: CallableRowRequirementSource::InlineReturn,
+            row: row.clone(),
+        })
+        .or_else(|| {
+            builtin
+                .proposition_tail
+                .as_ref()
+                .and_then(|tail| tail.row.as_ref())
+                .map(|row| CallableRowRequirementSummary {
+                    source: CallableRowRequirementSource::WhereRow,
+                    row: row.row.clone(),
+                })
+        })
+}
+
+pub(crate) const fn callable_inline_return_row(
+    return_type: Option<&ash_parser::surface::Type>,
+) -> Option<&ash_parser::surface::ComputationRow> {
+    match return_type {
+        Some(ash_parser::surface::Type::Fn(params, Some(row), _)) if params.is_empty() => Some(row),
+        _ => None,
+    }
 }
 
 /// Declared signature preserved for imported callables.

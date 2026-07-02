@@ -6,6 +6,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Changed
+- Completed Phase 178 after broad verification and independent review remediation, preserving rowless callable compatibility for unsupported rowless surface type forms and extending authority-neutrality coverage across imported row-bearing callables (TASK-1825).
+- Reconciled Phase 178 docs/spec status for the source-to-Core callable row bridge, clarifying that explicit source rows now reach Core function row metadata while row-polymorphic inference, provider/admission wiring, handler execution, and broader corpus migration remain future work (TASK-1824).
+- Audited the Phase 178 source-to-Core row-loss boundary, documenting parser row retention, typechecker validation, rowless `Type::Fn` conversion points, engine import/export signature transport, and Core row bridge ownership before implementation (TASK-1818).
 - Closed Phase 177 as a bounded target-row parser/validation plus Core/CPS taxonomy alignment slice after broad verification and independent review remediation, explicitly retaining lowercase/source-path operation rows as unresolved requirement metadata and deferring source-to-Core row lowering, row-polymorphic inference, and provider/admission runtime wiring (TASK-1815).
 - Reconciled stale spec status surfaces for SPEC-081, SPEC-082, SPEC-086, SPEC-087, SPEC-088, SPEC-089, SPEC-091, SPEC-092, SPEC-094, SPEC-099, SPEC-100, SPEC-101, and SPEC-102 while preserving deferred-tail caveats (TASK-1805).
 - Reconciled WorkflowForm-era docs as historical/no-revival material and routed future workflow work to ambient computation facts (TASK-1804).
@@ -28,6 +31,12 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Phase 170 notation summary/export design now matches the implemented fail-closed local-table behavior for duplicate notation declarations (TASK-1742).
 
 ### Added
+- Added Phase 178 parser-to-Core row preservation regressions that inspect parser rows, engine/typecheck row summaries, imported callable signatures, Core callable rows, rowless defaults, and open row tails in one end-to-end path (TASK-1823).
+- Added Phase 178 authority-neutrality regressions proving row requirements do not register providers, select resources or capability implementations, install runtime modules, admit roles/capabilities, fabricate workflow authority summaries, or call host hooks during parse/check/execute (TASK-1822).
+- Lowered explicit Phase 178 source callable rows into Core Ash callable metadata via `CoreType::Function { row, .. }`, covering supported target row families, open row tails, and rowless default rows without granting runtime authority (TASK-1821).
+- Threaded explicit Phase 178 callable row requirements into engine workflow summaries for local and imported functions, preserving inline rows and `where row` rows while keeping rowless callables compatible and authority-neutral (TASK-1820).
+- Row-bearing engine callable requirement summaries for Phase 178 source rows, preserving explicit inline rows and expanded `where row` metadata on ordinary and builtin public callable exports without changing rowless `Type::Fn` inference or installing authority (TASK-1819).
+- PLAN-178 source-to-Core row lowering bridge packet, with tasks for row-loss boundary audit, row-bearing callable summary carriers, parsed-row summary threading, source-row to Core callable-row lowering, authority-neutrality tests, parser/engine/typecheck/Core row preservation tests, docs/spec reconciliation, and closeout (TASK-1817 through TASK-1825).
 - Added Phase 177 parser/engine/typechecker/Core/CPS cross-boundary row preservation and non-authority regressions, including explicit evidence that source callable rows remain validation-only at current rowless `Type::Fn` conversion boundaries (TASK-1814).
 - Added Core row taxonomy alignment for Phase 177 operation requirements, including operation-facing Core helpers, `operation`/`op` Core text aliases, and normalization/public-summary/text round-trip coverage while retaining legacy `Capability` storage compatibility (TASK-1812).
 - Impl-qualified operation-row identity resolution for Phase 177 rows, including concrete `PosixFs::read`, abstract `F::read` under an interface bound, and fail-closed diagnostics for interface-qualified or unknown operation identities (TASK-1810).

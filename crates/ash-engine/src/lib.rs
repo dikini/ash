@@ -31,9 +31,11 @@ pub use entry::{
     load_runtime_entry_stdlib_sources, verify_entry_workflow_def,
 };
 pub use error::EngineError;
+pub use module_loader::{CallableRowRequirementSource, CallableRowRequirementSummary};
 // Re-export the unified CapabilityProvider trait from ash_core
 pub use ash_core::capability::CapabilityProvider;
 
+use ash_core::core_ash::{CoreRow, CoreRowItem, CoreType};
 use ash_core::runtime::{
     FailureEntity, OperationalFailure, ProcessFailure, RunId, TowerLevel, WorkflowAdmissionContext,
     WorkflowBoundaryOutcome, WorkflowContractCheckEvidence, WorkflowEvidenceStatus,
@@ -133,6 +135,16 @@ pub struct Workflow {
     /// produce the proper polymorphic type instead of an arity-only synthetic.
     pub imported_builtin_signatures:
         std::collections::HashMap<String, ash_parser::surface::BuiltinFnDef>,
+    /// Explicit callable row requirements for imported and local callables.
+    ///
+    /// These are requirement summaries only; they do not install providers,
+    /// admission facts, handlers, roles, resources, or runtime authority.
+    pub callable_row_requirements: std::collections::HashMap<String, CallableRowRequirementSummary>,
+    /// Core Ash function types for imported and local callables.
+    ///
+    /// This is a metadata bridge from explicit source rows to Core requirement
+    /// rows. It does not make a callable executable or grant authority.
+    pub core_callable_types: std::collections::HashMap<String, CoreType>,
     /// Public first-class workflow summaries for imported `Workflow<A>` callables.
     pub imported_workflow_summaries:
         std::collections::HashMap<String, ash_core::workflow_carrier::PublicWorkflowSummary>,
@@ -309,6 +321,8 @@ pub enum WorkflowAdmissionOutcome {
 type ProgramProcessingResult = (
     HashMap<String, Value>,
     HashMap<String, usize>,
+    HashMap<String, CallableRowRequirementSummary>,
+    HashMap<String, CoreType>,
     ash_core::ast::Workflow,
 );
 
@@ -1070,6 +1084,8 @@ impl Engine {
         program: &ash_parser::surface::Program,
         imported_closures: HashMap<String, Value>,
         imported_param_counts: HashMap<String, usize>,
+        imported_callable_row_requirements: HashMap<String, CallableRowRequirementSummary>,
+        imported_core_callable_types: HashMap<String, CoreType>,
     ) -> Result<ProgramProcessingResult, EngineError> {
         use ash_core::env_frame::EnvFrame;
         use ash_parser::{
@@ -1083,8 +1099,17 @@ impl Engine {
             &program.definitions,
         ));
 
-        let (mut local_closures, mut local_param_counts) =
-            (imported_closures, imported_param_counts);
+        let (
+            mut local_closures,
+            mut local_param_counts,
+            mut callable_row_requirements,
+            mut core_callable_types,
+        ) = (
+            imported_closures,
+            imported_param_counts,
+            imported_callable_row_requirements,
+            imported_core_callable_types,
+        );
 
         let mut imported_env = EnvFrame::new();
         for (name, value) in &local_closures {
@@ -1106,6 +1131,18 @@ impl Engine {
                     .map(|p| (p.name.to_string(), None))
                     .collect();
                 local_param_counts.insert(name.clone(), params.len());
+                if let Some(row_requirement) =
+                    module_loader::callable_row_requirement_from_fn_def(fn_def)
+                {
+                    callable_row_requirements.insert(name.clone(), row_requirement);
+                }
+                let core_type = core_callable_type_from_fn_def(fn_def).map_err(|error| {
+                    EngineError::Parse(format!(
+                        "failed to lower callable row for '{}': {error}",
+                        fn_def.name
+                    ))
+                })?;
+                core_callable_types.insert(name.clone(), core_type);
                 late_slots.insert(name.clone(), slot);
                 function_specs.push((name, params, body_expr));
             }
@@ -1145,9 +1182,16 @@ impl Engine {
             local_param_counts.insert(helper.name.to_string(), helper.params.len());
         }
 
-        Ok((local_closures, local_param_counts, core))
+        Ok((
+            local_closures,
+            local_param_counts,
+            callable_row_requirements,
+            core_callable_types,
+            core,
+        ))
     }
 
+    #[allow(clippy::too_many_lines)]
     fn parse_workflow_source_with_imports(
         &self,
         source: &str,
@@ -1166,10 +1210,12 @@ impl Engine {
         let (
             imported_closures,
             imported_param_counts,
+            imported_callable_row_requirements,
+            imported_core_callable_types,
             imported_fn_signatures,
             imported_builtin_signatures,
             imported_workflow_summaries,
-        ) = build_imported_closures(imported_callables);
+        ) = build_imported_closures(imported_callables)?;
 
         let mut input = new_input(source);
         skip_whitespace_and_comments(&mut input);
@@ -1191,12 +1237,19 @@ impl Engine {
 
                     let warnings = workflow_warnings_for_def(&program.workflow);
                     let id = self.store_surface_workflow_def(program.workflow.clone());
-                    let (local_closures, local_param_counts, core) = self
-                        .process_program_definitions(
-                            &program,
-                            imported_closures,
-                            imported_param_counts,
-                        )?;
+                    let (
+                        local_closures,
+                        local_param_counts,
+                        callable_row_requirements,
+                        core_callable_types,
+                        core,
+                    ) = self.process_program_definitions(
+                        &program,
+                        imported_closures,
+                        imported_param_counts,
+                        imported_callable_row_requirements,
+                        imported_core_callable_types,
+                    )?;
 
                     self.store_surface_program(id, program);
                     if let Some(identity) = module_identity {
@@ -1212,6 +1265,8 @@ impl Engine {
                         imported_param_counts: local_param_counts,
                         imported_fn_signatures,
                         imported_builtin_signatures,
+                        callable_row_requirements,
+                        core_callable_types,
                         imported_workflow_summaries,
                         warnings,
                     });
@@ -1232,6 +1287,8 @@ impl Engine {
                     imported_param_counts,
                     imported_fn_signatures,
                     imported_builtin_signatures,
+                    callable_row_requirements: imported_callable_row_requirements,
+                    core_callable_types: imported_core_callable_types,
                     imported_workflow_summaries,
                     warnings,
                 })
@@ -1243,10 +1300,18 @@ impl Engine {
 
                 let warnings = workflow_warnings_for_def(&program.workflow);
                 let id = self.store_surface_workflow_def(program.workflow.clone());
-                let (local_closures, local_param_counts, core) = self.process_program_definitions(
+                let (
+                    local_closures,
+                    local_param_counts,
+                    callable_row_requirements,
+                    core_callable_types,
+                    core,
+                ) = self.process_program_definitions(
                     &program,
                     imported_closures,
                     imported_param_counts,
+                    imported_callable_row_requirements,
+                    imported_core_callable_types,
                 )?;
 
                 self.store_surface_program(id, program);
@@ -1263,6 +1328,8 @@ impl Engine {
                     imported_param_counts: local_param_counts,
                     imported_fn_signatures,
                     imported_builtin_signatures,
+                    callable_row_requirements,
+                    core_callable_types,
                     imported_workflow_summaries,
                     warnings,
                 })
@@ -2186,6 +2253,281 @@ fn surface_type_to_typeck(ty: &SurfaceType) -> Result<ash_typeck::Type, String> 
         ),
     }
 }
+
+fn surface_path_to_core_path(path: &[ash_parser::surface::Name]) -> Vec<String> {
+    path.iter().map(ToString::to_string).collect()
+}
+
+fn surface_type_to_core_type(ty: &SurfaceType) -> Result<CoreType, String> {
+    match ty {
+        SurfaceType::Hole { span } => Err(format!(
+            "type holes cannot lower to Core callable type metadata at {span:?}"
+        )),
+        SurfaceType::Name(name) => Ok(match name.as_ref() {
+            "Int" | "String" | "Bool" | "Time" | "Ref" | "Unit" => CoreType::Base(name.to_string()),
+            "()" => CoreType::Base("Unit".to_string()),
+            other => CoreType::Named(other.to_string()),
+        }),
+        SurfaceType::List(item) => Ok(CoreType::App {
+            name: "List".to_string(),
+            args: vec![surface_type_to_core_type(item)?],
+        }),
+        SurfaceType::Tuple(items) => items
+            .iter()
+            .map(surface_type_to_core_type)
+            .collect::<Result<Vec<_>, _>>()
+            .map(CoreType::Tuple),
+        SurfaceType::Record(fields) => fields
+            .iter()
+            .map(|(name, ty)| surface_type_to_core_type(ty).map(|ty| (name.to_string(), ty)))
+            .collect::<Result<Vec<_>, _>>()
+            .map(CoreType::Record),
+        SurfaceType::Capability(name) => Ok(CoreType::Named(name.to_string())),
+        SurfaceType::Constructor { name, args } => {
+            let args = args
+                .iter()
+                .map(surface_type_to_core_type)
+                .collect::<Result<Vec<_>, _>>()?;
+            Ok(CoreType::App {
+                name: name.to_string(),
+                args,
+            })
+        }
+        SurfaceType::Fn(params, row, ret) => {
+            let params = params
+                .iter()
+                .map(surface_type_to_core_type)
+                .collect::<Result<Vec<_>, _>>()?;
+            let result = Box::new(surface_type_to_core_type(ret)?);
+            let row = row.as_ref().map_or_else(
+                || Ok(CoreRow::default()),
+                surface_computation_row_to_core_row,
+            )?;
+            Ok(CoreType::Function {
+                params,
+                result,
+                row,
+            })
+        }
+        SurfaceType::Associated { .. } => {
+            Err("associated types cannot lower to Core callable type metadata yet".to_string())
+        }
+        SurfaceType::AssociatedFamilyProjection { .. } => Err(
+            "associated family projections cannot lower to Core callable type metadata yet"
+                .to_string(),
+        ),
+    }
+}
+
+fn surface_type_to_core_type_lossy(ty: &SurfaceType) -> CoreType {
+    match ty {
+        SurfaceType::Hole { .. } => CoreType::Var("_".to_string()),
+        SurfaceType::Name(name) => match name.as_ref() {
+            "Int" | "String" | "Bool" | "Time" | "Ref" | "Unit" => CoreType::Base(name.to_string()),
+            "()" => CoreType::Base("Unit".to_string()),
+            other => CoreType::Named(other.to_string()),
+        },
+        SurfaceType::List(item) => CoreType::App {
+            name: "List".to_string(),
+            args: vec![surface_type_to_core_type_lossy(item)],
+        },
+        SurfaceType::Tuple(items) => {
+            CoreType::Tuple(items.iter().map(surface_type_to_core_type_lossy).collect())
+        }
+        SurfaceType::Record(fields) => CoreType::Record(
+            fields
+                .iter()
+                .map(|(name, ty)| (name.to_string(), surface_type_to_core_type_lossy(ty)))
+                .collect(),
+        ),
+        SurfaceType::Capability(name) => CoreType::Named(name.to_string()),
+        SurfaceType::Constructor { name, args } => CoreType::App {
+            name: name.to_string(),
+            args: args.iter().map(surface_type_to_core_type_lossy).collect(),
+        },
+        SurfaceType::Fn(params, row, ret) => CoreType::Function {
+            params: params.iter().map(surface_type_to_core_type_lossy).collect(),
+            result: Box::new(surface_type_to_core_type_lossy(ret)),
+            row: row
+                .as_ref()
+                .and_then(|row| surface_computation_row_to_core_row(row).ok())
+                .unwrap_or_default(),
+        },
+        SurfaceType::Associated { name, .. } => CoreType::Named(format!("Associated::{name}")),
+        SurfaceType::AssociatedFamilyProjection {
+            interface, member, ..
+        } => CoreType::Named(format!("<{interface}>::{member}")),
+    }
+}
+
+fn surface_computation_row_to_core_row(
+    row: &ash_parser::surface::ComputationRow,
+) -> Result<CoreRow, String> {
+    let mut items = Vec::new();
+    let mut tail = None;
+
+    for item in &row.items {
+        match item {
+            ash_parser::surface::ComputationRowItem::Operation { path, .. } => {
+                let (operation, path) = path
+                    .split_last()
+                    .ok_or_else(|| "operation row item has no operation name".to_string())?;
+                items.push(CoreRowItem::operation(
+                    surface_path_to_core_path(path),
+                    operation.to_string(),
+                ));
+            }
+            ash_parser::surface::ComputationRowItem::WholeRow { variable, .. }
+            | ash_parser::surface::ComputationRowItem::Tail { variable, .. } => {
+                if tail.replace(variable.to_string()).is_some() {
+                    return Err(format!("duplicate Core row tail '{variable}'"));
+                }
+            }
+            ash_parser::surface::ComputationRowItem::Resource { path, mode, .. } => {
+                items.push(CoreRowItem::Resource {
+                    path: surface_path_to_core_path(path),
+                    mode: mode
+                        .as_ref()
+                        .map_or_else(|| "use".to_string(), ToString::to_string),
+                });
+            }
+            ash_parser::surface::ComputationRowItem::Role { path, .. } => {
+                items.push(CoreRowItem::Role {
+                    path: surface_path_to_core_path(path),
+                });
+            }
+            ash_parser::surface::ComputationRowItem::Policy { path, .. } => {
+                items.push(CoreRowItem::Policy {
+                    path: surface_path_to_core_path(path),
+                });
+            }
+            ash_parser::surface::ComputationRowItem::Channel {
+                mode,
+                path,
+                payload,
+                ..
+            } => {
+                items.push(CoreRowItem::Channel {
+                    path: surface_path_to_core_path(path),
+                    mode: mode
+                        .as_ref()
+                        .map_or_else(|| "send".to_string(), ToString::to_string),
+                    payload_type: Box::new(payload.as_ref().map_or_else(
+                        || Ok(CoreType::Base("Unit".to_string())),
+                        surface_type_to_core_type,
+                    )?),
+                });
+            }
+            ash_parser::surface::ComputationRowItem::Process { operation, .. } => {
+                items.push(CoreRowItem::Process {
+                    operation: operation
+                        .as_ref()
+                        .map_or_else(|| "spawn".to_string(), ToString::to_string),
+                });
+            }
+            ash_parser::surface::ComputationRowItem::Fail { path, .. } => {
+                items.push(CoreRowItem::Failure {
+                    ty: path.as_ref().map(|path| {
+                        Box::new(CoreType::Named(
+                            path.iter()
+                                .map(ToString::to_string)
+                                .collect::<Vec<_>>()
+                                .join("."),
+                        ))
+                    }),
+                });
+            }
+            ash_parser::surface::ComputationRowItem::Evidence { path, .. } => {
+                items.push(CoreRowItem::Evidence {
+                    path: surface_path_to_core_path(path),
+                });
+            }
+            ash_parser::surface::ComputationRowItem::Group { path, .. } => {
+                items.push(CoreRowItem::EffectGroupRef {
+                    path: surface_path_to_core_path(path),
+                });
+            }
+        }
+    }
+
+    Ok(CoreRow { items, tail })
+}
+
+fn callable_row_for_core_type(
+    return_type: &SurfaceType,
+    proposition_tail: Option<&ash_parser::surface::PropositionTail>,
+) -> Result<CoreRow, String> {
+    match (
+        module_loader::callable_inline_return_row(Some(return_type)),
+        proposition_tail.and_then(|tail| tail.row.as_ref()),
+    ) {
+        (Some(_), Some(_)) => {
+            Err("duplicate inline and expanded callable rows cannot lower to Core".to_string())
+        }
+        (Some(row), None) => surface_computation_row_to_core_row(row),
+        (None, Some(row)) => surface_computation_row_to_core_row(&row.row),
+        (None, None) => Ok(CoreRow::default()),
+    }
+}
+
+fn core_callable_type_from_fn_def(
+    function: &ash_parser::surface::FnDef,
+) -> Result<CoreType, String> {
+    let has_explicit_row = module_loader::callable_row_requirement_from_fn_def(function).is_some();
+    let params = function
+        .params
+        .iter()
+        .map(|param| {
+            if has_explicit_row {
+                surface_type_to_core_type(&param.ty)
+            } else {
+                Ok(surface_type_to_core_type_lossy(&param.ty))
+            }
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    let Some(return_type) = function.return_type.as_ref() else {
+        return Ok(CoreType::Function {
+            params,
+            result: Box::new(CoreType::Var(format!("{}_return", function.name))),
+            row: CoreRow::default(),
+        });
+    };
+    let result = Box::new(match return_type {
+        SurfaceType::Fn(params, row, ret) if params.is_empty() && row.is_some() => {
+            surface_type_to_core_type(ret)?
+        }
+        other if has_explicit_row => surface_type_to_core_type(other)?,
+        other => surface_type_to_core_type_lossy(other),
+    });
+    let row = callable_row_for_core_type(return_type, function.proposition_tail.as_ref())?;
+    Ok(CoreType::Function {
+        params,
+        result,
+        row,
+    })
+}
+
+fn core_callable_type_from_builtin(
+    builtin: &ash_parser::surface::BuiltinFnDef,
+) -> Result<CoreType, String> {
+    let params = builtin
+        .params
+        .iter()
+        .map(|param| surface_type_to_core_type(&param.ty))
+        .collect::<Result<Vec<_>, _>>()?;
+    let result = Box::new(match &builtin.return_type {
+        SurfaceType::Fn(params, row, ret) if params.is_empty() && row.is_some() => {
+            surface_type_to_core_type(ret)?
+        }
+        other => surface_type_to_core_type(other)?,
+    });
+    let row = callable_row_for_core_type(&builtin.return_type, builtin.proposition_tail.as_ref())?;
+    Ok(CoreType::Function {
+        params,
+        result,
+        row,
+    })
+}
 impl Default for Engine {
     /// Creates a default engine with standard configuration.
     ///
@@ -2606,6 +2948,8 @@ fn bind_imported_callable_types(
 type ImportedClosureBindings = (
     HashMap<String, Value>,
     HashMap<String, usize>,
+    HashMap<String, CallableRowRequirementSummary>,
+    HashMap<String, CoreType>,
     HashMap<String, ash_parser::surface::FnDef>,
     HashMap<String, ash_parser::surface::BuiltinFnDef>,
     HashMap<String, ash_core::workflow_carrier::PublicWorkflowSummary>,
@@ -2620,7 +2964,7 @@ type ImportedClosureBindings = (
 #[allow(clippy::too_many_lines)]
 fn build_imported_closures(
     imported_callables: &HashMap<String, module_loader::InlineCallable>,
-) -> ImportedClosureBindings {
+) -> Result<ImportedClosureBindings, EngineError> {
     use module_loader::CallableKind;
 
     struct ClosureSpec {
@@ -2702,6 +3046,8 @@ fn build_imported_closures(
 
     let mut closures = HashMap::new();
     let mut param_counts = HashMap::new();
+    let mut callable_row_requirements = HashMap::new();
+    let mut core_callable_types = HashMap::new();
     let mut fn_signatures = HashMap::new();
     let mut builtin_signatures = HashMap::new();
     let mut workflow_summaries = HashMap::new();
@@ -2710,13 +3056,28 @@ fn build_imported_closures(
         let params: Vec<(String, Option<String>)> =
             callable.params.iter().map(|p| (p.clone(), None)).collect();
         param_counts.insert(name.clone(), params.len());
+        if let Some(row_requirement) = &callable.row_requirement {
+            callable_row_requirements.insert(name.clone(), row_requirement.clone());
+        }
 
         if let Some(sig) = &callable.signature {
             match sig {
                 module_loader::CallableSignature::Function(fn_def) => {
+                    let core_type = core_callable_type_from_fn_def(fn_def).map_err(|error| {
+                        EngineError::Parse(format!(
+                            "failed to lower imported callable row for '{name}': {error}"
+                        ))
+                    })?;
+                    core_callable_types.insert(name.clone(), core_type);
                     fn_signatures.insert(name.clone(), fn_def.clone());
                 }
                 module_loader::CallableSignature::Builtin(builtin) => {
+                    let core_type = core_callable_type_from_builtin(builtin).map_err(|error| {
+                        EngineError::Parse(format!(
+                            "failed to lower imported builtin callable row for '{name}': {error}"
+                        ))
+                    })?;
+                    core_callable_types.insert(name.clone(), core_type);
                     builtin_signatures.insert(name.clone(), builtin.clone());
                 }
             }
@@ -2805,13 +3166,15 @@ fn build_imported_closures(
         closures.insert(name.clone(), closure);
     }
 
-    (
+    Ok((
         closures,
         param_counts,
+        callable_row_requirements,
+        core_callable_types,
         fn_signatures,
         builtin_signatures,
         workflow_summaries,
-    )
+    ))
 }
 
 #[cfg(test)]

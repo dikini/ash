@@ -4,7 +4,7 @@ title: Ash Specification Orientation Index
 kind: orientation-index
 status: active
 authority: navigational
-last_verified: 2026-06-29
+last_verified: 2026-07-02
 ---
 
 # Ash specification orientation index
@@ -74,6 +74,7 @@ Common tags include: `grammar`, `syntax`, `semantics`, `type-system`, `effect-sy
 5. [SPEC-099b](SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md)
 6. [SPEC-099](SPEC-099-CORE-LANGUAGE.md)
 7. [SPEC-100](SPEC-100-CORE-TYPE-CHECKING.md)
+8. [PLAN-178](../plan/PLAN-178-SOURCE-TO-CORE-ROW-LOWERING-BRIDGE.md) for the current explicit source callable row to Core metadata bridge and remaining non-authority caveats.
 
 ### Current vs target Core/type/effect planning
 

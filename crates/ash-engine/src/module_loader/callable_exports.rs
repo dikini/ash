@@ -6,7 +6,8 @@ use super::{
     OpenPostcondition, Parser, Path, ProcContractSummary, ProcFailureSummary, ProcLowerSummary,
     ProcProvenanceSummary, ProcResourceAuthoritySummary, ProjectionEvent, ProjectionEventKind,
     ProjectionKind, PublicWorkflowSummary, SourceOrigin, Type, Workflow, WorkflowBinder,
-    WorkflowDef, WorkflowForm, WorkflowNodeId, WorkflowScope, convert_type_def,
+    WorkflowDef, WorkflowForm, WorkflowNodeId, WorkflowScope,
+    callable_row_requirement_from_builtin, callable_row_requirement_from_fn_def, convert_type_def,
     extract_semicolon_snippets, legacy_workflow_def_to_workflow_form, lower_workflow_form,
     new_input, parse_builtin_fn_definition, parse_fn_definition, parse_type_def, workflow_def,
 };
@@ -155,6 +156,7 @@ pub(super) fn parse_workflow_signature_callable(snippet: &str) -> Option<Importe
                 .collect(),
             effectful_names: HashSet::new(),
             kind: CallableKind::User { body },
+            row_requirement: None,
             signature: Some(CallableSignature::Function(fn_def)),
             exporting_modules: HashSet::new(),
             workflow_summary: None,
@@ -295,6 +297,7 @@ pub(super) fn imported_callable_from_fn_def(
         .collect::<Vec<_>>();
     let workflow_summary = workflow_returning_pub_fn_summary(&function);
     let body = function.body.clone();
+    let row_requirement = callable_row_requirement_from_fn_def(&function);
 
     ImportedCallableExport {
         callable: InlineCallable {
@@ -302,6 +305,7 @@ pub(super) fn imported_callable_from_fn_def(
             params,
             effectful_names: HashSet::new(),
             kind: CallableKind::User { body },
+            row_requirement,
             signature: Some(CallableSignature::Function(function)),
             exporting_modules: HashSet::new(),
             workflow_summary,
@@ -525,6 +529,7 @@ pub(super) fn parse_builtin_fn_callable(
             params,
             effectful_names: HashSet::new(),
             kind: CallableKind::Builtin { module },
+            row_requirement: callable_row_requirement_from_builtin(&builtin),
             signature: Some(CallableSignature::Builtin(builtin)),
             exporting_modules: HashSet::new(),
             workflow_summary: None,
@@ -574,6 +579,7 @@ pub(super) fn extract_callable_from_workflow(
                 .collect(),
             effectful_names: HashSet::new(),
             kind: CallableKind::User { body: expr },
+            row_requirement: callable_row_requirement_from_fn_def(&fn_def),
             signature,
             exporting_modules: HashSet::new(),
             workflow_summary: Some(workflow_summary),

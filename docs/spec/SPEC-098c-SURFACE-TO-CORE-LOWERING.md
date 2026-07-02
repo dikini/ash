@@ -7,7 +7,7 @@ authority: design
 status: draft
 stability: alpha
 owner: language
-last_verified: 2026-06-30
+last_verified: 2026-07-02
 verified_against:
   specs:
     - docs/spec/SPEC-095b-TARGET-GRAMMAR.md
@@ -78,6 +78,14 @@ fn f(params) -> {ρ} T where row { W } { body }
 Inline row syntax and `where row` syntax are mutually exclusive at the surface grammar layer but
 normalize to the same callable row summary. If both are absent, lowering asks surface type inference
 for an inferred row; exported/public callables must receive an explicit or summarized public row.
+
+**Current implementation note (Phase 178).** The current bridge preserves explicit inline callable
+rows and expanded `where row` rows from parser carriers through engine/typecheck-facing callable
+summaries into `CoreType::Function { row, .. }` metadata for local and imported/exported callables.
+Rowless callables continue to lower with the default empty Core row. Open row tails are preserved as
+Core row tails in this metadata bridge. This is still a requirement-recording bridge: it does not
+perform row-polymorphic inference, install providers, admit roles/capabilities, register handlers,
+or wire runtime authority.
 
 `where row` items lower as follows:
 
@@ -248,6 +256,9 @@ of these products, lowering must reject the program before Core.
 
 ## 13. Changelog
 
+- 2026-07-02: Reconciled Phase 178 source-to-Core callable row bridge: explicit inline and expanded
+  callable rows now reach engine summaries and Core function row metadata while remaining
+  authority-neutral; row-polymorphic inference and runtime authority wiring remain future work.
 - 2026-06-30: Added Phase 173 macro lowering boundary rules for macro summaries, token-tree reparse, binder hygiene validation, and typed macro obligations.
 - 2026-06-30: Added Phase 172 parser-first expression macro MVP lowering boundary: supported local macros must expand before Core, while unsupported macro constructs and declarations remain rejected before Core/export/typecheck acceptance.
 - 2026-06-30: Clarified Phase 171 fail-closed lowering boundary for parsed macro invocation carriers and authority-neutral generated helper binders.

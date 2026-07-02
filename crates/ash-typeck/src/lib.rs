@@ -1421,6 +1421,332 @@ fn register_public_function_proposition_tail(
     Ok(())
 }
 
+fn row_item_span(item: &ash_parser::surface::ComputationRowItem) -> ash_parser::token::Span {
+    match item {
+        ash_parser::surface::ComputationRowItem::Operation { span, .. }
+        | ash_parser::surface::ComputationRowItem::Resource { span, .. }
+        | ash_parser::surface::ComputationRowItem::Role { span, .. }
+        | ash_parser::surface::ComputationRowItem::Policy { span, .. }
+        | ash_parser::surface::ComputationRowItem::Channel { span, .. }
+        | ash_parser::surface::ComputationRowItem::Process { span, .. }
+        | ash_parser::surface::ComputationRowItem::Fail { span, .. }
+        | ash_parser::surface::ComputationRowItem::Evidence { span, .. }
+        | ash_parser::surface::ComputationRowItem::Group { span, .. }
+        | ash_parser::surface::ComputationRowItem::Tail { span, .. } => *span,
+    }
+}
+
+fn row_path_text(path: &[ash_parser::surface::Name]) -> String {
+    path.iter()
+        .map(|segment| segment.as_ref())
+        .collect::<Vec<_>>()
+        .join("::")
+}
+
+fn row_item_text(item: &ash_parser::surface::ComputationRowItem) -> String {
+    match item {
+        ash_parser::surface::ComputationRowItem::Operation { path, .. } => row_path_text(path),
+        ash_parser::surface::ComputationRowItem::Resource { path, mode, .. } => {
+            mode.as_ref().map_or_else(
+                || format!("resource {}", row_path_text(path)),
+                |mode| format!("resource {} {}", row_path_text(path), mode),
+            )
+        }
+        ash_parser::surface::ComputationRowItem::Role { path, .. } => {
+            format!("role {}", row_path_text(path))
+        }
+        ash_parser::surface::ComputationRowItem::Policy { path, .. } => {
+            format!("policy {}", row_path_text(path))
+        }
+        ash_parser::surface::ComputationRowItem::Channel { mode, path, .. } => {
+            mode.as_ref().map_or_else(
+                || format!("channel {}", row_path_text(path)),
+                |mode| format!("channel {} {}", mode, row_path_text(path)),
+            )
+        }
+        ash_parser::surface::ComputationRowItem::Process {
+            keyword, operation, ..
+        } => operation.as_ref().map_or_else(
+            || keyword.to_string(),
+            |operation| format!("{keyword} {operation}"),
+        ),
+        ash_parser::surface::ComputationRowItem::Fail { path, .. } => path.as_ref().map_or_else(
+            || "fail".to_string(),
+            |path| format!("fail {}", row_path_text(path)),
+        ),
+        ash_parser::surface::ComputationRowItem::Evidence { path, .. } => {
+            format!("evidence {}", row_path_text(path))
+        }
+        ash_parser::surface::ComputationRowItem::Group { path, .. } => {
+            format!("group {}", row_path_text(path))
+        }
+        ash_parser::surface::ComputationRowItem::Tail { variable, .. } => {
+            format!("| {variable}")
+        }
+    }
+}
+
+fn unsupported_predicate_like_row_family(
+    item: &ash_parser::surface::ComputationRowItem,
+) -> Option<&'static str> {
+    let ash_parser::surface::ComputationRowItem::Operation { path, .. } = item else {
+        return None;
+    };
+    let first = path.first()?.as_ref();
+    [
+        "requires",
+        "ensures",
+        "invariant",
+        "law",
+        "proof",
+        "contract",
+    ]
+    .into_iter()
+    .find(|family| first == *family || first.starts_with(&format!("{family}_")))
+}
+
+fn row_identity_target_requires_resolution(target: &ash_parser::surface::Name) -> bool {
+    target
+        .as_ref()
+        .chars()
+        .next()
+        .is_some_and(char::is_uppercase)
+}
+
+fn proposition_type_name(ty: &ash_parser::surface::Type) -> Option<&str> {
+    match ty {
+        ash_parser::surface::Type::Name(name) => Some(name.as_ref()),
+        ash_parser::surface::Type::Constructor { name, .. } => Some(name.as_ref()),
+        _ => None,
+    }
+}
+
+fn row_identity_bounds_from_tail(
+    proposition_tail: Option<&ash_parser::surface::PropositionTail>,
+) -> Vec<(String, String)> {
+    proposition_tail.map_or_else(Vec::new, |tail| {
+        tail.clauses
+            .iter()
+            .filter_map(|clause| {
+                let ash_parser::surface::PropositionClauseKind::InterfaceBound {
+                    subject,
+                    interface,
+                    ..
+                } = &clause.kind
+                else {
+                    return None;
+                };
+                Some((
+                    proposition_type_name(subject)?.to_string(),
+                    proposition_type_name(interface)?.to_string(),
+                ))
+            })
+            .collect()
+    })
+}
+
+fn abstract_row_identity_resolution(
+    env: &TypeEnv,
+    target: &str,
+    method: &str,
+    row_identity_bounds: &[(String, String)],
+) -> Option<crate::type_env::OperationRowIdentityResolution> {
+    row_identity_bounds
+        .iter()
+        .filter(|(type_param, _)| type_param == target)
+        .find_map(|(type_param, interface)| {
+            env.lookup_interface(interface)
+                .is_some_and(|info| info.methods.contains_key(method))
+                .then(
+                    || crate::type_env::OperationRowIdentityResolution::AbstractImpl {
+                        type_param: type_param.clone(),
+                        interface: interface.clone(),
+                        method: method.to_string(),
+                    },
+                )
+        })
+}
+
+fn validate_operation_row_identity(
+    env: &TypeEnv,
+    item: &ash_parser::surface::ComputationRowItem,
+    row_identity_bounds: &[(String, String)],
+) -> Result<(), TypeCheckError> {
+    let ash_parser::surface::ComputationRowItem::Operation { path, span } = item else {
+        return Ok(());
+    };
+    let [target, method] = path.as_slice() else {
+        return Ok(());
+    };
+    if !row_identity_target_requires_resolution(target) {
+        return Ok(());
+    }
+
+    let resolution = abstract_row_identity_resolution(
+        env,
+        target.as_ref(),
+        method.as_ref(),
+        row_identity_bounds,
+    )
+    .unwrap_or_else(|| env.resolve_operation_row_identity(target.as_ref(), method.as_ref()));
+
+    match resolution {
+        crate::type_env::OperationRowIdentityResolution::ConcreteImpl { .. }
+        | crate::type_env::OperationRowIdentityResolution::AbstractImpl { .. } => Ok(()),
+        crate::type_env::OperationRowIdentityResolution::InterfaceQualified {
+            suggestion, ..
+        } => Err(
+            crate::error::TypeEnvError::InterfaceQualifiedOperationRowIdentity {
+                item: row_item_text(item),
+                suggestion,
+                span: *span,
+            }
+            .into(),
+        ),
+        crate::type_env::OperationRowIdentityResolution::UnknownImplType { impl_type } => {
+            Err(crate::error::TypeEnvError::UnknownOperationRowImplType {
+                impl_type,
+                item: row_item_text(item),
+                span: *span,
+            }
+            .into())
+        }
+        crate::type_env::OperationRowIdentityResolution::UnknownMethod { candidates, .. } => {
+            Err(crate::error::TypeEnvError::UnknownOperationRowMethod {
+                item: row_item_text(item),
+                candidates: candidates.join(", "),
+                span: *span,
+            }
+            .into())
+        }
+    }
+}
+
+fn validate_computation_row(
+    env: &TypeEnv,
+    row: &ash_parser::surface::ComputationRow,
+    row_identity_bounds: &[(String, String)],
+) -> Result<(), TypeCheckError> {
+    let mut tail_seen = None::<(&ash_parser::surface::Name, ash_parser::token::Span, usize)>;
+    for (index, item) in row.items.iter().enumerate() {
+        if let Some(family) = unsupported_predicate_like_row_family(item) {
+            return Err(crate::error::TypeEnvError::UnsupportedRowItemFamily {
+                family: family.to_string(),
+                item: row_item_text(item),
+                span: row_item_span(item),
+            }
+            .into());
+        }
+
+        validate_operation_row_identity(env, item, row_identity_bounds)?;
+
+        if let ash_parser::surface::ComputationRowItem::Tail { variable, span } = item {
+            if tail_seen.is_some() {
+                return Err(crate::error::TypeEnvError::DuplicateRowTail {
+                    tail: variable.to_string(),
+                    span: *span,
+                }
+                .into());
+            }
+            tail_seen = Some((variable, *span, index));
+        }
+    }
+    if let Some((variable, span, index)) = tail_seen
+        && index + 1 != row.items.len()
+    {
+        return Err(crate::error::TypeEnvError::RowTailNotFinal {
+            tail: variable.to_string(),
+            span,
+        }
+        .into());
+    }
+    Ok(())
+}
+
+fn validate_surface_type_rows(
+    env: &TypeEnv,
+    ty: &ash_parser::surface::Type,
+    row_identity_bounds: &[(String, String)],
+) -> Result<(), TypeCheckError> {
+    match ty {
+        ash_parser::surface::Type::List(item) => {
+            validate_surface_type_rows(env, item, row_identity_bounds)
+        }
+        ash_parser::surface::Type::Tuple(items) => {
+            for item in items {
+                validate_surface_type_rows(env, item, row_identity_bounds)?;
+            }
+            Ok(())
+        }
+        ash_parser::surface::Type::Record(fields) => {
+            for (_, field_ty) in fields {
+                validate_surface_type_rows(env, field_ty, row_identity_bounds)?;
+            }
+            Ok(())
+        }
+        ash_parser::surface::Type::Constructor { args, .. }
+        | ash_parser::surface::Type::AssociatedFamilyProjection { args, .. } => {
+            for arg in args {
+                validate_surface_type_rows(env, arg, row_identity_bounds)?;
+            }
+            Ok(())
+        }
+        ash_parser::surface::Type::Associated { base, .. } => {
+            validate_surface_type_rows(env, base, row_identity_bounds)
+        }
+        ash_parser::surface::Type::Fn(params, row, ret) => {
+            for param in params {
+                validate_surface_type_rows(env, param, row_identity_bounds)?;
+            }
+            if let Some(row) = row {
+                validate_computation_row(env, row, row_identity_bounds)?;
+            }
+            validate_surface_type_rows(env, ret, row_identity_bounds)
+        }
+        ash_parser::surface::Type::Name(_)
+        | ash_parser::surface::Type::Hole { .. }
+        | ash_parser::surface::Type::Capability(_) => Ok(()),
+    }
+}
+
+fn callable_inline_return_row(
+    function_return_type: Option<&ash_parser::surface::Type>,
+) -> Option<&ash_parser::surface::ComputationRow> {
+    match function_return_type {
+        Some(ash_parser::surface::Type::Fn(_, Some(row), _)) => Some(row),
+        _ => None,
+    }
+}
+
+fn validate_callable_rows(
+    env: &TypeEnv,
+    name: &str,
+    params: &[ash_parser::surface::Param],
+    return_type: Option<&ash_parser::surface::Type>,
+    proposition_tail: Option<&ash_parser::surface::PropositionTail>,
+) -> Result<(), TypeCheckError> {
+    let row_identity_bounds = row_identity_bounds_from_tail(proposition_tail);
+    for param in params {
+        validate_surface_type_rows(env, &param.ty, &row_identity_bounds)?;
+    }
+    if let Some(return_type) = return_type {
+        validate_surface_type_rows(env, return_type, &row_identity_bounds)?;
+    }
+    if let Some(row) = proposition_tail.and_then(|tail| tail.row.as_ref()) {
+        if let Some(inline_row) = callable_inline_return_row(return_type) {
+            return Err(crate::error::TypeEnvError::DuplicateCallableRow {
+                callable: name.to_string(),
+                inline_span: inline_row.span,
+                expanded_span: row.span,
+                span: row.span,
+            }
+            .into());
+        }
+        validate_computation_row(env, &row.row, &row_identity_bounds)?;
+    }
+    Ok(())
+}
+
 fn register_function_signatures(
     env: &mut TypeEnv,
     definitions: &[ash_parser::surface::Definition],
@@ -1438,6 +1764,13 @@ fn register_function_signatures_inner(
     for (index, definition) in definitions.iter().enumerate() {
         match definition {
             ash_parser::surface::Definition::Function(function) => {
+                validate_callable_rows(
+                    env,
+                    function.name.as_ref(),
+                    &function.params,
+                    function.return_type.as_ref(),
+                    function.proposition_tail.as_ref(),
+                )?;
                 let signature = fn_signature_type(env, function)?;
                 env.bind_variable(function.name.as_ref(), signature);
                 if matches!(function.visibility, ash_parser::surface::Visibility::Public)
@@ -1453,6 +1786,13 @@ fn register_function_signatures_inner(
                 }
             }
             ash_parser::surface::Definition::BuiltinFn(builtin_fn) => {
+                validate_callable_rows(
+                    env,
+                    builtin_fn.name.as_ref(),
+                    &builtin_fn.params,
+                    Some(&builtin_fn.return_type),
+                    builtin_fn.proposition_tail.as_ref(),
+                )?;
                 let signature = builtin_fn_signature_type(env, builtin_fn)?;
                 env.bind_variable(builtin_fn.name.as_ref(), signature);
                 if matches!(
@@ -3037,6 +3377,7 @@ mod tests {
             params: vec![],
             declared_return_type: Some(SurfaceType::Fn(
                 vec![SurfaceType::Name("Int".into())],
+                None,
                 Box::new(SurfaceType::Name("Int".into())),
             )),
             plays_roles: vec![],

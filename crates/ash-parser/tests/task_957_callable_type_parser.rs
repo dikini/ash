@@ -45,7 +45,7 @@ fn assert_name(ty: &Type, expected: &str) {
 
 fn assert_binary_int_string_to_bool(ty: &Type) {
     match ty {
-        Type::Fn(params, ret) => {
+        Type::Fn(params, _row, ret) => {
             assert_eq!(params.len(), 2, "expected a two-argument callable");
             assert_name(&params[0], "Int");
             assert_name(&params[1], "String");
@@ -57,7 +57,7 @@ fn assert_binary_int_string_to_bool(ty: &Type) {
 
 fn assert_binary_int_int_to_int(ty: &Type) {
     match ty {
-        Type::Fn(params, ret) => {
+        Type::Fn(params, _row, ret) => {
             assert_eq!(params.len(), 2, "expected a two-argument callable");
             assert_name(&params[0], "Int");
             assert_name(&params[1], "Int");
@@ -69,7 +69,7 @@ fn assert_binary_int_int_to_int(ty: &Type) {
 
 fn assert_unary_int_to_bool(ty: &Type) {
     match ty {
-        Type::Fn(params, ret) => {
+        Type::Fn(params, _row, ret) => {
             assert_eq!(params.len(), 1, "expected a unary callable");
             assert_name(&params[0], "Int");
             assert_name(ret, "Bool");
@@ -114,7 +114,7 @@ fn tuple_domain_is_not_silently_lowered_as_unary_argument() {
         only_function_param_type("fn keep(f: (Int, String) -> Bool) -> Bool { true }"),
         only_alias_type("type Predicate = (Int, String) -> Bool;"),
     ] {
-        let Type::Fn(params, _) = ty else {
+        let Type::Fn(params, ..) = ty else {
             panic!("expected Type::Fn");
         };
         assert_eq!(params.len(), 2, "tuple domain was lowered as one argument");
@@ -136,7 +136,7 @@ fn unary_tuple_argument_spelling_is_explicit_or_diagnostic() {
     );
 
     match unary_tuple_callable {
-        Type::Fn(params, ret) => {
+        Type::Fn(params, _row, ret) => {
             assert_eq!(params.len(), 1);
             assert_name(&params[0], "Pair");
             assert_name(&ret, "Bool");

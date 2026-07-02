@@ -514,7 +514,7 @@ fn format_type(ty: &Type) -> String {
             args.iter().map(format_type).collect::<Vec<_>>().join(", "),
             member
         ),
-        Type::Fn(params, ret) => format!(
+        Type::Fn(params, _row, ret) => format!(
             "Fn({}) -> {}",
             params
                 .iter()

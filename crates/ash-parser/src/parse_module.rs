@@ -24,16 +24,17 @@ use crate::surface::{
     BlockStmt, BuiltinFnDef, CallablePath, CapabilityDef, CapabilityImplementationDef,
     CapabilityImplementationDependency, CapabilityImplementationDependencyKind,
     CapabilityImplementationOperation, CapabilityInterfaceDef, CapabilityOperationMode,
-    CapabilityOperationSig, CapabilityRef, Constraint, Contract, DataKindDef, Definition,
-    DomainConstructor, DomainField, DomainSlot, EffectType, Expr, FnDef, ImplDef, ImplMethodDef,
-    InterfaceDef, InterfaceEvidenceConstraint, InterfaceMethodSig, InterfaceTypeParam, LawDef,
-    MacroDef, MacroTypeSignatureSummary, MatchArm, Name, NotationAssociativity, NotationDecl,
-    NotationFixity, NotationPattern, Param, Pattern, Predicate, ProofBody, ProofDef,
-    PropertyStrategyBinding, PropositionClause, PropositionClauseKind, PropositionPredicateDecl,
-    PropositionPredicateParam, PropositionTail, ProxyDef, RawOperatorToken, ResourceField,
-    ResourceTypeDef, RoleDef, SealedDomainDef, Type, TypeBody, TypeDef, TypeField, TypeFnDecreases,
-    TypeFnDef, TypeFnEquation, TypeFnParam, TypeParam, TypePattern, VariantDef, VariantPayload,
-    Visibility, WhereBound, Workflow, YieldArm,
+    CapabilityOperationSig, CapabilityRef, ComputationRow, ComputationRowItem, Constraint,
+    Contract, DataKindDef, Definition, DomainConstructor, DomainField, DomainSlot, EffectType,
+    Expr, FnDef, ImplDef, ImplMethodDef, InterfaceDef, InterfaceEvidenceConstraint,
+    InterfaceMethodSig, InterfaceTypeParam, LawDef, MacroDef, MacroTypeSignatureSummary, MatchArm,
+    Name, NotationAssociativity, NotationDecl, NotationFixity, NotationPattern, Param, Pattern,
+    Predicate, ProofBody, ProofDef, PropertyStrategyBinding, PropositionClause,
+    PropositionClauseKind, PropositionPredicateDecl, PropositionPredicateParam, PropositionTail,
+    PropositionWhereRow, ProxyDef, RawOperatorToken, ResourceField, ResourceTypeDef, RoleDef,
+    SealedDomainDef, Type, TypeBody, TypeDef, TypeField, TypeFnDecreases, TypeFnDef,
+    TypeFnEquation, TypeFnParam, TypeParam, TypePattern, VariantDef, VariantPayload, Visibility,
+    WhereBound, Workflow, YieldArm,
 };
 use crate::token::Span;
 
@@ -683,18 +684,47 @@ fn parse_proposition_tail(input: &mut ParseInput) -> ModalResult<PropositionTail
     let where_span = crate::input::span_from(&where_start, &input.state.pos);
     skip_whitespace_and_comments(input);
 
+    let mut row = None;
     let mut clauses = Vec::new();
-    clauses.push(parse_proposition_clause(input)?);
-    skip_whitespace_and_comments(input);
-    while consume_comma_separator(input) {
-        clauses.push(parse_proposition_clause(input)?);
+
+    while !input.input.is_empty() && !input.input.starts_with("{") {
+        if starts_with_keyword(input, "row") {
+            let parsed = parse_proposition_where_row(input)?;
+            if row.is_some() {
+                return Err(winnow::error::ErrMode::Backtrack(
+                    winnow::error::ContextError::new(),
+                ));
+            }
+            row = Some(parsed);
+        } else {
+            clauses.push(parse_proposition_clause(input)?);
+        }
+        skip_whitespace_and_comments(input);
+        if !consume_comma_separator(input) {
+            break;
+        }
         skip_whitespace_and_comments(input);
     }
 
     Ok(PropositionTail {
         clauses,
+        row,
         where_span,
         span: crate::input::span_from(&tail_start, &input.state.pos),
+    })
+}
+
+fn parse_proposition_where_row(input: &mut ParseInput) -> ModalResult<PropositionWhereRow> {
+    let row_keyword_start = input.state.pos;
+    let _ = keyword("row").parse_next(input)?;
+    let row_keyword_span = crate::input::span_from(&row_keyword_start, &input.state.pos);
+    let row = parse_computation_row_from_open_brace(input)?;
+    let span = crate::input::span_from(&row_keyword_start, &input.state.pos);
+    skip_whitespace_and_comments(input);
+    Ok(PropositionWhereRow {
+        row,
+        row_keyword_span,
+        span,
     })
 }
 
@@ -762,6 +792,243 @@ fn parse_proposition_clause(input: &mut ParseInput) -> ModalResult<PropositionCl
         },
         span: crate::input::span_from(&clause_start, &input.state.pos),
     })
+}
+
+fn parse_computation_row_from_open_brace(input: &mut ParseInput) -> ModalResult<ComputationRow> {
+    let row_start = input.state.pos;
+    let _ = literal_str("{").parse_next(input)?;
+
+    let mut items = Vec::new();
+    skip_whitespace_and_comments(input);
+
+    if !input.input.is_empty() && !input.input.starts_with("}") {
+        loop {
+            let item = parse_computation_row_item(input)?;
+            let is_tail = matches!(&item, ComputationRowItem::Tail { .. });
+            items.push(item);
+            skip_whitespace_and_comments(input);
+
+            if input.input.starts_with("}") {
+                break;
+            }
+
+            if is_tail {
+                return Err(winnow::error::ErrMode::Backtrack(
+                    winnow::error::ContextError::new(),
+                ));
+            }
+
+            if !consume_comma_separator(input) {
+                break;
+            }
+            skip_whitespace_and_comments(input);
+
+            if input.input.starts_with("}") {
+                break;
+            }
+        }
+    }
+
+    let _ = literal_str("}").parse_next(input)?;
+
+    Ok(ComputationRow {
+        items,
+        span: crate::input::span_from(&row_start, &input.state.pos),
+    })
+}
+
+fn parse_computation_row_item(input: &mut ParseInput) -> ModalResult<ComputationRowItem> {
+    let start = input.state.pos;
+
+    if input.input.starts_with("|") {
+        let _ = literal_str("|").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        let (variable, _) = identifier_with_span(input)?;
+        return Ok(ComputationRowItem::Tail {
+            variable: variable.into(),
+            span: crate::input::span_from(&start, &input.state.pos),
+        });
+    }
+
+    if starts_with_keyword(input, "resource") {
+        let _path_keyword = keyword("resource").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        let path = parse_row_path(input)?;
+        let mode = if input.input.is_empty()
+            || input.input.starts_with(",")
+            || input.input.starts_with("}")
+        {
+            None
+        } else {
+            parse_row_optional_mode(input)
+        };
+        return Ok(ComputationRowItem::Resource {
+            path,
+            mode,
+            span: crate::input::span_from(&start, &input.state.pos),
+        });
+    }
+
+    if starts_with_keyword(input, "role") {
+        let _ = keyword("role").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        let path = parse_row_path(input)?;
+        return Ok(ComputationRowItem::Role {
+            path,
+            span: crate::input::span_from(&start, &input.state.pos),
+        });
+    }
+
+    if starts_with_keyword(input, "policy") {
+        let _ = keyword("policy").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        let path = parse_row_path(input)?;
+        return Ok(ComputationRowItem::Policy {
+            path,
+            span: crate::input::span_from(&start, &input.state.pos),
+        });
+    }
+
+    if starts_with_keyword(input, "channel") {
+        let _ = keyword("channel").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        let mode = parse_row_optional_mode(input);
+        let path = parse_row_path(input)?;
+        return Ok(ComputationRowItem::Channel {
+            mode,
+            path,
+            payload: None,
+            span: crate::input::span_from(&start, &input.state.pos),
+        });
+    }
+
+    if starts_with_keyword(input, "proc") || starts_with_keyword(input, "process") {
+        let keyword = if starts_with_keyword(input, "proc") {
+            keyword("proc").parse_next(input)?
+        } else {
+            keyword("process").parse_next(input)?
+        };
+        let keyword = keyword.into();
+        skip_whitespace_and_comments(input);
+        let operation = if !input.input.is_empty()
+            && !input.input.starts_with(",")
+            && !input.input.starts_with("}")
+        {
+            let (operation, _) = identifier_with_span(input)?;
+            Some(operation.into())
+        } else {
+            None
+        };
+        return Ok(ComputationRowItem::Process {
+            keyword,
+            operation,
+            span: crate::input::span_from(&start, &input.state.pos),
+        });
+    }
+
+    if starts_with_keyword(input, "fail") {
+        let _ = keyword("fail").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        let path = if input.input.is_empty()
+            || input.input.starts_with(",")
+            || input.input.starts_with("}")
+        {
+            None
+        } else {
+            Some(parse_row_path(input)?)
+        };
+        return Ok(ComputationRowItem::Fail {
+            path,
+            span: crate::input::span_from(&start, &input.state.pos),
+        });
+    }
+
+    if starts_with_keyword(input, "evidence") {
+        let _ = keyword("evidence").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        let path = parse_row_path(input)?;
+        return Ok(ComputationRowItem::Evidence {
+            path,
+            span: crate::input::span_from(&start, &input.state.pos),
+        });
+    }
+
+    if starts_with_keyword(input, "group") {
+        let _ = keyword("group").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        let path = parse_row_path(input)?;
+        return Ok(ComputationRowItem::Group {
+            path,
+            span: crate::input::span_from(&start, &input.state.pos),
+        });
+    }
+
+    let path = parse_row_path(input)?;
+    Ok(ComputationRowItem::Operation {
+        path,
+        span: crate::input::span_from(&start, &input.state.pos),
+    })
+}
+
+fn parse_row_path(input: &mut ParseInput) -> ModalResult<Vec<Name>> {
+    let first_name = identifier(input)?;
+    let mut path = vec![first_name.into()];
+
+    loop {
+        skip_whitespace_and_comments(input);
+        if input.input.starts_with("::") {
+            let _ = literal_str("::").parse_next(input)?;
+            let next = identifier(input)?;
+            path.push(next.into());
+            continue;
+        }
+        if input.input.starts_with(".") {
+            let _ = literal_str(".").parse_next(input)?;
+            let next = identifier(input)?;
+            path.push(next.into());
+            continue;
+        }
+        break;
+    }
+
+    Ok(path)
+}
+
+fn parse_row_optional_mode(input: &mut ParseInput) -> Option<Name> {
+    if starts_with_keyword(input, "read") {
+        let _ = keyword("read").parse_next(input).ok()?;
+        return Some("read".into());
+    }
+    if starts_with_keyword(input, "write") {
+        let _ = keyword("write").parse_next(input).ok()?;
+        return Some("write".into());
+    }
+    if starts_with_keyword(input, "split") {
+        let _ = keyword("split").parse_next(input).ok()?;
+        return Some("split".into());
+    }
+    if starts_with_keyword(input, "join") {
+        let _ = keyword("join").parse_next(input).ok()?;
+        return Some("join".into());
+    }
+    if starts_with_keyword(input, "send") {
+        let _ = keyword("send").parse_next(input).ok()?;
+        return Some("send".into());
+    }
+    if starts_with_keyword(input, "receive") {
+        let _ = keyword("receive").parse_next(input).ok()?;
+        return Some("receive".into());
+    }
+    if starts_with_keyword(input, "select") {
+        let _ = keyword("select").parse_next(input).ok()?;
+        return Some("select".into());
+    }
+    if starts_with_keyword(input, "close") {
+        let _ = keyword("close").parse_next(input).ok()?;
+        return Some("close".into());
+    }
+
+    None
 }
 
 fn type_as_named_predicate(ty: Type) -> Option<(Name, Vec<Type>)> {
@@ -1105,7 +1372,7 @@ fn convert_type_expr(ty: crate::parse_type_def::TypeExpr) -> Type {
         crate::parse_type_def::TypeExpr::Constructor { name, args } if name == "Fn" => {
             let mut args: Vec<Type> = args.into_iter().map(convert_type_expr).collect();
             if let Some(ret) = args.pop() {
-                Type::Fn(args, Box::new(ret))
+                Type::Fn(args, None, Box::new(ret))
             } else {
                 Type::Constructor {
                     name: name.into_boxed_str(),
@@ -2329,6 +2596,19 @@ fn parse_surface_type_with_holes(
 ) -> ModalResult<Type> {
     skip_whitespace_and_comments(input);
 
+    if input.input.starts_with("{") {
+        let checkpoint = input.checkpoint();
+        if let Ok(row) = parse_computation_row_from_open_brace(input) {
+            skip_whitespace_and_comments(input);
+            if let Ok(ty) = parse_surface_type_with_holes(input, hole_policy) {
+                return Ok(Type::Fn(Vec::new(), Some(row), Box::new(ty)));
+            }
+            input.reset(&checkpoint);
+        } else {
+            input.reset(&checkpoint);
+        }
+    }
+
     if input.input.starts_with("<") {
         return match hole_policy {
             TypeHolePolicy::Disallow => parse_associated_family_projection_type(input),
@@ -2358,8 +2638,8 @@ fn parse_surface_type_with_holes(
         skip_whitespace_and_comments(input);
         let _ = literal_str("->").parse_next(input)?;
         skip_whitespace_and_comments(input);
-        let ret = parse_surface_type_with_holes(input, hole_policy)?;
-        return Ok(Type::Fn(params, Box::new(ret)));
+        let (row, ret) = parse_optional_callable_row(input, hole_policy)?;
+        return Ok(Type::Fn(params, row, ret));
     }
 
     if input.input.starts_with("(") {
@@ -2377,8 +2657,8 @@ fn parse_surface_type_with_holes(
     skip_whitespace_and_comments(input);
     if literal_str("->").parse_next(input).is_ok() {
         skip_whitespace_and_comments(input);
-        let rhs = parse_surface_type_with_holes(input, hole_policy)?;
-        Ok(Type::Fn(vec![lhs], Box::new(rhs)))
+        let (row, rhs) = parse_optional_callable_row(input, hole_policy)?;
+        Ok(Type::Fn(vec![lhs], row, rhs))
     } else {
         Ok(lhs)
     }
@@ -2406,9 +2686,28 @@ fn parse_parenthesized_callable_type_with_holes(
     skip_whitespace_and_comments(input);
     let _ = literal_str("->").parse_next(input)?;
     skip_whitespace_and_comments(input);
-    let ret = parse_surface_type_with_holes(input, hole_policy)?;
+    let (row, ret) = parse_optional_callable_row(input, hole_policy)?;
 
-    Ok(Type::Fn(params, Box::new(ret)))
+    Ok(Type::Fn(params, row, ret))
+}
+
+fn parse_optional_callable_row(
+    input: &mut ParseInput,
+    hole_policy: TypeHolePolicy,
+) -> ModalResult<(Option<ComputationRow>, Box<Type>)> {
+    if input.input.starts_with("{") {
+        let checkpoint = input.checkpoint();
+        if let Ok(row) = parse_computation_row_from_open_brace(input) {
+            skip_whitespace_and_comments(input);
+            if let Ok(ty) = parse_surface_type_with_holes(input, hole_policy) {
+                return Ok((Some(row), Box::new(ty)));
+            }
+        }
+        input.reset(&checkpoint);
+    }
+
+    let rhs = parse_surface_type_with_holes(input, hole_policy)?;
+    Ok((None, Box::new(rhs)))
 }
 
 fn parse_associated_family_projection_type(input: &mut ParseInput) -> ModalResult<Type> {

@@ -176,6 +176,11 @@ impl CoreRow {
 /// Requirement row item.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum CoreRowItem {
+    /// Operation requirement.
+    ///
+    /// The variant name is retained for compatibility with pre-Phase-177 Core
+    /// callers and serialized data. New operation-facing code should prefer
+    /// [`CoreRowItem::operation`] and [`CoreRowItem::is_operation_requirement`].
     Capability {
         path: CorePath,
         operation: CoreName,
@@ -210,6 +215,26 @@ pub enum CoreRowItem {
     EffectGroupRef {
         path: CorePath,
     },
+}
+
+impl CoreRowItem {
+    /// Builds an operation requirement row item.
+    ///
+    /// Core stores operation requirements in the legacy `Capability` variant
+    /// for compatibility with existing callers and serialized artifacts.
+    #[must_use]
+    pub fn operation(path: CorePath, operation: impl Into<CoreName>) -> Self {
+        Self::Capability {
+            path,
+            operation: operation.into(),
+        }
+    }
+
+    /// Returns true when this row item is an operation requirement.
+    #[must_use]
+    pub fn is_operation_requirement(&self) -> bool {
+        matches!(self, Self::Capability { .. })
+    }
 }
 
 /// Raised operation kinds representable by SPEC-096b/SPEC-098b.

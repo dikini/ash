@@ -19,7 +19,7 @@ fn ty(name: &str) -> SurfaceType {
 }
 
 fn fn_ty(params: Vec<SurfaceType>, return_type: SurfaceType) -> SurfaceType {
-    SurfaceType::Fn(params, Box::new(return_type))
+    SurfaceType::Fn(params, None, Box::new(return_type))
 }
 
 fn param(name: &str, ty: SurfaceType) -> Param {

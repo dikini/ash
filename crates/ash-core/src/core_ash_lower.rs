@@ -27,6 +27,10 @@ pub enum CoreLoweringError {
     /// A Core carrier has no representable equivalent in the current CPS IR.
     #[error("Core value cannot lower to CPS: {detail}")]
     UnrepresentableValue { detail: String },
+
+    /// A Core row has shape the current CPS bridge cannot represent.
+    #[error("Core row cannot lower to CPS: {detail}")]
+    UnsupportedCoreRow { detail: String },
 }
 
 /// Explicit row/context information needed to synthesize CPS continuation fields.
@@ -196,7 +200,7 @@ fn lower_expr_with_letcall_rows(
         CoreExpr::Atom(atom) => Ok(Term::Jump {
             cont: state.context.current_cont.clone(),
             arg: lower_atom(atom)?,
-            row: lower_row(&state.context.current_cont_row),
+            row: lower_row(&state.context.current_cont_row)?,
         }),
         CoreExpr::LetVal {
             name,
@@ -294,7 +298,7 @@ fn lower_expr_with_letcall_rows(
                 func: lower_atom(func)?,
                 args: lower_atoms(args)?,
                 cont: ContRef::Label(cont_name.clone()),
-                row: lower_row(&call_row),
+                row: lower_row(&call_row)?,
             };
             state.restore_current_cont(guard);
             Ok(Term::LetCont {
@@ -302,7 +306,7 @@ fn lower_expr_with_letcall_rows(
                 param: name.clone(),
                 cont_body: Box::new(cont_body),
                 body: Box::new(call),
-                row: lower_row(&cont_row),
+                row: lower_row(&cont_row)?,
                 multiplicity: ContMultiplicity::default(),
             })
         }
@@ -335,7 +339,7 @@ fn lower_expr_with_letcall_rows(
                     &else_path,
                     letcall_rows,
                 )?),
-                row: lower_row(&union_rows(&then_local, &else_local)),
+                row: lower_row(&union_rows(&then_local, &else_local))?,
             })
         }
         CoreExpr::Call { func, args } => {
@@ -347,7 +351,7 @@ fn lower_expr_with_letcall_rows(
                 func: lower_atom(func)?,
                 args: lower_atoms(args)?,
                 cont: state.context.current_cont.clone(),
-                row: lower_row(&call_row),
+                row: lower_row(&call_row)?,
             })
         }
         CoreExpr::LetMode {
@@ -394,7 +398,7 @@ fn lower_expr_with_letcall_rows(
                     param: name.clone(),
                     cont_body: Box::new(lowered_body),
                     body: Box::new(lowered_expr),
-                    row: lower_row(&body_row),
+                    row: lower_row(&body_row)?,
                     multiplicity: ContMultiplicity::default(),
                 })
             } else {
@@ -483,7 +487,7 @@ fn lower_expr_with_letcall_rows(
             Ok(Term::Jump {
                 cont: lower_cont_ref(cont),
                 arg: lower_atom(arg)?,
-                row: lower_row(&row),
+                row: lower_row(&row)?,
             })
         }
         CoreExpr::LetContCall {
@@ -497,7 +501,7 @@ fn lower_expr_with_letcall_rows(
                 name: name.clone(),
                 cont: core_cont_ref_name(cont).to_string(),
                 arg: lower_atom(arg)?,
-                row: lower_row(&cont_row(cont, state)),
+                row: lower_row(&cont_row(cont, state))?,
                 body: Box::new(lower_expr_with_letcall_rows(
                     body,
                     state,
@@ -510,7 +514,7 @@ fn lower_expr_with_letcall_rows(
             op: lower_effect_op(op),
             args: lower_atoms(args)?,
             resume: state.context.current_cont.clone(),
-            row: lower_row(&effect_op_row(op)),
+            row: lower_row(&effect_op_row(op))?,
         }),
         CoreExpr::Handle { clause, body } => {
             let clause_path = with_child_path(path, 0);
@@ -541,7 +545,7 @@ fn lower_expr_with_letcall_rows(
                 )?,
                 body: Box::new(lowered_body),
                 cont: state.context.current_cont.clone(),
-                row: lower_row(&residual_row),
+                row: lower_row(&residual_row)?,
             })
         }
         CoreExpr::RecordDischarge { discharge, body } => Ok(Term::RecordDischarge {
@@ -595,7 +599,7 @@ fn lower_value_with_letcall_rows(
                 body: Box::new(lowered_body?),
                 captured_env: Env::default(),
                 rec_binding: None,
-                row: lower_row(row),
+                row: lower_row(row)?,
             })
         }
         CoreValue::Record { fields } => {
@@ -650,14 +654,14 @@ fn lower_core_mode_thunk(
         body: Box::new(lowered_expr),
         captured_env: Env::default(),
         rec_binding: None,
-        row: lower_row(row),
+        row: lower_row(row)?,
     };
     Ok(Value::ThunkClosure {
         mode: thunk_mode,
         body: Box::new(thunk_body),
         captured_env: Env::default(),
         captured_chain: HandlerChain::new(),
-        row: lower_row(row),
+        row: lower_row(row)?,
         memo_cell: None,
     })
 }
@@ -761,8 +765,8 @@ fn lower_handler_clause_with_letcall_rows(
             .collect(),
         resume: clause.resume.name.clone(),
         body: Box::new(body?),
-        row: lower_row(&clause.row),
-        resume_row: resume_row_metadata(&clause.resume.ty),
+        row: lower_row(&clause.row)?,
+        resume_row: resume_row_metadata(&clause.resume.ty)?,
         resume_multiplicity: resume_multiplicity(&clause.resume.ty),
     })
 }
@@ -774,10 +778,10 @@ fn resume_row(ty: &CoreType) -> CoreRow {
     }
 }
 
-fn resume_row_metadata(ty: &CoreType) -> ResumeRowMetadata {
+fn resume_row_metadata(ty: &CoreType) -> Result<ResumeRowMetadata, CoreLoweringError> {
     match ty {
-        CoreType::Cont { row, .. } => ResumeRowMetadata::Known(lower_row(row)),
-        _ => ResumeRowMetadata::default(),
+        CoreType::Cont { row, .. } => Ok(ResumeRowMetadata::Known(lower_row(row)?)),
+        _ => Ok(ResumeRowMetadata::default()),
     }
 }
 
@@ -833,7 +837,7 @@ fn lower_effect_op(op: &CoreEffectOp) -> EffectOp {
             item: EffectItem {
                 namespace: "proc".to_string(),
                 name: operation.clone(),
-                kind: EffectItemKind::Alias,
+                kind: EffectItemKind::Process,
             },
             arg_types: lower_type_names(arg_types),
             result_type: lower_type_name(result_type),
@@ -845,7 +849,7 @@ fn lower_effect_op(op: &CoreEffectOp) -> EffectOp {
                     .as_ref()
                     .map(lower_type_name)
                     .unwrap_or_else(|| "failure".to_string()),
-                kind: EffectItemKind::Alias,
+                kind: EffectItemKind::Failure,
             },
             arg_types: ty
                 .as_ref()
@@ -1612,72 +1616,77 @@ fn contract_row(contract: &str) -> CoreRow {
     }
 }
 
-fn lower_row(row: &CoreRow) -> EffectRow {
+fn lower_row(row: &CoreRow) -> Result<EffectRow, CoreLoweringError> {
+    if let Some(tail) = &row.tail {
+        return Err(CoreLoweringError::UnsupportedCoreRow {
+            detail: format!("row tail `{tail}` is not representable in CPS rows yet"),
+        });
+    }
+
     let mut items = Vec::with_capacity(row.items.len());
     for item in &row.items {
-        if let Some(lowered) = lower_row_item(item)
-            && !items.contains(&lowered)
-        {
+        let lowered = lower_row_item(item)?;
+        if !items.contains(&lowered) {
             items.push(lowered);
         }
     }
-    EffectRow { items }
+    Ok(EffectRow { items })
 }
 
-fn lower_row_item(item: &CoreRowItem) -> Option<EffectItem> {
+fn lower_row_item(item: &CoreRowItem) -> Result<EffectItem, CoreLoweringError> {
     match item {
-        CoreRowItem::Capability { path, operation } => Some(EffectItem {
+        CoreRowItem::Capability { path, operation } => Ok(EffectItem {
             namespace: "cap".to_string(),
             name: dotted_name(path, operation),
             kind: EffectItemKind::Capability,
         }),
-        CoreRowItem::Role { path } => Some(EffectItem {
+        CoreRowItem::Role { path } => Ok(EffectItem {
             namespace: "role".to_string(),
             name: path.join("."),
             kind: EffectItemKind::Role,
         }),
-        CoreRowItem::Policy { path } => Some(EffectItem {
+        CoreRowItem::Policy { path } => Ok(EffectItem {
             namespace: "policy".to_string(),
             name: path.join("."),
             kind: EffectItemKind::Policy,
         }),
-        CoreRowItem::Contract { contract } => Some(EffectItem {
+        CoreRowItem::Contract { contract } => Ok(EffectItem {
             namespace: "contract".to_string(),
             name: contract.clone(),
             kind: EffectItemKind::Contract,
         }),
-        CoreRowItem::Channel { path, mode, .. } => Some(EffectItem {
+        CoreRowItem::Channel { path, mode, .. } => Ok(EffectItem {
             namespace: "channel".to_string(),
             name: dotted_name(path, mode),
             kind: EffectItemKind::Channel,
         }),
-        CoreRowItem::Evidence { path } => Some(EffectItem {
+        CoreRowItem::Evidence { path } => Ok(EffectItem {
             namespace: "evidence".to_string(),
             name: path.join("."),
-            kind: EffectItemKind::Alias,
+            kind: EffectItemKind::Evidence,
         }),
-        CoreRowItem::EffectGroupRef { path } => Some(EffectItem {
+        CoreRowItem::EffectGroupRef { path } => Ok(EffectItem {
             namespace: "group".to_string(),
             name: path.join("."),
             kind: EffectItemKind::Group,
         }),
-        CoreRowItem::Resource { path, mode } => Some(EffectItem {
+        CoreRowItem::Resource { path, mode } => Ok(EffectItem {
             namespace: "resource".to_string(),
             name: dotted_name(path, mode),
-            kind: EffectItemKind::Alias,
+            kind: EffectItemKind::Resource,
         }),
-        CoreRowItem::Process { operation } => Some(EffectItem {
+        CoreRowItem::Process { operation } => Ok(EffectItem {
             namespace: "proc".to_string(),
             name: operation.clone(),
-            kind: EffectItemKind::Alias,
+            kind: EffectItemKind::Process,
         }),
-        CoreRowItem::Failure { ty } => Some(EffectItem {
+        CoreRowItem::Failure { ty } => Ok(EffectItem {
             namespace: "fail".to_string(),
             name: ty
                 .as_deref()
                 .map(lower_type_name)
                 .unwrap_or_else(|| "failure".to_string()),
-            kind: EffectItemKind::Alias,
+            kind: EffectItemKind::Failure,
         }),
     }
 }
@@ -1693,9 +1702,10 @@ fn dotted_name(path: &[String], leaf: &str) -> String {
 mod tests {
     use super::*;
     use crate::core_ash::{
-        CoreCaptureSet, CoreEffectOp, CoreEvalMode, CoreExpr, CoreThunkMode, CoreType, CoreValue,
+        CoreCaptureSet, CoreEffectOp, CoreEvalMode, CoreExpr, CoreRowItem, CoreThunkMode, CoreType,
+        CoreValue,
     };
-    use crate::cps::{ThunkMode, Value as LoweredValue};
+    use crate::cps::{EffectItem, EffectItemKind, ThunkMode, Value as LoweredValue};
 
     fn payload_a_first() -> CoreType {
         CoreType::Record(vec![
@@ -1773,13 +1783,19 @@ mod tests {
                 mode, body, row, ..
             } => {
                 assert_eq!(mode, ThunkMode::Lazy);
-                assert_eq!(row, lower_row(&sample_row_item_row()));
+                assert_eq!(
+                    row,
+                    lower_row(&sample_row_item_row()).expect("sample row should lower"),
+                );
                 match *body {
                     LoweredValue::Lam {
                         params, body, row, ..
                     } => {
                         assert!(params.is_empty());
-                        assert_eq!(row, lower_row(&sample_row_item_row()));
+                        assert_eq!(
+                            row,
+                            lower_row(&sample_row_item_row()).expect("sample row should lower"),
+                        );
                         assert!(matches!(
                             *body,
                             Term::Jump {
@@ -1904,5 +1920,72 @@ mod tests {
         let total_row = total_row_with_letcall_rows(&expr, &state, &[], &HashMap::new())
             .expect("lazy letmode total row should compute");
         assert_eq!(total_row, CoreRow::default());
+    }
+
+    #[test]
+    fn lower_row_rejects_open_row_tail() {
+        let open_row = CoreRow {
+            items: vec![CoreRowItem::Capability {
+                path: vec!["db".into()],
+                operation: "read".into(),
+            }],
+            tail: Some("rho".into()),
+        };
+
+        let err =
+            lower_row(&open_row).expect_err("open rows should be unsupported in CPS lowering");
+        assert_eq!(
+            err,
+            CoreLoweringError::UnsupportedCoreRow {
+                detail: "row tail `rho` is not representable in CPS rows yet".to_string()
+            }
+        );
+    }
+
+    #[test]
+    fn lower_row_preserves_family_kinds() {
+        let row = CoreRow {
+            items: vec![
+                CoreRowItem::Resource {
+                    path: vec!["db".into()],
+                    mode: "write".into(),
+                },
+                CoreRowItem::Process {
+                    operation: "cleanup".into(),
+                },
+                CoreRowItem::Evidence {
+                    path: vec!["proofs".into(), "audit".into()],
+                },
+                CoreRowItem::Failure { ty: None },
+            ],
+            tail: None,
+        };
+
+        let lowered = lower_row(&row).expect("supported families should lower");
+        assert_eq!(
+            lowered.items,
+            vec![
+                EffectItem {
+                    namespace: "resource".to_string(),
+                    name: "db.write".to_string(),
+                    kind: EffectItemKind::Resource,
+                },
+                EffectItem {
+                    namespace: "proc".to_string(),
+                    name: "cleanup".to_string(),
+                    kind: EffectItemKind::Process,
+                },
+                EffectItem {
+                    namespace: "evidence".to_string(),
+                    name: "proofs.audit".to_string(),
+                    kind: EffectItemKind::Evidence,
+                },
+                EffectItem {
+                    namespace: "fail".to_string(),
+                    name: "failure".to_string(),
+                    kind: EffectItemKind::Failure,
+                },
+            ]
+        );
     }
 }

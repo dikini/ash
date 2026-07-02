@@ -106,7 +106,7 @@ fn test_option_public_functions_parse_as_real_fn_definitions() {
         .expect("map function should parse");
     assert!(matches!(
         map.params[1].ty,
-        SurfaceType::Fn(ref params, ref ret)
+        SurfaceType::Fn(ref params, _, ref ret)
             if params.len() == 1
                 && matches!(params[0], SurfaceType::Name(ref name) if name.as_ref() == "T")
                 && matches!(ret.as_ref(), SurfaceType::Name(name) if name.as_ref() == "U")
@@ -144,7 +144,7 @@ fn test_result_public_functions_parse_as_real_fn_definitions() {
             .iter()
             .find(|function| function.name.as_ref() == function_name)
             .unwrap_or_else(|| panic!("{function_name} function should parse"));
-        assert!(matches!(function.params[1].ty, SurfaceType::Fn(_, _)));
+        assert!(matches!(function.params[1].ty, SurfaceType::Fn(_, _, _)));
     }
 }
 

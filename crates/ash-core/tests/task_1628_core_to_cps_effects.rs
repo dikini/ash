@@ -97,7 +97,7 @@ fn lowers_failure_raise_as_explicit_fail_effect_row() {
     };
     assert_eq!(op.item.namespace, "fail");
     assert_eq!(op.item.name, "ConfigError");
-    assert_eq!(op.item.kind, EffectItemKind::Alias);
+    assert_eq!(op.item.kind, EffectItemKind::Failure);
     assert_eq!(op.result_type, "Never");
     assert_eq!(row.items.len(), 1);
     assert_eq!(row.items[0].namespace, "fail");

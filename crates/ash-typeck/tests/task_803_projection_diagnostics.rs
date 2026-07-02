@@ -317,6 +317,7 @@ fn task803_function_projection_base_reports_projection_specific_unsupported_shap
         .lower_surface_type_to_canonical(&SurfaceType::Associated {
             base: Box::new(SurfaceType::Fn(
                 vec![SurfaceType::Name("Int".into())],
+                None,
                 Box::new(SurfaceType::Name("String".into())),
             )),
             name: "Item".into(),

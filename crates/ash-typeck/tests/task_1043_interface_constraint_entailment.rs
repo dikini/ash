@@ -224,6 +224,7 @@ fn constrained_interface_argument_entails_required_argument_evidence() {
             span: Span::default(),
         }],
         where_span: Span::default(),
+        row: None,
         span: Span::default(),
     };
     env.add_proposition_assumptions_from_tail(
@@ -320,6 +321,7 @@ fn generic_method_lookup_substitutes_constrained_interface_arguments() {
             span: Span::default(),
         }],
         where_span: Span::default(),
+        row: None,
         span: Span::default(),
     };
     env.add_proposition_assumptions_from_tail(

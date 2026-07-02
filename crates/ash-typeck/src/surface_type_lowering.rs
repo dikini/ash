@@ -198,7 +198,7 @@ pub(super) fn workflow_surface_type_to_type(
                 })
             }
         }
-        ash_parser::surface::Type::Fn(params, ret) => {
+        ash_parser::surface::Type::Fn(params, _row, ret) => {
             // Pure function type: Fn(T, U) -> V => Type::Fn(params, ret)
             let param_types: Result<Vec<_>, _> = params
                 .iter()

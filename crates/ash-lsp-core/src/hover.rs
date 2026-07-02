@@ -73,7 +73,7 @@ fn type_to_string(ty: &Type) -> String {
                 .join(", ");
             format!("<{interface}<{args}>>::{member}")
         }
-        Type::Fn(params, ret) => {
+        Type::Fn(params, _row, ret) => {
             let params = params
                 .iter()
                 .map(type_to_string)

@@ -152,6 +152,7 @@ Update this section as tasks complete:
 | [174](PLAN-174-MACRO-AWARE-TOOLING-SUMMARY-IDENTITY-AND-INFERENCE-READINESS.md) | 10 | 10 | ✅ Complete |
 | [175](PLAN-175-NAME-RESOLUTION-BACKED-SEMANTIC-IDENTITY-FOR-MACROS-AND-TOOLING.md) | 10 | 10 | ✅ Complete |
 | [176](PLAN-176-DEFERRED-CLEANUP-AFTER-TARGET-REDESIGN.md) | 9 | 9 | ✅ Complete; deferred cleanup after target-language redesign closed with review remediation |
+| [177](PLAN-177-TARGET-ASH-ROW-SYNTAX-AND-CORE-CPS-ALIGNMENT.md) | 10 | 7 | 🚧 In Progress; seam audit, implementation decisions, operation identity, row validation, core/CPS bridge, and parser carriers complete |
 
 ---
 
@@ -879,3 +880,25 @@ Retires or re-scopes deferred cleanup candidates that were intentionally left be
 
 
 - TASK-1802 closed Phase 176 after broad gates, `Value::List` absence verification, and independent review remediation for imported private-helper isolation, QuickCheck fail-closed honesty, and final status-count drift.
+
+## Phase 177: Target Ash Row Syntax and Core/CPS Alignment
+
+**Status:** ✅ Complete (10/10 tasks complete; bounded parser/validation, operation identity, Core/CPS taxonomy, cross-boundary evidence, and closeout complete)
+**Plan:** [PLAN-177: Target Ash Row Syntax and Core/CPS Alignment](PLAN-177-TARGET-ASH-ROW-SYNTAX-AND-CORE-CPS-ALIGNMENT.md)
+**Depends on:** Phase 176 closeout and interphase TASK-1803 through TASK-1805 status reconciliation.
+**Specs/notes:** `SPEC-095b`, `SPEC-096b`, `SPEC-097b`, `SPEC-098b`, `SPEC-098c`, `SPEC-099`, `SPEC-100`, `NOTE-020`, `NOTE-021`, `NOTE-022`, `NOTE-023`, and `NOTE-025`.
+
+Starts the next target-Ash implementation packet by connecting source-facing computation-row/effect syntax to parser and validation carriers while aligning Core and CPS row carriers for later source-to-Core bridging. The phase is audit-first and bounded: it parses and validates target row syntax, preserves impl-qualified operation identity where proven, aligns Core/CPS row taxonomy enough to avoid silent row loss, records the current rowless source-to-typechecker boundary, and adds cross-boundary tests proving rows remain requirements rather than authority grants.
+
+| Task | Description | Status |
+|------|-------------|--------|
+| [TASK-1806](tasks/TASK-1806-phase-177-plan-packet.md) | Create the Phase 177 target-Ash row syntax and Core/CPS alignment packet | ✅ Complete |
+| [TASK-1807](tasks/TASK-1807-row-syntax-core-cps-seam-audit.md) | Audit row syntax, Core row, CPS row, and lowering seams | ✅ Complete |
+| [TASK-1808](tasks/TASK-1808-row-syntax-spec-delta-reconciliation.md) | Reconcile target row/effect syntax deltas into implementation decisions | ✅ Complete |
+| [TASK-1809](tasks/TASK-1809-surface-computation-row-parser-carriers.md) | Add surface computation-row parser and AST carriers | ✅ Complete |
+| [TASK-1810](tasks/TASK-1810-impl-qualified-operation-identity-resolution.md) | Resolve impl-qualified operation row identities | ✅ Complete |
+| [TASK-1811](tasks/TASK-1811-row-validation-and-diagnostics.md) | Validate row syntax and emit fail-closed diagnostics | ✅ Complete |
+| [TASK-1812](tasks/TASK-1812-core-row-taxonomy-alignment.md) | Align Core row taxonomy with target computation-row families | ✅ Complete |
+| [TASK-1813](tasks/TASK-1813-cps-row-taxonomy-bridge.md) | Align CPS row/effect carriers and Core-to-CPS row lowering | ✅ Complete |
+| [TASK-1814](tasks/TASK-1814-row-syntax-core-cps-cross-boundary-tests.md) | Add parser/engine/Core/CPS cross-boundary row preservation tests | ✅ Complete |
+| [TASK-1815](tasks/TASK-1815-phase-177-closeout.md) | Close out Phase 177 with gates, review, and status reconciliation | ✅ Complete |

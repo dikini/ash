@@ -1,6 +1,78 @@
 use super::*;
 
 impl TypeEnv {
+    /// Resolve a Phase 177 operation-row identity of the form `Target::operation`.
+    ///
+    /// This query is read-only: it proves whether the row item names an already
+    /// registered interface method or concrete impl method, and does not search
+    /// handlers, providers, or runtime authority.
+    #[must_use]
+    pub fn resolve_operation_row_identity(
+        &self,
+        target: &str,
+        method: &str,
+    ) -> OperationRowIdentityResolution {
+        if let Some(interface) = self.interfaces.get(target)
+            && interface.methods.contains_key(method)
+        {
+            return OperationRowIdentityResolution::InterfaceQualified {
+                interface: target.to_string(),
+                method: method.to_string(),
+                suggestion: self
+                    .impls
+                    .iter()
+                    .filter(|scheme| scheme.interface == target)
+                    .find_map(|scheme| {
+                        let has_method = scheme
+                            .methods
+                            .iter()
+                            .any(|impl_method| impl_method.name == method);
+                        has_method
+                            .then(|| {
+                                scheme_concrete_target_name(scheme)
+                                    .map(|impl_type| format!("{impl_type}::{method}"))
+                            })
+                            .flatten()
+                    })
+                    .unwrap_or_else(|| format!("<impl>::{method}")),
+            };
+        }
+
+        let matching_target_schemes = self
+            .impls
+            .iter()
+            .filter(|scheme| scheme_concrete_target_name(scheme).as_deref() == Some(target))
+            .collect::<Vec<_>>();
+
+        if matching_target_schemes.is_empty() {
+            return OperationRowIdentityResolution::UnknownImplType {
+                impl_type: target.to_string(),
+            };
+        }
+
+        if let Some(scheme) = matching_target_schemes.iter().find(|scheme| {
+            scheme
+                .methods
+                .iter()
+                .any(|impl_method| impl_method.name == method)
+        }) {
+            return OperationRowIdentityResolution::ConcreteImpl {
+                impl_type: target.to_string(),
+                interface: scheme.interface.clone(),
+                method: method.to_string(),
+            };
+        }
+
+        OperationRowIdentityResolution::UnknownMethod {
+            impl_type: target.to_string(),
+            method: method.to_string(),
+            candidates: matching_target_schemes
+                .into_iter()
+                .map(render_impl_scheme_head)
+                .collect(),
+        }
+    }
+
     /// Create a new child environment with this as parent
     ///
     /// Used for block scoping - variables bound in the child
@@ -721,5 +793,31 @@ impl TypeEnv {
     /// Get all registered providers.
     pub fn providers(&self) -> &HashSet<String> {
         &self.providers
+    }
+}
+
+fn scheme_concrete_target_name(scheme: &ImplScheme) -> Option<String> {
+    match scheme.head_args.first()? {
+        InterfaceEvidenceArg::Proper(Type::Constructor { name, args, .. }) if args.is_empty() => {
+            name.is_root().then(|| name.name.clone())
+        }
+        _ => None,
+    }
+}
+
+fn render_impl_scheme_head(scheme: &ImplScheme) -> String {
+    let args = scheme
+        .head_args
+        .iter()
+        .map(render_interface_evidence_arg_for_row)
+        .collect::<Vec<_>>()
+        .join(", ");
+    format!("impl {}<{}>", scheme.interface, args)
+}
+
+fn render_interface_evidence_arg_for_row(arg: &InterfaceEvidenceArg) -> String {
+    match arg {
+        InterfaceEvidenceArg::Proper(ty) => ty.to_string(),
+        InterfaceEvidenceArg::Constructor(expr) => format!("{expr:?}"),
     }
 }

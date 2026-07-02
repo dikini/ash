@@ -330,7 +330,7 @@ impl TypeEnv {
                         | SurfaceType::Record(_)
                         | SurfaceType::List(_)
                         | SurfaceType::Capability(_)
-                        | SurfaceType::Fn(_, _)
+                        | SurfaceType::Fn(_, _, _)
                 ) {
                     let found = match base.as_ref() {
                         SurfaceType::Tuple(items) => {
@@ -343,7 +343,7 @@ impl TypeEnv {
                         SurfaceType::Capability(name) => {
                             format!("unsupported projection base Capability({name})")
                         }
-                        SurfaceType::Fn(_, _) => "unsupported projection base Fn".to_string(),
+                        SurfaceType::Fn(_, _, _) => "unsupported projection base Fn".to_string(),
                         SurfaceType::Hole { .. } => {
                             "unsupported projection base type hole _".to_string()
                         }
@@ -383,7 +383,7 @@ impl TypeEnv {
                 found: format!("Capability({name})"),
                 span: Span::default(),
             }),
-            SurfaceType::Fn(_, _) => Err(TypeError::ConstructorNameMismatch {
+            SurfaceType::Fn(_, _, _) => Err(TypeError::ConstructorNameMismatch {
                 expected: "nominal or associated type expression supported by TASK-798 lowering"
                     .to_string(),
                 found: "Fn".to_string(),
@@ -532,7 +532,7 @@ impl TypeEnv {
             | SurfaceType::Tuple(_)
             | SurfaceType::Record(_)
             | SurfaceType::Capability(_)
-            | SurfaceType::Fn(_, _) => {
+            | SurfaceType::Fn(_, _, _) => {
                 if surface_type_contains_hole(ty) {
                     return Err(
                         PartialConstructorElaborationError::UnsupportedHolePosition {

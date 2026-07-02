@@ -1409,7 +1409,7 @@ fn collect_surface_type_names(ty: &Type, names: &mut Vec<String>) {
                 collect_surface_type_names(arg, names);
             }
         }
-        Type::Fn(params, ret) => {
+        Type::Fn(params, _row, ret) => {
             for param in params {
                 collect_surface_type_names(param, names);
             }
@@ -1549,7 +1549,7 @@ fn rewrite_surface_type_aliases(ty: &mut Type, aliases: &HashMap<String, String>
                 rewrite_surface_type_aliases(arg, aliases);
             }
         }
-        Type::Fn(params, ret) => {
+        Type::Fn(params, _row, ret) => {
             for param in params {
                 rewrite_surface_type_aliases(param, aliases);
             }

@@ -774,7 +774,7 @@ pub(super) fn lower_proof_param_type(surface: &SurfaceType, env: &TypeEnv) -> Ty
         SurfaceType::Associated { .. } | SurfaceType::AssociatedFamilyProjection { .. } => {
             Type::Var(TypeVar::fresh())
         }
-        SurfaceType::Fn(params, ret) => Type::Fn(
+        SurfaceType::Fn(params, _row, ret) => Type::Fn(
             params
                 .iter()
                 .map(|param| lower_proof_param_type(param, env))

@@ -334,7 +334,11 @@ pub enum EffectItemKind {
     Role,
     Policy,
     Contract,
+    Resource,
     Channel,
+    Process,
+    Evidence,
+    Failure,
     Alias,
     Group,
 }

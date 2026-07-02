@@ -81,6 +81,7 @@ fn proc_bind_signature_typechecks_dependent_sequencing_shape() {
             constructor("Proc", vec![SurfaceType::Name("Int".into())]),
             SurfaceType::Fn(
                 vec![SurfaceType::Name("Int".into())],
+                None,
                 Box::new(constructor(
                     "Proc",
                     vec![SurfaceType::Name("String".into())],

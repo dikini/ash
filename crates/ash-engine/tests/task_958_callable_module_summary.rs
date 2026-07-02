@@ -30,7 +30,7 @@ fn imported_workflow(module_source: &str, import_name: &str) -> ash_engine::Work
 
 fn assert_surface_binary_callable(ty: &SurfaceType) {
     match ty {
-        SurfaceType::Fn(params, ret) => {
+        SurfaceType::Fn(params, _row, ret) => {
             assert_eq!(params.len(), 2, "callable parameter arity must survive");
             assert!(matches!(&params[0], SurfaceType::Name(name) if name.as_ref() == "Int"));
             assert!(matches!(&params[1], SurfaceType::Name(name) if name.as_ref() == "String"));

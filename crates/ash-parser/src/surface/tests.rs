@@ -137,6 +137,7 @@ fn test_builtin_fn_def_construction() {
                 name: "predicate".into(),
                 ty: Type::Fn(
                     vec![Type::Name("T".into())],
+                    None,
                     Box::new(Type::Name("Bool".into())),
                 ),
             },

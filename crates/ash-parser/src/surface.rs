@@ -430,10 +430,117 @@ pub struct TypeFnDef {
 pub struct PropositionTail {
     /// Ordered source clauses in the proposition list.
     pub clauses: Vec<PropositionClause>,
+    /// Optional `row` block parsed from a `where row { ... }` section.
+    pub row: Option<PropositionWhereRow>,
     /// Source span covering the `where` keyword.
     pub where_span: Span,
     /// Source span covering the complete tail.
     pub span: Span,
+}
+
+/// A callable-row block inside a proposition-tail `where` clause.
+#[derive(Debug, Clone, PartialEq)]
+pub struct PropositionWhereRow {
+    /// Parsed row entries.
+    pub row: ComputationRow,
+    /// Source span covering the `row` keyword.
+    pub row_keyword_span: Span,
+    /// Source span covering the complete `row { ... }` block.
+    pub span: Span,
+}
+
+/// A source-preserving computation row.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ComputationRow {
+    /// Row entries in source order.
+    pub items: Vec<ComputationRowItem>,
+    /// Source span covering the complete row braces content.
+    pub span: Span,
+}
+
+/// A typed row entry family.
+#[derive(Debug, Clone, PartialEq)]
+pub enum ComputationRowItem {
+    /// A default operation entry represented by a qualified path.
+    ///
+    /// Examples: `fs.read`, `PosixFs::read`
+    Operation {
+        /// Operation path segments.
+        path: Vec<Name>,
+        /// Full source span for this item.
+        span: Span,
+    },
+    /// Resource family entry.
+    Resource {
+        /// Resource path.
+        path: Vec<Name>,
+        /// Optional mode token.
+        mode: Option<Name>,
+        /// Full source span for this item.
+        span: Span,
+    },
+    /// Role family entry.
+    Role {
+        /// Role path.
+        path: Vec<Name>,
+        /// Full source span for this item.
+        span: Span,
+    },
+    /// Policy family entry.
+    Policy {
+        /// Policy path.
+        path: Vec<Name>,
+        /// Full source span for this item.
+        span: Span,
+    },
+    /// Channel family entry.
+    Channel {
+        /// Optional mode token.
+        mode: Option<Name>,
+        /// Channel path.
+        path: Vec<Name>,
+        /// Optional message payload.
+        payload: Option<Type>,
+        /// Full source span for this item.
+        span: Span,
+    },
+    /// Process family entry (`proc`/`process`) with optional operation.
+    Process {
+        /// Keyword token (`proc` or `process`).
+        keyword: Name,
+        /// Optional operation token, e.g. `spawn`.
+        operation: Option<Name>,
+        /// Full source span for this item.
+        span: Span,
+    },
+    /// Failure family entry.
+    Fail {
+        /// Optional failure path.
+        path: Option<Vec<Name>>,
+        /// Full source span for this item.
+        span: Span,
+    },
+    /// Evidence family entry.
+    Evidence {
+        /// Evidence path.
+        path: Vec<Name>,
+        /// Full source span for this item.
+        span: Span,
+    },
+    /// Group family entry.
+    Group {
+        /// Group path.
+        path: Vec<Name>,
+        /// Full source span for this item.
+        span: Span,
+    },
+    /// Open-row tail entry.
+    Tail {
+        /// Tail variable name.
+        variable: Name,
+        /// Full source span for this item.
+        span: Span,
+    },
 }
 
 /// A raw source proposition clause with its complete source span.
@@ -3577,6 +3684,7 @@ fn infer_bounded_macro_expr_type(
                 .iter()
                 .map(|(_, ty)| ty.as_ref().map(|ty| Type::Name(ty.clone())))
                 .collect::<Option<Vec<_>>>()?,
+            None,
             Box::new(Type::Name(return_type.as_ref()?.clone())),
         )),
         _ => None,
@@ -3679,18 +3787,117 @@ fn format_type(ty: &Type) -> String {
             args.iter().map(format_type).collect::<Vec<_>>().join(", "),
             member
         ),
-        Type::Fn(params, ret) => format!(
-            "Fn({}) -> {}",
-            params
-                .iter()
-                .map(format_type)
-                .collect::<Vec<_>>()
-                .join(", "),
-            format_type(ret)
-        ),
+        Type::Fn(params, row, ret) => {
+            let row_text = row.as_ref().map_or_else(String::new, |row| {
+                format!(
+                    " {}",
+                    row.items
+                        .iter()
+                        .map(format_row_item)
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                )
+            });
+            format!(
+                "Fn({}) ->{} {}",
+                params
+                    .iter()
+                    .map(format_type)
+                    .collect::<Vec<_>>()
+                    .join(", "),
+                row_text,
+                format_type(ret)
+            )
+        }
     }
 }
 
+fn format_row_item(item: &ComputationRowItem) -> String {
+    match item {
+        ComputationRowItem::Operation { path, .. } => path
+            .iter()
+            .map(|part| part.as_ref())
+            .collect::<Vec<_>>()
+            .join("::"),
+        ComputationRowItem::Resource { path, mode, .. } => {
+            let path = path
+                .iter()
+                .map(|part| part.as_ref())
+                .collect::<Vec<_>>()
+                .join("::");
+            match mode {
+                Some(mode) => format!("resource {mode} {path}"),
+                None => format!("resource {path}"),
+            }
+        }
+        ComputationRowItem::Role { path, .. } => {
+            format!(
+                "role {}",
+                path.iter()
+                    .map(|part| part.as_ref())
+                    .collect::<Vec<_>>()
+                    .join("::")
+            )
+        }
+        ComputationRowItem::Policy { path, .. } => {
+            format!(
+                "policy {}",
+                path.iter()
+                    .map(|part| part.as_ref())
+                    .collect::<Vec<_>>()
+                    .join("::")
+            )
+        }
+        ComputationRowItem::Channel { path, mode, .. } => {
+            let path = path
+                .iter()
+                .map(|part| part.as_ref())
+                .collect::<Vec<_>>()
+                .join("::");
+            match mode {
+                Some(mode) => format!("channel {mode} {path}"),
+                None => format!("channel {path}"),
+            }
+        }
+        ComputationRowItem::Process {
+            keyword, operation, ..
+        } => match operation {
+            Some(operation) => format!("{keyword} {operation}"),
+            None => keyword.to_string(),
+        },
+        ComputationRowItem::Fail { path, .. } => match path {
+            Some(path) => format!(
+                "fail {}",
+                path.iter()
+                    .map(|part| part.as_ref())
+                    .collect::<Vec<_>>()
+                    .join("::")
+            ),
+            None => "fail".to_string(),
+        },
+        ComputationRowItem::Evidence { path, .. } => {
+            format!(
+                "evidence {}",
+                path.iter()
+                    .map(|part| part.as_ref())
+                    .collect::<Vec<_>>()
+                    .join("::")
+            )
+        }
+        ComputationRowItem::Group { path, .. } => {
+            format!(
+                "group {}",
+                path.iter()
+                    .map(|part| part.as_ref())
+                    .collect::<Vec<_>>()
+                    .join("::")
+            )
+        }
+        ComputationRowItem::Tail { variable, .. } => {
+            format!("| {variable}")
+        }
+    }
+}
 fn render_macro_token_trees(trees: &[MacroTokenTree]) -> String {
     let mut out = String::new();
     for tree in trees {
@@ -6080,8 +6287,8 @@ pub enum Type {
         /// Source span.
         span: Span,
     },
-    /// Function type: Fn(T, U) -> V
-    Fn(Vec<Type>, Box<Type>),
+    /// Function type: Fn(params..., [row], result)
+    Fn(Vec<Type>, Option<ComputationRow>, Box<Type>),
 }
 
 /// Guard expressions for actions.

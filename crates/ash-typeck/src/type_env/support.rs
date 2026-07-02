@@ -887,6 +887,38 @@ pub struct ImplScheme {
     pub methods: Vec<ImplMethodInfo>,
 }
 
+/// Result of resolving a source operation-row identity against registered
+/// interface/impl evidence.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum OperationRowIdentityResolution {
+    /// The row used an interface-qualified method such as `Fs::read`.
+    InterfaceQualified {
+        interface: String,
+        method: String,
+        suggestion: String,
+    },
+    /// The row resolved to a concrete impl target such as `PosixFs::read`.
+    ConcreteImpl {
+        impl_type: String,
+        interface: String,
+        method: String,
+    },
+    /// The row resolved through an in-scope type-parameter interface bound.
+    AbstractImpl {
+        type_param: String,
+        interface: String,
+        method: String,
+    },
+    /// The row target is neither a known interface nor a visible impl target.
+    UnknownImplType { impl_type: String },
+    /// The row target is a visible impl target but no impl method matches.
+    UnknownMethod {
+        impl_type: String,
+        method: String,
+        candidates: Vec<String>,
+    },
+}
+
 /// Typed owner category for propositions generated or assumed during type checking.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum PropositionCheckingSiteKind {
@@ -1398,7 +1430,7 @@ pub(super) fn surface_type_to_type(
             }
         }
 
-        SurfaceType::Fn(params, ret) => {
+        SurfaceType::Fn(params, _row, ret) => {
             let params = params
                 .iter()
                 .map(|param| surface_type_to_type(param, param_mapping, type_env))
@@ -1514,7 +1546,7 @@ pub(super) fn collect_implicit_interface_method_type_params(
                 );
             }
         }
-        SurfaceType::Fn(params, ret) => {
+        SurfaceType::Fn(params, _row, ret) => {
             for param in params {
                 collect_implicit_interface_method_type_params(
                     param,
@@ -1795,7 +1827,7 @@ pub(super) fn surface_projection_base_spelling(base: &SurfaceType) -> String {
         SurfaceType::Record(fields) => format!("Record({})", fields.len()),
         SurfaceType::List(_) => "List".to_string(),
         SurfaceType::Capability(name) => format!("Capability({name})"),
-        SurfaceType::Fn(_, _) => "Fn".to_string(),
+        SurfaceType::Fn(_, _, _) => "Fn".to_string(),
         SurfaceType::Associated { base, name } => {
             format!("{}::{}", surface_projection_base_spelling(base), name)
         }
@@ -2523,10 +2555,10 @@ pub(super) fn surface_type_hole_count(ty: &SurfaceType) -> usize {
         SurfaceType::Hole { .. } => 1,
         SurfaceType::Name(_) | SurfaceType::Capability(_) => 0,
         SurfaceType::List(item) => surface_type_hole_count(item),
-        SurfaceType::Tuple(items) | SurfaceType::Fn(items, _) => {
+        SurfaceType::Tuple(items) | SurfaceType::Fn(items, _, _) => {
             items.iter().map(surface_type_hole_count).sum::<usize>()
                 + match ty {
-                    SurfaceType::Fn(_, ret) => surface_type_hole_count(ret),
+                    SurfaceType::Fn(_, _, ret) => surface_type_hole_count(ret),
                     _ => 0,
                 }
         }

@@ -88,6 +88,7 @@ fn predicate_tail(name: &str, name_start: usize, args: Vec<SurfaceType>) -> Prop
     PropositionTail {
         where_span: span(0, 5),
         span: span(0, 40),
+        row: None,
         clauses: vec![PropositionClause {
             span: span(name_start, 40),
             kind: PropositionClauseKind::NamedPredicate {

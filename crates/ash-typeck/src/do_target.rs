@@ -780,7 +780,7 @@ fn render_surface_type(ty: &SurfaceType) -> String {
                 .join(", "),
             member
         ),
-        SurfaceType::Fn(params, ret) => format!(
+        SurfaceType::Fn(params, _row, ret) => format!(
             "({}) -> {}",
             params
                 .iter()

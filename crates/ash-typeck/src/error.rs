@@ -404,6 +404,90 @@ pub enum TypeEnvError {
         span: Span,
     },
 
+    /// Callable declaration supplied the same row both inline and in `where row`.
+    #[error(
+        "row specified twice for callable '{callable}': inline row appears in return type and expanded row appears in where clause"
+    )]
+    DuplicateCallableRow {
+        /// Callable name.
+        callable: String,
+        /// Span covering the inline row.
+        inline_span: Span,
+        /// Span covering the expanded `where row` block.
+        expanded_span: Span,
+        /// Primary diagnostic span.
+        span: Span,
+    },
+
+    /// Row tail appeared before the final row entry.
+    #[error("row tail '| {tail}' must be the final row entry")]
+    RowTailNotFinal {
+        /// Tail variable name.
+        tail: String,
+        /// Source span covering the tail.
+        span: Span,
+    },
+
+    /// A row contains more than one tail entry.
+    #[error("duplicate row tail '| {tail}'")]
+    DuplicateRowTail {
+        /// Tail variable name.
+        tail: String,
+        /// Source span covering the duplicate tail.
+        span: Span,
+    },
+
+    /// Unsupported row item family was found before Core lowering.
+    #[error(
+        "unsupported row item family '{family}' in `{item}`: rows contain requirements, not grants; use an evidence row item for predicate, law, contract, or proof requirements"
+    )]
+    UnsupportedRowItemFamily {
+        /// Unsupported family spelling.
+        family: String,
+        /// Full item spelling.
+        item: String,
+        /// Source span covering the row item.
+        span: Span,
+    },
+
+    /// Interface-qualified operation identity was used where an impl-qualified
+    /// operation identity is required.
+    #[error(
+        "interface-qualified operation row identity `{item}` is ambiguous; use an impl-qualified identity such as `{suggestion}`"
+    )]
+    InterfaceQualifiedOperationRowIdentity {
+        /// Full row item spelling.
+        item: String,
+        /// Suggested impl-qualified form when available.
+        suggestion: String,
+        /// Source span covering the row item.
+        span: Span,
+    },
+
+    /// Operation row identity names an unknown concrete impl target.
+    #[error("unknown impl type `{impl_type}` in operation row identity `{item}`")]
+    UnknownOperationRowImplType {
+        /// Unknown impl target spelling.
+        impl_type: String,
+        /// Full row item spelling.
+        item: String,
+        /// Source span covering the row item.
+        span: Span,
+    },
+
+    /// Operation row identity names a visible impl target but no matching operation.
+    #[error(
+        "unknown operation in operation row identity `{item}`; no matching method in {candidates}"
+    )]
+    UnknownOperationRowMethod {
+        /// Full row item spelling.
+        item: String,
+        /// Candidate impl heads for the target type.
+        candidates: String,
+        /// Source span covering the row item.
+        span: Span,
+    },
+
     /// Interface already defined
     #[error("Interface '{0}' is already defined")]
     DuplicateInterface(String, Span),
@@ -604,6 +688,13 @@ impl TypeEnvError {
             | Self::UnknownPropositionPredicate { span, .. }
             | Self::PropositionPredicateArityMismatch { span, .. }
             | Self::PropositionDiagnostic { span, .. }
+            | Self::DuplicateCallableRow { span, .. }
+            | Self::RowTailNotFinal { span, .. }
+            | Self::DuplicateRowTail { span, .. }
+            | Self::UnsupportedRowItemFamily { span, .. }
+            | Self::InterfaceQualifiedOperationRowIdentity { span, .. }
+            | Self::UnknownOperationRowImplType { span, .. }
+            | Self::UnknownOperationRowMethod { span, .. }
             | Self::DuplicateInterface(_, span)
             | Self::MissingInterface(_, span)
             | Self::DuplicateImpl { span, .. }

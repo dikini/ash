@@ -124,6 +124,7 @@ fn task_875_lowers_all_surface_proposition_clause_families_to_typed_core_carrier
     let tail = PropositionTail {
         where_span: span(0, 5),
         span: span(0, 80),
+        row: None,
         clauses: vec![
             PropositionClause {
                 span: span(6, 16),
@@ -228,6 +229,7 @@ fn task_875_lowers_multi_argument_interface_bound_proposition_terms() {
     let tail = PropositionTail {
         where_span: span(0, 5),
         span: span(0, 45),
+        row: None,
         clauses: vec![PropositionClause {
             span: span(6, 45),
             kind: PropositionClauseKind::InterfaceBound {
@@ -273,6 +275,7 @@ fn task_875_lowers_sealed_domain_constructor_terms_without_nominal_encoding() {
     let tail = PropositionTail {
         where_span: span(80, 85),
         span: span(80, 110),
+        row: None,
         clauses: vec![PropositionClause {
             span: span(86, 110),
             kind: PropositionClauseKind::Disequality {
@@ -335,6 +338,7 @@ fn task_875_generated_obligations_retain_source_anchors_and_owner_sites_without_
     let tail = PropositionTail {
         where_span: span(0, 5),
         span: span(0, 26),
+        row: None,
         clauses: vec![PropositionClause {
             span: clause_span,
             kind: PropositionClauseKind::Equality {
@@ -404,6 +408,7 @@ fn task_875_assumptions_are_separate_from_required_obligations_and_include_type_
     let tail = PropositionTail {
         where_span: span(30, 35),
         span: span(30, 45),
+        row: None,
         clauses: vec![PropositionClause {
             span: span(36, 45),
             kind: PropositionClauseKind::Disequality {

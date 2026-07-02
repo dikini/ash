@@ -423,7 +423,7 @@ fn format_type(ty: &Type) -> String {
             let args = args.iter().map(format_type).collect::<Vec<_>>().join(", ");
             format!("<{interface}<{args}>>::{member}")
         }
-        Type::Fn(params, ret) => {
+        Type::Fn(params, _row, ret) => {
             let params = params
                 .iter()
                 .map(format_type)

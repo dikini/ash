@@ -8,7 +8,7 @@ fn task689d_parse_fn_parameter_with_arrow_function_type() {
     };
     assert_eq!(f.params.len(), 1);
     match &f.params[0].ty {
-        Type::Fn(params, ret) => {
+        Type::Fn(params, _row, ret) => {
             assert_eq!(params.len(), 1);
             match &params[0] {
                 Type::Name(name) => assert_eq!(name.as_ref(), "Int"),
@@ -105,7 +105,7 @@ fn parse_fn_type() {
     };
     let rt = f.return_type.expect("should have return type");
     match rt {
-        Type::Fn(params, ref _ret) => {
+        Type::Fn(params, ..) => {
             assert_eq!(params.len(), 2, "expected 2 params in Fn type");
         }
         other => panic!("expected Type::Fn, got: {:?}", other),

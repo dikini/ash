@@ -1270,7 +1270,7 @@ fn lower_type_to_type_expr(ty: &Type) -> ash_core::workflow_contract::TypeExpr {
             name: name.to_string(),
             args: args.iter().map(lower_type_to_type_expr).collect(),
         },
-        Type::Fn(_params, _ret) => TypeExpr::Constructor {
+        Type::Fn(_, _, _) => TypeExpr::Constructor {
             name: "Fn".to_string(),
             args: vec![],
         },
@@ -1327,7 +1327,7 @@ pub fn lower_surface_type(ty: &Type) -> ash_core::ast::TypeExpr {
             }),
             name: member.to_string(),
         },
-        Type::Fn(params, ret) => {
+        Type::Fn(params, _row, ret) => {
             let mut args: Vec<_> = params.iter().map(lower_surface_type).collect();
             args.push(lower_surface_type(ret));
             TypeExpr::Constructor {

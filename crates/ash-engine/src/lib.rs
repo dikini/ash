@@ -2169,7 +2169,7 @@ fn surface_type_to_typeck(ty: &SurfaceType) -> Result<ash_typeck::Type, String> 
                 kind: ash_typeck::Kind::Type,
             })
         }
-        SurfaceType::Fn(params, ret) => {
+        SurfaceType::Fn(params, _row, ret) => {
             let params = params
                 .iter()
                 .map(surface_type_to_typeck)

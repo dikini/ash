@@ -503,9 +503,9 @@ impl Parser {
     fn parse_row_item_inner(&mut self) -> ParseResult<CoreRowItem> {
         let head = self.expect_symbol()?;
         match head.as_str() {
-            "cap" => {
+            "cap" | "operation" | "op" => {
                 let (path, operation) = split_path_operation(&self.expect_symbol()?)?;
-                Ok(CoreRowItem::Capability { path, operation })
+                Ok(CoreRowItem::operation(path, operation))
             }
             "resource" => Ok(CoreRowItem::Resource {
                 path: split_path(&self.expect_symbol()?),

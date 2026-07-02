@@ -1,10 +1,10 @@
 # PLAN-177: Target Ash Row Syntax and Core/CPS Alignment
 
-**Status:** ✅ Complete (10/10 tasks complete; bounded parser/validation, operation identity, Core/CPS taxonomy, cross-boundary evidence, and closeout complete)
+**Status:** ✅ Complete (11/11 tasks complete; bounded parser/validation, operation identity, Core/CPS taxonomy, cross-boundary evidence, closeout, and row syntax review remediation complete)
 **Spec:** [SPEC-095b: Target Grammar](../spec/SPEC-095b-TARGET-GRAMMAR.md); [SPEC-096b: Target Effect System](../spec/SPEC-096b-TARGET-EFFECT-SYSTEM.md); [SPEC-097b: Target Type System](../spec/SPEC-097b-TARGET-TYPE-SYSTEM.md); [SPEC-098b: Target IR](../spec/SPEC-098b-TARGET-IR.md); [SPEC-098c: Surface-to-Core Lowering](../spec/SPEC-098c-SURFACE-TO-CORE-LOWERING.md); [SPEC-099: Core Language](../spec/SPEC-099-CORE-LANGUAGE.md); [SPEC-100: Core Type Checking](../spec/SPEC-100-CORE-TYPE-CHECKING.md)
 **Notes:** [NOTE-020: Computation Row Taxonomy](../notes/NOTE-020-COMPUTATION-ROW-TAXONOMY.md); [NOTE-021: Row, Callable, Where, and Fact Syntax](../notes/NOTE-021-ROW-CALLABLE-WHERE-AND-FACT-SYNTAX.md); [NOTE-022: Effects as Interfaces](../notes/NOTE-022-EFFECTS-AS-INTERFACES-DECLARATION-SIDE.md); [NOTE-023: Handler Surface](../notes/NOTE-023-HANDLER-SURFACE-DISPATCH-SIDE.md); [NOTE-025: Effect Identity via Sorts and Impls](../notes/NOTE-025-EFFECT-IDENTITY-VIA-SORTS-AND-IMPLS.md)
 **Depends on:** Phase 176 closeout and interphase TASK-1803 through TASK-1805 status reconciliation.
-**Task range:** TASK-1806 through TASK-1815.
+**Task range:** TASK-1806 through TASK-1816.
 
 ## Goal
 
@@ -83,6 +83,7 @@ Phase 177 owns:
 | [TASK-1813](tasks/TASK-1813-cps-row-taxonomy-bridge.md) | Align CPS row/effect carriers and Core-to-CPS row lowering | ✅ Complete |
 | [TASK-1814](tasks/TASK-1814-row-syntax-core-cps-cross-boundary-tests.md) | Add parser/engine/Core/CPS cross-boundary row preservation tests | ✅ Complete |
 | [TASK-1815](tasks/TASK-1815-phase-177-closeout.md) | Close out Phase 177 with gates, review, and status reconciliation | ✅ Complete |
+| [TASK-1816](tasks/TASK-1816-phase-177-row-syntax-review-remediation.md) | Remediate Phase 177 row syntax review findings | ✅ Complete |
 
 ## Implementation order
 
@@ -95,6 +96,7 @@ Phase 177 owns:
 7. TASK-1813 aligns CPS row/effect carriers and Core-to-CPS lowering without silent row loss.
 8. TASK-1814 proves parser/engine retention, typechecker non-authority, and Core/CPS carrier preservation while recording the source-to-typechecker rowless boundary.
 9. TASK-1815 runs broad gates, obtains independent review, and reconciles docs/changelog/status.
+10. TASK-1816 remediates post-closeout row syntax review findings around whole-row variables, target open-row tail syntax, and operation separator preservation.
 
 ## Acceptance criteria
 
@@ -140,3 +142,4 @@ If Phase 177 closes cleanly, the next plausible packets are target handler execu
 - TASK-1813 implemented explicit CPS kinds for resource/process/evidence/failure families in both row and op lowering, plus open-row tail fail-closed diagnostics with regression coverage.
 - TASK-1814 added parser, engine/module, typechecker, and Core/CPS cross-boundary tests for row span preservation, imported signature row retention, authority non-leakage, and CPS family preservation. It records source-to-typechecker callable rows as a validation-only boundary because current `Type::Fn` conversion remains rowless.
 - TASK-1815 closed Phase 177 after focused and broad verification plus independent review remediation. Closeout clarifies that lowercase/source-path operation rows remain unresolved requirement metadata in this validation-only slice and that full source-to-Core row lowering, row-polymorphic inference, provider/admission runtime wiring, and end-to-end source row preservation into CPS remain future work.
+- TASK-1816 remediated post-closeout row syntax review findings by adding whole-row variable carriers, target open-row tail parsing without a comma, operation separator preservation, and multi-character row-variable regression coverage while preserving fail-closed validation for predicate-like bare row names.

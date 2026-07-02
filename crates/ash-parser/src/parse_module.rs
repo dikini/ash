@@ -32,9 +32,9 @@ use crate::surface::{
     Predicate, ProofBody, ProofDef, PropertyStrategyBinding, PropositionClause,
     PropositionClauseKind, PropositionPredicateDecl, PropositionPredicateParam, PropositionTail,
     PropositionWhereRow, ProxyDef, RawOperatorToken, ResourceField, ResourceTypeDef, RoleDef,
-    SealedDomainDef, Type, TypeBody, TypeDef, TypeField, TypeFnDecreases, TypeFnDef,
-    TypeFnEquation, TypeFnParam, TypeParam, TypePattern, VariantDef, VariantPayload, Visibility,
-    WhereBound, Workflow, YieldArm,
+    RowPathSeparator, SealedDomainDef, Type, TypeBody, TypeDef, TypeField, TypeFnDecreases,
+    TypeFnDef, TypeFnEquation, TypeFnParam, TypeParam, TypePattern, VariantDef, VariantPayload,
+    Visibility, WhereBound, Workflow, YieldArm,
 };
 use crate::token::Span;
 
@@ -818,6 +818,10 @@ fn parse_computation_row_from_open_brace(input: &mut ParseInput) -> ModalResult<
                 ));
             }
 
+            if input.input.starts_with("|") {
+                continue;
+            }
+
             if !consume_comma_separator(input) {
                 break;
             }
@@ -830,6 +834,20 @@ fn parse_computation_row_from_open_brace(input: &mut ParseInput) -> ModalResult<
     }
 
     let _ = literal_str("}").parse_next(input)?;
+
+    let items = match items.as_slice() {
+        [
+            ComputationRowItem::Operation {
+                path,
+                separator: None,
+                span,
+            },
+        ] if path.len() == 1 => vec![ComputationRowItem::WholeRow {
+            variable: path[0].clone(),
+            span: *span,
+        }],
+        _ => items,
+    };
 
     Ok(ComputationRow {
         items,
@@ -963,16 +981,30 @@ fn parse_computation_row_item(input: &mut ParseInput) -> ModalResult<Computation
         });
     }
 
-    let path = parse_row_path(input)?;
+    let (path, separator) = parse_operation_row_path(input)?;
     Ok(ComputationRowItem::Operation {
         path,
+        separator,
         span: crate::input::span_from(&start, &input.state.pos),
     })
 }
 
 fn parse_row_path(input: &mut ParseInput) -> ModalResult<Vec<Name>> {
+    parse_row_path_with_final_separator(input).map(|(path, _)| path)
+}
+
+fn parse_operation_row_path(
+    input: &mut ParseInput,
+) -> ModalResult<(Vec<Name>, Option<RowPathSeparator>)> {
+    parse_row_path_with_final_separator(input)
+}
+
+fn parse_row_path_with_final_separator(
+    input: &mut ParseInput,
+) -> ModalResult<(Vec<Name>, Option<RowPathSeparator>)> {
     let first_name = identifier(input)?;
     let mut path = vec![first_name.into()];
+    let mut separators = Vec::new();
 
     loop {
         skip_whitespace_and_comments(input);
@@ -980,18 +1012,20 @@ fn parse_row_path(input: &mut ParseInput) -> ModalResult<Vec<Name>> {
             let _ = literal_str("::").parse_next(input)?;
             let next = identifier(input)?;
             path.push(next.into());
+            separators.push(RowPathSeparator::DoubleColon);
             continue;
         }
         if input.input.starts_with(".") {
             let _ = literal_str(".").parse_next(input)?;
             let next = identifier(input)?;
             path.push(next.into());
+            separators.push(RowPathSeparator::Dot);
             continue;
         }
         break;
     }
 
-    Ok(path)
+    Ok((path, separators.last().copied()))
 }
 
 fn parse_row_optional_mode(input: &mut ParseInput) -> Option<Name> {

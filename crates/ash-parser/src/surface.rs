@@ -458,6 +458,15 @@ pub struct ComputationRow {
     pub span: Span,
 }
 
+/// Separator used before the final segment of an operation row path.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RowPathSeparator {
+    /// Dot separator, e.g. `fs.read`.
+    Dot,
+    /// Double-colon separator, e.g. `PosixFs::read`.
+    DoubleColon,
+}
+
 /// A typed row entry family.
 #[derive(Debug, Clone, PartialEq)]
 pub enum ComputationRowItem {
@@ -467,6 +476,15 @@ pub enum ComputationRowItem {
     Operation {
         /// Operation path segments.
         path: Vec<Name>,
+        /// Source separator before the final path segment, when present.
+        separator: Option<RowPathSeparator>,
+        /// Full source span for this item.
+        span: Span,
+    },
+    /// Whole-row variable entry, e.g. `{r}`.
+    WholeRow {
+        /// Row variable name.
+        variable: Name,
         /// Full source span for this item.
         span: Span,
     },
@@ -3812,48 +3830,48 @@ fn format_type(ty: &Type) -> String {
     }
 }
 
+fn format_row_path(path: &[Name]) -> String {
+    path.iter()
+        .map(|part| part.as_ref())
+        .collect::<Vec<_>>()
+        .join("::")
+}
+
+fn format_operation_row_path(path: &[Name], separator: Option<RowPathSeparator>) -> String {
+    let Some((last, prefix)) = path.split_last() else {
+        return String::new();
+    };
+    if prefix.is_empty() {
+        return last.to_string();
+    }
+    let separator = match separator.unwrap_or(RowPathSeparator::DoubleColon) {
+        RowPathSeparator::Dot => ".",
+        RowPathSeparator::DoubleColon => "::",
+    };
+    format!("{}{separator}{last}", format_row_path(prefix))
+}
+
 fn format_row_item(item: &ComputationRowItem) -> String {
     match item {
-        ComputationRowItem::Operation { path, .. } => path
-            .iter()
-            .map(|part| part.as_ref())
-            .collect::<Vec<_>>()
-            .join("::"),
+        ComputationRowItem::Operation {
+            path, separator, ..
+        } => format_operation_row_path(path, *separator),
+        ComputationRowItem::WholeRow { variable, .. } => variable.to_string(),
         ComputationRowItem::Resource { path, mode, .. } => {
-            let path = path
-                .iter()
-                .map(|part| part.as_ref())
-                .collect::<Vec<_>>()
-                .join("::");
+            let path = format_row_path(path);
             match mode {
                 Some(mode) => format!("resource {mode} {path}"),
                 None => format!("resource {path}"),
             }
         }
         ComputationRowItem::Role { path, .. } => {
-            format!(
-                "role {}",
-                path.iter()
-                    .map(|part| part.as_ref())
-                    .collect::<Vec<_>>()
-                    .join("::")
-            )
+            format!("role {}", format_row_path(path))
         }
         ComputationRowItem::Policy { path, .. } => {
-            format!(
-                "policy {}",
-                path.iter()
-                    .map(|part| part.as_ref())
-                    .collect::<Vec<_>>()
-                    .join("::")
-            )
+            format!("policy {}", format_row_path(path))
         }
         ComputationRowItem::Channel { path, mode, .. } => {
-            let path = path
-                .iter()
-                .map(|part| part.as_ref())
-                .collect::<Vec<_>>()
-                .join("::");
+            let path = format_row_path(path);
             match mode {
                 Some(mode) => format!("channel {mode} {path}"),
                 None => format!("channel {path}"),
@@ -3866,32 +3884,14 @@ fn format_row_item(item: &ComputationRowItem) -> String {
             None => keyword.to_string(),
         },
         ComputationRowItem::Fail { path, .. } => match path {
-            Some(path) => format!(
-                "fail {}",
-                path.iter()
-                    .map(|part| part.as_ref())
-                    .collect::<Vec<_>>()
-                    .join("::")
-            ),
+            Some(path) => format!("fail {}", format_row_path(path)),
             None => "fail".to_string(),
         },
         ComputationRowItem::Evidence { path, .. } => {
-            format!(
-                "evidence {}",
-                path.iter()
-                    .map(|part| part.as_ref())
-                    .collect::<Vec<_>>()
-                    .join("::")
-            )
+            format!("evidence {}", format_row_path(path))
         }
         ComputationRowItem::Group { path, .. } => {
-            format!(
-                "group {}",
-                path.iter()
-                    .map(|part| part.as_ref())
-                    .collect::<Vec<_>>()
-                    .join("::")
-            )
+            format!("group {}", format_row_path(path))
         }
         ComputationRowItem::Tail { variable, .. } => {
             format!("| {variable}")

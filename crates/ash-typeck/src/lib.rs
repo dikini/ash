@@ -1424,6 +1424,7 @@ fn register_public_function_proposition_tail(
 fn row_item_span(item: &ash_parser::surface::ComputationRowItem) -> ash_parser::token::Span {
     match item {
         ash_parser::surface::ComputationRowItem::Operation { span, .. }
+        | ash_parser::surface::ComputationRowItem::WholeRow { span, .. }
         | ash_parser::surface::ComputationRowItem::Resource { span, .. }
         | ash_parser::surface::ComputationRowItem::Role { span, .. }
         | ash_parser::surface::ComputationRowItem::Policy { span, .. }
@@ -1443,9 +1444,29 @@ fn row_path_text(path: &[ash_parser::surface::Name]) -> String {
         .join("::")
 }
 
+fn operation_row_path_text(
+    path: &[ash_parser::surface::Name],
+    separator: Option<ash_parser::surface::RowPathSeparator>,
+) -> String {
+    let Some((last, prefix)) = path.split_last() else {
+        return String::new();
+    };
+    if prefix.is_empty() {
+        return last.to_string();
+    }
+    let separator = match separator.unwrap_or(ash_parser::surface::RowPathSeparator::DoubleColon) {
+        ash_parser::surface::RowPathSeparator::Dot => ".",
+        ash_parser::surface::RowPathSeparator::DoubleColon => "::",
+    };
+    format!("{}{separator}{last}", row_path_text(prefix))
+}
+
 fn row_item_text(item: &ash_parser::surface::ComputationRowItem) -> String {
     match item {
-        ash_parser::surface::ComputationRowItem::Operation { path, .. } => row_path_text(path),
+        ash_parser::surface::ComputationRowItem::Operation {
+            path, separator, ..
+        } => operation_row_path_text(path, *separator),
+        ash_parser::surface::ComputationRowItem::WholeRow { variable, .. } => variable.to_string(),
         ash_parser::surface::ComputationRowItem::Resource { path, mode, .. } => {
             mode.as_ref().map_or_else(
                 || format!("resource {}", row_path_text(path)),
@@ -1489,10 +1510,12 @@ fn row_item_text(item: &ash_parser::surface::ComputationRowItem) -> String {
 fn unsupported_predicate_like_row_family(
     item: &ash_parser::surface::ComputationRowItem,
 ) -> Option<&'static str> {
-    let ash_parser::surface::ComputationRowItem::Operation { path, .. } = item else {
-        return None;
+    let first = match item {
+        ash_parser::surface::ComputationRowItem::Operation { path, .. } => path.first()?,
+        ash_parser::surface::ComputationRowItem::WholeRow { variable, .. } => variable,
+        _ => return None,
     };
-    let first = path.first()?.as_ref();
+    let first = first.as_ref();
     [
         "requires",
         "ensures",
@@ -1572,9 +1595,17 @@ fn validate_operation_row_identity(
     item: &ash_parser::surface::ComputationRowItem,
     row_identity_bounds: &[(String, String)],
 ) -> Result<(), TypeCheckError> {
-    let ash_parser::surface::ComputationRowItem::Operation { path, span } = item else {
+    let ash_parser::surface::ComputationRowItem::Operation {
+        path,
+        separator,
+        span,
+    } = item
+    else {
         return Ok(());
     };
+    if *separator != Some(ash_parser::surface::RowPathSeparator::DoubleColon) {
+        return Ok(());
+    }
     let [target, method] = path.as_slice() else {
         return Ok(());
     };

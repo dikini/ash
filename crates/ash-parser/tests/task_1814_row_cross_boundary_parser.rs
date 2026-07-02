@@ -15,7 +15,7 @@ fn first_function(source: &str) -> ash_parser::surface::FnDef {
 
 #[test]
 fn inline_row_items_keep_source_spans_before_validation() {
-    let function = first_function("fn guarded(f: Int -> {PosixFs::read, | r} String) -> Int { 0 }");
+    let function = first_function("fn guarded(f: Int -> {PosixFs::read | r} String) -> Int { 0 }");
     let Type::Fn(_, Some(row), _) = &function.params[0].ty else {
         panic!("expected row-bearing callable parameter");
     };

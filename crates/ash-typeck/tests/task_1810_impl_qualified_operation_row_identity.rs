@@ -151,3 +151,9 @@ fn unknown_impl_operation_in_operation_row_is_rejected() {
         &["unknown operation", "PosixFs::write", "impl Fs<PosixFs>"],
     );
 }
+
+#[test]
+fn dotted_uppercase_operation_row_remains_unresolved_metadata() {
+    assert_typechecks(&fs_fixture_with_row("PosixFs.read"));
+    assert_typechecks(&fs_fixture_with_row("PosixFs.write"));
+}

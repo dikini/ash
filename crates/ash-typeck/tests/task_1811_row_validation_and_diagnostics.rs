@@ -91,6 +91,23 @@ fn predicate_like_row_families_fail_closed() {
 }
 
 #[test]
+fn predicate_like_whole_row_variables_still_fail_closed() {
+    assert_typecheck_err_contains(
+        r#"
+        fn guarded() -> Int
+        where
+            row { requires_fact }
+        {
+            0
+        }
+
+        workflow main { done }
+        "#,
+        &["unsupported", "row", "requires", "evidence"],
+    );
+}
+
+#[test]
 fn row_tail_must_be_final_even_for_malformed_surface_carriers() {
     let mut program = parse_program(
         r#"
@@ -106,6 +123,7 @@ fn row_tail_must_be_final_even_for_malformed_surface_carriers() {
     );
     first_where_row_items_mut(&mut program).push(ComputationRowItem::Operation {
         path: vec!["fs".into(), "read".into()],
+        separator: Some(ash_parser::surface::RowPathSeparator::Dot),
         span: Span::default(),
     });
 

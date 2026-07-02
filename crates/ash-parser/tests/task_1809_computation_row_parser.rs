@@ -1,5 +1,5 @@
 use ash_parser::surface::{
-    ComputationRow, ComputationRowItem, Definition, PropositionWhereRow, Type,
+    ComputationRow, ComputationRowItem, Definition, PropositionWhereRow, RowPathSeparator, Type,
 };
 
 fn parse_module(source: &str) -> ash_parser::surface::ModuleFile {
@@ -32,6 +32,19 @@ fn assert_single_op_row_item(row: &ComputationRow, expected: &str) {
             assert_eq!(row_path_text(path), expected);
         }
         other => panic!("expected operation row item, got {other:?}"),
+    }
+}
+
+fn assert_single_whole_row_variable(row: &ComputationRow, expected: &str) {
+    let [item] = &row.items[..] else {
+        panic!("expected exactly one row item");
+    };
+
+    match item {
+        ComputationRowItem::WholeRow { variable, .. } => {
+            assert_eq!(variable.as_ref(), expected);
+        }
+        other => panic!("expected whole-row variable, got {other:?}"),
     }
 }
 
@@ -95,7 +108,7 @@ fn task_1809_parses_row_variable_in_inline_fn_parameters_and_result() {
     let row = row
         .as_ref()
         .expect("higher-order parameter should have inline row");
-    assert_single_op_row_item(row, "r");
+    assert_single_whole_row_variable(row, "r");
 
     let Type::Fn(_result_params, result_row, result_ret) = function
         .return_type
@@ -107,13 +120,87 @@ fn task_1809_parses_row_variable_in_inline_fn_parameters_and_result() {
     let result_row = result_row
         .as_ref()
         .expect("function return should carry row variable");
-    assert_single_op_row_item(result_row, "r");
+    assert_single_whole_row_variable(result_row, "r");
     let Type::Constructor { name, args } = &**result_ret else {
         panic!("expected return type constructor, got {result_ret:?}");
     };
     assert_eq!(name.as_ref(), "List");
     assert_eq!(args.len(), 1);
     assert_eq!(args[0], Type::Name("B".into()));
+}
+
+#[test]
+fn task_1816_parses_multi_character_whole_row_variable() {
+    let module =
+        parse_module("fn map<A, B, effects>(xs: List<A>, f: A -> {effects} B) -> List<B> { xs }");
+    let function = first_function(&module);
+
+    let Type::Fn(_, row, ret) = &function.params[1].ty else {
+        panic!("expected higher-order parameter to be callable");
+    };
+    let row = row
+        .as_ref()
+        .expect("higher-order parameter should have inline row");
+    assert_single_whole_row_variable(row, "effects");
+    assert_eq!(&**ret, &Type::Name("B".into()));
+}
+
+#[test]
+fn task_1816_parses_target_open_row_tail_without_comma() {
+    let module = parse_module("fn lift<A, r>(x: A) -> {PosixFs::read | r} A { x }");
+    let function = first_function(&module);
+
+    let Type::Fn(_, Some(row), ret) = function
+        .return_type
+        .as_ref()
+        .expect("function should have return type")
+    else {
+        panic!("expected function return type to be callable");
+    };
+    assert_eq!(row.items.len(), 2);
+    assert!(matches!(
+        &row.items[0],
+        ComputationRowItem::Operation {
+            path,
+            separator: Some(RowPathSeparator::DoubleColon),
+            ..
+        } if row_path_text(path) == "PosixFs::read"
+    ));
+    assert!(matches!(
+        &row.items[1],
+        ComputationRowItem::Tail { variable, .. } if variable.as_ref() == "r"
+    ));
+    assert_eq!(&**ret, &Type::Name("A".into()));
+}
+
+#[test]
+fn task_1816_preserves_operation_separator_spelling() {
+    let module =
+        parse_module("fn compare() -> Int where row { PosixFs::read, PosixFs.read } { 0 }");
+    let function = first_function(&module);
+    let PropositionWhereRow { row, .. } = function
+        .proposition_tail
+        .as_ref()
+        .and_then(|tail| tail.row.as_ref())
+        .expect("expected where row");
+
+    assert_eq!(row.items.len(), 2);
+    assert!(matches!(
+        &row.items[0],
+        ComputationRowItem::Operation {
+            path,
+            separator: Some(RowPathSeparator::DoubleColon),
+            ..
+        } if row_path_text(path) == "PosixFs::read"
+    ));
+    assert!(matches!(
+        &row.items[1],
+        ComputationRowItem::Operation {
+            path,
+            separator: Some(RowPathSeparator::Dot),
+            ..
+        } if row_path_text(path) == "PosixFs::read"
+    ));
 }
 
 #[test]

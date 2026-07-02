@@ -152,7 +152,7 @@ Update this section as tasks complete:
 | [174](PLAN-174-MACRO-AWARE-TOOLING-SUMMARY-IDENTITY-AND-INFERENCE-READINESS.md) | 10 | 10 | ✅ Complete |
 | [175](PLAN-175-NAME-RESOLUTION-BACKED-SEMANTIC-IDENTITY-FOR-MACROS-AND-TOOLING.md) | 10 | 10 | ✅ Complete |
 | [176](PLAN-176-DEFERRED-CLEANUP-AFTER-TARGET-REDESIGN.md) | 9 | 9 | ✅ Complete; deferred cleanup after target-language redesign closed with review remediation |
-| [177](PLAN-177-TARGET-ASH-ROW-SYNTAX-AND-CORE-CPS-ALIGNMENT.md) | 10 | 7 | 🚧 In Progress; seam audit, implementation decisions, operation identity, row validation, core/CPS bridge, and parser carriers complete |
+| [177](PLAN-177-TARGET-ASH-ROW-SYNTAX-AND-CORE-CPS-ALIGNMENT.md) | 11 | 11 | ✅ Complete; target row syntax review remediation complete |
 
 ---
 
@@ -883,7 +883,7 @@ Retires or re-scopes deferred cleanup candidates that were intentionally left be
 
 ## Phase 177: Target Ash Row Syntax and Core/CPS Alignment
 
-**Status:** ✅ Complete (10/10 tasks complete; bounded parser/validation, operation identity, Core/CPS taxonomy, cross-boundary evidence, and closeout complete)
+**Status:** ✅ Complete (11/11 tasks complete; bounded parser/validation, operation identity, Core/CPS taxonomy, cross-boundary evidence, closeout, and row syntax review remediation complete)
 **Plan:** [PLAN-177: Target Ash Row Syntax and Core/CPS Alignment](PLAN-177-TARGET-ASH-ROW-SYNTAX-AND-CORE-CPS-ALIGNMENT.md)
 **Depends on:** Phase 176 closeout and interphase TASK-1803 through TASK-1805 status reconciliation.
 **Specs/notes:** `SPEC-095b`, `SPEC-096b`, `SPEC-097b`, `SPEC-098b`, `SPEC-098c`, `SPEC-099`, `SPEC-100`, `NOTE-020`, `NOTE-021`, `NOTE-022`, `NOTE-023`, and `NOTE-025`.
@@ -902,3 +902,4 @@ Starts the next target-Ash implementation packet by connecting source-facing com
 | [TASK-1813](tasks/TASK-1813-cps-row-taxonomy-bridge.md) | Align CPS row/effect carriers and Core-to-CPS row lowering | ✅ Complete |
 | [TASK-1814](tasks/TASK-1814-row-syntax-core-cps-cross-boundary-tests.md) | Add parser/engine/Core/CPS cross-boundary row preservation tests | ✅ Complete |
 | [TASK-1815](tasks/TASK-1815-phase-177-closeout.md) | Close out Phase 177 with gates, review, and status reconciliation | ✅ Complete |
+| [TASK-1816](tasks/TASK-1816-phase-177-row-syntax-review-remediation.md) | Remediate Phase 177 row syntax review findings | ✅ Complete |

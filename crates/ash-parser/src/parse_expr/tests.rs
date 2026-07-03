@@ -36,6 +36,34 @@ fn test_do_block_parses_act_return() {
 }
 
 #[test]
+fn target_ambient_do_block_parses_without_tower_target() {
+    let mut input = test_input("do { let x = 1; return x }");
+    let result = expr(&mut input).unwrap();
+
+    match result {
+        Expr::DoBlock { target, stmts, .. } => {
+            assert_eq!(target.name.as_ref(), "__ambient");
+            assert!(
+                !matches!(target.name.as_ref(), "Act" | "Proc" | "Workflow"),
+                "target do must not expose a tower computation target"
+            );
+            assert!(target.args.is_empty());
+            assert_eq!(stmts.len(), 2);
+            assert!(matches!(
+                &stmts[0],
+                crate::surface::DoStmt::Let { name, .. } if name.as_ref() == "x"
+            ));
+            assert!(matches!(
+                &stmts[1],
+                crate::surface::DoStmt::Return { value, .. }
+                    if matches!(value.as_ref(), Expr::Variable { name, .. } if name.as_ref() == "x")
+            ));
+        }
+        other => panic!("expected ambient DoBlock, got {other:?}"),
+    }
+}
+
+#[test]
 fn test_do_block_parses_proc_bind_then_return() {
     let mut input = test_input("do:Proc { x <- proc::unit(1); return x }");
     let result = expr(&mut input).unwrap();

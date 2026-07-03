@@ -157,6 +157,7 @@ Update this section as tasks complete:
 | [179](PLAN-179-EXPLICIT-ROW-ADMISSION-RUNTIME-WIRING.md) | 9 | 9 | ✅ Complete; explicit row requirements wired to admission/runtime checks |
 | [180](PLAN-180-TARGET-DOCS-CONSISTENCY-CLEANUP.md) | 1 | 1 | ✅ Complete; target docs consistency cleanup |
 | [181](PLAN-181-LEGACY-AUTHORITY-VOCABULARY-AUDIT.md) | 1 | 1 | ✅ Complete; legacy authority vocabulary audit |
+| [182](PLAN-182-CORE-COMPUTATION-MODEL-CONFORMANCE.md) | 10 | 10 | Complete; Core computation model conformance |
 
 ---
 
@@ -975,3 +976,25 @@ Audits older capability/provider authority vocabulary and classifies affected do
 || Task | Description | Status |
 ||------|-------------|--------|
 || [TASK-1836](tasks/TASK-1836-legacy-authority-vocabulary-audit.md) | Classify legacy authority vocabulary docs | ✅ Complete |
+
+## Phase 182: Core Computation Model Conformance
+
+|**Status:** Complete (10/10 tasks complete)
+|**Plan:** [PLAN-182: Core Computation Model Conformance](PLAN-182-CORE-COMPUTATION-MODEL-CONFORMANCE.md)
+|**Depends on:** Phase 181 legacy authority vocabulary audit.
+|**Specs/notes:** `SPEC-095b`, `SPEC-096b`, `SPEC-097b`, `SPEC-098b`, `SPEC-098c`, `SPEC-099`, `SPEC-100`, `NOTE-019`, `NOTE-020`, and `NOTE-021`.
+
+Makes the target Core computation model explicit and executable for a bounded slice: Core Ash is the checked direct-style language, computation rows are requirement metadata, `fn` is the primary computation unit, and target `do { ... }` is direct sequencing sugar rather than an `Act`, `Proc`, or `Workflow` mode.
+
+|| Task | Description | Status |
+||------|-------------|--------|
+|| [TASK-1837](tasks/TASK-1837-core-computation-plan-packet.md) | Create the Phase 182 plan packet | Complete |
+|| [TASK-1838](tasks/TASK-1838-core-computation-boundary-audit.md) | Audit Core computation boundaries | Complete |
+|| [TASK-1839](tasks/TASK-1839-core-computation-spec-reconciliation.md) | Reconcile target Core computation specs | Complete |
+|| [TASK-1840](tasks/TASK-1840-primary-fn-computation-unit.md) | Prove `fn` as primary row-bearing computation unit | Complete |
+|| [TASK-1841](tasks/TASK-1841-ambient-do-sequencing-sugar.md) | Implement target `do { ... }` sequencing sugar | Complete |
+|| [TASK-1842](tasks/TASK-1842-row-requirements-direct-style-preservation.md) | Preserve row requirements through direct-style Core metadata | Complete |
+|| [TASK-1843](tasks/TASK-1843-demote-tower-language-in-target-docs.md) | Demote tower language in target docs | Complete |
+|| [TASK-1844](tasks/TASK-1844-core-computation-cross-boundary-fixture.md) | Add canonical cross-boundary target fixture | Complete |
+|| [TASK-1845](tasks/TASK-1845-phase-182-consistency-review.md) | Review Phase 182 consistency and cross-references | Complete |
+|| [TASK-1846](tasks/TASK-1846-core-computation-closeout.md) | Close out Phase 182 | Complete |

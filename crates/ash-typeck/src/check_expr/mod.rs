@@ -2406,6 +2406,10 @@ fn check_do_block(
     stmts: &[DoStmt],
     span: Span,
 ) -> CheckResult {
+    if is_ambient_do_target(target) {
+        return check_ambient_do_block(env, stmts, span);
+    }
+
     let dictionary = match crate::do_target::resolve_do_target(env, target) {
         Ok(dictionary) => dictionary,
         Err(err) => return CheckResult::error(err),
@@ -2552,6 +2556,86 @@ fn check_do_block(
             args: computation_args_for_do_target(&dictionary, return_ty),
             kind: crate::Kind::Type,
         },
+        substitution,
+        errors: Vec::new(),
+    }
+}
+
+fn is_ambient_do_target(target: &ash_parser::surface::DoTarget) -> bool {
+    target.name.as_ref() == "__ambient" && target.args.is_empty()
+}
+
+fn check_ambient_do_block(env: &TypeEnv, stmts: &[DoStmt], span: Span) -> CheckResult {
+    if stmts.is_empty() {
+        return CheckResult::error(ConstructorError::UnsupportedExpression {
+            kind: "empty do block".to_string(),
+            span,
+        });
+    }
+
+    for (index, stmt) in stmts.iter().enumerate() {
+        if matches!(stmt, DoStmt::Return { .. }) && index + 1 < stmts.len() {
+            return CheckResult::error(ConstructorError::UnsupportedExpression {
+                kind: "return must be the last statement in a do block".to_string(),
+                span: do_stmt_span(stmt),
+            });
+        }
+    }
+
+    if !matches!(stmts.last(), Some(DoStmt::Return { .. })) {
+        return CheckResult::error(ConstructorError::UnsupportedExpression {
+            kind: "do block must end with a return statement".to_string(),
+            span,
+        });
+    }
+
+    let mut block_env = env.clone();
+    let mut substitution = Substitution::new();
+    let mut errors: Vec<ConstructorError> = Vec::new();
+    let mut return_ty = Type::Null;
+
+    for stmt in stmts {
+        match stmt {
+            DoStmt::Let { name, value, .. } | DoStmt::Bind { name, value, .. } => {
+                let value_result = check_expr(&block_env, value);
+                substitution = substitution.compose(&value_result.substitution);
+                if !value_result.is_ok() {
+                    errors.extend(value_result.errors);
+                    continue;
+                }
+                let value_ty = substitution.apply(&value_result.ty);
+                block_env.bind_variable(name.as_ref(), value_ty);
+            }
+            DoStmt::Return { value, .. } => {
+                let value_result = check_expr(&block_env, value);
+                substitution = substitution.compose(&value_result.substitution);
+                if !value_result.is_ok() {
+                    errors.extend(value_result.errors);
+                    continue;
+                }
+                return_ty = substitution.apply(&value_result.ty);
+            }
+            DoStmt::WorkflowRequires { span, .. } | DoStmt::WorkflowEnsures { span, .. } => {
+                errors.push(ConstructorError::UnsupportedExpression {
+                    kind:
+                        "workflow contract statement requires explicit workflow/profile elaboration"
+                            .to_string(),
+                    span: *span,
+                });
+            }
+        }
+    }
+
+    if !errors.is_empty() {
+        return CheckResult {
+            ty: Type::Var(TypeVar::fresh()),
+            substitution,
+            errors,
+        };
+    }
+
+    CheckResult {
+        ty: return_ty,
         substitution,
         errors: Vec::new(),
     }

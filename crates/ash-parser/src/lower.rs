@@ -18,9 +18,9 @@ use ash_core::RoleObligationRef as CoreRoleObligationRef;
 
 use crate::capability_export::{CapabilityResolutionContext, ModuleId};
 use crate::surface::{
-    BinaryOp, BlockStmt, CapabilityDef, CheckTarget, EffectType, ExpandedSurfaceModule, Expr,
-    Guard, Literal, ModuleFile, ObligationRef, Pattern, PolicyExpr, Predicate, StreamPattern, Type,
-    UnaryOp, Workflow as SurfaceWorkflow, WorkflowDef, YieldArm, expand_surface_module,
+    BinaryOp, BlockStmt, CapabilityDef, CheckTarget, DoStmt, EffectType, ExpandedSurfaceModule,
+    Expr, Guard, Literal, ModuleFile, ObligationRef, Pattern, PolicyExpr, Predicate, StreamPattern,
+    Type, UnaryOp, Workflow as SurfaceWorkflow, WorkflowDef, YieldArm, expand_surface_module,
     visit_exprs_in_module,
 };
 
@@ -2094,6 +2094,14 @@ pub fn lower_expr(expr: &Expr) -> Result<CoreExpr, LoweringError> {
             Ok(result)
         }
 
+        Expr::DoBlock {
+            target,
+            stmts,
+            span,
+        } if target.name.as_ref() == "__ambient" && target.args.is_empty() => {
+            lower_ambient_do_block(stmts, *span)
+        }
+
         Expr::DoBlock { .. } => Err(LoweringError::ExprNotLowerable {
             kind: "generic do block requires typed do elaboration before lowering",
         }),
@@ -2102,6 +2110,76 @@ pub fn lower_expr(expr: &Expr) -> Result<CoreExpr, LoweringError> {
             kind: "comprehension requires typed do elaboration before lowering",
         }),
     }
+}
+
+fn lower_ambient_do_block(
+    stmts: &[DoStmt],
+    _span: crate::token::Span,
+) -> Result<CoreExpr, LoweringError> {
+    if stmts.is_empty() {
+        return Err(LoweringError::UnsupportedFeature(
+            "empty target ambient do block".to_string(),
+        ));
+    }
+
+    for (index, stmt) in stmts.iter().enumerate() {
+        if matches!(stmt, DoStmt::Return { .. }) && index + 1 < stmts.len() {
+            return Err(LoweringError::UnsupportedFeature(
+                "return must be the last statement in a target ambient do block".to_string(),
+            ));
+        }
+    }
+
+    let Some(DoStmt::Return { value, .. }) = stmts.last() else {
+        return Err(LoweringError::UnsupportedFeature(
+            "target ambient do block must end with a return statement".to_string(),
+        ));
+    };
+
+    let mut result = lower_expr(value)?;
+    for stmt in stmts[..stmts.len() - 1].iter().rev() {
+        match stmt {
+            DoStmt::Let {
+                name,
+                value,
+                span: stmt_span,
+            }
+            | DoStmt::Bind {
+                name,
+                value,
+                span: stmt_span,
+            } => {
+                result = CoreExpr::Let {
+                    pattern: ash_core::Pattern::Variable {
+                        name: name.to_string(),
+                        span: ash_core::Span {
+                            start: stmt_span.start,
+                            end: stmt_span.end,
+                        },
+                    },
+                    expr: Box::new(lower_expr(value)?),
+                    body: Box::new(result),
+                    span: ash_core::Span {
+                        start: stmt_span.start,
+                        end: stmt_span.end,
+                    },
+                };
+            }
+            DoStmt::WorkflowRequires { .. } | DoStmt::WorkflowEnsures { .. } => {
+                return Err(LoweringError::UnsupportedFeature(
+                    "workflow contract statement requires explicit workflow/profile elaboration"
+                        .to_string(),
+                ));
+            }
+            DoStmt::Return { .. } => {
+                return Err(LoweringError::UnsupportedFeature(
+                    "return must be the last statement in a target ambient do block".to_string(),
+                ));
+            }
+        }
+    }
+
+    Ok(result)
 }
 
 /// Lower an act block into nested bind/unit calls. SPEC-047 §6.2

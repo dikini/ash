@@ -6,6 +6,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Changed
+- Completed PLAN-182 Core computation model conformance: target `do { ... }` now parses, typechecks, and lowers as direct-style sequencing sugar; row-bearing `fn` declarations preserve explicit rows through engine summaries and Core callable metadata; target specs and indexes now route this work through Core Ash, rows, and direct-style checking (TASK-1837 through TASK-1846).
 - Completed PLAN-181 legacy authority vocabulary audit, classifying older capability/provider docs as current-state compatibility, implemented compatibility substrate, superseded historical reference, or target-state authority routing without letting compatibility delay target-Ash direction (TASK-1836).
 - Completed PLAN-180 target docs consistency cleanup, reconciling stale target-Ash specs and notes around interface/impl operation declarations, provider/handler admission, target operational-semantics routing, and historical WorkflowForm/capability-binding material (TASK-1835).
 - Completed Phase 178 after broad verification and independent review remediation, preserving rowless callable compatibility for unsupported rowless surface type forms and extending authority-neutrality coverage across imported row-bearing callables (TASK-1825).

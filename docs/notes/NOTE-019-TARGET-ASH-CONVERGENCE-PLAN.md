@@ -96,11 +96,12 @@ These are design constraints for future specs and implementation plans.
 
 ### 3.1 One ambient computation model
 
-Target Ash has one ambient monad for sequencing. Computation rows index the facts attached
+Target Ash has one checked direct-style computation model. Computation rows index the facts attached
 to a computation: effects, evaluation modes, failures, contracts, evidence, authority,
-runtime requirements, and related obligations. Other monadic stories are implemented by
-effects plus providers, while lazy/memo/eager behavior is represented as
-computation-row mode facts. Provider nesting composes interpretations; row order does not.
+runtime requirements, and related obligations. Other monadic stories are implemented as profiles,
+library surfaces, handlers, or runtime concepts over the same Core model, while lazy/memo/eager
+behavior is represented as computation-row mode facts. Provider nesting composes interpretations;
+row order does not.
 
 #### 3.1.1 `do` notation versus plain function composition
 
@@ -114,9 +115,10 @@ fn name(...) -> ... = f(g(h(x, y)))
 This is the smallest surface for pure expression trees and for code where the data flow is
 clear when read inside-out.
 
-`do` is useful for the other common shape: direct, imperative-looking sequencing. It should
-not introduce a second execution model. It is notation for the ambient monad's `bind`, with
-`return` as the ambient unit:
+`do` is useful for the other common shape: direct, imperative-looking sequencing. It must not
+introduce a second execution model. In the Phase 182 implementation slice, target `do { ... }`
+checks as direct-style sequencing sugar: `let` and `<-` bind ordinary checked expression values,
+and `return` supplies the final expression type.
 
 ```ash
 fn name(...) -> ... = do {
@@ -130,7 +132,7 @@ The important design constraint is therefore:
 ```text
 do syntax is ergonomic sequencing sugar;
 function call syntax is ordinary expression composition;
-both elaborate through the same row-indexed ambient computation model.
+both elaborate through the same checked Core computation model with rows as requirement metadata.
 ```
 
 Open syntax question: the examples above use `=` before the body because the goal is to

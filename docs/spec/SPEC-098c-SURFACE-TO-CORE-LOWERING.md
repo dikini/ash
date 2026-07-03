@@ -7,7 +7,7 @@ authority: design
 status: draft
 stability: alpha
 owner: language
-last_verified: 2026-07-02
+last_verified: 2026-07-03
 verified_against:
   specs:
     - docs/spec/SPEC-095b-TARGET-GRAMMAR.md
@@ -79,13 +79,15 @@ Inline row syntax and `where row` syntax are mutually exclusive at the surface g
 normalize to the same callable row summary. If both are absent, lowering asks surface type inference
 for an inferred row; exported/public callables must receive an explicit or summarized public row.
 
-**Current implementation note (Phase 178).** The current bridge preserves explicit inline callable
+**Current implementation note (Phase 178 / Phase 182).** The current bridge preserves explicit inline callable
 rows and expanded `where row` rows from parser carriers through engine/typecheck-facing callable
 summaries into `CoreType::Function { row, .. }` metadata for local and imported/exported callables.
 Rowless callables continue to lower with the default empty Core row. Open row tails are preserved as
 Core row tails in this metadata bridge. This is still a requirement-recording bridge: it does not
 perform row-polymorphic inference, install providers, admit roles/capabilities, register handlers,
-or wire runtime authority.
+or wire runtime authority. Phase 182 additionally keeps row-bearing `fn` bodies that use target
+ambient `do { ... }` on this same path: the row remains callable metadata and the body lowers through
+ordinary direct-style Core sequencing.
 
 `where row` items lower as follows:
 
@@ -99,17 +101,19 @@ or wire runtime authority.
 
 ## 5. `do` sequencing
 
-A `do` block lowers to Core sequencing. Each binding contributes its local row; rows compose by row
-union while contract summaries compose through predicate-transformer obligations, as specified in
-SPEC-097b.
+Target `do { ... }` lowers to direct-style Core sequencing. Each `let` or direct `<-` binding lowers
+to an ordinary Core `Let`; the final `return` lowers to the tail expression. The block itself does
+not install authority, select a tower runtime, or wrap its result in `Act`, `Proc`, or `Workflow`.
+Rows remain attached to the enclosing callable type/summary and are validated as requirements.
 
 ```text
 do { x <- m; return k(x) }
-  => bind lower(m) as x; lower(k(x))
+  => let x = lower(m) in lower(k(x))
 ```
 
-Legacy `do:Act`, `do:Proc`, and `do:Workflow` profiles lower as ordinary `do` plus a row-profile
-check. The profiles are semantic anchors over one computation model, not separate Core languages.
+Explicit `do:Act`, `do:Proc`, and `do:Workflow` are compatibility/profile forms. They are not the
+target semantic foundation and continue to require the typed do-elaboration path until a profile
+lowering spec states their exact library/runtime mapping.
 
 ## 6. Handlers and provider boundaries
 

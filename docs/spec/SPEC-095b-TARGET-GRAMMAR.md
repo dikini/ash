@@ -8,7 +8,7 @@ authority: design
 status: draft
 stability: alpha
 owner: language
-last_verified: 2026-06-29
+last_verified: 2026-07-03
 verified_against:
   specs:
     - docs/spec/SPEC-095a-CURRENT-GRAMMAR.md
@@ -26,11 +26,11 @@ unified effect system is implemented. It is a goal-state living document.
 
 ## 1. Summary
 
-The target grammar unifies Ash's effect-accounting surface into one coherent syntax:
+The target grammar unifies Ash's computation-requirement surface into one coherent syntax:
 
-- effect rows on function types and computation blocks;
-- a single `do { ... }` form with effect requirements inferred from the body;
-- structured effect items for operations, resources, roles, policies, contracts, channels, process operations, failure, and evidence;
+- computation rows on function types and computation blocks;
+- a single `do { ... }` form as direct-style sequencing sugar;
+- structured row items for operations, resources, roles, policies, contracts, channels, process operations, failure, and evidence;
 - transparent effect aliases and diagnostic groups;
 - row variables for polymorphism.
 
@@ -211,8 +211,9 @@ key and align the surrounding handler method signature with the runtime primitiv
 ### 4.2 Do Block Expression
 
 ```ebnf
-do_block_expr = "do" [ do_profile ] "{" { do_stmt } "}" ;
-do_profile = ":" identifier ;
+do_block_expr = "do" "{" { do_stmt } "}"
+              | "do" do_profile "{" { do_stmt } "}" ;
+do_profile = ":" identifier ;  -- compatibility profile only
 
 do_stmt = "let" identifier "=" expr ";"
         | identifier "<-" expr ";"
@@ -220,6 +221,12 @@ do_stmt = "let" identifier "=" expr ";"
         | expr ";"
         ;
 ```
+
+Target `do { ... }` has no named tower target. It is checked as direct-style sequencing:
+`let` binds an ordinary expression value, `<-` is direct binding sugar for the same checked
+value in the current implementation slice, and `return` supplies the final expression type.
+Rows remain callable requirement metadata; the `do` block does not install authority or choose
+an `Act`, `Proc`, or `Workflow` runtime mode.
 
 `handle effect_item with { ... }` is obsolete compatibility syntax, not target syntax. In target
 Ash, handlers are ordinary handler-marked callables installed with `handle expr with handler_name`,

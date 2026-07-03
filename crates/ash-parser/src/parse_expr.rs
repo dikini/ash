@@ -29,7 +29,10 @@ fn input_starts_with_keyword(input: &ParseInput, word: &str) -> bool {
         .is_none_or(|c| !(c.is_ascii_alphanumeric() || c == '_' || c == '-'))
 }
 
-/// Try to parse a generalized do block expression: `do:K { ... }`.
+const AMBIENT_DO_TARGET: &str = "__ambient";
+
+/// Try to parse a generalized do block expression: `do:K { ... }` or target
+/// ambient sequencing sugar `do { ... }`.
 pub(crate) fn parse_do_block_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     if !input_starts_with_keyword(input, "do") {
         return Err(winnow::error::ErrMode::Backtrack(
@@ -40,11 +43,19 @@ pub(crate) fn parse_do_block_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     let start_pos = input.state.pos;
     let _ = keyword("do").parse_next(input)?;
     skip_whitespace_and_comments(input);
-    let _ = literal_str(":").parse_next(input)?;
-    skip_whitespace_and_comments(input);
 
-    let target_start = input.state.pos;
-    let target = parse_do_target(input, &target_start)?;
+    let target = if input.input.starts_with(':') {
+        let _ = literal_str(":").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        let target_start = input.state.pos;
+        parse_do_target(input, &target_start)?
+    } else {
+        DoTarget {
+            name: AMBIENT_DO_TARGET.into(),
+            args: Vec::new(),
+            span: span_from(&start_pos, &input.state.pos),
+        }
+    };
 
     skip_whitespace_and_comments(input);
     let _ = literal_str("{").parse_next(input)?;

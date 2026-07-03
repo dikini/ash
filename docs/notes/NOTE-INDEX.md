@@ -57,6 +57,7 @@ Common tags include: `grammar`, `syntax`, `semantics`, `type-system`, `effect-sy
 5. [NOTE-025](NOTE-025-EFFECT-IDENTITY-VIA-SORTS-AND-IMPLS.md)
 6. [PLAN-180](../plan/PLAN-180-TARGET-DOCS-CONSISTENCY-CLEANUP.md) for the target-doc cleanup that fences older capability-binding and WorkflowForm material.
 7. [PLAN-182](../plan/PLAN-182-CORE-COMPUTATION-MODEL-CONFORMANCE.md) for the implemented Core computation model slice: target `fn`, direct-style `do { ... }`, and callable row metadata.
+8. [PLAN-183](../plan/PLAN-183-OPERATION-AUTHORITY-MODEL.md) for the current operation authority model: operation identities are impl/type-qualified, rows require authority without granting it, and non-operation row families keep distinct discharge rules.
 
 ### Work on target-Ash convergence or stale-doc cleanup
 
@@ -69,6 +70,7 @@ Common tags include: `grammar`, `syntax`, `semantics`, `type-system`, `effect-sy
 7. [PLAN-180](../plan/PLAN-180-TARGET-DOCS-CONSISTENCY-CLEANUP.md)
 8. [PLAN-181](../plan/PLAN-181-LEGACY-AUTHORITY-VOCABULARY-AUDIT.md) for current-state-vs-historical classification of legacy authority vocabulary.
 9. [PLAN-182](../plan/PLAN-182-CORE-COMPUTATION-MODEL-CONFORMANCE.md) for direct-style Core computation conformance.
+10. [PLAN-183](../plan/PLAN-183-OPERATION-AUTHORITY-MODEL.md) for operation authority and row-family discharge consistency.
 
 ### Change target handler/effect/operation syntax
 

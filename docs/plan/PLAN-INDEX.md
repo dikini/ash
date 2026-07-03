@@ -158,6 +158,7 @@ Update this section as tasks complete:
 | [180](PLAN-180-TARGET-DOCS-CONSISTENCY-CLEANUP.md) | 1 | 1 | ✅ Complete; target docs consistency cleanup |
 | [181](PLAN-181-LEGACY-AUTHORITY-VOCABULARY-AUDIT.md) | 1 | 1 | ✅ Complete; legacy authority vocabulary audit |
 | [182](PLAN-182-CORE-COMPUTATION-MODEL-CONFORMANCE.md) | 10 | 10 | Complete; Core computation model conformance |
+| [183](PLAN-183-OPERATION-AUTHORITY-MODEL.md) | 8 | 8 | ✅ Complete; operation and authority model |
 
 ---
 
@@ -998,3 +999,23 @@ Makes the target Core computation model explicit and executable for a bounded sl
 || [TASK-1844](tasks/TASK-1844-core-computation-cross-boundary-fixture.md) | Add canonical cross-boundary target fixture | Complete |
 || [TASK-1845](tasks/TASK-1845-phase-182-consistency-review.md) | Review Phase 182 consistency and cross-references | Complete |
 || [TASK-1846](tasks/TASK-1846-core-computation-closeout.md) | Close out Phase 182 | Complete |
+
+## Phase 183: Operation And Authority Model
+
+|**Status:** ✅ Complete (8/8 tasks complete)
+|**Plan:** [PLAN-183: Operation And Authority Model](PLAN-183-OPERATION-AUTHORITY-MODEL.md)
+|**Depends on:** Phase 182 Core computation model conformance.
+|**Specs/notes:** `SPEC-096b`, `SPEC-097b`, `SPEC-098b`, `SPEC-098c`, `SPEC-099b`, `SPEC-100`, `NOTE-022`, `NOTE-023`, and `NOTE-025`.
+
+Defines how effects actually happen for the target model: operations are interface methods, operation identity is impl/type-qualified, rows require operations without granting authority, and operation/resource/role/policy/evidence/failure rows have separate discharge paths.
+
+|| Task | Description | Status |
+||------|-------------|--------|
+|| [TASK-1847](tasks/TASK-1847-operation-authority-plan-packet.md) | Create the Phase 183 plan packet | Complete |
+|| [TASK-1848](tasks/TASK-1848-operation-authority-boundary-audit.md) | Audit operation authority boundaries | Complete |
+|| [TASK-1849](tasks/TASK-1849-operation-authority-spec-reconciliation.md) | Reconcile operation authority specs | Complete |
+|| [TASK-1850](tasks/TASK-1850-admission-discharge-model.md) | Add admission discharge model | Complete |
+|| [TASK-1851](tasks/TASK-1851-impl-qualified-operation-authority-fixtures.md) | Add impl/type-qualified operation authority fixtures | Complete |
+|| [TASK-1852](tasks/TASK-1852-row-family-discharge-diagnostics.md) | Separate row-family discharge diagnostics | Complete |
+|| [TASK-1853](tasks/TASK-1853-operation-authority-non-grant-regressions.md) | Prove rows do not grant authority | Complete |
+|| [TASK-1854](tasks/TASK-1854-operation-authority-closeout.md) | Close out Phase 183 | Complete |

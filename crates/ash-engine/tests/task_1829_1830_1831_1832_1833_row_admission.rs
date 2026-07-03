@@ -498,8 +498,8 @@ fn row_admission_requirement_derives_from_core_row() {
     let requirements = RowAdmissionRequirement::from_core_row(&row);
     assert!(requirements.iter().any(|r| matches!(
         r,
-        RowAdmissionRequirement::Operation { provider, operation }
-            if provider == "posixfs" && operation == "read"
+        RowAdmissionRequirement::Operation { authority, operation }
+            if authority == "posixfs" && operation == "read"
     )));
     assert!(requirements.iter().any(|r| matches!(
         r,
@@ -525,7 +525,7 @@ fn row_admission_check_operation_satisfied_when_provider_present() {
         .expect("parses");
     let request = base_request(&workflow);
     let req = RowAdmissionRequirement::Operation {
-        provider: "fs".to_string(),
+        authority: "fs".to_string(),
         operation: "read".to_string(),
     };
 

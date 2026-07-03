@@ -79,15 +79,17 @@ Inline row syntax and `where row` syntax are mutually exclusive at the surface g
 normalize to the same callable row summary. If both are absent, lowering asks surface type inference
 for an inferred row; exported/public callables must receive an explicit or summarized public row.
 
-**Current implementation note (Phase 178 / Phase 182).** The current bridge preserves explicit inline callable
+**Current implementation note (Phase 178 / Phase 182 / Phase 183).** The current bridge preserves explicit inline callable
 rows and expanded `where row` rows from parser carriers through engine/typecheck-facing callable
 summaries into `CoreType::Function { row, .. }` metadata for local and imported/exported callables.
 Rowless callables continue to lower with the default empty Core row. Open row tails are preserved as
 Core row tails in this metadata bridge. This is still a requirement-recording bridge: it does not
-perform row-polymorphic inference, install providers, admit roles/capabilities, register handlers,
-or wire runtime authority. Phase 182 additionally keeps row-bearing `fn` bodies that use target
+perform row-polymorphic inference, install operation authority providers, admit roles, register
+handlers, or wire runtime authority. Phase 182 additionally keeps row-bearing `fn` bodies that use target
 ambient `do { ... }` on this same path: the row remains callable metadata and the body lowers through
-ordinary direct-style Core sequencing.
+ordinary direct-style Core sequencing. Phase 183 classifies the corresponding admission-side
+discharge families without changing lowering: operation rows require existing operation authority,
+while resource, role, policy, evidence, and failure rows remain distinct requirements.
 
 `where row` items lower as follows:
 
@@ -134,7 +136,8 @@ multiplicity is checked by the Core/CPS continuation-multiplicity specs.
 carry `Origin::Desugaring` metadata pointing to the derive site.
 
 Provider frames represent runtime authority at explicit runtime boundaries. Lowering records the
-provider boundary; operational dispatch is specified in SPEC-099b.
+provider boundary; operational dispatch is specified in SPEC-099b. Lowering must not synthesize
+provider frames merely because a callable row mentions an operation identity.
 
 ## 7. Impl operation identity
 
@@ -260,6 +263,7 @@ of these products, lowering must reject the program before Core.
 
 ## 13. Changelog
 
+- 2026-07-03: Reconciled Phase 183 operation authority model: lowering preserves impl/type-qualified operation identities as requirements and leaves operation/resource/role/policy/evidence/failure discharge to admission/type/runtime phases.
 - 2026-07-02: Reconciled Phase 178 source-to-Core callable row bridge: explicit inline and expanded
   callable rows now reach engine summaries and Core function row metadata while remaining
   authority-neutral; row-polymorphic inference and runtime authority wiring remain future work.

@@ -118,7 +118,7 @@ that are already available or already discharged in the current scope.
 Examples of ambient facts include:
 
 - a role admitted at workflow/process start;
-- an operation provider or legacy capability binding admitted by a workflow header;
+- an operation authority provider, handler, or host admission fact available at the boundary;
 - a policy handler installed around a region;
 - a proof or runtime-check strategy for a contract;
 - a channel endpoint owned by the current process;
@@ -152,7 +152,7 @@ All row items share row syntax, but they are not discharged uniformly.
 
 | Row item kind | Discharge mechanism |
 |-------------|---------------------|
-| operation | admitted provider/effect binding or role entailment |
+| operation | admitted operation authority provider, handler, host admission fact, or role entailment |
 | resource | ownership, borrow, split, join, or provenance over a runtime resource |
 | role | role admission at the execution boundary |
 | policy | named policy binding evaluated or handled by a compatible decision domain |
@@ -231,9 +231,10 @@ fn read_config<F: Fs>(path: String) -> {F::read} String { ... }
 -- After specialization with F = PosixFs: {PosixFs::read}
 ```
 
-An operation effect is discharged by an explicit provider/effect binding, by a role that
-entails the operation, or by a host/runtime admission fact. The type checker must not treat
-an operation name as an ordinary value binding.
+An operation effect is discharged by an explicit operation authority provider, by a handler
+covering the operation identity, by a role that entails the operation, or by a host/runtime
+admission fact. A row item such as `PosixFs::read` requires that authority; it never creates
+or grants it. The type checker must not treat an operation name as an ordinary value binding.
 
 Per NOTE-034, operation effects are authority-bearing and remain separate from contract
 predicate evaluation. A contract predicate may inspect ordinary values produced by operation
@@ -507,8 +508,9 @@ row-discharge evidence must be invalidated or rechecked.
 
 ### 7.3 Authority denial
 
-Authority denial is not the same as a policy denial. If no admitted role or provider/effect
-binding discharges an operation effect, the computation is rejected before the operation runs.
+Authority denial is not the same as a policy denial. If no admitted role, provider, handler,
+or host admission fact discharges an operation effect, the computation is rejected before the
+operation runs.
 
 A later operational-semantics spec must distinguish at least:
 
@@ -730,6 +732,7 @@ workflow reporting, and audit evidence.
 
 ## 15. Changelog
 
+- 2026-07-03: Reconciled operation authority wording for Phase 183: operations are interface methods, operation identities are impl/type-qualified, rows require operations without granting authority, and operation/resource/role/policy/evidence/failure row families keep separate discharge rules.
 - 2026-06-18: Created as target-state effect system document. Defined row semantics, effect item taxonomy, discharge rules, aliases/groups, and migration path.
 - 2026-06-27: Reconciled with NOTE-020 (computation row taxonomy), NOTE-021 (Row kind, evidence rows), NOTE-022 (effects as interfaces), NOTE-023 (handler surface semantics).
 - 2026-06-27: Reconciled with NOTE-025 (effect identity via sorts and impls). Operation effect identity changed from interface-qualified (`fs.read`) to impl-type-qualified (`PosixFs::read`). §6.1 examples and EBNF updated.

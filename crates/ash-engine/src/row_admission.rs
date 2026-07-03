@@ -21,7 +21,7 @@
 //! host already selected a matching resource initializer; a satisfied role row
 //! means the admission request already carries the matching admitted role.
 
-use ash_core::core_ash::{CoreRow, CoreRowItem};
+use ash_core::core_ash::{CoreRow, CoreRowItem, CoreType};
 use ash_core::runtime::{
     WorkflowAdmissionContext, WorkflowFailure, WorkflowFailureEvidence, WorkflowFailureKind,
     WorkflowReport,
@@ -37,8 +37,8 @@ use crate::{
 pub enum RowAdmissionRequirement {
     /// Operation requirement such as `posixfs.read` or `PosixFs::read`.
     Operation {
-        /// Provider/interface name (e.g. `posixfs`).
-        provider: String,
+        /// Runtime authority identity required to discharge the operation.
+        authority: String,
         /// Operation name (e.g. `read`).
         operation: String,
     },
@@ -88,6 +88,59 @@ pub enum RowAdmissionRequirement {
     },
 }
 
+/// Admission-side discharge family for one explicit row requirement.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum RowAdmissionDischarge {
+    /// Operation rows discharge through existing registered operation authority.
+    OperationAuthority {
+        /// Human-readable operation identity, such as `PosixFs::read`.
+        identity: String,
+        /// Runtime authority identity required by the current admission substrate.
+        authority: String,
+        /// Operation method name.
+        operation: String,
+    },
+    /// Resource rows discharge through selected resource authority.
+    ResourceAuthority {
+        /// Resource type/name.
+        resource: String,
+        /// Required access mode.
+        mode: String,
+    },
+    /// Role rows discharge through admitted role authority.
+    RoleAuthority {
+        /// Required role path.
+        role: String,
+    },
+    /// Policy rows discharge through policy evidence/admission.
+    PolicyEvidence {
+        /// Required policy path.
+        policy: String,
+    },
+    /// Failure rows discharge through a failure handler.
+    FailureHandler {
+        /// Optional failure type name.
+        ty: Option<String>,
+    },
+    /// Evidence rows discharge through named evidence.
+    Evidence {
+        /// Evidence path.
+        evidence: String,
+    },
+    /// Effect group rows require group expansion before concrete discharge.
+    EffectGroup {
+        /// Group path.
+        group: String,
+    },
+    /// Unsupported row families fail closed with an explicit family.
+    Unsupported {
+        /// Requirement family name.
+        family: &'static str,
+        /// Human-readable description.
+        description: String,
+    },
+}
+
 impl RowAdmissionRequirement {
     /// Derive admission requirements from a Core row.
     #[must_use]
@@ -98,7 +151,7 @@ impl RowAdmissionRequirement {
     fn from_core_row_item(item: &CoreRowItem) -> Self {
         match item {
             CoreRowItem::Capability { path, operation } => Self::Operation {
-                provider: path.join("."),
+                authority: path.join("."),
                 operation: operation.clone(),
             },
             CoreRowItem::Resource { path, mode } => Self::Resource {
@@ -115,7 +168,7 @@ impl RowAdmissionRequirement {
                 operation: operation.clone(),
             },
             CoreRowItem::Failure { ty } => Self::Failure {
-                ty: ty.as_ref().map(|t| format!("{t:?}")),
+                ty: ty.as_deref().map(format_core_type_name),
             },
             CoreRowItem::Evidence { path } => Self::Evidence {
                 evidence: path.join("."),
@@ -144,9 +197,12 @@ impl RowAdmissionRequirement {
     pub fn label(&self) -> String {
         match self {
             Self::Operation {
-                provider,
+                authority,
                 operation,
-            } => format!("{provider}.{operation}"),
+            } => format!(
+                "operation {}",
+                format_operation_identity(authority, operation)
+            ),
             Self::Resource { resource, mode } => format!("resource {resource} {mode}"),
             Self::Role { role } => format!("role {role}"),
             Self::Policy { policy } => format!("policy {policy}"),
@@ -158,6 +214,92 @@ impl RowAdmissionRequirement {
                 family,
                 description,
             } => format!("{family}: {description}"),
+        }
+    }
+
+    /// Return the admission discharge family for this row requirement.
+    #[must_use]
+    pub fn discharge(&self) -> RowAdmissionDischarge {
+        match self {
+            Self::Operation {
+                authority,
+                operation,
+            } => RowAdmissionDischarge::OperationAuthority {
+                identity: format_operation_identity(authority, operation),
+                authority: authority.clone(),
+                operation: operation.clone(),
+            },
+            Self::Resource { resource, mode } => RowAdmissionDischarge::ResourceAuthority {
+                resource: resource.clone(),
+                mode: mode.clone(),
+            },
+            Self::Role { role } => RowAdmissionDischarge::RoleAuthority { role: role.clone() },
+            Self::Policy { policy } => RowAdmissionDischarge::PolicyEvidence {
+                policy: policy.clone(),
+            },
+            Self::Process { operation } => RowAdmissionDischarge::Unsupported {
+                family: "process",
+                description: format!(
+                    "process row '{operation}' requires process runtime discharge"
+                ),
+            },
+            Self::Failure { ty } => RowAdmissionDischarge::FailureHandler { ty: ty.clone() },
+            Self::Evidence { evidence } => RowAdmissionDischarge::Evidence {
+                evidence: evidence.clone(),
+            },
+            Self::EffectGroup { group } => RowAdmissionDischarge::EffectGroup {
+                group: group.clone(),
+            },
+            Self::Unsupported {
+                family,
+                description,
+            } => RowAdmissionDischarge::Unsupported {
+                family,
+                description: description.clone(),
+            },
+        }
+    }
+}
+
+fn format_operation_identity(authority: &str, operation: &str) -> String {
+    let separator = authority
+        .rsplit('.')
+        .next()
+        .and_then(|last| last.chars().next())
+        .filter(|first| first.is_uppercase())
+        .map_or(".", |_| "::");
+    format!("{authority}{separator}{operation}")
+}
+
+fn format_core_type_name(ty: &CoreType) -> String {
+    match ty {
+        CoreType::Base(name) | CoreType::Named(name) | CoreType::Var(name) => name.clone(),
+        CoreType::Function { .. } => "fn".to_string(),
+        CoreType::Refinement { base, predicate } => {
+            format!("{} where {predicate}", format_core_type_name(base))
+        }
+        CoreType::Cont { .. } => "cont".to_string(),
+        CoreType::Tuple(items) => {
+            let names: Vec<_> = items.iter().map(format_core_type_name).collect();
+            format!("({})", names.join(", "))
+        }
+        CoreType::Record(fields) => {
+            let fields: Vec<_> = fields
+                .iter()
+                .map(|(name, ty)| format!("{name}: {}", format_core_type_name(ty)))
+                .collect();
+            format!("{{{}}}", fields.join(", "))
+        }
+        CoreType::App { name, args } => {
+            if args.is_empty() {
+                name.clone()
+            } else {
+                let args: Vec<_> = args.iter().map(format_core_type_name).collect();
+                format!("{name}<{}>", args.join(", "))
+            }
+        }
+        CoreType::Mode { mode, inner, .. } => {
+            format!("{mode:?}<{}>", format_core_type_name(inner))
         }
     }
 }
@@ -190,16 +332,17 @@ impl RowAdmissionCheck {
     ) -> Self {
         match requirement {
             RowAdmissionRequirement::Operation {
-                provider,
+                authority,
                 operation,
             } => {
-                if engine.has_provider(provider) {
+                let identity = format_operation_identity(authority, operation);
+                if engine.has_provider(authority) {
                     Self::Satisfied
                 } else {
                     Self::Missing {
                         kind: WorkflowFailureKind::CapabilityAdmissionFailure,
                         notes: vec![format!(
-                            "operation row '{provider}.{operation}' requires provider '{provider}', which is not registered"
+                            "operation authority for '{identity}' requires registered authority '{authority}'. Rows do not grant authority"
                         )],
                     }
                 }
@@ -228,7 +371,7 @@ impl RowAdmissionCheck {
             }
             RowAdmissionRequirement::Policy { policy } => Self::Unsupported {
                 notes: vec![format!(
-                    "policy row '{policy}' is not supported by the admission substrate"
+                    "policy row '{policy}' requires policy evidence discharge, which is not supported by the admission substrate"
                 )],
             },
             RowAdmissionRequirement::Process { operation } => Self::Unsupported {
@@ -238,13 +381,13 @@ impl RowAdmissionCheck {
             },
             RowAdmissionRequirement::Failure { ty } => Self::Unsupported {
                 notes: vec![format!(
-                    "failure row '{}' is not supported by the admission substrate",
+                    "failure row '{}' requires failure handler discharge, which is not supported by the admission substrate",
                     ty.as_deref().unwrap_or("<unknown>")
                 )],
             },
             RowAdmissionRequirement::Evidence { evidence } => Self::Unsupported {
                 notes: vec![format!(
-                    "evidence row '{evidence}' is not supported by the admission substrate"
+                    "evidence row '{evidence}' requires evidence discharge, which is not supported by the admission substrate"
                 )],
             },
             RowAdmissionRequirement::EffectGroup { group } => Self::Unsupported {

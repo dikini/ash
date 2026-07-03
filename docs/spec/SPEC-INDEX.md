@@ -79,6 +79,7 @@ Common tags include: `grammar`, `syntax`, `semantics`, `type-system`, `effect-sy
 10. [PLAN-180](../plan/PLAN-180-TARGET-DOCS-CONSISTENCY-CLEANUP.md) for the target-doc consistency cleanup that fences NOTE-009-era capability-binding and WorkflowForm material.
 11. [PLAN-181](../plan/PLAN-181-LEGACY-AUTHORITY-VOCABULARY-AUDIT.md) for the legacy authority vocabulary audit and current-state-vs-historical classification.
 12. [PLAN-182](../plan/PLAN-182-CORE-COMPUTATION-MODEL-CONFORMANCE.md) for the implemented Core computation model slice: target `fn`, direct-style `do { ... }`, and callable row metadata.
+13. [PLAN-183](../plan/PLAN-183-OPERATION-AUTHORITY-MODEL.md) for operation authority discharge: operations as interface methods, impl/type-qualified operation identity, rows-as-requirements, and separate operation/resource/role/policy/evidence/failure discharge families.
 
 ### Legacy authority vocabulary audit
 
@@ -91,6 +92,7 @@ Common tags include: `grammar`, `syntax`, `semantics`, `type-system`, `effect-sy
 7. [NOTE-023](../notes/NOTE-023-HANDLER-SURFACE-DISPATCH-SIDE.md)
 8. [NOTE-025](../notes/NOTE-025-EFFECT-IDENTITY-VIA-SORTS-AND-IMPLS.md)
 9. [PLAN-181](../plan/PLAN-181-LEGACY-AUTHORITY-VOCABULARY-AUDIT.md) for classification of older capability/provider specs.
+10. [PLAN-183](../plan/PLAN-183-OPERATION-AUTHORITY-MODEL.md) for the current operation authority model and admission-side discharge vocabulary.
 
 ### Current vs target Core/type/effect planning
 

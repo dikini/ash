@@ -75,6 +75,7 @@ Common tags include: `grammar`, `syntax`, `semantics`, `type-system`, `effect-sy
 6. [SPEC-099](SPEC-099-CORE-LANGUAGE.md)
 7. [SPEC-100](SPEC-100-CORE-TYPE-CHECKING.md)
 8. [PLAN-178](../plan/PLAN-178-SOURCE-TO-CORE-ROW-LOWERING-BRIDGE.md) for the current explicit source callable row to Core metadata bridge and remaining non-authority caveats.
+9. [PLAN-179](../plan/PLAN-179-EXPLICIT-ROW-ADMISSION-RUNTIME-WIRING.md) for the completed explicit row requirement admission/runtime wiring slice.
 
 ### Current vs target Core/type/effect planning
 

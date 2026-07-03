@@ -66,7 +66,7 @@ Phase 179 owns:
 | [TASK-1826](tasks/TASK-1826-phase-179-plan-packet.md) | Create the Phase 179 explicit row admission wiring packet | ✅ Complete |
 | [TASK-1827](tasks/TASK-1827-row-admission-runtime-audit.md) | Audit row metadata against admission/runtime authority paths | ✅ Complete |
 | [TASK-1828](tasks/TASK-1828-explicit-row-admission-carriers.md) | Add explicit row admission requirement carriers | ✅ Complete |
-| [TASK-1829](tasks/TASK-1829-operation-row-provider-admission.md) | Check operation rows against provider/capability admission | ✅ Complete |
+| [TASK-1829](tasks/TASK-1829-operation-row-provider-admission.md) | Check operation rows against provider/operation admission | ✅ Complete |
 | [TASK-1830](tasks/TASK-1830-resource-row-admission.md) | Check resource rows against resource authority | ✅ Complete |
 | [TASK-1831](tasks/TASK-1831-role-policy-row-admission.md) | Check role and policy rows against admission authority | ✅ Complete |
 | [TASK-1832](tasks/TASK-1832-imported-row-admission.md) | Apply row admission checks across imported callables | ✅ Complete |
@@ -77,7 +77,7 @@ Phase 179 owns:
 
 1. TASK-1827 audits current runtime/admission authority seams and records exact owner APIs.
 2. TASK-1828 adds a derived admission requirement carrier and tests that it is metadata-only.
-3. TASK-1829 wires operation rows to existing provider/capability admission checks.
+3. TASK-1829 wires operation rows to existing provider/operation admission checks.
 4. TASK-1830 wires resource rows to existing resource authority checks or explicit fail-closed diagnostics.
 5. TASK-1831 wires role/policy rows to existing admission checks or explicit fail-closed diagnostics.
 6. TASK-1832 verifies local/imported callable parity.
@@ -86,17 +86,17 @@ Phase 179 owns:
 
 ## Acceptance criteria
 
-- [ ] Current provider, resource, role, policy, workflow admission, and execution seams are audited before implementation.
-- [ ] Explicit row metadata can derive admission-facing requirements without registering authority.
-- [ ] Missing operation/provider authority rejects with a precise diagnostic.
-- [ ] Satisfied operation/provider authority admits through existing provider/capability paths.
-- [ ] Resource row requirements are checked against existing resource authority or fail closed as unsupported.
-- [ ] Role row requirements are checked against admitted role authority.
-- [ ] Policy row requirements are checked against existing policy evidence or fail closed as unsupported.
-- [ ] Imported row-bearing callable requirements are checked the same way as local row-bearing callable requirements.
-- [ ] Parse/check/import of row-bearing callables remains authority-neutral.
-- [ ] Row-polymorphic inference, handler execution, provider registration, and broad corpus migration remain explicitly out of scope.
-- [ ] PLAN-INDEX, task files, docs/spec references, and CHANGELOG agree on Phase 179 status.
+- [x] Current provider, resource, role, policy, workflow admission, and execution seams are audited before implementation.
+- [x] Explicit row metadata can derive admission-facing requirements without registering authority.
+- [x] Missing operation/provider authority rejects with a precise diagnostic.
+- [x] Satisfied operation/provider authority admits through existing provider/operation paths.
+- [x] Resource row requirements are checked against existing resource authority or fail closed as unsupported.
+- [x] Role row requirements are checked against admitted role authority.
+- [x] Policy row requirements are checked against existing policy evidence or fail closed as unsupported.
+- [x] Imported row-bearing callable requirements are checked the same way as local row-bearing callable requirements.
+- [x] Parse/check/import of row-bearing callables remains authority-neutral.
+- [x] Row-polymorphic inference, handler execution, provider registration, and broad corpus migration remain explicitly out of scope.
+- [x] PLAN-INDEX, task files, docs/spec references, and CHANGELOG agree on Phase 179 status.
 
 ## Verification baseline
 

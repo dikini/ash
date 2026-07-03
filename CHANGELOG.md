@@ -21,6 +21,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Removed the legacy `Value::List` runtime representation in favor of canonical `Cons`/`Nil` list values, preserving list serialization and migrating construction, pattern, interpreter, engine, CLI, test, and benchmark call sites to semantic helpers (TASK-1797).
 
 ### Fixed
+- Reconciled Phase 179 closeout review findings by replacing remaining legacy provider/capability wording in PLAN-179/TASK-1829, marking PLAN-179 acceptance criteria complete, and aligning SPEC-INDEX with completed Phase 179 status (TASK-1834).
 - Remediated Phase 177 row syntax review findings so whole-row variables, target open-row tail syntax, and operation-path separator spelling are represented distinctly in parser/typechecker validation (TASK-1816).
 - Fixed module-level pure helper visibility inside closures by giving local function closures module callable environments and transporting imported public callable private-helper runtime dependencies in isolated per-module families without leaking those helpers into caller bindings (TASK-1798).
 - Clarified typed macro summary comments and strengthened TASK-1771 result-mismatch regression coverage to assert the template-body diagnostic span directly (TASK-1771).

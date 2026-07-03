@@ -24,6 +24,7 @@ pub mod module_loader;
 pub mod monomorphize;
 pub mod parse;
 pub mod providers;
+pub mod row_admission;
 pub mod runtime_artifact;
 
 pub use entry::{
@@ -884,6 +885,12 @@ impl Engine {
     #[must_use]
     pub fn has_provider(&self, name: &str) -> bool {
         self.runtime_state.has_provider(name)
+    }
+
+    /// Return the number of registered capability providers.
+    #[must_use]
+    pub fn provider_count(&self) -> usize {
+        self.runtime_state.provider_count()
     }
 
     /// Return the selected Ash-defined implementation for a host binding name.

@@ -66,7 +66,9 @@ fn expr_contains_do_block(expr: &Expr) -> bool {
             ..
         } => {
             statements.iter().any(|stmt| match stmt {
-                BlockStmt::Let { expr, .. } => expr_contains_do_block(expr),
+                BlockStmt::Let { expr, .. } | BlockStmt::Expr { expr, .. } => {
+                    expr_contains_do_block(expr)
+                }
             }) || tail_expr
                 .as_ref()
                 .is_some_and(|tail| expr_contains_do_block(tail))

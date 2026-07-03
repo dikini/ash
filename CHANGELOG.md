@@ -6,6 +6,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Changed
+- Completed PLAN-192 Surface Postfix Projection: field projection now parses, checks, lowers, and executes on record literals and parenthesized constructor values without introducing workflow syntax or a second runtime mode (TASK-1887, TASK-1888).
+- Completed PLAN-191 Surface Block Expressions: function-first Ash now parses, checks, lowers, and executes nested ordinary blocks and block expression statements on the direct-style expression path without introducing workflow syntax or a second runtime mode (TASK-1885, TASK-1886).
 - Completed PLAN-190 Surface Do Expression Statements: unified direct-style `do` now parses, checks, lowers, and executes ordinary `expr;` sequencing without introducing workflow syntax or a second runtime mode (TASK-1883, TASK-1884).
 - Completed PLAN-189 Surface Match Ordinary Scrutinees: function-first pattern matching now accepts call, field-projection, and binary expressions as ordinary `match` scrutinees without introducing workflow syntax or a second runtime mode (TASK-1881, TASK-1882).
 - Completed PLAN-188 Surface Match Constructor Scrutinees: function-first Ash now accepts ADT constructor expressions such as `Some { value: 41 }` as ordinary `match` scrutinees without introducing workflow syntax or a second runtime mode (TASK-1879, TASK-1880).
@@ -32,6 +34,17 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Removed the legacy `Value::List` runtime representation in favor of canonical `Cons`/`Nil` list values, preserving list serialization and migrating construction, pattern, interpreter, engine, CLI, test, and benchmark call sites to semantic helpers (TASK-1797).
 
 ### Fixed
+- Prevented REPL multiline input detection from invoking parser paths on unmatched closing
+  delimiters, avoiding hangs for inputs such as `}` and `workflow test { } }` (TASK-1888).
+- Restored configuration-only `ash run --dry-run --capability-impl/--resource-init` validation for
+  declaration-only modules while preserving no-entry rejection for ordinary module-only dry runs
+  (TASK-1888).
+- Kept `std/src/llm/loading.ash` checkable by making the placeholder `load_system_prompt` body wrap
+  the supplied text directly instead of depending on unsupported sibling workflow-call typing
+  (TASK-1888).
+- Preserved tuple-style `.0`/`.1` field projection for runtime record and variant fields stored as
+  `_0`/`_1`, keeping existing proc/workflow tuple projections compatible with generalized postfix
+  parsing (TASK-1888).
 - Reconciled Phase 179 closeout review findings by replacing remaining legacy provider/capability wording in PLAN-179/TASK-1829, marking PLAN-179 acceptance criteria complete, and aligning SPEC-INDEX with completed Phase 179 status (TASK-1834).
 - Remediated Phase 177 row syntax review findings so whole-row variables, target open-row tail syntax, and operation-path separator spelling are represented distinctly in parser/typechecker validation (TASK-1816).
 - Fixed module-level pure helper visibility inside closures by giving local function closures module callable environments and transporting imported public callable private-helper runtime dependencies in isolated per-module families without leaking those helpers into caller bindings (TASK-1798).

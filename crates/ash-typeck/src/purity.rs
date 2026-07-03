@@ -313,15 +313,21 @@ fn check_purity_recursive(
         } => {
             let mut block_env = env.extend();
             for stmt in statements {
-                let BlockStmt::Let { pattern, expr, .. } = stmt;
-                check_purity_recursive(&block_env, expr, allow_effects, errors);
-                let expr_result = check_expr(&block_env, expr);
-                if expr_result.is_ok() {
-                    crate::bind_pattern_variables(
-                        &mut block_env,
-                        pattern,
-                        &expr_result.substitution.apply(&expr_result.ty),
-                    );
+                match stmt {
+                    BlockStmt::Let { pattern, expr, .. } => {
+                        check_purity_recursive(&block_env, expr, allow_effects, errors);
+                        let expr_result = check_expr(&block_env, expr);
+                        if expr_result.is_ok() {
+                            crate::bind_pattern_variables(
+                                &mut block_env,
+                                pattern,
+                                &expr_result.substitution.apply(&expr_result.ty),
+                            );
+                        }
+                    }
+                    BlockStmt::Expr { expr, .. } => {
+                        check_purity_recursive(&block_env, expr, allow_effects, errors);
+                    }
                 }
             }
             if let Some(tail) = tail_expr {

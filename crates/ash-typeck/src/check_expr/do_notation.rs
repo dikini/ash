@@ -122,7 +122,8 @@ pub(super) fn collect_do_notation_diagnostics(
         } => {
             for statement in statements {
                 match statement {
-                    ash_parser::surface::BlockStmt::Let { expr, .. } => {
+                    ash_parser::surface::BlockStmt::Let { expr, .. }
+                    | ash_parser::surface::BlockStmt::Expr { expr, .. } => {
                         collect_do_notation_diagnostics(env, expr, diagnostics);
                     }
                 }

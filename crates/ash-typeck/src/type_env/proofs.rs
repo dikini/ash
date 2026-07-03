@@ -180,7 +180,9 @@ impl<'a> ProofCallCollector<'a> {
             } => {
                 for statement in statements {
                     match statement {
-                        BlockStmt::Let { expr, .. } => self.visit_expr(expr),
+                        BlockStmt::Let { expr, .. } | BlockStmt::Expr { expr, .. } => {
+                            self.visit_expr(expr)
+                        }
                     }
                 }
                 if let Some(tail_expr) = tail_expr {
@@ -448,6 +450,9 @@ impl ProofFuelChecker {
         let mut block_env = self.env.clone();
         for statement in statements {
             match statement {
+                BlockStmt::Expr { expr, .. } => {
+                    self.visit_expr_with_env(expr, block_env.clone());
+                }
                 BlockStmt::Let {
                     pattern,
                     expr,

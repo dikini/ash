@@ -69,6 +69,36 @@ fn test_eval_field_access_named_variant_payload() {
 }
 
 #[test]
+fn test_eval_field_access_numeric_tuple_aliases() {
+    let ctx = Context::new();
+    let mut record = HashMap::new();
+    record.insert("_0".to_string(), Value::Int(20));
+    let record_expr = Expr::FieldAccess {
+        expr: Box::new(Expr::Literal(Value::Record(Box::new(record)))),
+        field: "0".to_string(),
+    };
+    assert_eq!(eval_expr(&record_expr, &ctx).unwrap(), Value::Int(20));
+
+    let variant_expr = Expr::FieldAccess {
+        expr: Box::new(Expr::Literal(Value::Variant {
+            name: "Box".to_string(),
+            fields: Box::new(vec![("_0".to_string(), Value::Int(21))]),
+        })),
+        field: "0".to_string(),
+    };
+    assert_eq!(eval_expr(&variant_expr, &ctx).unwrap(), Value::Int(21));
+
+    let list_expr = Expr::FieldAccess {
+        expr: Box::new(Expr::Literal(Value::list_from_vec(vec![
+            Value::Int(22),
+            Value::Int(23),
+        ]))),
+        field: "0".to_string(),
+    };
+    assert_eq!(eval_expr(&list_expr, &ctx).unwrap(), Value::Int(22));
+}
+
+#[test]
 fn test_eval_field_access_not_found() {
     let ctx = Context::new();
     let mut record = HashMap::new();

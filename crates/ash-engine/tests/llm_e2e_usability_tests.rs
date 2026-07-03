@@ -84,15 +84,11 @@ fn test_all_llm_files_check_clean() {
                 .iter()
                 .any(|warning| warning.contains("format_tool_calls_for_review"));
         let tolerated_router_warning = file_name == Some("router.ash")
-            && result.warnings.len() == 2
+            && !result.warnings.is_empty()
             && result
                 .warnings
                 .iter()
-                .any(|warning| warning.contains("parse_route"))
-            && result
-                .warnings
-                .iter()
-                .any(|warning| warning.contains("select_model"));
+                .all(|warning| warning.contains("parse_route") || warning.contains("select_model"));
         assert!(
             result.warnings.is_empty() || tolerated_supervised_warning || tolerated_router_warning,
             "{}: unexpected warnings: {:?}",

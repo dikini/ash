@@ -166,6 +166,8 @@ Update this section as tasks complete:
 | [188](PLAN-188-SURFACE-MATCH-CONSTRUCTOR-SCRUTINEES.md) | 2 | 2 | ✅ Complete; ADT constructor expressions as match scrutinees |
 | [189](PLAN-189-SURFACE-MATCH-ORDINARY-SCRUTINEES.md) | 2 | 2 | ✅ Complete; call, field, and binary expressions as match scrutinees |
 | [190](PLAN-190-SURFACE-DO-EXPRESSION-STATEMENTS.md) | 2 | 2 | ✅ Complete; expression statements in unified do |
+| [191](PLAN-191-SURFACE-BLOCK-EXPRESSIONS.md) | 2 | 2 | ✅ Complete; nested block expressions and block expression statements |
+| [192](PLAN-192-SURFACE-POSTFIX-PROJECTION.md) | 2 | 2 | ✅ Complete; postfix field projection on ordinary primary expressions |
 
 ---
 

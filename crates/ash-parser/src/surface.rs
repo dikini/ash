@@ -3313,6 +3313,16 @@ fn expand_macros_in_expr_with_parent(
                             parent,
                         )?;
                     }
+                    BlockStmt::Expr { expr, .. } => {
+                        expand_macros_in_expr_with_parent(
+                            expr,
+                            table,
+                            notation_table,
+                            origins,
+                            depth,
+                            parent,
+                        )?;
+                    }
                 }
             }
             if let Some(tail_expr) = tail_expr {
@@ -4772,6 +4782,14 @@ fn elaborate_operator_sections_in_expr_with_parent(
                         origins,
                         parent_origin,
                     ),
+                    BlockStmt::Expr { expr, .. } => {
+                        elaborate_operator_sections_in_expr_with_parent(
+                            expr,
+                            table,
+                            origins,
+                            parent_origin,
+                        )
+                    }
                 }
             }
             if let Some(tail_expr) = tail_expr {
@@ -5704,6 +5722,7 @@ where
             for stmt in statements {
                 match stmt {
                     BlockStmt::Let { expr, .. } => visit_expr(expr, visitor),
+                    BlockStmt::Expr { expr, .. } => visit_expr(expr, visitor),
                 }
             }
             if let Some(tail_expr) = tail_expr {
@@ -6021,6 +6040,13 @@ pub enum BlockStmt {
         /// Pattern to bind
         pattern: Pattern,
         /// Expression to evaluate
+        expr: Expr,
+        /// Source span
+        span: Span,
+    },
+    /// Sequenced expression statement: `expr;`
+    Expr {
+        /// Expression evaluated for sequencing; its value is discarded.
         expr: Expr,
         /// Source span
         span: Span,

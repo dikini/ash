@@ -38,10 +38,10 @@ workflow load_prompt(source: String) -> Message {
 -- Returns: Message with role=System containing the provided name/text.
 --
 -- Deferred: configured prompt-directory lookup and IO failure reporting remain
--- future work; this corpus-safe placeholder delegates to `load_prompt`.
+-- future work; this corpus-safe placeholder wraps the provided text directly.
 --
 -- Example:
 --   let sys_prompt = load_system_prompt("code_review");
 workflow load_system_prompt(name: String) -> Message {
-    ret load_prompt(name);
+    ret system(name);
 }

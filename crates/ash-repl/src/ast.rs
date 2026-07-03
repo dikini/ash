@@ -262,6 +262,9 @@ fn render_expr(expr: &Expr) -> String {
                         s.push('}');
                         s
                     }
+                    ash_parser::surface::BlockStmt::Expr { expr, .. } => {
+                        format!("Expr({})", render_expr(expr))
+                    }
                 })),
             );
             if let Some(e) = tail_expr {

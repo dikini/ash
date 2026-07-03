@@ -206,6 +206,10 @@ pub async fn run(args: &RunArgs) -> Result<RunOutcome> {
         // Dry-run mode: parse and check only
         if args.dry_run {
             if is_module_only_source(&source) {
+                if !args.capability_impl.is_empty() || !args.resource_init.is_empty() {
+                    println!("Dry run successful");
+                    return Ok(RunOutcome::completed());
+                }
                 anyhow::bail!("entry file has no fn main or workflow");
             }
 

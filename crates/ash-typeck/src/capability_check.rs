@@ -794,8 +794,12 @@ impl CapabilityChecker {
                 ..
             } => {
                 for stmt in statements {
-                    let ash_parser::surface::BlockStmt::Let { expr, .. } = stmt;
-                    self.verify_expr(expr)?;
+                    match stmt {
+                        ash_parser::surface::BlockStmt::Let { expr, .. }
+                        | ash_parser::surface::BlockStmt::Expr { expr, .. } => {
+                            self.verify_expr(expr)?;
+                        }
+                    }
                 }
                 if let Some(e) = tail_expr {
                     self.verify_expr(e)?;

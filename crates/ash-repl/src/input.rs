@@ -26,6 +26,11 @@ pub enum InputStatus {
 enum StructuralStatus {
     /// All delimiters are balanced.
     Balanced,
+    /// Input has a closing delimiter that cannot match the current stack.
+    Mismatched {
+        /// Human-readable reason for the mismatched delimiter.
+        reason: String,
+    },
     /// Input has unclosed delimiters.
     Unclosed {
         /// Human-readable reason for the unclosed state.
@@ -42,6 +47,8 @@ enum StructuralStatus {
 pub struct InputDetector {
     /// Stack of open delimiters: {, [, (
     brace_stack: Vec<char>,
+    /// Mismatched closing delimiter detected during structural analysis.
+    mismatched_delimiter: Option<String>,
     /// Whether we're currently inside a string literal.
     in_string: bool,
     /// The delimiter for the current string (' or ").
@@ -62,6 +69,7 @@ impl InputDetector {
     pub const fn new() -> Self {
         Self {
             brace_stack: Vec::new(),
+            mismatched_delimiter: None,
             in_string: false,
             string_delim: '"',
             escape_next: false,
@@ -90,6 +98,7 @@ impl InputDetector {
 
         // Phase 1: Structural analysis (unclosed delimiters/strings)
         match self.check_structure(input) {
+            StructuralStatus::Mismatched { reason } => return InputStatus::Error(reason),
             StructuralStatus::Unclosed { reason } => {
                 // Check if it's a structural issue (delimiters, strings) or trailing operator
                 // Structural issues are definitely incomplete
@@ -115,6 +124,7 @@ impl InputDetector {
     /// Reset the detector's internal state.
     fn reset(&mut self) {
         self.brace_stack.clear();
+        self.mismatched_delimiter = None;
         self.in_string = false;
         self.string_delim = '"';
         self.escape_next = false;
@@ -193,17 +203,25 @@ impl InputDetector {
             '}' => {
                 if self.brace_stack.last() == Some(&'{') {
                     self.brace_stack.pop();
+                } else {
+                    self.mismatched_delimiter =
+                        Some("unexpected closing delimiter '}'".to_string());
                 }
-                // Mismatched delimiters are treated as balanced to let parser report the error
             }
             ']' => {
                 if self.brace_stack.last() == Some(&'[') {
                     self.brace_stack.pop();
+                } else {
+                    self.mismatched_delimiter =
+                        Some("unexpected closing delimiter ']'".to_string());
                 }
             }
             ')' => {
                 if self.brace_stack.last() == Some(&'(') {
                     self.brace_stack.pop();
+                } else {
+                    self.mismatched_delimiter =
+                        Some("unexpected closing delimiter ')'".to_string());
                 }
             }
             _ => {}
@@ -212,6 +230,12 @@ impl InputDetector {
 
     /// Determine the final structural status based on accumulated state.
     fn determine_structural_status(&self, input: &str) -> StructuralStatus {
+        if let Some(reason) = &self.mismatched_delimiter {
+            return StructuralStatus::Mismatched {
+                reason: reason.clone(),
+            };
+        }
+
         if self.in_string {
             return StructuralStatus::Unclosed {
                 reason: format!("unclosed string literal (missing '{}')", self.string_delim),

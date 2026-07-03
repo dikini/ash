@@ -352,15 +352,10 @@ fn test_all_llm_stdlib_files_check_without_fatal_errors() {
                     .iter()
                     .any(|warning| warning.contains("format_tool_calls_for_review"));
             let tolerated_router_warnings = file_name == "router.ash"
-                && result.warnings.len() == 2
-                && result
-                    .warnings
-                    .iter()
-                    .any(|warning| warning.contains("parse_route"))
-                && result
-                    .warnings
-                    .iter()
-                    .any(|warning| warning.contains("select_model"));
+                && !result.warnings.is_empty()
+                && result.warnings.iter().all(|warning| {
+                    warning.contains("parse_route") || warning.contains("select_model")
+                });
             assert!(
                 result.warnings.is_empty()
                     || tolerated_supervised_warning

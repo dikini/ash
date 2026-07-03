@@ -112,7 +112,10 @@ fn task556_named_fn_in_block_desugars_to_let() {
         ref pattern,
         ref expr,
         ..
-    } = statements[0];
+    } = statements[0]
+    else {
+        panic!("expected let statement, got: {:?}", statements[0]);
+    };
     assert!(
         matches!(pattern, ash_parser::surface::Pattern::Variable { name, .. } if name.as_ref() == "helper"),
         "expected Variable(\"helper\"), got: {:?}",
@@ -256,7 +259,9 @@ fn task557_closure_in_let_binding() {
         panic!("expected Block body, got: {:?}", f.body);
     };
     assert_eq!(statements.len(), 1, "expected one let statement");
-    let BlockStmt::Let { ref expr, .. } = statements[0];
+    let BlockStmt::Let { ref expr, .. } = statements[0] else {
+        panic!("expected let statement, got: {:?}", statements[0]);
+    };
     assert!(
         matches!(expr, Expr::FnDef { params, .. } if params.len() == 1),
         "expected FnDef with one param in let binding, got: {:?}",

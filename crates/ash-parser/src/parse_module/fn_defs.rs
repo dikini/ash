@@ -370,6 +370,22 @@ fn parse_fn_block_expr(input: &mut ParseInput) -> ModalResult<Expr> {
             continue;
         }
 
+        let stmt_checkpoint = input.clone();
+        if let Ok(value) = parse_fn_expr(input) {
+            skip_whitespace_and_comments(input);
+            if literal_str(";").parse_next(input).is_ok() {
+                let stmt_span =
+                    crate::input::span_from(&stmt_checkpoint.state.pos, &input.state.pos);
+                statements.push(BlockStmt::Expr {
+                    expr: value,
+                    span: stmt_span,
+                });
+                skip_whitespace_and_comments(input);
+                continue;
+            }
+        }
+        *input = stmt_checkpoint;
+
         // Must be a tail expression
         break;
     }

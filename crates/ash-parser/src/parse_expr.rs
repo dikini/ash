@@ -845,6 +845,21 @@ fn parse_fn_expr_body(input: &mut ParseInput) -> ModalResult<Expr> {
             continue;
         }
 
+        let stmt_checkpoint = input.clone();
+        if let Ok(value) = expr(input) {
+            skip_whitespace_and_comments(input);
+            if literal_str(";").parse_next(input).is_ok() {
+                let stmt_span = span_from(&stmt_checkpoint.state.pos, &input.state.pos);
+                statements.push(BlockStmt::Expr {
+                    expr: value,
+                    span: stmt_span,
+                });
+                skip_whitespace_and_comments(input);
+                continue;
+            }
+        }
+        *input = stmt_checkpoint;
+
         // Must be the tail expression
         break;
     }
@@ -1201,7 +1216,7 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
 
     // Try parenthesized expression first
     if let Ok(e) = delimited(literal_str("("), expr, literal_str(")")).parse_next(input) {
-        return Ok(e);
+        return finish_postfix_expr(input, e, &start_pos);
     }
 
     // Try anonymous fn expression: fn(params) [-> type] { body }
@@ -1209,7 +1224,7 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     {
         let saved = input.clone();
         if let Ok(fn_def) = parse_fn_expr(input) {
-            return Ok(fn_def);
+            return finish_postfix_expr(input, fn_def, &start_pos);
         }
         *input = saved;
     }
@@ -1218,7 +1233,7 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     {
         let saved = input.clone();
         if let Ok(comprehension) = parse_comprehension_expr(input) {
-            return Ok(comprehension);
+            return finish_postfix_expr(input, comprehension, &start_pos);
         }
         *input = saved;
     }
@@ -1227,7 +1242,7 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     {
         let saved = input.clone();
         if let Ok(list_expr) = parse_list_expr(input) {
-            return Ok(list_expr);
+            return finish_postfix_expr(input, list_expr, &start_pos);
         }
         *input = saved;
     }
@@ -1236,7 +1251,16 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     {
         let saved = input.clone();
         if let Ok(record_expr) = parse_record_expr(input) {
-            return Ok(record_expr);
+            return finish_postfix_expr(input, record_expr, &start_pos);
+        }
+        *input = saved;
+    }
+
+    // Try ordinary block expression: { stmts* tail_expr? }
+    {
+        let saved = input.clone();
+        if let Ok(block_expr) = parse_fn_expr_body(input) {
+            return finish_postfix_expr(input, block_expr, &start_pos);
         }
         *input = saved;
     }
@@ -1277,14 +1301,14 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     {
         let saved = input.clone();
         if let Ok(do_block) = parse_do_block_expr(input) {
-            return Ok(do_block);
+            return finish_postfix_expr(input, do_block, &start_pos);
         }
         *input = saved;
     }
 
     // Try act block expression: act { ... }  (SPEC-047 §2.1)
     if let Ok(act_block) = parse_act_block_expr(input) {
-        return Ok(act_block);
+        return finish_postfix_expr(input, act_block, &start_pos);
     }
 
     // Try identifier/variable (and potential field access/call)
@@ -1342,12 +1366,16 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
             parse_constructor_fields(input)?
         };
         let span = span_from(&start_pos, &input.state.pos);
-        return Ok(Expr::Constructor {
-            name: name_str,
-            payload: ConstructorPayload::Record(fields.clone()),
-            fields,
-            span,
-        });
+        return finish_postfix_expr(
+            input,
+            Expr::Constructor {
+                name: name_str,
+                payload: ConstructorPayload::Record(fields.clone()),
+                fields,
+                span,
+            },
+            &start_pos,
+        );
     }
 
     let is_uppercase_leading = name.chars().next().is_some_and(|c| c.is_ascii_uppercase());
@@ -1361,39 +1389,52 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
             items
         };
         let span = span_from(&start_pos, &input.state.pos);
-        return Ok(Expr::Constructor {
-            name: name.into(),
-            fields: vec![],
-            payload: ConstructorPayload::Tuple(items),
-            span,
-        });
+        return finish_postfix_expr(
+            input,
+            Expr::Constructor {
+                name: name.into(),
+                fields: vec![],
+                payload: ConstructorPayload::Tuple(items),
+                span,
+            },
+            &start_pos,
+        );
     }
 
-    // Check for field access or method call
-    let mut expr = Expr::Variable {
-        name: name_str.clone(),
-        span: name_span,
-    };
+    finish_postfix_expr(
+        input,
+        Expr::Variable {
+            name: name_str.clone(),
+            span: name_span,
+        },
+        &start_pos,
+    )
+}
 
+fn finish_postfix_expr(
+    input: &mut ParseInput,
+    mut expr: Expr,
+    start_pos: &Position,
+) -> ModalResult<Expr> {
     loop {
         // Field access: .field
-        if opt(literal_str(".")).parse_next(input)?.is_some() {
-            if let Ok(field) = parse_field_name(input) {
-                let span = span_from(&start_pos, &input.state.pos);
-                expr = Expr::FieldAccess {
-                    base: Box::new(expr),
-                    field: field.into(),
-                    span,
-                };
-                continue;
-            }
+        if opt(literal_str(".")).parse_next(input)?.is_some()
+            && let Ok(field) = parse_field_name(input)
+        {
+            let span = span_from(start_pos, &input.state.pos);
+            expr = Expr::FieldAccess {
+                base: Box::new(expr),
+                field: field.into(),
+                span,
+            };
+            continue;
         }
 
         // Index access: [index]
         if opt(literal_str("[")).parse_next(input)?.is_some() {
             let index = self::expr(input)?;
             let _ = literal_str("]").parse_next(input)?;
-            let span = span_from(&start_pos, &input.state.pos);
+            let span = span_from(start_pos, &input.state.pos);
             expr = Expr::IndexAccess {
                 base: Box::new(expr),
                 index: Box::new(index),
@@ -1415,7 +1456,7 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
                 let _ = literal_str(")").parse_next(input)?;
                 args
             };
-            let span = span_from(&start_pos, &input.state.pos);
+            let span = span_from(start_pos, &input.state.pos);
             expr = match expr {
                 Expr::Variable { name, .. } => Expr::Call {
                     func: name,

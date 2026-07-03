@@ -684,6 +684,9 @@ fn validate_interface_calls_in_expr(
                         )?;
                         bind_pattern_variables(&mut block_env, pattern, &binding_ty);
                     }
+                    ash_parser::surface::BlockStmt::Expr { expr, .. } => {
+                        validate_interface_calls_in_expr(&block_env, expr)?;
+                    }
                 }
             }
             if let Some(e) = tail_expr {
@@ -2349,12 +2352,28 @@ fn validate_fn_call_preconditions_expr(
             let mut nested_facts = facts.clone();
             let nested_assumptions = assumptions.clone();
             for statement in statements {
-                let ash_parser::surface::BlockStmt::Let { pattern, expr, .. } = statement;
-                validate_fn_call_preconditions_expr(env, expr, &nested_facts, &nested_assumptions)?;
-                if let (ash_parser::surface::Pattern::Variable { name, .. }, Some(value)) =
-                    (pattern, int_fact_from_expr(&nested_facts, expr))
-                {
-                    nested_facts.insert(name.to_string(), value);
+                match statement {
+                    ash_parser::surface::BlockStmt::Let { pattern, expr, .. } => {
+                        validate_fn_call_preconditions_expr(
+                            env,
+                            expr,
+                            &nested_facts,
+                            &nested_assumptions,
+                        )?;
+                        if let (ash_parser::surface::Pattern::Variable { name, .. }, Some(value)) =
+                            (pattern, int_fact_from_expr(&nested_facts, expr))
+                        {
+                            nested_facts.insert(name.to_string(), value);
+                        }
+                    }
+                    ash_parser::surface::BlockStmt::Expr { expr, .. } => {
+                        validate_fn_call_preconditions_expr(
+                            env,
+                            expr,
+                            &nested_facts,
+                            &nested_assumptions,
+                        )?;
+                    }
                 }
             }
             if let Some(tail_expr) = tail_expr {

@@ -634,6 +634,15 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
             // Process statements (let-bindings)
             for stmt in statements {
                 match stmt {
+                    ash_parser::surface::BlockStmt::Expr { expr, .. } => {
+                        let expr_result = check_expr(&block_env, expr);
+                        substitution = substitution.compose(&expr_result.substitution);
+                        let expr_has_fatal = expr_result.has_fatal_errors();
+                        errors.extend(expr_result.errors);
+                        if expr_has_fatal {
+                            continue;
+                        }
+                    }
                     ash_parser::surface::BlockStmt::Let {
                         pattern,
                         expr,

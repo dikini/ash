@@ -469,7 +469,10 @@ pub(crate) fn parse_program_with_functions(source: &str) -> Result<ParsedProgram
     use ash_parser::parse_workflow::workflow_def;
     use winnow::Parser;
 
-    if let Ok(module) = ash_parser::parse_surface_file(source)
+    let plain_multi_workflow_source =
+        has_multiple_workflow_declarations(source) && !source.contains("use ");
+    if !plain_multi_workflow_source
+        && let Ok(module) = ash_parser::parse_surface_file(source)
         && let Some(program) = program_from_module_file(module)
     {
         return Ok(program);
@@ -543,6 +546,17 @@ pub(crate) fn parse_program_with_functions(source: &str) -> Result<ParsedProgram
         },
         entry_source,
     })
+}
+
+fn has_multiple_workflow_declarations(source: &str) -> bool {
+    source
+        .lines()
+        .filter(|line| {
+            let trimmed = line.trim_start();
+            trimmed.starts_with("workflow ") || trimmed.starts_with("pub workflow ")
+        })
+        .nth(1)
+        .is_some()
 }
 
 fn program_from_module_file(module: ash_parser::surface::ModuleFile) -> Option<ParsedProgram> {
@@ -2375,8 +2389,12 @@ fn collect_expr_constructor_names(expr: &Expr, names: &mut Vec<String>) {
             ..
         } => {
             for statement in statements {
-                let ash_parser::surface::BlockStmt::Let { expr, .. } = statement;
-                collect_expr_constructor_names(expr, names);
+                match statement {
+                    ash_parser::surface::BlockStmt::Let { expr, .. }
+                    | ash_parser::surface::BlockStmt::Expr { expr, .. } => {
+                        collect_expr_constructor_names(expr, names);
+                    }
+                }
             }
             if let Some(tail_expr) = tail_expr {
                 collect_expr_constructor_names(tail_expr, names);

@@ -262,7 +262,7 @@ fn test_act_without_brace_does_not_parse_as_expression() {
 
 #[test]
 fn test_act_with_malformed_new_form_does_not_parse_as_complete_expression() {
-    let mut input = ash_parser::new_input("act { return x; }");
+    let mut input = ash_parser::new_input("act { return x; y <- act::unit(1) }");
     let _ = ash_parser::parse_expr::expr(&mut input);
     assert!(
         !input.input.trim().is_empty(),

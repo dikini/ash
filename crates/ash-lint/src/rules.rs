@@ -278,6 +278,7 @@ fn contains_policy(expr: &Expr) -> bool {
         } => {
             statements.iter().any(|s| match s {
                 ash_parser::surface::BlockStmt::Let { expr, .. } => contains_policy(expr),
+                ash_parser::surface::BlockStmt::Expr { expr, .. } => contains_policy(expr),
             }) || tail_expr.as_ref().is_some_and(|e| contains_policy(e))
         }
         Expr::FnDef { body, .. } => contains_policy(body),

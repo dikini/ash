@@ -151,7 +151,7 @@ fn assert_summary_operation(
 
 #[test]
 fn inline_row_survives_parser_engine_check_and_core_lowering() {
-    let source = "fn read(path: String) -> {posixfs.read} String { let f = fn() -> String { path }; f }\nworkflow main { ret 0 }\n";
+    let source = "fn read(path: String) -> {posixfs.read} String { let f = fn() -> String { path }; f() }\nworkflow main { ret 0 }\n";
 
     let parsed = parse_module(source);
     let row = inline_return_row(function_named(&parsed, "read"), "String");
@@ -247,7 +247,7 @@ fn rowless_function_keeps_stable_default_row_after_engine_check() {
 
 #[test]
 fn open_row_tail_survives_parser_engine_check_and_core_lowering() {
-    let source = "fn read(path: String) -> {posixfs.read | r} String { let f = fn() -> String { path }; f }\nworkflow main { ret 0 }\n";
+    let source = "fn read(path: String) -> {posixfs.read | r} String { let f = fn() -> String { path }; f() }\nworkflow main { ret 0 }\n";
 
     let parsed = parse_module(source);
     let row = inline_return_row(function_named(&parsed, "read"), "String");

@@ -178,6 +178,88 @@ fn parse_fn_block_with_let() {
     }
 }
 
+#[test]
+fn parse_fn_nested_block_with_expression_statements() {
+    let def = parse_fn(
+        r#"fn compute() -> Int {
+            {
+                touch();
+                1 + 1;
+                41
+            }
+        }"#,
+    );
+    let Definition::Function(f) = def else {
+        panic!("expected Function definition");
+    };
+
+    let Expr::Block {
+        tail_expr: Some(outer_tail),
+        ..
+    } = &f.body
+    else {
+        panic!("expected outer Block body, got: {:?}", f.body);
+    };
+
+    let Expr::Block {
+        statements,
+        tail_expr: Some(inner_tail),
+        ..
+    } = outer_tail.as_ref()
+    else {
+        panic!("expected nested Block tail, got: {:?}", outer_tail);
+    };
+
+    assert_eq!(statements.len(), 2, "expected two expression statements");
+    assert!(matches!(
+        &statements[0],
+        BlockStmt::Expr { expr, .. }
+            if matches!(expr, Expr::Call { func, args, .. } if func.as_ref() == "touch" && args.is_empty())
+    ));
+    assert!(matches!(
+        &statements[1],
+        BlockStmt::Expr { expr, .. } if matches!(expr, Expr::Binary { .. })
+    ));
+    assert!(matches!(inner_tail.as_ref(), Expr::Literal(_)));
+}
+
+#[test]
+fn parse_fn_postfix_projection_on_record_and_constructor_values() {
+    let record_def = parse_fn(r#"fn record_item() -> Int { { item: 41 }.item }"#);
+    let Definition::Function(record_fn) = record_def else {
+        panic!("expected Function definition");
+    };
+    let Expr::Block {
+        tail_expr: Some(record_tail),
+        ..
+    } = &record_fn.body
+    else {
+        panic!("expected Block body, got: {:?}", record_fn.body);
+    };
+    assert!(matches!(
+        record_tail.as_ref(),
+        Expr::FieldAccess { base, field, .. }
+            if field.as_ref() == "item" && matches!(base.as_ref(), Expr::Record { .. })
+    ));
+
+    let constructor_def = parse_fn(r#"fn boxed_item() -> Int { (Box { item: 41 }).item }"#);
+    let Definition::Function(constructor_fn) = constructor_def else {
+        panic!("expected Function definition");
+    };
+    let Expr::Block {
+        tail_expr: Some(constructor_tail),
+        ..
+    } = &constructor_fn.body
+    else {
+        panic!("expected Block body, got: {:?}", constructor_fn.body);
+    };
+    assert!(matches!(
+        constructor_tail.as_ref(),
+        Expr::FieldAccess { base, field, .. }
+            if field.as_ref() == "item" && matches!(base.as_ref(), Expr::Constructor { .. })
+    ));
+}
+
 // ---------------------------------------------------------------------------
 // 9. pub fn
 // ---------------------------------------------------------------------------
@@ -215,7 +297,10 @@ fn parse_fn_rejects_nested_fn() {
         ref expr,
         ref pattern,
         ..
-    } = statements[0];
+    } = statements[0]
+    else {
+        panic!("expected let statement, got: {:?}", statements[0]);
+    };
     assert!(
         matches!(expr, Expr::FnDef { .. }),
         "expected FnDef expression in let-binding, got: {:?}",

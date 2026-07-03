@@ -713,9 +713,15 @@ impl NameResolver {
                 ..
             } => {
                 for stmt in statements {
-                    let ash_parser::surface::BlockStmt::Let { pattern, expr, .. } = stmt;
-                    self.resolve_expr(expr);
-                    self.bind_pattern(pattern);
+                    match stmt {
+                        ash_parser::surface::BlockStmt::Let { pattern, expr, .. } => {
+                            self.resolve_expr(expr);
+                            self.bind_pattern(pattern);
+                        }
+                        ash_parser::surface::BlockStmt::Expr { expr, .. } => {
+                            self.resolve_expr(expr);
+                        }
+                    }
                 }
                 if let Some(e) = tail_expr {
                     self.resolve_expr(e);

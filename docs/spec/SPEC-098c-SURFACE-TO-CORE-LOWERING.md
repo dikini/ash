@@ -79,7 +79,7 @@ Inline row syntax and `where row` syntax are mutually exclusive at the surface g
 normalize to the same callable row summary. If both are absent, lowering asks surface type inference
 for an inferred row; exported/public callables must receive an explicit or summarized public row.
 
-**Current implementation note (Phase 178 / Phase 182 / Phase 183 / Phase 185 / Phase 188 / Phase 189 / Phase 190).** The current bridge preserves explicit inline callable
+**Current implementation note (Phase 178 / Phase 182 / Phase 183 / Phase 185 / Phase 188 / Phase 189 / Phase 190 / Phase 191 / Phase 192).** The current bridge preserves explicit inline callable
 rows and expanded `where row` rows from parser carriers through engine/typecheck-facing callable
 summaries into `CoreType::Function { row, .. }` metadata for local and imported/exported callables.
 Rowless callables continue to lower with the default empty Core row. Open row tails are preserved as
@@ -102,7 +102,10 @@ the constructor lowers as a normal value expression and the `match` lowers to th
 match representation. Phase 189 extends function-body match scrutinees to ordinary call,
 field-projection, and binary expressions without changing the Core match shape. Phase 190 lowers
 target `do` expression statements as direct-style sequencing that evaluates the expression and
-discards the result before continuing.
+discards the result before continuing. Phase 191 applies the same direct-style sequencing rule to
+ordinary block expression statements.
+Phase 192 keeps postfix field projection on record and constructor primary expressions on the
+existing `FieldAccess` lowering path.
 
 `where row` items lower as follows:
 
@@ -120,6 +123,10 @@ Target `do { ... }` lowers to direct-style Core sequencing. Each `let` or direct
 to an ordinary Core `Let`; the final `return` lowers to the tail expression. The block itself does
 not install authority, select a tower runtime, or wrap its result in `Act`, `Proc`, or `Workflow`.
 Rows remain attached to the enclosing callable type/summary and are validated as requirements.
+
+Ordinary block expressions lower through the same Core `Let` spine. A block statement `expr;`
+lowers to a discard binding before the remaining block tail; it does not introduce a runtime
+profile or computation wrapper.
 
 ```text
 do { x <- m; return k(x) }

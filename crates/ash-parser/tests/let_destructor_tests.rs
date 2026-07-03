@@ -16,7 +16,9 @@ fn let_single_identifier_works() {
     match &f.body {
         Expr::Block { statements, .. } => {
             assert_eq!(statements.len(), 1);
-            let ash_parser::surface::BlockStmt::Let { pattern, .. } = &statements[0];
+            let ash_parser::surface::BlockStmt::Let { pattern, .. } = &statements[0] else {
+                panic!("expected let statement, got: {:?}", statements[0]);
+            };
             assert!(matches!(pattern, Pattern::Variable { name, .. } if name.as_ref() == "x"));
         }
         _ => panic!("expected Block body"),
@@ -36,7 +38,9 @@ fn let_record_destructor_works() {
     match &f.body {
         Expr::Block { statements, .. } => {
             assert_eq!(statements.len(), 2);
-            let ash_parser::surface::BlockStmt::Let { pattern, .. } = &statements[1];
+            let ash_parser::surface::BlockStmt::Let { pattern, .. } = &statements[1] else {
+                panic!("expected let statement, got: {:?}", statements[1]);
+            };
             match pattern {
                 Pattern::Record(fields) => {
                     assert_eq!(fields.len(), 2);
@@ -65,7 +69,9 @@ fn let_record_destructor_with_rename_works() {
     match &f.body {
         Expr::Block { statements, .. } => {
             assert_eq!(statements.len(), 2);
-            let ash_parser::surface::BlockStmt::Let { pattern, .. } = &statements[1];
+            let ash_parser::surface::BlockStmt::Let { pattern, .. } = &statements[1] else {
+                panic!("expected let statement, got: {:?}", statements[1]);
+            };
             match pattern {
                 Pattern::Record(fields) => {
                     assert_eq!(fields.len(), 2);
@@ -162,7 +168,9 @@ fn let_record_destructor_shorthand_works() {
     match &f.body {
         Expr::Block { statements, .. } => {
             assert_eq!(statements.len(), 2);
-            let ash_parser::surface::BlockStmt::Let { pattern, .. } = &statements[1];
+            let ash_parser::surface::BlockStmt::Let { pattern, .. } = &statements[1] else {
+                panic!("expected let statement, got: {:?}", statements[1]);
+            };
             match pattern {
                 Pattern::Record(fields) => {
                     assert_eq!(fields.len(), 2);

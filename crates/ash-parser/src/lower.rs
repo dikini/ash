@@ -2059,6 +2059,26 @@ pub fn lower_expr(expr: &Expr) -> Result<CoreExpr, LoweringError> {
                             },
                         };
                     }
+                    BlockStmt::Expr {
+                        expr,
+                        span: stmt_span,
+                    } => {
+                        result = CoreExpr::Let {
+                            pattern: CorePattern::Variable {
+                                name: "_".to_string(),
+                                span: ash_core::Span {
+                                    start: stmt_span.start,
+                                    end: stmt_span.end,
+                                },
+                            },
+                            expr: Box::new(lower_expr(expr)?),
+                            body: Box::new(result),
+                            span: ash_core::Span {
+                                start: stmt_span.start,
+                                end: stmt_span.end,
+                            },
+                        };
+                    }
                 }
             }
             Ok(result)

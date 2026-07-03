@@ -3001,6 +3001,51 @@ fn check_field_access(env: &TypeEnv, base: &Expr, field: &str, span: Span) -> Ch
                 span,
             }),
         },
+        Type::Constructor { name, args, .. } => {
+            let Some(type_info) = env.lookup_type_info(&name.name) else {
+                return CheckResult::error(ConstructorError::NotARecord {
+                    field: field.to_string(),
+                    actual: base_ty.clone(),
+                    span,
+                });
+            };
+            let (params, fields) = match type_info {
+                TypeInfo::Struct { params, fields, .. } => (params, fields),
+                TypeInfo::Enum {
+                    params, variants, ..
+                } if matches!(variants.as_slice(), [variant] if variant.name == name.name) => {
+                    (params, &variants[0].fields)
+                }
+                _ => {
+                    return CheckResult::error(ConstructorError::NotARecord {
+                        field: field.to_string(),
+                        actual: base_ty.clone(),
+                        span,
+                    });
+                }
+            };
+            if params.len() != args.len() {
+                return CheckResult::error(ConstructorError::NotARecord {
+                    field: field.to_string(),
+                    actual: base_ty.clone(),
+                    span,
+                });
+            }
+            let field_substitution = Substitution::from_pairs(params.iter().copied().zip(args));
+            match fields.iter().find(|(name, _)| name.as_str() == field) {
+                Some((_, field_ty)) => CheckResult {
+                    ty: base_result
+                        .substitution
+                        .apply(&field_substitution.apply(field_ty)),
+                    substitution: base_result.substitution,
+                    errors: base_result.errors,
+                },
+                None => CheckResult::error(ConstructorError::MissingRecordField {
+                    field: field.to_string(),
+                    span,
+                }),
+            }
+        }
         other => CheckResult::error(ConstructorError::NotARecord {
             field: field.to_string(),
             actual: other.clone(),

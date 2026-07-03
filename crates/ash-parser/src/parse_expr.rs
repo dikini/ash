@@ -210,9 +210,8 @@ fn parse_do_stmt(input: &mut ParseInput) -> ModalResult<DoStmt> {
         let value = expr(input)?;
         skip_whitespace_and_comments(input);
         if input.input.starts_with(';') {
-            return Err(winnow::error::ErrMode::Backtrack(
-                winnow::error::ContextError::new(),
-            ));
+            let _ = literal_str(";").parse_next(input)?;
+            skip_whitespace_and_comments(input);
         }
         let span = span_from(&stmt_start, &input.state.pos);
         return Ok(DoStmt::Return {

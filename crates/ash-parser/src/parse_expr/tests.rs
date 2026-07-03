@@ -120,18 +120,21 @@ fn test_do_block_parses_let_then_return() {
 }
 
 #[test]
-fn test_do_block_rejects_trailing_semicolon_after_return() {
+fn test_do_block_accepts_trailing_semicolon_after_return() {
     let mut input = test_input("do:Act { return 1; }");
-    let result = expr(&mut input);
-    assert!(
-        result.is_err(),
-        "expected trailing semicolon after do return to be rejected, got {result:?}"
-    );
-    assert_eq!(
-        input.input.to_string(),
-        "do:Act { return 1; }",
-        "failed do-block parse should not leave input partially consumed"
-    );
+    let result = expr(&mut input).unwrap();
+    match result {
+        Expr::DoBlock { target, stmts, .. } => {
+            assert_eq!(target.name.as_ref(), "Act");
+            assert_eq!(stmts.len(), 1);
+            assert!(matches!(
+                &stmts[0],
+                DoStmt::Return { value, .. }
+                    if matches!(value.as_ref(), Expr::Literal(Literal::Int(1)))
+            ));
+        }
+        other => panic!("expected DoBlock, got {other:?}"),
+    }
 }
 
 #[test]
@@ -199,13 +202,21 @@ fn test_new_act_block_sugar_rejects_trailing_statement_after_return() {
 }
 
 #[test]
-fn test_new_act_block_sugar_rejects_return_trailing_semicolon() {
+fn test_new_act_block_sugar_accepts_return_trailing_semicolon() {
     let mut input = test_input("act { return x; }");
-    let result = parse_act_block_expr(&mut input);
-    assert!(
-        result.is_err(),
-        "new-form act sugar should reject legacy-style semicolon after return: {result:?}"
-    );
+    let result = parse_act_block_expr(&mut input).unwrap();
+    match result {
+        Expr::DoBlock { target, stmts, .. } => {
+            assert_eq!(target.name.as_ref(), "Act");
+            assert_eq!(stmts.len(), 1);
+            assert!(matches!(
+                &stmts[0],
+                DoStmt::Return { value, .. }
+                    if matches!(value.as_ref(), Expr::Variable { name, .. } if name.as_ref() == "x")
+            ));
+        }
+        other => panic!("expected act sugar to parse as DoBlock, got {other:?}"),
+    }
 }
 
 #[test]

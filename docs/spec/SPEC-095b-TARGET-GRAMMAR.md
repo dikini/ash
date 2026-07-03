@@ -38,6 +38,12 @@ This grammar replaces the separate `do:Act`, `do:Proc`, `do:Workflow`, `workflow
 `ret`, and legacy workflow-statement syntax with a unified surface. During migration, legacy
 forms remain accepted as compatibility aliases.
 
+**Current implementation note (Phase 185).** Ordinary engine parsing now accepts a target entry
+source with top-level `fn main(...) -> T { ... }` and no `workflow` block. The engine adapts that
+entry to its existing runtime carrier internally; the source program remains a function-first module,
+and `workflow` remains compatibility/runtime-profile syntax rather than the target core source path.
+Target `do { ... }` accepts both `return expr` and the documented statement form `return expr;`.
+
 ## 2. Lexical Structure
 
 ### 2.1 Tokens
@@ -125,6 +131,19 @@ form; operations are declared via the existing `interface_definition` production
 NOTE-023 §7, `handler_decl` appears both at module level (standalone handler) and inside
 impl bodies (co-located handler, see §8.4). In both positions it produces a handler-marked
 function in the value namespace.
+
+### 3.2.1 Target Entry Shape
+
+The target executable entry shape is an ordinary function named `main`:
+
+```ebnf
+entry_definition = "fn" "main" "(" parameter_list? ")" "->" effect_row? type
+                   proposition_tail? "{" expr "}" ;
+```
+
+The entry function follows the same row, type, expression, and lowering rules as any other `fn`.
+Implementations may retain legacy `workflow main` as compatibility/runtime-profile syntax during
+migration, but it must not be the only path for target entry sources.
 
 ### 3.3 Operation Interface Declarations
 

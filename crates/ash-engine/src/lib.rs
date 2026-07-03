@@ -1411,7 +1411,15 @@ impl Engine {
             )?;
             let mut imported_type_defs = self.get_imported_type_defs(workflow.id);
             imported_type_defs.extend(self.runtime_stdlib_type_defs()?);
+            let local_type_defs =
+                module_loader::core_type_defs_from_definitions(&program.definitions)?;
+            imported_type_defs.extend(local_type_defs.clone());
             register_imported_type_defs(&mut type_env, imported_type_defs)?;
+            for local_type in &local_type_defs {
+                type_env
+                    .expose_type_representation(&local_type.name)
+                    .map_err(|error| EngineError::Type(error.to_string()))?;
+            }
             bind_imported_callable_types(&mut type_env, workflow)?;
 
             let type_check_result = self

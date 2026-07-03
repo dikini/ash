@@ -433,11 +433,14 @@ pub(crate) struct ModuleExports {
     pub(crate) child_modules: HashMap<String, Self>,
 }
 
-/// Parse source containing zero or more function definitions followed by a
-/// workflow definition.
+/// Parse source containing zero or more function definitions followed by an
+/// optional compatibility workflow definition.
 ///
-/// This handles the extended syntax where `fn` definitions precede the
-/// `workflow` block.
+/// This handles both the compatibility syntax where `fn` definitions precede a
+/// `workflow` block and the target surface syntax where `fn main` is the entry
+/// computation. The latter is adapted to the existing runtime entry carrier by
+/// synthesizing an internal workflow that returns `main(...)`; the source-level
+/// computation remains the ordinary function declaration.
 ///
 /// # Errors
 ///
@@ -453,6 +456,12 @@ pub fn parse_program_with_functions(source: &str) -> Result<ash_parser::surface:
     use ash_parser::parse_utils::skip_whitespace_and_comments;
     use ash_parser::parse_workflow::workflow_def;
     use winnow::Parser;
+
+    if let Ok(module) = ash_parser::parse_surface_file(source)
+        && let Some(program) = program_from_module_file(module)
+    {
+        return Ok(program);
+    }
 
     let mut input = new_input(source);
     skip_whitespace_and_comments(&mut input);
@@ -486,13 +495,25 @@ pub fn parse_program_with_functions(source: &str) -> Result<ash_parser::surface:
         }
     }
 
-    if all_workflows.is_empty() {
-        return Err("expected at least one workflow definition".to_string());
-    }
-
-    // The last workflow is the entry point; preceding ones are helpers.
-    let workflow = all_workflows.pop().expect("at least one workflow");
-    let helper_workflows = all_workflows;
+    let (workflow, helper_workflows) = if all_workflows.is_empty() {
+        let main = definitions
+            .iter()
+            .find_map(|definition| match definition {
+                ash_parser::surface::Definition::Function(function)
+                    if function.name.as_ref() == "main" =>
+                {
+                    Some(function)
+                }
+                _ => None,
+            })
+            .ok_or_else(|| "expected a workflow definition or fn main entry".to_string())?;
+        (synthesize_fn_main_entry_workflow(main), Vec::new())
+    } else {
+        // The last workflow is the compatibility entry point; preceding ones
+        // are helpers.
+        let workflow = all_workflows.pop().expect("at least one workflow");
+        (workflow, all_workflows)
+    };
 
     if !input.input.is_empty() {
         return Err("unexpected trailing input after workflow definition".to_string());
@@ -503,6 +524,85 @@ pub fn parse_program_with_functions(source: &str) -> Result<ash_parser::surface:
         helper_workflows,
         workflow,
     })
+}
+
+fn program_from_module_file(
+    module: ash_parser::surface::ModuleFile,
+) -> Option<ash_parser::surface::Program> {
+    if let Some(workflow) = module.workflow {
+        return Some(ash_parser::surface::Program {
+            definitions: module.definitions,
+            helper_workflows: Vec::new(),
+            workflow,
+        });
+    }
+
+    let main = module
+        .definitions
+        .iter()
+        .find_map(|definition| match definition {
+            ash_parser::surface::Definition::Function(function)
+                if function.name.as_ref() == "main" =>
+            {
+                Some(function)
+            }
+            _ => None,
+        })?;
+
+    Some(ash_parser::surface::Program {
+        workflow: synthesize_fn_main_entry_workflow(main),
+        definitions: module.definitions,
+        helper_workflows: Vec::new(),
+    })
+}
+
+fn synthesize_fn_main_entry_workflow(
+    main: &ash_parser::surface::FnDef,
+) -> ash_parser::surface::WorkflowDef {
+    use ash_parser::surface::{Expr, Parameter, Workflow, WorkflowDef};
+    use ash_parser::token::Span;
+
+    let span = main.span;
+    let args = main
+        .params
+        .iter()
+        .map(|param| Expr::Variable {
+            name: param.name.clone(),
+            span: Span::default(),
+        })
+        .collect();
+    let params = main
+        .params
+        .iter()
+        .map(|param| Parameter {
+            name: param.name.clone(),
+            ty: param.ty.clone(),
+            span: Span::default(),
+        })
+        .collect();
+
+    WorkflowDef {
+        name: main.name.clone(),
+        type_params: main.type_params.clone(),
+        params,
+        declared_return_type: None,
+        plays_roles: Vec::new(),
+        capabilities: Vec::new(),
+        owned_resources: Vec::new(),
+        used_bindings: Vec::new(),
+        header_events: Vec::new(),
+        body: Workflow::Ret {
+            expr: Expr::Call {
+                func: main.name.clone(),
+                module: None,
+                args,
+                span,
+            },
+            span,
+        },
+        contract: None,
+        span,
+    }
 }
 
 /// Load an ordinary workflow file together with its imported metadata.
@@ -6113,6 +6213,125 @@ fn convert_type_def(parsed: &ParsedTypeDef) -> Result<CoreTypeDef, EngineError> 
         },
         builtin: parsed.builtin,
     })
+}
+
+pub(crate) fn core_type_defs_from_definitions(
+    definitions: &[ash_parser::surface::Definition],
+) -> Result<Vec<CoreTypeDef>, EngineError> {
+    definitions
+        .iter()
+        .filter_map(|definition| match definition {
+            ash_parser::surface::Definition::Type(type_def) => Some(type_def),
+            _ => None,
+        })
+        .map(convert_surface_type_def)
+        .collect()
+}
+
+fn convert_surface_type_def(
+    parsed: &ash_parser::surface::TypeDef,
+) -> Result<CoreTypeDef, EngineError> {
+    Ok(CoreTypeDef {
+        name: parsed.name.to_string(),
+        params: parsed.params.iter().map(ToString::to_string).collect(),
+        body: match &parsed.body {
+            ash_parser::surface::TypeBody::Struct(fields) => {
+                CoreTypeBody::Struct(convert_surface_type_fields(fields)?)
+            }
+            ash_parser::surface::TypeBody::Enum(variants) => CoreTypeBody::Enum(
+                variants
+                    .iter()
+                    .map(|variant| {
+                        Ok(CoreVariantDef {
+                            name: variant.name.to_string(),
+                            fields: convert_surface_type_fields(&variant.fields)?,
+                            payload: match &variant.payload {
+                                ash_parser::surface::VariantPayload::Unit => {
+                                    CoreVariantPayload::Unit
+                                }
+                                ash_parser::surface::VariantPayload::Record(fields) => {
+                                    CoreVariantPayload::Record(convert_surface_type_fields(fields)?)
+                                }
+                                ash_parser::surface::VariantPayload::Tuple(items) => {
+                                    CoreVariantPayload::Tuple(convert_surface_type_items(items)?)
+                                }
+                            },
+                        })
+                    })
+                    .collect::<Result<Vec<_>, EngineError>>()?,
+            ),
+            ash_parser::surface::TypeBody::Alias(target) => {
+                CoreTypeBody::Alias(convert_surface_type_expr(target)?)
+            }
+        },
+        visibility: match parsed.visibility {
+            ash_parser::surface::Visibility::Public => CoreVisibility::Public,
+            ash_parser::surface::Visibility::Crate
+            | ash_parser::surface::Visibility::Super { .. }
+            | ash_parser::surface::Visibility::Restricted { .. } => CoreVisibility::Crate,
+            ash_parser::surface::Visibility::Inherited | ash_parser::surface::Visibility::Self_ => {
+                CoreVisibility::Private
+            }
+        },
+        builtin: parsed.builtin,
+    })
+}
+
+fn convert_surface_type_fields(
+    fields: &[ash_parser::surface::TypeField],
+) -> Result<Vec<(String, CoreTypeExpr)>, EngineError> {
+    fields
+        .iter()
+        .map(|field| {
+            Ok((
+                field.name.to_string(),
+                convert_surface_type_expr(&field.ty)?,
+            ))
+        })
+        .collect()
+}
+
+fn convert_surface_type_items(
+    items: &[ash_parser::surface::Type],
+) -> Result<Vec<CoreTypeExpr>, EngineError> {
+    items.iter().map(convert_surface_type_expr).collect()
+}
+
+fn convert_surface_type_expr(
+    parsed: &ash_parser::surface::Type,
+) -> Result<CoreTypeExpr, EngineError> {
+    match parsed {
+        ash_parser::surface::Type::Name(name) => Ok(CoreTypeExpr::Named(name.to_string())),
+        ash_parser::surface::Type::List(item) => Ok(CoreTypeExpr::Constructor {
+            name: "List".to_string(),
+            args: vec![convert_surface_type_expr(item)?],
+        }),
+        ash_parser::surface::Type::Tuple(items) => {
+            Ok(CoreTypeExpr::Tuple(convert_surface_type_items(items)?))
+        }
+        ash_parser::surface::Type::Record(fields) => Ok(CoreTypeExpr::Record(
+            fields
+                .iter()
+                .map(|(name, ty)| Ok((name.to_string(), convert_surface_type_expr(ty)?)))
+                .collect::<Result<Vec<_>, EngineError>>()?,
+        )),
+        ash_parser::surface::Type::Constructor { name, args } => Ok(CoreTypeExpr::Constructor {
+            name: name.to_string(),
+            args: convert_surface_type_items(args)?,
+        }),
+        ash_parser::surface::Type::Associated { base, name } => Ok(CoreTypeExpr::Associated {
+            base: Box::new(convert_surface_type_expr(base)?),
+            name: name.to_string(),
+        }),
+        ash_parser::surface::Type::Hole { span } => Err(EngineError::Parse(format!(
+            "type holes are not supported in type definitions at {span:?}"
+        ))),
+        ash_parser::surface::Type::Fn(_, _, _)
+        | ash_parser::surface::Type::Capability(_)
+        | ash_parser::surface::Type::AssociatedFamilyProjection { .. } => Err(EngineError::Parse(
+            format!("unsupported type definition field type: {parsed:?}"),
+        )),
+    }
 }
 
 fn convert_type_expr_fields(

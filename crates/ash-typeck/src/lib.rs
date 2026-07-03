@@ -1340,7 +1340,11 @@ pub fn fn_signature_type(
         .map(|param| workflow_surface_type_to_type(&signature_env, &param.ty, &type_param_bindings))
         .collect::<Result<Vec<_>, _>>()?;
 
-    let ret = match &function.return_type {
+    let ret = match function
+        .return_type
+        .as_ref()
+        .map(declaration_result_type_for_callable)
+    {
         Some(ret) => workflow_surface_type_to_type(&signature_env, ret, &type_param_bindings)?,
         None => Type::Var(TypeVar::fresh()),
     };
@@ -1744,8 +1748,17 @@ fn callable_inline_return_row(
     function_return_type: Option<&ash_parser::surface::Type>,
 ) -> Option<&ash_parser::surface::ComputationRow> {
     match function_return_type {
-        Some(ash_parser::surface::Type::Fn(_, Some(row), _)) => Some(row),
+        Some(ash_parser::surface::Type::Fn(params, Some(row), _)) if params.is_empty() => Some(row),
         _ => None,
+    }
+}
+
+fn declaration_result_type_for_callable(
+    return_type: &ash_parser::surface::Type,
+) -> &ash_parser::surface::Type {
+    match return_type {
+        ash_parser::surface::Type::Fn(params, Some(_), ret) if params.is_empty() => ret,
+        other => other,
     }
 }
 

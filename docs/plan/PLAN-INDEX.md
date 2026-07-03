@@ -160,6 +160,7 @@ Update this section as tasks complete:
 | [182](PLAN-182-CORE-COMPUTATION-MODEL-CONFORMANCE.md) | 10 | 10 | Complete; Core computation model conformance |
 | [183](PLAN-183-OPERATION-AUTHORITY-MODEL.md) | 8 | 8 | ✅ Complete; operation and authority model |
 | [184](PLAN-184-HANDLER-PROVIDER-SEMANTICS.md) | 8 | 8 | ✅ Complete; handler/provider semantics |
+| [185](PLAN-185-SURFACE-FUNCTION-LANGUAGE.md) | 7 | 7 | ✅ Complete; surface function language entry slice |
 
 ---
 
@@ -1040,3 +1041,22 @@ Turns rows from metadata into the operational model for operation effects: handl
 || [TASK-1860](tasks/TASK-1860-missing-discharge-failure-diagnostics.md) | Define missing-discharge failures | Complete |
 || [TASK-1861](tasks/TASK-1861-handler-provider-spec-reconciliation.md) | Reconcile handler/provider specs | Complete |
 || [TASK-1862](tasks/TASK-1862-handler-provider-closeout.md) | Close out Phase 184 | Complete |
+
+## Phase 185: Surface Function Language
+
+|**Status:** ✅ Complete (7/7 tasks complete)
+|**Plan:** [PLAN-185: Surface Function Language](PLAN-185-SURFACE-FUNCTION-LANGUAGE.md)
+|**Depends on:** Phase 184 Handler / Provider Semantics.
+|**Specs/notes:** `SPEC-095b`, `SPEC-097b`, `SPEC-098b`, `SPEC-098c`, `SPEC-099b`, and `SPEC-100`.
+
+Makes target Ash pleasant as a surface language by using ordinary `fn` declarations as the user-facing computation unit, keeping rows as requirement sets, treating `do { ... }` as direct-style sequencing sugar, and demoting workflow syntax to compatibility/runtime profile handling rather than a core source-language path.
+
+|| Task | Description | Status |
+||------|-------------|--------|
+|| [TASK-1863](tasks/TASK-1863-surface-function-language-plan-packet.md) | Create the Phase 185 plan packet | Complete |
+|| [TASK-1864](tasks/TASK-1864-surface-function-boundary-audit.md) | Audit current `fn`/row/`do`/workflow boundaries | Complete |
+|| [TASK-1865](tasks/TASK-1865-fn-main-entry-adapter.md) | Accept `fn main` as target entry syntax | Complete |
+|| [TASK-1866](tasks/TASK-1866-function-body-language-fixture.md) | Add cohesive ordinary function body conformance fixture | Complete |
+|| [TASK-1867](tasks/TASK-1867-surface-function-spec-reconciliation.md) | Reconcile target specs and indexes | Complete |
+|| [TASK-1868](tasks/TASK-1868-surface-function-closeout.md) | Close out Phase 185 | Complete |
+|| [TASK-1869](tasks/TASK-1869-surface-function-do-return-and-execution.md) | Accept semicolon `do` return and execute `fn main` sources | Complete |

@@ -81,6 +81,7 @@ Common tags include: `grammar`, `syntax`, `semantics`, `type-system`, `effect-sy
 12. [PLAN-182](../plan/PLAN-182-CORE-COMPUTATION-MODEL-CONFORMANCE.md) for the implemented Core computation model slice: target `fn`, direct-style `do { ... }`, and callable row metadata.
 13. [PLAN-183](../plan/PLAN-183-OPERATION-AUTHORITY-MODEL.md) for operation authority discharge: operations as interface methods, impl/type-qualified operation identity, rows-as-requirements, and separate operation/resource/role/policy/evidence/failure discharge families.
 14. [PLAN-184](../plan/PLAN-184-HANDLER-PROVIDER-SEMANTICS.md) for executable handler/provider semantics: frame-stack lookup, raise/handle behavior, admission proof evidence, missing-discharge failure, and shadowing.
+15. [PLAN-185](../plan/PLAN-185-SURFACE-FUNCTION-LANGUAGE.md) for target `fn main` entry syntax, function-first surface fixtures, and workflow-as-compatibility routing.
 
 ### Legacy authority vocabulary audit
 

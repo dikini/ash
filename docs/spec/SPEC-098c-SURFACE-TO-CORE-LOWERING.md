@@ -79,7 +79,7 @@ Inline row syntax and `where row` syntax are mutually exclusive at the surface g
 normalize to the same callable row summary. If both are absent, lowering asks surface type inference
 for an inferred row; exported/public callables must receive an explicit or summarized public row.
 
-**Current implementation note (Phase 178 / Phase 182 / Phase 183).** The current bridge preserves explicit inline callable
+**Current implementation note (Phase 178 / Phase 182 / Phase 183 / Phase 185).** The current bridge preserves explicit inline callable
 rows and expanded `where row` rows from parser carriers through engine/typecheck-facing callable
 summaries into `CoreType::Function { row, .. }` metadata for local and imported/exported callables.
 Rowless callables continue to lower with the default empty Core row. Open row tails are preserved as
@@ -89,7 +89,10 @@ handlers, or wire runtime authority. Phase 182 additionally keeps row-bearing `f
 ambient `do { ... }` on this same path: the row remains callable metadata and the body lowers through
 ordinary direct-style Core sequencing. Phase 183 classifies the corresponding admission-side
 discharge families without changing lowering: operation rows require existing operation authority,
-while resource, role, policy, evidence, and failure rows remain distinct requirements.
+while resource, role, policy, evidence, and failure rows remain distinct requirements. Phase 185
+accepts `fn main`-only entry sources by synthesizing an internal runtime adapter that calls the
+ordinary `main` function; callable metadata and body lowering still flow through the same function
+path, so this does not add a second Core semantic path.
 
 `where row` items lower as follows:
 

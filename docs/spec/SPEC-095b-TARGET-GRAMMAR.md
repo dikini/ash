@@ -54,7 +54,9 @@ and binary expressions. Phase 190 adds the target `do` expression-statement form
 same direct-style sequencing path. Phase 191 extends ordinary expression parsing to nested block
 expressions and block expression statements, using the same direct-style discard sequencing.
 Phase 192 extends field projection to ordinary primary expressions such as record literals and
-parenthesized constructor expressions.
+parenthesized constructor expressions. Phase 193 makes tuple-payload ADTs such as
+`RuntimeError(2, "missing config")` usable in function-first match scrutinees and patterns on the
+same ordinary expression path.
 
 ## 2. Lexical Structure
 

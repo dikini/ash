@@ -81,6 +81,7 @@ Common tags include: `grammar`, `syntax`, `semantics`, `type-system`, `effect-sy
 17. [PLAN-190](../plan/PLAN-190-SURFACE-DO-EXPRESSION-STATEMENTS.md) for expression statements in unified direct-style `do`.
 18. [PLAN-191](../plan/PLAN-191-SURFACE-BLOCK-EXPRESSIONS.md) for nested ordinary block expressions and block expression statements.
 19. [PLAN-192](../plan/PLAN-192-SURFACE-POSTFIX-PROJECTION.md) for postfix field projection on ordinary primary expressions.
+20. [PLAN-193](../plan/PLAN-193-SURFACE-TUPLE-ADT-EXPRESSIONS.md) for tuple-payload ADTs in function-first Ash.
 
 ### Change target handler/effect/operation syntax
 

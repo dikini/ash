@@ -868,7 +868,14 @@ fn test_parse_nested_constructor_expression() {
                     ..
                 } => {
                     assert_eq!(name.as_ref(), "RuntimeError");
-                    assert!(fields.is_empty());
+                    assert_eq!(fields.len(), 2);
+                    assert_eq!(fields[0].0.as_ref(), "_0");
+                    assert!(matches!(fields[0].1, Expr::Literal(Literal::Int(42))));
+                    assert_eq!(fields[1].0.as_ref(), "_1");
+                    assert!(matches!(
+                        &fields[1].1,
+                        Expr::Literal(Literal::String(message)) if message.as_ref() == "boom"
+                    ));
                     assert!(
                         matches!(payload, ConstructorPayload::Tuple(items) if matches!(
                             items.as_slice(),

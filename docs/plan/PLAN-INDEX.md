@@ -168,6 +168,7 @@ Update this section as tasks complete:
 | [190](PLAN-190-SURFACE-DO-EXPRESSION-STATEMENTS.md) | 2 | 2 | ✅ Complete; expression statements in unified do |
 | [191](PLAN-191-SURFACE-BLOCK-EXPRESSIONS.md) | 2 | 2 | ✅ Complete; nested block expressions and block expression statements |
 | [192](PLAN-192-SURFACE-POSTFIX-PROJECTION.md) | 2 | 2 | ✅ Complete; postfix field projection on ordinary primary expressions |
+| [193](PLAN-193-SURFACE-TUPLE-ADT-EXPRESSIONS.md) | 2 | 2 | ✅ Complete; tuple-payload ADTs in function-first Ash |
 
 ---
 

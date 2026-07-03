@@ -1393,7 +1393,7 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
             input,
             Expr::Constructor {
                 name: name.into(),
-                fields: vec![],
+                fields: tuple_constructor_fields(&items),
                 payload: ConstructorPayload::Tuple(items),
                 span,
             },
@@ -1458,6 +1458,12 @@ fn finish_postfix_expr(
             };
             let span = span_from(start_pos, &input.state.pos);
             expr = match expr {
+                Expr::Variable { name, .. } if name_starts_uppercase(&name) => Expr::Constructor {
+                    name,
+                    fields: tuple_constructor_fields(&args),
+                    payload: ConstructorPayload::Tuple(args),
+                    span,
+                },
                 Expr::Variable { name, .. } => Expr::Call {
                     func: name,
                     module: None,
@@ -1477,6 +1483,22 @@ fn finish_postfix_expr(
     }
 
     Ok(expr)
+}
+
+fn name_starts_uppercase(name: &Name) -> bool {
+    name.as_ref()
+        .chars()
+        .next()
+        .is_some_and(|c| c.is_ascii_uppercase())
+}
+
+pub(crate) fn tuple_constructor_fields(items: &[Expr]) -> Vec<(Name, Expr)> {
+    items
+        .iter()
+        .cloned()
+        .enumerate()
+        .map(|(index, item)| (format!("_{index}").into(), item))
+        .collect()
 }
 
 fn parse_macro_invocation_after_bang(

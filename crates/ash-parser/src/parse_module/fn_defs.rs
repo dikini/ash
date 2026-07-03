@@ -571,6 +571,20 @@ fn parse_fn_scrutinee(input: &mut ParseInput) -> ModalResult<Expr> {
             };
             let span = crate::input::span_from(&start_pos, &input.state.pos);
             result = match result {
+                Expr::Variable { name, .. }
+                    if name
+                        .as_ref()
+                        .chars()
+                        .next()
+                        .is_some_and(|c| c.is_ascii_uppercase()) =>
+                {
+                    Expr::Constructor {
+                        name,
+                        fields: crate::parse_expr::tuple_constructor_fields(&args),
+                        payload: ConstructorPayload::Tuple(args),
+                        span,
+                    }
+                }
                 Expr::Variable { name, .. } => Expr::Call {
                     func: name,
                     module: None,

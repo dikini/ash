@@ -105,7 +105,9 @@ target `do` expression statements as direct-style sequencing that evaluates the 
 discards the result before continuing. Phase 191 applies the same direct-style sequencing rule to
 ordinary block expression statements.
 Phase 192 keeps postfix field projection on record and constructor primary expressions on the
-existing `FieldAccess` lowering path.
+existing `FieldAccess` lowering path. Phase 193 keeps tuple-payload ADT constructors on the
+existing constructor lowering path by preserving positional payloads as stable `_0`, `_1`, ...
+fields before type checking and Core lowering.
 
 `where row` items lower as follows:
 

@@ -6,6 +6,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Changed
+- Completed PLAN-193 Surface Tuple ADT Expressions: function-first Ash now parses, checks, lowers,
+  and executes tuple-payload ADT constructors and variant patterns such as
+  `RuntimeError(2, "missing config")` without introducing workflow syntax or a second runtime mode
+  (TASK-1889, TASK-1890).
 - Completed PLAN-192 Surface Postfix Projection: field projection now parses, checks, lowers, and executes on record literals and parenthesized constructor values without introducing workflow syntax or a second runtime mode (TASK-1887, TASK-1888).
 - Completed PLAN-191 Surface Block Expressions: function-first Ash now parses, checks, lowers, and executes nested ordinary blocks and block expression statements on the direct-style expression path without introducing workflow syntax or a second runtime mode (TASK-1885, TASK-1886).
 - Completed PLAN-190 Surface Do Expression Statements: unified direct-style `do` now parses, checks, lowers, and executes ordinary `expr;` sequencing without introducing workflow syntax or a second runtime mode (TASK-1883, TASK-1884).

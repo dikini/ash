@@ -97,6 +97,34 @@ fn parse_fn_match_constructor_expression_scrutinee() {
 }
 
 #[test]
+fn parse_fn_match_tuple_constructor_expression_scrutinee() {
+    let def = parse_fn(
+        r#"fn describe() -> Int { match RuntimeError(2, "missing config") { RuntimeError(code, message) => code } }"#,
+    );
+    let Definition::Function(f) = def else {
+        panic!("expected Function definition");
+    };
+    match &f.body {
+        Expr::Block { tail_expr, .. } => {
+            let tail = tail_expr.as_ref().expect("should have tail expr");
+            match tail.as_ref() {
+                Expr::Match {
+                    scrutinee, arms, ..
+                } => {
+                    assert!(
+                        matches!(scrutinee.as_ref(), Expr::Constructor { .. }),
+                        "expected tuple constructor scrutinee, got: {scrutinee:?}"
+                    );
+                    assert_eq!(arms.len(), 1, "expected one match arm");
+                }
+                other => panic!("expected Match, got: {:?}", other),
+            }
+        }
+        other => panic!("expected Block, got: {:?}", other),
+    }
+}
+
+#[test]
 fn parse_fn_match_call_field_and_binary_scrutinees() {
     let cases = [
         (

@@ -115,12 +115,14 @@ Frame ::= HandlerFrame { op, clause, resume_policy, origin }
 Operation dispatch searches innermost to outermost by impl/type-qualified operation identity such
 as `PosixFs::read` or a checked abstract identity such as `F::read`. Handler frames provide
 program-level handling. Provider frames provide runtime authority for operations admitted at a
-boundary.
+boundary. Handler and provider frames are searched in the same pass; an inner provider shadows an
+outer handler, and an inner handler shadows an outer provider.
 
 ```text
 lookup_op(op, HandlerFrame(op, clause) :: χ) = Handler(clause)
 lookup_op(op, ProviderFrame(op, provider) :: χ) = Provider(provider)
 lookup_op(op, frame :: χ) = lookup_op(op, χ)      if frame does not match op
+lookup_op(op, []) = UnhandledEffect(op)
 ```
 
 Provider frames are not skipped. They are the runtime authority representation for provider-backed
@@ -130,6 +132,14 @@ structured trap depending on the boundary contract.
 Computation rows do not install handler or provider frames. They describe requirements that must
 already be discharged by the frame stack, boundary admission facts, or other kind-specific
 discharge evidence before the operation is allowed to run.
+
+Raising an operation evaluates the operation arguments, resolves the resume continuation, and calls
+`lookup_op`. If a handler frame matches, the evaluator removes that shallow handler for the handled
+segment, binds the operation arguments and resume continuation into the handler clause environment,
+and evaluates the clause. If a provider frame matches, the evaluator invokes the provider handler
+with the operation arguments and resume continuation while preserving the provider frame. If no frame
+matches, the outcome is structured missing-discharge failure (`UnhandledEffect(op)` in the current
+CPS interpreter).
 
 ## 6. Structured traps and bottom
 
@@ -238,6 +248,7 @@ missing contract/monitor behavior are historical implementation boundaries, not 
 
 ## 13. Changelog
 
+- 2026-07-03: Reconciled Phase 184 handler/provider semantics: lookup is one innermost-to-outermost pass across handler and provider frames, raise/handle behavior is explicit, and missing discharge is `UnhandledEffect(op)`.
 - 2026-07-03: Reconciled Phase 183 operation authority model: dispatch keys are impl/type-qualified operation identities, and rows never install provider/handler frames.
 - 2026-06-29: Recast as target Core/CPS operational semantics. Added Core big-step, Core/CPS small-step, provider-frame dispatch, structured traps, dynamic contracts, lazy/memo forcing, trace facts, temporal monitors, and Phase 159 context boundaries.
 - 2026-06-19: Initial Phase 159 CPS interpreter semantics for the isolated prototype.

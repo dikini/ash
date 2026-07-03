@@ -252,9 +252,10 @@ D |- Row discharged => DischargeRecords, ResidualRow
 
 Each item kind has a separate rule:
 
-- operation requirements discharge through admitted operation authority provider/handler frames,
-  host admission facts, or role entailment. Legacy admitted capability bindings are current-state
-  compatibility evidence, not the target model;
+- operation requirements discharge through admitted operation authority handler/provider frames,
+  host admission facts, or role entailment. Handler/provider frames use the same
+  innermost-to-outermost lookup order as runtime raise dispatch. Legacy admitted capability
+  bindings are current-state compatibility evidence, not the target model;
 - roles discharge through role admission at the execution boundary;
 - policies discharge through compatible named policy handlers/evaluators;
 - contracts discharge through static proof, evidence, or dynamic contract strategy;
@@ -650,6 +651,7 @@ generic row mismatch.
 
 ## Changelog
 
+- 2026-07-03: Reconciled Phase 184 handler/provider semantics: Core discharge records may cite handler/provider frames, and operation frame lookup follows runtime innermost-to-outermost dispatch order.
 - 2026-07-03: Reconciled Phase 183 operation authority model: operation rows discharge through operation authority providers/handlers/admission facts or role entailment, while resource, role, policy, evidence, and failure rows keep separate discharge rules.
 - 2026-07-02: Reconciled Phase 178 source-to-Core callable row metadata: explicit source rows can
   populate Core function rows, but Core checking still consumes them as requirements rather than

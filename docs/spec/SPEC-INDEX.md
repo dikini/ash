@@ -80,6 +80,7 @@ Common tags include: `grammar`, `syntax`, `semantics`, `type-system`, `effect-sy
 11. [PLAN-181](../plan/PLAN-181-LEGACY-AUTHORITY-VOCABULARY-AUDIT.md) for the legacy authority vocabulary audit and current-state-vs-historical classification.
 12. [PLAN-182](../plan/PLAN-182-CORE-COMPUTATION-MODEL-CONFORMANCE.md) for the implemented Core computation model slice: target `fn`, direct-style `do { ... }`, and callable row metadata.
 13. [PLAN-183](../plan/PLAN-183-OPERATION-AUTHORITY-MODEL.md) for operation authority discharge: operations as interface methods, impl/type-qualified operation identity, rows-as-requirements, and separate operation/resource/role/policy/evidence/failure discharge families.
+14. [PLAN-184](../plan/PLAN-184-HANDLER-PROVIDER-SEMANTICS.md) for executable handler/provider semantics: frame-stack lookup, raise/handle behavior, admission proof evidence, missing-discharge failure, and shadowing.
 
 ### Legacy authority vocabulary audit
 
@@ -93,6 +94,7 @@ Common tags include: `grammar`, `syntax`, `semantics`, `type-system`, `effect-sy
 8. [NOTE-025](../notes/NOTE-025-EFFECT-IDENTITY-VIA-SORTS-AND-IMPLS.md)
 9. [PLAN-181](../plan/PLAN-181-LEGACY-AUTHORITY-VOCABULARY-AUDIT.md) for classification of older capability/provider specs.
 10. [PLAN-183](../plan/PLAN-183-OPERATION-AUTHORITY-MODEL.md) for the current operation authority model and admission-side discharge vocabulary.
+11. [PLAN-184](../plan/PLAN-184-HANDLER-PROVIDER-SEMANTICS.md) for current handler/provider frame lookup, admission proof, and missing-discharge behavior.
 
 ### Current vs target Core/type/effect planning
 

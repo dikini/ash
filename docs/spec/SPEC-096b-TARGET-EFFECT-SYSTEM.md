@@ -152,7 +152,7 @@ All row items share row syntax, but they are not discharged uniformly.
 
 | Row item kind | Discharge mechanism |
 |-------------|---------------------|
-| operation | admitted operation authority provider, handler, host admission fact, or role entailment |
+| operation | admitted operation authority handler/provider frame, host admission fact, or role entailment |
 | resource | ownership, borrow, split, join, or provenance over a runtime resource |
 | role | role admission at the execution boundary |
 | policy | named policy binding evaluated or handled by a compatible decision domain |
@@ -231,10 +231,11 @@ fn read_config<F: Fs>(path: String) -> {F::read} String { ... }
 -- After specialization with F = PosixFs: {PosixFs::read}
 ```
 
-An operation effect is discharged by an explicit operation authority provider, by a handler
-covering the operation identity, by a role that entails the operation, or by a host/runtime
-admission fact. A row item such as `PosixFs::read` requires that authority; it never creates
-or grants it. The type checker must not treat an operation name as an ordinary value binding.
+An operation effect is discharged by an explicit operation authority provider frame, by a handler
+frame covering the operation identity, by a role that entails the operation, or by a host/runtime
+admission fact. Handler and provider frames are searched in innermost-to-outermost order at runtime.
+A row item such as `PosixFs::read` requires that authority; it never creates or grants it. The type
+checker must not treat an operation name as an ordinary value binding.
 
 Per NOTE-034, operation effects are authority-bearing and remain separate from contract
 predicate evaluation. A contract predicate may inspect ordinary values produced by operation
@@ -732,6 +733,7 @@ workflow reporting, and audit evidence.
 
 ## 15. Changelog
 
+- 2026-07-03: Reconciled Phase 184 handler/provider semantics: operation effects can discharge through handler/provider frames, runtime lookup is innermost-to-outermost, and rows still do not install frames.
 - 2026-07-03: Reconciled operation authority wording for Phase 183: operations are interface methods, operation identities are impl/type-qualified, rows require operations without granting authority, and operation/resource/role/policy/evidence/failure row families keep separate discharge rules.
 - 2026-06-18: Created as target-state effect system document. Defined row semantics, effect item taxonomy, discharge rules, aliases/groups, and migration path.
 - 2026-06-27: Reconciled with NOTE-020 (computation row taxonomy), NOTE-021 (Row kind, evidence rows), NOTE-022 (effects as interfaces), NOTE-023 (handler surface semantics).

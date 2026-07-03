@@ -709,11 +709,13 @@ For example, a capability call `Raise { op: cap db.read, resume: k }` has:
 - `resume.row = ρk`
 - `term_row = {cap db.read} ∪ ρk`
 
-**Capability discharge layering:** For capability operations, `Raise` is the operational
-request form. The requirement row is discharged by admitted provider authority. In the CPS
-IR operational model, that authority is represented by provider frames installed at the
-runtime boundary. There is no separate direct ambient servicing path in the IR semantics.
-This preserves the "rows are requirements, not grants" rule: the row records what is needed, not what is available.
+**Capability discharge layering:** For capability/operation requests, `Raise` is the
+operational request form. The requirement row is discharged by an admitted handler/provider
+frame, host admission fact, or another kind-specific discharge rule before execution. In the
+CPS IR operational model, provider-backed authority is represented by provider frames installed
+at the runtime boundary; program handling is represented by handler frames. There is no separate
+direct ambient servicing path in the IR semantics. This preserves the "rows are requirements,
+not grants" rule: the row records what is needed, not what is available.
 
 ### 5.3 Handler Clause
 
@@ -1376,7 +1378,7 @@ arguments unless lowered to `Cont` closures first.
 
 ```text
 eval(Raise { op, args, resume = k_resume }) under chain H
-  = let (prefix, matched, parent) = find_match(H, op) in
+  = let (prefix, matched, parent) = find_innermost_match(H, op) in
 
 If matched is Handler:
   - Build resume continuation:
@@ -1387,18 +1389,12 @@ If matched is Handler:
         chain: prefix ++ parent,  -- excludes matched handler; shallow semantics
         row: k_resume.row
       }
-  - Evaluate matched.clause.body under chain parent with args and resume
+  - Evaluate matched.clause.body under chain prefix ++ parent with args and resume
 
 If matched is Provider:
-  - Build resume continuation:
-      resume = Cont {
-        arg: matched.clause.op.result,
-        body: Jump { cont: k_resume, arg: arg, row: k_resume.row },
-        env: capture_env(k_resume),
-        chain: prefix ++ matched ++ parent,  -- preserves provider frame; persistent semantics
-        row: k_resume.row
-      }
-  - Evaluate matched.clause.body under chain parent with args and resume
+  - Resolve matched.provider handler from the runtime environment.
+  - Invoke the provider handler with args and k_resume under chain prefix ++ matched ++ parent,
+    preserving the provider frame for persistent provider semantics.
 
 If not found:
   - Trap { reason: UnhandledEffect(op) }
@@ -1406,6 +1402,8 @@ If not found:
 
 **Capture chain semantics:** `prefix` is the chain segment between the raise site and the
 matched frame, containing any nonmatching frames. `parent` is the chain outside the matched
+frame. `find_innermost_match` searches handler and provider frames in one pass; an inner
+provider shadows an outer handler, and an inner handler shadows an outer provider.
 frame. The captured chain depends on the matched frame kind:
 
 - If `matched` is a **user-installed handler** (`Handler` variant): shallow resume captures
@@ -1613,6 +1611,7 @@ resolved through an additional indirection layer. Both are possible but not spec
 
 ## 15. Changelog
 
+- 2026-07-03: Reconciled Phase 184 handler/provider semantics: `Raise` dispatch uses one innermost-to-outermost lookup across handler and provider frames, provider frames persist, shallow handler frames are removed for the handled segment, and missing discharge traps as `UnhandledEffect`.
 - 2026-06-18: Major revision after review. Split grammar into Atom/Value/Term. Added `Call`
   vs `Jump` distinction. Added answer type discipline. Separated callee/continuation/total
   rows. Made `Raise`/`Handle` operation-typed. Added contract discharge status. Rewrote

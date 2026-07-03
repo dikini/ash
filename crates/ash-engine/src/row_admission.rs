@@ -141,6 +141,109 @@ pub enum RowAdmissionDischarge {
     },
 }
 
+/// One operation-discharge frame supplied by an admission/runtime environment.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OperationAdmissionFrame {
+    /// Impl/type-qualified operation identity, such as `PosixFs::read`.
+    pub identity: String,
+    /// Frame kind used to discharge the operation.
+    pub kind: OperationAdmissionFrameKind,
+}
+
+/// Operation-discharge frame kind.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum OperationAdmissionFrameKind {
+    /// Program handler frame.
+    Handler {
+        /// Handler identity for diagnostics/evidence.
+        handler: String,
+    },
+    /// Provider authority frame.
+    Provider {
+        /// Provider identity for diagnostics/evidence.
+        provider: String,
+    },
+}
+
+/// Evidence proving an operation row requirement is discharged.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum RowAdmissionProof {
+    /// Discharged by a handler frame.
+    OperationHandlerFrame {
+        /// Impl/type-qualified operation identity.
+        identity: String,
+        /// Handler identity.
+        handler: String,
+    },
+    /// Discharged by a provider frame.
+    OperationProviderFrame {
+        /// Impl/type-qualified operation identity.
+        identity: String,
+        /// Provider identity.
+        provider: String,
+    },
+}
+
+/// Admission/runtime evidence available when checking explicit row requirements.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct RowAdmissionEnvironment {
+    operation_frames: Vec<OperationAdmissionFrame>,
+}
+
+impl RowAdmissionEnvironment {
+    /// Create an empty admission environment.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Add an operation frame, returning the updated environment.
+    #[must_use]
+    pub fn with_operation_frame(mut self, frame: OperationAdmissionFrame) -> Self {
+        self.push_operation_frame(frame);
+        self
+    }
+
+    /// Push an operation frame onto the innermost end of the frame stack.
+    pub fn push_operation_frame(&mut self, frame: OperationAdmissionFrame) {
+        self.operation_frames.push(frame);
+    }
+
+    /// Return operation-discharge proof using innermost-to-outermost frame order.
+    #[must_use]
+    pub fn prove_operation(
+        &self,
+        requirement: &RowAdmissionRequirement,
+    ) -> Option<RowAdmissionProof> {
+        let RowAdmissionRequirement::Operation {
+            authority,
+            operation,
+        } = requirement
+        else {
+            return None;
+        };
+        let identity = format_operation_identity(authority, operation);
+        self.operation_frames
+            .iter()
+            .rev()
+            .find(|frame| frame.identity == identity)
+            .map(|frame| match &frame.kind {
+                OperationAdmissionFrameKind::Handler { handler } => {
+                    RowAdmissionProof::OperationHandlerFrame {
+                        identity,
+                        handler: handler.clone(),
+                    }
+                }
+                OperationAdmissionFrameKind::Provider { provider } => {
+                    RowAdmissionProof::OperationProviderFrame {
+                        identity,
+                        provider: provider.clone(),
+                    }
+                }
+            })
+    }
+}
+
 impl RowAdmissionRequirement {
     /// Derive admission requirements from a Core row.
     #[must_use]
@@ -330,19 +433,36 @@ impl RowAdmissionCheck {
         request: &WorkflowAdmissionRequest,
         requirement: &RowAdmissionRequirement,
     ) -> Self {
+        Self::check_with_environment(
+            engine,
+            request,
+            requirement,
+            &RowAdmissionEnvironment::new(),
+        )
+    }
+
+    /// Check one row requirement against explicit admission/runtime evidence.
+    pub fn check_with_environment(
+        engine: &Engine,
+        request: &WorkflowAdmissionRequest,
+        requirement: &RowAdmissionRequirement,
+        environment: &RowAdmissionEnvironment,
+    ) -> Self {
         match requirement {
             RowAdmissionRequirement::Operation {
                 authority,
                 operation,
             } => {
                 let identity = format_operation_identity(authority, operation);
-                if engine.has_provider(authority) {
+                if environment.prove_operation(requirement).is_some()
+                    || engine.has_provider(authority)
+                {
                     Self::Satisfied
                 } else {
                     Self::Missing {
                         kind: WorkflowFailureKind::CapabilityAdmissionFailure,
                         notes: vec![format!(
-                            "operation authority for '{identity}' requires registered authority '{authority}'. Rows do not grant authority"
+                            "operation authority for '{identity}' requires a handler/provider frame or registered authority '{authority}'. Rows do not grant authority"
                         )],
                     }
                 }

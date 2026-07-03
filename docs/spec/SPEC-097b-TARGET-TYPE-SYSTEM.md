@@ -430,7 +430,8 @@ row `R`.
 The discharge rule is kind-specific:
 
 ```text
-Env ⊢ C.op discharged          if Env has admitted provider/effect C.op
+Env ⊢ C.op discharged          if Env has an admitted handler/provider frame for C.op
+                                or Env has host/runtime admission evidence for C.op
                                 or Env has admitted role R and role R entails C.op
 
 Env ⊢ role R discharged        if Env has admitted role R
@@ -706,6 +707,11 @@ and whose return type is the *answer type* `Ans`. The handler's output row is `{
 peeled operations are removed from the requirement row while the residual row `r` is
 propagated to the handler's caller (NOTE-023). Operation identities are impl-type-qualified
 (NOTE-025).
+
+At runtime, installing a handler contributes a handler frame for the peeled operation identity.
+Provider-backed authority contributes a provider frame for the same identity. A raise is discharged
+by the first matching handler or provider frame found by innermost-to-outermost frame-stack lookup;
+rows themselves do not install either frame.
 
 For each peeled operation `ImplType::op` with result type `B_op` declared by the interface,
 the handler branch receives a *continuation* parameter of type `B_op -> {r} Ans`. The
@@ -1137,6 +1143,7 @@ admission.
 
 ## 16. Changelog
 
+- 2026-07-03: Reconciled Phase 184 handler/provider semantics: operation discharge can be proven by admitted handler/provider frames, runtime raise dispatch uses innermost-to-outermost frame lookup, and rows remain requirements rather than frame installation.
 - 2026-06-29: Added surface inference rules for normalized rows, fact/evidence summaries, handler marker subtyping, operation identity specialization, and notation/operator-section typing.
 
 - 2026-06-18: Created as target-state type system document. Defined row semantics, effect item taxonomy, discharge rules, alias/group behavior, and acceptance criteria.

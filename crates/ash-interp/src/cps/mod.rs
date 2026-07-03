@@ -699,81 +699,85 @@ fn eval_raise(
     chain: &HandlerChain,
     runtime: &mut CpsRuntime,
 ) -> CpsResult<Atom> {
-    // Check for shallow handler first
-    if let Some((clause, handler_idx)) = chain.find_handler(op) {
-        let arg_values: CpsResult<Vec<Atom>> = args.iter().map(|a| eval_atom(a, env)).collect();
-        let arg_values = arg_values?;
-        // Remove the matched shallow handler from the chain BEFORE evaluating clause body
-        let mut body_chain = chain.clone();
-        body_chain.frames.remove(handler_idx);
-        // Build resume continuation that captures current env and chain WITHOUT the handler
-        let resume_chain = body_chain.clone();
+    match chain.find_operation_frame(op) {
+        Some(HandlerFrameMatch::Shallow {
+            clause,
+            frame_index,
+        }) => {
+            let arg_values: CpsResult<Vec<Atom>> = args.iter().map(|a| eval_atom(a, env)).collect();
+            let arg_values = arg_values?;
+            // Remove the matched shallow handler from the chain BEFORE evaluating clause body.
+            let mut body_chain = chain.clone();
+            body_chain.frames.remove(frame_index);
+            // Build resume continuation that captures current env and chain WITHOUT the handler.
+            let resume_chain = body_chain.clone();
 
-        // Resolve the dynamic resume row and copy multiplicity from the clause.
-        // This is the runtime fail-closed check required by SPEC-102 §5/§7.
-        let (resume_row, resume_multiplicity) = resolve_resume_metadata(clause, resume)?;
+            // Resolve the dynamic resume row and copy multiplicity from the clause.
+            // This is the runtime fail-closed check required by SPEC-102 §5/§7.
+            let (resume_row, resume_multiplicity) = resolve_resume_metadata(clause, resume)?;
 
-        let resume_cont = Value::Cont {
-            param: clause.resume.clone(),
-            body: Box::new(Term::Jump {
-                cont: resume.clone(),
-                arg: Atom::Var(clause.resume.clone()),
-                row: resume_row.clone(),
-            }),
-            captured_env: env.clone(),
-            captured_chain: resume_chain,
-            consumed: ConsumedFlag::new(),
-            row: resume_row,
-            multiplicity: resume_multiplicity,
-        };
-        let mut new_env = env.clone();
-        for (param, arg) in clause.params.iter().zip(arg_values.iter()) {
-            new_env = new_env.with_binding(param.clone(), Value::Atom(arg.clone()));
-        }
-        new_env = new_env.with_binding(clause.resume.clone(), resume_cont);
-        eval_unchecked_with_runtime(&clause.body, &new_env, &body_chain, runtime)
-    } else if let Some((handler_name, _provider_idx)) = chain.find_provider(op) {
-        // Provider dispatch: invoke the provider handler directly
-        let handler_value = env
-            .lookup(&handler_name)
-            .ok_or_else(|| CpsError::UnboundVariable(handler_name.clone()))?
-            .clone();
-        match handler_value {
-            Value::Lam {
-                params,
-                cont: lam_cont,
-                body,
-                captured_env,
-                rec_binding,
-                ..
-            } => {
-                let arg_values: CpsResult<Vec<Atom>> =
-                    args.iter().map(|a| eval_atom(a, env)).collect();
-                let arg_values = arg_values?;
-                if params.len() != arg_values.len() {
-                    return Err(CpsError::Trap(TrapReason::Custom(format!(
-                        "provider handler arity mismatch: expected {} args, got {}",
-                        params.len(),
-                        arg_values.len()
-                    ))));
-                }
-                let resume_value = resolve_cont(resume, env)?;
-                let mut new_env = captured_env.clone();
-                if let Some(rec_name) = rec_binding
-                    && let Some(rec_value) = env.lookup(&rec_name)
-                {
-                    new_env = new_env.with_binding(rec_name, rec_value.clone());
-                }
-                for (param, arg) in params.iter().zip(arg_values.iter()) {
-                    new_env = new_env.with_binding(param.clone(), Value::Atom(arg.clone()));
-                }
-                new_env = new_env.with_binding(lam_cont.clone(), resume_value);
-                eval_unchecked_with_runtime(&body, &new_env, chain, runtime)
+            let resume_cont = Value::Cont {
+                param: clause.resume.clone(),
+                body: Box::new(Term::Jump {
+                    cont: resume.clone(),
+                    arg: Atom::Var(clause.resume.clone()),
+                    row: resume_row.clone(),
+                }),
+                captured_env: env.clone(),
+                captured_chain: resume_chain,
+                consumed: ConsumedFlag::new(),
+                row: resume_row,
+                multiplicity: resume_multiplicity,
+            };
+            let mut new_env = env.clone();
+            for (param, arg) in clause.params.iter().zip(arg_values.iter()) {
+                new_env = new_env.with_binding(param.clone(), Value::Atom(arg.clone()));
             }
-            _ => Err(CpsError::ExpectedLambda(handler_value)),
+            new_env = new_env.with_binding(clause.resume.clone(), resume_cont);
+            eval_unchecked_with_runtime(&clause.body, &new_env, &body_chain, runtime)
         }
-    } else {
-        Err(CpsError::UnhandledEffect(op.clone()))
+        Some(HandlerFrameMatch::Provider { handler, .. }) => {
+            // Provider dispatch: invoke the provider handler directly.
+            let handler_value = env
+                .lookup(handler)
+                .ok_or_else(|| CpsError::UnboundVariable(handler.to_string()))?
+                .clone();
+            match handler_value {
+                Value::Lam {
+                    params,
+                    cont: lam_cont,
+                    body,
+                    captured_env,
+                    rec_binding,
+                    ..
+                } => {
+                    let arg_values: CpsResult<Vec<Atom>> =
+                        args.iter().map(|a| eval_atom(a, env)).collect();
+                    let arg_values = arg_values?;
+                    if params.len() != arg_values.len() {
+                        return Err(CpsError::Trap(TrapReason::Custom(format!(
+                            "provider handler arity mismatch: expected {} args, got {}",
+                            params.len(),
+                            arg_values.len()
+                        ))));
+                    }
+                    let resume_value = resolve_cont(resume, env)?;
+                    let mut new_env = captured_env.clone();
+                    if let Some(rec_name) = rec_binding
+                        && let Some(rec_value) = env.lookup(&rec_name)
+                    {
+                        new_env = new_env.with_binding(rec_name, rec_value.clone());
+                    }
+                    for (param, arg) in params.iter().zip(arg_values.iter()) {
+                        new_env = new_env.with_binding(param.clone(), Value::Atom(arg.clone()));
+                    }
+                    new_env = new_env.with_binding(lam_cont.clone(), resume_value);
+                    eval_unchecked_with_runtime(&body, &new_env, chain, runtime)
+                }
+                _ => Err(CpsError::ExpectedLambda(handler_value)),
+            }
+        }
+        None => Err(CpsError::UnhandledEffect(op.clone())),
     }
 }
 

@@ -159,6 +159,7 @@ Update this section as tasks complete:
 | [181](PLAN-181-LEGACY-AUTHORITY-VOCABULARY-AUDIT.md) | 1 | 1 | ✅ Complete; legacy authority vocabulary audit |
 | [182](PLAN-182-CORE-COMPUTATION-MODEL-CONFORMANCE.md) | 10 | 10 | Complete; Core computation model conformance |
 | [183](PLAN-183-OPERATION-AUTHORITY-MODEL.md) | 8 | 8 | ✅ Complete; operation and authority model |
+| [184](PLAN-184-HANDLER-PROVIDER-SEMANTICS.md) | 8 | 8 | ✅ Complete; handler/provider semantics |
 
 ---
 
@@ -1019,3 +1020,23 @@ Defines how effects actually happen for the target model: operations are interfa
 || [TASK-1852](tasks/TASK-1852-row-family-discharge-diagnostics.md) | Separate row-family discharge diagnostics | Complete |
 || [TASK-1853](tasks/TASK-1853-operation-authority-non-grant-regressions.md) | Prove rows do not grant authority | Complete |
 || [TASK-1854](tasks/TASK-1854-operation-authority-closeout.md) | Close out Phase 183 | Complete |
+
+## Phase 184: Handler / Provider Semantics
+
+|**Status:** ✅ Complete (8/8 tasks complete)
+|**Plan:** [PLAN-184: Handler / Provider Semantics](PLAN-184-HANDLER-PROVIDER-SEMANTICS.md)
+|**Depends on:** Phase 183 Operation and Authority Model.
+|**Specs/notes:** `SPEC-096b`, `SPEC-097b`, `SPEC-098b`, `SPEC-099b`, `SPEC-100`, `NOTE-023`, and `NOTE-025`.
+
+Turns rows from metadata into the operational model for operation effects: handler/provider frames discharge operation requirements, raise/handle dispatch uses frame-stack order, missing discharge fails closed, and handler/provider nesting and shadowing are observable.
+
+|| Task | Description | Status |
+||------|-------------|--------|
+|| [TASK-1855](tasks/TASK-1855-handler-provider-plan-packet.md) | Create the Phase 184 plan packet | Complete |
+|| [TASK-1856](tasks/TASK-1856-handler-provider-boundary-audit.md) | Audit handler/provider semantics boundaries | Complete |
+|| [TASK-1857](tasks/TASK-1857-admission-frame-proof-model.md) | Add admission frame proof model | Complete |
+|| [TASK-1858](tasks/TASK-1858-cps-frame-ordered-dispatch.md) | Fix CPS frame-ordered dispatch | Complete |
+|| [TASK-1859](tasks/TASK-1859-raise-handle-provider-regressions.md) | Add raise/handle/provider regressions | Complete |
+|| [TASK-1860](tasks/TASK-1860-missing-discharge-failure-diagnostics.md) | Define missing-discharge failures | Complete |
+|| [TASK-1861](tasks/TASK-1861-handler-provider-spec-reconciliation.md) | Reconcile handler/provider specs | Complete |
+|| [TASK-1862](tasks/TASK-1862-handler-provider-closeout.md) | Close out Phase 184 | Complete |

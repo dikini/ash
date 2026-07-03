@@ -363,6 +363,25 @@ pub enum HandlerFrame {
     Provider { op: EffectOp, handler: Name },
 }
 
+/// Frame-ordered operation discharge found in a handler chain.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum HandlerFrameMatch<'a> {
+    /// A shallow handler clause matched the operation.
+    Shallow {
+        /// Matching handler clause.
+        clause: &'a HandlerClause,
+        /// Frame index in the chain.
+        frame_index: usize,
+    },
+    /// A provider frame matched the operation.
+    Provider {
+        /// Provider handler name.
+        handler: &'a str,
+        /// Frame index in the chain.
+        frame_index: usize,
+    },
+}
+
 /// Handler chain - explicit stack of handler frames
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct HandlerChain {
@@ -402,6 +421,31 @@ impl HandlerChain {
     /// Push a frame onto the chain
     pub fn push(&mut self, frame: HandlerFrame) {
         self.frames.push(frame);
+    }
+
+    /// Find the innermost frame that discharges an effect operation.
+    pub fn find_operation_frame(&self, op: &EffectOp) -> Option<HandlerFrameMatch<'_>> {
+        for (idx, frame) in self.frames.iter().enumerate().rev() {
+            match frame {
+                HandlerFrame::Shallow { clause } if clause.op == *op => {
+                    return Some(HandlerFrameMatch::Shallow {
+                        clause,
+                        frame_index: idx,
+                    });
+                }
+                HandlerFrame::Provider {
+                    op: provider_op,
+                    handler,
+                } if provider_op == op => {
+                    return Some(HandlerFrameMatch::Provider {
+                        handler,
+                        frame_index: idx,
+                    });
+                }
+                _ => continue,
+            }
+        }
+        None
     }
 
     /// Find the innermost handler for an effect operation, returning (clause, frame_index)

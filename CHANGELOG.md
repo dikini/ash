@@ -31,6 +31,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Phase 170 notation summary/export design now matches the implemented fail-closed local-table behavior for duplicate notation declarations (TASK-1742).
 
 ### Added
+- Phase 179 explicit row admission runtime wiring: derived admission carriers (`RowAdmissionRequirement`, `RowAdmissionCheck`) from Core callable row metadata; `Engine::admit_workflow_with_explicit_rows` checks operation rows against registered providers, resource rows against selected resource initializers, role rows against admitted roles, and fails closed on policy/process/failure/evidence/group rows with structured diagnostics; imported row-bearing callables participate identically; authority-neutrality regressions prove row admission does not install providers, resources, roles, or call host hooks (TASK-1827 through TASK-1834).
+
+### Changed
+- Reconciled Phase 179 plan/task/index surfaces with the deprecation of NOTE-009's `capability` vocabulary: operation rows are now described as interface/impl-qualified operation identities per NOTE-022/025, provider/operation admission replaces the legacy `provider/capability` wording, and NOTE-009 is listed as superseded historical context in PLAN-179 and the PLAN-INDEX Phase 179 detailed block (TASK-1834).
 - Added Phase 178 parser-to-Core row preservation regressions that inspect parser rows, engine/typecheck row summaries, imported callable signatures, Core callable rows, rowless defaults, and open row tails in one end-to-end path (TASK-1823).
 - Added Phase 178 authority-neutrality regressions proving row requirements do not register providers, select resources or capability implementations, install runtime modules, admit roles/capabilities, fabricate workflow authority summaries, or call host hooks during parse/check/execute (TASK-1822).
 - Lowered explicit Phase 178 source callable rows into Core Ash callable metadata via `CoreType::Function { row, .. }`, covering supported target row families, open row tails, and rowless default rows without granting runtime authority (TASK-1821).

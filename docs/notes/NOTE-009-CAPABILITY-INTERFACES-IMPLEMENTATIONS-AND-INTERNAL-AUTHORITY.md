@@ -1,9 +1,15 @@
 # NOTE-009: Capability Interfaces, Implementations, Resources, and Internal Authority
 
 **Date:** 2026-04-24
-**Status:** Exploratory design note
+**Status:** Superseded — conceptually merged into the interface/impl/handler model
 **Priority:** High — records the current DX direction before syntax and normative semantics are hardened
-**Related:** SPEC-047, SPEC-048, SPEC-049, SPEC-051, NOTE-004, NOTE-007
+**Related:** SPEC-047, SPEC-048, SPEC-049, SPEC-051, NOTE-004, NOTE-007, NOTE-022, NOTE-023, NOTE-025
+
+> **Deprecation notice.** This note's sketch vocabulary (`capability interface`, `capability impl`, `capability binding`) has been superseded by the target Ash model:
+> - effect operations are declared as ordinary `interface` methods (NOTE-022);
+> - operation identity is carried by the `impl` type (NOTE-025);
+> - handler behavior is supplied by named `handler` functions installed via `handle ... with` (NOTE-023).
+> The conceptual content of this note — authority provenance, resource ownership, late binding, adapter/decorator patterns — remains valid, but its concrete syntax and namespace are no longer current. Treat this note as historical context, not target specification.
 
 ## 1. Purpose
 

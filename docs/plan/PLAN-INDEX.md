@@ -154,6 +154,7 @@ Update this section as tasks complete:
 | [176](PLAN-176-DEFERRED-CLEANUP-AFTER-TARGET-REDESIGN.md) | 9 | 9 | ✅ Complete; deferred cleanup after target-language redesign closed with review remediation |
 | [177](PLAN-177-TARGET-ASH-ROW-SYNTAX-AND-CORE-CPS-ALIGNMENT.md) | 11 | 11 | ✅ Complete; target row syntax review remediation complete |
 | [178](PLAN-178-SOURCE-TO-CORE-ROW-LOWERING-BRIDGE.md) | 9 | 9 | ✅ Complete; explicit source rows lower into Core callable metadata with review remediation |
+| [179](PLAN-179-EXPLICIT-ROW-ADMISSION-RUNTIME-WIRING.md) | 9 | 9 | ✅ Complete; explicit row requirements wired to admission/runtime checks |
 
 ---
 
@@ -925,3 +926,24 @@ Bridges Phase 177's parsed and validated target row syntax into the source-to-ty
 | [TASK-1823](tasks/TASK-1823-parser-engine-typecheck-core-row-preservation.md) | Add parser -> engine/typecheck -> Core row preservation tests | ✅ Complete |
 | [TASK-1824](tasks/TASK-1824-phase-178-docs-spec-reconciliation.md) | Reconcile docs/spec/status for Phase 178 boundaries | ✅ Complete |
 | [TASK-1825](tasks/TASK-1825-phase-178-closeout.md) | Close out Phase 178 with gates and review | ✅ Complete |
+
+## Phase 179: Explicit Row Admission Runtime Wiring
+
+|**Status:** ✅ Complete (9/9 tasks complete)
+|**Plan:** [PLAN-179: Explicit Row Admission Runtime Wiring](PLAN-179-EXPLICIT-ROW-ADMISSION-RUNTIME-WIRING.md)
+|**Depends on:** Phase 178 closeout.
+|**Specs/notes:** `SPEC-096b`, `SPEC-098c`, `SPEC-099b`, `SPEC-100`, `SPEC-017`, `SPEC-019`, `SPEC-052`, `SPEC-053`, `NOTE-009` *(superseded; historical context only; see NOTE-022/023/025)*, `NOTE-020`, `NOTE-021`, `NOTE-022`, `NOTE-023`, and `NOTE-025`.
+
+Connects Phase 178's explicit source/Core row metadata to runtime/admission checks. Operation rows are interface/impl-qualified operation identities per NOTE-022/025; the "provider" checks in this phase refer to already-registered host/runtime authority, not the deprecated `capability binding` vocabulary. The phase is bounded to fail-closed admission of already explicit row requirements: operation/provider, resource, role, and policy rows must require existing authority or produce precise unsupported/missing-authority diagnostics. Row-polymorphic inference, handler execution, provider registration, and broad stdlib/example migration remain out of scope.
+
+|| Task | Description | Status |
+||------|-------------|--------|
+|| [TASK-1826](tasks/TASK-1826-phase-179-plan-packet.md) | Create the Phase 179 explicit row admission wiring packet | ✅ Complete |
+|| [TASK-1827](tasks/TASK-1827-row-admission-runtime-audit.md) | Audit row metadata against admission/runtime authority paths | ✅ Complete |
+|| [TASK-1828](tasks/TASK-1828-explicit-row-admission-carriers.md) | Add explicit row admission requirement carriers | ✅ Complete |
+|| [TASK-1829](tasks/TASK-1829-operation-row-provider-admission.md) | Check operation rows against provider/operation admission | ✅ Complete |
+|| [TASK-1830](tasks/TASK-1830-resource-row-admission.md) | Check resource rows against resource authority | ✅ Complete |
+|| [TASK-1831](tasks/TASK-1831-role-policy-row-admission.md) | Check role and policy rows against admission authority | ✅ Complete |
+|| [TASK-1832](tasks/TASK-1832-imported-row-admission.md) | Apply row admission checks across imported callables | ✅ Complete |
+|| [TASK-1833](tasks/TASK-1833-row-admission-non-authority-regressions.md) | Prove row admission does not install authority | ✅ Complete |
+|| [TASK-1834](tasks/TASK-1834-phase-179-closeout.md) | Close out Phase 179 with gates and review | ✅ Complete |

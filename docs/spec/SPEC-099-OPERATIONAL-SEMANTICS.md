@@ -21,6 +21,12 @@ verified_against:
 
 # SPEC-099: Operational Semantics for Unified Effect System
 
+> **Target reconciliation.** This unsuffixed draft is a historical bridge toward
+> the current/target operational-semantics split. Use SPEC-099b for target-Ash
+> operational semantics. Capability-shaped transition examples here are
+> compatibility background and should be translated to provider/handler
+> operation dispatch for target planning.
+
 ## 1. Summary
 
 This spec defines the operational semantics for the unified effect system. It covers both small-step semantics (for implementation) and big-step semantics (for reasoning). The key insight: Act, Proc, and Workflow are the same monad, so they share the same operational rules.

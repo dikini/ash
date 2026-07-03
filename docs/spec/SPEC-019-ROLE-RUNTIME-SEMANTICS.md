@@ -2,6 +2,12 @@
 
 ## Status: Active
 
+> **Target reconciliation.** This spec remains useful for current-state role
+> authority and obligation behavior, but its capability-list authority model is
+> compatibility substrate. Target-Ash role authority should be interpreted as
+> row-accounted role/policy/operation admission evidence, with no implication
+> that compatibility capability lists define target operation identities.
+
 ## 1. Overview
 
 Define runtime enforcement of role `authority` and `obligations`. Currently, the runtime uses `Role` as a lightweight identity for policy evaluation. This specification extends roles to enforce authority (what capabilities a role can access) and obligations (what duties a role must fulfill).

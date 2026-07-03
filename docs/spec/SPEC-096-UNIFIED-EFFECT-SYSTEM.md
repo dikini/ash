@@ -24,6 +24,12 @@ verified_against:
 
 # SPEC-096: Unified Effect System with Row Polymorphism and Contract Effects
 
+> **Target reconciliation.** This unsuffixed draft is a historical bridge toward
+> the current-state/target split. Use SPEC-096a for current behavior and
+> SPEC-096b for target-Ash effect-system design. Compatibility references to
+> legacy capability declarations or bindings in this draft do not constrain the
+> target provider/handler admission model.
+
 ## 1. Summary
 
 Ash should move toward one effect-accounting model based on row polymorphism. Effect rows describe the requirements of a computation: which operations, roles, policies, contracts, channels, process operations, failures, and evidence/reporting effects the computation may use or emit.

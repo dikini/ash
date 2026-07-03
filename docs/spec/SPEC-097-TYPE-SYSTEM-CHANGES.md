@@ -20,6 +20,11 @@ verified_against:
 
 # SPEC-097: Type System Changes for Unified Effect System
 
+> **Target reconciliation.** This unsuffixed draft is a historical bridge toward
+> the split target type-system specs. Use SPEC-097b and SPEC-100 for target-Ash
+> type checking. Legacy capability declarations are compatibility inputs only,
+> not target authority vocabulary.
+
 ## 1. Summary
 
 This spec defines the type-system obligations for the unified effect-row direction in SPEC-096. The central rule is:

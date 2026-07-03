@@ -5,6 +5,12 @@
 **Priority:** High — records the current environment model for `Act`, `Proc`, and workflow semantics
 **Related:** DESIGN-030, SPEC-048, SPEC-047, NOTE-006
 
+> **Target reconciliation.** This note records current-state environment
+> component modeling. Legacy capability surface/provider-registry components are
+> compatibility substrate; target-Ash authority planning should translate them
+> to operation/resource/provider/handler admission evidence and computation-row
+> discharge.
+
 ## 1. Purpose
 
 This note captures the current working model for environment lookup in the Ash semantic tower:

@@ -46,7 +46,7 @@ Lazy and memo computation are not optimization hints. They change:
 1. when effects fire;
 2. whether divergence or failure is observed at binding time or force time;
 3. whether repeated demand re-runs a computation;
-4. which dynamic path owns capability/provider access at force time;
+4. which dynamic path owns provider/handler operation authority and resource access at force time;
 5. whether shared subcomputations preserve asymptotic behavior.
 
 Representing modes only as comments or backend conventions would make Core type checking, row diagnostics, contract discharge, runtime traces, and Core-to-CPS lowering disagree. Core therefore needs explicit mode carriers even though CPS IR can lower them into ordinary closure and value machinery.

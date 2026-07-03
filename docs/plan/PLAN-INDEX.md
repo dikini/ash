@@ -156,6 +156,7 @@ Update this section as tasks complete:
 | [178](PLAN-178-SOURCE-TO-CORE-ROW-LOWERING-BRIDGE.md) | 9 | 9 | ✅ Complete; explicit source rows lower into Core callable metadata with review remediation |
 | [179](PLAN-179-EXPLICIT-ROW-ADMISSION-RUNTIME-WIRING.md) | 9 | 9 | ✅ Complete; explicit row requirements wired to admission/runtime checks |
 | [180](PLAN-180-TARGET-DOCS-CONSISTENCY-CLEANUP.md) | 1 | 1 | ✅ Complete; target docs consistency cleanup |
+| [181](PLAN-181-LEGACY-AUTHORITY-VOCABULARY-AUDIT.md) | 1 | 1 | ✅ Complete; legacy authority vocabulary audit |
 
 ---
 
@@ -961,3 +962,16 @@ Reconciles target-Ash documentation after the interface/impl-qualified operation
 || Task | Description | Status |
 ||------|-------------|--------|
 || [TASK-1835](tasks/TASK-1835-target-docs-consistency-cleanup.md) | Reconcile stale target-Ash specs and notes | ✅ Complete |
+
+## Phase 181: Legacy Authority Vocabulary Audit
+
+|**Status:** ✅ Complete (1/1 tasks complete)
+|**Plan:** [PLAN-181: Legacy Authority Vocabulary Audit](PLAN-181-LEGACY-AUTHORITY-VOCABULARY-AUDIT.md)
+|**Depends on:** Phase 180 target docs consistency cleanup.
+|**Specs/notes:** `SPEC-096b`, `SPEC-097b`, `SPEC-098b`, `SPEC-099b`, `SPEC-100`, `NOTE-022`, `NOTE-023`, and `NOTE-025`.
+
+Audits older capability/provider authority vocabulary and classifies affected docs as target-state authority, current-state compatibility, superseded historical reference, or deferred background. Target correctness takes priority over preserving compatibility vocabulary as active target guidance.
+
+|| Task | Description | Status |
+||------|-------------|--------|
+|| [TASK-1836](tasks/TASK-1836-legacy-authority-vocabulary-audit.md) | Classify legacy authority vocabulary docs | ✅ Complete |

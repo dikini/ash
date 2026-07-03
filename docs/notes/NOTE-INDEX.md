@@ -66,6 +66,7 @@ Common tags include: `grammar`, `syntax`, `semantics`, `type-system`, `effect-sy
 5. [NOTE-023](NOTE-023-HANDLER-SURFACE-DISPATCH-SIDE.md)
 6. [NOTE-025](NOTE-025-EFFECT-IDENTITY-VIA-SORTS-AND-IMPLS.md)
 7. [PLAN-180](../plan/PLAN-180-TARGET-DOCS-CONSISTENCY-CLEANUP.md)
+8. [PLAN-181](../plan/PLAN-181-LEGACY-AUTHORITY-VOCABULARY-AUDIT.md) for current-state-vs-historical classification of legacy authority vocabulary.
 
 ### Change target handler/effect/operation syntax
 
@@ -91,8 +92,8 @@ Common tags include: `grammar`, `syntax`, `semantics`, `type-system`, `effect-sy
 | [NOTE-004-STDLIB-BUILTIN-GAP.md](NOTE-004-STDLIB-BUILTIN-GAP.md) | unspecified | general | orientation | design note | — |
 | [NOTE-005-ACT-MONAD-UNIFYING-PURE-AND-EFFECTFUL.md](NOTE-005-ACT-MONAD-UNIFYING-PURE-AND-EFFECTFUL.md) | Superseded by SPEC-047 (normative spec) and PLAN-097 (implementation plan) | ambient-computation | effect-system | superseded/historical note | — |
 | [NOTE-006-C3C-ACTENV-EXPOSURE-DESIGN.md](NOTE-006-C3C-ACTENV-EXPOSURE-DESIGN.md) | Active design note for TASK-689C | runtime | core-ir, runtime | design note | — |
-| [NOTE-006-WORKFLOW-AMBIENT-TYPING-AND-RUNTIME-FAILURE.md](NOTE-006-WORKFLOW-AMBIENT-TYPING-AND-RUNTIME-FAILURE.md) | Draft | ambient-computation | effect-system, type-system | design note | — |
-| [NOTE-007-RUNTIME-ENVIRONMENT-IDENTITY-AND-COMPONENTS.md](NOTE-007-RUNTIME-ENVIRONMENT-IDENTITY-AND-COMPONENTS.md) | Draft | runtime | core-ir, runtime | design note | — |
+| [NOTE-006-WORKFLOW-AMBIENT-TYPING-AND-RUNTIME-FAILURE.md](NOTE-006-WORKFLOW-AMBIENT-TYPING-AND-RUNTIME-FAILURE.md) | Historical/current-state workflow ambient typing direction; target authority routes through rows/admission | ambient-computation | current-state, effect-system, type-system, workflow | design note / compatibility context | SPEC-096b; SPEC-098b; SPEC-100; PLAN-181 |
+| [NOTE-007-RUNTIME-ENVIRONMENT-IDENTITY-AND-COMPONENTS.md](NOTE-007-RUNTIME-ENVIRONMENT-IDENTITY-AND-COMPONENTS.md) | Current-state runtime environment component model; capability/provider components are compatibility substrate | runtime | authority, core-ir, current-state, runtime | design note / compatibility context | SPEC-096b; SPEC-099b; SPEC-100; PLAN-181 |
 | [NOTE-007-context-send-sync-clone-cost-and-optimization-opportunities.md](NOTE-007-context-send-sync-clone-cost-and-optimization-opportunities.md) | Active implementation note for TASK-689D follow-on runtime work | runtime | runtime, semantics | design note | — |
 | [NOTE-008-OPERATIONAL-BOTTOM-AND-SCOPED-ERROR-HANDLING.md](NOTE-008-OPERATIONAL-BOTTOM-AND-SCOPED-ERROR-HANDLING.md) | Draft | runtime | runtime | design note | — |
 | [NOTE-009-CAPABILITY-INTERFACES-IMPLEMENTATIONS-AND-INTERNAL-AUTHORITY.md](NOTE-009-CAPABILITY-INTERFACES-IMPLEMENTATIONS-AND-INTERNAL-AUTHORITY.md) | Superseded by NOTE-022 / NOTE-023 / NOTE-025 (interface/impl/handler model) | ambient-computation | authority, effect-system | superseded/historical note | NOTE-022; NOTE-023; NOTE-025 |

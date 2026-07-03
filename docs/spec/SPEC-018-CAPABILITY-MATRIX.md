@@ -2,6 +2,12 @@
 
 ## Status: Draft
 
+> **Target reconciliation.** This draft records the legacy capability runtime
+> verification matrix. It is a historical/current-state compatibility reference,
+> not target-Ash authority design. Target admission work should route through
+> computation-row discharge, provider/handler admission, and distinct
+> operation/resource/role/policy requirement kinds in SPEC-096b and SPEC-100.
+
 ## 1. Overview
 
 Workflows declare their capability requirements at compile time. At runtime, they're instantiated with specific obligations and named policies that have already been lowered to the canonical core policy representation. This spec defines the verification matrix and runtime checks to ensure compatibility.

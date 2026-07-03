@@ -2,6 +2,14 @@
 
 ## Status: Active (Section 2 Capability Definitions, Section 11 IO Capability Boundary - V1 Frozen)
 
+> **Target reconciliation.** This spec is current-state compatibility material
+> for the legacy capability invocation and IO capability boundary. It must not
+> be used as target-Ash authority vocabulary. Target authority planning should
+> use computation rows, interface/impl-qualified operation identities, and
+> provider/handler admission from SPEC-096b, NOTE-022, NOTE-023, NOTE-025, and
+> SPEC-100. Keep compatibility behavior only where it documents live lowering or
+> runtime behavior.
+
 ## 1. Overview
 
 All capabilities (input: `observe`, `receive`; output: `set`, `send`) must integrate with Ash's system features: obligations, policies, effects, provenance, and capability safety.

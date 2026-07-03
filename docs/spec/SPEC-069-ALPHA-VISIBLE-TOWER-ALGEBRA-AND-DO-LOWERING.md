@@ -8,6 +8,12 @@
 **Plan:** [PLAN-118](../plan/PLAN-118-DESIGN-040-041-ALPHA-IMPLEMENTATION-PACKET.md), [PLAN-119](../plan/PLAN-119-SPEC-069-070-IMPLEMENTED-MVP-CLOSURE.md)
 **Implementation Tasks:** [TASK-919](../plan/tasks/TASK-919-design040041-current-state-and-scope-reconciliation.md) through [TASK-945](../plan/tasks/TASK-945-phase123-daemon-local-control-security-remediation.md)
 
+> **Target reconciliation.** This implemented alpha spec remains compatibility
+> substrate for visible tower algebra and generalized do lowering. Its
+> capability/provider references describe the implemented alpha runtime
+> boundary; target-Ash authority design is governed by computation rows,
+> provider/handler admission, and Core/CPS target specs.
+
 ## 1. Summary
 
 SPEC-069 defines the alpha target for Ash's visible computation tower. Alpha must demonstrate that `Act<A>`, `Proc<A>`, `Workflow<A>`, and ordinary user/library computation constructors are sequenced through Ash-visible algebra and type evidence rather than unrelated parser/runtime magic.

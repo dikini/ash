@@ -5,6 +5,11 @@
 **Related:** DESIGN-030, SPEC-019, SPEC-022, SPEC-025, SPEC-049, SPEC-050, SPEC-048, SPEC-047, NOTE-006, NOTE-007, NOTE-008
 **Promotes:** DESIGN-030 workflow-semantics follow-on direction and NOTE-006 workflow failure-boundary direction for overlapping workflow governance semantics
 
+> **Target reconciliation.** This spec is current-state workflow governance
+> substrate. Its role/capability admission wording should be translated to
+> target computation rows, ambient workflow facts, and provider/handler
+> admission when planning target-Ash authority behavior.
+
 ## Summary
 
 This specification defines the initial normative workflow-semantics layer above `Proc<A>` in the current Ash semantic tower:

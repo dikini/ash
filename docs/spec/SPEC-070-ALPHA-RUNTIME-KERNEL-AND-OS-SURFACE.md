@@ -8,6 +8,11 @@
 **Plan:** [PLAN-118](../plan/PLAN-118-DESIGN-040-041-ALPHA-IMPLEMENTATION-PACKET.md), [PLAN-119](../plan/PLAN-119-SPEC-069-070-IMPLEMENTED-MVP-CLOSURE.md)
 **Implementation Tasks:** [TASK-919](../plan/tasks/TASK-919-design040041-current-state-and-scope-reconciliation.md) through [TASK-945](../plan/tasks/TASK-945-phase123-daemon-local-control-security-remediation.md)
 
+> **Target reconciliation.** This implemented alpha runtime-kernel spec remains
+> compatibility substrate. Admission and grant checks here should not be read as
+> preserving legacy capability vocabulary in target-Ash; target work should map
+> those checks to provider/handler admission and resource authority evidence.
+
 ## 1. Summary
 
 SPEC-070 defines the alpha OS-facing runtime regime for Ash. Ash has one semantic `RuntimeKernel` with two host modes:

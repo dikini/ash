@@ -2,6 +2,12 @@
 
 ## Status: Active
 
+> **Target reconciliation.** This spec records current-state workflow typing and
+> obligation behavior. Its `provider:action` and capability-invocation wording is
+> compatibility context. Target workflow authority should route through
+> computation rows, contract facts, and provider/handler admission rather than
+> legacy capability invocation syntax.
+
 ## 1. Overview
 
 Enable **Hoare-style contracts** (`requires`/`ensures`) and **obligation tracking** in the Ash type system. Obligations are local logical markers used for gating decisions within a workflow, with audit trail support.

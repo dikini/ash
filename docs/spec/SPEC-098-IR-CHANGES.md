@@ -20,6 +20,11 @@ verified_against:
 
 # SPEC-098: IR Changes for Unified Effect System
 
+> **Target reconciliation.** This unsuffixed draft is a historical bridge toward
+> the split current/target IR specs. Use SPEC-098b and SPEC-098c for target-Ash
+> IR/lowering work. Legacy capability-shaped IR fields in this document are
+> current-state migration context, not target operation identity design.
+
 ## 1. Summary
 
 This spec documents the changes to the Ash Intermediate Representation (IR) required to support the unified effect system. The IR is the core AST (`crates/ash-core/src/ast.rs`) that the parser lowers to and the interpreter/typechecker operates on. The key question: does the unified effect system require IR changes, or is it purely a surface syntax + type system feature?

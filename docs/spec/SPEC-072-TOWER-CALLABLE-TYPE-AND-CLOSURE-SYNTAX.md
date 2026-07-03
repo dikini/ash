@@ -7,6 +7,12 @@
 **Plan:** [PLAN-121](../plan/PLAN-121-TOWER-CALLABLE-SYNTAX.md)
 **Implementation Tasks:** [TASK-955](../plan/tasks/TASK-955-tower-callable-syntax-packet.md) through [TASK-963](../plan/tasks/TASK-963-stdlib-and-reference-callable-syntax-migration.md), with [TASK-962](../plan/tasks/TASK-962-tower-callable-syntax-closeout.md) as the final closeout gate
 
+> **Target reconciliation.** This implemented callable syntax spec remains
+> active for callable spelling and reserved tower arrows. References to
+> capability/provider availability in Act-callable application are compatibility
+> notes; target semantics should use computation-row requirements and
+> provider/handler admission.
+
 ## 1. Summary
 
 Ash callable types and closure literals use a tower-aligned arrow family:

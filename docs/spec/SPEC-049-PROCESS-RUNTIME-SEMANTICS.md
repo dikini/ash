@@ -5,6 +5,12 @@
 **Related:** DESIGN-030, SPEC-048, SPEC-050, SPEC-051, SPEC-047, SPEC-025, SPEC-004, NOTE-007, NOTE-008
 **Promotes:** NOTE-007 for overlapping process identity, runtime environment component, and child-environment projection semantics
 
+> **Target reconciliation.** This spec records current-state process runtime
+> semantics and child-environment projection. Legacy capability/provider
+> vocabulary here is compatibility substrate only. Target process authority is
+> row-accounted operation/resource/role/policy evidence projected through
+> provider/handler admission and resource authority.
+
 ## Summary
 
 This specification defines the first normative process-runtime semantics for `Proc<A>` execution.

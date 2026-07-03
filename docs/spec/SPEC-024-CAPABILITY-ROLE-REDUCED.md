@@ -5,6 +5,12 @@
 **Date:** 2026-03-26  
 **Version:** 1.0
 
+> **Target reconciliation.** This canonical status applies to the reduced
+> legacy capability/role surface, not to the target-Ash authority model. For
+> target work, treat this as a superseded historical surface reference and route
+> authority design through interface/impl operation declarations, computation
+> rows, and provider/handler admission.
+
 ---
 
 ## 1. Overview

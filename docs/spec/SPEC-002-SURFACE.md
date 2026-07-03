@@ -2,6 +2,12 @@
 
 ## Status: Draft
 
+> **Target reconciliation.** This draft is a legacy/current-state surface
+> baseline. Its explicit `provider:action(...)` capability invocation text is
+> compatibility context, not target-Ash authority syntax. Target surface and
+> authority work should start from SPEC-095b, SPEC-096b, SPEC-098c, NOTE-022,
+> NOTE-023, and NOTE-025.
+
 ## 1. Overview
 
 The surface language is designed to be:

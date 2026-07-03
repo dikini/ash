@@ -5,6 +5,12 @@
 **Priority:** High — clarifies workflow typing direction without prematurely fixing orchestration policy
 **Related:** NOTE-001, NOTE-005, SPEC-001, SPEC-003, SPEC-004, SPEC-022, SPEC-025, SPEC-047
 
+> **Target reconciliation.** This note records an older workflow/Act ambient
+> typing direction. Its capability-refinement and workflow-header vocabulary is
+> compatibility context. Target-Ash workflow authority should be read through
+> ambient computation rows, provider/handler admission, and target workflow facts
+> rather than through legacy capability refinement as a target primitive.
+
 ## 1. Problem
 
 Ash workflows now sit between two partially aligned stories:

@@ -5,6 +5,12 @@
 **Related:** NOTE-005, SPEC-001, SPEC-004, SPEC-025, SPEC-027, SPEC-031, SPEC-BUILTIN-FN, SPEC-020
 **Supersedes:** NOTE-005 (design exploration — this spec is its normative counterpart)
 
+> **Target reconciliation.** This spec is the current-state Act/effectful
+> computation substrate. Its references to capability providers are compatibility
+> vocabulary for the legacy Act environment. Target authority planning should
+> translate Act effects into computation-row operation/resource requirements
+> discharged by provider/handler admission.
+
 ## 1. Overview
 
 Introduce `Act<A>` as a first-class type constructor in the expression layer, adding a composable effectful-computation model that interoperates with the existing workflow runtime. An `Act<A>` value is a suspended computation that, given an environment of capability providers, policies, and provenance, may produce a value of type `A` alongside an accumulated effect log, or fail with an error.

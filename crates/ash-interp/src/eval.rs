@@ -91,6 +91,53 @@ async fn observe_terminal_process_async(
     observe_terminal_state(handle.process_id, terminal_state)
 }
 
+fn eval_field_access_value(value: Value, field: &str) -> EvalResult<Value> {
+    match value {
+        Value::Record(mut fields) => {
+            let removed = fields.remove(field);
+            if removed.is_none() {
+                return Err(EvalError::FieldNotFound {
+                    field: field.to_string(),
+                    value: Box::new(Value::Record(fields)),
+                });
+            }
+            Ok(removed.unwrap())
+        }
+        Value::Variant { name, fields } => fields
+            .iter()
+            .find_map(|(candidate, value)| {
+                if candidate == field {
+                    Some(value.clone())
+                } else {
+                    None
+                }
+            })
+            .ok_or_else(|| EvalError::FieldNotFound {
+                field: field.to_string(),
+                value: Box::new(Value::Variant { name, fields }),
+            }),
+        value if value.is_list() => {
+            let items = value
+                .list_to_vec()
+                .expect("is_list only returns true for convertible lists");
+            let idx = field
+                .parse::<usize>()
+                .map_err(|_| EvalError::TypeMismatch {
+                    expected: "record".to_string(),
+                    actual: format!("{:?}", value),
+                })?;
+            items.get(idx).cloned().ok_or(EvalError::IndexOutOfBounds {
+                index: idx as i64,
+                len: items.len(),
+            })
+        }
+        value => Err(EvalError::TypeMismatch {
+            expected: "record".to_string(),
+            actual: format!("{:?}", value),
+        }),
+    }
+}
+
 async fn wait_for_terminal_process_async(
     process_id: ash_core::ProcessId,
     runtime_ctx: &Context,
@@ -1419,35 +1466,7 @@ fn eval_expr_force_async<'a>(expr: &'a Expr, ctx: &'a Context) -> EvalBoxFuture<
                 .ok_or_else(|| EvalError::UndefinedVariable(name.clone())),
             Expr::FieldAccess { expr, field } => {
                 let value = eval_expr_force_async(expr, ctx).await?;
-                match value {
-                    Value::Record(mut fields) => {
-                        fields
-                            .remove(field)
-                            .ok_or_else(|| EvalError::FieldNotFound {
-                                field: field.clone(),
-                                value: Box::new(Value::Record(fields)),
-                            })
-                    }
-                    value if value.is_list() => {
-                        let items = value
-                            .list_to_vec()
-                            .expect("is_list only returns true for convertible lists");
-                        let idx = field
-                            .parse::<usize>()
-                            .map_err(|_| EvalError::TypeMismatch {
-                                expected: "record".to_string(),
-                                actual: format!("{:?}", value),
-                            })?;
-                        items.get(idx).cloned().ok_or(EvalError::IndexOutOfBounds {
-                            index: idx as i64,
-                            len: items.len(),
-                        })
-                    }
-                    _ => Err(EvalError::TypeMismatch {
-                        expected: "record".to_string(),
-                        actual: format!("{:?}", value),
-                    }),
-                }
+                eval_field_access_value(value, field)
             }
             Expr::IndexAccess { expr, index } => {
                 let collection = eval_expr_force_async(expr, ctx).await?;
@@ -2165,37 +2184,7 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
 
         Expr::FieldAccess { expr, field } => {
             let value = eval_expr(expr, ctx)?;
-            match value {
-                Value::Record(mut fields) => {
-                    let removed = fields.remove(field);
-                    if removed.is_none() {
-                        return Err(EvalError::FieldNotFound {
-                            field: field.clone(),
-                            value: Box::new(Value::Record(fields)),
-                        });
-                    }
-                    Ok(removed.unwrap())
-                }
-                value if value.is_list() => {
-                    let items = value
-                        .list_to_vec()
-                        .expect("is_list only returns true for convertible lists");
-                    let idx = field
-                        .parse::<usize>()
-                        .map_err(|_| EvalError::TypeMismatch {
-                            expected: "record".to_string(),
-                            actual: format!("{:?}", value),
-                        })?;
-                    items.get(idx).cloned().ok_or(EvalError::IndexOutOfBounds {
-                        index: idx as i64,
-                        len: items.len(),
-                    })
-                }
-                _ => Err(EvalError::TypeMismatch {
-                    expected: "record".to_string(),
-                    actual: format!("{:?}", value),
-                }),
-            }
+            eval_field_access_value(value, field)
         }
 
         Expr::IndexAccess { expr, index } => {

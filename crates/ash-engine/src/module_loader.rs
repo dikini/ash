@@ -450,7 +450,19 @@ pub(crate) struct ModuleExports {
 ///
 /// Panics if no workflow definition is found after the check above passes
 /// (should be unreachable).
-pub fn parse_program_with_functions(source: &str) -> Result<ash_parser::surface::Program, String> {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum ProgramEntrySource {
+    UserWorkflow,
+    FunctionMainAdapter,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct ParsedProgram {
+    pub program: ash_parser::surface::Program,
+    pub entry_source: ProgramEntrySource,
+}
+
+pub(crate) fn parse_program_with_functions(source: &str) -> Result<ParsedProgram, String> {
     use ash_parser::input::new_input;
     use ash_parser::parse_module::parse_fn_definition;
     use ash_parser::parse_utils::skip_whitespace_and_comments;
@@ -495,7 +507,7 @@ pub fn parse_program_with_functions(source: &str) -> Result<ash_parser::surface:
         }
     }
 
-    let (workflow, helper_workflows) = if all_workflows.is_empty() {
+    let (workflow, helper_workflows, entry_source) = if all_workflows.is_empty() {
         let main = definitions
             .iter()
             .find_map(|definition| match definition {
@@ -507,33 +519,41 @@ pub fn parse_program_with_functions(source: &str) -> Result<ash_parser::surface:
                 _ => None,
             })
             .ok_or_else(|| "expected a workflow definition or fn main entry".to_string())?;
-        (synthesize_fn_main_entry_workflow(main), Vec::new())
+        (
+            synthesize_fn_main_entry_workflow(main),
+            Vec::new(),
+            ProgramEntrySource::FunctionMainAdapter,
+        )
     } else {
         // The last workflow is the compatibility entry point; preceding ones
         // are helpers.
         let workflow = all_workflows.pop().expect("at least one workflow");
-        (workflow, all_workflows)
+        (workflow, all_workflows, ProgramEntrySource::UserWorkflow)
     };
 
     if !input.input.is_empty() {
         return Err("unexpected trailing input after workflow definition".to_string());
     }
 
-    Ok(ash_parser::surface::Program {
-        definitions,
-        helper_workflows,
-        workflow,
+    Ok(ParsedProgram {
+        program: ash_parser::surface::Program {
+            definitions,
+            helper_workflows,
+            workflow,
+        },
+        entry_source,
     })
 }
 
-fn program_from_module_file(
-    module: ash_parser::surface::ModuleFile,
-) -> Option<ash_parser::surface::Program> {
+fn program_from_module_file(module: ash_parser::surface::ModuleFile) -> Option<ParsedProgram> {
     if let Some(workflow) = module.workflow {
-        return Some(ash_parser::surface::Program {
-            definitions: module.definitions,
-            helper_workflows: Vec::new(),
-            workflow,
+        return Some(ParsedProgram {
+            program: ash_parser::surface::Program {
+                definitions: module.definitions,
+                helper_workflows: Vec::new(),
+                workflow,
+            },
+            entry_source: ProgramEntrySource::UserWorkflow,
         });
     }
 
@@ -549,10 +569,13 @@ fn program_from_module_file(
             _ => None,
         })?;
 
-    Some(ash_parser::surface::Program {
-        workflow: synthesize_fn_main_entry_workflow(main),
-        definitions: module.definitions,
-        helper_workflows: Vec::new(),
+    Some(ParsedProgram {
+        program: ash_parser::surface::Program {
+            workflow: synthesize_fn_main_entry_workflow(main),
+            definitions: module.definitions,
+            helper_workflows: Vec::new(),
+        },
+        entry_source: ProgramEntrySource::FunctionMainAdapter,
     })
 }
 

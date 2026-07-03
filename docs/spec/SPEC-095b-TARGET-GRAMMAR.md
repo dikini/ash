@@ -38,11 +38,14 @@ This grammar replaces the separate `do:Act`, `do:Proc`, `do:Workflow`, `workflow
 `ret`, and legacy workflow-statement syntax with a unified surface. During migration, legacy
 forms remain accepted as compatibility aliases.
 
-**Current implementation note (Phase 185).** Ordinary engine parsing now accepts a target entry
-source with top-level `fn main(...) -> T { ... }` and no `workflow` block. The engine adapts that
+**Current implementation note (Phase 185/186).** Ordinary engine parsing now accepts a target entry
+source with top-level `fn main(...) -> T { ... }` and no `workflow` block, and the CLI dry-run path
+uses the same ordinary file-backed parse/check path for that source shape. The engine adapts that
 entry to its existing runtime carrier internally; the source program remains a function-first module,
 and `workflow` remains compatibility/runtime-profile syntax rather than the target core source path.
 Target `do { ... }` accepts both `return expr` and the documented statement form `return expr;`.
+The runtime also accepts field projection on named constructor payload values for the ordinary
+record/ADT fixture shape accepted by the surface typechecker.
 
 ## 2. Lexical Structure
 

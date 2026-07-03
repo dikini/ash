@@ -74,6 +74,7 @@ Common tags include: `grammar`, `syntax`, `semantics`, `type-system`, `effect-sy
 10. [PLAN-183](../plan/PLAN-183-OPERATION-AUTHORITY-MODEL.md) for operation authority and row-family discharge consistency.
 11. [PLAN-184](../plan/PLAN-184-HANDLER-PROVIDER-SEMANTICS.md) for handler/provider operational semantics and shadowing consistency.
 12. [PLAN-185](../plan/PLAN-185-SURFACE-FUNCTION-LANGUAGE.md) for function-first target entry syntax and workflow compatibility/profile routing.
+13. [PLAN-186](../plan/PLAN-186-SURFACE-FUNCTION-CLI-ENTRY.md) for CLI user-path conformance for function-first entry sources.
 
 ### Change target handler/effect/operation syntax
 

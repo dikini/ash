@@ -186,6 +186,18 @@ fn workflow_warnings_for_def(def: &ash_parser::surface::WorkflowDef) -> Vec<Work
     )]
 }
 
+fn workflow_warnings_for_program(
+    program: &ash_parser::surface::Program,
+    entry_source: module_loader::ProgramEntrySource,
+) -> Vec<WorkflowWarning> {
+    match entry_source {
+        module_loader::ProgramEntrySource::UserWorkflow => {
+            workflow_warnings_for_def(&program.workflow)
+        }
+        module_loader::ProgramEntrySource::FunctionMainAdapter => Vec::new(),
+    }
+}
+
 impl PartialEq for Workflow {
     fn eq(&self, other: &Self) -> bool {
         self.core == other.core && self.id == other.id
@@ -1235,14 +1247,16 @@ impl Engine {
                 skip_whitespace_and_comments(&mut input);
                 if !input.input.is_empty() {
                     // Remaining input — try multi-workflow path instead
-                    let program =
-                        module_loader::parse_program_with_functions(source).map_err(|e| {
+                    let parsed_program = module_loader::parse_program_with_functions(source)
+                        .map_err(|e| {
                             EngineError::Parse(format!(
                                 "trailing input after workflow but multi-workflow parse failed: {e}"
                             ))
                         })?;
+                    let program = parsed_program.program;
 
-                    let warnings = workflow_warnings_for_def(&program.workflow);
+                    let warnings =
+                        workflow_warnings_for_program(&program, parsed_program.entry_source);
                     let id = self.store_surface_workflow_def(program.workflow.clone());
                     let (
                         local_closures,
@@ -1302,10 +1316,11 @@ impl Engine {
             }
             Err(parse_error) => {
                 // Try parsing as a program with function definitions and helper workflows
-                let program = module_loader::parse_program_with_functions(source)
+                let parsed_program = module_loader::parse_program_with_functions(source)
                     .map_err(|_| EngineError::Parse(format!("{parse_error}")))?;
+                let program = parsed_program.program;
 
-                let warnings = workflow_warnings_for_def(&program.workflow);
+                let warnings = workflow_warnings_for_program(&program, parsed_program.entry_source);
                 let id = self.store_surface_workflow_def(program.workflow.clone());
                 let (
                     local_closures,

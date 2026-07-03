@@ -32,6 +32,17 @@ fn headerless_legacy_workflow() -> (tempfile::TempDir, std::path::PathBuf) {
     )
 }
 
+fn function_first_entry() -> (tempfile::TempDir, std::path::PathBuf) {
+    write_legacy_workflow(
+        r"fn main<row>() -> {row} Int {
+    do {
+        return 1;
+    }
+}
+",
+    )
+}
+
 fn assert_legacy_workflow_warning_human_output(stdout: &str) {
     assert!(stdout.contains("Warning:"), "stdout={stdout}");
     assert!(
@@ -152,5 +163,29 @@ fn ash_check_legacy_workflow_warning_is_non_fatal_json_diagnostic() {
     assert!(
         message.contains("first-class Workflow") || message.contains("do:Workflow"),
         "warning should include a rewrite hint toward first-class workflow syntax; json={json}"
+    );
+}
+
+#[test]
+fn ash_check_function_first_entry_does_not_emit_legacy_workflow_warning() {
+    let (_dir, path) = function_first_entry();
+
+    let output = Command::cargo_bin("ash")
+        .expect("ash binary exists")
+        .arg("check")
+        .arg(&path)
+        .output()
+        .expect("run ash check");
+
+    assert!(
+        output.status.success(),
+        "function-first entry should check successfully\nstdout={}\nstderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        !stdout.contains("DeprecatedLegacyWorkflowDeclaration"),
+        "function-first source must not surface synthetic workflow warning; stdout={stdout}"
     );
 }

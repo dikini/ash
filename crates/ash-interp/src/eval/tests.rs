@@ -53,6 +53,22 @@ fn test_eval_field_access() {
 }
 
 #[test]
+fn test_eval_field_access_named_variant_payload() {
+    let ctx = Context::new();
+    let expr = Expr::FieldAccess {
+        expr: Box::new(Expr::Literal(Value::Variant {
+            name: "UserPayload".to_string(),
+            fields: Box::new(vec![
+                ("name".to_string(), Value::String("Ada".to_string())),
+                ("age".to_string(), Value::Int(41)),
+            ]),
+        })),
+        field: "age".to_string(),
+    };
+    assert_eq!(eval_expr(&expr, &ctx).unwrap(), Value::Int(41));
+}
+
+#[test]
 fn test_eval_field_access_not_found() {
     let ctx = Context::new();
     let mut record = HashMap::new();

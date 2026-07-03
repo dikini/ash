@@ -60,8 +60,8 @@ fn fn_main_source_without_workflow_parses_checks_and_preserves_row_metadata() {
     }));
 }
 
-#[test]
-fn fn_main_source_composes_records_adts_match_calls_and_do_without_workflow() {
+#[tokio::test]
+async fn fn_main_source_composes_records_adts_match_calls_and_do_without_workflow() {
     let source = r#"
         type UserPayload = UserPayload { name: String, age: Int };
         type Lookup = Found { age: Int } | Missing;
@@ -95,6 +95,12 @@ fn fn_main_source_composes_records_adts_match_calls_and_do_without_workflow() {
         workflow.core_callable_types.contains_key("score"),
         "helper function should lower as an ordinary Core callable"
     );
+
+    let result = engine()
+        .run(source)
+        .await
+        .expect("rich function-first source should execute");
+    assert_eq!(result, Value::Int(41));
 }
 
 #[test]

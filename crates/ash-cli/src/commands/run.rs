@@ -206,15 +206,19 @@ pub async fn run(args: &RunArgs) -> Result<RunOutcome> {
         // Dry-run mode: parse and check only
         if args.dry_run {
             if is_module_only_source(&source) {
-                println!("Dry run successful");
-                return Ok(RunOutcome::completed());
+                anyhow::bail!("entry file has no fn main or workflow");
             }
 
-            let mut workflow = parse_runnable_workflow(&engine, &source, WorkflowSourceKind::Entry)
-                .map_err(classify_engine_error)?;
-            engine
-                .verify_entry_workflow(&workflow)
-                .map_err(classify_entry_verification_error)?;
+            let mut workflow = if source_kind == WorkflowSourceKind::Ordinary {
+                engine.parse_file(path).map_err(classify_engine_error)?
+            } else {
+                let workflow = parse_runnable_workflow(&engine, &source, WorkflowSourceKind::Entry)
+                    .map_err(classify_engine_error)?;
+                engine
+                    .verify_entry_workflow(&workflow)
+                    .map_err(classify_entry_verification_error)?;
+                workflow
+            };
             engine.check(&mut workflow).map_err(classify_engine_error)?;
 
             println!("Dry run successful");
@@ -1126,6 +1130,13 @@ fn is_module_only_source(source: &str) -> bool {
     }) && !tokens
         .iter()
         .any(|token| matches!(token.kind, TokenKind::Workflow))
+        && !contains_fn_main_entry(&tokens)
+}
+
+fn contains_fn_main_entry(tokens: &[Token]) -> bool {
+    tokens.windows(2).any(|window| {
+        matches!(window[0].kind, TokenKind::Fn) && matches_ident(window.get(1), "main")
+    })
 }
 
 fn should_use_entry_bootstrap(source_kind: WorkflowSourceKind) -> bool {
@@ -1414,6 +1425,168 @@ mod tests {
 
         let result = run(&args).await;
         assert!(result.is_ok(), "Dry run should succeed for valid workflow");
+    }
+
+    #[tokio::test]
+    async fn test_dry_run_valid_fn_main_entry() {
+        use std::io::Write;
+        use tempfile::NamedTempFile;
+
+        let mut temp_file = NamedTempFile::with_suffix(".ash").unwrap();
+        write!(
+            temp_file,
+            r#"
+            fn main() -> Int {{
+                do {{
+                    return 42;
+                }}
+            }}
+            "#
+        )
+        .unwrap();
+        let path = temp_file.path().to_str().unwrap().to_string();
+
+        let args = RunArgs {
+            path,
+            output: None,
+            trace: false,
+            format: RunOutputFormat::Text,
+            dry_run: true,
+            timeout: None,
+            capability_impl: vec![],
+            resource_init: vec![],
+            admission_profile: RunAdmissionProfile::Empty,
+            program_args: vec![],
+        };
+
+        let result = run(&args).await;
+        assert!(
+            result.is_ok(),
+            "dry run should accept function-first entry source: {result:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_dry_run_fn_main_with_module_declaration_is_checked() {
+        use std::io::Write;
+        use tempfile::NamedTempFile;
+
+        let mut temp_file = NamedTempFile::with_suffix(".ash").unwrap();
+        write!(
+            temp_file,
+            r#"
+            policy ReviewPolicy {{ allow => true }}
+
+            fn main() -> Int {{
+                missing_name
+            }}
+            "#
+        )
+        .unwrap();
+        let path = temp_file.path().to_str().unwrap().to_string();
+
+        let args = RunArgs {
+            path,
+            output: None,
+            trace: false,
+            format: RunOutputFormat::Text,
+            dry_run: true,
+            timeout: None,
+            capability_impl: vec![],
+            resource_init: vec![],
+            admission_profile: RunAdmissionProfile::Empty,
+            program_args: vec![],
+        };
+
+        let result = run(&args).await;
+        assert!(
+            result.is_err(),
+            "dry run must typecheck function-first entry sources even when they include module declarations"
+        );
+        let err_msg = result.unwrap_err().to_string();
+        assert!(
+            err_msg.contains("missing_name") || err_msg.contains("Unbound variable"),
+            "dry run should report the fn main type error, got: {err_msg}"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_dry_run_module_without_entry_is_rejected() {
+        use std::io::Write;
+        use tempfile::NamedTempFile;
+
+        let mut temp_file = NamedTempFile::with_suffix(".ash").unwrap();
+        write!(
+            temp_file,
+            r#"
+            policy ReviewPolicy {{ allow => true }}
+            "#
+        )
+        .unwrap();
+        let path = temp_file.path().to_str().unwrap().to_string();
+
+        let args = RunArgs {
+            path,
+            output: None,
+            trace: false,
+            format: RunOutputFormat::Text,
+            dry_run: true,
+            timeout: None,
+            capability_impl: vec![],
+            resource_init: vec![],
+            admission_profile: RunAdmissionProfile::Empty,
+            program_args: vec![],
+        };
+
+        let result = run(&args).await;
+        assert!(
+            result.is_err(),
+            "dry run should require a runnable entry, not accept declaration-only modules"
+        );
+        let err_msg = result.unwrap_err().to_string();
+        assert!(
+            err_msg.contains("fn main") || err_msg.contains("workflow"),
+            "dry run should report the missing entry shape, got: {err_msg}"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_run_valid_fn_main_entry() {
+        use std::io::Write;
+        use tempfile::NamedTempFile;
+
+        let mut temp_file = NamedTempFile::with_suffix(".ash").unwrap();
+        write!(
+            temp_file,
+            r#"
+            fn main() -> Int {{
+                do {{
+                    return 42;
+                }}
+            }}
+            "#
+        )
+        .unwrap();
+        let path = temp_file.path().to_str().unwrap().to_string();
+
+        let args = RunArgs {
+            path,
+            output: None,
+            trace: false,
+            format: RunOutputFormat::Text,
+            dry_run: false,
+            timeout: None,
+            capability_impl: vec![],
+            resource_init: vec![],
+            admission_profile: RunAdmissionProfile::Empty,
+            program_args: vec![],
+        };
+
+        let result = run(&args).await;
+        assert!(
+            result.is_ok(),
+            "run should execute function-first entry source: {result:?}"
+        );
     }
 
     #[tokio::test]

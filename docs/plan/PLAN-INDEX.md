@@ -161,6 +161,7 @@ Update this section as tasks complete:
 | [183](PLAN-183-OPERATION-AUTHORITY-MODEL.md) | 8 | 8 | ✅ Complete; operation and authority model |
 | [184](PLAN-184-HANDLER-PROVIDER-SEMANTICS.md) | 8 | 8 | ✅ Complete; handler/provider semantics |
 | [185](PLAN-185-SURFACE-FUNCTION-LANGUAGE.md) | 7 | 7 | ✅ Complete; surface function language entry slice |
+| [186](PLAN-186-SURFACE-FUNCTION-CLI-ENTRY.md) | 7 | 7 | ✅ Complete; CLI surface function entry conformance |
 
 ---
 
@@ -1060,3 +1061,22 @@ Makes target Ash pleasant as a surface language by using ordinary `fn` declarati
 || [TASK-1867](tasks/TASK-1867-surface-function-spec-reconciliation.md) | Reconcile target specs and indexes | Complete |
 || [TASK-1868](tasks/TASK-1868-surface-function-closeout.md) | Close out Phase 185 | Complete |
 || [TASK-1869](tasks/TASK-1869-surface-function-do-return-and-execution.md) | Accept semicolon `do` return and execute `fn main` sources | Complete |
+
+## Phase 186: Surface Function CLI Entry
+
+|**Status:** ✅ Complete (7/7 tasks complete)
+|**Plan:** [PLAN-186: Surface Function CLI Entry](PLAN-186-SURFACE-FUNCTION-CLI-ENTRY.md)
+|**Depends on:** Phase 185 Surface Function Language.
+|**Specs/notes:** `SPEC-095b`, `SPEC-098c`, `SPEC-099b`, `SPEC-100`, and `PLAN-185`.
+
+Extends the function-first target entry path to the command-line user surface: `ash run --dry-run` and normal `ash run` should accept ordinary `fn main` sources without requiring a `workflow` block, while legacy workflow entry handling remains compatibility/runtime-profile routing. Function-first runtime execution also accepts named constructor payload field projection for ordinary ADT/record-shaped source fixtures.
+
+|| Task | Description | Status |
+||------|-------------|--------|
+|| [TASK-1870](tasks/TASK-1870-surface-function-cli-plan-packet.md) | Create the Phase 186 plan packet | Complete |
+|| [TASK-1871](tasks/TASK-1871-cli-entry-boundary-audit.md) | Audit CLI run/check entry boundaries | Complete |
+|| [TASK-1872](tasks/TASK-1872-run-dry-run-fn-main-entry.md) | Make `ash run --dry-run` accept function-first entry sources | Complete |
+|| [TASK-1873](tasks/TASK-1873-cli-entry-spec-reconciliation.md) | Reconcile CLI entry specs and indexes | Complete |
+|| [TASK-1874](tasks/TASK-1874-surface-function-cli-closeout.md) | Close out Phase 186 | Complete |
+|| [TASK-1875](tasks/TASK-1875-synthetic-entry-warning-cleanup.md) | Suppress legacy workflow warnings for synthetic `fn main` adapters | Complete |
+|| [TASK-1876](tasks/TASK-1876-surface-constructor-field-execution.md) | Execute function-first sources with named constructor field projection | Complete |

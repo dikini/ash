@@ -91,8 +91,11 @@ ordinary direct-style Core sequencing. Phase 183 classifies the corresponding ad
 discharge families without changing lowering: operation rows require existing operation authority,
 while resource, role, policy, evidence, and failure rows remain distinct requirements. Phase 185
 accepts `fn main`-only entry sources by synthesizing an internal runtime adapter that calls the
-ordinary `main` function; callable metadata and body lowering still flow through the same function
-path, so this does not add a second Core semantic path.
+ordinary `main` function, and Phase 186 routes CLI dry-run for ordinary files through that same
+file-backed parse/check path; callable metadata and body lowering still flow through the same
+function path, so this does not add a second Core semantic path. Phase 186 also aligned runtime
+field projection for named constructor payload values with the surface/Core fixture accepted by this
+path.
 
 `where row` items lower as follows:
 

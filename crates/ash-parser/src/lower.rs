@@ -2171,6 +2171,26 @@ fn lower_ambient_do_block(
                     },
                 };
             }
+            DoStmt::Expr {
+                value,
+                span: stmt_span,
+            } => {
+                result = CoreExpr::Let {
+                    pattern: ash_core::Pattern::Variable {
+                        name: "_".to_string(),
+                        span: ash_core::Span {
+                            start: stmt_span.start,
+                            end: stmt_span.end,
+                        },
+                    },
+                    expr: Box::new(lower_expr(value)?),
+                    body: Box::new(result),
+                    span: ash_core::Span {
+                        start: stmt_span.start,
+                        end: stmt_span.end,
+                    },
+                };
+            }
             DoStmt::WorkflowRequires { .. } | DoStmt::WorkflowEnsures { .. } => {
                 return Err(LoweringError::UnsupportedFeature(
                     "workflow contract statement requires explicit workflow/profile elaboration"

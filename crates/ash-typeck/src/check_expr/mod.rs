@@ -1067,6 +1067,13 @@ fn build_tcir_statements(
                             .collect(),
                     },
                 },
+                DoStmt::Expr { value, .. } => TcirStatementKind::Let {
+                    binder: TcirBinder {
+                        name: "_".to_string(),
+                        source_anchor: Some(source_anchor.clone()),
+                    },
+                    value: Box::new(elaborate_workflow_call_expr(value)?),
+                },
                 DoStmt::Return { value, .. } => TcirStatementKind::Return {
                     value: Box::new(elaborate_workflow_call_expr(value)?),
                     return_op: Box::new(return_op.clone()),
@@ -1175,6 +1182,7 @@ fn collect_tcir_explicit_lifts(stmts: &[DoStmt]) -> Vec<TcirExplicitLiftProvenan
         match stmt {
             DoStmt::Let { value, .. }
             | DoStmt::Bind { value, .. }
+            | DoStmt::Expr { value, .. }
             | DoStmt::Return { value, .. } => {
                 collect_tcir_lifts_from_expr(value, &mut lifts);
             }
@@ -1221,6 +1229,7 @@ fn collect_tcir_lifts_from_expr(expr: &Expr, lifts: &mut Vec<TcirExplicitLiftPro
                 match stmt {
                     DoStmt::Let { value, .. }
                     | DoStmt::Bind { value, .. }
+                    | DoStmt::Expr { value, .. }
                     | DoStmt::Return { value, .. } => collect_tcir_lifts_from_expr(value, lifts),
                     DoStmt::WorkflowRequires { .. } | DoStmt::WorkflowEnsures { .. } => {}
                 }
@@ -1735,6 +1744,15 @@ fn elaborate_do_stmts(
             body: Box::new(elaborate_do_stmts(rest, dictionary)?),
             span: ash_core::Span::default(),
         }),
+        [DoStmt::Expr { value, .. }, rest @ ..] => Ok(CoreExpr::Let {
+            pattern: CorePattern::Variable {
+                name: "_".to_string(),
+                span: ash_core::Span::default(),
+            },
+            expr: Box::new(elaborate_workflow_call_expr(value)?),
+            body: Box::new(elaborate_do_stmts(rest, dictionary)?),
+            span: ash_core::Span::default(),
+        }),
         [DoStmt::Bind { name, value, .. }, rest @ ..] => {
             let continuation = CoreExpr::FnDef {
                 params: vec![(name.to_string(), None)],
@@ -1887,6 +1905,20 @@ impl WorkflowArtifactBuilder {
                     self.local_artifacts.remove(name.as_ref());
                 }
                 self.form_from_stmts(rest)
+            }
+            [DoStmt::Expr { value, .. }, rest @ ..] => {
+                if self.try_workflow_source_form(value)?.is_some() {
+                    let source = self.workflow_source_form(value)?;
+                    let next = self.form_from_stmts(rest)?;
+                    Ok(WorkflowForm::Bind {
+                        node: self.node(),
+                        source: Box::new(source),
+                        binder: WorkflowBinder::Ignored,
+                        next: Box::new(next),
+                    })
+                } else {
+                    self.form_from_stmts(rest)
+                }
             }
             [
                 DoStmt::Bind {
@@ -2509,6 +2541,13 @@ fn check_do_block(
                     )),
                 }
             }
+            DoStmt::Expr { value, .. } => {
+                let value_result = check_expr(&block_env, value);
+                substitution = substitution.compose(&value_result.substitution);
+                if !value_result.is_ok() {
+                    errors.extend(value_result.errors);
+                }
+            }
             DoStmt::Return { value, .. } => {
                 let value_result = check_expr(&block_env, value);
                 substitution = substitution.compose(&value_result.substitution);
@@ -2607,6 +2646,14 @@ fn check_ambient_do_block(env: &TypeEnv, stmts: &[DoStmt], span: Span) -> CheckR
                 let value_ty = substitution.apply(&value_result.ty);
                 block_env.bind_variable(name.as_ref(), value_ty);
             }
+            DoStmt::Expr { value, .. } => {
+                let value_result = check_expr(&block_env, value);
+                substitution = substitution.compose(&value_result.substitution);
+                if !value_result.is_ok() {
+                    errors.extend(value_result.errors);
+                    continue;
+                }
+            }
             DoStmt::Return { value, .. } => {
                 let value_result = check_expr(&block_env, value);
                 substitution = substitution.compose(&value_result.substitution);
@@ -2646,6 +2693,7 @@ fn do_stmt_span(stmt: &DoStmt) -> Span {
     match stmt {
         DoStmt::Let { span, .. }
         | DoStmt::Bind { span, .. }
+        | DoStmt::Expr { span, .. }
         | DoStmt::Return { span, .. }
         | DoStmt::WorkflowRequires { span, .. }
         | DoStmt::WorkflowEnsures { span, .. } => *span,
@@ -2755,6 +2803,7 @@ fn expr_mentions_variable(expr: &Expr, target: &str) -> bool {
         Expr::DoBlock { stmts, .. } => stmts.iter().any(|stmt| match stmt {
             DoStmt::Let { value, .. }
             | DoStmt::Bind { value, .. }
+            | DoStmt::Expr { value, .. }
             | DoStmt::Return { value, .. } => expr_mentions_variable(value, target),
             DoStmt::WorkflowRequires { expr, .. } | DoStmt::WorkflowEnsures { expr, .. } => {
                 expr_mentions_variable(expr, target)

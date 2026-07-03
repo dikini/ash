@@ -835,6 +835,7 @@ impl CapabilityChecker {
                     match stmt {
                         DoStmt::Let { value, .. }
                         | DoStmt::Bind { value, .. }
+                        | DoStmt::Expr { value, .. }
                         | DoStmt::Return { value, .. } => self.verify_expr(value)?,
                         DoStmt::WorkflowRequires { .. } | DoStmt::WorkflowEnsures { .. } => {
                             // Contract statements are classified by workflow elaboration; do not

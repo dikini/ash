@@ -474,34 +474,112 @@ fn parse_fn_if_expr(input: &mut ParseInput) -> ModalResult<Expr> {
 /// as a record constructor, which would conflict with the match body delimiter.
 fn parse_fn_scrutinee(input: &mut ParseInput) -> ModalResult<Expr> {
     skip_whitespace_and_comments(input);
+    let start_pos = input.state.pos;
 
     // Parenthesized expression
-    if input.input.starts_with("(") {
+    let mut result = if input.input.starts_with("(") {
         let _ = literal_str("(").parse_next(input)?;
         let inner = parse_fn_scrutinee(input)?;
         skip_whitespace_and_comments(input);
         let _ = literal_str(")").parse_next(input)?;
-        return Ok(inner);
-    }
+        inner
+    } else if let Ok(lit) = crate::parse_expr::literal(input) {
+        Expr::Literal(lit)
+    } else {
+        // Variable / identifier (may have postfixes or binary ops after)
+        let (name, name_span) = crate::parse_expr::identifier_with_span(input)?;
+        let name_is_uppercase = name.chars().next().is_some_and(|c| c.is_ascii_uppercase());
+        let name_value: Name = name.into();
 
-    // Literal
-    if let Ok(lit) = crate::parse_expr::literal(input) {
-        return Ok(Expr::Literal(lit));
-    }
+        if name_is_uppercase {
+            let constructor_checkpoint = input.clone();
+            skip_whitespace_and_comments(input);
+            if input.input.starts_with('{') {
+                let _ = literal_str("{").parse_next(input)?;
+                skip_whitespace_and_comments(input);
+                let fields = if literal_str("}").parse_next(input).is_ok() {
+                    Vec::new()
+                } else {
+                    match crate::parse_expr::parse_constructor_fields(input) {
+                        Ok(fields) => fields,
+                        Err(err) => {
+                            *input = constructor_checkpoint;
+                            return Err(err);
+                        }
+                    }
+                };
+                let span = Span {
+                    start: name_span.start,
+                    end: input.state.pos.offset,
+                    line: name_span.line,
+                    column: name_span.column,
+                };
+                return Ok(Expr::Constructor {
+                    name: name_value,
+                    payload: ConstructorPayload::Record(fields.clone()),
+                    fields,
+                    span,
+                });
+            }
+            *input = constructor_checkpoint;
+        }
 
-    // Variable / identifier (may have binary ops after)
-    let (name, name_span) = crate::parse_expr::identifier_with_span(input)?;
-    let mut result = Expr::Variable {
-        name: name.into(),
-        span: name_span,
+        Expr::Variable {
+            name: name_value,
+            span: name_span,
+        }
     };
 
-    // Handle binary operators (but NOT { which would be a constructor)
+    loop {
+        skip_whitespace_and_comments(input);
+        if input.input.starts_with('.') {
+            let _ = literal_str(".").parse_next(input)?;
+            let field = crate::parse_expr::parse_field_name(input)?;
+            let span = crate::input::span_from(&start_pos, &input.state.pos);
+            result = Expr::FieldAccess {
+                base: Box::new(result),
+                field: field.into(),
+                span,
+            };
+            continue;
+        }
+
+        if input.input.starts_with('(') {
+            let _ = literal_str("(").parse_next(input)?;
+            let args = if literal_str(")").parse_next(input).is_ok() {
+                Vec::new()
+            } else {
+                let args = crate::parse_expr::parse_args(input)?;
+                let _ = literal_str(")").parse_next(input)?;
+                args
+            };
+            let span = crate::input::span_from(&start_pos, &input.state.pos);
+            result = match result {
+                Expr::Variable { name, .. } => Expr::Call {
+                    func: name,
+                    module: None,
+                    args,
+                    span,
+                },
+                other => Expr::FnApply {
+                    func: Box::new(other),
+                    args,
+                    span,
+                },
+            };
+            continue;
+        }
+
+        break;
+    }
+
+    // Handle binary operators (but NOT `{`, which is the match body delimiter
+    // unless an uppercase constructor payload already consumed it above).
     skip_whitespace_and_comments(input);
     while let Some(op) = try_parse_bin_op(input) {
         skip_whitespace_and_comments(input);
         let right = parse_fn_scrutinee(input)?;
-        let span = crate::token::Span::default();
+        let span = crate::input::span_from(&start_pos, &input.state.pos);
         result = Expr::Binary {
             op,
             raw_operator: None,

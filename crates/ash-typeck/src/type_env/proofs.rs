@@ -267,6 +267,7 @@ impl<'a> ProofCallCollector<'a> {
             match stmt {
                 DoStmt::Let { value, .. }
                 | DoStmt::Bind { value, .. }
+                | DoStmt::Expr { value, .. }
                 | DoStmt::Return { value, .. } => self.visit_expr(value),
                 DoStmt::WorkflowRequires { expr, .. } | DoStmt::WorkflowEnsures { expr, .. } => {
                     self.visit_expr(expr);
@@ -678,6 +679,7 @@ impl ProofFuelChecker {
             match stmt {
                 DoStmt::Let { value, .. }
                 | DoStmt::Bind { value, .. }
+                | DoStmt::Expr { value, .. }
                 | DoStmt::Return { value, .. } => self.visit_expr(value),
                 DoStmt::WorkflowRequires { expr, .. } | DoStmt::WorkflowEnsures { expr, .. } => {
                     self.visit_expr(expr);

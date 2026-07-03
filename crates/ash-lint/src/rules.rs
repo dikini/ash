@@ -319,6 +319,7 @@ fn contains_policy(expr: &Expr) -> bool {
         Expr::DoBlock { stmts, .. } => stmts.iter().any(|stmt| match stmt {
             ash_parser::surface::DoStmt::Let { value, .. }
             | ash_parser::surface::DoStmt::Bind { value, .. }
+            | ash_parser::surface::DoStmt::Expr { value, .. }
             | ash_parser::surface::DoStmt::Return { value, .. } => contains_policy(value),
             ash_parser::surface::DoStmt::WorkflowRequires { .. }
             | ash_parser::surface::DoStmt::WorkflowEnsures { .. } => false,

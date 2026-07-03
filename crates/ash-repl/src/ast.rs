@@ -327,6 +327,9 @@ fn render_expr(expr: &Expr) -> String {
                     ash_parser::surface::DoStmt::Bind { name, value, .. } => {
                         format!("Bind({name:?}, {})", render_expr(value))
                     }
+                    ash_parser::surface::DoStmt::Expr { value, .. } => {
+                        format!("Expr({})", render_expr(value))
+                    }
                     ash_parser::surface::DoStmt::Return { value, .. } => {
                         format!("Return({})", render_expr(value))
                     }

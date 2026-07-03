@@ -79,7 +79,7 @@ Inline row syntax and `where row` syntax are mutually exclusive at the surface g
 normalize to the same callable row summary. If both are absent, lowering asks surface type inference
 for an inferred row; exported/public callables must receive an explicit or summarized public row.
 
-**Current implementation note (Phase 178 / Phase 182 / Phase 183 / Phase 185).** The current bridge preserves explicit inline callable
+**Current implementation note (Phase 178 / Phase 182 / Phase 183 / Phase 185 / Phase 188 / Phase 189 / Phase 190).** The current bridge preserves explicit inline callable
 rows and expanded `where row` rows from parser carriers through engine/typecheck-facing callable
 summaries into `CoreType::Function { row, .. }` metadata for local and imported/exported callables.
 Rowless callables continue to lower with the default empty Core row. Open row tails are preserved as
@@ -97,6 +97,12 @@ function path, so this does not add a second Core semantic path. Phase 186 also 
 field projection for named constructor payload values with the surface/Core fixture accepted by this
 path. Phase 187 adds structural record expressions to the same path: record fields lower as ordinary
 field expressions and evaluate to `Value::Record` without using nominal constructor identities.
+Phase 188 keeps ADT constructor-expression match scrutinees on the same ordinary expression path:
+the constructor lowers as a normal value expression and the `match` lowers to the existing Core
+match representation. Phase 189 extends function-body match scrutinees to ordinary call,
+field-projection, and binary expressions without changing the Core match shape. Phase 190 lowers
+target `do` expression statements as direct-style sequencing that evaluates the expression and
+discards the result before continuing.
 
 `where row` items lower as follows:
 

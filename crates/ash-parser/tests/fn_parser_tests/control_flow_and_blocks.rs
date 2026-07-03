@@ -68,6 +68,69 @@ fn parse_fn_match_expr() {
     }
 }
 
+#[test]
+fn parse_fn_match_constructor_expression_scrutinee() {
+    let def = parse_fn(
+        r#"fn describe() -> Int { match Some { value: 41 } { Some { value: value } => value, None => 0 } }"#,
+    );
+    let Definition::Function(f) = def else {
+        panic!("expected Function definition");
+    };
+    match &f.body {
+        Expr::Block { tail_expr, .. } => {
+            let tail = tail_expr.as_ref().expect("should have tail expr");
+            match tail.as_ref() {
+                Expr::Match {
+                    scrutinee, arms, ..
+                } => {
+                    assert!(
+                        matches!(scrutinee.as_ref(), Expr::Constructor { .. }),
+                        "expected constructor scrutinee, got: {scrutinee:?}"
+                    );
+                    assert_eq!(arms.len(), 2, "expected two match arms");
+                }
+                other => panic!("expected Match, got: {:?}", other),
+            }
+        }
+        other => panic!("expected Block, got: {:?}", other),
+    }
+}
+
+#[test]
+fn parse_fn_match_call_field_and_binary_scrutinees() {
+    let cases = [
+        (
+            r#"fn describe() -> Int { match make() { Some { value: value } => value, None => 0 } }"#,
+            "call",
+        ),
+        (
+            r#"fn describe() -> Int { match holder.inner { Box { item: item } => item } }"#,
+            "field projection",
+        ),
+        (
+            r#"fn describe() -> Int { match 40 + 1 { 41 => 1, _ => 0 } }"#,
+            "binary",
+        ),
+    ];
+
+    for (source, label) in cases {
+        let def = parse_fn(source);
+        let Definition::Function(f) = def else {
+            panic!("expected Function definition for {label}");
+        };
+        match &f.body {
+            Expr::Block { tail_expr, .. } => {
+                let tail = tail_expr.as_ref().expect("should have tail expr");
+                assert!(
+                    matches!(tail.as_ref(), Expr::Match { .. }),
+                    "expected Match for {label}, got: {tail:?}"
+                );
+            }
+            other => panic!("expected Block for {label}, got: {:?}", other),
+        }
+    }
+}
+
 // ---------------------------------------------------------------------------
 // 7. panic expression
 // ---------------------------------------------------------------------------

@@ -65,7 +65,9 @@ pub(super) fn collect_do_notation_diagnostics(
                             }
                             collect_do_notation_diagnostics(&block_env, value, diagnostics);
                         }
-                        DoStmt::Bind { value, .. } | DoStmt::Return { value, .. } => {
+                        DoStmt::Bind { value, .. }
+                        | DoStmt::Expr { value, .. }
+                        | DoStmt::Return { value, .. } => {
                             collect_do_notation_diagnostics(&block_env, value, diagnostics);
                         }
                         DoStmt::WorkflowRequires { .. } | DoStmt::WorkflowEnsures { .. } => {

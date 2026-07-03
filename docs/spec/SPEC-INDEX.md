@@ -84,6 +84,9 @@ Common tags include: `grammar`, `syntax`, `semantics`, `type-system`, `effect-sy
 15. [PLAN-185](../plan/PLAN-185-SURFACE-FUNCTION-LANGUAGE.md) for target `fn main` entry syntax, function-first surface fixtures, and workflow-as-compatibility routing.
 16. [PLAN-186](../plan/PLAN-186-SURFACE-FUNCTION-CLI-ENTRY.md) for CLI user-path conformance for function-first entry sources.
 17. [PLAN-187](../plan/PLAN-187-SURFACE-RECORD-EXPRESSIONS.md) for structural record expressions in function-first Ash.
+18. [PLAN-188](../plan/PLAN-188-SURFACE-MATCH-CONSTRUCTOR-SCRUTINEES.md) for ADT constructor expressions as ordinary match scrutinees in function-first Ash.
+19. [PLAN-189](../plan/PLAN-189-SURFACE-MATCH-ORDINARY-SCRUTINEES.md) for call, field, and binary expressions as ordinary match scrutinees in function-first Ash.
+20. [PLAN-190](../plan/PLAN-190-SURFACE-DO-EXPRESSION-STATEMENTS.md) for expression statements in unified direct-style `do`.
 
 ### Legacy authority vocabulary audit
 

@@ -38,7 +38,7 @@ This grammar replaces the separate `do:Act`, `do:Proc`, `do:Workflow`, `workflow
 `ret`, and legacy workflow-statement syntax with a unified surface. During migration, legacy
 forms remain accepted as compatibility aliases.
 
-**Current implementation note (Phase 185/186/187).** Ordinary engine parsing now accepts a target entry
+**Current implementation note (Phase 185/186/187/188/189/190).** Ordinary engine parsing now accepts a target entry
 source with top-level `fn main(...) -> T { ... }` and no `workflow` block, and the CLI dry-run path
 uses the same ordinary file-backed parse/check path for that source shape. The engine adapts that
 entry to its existing runtime carrier internally; the source program remains a function-first module,
@@ -47,7 +47,11 @@ Target `do { ... }` accepts both `return expr` and the documented statement form
 The runtime also accepts field projection on named constructor payload values for the ordinary
 record/ADT fixture shape accepted by the surface typechecker. Phase 187 adds bare structural record
 expressions such as `{ name: "Ada", age: 41 }` in ordinary expression position, including `do` binding
-and field projection.
+and field projection. Phase 188 closes the next pattern-matching expression gap by allowing ADT
+record-constructor expressions such as `Some { value: 41 }` directly as `match` scrutinees in
+function bodies. Phase 189 extends that same match-scrutinee path to ordinary call, field-projection,
+and binary expressions. Phase 190 adds the target `do` expression-statement form `expr;` to the
+same direct-style sequencing path.
 
 ## 2. Lexical Structure
 

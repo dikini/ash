@@ -163,6 +163,9 @@ Update this section as tasks complete:
 | [185](PLAN-185-SURFACE-FUNCTION-LANGUAGE.md) | 7 | 7 | ✅ Complete; surface function language entry slice |
 | [186](PLAN-186-SURFACE-FUNCTION-CLI-ENTRY.md) | 7 | 7 | ✅ Complete; CLI surface function entry conformance |
 | [187](PLAN-187-SURFACE-RECORD-EXPRESSIONS.md) | 2 | 2 | ✅ Complete; structural record expressions for function-first Ash |
+| [188](PLAN-188-SURFACE-MATCH-CONSTRUCTOR-SCRUTINEES.md) | 2 | 2 | ✅ Complete; ADT constructor expressions as match scrutinees |
+| [189](PLAN-189-SURFACE-MATCH-ORDINARY-SCRUTINEES.md) | 2 | 2 | ✅ Complete; call, field, and binary expressions as match scrutinees |
+| [190](PLAN-190-SURFACE-DO-EXPRESSION-STATEMENTS.md) | 2 | 2 | ✅ Complete; expression statements in unified do |
 
 ---
 

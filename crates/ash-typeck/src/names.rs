@@ -759,6 +759,9 @@ impl NameResolver {
                         ash_parser::surface::DoStmt::Return { value, .. } => {
                             self.resolve_expr(value);
                         }
+                        ash_parser::surface::DoStmt::Expr { value, .. } => {
+                            self.resolve_expr(value);
+                        }
                         ash_parser::surface::DoStmt::WorkflowRequires { .. }
                         | ash_parser::surface::DoStmt::WorkflowEnsures { .. } => {
                             // Contract statements are raw workflow-contract syntax until the

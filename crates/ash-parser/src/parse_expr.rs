@@ -220,17 +220,31 @@ fn parse_do_stmt(input: &mut ParseInput) -> ModalResult<DoStmt> {
         });
     }
 
-    let name: Name = identifier(input)?.into();
-    skip_whitespace_and_comments(input);
-    let _ = literal_str("<-").parse_next(input)?;
-    skip_whitespace_and_comments(input);
+    let bind_checkpoint = input.clone();
+    if let Ok(name) = identifier(input) {
+        skip_whitespace_and_comments(input);
+        if literal_str("<-").parse_next(input).is_ok() {
+            skip_whitespace_and_comments(input);
+            let value = expr(input)?;
+            skip_whitespace_and_comments(input);
+            let _ = literal_str(";").parse_next(input)?;
+            let span = span_from(&stmt_start, &input.state.pos);
+            skip_whitespace_and_comments(input);
+            return Ok(DoStmt::Bind {
+                name: Name::from(name),
+                value: Box::new(value),
+                span,
+            });
+        }
+    }
+    *input = bind_checkpoint;
+
     let value = expr(input)?;
     skip_whitespace_and_comments(input);
     let _ = literal_str(";").parse_next(input)?;
     let span = span_from(&stmt_start, &input.state.pos);
     skip_whitespace_and_comments(input);
-    Ok(DoStmt::Bind {
-        name,
+    Ok(DoStmt::Expr {
         value: Box::new(value),
         span,
     })
@@ -1916,7 +1930,7 @@ fn parse_comprehension_qualifier(input: &mut ParseInput) -> ModalResult<Comprehe
     })
 }
 
-fn parse_constructor_fields(input: &mut ParseInput) -> ModalResult<Vec<(Name, Expr)>> {
+pub(crate) fn parse_constructor_fields(input: &mut ParseInput) -> ModalResult<Vec<(Name, Expr)>> {
     let mut fields = vec![parse_constructor_field(input)?];
 
     loop {
@@ -1953,7 +1967,7 @@ fn parse_record_expr(input: &mut ParseInput) -> ModalResult<Expr> {
 
 /// Parse a field name in a constructor expression.
 /// Unlike `identifier`, this allows keywords as field names (e.g. `role: User`).
-fn parse_field_name<'a>(input: &mut ParseInput<'a>) -> ModalResult<&'a str> {
+pub(crate) fn parse_field_name<'a>(input: &mut ParseInput<'a>) -> ModalResult<&'a str> {
     take_while(1.., |c: char| c.is_ascii_alphanumeric() || c == '_').parse_next(input)
 }
 

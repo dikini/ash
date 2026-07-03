@@ -64,6 +64,35 @@ fn target_ambient_do_block_parses_without_tower_target() {
 }
 
 #[test]
+fn target_ambient_do_block_parses_expression_statements() {
+    let mut input = test_input("do { touch(); 1 + 1; return 41 }");
+    let result = expr(&mut input).unwrap();
+
+    match result {
+        Expr::DoBlock { target, stmts, .. } => {
+            assert_eq!(target.name.as_ref(), "__ambient");
+            assert_eq!(stmts.len(), 3);
+            assert!(matches!(
+                &stmts[0],
+                crate::surface::DoStmt::Expr { value, .. }
+                    if matches!(value.as_ref(), Expr::Call { func, args, .. } if func.as_ref() == "touch" && args.is_empty())
+            ));
+            assert!(matches!(
+                &stmts[1],
+                crate::surface::DoStmt::Expr { value, .. }
+                    if matches!(value.as_ref(), Expr::Binary { .. })
+            ));
+            assert!(matches!(
+                &stmts[2],
+                crate::surface::DoStmt::Return { value, .. }
+                    if matches!(value.as_ref(), Expr::Literal(Literal::Int(41)))
+            ));
+        }
+        other => panic!("expected ambient DoBlock, got {other:?}"),
+    }
+}
+
+#[test]
 fn test_do_block_parses_proc_bind_then_return() {
     let mut input = test_input("do:Proc { x <- proc::unit(1); return x }");
     let result = expr(&mut input).unwrap();

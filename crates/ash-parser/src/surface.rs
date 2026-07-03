@@ -1956,6 +1956,13 @@ pub enum DoStmt {
         /// Source span covering the whole statement.
         span: Span,
     },
+    /// Sequenced expression statement: `expr;`.
+    Expr {
+        /// Expression evaluated for sequencing; its value is discarded.
+        value: Box<Expr>,
+        /// Source span covering the whole statement.
+        span: Span,
+    },
     /// Workflow contract precondition statement: `requires: expr;`.
     WorkflowRequires {
         /// Raw contract expression, classified later.
@@ -3345,6 +3352,7 @@ fn expand_macros_in_expr_with_parent(
                 match stmt {
                     DoStmt::Let { value, .. }
                     | DoStmt::Bind { value, .. }
+                    | DoStmt::Expr { value, .. }
                     | DoStmt::WorkflowRequires { expr: value, .. }
                     | DoStmt::WorkflowEnsures { expr: value, .. }
                     | DoStmt::Return { value, .. } => {
@@ -4803,6 +4811,7 @@ fn elaborate_operator_sections_in_expr_with_parent(
                 match stmt {
                     DoStmt::Let { value, .. }
                     | DoStmt::Bind { value, .. }
+                    | DoStmt::Expr { value, .. }
                     | DoStmt::WorkflowRequires { expr: value, .. }
                     | DoStmt::WorkflowEnsures { expr: value, .. }
                     | DoStmt::Return { value, .. } => {
@@ -5722,6 +5731,7 @@ where
                 match stmt {
                     DoStmt::Let { value, .. }
                     | DoStmt::Bind { value, .. }
+                    | DoStmt::Expr { value, .. }
                     | DoStmt::WorkflowRequires { expr: value, .. }
                     | DoStmt::WorkflowEnsures { expr: value, .. }
                     | DoStmt::Return { value, .. } => visit_expr(value, visitor),

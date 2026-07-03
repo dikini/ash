@@ -1,6 +1,14 @@
 # SPEC-004: Operational Semantics
 
-## Status: Draft
+## Status: Historical/current-state Core semantics draft; target operational semantics superseded by SPEC-099b
+
+> **Target reconciliation.** This spec records an older Core operational
+> semantics draft and remains useful for historical/current-state lookup and
+> failure conventions. Target-Ash operational semantics work should start from
+> [SPEC-099b](SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md), [SPEC-098b](SPEC-098b-TARGET-IR.md),
+> and [SPEC-100](SPEC-100-CORE-TYPE-CHECKING.md). Legacy `capability` lookup
+> language below should be translated to provider/handler admission of
+> interface/impl-qualified operation identities when used for target planning.
 
 ## 1. Overview
 

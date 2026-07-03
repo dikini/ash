@@ -252,8 +252,8 @@ D |- Row discharged => DischargeRecords, ResidualRow
 
 Each item kind has a separate rule:
 
-- capabilities discharge through admitted capability bindings, provider frames, or admitted
-  role entailment;
+- operation requirements discharge through admitted provider/handler frames, with legacy
+  admitted capability bindings treated as current-state compatibility evidence;
 - roles discharge through role admission at the execution boundary;
 - policies discharge through compatible named policy handlers/evaluators;
 - contracts discharge through static proof, evidence, or dynamic contract strategy;

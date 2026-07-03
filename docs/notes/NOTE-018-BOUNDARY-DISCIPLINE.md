@@ -204,7 +204,7 @@ trusted handlers, or providers.
 
 **Options:**
 
-1. Put canonical extern hooks in effect declarations.
+1. Put any future canonical extern hooks in trusted handler/provider declarations.
 2. Put backend-specific extern hooks inside trusted provider/handler implementations.
 3. Allow both placements under one invariant: ordinary Ash code calls typed operations, not
    raw externs.
@@ -525,7 +525,7 @@ boundary report        -- workflow/app/runtime classification of lower causes
 | `with_error` | handler/library surface over recoverable failure effects |
 | `panic` | trap/debug abort, not domain failure |
 | failed `requires`/`ensures` | contract violation; trap by default unless explicitly recoverable |
-| missing capability/provider binding | authority/admission failure |
+| missing provider/operation authority | authority/admission failure |
 | denied policy decision | policy denial with decision evidence |
 | host call throws/returns invalid data | host ABI/provider failure |
 | child process exits abnormally | process failure observed by supervisor/monitor/join |
@@ -560,7 +560,7 @@ when a more precise boundary class is known.
    operation-specific result types.
 7. Blame labels and value redaction rules for contract violation diagnostics.
 
-## 3. Decision Pass B: Effect Declaration and Extern/Host Boundaries
+## 3. Decision Pass B: Operation Declaration and Extern/Host Boundaries
 
 ### 3.1 Decision
 
@@ -574,28 +574,29 @@ host/provider adapter    -- how the request is implemented
 
 Resolved direction for the first target slice:
 
-1. **Canonical operation identity lives below surface spelling.** Current `capability`
-   declarations migrate to `effect` declarations; Core/CPS sees one canonical operation
-   identity and one row item.
-2. **`effect` is the target vocabulary for operation declarations.** It names typed
-   operation function signatures and their row contribution.
-3. **`capability` is subsumed by `effect`.** The target language does not need separate
-   capability declaration syntax. Current capability declarations are corpus migration
-   work: rewrite them as effect declarations plus provider/admission metadata where needed.
-4. **User-defined effects are a target-language direction, but an alpha staging choice.**
-   The design vocabulary uses `effect` for ordinary algebraic-operation declarations such
-   as failure, choice, and host operations. Current alpha specs may restrict which
-   namespaces lower to Core/CPS until fully general user-defined resumable effects are
-   specified across the effect, type, Core, and IR specs.
-5. **Runtime builtins are calls from trusted handler bodies, not declarations.** Effect
-   declarations define the operation interface. Trusted stdlib handlers implement those
+1. **Canonical operation identity lives below source spelling.** Current `capability`
+   declarations migrate to interface operation signatures plus impl/type-qualified operation
+   identities; Core/CPS sees one canonical operation identity and one row item.
+2. **Interfaces are the target vocabulary for operation declarations.** They name typed
+   operation function signatures, generics, associated types, laws, and constraints.
+3. **`capability` is subsumed by operations plus admission.** The target language does not
+   need separate capability declaration syntax. Current capability declarations are corpus
+   migration work: rewrite them as interface operations plus provider/handler admission
+   metadata where needed.
+4. **User-defined operations are a target-language direction, but an alpha staging choice.**
+   The design vocabulary uses interface operation declarations for ordinary algebraic
+   operations such as failure, choice, and host operations. Current alpha specs may restrict
+   which namespaces lower to Core/CPS until fully general user-defined resumable operations
+   are specified across the effect, type, Core, and IR specs.
+5. **Runtime builtins are calls from trusted handler bodies, not declarations.** Interfaces
+   define the operation contract. Trusted stdlib handlers implement those
    operations with ordinary `fn` methods whose bodies call `builtin(...)` using a typed
    runtime primitive symbol/key. `extern fn` remains out of scope for the current target
    language.
 6. **Externs are out of scope for the current target language.** Ordinary Ash code calls typed
    operations. A later host/FFI design may add trusted implementation hooks, but raw extern
    declarations are not part of the current target surface.
-7. **Provider installation is admission, not definition.** Declaring an effect does not
+7. **Provider installation is admission, not definition.** Declaring an interface does not
    install authority. Runtime admission installs a provider frame that may discharge the row
    item.
 
@@ -1849,7 +1850,7 @@ Closure capture rules should classify captured values at least as:
 |---|---|
 | pure data | allowed in pure/effectful closures |
 | value produced by effect | allowed only when closure row/profile admits it |
-| capability/provider/resource handle | allowed only with explicit authority/lifetime facts |
+| operation/provider/resource handle | allowed only with explicit authority/lifetime facts |
 | process-local/region-local value | rejected across process/app boundaries |
 | continuation | affine/process-local by default; stricter rules for multi-shot pure |
 | handler/provider chain | trusted/runtime capture, not ordinary user data |
@@ -1880,13 +1881,13 @@ change row/type/evidence results.
 
 1. Exact target replacement for every current workflow statement still used in
    stdlib/docs/tests.
-2. Final user-facing syntax for row variables, effect declarations, handlers, and app specs.
+2. Final user-facing syntax for row variables, operation declarations, handlers, and app specs.
 3. Corpus migration schedule for `workflow`, `act`, `ret`, `do:Act`, `do:Proc`, and
    `do:Workflow` usages in stdlib/docs/tests.
 4. Closure capture representation in Core summaries and diagnostics.
 5. Whether callable public summaries expose inferred rows by default or only stable
    annotated rows.
-6. Versioning format for effect identities, row aliases/groups, evidence refs, and operation
+6. Versioning format for operation identities, row aliases/groups, evidence refs, and operation
    contracts.
 7. Cross-package evidence cache trust and invalidation policy.
 8. Diagnostic or tooling rewrite hints for migrating project-owned corpus forms to target
@@ -1932,6 +1933,9 @@ Internal references:
 
 ## 15. Changelog
 
+- 2026-07-03: Reconciled the main decision text with NOTE-022/025: interfaces are the
+  target operation declaration form, impl/type-qualified identities are canonical after
+  resolution, and provider/handler admission discharges authority.
 - 2026-06-27: Applied NOTE-022 decision: replaced `effect Fs { ... }` and
   `effect Choice { ... }` with `interface Fs { ... }` and `interface Choice { ... }` in
   §3.2 and the Frank-like handler example. Updated §3.2 prose to reference interfaces
@@ -1950,10 +1954,9 @@ Internal references:
 - 2026-06-24: Added first decision pass for the failure boundary, separating recoverable
   `fail`, traps, contract violations, authority/admission failures, policy denials, host
   adapter failures, process failure/cancellation, and workflow/app boundary reports.
-- 2026-06-24: Added second decision pass for effect declaration and extern/host boundaries:
-  `effect` is the target operation vocabulary, current `capability` syntax is migration
-  input to effect operations, canonical operation identity lives below surface spelling, and
-  raw externs remain trusted implementation hooks.
+- 2026-06-24: Added second decision pass for operation declaration and extern/host boundaries;
+  superseded by the 2026-07-03 reconciliation entry above where it used `effect` as the
+  target operation vocabulary.
 - 2026-06-24: Added third decision pass for row environment and admission boundaries:
   rows are requirement facts, ambient environments carry kind-specific discharge facts,
   admission is explicit at runtime boundaries, role entailment is discharge rather than row

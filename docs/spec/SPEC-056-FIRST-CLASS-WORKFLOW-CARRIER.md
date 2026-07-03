@@ -444,7 +444,7 @@ Then(w1, w2) = Bind(w1, _, w2)
 
 `Fail` and `WithError` are not first-slice primitive workflow-form nodes. They remain operational-bottom and scoped-failure behavior inherited from SPEC-050/SPEC-051 through the Proc/failure projections. A future spec may add explicit workflow failure forms only if workflow-specific routing cannot be represented by projected events.
 
-`WorkflowForm` is the semantic source of truth. Carrier records such as `{ contract, body, evidence }` are implementation views derived from the preserved form, not independently maintained artifacts.
+In the historical MVP, `WorkflowForm` was described as the semantic source of truth. Carrier records such as `{ contract, body, evidence }` were implementation views derived from the preserved form, not independently maintained artifacts. Target-state work must translate still-useful facts into ambient computation rows, Core/CPS carriers, contract/evidence sidecars, admission facts, and reporting/provenance metadata instead of reviving `WorkflowForm`.
 
 ### 6.2.2 Projection events and alignment identity
 
@@ -993,7 +993,7 @@ All SPEC-055 MVP restrictions still apply:
 
 ## 10. Workflow Declarations and First-Class Values
 
-Existing workflow declarations remain valid but become deprecated compatibility syntax when this spec is implemented. The compiler must emit a deprecation warning for the legacy declaration surface and then translate it into the same `WorkflowForm` implementation path used by first-class workflow expressions.
+In the historical MVP, existing workflow declarations were expected to remain valid but become deprecated compatibility syntax when this spec was implemented. Target-state work should not implement a new `WorkflowForm` translation path from this section; it should route workflow declarations through ambient workflow facts and the current Core/CPS target specs.
 
 This spec adds a semantic interpretation:
 
@@ -1001,7 +1001,7 @@ This spec adds a semantic interpretation:
 workflow declaration = named/scoped/exported Workflow<A> expression plus host/runtime entrypoint metadata
 ```
 
-A new-style declaration body is target-typed as a workflow block and lowers to a `WorkflowForm<A>` / `Workflow<A>` value. Header-like clauses such as `requires:` and `ensures:` are contract-injection workflow forms in that block, not a separate semantic island.
+In that MVP design, a new-style declaration body was target-typed as a workflow block and lowered to a `WorkflowForm<A>` / `Workflow<A>` value. For target Ash, the durable rule is that header-like clauses such as `requires:` and `ensures:` lower to ordinary contract/evidence/admission facts attached to the ambient computation, not to a separate semantic island.
 
 Conceptual declaration rule for new-style bodies:
 
@@ -1025,7 +1025,7 @@ legacy workflow header/body
 
 `leading_contract_events` is constructed in source order from legacy `plays role(...)`, capability/resource/admission headers, `requires: <expr>`, and `ensures: <expr>` clauses. The explicit `requires:` and `ensures:` expressions are parsed/classified by the same contract-expression rules used for `do:Workflow` statement forms and `workflow::requires` / `workflow::ensures` intrinsic calls.
 
-The first compatibility implementation may translate the legacy syntax-heavy body through an existing legacy workflow-body-to-Proc adapter and wrap it as `FromProc(legacy_body_as_proc_summary)`. That adapter is a compatibility boundary only; it must still feed the same `WorkflowForm` projection, obligation, coverage, lowering, and runtime boundary implementation. New code must not add a parallel semantic path for deprecated declarations.
+The first compatibility implementation was allowed to translate the legacy syntax-heavy body through an existing legacy workflow-body-to-Proc adapter and wrap it as `FromProc(legacy_body_as_proc_summary)`. That adapter remains historical context only. New target work must not add a parallel semantic path for deprecated declarations; it should feed the shared ambient/Core/CPS contract, admission, provenance, and reporting machinery.
 
 Future phases may progressively desugar individual legacy workflow body statements into ordinary workflow algebra operations. Such desugaring is a refactoring of the translation boundary, not a semantic change.
 
@@ -1089,9 +1089,9 @@ Static discharge of requirements, dynamic residualization of checks, and erasure
 
 This spec does not require a new scheduler, new process runtime, new workflow terminal state, or new CLI command.
 
-## 14. Verification Requirements
+## 14. Historical MVP Verification Requirements
 
-Implementation must include tests for:
+The Phase 104/108 MVP used the following verification requirements. They are retained as historical evidence and migration context. New target-state implementation plans should derive tests from SPEC-096b/097b/098b/098c/099b/100 and should not revive `WorkflowForm` merely to satisfy this list.
 
 1. `WorkflowForm` grammar preserves `Unit`, `Bind`, `FromProc`, `FromAct`, `Requires`, `Ensures`, and `Scope` nodes with stable `WorkflowNodeId`s.
 2. Projection events carry node id, projection kind, event kind, and source-origin metadata, including synthetic and imported-summary origins.

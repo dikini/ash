@@ -4,6 +4,12 @@
 **Date:** 2026-05-06
 **Related:** [NOTE-007](NOTE-007-RUNTIME-ENVIRONMENT-IDENTITY-AND-COMPONENTS.md), [NOTE-009](NOTE-009-CAPABILITY-INTERFACES-IMPLEMENTATIONS-AND-INTERNAL-AUTHORITY.md), [SPEC-048](../spec/SPEC-048-PROC-LIBRARY.md), [SPEC-049](../spec/SPEC-049-PROCESS-RUNTIME-SEMANTICS.md), [SPEC-050](../spec/SPEC-050-OPERATIONAL-BOTTOM-AND-SCOPED-HANDLING.md), [SPEC-051](../spec/SPEC-051-WORKFLOW-SEMANTICS.md), [SPEC-052](../spec/SPEC-052-CAPABILITY-INTERFACES-AND-IMPLEMENTATIONS.md), [SPEC-053](../spec/SPEC-053-RUNTIME-RESOURCES-AND-AUTHORITY-PROVENANCE.md), [SPEC-056](../spec/SPEC-056-FIRST-CLASS-WORKFLOW-CARRIER.md), [DESIGN-034](../design/DESIGN-034-TOTAL-TYPE-COMPUTATION.md)
 
+> **Target reconciliation.** This note predates the NOTE-022/023/025 interface,
+> handler, and impl-qualified operation model. Its `CapabilityBinding` examples
+> remain useful as historical/current-state authority-admission sketches, but
+> target-Ash protocol work should translate them to provider/handler admission of
+> interface/impl-qualified operation identities plus resource authority evidence.
+
 ## 1. Purpose
 
 This note captures an initial architecture discussion about how Ash capability, authority, distributed computation, sandboxing, inter-workflow communication, LLM/tool interaction, and workflow-synchronized external actors should fit together.
@@ -174,6 +180,9 @@ CapabilityBinding       = internal authority-bearing binding
 CapabilityAdvertisement = external/caller-visible projection of selected authority
 ToolDescriptor          = protocol-specific representation, e.g. MCP/OpenAPI/function-call schema
 ```
+
+For target-Ash work, read `CapabilityBinding` here as an admitted
+provider/handler frame carrying operation and resource authority evidence.
 
 Discovery must not be a raw list of providers. It should be contextual:
 
@@ -475,7 +484,9 @@ Earlier direct mapping:
 CapabilityBinding -> Tool
 ```
 
-is insufficient. The refined model is:
+is insufficient. In target vocabulary, tools are projections from admitted
+provider/handler operation authority plus protocol state, not a raw exposure of
+legacy capability bindings. The refined model is:
 
 ```text
 LocalProtocolState + endpoint authority + disclosure policy
@@ -619,7 +630,7 @@ The first model should avoid:
 7. Which failure categories should be domain-level protocol messages versus operational bottom?
 8. What is the first smoke-test scenario: TDD workflow with LLM actor, sandboxed verifier, or two Ash workflows exchanging evidence?
 9. How much of CSP refusal/failure semantics must be static versus runtime-derived from compiled automata?
-10. What are the exact no-widening checks from capability binding to advertisement to protocol event?
+10. What are the exact no-widening checks from provider/handler admission to advertisement to protocol event?
 
 ## 20. Suggested Next Step
 
@@ -635,3 +646,9 @@ That packet should answer only:
 6. what is explicitly deferred.
 
 The first executable smoke test should be small and local: one coordinator workflow, one external/LLM-like actor adapter, one verifier participant, and a TDD-style Red transition with evidence acceptance/refusal. Network distribution and OS sandboxing can be added after the type/protocol artifact boundary is stable.
+
+## 21. Changelog
+
+| Date | Change |
+| --- | --- |
+| 2026-07-03 | Added target reconciliation guidance: `CapabilityBinding` examples are historical/current-state sketches, while target-Ash protocol work should use provider/handler admission of interface/impl-qualified operation identities plus resource authority evidence. |

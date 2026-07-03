@@ -1,11 +1,19 @@
 # SPEC-053: Runtime Resources and Authority Provenance
 
-**Status:** Draft
+**Status:** Historical/current-state resource substrate; target authority vocabulary superseded by NOTE-022/023/025
 **Date:** 2026-04-27
-**Promotes:** [NOTE-009](../notes/NOTE-009-CAPABILITY-INTERFACES-IMPLEMENTATIONS-AND-INTERNAL-AUTHORITY.md) resource-type, resource-instance, resource-binding, internal-authority, derived-authority, and authority-provenance design direction
+**Promotes:** [NOTE-009](../notes/NOTE-009-CAPABILITY-INTERFACES-IMPLEMENTATIONS-AND-INTERNAL-AUTHORITY.md) resource-type, resource-instance, resource-binding, internal-authority, derived-authority, and authority-provenance design direction *(historical vocabulary; see target reconciliation below)*
 **Related:** SPEC-003, SPEC-004, SPEC-017, SPEC-019, SPEC-022, SPEC-047, SPEC-048, SPEC-049, SPEC-050, SPEC-051, [SPEC-052](SPEC-052-CAPABILITY-INTERFACES-AND-IMPLEMENTATIONS.md)
 
 ## Summary
+
+> **Target reconciliation.** This spec records the Phase 103-era runtime resource and
+> authority-provenance substrate. Its resource identity, ownership, split/join, lifecycle,
+> and provenance requirements remain useful. Its `capability binding` vocabulary is
+> historical/current-state context, not the target authority model. Target-Ash work should
+> describe operation requirements as interface/impl-qualified operation identities discharged
+> by provider/handler admission, with resources participating as explicit authority and
+> provenance inputs.
 
 This specification defines Ash-owned runtime resources and authority provenance. It supplies the resource substrate required by capability interfaces and implementations in [SPEC-052](SPEC-052-CAPABILITY-INTERFACES-AND-IMPLEMENTATIONS.md).
 
@@ -317,6 +325,10 @@ As of Phase 104, runtime resources remain environment-owned metadata and authori
 7. Exact standard library internal resources for tests, replay, clocks, and queues.
 
 ## Changelog
+
+### 2026-07-03
+
+- Added target reconciliation notice: SPEC-053's resource substrate remains useful, but NOTE-009-era `capability binding` vocabulary is historical/current-state context for target planning.
 
 ### 2026-04-27
 

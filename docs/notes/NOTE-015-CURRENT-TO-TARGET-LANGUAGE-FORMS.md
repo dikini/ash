@@ -336,7 +336,7 @@ that into:
 
 ```text
 current capability declaration
-  -> effect operation signature
+  -> interface operation signature
   -> row item required by callers
   -> contracts on arguments/results
   -> provider/handler implementation
@@ -355,14 +355,14 @@ interface Fs {
 The target language does not need a privileged "capability subsystem" separate from effects.
 It needs:
 
-1. canonical operation identity: `Fs.read`;
-2. row contribution: `{fs.read}`;
+1. canonical operation identity: `PosixFs::read` after impl/type qualification;
+2. row contribution: `{PosixFs::read}` or a source spelling that resolves to that identity;
 3. contract contribution: e.g. `requires {path != ""}`;
 4. provider or handler discharge;
 5. optional trusted host implementation.
 
 Current capability-like authoring forms are migration input, not target syntax. Their lowering
-must be honest: they define typed effect operations and provider/admission paths. Whether and
+must be honest: they define typed interface operations and provider/admission paths. Whether and
 how authority facts are introduced in source remains unresolved; ordinary operation rows
 should not use a superfluous `cap` prefix.
 
@@ -572,7 +572,7 @@ is supplied by handlers interpreting effect operations. Therefore:
 
 ## 7. To Be Resolved
 
-### 7.1 Surface spelling for effect declarations
+### 7.1 Surface spelling for operation declarations
 
 **Resolved by NOTE-022:** operation signatures are declared as interface methods using the
 existing interface/impl machinery. No separate `effect` keyword. The interface is the type
@@ -590,12 +590,12 @@ signature form inside interface blocks.
 
 Externs should not be ordinary pure functions. The unresolved details:
 
-- Can externs appear only inside effect/provider declarations?
+- Can externs appear only inside trusted handler/provider declarations?
 - Can trusted handlers own externs instead?
 - What syntax distinguishes safe Ash calls from raw host ABI hooks?
 - How are extern contracts and ABI failures represented?
 
-The semantic requirement is already clear: ordinary Ash code calls typed effect operations,
+The semantic requirement is already clear: ordinary Ash code calls typed operations,
 not raw externs.
 
 ### 7.3 Failure taxonomy
@@ -797,6 +797,9 @@ Internal references:
 
 ## 11. Changelog
 
+- 2026-07-03: Reconciled remaining target-operation wording with NOTE-025: operation
+  identities are impl/type-qualified after resolution (for example `PosixFs::read`), while
+  source row spellings may remain readable aliases that resolve to canonical identities.
 - 2026-06-27: Applied NOTE-022 decision: replaced all `effect Foo { ... }` declaration
   examples with `interface Foo { ... }` in §2.3, §4, and §7. Updated §7.1 from "make
   `effect` the canonical target vocabulary" to "interfaces are canonical; no `effect`

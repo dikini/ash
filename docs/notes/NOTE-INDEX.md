@@ -4,7 +4,7 @@ title: Ash Design Note Orientation Index
 kind: orientation-index
 status: active
 authority: navigational
-last_verified: 2026-06-29
+last_verified: 2026-07-03
 ---
 
 # Ash design note orientation index
@@ -55,6 +55,17 @@ Common tags include: `grammar`, `syntax`, `semantics`, `type-system`, `effect-sy
 3. [NOTE-022](NOTE-022-EFFECTS-AS-INTERFACES-DECLARATION-SIDE.md)
 4. [NOTE-023](NOTE-023-HANDLER-SURFACE-DISPATCH-SIDE.md)
 5. [NOTE-025](NOTE-025-EFFECT-IDENTITY-VIA-SORTS-AND-IMPLS.md)
+6. [PLAN-180](../plan/PLAN-180-TARGET-DOCS-CONSISTENCY-CLEANUP.md) for the target-doc cleanup that fences older capability-binding and WorkflowForm material.
+
+### Work on target-Ash convergence or stale-doc cleanup
+
+1. [NOTE-015](NOTE-015-CURRENT-TO-TARGET-LANGUAGE-FORMS.md)
+2. [NOTE-018](NOTE-018-BOUNDARY-DISCIPLINE.md)
+3. [NOTE-019](NOTE-019-TARGET-ASH-CONVERGENCE-PLAN.md)
+4. [NOTE-022](NOTE-022-EFFECTS-AS-INTERFACES-DECLARATION-SIDE.md)
+5. [NOTE-023](NOTE-023-HANDLER-SURFACE-DISPATCH-SIDE.md)
+6. [NOTE-025](NOTE-025-EFFECT-IDENTITY-VIA-SORTS-AND-IMPLS.md)
+7. [PLAN-180](../plan/PLAN-180-TARGET-DOCS-CONSISTENCY-CLEANUP.md)
 
 ### Change target handler/effect/operation syntax
 
@@ -86,7 +97,7 @@ Common tags include: `grammar`, `syntax`, `semantics`, `type-system`, `effect-sy
 | [NOTE-008-OPERATIONAL-BOTTOM-AND-SCOPED-ERROR-HANDLING.md](NOTE-008-OPERATIONAL-BOTTOM-AND-SCOPED-ERROR-HANDLING.md) | Draft | runtime | runtime | design note | — |
 | [NOTE-009-CAPABILITY-INTERFACES-IMPLEMENTATIONS-AND-INTERNAL-AUTHORITY.md](NOTE-009-CAPABILITY-INTERFACES-IMPLEMENTATIONS-AND-INTERNAL-AUTHORITY.md) | Superseded by NOTE-022 / NOTE-023 / NOTE-025 (interface/impl/handler model) | ambient-computation | authority, effect-system | superseded/historical note | NOTE-022; NOTE-023; NOTE-025 |
 | [NOTE-010-WORKFLOW-FORM-PRECHECK-QUESTIONS.md](NOTE-010-WORKFLOW-FORM-PRECHECK-QUESTIONS.md) | Historical / superseded WorkflowForm-era Q&A backlog; no revival | ambient-computation | core-ir, evidence, runtime, trace, workflow | historical design note | SPEC-096b; SPEC-098b; SPEC-099; TASK-1804 |
-| [NOTE-011-TYPE-LEVEL-PROTOCOLS-CAPABILITY-AUTHORITY-AND-DISTRIBUTED-PARTICIPANTS.md](NOTE-011-TYPE-LEVEL-PROTOCOLS-CAPABILITY-AUTHORITY-AND-DISTRIBUTED-PARTICIPANTS.md) | Exploratory design note / initial discussion capture | ambient-computation | authority, effect-system, type-system | design note | — |
+| [NOTE-011-TYPE-LEVEL-PROTOCOLS-CAPABILITY-AUTHORITY-AND-DISTRIBUTED-PARTICIPANTS.md](NOTE-011-TYPE-LEVEL-PROTOCOLS-CAPABILITY-AUTHORITY-AND-DISTRIBUTED-PARTICIPANTS.md) | Exploratory protocol note with historical/current-state capability-binding vocabulary fenced for target planning | ambient-computation | authority, effect-system, type-system | design note / historical authority vocabulary | NOTE-022; NOTE-023; NOTE-025; PLAN-180 |
 | [NOTE-012-MUTUAL-RECURSION-CPS-ASPECTS-DESIGN.md](NOTE-012-MUTUAL-RECURSION-CPS-ASPECTS-DESIGN.md) | unspecified | general | core-ir | design note | — |
 | [NOTE-013-AMBIENT-MONAD-AND-HANDLER-COMPOSITION-ALGEBRA.md](NOTE-013-AMBIENT-MONAD-AND-HANDLER-COMPOSITION-ALGEBRA.md) | Living document — exploration in progress | ambient-computation | effect-system | living design note | NOTE-020; NOTE-022; SPEC-096b; SPEC-097b |
 | [NOTE-014-CONTRACT-SYSTEMS-UNIFICATION.md](NOTE-014-CONTRACT-SYSTEMS-UNIFICATION.md) | Closed as design gap register — resolved by NOTE-027 through NOTE-035; implementation handoff tracked by PLAN-165 | contracts | contract | convergence note | NOTE-027..NOTE-035; PLAN-165 |

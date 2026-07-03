@@ -155,6 +155,7 @@ Update this section as tasks complete:
 | [177](PLAN-177-TARGET-ASH-ROW-SYNTAX-AND-CORE-CPS-ALIGNMENT.md) | 11 | 11 | ✅ Complete; target row syntax review remediation complete |
 | [178](PLAN-178-SOURCE-TO-CORE-ROW-LOWERING-BRIDGE.md) | 9 | 9 | ✅ Complete; explicit source rows lower into Core callable metadata with review remediation |
 | [179](PLAN-179-EXPLICIT-ROW-ADMISSION-RUNTIME-WIRING.md) | 9 | 9 | ✅ Complete; explicit row requirements wired to admission/runtime checks |
+| [180](PLAN-180-TARGET-DOCS-CONSISTENCY-CLEANUP.md) | 1 | 1 | ✅ Complete; target docs consistency cleanup |
 
 ---
 
@@ -947,3 +948,16 @@ Connects Phase 178's explicit source/Core row metadata to runtime/admission chec
 || [TASK-1832](tasks/TASK-1832-imported-row-admission.md) | Apply row admission checks across imported callables | ✅ Complete |
 || [TASK-1833](tasks/TASK-1833-row-admission-non-authority-regressions.md) | Prove row admission does not install authority | ✅ Complete |
 || [TASK-1834](tasks/TASK-1834-phase-179-closeout.md) | Close out Phase 179 with gates and review | ✅ Complete |
+
+## Phase 180: Target Docs Consistency Cleanup
+
+|**Status:** ✅ Complete (1/1 tasks complete)
+|**Plan:** [PLAN-180: Target Docs Consistency Cleanup](PLAN-180-TARGET-DOCS-CONSISTENCY-CLEANUP.md)
+|**Depends on:** Phase 179 closeout.
+|**Specs/notes:** `SPEC-095b`, `SPEC-096b`, `SPEC-097b`, `SPEC-098b`, `SPEC-098c`, `SPEC-099b`, `SPEC-100`, `NOTE-015`, `NOTE-018`, `NOTE-019`, `NOTE-022`, `NOTE-023`, and `NOTE-025`.
+
+Reconciles target-Ash documentation after the interface/impl-qualified operation and explicit row-admission work. The phase fences legacy `capability binding`, `effect` declaration, and `WorkflowForm` material so current target planning routes through computation rows, provider/handler admission, and ambient workflow facts.
+
+|| Task | Description | Status |
+||------|-------------|--------|
+|| [TASK-1835](tasks/TASK-1835-target-docs-consistency-cleanup.md) | Reconcile stale target-Ash specs and notes | ✅ Complete |

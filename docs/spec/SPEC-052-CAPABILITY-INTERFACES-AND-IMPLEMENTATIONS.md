@@ -1,11 +1,21 @@
 # SPEC-052: Capability Interfaces and Implementations
 
-**Status:** Draft
+**Status:** Historical/current-state substrate; target authority vocabulary superseded by NOTE-022/023/025
 **Date:** 2026-04-27
-**Promotes:** [NOTE-009](../notes/NOTE-009-CAPABILITY-INTERFACES-IMPLEMENTATIONS-AND-INTERNAL-AUTHORITY.md) capability-interface, capability-implementation, capability-binding, late-binding, and capability-adapter design direction
+**Promotes:** [NOTE-009](../notes/NOTE-009-CAPABILITY-INTERFACES-IMPLEMENTATIONS-AND-INTERNAL-AUTHORITY.md) capability-interface, capability-implementation, capability-binding, late-binding, and capability-adapter design direction *(historical vocabulary; see target reconciliation below)*
 **Related:** SPEC-002, SPEC-003, SPEC-009, SPEC-012, SPEC-017, SPEC-047, SPEC-048, SPEC-049, SPEC-051, [SPEC-053](SPEC-053-RUNTIME-RESOURCES-AND-AUTHORITY-PROVENANCE.md)
 
 ## Summary
+
+> **Target reconciliation.** This spec records the Phase 103-era capability binding substrate
+> and remains useful for current implementation history. It is not the target-Ash authority
+> vocabulary. Target planning should use [NOTE-022](../notes/NOTE-022-EFFECTS-AS-INTERFACES-DECLARATION-SIDE.md),
+> [NOTE-023](../notes/NOTE-023-HANDLER-SURFACE-DISPATCH-SIDE.md), and
+> [NOTE-025](../notes/NOTE-025-EFFECT-IDENTITY-VIA-SORTS-AND-IMPLS.md): interfaces declare
+> operation signatures, impl/bodyless types qualify canonical operation identities, rows carry
+> operation requirements, and provider/handler admission discharges authority. The
+> `capability binding` language below is historical/current-state context for compatibility
+> with existing runtime APIs, not a mandate for new target-state docs or implementation plans.
 
 This specification defines Ash capability interfaces, capability implementations, and capability bindings as a first-class language/runtime contract.
 
@@ -319,6 +329,10 @@ As of Phase 104, Ash-defined implementation bodies can execute through the runti
 7. Exact serialized representation of capability provenance events.
 
 ## Changelog
+
+### 2026-07-03
+
+- Added target reconciliation notice: SPEC-052's capability-binding vocabulary is historical/current-state context superseded for target planning by NOTE-022/023/025.
 
 ### 2026-04-27
 

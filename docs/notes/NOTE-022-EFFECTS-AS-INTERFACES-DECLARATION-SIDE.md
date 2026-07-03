@@ -202,11 +202,11 @@ declaration/dispatch separation is not just convenient but semantically grounded
 
 | Note | Impact | Action |
 |---|---|---|
-| NOTE-013 | §11.1 uses `effect Fs { ... }` in extern placement examples. §12-13 open questions reference effect declaration syntax. | Replace `effect` with `interface` in examples. Open Q1 ("minimal surface for declaring effect operations") is resolved by this note. Open Q2 ("surface form for handlers") remains open (dispatch side). Open Q5 (resume strategy syntax) remains open (dispatch side). Open Q6 (extern placement) is partially resolved: externs attach to handler/provider declarations, not to the interface. |
+| NOTE-013 | Earlier §11.1 versions used `effect Fs { ... }` in extern placement examples. | Reconciled: examples now use `interface`; Open Q1 is resolved by this note. Dispatch-side questions remain with NOTE-023/024. |
 | NOTE-014 | Lines 660-720 use `effect Fs { ... }` in contract examples. | Replace `effect` with `interface` in examples. |
-| NOTE-015 | §7.1 says "make `effect` the canonical target vocabulary." §7.1 is now superseded by this note. | Update §7.1 to reference NOTE-022. The direction is now: interfaces are canonical; `effect` keyword is retired. |
-| NOTE-018 | §3.2 shows `effect Fs { ... }` as canonical declaration. §3.3 extern placement references effect declarations. | Replace `effect` with `interface` in §3.2 examples. Update §3.3 to note that externs attach to handler/provider declarations, not to the interface itself. |
-| NOTE-019 | §3.4, §4.4, gap register reference "effect declarations." §6.1 lists "effect declaration syntax" as first vocabulary decision. | Update to reference interfaces. Gap register entry "Canonical effect declaration syntax" is resolved — replaced by "Canonical operation declaration syntax: interfaces." |
+| NOTE-015 | §7.1 previously said "make `effect` the canonical target vocabulary." | Reconciled: interfaces are canonical; `effect` keyword is retired; NOTE-025 supplies impl/type-qualified identity. |
+| NOTE-018 | §3.2 previously showed `effect Fs { ... }` as canonical declaration. | Reconciled: main decision text now uses interface operation declarations and provider/handler admission. |
+| NOTE-019 | §3.4, §4.4, gap register, and §6.1 previously referenced "effect declarations." | Reconciled: target convergence text now uses interface operation declarations plus impl/type-qualified identities. |
 | NOTE-020 | References effect operations as row generators. | No change needed — NOTE-020 discusses operations at the semantic level, not the declaration keyword. |
 | NOTE-021 | References operations in rows (`fs.read`). | No change needed — NOTE-021 is about row syntax, not declaration form. |
 

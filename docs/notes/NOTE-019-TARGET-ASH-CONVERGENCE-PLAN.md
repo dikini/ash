@@ -159,8 +159,9 @@ The target capability story is:
 operation identity + row item + contracts + provider + admission + optional builtin host hook
 ```
 
-Current capability declarations are subsumed by `effect` declarations in the target model.
-They are corpus migration work, not a separate compatibility syntax.
+Current capability declarations migrate to interface operation declarations plus
+provider/handler admission in the target model. They are corpus migration work, not a
+separate compatibility syntax.
 
 Ordinary row spelling should name operations directly, such as `{fs.read}` or
 `{net.request}`. The authority-bearing status of an operation is discharged by
@@ -372,8 +373,8 @@ Required convergence:
 
 - use the canonical operation declaration syntax: `interface` blocks with `fn` operation
   signatures, such as `interface Fs { fn read(path: Path) -> String; }` (NOTE-022);
-- migrate current capability declarations to target effect declarations plus provider and
-  admission metadata where needed;
+- migrate current capability declarations to target interface operation declarations plus
+  provider/handler admission metadata where needed;
 - define provider surface syntax and how it exposes row peeling, including both explicit
   scoped installation and Frank-like `fn`/optional `operator` definitions using `on` to
   eliminate computations produced by ordinary thunk parameters such as `Unit -> {r} A`;
@@ -490,7 +491,8 @@ Required convergence:
 
 - `std::act`, `std::proc`, and `std::workflow` become profile/library modules over target
   rows rather than evidence that the language has three semantic towers;
-- authority-bearing operation libraries use effect declarations and provider/admission APIs;
+- authority-bearing operation libraries use interface operation declarations and
+  provider/admission APIs;
 - process/channel helpers expose boundary rules instead of hiding runtime authority;
 - examples teach target forms first;
 - tests prove target forms rather than preserving old syntax.
@@ -536,7 +538,8 @@ The order matters because some decisions unlock many others.
 
 Decide the vocabulary that affects all later specs:
 
-1. effect declaration syntax — **resolved by NOTE-022:** operations are interface methods;
+1. operation declaration syntax — **resolved by NOTE-022/025:** operations are interface
+   methods whose canonical row identities are impl/type-qualified after resolution;
 2. row item taxonomy and aliases/groups;
 3. provider/admission/authority distinction;
 4. failure taxonomy;
@@ -550,7 +553,7 @@ Define how target surface forms lower:
 
 1. row-bearing callable syntax;
 2. `do` and profile annotations;
-3. effect declarations and operation calls;
+3. interface operation declarations and operation calls;
 4. providers;
 5. contracts/evidence;
 6. app/runtime declarations if source-level.
@@ -655,14 +658,16 @@ Internal references:
 - 2026-06-27: Applied NOTE-023 decision: marked "Provider surface and row peeling syntax"
   and "Resume strategy surface" as resolved in the gap register. Added NOTE-023 to
   references.
+- 2026-07-03: Reconciled remaining main-body target-operation wording with NOTE-022/025:
+  target operation declarations are interface methods, canonical row identities are
+  impl/type-qualified after resolution, and capability syntax is migration input to
+  operations plus provider/handler admission rather than to `effect` declarations.
 - 2026-06-27: Applied NOTE-022 decision: updated §3.4, §4.4, gap register, and §6.1 to
   reference interfaces as the canonical operation declaration form. Marked "Canonical
   effect declaration syntax" as resolved in the gap register. Decision order item 1 is now
   resolved. Handler/provider surface, admission, resume, and extern placement remain open.
-- 2026-06-25: Settled the plain effect declaration direction: `effect` blocks contain `fn`
-  operation signatures, and rows/call sites may use any resolvable operation name while
-  canonical identity remains a module/name-resolution concern; current capability
-  declarations are subsumed by effects rather than preserved as compatibility syntax.
+- 2026-06-25: Settled an older plain effect-declaration direction; superseded by NOTE-022/025
+  and the 2026-07-03 reconciliation entry above.
 - 2026-06-25: Added the handler surface convergence checkpoint for explicit scoped handlers
   and Frank-like `fn`/optional `operator` definitions with `on` computation elimination.
 - 2026-06-25: Clarified capabilities-as-providers: providers eliminate operation rows but

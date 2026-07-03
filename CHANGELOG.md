@@ -6,6 +6,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Changed
+- Completed PLAN-180 target docs consistency cleanup, reconciling stale target-Ash specs and notes around interface/impl operation declarations, provider/handler admission, target operational-semantics routing, and historical WorkflowForm/capability-binding material (TASK-1835).
 - Completed Phase 178 after broad verification and independent review remediation, preserving rowless callable compatibility for unsupported rowless surface type forms and extending authority-neutrality coverage across imported row-bearing callables (TASK-1825).
 - Reconciled Phase 178 docs/spec status for the source-to-Core callable row bridge, clarifying that explicit source rows now reach Core function row metadata while row-polymorphic inference, provider/admission wiring, handler execution, and broader corpus migration remain future work (TASK-1824).
 - Audited the Phase 178 source-to-Core row-loss boundary, documenting parser row retention, typechecker validation, rowless `Type::Fn` conversion points, engine import/export signature transport, and Core row bridge ownership before implementation (TASK-1818).

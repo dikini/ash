@@ -4,7 +4,7 @@ title: Ash Specification Orientation Index
 kind: orientation-index
 status: active
 authority: navigational
-last_verified: 2026-07-02
+last_verified: 2026-07-03
 ---
 
 # Ash specification orientation index
@@ -22,7 +22,7 @@ This index helps humans and agents choose the right specifications before planni
 
 - `language-surface`: grammar, parser-facing syntax, and source-level forms.
 - `type-system`: typing, type computation, interfaces, constraints, and summaries.
-- `effect-system`: effects, rows, handlers, authority, and capability/provider boundaries.
+- `effect-system`: effects, rows, handlers, authority, and provider/handler admission boundaries.
 - `core-ir`: Core Ash, Target IR, CPS IR, and operational/type-checking semantics.
 - `runtime`: process/workflow runtime, observability, resources, and execution behavior.
 - `testing`: laws, evidence, QuickCheck, mutation, coverage, and test orchestration.
@@ -76,6 +76,7 @@ Common tags include: `grammar`, `syntax`, `semantics`, `type-system`, `effect-sy
 7. [SPEC-100](SPEC-100-CORE-TYPE-CHECKING.md)
 8. [PLAN-178](../plan/PLAN-178-SOURCE-TO-CORE-ROW-LOWERING-BRIDGE.md) for the current explicit source callable row to Core metadata bridge and remaining non-authority caveats.
 9. [PLAN-179](../plan/PLAN-179-EXPLICIT-ROW-ADMISSION-RUNTIME-WIRING.md) for the completed explicit row requirement admission/runtime wiring slice.
+10. [PLAN-180](../plan/PLAN-180-TARGET-DOCS-CONSISTENCY-CLEANUP.md) for the target-doc consistency cleanup that fences NOTE-009-era capability-binding and WorkflowForm material.
 
 ### Current vs target Core/type/effect planning
 
@@ -102,7 +103,7 @@ Common tags include: `grammar`, `syntax`, `semantics`, `type-system`, `effect-sy
 | [SPEC-001-IR.md](SPEC-001-IR.md) | Draft | core-ir | core-ir, semantics | normative spec | — |
 | [SPEC-002-SURFACE.md](SPEC-002-SURFACE.md) | Draft | language-surface | grammar, surface | normative spec | — |
 | [SPEC-003-TYPE-SYSTEM.md](SPEC-003-TYPE-SYSTEM.md) | Draft | type-system | type-system | normative spec | — |
-| [SPEC-004-SEMANTICS.md](SPEC-004-SEMANTICS.md) | Draft | core-ir | core-ir, semantics | normative spec | — |
+| [SPEC-004-SEMANTICS.md](SPEC-004-SEMANTICS.md) | Historical/current-state Core semantics draft; target operational semantics superseded by SPEC-099b | core-ir | core-ir, semantics, current-state | historical/current-state spec | SPEC-098b; SPEC-099b; SPEC-100; PLAN-180 |
 | [SPEC-005-CLI.md](SPEC-005-CLI.md) | unspecified | tooling | tooling | normative spec | — |
 | [SPEC-006-POLICY-DEFINITIONS.md](SPEC-006-POLICY-DEFINITIONS.md) | Draft | language-surface | grammar, surface | normative spec | — |
 | [SPEC-007-POLICY-COMBINATORS.md](SPEC-007-POLICY-COMBINATORS.md) | Draft | general | orientation | normative spec | — |
@@ -151,11 +152,11 @@ Common tags include: `grammar`, `syntax`, `semantics`, `type-system`, `effect-sy
 | [SPEC-049-PROCESS-RUNTIME-SEMANTICS.md](SPEC-049-PROCESS-RUNTIME-SEMANTICS.md) | Draft | runtime | core-ir, runtime, semantics | normative spec | — |
 | [SPEC-050-OPERATIONAL-BOTTOM-AND-SCOPED-HANDLING.md](SPEC-050-OPERATIONAL-BOTTOM-AND-SCOPED-HANDLING.md) | Draft | core-ir | core-ir, semantics | normative spec | — |
 | [SPEC-051-WORKFLOW-SEMANTICS.md](SPEC-051-WORKFLOW-SEMANTICS.md) | Draft | runtime | core-ir, runtime, semantics | normative spec | — |
-| [SPEC-052-CAPABILITY-INTERFACES-AND-IMPLEMENTATIONS.md](SPEC-052-CAPABILITY-INTERFACES-AND-IMPLEMENTATIONS.md) | Draft | effect-system | authority, effect-system, type-system | normative spec | — |
-| [SPEC-053-RUNTIME-RESOURCES-AND-AUTHORITY-PROVENANCE.md](SPEC-053-RUNTIME-RESOURCES-AND-AUTHORITY-PROVENANCE.md) | Draft | runtime | authority, effect-system, runtime | normative spec | — |
+| [SPEC-052-CAPABILITY-INTERFACES-AND-IMPLEMENTATIONS.md](SPEC-052-CAPABILITY-INTERFACES-AND-IMPLEMENTATIONS.md) | Historical/current-state substrate; target authority vocabulary superseded by NOTE-022/023/025 | effect-system | authority, current-state, effect-system, references | historical/current-state spec | NOTE-022; NOTE-023; NOTE-025; PLAN-180 |
+| [SPEC-053-RUNTIME-RESOURCES-AND-AUTHORITY-PROVENANCE.md](SPEC-053-RUNTIME-RESOURCES-AND-AUTHORITY-PROVENANCE.md) | Historical/current-state resource substrate; target authority vocabulary superseded by NOTE-022/023/025 | runtime | authority, current-state, effect-system, references, runtime | historical/current-state spec | NOTE-022; NOTE-023; NOTE-025; PLAN-180 |
 | [SPEC-054-GENERALIZED-TYPED-DO-NOTATION.md](SPEC-054-GENERALIZED-TYPED-DO-NOTATION.md) | Implemented MVP (Phase 105) | type-system | implemented, type-system | implemented spec | — |
 | [SPEC-055-MONAD-COMPREHENSION-SYNTAX.md](SPEC-055-MONAD-COMPREHENSION-SYNTAX.md) | Implemented MVP | language-surface | grammar, implemented, surface | implemented spec | — |
-| [SPEC-056-FIRST-CLASS-WORKFLOW-CARRIER.md](SPEC-056-FIRST-CLASS-WORKFLOW-CARRIER.md) | Implemented MVP / historical WorkflowForm language superseded for target planning | runtime | core-ir, effect-system, implemented, runtime, semantics, workflow | implemented spec / historical carrier framing | SPEC-096b; SPEC-098b; SPEC-099; TASK-1804 |
+| [SPEC-056-FIRST-CLASS-WORKFLOW-CARRIER.md](SPEC-056-FIRST-CLASS-WORKFLOW-CARRIER.md) | Implemented MVP / historical WorkflowForm language superseded for target planning | runtime | core-ir, effect-system, implemented, references, runtime, semantics, workflow | implemented spec / historical carrier framing | SPEC-096b; SPEC-098b; SPEC-099b; SPEC-100; TASK-1804; PLAN-180 |
 | [SPEC-057-UNIFIED-TYPE-MODULE-PIPELINE-AND-SEMANTIC-SUMMARIES.md](SPEC-057-UNIFIED-TYPE-MODULE-PIPELINE-AND-SEMANTIC-SUMMARIES.md) | Implemented MVP | type-system | implemented, type-system | implemented spec | — |
 | [SPEC-058-CANONICAL-TYPE-EXPRESSION-IR-PROJECTION-IDS-KIND-ARITY-SUBSTRATE.md](SPEC-058-CANONICAL-TYPE-EXPRESSION-IR-PROJECTION-IDS-KIND-ARITY-SUBSTRATE.md) | Implemented MVP | core-ir | core-ir, implemented, semantics, type-system | implemented spec | — |
 | [SPEC-059-SEALED-TYPE-LEVEL-DOMAINS.md](SPEC-059-SEALED-TYPE-LEVEL-DOMAINS.md) | Implemented MVP | type-system | implemented, type-system | implemented spec | — |

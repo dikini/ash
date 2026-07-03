@@ -107,6 +107,11 @@ fn assert_only_lowered_forms(core: &CoreExpr) {
                 assert_only_lowered_forms(value);
             }
         }
+        CoreExpr::Record { fields } => {
+            for (_, value) in fields {
+                assert_only_lowered_forms(value);
+            }
+        }
         CoreExpr::Let { expr, body, .. } => {
             assert_only_lowered_forms(expr);
             assert_only_lowered_forms(body);

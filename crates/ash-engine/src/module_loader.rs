@@ -2303,6 +2303,11 @@ fn collect_expr_constructor_names(expr: &Expr, names: &mut Vec<String>) {
                 }
             }
         }
+        Expr::Record { fields, .. } => {
+            for (_, expr) in fields {
+                collect_expr_constructor_names(expr, names);
+            }
+        }
         Expr::FieldAccess { base, .. } | Expr::Unary { operand: base, .. } => {
             collect_expr_constructor_names(base, names);
         }

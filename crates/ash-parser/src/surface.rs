@@ -3159,6 +3159,19 @@ fn expand_macros_in_expr_with_parent(
             }
             Ok(())
         }
+        Expr::Record { fields, .. } => {
+            for (_, expr) in fields {
+                expand_macros_in_expr_with_parent(
+                    expr,
+                    table,
+                    notation_table,
+                    origins,
+                    depth,
+                    parent,
+                )?;
+            }
+            Ok(())
+        }
         Expr::FnApply { func, args, .. } => {
             expand_macros_in_expr_with_parent(func, table, notation_table, origins, depth, parent)?;
             for arg in args {
@@ -4687,6 +4700,16 @@ fn elaborate_operator_sections_in_expr_with_parent(
                 ConstructorPayload::Unit => {}
             }
         }
+        Expr::Record { fields, .. } => {
+            for (_, expr) in fields {
+                elaborate_operator_sections_in_expr_with_parent(
+                    expr,
+                    table,
+                    origins,
+                    parent_origin,
+                );
+            }
+        }
         Expr::If {
             condition,
             then_branch,
@@ -5640,6 +5663,11 @@ where
                 ConstructorPayload::Unit => {}
             }
         }
+        Expr::Record { fields, .. } => {
+            for (_, expr) in fields {
+                visit_expr(expr, visitor);
+            }
+        }
         Expr::If {
             condition,
             then_branch,
@@ -5837,6 +5865,13 @@ pub enum Expr {
         fields: Vec<(Name, Expr)>,
         /// Explicit constructor payload shape
         payload: ConstructorPayload,
+        /// Source span
+        span: Span,
+    },
+    /// Structural record expression: `{ name: "Ada", age: 41 }`
+    Record {
+        /// Field expressions.
+        fields: Vec<(Name, Expr)>,
         /// Source span
         span: Span,
     },
@@ -6375,6 +6410,7 @@ impl Spanned for Expr {
             Expr::IfLet { span, .. } => *span,
             Expr::CheckObligation { span, .. } => *span,
             Expr::Constructor { span, .. } => *span,
+            Expr::Record { span, .. } => *span,
             Expr::If { span, .. } => *span,
             Expr::Panic { span, .. } => *span,
             Expr::Fail { span, .. } => *span,

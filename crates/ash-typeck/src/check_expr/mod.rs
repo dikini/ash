@@ -128,6 +128,7 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
             payload,
             ..
         } => check_constructor(env, name.as_ref(), fields, payload),
+        Expr::Record { fields, .. } => check_record_expr(env, fields),
         Expr::IfLet {
             pattern,
             expr,
@@ -2967,6 +2968,7 @@ fn get_expr_span(expr: &Expr) -> Span {
         Expr::IfLet { span, .. } => *span,
         Expr::CheckObligation { span, .. } => *span,
         Expr::Constructor { span, .. } => *span,
+        Expr::Record { span, .. } => *span,
         Expr::If { span, .. } => *span,
         Expr::Panic { span, .. } => *span,
         Expr::Fail { span, .. } => *span,
@@ -3656,6 +3658,25 @@ fn check_constructor(
 
     CheckResult {
         ty: substitution.apply(&result_type),
+        substitution,
+        errors,
+    }
+}
+
+fn check_record_expr(env: &TypeEnv, fields: &[(Box<str>, Expr)]) -> CheckResult {
+    let mut typed_fields = Vec::with_capacity(fields.len());
+    let mut substitution = Substitution::new();
+    let mut errors = Vec::new();
+
+    for (name, expr) in fields {
+        let result = check_expr(env, expr);
+        substitution = substitution.compose(&result.substitution);
+        errors.extend(result.errors);
+        typed_fields.push((name.clone(), substitution.apply(&result.ty)));
+    }
+
+    CheckResult {
+        ty: Type::Record(typed_fields),
         substitution,
         errors,
     }

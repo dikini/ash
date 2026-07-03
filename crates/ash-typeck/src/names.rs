@@ -666,6 +666,12 @@ impl NameResolver {
                 }
             }
 
+            Expr::Record { fields, .. } => {
+                for (_, expr) in fields {
+                    self.resolve_expr(expr);
+                }
+            }
+
             Expr::CheckObligation { .. } => {
                 // Nothing to resolve for obligation check expressions
             }

@@ -95,7 +95,8 @@ ordinary `main` function, and Phase 186 routes CLI dry-run for ordinary files th
 file-backed parse/check path; callable metadata and body lowering still flow through the same
 function path, so this does not add a second Core semantic path. Phase 186 also aligned runtime
 field projection for named constructor payload values with the surface/Core fixture accepted by this
-path.
+path. Phase 187 adds structural record expressions to the same path: record fields lower as ordinary
+field expressions and evaluate to `Value::Record` without using nominal constructor identities.
 
 `where row` items lower as follows:
 

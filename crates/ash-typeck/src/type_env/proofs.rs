@@ -151,6 +151,11 @@ impl<'a> ProofCallCollector<'a> {
                     }
                 }
             }
+            Expr::Record { fields, .. } => {
+                for (_, field_expr) in fields {
+                    self.visit_expr(field_expr);
+                }
+            }
             Expr::If {
                 condition,
                 then_branch,
@@ -385,6 +390,11 @@ impl ProofFuelChecker {
                             self.visit_expr(item);
                         }
                     }
+                }
+            }
+            Expr::Record { fields, .. } => {
+                for (_, field_expr) in fields {
+                    self.visit_expr(field_expr);
                 }
             }
             Expr::If {

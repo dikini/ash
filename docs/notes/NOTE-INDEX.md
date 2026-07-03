@@ -75,6 +75,7 @@ Common tags include: `grammar`, `syntax`, `semantics`, `type-system`, `effect-sy
 11. [PLAN-184](../plan/PLAN-184-HANDLER-PROVIDER-SEMANTICS.md) for handler/provider operational semantics and shadowing consistency.
 12. [PLAN-185](../plan/PLAN-185-SURFACE-FUNCTION-LANGUAGE.md) for function-first target entry syntax and workflow compatibility/profile routing.
 13. [PLAN-186](../plan/PLAN-186-SURFACE-FUNCTION-CLI-ENTRY.md) for CLI user-path conformance for function-first entry sources.
+14. [PLAN-187](../plan/PLAN-187-SURFACE-RECORD-EXPRESSIONS.md) for structural record expressions in function-first Ash.
 
 ### Change target handler/effect/operation syntax
 

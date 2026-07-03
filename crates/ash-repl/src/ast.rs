@@ -188,6 +188,23 @@ fn render_expr(expr: &Expr) -> String {
             out.push('}');
             out
         }
+        Expr::Record { fields, .. } => {
+            let mut out = String::from("Record {\n");
+            push_field(
+                &mut out,
+                2,
+                "fields",
+                &render_list(fields.iter().map(|(field, expr)| {
+                    let mut field_out = String::from("Field {\n");
+                    push_field(&mut field_out, 2, "name", &format!("{field:?}"));
+                    push_field(&mut field_out, 2, "value", &render_expr(expr));
+                    field_out.push('}');
+                    field_out
+                })),
+            );
+            out.push('}');
+            out
+        }
         Expr::If {
             condition,
             then_branch,

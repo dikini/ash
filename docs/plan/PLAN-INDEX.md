@@ -162,6 +162,7 @@ Update this section as tasks complete:
 | [184](PLAN-184-HANDLER-PROVIDER-SEMANTICS.md) | 8 | 8 | ✅ Complete; handler/provider semantics |
 | [185](PLAN-185-SURFACE-FUNCTION-LANGUAGE.md) | 7 | 7 | ✅ Complete; surface function language entry slice |
 | [186](PLAN-186-SURFACE-FUNCTION-CLI-ENTRY.md) | 7 | 7 | ✅ Complete; CLI surface function entry conformance |
+| [187](PLAN-187-SURFACE-RECORD-EXPRESSIONS.md) | 2 | 2 | ✅ Complete; structural record expressions for function-first Ash |
 
 ---
 
@@ -1080,3 +1081,19 @@ Extends the function-first target entry path to the command-line user surface: `
 || [TASK-1874](tasks/TASK-1874-surface-function-cli-closeout.md) | Close out Phase 186 | Complete |
 || [TASK-1875](tasks/TASK-1875-synthetic-entry-warning-cleanup.md) | Suppress legacy workflow warnings for synthetic `fn main` adapters | Complete |
 || [TASK-1876](tasks/TASK-1876-surface-constructor-field-execution.md) | Execute function-first sources with named constructor field projection | Complete |
+
+## Phase 187: Surface Record Expressions
+
+|**Status:** ✅ Complete (2/2 tasks complete)
+|**Plan:** [PLAN-187: Surface Record Expressions](PLAN-187-SURFACE-RECORD-EXPRESSIONS.md)
+|**Depends on:** Phase 186 Surface Function CLI Entry.
+|**Specs/notes:** `SPEC-095b`, `SPEC-097b`, `SPEC-098c`, `SPEC-100`, and `PLAN-185`.
+
+Makes structural records ordinary function-first surface expressions: `{ field: expr }` should parse,
+check, execute, and project fields without requiring legacy workflow syntax, nominal constructor
+payloads, or stdlib helper calls.
+
+|| Task | Description | Status |
+||------|-------------|--------|
+|| [TASK-1877](tasks/TASK-1877-surface-record-expression-plan-packet.md) | Create the Phase 187 plan packet | Complete |
+|| [TASK-1878](tasks/TASK-1878-structural-record-expression-execution.md) | Parse, check, and execute structural record expressions | Complete |

@@ -298,6 +298,7 @@ fn contains_policy(expr: &Expr) -> bool {
                     }
                 }
         }
+        Expr::Record { fields, .. } => fields.iter().any(|(_, e)| contains_policy(e)),
         Expr::Variable { .. }
         | Expr::Literal(_)
         | Expr::OperatorSection { .. }

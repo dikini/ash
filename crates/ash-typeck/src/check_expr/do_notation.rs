@@ -179,6 +179,11 @@ pub(super) fn collect_do_notation_diagnostics(
                 }
             }
         }
+        Expr::Record { fields, .. } => {
+            for (_, value) in fields {
+                collect_do_notation_diagnostics(env, value, diagnostics);
+            }
+        }
         Expr::WithError { body, arms, .. } => {
             collect_do_notation_diagnostics(env, body, diagnostics);
             for arm in arms {

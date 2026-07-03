@@ -1673,6 +1673,14 @@ fn eval_expr_force_async<'a>(expr: &'a Expr, ctx: &'a Context) -> EvalBoxFuture<
                     fields: Box::new(evaluated_fields),
                 })
             }
+            Expr::Record { fields } => {
+                let mut evaluated_fields = HashMap::with_capacity(fields.len());
+                for (field_name, field_expr) in fields {
+                    let value = eval_expr_force_async(field_expr, ctx).await?;
+                    evaluated_fields.insert(field_name.clone(), value);
+                }
+                Ok(Value::Record(Box::new(evaluated_fields)))
+            }
             Expr::Match { scrutinee, arms } => {
                 let value = eval_expr_force_async(scrutinee, ctx).await?;
                 for arm in arms {
@@ -2407,6 +2415,16 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
                 name: name.clone(),
                 fields: Box::new(evaluated_fields),
             })
+        }
+
+        Expr::Record { fields } => {
+            let evaluated_fields = fields
+                .iter()
+                .map(|(field_name, expr)| {
+                    eval_expr(expr, ctx).map(|value| (field_name.clone(), value))
+                })
+                .collect::<Result<HashMap<_, _>, _>>()?;
+            Ok(Value::Record(Box::new(evaluated_fields)))
         }
 
         Expr::Match { scrutinee, arms } => eval_match(scrutinee, arms, ctx),

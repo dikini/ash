@@ -1692,6 +1692,11 @@ fn assert_act_block_uses_only_call_fndef(expr: &CoreExpr) {
                 assert_act_block_uses_only_call_fndef(e);
             }
         }
+        CoreExpr::Record { fields } => {
+            for (_, e) in fields {
+                assert_act_block_uses_only_call_fndef(e);
+            }
+        }
         CoreExpr::Match { scrutinee, arms } => {
             assert_act_block_uses_only_call_fndef(scrutinee);
             for arm in arms {

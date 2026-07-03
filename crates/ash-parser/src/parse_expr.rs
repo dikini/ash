@@ -1218,6 +1218,15 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
         *input = saved;
     }
 
+    // Try structural record expression: { field: expr, ... }
+    {
+        let saved = input.clone();
+        if let Ok(record_expr) = parse_record_expr(input) {
+            return Ok(record_expr);
+        }
+        *input = saved;
+    }
+
     // Try literal
     if let Ok(lit) = literal(input) {
         return Ok(Expr::Literal(lit));
@@ -1927,6 +1936,19 @@ fn parse_constructor_fields(input: &mut ParseInput) -> ModalResult<Vec<(Name, Ex
     skip_whitespace_and_comments(input);
     let _ = literal_str("}").parse_next(input)?;
     Ok(fields)
+}
+
+fn parse_record_expr(input: &mut ParseInput) -> ModalResult<Expr> {
+    let start_pos = input.state.pos;
+    let _ = literal_str("{").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let fields = if literal_str("}").parse_next(input).is_ok() {
+        vec![]
+    } else {
+        parse_constructor_fields(input)?
+    };
+    let span = span_from(&start_pos, &input.state.pos);
+    Ok(Expr::Record { fields, span })
 }
 
 /// Parse a field name in a constructor expression.

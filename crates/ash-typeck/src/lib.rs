@@ -646,6 +646,12 @@ fn validate_interface_calls_in_expr(
                 }
             }
         }
+        ash_parser::surface::Expr::Record { fields, .. } => {
+            for (_, field_expr) in fields {
+                validate_interface_calls_in_expr(env, field_expr)?;
+            }
+            Ok(())
+        }
         ash_parser::surface::Expr::If {
             condition,
             then_branch,
@@ -2305,6 +2311,12 @@ fn validate_fn_call_preconditions_expr(
                         validate_fn_call_preconditions_expr(env, value, facts, assumptions)?;
                     }
                 }
+            }
+            Ok(())
+        }
+        ash_parser::surface::Expr::Record { fields, .. } => {
+            for (_, value) in fields {
+                validate_fn_call_preconditions_expr(env, value, facts, assumptions)?;
             }
             Ok(())
         }

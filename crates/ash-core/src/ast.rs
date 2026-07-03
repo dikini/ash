@@ -458,6 +458,11 @@ pub enum Expr {
         fields: Vec<(Name, Expr)>,
     },
 
+    /// Structural record expression.
+    Record {
+        fields: Vec<(Name, Expr)>,
+    },
+
     /// Match expression
     Match {
         scrutinee: Box<Expr>,

@@ -247,7 +247,7 @@ fn monomorphize_expr(expr: &mut Expr, type_env: &TypeEnv) -> Result<(), Monomorp
                 monomorphize_expr(arg, type_env)?;
             }
         }
-        Expr::Constructor { fields, .. } => {
+        Expr::Constructor { fields, .. } | Expr::Record { fields } => {
             for (_, field_expr) in fields.iter_mut() {
                 monomorphize_expr(field_expr, type_env)?;
             }

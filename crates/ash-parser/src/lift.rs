@@ -177,6 +177,17 @@ fn lift_expr(
             )
         }
 
+        CoreExpr::Record { fields } => {
+            let mut bindings = Vec::new();
+            let mut new_fields = Vec::new();
+            for (field_name, field_expr) in fields {
+                let (new_field, field_bindings) = lift_expr(field_expr, effectful_names, state);
+                bindings.extend(field_bindings);
+                new_fields.push((field_name, new_field));
+            }
+            (CoreExpr::Record { fields: new_fields }, bindings)
+        }
+
         CoreExpr::Match { scrutinee, arms } => {
             let (new_scrutinee, scrut_bindings) = lift_expr(*scrutinee, effectful_names, state);
             let mut new_arms = Vec::new();

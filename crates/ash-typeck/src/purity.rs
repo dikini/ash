@@ -289,6 +289,11 @@ fn check_purity_recursive(
                 }
             }
         }
+        Expr::Record { fields, .. } => {
+            for (_, field_expr) in fields {
+                check_purity_recursive(env, field_expr, allow_effects, errors);
+            }
+        }
         Expr::If {
             condition,
             then_branch,

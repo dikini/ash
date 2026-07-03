@@ -797,6 +797,25 @@ fn test_parse_constructor_expression() {
 }
 
 #[test]
+fn test_parse_structural_record_expression() {
+    let mut input = test_input(r#"{ name: "Ada", age: 41 }"#);
+    let result = expr(&mut input).unwrap();
+
+    match result {
+        Expr::Record { fields, .. } => {
+            assert_eq!(fields.len(), 2);
+            assert_eq!(fields[0].0.as_ref(), "name");
+            assert!(
+                matches!(fields[0].1, Expr::Literal(Literal::String(ref value)) if value.as_ref() == "Ada")
+            );
+            assert_eq!(fields[1].0.as_ref(), "age");
+            assert!(matches!(fields[1].1, Expr::Literal(Literal::Int(41))));
+        }
+        other => panic!("Expected Record expression, got {other:?}"),
+    }
+}
+
+#[test]
 fn test_parse_nested_constructor_expression() {
     let mut input = test_input(r#"Err { error: RuntimeError(42, "boom") }"#);
     let result = expr(&mut input).unwrap();

@@ -750,6 +750,13 @@ impl CapabilityChecker {
                 Ok(())
             }
 
+            Expr::Record { fields, .. } => {
+                for (_, expr) in fields {
+                    self.verify_expr(expr)?;
+                }
+                Ok(())
+            }
+
             Expr::CheckObligation { .. } => {
                 // Check obligation expressions don't involve capabilities
                 Ok(())

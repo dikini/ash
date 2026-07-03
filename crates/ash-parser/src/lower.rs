@@ -2002,6 +2002,12 @@ pub fn lower_expr(expr: &Expr) -> Result<CoreExpr, LoweringError> {
                 fields: lowered_fields,
             })
         }
+        Expr::Record { fields, .. } => Ok(CoreExpr::Record {
+            fields: fields
+                .iter()
+                .map(|(name, expr)| Ok((name.to_string(), lower_expr(expr)?)))
+                .collect::<Result<Vec<_>, _>>()?,
+        }),
 
         Expr::If {
             condition,

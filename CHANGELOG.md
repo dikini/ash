@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
+### Added
+- Added PLAN-194 Contract And Evidence System, with TASK-1891 through TASK-1901 covering target
+  `requires`/`ensures`, predicate well-formedness, authority-free contract predicates, evidence
+  rows for tests/laws/proofs/runtime monitors, and structured blame diagnostics.
+
 ### Changed
 - Completed PLAN-193 Surface Tuple ADT Expressions: function-first Ash now parses, checks, lowers,
   and executes tuple-payload ADT constructors and variant patterns such as

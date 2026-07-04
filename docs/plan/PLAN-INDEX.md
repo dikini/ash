@@ -169,6 +169,7 @@ Update this section as tasks complete:
 | [191](PLAN-191-SURFACE-BLOCK-EXPRESSIONS.md) | 2 | 2 | ✅ Complete; nested block expressions and block expression statements |
 | [192](PLAN-192-SURFACE-POSTFIX-PROJECTION.md) | 2 | 2 | ✅ Complete; postfix field projection on ordinary primary expressions |
 | [193](PLAN-193-SURFACE-TUPLE-ADT-EXPRESSIONS.md) | 2 | 2 | ✅ Complete; tuple-payload ADTs in function-first Ash |
+| [194](PLAN-194-CONTRACT-AND-EVIDENCE-SYSTEM.md) | 11 | 0 | Planned; contract and evidence system over the firm computation/operation model |
 
 ---
 
@@ -1103,3 +1104,32 @@ payloads, or stdlib helper calls.
 ||------|-------------|--------|
 || [TASK-1877](tasks/TASK-1877-surface-record-expression-plan-packet.md) | Create the Phase 187 plan packet | Complete |
 || [TASK-1878](tasks/TASK-1878-structural-record-expression-execution.md) | Parse, check, and execute structural record expressions | Complete |
+
+## Phase 194: Contract And Evidence System
+
+|**Status:** Planned (0/11 tasks complete)
+|**Plan:** [PLAN-194: Contract And Evidence System](PLAN-194-CONTRACT-AND-EVIDENCE-SYSTEM.md)
+|**Depends on:** Phase 184 Handler / Provider Semantics and Phase 193 Surface Tuple ADT Expressions.
+|**Specs/notes:** `SPEC-096b`, `SPEC-097b`, `SPEC-098b`, `SPEC-098c`, `SPEC-099b`, `SPEC-100`,
+`PLAN-165`, `PLAN-183`, `PLAN-184`, `NOTE-027`, `NOTE-029`, `NOTE-031`, `NOTE-032`, `NOTE-033`,
+`NOTE-034`, and `NOTE-035`.
+
+Adds correctness obligations on top of the target computation model: surface `requires`/`ensures`,
+predicate well-formedness, authority-free contract predicate evaluation, evidence rows for tests,
+laws, proofs, runtime monitors, and observations, plus structured blame diagnostics. The phase is
+intentionally after the operation model: contract predicates may inspect values and observation
+evidence, but they cannot acquire operation/resource/role/policy authority.
+
+|| Task | Description | Status |
+||------|-------------|--------|
+|| [TASK-1891](tasks/TASK-1891-contract-evidence-plan-packet.md) | Create the Phase 194 plan and task packet | Planned |
+|| [TASK-1892](tasks/TASK-1892-contract-evidence-seam-audit.md) | Audit live contract/evidence carriers, row admission, and diagnostics boundaries | Planned |
+|| [TASK-1893](tasks/TASK-1893-requires-ensures-surface-carriers.md) | Parse and preserve `requires`/`ensures` clauses on target `fn` declarations | Planned |
+|| [TASK-1894](tasks/TASK-1894-contract-predicate-well-formedness.md) | Enforce predicate well-formedness and authority-free observer rules | Planned |
+|| [TASK-1895](tasks/TASK-1895-surface-contract-lowering.md) | Lower surface contracts to Core predicate sidecars, snapshots, and check plans | Planned |
+|| [TASK-1896](tasks/TASK-1896-evidence-row-substrate.md) | Add evidence row records for tests, laws, proofs, runtime monitors, and observations | Planned |
+|| [TASK-1897](tasks/TASK-1897-contract-discharge-integration.md) | Integrate static/evidence/dynamic contract discharge with row admission | Planned |
+|| [TASK-1898](tasks/TASK-1898-dynamic-contract-runtime-checks.md) | Execute dynamic contract checks with distinct violation and predicate-fault traps | Planned |
+|| [TASK-1899](tasks/TASK-1899-contract-blame-diagnostics.md) | Emit structured blame diagnostics with snapshots, evidence, and redaction metadata | Planned |
+|| [TASK-1900](tasks/TASK-1900-runtime-monitor-evidence.md) | Wire runtime monitor evidence rows and temporal monitor diagnostics | Planned |
+|| [TASK-1901](tasks/TASK-1901-contract-evidence-closeout.md) | Close out Phase 194 with fixtures, docs, gates, and review remediation | Planned |

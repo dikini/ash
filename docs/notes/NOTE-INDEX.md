@@ -4,7 +4,7 @@ title: Ash Design Note Orientation Index
 kind: orientation-index
 status: active
 authority: navigational
-last_verified: 2026-07-03
+last_verified: 2026-07-04
 ---
 
 # Ash design note orientation index
@@ -41,12 +41,14 @@ Common tags include: `grammar`, `syntax`, `semantics`, `type-system`, `effect-sy
 2. [NOTE-033](NOTE-033-SURFACE-TO-CORE-CONTRACT-LOWERING.md)
 3. [NOTE-034](NOTE-034-CONTRACT-CAPABILITY-BOUNDARY.md)
 4. [PLAN-165](../plan/PLAN-165-CONTRACT-SYSTEM-IMPLEMENTATION-HANDOFF.md)
+5. [PLAN-194](../plan/PLAN-194-CONTRACT-AND-EVIDENCE-SYSTEM.md) for target-surface `requires`/`ensures`, authority-free predicate checking, evidence rows, and blame diagnostics after operation semantics are firm.
 
 ### Implement temporal/trace contract monitors
 
 1. [NOTE-035](NOTE-035-TEMPORAL-AND-CONCURRENT-CONTRACTS.md)
 2. [NOTE-034](NOTE-034-CONTRACT-CAPABILITY-BOUNDARY.md)
 3. [PLAN-165](../plan/PLAN-165-CONTRACT-SYSTEM-IMPLEMENTATION-HANDOFF.md)
+4. [PLAN-194](../plan/PLAN-194-CONTRACT-AND-EVIDENCE-SYSTEM.md) for runtime monitor evidence rows and temporal diagnostics.
 
 ### Work on ambient computation, handlers, and effect identity
 
@@ -82,6 +84,7 @@ Common tags include: `grammar`, `syntax`, `semantics`, `type-system`, `effect-sy
 18. [PLAN-191](../plan/PLAN-191-SURFACE-BLOCK-EXPRESSIONS.md) for nested ordinary block expressions and block expression statements.
 19. [PLAN-192](../plan/PLAN-192-SURFACE-POSTFIX-PROJECTION.md) for postfix field projection on ordinary primary expressions.
 20. [PLAN-193](../plan/PLAN-193-SURFACE-TUPLE-ADT-EXPRESSIONS.md) for tuple-payload ADTs in function-first Ash.
+21. [PLAN-194](../plan/PLAN-194-CONTRACT-AND-EVIDENCE-SYSTEM.md) for target contract/evidence obligations layered over the function-first computation model.
 
 ### Change target handler/effect/operation syntax
 

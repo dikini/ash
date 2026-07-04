@@ -4,7 +4,7 @@ title: Ash Specification Orientation Index
 kind: orientation-index
 status: active
 authority: navigational
-last_verified: 2026-07-03
+last_verified: 2026-07-04
 ---
 
 # Ash specification orientation index
@@ -90,6 +90,7 @@ Common tags include: `grammar`, `syntax`, `semantics`, `type-system`, `effect-sy
 21. [PLAN-191](../plan/PLAN-191-SURFACE-BLOCK-EXPRESSIONS.md) for nested ordinary block expressions and block expression statements.
 22. [PLAN-192](../plan/PLAN-192-SURFACE-POSTFIX-PROJECTION.md) for postfix field projection on ordinary primary expressions.
 23. [PLAN-193](../plan/PLAN-193-SURFACE-TUPLE-ADT-EXPRESSIONS.md) for tuple-payload ADTs in function-first Ash.
+24. [PLAN-194](../plan/PLAN-194-CONTRACT-AND-EVIDENCE-SYSTEM.md) for target contract/evidence planning on top of the firm computation and operation model.
 
 ### Legacy authority vocabulary audit
 
@@ -122,6 +123,7 @@ Common tags include: `grammar`, `syntax`, `semantics`, `type-system`, `effect-sy
 4. [SPEC-099](SPEC-099-CORE-LANGUAGE.md)
 5. [SPEC-100](SPEC-100-CORE-TYPE-CHECKING.md)
 6. [PLAN-165](../plan/PLAN-165-CONTRACT-SYSTEM-IMPLEMENTATION-HANDOFF.md)
+7. [PLAN-194](../plan/PLAN-194-CONTRACT-AND-EVIDENCE-SYSTEM.md) for target-surface `requires`/`ensures`, predicate well-formedness, evidence rows, authority-free predicates, and structured blame diagnostics after operation/authority semantics are firm.
 
 ## Document table
 

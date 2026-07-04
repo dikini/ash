@@ -177,7 +177,11 @@ fn fn_contract_rejects_unknown_variables() {
     };
 
     let error = type_check_program(&program).expect_err("unknown contract vars must be rejected");
-    assert!(error.to_string().contains("unknown variable 'ghost'"));
+    assert!(
+        error
+            .to_string()
+            .contains("unknown contract variable 'ghost'")
+    );
 }
 
 #[test]

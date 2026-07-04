@@ -2,6 +2,9 @@
 //!
 //! This module converts the surface syntax AST into the core IR representation
 //! used by the ash-core crate.
+//!
+//! The `contract_predicate` submodule provides the TASK-1893/1894 bridge from
+//! surface predicate expressions to core [`ContractPredicateExpr`] carriers.
 
 use std::{cell::RefCell, fmt};
 
@@ -23,6 +26,8 @@ use crate::surface::{
     Type, UnaryOp, Workflow as SurfaceWorkflow, WorkflowDef, YieldArm, expand_surface_module,
     visit_exprs_in_module,
 };
+
+pub mod contract_predicate;
 
 thread_local! {
     static ACTIVE_EFFECTFUL_NAMES: RefCell<Option<std::collections::HashSet<String>>> =
@@ -217,55 +222,229 @@ impl fmt::Display for FnContractLoweringError {
 
 impl std::error::Error for FnContractLoweringError {}
 
-/// Lowered fn contract together with the explicit runtime postcondition boundary.
+/// Lowered fn contract sidecars produced by the TASK-1895 Core predicate lowering boundary.
 #[derive(Debug, Clone, PartialEq)]
 pub struct LoweredFnContract {
+    /// Requires-clause discharge records, one per precondition.
+    pub requires_discharges: Vec<ash_core::core_ash_contract::ContractDischargeRecord>,
+    /// Ensures-clause discharge records, one per postcondition.
+    pub ensures_discharges: Vec<ash_core::core_ash_contract::ContractDischargeRecord>,
+    /// Retained legacy contract carrier for callers still expecting workflow-contract shape.
     pub contract: ash_core::workflow_contract::Contract,
+    /// Explicit runtime postcondition boundary for interpreter hooks.
     pub runtime_postconditions: ash_core::workflow_contract::RuntimePostconditionContract,
 }
 
-/// Lower a parsed fn contract into the core contract subset used by type checking and runtime
-/// postcondition evaluation.
+impl LoweredFnContract {
+    /// Returns all discharge records (requires then ensures).
+    #[must_use]
+    pub fn discharges(&self) -> Vec<ash_core::core_ash_contract::ContractDischargeRecord> {
+        let mut all = self.requires_discharges.clone();
+        all.extend(self.ensures_discharges.clone());
+        all
+    }
+}
+
+/// Context needed to build a [`PredicateEnvironment`] for a fn contract.
+#[derive(Debug, Clone, PartialEq)]
+pub struct FnContractLoweringContext<'a> {
+    /// Owning callable name for boundary identity.
+    pub name: &'a str,
+    /// Parameters with their Core types.
+    pub params: &'a [(String, ash_core::core_ash::CoreType)],
+    /// Optional return type of the callable.
+    pub result: Option<ash_core::core_ash::CoreType>,
+}
+
+/// Lower a parsed fn contract into the TASK-1895 Core predicate sidecars.
+///
+/// Builds a boundary-local [`PredicateEnvironment`] from the supplied parameters
+/// and result type, then translates each `requires`/`ensures` clause into a
+/// [`ContractPredicateExpr`] and lowers it through [`lower_contract_predicate`].
+/// The resulting discharge records are attached to the returned
+/// [`LoweredFnContract`].
 pub fn lower_fn_contract(
     contract: Option<&crate::surface::Contract>,
+    ctx: &FnContractLoweringContext<'_>,
 ) -> Result<LoweredFnContract, FnContractLoweringError> {
     let Some(contract) = contract else {
         return Ok(LoweredFnContract {
+            requires_discharges: Vec::new(),
+            ensures_discharges: Vec::new(),
             contract: ash_core::workflow_contract::Contract::default(),
             runtime_postconditions:
                 ash_core::workflow_contract::RuntimePostconditionContract::default(),
         });
     };
 
-    let requires = contract
-        .requires
-        .iter()
-        .map(lower_fn_requirement)
-        .collect::<Result<Vec<_>, _>>()?;
-    let ensures = contract
-        .ensures
-        .iter()
-        .map(lower_fn_ensures_clause)
-        .collect::<Result<Vec<_>, _>>()?;
+    let requires_env = build_predicate_environment(ctx, BoundaryKind::Requires);
+    let ensures_env = build_predicate_environment(ctx, BoundaryKind::Ensures);
+
+    let mut requires_discharges = Vec::new();
+    let mut requires = Vec::new();
+    for (index, requirement) in contract.requires.iter().enumerate() {
+        let (predicate, discharge) = lower_fn_requirement(requirement, ctx, &requires_env, index)?;
+        requires_discharges.push(discharge);
+        requires.push(predicate);
+    }
+
+    let mut ensures_discharges = Vec::new();
+    let mut ensures = Vec::new();
+    for (index, clause) in contract.ensures.iter().enumerate() {
+        let (predicate, discharge) = lower_fn_ensures_clause(clause, ctx, &ensures_env, index)?;
+        ensures_discharges.push(discharge);
+        ensures.push(predicate);
+    }
 
     let runtime_postconditions = ash_core::workflow_contract::RuntimePostconditionContract {
         predicates: ensures.clone(),
     };
 
     Ok(LoweredFnContract {
+        requires_discharges,
+        ensures_discharges,
         contract: ash_core::workflow_contract::Contract { requires, ensures },
         runtime_postconditions,
     })
 }
 
+fn boundary_id(name: &str, kind: BoundaryKind) -> ash_core::core_ash_contract::CoreBoundaryId {
+    use ash_core::core_ash_contract::CoreBoundaryId;
+    match kind {
+        BoundaryKind::Requires => CoreBoundaryId::new(format!("fn:{name}:requires")),
+        BoundaryKind::Ensures => CoreBoundaryId::new(format!("fn:{name}:ensures")),
+    }
+}
+
+fn boundary_kind_to_core(kind: BoundaryKind) -> ash_core::core_ash_contract::BoundaryKind {
+    match kind {
+        BoundaryKind::Requires => ash_core::core_ash_contract::BoundaryKind::Requires,
+        BoundaryKind::Ensures => ash_core::core_ash_contract::BoundaryKind::Ensures,
+    }
+}
+
+fn build_predicate_environment(
+    ctx: &FnContractLoweringContext<'_>,
+    kind: BoundaryKind,
+) -> ash_core::core_ash_contract::PredicateEnvironment {
+    use ash_core::core_ash_contract::{PredicateBinder, PredicateBinderKind, PredicateEnvironment};
+
+    let boundary = boundary_id(ctx.name, kind);
+    let mut binders: Vec<PredicateBinder> = ctx
+        .params
+        .iter()
+        .enumerate()
+        .map(|(index, (name, ty))| {
+            PredicateBinder::new(
+                boundary.clone(),
+                name.clone(),
+                name.clone(),
+                PredicateBinderKind::Parameter,
+                ty.clone(),
+                ash_core::core_ash::CoreSourceSpan {
+                    file: None,
+                    start: index,
+                    end: index.saturating_add(1),
+                },
+            )
+        })
+        .collect();
+
+    if let Some(result_ty) = &ctx.result {
+        binders.push(PredicateBinder::new(
+            boundary.clone(),
+            "result".to_string(),
+            "result".to_string(),
+            PredicateBinderKind::Result,
+            result_ty.clone(),
+            ash_core::core_ash::CoreSourceSpan {
+                file: None,
+                start: 0,
+                end: 1,
+            },
+        ));
+    }
+
+    PredicateEnvironment::new(boundary, binders, Vec::new(), Vec::new())
+}
+
+pub fn surface_type_to_core_type(ty: &crate::surface::Type) -> ash_core::core_ash::CoreType {
+    use ash_core::core_ash::CoreType;
+    match ty {
+        crate::surface::Type::Name(name) => CoreType::Base(name.to_string()),
+        crate::surface::Type::Capability(name) => CoreType::Named(name.to_string()),
+        crate::surface::Type::Constructor { name, args } => CoreType::App {
+            name: name.to_string(),
+            args: args.iter().map(surface_type_to_core_type).collect(),
+        },
+        crate::surface::Type::List(inner) => CoreType::App {
+            name: "List".to_string(),
+            args: vec![surface_type_to_core_type(inner)],
+        },
+        crate::surface::Type::Tuple(items) => {
+            CoreType::Tuple(items.iter().map(surface_type_to_core_type).collect())
+        }
+        crate::surface::Type::Record(fields) => CoreType::Record(
+            fields
+                .iter()
+                .map(|(n, t)| (n.to_string(), surface_type_to_core_type(t)))
+                .collect(),
+        ),
+        crate::surface::Type::Fn(params, _row, ret) => CoreType::Function {
+            params: params.iter().map(surface_type_to_core_type).collect(),
+            result: Box::new(surface_type_to_core_type(ret)),
+            row: ash_core::core_ash::CoreRow::default(),
+        },
+        crate::surface::Type::Associated { base, name } => CoreType::App {
+            name: name.to_string(),
+            args: vec![surface_type_to_core_type(base)],
+        },
+        _ => CoreType::Base("?".to_string()),
+    }
+}
+
 fn lower_fn_requirement(
     requirement: &crate::surface::Requirement,
-) -> Result<ash_core::workflow_contract::Requirement, FnContractLoweringError> {
+    ctx: &FnContractLoweringContext<'_>,
+    env: &ash_core::core_ash_contract::PredicateEnvironment,
+    index: usize,
+) -> Result<
+    (
+        ash_core::workflow_contract::Requirement,
+        ash_core::core_ash_contract::ContractDischargeRecord,
+    ),
+    FnContractLoweringError,
+> {
     match requirement {
         crate::surface::Requirement::Arithmetic { expr } => {
+            let contract_text = format!("{expr:?}");
             let (var, constraint) = lower_stage1_arith_predicate(expr)
                 .map_err(|message| FnContractLoweringError::InvalidRequires { message })?;
-            Ok(ash_core::workflow_contract::Requirement::Arithmetic { var, constraint })
+            let predicate_expr = arith_constraint_to_predicate_expr(
+                &var,
+                &constraint,
+                env,
+                ctx,
+                BoundaryKind::Requires,
+            )?;
+            let span = ash_core::core_ash::CoreSourceSpan {
+                file: None,
+                start: 0,
+                end: 1,
+            };
+            let discharge = lower_predicate_to_discharge(
+                predicate_expr,
+                env,
+                BoundaryKind::Requires,
+                index,
+                contract_text,
+                span,
+            )
+            .map_err(|message| FnContractLoweringError::InvalidRequires { message })?;
+            Ok((
+                ash_core::workflow_contract::Requirement::Arithmetic { var, constraint },
+                discharge,
+            ))
         }
         crate::surface::Requirement::HasCapability { .. } => {
             Err(FnContractLoweringError::InvalidRequires {
@@ -280,20 +459,295 @@ fn lower_fn_requirement(
 
 fn lower_fn_ensures_clause(
     clause: &crate::surface::EnsuresClause,
-) -> Result<ash_core::workflow_contract::PostPredicate, FnContractLoweringError> {
+    ctx: &FnContractLoweringContext<'_>,
+    env: &ash_core::core_ash_contract::PredicateEnvironment,
+    index: usize,
+) -> Result<
+    (
+        ash_core::workflow_contract::PostPredicate,
+        ash_core::core_ash_contract::ContractDischargeRecord,
+    ),
+    FnContractLoweringError,
+> {
+    let contract_text = format!("{clause:?}");
     if let Some(constraint) = lower_result_constraint(&clause.expr) {
-        return Ok(ash_core::workflow_contract::PostPredicate::ResultSatisfies(
-            constraint,
+        let predicate_expr = arith_constraint_to_predicate_expr(
+            "result",
+            &constraint,
+            env,
+            ctx,
+            BoundaryKind::Ensures,
+        )?;
+        let span = ash_core::core_ash::CoreSourceSpan {
+            file: None,
+            start: 0,
+            end: 1,
+        };
+        let discharge = lower_predicate_to_discharge(
+            predicate_expr,
+            env,
+            BoundaryKind::Ensures,
+            index,
+            contract_text,
+            span,
+        )
+        .map_err(|message| FnContractLoweringError::InvalidEnsures { message })?;
+        return Ok((
+            ash_core::workflow_contract::PostPredicate::ResultSatisfies(constraint),
+            discharge,
         ));
     }
 
     if let Some((left, right)) = lower_result_equality(&clause.expr) {
-        return Ok(ash_core::workflow_contract::PostPredicate::Eq(left, right));
+        let predicate_expr = result_equality_to_predicate_expr(&left, &right, env, ctx)?;
+        let span = ash_core::core_ash::CoreSourceSpan {
+            file: None,
+            start: 0,
+            end: 1,
+        };
+        let discharge = lower_predicate_to_discharge(
+            predicate_expr,
+            env,
+            BoundaryKind::Ensures,
+            index,
+            contract_text,
+            span,
+        )
+        .map_err(|message| FnContractLoweringError::InvalidEnsures { message })?;
+        return Ok((
+            ash_core::workflow_contract::PostPredicate::Eq(left, right),
+            discharge,
+        ));
     }
 
     Err(FnContractLoweringError::InvalidEnsures {
         message: "fn ensures clauses must be value-level predicates over `result` or simple equality; state assertions are not allowed".to_string(),
     })
+}
+
+fn lower_predicate_to_discharge(
+    expr: ash_core::core_ash_contract::ContractPredicateExpr,
+    env: &ash_core::core_ash_contract::PredicateEnvironment,
+    kind: BoundaryKind,
+    index: usize,
+    contract_text: String,
+    span: ash_core::core_ash::CoreSourceSpan,
+) -> Result<ash_core::core_ash_contract::ContractDischargeRecord, String> {
+    use ash_core::core_ash_contract::{
+        ContractRecoverability, CoreBlameLabel, CoreBlameParty, CoreBlamePolarity,
+    };
+
+    let boundary = env.boundary().clone();
+    let _boundary_kind = boundary_kind_to_core(kind);
+    let blame = match kind {
+        BoundaryKind::Requires => CoreBlameLabel::new(
+            CoreBlameParty::Caller,
+            CoreBlamePolarity::Negative,
+            boundary.clone(),
+        ),
+        BoundaryKind::Ensures => CoreBlameLabel::new(
+            CoreBlameParty::Callee,
+            CoreBlamePolarity::Positive,
+            boundary.clone(),
+        ),
+    };
+
+    let lowering = ash_core::core_ash_contract::lower_contract_predicate(
+        boundary.clone(),
+        env.clone(),
+        expr,
+        ash_core::core_ash::CoreType::Base("Bool".to_string()),
+        span.clone(),
+        contract_text,
+        blame.clone(),
+        ContractRecoverability::TrapDefault,
+    )
+    .map_err(|error| format!("{error:?}"))?;
+
+    let status = if let Some(plan) = lowering.runtime_check {
+        ash_core::core_ash_contract::ContractDischargeStatus::Dynamic {
+            plan: Box::new(plan),
+        }
+    } else {
+        ash_core::core_ash_contract::ContractDischargeStatus::Deferred {
+            reason: "legacy-stage1-contract".into(),
+        }
+    };
+
+    Ok(ash_core::core_ash_contract::ContractDischargeRecord::new(
+        format!("fn-contract-{index}"),
+        boundary,
+        status,
+        span,
+        Some(blame),
+    ))
+}
+
+fn arith_constraint_to_predicate_expr(
+    var_name: &str,
+    constraint: &ash_core::workflow_contract::ArithConstraint,
+    env: &ash_core::core_ash_contract::PredicateEnvironment,
+    ctx: &FnContractLoweringContext<'_>,
+    _kind: BoundaryKind,
+) -> Result<ash_core::core_ash_contract::ContractPredicateExpr, FnContractLoweringError> {
+    use ash_core::core_ash_contract::ContractPredicateExpr;
+
+    let binder =
+        find_binder_ref(env, var_name).ok_or_else(|| FnContractLoweringError::InvalidRequires {
+            message: format!("unknown contract variable '{var_name}'"),
+        })?;
+    let binder_expr = if var_name == "result" {
+        ContractPredicateExpr::Result(binder)
+    } else {
+        ContractPredicateExpr::Binder(binder)
+    };
+    let value_ty = if let Some((_, ty)) = ctx.params.iter().find(|(n, _)| n == var_name) {
+        ty.clone()
+    } else if var_name == "result" {
+        ctx.result
+            .clone()
+            .unwrap_or(ash_core::core_ash::CoreType::Base("Int".to_string()))
+    } else {
+        ash_core::core_ash::CoreType::Base("Int".to_string())
+    };
+
+    let int_lit = |v: i64| ContractPredicateExpr::IntLit(i128::from(v));
+    let cmp_expr = match constraint {
+        ash_core::workflow_contract::ArithConstraint::Gt(v) => {
+            ContractPredicateExpr::Gt(Box::new(binder_expr), Box::new(int_lit(*v)))
+        }
+        ash_core::workflow_contract::ArithConstraint::Lt(v) => {
+            ContractPredicateExpr::Lt(Box::new(binder_expr), Box::new(int_lit(*v)))
+        }
+        ash_core::workflow_contract::ArithConstraint::Gte(v) => {
+            ContractPredicateExpr::Ge(Box::new(binder_expr), Box::new(int_lit(*v)))
+        }
+        ash_core::workflow_contract::ArithConstraint::Lte(v) => {
+            ContractPredicateExpr::Le(Box::new(binder_expr), Box::new(int_lit(*v)))
+        }
+        ash_core::workflow_contract::ArithConstraint::Eq(v) => {
+            ContractPredicateExpr::Eq(Box::new(binder_expr), Box::new(int_lit(*v)))
+        }
+        ash_core::workflow_contract::ArithConstraint::NotEq(v) => {
+            ContractPredicateExpr::Ne(Box::new(binder_expr), Box::new(int_lit(*v)))
+        }
+        ash_core::workflow_contract::ArithConstraint::Modulo { div, rem } => {
+            let rem_expr =
+                ContractPredicateExpr::Rem(Box::new(binder_expr.clone()), Box::new(int_lit(*div)));
+            ContractPredicateExpr::Eq(Box::new(rem_expr), Box::new(int_lit(*rem)))
+        }
+        ash_core::workflow_contract::ArithConstraint::Range { min, max } => {
+            let ge_min =
+                ContractPredicateExpr::Ge(Box::new(binder_expr.clone()), Box::new(int_lit(*min)));
+            let le_max = ContractPredicateExpr::Le(Box::new(binder_expr), Box::new(int_lit(*max)));
+            ContractPredicateExpr::And(Box::new(ge_min), Box::new(le_max))
+        }
+    };
+    Ok(cast_expr_to_type(cmp_expr, &value_ty))
+}
+
+fn result_equality_to_predicate_expr(
+    left: &str,
+    right: &str,
+    env: &ash_core::core_ash_contract::PredicateEnvironment,
+    ctx: &FnContractLoweringContext<'_>,
+) -> Result<ash_core::core_ash_contract::ContractPredicateExpr, FnContractLoweringError> {
+    use ash_core::core_ash_contract::ContractPredicateExpr;
+
+    let left_expr = if left == "result" {
+        let binder = find_binder_ref(env, "result").ok_or_else(|| {
+            FnContractLoweringError::InvalidEnsures {
+                message: "result binder not available".to_string(),
+            }
+        })?;
+        ContractPredicateExpr::Result(binder)
+    } else {
+        contract_predicate_expr_from_simple_value(left, env, ctx).ok_or_else(|| {
+            FnContractLoweringError::InvalidEnsures {
+                message: format!("unsupported equality operand '{left}'"),
+            }
+        })?
+    };
+    let right_expr =
+        contract_predicate_expr_from_simple_value(right, env, ctx).ok_or_else(|| {
+            FnContractLoweringError::InvalidEnsures {
+                message: format!("unsupported equality operand '{right}'"),
+            }
+        })?;
+    Ok(ContractPredicateExpr::Eq(
+        Box::new(left_expr),
+        Box::new(right_expr),
+    ))
+}
+
+fn contract_predicate_expr_from_simple_value(
+    value: &str,
+    env: &ash_core::core_ash_contract::PredicateEnvironment,
+    _ctx: &FnContractLoweringContext<'_>,
+) -> Option<ash_core::core_ash_contract::ContractPredicateExpr> {
+    use ash_core::core_ash_contract::ContractPredicateExpr;
+
+    if value == "result" {
+        let binder = find_binder_ref(env, "result")?;
+        return Some(ContractPredicateExpr::Result(binder));
+    }
+
+    if let Some(binder) = find_binder_ref(env, value) {
+        return Some(ContractPredicateExpr::Binder(binder));
+    }
+
+    if value.parse::<i64>().is_ok() {
+        return Some(ContractPredicateExpr::IntLit(i128::from(
+            value.parse::<i64>().ok()?,
+        )));
+    }
+
+    if value.parse::<bool>().is_ok() {
+        return Some(ContractPredicateExpr::BoolLit(value.parse::<bool>().ok()?));
+    }
+
+    if value == "null" {
+        return Some(ContractPredicateExpr::UnitLit);
+    }
+
+    if value.starts_with('"') && value.ends_with('"') {
+        return Some(ContractPredicateExpr::StringLit(
+            value[1..value.len() - 1].to_string(),
+        ));
+    }
+
+    if value == "true" {
+        return Some(ContractPredicateExpr::BoolLit(true));
+    }
+    if value == "false" {
+        return Some(ContractPredicateExpr::BoolLit(false));
+    }
+
+    None
+}
+
+fn find_binder_ref(
+    env: &ash_core::core_ash_contract::PredicateEnvironment,
+    name: &str,
+) -> Option<ash_core::core_ash_contract::PredicateBinderRef> {
+    env.binders()
+        .iter()
+        .find(|b| b.id().local() == name)
+        .map(|b| b.ref_())
+}
+
+fn cast_expr_to_type(
+    expr: ash_core::core_ash_contract::ContractPredicateExpr,
+    ty: &ash_core::core_ash::CoreType,
+) -> ash_core::core_ash_contract::ContractPredicateExpr {
+    let _ = ty;
+    expr
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum BoundaryKind {
+    Requires,
+    Ensures,
 }
 
 fn lower_stage1_arith_predicate(

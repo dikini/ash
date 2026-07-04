@@ -2570,7 +2570,27 @@ fn check_function_def_in_env(
         fn_env.bind_variable(param.name.as_ref(), ty.clone());
     }
 
-    let lowered_contract = ash_parser::lower_fn_contract(function.contract.as_ref())
+    let ctx_params: Vec<(String, ash_core::core_ash::CoreType)> = function
+        .params
+        .iter()
+        .zip(param_types.iter())
+        .map(|(param, _ty)| {
+            (
+                param.name.to_string(),
+                ash_parser::surface_type_to_core_type(&param.ty),
+            )
+        })
+        .collect();
+    let ctx = ash_parser::FnContractLoweringContext {
+        name: function.name.as_ref(),
+        params: &ctx_params,
+        result: function
+            .return_type
+            .as_ref()
+            .map(ash_parser::surface_type_to_core_type),
+    };
+
+    let lowered_contract = ash_parser::lower_fn_contract(function.contract.as_ref(), &ctx)
         .map_err(|error| TypeCheckError::TypeError(error.to_string()))?;
     validate_fn_contract_namespace(function, &lowered_contract)?;
 

@@ -124,6 +124,7 @@ Common tags include: `grammar`, `syntax`, `semantics`, `type-system`, `effect-sy
 5. [SPEC-100](SPEC-100-CORE-TYPE-CHECKING.md)
 6. [PLAN-165](../plan/PLAN-165-CONTRACT-SYSTEM-IMPLEMENTATION-HANDOFF.md)
 7. [PLAN-194](../plan/PLAN-194-CONTRACT-AND-EVIDENCE-SYSTEM.md) for target-surface `requires`/`ensures`, predicate well-formedness, evidence rows, authority-free predicates, and structured blame diagnostics after operation/authority semantics are firm.
+8. [AUDIT-194](../plan/audits/AUDIT-194-contract-evidence-seams.md) for the live parser/typecheck/lowering/evidence/admission/runtime/diagnostic/temporal seam inventory before implementation.
 
 ## Document table
 

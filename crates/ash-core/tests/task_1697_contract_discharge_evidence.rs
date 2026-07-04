@@ -1,9 +1,9 @@
 use ash_core::core_ash::{CoreSourceSpan, CoreType};
 use ash_core::core_ash_contract::{
-    ComposedContract, ContractDischargeRecord, ContractDischargeStatus, ContractEvidenceRef,
-    ContractRecoverability, CoreBlameLabel, CoreBlameParty, CoreBlamePolarity, DiagnosticShape,
-    DynamicPredicatePlan, LoweredPredicateBuilder, PredicateEnvironment, PredicateNode,
-    RuntimeCheckPlan,
+    BoundaryKind, ComposedContract, ContractDischargeRecord, ContractDischargeStatus,
+    ContractEvidenceRef, ContractRecoverability, CoreBlameLabel, CoreBlameParty, CoreBlamePolarity,
+    DiagnosticShape, DynamicPredicatePlan, LoweredPredicateBuilder, PredicateEnvironment,
+    PredicateNode, RuntimeCheckPlan,
 };
 
 fn bool_ty() -> CoreType {
@@ -33,12 +33,20 @@ fn runtime_plan(boundary: &str) -> RuntimeCheckPlan {
         PredicateNode::BoolLit(true),
         bool_ty(),
     )
-    .dynamic_plan(DynamicPredicatePlan::Interpreter)
+    .dynamic_plan(DynamicPredicatePlan::Interpreter {
+        boundary_kind: BoundaryKind::Ensures,
+        environment_binders: Vec::new(),
+        predicate_node: PredicateNode::BoolLit(true),
+    })
     .build();
     RuntimeCheckPlan::new(
         predicate.predicate_ref().clone(),
         PredicateEnvironment::new(boundary, Vec::new(), Vec::new(), Vec::new()).ref_(),
-        DynamicPredicatePlan::Interpreter,
+        DynamicPredicatePlan::Interpreter {
+            boundary_kind: BoundaryKind::Ensures,
+            environment_binders: Vec::new(),
+            predicate_node: PredicateNode::BoolLit(true),
+        },
         blame(boundary),
         Vec::new(),
         DiagnosticShape::predicate_false("dynamic-check"),

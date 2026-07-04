@@ -2024,6 +2024,23 @@ impl Engine {
             .register_callable_workflow(workflow_name, workflow, arity, vec![])
             .await;
     }
+
+    /// Register a callable workflow with explicit parameter names.
+    ///
+    /// Used by integration tests that construct core IR directly and need the
+    /// runtime to bind caller arguments to named parameters in the child context.
+    #[doc(hidden)]
+    pub async fn register_callable_workflow_with_params(
+        &self,
+        workflow_name: impl Into<String>,
+        workflow: ash_core::Workflow,
+        arity: usize,
+        params: Vec<String>,
+    ) {
+        self.runtime_state
+            .register_callable_workflow(workflow_name, workflow, arity, params)
+            .await;
+    }
     /// Execute a workflow asynchronously with input bindings
     ///
     /// The input bindings are injected into the workflow's execution context

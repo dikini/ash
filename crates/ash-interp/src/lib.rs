@@ -38,6 +38,7 @@ pub mod list_helpers;
 pub mod mailbox;
 pub mod pattern;
 pub mod policy;
+pub mod predicate_evaluator;
 pub mod process_env;
 pub mod process_registry;
 pub mod proxy_registry;

@@ -85,7 +85,7 @@ fn task_1852_row_families_have_distinct_discharge_paths() {
             path: vec!["pii".to_string(), "redact".to_string()],
         },
         CoreRowItem::Evidence {
-            path: vec!["signed".to_string()],
+            path: vec!["test".to_string(), "add_unit".to_string()],
         },
         CoreRowItem::Failure {
             ty: Some(Box::new(CoreType::Named("HostFailure".to_string()))),
@@ -110,7 +110,8 @@ fn task_1852_row_families_have_distinct_discharge_paths() {
         policy: "pii.redact".to_string(),
     }));
     assert!(discharges.contains(&RowAdmissionDischarge::Evidence {
-        evidence: "signed".to_string(),
+        family: "test".into(),
+        evidence: "test.add_unit".to_string(),
     }));
     assert!(discharges.contains(&RowAdmissionDischarge::FailureHandler {
         ty: Some("HostFailure".to_string()),

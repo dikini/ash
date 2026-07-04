@@ -34,6 +34,12 @@ use crate::runtime_state::{RuntimeState, SPAWNED_CHILD_CONTROL_BINDING};
 use crate::stream::StreamContext;
 use crate::yield_state::{CorrelationId, SuspendedYields, YieldState};
 
+use crate::predicate_evaluator::{PredicateResult, evaluate_runtime_check_plan};
+use ash_core::core_ash_contract::{
+    BoundaryKind, ContractDiagnostic, ContractDischargeStatus, PredicateClassification,
+    PredicateFaultDiagnostic, RuntimeCheckPlan,
+};
+
 use std::collections::BTreeSet;
 use std::future::Future;
 use std::pin::Pin;
@@ -46,6 +52,42 @@ type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
 type SharedControlRegistry = Arc<Mutex<ControlLinkRegistry>>;
 type SharedProxyRegistry = Arc<Mutex<ProxyRegistry>>;
 type SharedSuspendedYields = Arc<Mutex<SuspendedYields>>;
+
+/// Evaluates a dynamic contract check plan against captured boundary values.
+///
+/// Returns `Ok(())` when the predicate is true. On a false predicate, returns
+/// `ExecError::ContractViolation` carrying a structured diagnostic. On a
+/// predicate evaluator fault, returns `ExecError::ContractPredicateFault`.
+fn evaluate_contract_plan(
+    runtime_state: &RuntimeState,
+    plan: &RuntimeCheckPlan,
+    arguments: &[Value],
+    result: Option<&Value>,
+) -> Result<(), ExecError> {
+    match evaluate_runtime_check_plan(runtime_state, plan, arguments, result) {
+        PredicateResult::True => Ok(()),
+        PredicateResult::False => {
+            let diagnostic = ContractDiagnostic::new(
+                plan.predicate().clone(),
+                "dynamic contract check",
+                plan.blame().clone(),
+                PredicateClassification::Dynamic,
+                plan.snapshot_refs().to_vec(),
+            );
+            Err(ExecError::ContractViolation(Box::new(diagnostic)))
+        }
+        PredicateResult::Fault(fault) => {
+            let diagnostic = PredicateFaultDiagnostic::new(
+                plan.predicate().clone(),
+                "dynamic contract check",
+                plan.blame().clone(),
+                fault,
+                plan.snapshot_refs().to_vec(),
+            );
+            Err(ExecError::ContractPredicateFault(Box::new(diagnostic)))
+        }
+    }
+}
 
 /// Execute a workflow, returning the final value (legacy signature without BehaviourContext)
 ///
@@ -798,8 +840,18 @@ fn execute_workflow_inner_observed<'a>(
                     resolve_registered_runtime_call_target(runtime_state, target, arguments.len())
                         .await?;
 
+                // Evaluate arguments in the caller's context once, so they are
+                // available for both the pre-call `requires` check and the
+                // post-call `ensures` check.
+                let mut arg_values = Vec::with_capacity(arguments.len());
+                for arg_expr in arguments.iter() {
+                    let arg_value = eval_expr_async(arg_expr, &ctx)
+                        .await
+                        .map_err(ExecError::Eval)?;
+                    arg_values.push(arg_value);
+                }
+
                 // Build child context with arguments bound to parameter names.
-                // Arguments are evaluated in the caller's context.
                 let child_ctx = if let Some(ref callable) = callable {
                     let mut child = ctx.extend();
                     if let Some(policy_evaluator) = ctx.policy_evaluator() {
@@ -808,11 +860,8 @@ fn execute_workflow_inner_observed<'a>(
                     if let Some(act_env) = ctx.act_env() {
                         child = child.with_act_env_arc(act_env);
                     }
-                    for (param_name, arg_expr) in callable.params.iter().zip(arguments.iter()) {
-                        let arg_value = eval_expr_async(arg_expr, &ctx)
-                            .await
-                            .map_err(ExecError::Eval)?;
-                        child.set(param_name.clone(), arg_value);
+                    for (param_name, arg_value) in callable.params.iter().zip(arg_values.iter()) {
+                        child.set(param_name.clone(), arg_value.clone());
                     }
                     child
                 } else {
@@ -826,7 +875,16 @@ fn execute_workflow_inner_observed<'a>(
                     child
                 };
 
-                execute_workflow_inner_observed(
+                // Dynamic contract checks: `requires` is evaluated at the entry
+                // boundary; `ensures` is evaluated at the return boundary.
+                if let Some(discharge) = runtime_state.contract_discharge_record(target)
+                    && let ContractDischargeStatus::Dynamic { plan } = discharge.status()
+                    && plan.boundary_kind() == BoundaryKind::Requires
+                {
+                    evaluate_contract_plan(runtime_state, plan, &arg_values, None)?;
+                }
+
+                let call_result = execute_workflow_inner_observed(
                     &child_workflow,
                     child_ctx,
                     cap_ctx,
@@ -842,6 +900,37 @@ fn execute_workflow_inner_observed<'a>(
                     execution_recorder,
                 )
                 .await?;
+
+                if let Some(discharge) = runtime_state.contract_discharge_record(target)
+                    && let ContractDischargeStatus::Dynamic { plan } = discharge.status()
+                    && plan.boundary_kind() == BoundaryKind::Ensures
+                {
+                    evaluate_contract_plan(runtime_state, plan, &arg_values, Some(&call_result))?;
+                }
+
+                // If the continuation is `Done`, we still execute the
+                // continuation so that `Done` behaves consistently (it returns
+                // `Value::Null`). The call result is intentionally not leaked
+                // past the continuation boundary; callers that need it must
+                // bind it with a `Workflow::Let` continuation.
+                if matches!(**continuation, Workflow::Done) {
+                    return execute_workflow_inner_observed(
+                        continuation,
+                        ctx,
+                        cap_ctx,
+                        policy_eval,
+                        behaviour_ctx,
+                        stream_ctx,
+                        mailbox,
+                        control_registry,
+                        proxy_registry.clone(),
+                        suspended_yields.clone(),
+                        runtime_state,
+                        terminal_observer,
+                        execution_recorder,
+                    )
+                    .await;
+                }
 
                 execute_workflow_inner_observed(
                     continuation,

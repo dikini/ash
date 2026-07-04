@@ -513,7 +513,22 @@ fn test_lower_fn_contract_stage1_predicates() {
         }],
     };
 
-    let lowered = lower_fn_contract(Some(&contract)).expect("fn contract should lower");
+    let ctx = FnContractLoweringContext {
+        name: "safe_div",
+        params: &[
+            (
+                "n".to_string(),
+                ash_core::core_ash::CoreType::Base("Int".to_string()),
+            ),
+            (
+                "d".to_string(),
+                ash_core::core_ash::CoreType::Base("Int".to_string()),
+            ),
+        ],
+        result: Some(ash_core::core_ash::CoreType::Base("Int".to_string())),
+    };
+
+    let lowered = lower_fn_contract(Some(&contract), &ctx).expect("fn contract should lower");
     assert_eq!(lowered.contract.requires.len(), 3);
     assert_eq!(lowered.runtime_postconditions.predicates.len(), 1);
     assert!(matches!(
@@ -561,7 +576,16 @@ fn test_lower_fn_contract_rejects_non_value_ensures() {
         }],
     };
 
-    let error = lower_fn_contract(Some(&contract)).expect_err("invalid ensures should fail");
+    let ctx = FnContractLoweringContext {
+        name: "_test",
+        params: &[(
+            "state".to_string(),
+            ash_core::core_ash::CoreType::Base("Int".to_string()),
+        )],
+        result: Some(ash_core::core_ash::CoreType::Base("Int".to_string())),
+    };
+
+    let error = lower_fn_contract(Some(&contract), &ctx).expect_err("invalid ensures should fail");
     assert!(matches!(
         error,
         FnContractLoweringError::InvalidEnsures { .. }

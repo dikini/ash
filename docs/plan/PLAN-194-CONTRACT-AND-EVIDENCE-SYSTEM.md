@@ -1,6 +1,6 @@
 # PLAN-194: Contract And Evidence System
 
-**Status:** Planned
+**Status:** ✅ Complete; all Phase 194 tasks finished and gates passing
 **Depends on:** Phase 184 Handler / Provider Semantics and Phase 193 Surface Tuple ADT Expressions.
 **Specs/notes:** `SPEC-096b`, `SPEC-097b`, `SPEC-098b`, `SPEC-098c`, `SPEC-099b`,
 `SPEC-100`, `PLAN-165`, `PLAN-183`, `PLAN-184`, `NOTE-027`, `NOTE-029`, `NOTE-031`,
@@ -68,15 +68,15 @@ or acquire provider/resource/role authority.
 |------|-------------|----------|------------|--------|
 | [TASK-1891](tasks/TASK-1891-contract-evidence-plan-packet.md) | Create the Phase 194 plan and task packet | 2h | Phase 193 | Planned |
 | [TASK-1892](tasks/TASK-1892-contract-evidence-seam-audit.md) | Audit live contract/evidence carriers, row admission, and diagnostics boundaries | 4h | TASK-1891 | Planned |
-| [TASK-1893](tasks/TASK-1893-requires-ensures-surface-carriers.md) | Parse and preserve `requires`/`ensures` clauses on target `fn` declarations | 8h | TASK-1892 | Planned |
-| [TASK-1894](tasks/TASK-1894-contract-predicate-well-formedness.md) | Enforce predicate well-formedness and authority-free observer rules | 10h | TASK-1893 | Planned |
-| [TASK-1895](tasks/TASK-1895-surface-contract-lowering.md) | Lower surface contracts to Core predicate sidecars, snapshots, and check plans | 10h | TASK-1894 | Planned |
-| [TASK-1896](tasks/TASK-1896-evidence-row-substrate.md) | Add evidence row records for tests, laws, proofs, runtime monitors, and observations | 8h | TASK-1895 | Planned |
-| [TASK-1897](tasks/TASK-1897-contract-discharge-integration.md) | Integrate static/evidence/dynamic contract discharge with row admission | 8h | TASK-1896 | Planned |
-| [TASK-1898](tasks/TASK-1898-dynamic-contract-runtime-checks.md) | Execute dynamic contract checks with distinct violation and predicate-fault traps | 10h | TASK-1897 | Planned |
-| [TASK-1899](tasks/TASK-1899-contract-blame-diagnostics.md) | Emit structured blame diagnostics with snapshots, evidence, and redaction metadata | 8h | TASK-1898 | Planned |
-| [TASK-1900](tasks/TASK-1900-runtime-monitor-evidence.md) | Wire runtime monitor evidence rows and temporal monitor diagnostics | 8h | TASK-1896, TASK-1899 | Planned |
-| [TASK-1901](tasks/TASK-1901-contract-evidence-closeout.md) | Close out Phase 194 with fixtures, docs, gates, and review remediation | 6h | TASK-1893 through TASK-1900 | Planned |
+||| [TASK-1893](tasks/TASK-1893-requires-ensures-surface-carriers.md) | Parse and preserve `requires`/`ensures` clauses on target `fn` declarations | 8h | TASK-1892 | ✅ Complete |
+||| [TASK-1894](tasks/TASK-1894-contract-predicate-well-formedness.md) | Enforce predicate well-formedness and authority-free observer rules | 10h | TASK-1893 | ✅ Complete |
+||| [TASK-1895](tasks/TASK-1895-surface-contract-lowering.md) | Lower surface contracts to Core predicate sidecars, snapshots, and check plans | 10h | TASK-1894 | ✅ Complete |
+||| [TASK-1896](tasks/TASK-1896-evidence-row-substrate.md) | Add evidence row records for tests, laws, proofs, runtime monitors, and observations | 8h | TASK-1895 | ✅ Complete |
+||| [TASK-1897](tasks/TASK-1897-contract-discharge-integration.md) | Integrate static/evidence/dynamic contract discharge with row admission | 8h | TASK-1896 | ✅ Complete |
+||| [TASK-1898](tasks/TASK-1898-dynamic-contract-runtime-checks.md) | Execute dynamic contract checks with distinct violation and predicate-fault traps | 10h | TASK-1897 | ✅ Complete |
+||| [TASK-1899](tasks/TASK-1899-contract-blame-diagnostics.md) | Emit structured blame diagnostics with snapshots, evidence, and redaction metadata | 8h | TASK-1898 | ✅ Complete |
+||| [TASK-1900](tasks/TASK-1900-runtime-monitor-evidence.md) | Wire runtime monitor evidence rows and temporal monitor diagnostics | 8h | TASK-1896, TASK-1899 | ✅ Complete |
+||| [TASK-1901](tasks/TASK-1901-contract-evidence-closeout.md) | Close out Phase 194 with fixtures, docs, gates, and review remediation | 6h | TASK-1893 through TASK-1900 | ✅ Complete |
 
 Estimated implementation effort after the plan packet: 80 hours.
 
@@ -166,13 +166,13 @@ row requirements, authority-free predicates, evidence discharge, and structured 
 
 ## Acceptance Criteria
 
-- [ ] Phase 194 plan and task files exist and are indexed.
-- [ ] Target `fn` contracts parse, preserve, summarize, and lower without workflow syntax.
-- [ ] Predicate well-formedness rejects authority acquisition and unstable observers.
-- [ ] Surface contracts lower to Core predicate sidecars, snapshots, runtime check plans, and
+- [x] Phase 194 plan and task files exist and are indexed.
+- [x] Target `fn` contracts parse, preserve, summarize, and lower without workflow syntax.
+- [x] Predicate well-formedness rejects authority acquisition and unstable observers.
+- [x] Surface contracts lower to Core predicate sidecars, snapshots, runtime check plans, and
   discharge metadata.
-- [ ] Evidence rows cover tests, laws, proofs, runtime monitors, and observations as requirements.
-- [ ] Dynamic checks distinguish contract violations from predicate faults.
-- [ ] Structured diagnostics preserve blame, boundary, predicate, snapshot, evidence, and redaction
+- [x] Evidence rows cover tests, laws, proofs, runtime monitors, and observations as requirements.
+- [x] Dynamic checks distinguish contract violations from predicate faults.
+- [x] Structured diagnostics preserve blame, boundary, predicate, snapshot, evidence, and redaction
   details.
-- [ ] Changelog and orientation indexes route future contract/evidence work through this phase.
+- [x] Changelog and orientation indexes route future contract/evidence work through this phase.

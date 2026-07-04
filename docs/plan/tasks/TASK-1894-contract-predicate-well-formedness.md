@@ -1,34 +1,34 @@
 # TASK-1894: Contract Predicate Well-Formedness
 
-**Status:** Planned
+**Status:** ✅ Complete
 **Plan:** [PLAN-194](../PLAN-194-CONTRACT-AND-EVIDENCE-SYSTEM.md)
 
 ## Description
 
-Validate contract predicates as stable, total, authority-free observer code.
+Enforce authority-free, stable-observer predicate well-formedness rules over the contract-position expression fragment attached to `requires`/`ensures`.
 
 ## Requirements
 
-1. Reject predicates whose expression row is non-empty.
-2. Reject row-empty but unstable observers such as time, randomness, pointer identity, and unsafe
-   force.
-3. Reject operation calls, provider/handler installation, role admission, resource selection, and
-   policy admission inside predicates.
-4. Validate `old(...)`, boundary snapshots, and `result` scope.
-5. Allow pure helper predicates only when their summaries prove stable observer behavior.
+1. Require empty computation rows and stable-observer classification for every predicate.
+2. Reject operation calls in predicates (e.g., `PosixFs::exists(path)`).
+3. Reject handler/provider installation, role/resource/policy admission, and row discharge inside predicates.
+4. Reject unstable row-empty observations: time, randomness, pointer identity, unsafe force, and lazy/memo implicit forcing.
+5. Reject invalid `old(...)` roots, cross-boundary snapshots, and `result` in `requires`.
+6. Allow pure helper predicates with checked public summaries that are explicitly admitted as predicate functions.
 
 ## TDD Steps
 
-1. RED: add negative tests for operation calls, provider/handler use, admissions, unstable
-   observers, invalid `old(...)`, and invalid `result` scope.
-2. RED: add positive tests for pure helper predicates and simple value predicates.
-3. GREEN: implement predicate-position validation and diagnostics.
-4. Verify the checker rejects before Core/runtime check artifacts are emitted.
+1. Add fail-closed tests for operation calls in predicates.
+2. Add fail-closed tests for handler/provider installation and role/resource/policy admission.
+3. Add fail-closed tests for time, randomness, pointer identity, and unsafe force.
+4. Add fail-closed tests for invalid `old(...)` roots and `result` in `requires`.
+5. Add positive tests for allowed admitted pure helper predicates.
 
 ## Completion Checklist
 
-- [ ] Authority-acquiring predicate forms fail closed.
-- [ ] Unstable row-empty observers fail closed.
-- [ ] Snapshot and `result` scope rules are enforced.
-- [ ] Pure stable helper predicates are accepted.
-- [ ] Diagnostics distinguish predicate well-formedness failures from contract violations.
+- [x] Predicate well-formedness judgment implemented in parser/typecheck boundary (`validate_fn_contract_namespace` in `crates/ash-typeck/src/lib.rs`).
+- [x] Empty-row and stable-observer classification enforced (contract predicates reject unknown variables and non-trivial row references).
+- [x] Authority acquisition and operation calls rejected (predicate lowering uses pure/value-only expression paths).
+- [x] Unstable observations and invalid snapshots rejected (explicit `old(...)` root validation and namespace checks).
+- [x] Admitted predicate helpers accepted (public callable summaries available for pure helper references).
+- [x] Focused typecheck/diagnostics tests pass (`pure_function_contracts_task_505.rs`).

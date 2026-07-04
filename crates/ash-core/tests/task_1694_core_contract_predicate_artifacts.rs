@@ -81,7 +81,11 @@ fn stable_identity_depends_on_binders_snapshots_predicate_fns_and_types_not_sour
     let first = LoweredPredicateBuilder::new(boundary, env.clone(), root.clone(), bool_ty())
         .source(span(0, 40), "sorted(xs) && old(xs.len) >= 0")
         .classification(PredicateClassification::Dynamic)
-        .dynamic_plan(DynamicPredicatePlan::Interpreter)
+        .dynamic_plan(DynamicPredicatePlan::Interpreter {
+            boundary_kind: BoundaryKind::Ensures,
+            environment_binders: Vec::new(),
+            predicate_node: PredicateNode::BoolLit(true),
+        })
         .diagnostic_shape(DiagnosticShape::predicate_false(
             "sorted-list-postcondition",
         ))
@@ -94,7 +98,11 @@ fn stable_identity_depends_on_binders_snapshots_predicate_fns_and_types_not_sour
                 " /* comment */ sorted ( xs ) && old ( xs . len ) >= 0",
             )
             .classification(PredicateClassification::Dynamic)
-            .dynamic_plan(DynamicPredicatePlan::Interpreter)
+            .dynamic_plan(DynamicPredicatePlan::Interpreter {
+                boundary_kind: BoundaryKind::Ensures,
+                environment_binders: Vec::new(),
+                predicate_node: PredicateNode::BoolLit(true),
+            })
             .diagnostic_shape(DiagnosticShape::predicate_false("different wording"))
             .build();
 
@@ -155,7 +163,11 @@ fn stable_identity_ignores_proof_and_runtime_discharge_metadata() {
             .build();
     let dynamic_predicate = LoweredPredicateBuilder::new(boundary, env, root, bool_ty())
         .classification(PredicateClassification::Dynamic)
-        .dynamic_plan(DynamicPredicatePlan::Interpreter)
+        .dynamic_plan(DynamicPredicatePlan::Interpreter {
+            boundary_kind: BoundaryKind::Ensures,
+            environment_binders: Vec::new(),
+            predicate_node: PredicateNode::BoolLit(true),
+        })
         .build();
 
     assert_eq!(
@@ -205,14 +217,22 @@ fn runtime_check_plan_reuses_lowered_predicate_ref_and_captured_environment() {
         bool_ty(),
     )
     .classification(PredicateClassification::Dynamic)
-    .dynamic_plan(DynamicPredicatePlan::Interpreter)
+    .dynamic_plan(DynamicPredicatePlan::Interpreter {
+        boundary_kind: BoundaryKind::Ensures,
+        environment_binders: Vec::new(),
+        predicate_node: PredicateNode::BoolLit(true),
+    })
     .source(span(0, 10), "result > 0")
     .build();
 
     let plan = RuntimeCheckPlan::new(
         predicate.predicate_ref().clone(),
         env.ref_(),
-        DynamicPredicatePlan::Interpreter,
+        DynamicPredicatePlan::Interpreter {
+            boundary_kind: BoundaryKind::Ensures,
+            environment_binders: Vec::new(),
+            predicate_node: PredicateNode::BoolLit(true),
+        },
         CoreBlameLabel::new(
             CoreBlameParty::Callee,
             CoreBlamePolarity::Positive,

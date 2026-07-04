@@ -9,6 +9,27 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Added PLAN-194 Contract And Evidence System, with TASK-1891 through TASK-1901 covering target
   `requires`/`ensures`, predicate well-formedness, authority-free contract predicates, evidence
   rows for tests/laws/proofs/runtime monitors, and structured blame diagnostics.
+- Created TASK-1893 through TASK-1901 task files for Phase 194 and added the AUDIT-194 seam audit
+  artifact mapping parser, typecheck, lowering, evidence-row, admission, runtime, diagnostic, and
+  temporal seams to their owning tasks. Updated PLAN-INDEX.md and CHANGELOG.md to mark TASK-1891 and
+  TASK-1892 complete and reflect the current Phase 194 status.
+- Added evidence row substrate (TASK-1896): `CoreRowItem::Evidence` paths encode evidence family
+  (`test`, `law`, `proof`, `monitor`, `observation`) plus identity; `RowAdmissionRequirement::Evidence`
+  and `RowAdmissionDischarge::Evidence` carry the family; evidence rows are treated as non-authority
+  requirements and rejected fail-closed when no valid discharge record is present.
+- Added contract discharge integration (TASK-1897): `ContractDischargeRecord` sidecars are stored in
+  `RuntimeState` and accessible via `Engine::set_contract_discharge_for_callable` and
+  `Engine::contract_discharge_record_for_callable`; `CoreRowItem::Contract` maps to an unsupported
+  fail-closed admission requirement so contract rows cannot grant authority.
+- Added dynamic contract runtime checks (TASK-1898): `Workflow::Call` evaluates authority-free dynamic
+  predicates at `requires` (entry) and `ensures` (return) boundaries, producing `ContractViolation`
+  traps on false predicates and `ContractPredicateFault` traps on evaluator faults.
+- Added structured contract blame diagnostics (TASK-1899): `ContractDiagnostic` and
+  `PredicateFaultDiagnostic` carry predicate identity, blame party/polarity, boundary identity,
+  snapshot refs, evidence refs, and a redacted flag; `ExecError` propagates these structs directly.
+- Added runtime monitor evidence carrier (TASK-1900): `RuntimeMonitorEvidence` records monitor
+  identity, contract identity, boundary, evaluation outcome, and redaction status; attached to
+  `ContractDischargeRecord` and covered by authority-neutrality tests.
 
 ### Changed
 - Completed PLAN-193 Surface Tuple ADT Expressions: function-first Ash now parses, checks, lowers,

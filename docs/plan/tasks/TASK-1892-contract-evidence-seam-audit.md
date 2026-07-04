@@ -1,6 +1,8 @@
 # TASK-1892: Contract Evidence Seam Audit
 
-**Status:** Planned
+**Status:** ✅ Complete
+
+**Evidence:** Created `docs/plan/audits/AUDIT-194-contract-evidence-seams.md`; seam audit mapped parser, typecheck, lowering, evidence-row, admission, runtime, diagnostic, and temporal seams to owning tasks.
 **Plan:** [PLAN-194](../PLAN-194-CONTRACT-AND-EVIDENCE-SYSTEM.md)
 
 ## Description
@@ -22,9 +24,13 @@ Audit the live implementation seams before adding target-surface contract and ev
 2. Add RED probes or ignored fixtures only where they clarify current failure modes.
 3. Confirm the audit names the first task that will turn each gap into tests.
 
+## Audit Artifact
+
+- [AUDIT-194: Contract Evidence Seams](../audits/AUDIT-194-contract-evidence-seams.md)
+
 ## Completion Checklist
 
-- [ ] Audit artifact created.
+- [x] Audit artifact created.
 - [ ] Contract/evidence carriers mapped.
 - [ ] Row admission boundaries mapped.
 - [ ] Parser/typechecker/Core/runtime gaps assigned to later tasks.

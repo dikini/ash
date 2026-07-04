@@ -21,7 +21,8 @@
 //! host already selected a matching resource initializer; a satisfied role row
 //! means the admission request already carries the matching admitted role.
 
-use ash_core::core_ash::{CoreRow, CoreRowItem, CoreType};
+use ash_core::core_ash::{CoreName, CoreRow, CoreRowItem, CoreType};
+use ash_core::core_ash_contract::ContractDischargeRecord;
 use ash_core::runtime::{
     WorkflowAdmissionContext, WorkflowFailure, WorkflowFailureEvidence, WorkflowFailureKind,
     WorkflowReport,
@@ -71,6 +72,8 @@ pub enum RowAdmissionRequirement {
     },
     /// Evidence requirement.
     Evidence {
+        /// Evidence family (e.g. `test`, `law`, `proof`, `monitor`, `observation`).
+        family: CoreName,
         /// Evidence name path.
         evidence: String,
     },
@@ -124,8 +127,15 @@ pub enum RowAdmissionDischarge {
     },
     /// Evidence rows discharge through named evidence.
     Evidence {
+        /// Evidence family (e.g. `test`, `law`, `proof`, `monitor`, `observation`).
+        family: CoreName,
         /// Evidence path.
         evidence: String,
+    },
+    /// Contract discharge rows require static, evidence, or dynamic discharge.
+    Contract {
+        /// Contract discharge record.
+        discharge: ContractDischargeRecord,
     },
     /// Effect group rows require group expansion before concrete discharge.
     EffectGroup {
@@ -273,16 +283,24 @@ impl RowAdmissionRequirement {
             CoreRowItem::Failure { ty } => Self::Failure {
                 ty: ty.as_deref().map(format_core_type_name),
             },
-            CoreRowItem::Evidence { path } => Self::Evidence {
-                evidence: path.join("."),
-            },
+            CoreRowItem::Evidence { path } => {
+                let family = path.first().map_or("unknown", CoreName::as_str);
+                Self::Evidence {
+                    family: family.into(),
+                    evidence: path
+                        .iter()
+                        .map(CoreName::as_str)
+                        .collect::<Vec<_>>()
+                        .join("."),
+                }
+            }
             CoreRowItem::EffectGroupRef { path } => Self::EffectGroup {
                 group: path.join("."),
             },
             CoreRowItem::Contract { contract } => Self::Unsupported {
                 family: "contract",
                 description: format!(
-                    "contract row item '{contract}' is not supported by admission"
+                    "legacy contract row item '{contract}' is treated as a contract-discharge requirement"
                 ),
             },
             CoreRowItem::Channel { path, mode, .. } => Self::Unsupported {
@@ -311,7 +329,7 @@ impl RowAdmissionRequirement {
             Self::Policy { policy } => format!("policy {policy}"),
             Self::Process { operation } => format!("process {operation}"),
             Self::Failure { ty } => format!("fail {}", ty.as_deref().unwrap_or("<unknown>")),
-            Self::Evidence { evidence } => format!("evidence {evidence}"),
+            Self::Evidence { family, evidence } => format!("evidence {family}:{evidence}"),
             Self::EffectGroup { group } => format!("group {group}"),
             Self::Unsupported {
                 family,
@@ -347,7 +365,8 @@ impl RowAdmissionRequirement {
                 ),
             },
             Self::Failure { ty } => RowAdmissionDischarge::FailureHandler { ty: ty.clone() },
-            Self::Evidence { evidence } => RowAdmissionDischarge::Evidence {
+            Self::Evidence { family, evidence } => RowAdmissionDischarge::Evidence {
+                family: family.clone(),
                 evidence: evidence.clone(),
             },
             Self::EffectGroup { group } => RowAdmissionDischarge::EffectGroup {
@@ -505,9 +524,32 @@ impl RowAdmissionCheck {
                     ty.as_deref().unwrap_or("<unknown>")
                 )],
             },
-            RowAdmissionRequirement::Evidence { evidence } => Self::Unsupported {
+            RowAdmissionRequirement::Evidence { family, evidence } => {
+                const VALID_FAMILIES: &[&str] = &["test", "law", "proof", "monitor", "observation"];
+                if !VALID_FAMILIES.contains(&family.as_str()) {
+                    return Self::Missing {
+                        kind: WorkflowFailureKind::RequiresViolation,
+                        notes: vec![format!(
+                            "evidence row '{evidence}' has invalid family '{family}'; expected test, law, proof, monitor, or observation"
+                        )],
+                    };
+                }
+                // Evidence rows are requirements/records, not authority.
+                // Without a valid evidence record in the admission request, fail closed.
+                Self::Missing {
+                    kind: WorkflowFailureKind::RequiresViolation,
+                    notes: vec![format!(
+                        "evidence row '{family}:{evidence}' requires a valid evidence record and an explicit strategy allowing evidence discharge; rows do not grant authority"
+                    )],
+                }
+            }
+            RowAdmissionRequirement::Unsupported {
+                family,
+                description,
+            } if *family == "contract" => Self::Missing {
+                kind: WorkflowFailureKind::RequiresViolation,
                 notes: vec![format!(
-                    "evidence row '{evidence}' requires evidence discharge, which is not supported by the admission substrate"
+                    "contract row {description} requires a ContractDischargeRecord and does not grant authority"
                 )],
             },
             RowAdmissionRequirement::EffectGroup { group } => Self::Unsupported {
@@ -582,6 +624,46 @@ impl Engine {
         // All explicit row requirements are satisfied or absent; delegate to the
         // existing admission path.
         self.admit_workflow(request).await
+    }
+
+    /// Set a contract-discharge record on a callable's admission requirement view.
+    ///
+    /// This is a metadata-only hook: it records the discharge but does not install
+    /// providers, resources, roles, handlers, or runtime authority. Discharge is
+    /// still checked through the admission path; missing or invalid discharge rejects.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the internal contract-discharge registry mutex is poisoned.
+    ///
+    /// # Errors
+    ///
+    /// Returns `None` if `callable_name` has no function row; otherwise returns the
+    /// previous discharge record if one was set.
+    pub fn set_contract_discharge_for_callable(
+        &mut self,
+        callable_name: &str,
+        discharge: ContractDischargeRecord,
+        workflow: &crate::Workflow,
+    ) -> Option<ContractDischargeRecord> {
+        let _ = workflow;
+        // For now, the record is kept in a dedicated engine-side registry so it is
+        // available for admission and later runtime check planning without mutating
+        // the callable row.
+        self.runtime_state
+            .contract_discharge_records
+            .lock()
+            .expect("contract discharge registry mutex poisoned")
+            .insert(callable_name.to_string(), discharge)
+    }
+
+    /// Returns the contract-discharge record registered for a callable, if any.
+    pub fn contract_discharge_record_for_callable(
+        &self,
+        callable_name: &str,
+        _workflow: &crate::Workflow,
+    ) -> Option<ContractDischargeRecord> {
+        self.runtime_state.contract_discharge_record(callable_name)
     }
 
     async fn reject_row_requirement(

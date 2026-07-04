@@ -50,6 +50,8 @@ pub type CoreDiagnosticShape = DiagnosticShape;
 pub type CoreContractRecoverability = ContractRecoverability;
 /// Core-prefixed alias for [`RuntimeCheckPlan`].
 pub type CoreRuntimeCheckPlan = RuntimeCheckPlan;
+/// Core-prefixed alias for [`EvidenceRef`].
+pub type CoreEvidenceRef = EvidenceRef;
 
 /// Stable contract boundary identity.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -260,6 +262,12 @@ impl PredicateBinder {
         PredicateBinderRef::new(self.id.clone())
     }
 
+    /// Returns this binder's kind.
+    #[must_use]
+    pub fn kind(&self) -> PredicateBinderKind {
+        self.kind
+    }
+
     /// Returns this binder's type.
     #[must_use]
     pub fn ty(&self) -> &CoreType {
@@ -320,6 +328,24 @@ impl SnapshotRef {
     #[must_use]
     pub fn boundary(&self) -> &CoreBoundaryId {
         &self.boundary
+    }
+
+    /// Returns the root binder of this snapshot.
+    #[must_use]
+    pub fn root(&self) -> &PredicateBinderId {
+        &self.root
+    }
+
+    /// Returns the projection path of this snapshot relative to its root binder.
+    #[must_use]
+    pub fn path(&self) -> &[CoreName] {
+        &self.path
+    }
+
+    /// Returns the declared type of the snapshot value.
+    #[must_use]
+    pub fn ty(&self) -> &CoreType {
+        &self.ty
     }
 }
 
@@ -457,9 +483,55 @@ pub enum ProofFragment {
 
 /// Runtime evaluator profile for dynamic predicate plans.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[allow(clippy::large_enum_variant)]
 pub enum DynamicPredicatePlan {
-    Interpreter,
+    /// Authority-free interpreter evaluation over a captured predicate
+    /// environment and snapshot map.
+    Interpreter {
+        /// Contract boundary kind (requires, ensures, invariant, ...).
+        boundary_kind: BoundaryKind,
+        /// Binders admitted by the captured predicate environment.
+        environment_binders: Vec<PredicateBinder>,
+        /// Predicate node to evaluate in the captured environment.
+        predicate_node: PredicateNode,
+    },
+    /// Compiled evaluator keyed by a registered implementation name.
     Compiled(CoreName),
+}
+
+impl DynamicPredicatePlan {
+    /// Boundary kind for this dynamic plan (requires, ensures, invariant, ...).
+    #[must_use]
+    pub fn boundary_kind(&self) -> BoundaryKind {
+        match self {
+            Self::Interpreter { boundary_kind, .. } => *boundary_kind,
+            Self::Compiled(_) => BoundaryKind::Unspecified,
+        }
+    }
+
+    /// Binders admitted by the predicate environment for this plan.
+    #[must_use]
+    pub fn environment_binders(&self) -> &[PredicateBinder] {
+        match self {
+            Self::Interpreter {
+                environment_binders,
+                ..
+            } => environment_binders,
+            Self::Compiled(_) => &[],
+        }
+    }
+
+    /// Predicate node evaluated by this plan.
+    #[must_use]
+    pub fn predicate_node(&self) -> &PredicateNode {
+        match self {
+            Self::Interpreter { predicate_node, .. } => predicate_node,
+            Self::Compiled(_) => {
+                static DUMMY: std::sync::OnceLock<PredicateNode> = std::sync::OnceLock::new();
+                DUMMY.get_or_init(|| PredicateNode::BoolLit(true))
+            }
+        }
+    }
 }
 
 /// Diagnostic shaping metadata retained with predicates and runtime checks.
@@ -812,6 +884,36 @@ impl RuntimeCheckPlan {
     pub fn recoverability(&self) -> &ContractRecoverability {
         &self.recoverability
     }
+
+    /// Returns the contract boundary kind (requires, ensures, etc.).
+    #[must_use]
+    pub fn boundary_kind(&self) -> BoundaryKind {
+        self.evaluator.boundary_kind()
+    }
+
+    /// Returns the binders from the captured predicate environment.
+    #[must_use]
+    pub fn environment_binders(&self) -> &[PredicateBinder] {
+        self.evaluator.environment_binders()
+    }
+
+    /// Returns the snapshot references bound at the contract boundary.
+    #[must_use]
+    pub fn snapshot_refs(&self) -> &[SnapshotRef] {
+        &self.snapshots
+    }
+
+    /// Returns the predicate node evaluated by this plan.
+    #[must_use]
+    pub fn predicate_node(&self) -> &PredicateNode {
+        self.evaluator.predicate_node()
+    }
+
+    /// Returns the blame label for dynamic failures of this plan.
+    #[must_use]
+    pub fn blame(&self) -> &CoreBlameLabel {
+        &self.blame
+    }
 }
 
 /// Runtime predicate evaluator fault classification.
@@ -944,6 +1046,42 @@ pub enum PredicateObservationError {
     ProviderAuthorityUnavailable,
 }
 
+/// Reference to an evidence item attached to a diagnostic.
+///
+/// Evidence is metadata-only: the family names the evidence class (e.g.
+/// `observation`, `test`, `law`, `proof`, `monitor`) and the identity names a
+/// stable evidence item. The diagnostic never embeds the evidence value; it
+/// carries only family and identity so that downstream reporting can resolve and
+/// redact the evidence according to policy.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct EvidenceRef {
+    family: CoreName,
+    identity: CoreName,
+}
+
+impl EvidenceRef {
+    /// Creates an evidence reference from a family and identity.
+    #[must_use]
+    pub fn new(family: impl Into<CoreName>, identity: impl Into<CoreName>) -> Self {
+        Self {
+            family: family.into(),
+            identity: identity.into(),
+        }
+    }
+
+    /// Returns the evidence family.
+    #[must_use]
+    pub fn family(&self) -> &str {
+        &self.family
+    }
+
+    /// Returns the evidence identity.
+    #[must_use]
+    pub fn identity(&self) -> &str {
+        &self.identity
+    }
+}
+
 /// Structured diagnostic payload for a false dynamic contract predicate.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct ContractDiagnostic {
@@ -952,10 +1090,15 @@ pub struct ContractDiagnostic {
     blame: CoreBlameLabel,
     predicate_classification: PredicateClassification,
     snapshot_refs: Vec<SnapshotRef>,
+    evidence_refs: Vec<EvidenceRef>,
+    redacted: bool,
 }
 
 impl ContractDiagnostic {
     /// Creates a contract-violation diagnostic payload.
+    ///
+    /// Evidence refs default to empty and `redacted` defaults to `true`, keeping
+    /// observation evidence details out of the diagnostic by default.
     #[must_use]
     pub fn new(
         predicate: PredicateRef,
@@ -970,6 +1113,8 @@ impl ContractDiagnostic {
             blame,
             predicate_classification,
             snapshot_refs,
+            evidence_refs: Vec::new(),
+            redacted: true,
         }
     }
 
@@ -977,6 +1122,56 @@ impl ContractDiagnostic {
     #[must_use]
     pub fn predicate(&self) -> &PredicateRef {
         &self.predicate
+    }
+
+    /// Returns the contract source text retained for diagnostics.
+    #[must_use]
+    pub fn contract_text(&self) -> &str {
+        &self.contract_text
+    }
+
+    /// Returns the blame label.
+    #[must_use]
+    pub fn blame(&self) -> &CoreBlameLabel {
+        &self.blame
+    }
+
+    /// Returns the predicate classification.
+    #[must_use]
+    pub fn predicate_classification(&self) -> PredicateClassification {
+        self.predicate_classification
+    }
+
+    /// Returns the snapshot references bound at the contract boundary.
+    #[must_use]
+    pub fn snapshot_refs(&self) -> &[SnapshotRef] {
+        &self.snapshot_refs
+    }
+
+    /// Returns the evidence references attached to this diagnostic.
+    #[must_use]
+    pub fn evidence_refs(&self) -> &[EvidenceRef] {
+        &self.evidence_refs
+    }
+
+    /// Returns true when observation evidence details are redacted in this diagnostic.
+    #[must_use]
+    pub fn redacted(&self) -> bool {
+        self.redacted
+    }
+
+    /// Attaches evidence references to this diagnostic.
+    #[must_use]
+    pub fn with_evidence_refs(mut self, evidence_refs: Vec<EvidenceRef>) -> Self {
+        self.evidence_refs = evidence_refs;
+        self
+    }
+
+    /// Marks this diagnostic as redacted (`true`) or unredacted (`false`).
+    #[must_use]
+    pub fn with_redacted(mut self, redacted: bool) -> Self {
+        self.redacted = redacted;
+        self
     }
 }
 
@@ -988,10 +1183,15 @@ pub struct PredicateFaultDiagnostic {
     blame: CoreBlameLabel,
     fault: PredicateFault,
     snapshot_refs: Vec<SnapshotRef>,
+    evidence_refs: Vec<EvidenceRef>,
+    redacted: bool,
 }
 
 impl PredicateFaultDiagnostic {
     /// Creates a predicate-fault diagnostic payload.
+    ///
+    /// Evidence refs default to empty and `redacted` defaults to `true`, keeping
+    /// observation evidence details out of the diagnostic by default.
     #[must_use]
     pub fn new(
         predicate: PredicateRef,
@@ -1006,13 +1206,65 @@ impl PredicateFaultDiagnostic {
             blame,
             fault,
             snapshot_refs,
+            evidence_refs: Vec::new(),
+            redacted: true,
         }
+    }
+
+    /// Returns the predicate reference for which the evaluator faulted.
+    #[must_use]
+    pub fn predicate(&self) -> &PredicateRef {
+        &self.predicate
+    }
+
+    /// Returns the contract source text retained for diagnostics.
+    #[must_use]
+    pub fn contract_text(&self) -> &str {
+        &self.contract_text
+    }
+
+    /// Returns the blame label.
+    #[must_use]
+    pub fn blame(&self) -> &CoreBlameLabel {
+        &self.blame
     }
 
     /// Returns the predicate fault classification.
     #[must_use]
     pub fn fault(&self) -> &PredicateFault {
         &self.fault
+    }
+
+    /// Returns the snapshot references bound at the contract boundary.
+    #[must_use]
+    pub fn snapshot_refs(&self) -> &[SnapshotRef] {
+        &self.snapshot_refs
+    }
+
+    /// Returns the evidence references attached to this diagnostic.
+    #[must_use]
+    pub fn evidence_refs(&self) -> &[EvidenceRef] {
+        &self.evidence_refs
+    }
+
+    /// Returns true when observation evidence details are redacted in this diagnostic.
+    #[must_use]
+    pub fn redacted(&self) -> bool {
+        self.redacted
+    }
+
+    /// Attaches evidence references to this diagnostic.
+    #[must_use]
+    pub fn with_evidence_refs(mut self, evidence_refs: Vec<EvidenceRef>) -> Self {
+        self.evidence_refs = evidence_refs;
+        self
+    }
+
+    /// Marks this diagnostic as redacted (`true`) or unredacted (`false`).
+    #[must_use]
+    pub fn with_redacted(mut self, redacted: bool) -> Self {
+        self.redacted = redacted;
+        self
     }
 }
 
@@ -1166,6 +1418,76 @@ pub enum ContractDischargeStatus {
     Deferred { reason: CoreName },
 }
 
+/// Runtime monitor evidence row attached to a contract discharge.
+///
+/// This record is intentionally authority-free: it carries a monitor observation
+/// at a boundary, but does not grant predicate authority or discharge operation,
+/// resource, role, or policy rows.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct RuntimeMonitorEvidence {
+    monitor_ref: CoreName,
+    contract_ref: CoreName,
+    boundary: CoreBoundaryId,
+    outcome: MonitorEvaluationResult,
+    redacted: bool,
+}
+
+impl RuntimeMonitorEvidence {
+    /// Creates a new runtime monitor evidence row.
+    #[must_use]
+    pub fn new(
+        monitor_ref: impl Into<CoreName>,
+        contract_ref: impl Into<CoreName>,
+        boundary: impl Into<CoreBoundaryId>,
+        outcome: MonitorEvaluationResult,
+    ) -> Self {
+        Self {
+            monitor_ref: monitor_ref.into(),
+            contract_ref: contract_ref.into(),
+            boundary: boundary.into(),
+            outcome,
+            redacted: true,
+        }
+    }
+
+    /// The monitor plan identity that produced this evidence.
+    #[must_use]
+    pub fn monitor_ref(&self) -> &CoreName {
+        &self.monitor_ref
+    }
+
+    /// The trace contract identity the monitor was checking.
+    #[must_use]
+    pub fn contract_ref(&self) -> &CoreName {
+        &self.contract_ref
+    }
+
+    /// The boundary where the monitor was attached.
+    #[must_use]
+    pub fn boundary(&self) -> &CoreBoundaryId {
+        &self.boundary
+    }
+
+    /// The evaluation result at this boundary.
+    #[must_use]
+    pub fn outcome(&self) -> &MonitorEvaluationResult {
+        &self.outcome
+    }
+
+    /// Whether the observation trace is redacted (default true).
+    #[must_use]
+    pub fn redacted(&self) -> bool {
+        self.redacted
+    }
+
+    /// Returns a copy with the requested redaction flag.
+    #[must_use]
+    pub fn with_redacted(mut self, redacted: bool) -> Self {
+        self.redacted = redacted;
+        self
+    }
+}
+
 /// Contract discharge sidecar record.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct ContractDischargeRecord {
@@ -1175,6 +1497,7 @@ pub struct ContractDischargeRecord {
     status: ContractDischargeStatus,
     source_span: CoreSourceSpan,
     blame: Option<CoreBlameLabel>,
+    monitor_evidence: Vec<RuntimeMonitorEvidence>,
 }
 
 impl ContractDischargeRecord {
@@ -1252,7 +1575,9 @@ impl ContractDischargeRecord {
         )
     }
 
-    fn new(
+    /// Creates a contract discharge record with the supplied status.
+    #[must_use]
+    pub fn new(
         contract: impl Into<CoreName>,
         boundary: impl Into<CoreBoundaryId>,
         status: ContractDischargeStatus,
@@ -1261,12 +1586,14 @@ impl ContractDischargeRecord {
     ) -> Self {
         let contract = contract.into();
         let boundary = boundary.into();
+        let monitor_evidence = Vec::new();
         let discharge_ref = ContractDischargeRef(stable_digest(&(
             "ContractDischarge",
             &contract,
             &boundary,
             &status,
             &source_span,
+            &monitor_evidence,
         )));
         Self {
             discharge_ref,
@@ -1275,6 +1602,7 @@ impl ContractDischargeRecord {
             status,
             source_span,
             blame,
+            monitor_evidence,
         }
     }
 
@@ -1288,6 +1616,19 @@ impl ContractDischargeRecord {
     #[must_use]
     pub fn status(&self) -> &ContractDischargeStatus {
         &self.status
+    }
+
+    /// Runtime monitor evidence attached to this discharge record.
+    #[must_use]
+    pub fn monitor_evidence(&self) -> &[RuntimeMonitorEvidence] {
+        &self.monitor_evidence
+    }
+
+    /// Returns a copy with the supplied monitor evidence attached.
+    #[must_use]
+    pub fn with_monitor_evidence(mut self, monitor_evidence: Vec<RuntimeMonitorEvidence>) -> Self {
+        self.monitor_evidence = monitor_evidence;
+        self
     }
 }
 
@@ -1882,15 +2223,14 @@ pub fn lower_contract_predicate(
     } else {
         PredicateClassification::Dynamic
     };
-    let mut builder = LoweredPredicateBuilder::new(boundary.clone(), env, lowered.node, bool_ty)
-        .source(source_span.clone(), contract_text)
-        .classification(classification)
-        .diagnostic_shape(DiagnosticShape::predicate_false("contract-predicate-false"));
+    let mut builder =
+        LoweredPredicateBuilder::new(boundary.clone(), env.clone(), lowered.node, bool_ty)
+            .source(source_span.clone(), contract_text)
+            .classification(classification)
+            .diagnostic_shape(DiagnosticShape::predicate_false("contract-predicate-false"));
 
     if classification == PredicateClassification::Static {
         builder = builder.proof_fragment(ProofFragment::SmtSafe);
-    } else {
-        builder = builder.dynamic_plan(DynamicPredicatePlan::Interpreter);
     }
 
     let predicate = builder.build();
@@ -1908,7 +2248,16 @@ pub fn lower_contract_predicate(
         Some(RuntimeCheckPlan::new(
             predicate.predicate_ref().clone(),
             predicate.env.clone(),
-            DynamicPredicatePlan::Interpreter,
+            DynamicPredicatePlan::Interpreter {
+                boundary_kind: predicate.boundary_kind(),
+                environment_binders: predicate
+                    .free_vars()
+                    .iter()
+                    .filter_map(|b| env.binders().iter().find(|eb| eb.id() == b.id()))
+                    .cloned()
+                    .collect(),
+                predicate_node: predicate.root().clone(),
+            },
             blame,
             predicate.snapshot_refs().to_vec(),
             DiagnosticShape::predicate_false("contract-predicate-false"),

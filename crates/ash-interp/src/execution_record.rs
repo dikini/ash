@@ -21,14 +21,16 @@ pub enum ExecutionBlockedReason {
 pub enum ExecutionInvalidReason {
     RuntimeState(String),
 }
-
+/// Terminal outcome of an execution attempt.
 #[derive(Debug, Clone, PartialEq)]
+#[allow(clippy::large_enum_variant)]
 pub enum ExecutionTerminal {
     Return(Value),
     Reject(ExecError),
 }
-
+/// Execution phase for a single workflow attempt.
 #[derive(Debug, Clone, PartialEq)]
+#[allow(clippy::large_enum_variant)]
 pub enum ExecutionPhase {
     Running,
     Blocked(ExecutionBlockedReason),
@@ -506,6 +508,7 @@ impl SemanticCompletionPayload {
 }
 
 #[derive(Debug, Clone)]
+#[allow(clippy::large_enum_variant)]
 pub enum SemanticWorkflowOutcome {
     Return {
         value: Value,

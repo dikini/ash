@@ -7,6 +7,7 @@ use async_trait::async_trait;
 use tokio::sync::Mutex as AsyncMutex;
 
 use ash_core::capability::CapabilityError;
+use ash_core::core_ash_contract::{ContractDischargeRecord, PredicateBinderId, SnapshotRef};
 use ash_core::runtime::{
     CapabilityBinding, CapabilityBindingDependency, CapabilityBindingId, CapabilityBindingKind,
     CapabilityImplementationId, CapabilityInterfaceId, ProcessId, ProcessTerminalState, ResourceId,
@@ -366,6 +367,110 @@ pub struct RuntimeState {
     last_execution_record: Arc<AsyncMutex<Option<ExecutionRecord>>>,
     /// Capability provider registry for execution
     providers: Arc<StdMutex<HashMap<String, Arc<dyn CapabilityProvider>>>>,
+    /// Contract-discharge sidecar records keyed by callable name.
+    ///
+    /// These are metadata-only records attached to callable rows. They do not
+    /// grant authority or register providers; they are used for admission and
+    /// runtime check planning.
+    pub contract_discharge_records: Arc<StdMutex<HashMap<String, ContractDischargeRecord>>>,
+    /// Captured predicate-environment values keyed by binder id.
+    ///
+    /// Used by the authority-free contract predicate evaluator to resolve
+    /// parameter, result, and snapshot references at runtime.
+    pub predicate_binder_values: Arc<StdMutex<HashMap<PredicateBinderId, Value>>>,
+    /// Captured snapshot values keyed by `SnapshotRef`.
+    ///
+    /// Snapshots are boundary-local copies of values captured at the moment a
+    /// contract becomes active. They remain immutable for the duration of the
+    /// contract boundary.
+    pub predicate_snapshot_values: Arc<StdMutex<HashMap<SnapshotRef, Value>>>,
+}
+
+impl RuntimeState {
+    /// Returns the contract-discharge record for the given callable, if any.
+    pub fn contract_discharge_record(
+        &self,
+        callable_name: &str,
+    ) -> Option<ContractDischargeRecord> {
+        self.contract_discharge_records
+            .lock()
+            .expect("contract discharge registry mutex poisoned")
+            .get(callable_name)
+            .cloned()
+    }
+
+    /// Capture a value for a predicate binder.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the binder-value registry mutex is poisoned.
+    pub fn capture_predicate_binder(
+        &self,
+        binder: PredicateBinderId,
+        value: Value,
+    ) -> Option<Value> {
+        self.predicate_binder_values
+            .lock()
+            .expect("predicate binder registry mutex poisoned")
+            .insert(binder, value)
+    }
+
+    /// Look up a captured predicate binder value.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the binder-value registry mutex is poisoned.
+    pub fn predicate_binder_value(&self, binder: &PredicateBinderId) -> Option<Value> {
+        self.predicate_binder_values
+            .lock()
+            .expect("predicate binder registry mutex poisoned")
+            .get(binder)
+            .cloned()
+    }
+
+    /// Capture a snapshot value at a contract boundary.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the snapshot registry mutex is poisoned.
+    pub fn capture_predicate_snapshot(&self, snapshot: SnapshotRef, value: Value) -> Option<Value> {
+        self.predicate_snapshot_values
+            .lock()
+            .expect("predicate snapshot registry mutex poisoned")
+            .insert(snapshot, value)
+    }
+
+    /// Look up a captured snapshot value.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the snapshot registry mutex is poisoned.
+    pub fn predicate_snapshot_value(&self, snapshot: &SnapshotRef) -> Option<Value> {
+        self.predicate_snapshot_values
+            .lock()
+            .expect("predicate snapshot registry mutex poisoned")
+            .get(snapshot)
+            .cloned()
+    }
+
+    /// Clear all captured predicate binder and snapshot values.
+    ///
+    /// Typically called after a contract boundary terminates to prevent stale
+    /// snapshot/binder references from leaking across boundaries.
+    ///
+    /// # Panics
+    ///
+    /// Panics if either registry mutex is poisoned.
+    pub fn clear_predicate_environment(&self) {
+        self.predicate_binder_values
+            .lock()
+            .expect("predicate binder registry mutex poisoned")
+            .clear();
+        self.predicate_snapshot_values
+            .lock()
+            .expect("predicate snapshot registry mutex poisoned")
+            .clear();
+    }
 }
 
 impl std::fmt::Debug for RuntimeState {
@@ -397,6 +502,10 @@ impl std::fmt::Debug for RuntimeState {
             .field(
                 "providers",
                 &"<HashMap<String, Arc<dyn CapabilityProvider>>>",
+            )
+            .field(
+                "contract_discharge_records",
+                &"<HashMap<String, ContractDischargeRecord>>",
             )
             .finish()
     }
@@ -527,6 +636,9 @@ impl RuntimeState {
             implementation_operation_bodies: Arc::new(AsyncMutex::new(HashMap::new())),
             last_execution_record: Arc::new(AsyncMutex::new(None)),
             providers: Arc::new(StdMutex::new(HashMap::new())),
+            contract_discharge_records: Arc::new(StdMutex::new(HashMap::new())),
+            predicate_binder_values: Arc::new(StdMutex::new(HashMap::new())),
+            predicate_snapshot_values: Arc::new(StdMutex::new(HashMap::new())),
         }
     }
 

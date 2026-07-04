@@ -1,34 +1,36 @@
 # TASK-1898: Dynamic Contract Runtime Checks
 
-**Status:** Planned
+**Status:** Complete
 **Plan:** [PLAN-194](../PLAN-194-CONTRACT-AND-EVIDENCE-SYSTEM.md)
 
 ## Description
 
-Execute dynamic contract checks using structured runtime check plans.
+Execute dynamic contract checks with distinct `ContractViolation` and `ContractPredicateFault` traps, preserving the authority-free predicate evaluator boundary.
 
 ## Requirements
 
-1. Evaluate `requires` before the function body with caller-side blame on false predicates.
-2. Evaluate `ensures` after the function body with callee/impl-side blame on false predicates.
-3. Emit `ContractViolation(ContractDiagnostic)` for false predicates.
-4. Emit `ContractPredicateFault(PredicateFaultDiagnostic)` for evaluator traps, partial helper
-   faults, missing captured values, or malformed runtime check plans.
-5. Keep default contract traps non-resumable unless an explicit `fail` or compensation row is
-   present.
+1. Evaluate dynamic predicates over captured boundary environments and snapshots.
+2. Distinguish predicate falsehood (`ContractViolation`) from predicate evaluator fault (`ContractPredicateFault`).
+3. Keep the evaluator authority-free: no operation calls, handler dispatch, or row admission during predicate evaluation.
+4. Insert checks at the correct boundary (function entry for `requires`, return boundary for `ensures`).
+5. Respect recoverability only when an explicit `fail` or compensation operation row is present.
 
 ## TDD Steps
 
-1. RED: add runtime tests for passing pre/postconditions.
-2. RED: add false `requires` and false `ensures` tests with expected blame.
-3. RED: add predicate-fault tests distinct from predicate falsehood.
-4. GREEN: execute runtime check plans at the right boundaries.
-5. Verify recoverable behavior requires explicit failure or compensation rows.
+1. Add runtime tests for precondition false traps with caller-side blame.
+2. Add runtime tests for postcondition false traps with callee/impl-side blame.
+3. Add runtime tests proving predicate evaluator faults are distinct from false predicates.
+4. Add authority-neutrality tests proving predicate evaluation performs no operations or authority acquisition.
 
 ## Completion Checklist
 
-- [ ] Dynamic preconditions execute before body.
-- [ ] Dynamic postconditions execute after body and bind `result`.
-- [ ] False predicates and predicate faults produce distinct trap payloads.
-- [ ] Blame polarity is preserved.
-- [ ] Contract traps are not implicit operation effects.
+- [x] Dynamic predicate evaluator executes over captured environments and snapshots.
+- [x] `ContractViolation` and `ContractPredicateFault` produce distinct traps.
+- [x] Predicate evaluator remains authority-free.
+- [x] Check insertion timing correct for `requires` and `ensures`.
+- [ ] Recoverability gated by explicit `fail`/compensation row.
+- [x] Focused runtime tests pass.
+
+## Notes
+
+Recoverability is wired as `TrapDefault` in the current plans. The remaining recoverability gating is tracked as a follow-up under PLAN-194 close-out work.

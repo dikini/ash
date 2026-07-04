@@ -1,7 +1,10 @@
 //! Error types for the interpreter
 
+#![allow(clippy::result_large_err)]
+
 use ash_core::{
     Name, Value,
+    core_ash_contract::{ContractDiagnostic, PredicateFaultDiagnostic},
     runtime::{OperationalFailure, ProcessId},
 };
 use thiserror::Error;
@@ -104,6 +107,7 @@ pub enum EvalError {
 
 /// Errors that can occur during workflow execution
 #[derive(Debug, Clone, PartialEq)]
+#[allow(clippy::result_large_err)]
 pub enum ExecError {
     /// Parse error - syntax error in source code (exit code 2)
     Parse(String),
@@ -116,6 +120,12 @@ pub enum ExecError {
 
     /// Evaluation error during expression evaluation
     Eval(EvalError),
+
+    /// A dynamic contract predicate was false.
+    ContractViolation(Box<ContractDiagnostic>),
+
+    /// The contract predicate evaluator failed (distinct from a false predicate).
+    ContractPredicateFault(Box<PredicateFaultDiagnostic>),
 
     PatternMatchFailed {
         pattern: String,
@@ -201,6 +211,21 @@ impl std::fmt::Display for ExecError {
             Self::Type(msg) => write!(f, "type error: {msg}"),
             Self::Io(msg) => write!(f, "io error: {msg}"),
             Self::Eval(e) => write!(f, "evaluation error: {e}"),
+            Self::ContractViolation(diagnostic) => write!(
+                f,
+                "contract violation: predicate {} at boundary {} blamed {:?}/{:?}",
+                diagnostic.predicate().id.as_str(),
+                diagnostic.predicate().boundary.as_str(),
+                diagnostic.blame().party,
+                diagnostic.blame().polarity
+            ),
+            Self::ContractPredicateFault(diagnostic) => write!(
+                f,
+                "contract predicate fault: predicate {} at boundary {}: {:?}",
+                diagnostic.predicate().id.as_str(),
+                diagnostic.predicate().boundary.as_str(),
+                diagnostic.fault()
+            ),
             Self::PatternMatchFailed { pattern, value } => {
                 write!(f, "pattern match failed: {pattern} does not match {value}")
             }
@@ -323,6 +348,8 @@ impl ExecError {
             | Self::Type(..)
             | Self::Io(..)
             | Self::Eval(..)
+            | Self::ContractViolation(..)
+            | Self::ContractPredicateFault(..)
             | Self::PatternMatchFailed { .. }
             | Self::GuardFailed { .. }
             | Self::CapabilityNotAvailable(..)

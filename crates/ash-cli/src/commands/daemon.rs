@@ -1,14 +1,19 @@
 //! Local daemon control plane for the alpha RuntimeKernel host mode.
 
 use anyhow::{Context, Result, anyhow, bail};
-use ash_core::runtime::{FailureEntity, OperationalFailure, ProcessId, TowerLevel};
+use ash_core::runtime::{
+    FailureEntity, OperationalFailure, ProcessId, ServiceHealthStatus, ServiceId,
+    ServiceLifecycleState, ServiceRuntimeRecord, ServiceShutdownMode, TowerLevel,
+};
 use ash_core::runtime_kernel::{
-    AdmissionIdentity, AlphaAdmissionProfile, AlphaAdmissionStatus, ArtifactVersion,
-    ProviderRegistryIdentity, RUNTIME_KERNEL_ARTIFACT_VERSION, RuntimeArtifactCacheKey,
-    RuntimeConfigId, RuntimeEngineRelationship, RuntimeHostMode,
-    RuntimeKernelArtifactLanguageSummary, RuntimeKernelIdentity, RuntimeProfileId,
-    RuntimeProfileIdentity, RuntimeRootSet, RuntimeRootSetId, WorkflowArtifactIdentity,
-    WorkflowDefinitionIdentity, WorkflowInstanceIdentity,
+    AdmissionIdentity, AlphaAdmissionProfile, AlphaAdmissionStatus, ApplicationAdmissionProfile,
+    ApplicationBoundaryBindingManifest, ApplicationBoundaryBindings, ApplicationRuntimeReport,
+    ApplicationTerminalOutcome, ApplicationTraceBundle, ArtifactVersion, ProviderRegistryIdentity,
+    RUNTIME_KERNEL_ARTIFACT_VERSION, RuntimeArtifactCacheKey, RuntimeConfigId,
+    RuntimeEngineRelationship, RuntimeHostMode, RuntimeKernelArtifactLanguageSummary,
+    RuntimeKernelIdentity, RuntimeProfileId, RuntimeProfileIdentity, RuntimeRootSet,
+    RuntimeRootSetId, WorkflowArtifactIdentity, WorkflowDefinitionIdentity,
+    WorkflowInstanceIdentity,
 };
 use ash_core::{Expr, Value as AshValue};
 use ash_engine::runtime_artifact::{RuntimeArtifactBuildRequest, build_runtime_kernel_artifact};
@@ -301,6 +306,8 @@ struct InstanceRecord {
     artifact_version: String,
     source_hash: String,
     artifact_summary: RuntimeKernelArtifactLanguageSummary,
+    application_report: ApplicationRuntimeReport,
+    service_lifecycle: ServiceRuntimeRecord,
     #[serde(skip_serializing_if = "Option::is_none")]
     class: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -311,6 +318,7 @@ struct InstanceRecord {
 struct InstanceAdmissionRecord {
     status: String,
     profile: String,
+    profile_boundary: ApplicationAdmissionProfile,
     #[serde(skip_serializing_if = "Option::is_none")]
     reason: Option<String>,
     capability_grants: usize,
@@ -479,6 +487,12 @@ impl DaemonState {
             );
         }
 
+        let profile_boundary = ApplicationAdmissionProfile::runtime_boundary(
+            admission_profile.as_str(),
+            "daemon:start.admission_profile",
+            false,
+        )?;
+        let boundary_bindings = daemon_start_boundary_bindings(args)?;
         let profile = RuntimeProfileIdentity::new(
             self.profile_id.clone(),
             RuntimeConfigId::new(config_id),
@@ -515,10 +529,19 @@ impl DaemonState {
         let admission_record = InstanceAdmissionRecord {
             status: AlphaAdmissionStatus::Admitted.as_str().to_string(),
             profile: admission_profile.as_str().to_string(),
+            profile_boundary: profile_boundary.clone(),
             reason: None,
             capability_grants: admission.capability_grants.len(),
             resource_grants: admission.resource_grants.len(),
         };
+        let mut artifact_summary = definition.artifact_summary.clone();
+        artifact_summary.invocation_packet.admission_profile = profile_boundary;
+        artifact_summary.invocation_packet.boundary_bindings = boundary_bindings;
+        let application_report = application_report_from_artifact_summary(
+            &artifact_summary,
+            ApplicationTerminalOutcome::admitted(),
+        );
+        let service_lifecycle = daemon_service_lifecycle(&definition.workflow);
         let instance = WorkflowInstanceIdentity::admit(
             RuntimeHostMode::Daemon,
             definition_identity.id,
@@ -539,7 +562,9 @@ impl DaemonState {
             artifact_id: definition.artifact_id.clone(),
             artifact_version: definition.artifact_version.clone(),
             source_hash: definition.source_hash.clone(),
-            artifact_summary: definition.artifact_summary.clone(),
+            artifact_summary: artifact_summary.clone(),
+            application_report: application_report.clone(),
+            service_lifecycle: service_lifecycle.clone(),
             class: None,
             report: None,
         };
@@ -557,7 +582,9 @@ impl DaemonState {
             "definition_id": definition.definition_id,
             "artifact_id": definition.artifact_id,
             "artifact_version": definition.artifact_version,
-            "artifact_summary": definition.artifact_summary,
+            "artifact_summary": artifact_summary,
+            "application_report": application_report,
+            "service_lifecycle": service_lifecycle,
             "provider_registry": provider_registry_json(&self.provider_registry),
         }))
     }
@@ -584,6 +611,15 @@ impl DaemonState {
             Ok(()) => {
                 instance.status = InstanceStatus::Succeeded;
                 instance.class = Some("workflow_succeeded".to_string());
+                instance.application_report = application_report_from_artifact_summary(
+                    &instance.artifact_summary,
+                    ApplicationTerminalOutcome::succeeded(),
+                );
+                instance.service_lifecycle = daemon_shutdown_service_lifecycle(
+                    &instance.service_lifecycle,
+                    ServiceShutdownMode::Graceful,
+                    "daemon start-execute completed",
+                );
                 instance.report = Some(InstanceExecutionReport {
                     status: "succeeded".to_string(),
                     failure: None,
@@ -592,6 +628,16 @@ impl DaemonState {
             Err(failure) => {
                 instance.status = InstanceStatus::Failed;
                 instance.class = Some(failure.class().to_string());
+                let failure_reason = failure.report.message.clone();
+                instance.application_report = application_report_from_artifact_summary(
+                    &instance.artifact_summary,
+                    ApplicationTerminalOutcome::failed(failure_reason),
+                );
+                instance.service_lifecycle = daemon_shutdown_service_lifecycle(
+                    &instance.service_lifecycle,
+                    ServiceShutdownMode::Forced,
+                    "daemon start-execute failed",
+                );
                 instance.report = Some(InstanceExecutionReport {
                     status: "failed".to_string(),
                     failure: Some(failure.report),
@@ -732,6 +778,8 @@ impl DaemonState {
             "artifact_version": instance.artifact_version,
             "source_hash": instance.source_hash,
             "artifact_summary": instance.artifact_summary,
+            "application_report": instance.application_report,
+            "service_lifecycle": instance.service_lifecycle,
         }))
     }
 
@@ -744,6 +792,15 @@ impl DaemonState {
             "already_terminal"
         } else {
             instance.status = InstanceStatus::Cancelled;
+            instance.application_report = application_report_from_artifact_summary(
+                &instance.artifact_summary,
+                ApplicationTerminalOutcome::cancelled("daemon instance cancelled"),
+            );
+            instance.service_lifecycle = daemon_shutdown_service_lifecycle(
+                &instance.service_lifecycle,
+                ServiceShutdownMode::Graceful,
+                "daemon instance cancelled",
+            );
             "cancelled"
         };
         Ok(json!({
@@ -752,6 +809,7 @@ impl DaemonState {
             "instance_id": instance.instance_id,
             "status": instance.status,
             "class": class,
+            "service_lifecycle": instance.service_lifecycle,
         }))
     }
 
@@ -760,6 +818,14 @@ impl DaemonState {
             index_definitions(&self.root, &self.root_id, &self.profile_id, &self.config_id)?;
         let count = staged.len();
         self.definitions = staged;
+        let mut service_lifecycle = None;
+        for instance in self.instances.values_mut() {
+            if !instance.service_lifecycle.terminal {
+                instance.service_lifecycle =
+                    daemon_reload_service_lifecycle(&instance.service_lifecycle, "daemon:reload");
+                service_lifecycle = Some(instance.service_lifecycle.clone());
+            }
+        }
         if let Some(definition) = self.definitions.first() {
             self.identity.cache_key = RuntimeArtifactCacheKey::new(
                 self.root_id.clone(),
@@ -776,6 +842,7 @@ impl DaemonState {
             "status": "reloaded",
             "definition_count": count,
             "definitions": self.definitions,
+            "service_lifecycle": service_lifecycle,
         }))
     }
 }
@@ -959,6 +1026,8 @@ fn instance_status_json(instance: &InstanceRecord) -> Value {
         "artifact_version": instance.artifact_version,
         "source_hash": instance.source_hash,
         "artifact_summary": instance.artifact_summary,
+        "application_report": instance.application_report,
+        "service_lifecycle": instance.service_lifecycle,
     })
 }
 
@@ -1280,6 +1349,87 @@ fn provider_registry_json(provider_registry: &ProviderRegistryIdentity) -> Value
         "provider_names": provider_registry.provider_names,
         "grants_admission_authority": provider_registry.grants_admission_authority(),
     })
+}
+
+fn daemon_start_boundary_bindings(
+    args: &[String],
+) -> Result<
+    ApplicationBoundaryBindings,
+    ash_core::runtime_kernel::ApplicationBoundaryBindingDiagnostic,
+> {
+    ApplicationBoundaryBindings::from_manifest(
+        "daemon:start.boundary",
+        ApplicationBoundaryBindingManifest {
+            providers: args
+                .iter()
+                .enumerate()
+                .map(|(index, _)| format!("Args:{index}"))
+                .collect(),
+            grants_authority: false,
+            ..ApplicationBoundaryBindingManifest::default()
+        },
+    )
+}
+
+fn daemon_service_lifecycle(workflow: &str) -> ServiceRuntimeRecord {
+    let id = ServiceId::new();
+    ServiceRuntimeRecord {
+        id,
+        name: workflow.to_string(),
+        process_id: ProcessId::new(),
+        lifecycle: ServiceLifecycleState::Running,
+        health: ServiceHealthStatus::Healthy,
+        reload_generation: 0,
+        last_reload: None,
+        shutdown_mode: None,
+        terminal_reason: None,
+        terminal: false,
+        retained: true,
+        report_identity: Some(format!("service-report:{id:?}")),
+    }
+}
+
+fn daemon_reload_service_lifecycle(
+    lifecycle: &ServiceRuntimeRecord,
+    reload_identity: &str,
+) -> ServiceRuntimeRecord {
+    let mut lifecycle = lifecycle.clone();
+    lifecycle.lifecycle = ServiceLifecycleState::Running;
+    lifecycle.health = ServiceHealthStatus::Healthy;
+    lifecycle.reload_generation = lifecycle.reload_generation.saturating_add(1);
+    lifecycle.last_reload = Some(reload_identity.to_string());
+    lifecycle
+}
+
+fn daemon_shutdown_service_lifecycle(
+    lifecycle: &ServiceRuntimeRecord,
+    mode: ServiceShutdownMode,
+    reason: &str,
+) -> ServiceRuntimeRecord {
+    let mut lifecycle = lifecycle.clone();
+    lifecycle.lifecycle = ServiceLifecycleState::Terminated;
+    lifecycle.health = ServiceHealthStatus::Unavailable;
+    lifecycle.shutdown_mode = Some(mode);
+    lifecycle.terminal_reason = Some(reason.to_string());
+    lifecycle.terminal = true;
+    lifecycle.retained = true;
+    lifecycle
+}
+
+fn application_report_from_artifact_summary(
+    artifact_summary: &RuntimeKernelArtifactLanguageSummary,
+    terminal_outcome: ApplicationTerminalOutcome,
+) -> ApplicationRuntimeReport {
+    let trace_bundle = ApplicationTraceBundle::from_invocation_packet(
+        &artifact_summary.invocation_packet,
+        Vec::new(),
+        Vec::new(),
+    );
+    ApplicationRuntimeReport::new(
+        &artifact_summary.invocation_packet,
+        terminal_outcome,
+        trace_bundle,
+    )
 }
 
 fn selected_runtime_support_identity() -> String {

@@ -57,8 +57,8 @@ This draft replaces the earlier loose statement "`{fs} <: {fs, log}`" with expli
 
 Current parser/core/typechecker code does not yet carry a complete effect-row type in ordinary
 function signatures. The live type surfaces include named types, type constructors, tuples,
-records, associated types, and callable types, while workflow/effect information is tracked
-separately in existing workflow and legacy capability machinery.
+records, associated types, and callable types, while current-state workflow/effect information is
+tracked separately in legacy compatibility machinery.
 
 The existing 4-point `Effect` lattice in `crates/ash-core/src/effect.rs` is a coarse
 workflow/effect classification:
@@ -79,8 +79,9 @@ representation already has row structure.
 ### 2.2 Migration constraint
 
 The first implementation slice should add row summaries and row checking around existing
-carriers. It must not require immediate deletion of `Type::Fn`, `Type::Fun`, `Act<T>`,
-`Proc<T>`, `Workflow<T>`, workflow headers, or current legacy capability declarations.
+carriers. It must not require immediate deletion of legacy compatibility carriers, but target
+development must not add new `Act<T>`, `Proc<T>`, `Workflow<T>`, workflow headers, or legacy
+capability declarations. Those names are historical/current-state references only.
 
 ## 3. Type-level representation
 
@@ -299,8 +300,8 @@ pub struct EvidenceEffect {
 }
 ```
 
-These effects are profile-sensitive. `proc spawn` must not type-check in a pure or `Act`-only
-profile unless the computation is explicitly lifted or checked in a `Proc`-capable environment.
+These effects are runtime-boundary-sensitive. `proc spawn` must not type-check unless the
+computation is checked at an explicit process-capable runtime/admission boundary.
 
 ### 3.9 Newtype identity and representation
 
@@ -601,9 +602,9 @@ constrained.
 
 ### 7.4 No implicit tower lifts
 
-Row polymorphism does not add implicit lifts across `Pure`, `Act`, `Proc`, and `Workflow`
-profiles. If a `Proc` computation binds an `Act` computation, the explicit lift or embedding
-rule remains required until a separate spec changes it.
+Row polymorphism does not add implicit lifts across deprecated tower forms. Historical
+`Pure`/`Act`/`Proc`/`Workflow` compatibility references must be interpreted as explicit
+runtime/admission boundary checks, not as target type constructors.
 
 ## 8. Type checking rules by effect kind
 
@@ -685,7 +686,8 @@ The type checker must verify at least:
 2. direction compatibility;
 3. message type compatibility;
 4. guard predicate well-scoping;
-5. profile compatibility (`Proc` or `Workflow`, not `Pure`/plain `Act`).
+5. profile compatibility (a process-capable or governance-capable runtime profile, not a
+   deprecated tower constructor).
 
 Full protocol/session compatibility is a future spec.
 
@@ -697,7 +699,7 @@ into a domain result unless the source syntax explicitly constructs that domain 
 ### 8.7 Evidence/reporting
 
 Evidence and report effects must be checked against available evidence sinks or
-workflow/reporting boundaries. Public functions exporting evidence effects must preserve those
+application/reporting boundaries. Public functions exporting evidence effects must preserve those
 effects in module summaries.
 
 ### 8.8 Handler typing
@@ -840,7 +842,7 @@ fix. Examples:
 | contract not discharged | contract kind, predicate source, allowed discharge modes |
 | channel direction mismatch | endpoint name, expected direction, found direction |
 | guarded channel without guard behavior | guard source and required runtime/spec decision |
-| process effect in Act/Pure | process operation and required `Proc`/`Workflow` profile |
+| process effect without process runtime boundary | process operation and required process-capable boundary |
 | alias cycle | cycle path |
 | private alias in public row | private alias, public item, suggested expansion/export fix |
 
@@ -874,11 +876,10 @@ must classify the row item kind.
 - Contract effects preserve static/evidence/dynamic discharge status.
 - Channel guards are represented as contract effects or embedded guarded channel effects.
 
-### 12.5 Slice E: Profile checking
+### 12.5 Slice E: Runtime-boundary checking
 
-- Define `Pure`, `Act`, `Proc`, and `Workflow` row profiles.
-- Reject process/channel/governance effects in lower profiles unless an explicit lift or
-  boundary handles them.
+- Define process-capable and governance-capable row/admission boundary checks.
+- Reject process/channel/governance effects unless an explicit boundary handles them.
 
 ## 13. Acceptance criteria
 
@@ -1157,4 +1158,5 @@ admission.
 - 2026-06-29: Reconciled with NOTE-033. Refined `PredicateSummary` so predicate references point at typed lowered predicate artifacts with binder environments, snapshots, proof fragments, optional dynamic-check plans, diagnostics, and stable identities.
 - 2026-06-29: Swept stale contract-discharge wording so dynamic contracts lower to runtime checks by default rather than requiring hidden runtime contract handlers.
 - 2026-06-29: Reconciled with NOTE-034. Predicate well-formedness now explicitly separates authority-bearing operation calls from ordinary operation-produced values that contracts may inspect.
-- 2026-06-29: Reconciled with NOTE-035. Added trace-contract well-formedness over `Γtrace`, with `Proc`/`Workflow` treated as semantic anchors classified by referenced facts rather than separate contract mechanisms.
+- 2026-06-29: Reconciled with NOTE-035. Added trace-contract well-formedness over `Γtrace`, with historical `Proc`/`Workflow` vocabulary classified by referenced facts rather than separate contract mechanisms.
+- 2026-07-06: Reconciled with Phase 195. Marked `Act`/`Proc`/`Workflow` as deprecated development forms and routed profile checks through explicit runtime/admission boundaries.

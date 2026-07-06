@@ -4,7 +4,7 @@
 //! process/workflow runtime semantics. It intentionally does not wire runtime
 //! admission, scheduling, or `Proc` operations.
 
-use crate::{Value, WorkflowId};
+use crate::{Value, WorkflowId, core_ash_contract::TraceFactKind};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -538,6 +538,406 @@ impl Default for RunId {
     }
 }
 
+/// A unique identifier for one managed service runtime instance.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct ServiceId(pub Uuid);
+
+impl ServiceId {
+    /// Create a fresh service identifier.
+    #[must_use]
+    pub fn new() -> Self {
+        Self(Uuid::new_v4())
+    }
+}
+
+impl Default for ServiceId {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Explicit lifecycle state for a managed long-running service.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ServiceLifecycleState {
+    /// Service has been admitted and is starting.
+    Starting,
+    /// Service is running and health-checkable.
+    Running,
+    /// Service is applying a bounded reload.
+    Reloading,
+    /// Service is shutting down.
+    Stopping,
+    /// Service has reached terminal state and its report is retained.
+    Terminated,
+}
+
+/// Health status for a managed service instance.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ServiceHealthStatus {
+    /// Service is available.
+    Healthy,
+    /// Service is degraded but still inspectable.
+    Degraded,
+    /// Service is no longer available.
+    Unavailable,
+}
+
+/// Shutdown mode selected for a managed service instance.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ServiceShutdownMode {
+    /// Cooperative shutdown.
+    Graceful,
+    /// Forced terminal shutdown.
+    Forced,
+}
+
+/// Structured diagnostic for service lifecycle operations.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum ServiceLifecycleDiagnostic {
+    /// Service name was missing at the runtime boundary.
+    MissingServiceName,
+    /// Service name was malformed.
+    MalformedServiceName {
+        /// Name supplied by the runtime boundary.
+        service_name: String,
+    },
+    /// Requested service identity was not retained.
+    UnknownService {
+        /// Missing service identity.
+        service_id: ServiceId,
+    },
+    /// A terminal service may be inspected but not restarted/reloaded in place.
+    TerminalServiceRetained {
+        /// Retained terminal service identity.
+        service_id: ServiceId,
+    },
+}
+
+/// Retained service health report.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct ServiceHealthReport {
+    /// Service identity being reported.
+    pub service_id: ServiceId,
+    /// Current lifecycle state.
+    pub lifecycle: ServiceLifecycleState,
+    /// Current health status.
+    pub status: ServiceHealthStatus,
+}
+
+/// Explicit retained lifecycle state for one managed service.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct ServiceRuntimeRecord {
+    /// Stable service identity.
+    pub id: ServiceId,
+    /// Runtime service name.
+    pub name: String,
+    /// Underlying process identity owned by this service record.
+    pub process_id: ProcessId,
+    /// Current lifecycle state.
+    pub lifecycle: ServiceLifecycleState,
+    /// Current health status.
+    pub health: ServiceHealthStatus,
+    /// Bounded reload generation.
+    pub reload_generation: u32,
+    /// Last reload identity, if any.
+    pub last_reload: Option<String>,
+    /// Shutdown mode, if terminal shutdown has happened.
+    pub shutdown_mode: Option<ServiceShutdownMode>,
+    /// Terminal reason or note.
+    pub terminal_reason: Option<String>,
+    /// Whether this service reached terminal state.
+    pub terminal: bool,
+    /// Whether terminal report/state is retained.
+    pub retained: bool,
+    /// Stable retained report identity.
+    pub report_identity: Option<String>,
+}
+
+/// A unique identifier for one registered external actor adapter.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct ExternalActorAdapterId(pub Uuid);
+
+impl ExternalActorAdapterId {
+    /// Create a fresh external actor adapter identifier.
+    #[must_use]
+    pub fn new() -> Self {
+        Self(Uuid::new_v4())
+    }
+}
+
+impl Default for ExternalActorAdapterId {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// A unique identifier for one external actor call boundary.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct ActorCallId(pub Uuid);
+
+impl ActorCallId {
+    /// Create a fresh actor call identifier.
+    #[must_use]
+    pub fn new() -> Self {
+        Self(Uuid::new_v4())
+    }
+}
+
+impl Default for ActorCallId {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Supported external actor adapter protocols.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ActorProtocol {
+    /// HTTP request/response using JSON payloads.
+    HttpJson,
+    /// Message queue request/response using structured payloads.
+    MessageQueue,
+    /// Webhook delivery with structured callback payloads.
+    Webhook,
+    /// Unsupported protocol description used to fail closed at adapter construction.
+    Unsupported {
+        /// Human-readable reason.
+        reason: String,
+    },
+}
+
+/// Bounded external actor call policy.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct ActorCallPolicy {
+    /// Maximum retry attempts after an actor failure.
+    pub max_retries: u32,
+    /// Timeout budget in milliseconds.
+    pub timeout_millis: u64,
+}
+
+impl ActorCallPolicy {
+    /// Create a bounded call policy.
+    #[must_use]
+    pub fn bounded(max_retries: u32, timeout_millis: u64) -> Self {
+        Self {
+            max_retries,
+            timeout_millis,
+        }
+    }
+}
+
+/// Structured diagnostic emitted at external actor boundaries.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum ExternalActorDiagnostic {
+    /// Adapter name was missing.
+    MissingAdapterName,
+    /// Adapter name was malformed.
+    MalformedAdapterName {
+        /// Name supplied by the runtime boundary.
+        adapter_name: String,
+    },
+    /// Actor type name was missing.
+    MissingActorType,
+    /// Capability boundary metadata was missing.
+    MissingCapabilityBoundary {
+        /// Adapter name being constructed.
+        adapter_name: String,
+    },
+    /// Adapter attempted to grant authority directly.
+    AuthorityWideningAdapter {
+        /// Adapter name being constructed.
+        adapter_name: String,
+    },
+    /// Adapter protocol is unsupported.
+    UnsupportedProtocol {
+        /// Adapter name being constructed.
+        adapter_name: String,
+        /// Unsupported protocol reason.
+        reason: String,
+    },
+    /// Requested adapter is not registered.
+    UnknownAdapter {
+        /// Missing adapter name.
+        adapter_name: String,
+    },
+    /// Requested call is not retained.
+    UnknownCall {
+        /// Missing call identity.
+        call_id: ActorCallId,
+    },
+    /// Inbound payload did not match the adapter schema.
+    InboundTypeMismatch {
+        /// Adapter name.
+        adapter_name: String,
+        /// Expected inbound schema.
+        expected: String,
+        /// Actual value type.
+        actual: String,
+    },
+    /// Outbound response did not match the adapter schema.
+    OutboundTypeMismatch {
+        /// Adapter name.
+        adapter_name: String,
+        /// Expected outbound schema.
+        expected: String,
+        /// Actual value type.
+        actual: String,
+    },
+    /// Payload cannot cross an external actor boundary.
+    NonSendablePayload {
+        /// Adapter name.
+        adapter_name: String,
+        /// Structured sendability reason rendered without payload contents.
+        reason: String,
+    },
+    /// Retry budget was exhausted.
+    RetryBudgetExhausted {
+        /// Call identity.
+        call_id: ActorCallId,
+        /// Configured retry budget.
+        max_retries: u32,
+    },
+    /// Retained call is already terminal.
+    TerminalCallRetained {
+        /// Retained call identity.
+        call_id: ActorCallId,
+    },
+}
+
+/// Explicit typed adapter metadata for crossing an external actor boundary.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct ExternalActorAdapter {
+    /// Stable adapter identity.
+    pub id: ExternalActorAdapterId,
+    /// Runtime adapter name.
+    pub name: String,
+    /// External protocol.
+    pub protocol: ActorProtocol,
+    /// Stable actor type label used in reports.
+    pub actor_type: String,
+    /// Rendered inbound payload schema.
+    pub inbound_schema: String,
+    /// Rendered outbound response schema.
+    pub outbound_schema: String,
+    /// Capability or policy boundary that authorizes this adapter.
+    pub capability_boundary: String,
+    /// Bounded call policy.
+    pub policy: ActorCallPolicy,
+    /// Whether this adapter directly grants authority. Valid adapters keep this false.
+    pub grants_authority: bool,
+    /// Ownership discipline for values crossing the adapter.
+    pub ownership: String,
+}
+
+impl ExternalActorAdapter {
+    /// Build external actor adapter metadata selected at a runtime boundary.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ExternalActorDiagnostic`] when the adapter name, actor type, protocol, capability
+    /// boundary, or authority metadata is invalid.
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        name: impl Into<String>,
+        protocol: ActorProtocol,
+        actor_type: impl Into<String>,
+        inbound_schema: impl std::fmt::Display,
+        outbound_schema: impl std::fmt::Display,
+        capability_boundary: impl Into<String>,
+        policy: ActorCallPolicy,
+        grants_authority: bool,
+    ) -> Result<Self, ExternalActorDiagnostic> {
+        let name = name.into();
+        if name.is_empty() {
+            return Err(ExternalActorDiagnostic::MissingAdapterName);
+        }
+        if !is_valid_runtime_boundary_name(&name) {
+            return Err(ExternalActorDiagnostic::MalformedAdapterName { adapter_name: name });
+        }
+        let actor_type = actor_type.into();
+        if actor_type.is_empty() {
+            return Err(ExternalActorDiagnostic::MissingActorType);
+        }
+        let capability_boundary = capability_boundary.into();
+        if capability_boundary.is_empty() {
+            return Err(ExternalActorDiagnostic::MissingCapabilityBoundary { adapter_name: name });
+        }
+        if grants_authority {
+            return Err(ExternalActorDiagnostic::AuthorityWideningAdapter { adapter_name: name });
+        }
+        if let ActorProtocol::Unsupported { reason } = protocol {
+            return Err(ExternalActorDiagnostic::UnsupportedProtocol {
+                adapter_name: name,
+                reason,
+            });
+        }
+        Ok(Self {
+            id: ExternalActorAdapterId::new(),
+            name,
+            protocol,
+            actor_type,
+            inbound_schema: inbound_schema.to_string(),
+            outbound_schema: outbound_schema.to_string(),
+            capability_boundary,
+            policy,
+            grants_authority,
+            ownership: "owned-sendable".to_string(),
+        })
+    }
+}
+
+/// Outcome category for one external actor call.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ActorCallOutcome {
+    /// Actor call completed with a valid response.
+    Succeeded,
+    /// Actor call failed with a structured diagnostic.
+    Failed,
+    /// Actor call exceeded its timeout budget.
+    TimedOut,
+    /// Actor call was cancelled by the runtime.
+    Cancelled,
+    /// Actor call is scheduled for a bounded retry.
+    RetryScheduled,
+}
+
+/// Retained external actor call report and trace carrier.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct ExternalActorCallRecord {
+    /// Stable call identity.
+    pub call_id: ActorCallId,
+    /// Adapter identity used by this call.
+    pub adapter_id: ExternalActorAdapterId,
+    /// Adapter name.
+    pub adapter_name: String,
+    /// Actor type label.
+    pub actor_type: String,
+    /// Capability or policy boundary that authorized this adapter.
+    pub capability_boundary: String,
+    /// External actor protocol.
+    pub protocol: ActorProtocol,
+    /// Call outcome.
+    pub outcome: ActorCallOutcome,
+    /// Retry attempt represented by this retained record.
+    pub retry_attempt: u32,
+    /// Whether this call reached a terminal retained state.
+    pub terminal: bool,
+    /// Human-readable inbound payload type label.
+    pub payload_type: String,
+    /// Human-readable response type label.
+    pub response_type: Option<String>,
+    /// Payload redaction policy marker.
+    pub payload_redaction: String,
+    /// Redacted trace subject, safe for reports.
+    pub trace_subject: String,
+    /// Optional bounded diagnostic detail.
+    pub diagnostic: Option<String>,
+}
+
 /// A unique identifier for one process.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct ProcessId(pub Uuid);
@@ -816,6 +1216,318 @@ impl ProcessFailureAggregate {
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.failures.is_empty()
+    }
+}
+
+/// Runtime boundary that observed a process terminal state.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum ProcessPropagationBoundary {
+    /// Single-handle await observation.
+    Await,
+    /// Two-handle join observation.
+    Join,
+    /// Ordered handle-list gather observation.
+    Gather,
+}
+
+/// Supervisor policy selected at an application/runtime boundary.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum SupervisorPolicy {
+    /// Restart failed children up to a bounded attempt count, then escalate.
+    BoundedRestart {
+        /// Maximum restart attempts before escalation.
+        max_restarts: u32,
+    },
+    /// Cancel a supervised child through process cancellation semantics.
+    Cancel,
+    /// Escalate child failure/cancellation to the supervising runtime boundary.
+    Escalate,
+    /// Unsupported policy description used to fail closed at profile construction.
+    Unsupported {
+        /// Human-readable unsupported policy reason.
+        reason: String,
+    },
+}
+
+/// Structured diagnostic emitted while resolving supervisor runtime profiles.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum SupervisorDiagnostic {
+    /// Supervisor profile name was missing.
+    MissingProfileName,
+    /// Supervisor profile name was malformed.
+    MalformedProfileName {
+        /// Profile name supplied by the runtime boundary.
+        profile_name: String,
+    },
+    /// Supervisor profile attempted to grant authority directly.
+    AuthorityWideningProfile {
+        /// Profile name being resolved.
+        profile_name: String,
+    },
+    /// Supervisor policy is unsupported and must fail closed.
+    UnsupportedPolicy {
+        /// Profile name being resolved.
+        profile_name: String,
+        /// Unsupported policy reason.
+        reason: String,
+    },
+    /// Supervisor tried to observe a child without retained terminal state.
+    ProcessNotTerminal {
+        /// Profile name being evaluated.
+        profile_name: String,
+        /// Process whose terminal state was required.
+        process_id: ProcessId,
+    },
+    /// Process registry integration rejected the supervisor operation.
+    RuntimeRegistryFailure {
+        /// Failure detail from the process registry.
+        message: String,
+    },
+}
+
+/// Runtime supervisor profile over Phase 195 process handles and trace facts.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct SupervisorRuntimeProfile {
+    /// Stable profile name selected by the application runtime boundary.
+    pub profile_name: String,
+    /// Supervising process identity.
+    pub supervisor_process_id: ProcessId,
+    /// Runtime policy for child terminal observation.
+    pub policy: SupervisorPolicy,
+    /// Whether this profile directly grants authority. Valid profiles keep this false.
+    pub grants_authority: bool,
+}
+
+impl SupervisorRuntimeProfile {
+    /// Build a bounded restart supervisor profile.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SupervisorDiagnostic`] when the profile name is malformed or the policy is
+    /// unsupported.
+    pub fn bounded_restart(
+        profile_name: impl Into<String>,
+        supervisor_process_id: ProcessId,
+        max_restarts: u32,
+    ) -> Result<Self, SupervisorDiagnostic> {
+        Self::runtime_boundary(
+            profile_name,
+            supervisor_process_id,
+            SupervisorPolicy::BoundedRestart { max_restarts },
+            false,
+        )
+    }
+
+    /// Build a cancellation supervisor profile.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SupervisorDiagnostic`] when the profile name is malformed.
+    pub fn cancel_policy(
+        profile_name: impl Into<String>,
+        supervisor_process_id: ProcessId,
+    ) -> Result<Self, SupervisorDiagnostic> {
+        Self::runtime_boundary(
+            profile_name,
+            supervisor_process_id,
+            SupervisorPolicy::Cancel,
+            false,
+        )
+    }
+
+    /// Build supervisor profile metadata selected at a runtime boundary.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SupervisorDiagnostic`] when the profile name is missing/malformed, the profile
+    /// attempts to grant authority, or the selected policy is unsupported.
+    pub fn runtime_boundary(
+        profile_name: impl Into<String>,
+        supervisor_process_id: ProcessId,
+        policy: SupervisorPolicy,
+        grants_authority: bool,
+    ) -> Result<Self, SupervisorDiagnostic> {
+        let profile_name = profile_name.into();
+        if profile_name.is_empty() {
+            return Err(SupervisorDiagnostic::MissingProfileName);
+        }
+        if !is_valid_supervisor_profile_name(&profile_name) {
+            return Err(SupervisorDiagnostic::MalformedProfileName { profile_name });
+        }
+        if grants_authority {
+            return Err(SupervisorDiagnostic::AuthorityWideningProfile { profile_name });
+        }
+        if let SupervisorPolicy::Unsupported { reason } = policy {
+            return Err(SupervisorDiagnostic::UnsupportedPolicy {
+                profile_name,
+                reason,
+            });
+        }
+        Ok(Self {
+            profile_name,
+            supervisor_process_id,
+            policy,
+            grants_authority,
+        })
+    }
+}
+
+fn is_valid_supervisor_profile_name(name: &str) -> bool {
+    is_valid_runtime_boundary_name(name)
+}
+
+fn is_valid_runtime_boundary_name(name: &str) -> bool {
+    name.chars()
+        .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '-' | '_' | '.' | ':'))
+}
+
+/// Supervisor decision emitted after observing or controlling a process handle.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SupervisorDecisionRecord {
+    /// Supervisor profile name that made the decision.
+    pub profile_name: String,
+    /// Supervising process identity.
+    pub supervisor_process_id: ProcessId,
+    /// Process observed or controlled by this decision.
+    pub observed_process_id: ProcessId,
+    /// Observed terminal outcome category, if a terminal child was observed.
+    pub observed_outcome: Option<ProcessPropagationOutcome>,
+    /// Decision kind selected by the supervisor policy.
+    pub decision: SupervisorDecisionKind,
+    /// Restart attempts consumed by this profile after the decision.
+    pub restart_attempt: u32,
+    /// Replacement child process identity when a restart is requested.
+    pub replacement_process_id: Option<ProcessId>,
+    /// Whether this decision is terminal for supervisor reporting.
+    pub terminal: bool,
+    /// Optional bounded reason for diagnostics and reports.
+    pub reason: Option<String>,
+}
+
+/// Bounded supervisor decision kind.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum SupervisorDecisionKind {
+    /// Child completed successfully.
+    Complete,
+    /// Child should be restarted.
+    Restart,
+    /// Child should be cancelled.
+    Cancel,
+    /// Failure/cancellation should be escalated to the supervising boundary.
+    Escalate,
+}
+
+/// Terminal outcome category propagated to a supervisor-facing diagnostic.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum ProcessPropagationOutcome {
+    /// Observed process completed normally.
+    Succeeded,
+    /// Observed process failed with operational failure evidence.
+    Failed,
+    /// Observed process was cancelled with cancellation evidence.
+    Cancelled,
+}
+
+/// Bounded diagnostic for process failure/cancellation propagation decisions.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ProcessPropagationDiagnostic {
+    /// Boundary that observed the terminal process state.
+    pub boundary: ProcessPropagationBoundary,
+    /// Supervising/observing process, when the observer has process identity.
+    pub observer_process_id: Option<ProcessId>,
+    /// Process whose terminal state was observed.
+    pub observed_process_id: ProcessId,
+    /// Observed terminal outcome category.
+    pub outcome: ProcessPropagationOutcome,
+    /// Payload preserved for failure or cancellation evidence.
+    pub payload: Option<Value>,
+    /// Payload type when failure/cancellation evidence was present.
+    pub payload_type: Option<String>,
+    /// Bounded propagation decision label.
+    pub decision: String,
+}
+
+impl ProcessPropagationDiagnostic {
+    /// Create a diagnostic from a terminal process state observation.
+    #[must_use]
+    pub fn from_terminal_state(
+        boundary: ProcessPropagationBoundary,
+        observer_process_id: Option<ProcessId>,
+        observed_process_id: ProcessId,
+        terminal_state: &ProcessTerminalState,
+    ) -> Self {
+        match terminal_state {
+            ProcessTerminalState::Succeeded { .. } => Self {
+                boundary,
+                observer_process_id,
+                observed_process_id,
+                outcome: ProcessPropagationOutcome::Succeeded,
+                payload: None,
+                payload_type: None,
+                decision: "return-success".to_string(),
+            },
+            ProcessTerminalState::Failed { failure, .. } => Self {
+                boundary,
+                observer_process_id,
+                observed_process_id,
+                outcome: ProcessPropagationOutcome::Failed,
+                payload: Some(failure.payload.clone()),
+                payload_type: Some(failure.payload_type.clone()),
+                decision: "propagate-failure".to_string(),
+            },
+            ProcessTerminalState::Cancelled { failure, .. } => Self {
+                boundary,
+                observer_process_id,
+                observed_process_id,
+                outcome: ProcessPropagationOutcome::Cancelled,
+                payload: Some(failure.payload.clone()),
+                payload_type: Some(failure.payload_type.clone()),
+                decision: "propagate-cancellation".to_string(),
+            },
+        }
+    }
+}
+
+/// Stable runtime event label for process/channel trace facts.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum RuntimeTraceEvent {
+    Register,
+    Spawn,
+    Start,
+    Complete,
+    Fail,
+    Cancel,
+    Restart,
+    Escalate,
+    Health,
+    Reload,
+    Shutdown,
+    Join,
+    Send,
+    Receive,
+    Close,
+}
+
+/// Runtime trace fact suitable for later temporal monitor evaluation.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct RuntimeTraceFact {
+    /// Coarse trace fact family.
+    pub kind: TraceFactKind,
+    /// Stable event label.
+    pub event: RuntimeTraceEvent,
+    /// Stable subject identifier rendered by the runtime.
+    pub subject: String,
+}
+
+impl RuntimeTraceFact {
+    /// Create a runtime trace fact.
+    #[must_use]
+    pub fn new(kind: TraceFactKind, event: RuntimeTraceEvent, subject: impl Into<String>) -> Self {
+        Self {
+            kind,
+            event,
+            subject: subject.into(),
+        }
     }
 }
 

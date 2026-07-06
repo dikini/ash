@@ -198,13 +198,9 @@ async fn second_await_on_same_handle_fails_with_structured_handle_consumed_error
 }
 
 #[tokio::test]
-async fn awaiting_unregistered_or_non_terminal_process_fails_honestly_and_deterministically() {
+async fn awaiting_unregistered_process_fails_honestly_and_deterministically() {
     let runtime_state = RuntimeState::new();
     let process_id = ProcessId::new();
-    runtime_state
-        .register_root_process(process_id)
-        .await
-        .expect("process registers");
 
     let handle = Value::ProcessHandle(ProcessHandle::new(process_id, Some("Int".to_string())));
     let proc_value = eval_expr(&proc_await_expr(handle), &Context::new())
@@ -212,7 +208,7 @@ async fn awaiting_unregistered_or_non_terminal_process_fails_honestly_and_determ
 
     let err = force_proc_with_runtime(runtime_state, proc_value)
         .await
-        .expect_err("await must reject non-terminal process");
+        .expect_err("await must reject unregistered process");
     assert_eq!(
         err,
         EvalError::ProcessObservationUnavailable {

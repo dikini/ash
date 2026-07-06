@@ -1859,6 +1859,8 @@ pub enum TraceFactKind {
     Channel,
     Resource,
     Operation,
+    Service,
+    ExternalActor,
     Contract,
     Workflow,
     Evidence,
@@ -1896,6 +1898,8 @@ impl TraceAlphabet {
                     | TraceFactKind::Channel
                     | TraceFactKind::Resource
                     | TraceFactKind::Operation
+                    | TraceFactKind::Service
+                    | TraceFactKind::ExternalActor
                     | TraceFactKind::Time
             )
         });

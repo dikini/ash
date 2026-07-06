@@ -2519,6 +2519,48 @@ async fn proc_par_returns_ordered_child_handles_and_defers_child_failure_to_late
 }
 
 #[tokio::test]
+async fn proc_await_waits_for_running_child_completion() {
+    let runtime_state = RuntimeState::new();
+    let process_id = ProcessId::new();
+    runtime_state
+        .register_root_process(process_id)
+        .await
+        .expect("process registers");
+    runtime_state
+        .mark_process_running(process_id)
+        .await
+        .expect("process starts running");
+
+    let proc_ctx = Context::new().with_runtime_state(runtime_state.clone());
+    let await_proc = eval_expr(
+        &proc_await_expr(ProcessHandle::new(process_id, Some("Int".to_string()))),
+        &Context::new(),
+    )
+    .expect("await closure builds");
+
+    let completing_runtime_state = runtime_state.clone();
+    tokio::spawn(async move {
+        tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+        completing_runtime_state
+            .record_process_terminal(
+                process_id,
+                ash_core::runtime::ProcessTerminalState::Succeeded {
+                    value: Value::Int(42),
+                },
+            )
+            .await
+            .expect("terminal state records");
+    });
+
+    assert_eq!(
+        force_proc_in_context(&proc_ctx, await_proc)
+            .await
+            .expect("proc::await should wait for running child completion"),
+        Value::Int(42)
+    );
+}
+
+#[tokio::test]
 async fn proc_scatter_returns_handles_in_input_order() {
     let runtime_state = RuntimeState::new();
     let parent_process_id = ProcessId::new();

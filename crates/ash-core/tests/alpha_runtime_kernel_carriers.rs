@@ -1,3 +1,8 @@
+use ash_core::core_ash_contract::{TraceAlphabet, TraceFactKind, TraceInterpretation};
+use ash_core::runtime::{
+    ActorCallPolicy, ActorProtocol, ExternalActorAdapter, ExternalActorDiagnostic,
+    SupervisorDiagnostic, SupervisorPolicy, SupervisorRuntimeProfile,
+};
 use ash_core::runtime_kernel::{
     AdmissionIdentity, ArtifactVersion, ProviderRegistryIdentity, RuntimeArtifactCacheKey,
     RuntimeConfigId, RuntimeEngineRelationship, RuntimeHostMode, RuntimeKernelIdentity,
@@ -165,4 +170,108 @@ fn runtime_kernel_host_modes_share_definition_and_artifact_identity() {
         one_shot.process_tree(ProcessId::new()).workflow_instance_id,
         daemon.process_tree(ProcessId::new()).workflow_instance_id
     );
+}
+
+#[test]
+fn supervisor_runtime_profiles_are_authority_neutral_and_fail_closed() {
+    let supervisor_process_id = ProcessId::new();
+    let profile =
+        SupervisorRuntimeProfile::bounded_restart("supervisor:main", supervisor_process_id, 2)
+            .expect("bounded restart supervisor profile is supported");
+
+    assert_eq!(profile.profile_name, "supervisor:main");
+    assert_eq!(profile.supervisor_process_id, supervisor_process_id);
+    assert_eq!(
+        profile.policy,
+        SupervisorPolicy::BoundedRestart { max_restarts: 2 }
+    );
+    assert!(!profile.grants_authority);
+
+    assert_eq!(
+        SupervisorRuntimeProfile::runtime_boundary(
+            "supervisor:bad",
+            supervisor_process_id,
+            SupervisorPolicy::Unsupported {
+                reason: "unbounded restart".to_string(),
+            },
+            false,
+        )
+        .expect_err("unsupported supervisor policies fail closed"),
+        SupervisorDiagnostic::UnsupportedPolicy {
+            profile_name: "supervisor:bad".to_string(),
+            reason: "unbounded restart".to_string(),
+        }
+    );
+    assert!(matches!(
+        SupervisorRuntimeProfile::runtime_boundary(
+            "supervisor:authority",
+            supervisor_process_id,
+            SupervisorPolicy::Cancel,
+            true,
+        )
+        .expect_err("supervisor profiles cannot grant authority"),
+        SupervisorDiagnostic::AuthorityWideningProfile { .. }
+    ));
+}
+
+#[test]
+fn external_actor_adapters_are_authority_neutral_and_fail_closed() {
+    let adapter = ExternalActorAdapter::new(
+        "actor:payments",
+        ActorProtocol::HttpJson,
+        "PaymentRequest",
+        "{id: String, amount: Int}",
+        "String",
+        "capability:payments.charge",
+        ActorCallPolicy::bounded(2, 5_000),
+        false,
+    )
+    .expect("typed external actor adapter is supported");
+
+    assert_eq!(adapter.name, "actor:payments");
+    assert_eq!(adapter.protocol, ActorProtocol::HttpJson);
+    assert_eq!(adapter.actor_type, "PaymentRequest");
+    assert_eq!(adapter.inbound_schema, "{id: String, amount: Int}");
+    assert_eq!(adapter.outbound_schema, "String");
+    assert_eq!(adapter.capability_boundary, "capability:payments.charge");
+    assert_eq!(adapter.policy, ActorCallPolicy::bounded(2, 5_000));
+    assert_eq!(adapter.ownership, "owned-sendable");
+    assert!(!adapter.grants_authority);
+
+    assert_eq!(
+        ExternalActorAdapter::new(
+            "actor:legacy",
+            ActorProtocol::Unsupported {
+                reason: "raw socket actor protocol has no typed adapter".to_string(),
+            },
+            "LegacyRequest",
+            "String",
+            "String",
+            "capability:legacy.call",
+            ActorCallPolicy::bounded(0, 100),
+            false,
+        )
+        .expect_err("unsupported actor protocols fail closed"),
+        ExternalActorDiagnostic::UnsupportedProtocol {
+            adapter_name: "actor:legacy".to_string(),
+            reason: "raw socket actor protocol has no typed adapter".to_string(),
+        }
+    );
+    assert!(matches!(
+        ExternalActorAdapter::new(
+            "actor:authority",
+            ActorProtocol::HttpJson,
+            "AuthorityRequest",
+            "String",
+            "String",
+            "capability:authority.call",
+            ActorCallPolicy::bounded(0, 100),
+            true,
+        )
+        .expect_err("actor adapters cannot grant authority"),
+        ExternalActorDiagnostic::AuthorityWideningAdapter { .. }
+    ));
+
+    let alphabet = TraceAlphabet::new(vec![TraceFactKind::ExternalActor]);
+    assert_eq!(alphabet.interpretation(), TraceInterpretation::Operational);
 }

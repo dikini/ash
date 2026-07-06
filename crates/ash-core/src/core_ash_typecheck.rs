@@ -3127,7 +3127,7 @@ fn effect_operation_detail(op: &CoreEffectOp) -> String {
         CoreEffectOp::Channel { path, mode, .. } => {
             format!("channel {}", dotted_name(path, mode))
         }
-        CoreEffectOp::Process { operation, .. } => format!("proc {operation}"),
+        CoreEffectOp::Process { operation, .. } => format!("process {operation}"),
         CoreEffectOp::Failure { ty } => ty
             .as_ref()
             .map(|ty| format!("fail {}", type_detail(ty)))

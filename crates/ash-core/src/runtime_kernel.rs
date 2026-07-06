@@ -28,7 +28,8 @@ use crate::amir::{
     AmirModule, AmirSectionKind, AmirVerifier, BytecodeModule, BytecodeOpcode, BytecodeSectionKind,
     BytecodeVerifier,
 };
-use crate::runtime::{CapabilityBindingId, ProcessId, ResourceId};
+use crate::core_ash_contract::RuntimeMonitorEvidence;
+use crate::runtime::{CapabilityBindingId, ProcessId, ResourceId, RuntimeTraceFact};
 use crate::type_ir::{TcirComputationExpression, TcirStatementId};
 
 /// Minimal alpha admission profile for one-shot RuntimeKernel starts.
@@ -450,6 +451,939 @@ impl WorkflowArtifactIdentity {
     }
 }
 
+/// Kind of application entrypoint selected by a runtime invocation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ApplicationEntrypointKind {
+    /// Target application entrypoint backed by an ordinary checked callable.
+    CheckedCallable,
+    /// Compatibility entrypoint adapted from legacy `workflow` syntax.
+    LegacyWorkflowCompatibility,
+}
+
+/// Structured diagnostic emitted while resolving application entrypoint metadata.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, thiserror::Error)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum ApplicationEntrypointDiagnostic {
+    /// No entrypoint name was provided at the application boundary.
+    #[error("missing application entrypoint name")]
+    MissingEntrypointName,
+    /// A checked-callable entrypoint was selected without a callable identity.
+    #[error("missing callable identity for application entrypoint `{entrypoint_name}`")]
+    MissingCallableIdentity {
+        /// Entrypoint name being resolved.
+        entrypoint_name: String,
+    },
+    /// Multiple checked computations match one entrypoint selection.
+    #[error("ambiguous application entrypoint `{entrypoint_name}`")]
+    AmbiguousEntrypoint {
+        /// Entrypoint name being resolved.
+        entrypoint_name: String,
+        /// Candidate callable identities.
+        candidates: Vec<String>,
+    },
+    /// Entrypoint metadata was derived from stale source/check identity.
+    #[error("stale application entrypoint `{entrypoint_name}`")]
+    StaleEntrypoint {
+        /// Entrypoint name being resolved.
+        entrypoint_name: String,
+        /// Source/check identity used by the metadata.
+        expected_identity: String,
+        /// Current source/check identity observed at invocation.
+        actual_identity: String,
+    },
+    /// Entrypoint metadata is incompatible with the runtime target.
+    #[error("incompatible application entrypoint `{entrypoint_name}`")]
+    IncompatibleEntrypoint {
+        /// Entrypoint name being resolved.
+        entrypoint_name: String,
+        /// Expected entrypoint shape or boundary condition.
+        expected: String,
+        /// Actual entrypoint shape or boundary condition.
+        actual: String,
+    },
+}
+
+impl ApplicationEntrypointDiagnostic {
+    /// Build an ambiguous-entrypoint diagnostic.
+    #[must_use]
+    pub fn ambiguous<I, S>(entrypoint_name: impl Into<String>, candidates: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<String>,
+    {
+        Self::AmbiguousEntrypoint {
+            entrypoint_name: entrypoint_name.into(),
+            candidates: candidates.into_iter().map(Into::into).collect(),
+        }
+    }
+
+    /// Build a stale-entrypoint diagnostic.
+    #[must_use]
+    pub fn stale(
+        entrypoint_name: impl Into<String>,
+        expected_identity: impl Into<String>,
+        actual_identity: impl Into<String>,
+    ) -> Self {
+        Self::StaleEntrypoint {
+            entrypoint_name: entrypoint_name.into(),
+            expected_identity: expected_identity.into(),
+            actual_identity: actual_identity.into(),
+        }
+    }
+
+    /// Build an incompatible-entrypoint diagnostic.
+    #[must_use]
+    pub fn incompatible(
+        entrypoint_name: impl Into<String>,
+        expected: impl Into<String>,
+        actual: impl Into<String>,
+    ) -> Self {
+        Self::IncompatibleEntrypoint {
+            entrypoint_name: entrypoint_name.into(),
+            expected: expected.into(),
+            actual: actual.into(),
+        }
+    }
+}
+
+/// Application/runtime entrypoint metadata over a checked computation.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct ApplicationEntrypointMetadata {
+    /// Runtime entrypoint name selected by the host.
+    pub name: String,
+    /// Entrypoint kind, separating target callable metadata from legacy compatibility paths.
+    pub kind: ApplicationEntrypointKind,
+    /// Checked callable identity for target application entrypoints.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub callable_identity: Option<String>,
+    /// Relative module path containing the selected entrypoint.
+    pub relative_module_path: String,
+    /// Runtime target identity selected by the host before artifact identity is built.
+    pub runtime_target_identity: String,
+}
+
+impl ApplicationEntrypointMetadata {
+    /// Build checked-callable application entrypoint metadata.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ApplicationEntrypointDiagnostic`] when required metadata is missing.
+    pub fn checked_callable(
+        name: impl Into<String>,
+        callable_identity: impl Into<String>,
+        relative_module_path: impl Into<String>,
+        runtime_target_identity: impl Into<String>,
+    ) -> Result<Self, ApplicationEntrypointDiagnostic> {
+        let name = name.into();
+        if name.is_empty() {
+            return Err(ApplicationEntrypointDiagnostic::MissingEntrypointName);
+        }
+        let callable_identity = callable_identity.into();
+        if callable_identity.is_empty() {
+            return Err(ApplicationEntrypointDiagnostic::MissingCallableIdentity {
+                entrypoint_name: name,
+            });
+        }
+        Ok(Self {
+            name,
+            kind: ApplicationEntrypointKind::CheckedCallable,
+            callable_identity: Some(callable_identity),
+            relative_module_path: relative_module_path.into(),
+            runtime_target_identity: runtime_target_identity.into(),
+        })
+    }
+
+    /// Build compatibility metadata for a legacy workflow entrypoint.
+    #[must_use]
+    pub fn legacy_workflow_compatibility(
+        workflow_name: impl Into<String>,
+        relative_module_path: impl Into<String>,
+    ) -> Self {
+        let name = workflow_name.into();
+        Self {
+            runtime_target_identity: format!("legacy-workflow:{name}"),
+            name,
+            kind: ApplicationEntrypointKind::LegacyWorkflowCompatibility,
+            callable_identity: None,
+            relative_module_path: relative_module_path.into(),
+        }
+    }
+}
+
+/// Structured diagnostic emitted while resolving admission profile boundary metadata.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Error)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum ApplicationAdmissionProfileDiagnostic {
+    /// No admission profile name was provided at the application boundary.
+    #[error("missing admission profile name")]
+    MissingProfileName,
+    /// Admission profile name is not a stable profile identifier.
+    #[error("malformed admission profile name `{profile_name}`")]
+    MalformedProfileName {
+        /// Profile name supplied by the boundary.
+        profile_name: String,
+    },
+    /// Admission profile metadata was derived from stale source/check/profile identity.
+    #[error("stale admission profile `{profile_name}`")]
+    StaleProfile {
+        /// Profile name being resolved.
+        profile_name: String,
+        /// Expected profile identity.
+        expected_identity: String,
+        /// Actual profile identity observed at invocation.
+        actual_identity: String,
+    },
+    /// Admission profile metadata is incompatible with the runtime target.
+    #[error("incompatible admission profile `{profile_name}`")]
+    IncompatibleProfile {
+        /// Profile name being resolved.
+        profile_name: String,
+        /// Expected profile shape or boundary condition.
+        expected: String,
+        /// Actual profile shape or boundary condition.
+        actual: String,
+    },
+    /// Admission profile metadata attempted to grant authority directly.
+    #[error("admission profile `{profile_name}` attempted to widen authority")]
+    AuthorityWideningProfile {
+        /// Profile name being resolved.
+        profile_name: String,
+    },
+}
+
+impl ApplicationAdmissionProfileDiagnostic {
+    /// Build a stale-profile diagnostic.
+    #[must_use]
+    pub fn stale(
+        profile_name: impl Into<String>,
+        expected_identity: impl Into<String>,
+        actual_identity: impl Into<String>,
+    ) -> Self {
+        Self::StaleProfile {
+            profile_name: profile_name.into(),
+            expected_identity: expected_identity.into(),
+            actual_identity: actual_identity.into(),
+        }
+    }
+
+    /// Build an incompatible-profile diagnostic.
+    #[must_use]
+    pub fn incompatible(
+        profile_name: impl Into<String>,
+        expected: impl Into<String>,
+        actual: impl Into<String>,
+    ) -> Self {
+        Self::IncompatibleProfile {
+            profile_name: profile_name.into(),
+            expected: expected.into(),
+            actual: actual.into(),
+        }
+    }
+}
+
+/// Admission profile metadata selected at an application/runtime boundary.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct ApplicationAdmissionProfile {
+    /// Stable profile name selected by the boundary.
+    pub name: String,
+    /// Stable profile identity used in artifacts and reports.
+    pub profile_identity: String,
+    /// Boundary source that supplied this profile.
+    pub boundary_source: String,
+    /// Whether this metadata directly grants authority. Valid profile metadata must keep this false.
+    pub grants_authority: bool,
+}
+
+impl ApplicationAdmissionProfile {
+    /// Build non-authority metadata for one of the alpha admission profiles.
+    #[must_use]
+    pub fn alpha(profile: AlphaAdmissionProfile) -> Self {
+        let name = profile.as_str().to_string();
+        Self {
+            profile_identity: format!("admission-profile:{name}"),
+            name,
+            boundary_source: "alpha-admission-profile".to_string(),
+            grants_authority: false,
+        }
+    }
+
+    /// Build admission profile metadata from a runtime boundary input.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ApplicationAdmissionProfileDiagnostic`] when the profile name is missing,
+    /// malformed, or attempts to grant authority directly.
+    pub fn runtime_boundary(
+        name: impl Into<String>,
+        boundary_source: impl Into<String>,
+        grants_authority: bool,
+    ) -> Result<Self, ApplicationAdmissionProfileDiagnostic> {
+        let name = name.into();
+        if name.is_empty() {
+            return Err(ApplicationAdmissionProfileDiagnostic::MissingProfileName);
+        }
+        if !is_valid_admission_profile_name(&name) {
+            return Err(
+                ApplicationAdmissionProfileDiagnostic::MalformedProfileName { profile_name: name },
+            );
+        }
+        if grants_authority {
+            return Err(
+                ApplicationAdmissionProfileDiagnostic::AuthorityWideningProfile {
+                    profile_name: name,
+                },
+            );
+        }
+        Ok(Self {
+            profile_identity: format!("admission-profile:{name}"),
+            name,
+            boundary_source: boundary_source.into(),
+            grants_authority,
+        })
+    }
+}
+
+fn is_valid_admission_profile_name(name: &str) -> bool {
+    name.chars()
+        .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '-' | '_' | '.' | ':'))
+}
+
+/// Structured diagnostic emitted while resolving application boundary binding metadata.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Error)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum ApplicationBoundaryBindingDiagnostic {
+    /// A binding identity was required but not provided.
+    #[error("missing {family} boundary binding identity")]
+    MissingBindingIdentity {
+        /// Binding family being resolved.
+        family: String,
+    },
+    /// A binding identity is not a stable boundary identifier.
+    #[error("malformed {family} boundary binding identity `{binding_identity}`")]
+    MalformedBindingIdentity {
+        /// Binding family being resolved.
+        family: String,
+        /// Identity supplied by the boundary.
+        binding_identity: String,
+    },
+    /// Boundary binding metadata was derived from stale evidence.
+    #[error("stale {family} boundary binding `{binding_identity}`")]
+    StaleBinding {
+        /// Binding family being resolved.
+        family: String,
+        /// Binding identity being resolved.
+        binding_identity: String,
+        /// Expected evidence identity.
+        expected_identity: String,
+        /// Actual evidence identity observed at invocation.
+        actual_identity: String,
+    },
+    /// Boundary binding metadata is incompatible with the runtime target.
+    #[error("incompatible {family} boundary binding `{binding_identity}`")]
+    IncompatibleBinding {
+        /// Binding family being resolved.
+        family: String,
+        /// Binding identity being resolved.
+        binding_identity: String,
+        /// Expected boundary condition.
+        expected: String,
+        /// Actual boundary condition.
+        actual: String,
+    },
+    /// Boundary binding metadata attempted to grant authority directly.
+    #[error("{family} boundary binding `{binding_identity}` attempted to widen authority")]
+    AuthorityWideningBinding {
+        /// Binding family being resolved.
+        family: String,
+        /// Binding identity being resolved.
+        binding_identity: String,
+    },
+}
+
+impl ApplicationBoundaryBindingDiagnostic {
+    /// Build a stale-binding diagnostic.
+    #[must_use]
+    pub fn stale(
+        family: impl Into<String>,
+        binding_identity: impl Into<String>,
+        expected_identity: impl Into<String>,
+        actual_identity: impl Into<String>,
+    ) -> Self {
+        Self::StaleBinding {
+            family: family.into(),
+            binding_identity: binding_identity.into(),
+            expected_identity: expected_identity.into(),
+            actual_identity: actual_identity.into(),
+        }
+    }
+
+    /// Build an incompatible-binding diagnostic.
+    #[must_use]
+    pub fn incompatible(
+        family: impl Into<String>,
+        binding_identity: impl Into<String>,
+        expected: impl Into<String>,
+        actual: impl Into<String>,
+    ) -> Self {
+        Self::IncompatibleBinding {
+            family: family.into(),
+            binding_identity: binding_identity.into(),
+            expected: expected.into(),
+            actual: actual.into(),
+        }
+    }
+}
+
+/// Application/runtime boundary binding request before validation and redaction.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct ApplicationBoundaryBindingManifest {
+    /// Role identities selected at the boundary.
+    pub roles: Vec<String>,
+    /// Policy identities selected at the boundary.
+    pub policies: Vec<String>,
+    /// Resource identities selected at the boundary.
+    pub resources: Vec<String>,
+    /// Provider identities selected at the boundary.
+    pub providers: Vec<String>,
+    /// Contract or evidence identities selected at the boundary.
+    pub contracts: Vec<String>,
+    /// Whether this metadata directly grants authority. Valid bindings must keep this false.
+    pub grants_authority: bool,
+}
+
+/// Auditable, non-authority bindings selected at an application/runtime boundary.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct ApplicationBoundaryBindings {
+    /// Boundary source that supplied the bindings.
+    pub boundary_source: String,
+    /// Redacted stable identity for the boundary evidence set.
+    pub redacted_evidence_identity: String,
+    /// Role identities selected at the boundary.
+    pub roles: Vec<String>,
+    /// Policy identities selected at the boundary.
+    pub policies: Vec<String>,
+    /// Resource identities selected at the boundary.
+    pub resources: Vec<String>,
+    /// Provider identities selected at the boundary.
+    pub providers: Vec<String>,
+    /// Contract or evidence identities selected at the boundary.
+    pub contracts: Vec<String>,
+    /// Whether this metadata directly grants authority. Valid bindings must keep this false.
+    pub grants_authority: bool,
+}
+
+impl ApplicationBoundaryBindings {
+    /// Build an empty non-authority boundary binding record.
+    #[must_use]
+    pub fn empty(boundary_source: impl Into<String>) -> Self {
+        Self::from_manifest(
+            boundary_source,
+            ApplicationBoundaryBindingManifest::default(),
+        )
+        .expect("empty boundary binding manifest is valid")
+    }
+
+    /// Build non-authority boundary bindings from a runtime boundary manifest.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ApplicationBoundaryBindingDiagnostic`] when a binding identity is missing,
+    /// malformed, or attempts to grant authority directly.
+    pub fn from_manifest(
+        boundary_source: impl Into<String>,
+        manifest: ApplicationBoundaryBindingManifest,
+    ) -> Result<Self, ApplicationBoundaryBindingDiagnostic> {
+        let boundary_source = boundary_source.into();
+        let roles = normalize_boundary_binding_list("role", manifest.roles)?;
+        let policies = normalize_boundary_binding_list("policy", manifest.policies)?;
+        let resources = normalize_boundary_binding_list("resource", manifest.resources)?;
+        let providers = normalize_boundary_binding_list("provider", manifest.providers)?;
+        let contracts = normalize_boundary_binding_list("contract", manifest.contracts)?;
+        if manifest.grants_authority {
+            let (family, binding_identity) = first_boundary_binding_identity(
+                &roles,
+                &policies,
+                &resources,
+                &providers,
+                &contracts,
+                &boundary_source,
+            );
+            return Err(
+                ApplicationBoundaryBindingDiagnostic::AuthorityWideningBinding {
+                    family,
+                    binding_identity,
+                },
+            );
+        }
+        let redacted_evidence_identity = boundary_binding_evidence_identity(
+            &boundary_source,
+            &roles,
+            &policies,
+            &resources,
+            &providers,
+            &contracts,
+        );
+        Ok(Self {
+            boundary_source,
+            redacted_evidence_identity,
+            roles,
+            policies,
+            resources,
+            providers,
+            contracts,
+            grants_authority: manifest.grants_authority,
+        })
+    }
+}
+
+fn normalize_boundary_binding_list(
+    family: &'static str,
+    identities: Vec<String>,
+) -> Result<Vec<String>, ApplicationBoundaryBindingDiagnostic> {
+    let mut normalized = Vec::with_capacity(identities.len());
+    for identity in identities {
+        let identity = identity.trim().to_string();
+        if identity.is_empty() {
+            return Err(
+                ApplicationBoundaryBindingDiagnostic::MissingBindingIdentity {
+                    family: family.to_string(),
+                },
+            );
+        }
+        if !is_valid_boundary_binding_identity(&identity) {
+            return Err(
+                ApplicationBoundaryBindingDiagnostic::MalformedBindingIdentity {
+                    family: family.to_string(),
+                    binding_identity: identity,
+                },
+            );
+        }
+        normalized.push(identity);
+    }
+    normalized.sort();
+    normalized.dedup();
+    Ok(normalized)
+}
+
+fn is_valid_boundary_binding_identity(identity: &str) -> bool {
+    identity
+        .chars()
+        .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '-' | '_' | '.' | ':'))
+}
+
+fn first_boundary_binding_identity(
+    roles: &[String],
+    policies: &[String],
+    resources: &[String],
+    providers: &[String],
+    contracts: &[String],
+    boundary_source: &str,
+) -> (String, String) {
+    [
+        ("role", roles),
+        ("policy", policies),
+        ("resource", resources),
+        ("provider", providers),
+        ("contract", contracts),
+    ]
+    .into_iter()
+    .find_map(|(family, identities)| {
+        identities
+            .first()
+            .map(|identity| (family.to_string(), identity.clone()))
+    })
+    .unwrap_or_else(|| ("boundary".to_string(), boundary_source.to_string()))
+}
+
+fn boundary_binding_evidence_identity(
+    boundary_source: &str,
+    roles: &[String],
+    policies: &[String],
+    resources: &[String],
+    providers: &[String],
+    contracts: &[String],
+) -> String {
+    stable_sha256(&[
+        "application-boundary-bindings",
+        boundary_source,
+        &structured_identity(&roles.iter().map(String::as_str).collect::<Vec<_>>()),
+        &structured_identity(&policies.iter().map(String::as_str).collect::<Vec<_>>()),
+        &structured_identity(&resources.iter().map(String::as_str).collect::<Vec<_>>()),
+        &structured_identity(&providers.iter().map(String::as_str).collect::<Vec<_>>()),
+        &structured_identity(&contracts.iter().map(String::as_str).collect::<Vec<_>>()),
+    ])
+}
+
+/// Invocation packet tying application entrypoint metadata to source/check/runtime identity.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct ApplicationInvocationPacket {
+    /// Selected entrypoint metadata.
+    pub entrypoint: ApplicationEntrypointMetadata,
+    /// Admission profile metadata selected at the runtime boundary.
+    pub admission_profile: ApplicationAdmissionProfile,
+    /// Non-authority role/policy/resource/provider/contract bindings selected at the boundary.
+    pub boundary_bindings: ApplicationBoundaryBindings,
+    /// Source identity used to derive the invocation artifact.
+    pub source_identity: String,
+    /// Check/type-summary identity used to derive the invocation artifact.
+    pub check_identity: String,
+    /// Runtime artifact identity selected for execution.
+    pub runtime_target_identity: String,
+}
+
+impl ApplicationInvocationPacket {
+    /// Create an invocation packet from entrypoint and artifact identities.
+    #[must_use]
+    pub fn new(
+        entrypoint: ApplicationEntrypointMetadata,
+        admission_profile: ApplicationAdmissionProfile,
+        boundary_bindings: ApplicationBoundaryBindings,
+        source_identity: impl Into<String>,
+        check_identity: impl Into<String>,
+        runtime_target_identity: impl Into<String>,
+    ) -> Self {
+        Self {
+            entrypoint,
+            admission_profile,
+            boundary_bindings,
+            source_identity: source_identity.into(),
+            check_identity: check_identity.into(),
+            runtime_target_identity: runtime_target_identity.into(),
+        }
+    }
+}
+
+/// Terminal status projected into an application runtime report.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ApplicationTerminalStatus {
+    /// Runtime admission succeeded but body execution has not reached a terminal outcome.
+    Admitted,
+    /// Runtime invocation completed successfully.
+    Succeeded,
+    /// Runtime invocation failed after admission.
+    Failed,
+    /// Runtime invocation was cancelled.
+    Cancelled,
+    /// Runtime invocation was rejected before body execution.
+    Rejected,
+}
+
+impl ApplicationTerminalStatus {
+    /// Stable terminal status label used in reports.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Admitted => "admitted",
+            Self::Succeeded => "succeeded",
+            Self::Failed => "failed",
+            Self::Cancelled => "cancelled",
+            Self::Rejected => "rejected",
+        }
+    }
+}
+
+/// Terminal outcome evidence for an application runtime invocation.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct ApplicationTerminalOutcome {
+    /// Stable terminal status.
+    pub status: ApplicationTerminalStatus,
+    /// Whether this outcome is terminal for the invocation.
+    pub is_terminal: bool,
+    /// Optional human-readable failure, cancellation, or rejection reason.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reason: Option<String>,
+}
+
+impl ApplicationTerminalOutcome {
+    /// Build an admitted-but-not-terminal outcome.
+    #[must_use]
+    pub const fn admitted() -> Self {
+        Self {
+            status: ApplicationTerminalStatus::Admitted,
+            is_terminal: false,
+            reason: None,
+        }
+    }
+
+    /// Build a successful terminal outcome.
+    #[must_use]
+    pub const fn succeeded() -> Self {
+        Self {
+            status: ApplicationTerminalStatus::Succeeded,
+            is_terminal: true,
+            reason: None,
+        }
+    }
+
+    /// Build a failed terminal outcome.
+    #[must_use]
+    pub fn failed(reason: impl Into<String>) -> Self {
+        Self {
+            status: ApplicationTerminalStatus::Failed,
+            is_terminal: true,
+            reason: Some(reason.into()),
+        }
+    }
+
+    /// Build a cancelled terminal outcome.
+    #[must_use]
+    pub fn cancelled(reason: impl Into<String>) -> Self {
+        Self {
+            status: ApplicationTerminalStatus::Cancelled,
+            is_terminal: true,
+            reason: Some(reason.into()),
+        }
+    }
+
+    /// Build a rejected terminal outcome.
+    #[must_use]
+    pub fn rejected(reason: impl Into<String>) -> Self {
+        Self {
+            status: ApplicationTerminalStatus::Rejected,
+            is_terminal: true,
+            reason: Some(reason.into()),
+        }
+    }
+}
+
+/// Authority-neutral trace bundle attached to an application runtime report.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct ApplicationTraceBundle {
+    /// Stable redacted identity for this trace bundle.
+    pub trace_identity: String,
+    /// Source identity from the invocation packet.
+    pub source_identity: String,
+    /// Check identity from the invocation packet.
+    pub check_identity: String,
+    /// Entrypoint/runtime target identity from the invocation packet.
+    pub entrypoint_identity: String,
+    /// Admission profile identity from the invocation packet.
+    pub admission_profile_identity: String,
+    /// Redacted evidence identity for boundary bindings.
+    pub boundary_evidence_identity: String,
+    /// Admission facts projected as evidence, not grants.
+    pub admission_facts: Vec<String>,
+    /// Boundary facts projected as evidence, not grants.
+    pub boundary_facts: Vec<String>,
+    /// Retained process/channel runtime facts.
+    pub process_facts: Vec<RuntimeTraceFact>,
+    /// Contract/evidence identities observed at the boundary.
+    pub contract_evidence: Vec<String>,
+    /// Runtime monitor evidence rows.
+    pub monitor_evidence: Vec<RuntimeMonitorEvidence>,
+    /// Whether this trace bundle grants authority. Application trace bundles must keep this false.
+    pub grants_authority: bool,
+    /// Whether this trace bundle mutates authority state. Application trace bundles must keep this false.
+    pub mutates_authority: bool,
+}
+
+impl ApplicationTraceBundle {
+    /// Project an authority-neutral trace bundle from an invocation packet.
+    #[must_use]
+    pub fn from_invocation_packet(
+        invocation_packet: &ApplicationInvocationPacket,
+        process_facts: Vec<RuntimeTraceFact>,
+        monitor_evidence: Vec<RuntimeMonitorEvidence>,
+    ) -> Self {
+        let source_identity = invocation_packet.source_identity.clone();
+        let check_identity = invocation_packet.check_identity.clone();
+        let entrypoint_identity = invocation_packet.entrypoint.runtime_target_identity.clone();
+        let admission_profile_identity =
+            invocation_packet.admission_profile.profile_identity.clone();
+        let boundary_evidence_identity = invocation_packet
+            .boundary_bindings
+            .redacted_evidence_identity
+            .clone();
+        let admission_facts = vec![format!(
+            "admission_profile:{}",
+            invocation_packet.admission_profile.profile_identity
+        )];
+        let boundary_facts = application_boundary_facts(&invocation_packet.boundary_bindings);
+        let contract_evidence = invocation_packet.boundary_bindings.contracts.clone();
+        let trace_identity = application_trace_identity(ApplicationTraceIdentityInput {
+            source_identity: &source_identity,
+            check_identity: &check_identity,
+            entrypoint_identity: &entrypoint_identity,
+            admission_profile_identity: &admission_profile_identity,
+            boundary_evidence_identity: &boundary_evidence_identity,
+            admission_facts: &admission_facts,
+            boundary_facts: &boundary_facts,
+            process_facts: &process_facts,
+            contract_evidence: &contract_evidence,
+            monitor_evidence_count: monitor_evidence.len(),
+        });
+        Self {
+            trace_identity,
+            source_identity,
+            check_identity,
+            entrypoint_identity,
+            admission_profile_identity,
+            boundary_evidence_identity,
+            admission_facts,
+            boundary_facts,
+            process_facts,
+            contract_evidence,
+            monitor_evidence,
+            grants_authority: false,
+            mutates_authority: false,
+        }
+    }
+}
+
+/// Authority-neutral application runtime report.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct ApplicationRuntimeReport {
+    /// Stable redacted identity for this report.
+    pub report_identity: String,
+    /// Source identity from the invocation packet.
+    pub source_identity: String,
+    /// Check identity from the invocation packet.
+    pub check_identity: String,
+    /// Entrypoint/runtime target identity from the invocation packet.
+    pub entrypoint_identity: String,
+    /// Admission profile metadata selected at the runtime boundary.
+    pub admission_profile: ApplicationAdmissionProfile,
+    /// Boundary binding metadata selected at the runtime boundary.
+    pub boundary_bindings: ApplicationBoundaryBindings,
+    /// Terminal outcome projected for this invocation.
+    pub terminal_outcome: ApplicationTerminalOutcome,
+    /// Authority-neutral trace bundle for this invocation.
+    pub trace_bundle: ApplicationTraceBundle,
+    /// Whether this report grants authority. Application reports must keep this false.
+    pub grants_authority: bool,
+    /// Whether this report mutates authority state. Application reports must keep this false.
+    pub mutates_authority: bool,
+}
+
+impl ApplicationRuntimeReport {
+    /// Build an authority-neutral application runtime report.
+    #[must_use]
+    pub fn new(
+        invocation_packet: &ApplicationInvocationPacket,
+        terminal_outcome: ApplicationTerminalOutcome,
+        trace_bundle: ApplicationTraceBundle,
+    ) -> Self {
+        let report_identity = stable_sha256(&[
+            "application-runtime-report",
+            &trace_bundle.trace_identity,
+            terminal_outcome.status.as_str(),
+            terminal_outcome.reason.as_deref().unwrap_or(""),
+        ]);
+        Self {
+            report_identity,
+            source_identity: invocation_packet.source_identity.clone(),
+            check_identity: invocation_packet.check_identity.clone(),
+            entrypoint_identity: invocation_packet.entrypoint.runtime_target_identity.clone(),
+            admission_profile: invocation_packet.admission_profile.clone(),
+            boundary_bindings: invocation_packet.boundary_bindings.clone(),
+            terminal_outcome,
+            trace_bundle,
+            grants_authority: false,
+            mutates_authority: false,
+        }
+    }
+}
+
+fn application_boundary_facts(boundary_bindings: &ApplicationBoundaryBindings) -> Vec<String> {
+    let mut facts = vec![
+        format!("boundary_source:{}", boundary_bindings.boundary_source),
+        format!(
+            "boundary_evidence:{}",
+            boundary_bindings.redacted_evidence_identity
+        ),
+    ];
+    facts.extend(
+        boundary_bindings
+            .roles
+            .iter()
+            .map(|identity| format!("role:{identity}")),
+    );
+    facts.extend(
+        boundary_bindings
+            .policies
+            .iter()
+            .map(|identity| format!("policy:{identity}")),
+    );
+    facts.extend(
+        boundary_bindings
+            .resources
+            .iter()
+            .map(|identity| format!("resource:{identity}")),
+    );
+    facts.extend(
+        boundary_bindings
+            .providers
+            .iter()
+            .map(|identity| format!("provider:{identity}")),
+    );
+    facts.extend(
+        boundary_bindings
+            .contracts
+            .iter()
+            .map(|identity| format!("contract:{identity}")),
+    );
+    facts
+}
+
+struct ApplicationTraceIdentityInput<'a> {
+    source_identity: &'a str,
+    check_identity: &'a str,
+    entrypoint_identity: &'a str,
+    admission_profile_identity: &'a str,
+    boundary_evidence_identity: &'a str,
+    admission_facts: &'a [String],
+    boundary_facts: &'a [String],
+    process_facts: &'a [RuntimeTraceFact],
+    contract_evidence: &'a [String],
+    monitor_evidence_count: usize,
+}
+
+fn application_trace_identity(input: ApplicationTraceIdentityInput<'_>) -> String {
+    let process_fact_text = input
+        .process_facts
+        .iter()
+        .map(|fact| format!("{:?}:{:?}:{}", fact.kind, fact.event, fact.subject))
+        .collect::<Vec<_>>();
+    stable_sha256(&[
+        "application-trace-bundle",
+        input.source_identity,
+        input.check_identity,
+        input.entrypoint_identity,
+        input.admission_profile_identity,
+        input.boundary_evidence_identity,
+        &structured_identity(
+            &input
+                .admission_facts
+                .iter()
+                .map(String::as_str)
+                .collect::<Vec<_>>(),
+        ),
+        &structured_identity(
+            &input
+                .boundary_facts
+                .iter()
+                .map(String::as_str)
+                .collect::<Vec<_>>(),
+        ),
+        &structured_identity(
+            &process_fact_text
+                .iter()
+                .map(String::as_str)
+                .collect::<Vec<_>>(),
+        ),
+        &structured_identity(
+            &input
+                .contract_evidence
+                .iter()
+                .map(String::as_str)
+                .collect::<Vec<_>>(),
+        ),
+        &input.monitor_evidence_count.to_string(),
+    ])
+}
+
 /// Identity for a host provider registry snapshot.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct ProviderRegistryIdentity {
@@ -722,6 +1656,12 @@ pub struct RuntimeArtifactBuildInput {
     pub relative_module_path: String,
     /// Exported workflow name.
     pub workflow_name: String,
+    /// Application/runtime entrypoint metadata selected for this artifact.
+    pub entrypoint: ApplicationEntrypointMetadata,
+    /// Admission profile metadata selected at the runtime boundary.
+    pub admission_profile: ApplicationAdmissionProfile,
+    /// Non-authority boundary bindings selected at the runtime boundary.
+    pub boundary_bindings: ApplicationBoundaryBindings,
     /// Source text used only for stable content hashing.
     pub source: String,
     /// Check/type-summary facts used only for stable check-summary hashing.
@@ -747,6 +1687,9 @@ impl RuntimeArtifactBuildInput {
             profile: identity.profile,
             relative_module_path: identity.relative_module_path,
             workflow_name: identity.workflow_name,
+            entrypoint: identity.entrypoint,
+            admission_profile: identity.admission_profile,
+            boundary_bindings: identity.boundary_bindings,
             source: source.into(),
             check_summary: check_summary.into(),
             tcir,
@@ -766,6 +1709,12 @@ pub struct RuntimeArtifactBuildIdentity {
     pub relative_module_path: String,
     /// Exported workflow name.
     pub workflow_name: String,
+    /// Application/runtime entrypoint metadata selected for this artifact.
+    pub entrypoint: ApplicationEntrypointMetadata,
+    /// Admission profile metadata selected at the runtime boundary.
+    pub admission_profile: ApplicationAdmissionProfile,
+    /// Non-authority boundary bindings selected at the runtime boundary.
+    pub boundary_bindings: ApplicationBoundaryBindings,
 }
 
 impl RuntimeArtifactBuildIdentity {
@@ -777,12 +1726,50 @@ impl RuntimeArtifactBuildIdentity {
         relative_module_path: impl Into<String>,
         workflow_name: impl Into<String>,
     ) -> Self {
+        let relative_module_path = relative_module_path.into();
+        let workflow_name = workflow_name.into();
+        let entrypoint = ApplicationEntrypointMetadata::legacy_workflow_compatibility(
+            workflow_name.clone(),
+            relative_module_path.clone(),
+        );
+        let admission_profile = ApplicationAdmissionProfile::alpha(AlphaAdmissionProfile::Empty);
+        let boundary_bindings = ApplicationBoundaryBindings::empty("alpha-boundary-bindings");
         Self {
             root_id,
             profile,
-            relative_module_path: relative_module_path.into(),
-            workflow_name: workflow_name.into(),
+            relative_module_path,
+            workflow_name,
+            entrypoint,
+            admission_profile,
+            boundary_bindings,
         }
+    }
+
+    /// Replace the default legacy compatibility metadata with application entrypoint metadata.
+    #[must_use]
+    pub fn with_entrypoint(mut self, entrypoint: ApplicationEntrypointMetadata) -> Self {
+        self.entrypoint = entrypoint;
+        self
+    }
+
+    /// Replace the default empty admission profile metadata.
+    #[must_use]
+    pub fn with_admission_profile(
+        mut self,
+        admission_profile: ApplicationAdmissionProfile,
+    ) -> Self {
+        self.admission_profile = admission_profile;
+        self
+    }
+
+    /// Replace the default empty boundary binding metadata.
+    #[must_use]
+    pub fn with_boundary_bindings(
+        mut self,
+        boundary_bindings: ApplicationBoundaryBindings,
+    ) -> Self {
+        self.boundary_bindings = boundary_bindings;
+        self
     }
 }
 
@@ -838,6 +1825,14 @@ impl RuntimeKernelArtifactBuilder {
             cache_key.clone(),
             artifact_version.clone(),
         );
+        let invocation_packet = ApplicationInvocationPacket::new(
+            input.entrypoint.clone(),
+            input.admission_profile.clone(),
+            input.boundary_bindings.clone(),
+            source_hash.clone(),
+            check_summary_hash.clone(),
+            artifact.id.as_str(),
+        );
 
         let tcir = RuntimeTcirArtifactSummary::from_tcir(&input.tcir, input.tcir_carrier_scope);
         let amir_module = AmirModule::from_tcir(&input.tcir);
@@ -855,6 +1850,8 @@ impl RuntimeKernelArtifactBuilder {
             cache_key,
             definition,
             artifact,
+            entrypoint: input.entrypoint,
+            invocation_packet,
             tcir,
             amir: RuntimeAmirArtifactSummary::from_module(&amir_module),
             bytecode: RuntimeBytecodeArtifactSummary::from_module(&bytecode_module),
@@ -878,6 +1875,10 @@ pub struct RuntimeKernelVerifiedArtifact {
     pub definition: WorkflowDefinitionIdentity,
     /// Workflow artifact identity derived from the builder input.
     pub artifact: WorkflowArtifactIdentity,
+    /// Application/runtime entrypoint metadata derived from checked computation selection.
+    pub entrypoint: ApplicationEntrypointMetadata,
+    /// Invocation packet carrying source, check, and runtime target identity.
+    pub invocation_packet: ApplicationInvocationPacket,
     /// Verifier-normalized TCIR summary.
     pub tcir: RuntimeTcirArtifactSummary,
     /// Verifier-normalized AMIR summary.
@@ -897,6 +1898,10 @@ pub struct RuntimeKernelArtifactLanguageSummary {
     pub check_summary_hash: String,
     /// RuntimeKernel artifact builder version.
     pub artifact_version: ArtifactVersion,
+    /// Application/runtime entrypoint metadata, excluding host-specific identity.
+    pub entrypoint: ApplicationEntrypointMetadata,
+    /// Invocation packet carrying source, check, and runtime target identity.
+    pub invocation_packet: ApplicationInvocationPacket,
     /// Verifier-normalized TCIR summary.
     pub tcir: RuntimeTcirArtifactSummary,
     /// Verifier-normalized AMIR summary.
@@ -915,6 +1920,8 @@ impl RuntimeKernelArtifactLanguageSummary {
             source_hash: artifact.source_hash.clone(),
             check_summary_hash: artifact.check_summary_hash.clone(),
             artifact_version: artifact.artifact_version.clone(),
+            entrypoint: artifact.entrypoint.clone(),
+            invocation_packet: artifact.invocation_packet.clone(),
             tcir: artifact.tcir.clone(),
             amir: artifact.amir.clone(),
             bytecode: artifact.bytecode.clone(),

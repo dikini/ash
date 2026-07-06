@@ -170,6 +170,8 @@ Update this section as tasks complete:
 | [192](PLAN-192-SURFACE-POSTFIX-PROJECTION.md) | 2 | 2 | ✅ Complete; postfix field projection on ordinary primary expressions |
 | [193](PLAN-193-SURFACE-TUPLE-ADT-EXPRESSIONS.md) | 2 | 2 | ✅ Complete; tuple-payload ADTs in function-first Ash |
 | [194](PLAN-194-CONTRACT-AND-EVIDENCE-SYSTEM.md) | 11 | 11 | ✅ Complete; all Phase 194 tasks finished |
+| [195](PLAN-195-PROCESS-AND-CONCURRENCY-MODEL.md) | 11 | 11 | ✅ Complete; process/concurrency model after computation, authority, handler/provider, and contract foundations |
+| [196](PLAN-196-APPLICATION-WORKFLOW-RUNTIME.md) | 11 | 9 | Planned; application/workflow runtime layer over computation, admission, authority, contracts, and process foundations |
 
 ---
 
@@ -1134,3 +1136,55 @@ evidence, but they cannot acquire operation/resource/role/policy authority.
 || [TASK-1899](tasks/TASK-1899-contract-blame-diagnostics.md) | Emit structured blame diagnostics with snapshots, evidence, and redaction metadata | ✅ Complete |
 || [TASK-1900](tasks/TASK-1900-runtime-monitor-evidence.md) | Wire runtime monitor evidence rows and temporal monitor diagnostics | ✅ Complete |
 || [TASK-1901](tasks/TASK-1901-contract-evidence-closeout.md) | Close out Phase 194 with fixtures, docs, gates, and review remediation | ✅ Complete |
+
+## Phase 195: Process And Concurrency Model
+
+**Status:** ✅ Complete (11/11 tasks complete)
+**Plan:** [PLAN-195: Process And Concurrency Model](PLAN-195-PROCESS-AND-CONCURRENCY-MODEL.md)
+**Audit:** [AUDIT-195: Process Runtime Seams](audits/AUDIT-195-process-runtime-seams.md)
+**Depends on:** Phase 182 Core Computation Model Conformance, Phase 183 Operation And Authority Model, Phase 184 Handler / Provider Semantics, and Phase 194 Contract And Evidence System.
+**Specs/notes:** `SPEC-096b`, `SPEC-097b`, `SPEC-098b`, `SPEC-098c`, `SPEC-099b`, `SPEC-100`, `PLAN-182`, `PLAN-183`, `PLAN-184`, `PLAN-194`, `NOTE-020`, `NOTE-021`, and `NOTE-035`.
+
+Adds structured execution beyond single computations while preserving the target model: process execution is a runtime profile over ambient row-bearing computations, not a separate semantic foundation and not a revival of the deprecated `Act`, `Proc`, or `Workflow` tower forms. Those names may remain only as legacy documentation references; new development must not add surface syntax, Core terms, IR nodes, public stdlib types, or runtime entry paths named `Act`, `Proc`, or `Workflow`. The phase is intentionally after the basic computation, operation authority, handler/provider, and contract/evidence models because concurrency multiplies unresolved authority, ownership, failure, and monitor questions. It introduces spawn/join/await, channels, cancellation, failure propagation, and sendability/ownership across process boundaries as runtime-profile facts with fail-closed validation and trace evidence.
+
+Non-goals: no `Act`/`Proc`/`Workflow` development forms, no separate workflow runtime, no distributed actor runtime, no scheduler fairness proof, no generalized temporal logic surface syntax, and no process authority granted by mentioning process rows.
+
+| Task | Description | Status |
+|------|-------------|--------|
+| [TASK-1902](tasks/TASK-1902-process-concurrency-plan-packet.md) | Create the Phase 195 plan and task packet | ✅ Complete |
+| [TASK-1903](tasks/TASK-1903-process-runtime-seam-audit.md) | Audit computation, handler/provider, row admission, runtime, and trace seams for process execution | ✅ Complete |
+| [TASK-1904](tasks/TASK-1904-deprecated-tower-vocabulary-spec-reconciliation.md) | Reconcile deprecated `Act`/`Proc`/`Workflow` vocabulary in target specs and notes | ✅ Complete |
+| [TASK-1905](tasks/TASK-1905-process-row-and-core-carriers.md) | Add process row facts and Core/CPS carriers for spawn, join, await, channels, cancellation, and ownership transfer | ✅ Complete |
+| [TASK-1906](tasks/TASK-1906-sendability-ownership-validation.md) | Validate sendability, ownership, affine movement, and borrowed-resource rejection across process boundaries | ✅ Complete |
+| [TASK-1907](tasks/TASK-1907-spawn-join-await-runtime-semantics.md) | Implement bounded spawn, join, and await runtime semantics over existing computation and handler frames | ✅ Complete |
+| [TASK-1908](tasks/TASK-1908-channel-runtime-semantics.md) | Implement bounded typed channel creation, send, receive, close, and select-ready diagnostics | ✅ Complete |
+| [TASK-1909](tasks/TASK-1909-cancellation-and-failure-propagation.md) | Model cancellation, child failure, join failure, and supervisor-facing propagation diagnostics | ✅ Complete |
+| [TASK-1910](tasks/TASK-1910-process-trace-and-monitor-evidence.md) | Emit process/channel/cancellation trace facts and runtime monitor evidence without granting authority | ✅ Complete |
+| [TASK-1911](tasks/TASK-1911-process-concurrency-cross-boundary-fixtures.md) | Add cross-boundary parser, typecheck, Core/CPS, runtime, and CLI fixtures for process/concurrency behavior | ✅ Complete |
+| [TASK-1912](tasks/TASK-1912-process-concurrency-closeout.md) | Close out Phase 195 with docs, changelog, gates, and review remediation | ✅ Complete |
+
+## Phase 196: Application / Workflow Runtime
+
+**Status:** ✅ Complete (11/11 tasks complete)
+**Plan:** [PLAN-196: Application / Workflow Runtime](PLAN-196-APPLICATION-WORKFLOW-RUNTIME.md)
+**Depends on:** Phase 182 Core Computation Model Conformance, Phase 183 Operation And Authority Model, Phase 184 Handler / Provider Semantics, Phase 194 Contract And Evidence System, and Phase 195 Process And Concurrency Model.
+**Specs/notes:** `SPEC-096b`, `SPEC-097b`, `SPEC-098b`, `SPEC-098c`, `SPEC-099b`, `SPEC-100`, `PLAN-182`, `PLAN-183`, `PLAN-184`, `PLAN-194`, `PLAN-195`, `NOTE-020`, `NOTE-021`, and `NOTE-035`.
+**Audit:** [AUDIT-196: Application Runtime Seams](audits/AUDIT-196-application-runtime-seams.md)
+
+Builds workflow as an application/runtime layer over ordinary checked computations, admission profiles, role/policy/resource/provider boundaries, contracts, process supervision, reports, traces, services, and external actor adapters. The legacy `workflow` form is compatibility-only and must not become a primitive target surface, Core, IR, or semantic island.
+
+Non-goals: no revival of legacy `workflow` form as a target primitive, no hidden authority from application entrypoints or admission profile names, no distributed actor runtime without explicit adapters, and no bypass of handler/provider, contract/evidence, process, or sendability checks.
+
+| Task | Description | Status |
+|------|-------------|--------|
+| [TASK-1913](tasks/TASK-1913-application-workflow-runtime-plan-packet.md) | Create the Phase 196 plan and task packet | ✅ Complete |
+| [TASK-1914](tasks/TASK-1914-application-runtime-seam-audit.md) | Audit CLI, engine, runtime kernel, daemon, admission, report, trace, and process seams | ✅ Complete |
+| [TASK-1915](tasks/TASK-1915-legacy-workflow-form-boundary-reconciliation.md) | Reconcile specs/docs so legacy `workflow` form is compatibility-only for target planning | ✅ Complete |
+| [TASK-1916](tasks/TASK-1916-application-entrypoint-metadata.md) | Add application entrypoint metadata and invocation packet carriers over checked computations | ✅ Complete |
+| [TASK-1917](tasks/TASK-1917-admission-profile-runtime-boundary.md) | Wire admission profiles to runtime entry boundaries without granting ambient authority | ✅ Complete |
+| [TASK-1918](tasks/TASK-1918-role-policy-resource-boundary-bindings.md) | Bind roles, policies, resources, providers, and contracts at application boundaries | ✅ Complete |
+| [TASK-1919](tasks/TASK-1919-application-reports-traces-artifacts.md) | Emit application reports, trace bundles, runtime artifacts, and monitor evidence | ✅ Complete |
+| [TASK-1920](tasks/TASK-1920-supervisor-runtime-profiles.md) | Add supervisor profiles over process handles with restart/cancel/failure policy | ✅ Complete |
+| [TASK-1921](tasks/TASK-1921-long-running-service-lifecycle.md) | Add long-running service lifecycle, health, reload, shutdown, and retention semantics | ✅ Complete |
+| [TASK-1922](tasks/TASK-1922-external-actor-integration.md) | Integrate external actors through explicit typed adapters and capability boundaries | ✅ Complete |
+| [TASK-1923](tasks/TASK-1923-application-runtime-cross-boundary-fixtures-and-closeout.md) | Add cross-boundary fixtures, docs, gates, and closeout | ✅ Complete |

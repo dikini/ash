@@ -7,16 +7,26 @@ use async_trait::async_trait;
 use tokio::sync::Mutex as AsyncMutex;
 
 use ash_core::capability::CapabilityError;
-use ash_core::core_ash_contract::{ContractDischargeRecord, PredicateBinderId, SnapshotRef};
+use ash_core::core_ash_contract::{
+    ContractDischargeRecord, MonitorEvaluationResult, PredicateBinderId, RuntimeMonitorEvidence,
+    SnapshotRef, TraceFactKind,
+};
 use ash_core::runtime::{
-    CapabilityBinding, CapabilityBindingDependency, CapabilityBindingId, CapabilityBindingKind,
-    CapabilityImplementationId, CapabilityInterfaceId, ProcessId, ProcessTerminalState, ResourceId,
-    ResourceInstance, ResourceLifecycle, ResourceOwner, ResourceProvenance,
-    ResourceSplitJoinPolicy, ResourceTypeId,
+    ActorCallId, ActorCallOutcome, CapabilityBinding, CapabilityBindingDependency,
+    CapabilityBindingId, CapabilityBindingKind, CapabilityImplementationId, CapabilityInterfaceId,
+    ExternalActorAdapter, ExternalActorCallRecord, ExternalActorDiagnostic, FailureEntity,
+    OperationalFailure, ProcessId, ProcessPropagationDiagnostic, ProcessPropagationOutcome,
+    ProcessTerminalState, ResourceId, ResourceInstance, ResourceLifecycle, ResourceOwner,
+    ResourceProvenance, ResourceSplitJoinPolicy, ResourceTypeId, RuntimeTraceEvent,
+    RuntimeTraceFact, ServiceHealthReport, ServiceHealthStatus, ServiceId,
+    ServiceLifecycleDiagnostic, ServiceLifecycleState, ServiceRuntimeRecord, ServiceShutdownMode,
+    SupervisorDecisionKind, SupervisorDecisionRecord, SupervisorDiagnostic, SupervisorPolicy,
+    SupervisorRuntimeProfile, TowerLevel,
 };
 use ash_core::{ControlLink, Effect, Expr, Value, Workflow, WorkflowId};
 
 use crate::capability::CapabilityProvider;
+use crate::channel::{ChannelError, ChannelId, ChannelRegistry};
 use crate::control_link::{
     ConservativeRetainedEffectSummary, ConservativeRetainedObligationsSummary,
     ConservativeRetainedProvenanceSummary, ControlLinkRegistry, LinkState,
@@ -358,6 +368,14 @@ pub struct RuntimeState {
     child_workflows: Arc<AsyncMutex<HashMap<String, Workflow>>>,
     callable_workflows: Arc<AsyncMutex<HashMap<String, RegisteredCallableWorkflow>>>,
     process_registry: Arc<AsyncMutex<ProcessRegistry>>,
+    channel_registry: Arc<AsyncMutex<ChannelRegistry>>,
+    process_propagation_diagnostics: Arc<AsyncMutex<Vec<ProcessPropagationDiagnostic>>>,
+    supervisor_decisions: Arc<AsyncMutex<Vec<SupervisorDecisionRecord>>>,
+    service_records: Arc<AsyncMutex<HashMap<ServiceId, ServiceRuntimeRecord>>>,
+    external_actor_adapters: Arc<AsyncMutex<HashMap<String, ExternalActorAdapter>>>,
+    external_actor_calls: Arc<AsyncMutex<HashMap<ActorCallId, ExternalActorCallRecord>>>,
+    runtime_trace_facts: Arc<AsyncMutex<Vec<RuntimeTraceFact>>>,
+    runtime_monitor_evidence: Arc<AsyncMutex<Vec<RuntimeMonitorEvidence>>>,
     resource_instances: Arc<AsyncMutex<HashMap<ResourceId, ResourceInstance>>>,
     capability_bindings: Arc<AsyncMutex<HashMap<CapabilityBindingId, CapabilityBinding>>>,
     capability_interface_operations:
@@ -486,6 +504,26 @@ impl std::fmt::Debug for RuntimeState {
                 &"<HashMap<String, RegisteredCallableWorkflow>>",
             )
             .field("process_registry", &self.process_registry)
+            .field("channel_registry", &self.channel_registry)
+            .field(
+                "process_propagation_diagnostics",
+                &"<Vec<ProcessPropagationDiagnostic>>",
+            )
+            .field("supervisor_decisions", &"<Vec<SupervisorDecisionRecord>>")
+            .field(
+                "service_records",
+                &"<HashMap<ServiceId, ServiceRuntimeRecord>>",
+            )
+            .field(
+                "external_actor_adapters",
+                &"<HashMap<String, ExternalActorAdapter>>",
+            )
+            .field(
+                "external_actor_calls",
+                &"<HashMap<ActorCallId, ExternalActorCallRecord>>",
+            )
+            .field("runtime_trace_facts", &"<Vec<RuntimeTraceFact>>")
+            .field("runtime_monitor_evidence", &"<Vec<RuntimeMonitorEvidence>>")
             .field(
                 "resource_instances",
                 &"<HashMap<ResourceId, ResourceInstance>>",
@@ -630,6 +668,14 @@ impl RuntimeState {
             child_workflows: Arc::new(AsyncMutex::new(HashMap::new())),
             callable_workflows: Arc::new(AsyncMutex::new(HashMap::new())),
             process_registry: Arc::new(AsyncMutex::new(ProcessRegistry::new())),
+            channel_registry: Arc::new(AsyncMutex::new(ChannelRegistry::new())),
+            process_propagation_diagnostics: Arc::new(AsyncMutex::new(Vec::new())),
+            supervisor_decisions: Arc::new(AsyncMutex::new(Vec::new())),
+            service_records: Arc::new(AsyncMutex::new(HashMap::new())),
+            external_actor_adapters: Arc::new(AsyncMutex::new(HashMap::new())),
+            external_actor_calls: Arc::new(AsyncMutex::new(HashMap::new())),
+            runtime_trace_facts: Arc::new(AsyncMutex::new(Vec::new())),
+            runtime_monitor_evidence: Arc::new(AsyncMutex::new(Vec::new())),
             resource_instances: Arc::new(AsyncMutex::new(HashMap::new())),
             capability_bindings: Arc::new(AsyncMutex::new(HashMap::new())),
             capability_interface_operations: Arc::new(AsyncMutex::new(HashMap::new())),
@@ -1641,7 +1687,17 @@ impl RuntimeState {
         &self,
         process_id: ProcessId,
     ) -> Result<(), ProcessRegistryError> {
-        self.process_registry.lock().await.register_root(process_id)
+        self.process_registry
+            .lock()
+            .await
+            .register_root(process_id)?;
+        self.record_runtime_trace_fact(RuntimeTraceFact::new(
+            TraceFactKind::Process,
+            RuntimeTraceEvent::Spawn,
+            format!("{process_id:?}"),
+        ))
+        .await;
+        Ok(())
     }
 
     /// Register one child process identity in the runtime process registry.
@@ -1655,7 +1711,14 @@ impl RuntimeState {
             parent_process_id,
             child_process_id,
             child_index,
-        )
+        )?;
+        self.record_runtime_trace_fact(RuntimeTraceFact::new(
+            TraceFactKind::Process,
+            RuntimeTraceEvent::Spawn,
+            format!("{parent_process_id:?}->{child_process_id:?}"),
+        ))
+        .await;
+        Ok(())
     }
 
     /// Register multiple child process identities atomically in the runtime process registry.
@@ -1667,7 +1730,16 @@ impl RuntimeState {
         self.process_registry
             .lock()
             .await
-            .register_children_batch(parent_process_id, children)
+            .register_children_batch(parent_process_id, children.clone())?;
+        for (child_process_id, _) in children {
+            self.record_runtime_trace_fact(RuntimeTraceFact::new(
+                TraceFactKind::Process,
+                RuntimeTraceEvent::Spawn,
+                format!("{parent_process_id:?}->{child_process_id:?}"),
+            ))
+            .await;
+        }
+        Ok(())
     }
 
     /// Transition one registered process identity to running.
@@ -1675,7 +1747,17 @@ impl RuntimeState {
         &self,
         process_id: ProcessId,
     ) -> Result<(), ProcessRegistryError> {
-        self.process_registry.lock().await.mark_running(process_id)
+        self.process_registry
+            .lock()
+            .await
+            .mark_running(process_id)?;
+        self.record_runtime_trace_fact(RuntimeTraceFact::new(
+            TraceFactKind::Process,
+            RuntimeTraceEvent::Start,
+            format!("{process_id:?}"),
+        ))
+        .await;
+        Ok(())
     }
 
     /// Record a write-once terminal process state.
@@ -1687,7 +1769,19 @@ impl RuntimeState {
         self.process_registry
             .lock()
             .await
-            .record_terminal(process_id, terminal_state)
+            .record_terminal(process_id, terminal_state.clone())?;
+        let event = match terminal_state {
+            ProcessTerminalState::Succeeded { .. } => RuntimeTraceEvent::Complete,
+            ProcessTerminalState::Failed { .. } => RuntimeTraceEvent::Fail,
+            ProcessTerminalState::Cancelled { .. } => RuntimeTraceEvent::Cancel,
+        };
+        self.record_runtime_trace_fact(RuntimeTraceFact::new(
+            TraceFactKind::Process,
+            event,
+            format!("{process_id:?}"),
+        ))
+        .await;
+        Ok(())
     }
 
     /// Look up one process record by identity.
@@ -1763,6 +1857,614 @@ impl RuntimeState {
             .lock()
             .await
             .children_of(parent_process_id)
+    }
+
+    /// Record one bounded process propagation diagnostic.
+    pub async fn record_process_propagation_diagnostic(
+        &self,
+        diagnostic: ProcessPropagationDiagnostic,
+    ) {
+        self.process_propagation_diagnostics
+            .lock()
+            .await
+            .push(diagnostic);
+    }
+
+    /// Return retained process propagation diagnostics.
+    pub async fn process_propagation_diagnostics(&self) -> Vec<ProcessPropagationDiagnostic> {
+        self.process_propagation_diagnostics.lock().await.clone()
+    }
+
+    /// Apply one supervisor policy decision to a retained terminal child process state.
+    pub async fn supervise_process_terminal(
+        &self,
+        profile: &SupervisorRuntimeProfile,
+        observed_process_id: ProcessId,
+    ) -> Result<SupervisorDecisionRecord, SupervisorDiagnostic> {
+        let terminal_state = self
+            .process_terminal_state(observed_process_id)
+            .await
+            .ok_or_else(|| SupervisorDiagnostic::ProcessNotTerminal {
+                profile_name: profile.profile_name.clone(),
+                process_id: observed_process_id,
+            })?;
+        let observed_outcome = process_outcome_from_terminal_state(&terminal_state);
+        let restart_attempt = self
+            .supervisor_decisions
+            .lock()
+            .await
+            .iter()
+            .filter(|decision| {
+                decision.profile_name == profile.profile_name
+                    && decision.decision == SupervisorDecisionKind::Restart
+            })
+            .count() as u32;
+
+        let record = match (&profile.policy, observed_outcome) {
+            (_, ProcessPropagationOutcome::Succeeded) => SupervisorDecisionRecord {
+                profile_name: profile.profile_name.clone(),
+                supervisor_process_id: profile.supervisor_process_id,
+                observed_process_id,
+                observed_outcome: Some(observed_outcome),
+                decision: SupervisorDecisionKind::Complete,
+                restart_attempt,
+                replacement_process_id: None,
+                terminal: true,
+                reason: None,
+            },
+            (SupervisorPolicy::BoundedRestart { max_restarts }, _) => {
+                if restart_attempt < *max_restarts {
+                    let replacement_process_id = ProcessId::new();
+                    self.register_child_process(
+                        profile.supervisor_process_id,
+                        replacement_process_id,
+                        restart_attempt as usize + 1,
+                    )
+                    .await
+                    .map_err(supervisor_registry_failure)?;
+                    SupervisorDecisionRecord {
+                        profile_name: profile.profile_name.clone(),
+                        supervisor_process_id: profile.supervisor_process_id,
+                        observed_process_id,
+                        observed_outcome: Some(observed_outcome),
+                        decision: SupervisorDecisionKind::Restart,
+                        restart_attempt: restart_attempt + 1,
+                        replacement_process_id: Some(replacement_process_id),
+                        terminal: false,
+                        reason: Some("child failure restart requested".to_string()),
+                    }
+                } else {
+                    SupervisorDecisionRecord {
+                        profile_name: profile.profile_name.clone(),
+                        supervisor_process_id: profile.supervisor_process_id,
+                        observed_process_id,
+                        observed_outcome: Some(observed_outcome),
+                        decision: SupervisorDecisionKind::Escalate,
+                        restart_attempt,
+                        replacement_process_id: None,
+                        terminal: true,
+                        reason: Some("restart budget exhausted".to_string()),
+                    }
+                }
+            }
+            (SupervisorPolicy::Cancel, _) => SupervisorDecisionRecord {
+                profile_name: profile.profile_name.clone(),
+                supervisor_process_id: profile.supervisor_process_id,
+                observed_process_id,
+                observed_outcome: Some(observed_outcome),
+                decision: SupervisorDecisionKind::Cancel,
+                restart_attempt,
+                replacement_process_id: None,
+                terminal: true,
+                reason: Some("supervisor cancel policy selected".to_string()),
+            },
+            (SupervisorPolicy::Escalate, _) => SupervisorDecisionRecord {
+                profile_name: profile.profile_name.clone(),
+                supervisor_process_id: profile.supervisor_process_id,
+                observed_process_id,
+                observed_outcome: Some(observed_outcome),
+                decision: SupervisorDecisionKind::Escalate,
+                restart_attempt,
+                replacement_process_id: None,
+                terminal: true,
+                reason: Some("supervisor escalation policy selected".to_string()),
+            },
+            (SupervisorPolicy::Unsupported { reason }, _) => {
+                return Err(SupervisorDiagnostic::UnsupportedPolicy {
+                    profile_name: profile.profile_name.clone(),
+                    reason: reason.clone(),
+                });
+            }
+        };
+        self.record_supervisor_decision(record).await
+    }
+
+    /// Cancel one supervised process through retained process terminal-state semantics.
+    pub async fn cancel_supervised_process(
+        &self,
+        profile: &SupervisorRuntimeProfile,
+        process_id: ProcessId,
+        reason: impl Into<String>,
+    ) -> Result<SupervisorDecisionRecord, SupervisorDiagnostic> {
+        let reason = reason.into();
+        let failure = OperationalFailure::new(
+            TowerLevel::Proc,
+            FailureEntity::Process(process_id),
+            Value::String(reason.clone()),
+            "String",
+        );
+        self.record_process_terminal(
+            process_id,
+            ProcessTerminalState::Cancelled {
+                process_id,
+                failure: Box::new(failure),
+            },
+        )
+        .await
+        .map_err(supervisor_registry_failure)?;
+        let restart_attempt = self
+            .supervisor_decisions
+            .lock()
+            .await
+            .iter()
+            .filter(|decision| {
+                decision.profile_name == profile.profile_name
+                    && decision.decision == SupervisorDecisionKind::Restart
+            })
+            .count() as u32;
+        let record = SupervisorDecisionRecord {
+            profile_name: profile.profile_name.clone(),
+            supervisor_process_id: profile.supervisor_process_id,
+            observed_process_id: process_id,
+            observed_outcome: Some(ProcessPropagationOutcome::Cancelled),
+            decision: SupervisorDecisionKind::Cancel,
+            restart_attempt,
+            replacement_process_id: None,
+            terminal: true,
+            reason: Some(reason),
+        };
+        self.record_supervisor_decision(record).await
+    }
+
+    /// Return retained supervisor decisions.
+    pub async fn supervisor_decisions(&self) -> Vec<SupervisorDecisionRecord> {
+        self.supervisor_decisions.lock().await.clone()
+    }
+
+    async fn record_supervisor_decision(
+        &self,
+        record: SupervisorDecisionRecord,
+    ) -> Result<SupervisorDecisionRecord, SupervisorDiagnostic> {
+        let event = match record.decision {
+            SupervisorDecisionKind::Complete => RuntimeTraceEvent::Complete,
+            SupervisorDecisionKind::Restart => RuntimeTraceEvent::Restart,
+            SupervisorDecisionKind::Cancel => RuntimeTraceEvent::Cancel,
+            SupervisorDecisionKind::Escalate => RuntimeTraceEvent::Escalate,
+        };
+        self.supervisor_decisions.lock().await.push(record.clone());
+        self.record_runtime_trace_fact(RuntimeTraceFact::new(
+            TraceFactKind::Process,
+            event,
+            format!(
+                "supervisor:{}:{:?}",
+                record.profile_name, record.observed_process_id
+            ),
+        ))
+        .await;
+        Ok(record)
+    }
+
+    /// Start and retain one managed service runtime record.
+    pub async fn start_service(
+        &self,
+        service_name: impl Into<String>,
+        process_id: ProcessId,
+    ) -> Result<ServiceRuntimeRecord, ServiceLifecycleDiagnostic> {
+        let service_name = service_name.into();
+        validate_service_name(&service_name)?;
+        let service_id = ServiceId::new();
+        let record = ServiceRuntimeRecord {
+            id: service_id,
+            name: service_name,
+            process_id,
+            lifecycle: ServiceLifecycleState::Running,
+            health: ServiceHealthStatus::Healthy,
+            reload_generation: 0,
+            last_reload: None,
+            shutdown_mode: None,
+            terminal_reason: None,
+            terminal: false,
+            retained: true,
+            report_identity: Some(format!("service-report:{service_id:?}")),
+        };
+        self.service_records
+            .lock()
+            .await
+            .insert(service_id, record.clone());
+        self.record_service_trace(&record, RuntimeTraceEvent::Start)
+            .await;
+        Ok(record)
+    }
+
+    /// Return retained service record by identity.
+    pub async fn service_record(&self, service_id: ServiceId) -> Option<ServiceRuntimeRecord> {
+        self.service_records.lock().await.get(&service_id).cloned()
+    }
+
+    /// Return retained service health without mutating authority.
+    pub async fn service_health(
+        &self,
+        service_id: ServiceId,
+    ) -> Result<ServiceHealthReport, ServiceLifecycleDiagnostic> {
+        let record = self
+            .service_record(service_id)
+            .await
+            .ok_or(ServiceLifecycleDiagnostic::UnknownService { service_id })?;
+        self.record_service_trace(&record, RuntimeTraceEvent::Health)
+            .await;
+        Ok(ServiceHealthReport {
+            service_id,
+            lifecycle: record.lifecycle,
+            status: record.health,
+        })
+    }
+
+    /// Apply one bounded service reload and retain the updated record.
+    pub async fn reload_service(
+        &self,
+        service_id: ServiceId,
+        reload_identity: impl Into<String>,
+    ) -> Result<ServiceRuntimeRecord, ServiceLifecycleDiagnostic> {
+        let mut records = self.service_records.lock().await;
+        let record = records
+            .get_mut(&service_id)
+            .ok_or(ServiceLifecycleDiagnostic::UnknownService { service_id })?;
+        if record.terminal {
+            return Err(ServiceLifecycleDiagnostic::TerminalServiceRetained { service_id });
+        }
+        record.lifecycle = ServiceLifecycleState::Reloading;
+        record.reload_generation = record.reload_generation.saturating_add(1);
+        record.last_reload = Some(reload_identity.into());
+        record.lifecycle = ServiceLifecycleState::Running;
+        record.health = ServiceHealthStatus::Healthy;
+        let updated = record.clone();
+        drop(records);
+        self.record_service_trace(&updated, RuntimeTraceEvent::Reload)
+            .await;
+        Ok(updated)
+    }
+
+    /// Shut down a service and retain its terminal report/state.
+    pub async fn shutdown_service(
+        &self,
+        service_id: ServiceId,
+        mode: ServiceShutdownMode,
+        reason: impl Into<String>,
+    ) -> Result<ServiceRuntimeRecord, ServiceLifecycleDiagnostic> {
+        let mut records = self.service_records.lock().await;
+        let record = records
+            .get_mut(&service_id)
+            .ok_or(ServiceLifecycleDiagnostic::UnknownService { service_id })?;
+        if record.terminal {
+            return Ok(record.clone());
+        }
+        record.lifecycle = ServiceLifecycleState::Stopping;
+        record.shutdown_mode = Some(mode);
+        record.terminal_reason = Some(reason.into());
+        record.health = ServiceHealthStatus::Unavailable;
+        record.lifecycle = ServiceLifecycleState::Terminated;
+        record.terminal = true;
+        record.retained = true;
+        let updated = record.clone();
+        drop(records);
+        self.record_service_trace(&updated, RuntimeTraceEvent::Shutdown)
+            .await;
+        Ok(updated)
+    }
+
+    async fn record_service_trace(&self, record: &ServiceRuntimeRecord, event: RuntimeTraceEvent) {
+        self.record_runtime_trace_fact(RuntimeTraceFact::new(
+            TraceFactKind::Service,
+            event,
+            format!("{}:{:?}", record.name, record.id),
+        ))
+        .await;
+    }
+
+    /// Register one external actor adapter at an explicit capability boundary.
+    pub async fn register_external_actor_adapter(
+        &self,
+        adapter: ExternalActorAdapter,
+    ) -> Result<ExternalActorAdapter, ExternalActorDiagnostic> {
+        let name = adapter.name.clone();
+        self.external_actor_adapters
+            .lock()
+            .await
+            .insert(name.clone(), adapter.clone());
+        self.record_runtime_trace_fact(RuntimeTraceFact::new(
+            TraceFactKind::ExternalActor,
+            RuntimeTraceEvent::Register,
+            format!("adapter:{name}:{:?}", adapter.id),
+        ))
+        .await;
+        Ok(adapter)
+    }
+
+    /// Return retained external actor adapter metadata by name.
+    pub async fn external_actor_adapter(&self, name: &str) -> Option<ExternalActorAdapter> {
+        self.external_actor_adapters.lock().await.get(name).cloned()
+    }
+
+    /// Record one successful external actor call after inbound/outbound boundary validation.
+    pub async fn record_external_actor_call(
+        &self,
+        adapter_name: &str,
+        payload: Value,
+        response: Value,
+    ) -> Result<ExternalActorCallRecord, ExternalActorDiagnostic> {
+        let adapter = self.lookup_external_actor_adapter(adapter_name).await?;
+        validate_actor_payload(&adapter, &payload)?;
+        validate_actor_response(&adapter, &response)?;
+        self.record_actor_call(
+            &adapter,
+            ActorCallOutcome::Succeeded,
+            0,
+            true,
+            Some(actor_value_type_name(&response).to_string()),
+            None,
+            RuntimeTraceEvent::Send,
+        )
+        .await
+    }
+
+    /// Record one external actor failure with bounded diagnostic evidence.
+    pub async fn record_external_actor_failure(
+        &self,
+        adapter_name: &str,
+        payload: Value,
+        diagnostic: impl Into<String>,
+    ) -> Result<ExternalActorCallRecord, ExternalActorDiagnostic> {
+        let adapter = self.lookup_external_actor_adapter(adapter_name).await?;
+        validate_actor_payload(&adapter, &payload)?;
+        self.record_actor_call(
+            &adapter,
+            ActorCallOutcome::Failed,
+            0,
+            false,
+            None,
+            Some(diagnostic.into()),
+            RuntimeTraceEvent::Fail,
+        )
+        .await
+    }
+
+    /// Record one external actor timeout as a terminal retained call state.
+    pub async fn record_external_actor_timeout(
+        &self,
+        adapter_name: &str,
+        payload: Value,
+    ) -> Result<ExternalActorCallRecord, ExternalActorDiagnostic> {
+        let adapter = self.lookup_external_actor_adapter(adapter_name).await?;
+        validate_actor_payload(&adapter, &payload)?;
+        self.record_actor_call(
+            &adapter,
+            ActorCallOutcome::TimedOut,
+            0,
+            true,
+            None,
+            Some(format!("timeout after {}ms", adapter.policy.timeout_millis)),
+            RuntimeTraceEvent::Fail,
+        )
+        .await
+    }
+
+    /// Schedule one bounded retry for a retained actor call.
+    pub async fn retry_external_actor_call(
+        &self,
+        call_id: ActorCallId,
+    ) -> Result<ExternalActorCallRecord, ExternalActorDiagnostic> {
+        let mut calls = self.external_actor_calls.lock().await;
+        let record = calls
+            .get_mut(&call_id)
+            .ok_or(ExternalActorDiagnostic::UnknownCall { call_id })?;
+        if record.terminal {
+            return Err(ExternalActorDiagnostic::TerminalCallRetained { call_id });
+        }
+        let adapter = self
+            .external_actor_adapters
+            .lock()
+            .await
+            .get(&record.adapter_name)
+            .cloned()
+            .ok_or_else(|| ExternalActorDiagnostic::UnknownAdapter {
+                adapter_name: record.adapter_name.clone(),
+            })?;
+        if record.retry_attempt >= adapter.policy.max_retries {
+            return Err(ExternalActorDiagnostic::RetryBudgetExhausted {
+                call_id,
+                max_retries: adapter.policy.max_retries,
+            });
+        }
+        record.retry_attempt = record.retry_attempt.saturating_add(1);
+        record.outcome = ActorCallOutcome::RetryScheduled;
+        record.terminal = false;
+        record.diagnostic = Some("retry scheduled".to_string());
+        let updated = record.clone();
+        drop(calls);
+        self.record_external_actor_trace(&updated, RuntimeTraceEvent::Restart)
+            .await;
+        Ok(updated)
+    }
+
+    /// Cancel one retained external actor call.
+    pub async fn cancel_external_actor_call(
+        &self,
+        call_id: ActorCallId,
+        reason: impl Into<String>,
+    ) -> Result<ExternalActorCallRecord, ExternalActorDiagnostic> {
+        let mut calls = self.external_actor_calls.lock().await;
+        let record = calls
+            .get_mut(&call_id)
+            .ok_or(ExternalActorDiagnostic::UnknownCall { call_id })?;
+        if record.terminal {
+            return Err(ExternalActorDiagnostic::TerminalCallRetained { call_id });
+        }
+        record.outcome = ActorCallOutcome::Cancelled;
+        record.terminal = true;
+        record.diagnostic = Some(reason.into());
+        let updated = record.clone();
+        drop(calls);
+        self.record_external_actor_trace(&updated, RuntimeTraceEvent::Cancel)
+            .await;
+        Ok(updated)
+    }
+
+    async fn lookup_external_actor_adapter(
+        &self,
+        adapter_name: &str,
+    ) -> Result<ExternalActorAdapter, ExternalActorDiagnostic> {
+        self.external_actor_adapters
+            .lock()
+            .await
+            .get(adapter_name)
+            .cloned()
+            .ok_or_else(|| ExternalActorDiagnostic::UnknownAdapter {
+                adapter_name: adapter_name.to_string(),
+            })
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    async fn record_actor_call(
+        &self,
+        adapter: &ExternalActorAdapter,
+        outcome: ActorCallOutcome,
+        retry_attempt: u32,
+        terminal: bool,
+        response_type: Option<String>,
+        diagnostic: Option<String>,
+        event: RuntimeTraceEvent,
+    ) -> Result<ExternalActorCallRecord, ExternalActorDiagnostic> {
+        let call_id = ActorCallId::new();
+        let trace_subject = format!("actor:{}:{call_id:?}:{outcome:?}", adapter.name);
+        let record = ExternalActorCallRecord {
+            call_id,
+            adapter_id: adapter.id,
+            adapter_name: adapter.name.clone(),
+            actor_type: adapter.actor_type.clone(),
+            capability_boundary: adapter.capability_boundary.clone(),
+            protocol: adapter.protocol.clone(),
+            outcome,
+            retry_attempt,
+            terminal,
+            payload_type: adapter.actor_type.clone(),
+            response_type,
+            payload_redaction: "redacted".to_string(),
+            trace_subject,
+            diagnostic,
+        };
+        self.external_actor_calls
+            .lock()
+            .await
+            .insert(call_id, record.clone());
+        self.record_external_actor_trace(&record, event).await;
+        Ok(record)
+    }
+
+    async fn record_external_actor_trace(
+        &self,
+        record: &ExternalActorCallRecord,
+        event: RuntimeTraceEvent,
+    ) {
+        self.record_runtime_trace_fact(RuntimeTraceFact::new(
+            TraceFactKind::ExternalActor,
+            event,
+            record.trace_subject.clone(),
+        ))
+        .await;
+    }
+
+    /// Record one runtime trace fact and matching authority-free monitor evidence row.
+    pub async fn record_runtime_trace_fact(&self, fact: RuntimeTraceFact) {
+        self.runtime_trace_facts.lock().await.push(fact.clone());
+        self.runtime_monitor_evidence
+            .lock()
+            .await
+            .push(RuntimeMonitorEvidence::new(
+                "phase-195-runtime-monitor",
+                "phase-195-runtime-trace",
+                format!("{:?}:{:?}", fact.kind, fact.event),
+                MonitorEvaluationResult::Pending,
+            ));
+    }
+
+    /// Return retained runtime trace facts.
+    pub async fn runtime_trace_facts(&self) -> Vec<RuntimeTraceFact> {
+        self.runtime_trace_facts.lock().await.clone()
+    }
+
+    /// Return retained runtime monitor evidence rows.
+    pub async fn runtime_monitor_evidence(&self) -> Vec<RuntimeMonitorEvidence> {
+        self.runtime_monitor_evidence.lock().await.clone()
+    }
+
+    /// Create one bounded typed runtime channel.
+    pub async fn create_channel(
+        &self,
+        payload_type: ash_typeck::Type,
+        capacity: usize,
+    ) -> ChannelId {
+        self.channel_registry
+            .lock()
+            .await
+            .create(payload_type, capacity)
+    }
+
+    /// Send one value through a runtime channel after type and sendability validation.
+    pub async fn send_channel(
+        &self,
+        channel_id: ChannelId,
+        value: Value,
+    ) -> Result<(), ChannelError> {
+        self.channel_registry.lock().await.send(channel_id, value)?;
+        self.record_runtime_trace_fact(RuntimeTraceFact::new(
+            TraceFactKind::Channel,
+            RuntimeTraceEvent::Send,
+            format!("{channel_id:?}"),
+        ))
+        .await;
+        Ok(())
+    }
+
+    /// Try to receive one value from a runtime channel without blocking.
+    pub async fn try_receive_channel(&self, channel_id: ChannelId) -> Result<Value, ChannelError> {
+        let value = self.channel_registry.lock().await.try_receive(channel_id)?;
+        self.record_runtime_trace_fact(RuntimeTraceFact::new(
+            TraceFactKind::Channel,
+            RuntimeTraceEvent::Receive,
+            format!("{channel_id:?}"),
+        ))
+        .await;
+        Ok(value)
+    }
+
+    /// Close a runtime channel against future sends.
+    pub async fn close_channel(&self, channel_id: ChannelId) -> Result<(), ChannelError> {
+        self.channel_registry.lock().await.close(channel_id)?;
+        self.record_runtime_trace_fact(RuntimeTraceFact::new(
+            TraceFactKind::Channel,
+            RuntimeTraceEvent::Close,
+            format!("{channel_id:?}"),
+        ))
+        .await;
+        Ok(())
+    }
+
+    /// Return a ready channel for supported select shapes.
+    pub async fn select_ready_channel(
+        &self,
+        channel_ids: &[ChannelId],
+    ) -> Result<Option<ChannelId>, ChannelError> {
+        self.channel_registry.lock().await.select_ready(channel_ids)
     }
 
     /// Register or replace one runtime-owned resource instance by stable identity.
@@ -2167,6 +2869,138 @@ impl RuntimeState {
     /// Read the most recent authoritative top-level execution record observed for this runtime state.
     pub async fn last_execution_record(&self) -> Option<ExecutionRecord> {
         (*self.last_execution_record.lock().await).clone()
+    }
+}
+
+fn process_outcome_from_terminal_state(
+    terminal_state: &ProcessTerminalState,
+) -> ProcessPropagationOutcome {
+    match terminal_state {
+        ProcessTerminalState::Succeeded { .. } => ProcessPropagationOutcome::Succeeded,
+        ProcessTerminalState::Failed { .. } => ProcessPropagationOutcome::Failed,
+        ProcessTerminalState::Cancelled { .. } => ProcessPropagationOutcome::Cancelled,
+    }
+}
+
+fn supervisor_registry_failure(error: ProcessRegistryError) -> SupervisorDiagnostic {
+    SupervisorDiagnostic::RuntimeRegistryFailure {
+        message: error.to_string(),
+    }
+}
+
+fn validate_service_name(service_name: &str) -> Result<(), ServiceLifecycleDiagnostic> {
+    if service_name.is_empty() {
+        return Err(ServiceLifecycleDiagnostic::MissingServiceName);
+    }
+    if !service_name
+        .chars()
+        .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '-' | '_' | '.' | ':'))
+    {
+        return Err(ServiceLifecycleDiagnostic::MalformedServiceName {
+            service_name: service_name.to_string(),
+        });
+    }
+    Ok(())
+}
+
+fn validate_actor_payload(
+    adapter: &ExternalActorAdapter,
+    payload: &Value,
+) -> Result<(), ExternalActorDiagnostic> {
+    if !actor_schema_matches(&adapter.inbound_schema, payload) {
+        return Err(ExternalActorDiagnostic::InboundTypeMismatch {
+            adapter_name: adapter.name.clone(),
+            expected: adapter.inbound_schema.clone(),
+            actual: actor_value_type_name(payload).to_string(),
+        });
+    }
+    payload
+        .validate_sendable_for_process_boundary()
+        .map_err(|reason| ExternalActorDiagnostic::NonSendablePayload {
+            adapter_name: adapter.name.clone(),
+            reason: reason.to_string(),
+        })
+}
+
+fn validate_actor_response(
+    adapter: &ExternalActorAdapter,
+    response: &Value,
+) -> Result<(), ExternalActorDiagnostic> {
+    if !actor_schema_matches(&adapter.outbound_schema, response) {
+        return Err(ExternalActorDiagnostic::OutboundTypeMismatch {
+            adapter_name: adapter.name.clone(),
+            expected: adapter.outbound_schema.clone(),
+            actual: actor_value_type_name(response).to_string(),
+        });
+    }
+    response
+        .validate_sendable_for_process_boundary()
+        .map_err(|reason| ExternalActorDiagnostic::NonSendablePayload {
+            adapter_name: adapter.name.clone(),
+            reason: reason.to_string(),
+        })
+}
+
+fn actor_schema_matches(schema: &str, value: &Value) -> bool {
+    match schema {
+        "Int" => matches!(value, Value::Int(_)),
+        "Float" => matches!(value, Value::Float(_)),
+        "String" => matches!(value, Value::String(_)),
+        "Bool" => matches!(value, Value::Bool(_)),
+        "Null" => matches!(value, Value::Null),
+        "Time" => matches!(value, Value::Time(_)),
+        "Ref" => matches!(value, Value::Ref(_)),
+        "Record" => matches!(value, Value::Record(_)),
+        _ if schema.starts_with('{') && schema.ends_with('}') => {
+            actor_record_schema_matches(schema, value)
+        }
+        _ => true,
+    }
+}
+
+fn actor_record_schema_matches(schema: &str, value: &Value) -> bool {
+    let Value::Record(record) = value else {
+        return false;
+    };
+    let body = schema.trim_start_matches('{').trim_end_matches('}').trim();
+    if body.is_empty() {
+        return record.is_empty();
+    }
+    body.split(',').all(|field| {
+        let Some((name, field_schema)) = field.trim().split_once(':') else {
+            return false;
+        };
+        record
+            .get(name.trim())
+            .is_some_and(|field_value| actor_schema_matches(field_schema.trim(), field_value))
+    })
+}
+
+fn actor_value_type_name(value: &Value) -> &'static str {
+    match value {
+        Value::Int(_) => "Int",
+        Value::Float(_) => "Float",
+        Value::String(_) => "String",
+        Value::Bool(_) => "Bool",
+        Value::Null => "Null",
+        Value::Time(_) => "Time",
+        Value::Ref(_) => "Ref",
+        Value::Record(_) => "Record",
+        Value::Cap(_) => "Cap",
+        Value::Variant { .. } => "Variant",
+        Value::Instance(_) => "Instance",
+        Value::InstanceAddr(_) => "InstanceAddr",
+        Value::ControlLink(_) => "ControlLink",
+        Value::Stream(_) => "Stream",
+        Value::ProcessHandle(_) => "ProcessHandle",
+        Value::ProcAwaitCapture(_) => "ProcAwaitCapture",
+        Value::ProcYieldCapture => "ProcYieldCapture",
+        Value::ProcParCapture { .. } => "ProcParCapture",
+        Value::ProcScatterCapture { .. } => "ProcScatterCapture",
+        Value::ProcJoinCapture { .. } => "ProcJoinCapture",
+        Value::ProcGatherCapture { .. } => "ProcGatherCapture",
+        Value::Closure { .. } => "Closure",
+        Value::ActEnvToken => "ActEnvToken",
     }
 }
 

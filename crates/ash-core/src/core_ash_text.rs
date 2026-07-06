@@ -525,7 +525,7 @@ impl Parser {
                 mode: self.expect_symbol()?,
                 payload_type: Box::new(self.parse_type_inner()?),
             }),
-            "proc" => Ok(CoreRowItem::Process {
+            "proc" | "process" => Ok(CoreRowItem::Process {
                 operation: self.expect_symbol()?,
             }),
             "fail" => {
@@ -693,7 +693,7 @@ impl Parser {
                     result_type,
                 }
             }
-            "proc" => {
+            "proc" | "process" => {
                 let operation = self.expect_symbol()?;
                 self.expect_colon()?;
                 let (arg_types, result_type) = self.parse_signature()?;
@@ -1344,7 +1344,9 @@ fn format_row(row: &CoreRow) -> String {
     }
 }
 
-fn format_row_item(item: &CoreRowItem) -> String {
+/// Formats one Core row item using canonical target spelling.
+#[must_use]
+pub fn format_row_item(item: &CoreRowItem) -> String {
     match item {
         CoreRowItem::Capability { path, operation } => {
             format!("cap {}", format_path_operation(path, operation))
@@ -1364,7 +1366,7 @@ fn format_row_item(item: &CoreRowItem) -> String {
             format_path(path),
             format_type(payload_type)
         ),
-        CoreRowItem::Process { operation } => format!("proc {operation}"),
+        CoreRowItem::Process { operation } => format!("process {operation}"),
         CoreRowItem::Failure { ty } => match ty {
             Some(ty) => format!("fail {}", format_type(ty)),
             None => "fail".to_string(),

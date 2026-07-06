@@ -37,26 +37,26 @@ describe the requirements of a computation: which operations, roles, policies, c
 channels, process operations, failures, and evidence/reporting effects the computation may
 use or emit.
 
-This spec does **not** immediately delete the public `Act`, `Proc`, and `Workflow` strata.
-In the first normative slice, those strata become named row profiles over a shared
-effect-accounting substrate:
+The old public `Act`, `Proc`, and `Workflow` strata are deprecated development forms. They may
+remain in historical/current-state references, but target work must not introduce new surface
+syntax, Core terms, IR nodes, public stdlib types, or runtime entry paths named `Act`, `Proc`, or
+`Workflow`. The target model uses ambient row-bearing computations plus named process, channel,
+contract, policy, and evidence facts:
 
 ```text
-Pure      = computation with an empty requirement row
-Act       = operation/resource/failure/evidence effects
-Proc      = Act + process/channel/concurrency effects
-Workflow  = Proc + contract/policy/role/obligation/reporting effects
+value-like computation = pure, total, eager/default, authority-free row
+operation facts        = operation/resource/failure/evidence requirements
+process facts          = process/channel/concurrency requirements
+governance facts       = contract/policy/role/obligation/reporting requirements
 ```
 
-A later spec may choose to collapse the public computation types into one runtime
-representation. This spec only requires that their authority and contract requirements
-become visible as computation rows.
+Rows make these requirements visible without selecting a deprecated tower runtime or wrapper type.
 
 ## 2. Motivation
 
 Ash currently has several related but separate mechanisms:
 
-- the four-stratum tower `Pure < Act < Proc < Workflow`;
+- the historical four-stratum tower `Pure < Act < Proc < Workflow`;
 - current capability declarations and bindings as migration input;
 - role authority and obligations;
 - policy declarations and policy decisions;
@@ -87,7 +87,7 @@ This draft is a precision pass over the language direction. It intentionally doe
    of the target model. See §6.1.
 2. a complete syntax for effect handlers — the handler surface is captured in NOTE-023; this
    spec defers the full syntactic grammar to that note;
-3. deletion of `Act<T>`, `Proc<T>`, `Workflow<T>`, or `workflow` syntax;
+3. immediate removal of legacy compatibility syntax from current-state implementations;
 4. a new runtime `Eff<A>` implementation;
 5. implicit privilege grants from aliases or groups;
 6. session-type or MPST protocol checking for channels.
@@ -117,30 +117,32 @@ that are already available or already discharged in the current scope.
 
 Examples of ambient facts include:
 
-- a role admitted at workflow/process start;
+- a role admitted at an application/process runtime boundary;
 - an operation authority provider, handler, or host admission fact available at the boundary;
 - a policy handler installed around a region;
 - a proof or runtime-check strategy for a contract;
 - a channel endpoint owned by the current process;
-- an evidence sink available at the workflow boundary.
+- an evidence sink available at an application/reporting boundary.
 
 A computation with requirement row `R` may run in environment `E` only if every required item
 in `R` is discharged by `E` according to that item kind's rule.
 
 ### 4.3 Row profiles preserve the tower
 
-The tower remains the default explanation of increasing operational power. Row profiles
-make that power explicit by naming increasingly rich computation rows.
+Deprecated tower vocabulary is no longer the target explanation of operational power. Active
+target guidance describes increasingly rich computation rows and the runtime/admission boundaries
+that can discharge them.
 
-| Profile | Row shape | Meaning |
-|---------|-----------|---------|
-| `Pure` | `{}` | no effect requirements |
-| `Act` | operation/resource/failure/evidence effects | runtime-managed effects without process or workflow governance |
-| `Proc` | `Act` effects plus process/channel effects | process identity, concurrency, message passing, observation of process failure |
-| `Workflow` | `Proc` effects plus contract/policy/role/obligation/reporting effects | governed orchestration boundary |
+| Row/profile region | Row shape | Meaning |
+|--------------------|-----------|---------|
+| value-like | `{}` plus total/eager/stable facts | no runtime-significant requirements |
+| operation-capable | operation/resource/failure/evidence effects | runtime-managed operation requirements |
+| process-capable | operation facts plus process/channel effects | process identity, concurrency, message passing, process failure observation |
+| governance-capable | process facts plus contract/policy/role/obligation/reporting effects | governed orchestration boundary facts |
 
-The profiles are not privileges. They are named constraints over rows. For example, an `Act`
-computation cannot use `channel receive` unless it is lifted or rechecked in a `Proc` profile.
+These regions are not privileges and are not denotable `Act`, `Proc`, or `Workflow` types. For
+example, a computation without process support cannot use `channel receive` unless an explicit
+runtime/admission boundary supports the required channel/process facts.
 
 ### 4.4 Effect discharge is kind-specific
 
@@ -377,10 +379,10 @@ admitted predicate-function identities, static/dynamic classification, proof fra
 dynamic runtime-check plan, diagnostic shape, and stable predicate identity. The implementation
 must not treat a source string as the predicate's semantic representation.
 
-Per NOTE-035, temporal/concurrent contracts are trace contracts over the ambient computation
-model. `Pure`, `Act`, `Proc`, and `Workflow` are semantic anchors rather than separate contract
-mechanisms: operational trace facts are `Proc`-like, obligation/evidence/commitment facts are
-`Workflow`-like, and mixed contracts may mention both. The row item records the trace-contract
+Per NOTE-035 and Phase 195, temporal/concurrent contracts are trace contracts over the ambient
+computation model. Historical `Pure`/`Act`/`Proc`/`Workflow` wording is legacy reference
+vocabulary only: process/channel trace facts are operational, obligation/evidence/commitment facts
+are normative, and mixed contracts may mention both. The row item records the trace-contract
 obligation; runtime monitor plans, static model-check evidence, or deferred trace obligations
 are recorded as discharge metadata.
 
@@ -429,9 +431,9 @@ fn start_worker() -> {proc spawn} P<Unit> { ... }
 fn wait_worker(p: P<A>) -> {proc await} A { ... }
 ```
 
-Process effects imply a process-capable ambient profile. They must not be silently accepted in
-profiles that lack process-runtime support. Per NOTE-035, this is a semantic anchor rather than
-a requirement that the source term have a separate `Proc<A>` constructor.
+Process effects imply process-runtime support. They must not be silently accepted in computations
+whose runtime/admission boundary lacks process support. Per Phase 195, this must not introduce a
+separate `Proc<A>` constructor, public stdlib type, Core term, IR node, or runtime entry path.
 
 ### 6.8 Failure effects
 
@@ -448,9 +450,9 @@ Example:
 fn parse_config(path: String) -> {PosixFs::read, fail ConfigError} Config { ... }
 ```
 
-A `fail` effect is discharged by an enclosing failure handler, workflow failure boundary, or
-profile-specific failure policy. It must not implicitly become `None`, `Err`, an empty list,
-or another domain value.
+A `fail` effect is discharged by an enclosing failure handler, application/runtime failure
+boundary, or profile-specific failure policy. It must not implicitly become `None`, `Err`, an
+empty list, or another domain value.
 
 Per NOTE-029, default dynamic contract failure is not a `fail` effect: it is structured bottom
 (`Trap { reason: ContractViolation(ContractDiagnostic) }`) outside ordinary row accounting. If
@@ -471,18 +473,18 @@ Examples:
 
 ```ash
 fn audited_write(msg: String) -> {StdoutLog::write, evidence audit_log} Unit { ... }
-fn finish() -> {report workflow_summary} Unit { ... }
+fn finish() -> {report application_summary} Unit { ... }
 ```
 
-These effects are normally discharged by workflow or runtime admission. A pure function cannot
+These effects are normally discharged by application/runtime admission. A pure function cannot
 require evidence/report effects directly.
 
 ## 7. Roles, effects, and authority
 
 ### 7.1 Role admission
 
-A role effect requires that the execution boundary has admitted that role. Admission is a
-runtime or workflow/process boundary decision, not a local type alias.
+A role effect requires that the execution boundary has admitted that role. Admission is an
+application/runtime or process boundary decision, not a local type alias.
 
 ```ash
 role manager {
@@ -658,11 +660,11 @@ fn read_config(path: String) -> {PosixFs::read} String {
 ```
 
 During migration, existing `do:Act`, `do:Proc`, `do:Workflow`, `act { ... }`, and `workflow`
-syntax remain compatibility surfaces. They should lower into the same row-checked semantic
-representation once the parser, type checker, and runtime carriers exist.
+syntax are compatibility surfaces only. They must not be used for new target development and must
+lower into ordinary row-checked semantic representation where compatibility support still exists.
 
-A later syntax spec must decide whether explicit target annotations remain useful as row
-profiles, for example `do:Proc { ... }` meaning "check this block against the `Proc` row profile."
+A later syntax spec may remove or further fence these compatibility forms; it must not promote
+them back into target surface, Core, IR, stdlib, or runtime foundations.
 
 ## 12. Migration path
 
@@ -671,8 +673,8 @@ profiles, for example `do:Proc { ... }` meaning "check this block against the `P
 Add effect-row summaries to checked functions, closures, and computation blocks without changing
 the public runtime representation.
 
-- Preserve `Act<T>`, `Proc<T>`, and `Workflow<T>`.
-- Preserve existing workflow syntax.
+- Preserve legacy compatibility behavior only where required for current-state migration.
+- Do not add new `Act<T>`, `Proc<T>`, `Workflow<T>`, or workflow syntax.
 - Emit row summaries for diagnostics and docs.
 
 ### 12.2 Stage 2: Row-checked admission
@@ -685,13 +687,14 @@ channel/process effects.
 - Policy effects reference named policy bindings.
 - Contract effects preserve static/evidence/dynamic discharge status.
 
-### 12.3 Stage 3: Row profiles for tower syntax
+### 12.3 Stage 3: Process and governance runtime boundaries
 
-Define `Act`, `Proc`, and `Workflow` as named row profiles over a shared substrate.
+Define process-capable and governance-capable runtime/admission boundaries over a shared row
+substrate.
 
-- `Act` admits operation/resource/failure effects.
-- `Proc` admits process/channel effects.
-- `Workflow` admits governance/reporting effects.
+- operation-capable boundaries admit operation/resource/failure effects;
+- process-capable boundaries admit process/channel effects;
+- governance-capable boundaries admit governance/reporting effects.
 
 ### 12.4 Stage 4: Surface simplification
 
@@ -742,4 +745,5 @@ workflow reporting, and audit evidence.
 - 2026-06-29: Reconciled with NOTE-031. Replaced `predicate = expr` with a restricted contract-position predicate grammar, added boundary-local `old(snapshot_expr)`, and required static/dynamic/rejected predicate classification before lowering.
 - 2026-06-29: Reconciled with NOTE-033. Clarified that contract-position predicate syntax lowers through structured predicate artifacts carrying binders, snapshots, classification, proof/runtime-check metadata, diagnostics, and stable identity.
 - 2026-06-29: Reconciled with NOTE-034. Clarified that operation/capability effects are authority-bearing and cannot be performed by contract predicates; operation results may flow into contracts only as ordinary values plus provenance metadata.
-- 2026-06-29: Reconciled with NOTE-035. Added trace-contract row-item spelling and clarified that `Pure`/`Act`/`Proc`/`Workflow` are semantic anchors over one ambient computation model rather than separate contract mechanisms.
+- 2026-06-29: Reconciled with NOTE-035. Added trace-contract row-item spelling and clarified that historical `Pure`/`Act`/`Proc`/`Workflow` vocabulary routes through one ambient computation model rather than separate contract mechanisms.
+- 2026-07-06: Reconciled with Phase 195. Marked `Act`/`Proc`/`Workflow` as deprecated development forms and replaced active profile guidance with process-capable and governance-capable runtime/admission boundaries.

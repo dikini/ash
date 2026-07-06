@@ -177,8 +177,8 @@ fn definition<'a>(list: &'a Value, workflow: &str) -> &'a Value {
         .expect("indexed workflow definition")
 }
 
-fn language_artifact_summary(value: &Value) -> &Value {
-    let summary = &value["artifact_summary"];
+fn language_artifact_summary(value: &Value) -> Value {
+    let mut summary = value["artifact_summary"].clone();
     assert_eq!(
         summary["tcir"]["carrier_scope"], "alpha_checked_workflow_boundary",
         "TASK-936 alpha summaries compare the checked workflow-boundary carrier, not full body TCIR: {summary}"
@@ -196,7 +196,23 @@ fn language_artifact_summary(value: &Value) -> &Value {
         "artifact summary must include verifier-normalized bytecode: {summary}"
     );
     assert_eq!(summary["bytecode"]["requires_source_reparse"], false);
+    normalize_application_boundary_metadata(&mut summary);
     summary
+}
+
+fn normalize_application_boundary_metadata(summary: &mut Value) {
+    let Some(invocation_packet) = summary.get_mut("invocation_packet") else {
+        return;
+    };
+
+    if let Some(admission_profile) = invocation_packet.get_mut("admission_profile") {
+        admission_profile["boundary_source"] = Value::String("<runtime-boundary>".to_string());
+    }
+    if let Some(boundary_bindings) = invocation_packet.get_mut("boundary_bindings") {
+        boundary_bindings["boundary_source"] = Value::String("<runtime-boundary>".to_string());
+        boundary_bindings["redacted_evidence_identity"] =
+            Value::String("<redacted-boundary-evidence>".to_string());
+    }
 }
 
 #[test]
@@ -261,7 +277,7 @@ fn failed_daemon_reload_preserves_admitted_artifact_summary() {
     let preserved_instance_summary = language_artifact_summary(&status);
 
     assert_eq!(preserved_definition_summary, initial_definition_summary);
-    assert_eq!(preserved_instance_summary, &admitted_summary);
+    assert_eq!(preserved_instance_summary, admitted_summary);
 }
 
 #[test]

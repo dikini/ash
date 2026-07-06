@@ -218,9 +218,11 @@ provider/runtime boundaries.
 
 ## 10. Surface anchors
 
-`Pure`, `Act`, `Proc`, and `Workflow` are semantic anchors over the same computation model. They
-constrain rows, interpretation, trace obligations, and observation boundaries; they do not introduce
-separate operational languages.
+Historical `Pure`, `Act`, `Proc`, and `Workflow` names may appear only as legacy reference
+vocabulary. Target operational semantics are defined over one ambient computation model with
+row/admission facts, trace obligations, and observation boundaries; these names do not introduce
+surface forms, Core terms, IR nodes, public stdlib types, runtime entry paths, or separate
+operational languages.
 
 ## 11. Phase 159 interpreter context
 

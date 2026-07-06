@@ -261,7 +261,7 @@ Each item kind has a separate rule:
 - contracts discharge through static proof, evidence, or dynamic contract strategy;
 - resources discharge through ownership/borrow/provenance facts;
 - channels discharge through owned endpoints with compatible mode and message type;
-- process effects discharge through compatible `Proc`/`Workflow` boundaries;
+- process effects discharge through explicit process-capable runtime/admission boundaries;
 - failures discharge through an explicit failure route, handler, or profile boundary;
 - evidence effects discharge through available evidence/report sinks.
 
@@ -382,11 +382,10 @@ monitor scope boundaries. It then classifies the formula's alphabet, type-checks
 formula, chooses `StaticModelChecked`, `StaticProved`, `EvidenceSurvivedTesting`,
 `RuntimeMonitor`, or `Deferred` discharge, and records monitor metadata.
 
-`Proc` and `Workflow` are not separate type-checking universes here. A formula is `Proc`-like
-when it mentions operational trace facts, `Workflow`-like when it mentions
-obligation/evidence/commitment/stage facts, and mixed when it relates both. Unknown temporal
-proofs demote to `RuntimeMonitor` or remain deferred; they do not become value-level
-`RuntimeCheckPlan`s.
+Deprecated `Proc` and `Workflow` names are not separate type-checking universes here. A formula is
+operational when it mentions process/channel trace facts, normative when it mentions
+obligation/evidence/commitment/stage facts, and mixed when it relates both. Unknown temporal proofs
+demote to `RuntimeMonitor` or remain deferred; they do not become value-level `RuntimeCheckPlan`s.
 
 ## 10. Atom and Value Typing
 

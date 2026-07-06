@@ -61,6 +61,102 @@ impl PartialEq for ProcessHandle {
     }
 }
 
+/// Structured reason a runtime value cannot cross a process boundary.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SendabilityRejection {
+    /// Runtime closures capture handler/environment state and are not process payloads.
+    Closure,
+    /// External references are borrowed resource authority, not owned transferable data.
+    BorrowedResource,
+    /// Capability references carry authority and must not be copied across process boundaries.
+    Capability,
+    /// Workflow instance values carry live workflow authority.
+    WorkflowInstance,
+    /// Workflow instance addresses are runtime-local references.
+    WorkflowInstanceAddress,
+    /// Control links are reusable supervision authority.
+    ControlLink,
+    /// Stream handles carry live consumer state.
+    StreamHandle,
+    /// A process handle was already consumed by an affine operation.
+    ConsumedProcessHandle { process_id: crate::ProcessId },
+    /// Hidden runtime marker or handler frame carrier.
+    RuntimeToken(&'static str),
+    /// A nested payload failed validation at the reported field path.
+    AtPath {
+        path: String,
+        reason: Box<SendabilityRejection>,
+    },
+}
+
+impl SendabilityRejection {
+    /// Attach a field path to a nested sendability rejection.
+    #[must_use]
+    pub fn at_path(path: impl Into<String>, reason: SendabilityRejection) -> SendabilityRejection {
+        let path = path.into();
+        match reason {
+            SendabilityRejection::AtPath {
+                path: nested_path,
+                reason,
+            } => SendabilityRejection::AtPath {
+                path: format!("{path}.{nested_path}"),
+                reason,
+            },
+            reason => SendabilityRejection::AtPath {
+                path,
+                reason: Box::new(reason),
+            },
+        }
+    }
+}
+
+impl std::fmt::Display for SendabilityRejection {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SendabilityRejection::Closure => {
+                write!(f, "closure captures cannot cross process boundaries")
+            }
+            SendabilityRejection::BorrowedResource => {
+                write!(
+                    f,
+                    "borrowed resource references cannot cross process boundaries"
+                )
+            }
+            SendabilityRejection::Capability => {
+                write!(f, "capabilities cannot cross process boundaries")
+            }
+            SendabilityRejection::WorkflowInstance => {
+                write!(f, "workflow instances cannot cross process boundaries")
+            }
+            SendabilityRejection::WorkflowInstanceAddress => {
+                write!(
+                    f,
+                    "workflow instance addresses cannot cross process boundaries"
+                )
+            }
+            SendabilityRejection::ControlLink => {
+                write!(f, "control links cannot cross process boundaries")
+            }
+            SendabilityRejection::StreamHandle => {
+                write!(f, "stream handles cannot cross process boundaries")
+            }
+            SendabilityRejection::ConsumedProcessHandle { process_id } => {
+                write!(
+                    f,
+                    "process handle for {} was already consumed",
+                    process_id.0
+                )
+            }
+            SendabilityRejection::RuntimeToken(token) => {
+                write!(f, "runtime token `{token}` cannot cross process boundaries")
+            }
+            SendabilityRejection::AtPath { path, reason } => write!(f, "{path}: {reason}"),
+        }
+    }
+}
+
+impl std::error::Error for SendabilityRejection {}
+
 /// Instance address - opaque reference to a workflow instance
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct InstanceAddr {
@@ -218,6 +314,73 @@ impl Value {
         match self {
             Value::ProcessHandle(handle) => Some(handle),
             _ => None,
+        }
+    }
+
+    /// Return true when this value may be transferred across a process boundary.
+    ///
+    /// This is stricter than Rust's `Send`: Ash process payloads must be owned data or affine
+    /// process handles, not captured closures, borrowed resources, handler frames, or live runtime
+    /// authority.
+    #[must_use]
+    pub fn is_sendable_across_process_boundary(&self) -> bool {
+        self.validate_sendable_for_process_boundary().is_ok()
+    }
+
+    /// Validate that this value may be transferred across a process boundary.
+    pub fn validate_sendable_for_process_boundary(&self) -> Result<(), SendabilityRejection> {
+        match self {
+            Value::Int(_)
+            | Value::Float(_)
+            | Value::String(_)
+            | Value::Bool(_)
+            | Value::Null
+            | Value::Time(_) => Ok(()),
+            Value::Record(fields) => {
+                let mut names: Vec<_> = fields.keys().collect();
+                names.sort();
+
+                for name in names {
+                    if let Some(value) = fields.get(name) {
+                        value
+                            .validate_sendable_for_process_boundary()
+                            .map_err(|reason| SendabilityRejection::at_path(name, reason))?;
+                    }
+                }
+
+                Ok(())
+            }
+            Value::Variant { fields, .. } => {
+                for (name, value) in fields.iter() {
+                    value
+                        .validate_sendable_for_process_boundary()
+                        .map_err(|reason| SendabilityRejection::at_path(name, reason))?;
+                }
+
+                Ok(())
+            }
+            Value::ProcessHandle(handle) if !handle.is_consumed() => Ok(()),
+            Value::ProcessHandle(handle) => Err(SendabilityRejection::ConsumedProcessHandle {
+                process_id: handle.process_id,
+            }),
+            Value::Ref(_) => Err(SendabilityRejection::BorrowedResource),
+            Value::Cap(_) => Err(SendabilityRejection::Capability),
+            Value::Instance(_) => Err(SendabilityRejection::WorkflowInstance),
+            Value::InstanceAddr(_) => Err(SendabilityRejection::WorkflowInstanceAddress),
+            Value::ControlLink(_) => Err(SendabilityRejection::ControlLink),
+            Value::Stream(_) => Err(SendabilityRejection::StreamHandle),
+            Value::ProcAwaitCapture(_) => Err(SendabilityRejection::RuntimeToken("proc-await")),
+            Value::ProcYieldCapture => Err(SendabilityRejection::RuntimeToken("proc-yield")),
+            Value::ProcParCapture { .. } => Err(SendabilityRejection::RuntimeToken("proc-par")),
+            Value::ProcScatterCapture { .. } => {
+                Err(SendabilityRejection::RuntimeToken("proc-scatter"))
+            }
+            Value::ProcJoinCapture { .. } => Err(SendabilityRejection::RuntimeToken("proc-join")),
+            Value::ProcGatherCapture { .. } => {
+                Err(SendabilityRejection::RuntimeToken("proc-gather"))
+            }
+            Value::Closure { .. } => Err(SendabilityRejection::Closure),
+            Value::ActEnvToken => Err(SendabilityRejection::RuntimeToken("act-env")),
         }
     }
 

@@ -3,8 +3,10 @@
 use ash_core::kind::Kind;
 use ash_core::module_graph::ModuleId;
 use ash_core::runtime_kernel::{
-    RuntimeArtifactBuildError, RuntimeArtifactBuildIdentity, RuntimeArtifactBuildInput,
-    RuntimeConfigId, RuntimeKernelArtifactBuilder, RuntimeKernelVerifiedArtifact, RuntimeProfileId,
+    AlphaAdmissionProfile, ApplicationAdmissionProfile, ApplicationBoundaryBindings,
+    ApplicationEntrypointDiagnostic, ApplicationEntrypointMetadata, RuntimeArtifactBuildError,
+    RuntimeArtifactBuildIdentity, RuntimeArtifactBuildInput, RuntimeConfigId,
+    RuntimeKernelArtifactBuilder, RuntimeKernelVerifiedArtifact, RuntimeProfileId,
     RuntimeProfileIdentity, RuntimeRootSetId, RuntimeTcirCarrierScope,
 };
 use ash_core::semantic_summary::{
@@ -26,6 +28,12 @@ pub struct RuntimeArtifactBuildRequest {
     pub relative_module_path: String,
     /// Exported workflow name.
     pub workflow_name: String,
+    /// Application/runtime entrypoint metadata selected for this artifact.
+    pub entrypoint: ApplicationEntrypointMetadata,
+    /// Admission profile metadata selected at the runtime boundary.
+    pub admission_profile: ApplicationAdmissionProfile,
+    /// Non-authority boundary bindings selected at the runtime boundary.
+    pub boundary_bindings: ApplicationBoundaryBindings,
     /// Runtime profile identity.
     pub profile_id: String,
     /// Runtime config identity.
@@ -50,10 +58,21 @@ impl RuntimeArtifactBuildRequest {
         source: impl Into<String>,
         check_summary: impl Into<String>,
     ) -> Self {
+        let relative_module_path = relative_module_path.into();
+        let workflow_name = workflow_name.into();
+        let entrypoint = ApplicationEntrypointMetadata::legacy_workflow_compatibility(
+            workflow_name.clone(),
+            relative_module_path.clone(),
+        );
+        let admission_profile = ApplicationAdmissionProfile::alpha(AlphaAdmissionProfile::Empty);
+        let boundary_bindings = ApplicationBoundaryBindings::empty("alpha-boundary-bindings");
         Self {
             root_id: root_id.into(),
-            relative_module_path: relative_module_path.into(),
-            workflow_name: workflow_name.into(),
+            relative_module_path,
+            workflow_name,
+            entrypoint,
+            admission_profile,
+            boundary_bindings,
             profile_id: profile_id.into(),
             config_id: config_id.into(),
             source: source.into(),
@@ -62,10 +81,71 @@ impl RuntimeArtifactBuildRequest {
         }
     }
 
+    /// Create a runtime artifact build request for a checked application callable entrypoint.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ApplicationEntrypointDiagnostic`] when the entrypoint name or callable identity is
+    /// missing.
+    #[allow(clippy::too_many_arguments)]
+    pub fn new_application_entrypoint(
+        root_id: impl Into<String>,
+        relative_module_path: impl Into<String>,
+        entrypoint_name: impl Into<String>,
+        callable_identity: impl Into<String>,
+        runtime_target_identity: impl Into<String>,
+        profile_id: impl Into<String>,
+        config_id: impl Into<String>,
+        source: impl Into<String>,
+        check_summary: impl Into<String>,
+    ) -> Result<Self, ApplicationEntrypointDiagnostic> {
+        let relative_module_path = relative_module_path.into();
+        let entrypoint_name = entrypoint_name.into();
+        let entrypoint = ApplicationEntrypointMetadata::checked_callable(
+            entrypoint_name.clone(),
+            callable_identity,
+            relative_module_path.clone(),
+            runtime_target_identity,
+        )?;
+        Ok(Self {
+            root_id: root_id.into(),
+            relative_module_path,
+            workflow_name: entrypoint_name,
+            entrypoint,
+            admission_profile: ApplicationAdmissionProfile::alpha(AlphaAdmissionProfile::Empty),
+            boundary_bindings: ApplicationBoundaryBindings::empty("alpha-boundary-bindings"),
+            profile_id: profile_id.into(),
+            config_id: config_id.into(),
+            source: source.into(),
+            check_summary: check_summary.into(),
+            runtime_support_identity: None,
+        })
+    }
+
     /// Record the selected toolchain runtime-support identity for artifact construction.
     #[must_use]
     pub fn with_runtime_support_identity(mut self, identity: impl Into<String>) -> Self {
         self.runtime_support_identity = Some(identity.into());
+        self
+    }
+
+    /// Attach admission profile metadata selected at the runtime boundary.
+    #[must_use]
+    pub fn with_admission_profile(
+        mut self,
+        admission_profile: ApplicationAdmissionProfile,
+    ) -> Self {
+        self.admission_profile = admission_profile;
+        self
+    }
+
+    /// Attach non-authority boundary binding metadata selected at the runtime boundary.
+    #[must_use]
+    pub fn with_boundary_bindings(
+        mut self,
+        boundary_bindings: ApplicationBoundaryBindings,
+    ) -> Self {
+        self.boundary_bindings = boundary_bindings;
         self
     }
 
@@ -97,7 +177,10 @@ pub fn build_runtime_kernel_artifact(
             profile,
             request.relative_module_path.clone(),
             request.workflow_name.clone(),
-        ),
+        )
+        .with_entrypoint(request.entrypoint.clone())
+        .with_admission_profile(request.admission_profile.clone())
+        .with_boundary_bindings(request.boundary_bindings.clone()),
         request.source.clone(),
         request.check_summary_with_runtime_support(),
         synthetic_tcir(request),

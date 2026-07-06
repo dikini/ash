@@ -835,7 +835,7 @@ fn lower_effect_op(op: &CoreEffectOp) -> EffectOp {
             result_type,
         } => EffectOp {
             item: EffectItem {
-                namespace: "proc".to_string(),
+                namespace: "process".to_string(),
                 name: operation.clone(),
                 kind: EffectItemKind::Process,
             },
@@ -1676,7 +1676,7 @@ fn lower_row_item(item: &CoreRowItem) -> Result<EffectItem, CoreLoweringError> {
             kind: EffectItemKind::Resource,
         }),
         CoreRowItem::Process { operation } => Ok(EffectItem {
-            namespace: "proc".to_string(),
+            namespace: "process".to_string(),
             name: operation.clone(),
             kind: EffectItemKind::Process,
         }),
@@ -1971,7 +1971,7 @@ mod tests {
                     kind: EffectItemKind::Resource,
                 },
                 EffectItem {
-                    namespace: "proc".to_string(),
+                    namespace: "process".to_string(),
                     name: "cleanup".to_string(),
                     kind: EffectItemKind::Process,
                 },

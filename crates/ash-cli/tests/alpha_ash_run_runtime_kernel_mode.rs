@@ -123,6 +123,146 @@ fn ash_run_reports_kernel_instance_and_artifact_identity() {
 }
 
 #[test]
+fn ash_run_reports_checked_callable_entrypoint_metadata_for_fn_main_source() {
+    let temp = tempdir().expect("tempdir");
+    let app_path = temp.path().join("app.ash");
+    fs::write(
+        &app_path,
+        r#"
+        fn main() -> Int {
+            7
+        }
+        "#,
+    )
+    .expect("write fn main source");
+
+    let mut cmd = Command::cargo_bin("ash").expect("ash binary exists");
+    let output = cmd
+        .arg("run")
+        .arg("--dry-run")
+        .arg(&app_path)
+        .arg("--format")
+        .arg("json")
+        .env("ASH_RUNTIME_KERNEL_REPORT", "json")
+        .assert()
+        .success()
+        .get_output()
+        .clone();
+
+    let stderr = String::from_utf8(output.stderr).expect("stderr utf8");
+    let report: Value = serde_json::from_str(&stderr).expect("kernel report json on stderr");
+    let entrypoint = &report["artifact_summary"]["entrypoint"];
+    assert_eq!(entrypoint["kind"], "checked_callable");
+    assert_eq!(entrypoint["name"], "main");
+    assert_eq!(entrypoint["relative_module_path"], "app.ash");
+    assert_eq!(entrypoint["callable_identity"], "callable:app.ash::main");
+    assert_eq!(
+        entrypoint["runtime_target_identity"],
+        "runtime-target:application-entry:main"
+    );
+    assert_eq!(
+        report["artifact_summary"]["invocation_packet"]["entrypoint"],
+        *entrypoint
+    );
+    assert!(
+        report["artifact_summary"]["invocation_packet"]["source_identity"]
+            .as_str()
+            .is_some_and(|identity| !identity.is_empty())
+    );
+    assert!(
+        report["artifact_summary"]["invocation_packet"]["check_identity"]
+            .as_str()
+            .is_some_and(|identity| !identity.is_empty())
+    );
+    assert!(
+        report["artifact_summary"]["invocation_packet"]["runtime_target_identity"]
+            .as_str()
+            .is_some_and(|identity| !identity.is_empty())
+    );
+    assert_eq!(
+        report["application_report"]["terminal_outcome"]["status"],
+        "succeeded"
+    );
+    assert_eq!(
+        report["application_report"]["source_identity"],
+        report["artifact_summary"]["invocation_packet"]["source_identity"]
+    );
+    assert_eq!(
+        report["application_report"]["check_identity"],
+        report["artifact_summary"]["invocation_packet"]["check_identity"]
+    );
+    assert_eq!(
+        report["application_report"]["entrypoint_identity"],
+        entrypoint["runtime_target_identity"]
+    );
+    assert_eq!(
+        report["application_report"]["trace_bundle"]["admission_facts"][0],
+        "admission_profile:admission-profile:empty"
+    );
+    assert!(
+        report["application_report"]["trace_bundle"]["boundary_facts"]
+            .as_array()
+            .expect("boundary facts")
+            .iter()
+            .any(|fact| fact == "boundary_source:cli:runtime-boundary")
+    );
+    assert_eq!(
+        report["application_report"]["trace_bundle"]["grants_authority"],
+        false
+    );
+    assert_eq!(
+        report["application_report"]["trace_bundle"]["mutates_authority"],
+        false
+    );
+    assert_eq!(report["application_report"]["grants_authority"], false);
+    assert_eq!(report["application_report"]["mutates_authority"], false);
+}
+
+#[test]
+fn ash_run_reports_provider_boundary_bindings_without_authority_grants() {
+    let temp = tempdir().expect("tempdir");
+    let app_path = temp.path().join("app.ash");
+    fs::write(
+        &app_path,
+        r#"
+        fn main() -> Int {
+            11
+        }
+        "#,
+    )
+    .expect("write fn main source");
+
+    let mut cmd = Command::cargo_bin("ash").expect("ash binary exists");
+    let output = cmd
+        .arg("run")
+        .arg("--dry-run")
+        .arg(&app_path)
+        .arg("--")
+        .arg("first")
+        .arg("second")
+        .env("ASH_RUNTIME_KERNEL_REPORT", "json")
+        .assert()
+        .success()
+        .get_output()
+        .clone();
+
+    let stderr = String::from_utf8(output.stderr).expect("stderr utf8");
+    let report: Value = serde_json::from_str(&stderr).expect("kernel report json on stderr");
+    let boundary_bindings = &report["artifact_summary"]["invocation_packet"]["boundary_bindings"];
+    assert_eq!(boundary_bindings["boundary_source"], "cli:runtime-boundary");
+    assert_eq!(boundary_bindings["providers"][0], "Args:0");
+    assert_eq!(boundary_bindings["providers"][1], "Args:1");
+    assert_eq!(boundary_bindings["grants_authority"], false);
+    assert_eq!(report["admission"]["capability_grants"], 0);
+    assert_eq!(report["admission"]["resource_grants"], 0);
+    assert_eq!(report["admission"]["action_grants"], 0);
+    assert_eq!(
+        report["provider_registry"]["grants_admission_authority"],
+        false
+    );
+}
+
+#[test]
 fn ash_run_does_not_emit_verified_artifact_report_before_parse_check_success() {
     let temp = tempdir().expect("tempdir");
     let workflow_path = temp.path().join("bad.ash");

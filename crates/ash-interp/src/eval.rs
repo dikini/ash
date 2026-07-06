@@ -2,8 +2,11 @@
 //!
 //! Evaluates expressions in a runtime context, producing values.
 
+use ash_core::core_ash_contract::TraceFactKind;
 use ash_core::runtime::{
-    CapabilityBindingKind, EffectScopeId, OperationalFailure, ProcessId, ProcessTerminalState,
+    CapabilityBindingKind, EffectScopeId, OperationalFailure, ProcessId,
+    ProcessPropagationBoundary, ProcessPropagationDiagnostic, ProcessTerminalState,
+    RuntimeTraceEvent, RuntimeTraceFact,
 };
 use ash_core::{BinaryOp, Expr, Value, ast::Pattern};
 use futures::future::join_all;
@@ -86,8 +89,22 @@ async fn observe_terminal_process_async(
             })?;
 
     let terminal_state = runtime_state
-        .process_terminal_state(handle.process_id)
+        .wait_for_process_terminal_state(handle.process_id)
         .await;
+    if let Some(terminal_state) = &terminal_state {
+        runtime_state
+            .record_process_propagation_diagnostic(
+                ProcessPropagationDiagnostic::from_terminal_state(
+                    ProcessPropagationBoundary::Await,
+                    runtime_ctx
+                        .process_identity()
+                        .map(|identity| identity.process_id),
+                    handle.process_id,
+                    terminal_state,
+                ),
+            )
+            .await;
+    }
     observe_terminal_state(handle.process_id, terminal_state)
 }
 
@@ -220,6 +237,40 @@ async fn observe_terminal_processes_wait_all_async(
     .into_iter()
     .collect::<Result<Vec<_>, _>>()?;
 
+    if let Some(runtime_state) = runtime_ctx.runtime_state() {
+        let boundary = match observer_name {
+            "join" => ProcessPropagationBoundary::Join,
+            "gather" => ProcessPropagationBoundary::Gather,
+            _ => ProcessPropagationBoundary::Gather,
+        };
+        let observer_process_id = runtime_ctx
+            .process_identity()
+            .map(|identity| identity.process_id);
+        if matches!(boundary, ProcessPropagationBoundary::Join) {
+            runtime_state
+                .record_runtime_trace_fact(RuntimeTraceFact::new(
+                    TraceFactKind::Process,
+                    RuntimeTraceEvent::Join,
+                    observer_process_id
+                        .map(|process_id| format!("{process_id:?}"))
+                        .unwrap_or_else(|| "unknown-observer".to_string()),
+                ))
+                .await;
+        }
+        for (handle, terminal_state) in handles.iter().zip(&terminal_states) {
+            runtime_state
+                .record_process_propagation_diagnostic(
+                    ProcessPropagationDiagnostic::from_terminal_state(
+                        boundary,
+                        observer_process_id,
+                        handle.process_id,
+                        terminal_state,
+                    ),
+                )
+                .await;
+        }
+    }
+
     let mut successes = Vec::with_capacity(terminal_states.len());
     let mut failures = Vec::new();
     for (handle, terminal_state) in handles.iter().zip(terminal_states) {
@@ -267,9 +318,14 @@ fn observe_terminal_state(
 ) -> EvalResult<Value> {
     match terminal_state {
         Some(ash_core::runtime::ProcessTerminalState::Succeeded { value }) => Ok(value),
-        Some(ash_core::runtime::ProcessTerminalState::Failed { failure, .. })
-        | Some(ash_core::runtime::ProcessTerminalState::Cancelled { failure, .. }) => {
+        Some(ash_core::runtime::ProcessTerminalState::Failed { failure, .. }) => {
             Err(EvalError::OperationalFailure(failure))
+        }
+        Some(ash_core::runtime::ProcessTerminalState::Cancelled { failure, .. }) => {
+            Err(EvalError::ProcessCancelled {
+                process_id,
+                failure,
+            })
         }
         None => Err(EvalError::ProcessObservationUnavailable {
             process_id,

@@ -287,6 +287,10 @@ fn ashd_serve_indexes_definitions_without_running_workflows() {
     assert_eq!(cancel["host_mode"], "Daemon");
     assert_eq!(cancel["class"], "cancelled");
     assert_eq!(cancel["status"], "cancelled");
+    assert_eq!(cancel["service_lifecycle"]["lifecycle"], "terminated");
+    assert_eq!(cancel["service_lifecycle"]["shutdown_mode"], "graceful");
+    assert_eq!(cancel["service_lifecycle"]["terminal"], true);
+    assert_eq!(cancel["service_lifecycle"]["retained"], true);
 }
 
 #[cfg(unix)]
@@ -317,6 +321,56 @@ fn ashd_start_protocol_round_trips_args_config_and_admission_profile() {
     assert_eq!(start["admission"]["profile"], "allow");
     assert_eq!(start["admission"]["capability_grants"], 0);
     assert_eq!(start["admission"]["resource_grants"], 0);
+    assert_eq!(
+        start["artifact_summary"]["invocation_packet"]["admission_profile"]["name"],
+        "allow"
+    );
+    assert_eq!(
+        start["artifact_summary"]["invocation_packet"]["admission_profile"]["grants_authority"],
+        false
+    );
+    assert_eq!(
+        start["artifact_summary"]["invocation_packet"]["boundary_bindings"]["boundary_source"],
+        "daemon:start.boundary"
+    );
+    assert_eq!(
+        start["artifact_summary"]["invocation_packet"]["boundary_bindings"]["providers"],
+        serde_json::json!(["Args:0", "Args:1"])
+    );
+    assert_eq!(
+        start["artifact_summary"]["invocation_packet"]["boundary_bindings"]["grants_authority"],
+        false
+    );
+    assert_eq!(
+        start["application_report"]["terminal_outcome"]["status"],
+        "admitted"
+    );
+    assert_eq!(
+        start["application_report"]["terminal_outcome"]["is_terminal"],
+        false
+    );
+    assert_eq!(
+        start["application_report"]["source_identity"],
+        start["artifact_summary"]["invocation_packet"]["source_identity"]
+    );
+    assert_eq!(
+        start["application_report"]["trace_bundle"]["boundary_facts"][0],
+        "boundary_source:daemon:start.boundary"
+    );
+    assert_eq!(
+        start["application_report"]["trace_bundle"]["grants_authority"],
+        false
+    );
+    assert_eq!(
+        start["application_report"]["trace_bundle"]["mutates_authority"],
+        false
+    );
+    assert_eq!(start["service_lifecycle"]["name"], "main");
+    assert_eq!(start["service_lifecycle"]["lifecycle"], "running");
+    assert_eq!(start["service_lifecycle"]["health"], "healthy");
+    assert_eq!(start["service_lifecycle"]["reload_generation"], 0);
+    assert_eq!(start["service_lifecycle"]["terminal"], false);
+    assert_eq!(start["service_lifecycle"]["retained"], true);
     let instance_id = start["instance_id"].as_str().expect("instance id");
 
     let status = daemon_json(&dirs.socket, &["status", "--instance", instance_id]);
@@ -325,6 +379,19 @@ fn ashd_start_protocol_round_trips_args_config_and_admission_profile() {
     assert_eq!(status["config_id"], "default");
     assert_eq!(status["admission"]["status"], "admitted");
     assert_eq!(status["admission"]["profile"], "allow");
+    assert_eq!(
+        status["artifact_summary"]["invocation_packet"]["admission_profile"]["name"],
+        "allow"
+    );
+    assert_eq!(
+        status["artifact_summary"]["invocation_packet"]["boundary_bindings"]["providers"],
+        serde_json::json!(["Args:0", "Args:1"])
+    );
+    assert_eq!(
+        status["application_report"]["terminal_outcome"]["status"],
+        "admitted"
+    );
+    assert_eq!(status["service_lifecycle"], start["service_lifecycle"]);
 
     let list = daemon_json(&dirs.socket, &["list"]);
     let instances = list["instances"].as_array().expect("instances");
@@ -333,6 +400,22 @@ fn ashd_start_protocol_round_trips_args_config_and_admission_profile() {
     assert_eq!(instances[0]["args"], serde_json::json!(["alpha", "beta"]));
     assert_eq!(instances[0]["config_id"], "default");
     assert_eq!(instances[0]["admission"]["profile"], "allow");
+    assert_eq!(
+        instances[0]["artifact_summary"]["invocation_packet"]["admission_profile"]["name"],
+        "allow"
+    );
+    assert_eq!(
+        instances[0]["artifact_summary"]["invocation_packet"]["boundary_bindings"]["providers"],
+        serde_json::json!(["Args:0", "Args:1"])
+    );
+    assert_eq!(
+        instances[0]["application_report"]["terminal_outcome"]["status"],
+        "admitted"
+    );
+    assert_eq!(
+        instances[0]["service_lifecycle"],
+        start["service_lifecycle"]
+    );
 }
 
 #[cfg(unix)]
@@ -528,6 +611,8 @@ fn ashd_reload_updates_definition_table_and_preserves_kernel_mode() {
     let reload = daemon_json(&dirs.socket, &["reload"]);
     assert_eq!(reload["host_mode"], "Daemon");
     assert_eq!(reload["status"], "reloaded");
+    assert_eq!(reload["service_lifecycle"]["lifecycle"], "running");
+    assert_eq!(reload["service_lifecycle"]["reload_generation"], 1);
 
     let second = daemon_json(&dirs.socket, &["start", "main"]);
     let second_artifact = second["artifact_id"].as_str().expect("artifact id");

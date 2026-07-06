@@ -230,10 +230,44 @@ impl CoreRowItem {
         }
     }
 
+    /// Builds a channel requirement row item.
+    #[must_use]
+    pub fn channel<I, S>(path: I, mode: impl Into<CoreName>, payload_type: CoreType) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<CoreName>,
+    {
+        Self::Channel {
+            path: path.into_iter().map(Into::into).collect(),
+            mode: mode.into(),
+            payload_type: Box::new(payload_type),
+        }
+    }
+
+    /// Builds a process runtime requirement row item.
+    #[must_use]
+    pub fn process(operation: impl Into<CoreName>) -> Self {
+        Self::Process {
+            operation: operation.into(),
+        }
+    }
+
     /// Returns true when this row item is an operation requirement.
     #[must_use]
     pub fn is_operation_requirement(&self) -> bool {
         matches!(self, Self::Capability { .. })
+    }
+
+    /// Returns true when this row item is a channel requirement.
+    #[must_use]
+    pub fn is_channel_requirement(&self) -> bool {
+        matches!(self, Self::Channel { .. })
+    }
+
+    /// Returns true when this row item is a process runtime requirement.
+    #[must_use]
+    pub fn is_process_requirement(&self) -> bool {
+        matches!(self, Self::Process { .. })
     }
 }
 

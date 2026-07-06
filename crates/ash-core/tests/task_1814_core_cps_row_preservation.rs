@@ -77,7 +77,7 @@ fn core_current_row_supported_families_survive_cps_lowering() {
     assert!(families.contains(&("policy", "AllowRead", EffectItemKind::Policy)));
     assert!(families.contains(&("contract", "Signed", EffectItemKind::Contract)));
     assert!(families.contains(&("channel", "inbox.recv", EffectItemKind::Channel)));
-    assert!(families.contains(&("proc", "spawn", EffectItemKind::Process)));
+    assert!(families.contains(&("process", "spawn", EffectItemKind::Process)));
     assert!(families.contains(&("fail", "String", EffectItemKind::Failure)));
     assert!(families.contains(&("evidence", "read_allowed", EffectItemKind::Evidence)));
     assert!(families.contains(&("group", "FsReads", EffectItemKind::Group)));

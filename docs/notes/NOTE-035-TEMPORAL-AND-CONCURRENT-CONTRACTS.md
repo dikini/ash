@@ -2,13 +2,13 @@
 
 **Date:** 2026-06-29
 **Status:** Living document — design direction captured; resolves NOTE-014 GAP 5
-**Purpose:** Define temporal/concurrent contracts over Ash's ambient computation model. This note replaces the older idea that `Proc` and `Workflow` need separate contract systems with a single trace-contract substrate whose interpretation becomes richer near the `Proc` and `Workflow` semantic anchors.
+**Purpose:** Define temporal/concurrent contracts over Ash's ambient computation model. This note replaces the older idea that `Proc` and `Workflow` need separate contract systems with a single trace-contract substrate. As of Phase 195, `Act`, `Proc`, and `Workflow` are deprecated development forms and may appear only as legacy reference vocabulary in historical docs.
 
 ## Pre-Spec Delta
 
 This note should be reconciled into the target specs as follows:
 
-- **SPEC-096 / SPEC-096b Effect System:** add trace/monitor-oriented contract effects and clarify that `Pure`, `Act`, `Proc`, and `Workflow` are ordered semantic anchors over one ambient computation model, not disjoint contract mechanisms.
+- **SPEC-096 / SPEC-096b Effect System:** add trace/monitor-oriented contract effects and clarify that old `Pure`, `Act`, `Proc`, and `Workflow` wording is legacy reference vocabulary over one ambient computation model, not target surface/Core/IR/runtime machinery.
 - **SPEC-097b Type System:** define trace-contract well-formedness separately from value-predicate well-formedness. Trace contracts mention typed event facts, monitor clocks, obligation/evidence facts, and policy facts; they do not perform capability or process operations.
 - **SPEC-098b Target IR:** add sidecar shapes for `TraceEvent`, `TraceContract`, `MonitorPlan`, `TemporalContractDiagnostic`, and `WorkflowLedgerFact`.
 - **SPEC-099 Core Language:** clarify that Core may record trace events and attach monitor sidecars without adding a separate `Proc` or `Workflow` term family.
@@ -21,7 +21,7 @@ NOTE-014 identified GAP 5 as the open question for concurrent, distributed, and 
 
 That framing is now too rigid.
 
-Ash has moved from separate `Act`, `Proc`, and `Workflow` monad constructors toward one ambient computation model enriched by rows, handlers, evidence, obligations, provenance, and monitor metadata. `Pure`, `Act`, `Proc`, and `Workflow` remain useful names, but they are semantic anchors on an axis, not hard runtime containers.
+Ash has moved from separate `Act`, `Proc`, and `Workflow` monad constructors toward one ambient computation model enriched by rows, handlers, evidence, obligations, provenance, and monitor metadata. Those old names are now historical reference vocabulary only; new development should use process/channel/governance facts over ambient computations.
 
 So NOTE-035 does not introduce a separate contract system for each old tower level. It introduces one monitorable trace-contract substrate:
 
@@ -32,12 +32,12 @@ ambient computation
   -> workflow interpretation lifts some facts into obligations, commitments, evidence, and stage state
 ```
 
-The difference between `Proc`-like and `Workflow`-like contracts is therefore interpretive:
+The difference between operational and normative trace contracts is therefore interpretive:
 
 ```text
-Proc anchor:      operational trace facts such as spawn, send, receive, fail, cancel, restart
-Workflow anchor:  interpreted facts such as obligation opened/discharged, evidence accepted,
-                  approval committed, stage advanced, compensation required
+operational trace: operational facts such as spawn, send, receive, fail, cancel, restart
+normative trace:   interpreted facts such as obligation opened/discharged, evidence accepted,
+                   approval committed, stage advanced, compensation required
 ```
 
 The machinery is shared. The alphabet and meaning become richer.
@@ -46,13 +46,13 @@ The machinery is shared. The alphabet and meaning become richer.
 
 Temporal/concurrent contracts are **trace contracts over the ambient monad**.
 
-`Pure`, `Act`, `Proc`, and `Workflow` are ordered semantic anchors over that ambient model. They name common regions in the space of rows, effects, traces, obligations, evidence, and governance facts. They are not disjoint contract mechanisms.
+Historical `Pure`, `Act`, `Proc`, and `Workflow` wording names older regions in the space of rows, effects, traces, obligations, evidence, and governance facts. These names are not disjoint contract mechanisms and are not target development forms.
 
 Therefore:
 
 1. A trace contract is checked against an event/fact stream, not against a single value boundary.
-2. `Proc`-like contracts mention operational events: spawn, send, receive, complete, fail, cancel, restart, acquire, release, timeout.
-3. `Workflow`-like contracts mention interpreted facts over the same substrate: obligation opened/discharged, commitment made, evidence accepted, actor authorized, stage committed, compensation required.
+2. Operational contracts mention process/channel events: spawn, send, receive, complete, fail, cancel, restart, acquire, release, timeout.
+3. Normative contracts mention interpreted facts over the same substrate: obligation opened/discharged, commitment made, evidence accepted, actor authorized, stage committed, compensation required.
 4. A computation may mix features from several anchors. The contract is classified by the facts it mentions, not by a hard enclosing type constructor.
 5. Most trace contracts discharge dynamically through monitors. Static proof or model checking may discharge bounded finite-state protocols, but unknown obligations demote to monitors rather than to value-level dynamic predicates.
 6. Monitors consume trace/evidence facts. They do not acquire capability or process authority.
@@ -60,8 +60,8 @@ Therefore:
 Short form:
 
 ```text
-Proc constrains what the runtime trace does.
-Workflow constrains what selected trace facts mean.
+Process/runtime facts constrain what the runtime trace does.
+Normative facts constrain what selected trace facts mean.
 ```
 
 ## 2. Ambient-axis model
@@ -81,14 +81,14 @@ as separate constructors. The target model is better described as:
 Ambient<A, row, evidence, obligations, trace, monitors, ...>
 ```
 
-The semantic anchors are approximate regions of this feature space:
+Operational/normative regions are approximate areas of this feature space:
 
-| Anchor | Typical features | Contract interpretation |
+| Region | Typical features | Contract interpretation |
 |--------|------------------|-------------------------|
-| `Pure` | values, refinements, equations | predicate over values |
-| `Act` | operation rows, authority, action evidence | Hoare boundary over an effectful action |
-| `Proc` | process/channel/lifecycle events | temporal property over operational trace |
-| `Workflow` | obligations, commitments, evidence, policy, stages | temporal/normative property over interpreted trace or ledger |
+| value | values, refinements, equations | predicate over values |
+| operation | operation rows, authority, action evidence | Hoare boundary over an effectful action |
+| process | process/channel/lifecycle events | temporal property over operational trace |
+| normative | obligations, commitments, evidence, policy, stages | temporal/normative property over interpreted trace or ledger |
 
 A computation may carry mixed features:
 
@@ -96,7 +96,8 @@ A computation may carry mixed features:
 {PosixFs::read, channel send Msg, process spawn, obligation approve_invoice, evidence audit_log}
 ```
 
-This is not a violation of the model. It is an ambient computation whose profile sits between and across the semantic anchors.
+This is not a violation of the model. It is an ambient computation whose facts sit across several
+runtime and interpretive regions.
 
 ## 3. Trace contracts versus value contracts
 
@@ -494,10 +495,10 @@ This crosses anchors. It relates an operational message fact to a workflow oblig
 
 ## 16. Design decisions
 
-1. `Pure`, `Act`, `Proc`, and `Workflow` are ordered semantic anchors over one ambient computation model.
+1. `Act`, `Proc`, and `Workflow` are deprecated development forms and legacy reference vocabulary only.
 2. Temporal/concurrent contracts are trace contracts, not separate `Proc` and `Workflow` contract systems.
-3. `Proc`-like contracts mention operational trace facts.
-4. `Workflow`-like contracts mention interpreted obligation/evidence/commitment/policy facts over traces.
+3. Operational contracts mention process/channel trace facts.
+4. Normative contracts mention interpreted obligation/evidence/commitment/policy facts over traces.
 5. Mixed contracts are allowed when their alphabet is mixed and every fact is in scope.
 6. Runtime monitors are the default discharge mechanism for temporal contracts.
 7. Static proof/model checking may discharge bounded finite-state trace contracts.
@@ -549,3 +550,4 @@ This crosses anchors. It relates an operational message fact to a workflow oblig
 | Date       | Change |
 |------------|--------|
 | 2026-06-29 | Initial note. Resolves NOTE-014 GAP 5 by defining trace contracts over the ambient computation model, treating `Pure`/`Act`/`Proc`/`Workflow` as semantic anchors, separating operational trace facts from workflow ledger facts, and specifying monitor discharge, temporal diagnostics, workflow lifting, authority boundaries, and worked examples. |
+| 2026-07-06 | Reconciled with Phase 195: `Act`, `Proc`, and `Workflow` are deprecated development forms and legacy reference vocabulary only; active guidance uses operational process/channel facts and normative ledger facts over ambient computations. |

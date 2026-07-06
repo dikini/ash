@@ -656,12 +656,13 @@ precondition at a sequencing or `bind` boundary. The IR does not need a new term
 monadic Hoare composition; it needs enough sidecar metadata to show that `∀a. Q(a) ⇒ R(a)`
 was proved, evidence-discharged, or left as a dynamic check.
 
-Per NOTE-035, temporal/concurrent contracts lower to `TraceContract` sidecars rather than
-value-level `LoweredPredicate`s. Operational trace facts are `Proc`-like, workflow ledger facts
-are `Workflow`-like, and mixed alphabets are valid in the ambient computation model. Runtime
-monitor plans are the default discharge path; static proof/model-check evidence may discharge
-bounded fragments. Monitor violation and monitor fault diagnostics are distinct, just as false
-predicates and predicate faults are distinct.
+Per NOTE-035 and Phase 195, temporal/concurrent contracts lower to `TraceContract` sidecars rather
+than value-level `LoweredPredicate`s. Process/channel trace facts are operational, workflow ledger
+facts are normative interpretations, and mixed alphabets are valid in the ambient computation
+model. Deprecated `Proc`/`Workflow` vocabulary is legacy reference terminology only, not a target IR
+node or type family. Runtime monitor plans are the default discharge path; static proof/model-check
+evidence may discharge bounded fragments. Monitor violation and monitor fault diagnostics are
+distinct, just as false predicates and predicate faults are distinct.
 
 ## 5. Raise and Handle
 
@@ -825,8 +826,8 @@ Not every `EffectItem` is a resumable algebraic operation. The IR distinguishes:
   static checking, evidence proofs, or runtime boundary checks, not by `Handle` frames.
 
 A capability call lowers to `Raise` with a `Capability` operation. A role admission is not
-raised; it is checked statically or at the workflow boundary. A policy effect is not raised;
-it is evaluated by a policy handler at an explicit boundary. A resource effect is not raised;
+raised; it is checked statically or at the application/runtime boundary. A policy effect is not
+raised; it is evaluated by a policy handler at an explicit boundary. A resource effect is not raised;
 it is discharged through ownership, borrow, split, join, or provenance tracking at the
 runtime boundary.
 
@@ -1465,8 +1466,9 @@ execution begins.
 
 During the migration period, the compiler maintains **two IRs**:
 
-1. **Legacy IR**: The current AST with `Act`, `Proc`, `Workflow`, `Do`, and other
-   migration-era artifacts. This is what the current parser produces.
+1. **Legacy IR**: Historical/current-state AST compatibility artifacts such as `Act`, `Proc`,
+   `Workflow`, `Do`, and other migration-era nodes. These must not be used for new target
+   development.
 2. **Target IR (CPS)**: The new CPS form with `Atom`, `Value`, `Term`, `Call`, `Jump`, etc.
 
 The lowering pipeline is:

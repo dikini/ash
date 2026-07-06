@@ -6,6 +6,86 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Added
+- Added PLAN-196 Application / Workflow Runtime, with TASK-1913 through TASK-1923 covering
+  application entrypoints, admission profiles, role/policy/resource/provider boundaries, reports,
+  traces, supervisors, long-running services, and external actor integration. The plan explicitly
+  treats the legacy `workflow` form as compatibility-only, not a primitive target language island.
+- Added the Phase 196 application runtime seam audit (TASK-1914), mapping CLI run/trace,
+  RuntimeKernel artifacts, daemon/service, admission, provider/resource, process/supervisor,
+  report/trace, legacy workflow compatibility, and external provider seams to owning Phase 196
+  tasks.
+- Reconciled legacy `workflow` form routing for Phase 196 (TASK-1915), adding stale-claim evidence,
+  application/runtime read paths in the spec and note indexes, and target-doc wording that routes
+  runtime entry work through application metadata over checked computations.
+- Added Phase 196 application entrypoint metadata (TASK-1916): RuntimeKernel artifacts now carry
+  `ApplicationEntrypointMetadata`, structured entrypoint diagnostics, and invocation packets with
+  source/check/runtime identity, while `ash run` reports checked-callable metadata for target
+  `fn main` sources without requiring legacy `workflow` syntax.
+- Added Phase 196 admission profile runtime-boundary metadata (TASK-1917): RuntimeKernel invocation
+  packets, `ash run` reports, and daemon instance artifact summaries now carry explicit
+  non-authority admission profile metadata with structured fail-closed diagnostics for missing,
+  malformed, stale, incompatible, or authority-widening profiles.
+- Added Phase 196 application boundary binding metadata (TASK-1918): RuntimeKernel invocation
+  packets now carry non-authority role, policy, resource, provider, and contract binding records
+  with redacted evidence identity, structured fail-closed diagnostics, and one-shot/daemon report
+  coverage without discharging rows or granting authority.
+- Added Phase 196 application runtime reports and trace bundles (TASK-1919): RuntimeKernel reports
+  now project source/check/entrypoint identity, admission profile, boundary bindings, process facts,
+  contract evidence, monitor evidence, and terminal outcome through authority-neutral
+  `ApplicationRuntimeReport` records for one-shot and daemon invocations.
+- Added Phase 196 supervisor runtime profiles (TASK-1920): bounded restart, cancellation,
+  escalation, terminal decision reporting, fail-closed unsupported-policy diagnostics, and
+  supervisor trace evidence now compose over Phase 195 process handles without granting authority.
+- Added Phase 196 long-running service lifecycle records (TASK-1921): services now retain explicit
+  lifecycle, health, reload, graceful/forced shutdown, terminal-retention, and service trace facts,
+  with daemon JSON responses exposing service lifecycle without bypassing admission or authority.
+- Added Phase 196 external actor integration carriers (TASK-1922): runtime adapter registration,
+  typed inbound/outbound validation, sendability enforcement, bounded retry/cancel/timeout/failure
+  diagnostics, and redacted external actor trace facts now compose through explicit capability
+  boundaries without granting authority.
+- Completed Phase 196 Application / Workflow Runtime closeout (TASK-1923): cross-boundary runtime
+  fixtures, stale-claim sweep evidence, plan/task status reconciliation, docs gates, clippy, and
+  full workspace verification now close the application runtime layer over checked computations
+  without reviving the legacy `workflow` form as a target primitive.
+- Added PLAN-195 Process And Concurrency Model, with TASK-1902 through TASK-1912 covering
+  process runtime-profile facts over ambient computation, deprecated `Act`/`Proc`/`Workflow`
+  vocabulary as legacy reference material only, spawn/join/await, channels, cancellation, failure
+  propagation, trace evidence, and sendability/ownership across process boundaries.
+- Added the Phase 195 process runtime seam audit (TASK-1903), mapping existing surface row, Core,
+  CPS, admission, runtime process, channel, contract/evidence, ownership, failure, and trace seams
+  to their owning Phase 195 implementation tasks.
+- Reconciled target specs and orientation indexes for Phase 195 (TASK-1904), marking
+  `Act`/`Proc`/`Workflow` as deprecated development forms and legacy reference vocabulary rather
+  than active target surface, Core, IR, stdlib, or runtime forms.
+- Added Phase 195 process/channel Core row carrier helpers and canonical process row text/CPS
+  lowering (TASK-1905): `CoreRowItem::process`, `CoreRowItem::channel`, channel/process predicate
+  helpers, `process` Core text spelling with legacy `proc` parsing retained, and CPS process rows
+  lowering under the `process` namespace.
+- Added Phase 195 process-boundary sendability validation (TASK-1906): owned primitive,
+  record/variant payloads and unconsumed process handles are accepted, while closures, borrowed
+  resources, capabilities, workflow/control authority, streams, runtime tokens, and consumed process
+  handles fail closed with structured rejection reasons and nested payload paths.
+- Completed Phase 195 bounded spawn/join/await runtime semantics (TASK-1907): existing
+  component-wise child process projection, retained terminal-state records, wait-all join/gather,
+  failure aggregation, and resource split/join boundaries are now covered for the phase, and async
+  `proc::await` waits for running children to reach terminal state instead of polling once.
+- Added Phase 195 bounded typed channel runtime state (TASK-1908): `RuntimeState` can create,
+  send, receive, close, and select-ready-check internal channels, enforcing `ash_typeck::Type`
+  payload schemas, TASK-1906 sendability, FIFO movement, closed/empty/full diagnostics, and a
+  fail-closed unsupported multi-channel select diagnostic.
+- Added Phase 195 process failure propagation diagnostics (TASK-1909): cancellation now surfaces
+  distinctly from ordinary child failure through `EvalError::ProcessCancelled`, and await/join/gather
+  observations retain bounded `ProcessPropagationDiagnostic` records with observer identity,
+  observed process identity, outcome category, payload, and propagation decision.
+- Added Phase 195 runtime trace fact emission and monitor evidence (TASK-1910): process spawn/start/
+  complete/fail/cancel/join and channel send/receive/close operations retain `RuntimeTraceFact`
+  records, with matching redacted `RuntimeMonitorEvidence` rows and authority-free
+  `MonitorAuthorityEnv` consumption.
+- Added Phase 195 cross-boundary process/concurrency fixtures (TASK-1911): parser, engine/typecheck
+  import, Core/CPS, runtime sendability/channel, and CLI JSON diagnostic tests cover canonical
+  `process` rows, channel carriers, ownership transfer, and fail-closed invalid boundaries.
+- Completed Phase 195 Process And Concurrency Model closeout (TASK-1912): plan/task status surfaces,
+  changelog evidence, docs gates, clippy, and the full workspace test suite are reconciled.
 - Added PLAN-194 Contract And Evidence System, with TASK-1891 through TASK-1901 covering target
   `requires`/`ensures`, predicate well-formedness, authority-free contract predicates, evidence
   rows for tests/laws/proofs/runtime monitors, and structured blame diagnostics.

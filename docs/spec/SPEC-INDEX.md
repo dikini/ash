@@ -24,7 +24,8 @@ This index helps humans and agents choose the right specifications before planni
 - `type-system`: typing, type computation, interfaces, constraints, and summaries.
 - `effect-system`: effects, rows, handlers, authority, and provider/handler admission boundaries.
 - `core-ir`: Core Ash, Target IR, CPS IR, and operational/type-checking semantics.
-- `runtime`: process/workflow runtime, observability, resources, and execution behavior.
+- `runtime`: process and application runtime, observability, resources, services, and execution
+  behavior.
 - `testing`: laws, evidence, QuickCheck, mutation, coverage, and test orchestration.
 - `tooling`: CLI, LSP, MCP, formatter, lint, Ashgrove, and reference maintenance tools.
 - `contracts`: contract-specific semantics and Core/type/runtime integration.
@@ -91,6 +92,27 @@ Common tags include: `grammar`, `syntax`, `semantics`, `type-system`, `effect-sy
 22. [PLAN-192](../plan/PLAN-192-SURFACE-POSTFIX-PROJECTION.md) for postfix field projection on ordinary primary expressions.
 23. [PLAN-193](../plan/PLAN-193-SURFACE-TUPLE-ADT-EXPRESSIONS.md) for tuple-payload ADTs in function-first Ash.
 24. [PLAN-194](../plan/PLAN-194-CONTRACT-AND-EVIDENCE-SYSTEM.md) for target contract/evidence planning on top of the firm computation and operation model.
+25. [PLAN-195](../plan/PLAN-195-PROCESS-AND-CONCURRENCY-MODEL.md) for process runtime-profile facts, channel/process rows, sendability/ownership, cancellation, trace evidence, and the active deprecation boundary for `Act`/`Proc`/`Workflow` development forms.
+26. [PLAN-196](../plan/PLAN-196-APPLICATION-WORKFLOW-RUNTIME.md) for application entrypoints over checked computations, admission profiles, boundary resources/providers/policies, reports/traces, supervisors, services, external actors, and the compatibility-only boundary for the legacy `workflow` form.
+
+### Application/runtime planning
+
+1. [PLAN-196](../plan/PLAN-196-APPLICATION-WORKFLOW-RUNTIME.md)
+2. [AUDIT-196](../plan/audits/AUDIT-196-application-runtime-seams.md)
+3. [PLAN-195](../plan/PLAN-195-PROCESS-AND-CONCURRENCY-MODEL.md)
+4. [PLAN-194](../plan/PLAN-194-CONTRACT-AND-EVIDENCE-SYSTEM.md)
+5. [PLAN-184](../plan/PLAN-184-HANDLER-PROVIDER-SEMANTICS.md)
+6. [PLAN-183](../plan/PLAN-183-OPERATION-AUTHORITY-MODEL.md)
+7. [SPEC-096b](SPEC-096b-TARGET-EFFECT-SYSTEM.md)
+8. [SPEC-097b](SPEC-097b-TARGET-TYPE-SYSTEM.md)
+9. [SPEC-098b](SPEC-098b-TARGET-IR.md)
+10. [SPEC-099b](SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md)
+11. [SPEC-100](SPEC-100-CORE-TYPE-CHECKING.md)
+
+Use this path when work involves application entrypoints, admission profiles, reports/traces,
+supervisors, services, daemon/runtime hosting, or external actor integration. Legacy `workflow`
+syntax is compatibility input only; target planning routes through application metadata over
+ordinary checked computations.
 
 ### Legacy authority vocabulary audit
 
@@ -230,20 +252,20 @@ Common tags include: `grammar`, `syntax`, `semantics`, `type-system`, `effect-sy
 | [SPEC-095c-SURFACE-AST-MACROS-AND-NOTATION.md](SPEC-095c-SURFACE-AST-MACROS-AND-NOTATION.md) | draft | language-surface | grammar, syntax, semantics, target-state, tooling | target-state spec | SPEC-095b; SPEC-097b; SPEC-098c; PLAN-167; PLAN-171; PLAN-172; PLAN-173 |
 | [SPEC-096-UNIFIED-EFFECT-SYSTEM.md](SPEC-096-UNIFIED-EFFECT-SYSTEM.md) | Historical bridge draft superseded by SPEC-096a/SPEC-096b split | contracts | authority, contract, effect-system, references | superseded/historical spec | SPEC-096a; SPEC-096b; PLAN-181 |
 | [SPEC-096a-CURRENT-EFFECT-SYSTEM.md](SPEC-096a-CURRENT-EFFECT-SYSTEM.md) | active | effect-system | authority, current-state, effect-system | current-state spec | — |
-| [SPEC-096b-TARGET-EFFECT-SYSTEM.md](SPEC-096b-TARGET-EFFECT-SYSTEM.md) | draft | effect-system | authority, effect-system, target-state | target-state spec | NOTE-013; NOTE-020; NOTE-022; NOTE-034; NOTE-035 |
+| [SPEC-096b-TARGET-EFFECT-SYSTEM.md](SPEC-096b-TARGET-EFFECT-SYSTEM.md) | draft | effect-system | authority, effect-system, target-state | target-state spec | NOTE-013; NOTE-020; NOTE-022; NOTE-034; NOTE-035; PLAN-195 |
 | [SPEC-097-TYPE-SYSTEM-CHANGES.md](SPEC-097-TYPE-SYSTEM-CHANGES.md) | Historical bridge draft superseded by SPEC-097b and SPEC-100 for target typing | effect-system | authority, effect-system, references, type-system | superseded/historical spec | SPEC-097b; SPEC-100; PLAN-181 |
 | [SPEC-097a-CURRENT-TYPE-SYSTEM.md](SPEC-097a-CURRENT-TYPE-SYSTEM.md) | active | type-system | current-state, type-system | current-state spec | — |
-| [SPEC-097b-TARGET-TYPE-SYSTEM.md](SPEC-097b-TARGET-TYPE-SYSTEM.md) | draft | type-system | target-state, type-system | target-state spec | NOTE-025; NOTE-031; NOTE-033; SPEC-095c; SPEC-098c; SPEC-100; PLAN-173 |
+| [SPEC-097b-TARGET-TYPE-SYSTEM.md](SPEC-097b-TARGET-TYPE-SYSTEM.md) | draft | type-system | target-state, type-system | target-state spec | NOTE-025; NOTE-031; NOTE-033; SPEC-095c; SPEC-098c; SPEC-100; PLAN-173; PLAN-195 |
 | [SPEC-098-IR-CHANGES.md](SPEC-098-IR-CHANGES.md) | Historical bridge draft superseded by SPEC-098b/SPEC-098c for target IR/lowering | core-ir | authority, core-ir, effect-system, references, semantics | superseded/historical spec | SPEC-098b; SPEC-098c; PLAN-181 |
 | [SPEC-098a-CURRENT-IR.md](SPEC-098a-CURRENT-IR.md) | active | core-ir | core-ir, current-state, semantics | current-state spec | — |
-| [SPEC-098b-TARGET-IR.md](SPEC-098b-TARGET-IR.md) | draft | core-ir | core-ir, semantics, target-state | target-state spec | SPEC-098c; SPEC-099b; SPEC-100; PLAN-165 |
-| [SPEC-098c-SURFACE-TO-CORE-LOWERING.md](SPEC-098c-SURFACE-TO-CORE-LOWERING.md) | draft | core-ir | core-ir, grammar, semantics, target-state | target-state spec | SPEC-095c; SPEC-097b; SPEC-098b; SPEC-100; PLAN-167; PLAN-171; PLAN-172; PLAN-173 |
+| [SPEC-098b-TARGET-IR.md](SPEC-098b-TARGET-IR.md) | draft | core-ir | core-ir, semantics, target-state | target-state spec | SPEC-098c; SPEC-099b; SPEC-100; PLAN-165; PLAN-195 |
+| [SPEC-098c-SURFACE-TO-CORE-LOWERING.md](SPEC-098c-SURFACE-TO-CORE-LOWERING.md) | draft | core-ir | core-ir, grammar, semantics, target-state | target-state spec | SPEC-095c; SPEC-097b; SPEC-098b; SPEC-100; PLAN-167; PLAN-171; PLAN-172; PLAN-173; PLAN-195 |
 | [SPEC-099-CORE-LANGUAGE.md](SPEC-099-CORE-LANGUAGE.md) | Implemented MVP (Phase 161) / design-level formal spec | core-ir | core-ir, implemented, semantics | implemented spec / formal design reference | SPEC-098b; SPEC-100; SPEC-101; SPEC-102; [PLAN-161](../plan/PLAN-161-CORE-ASH-IR-FOUNDATION.md); TASK-1805 |
 | [SPEC-099-OPERATIONAL-SEMANTICS.md](SPEC-099-OPERATIONAL-SEMANTICS.md) | Historical bridge draft superseded by SPEC-099b for target operational semantics | core-ir | authority, core-ir, effect-system, references, semantics | superseded/historical spec | SPEC-099b; PLAN-181 |
 | [SPEC-099a-CURRENT-OPERATIONAL-SEMANTICS.md](SPEC-099a-CURRENT-OPERATIONAL-SEMANTICS.md) | active | core-ir | core-ir, current-state, semantics | current-state spec | — |
-| [SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md](SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md) | draft | core-ir | core-ir, runtime, semantics, target-state | target-state spec | SPEC-098b; SPEC-098c; SPEC-100; SPEC-101; PLAN-167 |
+| [SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md](SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md) | draft | core-ir | core-ir, runtime, semantics, target-state | target-state spec | SPEC-098b; SPEC-098c; SPEC-100; SPEC-101; PLAN-167; PLAN-195 |
 | [SPEC-099c-CPS-IR-EXPANDED-OPERATIONAL-SEMANTICS.md](SPEC-099c-CPS-IR-EXPANDED-OPERATIONAL-SEMANTICS.md) | draft | core-ir | core-ir, semantics | normative spec | — |
-| [SPEC-100-CORE-TYPE-CHECKING.md](SPEC-100-CORE-TYPE-CHECKING.md) | Implemented MVP (Phase 162) / design-level formal spec | core-ir | core-ir, implemented, semantics, type-system | implemented spec / formal design reference | SPEC-097b; SPEC-098b; SPEC-099; [PLAN-162](../plan/PLAN-162-CORE-ASH-TYPE-CHECKING.md); PLAN-165; TASK-1805 |
+| [SPEC-100-CORE-TYPE-CHECKING.md](SPEC-100-CORE-TYPE-CHECKING.md) | Implemented MVP (Phase 162) / design-level formal spec | core-ir | core-ir, implemented, semantics, type-system | implemented spec / formal design reference | SPEC-097b; SPEC-098b; SPEC-099; [PLAN-162](../plan/PLAN-162-CORE-ASH-TYPE-CHECKING.md); PLAN-165; PLAN-195; TASK-1805 |
 | [SPEC-101-LAZY-AND-MEMO-COMPUTATION-MODES.md](SPEC-101-LAZY-AND-MEMO-COMPUTATION-MODES.md) | Implemented MVP (Phase 163); force-time authority phrased in provider/handler/resource target terms | core-ir | authority, core-ir, implemented, semantics, type-system | implemented spec | NOTE-028; SPEC-096b; SPEC-099; SPEC-100; [PLAN-163](../plan/PLAN-163-CORE-LAZY-MEMO-MODES.md); TASK-1805 |
 | [SPEC-102-CPS-CONTINUATION-MULTIPLICITY.md](SPEC-102-CPS-CONTINUATION-MULTIPLICITY.md) | Implemented MVP (Phase 164) | core-ir | core-ir, implemented, semantics | implemented spec | SPEC-099c; [PLAN-164](../plan/PLAN-164-CORE-CPS-CONTINUATION-MULTIPLICITY.md); TASK-1805 |
 | [SPEC-BUILTIN-FN.md](SPEC-BUILTIN-FN.md) | Draft | general | orientation | normative spec | — |

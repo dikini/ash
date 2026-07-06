@@ -89,6 +89,12 @@ pub enum EvalError {
     #[error("operational failure: {0:?}")]
     OperationalFailure(Box<OperationalFailure>),
 
+    #[error("process {process_id:?} was cancelled: {failure:?}")]
+    ProcessCancelled {
+        process_id: ProcessId,
+        failure: Box<OperationalFailure>,
+    },
+
     #[error("process handle already consumed for process {process_id:?}")]
     ProcessHandleConsumed { process_id: ProcessId },
 

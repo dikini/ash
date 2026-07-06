@@ -10,10 +10,13 @@ use anyhow::{Context, Result};
 use ash_core::capability::{CapabilityError, CapabilityProvider};
 use ash_core::runtime_kernel::{
     AdmissionIdentity, AlphaAdmissionDecision, AlphaAdmissionProfile, AlphaAdmissionStatus,
-    ProviderRegistryIdentity, RuntimeConfigId, RuntimeEngineRelationship, RuntimeHostMode,
-    RuntimeKernelArtifactLanguageSummary, RuntimeKernelIdentity, RuntimeProfileId,
-    RuntimeProfileIdentity, RuntimeRootSet, RuntimeRootSetId, WorkflowArtifactIdentity,
-    WorkflowDefinitionIdentity, WorkflowInstanceIdentity,
+    ApplicationAdmissionProfile, ApplicationBoundaryBindingManifest, ApplicationBoundaryBindings,
+    ApplicationEntrypointMetadata, ApplicationInvocationPacket, ApplicationRuntimeReport,
+    ApplicationTerminalOutcome, ApplicationTraceBundle, ProviderRegistryIdentity, RuntimeConfigId,
+    RuntimeEngineRelationship, RuntimeHostMode, RuntimeKernelArtifactLanguageSummary,
+    RuntimeKernelIdentity, RuntimeProfileId, RuntimeProfileIdentity, RuntimeRootSet,
+    RuntimeRootSetId, WorkflowArtifactIdentity, WorkflowDefinitionIdentity,
+    WorkflowInstanceIdentity,
 };
 use ash_core::{Constraint, Effect, Value};
 use ash_engine::EngineError;
@@ -160,6 +163,7 @@ pub async fn run(args: &RunArgs) -> Result<RunOutcome> {
     } else {
         source_kind
     };
+    let entrypoint_selection = runtime_entrypoint_selection(&source, selection.workflow.is_some());
     let use_entry_bootstrap = should_use_entry_bootstrap(source_kind);
     let workflow_name = selection.workflow.as_deref().unwrap_or("main");
     let host_mode = if args.trace {
@@ -192,6 +196,7 @@ pub async fn run(args: &RunArgs) -> Result<RunOutcome> {
                 path,
                 &source,
                 workflow_name,
+                entrypoint_selection,
                 host_mode,
                 admission_profile,
                 &args.program_args,
@@ -314,7 +319,7 @@ pub async fn run(args: &RunArgs) -> Result<RunOutcome> {
     match outcome {
         Ok(outcome) => {
             if let Some(kernel) = &kernel {
-                kernel.emit_report_if_requested()?;
+                kernel.emit_report_if_requested(ApplicationTerminalOutcome::succeeded())?;
             }
             Ok(outcome)
         }
@@ -322,7 +327,9 @@ pub async fn run(args: &RunArgs) -> Result<RunOutcome> {
             if let Some(kernel) = &kernel
                 && should_emit_kernel_report_for_error(&error)
             {
-                kernel.emit_report_if_requested()?;
+                kernel.emit_report_if_requested(ApplicationTerminalOutcome::failed(
+                    error.to_string(),
+                ))?;
             }
             Err(error)
         }
@@ -374,6 +381,12 @@ struct OneShotRuntimeKernel {
     admission_profile: AlphaAdmissionProfile,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum RuntimeEntrypointSelection {
+    CheckedCallable,
+    LegacyWorkflowCompatibility,
+}
+
 #[derive(Debug, Serialize)]
 struct OneShotKernelReport<'a> {
     kernel_id: String,
@@ -384,6 +397,7 @@ struct OneShotKernelReport<'a> {
     instance_id: String,
     admission: AdmissionReport<'a>,
     provider_registry: ProviderRegistryReport,
+    application_report: ApplicationRuntimeReport,
     source_hash: &'a str,
     check_summary_hash: &'a str,
     artifact_summary: &'a RuntimeKernelArtifactLanguageSummary,
@@ -395,12 +409,14 @@ struct OneShotAdmissionRejectionReport<'a> {
     workflow: &'a str,
     admission: AdmissionReport<'a>,
     provider_registry: ProviderRegistryReport,
+    application_report: ApplicationRuntimeReport,
 }
 
 #[derive(Debug, Serialize)]
 struct AdmissionReport<'a> {
     status: &'static str,
     profile: &'a str,
+    profile_boundary: &'a ApplicationAdmissionProfile,
     #[serde(skip_serializing_if = "Option::is_none")]
     reason: Option<&'a str>,
     capability_grants: usize,
@@ -430,6 +446,7 @@ impl OneShotRuntimeKernel {
         path: &Path,
         source: &str,
         workflow_name: &str,
+        entrypoint_selection: RuntimeEntrypointSelection,
         host_mode: RuntimeHostMode,
         admission_profile: AlphaAdmissionProfile,
         program_args: &[String],
@@ -444,18 +461,45 @@ impl OneShotRuntimeKernel {
             .file_name()
             .and_then(|name| name.to_str())
             .unwrap_or("<source>");
-        let verified_artifact = build_runtime_kernel_artifact(
-            &RuntimeArtifactBuildRequest::new(
-                root_id.as_str(),
-                relative_module_path,
-                workflow_name,
-                profile_id.as_str(),
-                config_id.as_str(),
-                source,
-                format!("workflow={workflow_name};check=alpha-runtime-kernel-shared"),
-            )
-            .with_runtime_support_identity(selected_runtime_support_identity()),
-        )?;
+        let mut artifact_request = match entrypoint_selection {
+            RuntimeEntrypointSelection::CheckedCallable => {
+                RuntimeArtifactBuildRequest::new_application_entrypoint(
+                    root_id.as_str(),
+                    relative_module_path,
+                    workflow_name,
+                    format!("callable:{relative_module_path}::{workflow_name}"),
+                    format!("runtime-target:application-entry:{workflow_name}"),
+                    profile_id.as_str(),
+                    config_id.as_str(),
+                    source,
+                    format!(
+                        "entrypoint={workflow_name};callable={relative_module_path}::{workflow_name};check=application-runtime-kernel-shared"
+                    ),
+                )?
+            }
+            RuntimeEntrypointSelection::LegacyWorkflowCompatibility => {
+                RuntimeArtifactBuildRequest::new(
+                    root_id.as_str(),
+                    relative_module_path,
+                    workflow_name,
+                    profile_id.as_str(),
+                    config_id.as_str(),
+                    source,
+                    format!("workflow={workflow_name};check=alpha-runtime-kernel-shared"),
+                )
+            }
+        };
+        artifact_request =
+            artifact_request.with_admission_profile(ApplicationAdmissionProfile::runtime_boundary(
+                admission_profile.as_str(),
+                "cli:--admission-profile",
+                false,
+            )?);
+        artifact_request =
+            artifact_request.with_boundary_bindings(runtime_boundary_bindings(program_args)?);
+        artifact_request =
+            artifact_request.with_runtime_support_identity(selected_runtime_support_identity());
+        let verified_artifact = build_runtime_kernel_artifact(&artifact_request)?;
         let artifact_summary =
             RuntimeKernelArtifactLanguageSummary::from_verified_artifact(&verified_artifact);
         let roots = RuntimeRootSet::new(
@@ -503,12 +547,15 @@ impl OneShotRuntimeKernel {
         })
     }
 
-    fn emit_report_if_requested(&self) -> Result<()> {
+    fn emit_report_if_requested(&self, terminal_outcome: ApplicationTerminalOutcome) -> Result<()> {
         let Ok(mode) = std::env::var("ASH_RUNTIME_KERNEL_REPORT") else {
             return Ok(());
         };
         if mode.eq_ignore_ascii_case("json") {
-            eprintln!("{}", serde_json::to_string_pretty(&self.report())?);
+            eprintln!(
+                "{}",
+                serde_json::to_string_pretty(&self.report(terminal_outcome))?
+            );
         } else {
             eprintln!(
                 "runtime_kernel.host_mode={}",
@@ -526,7 +573,11 @@ impl OneShotRuntimeKernel {
         Ok(())
     }
 
-    fn report(&self) -> OneShotKernelReport<'_> {
+    fn report(&self, terminal_outcome: ApplicationTerminalOutcome) -> OneShotKernelReport<'_> {
+        let application_report = application_report_from_invocation_packet(
+            &self.artifact_summary.invocation_packet,
+            terminal_outcome,
+        );
         OneShotKernelReport {
             kernel_id: self.identity.id.to_string(),
             host_mode: host_mode_label(self.identity.host_mode),
@@ -537,6 +588,7 @@ impl OneShotRuntimeKernel {
             admission: AdmissionReport {
                 status: AlphaAdmissionStatus::Admitted.as_str(),
                 profile: self.admission_profile.as_str(),
+                profile_boundary: &self.artifact_summary.invocation_packet.admission_profile,
                 reason: None,
                 capability_grants: self.instance.admission.capability_grants.len(),
                 resource_grants: self.instance.admission.resource_grants.len(),
@@ -575,6 +627,7 @@ impl OneShotRuntimeKernel {
                     .provider_registry
                     .grants_admission_authority(),
             },
+            application_report,
             source_hash: &self.identity.cache_key.source_hash,
             check_summary_hash: &self.identity.cache_key.check_summary_hash,
             artifact_summary: &self.artifact_summary,
@@ -593,16 +646,38 @@ fn emit_admission_rejection_report_if_requested(
         return Ok(());
     };
     let reason = admission_decision.reason.as_deref();
+    let profile_boundary = ApplicationAdmissionProfile::runtime_boundary(
+        admission_profile.as_str(),
+        "cli:--admission-profile",
+        false,
+    )?;
+    let boundary_bindings = runtime_boundary_bindings(program_args)?;
     if mode.eq_ignore_ascii_case("json") {
         let provider_registry =
             ProviderRegistryIdentity::new(runtime_arg_provider_names(program_args));
         let grants_admission_authority = provider_registry.grants_admission_authority();
+        let invocation_packet = ApplicationInvocationPacket::new(
+            ApplicationEntrypointMetadata::legacy_workflow_compatibility(
+                workflow_name,
+                "<admission-rejected>",
+            ),
+            profile_boundary.clone(),
+            boundary_bindings,
+            "admission-rejected-source",
+            "admission-rejected-check",
+            format!("runtime-target:admission-rejected:{workflow_name}"),
+        );
+        let application_report = application_report_from_invocation_packet(
+            &invocation_packet,
+            ApplicationTerminalOutcome::rejected(reason.unwrap_or("admission rejected")),
+        );
         let report = OneShotAdmissionRejectionReport {
             host_mode: host_mode_label(host_mode),
             workflow: workflow_name,
             admission: AdmissionReport {
                 status: admission_decision.status.as_str(),
                 profile: admission_profile.as_str(),
+                profile_boundary: &profile_boundary,
                 reason,
                 capability_grants: 0,
                 resource_grants: 0,
@@ -615,6 +690,7 @@ fn emit_admission_rejection_report_if_requested(
                 provider_names: provider_registry.provider_names,
                 grants_admission_authority,
             },
+            application_report,
         };
         eprintln!("{}", serde_json::to_string_pretty(&report)?);
     } else {
@@ -649,6 +725,31 @@ fn runtime_arg_provider_names(program_args: &[String]) -> Vec<String> {
         .enumerate()
         .map(|(index, _)| format!("Args:{index}"))
         .collect()
+}
+
+fn runtime_boundary_bindings(
+    program_args: &[String],
+) -> Result<
+    ApplicationBoundaryBindings,
+    ash_core::runtime_kernel::ApplicationBoundaryBindingDiagnostic,
+> {
+    ApplicationBoundaryBindings::from_manifest(
+        "cli:runtime-boundary",
+        ApplicationBoundaryBindingManifest {
+            providers: runtime_arg_provider_names(program_args),
+            grants_authority: false,
+            ..ApplicationBoundaryBindingManifest::default()
+        },
+    )
+}
+
+fn application_report_from_invocation_packet(
+    invocation_packet: &ApplicationInvocationPacket,
+    terminal_outcome: ApplicationTerminalOutcome,
+) -> ApplicationRuntimeReport {
+    let trace_bundle =
+        ApplicationTraceBundle::from_invocation_packet(invocation_packet, Vec::new(), Vec::new());
+    ApplicationRuntimeReport::new(invocation_packet, terminal_outcome, trace_bundle)
 }
 
 /// Build an engine with default capabilities
@@ -1100,6 +1201,18 @@ fn classify_workflow_source(source: &str) -> WorkflowSourceKind {
         WorkflowSourceKind::LeadingRuntimePrelude
     } else {
         WorkflowSourceKind::Ordinary
+    }
+}
+
+fn runtime_entrypoint_selection(
+    source: &str,
+    explicit_legacy_workflow_selector: bool,
+) -> RuntimeEntrypointSelection {
+    let (tokens, _errors) = lex_with_recovery(source);
+    if !explicit_legacy_workflow_selector && contains_fn_main_entry(&tokens) {
+        RuntimeEntrypointSelection::CheckedCallable
+    } else {
+        RuntimeEntrypointSelection::LegacyWorkflowCompatibility
     }
 }
 

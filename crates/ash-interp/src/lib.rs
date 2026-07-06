@@ -21,6 +21,7 @@ pub mod capability;
 pub mod capability_policy;
 pub mod capability_policy_runtime;
 pub mod capability_provenance;
+pub mod channel;
 pub mod constraint_enforcement;
 pub mod context;
 pub mod control_link;
@@ -65,6 +66,7 @@ pub use capability_policy::{
     Direction, Policy as CapabilityPolicy, PolicyDecision, PolicyError, Reason, Role,
     Transformation,
 };
+pub use channel::{ChannelError, ChannelId, ChannelRegistry};
 pub use constraint_enforcement::{ConstraintEnforcer, ConstraintViolation};
 pub use context::Context;
 pub use control_link::{

@@ -22,7 +22,8 @@ This index helps humans and agents choose the right design notes before editing 
 
 - `ambient-computation`: ambient monad, handlers, effects, rows, and semantic anchors.
 - `contracts`: contract semantics, lowering, diagnostics, trace contracts, and implementation handoffs.
-- `runtime`: runtime organization, host/FFI, bottom, observability, and operational behavior.
+- `runtime`: runtime organization, application hosting, host/FFI, bottom, observability, and
+  operational behavior.
 - `workflow`: workflow forms, obligations, participants, and process/workflow interpretation.
 - `type-system`: type-level constructs, nominals, newtypes, protocols, and type computation.
 - `tooling`: MCP/LSP/benchmark/evaluation notes.
@@ -49,6 +50,7 @@ Common tags include: `grammar`, `syntax`, `semantics`, `type-system`, `effect-sy
 2. [NOTE-034](NOTE-034-CONTRACT-CAPABILITY-BOUNDARY.md)
 3. [PLAN-165](../plan/PLAN-165-CONTRACT-SYSTEM-IMPLEMENTATION-HANDOFF.md)
 4. [PLAN-194](../plan/PLAN-194-CONTRACT-AND-EVIDENCE-SYSTEM.md) for runtime monitor evidence rows and temporal diagnostics.
+5. [PLAN-195](../plan/PLAN-195-PROCESS-AND-CONCURRENCY-MODEL.md) for process/channel trace facts and the active `Act`/`Proc`/`Workflow` deprecation boundary.
 
 ### Work on ambient computation, handlers, and effect identity
 
@@ -85,6 +87,22 @@ Common tags include: `grammar`, `syntax`, `semantics`, `type-system`, `effect-sy
 19. [PLAN-192](../plan/PLAN-192-SURFACE-POSTFIX-PROJECTION.md) for postfix field projection on ordinary primary expressions.
 20. [PLAN-193](../plan/PLAN-193-SURFACE-TUPLE-ADT-EXPRESSIONS.md) for tuple-payload ADTs in function-first Ash.
 21. [PLAN-194](../plan/PLAN-194-CONTRACT-AND-EVIDENCE-SYSTEM.md) for target contract/evidence obligations layered over the function-first computation model.
+22. [PLAN-195](../plan/PLAN-195-PROCESS-AND-CONCURRENCY-MODEL.md) for process runtime-profile facts without reviving deprecated `Act`/`Proc`/`Workflow` development forms.
+23. [PLAN-196](../plan/PLAN-196-APPLICATION-WORKFLOW-RUNTIME.md) for application/runtime entrypoints, admission profiles, role/policy/resource/provider boundaries, reports/traces, supervisors, services, external actors, and the compatibility-only legacy `workflow` boundary.
+
+### Work on application/runtime organization
+
+1. [NOTE-016](NOTE-016-RUNTIME-ORGANIZATION-BEHAVIOURS-REACTIVE-MODES.md)
+2. [PLAN-196](../plan/PLAN-196-APPLICATION-WORKFLOW-RUNTIME.md)
+3. [AUDIT-196](../plan/audits/AUDIT-196-application-runtime-seams.md)
+4. [PLAN-195](../plan/PLAN-195-PROCESS-AND-CONCURRENCY-MODEL.md)
+5. [PLAN-194](../plan/PLAN-194-CONTRACT-AND-EVIDENCE-SYSTEM.md)
+6. [NOTE-015](NOTE-015-CURRENT-TO-TARGET-LANGUAGE-FORMS.md)
+7. [NOTE-035](NOTE-035-TEMPORAL-AND-CONCURRENT-CONTRACTS.md)
+
+Use this path for application entrypoints, runtime kernels, daemon/service lifecycle, supervisors,
+reports/traces, and external actor integration. Treat legacy `workflow` syntax as compatibility
+input or historical context, not as a target runtime primitive.
 
 ### Change target handler/effect/operation syntax
 
@@ -121,7 +139,7 @@ Common tags include: `grammar`, `syntax`, `semantics`, `type-system`, `effect-sy
 | [NOTE-013-AMBIENT-MONAD-AND-HANDLER-COMPOSITION-ALGEBRA.md](NOTE-013-AMBIENT-MONAD-AND-HANDLER-COMPOSITION-ALGEBRA.md) | Living document — exploration in progress | ambient-computation | effect-system | living design note | NOTE-020; NOTE-022; SPEC-096b; SPEC-097b |
 | [NOTE-014-CONTRACT-SYSTEMS-UNIFICATION.md](NOTE-014-CONTRACT-SYSTEMS-UNIFICATION.md) | Closed as design gap register — resolved by NOTE-027 through NOTE-035; implementation handoff tracked by PLAN-165 | contracts | contract | convergence note | NOTE-027..NOTE-035; PLAN-165 |
 | [NOTE-015-CURRENT-TO-TARGET-LANGUAGE-FORMS.md](NOTE-015-CURRENT-TO-TARGET-LANGUAGE-FORMS.md) | Living document — exploration in progress | general | orientation | living design note | — |
-| [NOTE-016-RUNTIME-ORGANIZATION-BEHAVIOURS-REACTIVE-MODES.md](NOTE-016-RUNTIME-ORGANIZATION-BEHAVIOURS-REACTIVE-MODES.md) | Living document — exploration in progress | runtime | runtime | living design note | — |
+| [NOTE-016-RUNTIME-ORGANIZATION-BEHAVIOURS-REACTIVE-MODES.md](NOTE-016-RUNTIME-ORGANIZATION-BEHAVIOURS-REACTIVE-MODES.md) | Living document — exploration in progress; Phase 196 owns application/runtime implementation routing | runtime | runtime | living design note | PLAN-196; PLAN-195 |
 | [NOTE-017-MEMORY-REGIONS-OWNERSHIP-AND-UTILIZATION.md](NOTE-017-MEMORY-REGIONS-OWNERSHIP-AND-UTILIZATION.md) | Living document — exploration in progress | memory | ownership | living design note | — |
 | [NOTE-018-BOUNDARY-DISCIPLINE.md](NOTE-018-BOUNDARY-DISCIPLINE.md) | Living document — inventory in progress | ambient-computation | effect-system | living design note | — |
 | [NOTE-019-TARGET-ASH-CONVERGENCE-PLAN.md](NOTE-019-TARGET-ASH-CONVERGENCE-PLAN.md) | Draft note — convergence map, not an implementation plan | general | orientation | design note | — |
@@ -140,7 +158,7 @@ Common tags include: `grammar`, `syntax`, `semantics`, `type-system`, `effect-sy
 | [NOTE-032-CONTRACT-SOUNDNESS-OBLIGATIONS.md](NOTE-032-CONTRACT-SOUNDNESS-OBLIGATIONS.md) | Living document — design direction captured; resolves NOTE-014 GAP 7 | contracts | contract, core-ir | convergence note | — |
 | [NOTE-033-SURFACE-TO-CORE-CONTRACT-LOWERING.md](NOTE-033-SURFACE-TO-CORE-CONTRACT-LOWERING.md) | Living document — design direction captured; resolves NOTE-014 GAP 9 | contracts | contract, core-ir | convergence note | NOTE-031; NOTE-034; SPEC-098b; SPEC-100; PLAN-165 |
 | [NOTE-034-CONTRACT-CAPABILITY-BOUNDARY.md](NOTE-034-CONTRACT-CAPABILITY-BOUNDARY.md) | Living document — design direction captured; resolves NOTE-014 GAP 8 | contracts | authority, contract, core-ir | convergence note | NOTE-033; NOTE-035; SPEC-096b; SPEC-099 |
-| [NOTE-035-TEMPORAL-AND-CONCURRENT-CONTRACTS.md](NOTE-035-TEMPORAL-AND-CONCURRENT-CONTRACTS.md) | Living document — design direction captured; resolves NOTE-014 GAP 5 | contracts | contract, core-ir, temporal, trace | convergence note | NOTE-034; SPEC-098b; SPEC-099; PLAN-165 |
+| [NOTE-035-TEMPORAL-AND-CONCURRENT-CONTRACTS.md](NOTE-035-TEMPORAL-AND-CONCURRENT-CONTRACTS.md) | Living document — design direction captured; resolves NOTE-014 GAP 5; Phase 195 fences `Act`/`Proc`/`Workflow` as legacy vocabulary only | contracts | contract, core-ir, temporal, trace | convergence note | NOTE-034; SPEC-098b; SPEC-099; PLAN-165; PLAN-195 |
 | [PHASE-142-PERFORMANCE-BENCHMARK.md](PHASE-142-PERFORMANCE-BENCHMARK.md) | unspecified | tooling | tooling | design note | — |
 | [PHASE-143-MCP-CROSS-LANGUAGE-EVALUATION.md](PHASE-143-MCP-CROSS-LANGUAGE-EVALUATION.md) | unspecified | tooling | tooling | design note | — |
 | [diagnostic-span-default-tech-debt.md](diagnostic-span-default-tech-debt.md) | unspecified | general | diagnostics | design note | — |

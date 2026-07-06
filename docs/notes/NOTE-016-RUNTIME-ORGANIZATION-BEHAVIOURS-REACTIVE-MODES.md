@@ -5,8 +5,9 @@
 **Purpose:** Separate Ash's runtime organization story from overloaded `workflow`
 syntax. Defines the missing meta-layer for multi-app runtime hosting, explicit
 bootstrapping, supervision, behaviour patterns, and push/pull/declarative reactive modes.
-Companion to NOTE-015 (current-to-target language forms), SPEC-070 (runtime kernel), and
-the OTP/process/stream/comonad design notes.
+Companion to NOTE-015 (current-to-target language forms), SPEC-070 (runtime kernel), PLAN-195
+(process/concurrency runtime profiles), PLAN-196 (application/runtime layer), and the
+OTP/process/stream/comonad design notes.
 
 ## 0. Motivation
 
@@ -24,9 +25,12 @@ The overloaded uses are different things:
 6. **Stream/dataflow:** pull, push, or graph-based propagation.
 7. **Application runtime:** an OS-facing unit started by a kernel/daemon.
 
-When these are collapsed into one construct, workflow start, supervision, message routing,
-agent lifecycle, and reactive behavior feel magical. The target language direction should
-make each layer explicit and composable.
+When these are collapsed into one construct, workflow start, supervision, message routing, agent
+lifecycle, and reactive behavior feel magical. The target language direction should make each layer
+explicit and composable. Phase 196 owns the application/runtime layer: application entrypoints
+select ordinary checked computations and bind admission, resources, policies, reports,
+supervisors, services, and external actors without reviving the legacy `workflow` form as a target
+primitive.
 
 ## 1. The Missing Meta-Story: Runtime, Apps, and Instances
 
@@ -57,7 +61,7 @@ This is the meta-level distinction:
 | App instance | One admitted running app | `AppInstanceId` |
 | Supervisor tree | Runtime organization inside an app | `SupervisorId`, `ChildId` |
 | Process/service instance | Scheduled unit of execution | `ProcessId`, `ServiceId` |
-| Workflow instance | Governed computation instance | `WorkflowInstanceId` |
+| Compatibility workflow instance | Governed computation instance produced from legacy-compatible inputs | `WorkflowInstanceId` |
 | Graph instance | Running interpreted reactive blueprint | `GraphInstanceId` |
 
 A workflow definition is not an app. A process is not an app. A graph is not an app. An app

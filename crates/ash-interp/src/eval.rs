@@ -588,7 +588,11 @@ fn preserve_caught_failure_as_tail_cause(
 
 /// Metadata for a builtin function entry in the dispatch table.
 mod builtins;
-pub use builtins::{BuiltinEntry, builtin_dispatch_table, is_known_builtin};
+pub use builtins::{
+    BuiltinEntry, BuiltinHostHookMetadata, BuiltinHostHookMetadataError, builtin_dispatch_table,
+    builtin_host_hook_metadata, builtin_requires_host_hook_metadata, is_known_builtin,
+    validate_builtin_host_hook_metadata,
+};
 
 /// Build a qualified builtin name from its components.
 fn qualified_builtin_name(func: &str, module: Option<&str>) -> String {
@@ -616,6 +620,14 @@ pub fn dispatch_builtin(
         return Some(Err(EvalError::UnimplementedBuiltin {
             name: qualified_name.to_string(),
         }));
+    }
+
+    if let Err(error) = validate_builtin_host_hook_metadata(
+        qualified_name,
+        entry,
+        builtin_host_hook_metadata(qualified_name),
+    ) {
+        return Some(Err(EvalError::ExecutionFailed(error.to_string())));
     }
 
     // Arity enforcement: reject if argument count doesn't match unless variadic.

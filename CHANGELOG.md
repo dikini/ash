@@ -6,6 +6,40 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Added
+- Added PLAN-197 Host / FFI / Builtins (TASK-1924), with TASK-1924 through TASK-1933 covering builtin host
+  hooks, provider authoring APIs, trusted runtime adapters, sandbox enforcement, provenance and
+  redaction, an `extern` decision gate, cross-boundary fixtures, and closeout. The plan explicitly
+  sequences host exposure after authority semantics so host/FFI/builtin work cannot become a
+  backdoor around provider admission, sandboxing, or report/trace evidence.
+- Added the Phase 197 host boundary seam audit (TASK-1925), mapping builtin dispatch, provider
+  APIs, standard host providers, runtime adapters, sandbox checks, provenance/report surfaces, and
+  legacy `extern`/old-form references to follow-up implementation owners.
+- Added builtin host hook metadata for Phase 197 (TASK-1926), requiring implemented host-facing
+  builtins to declare operation identity, effect, required rows, sandbox policy, and provenance
+  policy before dispatch while keeping pure structural builtins separate.
+- Added the Phase 197 provider authoring API (TASK-1927), with validated provider operation
+  surfaces, per-operation effects, required rows, constraints, resources, sandbox/provenance policy
+  metadata, explicit standard-provider metadata, and runtime admission checks that reject
+  undeclared explicit provider rows.
+- Added the Phase 197 trusted runtime adapter registry (TASK-1928), with stable adapter identity
+  and versioning, provider/builtin metadata targets, explicit trust/admission/sandbox/provenance
+  policy metadata, fail-closed stale/incompatible/authority-widening diagnostics, and redacted
+  adapter registration trace facts.
+- Added Phase 197 host sandbox policy enforcement (TASK-1929), with runtime-retained sandbox
+  policies, pre-execution checks on admitted host provider projections, command allow/deny
+  decisions, and redacted denial evidence for blocked host attempts.
+- Added Phase 197 host provenance and redaction evidence (TASK-1930), with redacted
+  authority-neutral host boundary evidence for success, provider failure, and sandbox denial,
+  including operation trace facts and monitor evidence that omit raw argument and provider-error
+  secrets.
+- Documented the Phase 197 `extern` decision gate (TASK-1931): no MVP `extern` surface is added,
+  `extern fn` remains parser-rejected, and any future form must lower through trusted runtime
+  adapters, provider metadata, sandbox policy, and redacted provenance.
+- Added Phase 197 host boundary cross-boundary fixtures (TASK-1932), covering builtin hook
+  metadata, provider authoring metadata, trusted adapter validation, row admission, sandbox allow
+  and denial, redacted host-boundary evidence, and operation trace facts.
+- Completed Phase 197 Host / FFI / Builtins closeout (TASK-1933), including status reconciliation,
+  stale-claim sweep evidence, full Rust verification gates, docs gates, and diff checks.
 - Added PLAN-196 Application / Workflow Runtime, with TASK-1913 through TASK-1923 covering
   application entrypoints, admission profiles, role/policy/resource/provider boundaries, reports,
   traces, supervisors, long-running services, and external actor integration. The plan explicitly

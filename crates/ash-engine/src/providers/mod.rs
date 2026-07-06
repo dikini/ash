@@ -8,7 +8,9 @@
 //!
 //! All providers implement the unified `ash_core::capability::CapabilityProvider` trait.
 
-use ash_core::capability::{CapabilityError, CapabilityProvider};
+use ash_core::capability::{
+    CapabilityError, CapabilityProvider, ProviderAuthoringMetadata, ProviderOperationMetadata,
+};
 use ash_core::{Constraint, Effect, Value};
 use async_trait::async_trait;
 use std::io::{self, BufRead, Write};
@@ -238,6 +240,31 @@ impl CapabilityProvider for StdioProvider {
         Effect::Operational
     }
 
+    fn provider_metadata(&self) -> ProviderAuthoringMetadata {
+        ProviderAuthoringMetadata::new("stdio")
+            .with_operation(
+                ProviderOperationMetadata::new("read_line", Effect::Epistemic)
+                    .with_required_row("stdio.read_line")
+                    .with_resource("stdio")
+                    .with_sandbox_policy("host.stdio.read")
+                    .with_provenance_policy("host.stdio.read.redacted"),
+            )
+            .with_operation(
+                ProviderOperationMetadata::new("print", Effect::Operational)
+                    .with_required_row("stdio.print")
+                    .with_resource("stdio")
+                    .with_sandbox_policy("host.stdio.write")
+                    .with_provenance_policy("host.stdio.write.redacted"),
+            )
+            .with_operation(
+                ProviderOperationMetadata::new("println", Effect::Operational)
+                    .with_required_row("stdio.println")
+                    .with_resource("stdio")
+                    .with_sandbox_policy("host.stdio.write")
+                    .with_provenance_policy("host.stdio.write.redacted"),
+            )
+    }
+
     async fn observe(&self, constraints: &[Constraint]) -> Result<Value, CapabilityError> {
         // For stdio, we dispatch based on constraint predicate name
         if constraints.is_empty() {
@@ -352,6 +379,47 @@ impl CapabilityProvider for FsProvider {
 
     fn effect(&self) -> Effect {
         Effect::Operational
+    }
+
+    fn provider_metadata(&self) -> ProviderAuthoringMetadata {
+        fn fs_op(
+            name: &'static str,
+            effect: Effect,
+            row: &'static str,
+        ) -> ProviderOperationMetadata {
+            ProviderOperationMetadata::new(name, effect)
+                .with_required_row(row)
+                .with_constraint("paths")
+                .with_resource("filesystem")
+                .with_sandbox_policy(format!("host.fs.{name}"))
+                .with_provenance_policy(format!("host.fs.{name}.redacted"))
+        }
+
+        ProviderAuthoringMetadata::new("fs")
+            .with_operation(fs_op("exists", Effect::Epistemic, "fs.exists"))
+            .with_operation(fs_op("read_file", Effect::Epistemic, "fs.read"))
+            .with_operation(fs_op("read_to_string", Effect::Epistemic, "fs.read"))
+            .with_operation(fs_op("metadata", Effect::Epistemic, "fs.metadata"))
+            .with_operation(fs_op("read_dir", Effect::Epistemic, "fs.read_dir"))
+            .with_operation(fs_op("write_file", Effect::Operational, "fs.write"))
+            .with_operation(fs_op("write", Effect::Operational, "fs.write"))
+            .with_operation(fs_op("write_string", Effect::Operational, "fs.write"))
+            .with_operation(fs_op("append", Effect::Operational, "fs.append"))
+            .with_operation(fs_op("copy", Effect::Operational, "fs.copy"))
+            .with_operation(fs_op("rename", Effect::Operational, "fs.rename"))
+            .with_operation(fs_op("remove_file", Effect::Operational, "fs.remove_file"))
+            .with_operation(fs_op("create_dir", Effect::Operational, "fs.create_dir"))
+            .with_operation(fs_op(
+                "create_dir_all",
+                Effect::Operational,
+                "fs.create_dir_all",
+            ))
+            .with_operation(fs_op("remove_dir", Effect::Operational, "fs.remove_dir"))
+            .with_operation(fs_op(
+                "remove_dir_all",
+                Effect::Operational,
+                "fs.remove_dir_all",
+            ))
     }
 
     async fn observe(&self, constraints: &[Constraint]) -> Result<Value, CapabilityError> {

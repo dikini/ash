@@ -10,7 +10,9 @@
 //! - Both stdout and stderr capture
 //! - Exit code reporting
 
-use ash_core::capability::{CapabilityError, CapabilityProvider};
+use ash_core::capability::{
+    CapabilityError, CapabilityProvider, ProviderAuthoringMetadata, ProviderOperationMetadata,
+};
 use ash_core::{Constraint, Effect, Value};
 use async_trait::async_trait;
 use std::collections::HashMap;
@@ -219,6 +221,26 @@ impl CapabilityProvider for ProcessProvider {
 
     fn effect(&self) -> Effect {
         Effect::Operational
+    }
+
+    fn provider_metadata(&self) -> ProviderAuthoringMetadata {
+        ProviderAuthoringMetadata::new("process")
+            .with_operation(
+                ProviderOperationMetadata::new("run", Effect::Operational)
+                    .with_required_row("process.run")
+                    .with_constraint("commands")
+                    .with_resource("process")
+                    .with_sandbox_policy("host.process.run")
+                    .with_provenance_policy("host.process.run.redacted"),
+            )
+            .with_operation(
+                ProviderOperationMetadata::new("which", Effect::Epistemic)
+                    .with_required_row("process.which")
+                    .with_constraint("commands")
+                    .with_resource("process")
+                    .with_sandbox_policy("host.process.which")
+                    .with_provenance_policy("host.process.which.redacted"),
+            )
     }
 
     async fn observe(&self, constraints: &[Constraint]) -> Result<Value, CapabilityError> {

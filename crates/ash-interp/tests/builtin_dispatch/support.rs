@@ -1,10 +1,12 @@
 #![allow(unused_imports)]
 
-pub use ash_core::{Expr, Value};
+pub use ash_core::{Effect, Expr, Value};
 pub use ash_interp::context::Context;
 pub use ash_interp::error::EvalError;
 pub use ash_interp::eval::{
-    BuiltinEntry, builtin_dispatch_table, dispatch_builtin, eval_expr, is_known_builtin,
+    BuiltinEntry, BuiltinHostHookMetadataError, builtin_dispatch_table, builtin_host_hook_metadata,
+    builtin_requires_host_hook_metadata, dispatch_builtin, eval_expr, is_known_builtin,
+    validate_builtin_host_hook_metadata,
 };
 pub use std::path::{Path, PathBuf};
 

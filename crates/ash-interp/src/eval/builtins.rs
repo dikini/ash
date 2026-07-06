@@ -1,6 +1,8 @@
 //! Builtin metadata and dispatch-table lookup.
 
+use ash_core::Effect;
 use std::collections::HashMap;
+use thiserror::Error;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct BuiltinEntry {
@@ -11,6 +13,56 @@ pub struct BuiltinEntry {
     /// Whether the runtime implementation is present.
     /// Entries with `implemented: false` produce [`crate::error::EvalError::UnimplementedBuiltin`].
     pub implemented: bool,
+}
+
+/// Trusted runtime hook metadata for a host-facing builtin.
+///
+/// This metadata describes the authority, sandbox, and provenance requirements for a host hook. It
+/// is descriptive only; it does not grant authority by itself.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BuiltinHostHookMetadata {
+    /// Fully qualified builtin dispatch name.
+    pub builtin_name: &'static str,
+    /// Stable operation identity used for row/admission checks.
+    pub operation_identity: &'static str,
+    /// Effect level for this operation.
+    pub effect: Effect,
+    /// Required operation/provider rows.
+    pub required_rows: &'static [&'static str],
+    /// Sandbox policy identity that must be checked before host execution.
+    pub sandbox_policy: &'static str,
+    /// Provenance policy identity used for host-boundary evidence.
+    pub provenance_policy: &'static str,
+    /// Whether this metadata grants authority.
+    ///
+    /// This must remain false. Authority comes from admitted rows/providers/resources, not from a
+    /// builtin table entry.
+    pub grants_authority: bool,
+}
+
+/// Builtin host-hook metadata validation errors.
+#[derive(Debug, Clone, PartialEq, Eq, Error)]
+pub enum BuiltinHostHookMetadataError {
+    /// An implemented host-facing builtin has no metadata.
+    #[error("builtin '{builtin_name}' is missing host hook metadata")]
+    MissingHostHookMetadata {
+        /// Fully qualified builtin name.
+        builtin_name: String,
+    },
+    /// Metadata names a different builtin than the dispatch entry being checked.
+    #[error("builtin '{builtin_name}' has host hook metadata for '{metadata_builtin_name}'")]
+    MismatchedBuiltinName {
+        /// Fully qualified builtin name from the dispatch table.
+        builtin_name: String,
+        /// Builtin name embedded in the metadata record.
+        metadata_builtin_name: String,
+    },
+    /// Metadata attempted to grant authority directly.
+    #[error("builtin '{builtin_name}' host hook metadata must not grant authority")]
+    MetadataGrantsAuthority {
+        /// Fully qualified builtin name.
+        builtin_name: String,
+    },
 }
 
 /// Returns the builtin dispatch table mapping qualified names to entries.
@@ -441,6 +493,81 @@ pub fn builtin_dispatch_table() -> &'static HashMap<&'static str, BuiltinEntry> 
         );
         m
     })
+}
+
+/// Returns true if the builtin name is host-facing and must be backed by host-hook metadata when
+/// implemented.
+pub fn builtin_requires_host_hook_metadata(name: &str, _entry: &BuiltinEntry) -> bool {
+    name.starts_with("process::")
+        || name.starts_with("http::")
+        || name.starts_with("time::")
+        || name.starts_with("io::")
+        || name.starts_with("mcp::")
+        || name.starts_with("llm::")
+}
+
+/// Returns trusted host-hook metadata for an implemented host-facing builtin.
+pub fn builtin_host_hook_metadata(name: &str) -> Option<&'static BuiltinHostHookMetadata> {
+    static PROCESS_RUN_ROWS: &[&str] = &["process.run"];
+    static PROCESS_WHICH_ROWS: &[&str] = &["process.which"];
+    static PROCESS_RUN: BuiltinHostHookMetadata = BuiltinHostHookMetadata {
+        builtin_name: "process::run",
+        operation_identity: "process.run",
+        effect: Effect::Operational,
+        required_rows: PROCESS_RUN_ROWS,
+        sandbox_policy: "process-command",
+        provenance_policy: "host.process.run",
+        grants_authority: false,
+    };
+    static PROCESS_WHICH: BuiltinHostHookMetadata = BuiltinHostHookMetadata {
+        builtin_name: "process::which",
+        operation_identity: "process.which",
+        effect: Effect::Epistemic,
+        required_rows: PROCESS_WHICH_ROWS,
+        sandbox_policy: "process-command-lookup",
+        provenance_policy: "host.process.which",
+        grants_authority: false,
+    };
+
+    match name {
+        "process::run" => Some(&PROCESS_RUN),
+        "process::which" => Some(&PROCESS_WHICH),
+        _ => None,
+    }
+}
+
+/// Validate host-hook metadata for one builtin dispatch entry.
+///
+/// Forward-declared but unimplemented host-facing builtins are allowed to exist without metadata so
+/// they continue to fail at the unimplemented-builtin execution gate.
+pub fn validate_builtin_host_hook_metadata(
+    builtin_name: &str,
+    entry: &BuiltinEntry,
+    metadata: Option<&BuiltinHostHookMetadata>,
+) -> Result<(), BuiltinHostHookMetadataError> {
+    if !builtin_requires_host_hook_metadata(builtin_name, entry) || !entry.implemented {
+        return Ok(());
+    }
+
+    let metadata =
+        metadata.ok_or_else(|| BuiltinHostHookMetadataError::MissingHostHookMetadata {
+            builtin_name: builtin_name.to_string(),
+        })?;
+
+    if metadata.builtin_name != builtin_name {
+        return Err(BuiltinHostHookMetadataError::MismatchedBuiltinName {
+            builtin_name: builtin_name.to_string(),
+            metadata_builtin_name: metadata.builtin_name.to_string(),
+        });
+    }
+
+    if metadata.grants_authority {
+        return Err(BuiltinHostHookMetadataError::MetadataGrantsAuthority {
+            builtin_name: builtin_name.to_string(),
+        });
+    }
+
+    Ok(())
 }
 
 /// Check whether `(func, module)` identifies a known builtin.

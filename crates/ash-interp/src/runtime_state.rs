@@ -6,7 +6,8 @@ use std::sync::{Arc, Mutex as StdMutex};
 use async_trait::async_trait;
 use tokio::sync::Mutex as AsyncMutex;
 
-use ash_core::capability::CapabilityError;
+use ash_core::capability::ProviderAuthoringMetadata;
+use ash_core::capability::{CapabilityError, validate_provider_authoring_metadata};
 use ash_core::core_ash_contract::{
     ContractDischargeRecord, MonitorEvaluationResult, PredicateBinderId, RuntimeMonitorEvidence,
     SnapshotRef, TraceFactKind,
@@ -15,13 +16,15 @@ use ash_core::runtime::{
     ActorCallId, ActorCallOutcome, CapabilityBinding, CapabilityBindingDependency,
     CapabilityBindingId, CapabilityBindingKind, CapabilityImplementationId, CapabilityInterfaceId,
     ExternalActorAdapter, ExternalActorCallRecord, ExternalActorDiagnostic, FailureEntity,
-    OperationalFailure, ProcessId, ProcessPropagationDiagnostic, ProcessPropagationOutcome,
-    ProcessTerminalState, ResourceId, ResourceInstance, ResourceLifecycle, ResourceOwner,
-    ResourceProvenance, ResourceSplitJoinPolicy, ResourceTypeId, RuntimeTraceEvent,
-    RuntimeTraceFact, ServiceHealthReport, ServiceHealthStatus, ServiceId,
+    HostBoundaryEvidence, HostBoundaryOutcome, HostSandboxDecision, HostSandboxDenialRecord,
+    HostSandboxPolicy, OperationalFailure, ProcessId, ProcessPropagationDiagnostic,
+    ProcessPropagationOutcome, ProcessTerminalState, ResourceId, ResourceInstance,
+    ResourceLifecycle, ResourceOwner, ResourceProvenance, ResourceSplitJoinPolicy, ResourceTypeId,
+    RuntimeTraceEvent, RuntimeTraceFact, ServiceHealthReport, ServiceHealthStatus, ServiceId,
     ServiceLifecycleDiagnostic, ServiceLifecycleState, ServiceRuntimeRecord, ServiceShutdownMode,
     SupervisorDecisionKind, SupervisorDecisionRecord, SupervisorDiagnostic, SupervisorPolicy,
-    SupervisorRuntimeProfile, TowerLevel,
+    SupervisorRuntimeProfile, TowerLevel, TrustedRuntimeAdapter, TrustedRuntimeAdapterDiagnostic,
+    TrustedRuntimeAdapterTarget,
 };
 use ash_core::{ControlLink, Effect, Expr, Value, Workflow, WorkflowId};
 
@@ -225,11 +228,21 @@ fn normalized_action_grant(provider_name: &str, grant: &str) -> String {
 }
 
 #[derive(Debug, Clone)]
+struct ProjectedProviderRuntimeStores {
+    sandbox_policies: Arc<AsyncMutex<HashMap<String, HostSandboxPolicy>>>,
+    sandbox_denials: Arc<AsyncMutex<Vec<HostSandboxDenialRecord>>>,
+    host_boundary_evidence: Arc<AsyncMutex<Vec<HostBoundaryEvidence>>>,
+    runtime_trace_facts: Arc<AsyncMutex<Vec<RuntimeTraceFact>>>,
+    runtime_monitor_evidence: Arc<AsyncMutex<Vec<RuntimeMonitorEvidence>>>,
+}
+
+#[derive(Debug, Clone)]
 struct ProjectedProviderWrapper {
     inner: Arc<dyn CapabilityProvider>,
     provider_name: String,
     projected_name: String,
     surface: ProviderAdmissionSurface,
+    stores: ProjectedProviderRuntimeStores,
 }
 
 impl ProjectedProviderWrapper {
@@ -238,18 +251,124 @@ impl ProjectedProviderWrapper {
         provider_name: String,
         projected_name: String,
         surface: ProviderAdmissionSurface,
+        stores: ProjectedProviderRuntimeStores,
     ) -> Self {
         Self {
             inner,
             provider_name,
             projected_name,
             surface,
+            stores,
         }
     }
 
     fn with_projected_name(mut self, projected_name: String) -> Self {
         self.projected_name = projected_name;
         self
+    }
+
+    async fn enforce_sandbox(
+        &self,
+        action_name: &str,
+        args: &[Value],
+    ) -> Result<Option<(String, String)>, CapabilityError> {
+        let metadata = self.inner.provider_metadata();
+        let Some(operation) = metadata.operation(action_name) else {
+            return Ok(None);
+        };
+        let Some(policy_identity) = operation.sandbox_policy.as_deref() else {
+            return Ok(None);
+        };
+        let provenance_policy = operation
+            .provenance_policy
+            .clone()
+            .unwrap_or_else(|| "host.boundary.redacted".to_string());
+        let Some(policy) = self
+            .stores
+            .sandbox_policies
+            .lock()
+            .await
+            .get(policy_identity)
+            .cloned()
+        else {
+            return Ok(Some((policy_identity.to_string(), provenance_policy)));
+        };
+
+        match policy.decide(action_name, args) {
+            HostSandboxDecision::Allow => Ok(Some((policy.identity.clone(), provenance_policy))),
+            HostSandboxDecision::Deny { reason } => {
+                let record = HostSandboxDenialRecord {
+                    policy_identity: policy.identity.clone(),
+                    provider_name: self.provider_name.clone(),
+                    operation_name: action_name.to_string(),
+                    redacted_subject: format!(
+                        "sandbox:{}:{}.{action_name}:redacted",
+                        policy.identity, self.provider_name
+                    ),
+                    reason: reason.clone(),
+                };
+                self.stores.sandbox_denials.lock().await.push(record);
+                self.record_host_boundary_evidence(
+                    action_name,
+                    &policy.identity,
+                    &provenance_policy,
+                    HostBoundaryOutcome::Denied,
+                    Some(reason.clone()),
+                )
+                .await;
+                Err(CapabilityError::PermissionDenied(format!(
+                    "sandbox policy '{}' denied {}.{action_name}: {reason}",
+                    policy.identity, self.provider_name
+                )))
+            }
+        }
+    }
+
+    async fn record_host_boundary_evidence(
+        &self,
+        action_name: &str,
+        sandbox_policy: &str,
+        provenance_policy: &str,
+        outcome: HostBoundaryOutcome,
+        diagnostic: Option<String>,
+    ) {
+        let evidence = HostBoundaryEvidence::new(
+            self.provider_name.clone(),
+            action_name.to_string(),
+            None,
+            sandbox_policy.to_string(),
+            provenance_policy.to_string(),
+            outcome,
+            diagnostic,
+        );
+        let event = match outcome {
+            HostBoundaryOutcome::Succeeded => RuntimeTraceEvent::Complete,
+            _ => RuntimeTraceEvent::Fail,
+        };
+        self.stores
+            .runtime_trace_facts
+            .lock()
+            .await
+            .push(RuntimeTraceFact::new(
+                TraceFactKind::Operation,
+                event,
+                evidence.redacted_subject.clone(),
+            ));
+        self.stores
+            .runtime_monitor_evidence
+            .lock()
+            .await
+            .push(RuntimeMonitorEvidence::new(
+                "phase-197-host-boundary-monitor",
+                "phase-197-host-provenance",
+                format!("{:?}:{event:?}", TraceFactKind::Operation),
+                MonitorEvaluationResult::Pending,
+            ));
+        self.stores
+            .host_boundary_evidence
+            .lock()
+            .await
+            .push(evidence);
     }
 }
 
@@ -306,7 +425,33 @@ impl ash_core::capability::CapabilityProvider for ProjectedProviderWrapper {
         args: &[Value],
     ) -> Result<Value, ash_core::capability::CapabilityError> {
         if self.surface.allows_action(action_name) {
-            self.inner.execute(action_name, args).await
+            let policy = self.enforce_sandbox(action_name, args).await?;
+            let result = self.inner.execute(action_name, args).await;
+            if let Some((sandbox_policy, provenance_policy)) = policy {
+                match &result {
+                    Ok(_) => {
+                        self.record_host_boundary_evidence(
+                            action_name,
+                            &sandbox_policy,
+                            &provenance_policy,
+                            HostBoundaryOutcome::Succeeded,
+                            None,
+                        )
+                        .await;
+                    }
+                    Err(_) => {
+                        self.record_host_boundary_evidence(
+                            action_name,
+                            &sandbox_policy,
+                            &provenance_policy,
+                            HostBoundaryOutcome::Failed,
+                            Some("provider execution failed".to_string()),
+                        )
+                        .await;
+                    }
+                }
+            }
+            result
         } else {
             Err(CapabilityError::NotAvailable(format!(
                 "{}.{}",
@@ -372,6 +517,10 @@ pub struct RuntimeState {
     process_propagation_diagnostics: Arc<AsyncMutex<Vec<ProcessPropagationDiagnostic>>>,
     supervisor_decisions: Arc<AsyncMutex<Vec<SupervisorDecisionRecord>>>,
     service_records: Arc<AsyncMutex<HashMap<ServiceId, ServiceRuntimeRecord>>>,
+    trusted_runtime_adapters: Arc<AsyncMutex<HashMap<String, TrustedRuntimeAdapter>>>,
+    host_sandbox_policies: Arc<AsyncMutex<HashMap<String, HostSandboxPolicy>>>,
+    host_sandbox_denials: Arc<AsyncMutex<Vec<HostSandboxDenialRecord>>>,
+    host_boundary_evidence: Arc<AsyncMutex<Vec<HostBoundaryEvidence>>>,
     external_actor_adapters: Arc<AsyncMutex<HashMap<String, ExternalActorAdapter>>>,
     external_actor_calls: Arc<AsyncMutex<HashMap<ActorCallId, ExternalActorCallRecord>>>,
     runtime_trace_facts: Arc<AsyncMutex<Vec<RuntimeTraceFact>>>,
@@ -515,6 +664,16 @@ impl std::fmt::Debug for RuntimeState {
                 &"<HashMap<ServiceId, ServiceRuntimeRecord>>",
             )
             .field(
+                "trusted_runtime_adapters",
+                &"<HashMap<String, TrustedRuntimeAdapter>>",
+            )
+            .field(
+                "host_sandbox_policies",
+                &"<HashMap<String, HostSandboxPolicy>>",
+            )
+            .field("host_sandbox_denials", &"<Vec<HostSandboxDenialRecord>>")
+            .field("host_boundary_evidence", &"<Vec<HostBoundaryEvidence>>")
+            .field(
                 "external_actor_adapters",
                 &"<HashMap<String, ExternalActorAdapter>>",
             )
@@ -550,6 +709,16 @@ impl std::fmt::Debug for RuntimeState {
 }
 
 impl RuntimeState {
+    fn projected_provider_runtime_stores(&self) -> ProjectedProviderRuntimeStores {
+        ProjectedProviderRuntimeStores {
+            sandbox_policies: self.host_sandbox_policies.clone(),
+            sandbox_denials: self.host_sandbox_denials.clone(),
+            host_boundary_evidence: self.host_boundary_evidence.clone(),
+            runtime_trace_facts: self.runtime_trace_facts.clone(),
+            runtime_monitor_evidence: self.runtime_monitor_evidence.clone(),
+        }
+    }
+
     pub(crate) async fn implementation_binding_dependency_context(
         &self,
         binding: &CapabilityBinding,
@@ -625,6 +794,7 @@ impl RuntimeState {
                         provider_name.clone(),
                         source.name.clone(),
                         surface,
+                        self.projected_provider_runtime_stores(),
                     );
                     registry.register(Box::new(wrapper.clone()));
                     if source.name != *provider_name {
@@ -672,6 +842,10 @@ impl RuntimeState {
             process_propagation_diagnostics: Arc::new(AsyncMutex::new(Vec::new())),
             supervisor_decisions: Arc::new(AsyncMutex::new(Vec::new())),
             service_records: Arc::new(AsyncMutex::new(HashMap::new())),
+            trusted_runtime_adapters: Arc::new(AsyncMutex::new(HashMap::new())),
+            host_sandbox_policies: Arc::new(AsyncMutex::new(HashMap::new())),
+            host_sandbox_denials: Arc::new(AsyncMutex::new(Vec::new())),
+            host_boundary_evidence: Arc::new(AsyncMutex::new(Vec::new())),
             external_actor_adapters: Arc::new(AsyncMutex::new(HashMap::new())),
             external_actor_calls: Arc::new(AsyncMutex::new(HashMap::new())),
             runtime_trace_facts: Arc::new(AsyncMutex::new(Vec::new())),
@@ -1010,6 +1184,7 @@ impl RuntimeState {
                 name.clone(),
                 name.clone(),
                 surface,
+                self.projected_provider_runtime_stores(),
             ));
             registry.register(wrapper);
         }
@@ -1345,9 +1520,7 @@ impl RuntimeState {
 
         match &binding.kind {
             CapabilityBindingKind::HostProvider { provider_name, .. } => {
-                if !self.has_provider(provider_name) {
-                    return Err(ExecError::CapabilityNotAvailable(provider_name.clone()));
-                }
+                self.validate_host_provider_binding_metadata(provider_name, &binding)?;
             }
             CapabilityBindingKind::Implementation { .. } => {
                 if !binding
@@ -1406,6 +1579,59 @@ impl RuntimeState {
                 ))
             }
         }
+    }
+
+    fn validate_host_provider_binding_metadata(
+        &self,
+        provider_name: &str,
+        binding: &CapabilityBinding,
+    ) -> ExecResult<()> {
+        let provider = self
+            .get_provider(provider_name)
+            .ok_or_else(|| ExecError::CapabilityNotAvailable(provider_name.to_string()))?;
+        let metadata = provider.provider_metadata();
+        validate_provider_authoring_metadata(&metadata).map_err(|error| {
+            ExecError::InvalidRuntimeState(format!(
+                "provider '{provider_name}' metadata invalid: {error}"
+            ))
+        })?;
+
+        if metadata.compatibility_shim {
+            return Ok(());
+        }
+
+        let CapabilityBindingKind::HostProvider {
+            admitted_capabilities,
+            ..
+        } = &binding.kind
+        else {
+            return Ok(());
+        };
+
+        let mut declared_rows = metadata
+            .operations
+            .iter()
+            .flat_map(|operation| operation.required_rows.iter())
+            .cloned()
+            .collect::<HashSet<_>>();
+        if metadata.provider_name != provider_name {
+            for operation in &metadata.operations {
+                for row in &operation.required_rows {
+                    if let Some((_, operation_name)) = row.split_once('.') {
+                        declared_rows.insert(format!("{provider_name}.{operation_name}"));
+                    }
+                }
+            }
+        }
+        for capability in admitted_capabilities {
+            if !declared_rows.contains(capability.as_str()) {
+                return Err(ExecError::InvalidRuntimeState(format!(
+                    "provider '{provider_name}' metadata does not declare admitted capability '{capability}'"
+                )));
+            }
+        }
+
+        Ok(())
     }
 
     async fn validate_capability_binding_dependencies(
@@ -1577,6 +1803,7 @@ impl RuntimeState {
                 provider_name.clone(),
                 projected_name.clone(),
                 surface,
+                self.projected_provider_runtime_stores(),
             );
             registry.register(Box::new(wrapper));
         }
@@ -2169,6 +2396,147 @@ impl RuntimeState {
             format!("{}:{:?}", record.name, record.id),
         ))
         .await;
+    }
+
+    /// Register one trusted runtime adapter as runtime-owned host metadata.
+    pub async fn register_trusted_runtime_adapter(
+        &self,
+        adapter: TrustedRuntimeAdapter,
+    ) -> Result<TrustedRuntimeAdapter, TrustedRuntimeAdapterDiagnostic> {
+        adapter.validate()?;
+        let name = adapter.name.clone();
+        let version = adapter.version.clone();
+        let report_identity = adapter.report_identity.clone();
+        self.trusted_runtime_adapters
+            .lock()
+            .await
+            .insert(name.clone(), adapter.clone());
+        self.record_runtime_trace_fact(RuntimeTraceFact::new(
+            TraceFactKind::Operation,
+            RuntimeTraceEvent::Register,
+            format!("adapter:{name}:{version}:{report_identity}"),
+        ))
+        .await;
+        Ok(adapter)
+    }
+
+    /// Return retained trusted runtime adapter metadata by name.
+    pub async fn trusted_runtime_adapter(&self, name: &str) -> Option<TrustedRuntimeAdapter> {
+        self.trusted_runtime_adapters
+            .lock()
+            .await
+            .get(name)
+            .cloned()
+    }
+
+    /// Look up one trusted runtime adapter and require an exact version match.
+    pub async fn require_trusted_runtime_adapter(
+        &self,
+        adapter_name: &str,
+        version: &str,
+    ) -> Result<TrustedRuntimeAdapter, TrustedRuntimeAdapterDiagnostic> {
+        let adapter = self
+            .trusted_runtime_adapters
+            .lock()
+            .await
+            .get(adapter_name)
+            .cloned()
+            .ok_or_else(|| TrustedRuntimeAdapterDiagnostic::UnknownAdapter {
+                adapter_name: adapter_name.to_string(),
+            })?;
+        if adapter.version != version {
+            return Err(TrustedRuntimeAdapterDiagnostic::StaleAdapter {
+                adapter_name: adapter_name.to_string(),
+                requested_version: version.to_string(),
+                registered_version: adapter.version,
+            });
+        }
+        Ok(adapter)
+    }
+
+    /// Validate a trusted runtime adapter against provider operation metadata before execution.
+    pub async fn validate_trusted_runtime_adapter_for_provider_operation(
+        &self,
+        adapter_name: &str,
+        version: &str,
+        provider_metadata: &ProviderAuthoringMetadata,
+        operation_name: &str,
+    ) -> Result<TrustedRuntimeAdapter, TrustedRuntimeAdapterDiagnostic> {
+        validate_provider_authoring_metadata(provider_metadata).map_err(|error| {
+            TrustedRuntimeAdapterDiagnostic::IncompatibleAdapter {
+                adapter_name: adapter_name.to_string(),
+                reason: format!("provider metadata invalid: {error}"),
+            }
+        })?;
+
+        let adapter = self
+            .require_trusted_runtime_adapter(adapter_name, version)
+            .await?;
+        let operation = provider_metadata.operation(operation_name).ok_or_else(|| {
+            TrustedRuntimeAdapterDiagnostic::IncompatibleAdapter {
+                adapter_name: adapter.name.clone(),
+                reason: format!(
+                    "provider metadata {}.{operation_name} is missing",
+                    provider_metadata.provider_name
+                ),
+            }
+        })?;
+
+        let TrustedRuntimeAdapterTarget::ProviderOperation {
+            provider_name,
+            operation_name: adapter_operation,
+            required_row,
+        } = &adapter.target
+        else {
+            return Err(TrustedRuntimeAdapterDiagnostic::IncompatibleAdapter {
+                adapter_name: adapter.name.clone(),
+                reason: "adapter target is not a provider operation".to_string(),
+            });
+        };
+
+        if provider_name != &provider_metadata.provider_name
+            || adapter_operation != operation_name
+            || !operation.required_rows.contains(required_row)
+            || adapter.sandbox_policy != operation.sandbox_policy.clone().unwrap_or_default()
+            || adapter.provenance_policy != operation.provenance_policy.clone().unwrap_or_default()
+        {
+            return Err(TrustedRuntimeAdapterDiagnostic::IncompatibleAdapter {
+                adapter_name: adapter.name.clone(),
+                reason: format!(
+                    "adapter target {provider_name}.{adapter_operation}/{required_row} does not match provider metadata {}.{}",
+                    provider_metadata.provider_name, operation.operation_name
+                ),
+            });
+        }
+
+        Ok(adapter)
+    }
+
+    /// Register one host sandbox policy by identity.
+    pub async fn register_host_sandbox_policy(
+        &self,
+        policy: HostSandboxPolicy,
+    ) -> ExecResult<HostSandboxPolicy> {
+        if policy.identity.is_empty() {
+            return Err(ExecError::InvalidRuntimeState(
+                "host sandbox policy is missing identity".to_string(),
+            ));
+        }
+        self.host_sandbox_policies
+            .lock()
+            .await
+            .insert(policy.identity.clone(), policy.clone());
+        Ok(policy)
+    }
+
+    /// Return retained redacted host sandbox denial evidence.
+    pub async fn host_sandbox_denials(&self) -> Vec<HostSandboxDenialRecord> {
+        self.host_sandbox_denials.lock().await.clone()
+    }
+
+    /// Return retained redacted host boundary evidence.
+    pub async fn host_boundary_evidence(&self) -> Vec<HostBoundaryEvidence> {
+        self.host_boundary_evidence.lock().await.clone()
     }
 
     /// Register one external actor adapter at an explicit capability boundary.

@@ -2647,6 +2647,36 @@ pub struct EngineBuilder {
     resource_initializer_selections: Vec<(String, String)>,
 }
 
+fn custom_provider_admitted_capabilities(
+    registration_name: &str,
+    provider: &dyn ash_core::capability::CapabilityProvider,
+) -> Vec<String> {
+    let metadata = provider.provider_metadata();
+    if ash_core::capability::validate_provider_authoring_metadata(&metadata).is_err()
+        || metadata.compatibility_shim
+    {
+        return vec![format!("{registration_name}.*")];
+    }
+
+    let mut capabilities = metadata
+        .operations
+        .iter()
+        .flat_map(|operation| operation.required_rows.iter())
+        .map(|row| {
+            if metadata.provider_name != registration_name
+                && let Some((_, operation_name)) = row.split_once('.')
+            {
+                format!("{registration_name}.{operation_name}")
+            } else {
+                row.clone()
+            }
+        })
+        .collect::<Vec<_>>();
+    capabilities.sort();
+    capabilities.dedup();
+    capabilities
+}
+
 impl EngineBuilder {
     /// Create a new engine builder
     ///
@@ -2824,7 +2854,8 @@ impl EngineBuilder {
     ) -> Self {
         self.custom_providers
             .insert(name.to_string(), provider.clone());
-        if provider.effect().at_least(ash_core::Effect::Operational) {
+        if !name.is_empty() && provider.effect().at_least(ash_core::Effect::Operational) {
+            let admitted_capabilities = custom_provider_admitted_capabilities(name, &*provider);
             self.custom_provider_bindings
                 .retain(|binding| binding.name != name);
             self.custom_provider_bindings
@@ -2833,7 +2864,7 @@ impl EngineBuilder {
                     name,
                     CapabilityInterfaceId::new(name),
                     name,
-                    vec![format!("{name}.*")],
+                    admitted_capabilities,
                 ));
         }
         self

@@ -15,7 +15,9 @@ use crate::providers::llm::error;
 use crate::providers::llm::models::{extract_list_models_arg, list_models};
 use crate::providers::llm::stream_adapter::extract_chat_stream_args;
 use crate::providers::llm::stream_storage::{StreamStorage, spawn_stream_forwarder};
-use ash_core::capability::{CapabilityError, CapabilityProvider};
+use ash_core::capability::{
+    CapabilityError, CapabilityProvider, ProviderAuthoringMetadata, ProviderOperationMetadata,
+};
 use ash_core::{Constraint, Effect, Value};
 use async_openai::Client;
 use async_openai::config::OpenAIConfig;
@@ -146,6 +148,41 @@ impl CapabilityProvider for LlmProvider {
 
     fn effect(&self) -> Effect {
         Effect::Operational
+    }
+
+    fn provider_metadata(&self) -> ProviderAuthoringMetadata {
+        fn llm_op(
+            name: &'static str,
+            effect: Effect,
+            row: &'static str,
+        ) -> ProviderOperationMetadata {
+            ProviderOperationMetadata::new(name, effect)
+                .with_required_row(row)
+                .with_constraint("models")
+                .with_resource("llm")
+                .with_sandbox_policy(format!("host.llm.{name}"))
+                .with_provenance_policy(format!("host.llm.{name}.redacted"))
+        }
+
+        ProviderAuthoringMetadata::new("llm")
+            .with_operation(llm_op("list_models", Effect::Epistemic, "llm.list_models"))
+            .with_operation(llm_op("chat", Effect::Deliberative, "llm.chat"))
+            .with_operation(llm_op(
+                "chat_with_tools",
+                Effect::Operational,
+                "llm.chat_with_tools",
+            ))
+            .with_operation(llm_op(
+                "chat_stream",
+                Effect::Deliberative,
+                "llm.chat_stream",
+            ))
+            .with_operation(llm_op(
+                "pull_stream_chunk",
+                Effect::Epistemic,
+                "llm.pull_stream_chunk",
+            ))
+            .with_operation(llm_op("embed", Effect::Deliberative, "llm.embed"))
     }
 
     async fn observe(&self, _constraints: &[Constraint]) -> Result<Value, CapabilityError> {

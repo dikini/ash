@@ -5,6 +5,8 @@
 mod act_guard;
 #[path = "builtin_dispatch/dispatch_table.rs"]
 mod dispatch_table;
+#[path = "builtin_dispatch/host_hook_metadata.rs"]
+mod host_hook_metadata;
 #[path = "builtin_dispatch/list.rs"]
 mod list;
 #[path = "builtin_dispatch/markdown.rs"]

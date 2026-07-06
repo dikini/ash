@@ -1188,3 +1188,33 @@ Non-goals: no revival of legacy `workflow` form as a target primitive, no hidden
 | [TASK-1921](tasks/TASK-1921-long-running-service-lifecycle.md) | Add long-running service lifecycle, health, reload, shutdown, and retention semantics | ✅ Complete |
 | [TASK-1922](tasks/TASK-1922-external-actor-integration.md) | Integrate external actors through explicit typed adapters and capability boundaries | ✅ Complete |
 | [TASK-1923](tasks/TASK-1923-application-runtime-cross-boundary-fixtures-and-closeout.md) | Add cross-boundary fixtures, docs, gates, and closeout | ✅ Complete |
+
+## Phase 197: Host / FFI / Builtins
+
+**Status:** ✅ Complete (10/10 tasks complete)
+**Plan:** [PLAN-197: Host / FFI / Builtins](PLAN-197-HOST-FFI-BUILTINS.md)
+**Depends on:** Phase 183 Operation And Authority Model, Phase 184 Handler / Provider Semantics, Phase 194 Contract And Evidence System, Phase 195 Process And Concurrency Model, and Phase 196 Application / Workflow Runtime.
+**Specs/notes:** `SPEC-096b`, `SPEC-097b`, `SPEC-098b`, `SPEC-098c`, `SPEC-099b`, `SPEC-100`, `PLAN-183`, `PLAN-184`, `PLAN-194`, `PLAN-195`, `PLAN-196`, `NOTE-016`, `NOTE-020`, `NOTE-021`, `NOTE-025`, and `NOTE-035`.
+
+Exposes host functionality carefully through audited builtins, provider authoring APIs, trusted
+runtime adapters, sandboxing, and provenance. The phase is intentionally after authority,
+handler/provider, contract/evidence, process, and application runtime work so host integration
+cannot become a backdoor around row admission, policy checks, sendability, sandbox constraints, or
+report/trace obligations.
+
+Non-goals: no ambient host calls from ordinary expressions, no `extern` keyword or native ABI MVP,
+no builtin trusted by name alone, no provider/adapter bypass of admission or sandboxing, and no raw
+dynamic library/plugin callback path in this phase.
+
+| Task | Description | Status |
+|------|-------------|--------|
+| [TASK-1924](tasks/TASK-1924-host-ffi-builtins-plan-packet.md) | Create the Phase 197 plan and task packet | ✅ Complete |
+| [TASK-1925](tasks/TASK-1925-host-boundary-seam-audit.md) | Audit builtin, provider, runtime adapter, sandbox, and provenance seams | ✅ Complete |
+| [TASK-1926](tasks/TASK-1926-builtin-host-hook-metadata.md) | Add builtin host hook metadata and fail-closed diagnostics | ✅ Complete |
+| [TASK-1927](tasks/TASK-1927-provider-authoring-api.md) | Define provider authoring API for operation surfaces, constraints, resources, and effects | ✅ Complete |
+| [TASK-1928](tasks/TASK-1928-trusted-runtime-adapter-registry.md) | Add trusted runtime adapter registry with identity, versioning, and admission boundaries | ✅ Complete |
+| [TASK-1929](tasks/TASK-1929-host-sandbox-policy-enforcement.md) | Enforce sandbox policies for host-facing providers and adapters | ✅ Complete |
+| [TASK-1930](tasks/TASK-1930-host-provenance-and-redaction.md) | Attach provenance, trace, report, and redaction evidence to host boundary crossings | ✅ Complete |
+| [TASK-1931](tasks/TASK-1931-extern-decision-gate.md) | Decide whether `extern` is still needed and document the authority-checked path | ✅ Complete |
+| [TASK-1932](tasks/TASK-1932-host-boundary-cross-boundary-fixtures.md) | Add cross-boundary fixtures for builtins, providers, adapters, sandboxing, and provenance | ✅ Complete |
+| [TASK-1933](tasks/TASK-1933-host-ffi-builtins-closeout.md) | Close out Phase 197 with docs, changelog, gates, and review remediation | ✅ Complete |

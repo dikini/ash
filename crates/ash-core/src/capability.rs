@@ -5,6 +5,268 @@
 
 use crate::{Constraint, Effect, Value};
 
+/// One operation exposed by a capability provider.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProviderOperationMetadata {
+    /// Provider-local operation name.
+    pub operation_name: String,
+    /// Effect level for this operation.
+    pub effect: Effect,
+    /// Required operation rows that must be discharged elsewhere.
+    pub required_rows: Vec<String>,
+    /// Constraint fields this operation understands.
+    pub constraints: Vec<String>,
+    /// Host/runtime resources touched by this operation.
+    pub resources: Vec<String>,
+    /// Sandbox policy identity that must be checked before host execution.
+    pub sandbox_policy: Option<String>,
+    /// Provenance policy identity used to record/redact host-boundary evidence.
+    pub provenance_policy: Option<String>,
+    /// Whether this operation metadata claims to grant authority directly.
+    pub grants_authority: bool,
+}
+
+impl ProviderOperationMetadata {
+    /// Create provider operation metadata.
+    #[must_use]
+    pub fn new(operation_name: impl Into<String>, effect: Effect) -> Self {
+        Self {
+            operation_name: operation_name.into(),
+            effect,
+            required_rows: Vec::new(),
+            constraints: Vec::new(),
+            resources: Vec::new(),
+            sandbox_policy: None,
+            provenance_policy: None,
+            grants_authority: false,
+        }
+    }
+
+    /// Add a required operation row.
+    #[must_use]
+    pub fn with_required_row(mut self, row: impl Into<String>) -> Self {
+        self.required_rows.push(row.into());
+        self
+    }
+
+    /// Add a declared constraint field.
+    #[must_use]
+    pub fn with_constraint(mut self, constraint: impl Into<String>) -> Self {
+        self.constraints.push(constraint.into());
+        self
+    }
+
+    /// Add a declared host/runtime resource.
+    #[must_use]
+    pub fn with_resource(mut self, resource: impl Into<String>) -> Self {
+        self.resources.push(resource.into());
+        self
+    }
+
+    /// Attach a sandbox policy identity.
+    #[must_use]
+    pub fn with_sandbox_policy(mut self, policy: impl Into<String>) -> Self {
+        self.sandbox_policy = Some(policy.into());
+        self
+    }
+
+    /// Attach a provenance policy identity.
+    #[must_use]
+    pub fn with_provenance_policy(mut self, policy: impl Into<String>) -> Self {
+        self.provenance_policy = Some(policy.into());
+        self
+    }
+
+    /// Escape hatch for constructing invalid metadata in validation tests.
+    #[must_use]
+    pub fn with_authority_grant_for_test(mut self, grants_authority: bool) -> Self {
+        self.grants_authority = grants_authority;
+        self
+    }
+}
+
+/// Provider authoring metadata visible at registration/admission boundaries.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProviderAuthoringMetadata {
+    /// Provider name.
+    pub provider_name: String,
+    /// Operations exposed by this provider.
+    pub operations: Vec<ProviderOperationMetadata>,
+    /// Whether this is a migration shim for providers that have not yet authored explicit metadata.
+    pub compatibility_shim: bool,
+}
+
+impl ProviderAuthoringMetadata {
+    /// Create explicit provider metadata.
+    #[must_use]
+    pub fn new(provider_name: impl Into<String>) -> Self {
+        Self {
+            provider_name: provider_name.into(),
+            operations: Vec::new(),
+            compatibility_shim: false,
+        }
+    }
+
+    /// Create explicit compatibility metadata for existing providers during migration.
+    #[must_use]
+    pub fn compatibility_shim(provider_name: impl Into<String>, effect: Effect) -> Self {
+        let provider_name = provider_name.into();
+        Self {
+            operations: vec![
+                ProviderOperationMetadata::new("*", effect)
+                    .with_required_row(format!("{provider_name}.*"))
+                    .with_sandbox_policy(format!("host.{provider_name}.compat"))
+                    .with_provenance_policy(format!("host.{provider_name}.compat.redacted")),
+            ],
+            provider_name,
+            compatibility_shim: true,
+        }
+    }
+
+    /// Add one operation to the provider surface.
+    #[must_use]
+    pub fn with_operation(mut self, operation: ProviderOperationMetadata) -> Self {
+        self.operations.push(operation);
+        self
+    }
+
+    /// Look up provider operation metadata by name.
+    #[must_use]
+    pub fn operation(&self, operation_name: &str) -> Option<&ProviderOperationMetadata> {
+        self.operations
+            .iter()
+            .find(|operation| operation.operation_name == operation_name)
+    }
+}
+
+/// Provider authoring metadata validation errors.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+pub enum ProviderMetadataError {
+    /// Provider name was empty.
+    #[error("provider metadata is missing provider name")]
+    MissingProviderName,
+    /// Provider declared no operation surface.
+    #[error("provider '{provider_name}' is missing operation surface metadata")]
+    MissingOperationSurface {
+        /// Provider name.
+        provider_name: String,
+    },
+    /// Operation name was empty.
+    #[error("provider '{provider_name}' has an operation with missing name")]
+    MissingOperationName {
+        /// Provider name.
+        provider_name: String,
+    },
+    /// Provider declared the same operation more than once.
+    #[error("provider '{provider_name}' declares duplicate operation '{operation_name}'")]
+    DuplicateOperation {
+        /// Provider name.
+        provider_name: String,
+        /// Duplicated operation name.
+        operation_name: String,
+    },
+    /// Operation had no row metadata.
+    #[error("provider '{provider_name}' operation '{operation_name}' is missing required rows")]
+    MissingRequiredRows {
+        /// Provider name.
+        provider_name: String,
+        /// Operation name.
+        operation_name: String,
+    },
+    /// Operation lacked sandbox policy metadata.
+    #[error("provider '{provider_name}' operation '{operation_name}' is missing sandbox policy")]
+    MissingSandboxPolicy {
+        /// Provider name.
+        provider_name: String,
+        /// Operation name.
+        operation_name: String,
+    },
+    /// Operation lacked provenance policy metadata.
+    #[error("provider '{provider_name}' operation '{operation_name}' is missing provenance policy")]
+    MissingProvenancePolicy {
+        /// Provider name.
+        provider_name: String,
+        /// Operation name.
+        operation_name: String,
+    },
+    /// Operation attempted to grant authority directly.
+    #[error("provider '{provider_name}' operation '{operation_name}' must not grant authority")]
+    AuthorityWideningOperation {
+        /// Provider name.
+        provider_name: String,
+        /// Operation name.
+        operation_name: String,
+    },
+}
+
+/// Validate provider authoring metadata.
+///
+/// # Errors
+///
+/// Returns [`ProviderMetadataError`] when required provider or operation metadata is missing,
+/// duplicated, malformed, or authority-widening.
+pub fn validate_provider_authoring_metadata(
+    metadata: &ProviderAuthoringMetadata,
+) -> Result<(), ProviderMetadataError> {
+    if metadata.provider_name.trim().is_empty() {
+        return Err(ProviderMetadataError::MissingProviderName);
+    }
+    if metadata.operations.is_empty() {
+        return Err(ProviderMetadataError::MissingOperationSurface {
+            provider_name: metadata.provider_name.clone(),
+        });
+    }
+
+    let mut names = std::collections::HashSet::new();
+    for operation in &metadata.operations {
+        if operation.operation_name.trim().is_empty() {
+            return Err(ProviderMetadataError::MissingOperationName {
+                provider_name: metadata.provider_name.clone(),
+            });
+        }
+        if !names.insert(operation.operation_name.as_str()) {
+            return Err(ProviderMetadataError::DuplicateOperation {
+                provider_name: metadata.provider_name.clone(),
+                operation_name: operation.operation_name.clone(),
+            });
+        }
+        if operation.required_rows.is_empty() {
+            return Err(ProviderMetadataError::MissingRequiredRows {
+                provider_name: metadata.provider_name.clone(),
+                operation_name: operation.operation_name.clone(),
+            });
+        }
+        if operation
+            .sandbox_policy
+            .as_deref()
+            .is_none_or(str::is_empty)
+        {
+            return Err(ProviderMetadataError::MissingSandboxPolicy {
+                provider_name: metadata.provider_name.clone(),
+                operation_name: operation.operation_name.clone(),
+            });
+        }
+        if operation
+            .provenance_policy
+            .as_deref()
+            .is_none_or(str::is_empty)
+        {
+            return Err(ProviderMetadataError::MissingProvenancePolicy {
+                provider_name: metadata.provider_name.clone(),
+                operation_name: operation.operation_name.clone(),
+            });
+        }
+        if operation.grants_authority {
+            return Err(ProviderMetadataError::AuthorityWideningOperation {
+                provider_name: metadata.provider_name.clone(),
+                operation_name: operation.operation_name.clone(),
+            });
+        }
+    }
+
+    Ok(())
+}
+
 /// Unified error type for all capability operations
 #[derive(Debug, Clone, PartialEq, thiserror::Error)]
 pub enum CapabilityError {
@@ -34,6 +296,14 @@ pub trait CapabilityProvider: Send + Sync + std::fmt::Debug {
 
     /// Get the effect level of this provider
     fn effect(&self) -> Effect;
+
+    /// Return provider authoring metadata.
+    ///
+    /// Providers that have not migrated to explicit metadata receive a compatibility shim. Standard
+    /// host providers should override this with per-operation metadata.
+    fn provider_metadata(&self) -> ProviderAuthoringMetadata {
+        ProviderAuthoringMetadata::compatibility_shim(self.name(), self.effect())
+    }
 
     /// Observe/read from this capability
     ///

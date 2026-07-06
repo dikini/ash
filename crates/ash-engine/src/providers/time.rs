@@ -5,7 +5,9 @@
 //! - `now_iso`: Observe current time as ISO 8601 string
 //! - `sleep`: Execute a sleep/delay for N milliseconds
 
-use ash_core::capability::{CapabilityError, CapabilityProvider};
+use ash_core::capability::{
+    CapabilityError, CapabilityProvider, ProviderAuthoringMetadata, ProviderOperationMetadata,
+};
 use ash_core::{Constraint, Effect, Value};
 use async_trait::async_trait;
 use std::collections::HashMap;
@@ -183,6 +185,38 @@ impl CapabilityProvider for TimeProvider {
         // We report Deliberative as the safe middle ground.
         // Sleep requires the Operational path through execute().
         Effect::Deliberative
+    }
+
+    fn provider_metadata(&self) -> ProviderAuthoringMetadata {
+        ProviderAuthoringMetadata::new("time")
+            .with_operation(
+                ProviderOperationMetadata::new("now", Effect::Epistemic)
+                    .with_required_row("time.now")
+                    .with_resource("clock")
+                    .with_sandbox_policy("host.time.now")
+                    .with_provenance_policy("host.time.now.redacted"),
+            )
+            .with_operation(
+                ProviderOperationMetadata::new("now_iso", Effect::Epistemic)
+                    .with_required_row("time.now_iso")
+                    .with_resource("clock")
+                    .with_sandbox_policy("host.time.now")
+                    .with_provenance_policy("host.time.now.redacted"),
+            )
+            .with_operation(
+                ProviderOperationMetadata::new("epoch_millis", Effect::Epistemic)
+                    .with_required_row("time.epoch_millis")
+                    .with_resource("clock")
+                    .with_sandbox_policy("host.time.now")
+                    .with_provenance_policy("host.time.now.redacted"),
+            )
+            .with_operation(
+                ProviderOperationMetadata::new("sleep", Effect::Operational)
+                    .with_required_row("time.sleep")
+                    .with_resource("timer")
+                    .with_sandbox_policy("host.time.sleep")
+                    .with_provenance_policy("host.time.sleep.redacted"),
+            )
     }
 
     async fn observe(&self, constraints: &[Constraint]) -> Result<Value, CapabilityError> {

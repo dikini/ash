@@ -656,6 +656,566 @@ pub struct ServiceRuntimeRecord {
     pub report_identity: Option<String>,
 }
 
+/// A unique identifier for one trusted runtime adapter.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct TrustedRuntimeAdapterId(pub Uuid);
+
+impl TrustedRuntimeAdapterId {
+    /// Create a fresh trusted runtime adapter identifier.
+    #[must_use]
+    pub fn new() -> Self {
+        Self(Uuid::new_v4())
+    }
+}
+
+impl Default for TrustedRuntimeAdapterId {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Metadata surface that a trusted runtime adapter is allowed to target.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum TrustedRuntimeAdapterTarget {
+    /// Adapter targets an explicitly authored provider operation.
+    ProviderOperation {
+        /// Provider metadata identity.
+        provider_name: String,
+        /// Provider operation metadata identity.
+        operation_name: String,
+        /// Required operation row this adapter expects to satisfy.
+        required_row: String,
+    },
+    /// Adapter targets an explicitly declared builtin host hook.
+    BuiltinHostHook {
+        /// Builtin dispatch identity.
+        builtin_name: String,
+        /// Capability identity declared by the builtin host hook.
+        capability: String,
+        /// Operation identity declared by the builtin host hook.
+        operation: String,
+    },
+}
+
+/// Structured diagnostic emitted at trusted runtime adapter boundaries.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, thiserror::Error)]
+pub enum TrustedRuntimeAdapterDiagnostic {
+    /// Adapter name was missing.
+    #[error("trusted runtime adapter is missing name")]
+    MissingAdapterName,
+    /// Adapter name was malformed.
+    #[error("trusted runtime adapter name '{adapter_name}' is malformed")]
+    MalformedAdapterName {
+        /// Adapter name being constructed.
+        adapter_name: String,
+    },
+    /// Adapter version was missing.
+    #[error("trusted runtime adapter '{adapter_name}' is missing version")]
+    MissingVersion {
+        /// Adapter name being constructed.
+        adapter_name: String,
+    },
+    /// Trust source metadata was missing.
+    #[error("trusted runtime adapter '{adapter_name}' is missing trust source")]
+    MissingTrustSource {
+        /// Adapter name being constructed.
+        adapter_name: String,
+    },
+    /// Admission source metadata was missing.
+    #[error("trusted runtime adapter '{adapter_name}' is missing admission source")]
+    MissingAdmissionSource {
+        /// Adapter name being constructed.
+        adapter_name: String,
+    },
+    /// Sandbox policy metadata was missing.
+    #[error("trusted runtime adapter '{adapter_name}' is missing sandbox policy")]
+    MissingSandboxPolicy {
+        /// Adapter name being constructed.
+        adapter_name: String,
+    },
+    /// Provenance policy metadata was missing.
+    #[error("trusted runtime adapter '{adapter_name}' is missing provenance policy")]
+    MissingProvenancePolicy {
+        /// Adapter name being constructed.
+        adapter_name: String,
+    },
+    /// Report identity metadata was missing.
+    #[error("trusted runtime adapter '{adapter_name}' is missing report identity")]
+    MissingReportIdentity {
+        /// Adapter name being constructed.
+        adapter_name: String,
+    },
+    /// Provider adapter target did not reference provider operation metadata.
+    #[error("trusted runtime adapter '{adapter_name}' is missing provider metadata reference")]
+    MissingProviderMetadataReference {
+        /// Adapter name being constructed.
+        adapter_name: String,
+    },
+    /// Builtin adapter target did not reference builtin host hook metadata.
+    #[error("trusted runtime adapter '{adapter_name}' is missing builtin hook metadata reference")]
+    MissingBuiltinHookMetadataReference {
+        /// Adapter name being constructed.
+        adapter_name: String,
+    },
+    /// Adapter attempted to grant authority directly.
+    #[error("trusted runtime adapter '{adapter_name}' must not grant authority")]
+    AuthorityWideningAdapter {
+        /// Adapter name being constructed.
+        adapter_name: String,
+    },
+    /// Requested adapter is not registered.
+    #[error("trusted runtime adapter '{adapter_name}' is not registered")]
+    UnknownAdapter {
+        /// Missing adapter name.
+        adapter_name: String,
+    },
+    /// Requested adapter version does not match the registered version.
+    #[error(
+        "trusted runtime adapter '{adapter_name}' requested version '{requested_version}' but registered version is '{registered_version}'"
+    )]
+    StaleAdapter {
+        /// Adapter name.
+        adapter_name: String,
+        /// Requested version.
+        requested_version: String,
+        /// Registered version.
+        registered_version: String,
+    },
+    /// Adapter metadata is incompatible with the referenced hook/provider metadata.
+    #[error("trusted runtime adapter '{adapter_name}' is incompatible: {reason}")]
+    IncompatibleAdapter {
+        /// Adapter name.
+        adapter_name: String,
+        /// Bounded incompatibility reason.
+        reason: String,
+    },
+}
+
+/// Explicit metadata for a trusted runtime adapter.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct TrustedRuntimeAdapter {
+    /// Stable adapter identity.
+    pub id: TrustedRuntimeAdapterId,
+    /// Runtime adapter name.
+    pub name: String,
+    /// Adapter version expected by runtime call sites.
+    pub version: String,
+    /// Trusted runtime or build source that supplied this adapter.
+    pub trust_source: String,
+    /// Admission boundary that authorized the adapter to exist.
+    pub admission_source: String,
+    /// Sandbox policy checked before host execution.
+    pub sandbox_policy: String,
+    /// Provenance policy used for host-boundary evidence.
+    pub provenance_policy: String,
+    /// Stable redacted report identity.
+    pub report_identity: String,
+    /// Provider or builtin hook metadata this adapter targets.
+    pub target: TrustedRuntimeAdapterTarget,
+    /// Whether this adapter directly grants authority. Valid adapters keep this false.
+    pub grants_authority: bool,
+}
+
+impl TrustedRuntimeAdapter {
+    /// Build trusted adapter metadata for an explicitly authored provider operation.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TrustedRuntimeAdapterDiagnostic`] when required identity, policy, target, or
+    /// authority metadata is invalid.
+    #[allow(clippy::too_many_arguments)]
+    pub fn new_provider_operation(
+        name: impl Into<String>,
+        version: impl Into<String>,
+        trust_source: impl Into<String>,
+        admission_source: impl Into<String>,
+        sandbox_policy: impl Into<String>,
+        provenance_policy: impl Into<String>,
+        report_identity: impl Into<String>,
+        provider_name: impl Into<String>,
+        operation_name: impl Into<String>,
+        required_row: impl Into<String>,
+        grants_authority: bool,
+    ) -> Result<Self, TrustedRuntimeAdapterDiagnostic> {
+        Self::new(
+            name,
+            version,
+            trust_source,
+            admission_source,
+            sandbox_policy,
+            provenance_policy,
+            report_identity,
+            TrustedRuntimeAdapterTarget::ProviderOperation {
+                provider_name: provider_name.into(),
+                operation_name: operation_name.into(),
+                required_row: required_row.into(),
+            },
+            grants_authority,
+        )
+    }
+
+    /// Build trusted adapter metadata for an explicitly declared builtin host hook.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TrustedRuntimeAdapterDiagnostic`] when required identity, policy, target, or
+    /// authority metadata is invalid.
+    #[allow(clippy::too_many_arguments)]
+    pub fn new_builtin_host_hook(
+        name: impl Into<String>,
+        version: impl Into<String>,
+        trust_source: impl Into<String>,
+        admission_source: impl Into<String>,
+        sandbox_policy: impl Into<String>,
+        provenance_policy: impl Into<String>,
+        report_identity: impl Into<String>,
+        builtin_name: impl Into<String>,
+        capability: impl Into<String>,
+        operation: impl Into<String>,
+        grants_authority: bool,
+    ) -> Result<Self, TrustedRuntimeAdapterDiagnostic> {
+        Self::new(
+            name,
+            version,
+            trust_source,
+            admission_source,
+            sandbox_policy,
+            provenance_policy,
+            report_identity,
+            TrustedRuntimeAdapterTarget::BuiltinHostHook {
+                builtin_name: builtin_name.into(),
+                capability: capability.into(),
+                operation: operation.into(),
+            },
+            grants_authority,
+        )
+    }
+
+    /// Validate existing trusted adapter metadata.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TrustedRuntimeAdapterDiagnostic`] when metadata is malformed or
+    /// authority-widening.
+    pub fn validate(&self) -> Result<(), TrustedRuntimeAdapterDiagnostic> {
+        validate_trusted_runtime_adapter(self)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn new(
+        name: impl Into<String>,
+        version: impl Into<String>,
+        trust_source: impl Into<String>,
+        admission_source: impl Into<String>,
+        sandbox_policy: impl Into<String>,
+        provenance_policy: impl Into<String>,
+        report_identity: impl Into<String>,
+        target: TrustedRuntimeAdapterTarget,
+        grants_authority: bool,
+    ) -> Result<Self, TrustedRuntimeAdapterDiagnostic> {
+        let adapter = Self {
+            id: TrustedRuntimeAdapterId::new(),
+            name: name.into(),
+            version: version.into(),
+            trust_source: trust_source.into(),
+            admission_source: admission_source.into(),
+            sandbox_policy: sandbox_policy.into(),
+            provenance_policy: provenance_policy.into(),
+            report_identity: report_identity.into(),
+            target,
+            grants_authority,
+        };
+        adapter.validate()?;
+        Ok(adapter)
+    }
+}
+
+/// Validate trusted runtime adapter metadata.
+///
+/// # Errors
+///
+/// Returns [`TrustedRuntimeAdapterDiagnostic`] when required metadata is missing, malformed, or
+/// authority-widening.
+pub fn validate_trusted_runtime_adapter(
+    adapter: &TrustedRuntimeAdapter,
+) -> Result<(), TrustedRuntimeAdapterDiagnostic> {
+    if adapter.name.is_empty() {
+        return Err(TrustedRuntimeAdapterDiagnostic::MissingAdapterName);
+    }
+    if !is_valid_runtime_boundary_name(&adapter.name) {
+        return Err(TrustedRuntimeAdapterDiagnostic::MalformedAdapterName {
+            adapter_name: adapter.name.clone(),
+        });
+    }
+    if adapter.version.is_empty() {
+        return Err(TrustedRuntimeAdapterDiagnostic::MissingVersion {
+            adapter_name: adapter.name.clone(),
+        });
+    }
+    if adapter.trust_source.is_empty() {
+        return Err(TrustedRuntimeAdapterDiagnostic::MissingTrustSource {
+            adapter_name: adapter.name.clone(),
+        });
+    }
+    if adapter.admission_source.is_empty() {
+        return Err(TrustedRuntimeAdapterDiagnostic::MissingAdmissionSource {
+            adapter_name: adapter.name.clone(),
+        });
+    }
+    if adapter.sandbox_policy.is_empty() {
+        return Err(TrustedRuntimeAdapterDiagnostic::MissingSandboxPolicy {
+            adapter_name: adapter.name.clone(),
+        });
+    }
+    if adapter.provenance_policy.is_empty() {
+        return Err(TrustedRuntimeAdapterDiagnostic::MissingProvenancePolicy {
+            adapter_name: adapter.name.clone(),
+        });
+    }
+    if adapter.report_identity.is_empty() {
+        return Err(TrustedRuntimeAdapterDiagnostic::MissingReportIdentity {
+            adapter_name: adapter.name.clone(),
+        });
+    }
+    if adapter.grants_authority {
+        return Err(TrustedRuntimeAdapterDiagnostic::AuthorityWideningAdapter {
+            adapter_name: adapter.name.clone(),
+        });
+    }
+    match &adapter.target {
+        TrustedRuntimeAdapterTarget::ProviderOperation {
+            provider_name,
+            operation_name,
+            required_row,
+        } if provider_name.is_empty() || operation_name.is_empty() || required_row.is_empty() => {
+            Err(
+                TrustedRuntimeAdapterDiagnostic::MissingProviderMetadataReference {
+                    adapter_name: adapter.name.clone(),
+                },
+            )
+        }
+        TrustedRuntimeAdapterTarget::BuiltinHostHook {
+            builtin_name,
+            capability,
+            operation,
+        } if builtin_name.is_empty() || capability.is_empty() || operation.is_empty() => Err(
+            TrustedRuntimeAdapterDiagnostic::MissingBuiltinHookMetadataReference {
+                adapter_name: adapter.name.clone(),
+            },
+        ),
+        _ => Ok(()),
+    }
+}
+
+/// Host sandbox policy decision for one attempted host boundary crossing.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum HostSandboxDecision {
+    /// Operation is allowed to continue to the host provider/hook.
+    Allow,
+    /// Operation is denied before host execution.
+    Deny {
+        /// Bounded redacted reason.
+        reason: String,
+    },
+}
+
+/// Host sandbox policy metadata retained by the runtime.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct HostSandboxPolicy {
+    /// Stable policy identity referenced by provider/builtin/adapter metadata.
+    pub identity: String,
+    /// Whether the policy denies all attempts before more specific allow-list checks.
+    pub deny_all: bool,
+    /// Bounded denied reason.
+    pub denied_reason: Option<String>,
+    /// Allowed process command names.
+    pub allowed_commands: Vec<String>,
+}
+
+impl HostSandboxPolicy {
+    /// Create a policy that allows host execution, with optional allow-list refinements.
+    #[must_use]
+    pub fn allow_all(identity: impl Into<String>) -> Self {
+        Self {
+            identity: identity.into(),
+            deny_all: false,
+            denied_reason: None,
+            allowed_commands: Vec::new(),
+        }
+    }
+
+    /// Create a policy that denies all attempts before host execution.
+    #[must_use]
+    pub fn deny_all(identity: impl Into<String>, reason: impl Into<String>) -> Self {
+        Self {
+            identity: identity.into(),
+            deny_all: true,
+            denied_reason: Some(reason.into()),
+            allowed_commands: Vec::new(),
+        }
+    }
+
+    /// Add one allowed command name.
+    #[must_use]
+    pub fn with_allowed_command(mut self, command: impl Into<String>) -> Self {
+        self.allowed_commands.push(command.into());
+        self
+    }
+
+    /// Decide whether an operation may cross the host boundary.
+    #[must_use]
+    pub fn decide(&self, operation_name: &str, args: &[Value]) -> HostSandboxDecision {
+        if self.deny_all {
+            return HostSandboxDecision::Deny {
+                reason: self
+                    .denied_reason
+                    .clone()
+                    .unwrap_or_else(|| "sandbox policy denied host execution".to_string()),
+            };
+        }
+
+        if !self.allowed_commands.is_empty()
+            && matches!(operation_name, "run" | "spawn" | "which")
+            && let Some(command) = first_string_arg(args)
+            && !self
+                .allowed_commands
+                .iter()
+                .any(|allowed| allowed == command)
+        {
+            return HostSandboxDecision::Deny {
+                reason: "command not allowed by sandbox policy".to_string(),
+            };
+        }
+
+        HostSandboxDecision::Allow
+    }
+}
+
+/// Redacted retained evidence for a denied host sandbox attempt.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct HostSandboxDenialRecord {
+    /// Sandbox policy identity that denied the attempt.
+    pub policy_identity: String,
+    /// Provider or hook family being protected.
+    pub provider_name: String,
+    /// Operation name that was denied.
+    pub operation_name: String,
+    /// Redacted report subject. Must not include raw argument values.
+    pub redacted_subject: String,
+    /// Bounded denial reason.
+    pub reason: String,
+}
+
+/// A unique identifier for one host boundary evidence record.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct HostBoundaryEvidenceId(pub Uuid);
+
+impl HostBoundaryEvidenceId {
+    /// Create a fresh host boundary evidence identifier.
+    #[must_use]
+    pub fn new() -> Self {
+        Self(Uuid::new_v4())
+    }
+}
+
+impl Default for HostBoundaryEvidenceId {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Outcome for a host boundary crossing attempt.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum HostBoundaryOutcome {
+    /// Host operation completed successfully.
+    Succeeded,
+    /// Host provider/hook returned a failure.
+    Failed,
+    /// Sandbox or admission policy denied the attempt before host execution.
+    Denied,
+    /// Host operation timed out.
+    TimedOut,
+    /// Host operation was cancelled.
+    Cancelled,
+    /// Boundary metadata was malformed or stale.
+    MalformedMetadata,
+}
+
+/// Redacted authority-neutral evidence for one host boundary crossing.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct HostBoundaryEvidence {
+    /// Stable evidence identity.
+    pub id: HostBoundaryEvidenceId,
+    /// Provider or host-hook family.
+    pub provider_name: String,
+    /// Operation attempted at the host boundary.
+    pub operation_name: String,
+    /// Optional trusted runtime adapter identity.
+    pub adapter_name: Option<String>,
+    /// Sandbox policy identity applied before execution.
+    pub sandbox_policy: String,
+    /// Provenance/redaction policy identity applied to evidence.
+    pub provenance_policy: String,
+    /// Crossing outcome.
+    pub outcome: HostBoundaryOutcome,
+    /// Redacted subject suitable for reports/traces.
+    pub redacted_subject: String,
+    /// Optional bounded diagnostic without raw payload contents.
+    pub diagnostic: Option<String>,
+    /// Evidence records must not grant or mutate authority.
+    pub authority_neutral: bool,
+}
+
+impl HostBoundaryEvidence {
+    /// Create one redacted host boundary evidence record.
+    #[must_use]
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        provider_name: impl Into<String>,
+        operation_name: impl Into<String>,
+        adapter_name: Option<String>,
+        sandbox_policy: impl Into<String>,
+        provenance_policy: impl Into<String>,
+        outcome: HostBoundaryOutcome,
+        diagnostic: Option<String>,
+    ) -> Self {
+        let provider_name = provider_name.into();
+        let operation_name = operation_name.into();
+        let sandbox_policy = sandbox_policy.into();
+        let provenance_policy = provenance_policy.into();
+        Self {
+            id: HostBoundaryEvidenceId::new(),
+            redacted_subject: format!(
+                "host:{provider_name}.{operation_name}:{sandbox_policy}:{provenance_policy}:redacted"
+            ),
+            provider_name,
+            operation_name,
+            adapter_name,
+            sandbox_policy,
+            provenance_policy,
+            outcome,
+            diagnostic,
+            authority_neutral: true,
+        }
+    }
+}
+
+fn first_string_arg(args: &[Value]) -> Option<&str> {
+    args.iter().find_map(|arg| match arg {
+        Value::String(value) => Some(value.as_str()),
+        Value::Record(fields) => fields
+            .get("cmd")
+            .or_else(|| fields.get("command"))
+            .or_else(|| fields.get("program"))
+            .and_then(|value| match value {
+                Value::String(command) => Some(command.as_str()),
+                _ => None,
+            }),
+        _ => None,
+    })
+}
+
 /// A unique identifier for one registered external actor adapter.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct ExternalActorAdapterId(pub Uuid);

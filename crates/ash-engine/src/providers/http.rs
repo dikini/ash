@@ -9,7 +9,9 @@
 //!
 //! All actions return a structured response record with status, headers, and body.
 
-use ash_core::capability::{CapabilityError, CapabilityProvider};
+use ash_core::capability::{
+    CapabilityError, CapabilityProvider, ProviderAuthoringMetadata, ProviderOperationMetadata,
+};
 use ash_core::{Constraint, Effect, Value};
 use async_trait::async_trait;
 use std::collections::HashMap;
@@ -311,6 +313,28 @@ impl CapabilityProvider for HttpProvider {
 
     fn effect(&self) -> Effect {
         Effect::Operational
+    }
+
+    fn provider_metadata(&self) -> ProviderAuthoringMetadata {
+        fn http_op(
+            name: &'static str,
+            effect: Effect,
+            row: &'static str,
+        ) -> ProviderOperationMetadata {
+            ProviderOperationMetadata::new(name, effect)
+                .with_required_row(row)
+                .with_constraint("hosts")
+                .with_resource("network")
+                .with_sandbox_policy(format!("host.http.{name}"))
+                .with_provenance_policy(format!("host.http.{name}.redacted"))
+        }
+
+        ProviderAuthoringMetadata::new("http")
+            .with_operation(http_op("get", Effect::Epistemic, "http.get"))
+            .with_operation(http_op("head", Effect::Epistemic, "http.head"))
+            .with_operation(http_op("post", Effect::Operational, "http.post"))
+            .with_operation(http_op("put", Effect::Operational, "http.put"))
+            .with_operation(http_op("delete", Effect::Operational, "http.delete"))
     }
 
     async fn observe(&self, constraints: &[Constraint]) -> Result<Value, CapabilityError> {

@@ -2,7 +2,9 @@
 //!
 //! Provides JSON-RPC 2.0 communication with MCP-compatible LLM servers.
 
-use ash_core::capability::{CapabilityError, CapabilityProvider};
+use ash_core::capability::{
+    CapabilityError, CapabilityProvider, ProviderAuthoringMetadata, ProviderOperationMetadata,
+};
 use ash_core::{Constraint, Effect, Value};
 use async_trait::async_trait;
 use reqwest::Client;
@@ -193,6 +195,25 @@ impl CapabilityProvider for McpProvider {
 
     fn effect(&self) -> Effect {
         Effect::Deliberative
+    }
+
+    fn provider_metadata(&self) -> ProviderAuthoringMetadata {
+        ProviderAuthoringMetadata::new("mcp")
+            .with_operation(
+                ProviderOperationMetadata::new("capabilities", Effect::Epistemic)
+                    .with_required_row("mcp.capabilities")
+                    .with_resource("mcp")
+                    .with_sandbox_policy("host.mcp.capabilities")
+                    .with_provenance_policy("host.mcp.capabilities.redacted"),
+            )
+            .with_operation(
+                ProviderOperationMetadata::new("call", Effect::Deliberative)
+                    .with_required_row("mcp.call")
+                    .with_constraint("tools")
+                    .with_resource("mcp")
+                    .with_sandbox_policy("host.mcp.call")
+                    .with_provenance_policy("host.mcp.call.redacted"),
+            )
     }
 
     async fn observe(&self, constraints: &[Constraint]) -> Result<Value, CapabilityError> {

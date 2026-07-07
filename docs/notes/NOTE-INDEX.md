@@ -67,21 +67,25 @@ Common tags include: `grammar`, `syntax`, `semantics`, `type-system`, `effect-sy
 10. [SPEC-080](../spec/SPEC-080-INTERFACE-EVIDENCE-CONSTRAINTS.md) for interface-level proof obligations.
 11. [SPEC-096b](../spec/SPEC-096b-TARGET-EFFECT-SYSTEM.md) for contract/evidence row discharge.
 12. [SPEC-038](../spec/SPEC-038-RUST-LSP-MCP-RESEARCH-2025.md) for LSP/MCP provider integration research.
+13. [Verification and Prover Integration Survey](../reference/verification-and-prover-integration-survey.md)
+    for the broader literature context behind SMT, proof assistants, and LLM-driven proving.
 
 ### Work on symbolic-connectionist duality or LLM integration
 
 1. [NOTE-037](NOTE-037-SYMBOLIC-CONNECTIONIST-DUALITY.md)
 2. [NOTE-036](NOTE-036-GRADUAL-VERIFICATION-AND-PROOF-PROVIDERS.md) for the proof-provider instance
    of the triple `(compiler, prover, LLM)`.
-3. [NOTE-020](NOTE-020-COMPUTATION-ROW-TAXONOMY.md) for row taxonomy and how connectionist effects
+3. [Verification and Prover Integration Survey](../reference/verification-and-prover-integration-survey.md)
+   for the broader literature and state-of-the-art review.
+4. [NOTE-020](NOTE-020-COMPUTATION-ROW-TAXONOMY.md) for row taxonomy and how connectionist effects
    fit into computation rows.
-4. [NOTE-030](NOTE-030-MONADIC-HOARE-LOGIC-FOR-ASH-COMPUTATIONS.md) for symbolic contract
+5. [NOTE-030](NOTE-030-MONADIC-HOARE-LOGIC-FOR-ASH-COMPUTATIONS.md) for symbolic contract
    composition that LLM suggestions attempt to discharge.
-5. [SPEC-096b](../spec/SPEC-096b-TARGET-EFFECT-SYSTEM.md) for declaring LLM operations as row items
+6. [SPEC-096b](../spec/SPEC-096b-TARGET-EFFECT-SYSTEM.md) for declaring LLM operations as row items
    with their own discharge rules.
-6. [`std::llm`](../../std/src/llm/mod.ash) for existing connectionist primitives in the standard
+7. [`std::llm`](../../std/src/llm/mod.ash) for existing connectionist primitives in the standard
    library.
-7. [SPEC-038](../spec/SPEC-038-RUST-LSP-MCP-RESEARCH-2025.md) for MCP as the protocol between the
+8. [SPEC-038](../spec/SPEC-038-RUST-LSP-MCP-RESEARCH-2025.md) for MCP as the protocol between the
    symbolic compiler and connectionist services.
 
 ### Work on ambient computation, handlers, and effect identity

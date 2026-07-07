@@ -91,6 +91,44 @@ appear in effect rows.
 Short form: automatic proof is symbolic; LLM assistance is connectionist; the compiler is the
 orchestrator; fail-closedness remains on the symbolic side.
 
+## 0.2 Research summary by concern
+
+The following concerns are explored in more depth in the companion literature survey,
+[Verification, Prover Integration, and LLM-Driven Proving: A Literature
+Survey](../reference/verification-and-prover-integration-survey.md). Short answers are given here
+to keep this note self-contained.
+
+1. **What can we encode in triples and laws?** Initially, value predicates over primitives and
+   records, effect-row containment, interface laws, type-level propositions (SPEC-064), and bounded
+   temporal/trace properties. Full quantification, separation logic, and program equivalence are
+   asymptotic goals requiring proof-assistant providers. See survey §2–§4 and NOTE-036 §2.
+
+2. **How do we encode this — surface and Core syntax?** Surface syntax extends existing
+   `requires`/`ensures` and `proof ... { by test ... }` bodies with `by solver`, `by symbolic`,
+   `by lean`, and `by proof_term` evidence families. Core uses a single `Predicate` AST shared
+   across all backends. See NOTE-036 §3.
+
+3. **How do we propagate evidence and report/use/erase/transform it?** Every obligation receives an
+   outcome (`verified`, `tested`, `monitored`, `deferred`, `refuted`, `untested`). The compiler
+   reports, uses, erases, or transforms each into runtime checks/monitors based on outcome and
+   trust settings. See NOTE-036 §4.
+
+4. **Can we use different proof providers, and how are they organized on the system level?** Yes.
+   Built-in checks handle decidable fragments; external prover servers connect via MCP; optional
+   embedded solvers are used only when binary size and dependency trust are acceptable; LLM
+   suggestion servers are MCP tools, never evidence producers. See NOTE-036 §5 and survey §3, §6.
+
+5. **Could and should Ash use LLMs?** Yes, as connectionist suggestion assistants checked by
+   symbolic provers. Their output becomes evidence only after a trusted provider verifies it, and
+   LLM calls are tracked as non-deterministic effects. See NOTE-037 and NOTE-036 §6.
+
+6. **Feasibility of translating Ash constraints to SMT-LIB.** The initial value-predicate and
+   row-containment fragments are straightforward SMT-LIB candidates. Interface laws and temporal
+   properties may need quantifiers or model-checking backends. The open question is whether Ash
+   emits SMT-LIB directly or translates through an intermediate verification language such as
+   WhyML or Boogie; Creusot's Why3-frontend model and Dafny's Boogie model both argue for reuse.
+   See survey §3.1, §3.6, and NOTE-036 §5.
+
 ## 1. Gradual verification as an evidence lattice
 
 Every proof obligation in Ash should carry an **evidence outcome**. The outcome determines what the
@@ -433,6 +471,11 @@ behavior.
 
 ## 8. Relation to existing work
 
+- **[Verification, Prover Integration, and LLM-Driven Proving: A Literature
+  Survey](../reference/verification-and-prover-integration-survey.md):** surveys compiler-integrated
+  provers (Dafny, F*, Why3, Liquid Haskell, Lean 4, Verus, Creusot, Kani, Prusti, CompCert,
+  CakeML), type checking as proving, and LLM-driven proving. Maps each to Ash's design philosophy
+  and provider model. This note's architecture is grounded in that survey.
 - **NOTE-037:** frames the proof provider subsystem as the symbolic side of a
   symbolic-connectionist dual system. This note's SMT/Lean providers and LLM assistants are an
   instance of that broader thesis.
@@ -499,6 +542,8 @@ behavior.
 
 ### Internal references
 
+- [Verification, Prover Integration, and LLM-Driven Proving: A Literature
+  Survey](../reference/verification-and-prover-integration-survey.md)
 - [NOTE-030: Monadic Hoare Logic for Ash Computations](NOTE-030-MONADIC-HOARE-LOGIC-FOR-ASH-COMPUTATIONS.md)
 - [NOTE-031: Contract Predicate Well-Formedness and Snapshots](NOTE-031-CONTRACT-PREDICATE-WELL-FORMEDNESS-AND-SNAPSHOTS.md)
 - [NOTE-033: Surface-to-Core Contract Lowering](NOTE-033-SURFACE-TO-CORE-CONTRACT-LOWERING.md)
@@ -539,3 +584,4 @@ behavior.
 |---|---|
 | 2026-07-07 | Initial note. Frames Ash gradual verification: one predicate AST, evidence-outcome lattice, external proof providers via MCP, LLM-as-suggestion-assistant, and trust/reproducibility requirements. Positions automatic proof as the next tier above existing runtime checks and empirical law tests. |
 | 2026-07-07 | Added symbolic-connectionist duality summaries and references to NOTE-037. Clarified `verified (hybrid)` evidence and the `(compiler, prover, LLM)` triple. |
+| 2026-07-07 | Added §0.2 research summary by concern, with short answers per topic and references to the companion literature survey. Added survey to relation-to-existing-work and internal-references sections. |

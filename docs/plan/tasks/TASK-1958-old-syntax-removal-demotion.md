@@ -1,6 +1,6 @@
 # TASK-1958: Old Syntax Removal/Demotion
 
-**Status:** Planned
+**Status:** Complete
 **Phase:** [PLAN-200: Tooling And Migration Polish](../PLAN-200-TOOLING-AND-MIGRATION-POLISH.md)
 
 ## Description
@@ -25,7 +25,22 @@ formatter, LSP, examples, and docs have migration coverage.
 
 ## Completion Checklist
 
-- [ ] Productive paths reject or exclude unlabeled old syntax.
-- [ ] Retained old syntax is compatibility-only, historical-reference-only, or migration-note-only.
-- [ ] Temporary compatibility support has explicit diagnostics and task ownership.
-- [ ] Focused migration gates pass.
+- [x] Productive paths reject or exclude unlabeled old syntax.
+- [x] Retained old syntax is compatibility-only, historical-reference-only, or migration-note-only.
+- [x] Temporary compatibility support has explicit diagnostics and task ownership.
+- [x] Focused migration gates pass.
+
+## Evidence
+
+- Added `phase200_old_syntax_demoted`, which fail-closes the productive roots
+  `docs/TUTORIAL.md`, `docs/tutorials`, `examples/10-testing-helpers`,
+  `examples/11-process-channel-helpers`, and `templates/apps` against old/deprecated forms.
+- The same gate rejects unresolved audit language such as "requires review", "pending final",
+  "until migrated or removed", and "until docs refresh"; compatibility-only rows are limited to
+  test fixtures, LSP/CLI fixtures, std compatibility surfaces, and legacy test roots.
+- Updated AUDIT-200 so older phase-era examples are historical/reference-only instead of
+  unresolved productive candidates, docs/spec rows point at the TASK-1957 docs gate, and std tower
+  rows are explicitly retained as TASK-1958 compatibility surfaces.
+- Focused verification:
+  `cargo test -p ash-cli --test phase200_old_syntax_demoted -- --nocapture` and
+  `cargo test -p ash-cli --test phase200_legacy_deprecated_form_audit -- --nocapture`.

@@ -1,6 +1,6 @@
 # TASK-1959: Tooling/Migration Polish Closeout
 
-**Status:** Planned
+**Status:** Complete
 **Phase:** [PLAN-200: Tooling And Migration Polish](../PLAN-200-TOOLING-AND-MIGRATION-POLISH.md)
 
 ## Description
@@ -25,8 +25,24 @@ and review remediation.
 
 ## Completion Checklist
 
-- [ ] Phase 200 focused gates pass.
-- [ ] Workspace and docs gates pass.
-- [ ] PLAN-INDEX and CHANGELOG are reconciled.
-- [ ] Stale-syntax, deprecated-form, and stale-authority sweeps are recorded.
-- [ ] Review remediation is complete.
+- [x] Phase 200 focused gates pass.
+- [x] Workspace and docs gates pass.
+- [x] PLAN-INDEX and CHANGELOG are reconciled.
+- [x] Stale-syntax, deprecated-form, and stale-authority sweeps are recorded.
+- [x] Review remediation is complete.
+
+## Evidence
+
+- Phase 200 focused gates passed:
+  `cargo test -p ash-cli --test check_parse_diagnostics --test phase199_template_manifest --test phase200_formatter_current_syntax --test phase200_examples_current_syntax --test phase200_docs_current_syntax --test phase200_old_syntax_demoted --test phase200_legacy_deprecated_form_audit -- --nocapture`
+  and `cargo test -p ash-lsp-core --test phase200_lsp_migration_polish -- --nocapture`.
+- Broad closeout gates passed: `cargo fmt --check`, `cargo test --all`,
+  `cargo clippy --all-targets --all-features`,
+  `python3 tools/docs/validate_orientation_indexes.py --self-test`,
+  `bash scripts/check-docs-gate.sh`, and `git diff --check`.
+- Productive-root stale-claim sweep returned no matches for legacy/deprecated form patterns across
+  `docs/TUTORIAL.md`, `docs/tutorials`, `templates/apps`, `examples/10-testing-helpers`, and
+  `examples/11-process-channel-helpers`.
+- AUDIT-200 unresolved-language sweep returned no matches for "requires review", "pending final",
+  "until migrated", or "until docs refresh".
+- PLAN-200, PLAN-INDEX, task files, and CHANGELOG are reconciled for TASK-1951 through TASK-1959.

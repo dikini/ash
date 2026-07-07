@@ -6,6 +6,18 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Added
+- Completed Phase 200 tooling and migration polish closeout (TASK-1959): reconciled plan/task
+  status, recorded stale-claim sweep evidence, and verified the phase with focused migration gates,
+  full workspace tests, clippy, formatting, docs gates, orientation-index validation, and
+  whitespace checks.
+- Completed Phase 200 old-syntax removal/demotion (TASK-1958): added a fail-closed productive-root
+  gate, removed unresolved audit language, demoted older phase-era examples to
+  historical/reference-only material, and explicitly retained std tower surfaces as owned
+  compatibility rows.
+- Completed Phase 200 docs current-syntax refresh (TASK-1957): added a docs gate that keeps
+  productive tutorials/getting-started paths on current syntax, rewrote `docs/TUTORIAL.md` around
+  checked helper examples and app templates, and labeled retained reference/spec old-form mentions
+  as migration or historical material.
 - Completed Phase 200 examples current-syntax refresh (TASK-1956): added an example corpus gate
   that keeps Phase 199 productive examples free of deprecated forms, requires retained legacy
   examples to be visibly historical/reference/compatibility material, and updates the examples

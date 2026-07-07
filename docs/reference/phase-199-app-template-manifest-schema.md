@@ -25,8 +25,9 @@ They do not grant authority and must validate before any instantiation step.
 - File paths must be relative and must not contain parent traversal, drive prefixes, or absolute
   roots.
 - Generated checks must reference declared generated files.
-- Productive template files reject stale syntax patterns such as `observe ... with`,
-  `act ... with`, and legacy tower carrier spellings like `Proc<`, `Act<`, and `Workflow<`.
+- Migration note: productive template files reject stale syntax patterns such as
+  migration-only `observe ... with`, migration-only `act ... with`, and historical carrier
+  spellings like historical `Proc<`, historical `Act<`, and historical `Workflow<`.
 
 ## Instantiation
 

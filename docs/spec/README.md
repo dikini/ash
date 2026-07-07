@@ -35,8 +35,8 @@ This directory contains the canonical specifications for the Ash workflow langua
 | SPEC-027 | Pure Functions | Draft | fn construct for pure computation, match/if expressions, purity enforcement |
 | SPEC-028 | Function Constraint System | Draft | fn contract vocabulary, constraint evolution path, Z3 integration plan |
 | SPEC-045 | Ash Wiki Knowledge Substrate | Draft | Static-first metadata, authority, supersession, audit, and human/AI service contract over the project corpus |
-| SPEC-047 | Act Monad | Draft | First-class effectful computation, Act<A> type constructor, act {} blocks, invoke/unit/bind builtins, unifying pure expressions and effectful workflows |
-| SPEC-048 | Proc Library | Draft | Minimal process-structured computation type/library (`Proc<A>`) with async process handles (`P<A>`), library-first process combinators, and deferred runtime-heavy features |
+| SPEC-047 | Act Monad | Draft | Historical reference for the `Act<A>` carrier and `act {}` blocks; current productive docs should prefer checked helper/profile examples and target-current migration notes. |
+| SPEC-048 | Proc Library | Draft | Historical reference for the `Proc<A>` carrier with async process handles (`P<A>`); current productive docs should prefer checked `std::process` helper examples. |
 | SPEC-049 | Process Runtime Semantics | Draft | Runtime semantics for process identities, affine/linear handles, child environment projection, `yield`, async `par`, `await`, `join`, and `gather` |
 | SPEC-050 | Operational Bottom and Scoped Handling | Draft | Operational failure as tower/entity-indexed bottom, `fail`, `with_error`, process-observation failure, aggregation, and workflow-boundary reinterpretation hooks |
 | SPEC-051 | Workflow Semantics | Draft | Workflow as governance above `Proc`: admission, roles/capabilities, `requires`/`ensures`, obligations, reporting, `WorkflowFailure`, and lower-failure reinterpretation |

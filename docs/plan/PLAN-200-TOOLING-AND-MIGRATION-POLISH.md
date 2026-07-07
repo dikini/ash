@@ -1,6 +1,6 @@
 # PLAN-200: Tooling And Migration Polish
 
-**Status:** In Progress (6/9 tasks complete)
+**Status:** Complete (9/9 tasks complete)
 **Depends on:** Phase 199 Productive App Libraries And Templates.
 **Specs/notes:** `PLAN-199`, `PLAN-198`, `PLAN-196`, `PLAN-195`, `SPEC-096b`,
 `SPEC-097b`, `SPEC-098b`, `SPEC-098c`, `SPEC-099b`, `SPEC-100`, and `NOTE-035`.
@@ -65,9 +65,9 @@ the central product goal, not a cleanup item after tooling work.
 | [TASK-1954](tasks/TASK-1954-formatter-current-syntax-polish.md) | Polish formatter coverage for current target syntax and old-form quarantine | 14h | TASK-1952 | ✅ Complete |
 | [TASK-1955](tasks/TASK-1955-lsp-current-syntax-migration-polish.md) | Polish LSP diagnostics, hover, symbols, semantic tokens, and navigation for current syntax | 16h | TASK-1952 | ✅ Complete |
 | [TASK-1956](tasks/TASK-1956-examples-current-syntax-refresh.md) | Refresh examples corpus and classify or remove legacy examples | 12h | TASK-1952 | ✅ Complete |
-| [TASK-1957](tasks/TASK-1957-docs-current-syntax-refresh.md) | Refresh docs/tutorials/reference paths around current syntax and migration notes | 12h | TASK-1956 | Planned |
-| [TASK-1958](tasks/TASK-1958-old-syntax-removal-demotion.md) | Remove or demote old syntax from productive paths with fail-closed gates | 18h | TASK-1953, TASK-1954, TASK-1955, TASK-1956, TASK-1957 | Planned |
-| [TASK-1959](tasks/TASK-1959-tooling-migration-polish-closeout.md) | Close out Phase 200 with full gates, stale-claim sweep, docs, and review remediation | 8h | TASK-1958 | Planned |
+| [TASK-1957](tasks/TASK-1957-docs-current-syntax-refresh.md) | Refresh docs/tutorials/reference paths around current syntax and migration notes | 12h | TASK-1956 | ✅ Complete |
+| [TASK-1958](tasks/TASK-1958-old-syntax-removal-demotion.md) | Remove or demote old syntax from productive paths with fail-closed gates | 18h | TASK-1953, TASK-1954, TASK-1955, TASK-1956, TASK-1957 | ✅ Complete |
+| [TASK-1959](tasks/TASK-1959-tooling-migration-polish-closeout.md) | Close out Phase 200 with full gates, stale-claim sweep, docs, and review remediation | 8h | TASK-1958 | ✅ Complete |
 
 Estimated implementation effort after the plan packet: 108 hours.
 
@@ -154,11 +154,11 @@ labeled and excluded from productive tutorial, template, example, formatter, and
 - [x] Phase 200 plan and task files exist and are indexed.
 - [x] Legacy and deprecated forms are inventoried across diagnostics, formatter, LSP, examples,
       docs, templates, parser fixtures, and stdlib comments.
-- [ ] Productive old-form occurrences are removed, migrated, or explicitly demoted.
-- [ ] Diagnostics provide targeted migration hints for retained/deprecated forms.
-- [ ] Formatter gates prefer current target syntax and quarantine old-form behavior.
-- [ ] LSP gates prefer current target syntax and surface migration diagnostics where applicable.
-- [ ] Productive examples and templates use current syntax and have executable gates.
-- [ ] Productive docs/tutorials teach current syntax and quarantine old syntax in migration notes.
-- [ ] Closeout gates, changelog, docs gates, stale-claim sweep, and review remediation complete the
+- [x] Productive old-form occurrences are removed, migrated, or explicitly demoted.
+- [x] Diagnostics provide targeted migration hints for retained/deprecated forms.
+- [x] Formatter gates prefer current target syntax and quarantine old-form behavior.
+- [x] LSP gates prefer current target syntax and surface migration diagnostics where applicable.
+- [x] Productive examples and templates use current syntax and have executable gates.
+- [x] Productive docs/tutorials teach current syntax and quarantine old syntax in migration notes.
+- [x] Closeout gates, changelog, docs gates, stale-claim sweep, and review remediation complete the
       phase.

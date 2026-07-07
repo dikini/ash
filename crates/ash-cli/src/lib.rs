@@ -24,6 +24,7 @@
 pub mod commands;
 pub mod error;
 pub mod output;
+pub mod templates;
 pub mod test_runner;
 pub mod value_convert;
 

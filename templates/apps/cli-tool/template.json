@@ -1,0 +1,35 @@
+{
+  "schema_version": "ash-template-v1",
+  "id": "cli-tool",
+  "version": "0.1.0",
+  "description": "Current-syntax Ash CLI tool skeleton",
+  "required_profiles": ["application-default"],
+  "providers": [
+    {
+      "profile": "application-default",
+      "provider": "logging",
+      "operations": ["info"]
+    }
+  ],
+  "resources": ["stdout"],
+  "evidence_expectations": ["ash check src/main.ash"],
+  "parameters": [
+    {
+      "name": "app_name",
+      "required": true,
+      "default": null
+    }
+  ],
+  "files": [
+    {
+      "path": "src/main.ash",
+      "content": "workflow main {\n    let app_name = \"{{app_name}}\"\n    ret 0\n}\n"
+    }
+  ],
+  "generated_checks": [
+    {
+      "command": "ash check src/main.ash",
+      "file": "src/main.ash"
+    }
+  ]
+}

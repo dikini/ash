@@ -174,7 +174,7 @@ Update this section as tasks complete:
 | [196](PLAN-196-APPLICATION-WORKFLOW-RUNTIME.md) | 11 | 11 | ✅ Complete; application/workflow runtime layer over computation, admission, authority, contracts, and process foundations |
 | [197](PLAN-197-HOST-FFI-BUILTINS.md) | 10 | 10 | ✅ Complete; host/FFI/builtin boundary over provider admission, sandboxing, and provenance |
 | [198](PLAN-198-STANDARD-PROVIDERS-AND-PROFILES.md) | 8 | 7 | In Progress; standard providers and profiles over Phase 197 host boundary substrate |
-| [199](PLAN-199-PRODUCTIVE-APP-LIBRARIES-AND-TEMPLATES.md) | 9 | 0 | Planned; current-syntax app libraries, testing helpers, process/channel helpers, and templates |
+| [199](PLAN-199-PRODUCTIVE-APP-LIBRARIES-AND-TEMPLATES.md) | 9 | 9 | ✅ Complete; productive app libraries, testing helpers, process/channel helpers, and templates |
 
 ---
 
@@ -1251,7 +1251,7 @@ no legacy `workflow` syntax revival as the target provider example path.
 
 ## Phase 199: Productive App Libraries And Templates
 
-**Status:** Planned (0/9 tasks complete)
+**Status:** ✅ Complete (9/9 tasks complete)
 **Plan:** [PLAN-199: Productive App Libraries And Templates](PLAN-199-PRODUCTIVE-APP-LIBRARIES-AND-TEMPLATES.md)
 **Depends on:** Phase 198 Standard Providers And Profiles.
 **Specs/notes:** `PLAN-198`, `PLAN-197`, `PLAN-196`, `PLAN-195`, `PLAN-194`, `SPEC-096b`, `SPEC-097b`, `SPEC-098b`, `SPEC-098c`, `SPEC-099b`, `SPEC-100`, `SPEC-081`, `SPEC-082`, `SPEC-083`, `SPEC-084`, and `NOTE-035`.
@@ -1267,12 +1267,12 @@ workflow.
 
 | Task | Description | Status |
 |------|-------------|--------|
-| [TASK-1942](tasks/TASK-1942-productive-app-libraries-templates-plan-packet.md) | Create the Phase 199 plan and task packet | Planned |
-| [TASK-1943](tasks/TASK-1943-current-syntax-library-template-audit-remediation.md) | Review and revise libraries, examples, and template-like files to current syntax | Planned |
-| [TASK-1944](tasks/TASK-1944-testing-helper-libraries.md) | Add testing helper libraries over QuickCheck, law/evidence, coverage, and flake orchestration | Planned |
-| [TASK-1945](tasks/TASK-1945-process-channel-convenience-library.md) | Add process/channel convenience helpers over Phase 195 semantics | Planned |
-| [TASK-1946](tasks/TASK-1946-app-template-manifest-and-validation.md) | Define app template manifest/schema and validation model | Planned |
-| [TASK-1947](tasks/TASK-1947-template-instantiation-cli.md) | Add CLI/template instantiation path with fail-closed diagnostics | Planned |
-| [TASK-1948](tasks/TASK-1948-canonical-app-template-corpus.md) | Add canonical current-syntax app templates | Planned |
-| [TASK-1949](tasks/TASK-1949-tutorial-examples-and-template-docs.md) | Add tutorial examples and template docs tied to executable gates | Planned |
-| [TASK-1950](tasks/TASK-1950-productive-app-libraries-templates-closeout.md) | Close out Phase 199 with cross-template gates, docs, changelog, and review remediation | Planned |
+| [TASK-1942](tasks/TASK-1942-productive-app-libraries-templates-plan-packet.md) | Create the Phase 199 plan and task packet | ✅ Complete |
+| [TASK-1943](tasks/TASK-1943-current-syntax-library-template-audit-remediation.md) | Review and revise libraries, examples, and template-like files to current syntax | ✅ Complete |
+| [TASK-1944](tasks/TASK-1944-testing-helper-libraries.md) | Add testing helper libraries over QuickCheck, law/evidence, coverage, and flake orchestration | ✅ Complete |
+| [TASK-1945](tasks/TASK-1945-process-channel-convenience-library.md) | Add process/channel convenience helpers over Phase 195 semantics | ✅ Complete |
+| [TASK-1946](tasks/TASK-1946-app-template-manifest-and-validation.md) | Define app template manifest/schema and validation model | ✅ Complete |
+| [TASK-1947](tasks/TASK-1947-template-instantiation-cli.md) | Add CLI/template instantiation path with fail-closed diagnostics | ✅ Complete |
+| [TASK-1948](tasks/TASK-1948-canonical-app-template-corpus.md) | Add canonical current-syntax app templates | ✅ Complete |
+| [TASK-1949](tasks/TASK-1949-tutorial-examples-and-template-docs.md) | Add tutorial examples and template docs tied to executable gates | ✅ Complete |
+| [TASK-1950](tasks/TASK-1950-productive-app-libraries-templates-closeout.md) | Close out Phase 199 with cross-template gates, docs, changelog, and review remediation | ✅ Complete |

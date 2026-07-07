@@ -19,7 +19,9 @@ examples/
 ├── 06-capability-implementations/ # Capability interface/impl/resource examples
 ├── 07-phase105/       # Generalized typed do-notation examples
 ├── 08-phase106/       # Explicit-target monad comprehension examples
-└── 09-phase108/       # First-class Workflow carrier examples
+├── 09-phase108/       # First-class Workflow carrier examples
+├── 10-testing-helpers/ # Productive testing helper examples
+└── 11-process-channel-helpers/ # Productive process/channel helper examples
 ```
 
 ## Quick Start
@@ -91,6 +93,12 @@ These Phase 104 source examples are checkable declaration packets. Runtime execu
 - **04-workflow-explicit-lifts.reference.ash**: reference-only explicit `workflow::from_proc` / `workflow::from_act` lifts
 - **05-workflow-comprehension.ash**: executable `[...]: Workflow` spelling
 - **06-legacy-workflow-migration-warning.ash**: deprecated legacy declaration paired with a first-class rewrite
+
+### 10 - Testing Helpers
+- **testing_helpers.ash**: current-syntax imports for assertion, property, law, counterexample, coverage, mutation, flake, provider-evidence, and deterministic provider-profile fixture helpers
+
+### 11 - Process/Channel Helpers
+- **process_channel_helpers.ash**: current-syntax imports for spawn/join, bounded worker-pool, channel-loop, cancellation cleanup, sendability guard, channel diagnostic, and process trace helper records
 
 ## Canonical ADT Helper Surface
 

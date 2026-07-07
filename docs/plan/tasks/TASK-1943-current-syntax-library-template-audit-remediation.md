@@ -1,6 +1,6 @@
 # TASK-1943: Current-Syntax Library/Template Audit Remediation
 
-**Status:** Planned
+**Status:** Complete
 **Phase:** [PLAN-199: Productive App Libraries And Templates](../PLAN-199-PRODUCTIVE-APP-LIBRARIES-AND-TEMPLATES.md)
 
 ## Description
@@ -25,7 +25,21 @@ syntax before building new app templates.
 
 ## Completion Checklist
 
-- [ ] Productive library/example/template candidates are inventoried.
-- [ ] Historical/reference-only files are explicitly excluded from productive paths.
-- [ ] Required libraries are revised to current syntax.
-- [ ] Promoted productive files have executable or artifact gates.
+- [x] Productive library/example/template candidates are inventoried.
+- [x] Historical/reference-only files are explicitly excluded from productive paths.
+- [x] Required libraries are revised to current syntax.
+- [x] Promoted productive files have executable or artifact gates.
+
+## Evidence
+
+- Added [AUDIT-199](../audits/AUDIT-199-current-syntax-library-template-inventory.md),
+  classifying every `.ash` candidate under `std/src`, `examples`, `tests/std`, and
+  `tests/workflows`.
+- Added `phase199_current_syntax_audit`, a focused integration gate that fails if the audit omits a
+  candidate file, uses an unsupported classification, or promotes a current/productive file without
+  an executable or artifact gate.
+- Repaired the productive `std/README.md` usage snippet so it no longer teaches stale
+  `act ... with` syntax.
+- Focused verification:
+  `cargo test -p ash-cli --test phase199_current_syntax_audit -- --nocapture` and
+  `cargo test -p ash-cli --test example_corpus_check --test stdlib_corpus_check -- --nocapture`.

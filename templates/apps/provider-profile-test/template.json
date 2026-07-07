@@ -1,0 +1,40 @@
+{
+  "schema_version": "ash-template-v1",
+  "id": "provider-profile-test",
+  "version": "0.1.0",
+  "description": "Current-syntax provider/profile test app skeleton",
+  "required_profiles": ["deterministic-test-clock", "logging-only"],
+  "providers": [
+    {
+      "profile": "deterministic-test-clock",
+      "provider": "time",
+      "operations": ["now"]
+    },
+    {
+      "profile": "logging-only",
+      "provider": "logging",
+      "operations": ["info"]
+    }
+  ],
+  "resources": ["test-clock", "test-log"],
+  "evidence_expectations": ["ash check src/main.ash", "provider evidence is authority-neutral"],
+  "parameters": [
+    {
+      "name": "app_name",
+      "required": true,
+      "default": null
+    }
+  ],
+  "files": [
+    {
+      "path": "src/main.ash",
+      "content": "use test::{deterministic_profile_fixture, provider_evidence_summary}\n\nworkflow main {\n    let app_name = \"{{app_name}}\"\n    let fixture = deterministic_profile_fixture(\"deterministic-test-clock\", 0)\n    let evidence = provider_evidence_summary(\"time\", 1, true, true)\n    ret 0\n}\n"
+    }
+  ],
+  "generated_checks": [
+    {
+      "command": "ash check src/main.ash",
+      "file": "src/main.ash"
+    }
+  ]
+}

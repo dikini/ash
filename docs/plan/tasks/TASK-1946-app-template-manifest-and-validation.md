@@ -1,6 +1,6 @@
 # TASK-1946: App Template Manifest And Validation
 
-**Status:** Planned
+**Status:** Complete
 **Phase:** [PLAN-199: Productive App Libraries And Templates](../PLAN-199-PRODUCTIVE-APP-LIBRARIES-AND-TEMPLATES.md)
 
 ## Description
@@ -24,7 +24,18 @@ Define app template metadata, schema, validation rules, and conformance gates.
 
 ## Completion Checklist
 
-- [ ] Template manifest/schema is documented.
-- [ ] Validation rejects malformed or stale templates.
-- [ ] Provider/profile expectations remain explicit.
-- [ ] Unsupported syntax is caught before template promotion.
+- [x] Template manifest/schema is documented.
+- [x] Validation rejects malformed or stale templates.
+- [x] Provider/profile expectations remain explicit.
+- [x] Unsupported syntax is caught before template promotion.
+
+## Evidence
+
+- Added `ash_cli::templates` with `TemplateManifest`, provider/file/parameter/check metadata
+  structs, `TEMPLATE_SCHEMA_VERSION`, and fail-closed validation diagnostics.
+- Documented the schema in
+  [phase-199-app-template-manifest-schema.md](../../reference/phase-199-app-template-manifest-schema.md).
+- Validation rejects empty identity, stale schema versions, undeclared provider profile references,
+  unsafe paths, unknown generated-check files, and unsupported template syntax before promotion.
+- Focused verification:
+  `cargo test -p ash-cli --test phase199_template_manifest -- --nocapture`.

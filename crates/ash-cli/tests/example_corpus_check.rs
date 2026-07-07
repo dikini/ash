@@ -9,8 +9,8 @@ struct ExpectedFailure {
     reason: &'static str,
 }
 
-const EXPECTED_EXAMPLE_FILES: usize = 42;
-const EXPECTED_EXAMPLE_PASSING: usize = 31;
+const EXPECTED_EXAMPLE_FILES: usize = 44;
+const EXPECTED_EXAMPLE_PASSING: usize = 33;
 const EXPECTED_EXAMPLE_FAILING: usize = 0;
 const EXPECTED_EXAMPLE_REFERENCE_ONLY: usize = 11;
 
@@ -43,6 +43,8 @@ const EXPECTED_PASS: &[&str] = &[
     "examples/09-phase108/02-do-workflow-contract-statements.ash",
     "examples/09-phase108/05-workflow-comprehension.ash",
     "examples/09-phase108/06-legacy-workflow-migration-warning.ash",
+    "examples/10-testing-helpers/testing_helpers.ash",
+    "examples/11-process-channel-helpers/process_channel_helpers.ash",
     "examples/code_review.ash",
     "examples/entrypoint_args.ash",
     "examples/entrypoint_minimal.ash",

@@ -1,0 +1,40 @@
+{
+  "schema_version": "ash-template-v1",
+  "id": "http-fetch-process",
+  "version": "0.1.0",
+  "description": "Current-syntax HTTP fetch and process skeleton",
+  "required_profiles": ["sandboxed-http"],
+  "providers": [
+    {
+      "profile": "sandboxed-http",
+      "provider": "http",
+      "operations": ["get"]
+    },
+    {
+      "profile": "sandboxed-http",
+      "provider": "logging",
+      "operations": ["info"]
+    }
+  ],
+  "resources": ["https-api"],
+  "evidence_expectations": ["ash check src/main.ash", "HTTP host evidence is redacted"],
+  "parameters": [
+    {
+      "name": "app_name",
+      "required": true,
+      "default": null
+    }
+  ],
+  "files": [
+    {
+      "path": "src/main.ash",
+      "content": "use test::{property_evidence}\n\nworkflow main {\n    let app_name = \"{{app_name}}\"\n    let fetch_property = property_evidence(\"http fetch stays sandboxed\", true, 1, 0)\n    ret 0\n}\n"
+    }
+  ],
+  "generated_checks": [
+    {
+      "command": "ash check src/main.ash",
+      "file": "src/main.ash"
+    }
+  ]
+}

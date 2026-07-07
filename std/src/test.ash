@@ -35,3 +35,35 @@ pub fn fail_test() -> Bool {
 
 -- QuickCheck property-testing substrate (Phase 151)
 pub mod quickcheck;
+
+-- Phase 199 productive testing helpers.
+pub mod artifact;
+pub mod fixtures;
+
+pub use test::artifact::{
+    AssertionEvidence,
+    PropertyEvidence,
+    LawEvidence,
+    Counterexample,
+    TestCoverageArtifact,
+    TestMutationArtifact,
+    FlakeQuarantine,
+    ProviderEvidenceSummary,
+    assertion_evidence,
+    assert_named,
+    property_evidence,
+    law_evidence,
+    counterexample,
+    coverage_evidence,
+    mutation_evidence,
+    flake_quarantine,
+    provider_evidence_summary,
+};
+
+pub use test::fixtures::{
+    DeterministicProviderProfileFixture,
+    CommonTestCase,
+    deterministic_profile_fixture,
+    test_clock_fixture,
+    common_test_case,
+};

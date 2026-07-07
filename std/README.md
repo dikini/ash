@@ -78,12 +78,12 @@ The prelude is automatically imported in all Ash modules and includes:
 let maybe_value: Option<Int> = Some { value: 42 };
 if is_some(maybe_value) then {
     let value = unwrap(maybe_value);
-    act log with "Value is: " ++ value;
+    let message = "Value is present";
 };
 
 -- Result usage  
 let result: Result<Int, String> = Ok { value: 42 };
 if is_ok(result) then {
-    act log with "Success!";
+    let message = "Success";
 };
 ```

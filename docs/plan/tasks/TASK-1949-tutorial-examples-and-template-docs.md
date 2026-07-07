@@ -1,6 +1,6 @@
 # TASK-1949: Tutorial Examples And Template Docs
 
-**Status:** Planned
+**Status:** Complete
 **Phase:** [PLAN-199: Productive App Libraries And Templates](../PLAN-199-PRODUCTIVE-APP-LIBRARIES-AND-TEMPLATES.md)
 
 ## Description
@@ -25,7 +25,19 @@ or artifact gates.
 
 ## Completion Checklist
 
-- [ ] Tutorial examples use current target syntax.
-- [ ] Docs explain provider/profile and template use without implying ambient authority.
-- [ ] Examples are tied to executable or artifact gates.
-- [ ] Historical examples remain clearly labeled if retained.
+- [x] Tutorial examples use current target syntax.
+- [x] Docs explain provider/profile and template use without implying ambient authority.
+- [x] Examples are tied to executable or artifact gates.
+- [x] Historical examples remain clearly labeled if retained.
+
+## Evidence
+
+- Added [phase199-productive-apps.md](../../tutorials/phase199-productive-apps.md), a productive app
+  tutorial that links the canonical template index, testing helper example, process/channel helper
+  example, manifest schema, and focused gate names.
+- Added `phase199_tutorial_docs`, a docs gate that requires links to executable/artifact gates and
+  rejects stale productive tutorial patterns.
+- Linked the Phase 199 tutorial from `docs/TUTORIAL.md` while preserving older historical/tutorial
+  sketches as reference-oriented material.
+- Focused verification:
+  `cargo test -p ash-cli --test phase199_tutorial_docs -- --nocapture`.

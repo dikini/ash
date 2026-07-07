@@ -1,0 +1,35 @@
+{
+  "schema_version": "ash-template-v1",
+  "id": "file-pipeline",
+  "version": "0.1.0",
+  "description": "Current-syntax file pipeline skeleton",
+  "required_profiles": ["read-write-filesystem"],
+  "providers": [
+    {
+      "profile": "read-write-filesystem",
+      "provider": "filesystem",
+      "operations": ["read_to_string", "write_string"]
+    }
+  ],
+  "resources": ["workspace-files"],
+  "evidence_expectations": ["ash check src/main.ash", "filesystem evidence is redacted"],
+  "parameters": [
+    {
+      "name": "app_name",
+      "required": true,
+      "default": null
+    }
+  ],
+  "files": [
+    {
+      "path": "src/main.ash",
+      "content": "use test::{assert_true}\n\nworkflow main {\n    let app_name = \"{{app_name}}\"\n    let pipeline_ready = assert_true(true)\n    ret 0\n}\n"
+    }
+  ],
+  "generated_checks": [
+    {
+      "command": "ash check src/main.ash",
+      "file": "src/main.ash"
+    }
+  ]
+}

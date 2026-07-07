@@ -541,6 +541,9 @@ examples earlier in this tutorial. The larger policy and scenario sketches here 
 `examples/` are intentionally reference-oriented design examples rather than surface-syntax
 conformance samples.
 
+For productive app templates, standard profiles, and gated helper examples, see
+[Phase 199 Productive Apps Tutorial](tutorials/phase199-productive-apps.md).
+
 ```bash
 ls examples/
 ```

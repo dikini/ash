@@ -1,0 +1,40 @@
+{
+  "schema_version": "ash-template-v1",
+  "id": "supervised-worker",
+  "version": "0.1.0",
+  "description": "Current-syntax supervised worker skeleton",
+  "required_profiles": ["application-default"],
+  "providers": [
+    {
+      "profile": "application-default",
+      "provider": "process",
+      "operations": ["run"]
+    },
+    {
+      "profile": "application-default",
+      "provider": "logging",
+      "operations": ["warn"]
+    }
+  ],
+  "resources": ["worker-process"],
+  "evidence_expectations": ["ash check src/main.ash", "process trace evidence is redacted"],
+  "parameters": [
+    {
+      "name": "app_name",
+      "required": true,
+      "default": null
+    }
+  ],
+  "files": [
+    {
+      "path": "src/main.ash",
+      "content": "use process::{spawn_join_plan, process_trace}\n\nworkflow main {\n    let app_name = \"{{app_name}}\"\n    let plan = spawn_join_plan(\"worker\", 1)\n    let trace = process_trace(\"join\", true)\n    ret 0\n}\n"
+    }
+  ],
+  "generated_checks": [
+    {
+      "command": "ash check src/main.ash",
+      "file": "src/main.ash"
+    }
+  ]
+}

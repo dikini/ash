@@ -15,8 +15,10 @@ use std::process::ExitCode;
 use clap::{Parser, Subcommand, ValueEnum};
 use colored::Colorize;
 
-use ash_cli::commands::{CheckArgs, DaemonArgs, DotArgs, ReplArgs, RunArgs, TestArgs, TraceArgs};
-use ash_cli::commands::{check, daemon, dot, repl, run, test, trace};
+use ash_cli::commands::{
+    CheckArgs, DaemonArgs, DotArgs, ReplArgs, RunArgs, TemplateArgs, TestArgs, TraceArgs,
+};
+use ash_cli::commands::{check, daemon, dot, repl, run, template, test, trace};
 use ash_cli::error::{CliError, CliResult};
 
 /// Color output options
@@ -84,6 +86,10 @@ enum Commands {
     /// Control the local RuntimeKernel daemon (TASK-929)
     #[command(name = "daemon", about = "Control the local RuntimeKernel daemon")]
     Daemon(DaemonArgs),
+
+    /// Work with Ash app templates (Phase 199)
+    #[command(name = "template", about = "Work with Ash app templates")]
+    Template(TemplateArgs),
 }
 
 #[tokio::main]
@@ -153,6 +159,11 @@ async fn execute_command(cli: &Cli) -> CliResult<ExitCode> {
         Commands::Daemon(args) => {
             tracing::info!("Running daemon control command");
             daemon::daemon(args).await.map_err(CliError::from)
+        }
+        Commands::Template(args) => {
+            tracing::info!("Running template command");
+            template::template(args)?;
+            Ok(ExitCode::SUCCESS)
         }
     }
 }

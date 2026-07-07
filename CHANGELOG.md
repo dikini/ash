@@ -6,6 +6,37 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Added
+- Completed Phase 199 productive app libraries/templates closeout (TASK-1950): reconciled PLAN-199,
+  PLAN-INDEX, task evidence, and changelog status; recorded stale-claim sweep evidence; and verified
+  the phase with focused template/helper gates plus full workspace and docs gates.
+- Completed Phase 199 tutorial examples and template docs (TASK-1949): added a productive apps
+  tutorial linked to the canonical template corpus, testing helpers, process/channel helpers,
+  manifest schema, and focused executable gates, plus a docs gate that keeps stale syntax out of
+  productive tutorial paths.
+- Completed Phase 199 canonical app template corpus (TASK-1948): added validated
+  `ash-template-v1` templates for CLI tools, file pipelines, HTTP fetch/process apps, supervised
+  workers, and provider-profile test apps, all instantiated through the template CLI and checked
+  through generated `ash check` gates.
+- Completed Phase 199 template instantiation CLI (TASK-1947): added `ash template instantiate`
+  with validated JSON manifests, declared-parameter substitution, default overwrite protection, and
+  post-generation `ash check` conformance execution.
+- Completed Phase 199 app template manifest validation (TASK-1946): `ash_cli::templates` now
+  defines the `ash-template-v1` manifest schema and fail-closed validation for identity, version,
+  profiles, provider expectations, generated files, checks, unsafe paths, and unsupported stale
+  template syntax before instantiation.
+- Completed Phase 199 process/channel convenience library (TASK-1945): `std::process` now exposes
+  pure helper records for spawn/join plans, bounded worker pools, channel-loop plans, cancellation
+  cleanup, sendability guards, structured channel diagnostics, and redacted process trace
+  expectations, with a current-syntax example gated through the real stdlib import path.
+- Completed Phase 199 testing helper libraries (TASK-1944): `std::test` now exposes pure
+  assertion, property, law, counterexample, coverage, mutation, flake-quarantine, provider-evidence,
+  deterministic provider-profile, and common fixture helpers, with a current-syntax example gated
+  through the real stdlib import path.
+- Completed Phase 199 current-syntax library/template audit remediation (TASK-1943): added
+  AUDIT-199 and a focused audit gate classifying stdlib, example, `tests/std`, and workflow fixture
+  candidates as current executable, current reference, or historical/reference-only before app
+  templates are promoted; repaired the productive stdlib README usage snippet away from stale
+  `act ... with` syntax.
 - Completed Phase 198 standard providers and profiles (TASK-1941): evidence helper stdlib imports
   now execute without acquiring host/provider authority, and closeout fixtures cover the final
   filesystem, HTTP, time, logging, profile, and evidence surfaces.

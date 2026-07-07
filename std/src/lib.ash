@@ -17,6 +17,28 @@ pub use test::{
     assert_eq_string,
     assert_eq_bool,
     fail_test,
+    AssertionEvidence,
+    PropertyEvidence,
+    LawEvidence,
+    Counterexample,
+    TestCoverageArtifact,
+    TestMutationArtifact,
+    FlakeQuarantine,
+    ProviderEvidenceSummary,
+    DeterministicProviderProfileFixture,
+    CommonTestCase,
+    assertion_evidence,
+    assert_named,
+    property_evidence,
+    law_evidence,
+    counterexample,
+    coverage_evidence,
+    mutation_evidence,
+    flake_quarantine,
+    provider_evidence_summary,
+    deterministic_profile_fixture,
+    test_clock_fixture,
+    common_test_case,
 };
 
 -- LLM types
@@ -58,7 +80,24 @@ pub use evidence::{
 pub use regex::{find, matches, replace};
 
 -- Process functions
-pub use process::{run};
+pub use process::{
+    run,
+    which,
+    SpawnJoinPlan,
+    WorkerPoolPlan,
+    StreamLoopPlan,
+    CancellationCleanupPlan,
+    SendabilityGuard,
+    ChannelDiagnosticExpectation,
+    ProcessTraceExpectation,
+    spawn_join_plan,
+    bounded_worker_pool,
+    channel_loop_plan,
+    cancellation_cleanup,
+    sendability_guard,
+    channel_diagnostic,
+    process_trace,
+};
 
 -- Standard algebra interfaces
 pub mod algebra;

@@ -6,6 +6,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Added
+- Added PLAN-200 Tooling And Migration Polish (TASK-1951): a migration-first phase for
+  diagnostics, formatter, LSP, examples, and docs that treats legacy/deprecated form elimination
+  and demotion as the central design lock before tooling polish proceeds.
 - Completed Phase 199 productive app libraries/templates closeout (TASK-1950): reconciled PLAN-199,
   PLAN-INDEX, task evidence, and changelog status; recorded stale-claim sweep evidence; and verified
   the phase with focused template/helper gates plus full workspace and docs gates.

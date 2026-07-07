@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
+### Changed
+- Reconciled the stale Phase 198 PLAN-INDEX summary row with the completed Phase 198 closeout
+  status (TASK-1941).
+
 ### Added
 - Completed Phase 200 tooling and migration polish closeout (TASK-1959): reconciled plan/task
   status, recorded stale-claim sweep evidence, and verified the phase with focused migration gates,

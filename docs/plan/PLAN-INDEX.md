@@ -173,7 +173,7 @@ Update this section as tasks complete:
 | [195](PLAN-195-PROCESS-AND-CONCURRENCY-MODEL.md) | 11 | 11 | ✅ Complete; process/concurrency model after computation, authority, handler/provider, and contract foundations |
 | [196](PLAN-196-APPLICATION-WORKFLOW-RUNTIME.md) | 11 | 11 | ✅ Complete; application/workflow runtime layer over computation, admission, authority, contracts, and process foundations |
 | [197](PLAN-197-HOST-FFI-BUILTINS.md) | 10 | 10 | ✅ Complete; host/FFI/builtin boundary over provider admission, sandboxing, and provenance |
-| [198](PLAN-198-STANDARD-PROVIDERS-AND-PROFILES.md) | 8 | 7 | In Progress; standard providers and profiles over Phase 197 host boundary substrate |
+| [198](PLAN-198-STANDARD-PROVIDERS-AND-PROFILES.md) | 8 | 8 | ✅ Complete; standard providers and profiles over Phase 197 host boundary substrate |
 | [199](PLAN-199-PRODUCTIVE-APP-LIBRARIES-AND-TEMPLATES.md) | 9 | 9 | ✅ Complete; productive app libraries, testing helpers, process/channel helpers, and templates |
 | [200](PLAN-200-TOOLING-AND-MIGRATION-POLISH.md) | 9 | 9 | ✅ Complete; migration-first tooling polish and legacy/deprecated form elimination |
 

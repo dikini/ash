@@ -1,6 +1,6 @@
 # TASK-1956: Examples Current-Syntax Refresh
 
-**Status:** Planned
+**Status:** Complete
 **Phase:** [PLAN-200: Tooling And Migration Polish](../PLAN-200-TOOLING-AND-MIGRATION-POLISH.md)
 
 ## Description
@@ -25,7 +25,20 @@ explicitly classified, demoted, or removed.
 
 ## Completion Checklist
 
-- [ ] Productive examples use current syntax.
-- [ ] Retained legacy examples are compatibility-only or historical-reference-only.
-- [ ] Example README paths teach current syntax first.
-- [ ] Example corpus gates pass.
+- [x] Productive examples use current syntax.
+- [x] Retained legacy examples are compatibility-only or historical-reference-only.
+- [x] Example README paths teach current syntax first.
+- [x] Example corpus gates pass.
+
+## Evidence
+
+- Added `phase200_examples_current_syntax`, which keeps Phase 199 productive example roots free of
+  deprecated form hits and requires retained old-form examples to carry reference-only,
+  historical, or compatibility markers in the file or directory README.
+- Updated `examples/README.md` so the current productive testing/process examples and app template
+  docs are the first teaching path, while older phase-era material is explicitly migration/reference
+  material.
+- Example corpus compatibility fixtures are classified in AUDIT-200 as TASK-1956 rows.
+- Focused verification:
+  `cargo test -p ash-cli --test phase200_examples_current_syntax -- --nocapture` and
+  `cargo test -p ash-cli --test phase200_legacy_deprecated_form_audit -- --nocapture`.

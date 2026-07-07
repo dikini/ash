@@ -199,7 +199,7 @@ fn report_parse_error(parse_err: ash_engine::EngineError, path: &Path) -> CliRes
         })
     } else {
         let message = std::fs::read_to_string(path).map_or(err_msg.clone(), |source| {
-            targeted_parse_diagnostic(&source).unwrap_or(err_msg)
+            targeted_parse_diagnostic(&source).map_or(err_msg, |diagnostic| diagnostic.message())
         });
         Err(CliError::ParseError {
             message,
@@ -208,7 +208,38 @@ fn report_parse_error(parse_err: ash_engine::EngineError, path: &Path) -> CliRes
     }
 }
 
-fn targeted_parse_diagnostic(source: &str) -> Option<String> {
+const DEPRECATED_SYNTAX_MIGRATION_CODE: &str = "DeprecatedSyntaxMigration";
+
+#[derive(Debug, Clone)]
+struct MigrationDiagnostic {
+    pattern: &'static str,
+    line: usize,
+    column: usize,
+    context: String,
+    help: &'static str,
+}
+
+impl MigrationDiagnostic {
+    fn message(&self) -> String {
+        format!(
+            "{DEPRECATED_SYNTAX_MIGRATION_CODE}: unsupported stale syntax `{}` at line {}, column {}: {}. {}.",
+            self.pattern,
+            self.line,
+            self.column,
+            self.context.trim(),
+            self.help
+        )
+    }
+}
+
+fn targeted_parse_diagnostic(source: &str) -> Option<MigrationDiagnostic> {
+    if let Some(parse_error) = ash_parser::reserved_callable_arrow_diagnostic(source) {
+        return Some(reserved_callable_arrow_migration_diagnostic(
+            source,
+            &parse_error,
+        ));
+    }
+
     for (line_index, line) in source.lines().enumerate() {
         let code = strip_line_comment(line).trim();
         if code.is_empty() {
@@ -216,7 +247,7 @@ fn targeted_parse_diagnostic(source: &str) -> Option<String> {
         }
 
         if looks_like_stale_if_without_then(code) {
-            return Some(stale_syntax_message(
+            return Some(stale_syntax_diagnostic(
                 "if condition { ... }",
                 line_index + 1,
                 line,
@@ -225,7 +256,7 @@ fn targeted_parse_diagnostic(source: &str) -> Option<String> {
         }
 
         if looks_like_stale_for_in_loop(code) {
-            return Some(stale_syntax_message(
+            return Some(stale_syntax_diagnostic(
                 "for item in items { ... }",
                 line_index + 1,
                 line,
@@ -234,7 +265,7 @@ fn targeted_parse_diagnostic(source: &str) -> Option<String> {
         }
 
         if looks_like_stale_decide_else(code) {
-            return Some(stale_syntax_message(
+            return Some(stale_syntax_diagnostic(
                 "decide ... else",
                 line_index + 1,
                 line,
@@ -243,7 +274,7 @@ fn targeted_parse_diagnostic(source: &str) -> Option<String> {
         }
 
         if looks_like_stale_observe_with(code) {
-            return Some(stale_syntax_message(
+            return Some(stale_syntax_diagnostic(
                 "observe ... with",
                 line_index + 1,
                 line,
@@ -252,16 +283,52 @@ fn targeted_parse_diagnostic(source: &str) -> Option<String> {
         }
 
         if code.contains("with role:") {
-            return Some(stale_syntax_message(
+            return Some(stale_syntax_diagnostic(
                 "with role:",
                 line_index + 1,
                 line,
                 "role-shaped `with role:` annotations are not accepted by the current parser",
             ));
         }
+
+        if looks_like_stale_act_with(code) {
+            return Some(stale_syntax_diagnostic(
+                "act ... with",
+                line_index + 1,
+                line,
+                "current act statements do not use trailing `with` clauses",
+            ));
+        }
     }
 
     None
+}
+
+fn reserved_callable_arrow_migration_diagnostic(
+    source: &str,
+    parse_error: &ash_parser::error::ParseError,
+) -> MigrationDiagnostic {
+    let context = source
+        .lines()
+        .nth(parse_error.span.line.saturating_sub(1))
+        .unwrap_or_default()
+        .trim()
+        .to_string();
+    let pattern = if parse_error.message.contains("Act callable") {
+        "Act callable syntax is reserved (`-*>`)"
+    } else if parse_error.message.contains("Workflow callable") {
+        "Workflow callable syntax is reserved (`=*>`)"
+    } else {
+        "Proc callable syntax is reserved (`=>`)"
+    };
+
+    MigrationDiagnostic {
+        pattern,
+        line: parse_error.span.line,
+        column: parse_error.span.column,
+        context,
+        help: "use the pure callable arrow `->`; tower callable arrows are reserved but not implemented",
+    }
 }
 
 fn strip_line_comment(line: &str) -> &str {
@@ -290,17 +357,31 @@ fn looks_like_stale_observe_with(code: &str) -> bool {
     code.starts_with("observe ") && contains_word(code, "with")
 }
 
+fn looks_like_stale_act_with(code: &str) -> bool {
+    code.starts_with("act ") && contains_word(code, "with")
+}
+
 fn contains_word(source: &str, needle: &str) -> bool {
     source
         .split(|ch: char| !(ch.is_ascii_alphanumeric() || ch == '_'))
         .any(|token| token == needle)
 }
 
-fn stale_syntax_message(pattern: &str, line: usize, source_line: &str, note: &str) -> String {
-    format!(
-        "unsupported stale syntax `{pattern}` at line {line}: {}. {note}.",
-        source_line.trim()
-    )
+fn stale_syntax_diagnostic(
+    pattern: &'static str,
+    line: usize,
+    source_line: &str,
+    help: &'static str,
+) -> MigrationDiagnostic {
+    let trimmed = source_line.trim();
+    let column = source_line.find(trimmed).map_or(1, |index| index + 1);
+    MigrationDiagnostic {
+        pattern,
+        line,
+        column,
+        context: trimmed.to_string(),
+        help,
+    }
 }
 
 fn uncommented_source_contains_workflow_keyword(source: &str) -> bool {
@@ -541,17 +622,38 @@ fn output_json_with_warnings(
     // Add errors if present
     if let Err(e) = result {
         let error_str = format!("{e}");
-        // Determine error code based on error type
-        let code = match e {
-            CliError::ParseError { .. } => "E0001",
-            CliError::TypeError { .. } => "E0002",
-            _ => "E9999",
-        };
-        output = output.with_error(
-            &error_str,
-            code,
-            Some(JsonLocation::new(path.display().to_string(), 0, 0)),
-        );
+        if let CliError::ParseError { message, .. } = e {
+            if let Some(diagnostic) = parse_migration_diagnostic_message(message) {
+                output = output.with_error_details(
+                    message,
+                    DEPRECATED_SYNTAX_MIGRATION_CODE,
+                    JsonLocation::new(
+                        path.display().to_string(),
+                        diagnostic.line,
+                        diagnostic.column,
+                    ),
+                    Some(diagnostic.context),
+                    Some(diagnostic.help),
+                );
+            } else {
+                output = output.with_error(
+                    &error_str,
+                    "E0001",
+                    Some(JsonLocation::new(path.display().to_string(), 0, 0)),
+                );
+            }
+        } else {
+            // Determine error code based on error type
+            let code = match e {
+                CliError::TypeError { .. } => "E0002",
+                _ => "E9999",
+            };
+            output = output.with_error(
+                &error_str,
+                code,
+                Some(JsonLocation::new(path.display().to_string(), 0, 0)),
+            );
+        }
     }
 
     // Print the JSON output
@@ -584,6 +686,30 @@ fn output_json_with_warnings(
         Err(other) => Err(CliError::general(format!("{other}"))),
         Ok(()) => Ok(()),
     }
+}
+
+#[derive(Debug, Clone)]
+struct JsonMigrationDiagnostic {
+    line: usize,
+    column: usize,
+    context: String,
+    help: String,
+}
+
+fn parse_migration_diagnostic_message(message: &str) -> Option<JsonMigrationDiagnostic> {
+    let message = message.strip_prefix(DEPRECATED_SYNTAX_MIGRATION_CODE)?;
+    let (_, rest) = message.split_once(" at line ")?;
+    let (line, rest) = rest.split_once(", column ")?;
+    let (column, rest) = rest.split_once(": ")?;
+    let (context, help) = rest.rsplit_once(". ")?;
+    let help = help.strip_suffix('.').unwrap_or(help);
+
+    Some(JsonMigrationDiagnostic {
+        line: line.parse().ok()?,
+        column: column.parse().ok()?,
+        context: context.to_string(),
+        help: help.to_string(),
+    })
 }
 
 #[cfg(test)]

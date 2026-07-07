@@ -1,6 +1,17 @@
 # Ash Workflow Examples
 
-This directory contains example workflows demonstrating the Ash workflow language features, from basic concepts to real-world applications.
+This directory contains example workflows demonstrating the Ash workflow language features, from
+basic concepts to real-world applications.
+
+Phase 200 treats the current productive examples as the teaching path. Start with:
+
+- `examples/10-testing-helpers/testing_helpers.ash`
+- `examples/11-process-channel-helpers/process_channel_helpers.ash`
+- `templates/apps/README.md` for generated app skeletons and their `ash check` gates
+
+Older phase-era examples remain useful as migration/reference material, but any retained old-form
+syntax must be labeled as reference-only, historical, or compatibility-only before it can stay in
+the examples tree.
 
 Phase 107 classifies examples into two explicit categories:
 

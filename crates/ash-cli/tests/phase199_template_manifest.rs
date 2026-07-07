@@ -78,3 +78,40 @@ fn unsupported_template_syntax_is_rejected_before_promotion() {
         .expect_err("stale template syntax should fail closed");
     assert!(err.to_string().contains("unsupported syntax"));
 }
+
+#[test]
+fn deprecated_template_tower_carriers_are_rejected_before_promotion() {
+    for stale in ["Proc<", "Act<", "Workflow<"] {
+        let mut manifest = valid_manifest();
+        manifest.files[0].content = format!("fn helper() -> {stale}Int> {{ do {{ return 0 }} }}");
+
+        let err = match validate_template_manifest(&manifest) {
+            Ok(()) => panic!("{stale} should fail closed"),
+            Err(err) => err,
+        };
+        let message = err.to_string();
+        assert!(
+            message.contains("unsupported syntax") && message.contains(stale),
+            "{message}"
+        );
+    }
+}
+
+#[test]
+fn deprecated_template_provider_language_is_rejected_before_promotion() {
+    for stale in ["ambient authority", "direct provider"] {
+        let mut manifest = valid_manifest();
+        manifest.files[0].content =
+            format!("// This template relies on {stale}\nworkflow main {{ ret 0 }}");
+
+        let err = match validate_template_manifest(&manifest) {
+            Ok(()) => panic!("{stale} should fail closed"),
+            Err(err) => err,
+        };
+        let message = err.to_string();
+        assert!(
+            message.contains("unsupported syntax") && message.contains(stale),
+            "{message}"
+        );
+    }
+}

@@ -9,6 +9,7 @@
 //! - `repl` - Interactive REPL (TASK-056)
 //! - `dot` - Generate Graphviz DOT output (TASK-057)
 //! - `test` - Run tests (Phase 76 / TASK-509)
+//! - `fmt` - Format Ash source files (Phase 200)
 
 use std::process::ExitCode;
 
@@ -16,9 +17,9 @@ use clap::{Parser, Subcommand, ValueEnum};
 use colored::Colorize;
 
 use ash_cli::commands::{
-    CheckArgs, DaemonArgs, DotArgs, ReplArgs, RunArgs, TemplateArgs, TestArgs, TraceArgs,
+    CheckArgs, DaemonArgs, DotArgs, FmtArgs, ReplArgs, RunArgs, TemplateArgs, TestArgs, TraceArgs,
 };
-use ash_cli::commands::{check, daemon, dot, repl, run, template, test, trace};
+use ash_cli::commands::{check, daemon, dot, fmt, repl, run, template, test, trace};
 use ash_cli::error::{CliError, CliResult};
 
 /// Color output options
@@ -82,6 +83,10 @@ enum Commands {
     /// Generate Graphviz DOT output (TASK-057)
     #[command(name = "dot", about = "Generate Graphviz DOT output")]
     Dot(DotArgs),
+
+    /// Format Ash source files (Phase 200)
+    #[command(name = "fmt", about = "Format Ash source files")]
+    Fmt(FmtArgs),
 
     /// Control the local RuntimeKernel daemon (TASK-929)
     #[command(name = "daemon", about = "Control the local RuntimeKernel daemon")]
@@ -155,6 +160,10 @@ async fn execute_command(cli: &Cli) -> CliResult<ExitCode> {
             tracing::info!("Generating DOT for: {}", args.path);
             dot::dot(args).map_err(CliError::from)?;
             Ok(ExitCode::SUCCESS)
+        }
+        Commands::Fmt(args) => {
+            tracing::info!("Formatting Ash source");
+            fmt::fmt(args)
         }
         Commands::Daemon(args) => {
             tracing::info!("Running daemon control command");

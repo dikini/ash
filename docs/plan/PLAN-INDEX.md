@@ -175,7 +175,7 @@ Update this section as tasks complete:
 | [197](PLAN-197-HOST-FFI-BUILTINS.md) | 10 | 10 | ✅ Complete; host/FFI/builtin boundary over provider admission, sandboxing, and provenance |
 | [198](PLAN-198-STANDARD-PROVIDERS-AND-PROFILES.md) | 8 | 7 | In Progress; standard providers and profiles over Phase 197 host boundary substrate |
 | [199](PLAN-199-PRODUCTIVE-APP-LIBRARIES-AND-TEMPLATES.md) | 9 | 9 | ✅ Complete; productive app libraries, testing helpers, process/channel helpers, and templates |
-| [200](PLAN-200-TOOLING-AND-MIGRATION-POLISH.md) | 9 | 2 | In Progress; migration-first tooling polish and legacy/deprecated form elimination |
+| [200](PLAN-200-TOOLING-AND-MIGRATION-POLISH.md) | 9 | 6 | In Progress; migration-first tooling polish and legacy/deprecated form elimination |
 
 ---
 
@@ -1280,7 +1280,7 @@ workflow.
 
 ## Phase 200: Tooling And Migration Polish
 
-**Status:** In Progress (2/9 tasks complete)
+**Status:** In Progress (6/9 tasks complete)
 **Plan:** [PLAN-200: Tooling And Migration Polish](PLAN-200-TOOLING-AND-MIGRATION-POLISH.md)
 **Depends on:** Phase 199 Productive App Libraries And Templates.
 **Specs/notes:** `PLAN-199`, `PLAN-198`, `PLAN-196`, `PLAN-195`, `SPEC-096b`, `SPEC-097b`, `SPEC-098b`, `SPEC-098c`, `SPEC-099b`, `SPEC-100`, and `NOTE-035`.
@@ -1298,10 +1298,10 @@ package registry or marketplace workflow.
 |------|-------------|--------|
 | [TASK-1951](tasks/TASK-1951-tooling-migration-polish-plan-packet.md) | Create the Phase 200 plan and task packet | ✅ Complete |
 | [TASK-1952](tasks/TASK-1952-legacy-deprecated-form-audit.md) | Audit diagnostics, formatter, LSP, examples, docs, and old-form productive paths | ✅ Complete |
-| [TASK-1953](tasks/TASK-1953-migration-diagnostics.md) | Improve stale/deprecated syntax diagnostics and migration hints | Planned |
-| [TASK-1954](tasks/TASK-1954-formatter-current-syntax-polish.md) | Polish formatter coverage for current target syntax and old-form quarantine | Planned |
-| [TASK-1955](tasks/TASK-1955-lsp-current-syntax-migration-polish.md) | Polish LSP diagnostics, hover, symbols, semantic tokens, and navigation for current syntax | Planned |
-| [TASK-1956](tasks/TASK-1956-examples-current-syntax-refresh.md) | Refresh examples corpus and classify or remove legacy examples | Planned |
+| [TASK-1953](tasks/TASK-1953-migration-diagnostics.md) | Improve stale/deprecated syntax diagnostics and migration hints | ✅ Complete |
+| [TASK-1954](tasks/TASK-1954-formatter-current-syntax-polish.md) | Polish formatter coverage for current target syntax and old-form quarantine | ✅ Complete |
+| [TASK-1955](tasks/TASK-1955-lsp-current-syntax-migration-polish.md) | Polish LSP diagnostics, hover, symbols, semantic tokens, and navigation for current syntax | ✅ Complete |
+| [TASK-1956](tasks/TASK-1956-examples-current-syntax-refresh.md) | Refresh examples corpus and classify or remove legacy examples | ✅ Complete |
 | [TASK-1957](tasks/TASK-1957-docs-current-syntax-refresh.md) | Refresh docs/tutorials/reference paths around current syntax and migration notes | Planned |
 | [TASK-1958](tasks/TASK-1958-old-syntax-removal-demotion.md) | Remove or demote old syntax from productive paths with fail-closed gates | Planned |
 | [TASK-1959](tasks/TASK-1959-tooling-migration-polish-closeout.md) | Close out Phase 200 with full gates, stale-claim sweep, docs, and review remediation | Planned |

@@ -159,6 +159,28 @@ impl JsonOutput {
         self
     }
 
+    /// Add an error diagnostic with context and help metadata.
+    pub fn with_error_details(
+        mut self,
+        message: &str,
+        code: &str,
+        location: JsonLocation,
+        context: Option<String>,
+        help: Option<String>,
+    ) -> Self {
+        self.success = false;
+        self.diagnostics.push(Diagnostic {
+            severity: Severity::Error,
+            code: Some(code.to_string()),
+            message: message.to_string(),
+            location,
+            context,
+            help,
+        });
+        self.update_summary();
+        self
+    }
+
     /// Add a warning diagnostic
     pub fn with_warning(
         mut self,

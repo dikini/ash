@@ -1,6 +1,6 @@
 # PLAN-200: Tooling And Migration Polish
 
-**Status:** In Progress (2/9 tasks complete)
+**Status:** In Progress (6/9 tasks complete)
 **Depends on:** Phase 199 Productive App Libraries And Templates.
 **Specs/notes:** `PLAN-199`, `PLAN-198`, `PLAN-196`, `PLAN-195`, `SPEC-096b`,
 `SPEC-097b`, `SPEC-098b`, `SPEC-098c`, `SPEC-099b`, `SPEC-100`, and `NOTE-035`.
@@ -61,10 +61,10 @@ the central product goal, not a cleanup item after tooling work.
 |------|-------------|----------|------------|--------|
 | [TASK-1951](tasks/TASK-1951-tooling-migration-polish-plan-packet.md) | Create the Phase 200 plan and task packet | 2h | Phase 199 | ✅ Complete |
 | [TASK-1952](tasks/TASK-1952-legacy-deprecated-form-audit.md) | Audit diagnostics, formatter, LSP, examples, docs, and old-form productive paths | 12h | TASK-1951 | ✅ Complete |
-| [TASK-1953](tasks/TASK-1953-migration-diagnostics.md) | Improve stale/deprecated syntax diagnostics and migration hints | 16h | TASK-1952 | Planned |
-| [TASK-1954](tasks/TASK-1954-formatter-current-syntax-polish.md) | Polish formatter coverage for current target syntax and old-form quarantine | 14h | TASK-1952 | Planned |
-| [TASK-1955](tasks/TASK-1955-lsp-current-syntax-migration-polish.md) | Polish LSP diagnostics, hover, symbols, semantic tokens, and navigation for current syntax | 16h | TASK-1952 | Planned |
-| [TASK-1956](tasks/TASK-1956-examples-current-syntax-refresh.md) | Refresh examples corpus and classify or remove legacy examples | 12h | TASK-1952 | Planned |
+| [TASK-1953](tasks/TASK-1953-migration-diagnostics.md) | Improve stale/deprecated syntax diagnostics and migration hints | 16h | TASK-1952 | ✅ Complete |
+| [TASK-1954](tasks/TASK-1954-formatter-current-syntax-polish.md) | Polish formatter coverage for current target syntax and old-form quarantine | 14h | TASK-1952 | ✅ Complete |
+| [TASK-1955](tasks/TASK-1955-lsp-current-syntax-migration-polish.md) | Polish LSP diagnostics, hover, symbols, semantic tokens, and navigation for current syntax | 16h | TASK-1952 | ✅ Complete |
+| [TASK-1956](tasks/TASK-1956-examples-current-syntax-refresh.md) | Refresh examples corpus and classify or remove legacy examples | 12h | TASK-1952 | ✅ Complete |
 | [TASK-1957](tasks/TASK-1957-docs-current-syntax-refresh.md) | Refresh docs/tutorials/reference paths around current syntax and migration notes | 12h | TASK-1956 | Planned |
 | [TASK-1958](tasks/TASK-1958-old-syntax-removal-demotion.md) | Remove or demote old syntax from productive paths with fail-closed gates | 18h | TASK-1953, TASK-1954, TASK-1955, TASK-1956, TASK-1957 | Planned |
 | [TASK-1959](tasks/TASK-1959-tooling-migration-polish-closeout.md) | Close out Phase 200 with full gates, stale-claim sweep, docs, and review remediation | 8h | TASK-1958 | Planned |

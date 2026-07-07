@@ -10,6 +10,29 @@ use ash_parser::token::Span as ParserSpan;
 use lsp_types::{Diagnostic, DiagnosticSeverity, Position, Range};
 use tracing::{debug, info};
 
+const DEPRECATED_SYNTAX_MIGRATION_CODE: &str = "DeprecatedSyntaxMigration";
+
+#[derive(Debug, Clone)]
+struct MigrationDiagnostic {
+    pattern: &'static str,
+    line: usize,
+    column: usize,
+    width: usize,
+    context: String,
+    help: &'static str,
+}
+
+impl MigrationDiagnostic {
+    fn message(&self) -> String {
+        format!(
+            "unsupported stale syntax `{}`: {}. {}.",
+            self.pattern,
+            self.context.trim(),
+            self.help
+        )
+    }
+}
+
 /// Converts an `ash_diagnostic::Span` (1-indexed) to an `lsp_types::Range`
 /// (0-indexed).
 const fn span_to_lsp_range(span: &ash_diagnostic::Span) -> Range {
@@ -81,6 +104,145 @@ fn lint_diag_to_lsp(diag: &LintDiagnostic) -> Diagnostic {
     }
 }
 
+fn migration_diagnostic_to_lsp(diag: &MigrationDiagnostic) -> Diagnostic {
+    let start_line = diag.line.saturating_sub(1) as u32;
+    let start_col = diag.column.saturating_sub(1) as u32;
+    Diagnostic {
+        range: Range {
+            start: Position {
+                line: start_line,
+                character: start_col,
+            },
+            end: Position {
+                line: start_line,
+                character: start_col.saturating_add(diag.width as u32),
+            },
+        },
+        severity: Some(DiagnosticSeverity::ERROR),
+        code: Some(lsp_types::NumberOrString::String(
+            DEPRECATED_SYNTAX_MIGRATION_CODE.to_string(),
+        )),
+        source: Some("ash".to_string()),
+        message: diag.message(),
+        ..Diagnostic::default()
+    }
+}
+
+fn targeted_migration_diagnostic(source: &str) -> Option<MigrationDiagnostic> {
+    if let Some(parse_error) = ash_parser::reserved_callable_arrow_diagnostic(source) {
+        return Some(reserved_callable_arrow_migration_diagnostic(
+            source,
+            &parse_error,
+        ));
+    }
+
+    for (line_index, line) in source.lines().enumerate() {
+        let code = strip_line_comment(line).trim();
+        if code.is_empty() {
+            continue;
+        }
+
+        if looks_like_stale_observe_with(code) {
+            return Some(stale_syntax_diagnostic(
+                "observe ... with",
+                line_index + 1,
+                line,
+                "current observe statements do not use trailing `with` clauses",
+            ));
+        }
+
+        if code.contains("with role:") {
+            return Some(stale_syntax_diagnostic(
+                "with role:",
+                line_index + 1,
+                line,
+                "role-shaped `with role:` annotations are not accepted by the current parser",
+            ));
+        }
+
+        if looks_like_stale_act_with(code) {
+            return Some(stale_syntax_diagnostic(
+                "act ... with",
+                line_index + 1,
+                line,
+                "current act statements do not use trailing `with` clauses",
+            ));
+        }
+    }
+
+    None
+}
+
+fn reserved_callable_arrow_migration_diagnostic(
+    source: &str,
+    parse_error: &ash_parser::error::ParseError,
+) -> MigrationDiagnostic {
+    let context = source
+        .lines()
+        .nth(parse_error.span.line.saturating_sub(1))
+        .unwrap_or_default()
+        .trim()
+        .to_string();
+    let pattern = if parse_error.message.contains("Act callable") {
+        "Act callable syntax is reserved (`-*>`)"
+    } else if parse_error.message.contains("Workflow callable") {
+        "Workflow callable syntax is reserved (`=*>`)"
+    } else {
+        "Proc callable syntax is reserved (`=>`)"
+    };
+
+    MigrationDiagnostic {
+        pattern,
+        line: parse_error.span.line,
+        column: parse_error.span.column,
+        width: parse_error.span.end.saturating_sub(parse_error.span.start),
+        context,
+        help: "use the pure callable arrow `->`; tower callable arrows are reserved but not implemented",
+    }
+}
+
+fn stale_syntax_diagnostic(
+    pattern: &'static str,
+    line: usize,
+    source_line: &str,
+    help: &'static str,
+) -> MigrationDiagnostic {
+    let trimmed = source_line.trim();
+    let column = source_line.find(trimmed).map_or(1, |index| index + 1);
+    MigrationDiagnostic {
+        pattern,
+        line,
+        column,
+        width: trimmed.len(),
+        context: trimmed.to_string(),
+        help,
+    }
+}
+
+fn strip_line_comment(line: &str) -> &str {
+    let dash = line.find("--");
+    let slash = line.find("//");
+    match (dash, slash) {
+        (Some(a), Some(b)) => &line[..a.min(b)],
+        (Some(i), None) | (None, Some(i)) => &line[..i],
+        (None, None) => line,
+    }
+}
+
+fn looks_like_stale_observe_with(code: &str) -> bool {
+    code.starts_with("observe ") && contains_word(code, "with")
+}
+
+fn looks_like_stale_act_with(code: &str) -> bool {
+    code.starts_with("act ") && contains_word(code, "with")
+}
+
+fn contains_word(source: &str, needle: &str) -> bool {
+    source
+        .split(|ch: char| !(ch.is_ascii_alphanumeric() || ch == '_'))
+        .any(|token| token == needle)
+}
+
 /// Runs the full diagnostics pipeline on the given source text.
 ///
 /// 1. Parse with `ash_parser::parse_surface_file`.
@@ -102,6 +264,10 @@ pub fn compute_diagnostics(source: &str, config: &LintConfig) -> Vec<Diagnostic>
         }
         Err(errors) => {
             debug!(num_errors = errors.len(), "parse failed");
+            if let Some(diag) = targeted_migration_diagnostic(source) {
+                diagnostics.push(migration_diagnostic_to_lsp(&diag));
+                return diagnostics;
+            }
             for err in &errors {
                 if let Some(diag) = ash_lsp_error_to_diagnostic(err) {
                     diagnostics.push(diag);

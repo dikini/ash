@@ -325,6 +325,8 @@ fn validate_supported_syntax(file: &TemplateFile) -> Result<(), TemplateManifest
         "Act<",
         "Workflow<",
         "legacy workflow",
+        "ambient authority",
+        "direct provider",
     ] {
         let matched = match pattern {
             "observe ... with" => {

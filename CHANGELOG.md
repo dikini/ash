@@ -6,6 +6,23 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Added
+- Completed Phase 200 examples current-syntax refresh (TASK-1956): added an example corpus gate
+  that keeps Phase 199 productive examples free of deprecated forms, requires retained legacy
+  examples to be visibly historical/reference/compatibility material, and updates the examples
+  README to teach current productive examples first.
+- Completed Phase 200 LSP migration polish (TASK-1955): LSP diagnostics now surface
+  `DeprecatedSyntaxMigration` for selected stale syntax and reserved callable arrows with
+  source-backed ranges, while Phase 199 current examples retain document-symbol coverage.
+- Added Phase 200 formatter polish (TASK-1954): `ash fmt` now provides conservative
+  current-syntax-first formatting for files, directories, and stdin, with check/write modes,
+  idempotent whitespace normalization, Phase 199 example coverage, and fail-closed rejection for
+  deprecated formatter inputs such as stale `observe ... with`, tower carriers, and ambient/direct
+  provider wording.
+- Completed Phase 200 migration diagnostics (TASK-1953): stale `observe ... with` and
+  `act ... with` parser failures now surface `DeprecatedSyntaxMigration` diagnostics with JSON
+  code/span/context/help metadata; reserved Act/Proc/Workflow callable arrows keep targeted
+  migration hints in human and JSON output; and template validation fail-closes deprecated tower
+  carrier/provider language before app template promotion.
 - Completed Phase 200 legacy/deprecated form audit (TASK-1952): added AUDIT-200 and a focused
   audit gate that classifies old-form hits across diagnostics, LSP roots, docs/reference paths,
   examples, templates, stdlib surfaces, and compatibility fixtures with follow-up ownership for

@@ -1,6 +1,6 @@
 # TASK-1954: Formatter Current-Syntax Polish
 
-**Status:** Planned
+**Status:** Complete
 **Phase:** [PLAN-200: Tooling And Migration Polish](../PLAN-200-TOOLING-AND-MIGRATION-POLISH.md)
 
 ## Description
@@ -27,7 +27,20 @@ deprecated forms.
 
 ## Completion Checklist
 
-- [ ] Current-syntax formatter fixtures cover Phase 199 app/library surfaces.
-- [ ] Formatter output is idempotent.
-- [ ] Deprecated-form formatter behavior is compatibility-only or removed.
-- [ ] Productive formatter fixtures contain no unlabeled old syntax.
+- [x] Current-syntax formatter fixtures cover Phase 199 app/library surfaces.
+- [x] Formatter output is idempotent.
+- [x] Deprecated-form formatter behavior is compatibility-only or removed.
+- [x] Productive formatter fixtures contain no unlabeled old syntax.
+
+## Evidence
+
+- Added `ash fmt` with file, directory, `--stdin`, `--check`, and `--write` modes. The Phase 200
+  implementation is intentionally conservative: it normalizes whitespace deterministically and
+  leaves AST-level source rewrites to the future full formatter crate.
+- Added `phase200_formatter_current_syntax` coverage for Phase 199 testing/process examples,
+  stdin idempotence, trailing-whitespace check failures, and fail-closed deprecated formatter
+  inputs.
+- Deprecated formatter fixtures are classified in AUDIT-200 as compatibility-only TASK-1954 rows.
+- Focused verification:
+  `cargo test -p ash-cli --test phase200_formatter_current_syntax -- --nocapture` and
+  `cargo test -p ash-cli --test phase200_legacy_deprecated_form_audit -- --nocapture`.

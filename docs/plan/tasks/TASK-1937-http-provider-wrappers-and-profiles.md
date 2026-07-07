@@ -1,6 +1,6 @@
 # TASK-1937: HTTP Provider Wrappers And Profiles
 
-**Status:** Planned
+**Status:** Complete
 **Phase:** [PLAN-198: Standard Providers And Profiles](../PLAN-198-STANDARD-PROVIDERS-AND-PROFILES.md)
 
 ## Description
@@ -24,7 +24,19 @@ trusted provider/adapter substrate.
 
 ## Completion Checklist
 
-- [ ] HTTP wrappers parse/check through stdlib imports.
-- [ ] Sandboxed profiles enforce allowed methods and hosts.
-- [ ] Provider failure taxonomy remains distinct.
-- [ ] Redacted evidence is emitted for success, failure, and denial.
+- [x] HTTP wrappers parse/check through stdlib imports.
+- [x] Sandboxed profiles enforce allowed methods and hosts.
+- [x] Provider failure taxonomy remains distinct.
+- [x] Redacted evidence is emitted for success, failure, and denial.
+
+## Evidence
+
+- Added final-surface HTTP wrapper tests for `http::get`, `http::post`, `http::put`, and
+  `http::delete` through sandboxed standard profiles, including success, denied host, provider
+  failure, and redacted evidence assertions.
+- Registered current HTTP stdlib wrappers in the type environment, builtin dispatch metadata, and
+  async provider-backed dispatch path.
+- Updated `EngineBuilder::with_http_capabilities` from a placeholder configuration error to
+  built-in HTTP provider registration.
+- Preserved the current stdlib decision that `HEAD` remains deferred until it has a non-colliding
+  runtime bridge separate from list `head`.

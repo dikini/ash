@@ -331,8 +331,8 @@ async fn read_write_filesystem_profile_records_success_and_failure_evidence() {
     assert!(
         evidence.iter().any(|record| record.provider_name == "fs"
             && record.operation_name == "write"
-            && record.outcome == HostBoundaryOutcome::Failed),
-        "outside allowed path should record failed provider evidence: {evidence:?}"
+            && record.outcome == HostBoundaryOutcome::Denied),
+        "outside allowed path should record denied sandbox evidence: {evidence:?}"
     );
     assert!(
         evidence.iter().all(|record| !record

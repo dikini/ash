@@ -764,7 +764,6 @@ async fn test_engine_with_fs_role_simulation() {
 
 #[tokio::test]
 async fn test_engine_with_stdio_fs_capabilities_role_simulation() {
-    // HTTP provider not yet implemented - test without it
     let engine = Engine::new()
         .with_stdio_capabilities()
         .with_fs_capabilities()
@@ -776,17 +775,17 @@ async fn test_engine_with_stdio_fs_capabilities_role_simulation() {
 }
 
 #[test]
-fn test_engine_with_http_capabilities_returns_error() {
-    // HTTP provider not yet implemented - should return error
-    let result = Engine::new()
+fn test_engine_with_http_capabilities_registers_provider() {
+    let engine = Engine::new()
         .with_stdio_capabilities()
         .with_fs_capabilities()
         .with_http_capabilities(HttpConfig::new())
-        .build();
+        .build()
+        .expect("engine builds with HTTP capabilities");
 
     assert!(
-        result.is_err(),
-        "Engine should return error when HTTP capabilities requested"
+        engine.has_provider("http"),
+        "Engine should register HTTP provider when HTTP capabilities requested"
     );
 }
 

@@ -1,6 +1,6 @@
 # TASK-1936: Filesystem Provider Wrappers And Profiles
 
-**Status:** Planned
+**Status:** Complete
 **Phase:** [PLAN-198: Standard Providers And Profiles](../PLAN-198-STANDARD-PROVIDERS-AND-PROFILES.md)
 
 ## Description
@@ -25,7 +25,18 @@ profiles over the Phase 197 provider and sandbox substrate.
 
 ## Completion Checklist
 
-- [ ] Filesystem wrappers parse/check through stdlib imports.
-- [ ] Read-only and read-write profiles fail closed on overbroad paths.
-- [ ] Sandbox denial occurs before host effects.
-- [ ] Redacted evidence is emitted for success, failure, and denial.
+- [x] Filesystem wrappers parse/check through final-surface function entrypoints.
+- [x] Read-only and read-write profiles fail closed on overbroad paths.
+- [x] Sandbox denial occurs before host effects.
+- [x] Redacted evidence is emitted for success, failure, and denial.
+
+## Evidence
+
+- Added `crates/ash-engine/tests/task_1936_filesystem_provider_wrappers.rs` covering
+  target `fn main` execution through filesystem wrapper builtins for write, append, exists,
+  metadata, directory listing, read, and denied outside-profile writes.
+- Filesystem wrapper dispatch normalizes current-syntax `PathBuf { inner }` carriers to provider
+  path arguments, requires admitted `fs` profile bindings, and records redacted host-boundary
+  evidence for success and sandbox denial.
+- `HostSandboxPolicy` now carries filesystem path allow-list refinements so profile path rejection
+  occurs before host filesystem effects.

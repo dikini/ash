@@ -6,6 +6,14 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Added
+- Added Phase 198 HTTP wrapper execution through standard profiles (TASK-1937): current stdlib
+  HTTP wrappers for GET, POST, PUT, and DELETE now route through admitted provider bindings with
+  host/method sandbox denial before host effects, provider failure taxonomy, and redacted
+  host-boundary evidence.
+- Added Phase 198 filesystem wrapper execution through standard profiles (TASK-1936): filesystem
+  stdlib wrapper calls now route through admitted provider bindings for read/write/append/exists,
+  metadata, and directory listing, with profile path sandbox denial before host effects and
+  redacted host-boundary evidence.
 - Added NOTE-036 gradual verification and proof provider architecture design note,
   framing Ash's automatic verification, property testing, and runtime checking tiers as one
   gradual-assurance system, specifying proof-provider integration via MCP, LLM-assisted proof

@@ -196,13 +196,6 @@ impl ProviderAdmissionSurface {
         }
     }
 
-    fn allows_observe(&self, action_name: &str) -> bool {
-        match self {
-            Self::Provider => true,
-            Self::Actions(actions) => actions.contains(action_name),
-        }
-    }
-
     fn allows_action(&self, action_name: &str) -> bool {
         match self {
             Self::Provider => true,
@@ -327,6 +320,31 @@ impl ProjectedProviderWrapper {
         }
     }
 
+    fn admits_operation(&self, action_name: &str) -> bool {
+        if self.surface.allows_action(action_name) {
+            return true;
+        }
+
+        let ProviderAdmissionSurface::Actions(actions) = &self.surface else {
+            return false;
+        };
+
+        self.inner
+            .provider_metadata()
+            .operations
+            .iter()
+            .find(|operation| operation.operation_name == action_name)
+            .is_some_and(|operation| {
+                operation.required_rows.iter().any(|row| {
+                    let Some((provider, row_action)) = row.split_once('.') else {
+                        return actions.contains(row);
+                    };
+                    (provider == self.provider_name || provider == self.projected_name)
+                        && actions.contains(row_action)
+                })
+            })
+    }
+
     async fn record_host_boundary_evidence(
         &self,
         action_name: &str,
@@ -423,8 +441,22 @@ impl ash_core::capability::CapabilityProvider for ProjectedProviderWrapper {
                 "No observe constraints provided".to_string(),
             ));
         };
-        if self.surface.allows_observe(action_name) {
-            let policy = self.enforce_sandbox(action_name, &[]).await?;
+        if self.admits_operation(action_name) {
+            let sandbox_args = constraints
+                .first()
+                .map(|constraint| {
+                    constraint
+                        .predicate
+                        .arguments
+                        .iter()
+                        .map(|expr| match expr {
+                            ash_core::Expr::Literal(value) => value.clone(),
+                            _ => Value::Null,
+                        })
+                        .collect::<Vec<_>>()
+                })
+                .unwrap_or_default();
+            let policy = self.enforce_sandbox(action_name, &sandbox_args).await?;
             let result = self.inner.observe(constraints).await;
             if let Some((sandbox_policy, provenance_policy)) = policy {
                 match &result {
@@ -464,7 +496,7 @@ impl ash_core::capability::CapabilityProvider for ProjectedProviderWrapper {
         action_name: &str,
         args: &[Value],
     ) -> Result<Value, ash_core::capability::CapabilityError> {
-        if self.surface.allows_action(action_name) {
+        if self.admits_operation(action_name) {
             let policy = self.enforce_sandbox(action_name, args).await?;
             let result = self.inner.execute(action_name, args).await;
             if let Some((sandbox_policy, provenance_policy)) = policy {

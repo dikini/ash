@@ -39,9 +39,9 @@ pub use ash_core::capability::CapabilityProvider;
 
 use ash_core::core_ash::{CoreRow, CoreRowItem, CoreType};
 use ash_core::runtime::{
-    FailureEntity, OperationalFailure, ProcessFailure, RunId, TowerLevel, WorkflowAdmissionContext,
-    WorkflowBoundaryOutcome, WorkflowContractCheckEvidence, WorkflowEvidenceStatus,
-    WorkflowFailure, WorkflowFailureKind, WorkflowReport,
+    FailureEntity, HostBoundaryEvidence, OperationalFailure, ProcessFailure, RunId, TowerLevel,
+    WorkflowAdmissionContext, WorkflowBoundaryOutcome, WorkflowContractCheckEvidence,
+    WorkflowEvidenceStatus, WorkflowFailure, WorkflowFailureKind, WorkflowReport,
 };
 use ash_core::{
     CapabilityBinding, CapabilityBindingId, CapabilityInterfaceId, Provenance, Role, Value,
@@ -904,6 +904,24 @@ impl Engine {
     #[must_use]
     pub fn provider_count(&self) -> usize {
         self.runtime_state.provider_count()
+    }
+
+    /// Install one standard provider/admission profile into this engine runtime.
+    ///
+    /// # Errors
+    ///
+    /// Returns runtime validation errors when profile metadata, sandbox policy, or capability
+    /// binding admission is malformed or incompatible with provider metadata.
+    pub async fn install_standard_profile(
+        &self,
+        profile: standard_profiles::StandardProviderProfile,
+    ) -> ExecResult<standard_profiles::InstalledStandardProfile> {
+        profile.install(&self.runtime_state).await
+    }
+
+    /// Return retained redacted host-boundary evidence for this engine runtime.
+    pub async fn host_boundary_evidence(&self) -> Vec<HostBoundaryEvidence> {
+        self.runtime_state.host_boundary_evidence().await
     }
 
     /// Return the selected Ash-defined implementation for a host binding name.
@@ -2693,7 +2711,9 @@ impl EngineBuilder {
     /// Returns `EngineError` if the engine cannot be constructed
     /// (e.g., missing required capabilities or invalid configuration).
     pub fn build(self) -> Result<Engine, EngineError> {
-        use providers::{FsProvider, StdioProvider};
+        use providers::{
+            FsProvider, HttpConfig as ProviderHttpConfig, HttpProvider, StdioProvider,
+        };
         use std::sync::Arc;
 
         // Providers are stored as the unified trait type from ash_core
@@ -2719,11 +2739,11 @@ impl EngineBuilder {
         }
 
         // Register HTTP provider if configured
-        // Note: HTTP provider is not yet implemented.
-        if self.http_config.is_some() {
-            return Err(EngineError::Configuration(
-                "HTTP provider not yet implemented. Use with_custom_provider() to add your own HTTP implementation.".to_string(),
-            ));
+        if let Some(config) = self.http_config {
+            let provider = HttpProvider::with_config(
+                ProviderHttpConfig::new().with_timeout(config.timeout_seconds),
+            );
+            providers.insert("http".to_string(), Arc::new(provider));
         }
 
         // Register custom providers (these can override built-ins)
@@ -2783,13 +2803,7 @@ impl EngineBuilder {
         self
     }
 
-    /// Configure HTTP capabilities (not yet implemented)
-    ///
-    /// # Errors
-    ///
-    /// This method currently returns a `Configuration` error as the HTTP provider
-    /// is not yet implemented. Use `with_custom_provider()` to add a custom HTTP
-    /// implementation.
+    /// Configure HTTP capabilities
     ///
     /// # Example
     ///
@@ -2799,7 +2813,7 @@ impl EngineBuilder {
     /// let result = Engine::new()
     ///     .with_http_capabilities(HttpConfig::new())
     ///     .build();
-    /// assert!(result.is_err()); // HTTP provider not yet implemented
+    /// assert!(result.is_ok());
     /// ```
     #[must_use]
     #[allow(clippy::missing_const_for_fn)] // Cannot be const due to HashMap operations in build()

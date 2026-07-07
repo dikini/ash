@@ -320,43 +320,32 @@ fn test_engine_execute_workflow() {
 // ============================================================
 
 #[test]
-fn test_builder_http_capabilities_returns_error() {
-    // HTTP provider is not yet implemented, should return Configuration error
+fn test_builder_http_capabilities_registers_provider() {
     let config = HttpConfig::new();
-    let result = Engine::new().with_http_capabilities(config).build();
+    let engine = Engine::new()
+        .with_http_capabilities(config)
+        .build()
+        .expect("engine builds with HTTP capabilities");
     assert!(
-        result.is_err(),
-        "Builder with HTTP capabilities should return error (not yet implemented)"
-    );
-    let err = result.unwrap_err();
-    assert!(
-        matches!(err, EngineError::Configuration(_)),
-        "Error should be Configuration variant"
-    );
-    let err_msg = format!("{err}");
-    assert!(
-        err_msg.contains("HTTP provider not yet implemented"),
-        "Error message should indicate HTTP not implemented: {err_msg}"
+        engine.has_provider("http"),
+        "Builder with HTTP capabilities should register the HTTP provider"
     );
 }
 
 #[test]
-fn test_builder_http_capabilities_with_custom_config_returns_error() {
-    // HTTP provider is not yet implemented, should return Configuration error
+fn test_builder_http_capabilities_with_custom_config_registers_provider() {
     let config = HttpConfig {
         timeout_seconds: 60,
         max_redirects: 5,
         verify_ssl: false,
     };
-    let result = Engine::new().with_http_capabilities(config).build();
+    let engine = Engine::new()
+        .with_http_capabilities(config)
+        .build()
+        .expect("engine builds with custom HTTP config");
     assert!(
-        result.is_err(),
-        "Builder with custom HTTP config should return error (not yet implemented)"
-    );
-    let err = result.unwrap_err();
-    assert!(
-        matches!(err, EngineError::Configuration(_)),
-        "Error should be Configuration variant"
+        engine.has_provider("http"),
+        "Builder with custom HTTP config should register the HTTP provider"
     );
 }
 
@@ -442,17 +431,17 @@ fn test_builder_stdio_fs_custom_together() {
 }
 
 #[test]
-fn test_builder_http_with_other_capabilities_returns_error() {
-    // HTTP provider not yet implemented - should return error even with other capabilities
-    let result = Engine::new()
+fn test_builder_http_with_other_capabilities_registers_provider() {
+    let engine = Engine::new()
         .with_stdio_capabilities()
         .with_fs_capabilities()
         .with_http_capabilities(HttpConfig::new())
-        .build();
+        .build()
+        .expect("engine builds with stdio, fs, and HTTP capabilities");
 
     assert!(
-        result.is_err(),
-        "Builder with HTTP should return error (not yet implemented)"
+        engine.has_provider("http"),
+        "Builder with HTTP should register the HTTP provider"
     );
 }
 

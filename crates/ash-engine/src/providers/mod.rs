@@ -16,6 +16,7 @@ use async_trait::async_trait;
 use std::io::{self, BufRead, Write};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
+use tokio::io::AsyncWriteExt;
 
 pub mod http;
 pub use http::{HttpConfig, HttpProvider};
@@ -647,7 +648,7 @@ impl CapabilityProvider for FsProvider {
 
                 self.validate_path(&path)?;
 
-                tokio::fs::OpenOptions::new()
+                let mut file = tokio::fs::OpenOptions::new()
                     .append(true)
                     .create(true)
                     .open(&path)
@@ -659,7 +660,7 @@ impl CapabilityProvider for FsProvider {
                         ))
                     })?;
 
-                tokio::fs::write(&path, content).await.map_err(|e| {
+                file.write_all(content.as_bytes()).await.map_err(|e| {
                     CapabilityError::ExecutionFailed(format!(
                         "Cannot append to file '{}': {e}",
                         path.display()

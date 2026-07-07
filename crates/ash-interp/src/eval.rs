@@ -8,7 +8,7 @@ use ash_core::runtime::{
     ProcessPropagationBoundary, ProcessPropagationDiagnostic, ProcessTerminalState,
     RuntimeTraceEvent, RuntimeTraceFact,
 };
-use ash_core::{BinaryOp, Expr, Value, ast::Pattern};
+use ash_core::{BinaryOp, Constraint, Expr, Value, ast::Pattern, ast::Predicate};
 use futures::future::join_all;
 use std::collections::HashMap;
 
@@ -645,7 +645,213 @@ pub fn dispatch_builtin(
         None => (None, qualified_name),
     };
 
+    if let Some(result) = dispatch_provider_backed_builtin(qualified_name, func, args, ctx) {
+        return Some(result);
+    }
+
     Some(eval_function_call(func, module, args, ctx))
+}
+
+fn dispatch_provider_backed_builtin(
+    qualified_name: &str,
+    action_name: &str,
+    args: &[Value],
+    ctx: &Context,
+) -> Option<EvalResult<Value>> {
+    let provider_name = provider_backed_builtin_provider(qualified_name)?;
+
+    let runtime_state = ctx.runtime_state().ok_or_else(|| {
+        EvalError::ExecutionFailed(format!(
+            "provider-backed builtin '{qualified_name}' missing hidden runtime state"
+        ))
+    });
+    let runtime_state = match runtime_state {
+        Ok(runtime_state) => runtime_state,
+        Err(error) => return Some(Err(error)),
+    };
+    let Some(binding) =
+        futures::executor::block_on(runtime_state.capability_binding_by_name(provider_name))
+    else {
+        return Some(Err(EvalError::ExecutionFailed(format!(
+            "provider-backed builtin missing admitted {provider_name} binding"
+        ))));
+    };
+    if !ctx.admitted_capability_bindings().contains(&binding.id) {
+        return Some(Err(EvalError::ExecutionFailed(format!(
+            "provider-backed builtin {provider_name} binding is not admitted"
+        ))));
+    }
+
+    let provider_args = args
+        .iter()
+        .map(normalize_stdlib_path_value)
+        .collect::<Vec<_>>();
+    let projected_ctx = match futures::executor::block_on(
+        runtime_state.create_capability_context_for_bindings(&[binding.id]),
+    ) {
+        Ok(projected_ctx) => projected_ctx,
+        Err(error) => return Some(Err(EvalError::ExecutionFailed(error.to_string()))),
+    };
+
+    let result = if matches!(
+        action_name,
+        "exists" | "read_to_string" | "read_dir" | "metadata"
+    ) {
+        let constraints = vec![Constraint {
+            predicate: Predicate {
+                name: action_name.to_string(),
+                arguments: provider_args
+                    .iter()
+                    .cloned()
+                    .map(Expr::Literal)
+                    .collect::<Vec<_>>(),
+            },
+        }];
+        futures::executor::block_on(projected_ctx.observe(&ash_core::Capability {
+            name: provider_name.to_string(),
+            effect: ash_core::Effect::Epistemic,
+            constraints,
+        }))
+    } else {
+        futures::executor::block_on(projected_ctx.execute(
+            provider_name,
+            action_name,
+            &provider_args,
+        ))
+    };
+
+    Some(result.map_err(|error| EvalError::ExecutionFailed(error.to_string())))
+}
+
+async fn dispatch_provider_backed_builtin_async(
+    qualified_name: &str,
+    action_name: &str,
+    args: &[Value],
+    ctx: &Context,
+) -> Option<EvalResult<Value>> {
+    let provider_name = provider_backed_builtin_provider(qualified_name)?;
+    let table = builtin_dispatch_table();
+    let entry = match table.get(qualified_name) {
+        Some(entry) => entry,
+        None => {
+            return Some(Err(EvalError::UnknownFunction(qualified_name.to_string())));
+        }
+    };
+    if !entry.implemented {
+        return Some(Err(EvalError::UnimplementedBuiltin {
+            name: qualified_name.to_string(),
+        }));
+    }
+    if let Err(error) = validate_builtin_host_hook_metadata(
+        qualified_name,
+        entry,
+        builtin_host_hook_metadata(qualified_name),
+    ) {
+        return Some(Err(EvalError::ExecutionFailed(error.to_string())));
+    }
+    if !entry.variadic && args.len() != entry.arity {
+        return Some(Err(EvalError::WrongArity {
+            expected: entry.arity,
+            actual: args.len(),
+            callee: Some(qualified_name.to_string()),
+        }));
+    }
+
+    let runtime_state = match ctx.runtime_state() {
+        Some(runtime_state) => runtime_state,
+        None => {
+            return Some(Err(EvalError::ExecutionFailed(format!(
+                "provider-backed builtin '{qualified_name}' missing hidden runtime state"
+            ))));
+        }
+    };
+    let Some(binding) = runtime_state
+        .capability_binding_by_name(provider_name)
+        .await
+    else {
+        return Some(Err(EvalError::ExecutionFailed(format!(
+            "provider-backed builtin missing admitted {provider_name} binding"
+        ))));
+    };
+    if !ctx.admitted_capability_bindings().contains(&binding.id) {
+        return Some(Err(EvalError::ExecutionFailed(format!(
+            "provider-backed builtin {provider_name} binding is not admitted"
+        ))));
+    }
+
+    let provider_args = args
+        .iter()
+        .map(normalize_stdlib_path_value)
+        .collect::<Vec<_>>();
+    let projected_ctx = match runtime_state
+        .create_capability_context_for_bindings(&[binding.id])
+        .await
+    {
+        Ok(projected_ctx) => projected_ctx,
+        Err(error) => return Some(Err(EvalError::ExecutionFailed(error.to_string()))),
+    };
+
+    let result = if matches!(
+        action_name,
+        "exists" | "read_to_string" | "read_dir" | "metadata"
+    ) {
+        let constraints = vec![Constraint {
+            predicate: Predicate {
+                name: action_name.to_string(),
+                arguments: provider_args
+                    .iter()
+                    .cloned()
+                    .map(Expr::Literal)
+                    .collect::<Vec<_>>(),
+            },
+        }];
+        projected_ctx
+            .observe(&ash_core::Capability {
+                name: provider_name.to_string(),
+                effect: ash_core::Effect::Epistemic,
+                constraints,
+            })
+            .await
+    } else {
+        projected_ctx
+            .execute(provider_name, action_name, &provider_args)
+            .await
+    };
+
+    Some(result.map_err(|error| EvalError::ExecutionFailed(error.to_string())))
+}
+
+fn provider_backed_builtin_provider(qualified_name: &str) -> Option<&'static str> {
+    match qualified_name {
+        "http::get" | "http::post" | "http::put" | "http::delete" => Some("http"),
+        "fs::exists"
+        | "fs::read_to_string"
+        | "fs::append"
+        | "fs::write_string"
+        | "dir::read_dir"
+        | "meta::metadata"
+        | "io::fs::exists"
+        | "io::fs::read_to_string"
+        | "io::fs::append"
+        | "io::fs::write_string"
+        | "io::dir::read_dir"
+        | "io::meta::metadata" => Some("fs"),
+        _ => None,
+    }
+}
+
+fn normalize_stdlib_path_value(value: &Value) -> Value {
+    match value {
+        Value::Record(fields) => fields
+            .get("inner")
+            .cloned()
+            .unwrap_or_else(|| value.clone()),
+        Value::Variant { name, fields } if name == "PathBuf" => fields
+            .iter()
+            .find_map(|(field, value)| (field == "inner").then(|| value.clone()))
+            .unwrap_or_else(|| value.clone()),
+        _ => value.clone(),
+    }
 }
 
 // ── End builtin dispatch table ───────────────────────────────────
@@ -1719,6 +1925,11 @@ fn eval_expr_force_async<'a>(expr: &'a Expr, ctx: &'a Context) -> EvalBoxFuture<
                 }
 
                 let qname = qualified_builtin_name(func, module.as_deref());
+                if let Some(result) =
+                    dispatch_provider_backed_builtin_async(&qname, func, &args, ctx).await
+                {
+                    return result;
+                }
                 if let Some(result) = dispatch_builtin(&qname, &args, ctx) {
                     return result;
                 }

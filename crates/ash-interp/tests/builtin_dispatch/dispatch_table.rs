@@ -54,19 +54,11 @@ fn stdlib_pub_builtin_declarations_have_honest_dispatch_entries() {
 fn provider_backed_stdlib_builtins_are_forward_declared_not_implemented() {
     let table = builtin_dispatch_table();
     for name in [
-        "http::get",
-        "http::post",
-        "http::put",
-        "http::delete",
         "time::now",
         "time::now_iso",
         "time::epoch_millis",
         "time::sleep",
         "io::stdio::read_line",
-        "io::fs::read",
-        "io::fs::read_to_string",
-        "io::dir::read_dir",
-        "io::meta::metadata",
         "io::buf::read_to_end",
     ] {
         let entry = table
@@ -125,9 +117,8 @@ fn dispatch_builtin_unknown_returns_none() {
 #[test]
 fn dispatch_builtin_forward_declared_produces_unimplemented_error() {
     let ctx = Context::new();
-    let args = vec![Value::String("https://example.invalid".into())];
-    let result = dispatch_builtin("http::get", &args, &ctx)
-        .expect("dispatch should find http::get in the table");
+    let result = dispatch_builtin("time::now", &[], &ctx)
+        .expect("dispatch should find time::now in the table");
     assert!(
         matches!(result, Err(EvalError::UnimplementedBuiltin { .. })),
         "forward-declared builtin should produce UnimplementedBuiltin, got: {result:?}"
@@ -153,25 +144,23 @@ fn unimplemented_builtin_error_message_is_clear() {
 #[test]
 fn eval_function_call_forward_declared_via_expr_produces_unimplemented() {
     let ctx = Context::new();
-    // Call http::get("https://example.invalid") — it is forward-declared in
+    // Call time::now() — it is forward-declared in
     // the dispatch table but deliberately not bridged in the interpreter.
     let expr = Expr::Call {
-        func: "get".to_string(),
-        module: Some("http".to_string()),
-        arguments: vec![Expr::Literal(Value::String(
-            "https://example.invalid".into(),
-        ))],
+        func: "now".to_string(),
+        module: Some("time".to_string()),
+        arguments: vec![],
     };
     let err = eval_expr(&expr, &ctx).unwrap_err();
     assert!(
         matches!(err, EvalError::UnimplementedBuiltin { .. }),
-        "expected UnimplementedBuiltin for http::get, got: {err:?}"
+        "expected UnimplementedBuiltin for time::now, got: {err:?}"
     );
 
     // Verify the error message contains the qualified name
     let msg = err.to_string();
     assert!(
-        msg.contains("http::get"),
+        msg.contains("time::now"),
         "error message should contain qualified name, got: {msg}"
     );
 }

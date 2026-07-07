@@ -6,6 +6,7 @@
 
 use crate::{Value, WorkflowId, core_ash_contract::TraceFactKind};
 use serde::{Deserialize, Serialize};
+use std::path::Path;
 use uuid::Uuid;
 
 /// A unique identifier for one concrete runtime resource instance.
@@ -1032,6 +1033,8 @@ pub struct HostSandboxPolicy {
     pub allowed_commands: Vec<String>,
     /// Allowed HTTP host names for network provider operations.
     pub allowed_hosts: Vec<String>,
+    /// Allowed filesystem path prefixes for filesystem provider operations.
+    pub allowed_paths: Vec<String>,
 }
 
 impl HostSandboxPolicy {
@@ -1044,6 +1047,7 @@ impl HostSandboxPolicy {
             denied_reason: None,
             allowed_commands: Vec::new(),
             allowed_hosts: Vec::new(),
+            allowed_paths: Vec::new(),
         }
     }
 
@@ -1056,6 +1060,7 @@ impl HostSandboxPolicy {
             denied_reason: Some(reason.into()),
             allowed_commands: Vec::new(),
             allowed_hosts: Vec::new(),
+            allowed_paths: Vec::new(),
         }
     }
 
@@ -1070,6 +1075,13 @@ impl HostSandboxPolicy {
     #[must_use]
     pub fn with_allowed_host(mut self, host: impl Into<String>) -> Self {
         self.allowed_hosts.push(host.into());
+        self
+    }
+
+    /// Add one allowed filesystem path prefix.
+    #[must_use]
+    pub fn with_allowed_path(mut self, path: impl Into<String>) -> Self {
+        self.allowed_paths.push(path.into());
         self
     }
 
@@ -1113,8 +1125,47 @@ impl HostSandboxPolicy {
             }
         }
 
+        if !self.allowed_paths.is_empty() && is_filesystem_operation(operation_name) {
+            let Some(path) = first_string_arg(args) else {
+                return HostSandboxDecision::Deny {
+                    reason: "filesystem path missing or invalid".to_string(),
+                };
+            };
+            if !self
+                .allowed_paths
+                .iter()
+                .any(|allowed| Path::new(path).starts_with(Path::new(allowed)))
+            {
+                return HostSandboxDecision::Deny {
+                    reason: "filesystem path not allowed by sandbox policy".to_string(),
+                };
+            }
+        }
+
         HostSandboxDecision::Allow
     }
+}
+
+fn is_filesystem_operation(operation_name: &str) -> bool {
+    matches!(
+        operation_name,
+        "exists"
+            | "read_file"
+            | "read_to_string"
+            | "metadata"
+            | "read_dir"
+            | "write_file"
+            | "write"
+            | "write_string"
+            | "append"
+            | "copy"
+            | "rename"
+            | "remove_file"
+            | "create_dir"
+            | "create_dir_all"
+            | "remove_dir"
+            | "remove_dir_all"
+    )
 }
 
 /// Redacted retained evidence for a denied host sandbox attempt.

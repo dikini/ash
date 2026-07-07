@@ -61,11 +61,11 @@ fn implemented_host_builtin_without_metadata_fails_closed() {
 fn unimplemented_provider_backed_builtin_can_remain_forward_declared() {
     let table = builtin_dispatch_table();
     let entry = table
-        .get("http::get")
-        .expect("http::get should be forward declared");
+        .get("time::now")
+        .expect("time::now should be forward declared");
 
     assert!(!entry.implemented);
-    assert!(builtin_requires_host_hook_metadata("http::get", entry));
-    validate_builtin_host_hook_metadata("http::get", entry, None)
+    assert!(builtin_requires_host_hook_metadata("time::now", entry));
+    validate_builtin_host_hook_metadata("time::now", entry, None)
         .expect("forward declaration should fail at execution, not at metadata inventory time");
 }

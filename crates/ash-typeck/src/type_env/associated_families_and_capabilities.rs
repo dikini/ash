@@ -1676,6 +1676,8 @@ impl TypeEnv {
         self.add_proc_builtin_values();
         self.add_workflow_builtin_values();
         self.add_result_builtin_values();
+        self.add_filesystem_builtin_values();
+        self.add_http_builtin_values();
         self.add_builtin_capability_symbols();
     }
 
@@ -1683,6 +1685,106 @@ impl TypeEnv {
         for capability in ["Args", "Dir", "Fs", "Meta", "Stdio"] {
             self.register_capability_symbol(capability);
         }
+    }
+
+    /// Add filesystem stdlib wrapper signatures used by provider-backed builtin dispatch.
+    pub(super) fn add_filesystem_builtin_values(&mut self) {
+        let path = crate::types::Type::Constructor {
+            name: crate::QualifiedName::root("PathBuf"),
+            args: vec![],
+            kind: crate::Kind::Type,
+        };
+
+        for module in ["fs", "io::fs"] {
+            let exists = format!("{module}::exists");
+            self.bind_variable(
+                &exists,
+                crate::types::Type::Fn(vec![path.clone()], Box::new(crate::types::Type::Bool)),
+            );
+            let read_to_string = format!("{module}::read_to_string");
+            self.bind_variable(
+                &read_to_string,
+                crate::types::Type::Fn(vec![path.clone()], Box::new(crate::types::Type::String)),
+            );
+            let append = format!("{module}::append");
+            self.bind_variable(
+                &append,
+                crate::types::Type::Fn(
+                    vec![path.clone(), crate::types::Type::String],
+                    Box::new(crate::types::Type::Null),
+                ),
+            );
+            let write_string = format!("{module}::write_string");
+            self.bind_variable(
+                &write_string,
+                crate::types::Type::Fn(
+                    vec![path.clone(), crate::types::Type::String],
+                    Box::new(crate::types::Type::Null),
+                ),
+            );
+        }
+
+        for module in ["dir", "io::dir"] {
+            let read_dir = format!("{module}::read_dir");
+            self.bind_variable(
+                &read_dir,
+                crate::types::Type::Fn(
+                    vec![path.clone()],
+                    Box::new(crate::types::Type::List(Box::new(
+                        crate::types::Type::String,
+                    ))),
+                ),
+            );
+        }
+
+        let metadata_ty = crate::types::Type::Record(vec![
+            ("is_file".into(), crate::types::Type::Bool),
+            ("is_dir".into(), crate::types::Type::Bool),
+            ("len".into(), crate::types::Type::Int),
+            ("readonly".into(), crate::types::Type::Bool),
+        ]);
+        for module in ["meta", "io::meta"] {
+            let metadata = format!("{module}::metadata");
+            self.bind_variable(
+                &metadata,
+                crate::types::Type::Fn(vec![path.clone()], Box::new(metadata_ty.clone())),
+            );
+        }
+    }
+
+    /// Add HTTP stdlib wrapper signatures used by provider-backed builtin dispatch.
+    pub(super) fn add_http_builtin_values(&mut self) {
+        let response_ty = crate::types::Type::Record(vec![
+            ("status".into(), crate::types::Type::Int),
+            ("headers".into(), crate::types::Type::Record(vec![])),
+            ("body".into(), crate::types::Type::String),
+        ]);
+
+        self.bind_variable(
+            "http::get",
+            crate::types::Type::Fn(
+                vec![crate::types::Type::String],
+                Box::new(response_ty.clone()),
+            ),
+        );
+        self.bind_variable(
+            "http::post",
+            crate::types::Type::Fn(
+                vec![crate::types::Type::String, crate::types::Type::String],
+                Box::new(response_ty.clone()),
+            ),
+        );
+        self.bind_variable(
+            "http::put",
+            crate::types::Type::Fn(
+                vec![crate::types::Type::String, crate::types::Type::String],
+                Box::new(response_ty.clone()),
+            ),
+        );
+        self.bind_variable(
+            "http::delete",
+            crate::types::Type::Fn(vec![crate::types::Type::String], Box::new(response_ty)),
+        );
     }
 
     /// Add the Option<T> type

@@ -238,28 +238,29 @@ fn test_duplicate_provider_registration_handling() {
 
 #[test]
 fn test_builtin_provider_registration() {
-    // HTTP provider not yet implemented - test stdio and fs only
     let engine = Engine::new()
         .with_stdio_capabilities()
         .with_fs_capabilities()
-        .build();
+        .with_http_capabilities(HttpConfig::new())
+        .build()
+        .expect("engine builds with built-in providers");
     assert!(
-        engine.is_ok(),
-        "Engine should build with stdio and fs built-in providers"
+        engine.has_provider("http"),
+        "Engine should build with HTTP built-in provider"
     );
 }
 
 #[test]
-fn test_http_capabilities_returns_error() {
-    // HTTP provider not yet implemented - should return error
-    let result = Engine::new()
+fn test_http_capabilities_registers_provider() {
+    let engine = Engine::new()
         .with_stdio_capabilities()
         .with_fs_capabilities()
         .with_http_capabilities(HttpConfig::new())
-        .build();
+        .build()
+        .expect("engine builds with HTTP capabilities");
     assert!(
-        result.is_err(),
-        "Engine should return error when HTTP capabilities requested"
+        engine.has_provider("http"),
+        "Engine should register HTTP provider when HTTP capabilities are requested"
     );
 }
 
@@ -680,44 +681,46 @@ async fn test_fs_provider_integration() {
 }
 
 #[test]
-fn test_http_provider_returns_error() {
-    // HTTP provider not yet implemented - should return error
-    let result = Engine::new()
+fn test_http_provider_registers() {
+    let engine = Engine::new()
         .with_http_capabilities(HttpConfig::new())
-        .build();
+        .build()
+        .expect("engine builds with HTTP capabilities");
     assert!(
-        result.is_err(),
-        "Engine should return error when HTTP capabilities requested"
+        engine.has_provider("http"),
+        "Engine should register HTTP provider"
     );
 }
 
 #[tokio::test]
-async fn test_all_builtin_providers_together_except_http() {
-    // HTTP provider not yet implemented - test without it
+async fn test_all_builtin_providers_together() {
     let engine = Engine::new()
         .with_stdio_capabilities()
         .with_fs_capabilities()
+        .with_http_capabilities(HttpConfig::new())
         .build()
         .expect("engine builds");
 
+    assert!(engine.has_provider("http"));
     let result = engine.run("workflow main { ret 42; }").await;
     assert!(result.is_ok());
 }
 
 #[tokio::test]
-async fn test_mixed_custom_and_builtin_providers_except_http() {
-    // HTTP provider not yet implemented - test without it
+async fn test_mixed_custom_and_builtin_providers() {
     let custom1 = TrackingProvider::new("custom1");
     let custom2 = TrackingProvider::new("custom2");
 
     let engine = Engine::new()
         .with_stdio_capabilities()
         .with_fs_capabilities()
+        .with_http_capabilities(HttpConfig::new())
         .with_custom_provider("custom1", Arc::new(custom1))
         .with_custom_provider("custom2", Arc::new(custom2))
         .build()
         .expect("engine builds");
 
+    assert!(engine.has_provider("http"));
     let result = engine.run("workflow main { ret 42; }").await;
     assert!(result.is_ok());
 }
@@ -728,7 +731,6 @@ async fn test_mixed_custom_and_builtin_providers_except_http() {
 
 #[test]
 fn test_provider_builder_chaining() {
-    // HTTP provider not yet implemented - test without it
     let result = Engine::new()
         .with_stdio_capabilities()
         .with_fs_capabilities()
@@ -740,18 +742,18 @@ fn test_provider_builder_chaining() {
 }
 
 #[test]
-fn test_provider_builder_chaining_with_http_returns_error() {
-    // HTTP provider not yet implemented - should return error
-    let result = Engine::new()
+fn test_provider_builder_chaining_with_http_registers_provider() {
+    let engine = Engine::new()
         .with_stdio_capabilities()
         .with_fs_capabilities()
         .with_http_capabilities(HttpConfig::new())
         .with_custom_provider("a", Arc::new(TrackingProvider::new("a")))
-        .build();
+        .build()
+        .expect("engine builds with mixed providers and HTTP");
 
     assert!(
-        result.is_err(),
-        "Builder with HTTP should return error (not yet implemented)"
+        engine.has_provider("http"),
+        "Builder with HTTP should register the HTTP provider"
     );
 }
 

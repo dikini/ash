@@ -2029,6 +2029,7 @@ pub async fn execute_with_bindings_in_state(
         .await?;
     let ctx = Context::with_bindings(input_bindings)
         .with_admitted_capability_bindings(admitted_bindings.clone())
+        .with_runtime_state(runtime_state.clone())
         .with_act_env(ActEnv::new(
             act_cap_ctx,
             policy_eval.clone(),

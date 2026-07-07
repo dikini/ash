@@ -161,12 +161,37 @@ pub fn builtin_dispatch_table() -> &'static HashMap<&'static str, BuiltinEntry> 
             },
         );
 
-        // ── Provider-backed stdlib surfaces intentionally deferred in interp ──
+        // ── Provider-backed stdlib surfaces ──
         for (name, arity) in [
             ("http::get", 1),
             ("http::post", 2),
             ("http::put", 2),
             ("http::delete", 1),
+            ("fs::exists", 1),
+            ("fs::read_to_string", 1),
+            ("fs::append", 2),
+            ("fs::write_string", 2),
+            ("dir::read_dir", 1),
+            ("meta::metadata", 1),
+            ("io::fs::exists", 1),
+            ("io::fs::read_to_string", 1),
+            ("io::fs::append", 2),
+            ("io::fs::write_string", 2),
+            ("io::dir::read_dir", 1),
+            ("io::meta::metadata", 1),
+        ] {
+            m.insert(
+                name,
+                BuiltinEntry {
+                    arity,
+                    variadic: false,
+                    implemented: true,
+                },
+            );
+        }
+
+        // ── Provider-backed stdlib surfaces intentionally deferred in interp ──
+        for (name, arity) in [
             ("time::now", 0),
             ("time::now_iso", 0),
             ("time::epoch_millis", 0),
@@ -175,10 +200,7 @@ pub fn builtin_dispatch_table() -> &'static HashMap<&'static str, BuiltinEntry> 
             ("io::stdio::print", 1),
             ("io::stdio::println", 1),
             ("io::fs::read", 1),
-            ("io::fs::read_to_string", 1),
             ("io::fs::write", 2),
-            ("io::fs::write_string", 2),
-            ("io::fs::append", 2),
             ("io::fs::copy", 2),
             ("io::fs::rename", 2),
             ("io::fs::remove_file", 1),
@@ -186,8 +208,6 @@ pub fn builtin_dispatch_table() -> &'static HashMap<&'static str, BuiltinEntry> 
             ("io::dir::create_dir_all", 1),
             ("io::dir::remove_dir", 1),
             ("io::dir::remove_dir_all", 1),
-            ("io::dir::read_dir", 1),
-            ("io::meta::metadata", 1),
             ("io::meta::is_file", 1),
             ("io::meta::is_dir", 1),
             ("io::meta::len", 1),
@@ -196,6 +216,10 @@ pub fn builtin_dispatch_table() -> &'static HashMap<&'static str, BuiltinEntry> 
             ("io::buf::read_to_string", 1),
             ("io::buf::write_all", 2),
             ("io::buf::lines", 1),
+            ("logging::debug", 1),
+            ("logging::info", 1),
+            ("logging::warn", 1),
+            ("logging::error", 1),
             ("test::quickcheck::bool::gen", 1),
             ("test::quickcheck::bool::shrink", 1),
             ("test::quickcheck::context::seed", 1),
@@ -510,6 +534,10 @@ pub fn builtin_requires_host_hook_metadata(name: &str, _entry: &BuiltinEntry) ->
 pub fn builtin_host_hook_metadata(name: &str) -> Option<&'static BuiltinHostHookMetadata> {
     static PROCESS_RUN_ROWS: &[&str] = &["process.run"];
     static PROCESS_WHICH_ROWS: &[&str] = &["process.which"];
+    static HTTP_GET_ROWS: &[&str] = &["http.get"];
+    static HTTP_POST_ROWS: &[&str] = &["http.post"];
+    static HTTP_PUT_ROWS: &[&str] = &["http.put"];
+    static HTTP_DELETE_ROWS: &[&str] = &["http.delete"];
     static PROCESS_RUN: BuiltinHostHookMetadata = BuiltinHostHookMetadata {
         builtin_name: "process::run",
         operation_identity: "process.run",
@@ -528,10 +556,50 @@ pub fn builtin_host_hook_metadata(name: &str) -> Option<&'static BuiltinHostHook
         provenance_policy: "host.process.which",
         grants_authority: false,
     };
+    static HTTP_GET: BuiltinHostHookMetadata = BuiltinHostHookMetadata {
+        builtin_name: "http::get",
+        operation_identity: "http.get",
+        effect: Effect::Epistemic,
+        required_rows: HTTP_GET_ROWS,
+        sandbox_policy: "host.http.get",
+        provenance_policy: "host.http.get.redacted",
+        grants_authority: false,
+    };
+    static HTTP_POST: BuiltinHostHookMetadata = BuiltinHostHookMetadata {
+        builtin_name: "http::post",
+        operation_identity: "http.post",
+        effect: Effect::Operational,
+        required_rows: HTTP_POST_ROWS,
+        sandbox_policy: "host.http.post",
+        provenance_policy: "host.http.post.redacted",
+        grants_authority: false,
+    };
+    static HTTP_PUT: BuiltinHostHookMetadata = BuiltinHostHookMetadata {
+        builtin_name: "http::put",
+        operation_identity: "http.put",
+        effect: Effect::Operational,
+        required_rows: HTTP_PUT_ROWS,
+        sandbox_policy: "host.http.put",
+        provenance_policy: "host.http.put.redacted",
+        grants_authority: false,
+    };
+    static HTTP_DELETE: BuiltinHostHookMetadata = BuiltinHostHookMetadata {
+        builtin_name: "http::delete",
+        operation_identity: "http.delete",
+        effect: Effect::Operational,
+        required_rows: HTTP_DELETE_ROWS,
+        sandbox_policy: "host.http.delete",
+        provenance_policy: "host.http.delete.redacted",
+        grants_authority: false,
+    };
 
     match name {
         "process::run" => Some(&PROCESS_RUN),
         "process::which" => Some(&PROCESS_WHICH),
+        "http::get" => Some(&HTTP_GET),
+        "http::post" => Some(&HTTP_POST),
+        "http::put" => Some(&HTTP_PUT),
+        "http::delete" => Some(&HTTP_DELETE),
         _ => None,
     }
 }

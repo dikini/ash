@@ -82,7 +82,7 @@ impl StandardProviderProfile {
                 "fs",
                 ["fs.exists", "fs.read", "fs.metadata", "fs.read_dir"],
             )],
-            sandbox_policies: fs_policies(false),
+            sandbox_policies: fs_policies(false, &allowed_paths),
             fixed_epoch_millis: None,
             allowed_paths,
             allowed_hosts: Vec::new(),
@@ -121,7 +121,7 @@ impl StandardProviderProfile {
                     "fs.remove_dir_all",
                 ],
             )],
-            sandbox_policies: fs_policies(false),
+            sandbox_policies: fs_policies(false, &allowed_paths),
             fixed_epoch_millis: None,
             allowed_paths,
             allowed_hosts: Vec::new(),
@@ -232,7 +232,7 @@ impl StandardProviderProfile {
             .into_iter()
             .map(Into::into)
             .collect::<Vec<_>>();
-        let mut sandbox_policies = fs_policies(false);
+        let mut sandbox_policies = fs_policies(false, &allowed_paths);
         sandbox_policies.extend(["get", "head", "post", "put", "delete"].into_iter().map(
             |operation| {
                 allowed_hosts.iter().fold(
@@ -453,7 +453,7 @@ impl StandardProviderBinding {
     }
 }
 
-fn fs_policies(deny_all: bool) -> Vec<HostSandboxPolicy> {
+fn fs_policies(deny_all: bool, allowed_paths: &[PathBuf]) -> Vec<HostSandboxPolicy> {
     let operations = [
         "exists",
         "read_file",
@@ -479,7 +479,11 @@ fn fs_policies(deny_all: bool) -> Vec<HostSandboxPolicy> {
             if deny_all {
                 HostSandboxPolicy::deny_all(identity, "filesystem profile denied host execution")
             } else {
-                HostSandboxPolicy::allow_all(identity)
+                allowed_paths
+                    .iter()
+                    .fold(HostSandboxPolicy::allow_all(identity), |policy, path| {
+                        policy.with_allowed_path(path.display().to_string())
+                    })
             }
         })
         .collect()

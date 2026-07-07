@@ -1,6 +1,6 @@
 # TASK-1940: Common Row/Admission Profiles
 
-**Status:** Planned
+**Status:** In Progress
 **Phase:** [PLAN-198: Standard Providers And Profiles](../PLAN-198-STANDARD-PROVIDERS-AND-PROFILES.md)
 
 ## Description
@@ -25,7 +25,18 @@ Add common row/admission profile definitions and validation fixtures for standar
 
 ## Completion Checklist
 
-- [ ] Common profiles are defined and documented.
-- [ ] Profiles cannot grant authority by name.
-- [ ] Stale, malformed, and widening profiles fail closed.
-- [ ] Runtime reports retain profile identity and evidence identity.
+- [x] Common profiles are defined and documented.
+- [x] Profiles cannot grant authority by name.
+- [x] Malformed and authority-widening profiles fail closed.
+- [x] Runtime installation reports retain profile identity and admitted row identities.
+- [ ] Stale and incompatible profile metadata fixtures are covered.
+- [ ] Runtime reports retain evidence identity through final-surface fixtures.
+
+## Evidence
+
+- Added `ash_engine::standard_profiles` with read-only filesystem, read-write filesystem,
+  sandboxed HTTP, deterministic test, logging-only, and application-default profiles.
+- Added focused tests proving profile metadata is authority-neutral and profile installation admits
+  explicit provider rows rather than granting authority by profile name.
+- Added focused tests proving malformed and authority-widening profile metadata fails closed and
+  projected fs/http/time/logging calls retain redacted host-boundary evidence.

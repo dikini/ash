@@ -1,9 +1,9 @@
 -- Filesystem directory operations
 --
--- Provides parser-checkable runtime-provided function declarations for
--- directory access. The Dir capability below records the intended authority
--- contract; concrete capability-wrapper bodies remain deferred until the
--- parser/runtime support a canonical stdlib `act` wrapper spelling.
+-- Provides runtime-backed function declarations for directory access. The Dir
+-- capability records the intended authority contract; Phase 198 profiles admit
+-- explicit directory rows and enforce sandbox/provenance policy at the projected
+-- provider boundary.
 
 use path::PathBuf;
 

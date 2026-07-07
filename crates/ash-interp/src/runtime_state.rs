@@ -196,8 +196,11 @@ impl ProviderAdmissionSurface {
         }
     }
 
-    fn allows_observe(&self) -> bool {
-        matches!(self, Self::Provider)
+    fn allows_observe(&self, action_name: &str) -> bool {
+        match self {
+            Self::Provider => true,
+            Self::Actions(actions) => actions.contains(action_name),
+        }
     }
 
     fn allows_action(&self, action_name: &str) -> bool {
@@ -412,10 +415,47 @@ impl ash_core::capability::CapabilityProvider for ProjectedProviderWrapper {
         &self,
         constraints: &[ash_core::Constraint],
     ) -> Result<Value, ash_core::capability::CapabilityError> {
-        if self.surface.allows_observe() {
-            self.inner.observe(constraints).await
+        let Some(action_name) = constraints
+            .first()
+            .map(|constraint| constraint.predicate.name.as_str())
+        else {
+            return Err(CapabilityError::InvalidArgument(
+                "No observe constraints provided".to_string(),
+            ));
+        };
+        if self.surface.allows_observe(action_name) {
+            let policy = self.enforce_sandbox(action_name, &[]).await?;
+            let result = self.inner.observe(constraints).await;
+            if let Some((sandbox_policy, provenance_policy)) = policy {
+                match &result {
+                    Ok(_) => {
+                        self.record_host_boundary_evidence(
+                            action_name,
+                            &sandbox_policy,
+                            &provenance_policy,
+                            HostBoundaryOutcome::Succeeded,
+                            None,
+                        )
+                        .await;
+                    }
+                    Err(_) => {
+                        self.record_host_boundary_evidence(
+                            action_name,
+                            &sandbox_policy,
+                            &provenance_policy,
+                            HostBoundaryOutcome::Failed,
+                            Some("provider observation failed".to_string()),
+                        )
+                        .await;
+                    }
+                }
+            }
+            result
         } else {
-            Err(CapabilityError::NotAvailable(self.provider_name.clone()))
+            Err(CapabilityError::NotAvailable(format!(
+                "{}.{}",
+                self.provider_name, action_name
+            )))
         }
     }
 
@@ -990,6 +1030,22 @@ impl RuntimeState {
             .expect("provider registry mutex poisoned")
             .insert(name.into(), provider);
         self
+    }
+
+    /// Register or replace one capability provider on an existing runtime state.
+    ///
+    /// This mutates only the runtime provider registry. It does not admit rows, install profiles,
+    /// or grant authority; callers must still admit explicit capability bindings before projected
+    /// execution can use the provider.
+    pub fn register_provider(
+        &self,
+        name: impl Into<String>,
+        provider: Arc<dyn CapabilityProvider>,
+    ) -> Option<Arc<dyn CapabilityProvider>> {
+        self.providers
+            .lock()
+            .expect("provider registry mutex poisoned")
+            .insert(name.into(), provider)
     }
 
     /// Add multiple capability providers to the registry.

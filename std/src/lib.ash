@@ -41,6 +41,19 @@ pub use io::dir::{Dir, create_dir, create_dir_all, remove_dir, remove_dir_all, r
 pub use io::meta::{Metadata, Meta, metadata, is_file, is_dir, len, readonly};
 pub use io::buf::{read_to_end, read_to_string, write_all, lines};
 
+-- Logging provider helpers
+pub use logging::{Logging, debug, info, warn, error};
+
+-- Provider/profile evidence helpers
+pub use evidence::{
+    has_evidence,
+    is_redacted,
+    is_authority_neutral,
+    provider_outcome_is_success,
+    provider_outcome_is_denied,
+    provider_outcome_is_failure
+};
+
 -- Regex functions
 pub use regex::{find, matches, replace};
 

@@ -26,6 +26,7 @@ pub mod parse;
 pub mod providers;
 pub mod row_admission;
 pub mod runtime_artifact;
+pub mod standard_profiles;
 
 pub use entry::{
     EntryBootstrapError, EntryVerificationError, RuntimeEntryStdlibSource,

@@ -1,9 +1,9 @@
 -- HTTP client capability and functions
 --
--- Provides parser-checkable runtime-provided function declarations for making
--- HTTP requests. The Http capability below records the intended effectful
--- authority contract; concrete capability-wrapper bodies remain deferred until
--- the parser/runtime support a canonical stdlib `act` wrapper spelling.
+-- Provides runtime-backed function declarations for making HTTP requests. The
+-- Http capability records the intended effectful authority contract; Phase 198
+-- profiles admit explicit HTTP rows and enforce host/method sandbox policy plus
+-- redacted provenance at the projected provider boundary.
 
 -- HTTP provider operations return runtime records with at least:
 --   status: Int, headers: Record, body: String

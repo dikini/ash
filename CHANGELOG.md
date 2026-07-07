@@ -6,6 +6,18 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Added
+- Added NOTE-036 gradual verification and proof provider architecture design note,
+  framing Ash's automatic verification, property testing, and runtime checking tiers as one
+  gradual-assurance system, specifying proof-provider integration via MCP, LLM-assisted proof
+  suggestion, and trust/reproducibility requirements. Updates NOTE-INDEX.md with a corresponding
+  read path and document entry.
+- Added the first Phase 198 standard provider/profile implementation slice (TASK-1935,
+  TASK-1940): `ash_engine::standard_profiles` now defines authority-neutral read-only filesystem,
+  read-write filesystem, sandboxed HTTP, deterministic test-clock, logging-only, and
+  application-default profiles over explicit provider rows and runtime sandbox policies;
+  `LoggingProvider` supplies structured debug/info/warn/error provider metadata; stdlib now exposes
+  parser-checkable logging and evidence helper modules; and AUDIT-198 maps stdlib/provider seams to
+  remaining Phase 198 task ownership.
 - Added PLAN-198 Standard Providers And Profiles (TASK-1934) and PLAN-199 Productive App
   Libraries And Templates (TASK-1942). Phase 198 plans filesystem, HTTP, clock/time, logging,
   common row/admission profiles, and contract/evidence helpers over the Phase 197 host boundary

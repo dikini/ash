@@ -1,6 +1,6 @@
 # PLAN-198: Standard Providers And Profiles
 
-**Status:** Planned (0/8 tasks complete)
+**Status:** In Progress (2/8 tasks complete)
 **Depends on:** Phase 183 Operation And Authority Model, Phase 184 Handler / Provider Semantics,
 Phase 194 Contract And Evidence System, Phase 195 Process And Concurrency Model, Phase 196
 Application / Workflow Runtime, and Phase 197 Host / FFI / Builtins.
@@ -55,13 +55,13 @@ grant authority by name or bypass handler/provider admission.
 
 | Task | Description | Estimate | Depends on | Status |
 |------|-------------|----------|------------|--------|
-| [TASK-1934](tasks/TASK-1934-standard-providers-profiles-plan-packet.md) | Create the Phase 198 plan and task packet | 2h | Phase 197 | Planned |
-| [TASK-1935](tasks/TASK-1935-standard-provider-profile-audit.md) | Audit stdlib provider modules, runtime providers, examples, and profile seams | 6h | TASK-1934 | Planned |
+| [TASK-1934](tasks/TASK-1934-standard-providers-profiles-plan-packet.md) | Create the Phase 198 plan and task packet | 2h | Phase 197 | ✅ Complete |
+| [TASK-1935](tasks/TASK-1935-standard-provider-profile-audit.md) | Audit stdlib provider modules, runtime providers, examples, and profile seams | 6h | TASK-1934 | ✅ Complete |
 | [TASK-1936](tasks/TASK-1936-filesystem-provider-wrappers-and-profiles.md) | Implement filesystem stdlib wrappers and read/write row profiles | 14h | TASK-1935 | Planned |
 | [TASK-1937](tasks/TASK-1937-http-provider-wrappers-and-profiles.md) | Implement HTTP stdlib wrappers and sandboxed network profiles | 14h | TASK-1935 | Planned |
 | [TASK-1938](tasks/TASK-1938-clock-time-provider-and-test-clock.md) | Implement clock/time wrappers and deterministic test-clock profile support | 12h | TASK-1935 | Planned |
 | [TASK-1939](tasks/TASK-1939-logging-provider-redaction-and-provenance.md) | Implement logging wrappers with redaction and provenance evidence | 12h | TASK-1935 | Planned |
-| [TASK-1940](tasks/TASK-1940-common-row-admission-profiles.md) | Add common row/admission profile definitions and validation fixtures | 12h | TASK-1936, TASK-1937, TASK-1938, TASK-1939 | Planned |
+| [TASK-1940](tasks/TASK-1940-common-row-admission-profiles.md) | Add common row/admission profile definitions and validation fixtures | 12h | TASK-1936, TASK-1937, TASK-1938, TASK-1939 | In Progress |
 | [TASK-1941](tasks/TASK-1941-contract-evidence-helper-library-and-closeout.md) | Add contract/evidence helpers, final-surface fixtures, docs, gates, and closeout | 10h | TASK-1940 | Planned |
 
 Estimated implementation effort after the plan packet: 80 hours.

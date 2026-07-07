@@ -1,11 +1,9 @@
 -- Filesystem file operations
 --
--- Provides parser-checkable runtime-provided function declarations for reading
--- and writing files. The Fs capability below records the intended authority
--- contract; concrete capability-wrapper bodies remain deferred until the
--- parser/runtime support a canonical stdlib `act` wrapper spelling.
--- Phase 109 honesty: interpreter dispatch forward-declares io::fs::* as
--- unimplemented until the Fs provider bridge can preserve PathBuf/Bytes shapes.
+-- Provides runtime-backed function declarations for reading and writing files.
+-- The Fs capability records the intended authority contract; Phase 198 profiles
+-- admit explicit filesystem rows and enforce sandbox/provenance policy at the
+-- projected provider boundary.
 
 use path::PathBuf;
 

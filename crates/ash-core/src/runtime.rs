@@ -1030,6 +1030,8 @@ pub struct HostSandboxPolicy {
     pub denied_reason: Option<String>,
     /// Allowed process command names.
     pub allowed_commands: Vec<String>,
+    /// Allowed HTTP host names for network provider operations.
+    pub allowed_hosts: Vec<String>,
 }
 
 impl HostSandboxPolicy {
@@ -1041,6 +1043,7 @@ impl HostSandboxPolicy {
             deny_all: false,
             denied_reason: None,
             allowed_commands: Vec::new(),
+            allowed_hosts: Vec::new(),
         }
     }
 
@@ -1052,6 +1055,7 @@ impl HostSandboxPolicy {
             deny_all: true,
             denied_reason: Some(reason.into()),
             allowed_commands: Vec::new(),
+            allowed_hosts: Vec::new(),
         }
     }
 
@@ -1059,6 +1063,13 @@ impl HostSandboxPolicy {
     #[must_use]
     pub fn with_allowed_command(mut self, command: impl Into<String>) -> Self {
         self.allowed_commands.push(command.into());
+        self
+    }
+
+    /// Add one allowed HTTP host name.
+    #[must_use]
+    pub fn with_allowed_host(mut self, host: impl Into<String>) -> Self {
+        self.allowed_hosts.push(host.into());
         self
     }
 
@@ -1085,6 +1096,21 @@ impl HostSandboxPolicy {
             return HostSandboxDecision::Deny {
                 reason: "command not allowed by sandbox policy".to_string(),
             };
+        }
+
+        if !self.allowed_hosts.is_empty()
+            && matches!(operation_name, "get" | "head" | "post" | "put" | "delete")
+        {
+            let Some(host) = first_string_arg(args).and_then(http_host_from_url) else {
+                return HostSandboxDecision::Deny {
+                    reason: "HTTP URL host missing or invalid".to_string(),
+                };
+            };
+            if !self.allowed_hosts.iter().any(|allowed| allowed == host) {
+                return HostSandboxDecision::Deny {
+                    reason: "HTTP host not allowed by sandbox policy".to_string(),
+                };
+            }
         }
 
         HostSandboxDecision::Allow
@@ -1214,6 +1240,15 @@ fn first_string_arg(args: &[Value]) -> Option<&str> {
             }),
         _ => None,
     })
+}
+
+fn http_host_from_url(url: &str) -> Option<&str> {
+    let rest = url
+        .strip_prefix("https://")
+        .or_else(|| url.strip_prefix("http://"))?;
+    let host_port_path = rest.split(['/', '?', '#']).next()?;
+    let host = host_port_path.split(':').next()?;
+    (!host.is_empty()).then_some(host)
 }
 
 /// A unique identifier for one registered external actor adapter.

@@ -1,9 +1,9 @@
 -- Time capability and functions
 --
--- Provides parser-checkable runtime-provided declarations for observing current
--- time and sleeping. The Time capability below records the intended authority
--- contract; concrete capability-wrapper bodies remain deferred until the
--- parser/runtime support a canonical stdlib `act` wrapper spelling.
+-- Provides runtime-backed declarations for observing current time and sleeping.
+-- The Time capability records the intended authority contract; Phase 198
+-- profiles admit explicit clock rows and support deterministic test-clock
+-- provider installation for repeatable evidence.
 
 -- Time.now returns a runtime record with epoch_millis: Int and iso: String.
 pub capability Time: observe now() returns Record

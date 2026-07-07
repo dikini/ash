@@ -70,6 +70,13 @@ pub struct FsProvider {
     config: FsConfig,
 }
 
+/// Structured logging capability provider.
+///
+/// Logging is a host/report boundary. The provider records log attempts as successful provider
+/// calls, while runtime sandbox policy decides whether a projected profile may invoke it.
+#[derive(Debug, Clone, Default)]
+pub struct LoggingProvider;
+
 /// Configuration for filesystem provider
 #[derive(Debug, Clone, Default)]
 pub struct FsConfig {
@@ -367,6 +374,67 @@ impl FsProvider {
 impl Default for FsProvider {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl LoggingProvider {
+    /// Create a logging provider.
+    #[must_use]
+    pub const fn new() -> Self {
+        Self
+    }
+}
+
+#[async_trait]
+impl CapabilityProvider for LoggingProvider {
+    fn name(&self) -> &'static str {
+        "logging"
+    }
+
+    fn effect(&self) -> Effect {
+        Effect::Operational
+    }
+
+    fn provider_metadata(&self) -> ProviderAuthoringMetadata {
+        fn log_op(name: &'static str) -> ProviderOperationMetadata {
+            ProviderOperationMetadata::new(name, Effect::Operational)
+                .with_required_row(format!("logging.{name}"))
+                .with_constraint("redaction")
+                .with_resource("log")
+                .with_sandbox_policy("host.logging.write")
+                .with_provenance_policy("host.logging.write.redacted")
+        }
+
+        ProviderAuthoringMetadata::new("logging")
+            .with_operation(log_op("debug"))
+            .with_operation(log_op("info"))
+            .with_operation(log_op("warn"))
+            .with_operation(log_op("error"))
+    }
+
+    async fn observe(&self, _constraints: &[Constraint]) -> Result<Value, CapabilityError> {
+        Err(CapabilityError::NotAvailable(
+            "logging does not support observe".to_string(),
+        ))
+    }
+
+    async fn execute(&self, action_name: &str, args: &[Value]) -> Result<Value, CapabilityError> {
+        if !matches!(action_name, "debug" | "info" | "warn" | "error") {
+            return Err(CapabilityError::NotAvailable(format!(
+                "Unknown logging action: {action_name}"
+            )));
+        }
+        let mut fields = std::collections::HashMap::new();
+        fields.insert("level".to_string(), Value::String(action_name.to_string()));
+        fields.insert(
+            "redacted".to_string(),
+            Value::String(format!("logging.{action_name}:redacted")),
+        );
+        fields.insert(
+            "field_count".to_string(),
+            Value::Int(i64::try_from(args.len()).unwrap_or(i64::MAX)),
+        );
+        Ok(Value::Record(Box::new(fields)))
     }
 }
 

@@ -31,8 +31,12 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Added NOTE-036 gradual verification and proof provider architecture design note,
   framing Ash's automatic verification, property testing, and runtime checking tiers as one
   gradual-assurance system, specifying proof-provider integration via MCP, LLM-assisted proof
-  suggestion, and trust/reproducibility requirements. Updates NOTE-INDEX.md with a corresponding
-  read path and document entry.
+  suggestion, and trust/reproducibility requirements.
+- Added NOTE-037 symbolic-connectionist duality design note, framing Ash as a cooperative
+  dual system with a symbolic/provable core and a connectionist/LLM companion, defining the
+  compiler as orchestrator, LLM calls as effect-tracked operations, and `Hybrid` evidence for
+  LLM-suggested/prover-checked artifacts.
+- Updated NOTE-INDEX.md with read paths and document entries for NOTE-036 and NOTE-037.
 - Added the first Phase 198 standard provider/profile implementation slice (TASK-1935,
   TASK-1940): `ash_engine::standard_profiles` now defines authority-neutral read-only filesystem,
   read-write filesystem, sandboxed HTTP, deterministic test-clock, logging-only, and

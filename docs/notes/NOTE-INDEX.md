@@ -4,7 +4,7 @@ title: Ash Design Note Orientation Index
 kind: orientation-index
 status: active
 authority: navigational
-last_verified: 2026-07-04
+last_verified: 2026-07-07
 ---
 
 # Ash design note orientation index
@@ -51,6 +51,38 @@ Common tags include: `grammar`, `syntax`, `semantics`, `type-system`, `effect-sy
 3. [PLAN-165](../plan/PLAN-165-CONTRACT-SYSTEM-IMPLEMENTATION-HANDOFF.md)
 4. [PLAN-194](../plan/PLAN-194-CONTRACT-AND-EVIDENCE-SYSTEM.md) for runtime monitor evidence rows and temporal diagnostics.
 5. [PLAN-195](../plan/PLAN-195-PROCESS-AND-CONCURRENCY-MODEL.md) for process/channel trace facts and the active `Act`/`Proc`/`Workflow` deprecation boundary.
+
+### Work on gradual verification, proof providers, or automatic discharge
+
+1. [NOTE-036](NOTE-036-GRADUAL-VERIFICATION-AND-PROOF-PROVIDERS.md)
+2. [NOTE-037](NOTE-037-SYMBOLIC-CONNECTIONIST-DUALITY.md) for the broader symbolic-connectionist
+   framing that explains why proof providers and LLM assistance share an orchestration model.
+3. [NOTE-030](NOTE-030-MONADIC-HOARE-LOGIC-FOR-ASH-COMPUTATIONS.md) for contract composition obligations.
+4. [NOTE-031](NOTE-031-CONTRACT-PREDICATE-WELL-FORMEDNESS-AND-SNAPSHOTS.md) for the authority-free predicate language.
+5. [NOTE-033](NOTE-033-SURFACE-TO-CORE-CONTRACT-LOWERING.md) for lowering predicates to runtime checks.
+6. [NOTE-034](NOTE-034-CONTRACT-CAPABILITY-BOUNDARY.md) for evaluator/monitor authority separation.
+7. [SPEC-081](../spec/SPEC-081-LAW-TEST-EVIDENCE-SUBSTRATE.md) and [PLAN-145](../plan/PLAN-145-LAW-TEST-EVIDENCE-SUBSTRATE.md) for the empirical `by test` tier.
+8. [SPEC-085](../spec/SPEC-085-PROOF-PRODUCING-SYNTHESIS-TODO-SPEC.md) and [PLAN-149](../plan/PLAN-149-PROOF-PRODUCING-SYNTHESIS-TODO-SPEC.md) for the deferred proof-producing synthesis placeholder.
+9. [SPEC-064](../spec/SPEC-064-CONSTRAINT-PROPOSITION-LAYER.md) for the first type-level proposition solver.
+10. [SPEC-080](../spec/SPEC-080-INTERFACE-EVIDENCE-CONSTRAINTS.md) for interface-level proof obligations.
+11. [SPEC-096b](../spec/SPEC-096b-TARGET-EFFECT-SYSTEM.md) for contract/evidence row discharge.
+12. [SPEC-038](../spec/SPEC-038-RUST-LSP-MCP-RESEARCH-2025.md) for LSP/MCP provider integration research.
+
+### Work on symbolic-connectionist duality or LLM integration
+
+1. [NOTE-037](NOTE-037-SYMBOLIC-CONNECTIONIST-DUALITY.md)
+2. [NOTE-036](NOTE-036-GRADUAL-VERIFICATION-AND-PROOF-PROVIDERS.md) for the proof-provider instance
+   of the triple `(compiler, prover, LLM)`.
+3. [NOTE-020](NOTE-020-COMPUTATION-ROW-TAXONOMY.md) for row taxonomy and how connectionist effects
+   fit into computation rows.
+4. [NOTE-030](NOTE-030-MONADIC-HOARE-LOGIC-FOR-ASH-COMPUTATIONS.md) for symbolic contract
+   composition that LLM suggestions attempt to discharge.
+5. [SPEC-096b](../spec/SPEC-096b-TARGET-EFFECT-SYSTEM.md) for declaring LLM operations as row items
+   with their own discharge rules.
+6. [`std::llm`](../../std/src/llm/mod.ash) for existing connectionist primitives in the standard
+   library.
+7. [SPEC-038](../spec/SPEC-038-RUST-LSP-MCP-RESEARCH-2025.md) for MCP as the protocol between the
+   symbolic compiler and connectionist services.
 
 ### Work on ambient computation, handlers, and effect identity
 
@@ -159,6 +191,8 @@ input or historical context, not as a target runtime primitive.
 | [NOTE-033-SURFACE-TO-CORE-CONTRACT-LOWERING.md](NOTE-033-SURFACE-TO-CORE-CONTRACT-LOWERING.md) | Living document — design direction captured; resolves NOTE-014 GAP 9 | contracts | contract, core-ir | convergence note | NOTE-031; NOTE-034; SPEC-098b; SPEC-100; PLAN-165 |
 | [NOTE-034-CONTRACT-CAPABILITY-BOUNDARY.md](NOTE-034-CONTRACT-CAPABILITY-BOUNDARY.md) | Living document — design direction captured; resolves NOTE-014 GAP 8 | contracts | authority, contract, core-ir | convergence note | NOTE-033; NOTE-035; SPEC-096b; SPEC-099 |
 | [NOTE-035-TEMPORAL-AND-CONCURRENT-CONTRACTS.md](NOTE-035-TEMPORAL-AND-CONCURRENT-CONTRACTS.md) | Living document — design direction captured; resolves NOTE-014 GAP 5; Phase 195 fences `Act`/`Proc`/`Workflow` as legacy vocabulary only | contracts | contract, core-ir, temporal, trace | convergence note | NOTE-034; SPEC-098b; SPEC-099; PLAN-165; PLAN-195 |
+| [NOTE-036-GRADUAL-VERIFICATION-AND-PROOF-PROVIDERS.md](NOTE-036-GRADUAL-VERIFICATION-AND-PROOF-PROVIDERS.md) | Living document — research and future-spec guide for automatic proof, property testing, runtime checking, proof-provider architecture, and LLM-assisted verification | contracts | evidence, testing, semantics, tooling, deferred | living design note | NOTE-030..NOTE-035; NOTE-037; SPEC-064; SPEC-080; SPEC-081; SPEC-085; SPEC-096b; SPEC-098b; SPEC-099; SPEC-100; PLAN-145; PLAN-149; PLAN-194; SPEC-038 |
+| [NOTE-037-SYMBOLIC-CONNECTIONIST-DUALITY.md](NOTE-037-SYMBOLIC-CONNECTIONIST-DUALITY.md) | Living document — design thesis framing Ash as a symbolic-connectionist hybrid, mapping language constructs to both sides and defining the compiler as orchestrator | contracts | effect-system, semantics, tooling, orientation | living design note | NOTE-020; NOTE-030; NOTE-036; SPEC-096b; std::llm |
 | [PHASE-142-PERFORMANCE-BENCHMARK.md](PHASE-142-PERFORMANCE-BENCHMARK.md) | unspecified | tooling | tooling | design note | — |
 | [PHASE-143-MCP-CROSS-LANGUAGE-EVALUATION.md](PHASE-143-MCP-CROSS-LANGUAGE-EVALUATION.md) | unspecified | tooling | tooling | design note | — |
 | [diagnostic-span-default-tech-debt.md](diagnostic-span-default-tech-debt.md) | unspecified | general | diagnostics | design note | — |

@@ -135,8 +135,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Updated NOTE-036 with a research-summary-by-concern section and explicit references to the
   verification survey.
 - Added NOTE-038 research roadmap on type-level proofs, Π-types, and Dijkstra monads,
-  synthesizing current Ash proof capabilities, a possible Π-type extension, the relation to
-  Hoare triples/laws/contracts, and the row/WP adjunction with evaluation-mode considerations.
+  synthesizing current Ash proof capabilities, the existing contract lowering and monadic Hoare
+  composition, Ash-native weakest-precondition inference from the Ash monad, the optional Π-type
+  extension, and the row/WP adjunction with evaluation-mode considerations.
 - Updated NOTE-INDEX.md with read paths and document entries for NOTE-036, NOTE-037, NOTE-038,
   and the verification survey.
 - Added the first Phase 198 standard provider/profile implementation slice (TASK-1935,

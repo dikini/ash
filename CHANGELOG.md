@@ -67,7 +67,14 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   dual system with a symbolic/provable core and a connectionist/LLM companion, defining the
   compiler as orchestrator, LLM calls as effect-tracked operations, and `Hybrid` evidence for
   LLM-suggested/prover-checked artifacts.
-- Updated NOTE-INDEX.md with read paths and document entries for NOTE-036 and NOTE-037.
+- Added `docs/reference/verification-and-prover-integration-survey.md`, a literature and
+  state-of-the-art review covering compiler-integrated provers (Dafny, F*, Why3, Liquid Haskell,
+  Lean 4, Verus, Creusot, Kani, Prusti), type checking as proving, and LLM-driven theorem proving /
+  bug finding. Maps findings to Ash's gradual verification and symbolic-connectionist design.
+- Updated NOTE-036 with a research-summary-by-concern section and explicit references to the
+  verification survey.
+- Updated NOTE-INDEX.md with read paths and document entries for NOTE-036, NOTE-037, and the
+  verification survey.
 - Added the first Phase 198 standard provider/profile implementation slice (TASK-1935,
   TASK-1940): `ash_engine::standard_profiles` now defines authority-neutral read-only filesystem,
   read-write filesystem, sandboxed HTTP, deterministic test-clock, logging-only, and

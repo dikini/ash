@@ -1,6 +1,6 @@
 # TASK-1951: Tooling/Migration Polish Plan Packet
 
-**Status:** Planned
+**Status:** Complete
 **Phase:** [PLAN-200: Tooling And Migration Polish](../PLAN-200-TOOLING-AND-MIGRATION-POLISH.md)
 
 ## Description
@@ -24,7 +24,14 @@ legacy and deprecated form elimination as the primary objective.
 
 ## Completion Checklist
 
-- [ ] PLAN-200 exists.
-- [ ] TASK-1951 through TASK-1959 exist.
-- [ ] PLAN-INDEX references the phase and task files.
-- [ ] CHANGELOG.md records the planning packet.
+- [x] PLAN-200 exists.
+- [x] TASK-1951 through TASK-1959 exist.
+- [x] PLAN-INDEX references the phase and task files.
+- [x] CHANGELOG.md records the planning packet.
+
+## Evidence
+
+- PLAN-200 and TASK-1951 through TASK-1959 were added in commit `b0d356f6`.
+- PLAN-INDEX and CHANGELOG include the Phase 200 planning packet.
+- TASK-1952 is sequenced as the first implementation task so legacy/deprecated-form elimination
+  drives diagnostics, formatter, LSP, examples, and docs polish.

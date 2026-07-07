@@ -1,6 +1,6 @@
 # TASK-1952: Legacy/Deprecated Form Audit
 
-**Status:** Planned
+**Status:** Complete
 **Phase:** [PLAN-200: Tooling And Migration Polish](../PLAN-200-TOOLING-AND-MIGRATION-POLISH.md)
 
 ## Description
@@ -25,7 +25,21 @@ for legacy and deprecated forms before polishing tooling.
 
 ## Completion Checklist
 
-- [ ] Legacy/deprecated forms are inventoried.
-- [ ] Productive paths have no unclassified old-form occurrences.
-- [ ] Compatibility and historical paths are explicitly labeled.
-- [ ] Follow-up task ownership is recorded for every remediation row.
+- [x] Legacy/deprecated forms are inventoried.
+- [x] Productive paths have no unclassified old-form occurrences.
+- [x] Compatibility and historical paths are explicitly labeled.
+- [x] Follow-up task ownership is recorded for every remediation row.
+
+## Evidence
+
+- Added [AUDIT-200](../audits/AUDIT-200-legacy-deprecated-form-inventory.md), classifying
+  legacy/deprecated form hits across diagnostic tests, LSP test roots, productive docs/reference
+  paths, examples, templates, stdlib surfaces, and compatibility fixtures.
+- Added `phase200_legacy_deprecated_form_audit`, a focused gate that fails if a scanned file/pattern
+  pair is unclassified, uses an unsupported classification, lacks follow-up task ownership, or
+  lacks a gate/exclusion reason.
+- The audit records TASK-1953 ownership for migration diagnostics, TASK-1956 ownership for examples,
+  TASK-1957 ownership for docs/reference/spec refresh, and TASK-1958 ownership for final
+  old-syntax removal/demotion.
+- Focused verification:
+  `cargo test -p ash-cli --test phase200_legacy_deprecated_form_audit -- --nocapture`.

@@ -6,6 +6,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Added
+- Completed Phase 200 legacy/deprecated form audit (TASK-1952): added AUDIT-200 and a focused
+  audit gate that classifies old-form hits across diagnostics, LSP roots, docs/reference paths,
+  examples, templates, stdlib surfaces, and compatibility fixtures with follow-up ownership for
+  diagnostics, examples, docs, and final old-syntax removal/demotion.
 - Added PLAN-200 Tooling And Migration Polish (TASK-1951): a migration-first phase for
   diagnostics, formatter, LSP, examples, and docs that treats legacy/deprecated form elimination
   and demotion as the central design lock before tooling polish proceeds.

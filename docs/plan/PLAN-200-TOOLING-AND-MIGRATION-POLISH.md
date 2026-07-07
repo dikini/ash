@@ -1,6 +1,6 @@
 # PLAN-200: Tooling And Migration Polish
 
-**Status:** Planned (0/9 tasks complete)
+**Status:** In Progress (2/9 tasks complete)
 **Depends on:** Phase 199 Productive App Libraries And Templates.
 **Specs/notes:** `PLAN-199`, `PLAN-198`, `PLAN-196`, `PLAN-195`, `SPEC-096b`,
 `SPEC-097b`, `SPEC-098b`, `SPEC-098c`, `SPEC-099b`, `SPEC-100`, and `NOTE-035`.
@@ -59,8 +59,8 @@ the central product goal, not a cleanup item after tooling work.
 
 | Task | Description | Estimate | Depends on | Status |
 |------|-------------|----------|------------|--------|
-| [TASK-1951](tasks/TASK-1951-tooling-migration-polish-plan-packet.md) | Create the Phase 200 plan and task packet | 2h | Phase 199 | Planned |
-| [TASK-1952](tasks/TASK-1952-legacy-deprecated-form-audit.md) | Audit diagnostics, formatter, LSP, examples, docs, and old-form productive paths | 12h | TASK-1951 | Planned |
+| [TASK-1951](tasks/TASK-1951-tooling-migration-polish-plan-packet.md) | Create the Phase 200 plan and task packet | 2h | Phase 199 | ✅ Complete |
+| [TASK-1952](tasks/TASK-1952-legacy-deprecated-form-audit.md) | Audit diagnostics, formatter, LSP, examples, docs, and old-form productive paths | 12h | TASK-1951 | ✅ Complete |
 | [TASK-1953](tasks/TASK-1953-migration-diagnostics.md) | Improve stale/deprecated syntax diagnostics and migration hints | 16h | TASK-1952 | Planned |
 | [TASK-1954](tasks/TASK-1954-formatter-current-syntax-polish.md) | Polish formatter coverage for current target syntax and old-form quarantine | 14h | TASK-1952 | Planned |
 | [TASK-1955](tasks/TASK-1955-lsp-current-syntax-migration-polish.md) | Polish LSP diagnostics, hover, symbols, semantic tokens, and navigation for current syntax | 16h | TASK-1952 | Planned |
@@ -151,8 +151,8 @@ labeled and excluded from productive tutorial, template, example, formatter, and
 
 ## Acceptance Criteria
 
-- [ ] Phase 200 plan and task files exist and are indexed.
-- [ ] Legacy and deprecated forms are inventoried across diagnostics, formatter, LSP, examples,
+- [x] Phase 200 plan and task files exist and are indexed.
+- [x] Legacy and deprecated forms are inventoried across diagnostics, formatter, LSP, examples,
       docs, templates, parser fixtures, and stdlib comments.
 - [ ] Productive old-form occurrences are removed, migrated, or explicitly demoted.
 - [ ] Diagnostics provide targeted migration hints for retained/deprecated forms.

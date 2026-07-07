@@ -6,10 +6,31 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Changed
+- Removed live Rust compatibility paths for deprecated workflow declarations in Phase 201
+  (TASK-1962, TASK-1963, TASK-1965, TASK-1967): engine parsing now requires target `fn main`,
+  legacy workflow adapter and warning plumbing were deleted, runtime artifact metadata now uses
+  checked-callable entrypoints, `pub workflow` module-export salvage paths were removed, and REPL
+  expression/AST handling now uses target entry functions instead of synthetic workflow wrappers.
+- Repaired target `fn main` entry execution after deprecated entry removal (TASK-1962, TASK-1964):
+  synthesized runtime carriers now preserve the source function return type, entry verification
+  accepts the target parser's unit type representation, runtime stdlib metadata collection strips
+  import/module declaration lines before type metadata parsing, and CLI run tests use target Ash
+  entry expressions instead of workflow `done` fixtures.
+- Removed deprecated Ash source forms from active repository Ash artifacts for Phase 201
+  (TASK-1961, TASK-1965, TASK-1967): deleted historical example and fixture `.ash` trees,
+  removed stdlib tower carrier modules and `pub capability` declarations from target stdlib
+  surfaces, updated stdlib/example corpus gates, and added a fail-closed Ash-artifact gate that
+  rejects removed workflow/capability/tower syntax in `std`, `examples`, `templates`, and
+  remaining Ash fixtures.
 - Reconciled the stale Phase 198 PLAN-INDEX summary row with the completed Phase 198 closeout
   status (TASK-1941).
 
 ### Added
+- Added PLAN-201 Deprecated Functionality Removal (TASK-1960): a hard-removal phase that starts
+  with AUDIT-201, removes deprecated functionality from executable/checkable/lowerable/tooling
+  paths, requires repository Ash code to use target Ash only, removes deprecated snippets from
+  code/fixtures/templates/examples/snapshots, and adds fail-closed gates against reintroducing
+  removed forms.
 - Completed Phase 200 tooling and migration polish closeout (TASK-1959): reconciled plan/task
   status, recorded stale-claim sweep evidence, and verified the phase with focused migration gates,
   full workspace tests, clippy, formatting, docs gates, orientation-index validation, and
@@ -113,8 +134,11 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   bug finding. Maps findings to Ash's gradual verification and symbolic-connectionist design.
 - Updated NOTE-036 with a research-summary-by-concern section and explicit references to the
   verification survey.
-- Updated NOTE-INDEX.md with read paths and document entries for NOTE-036, NOTE-037, and the
-  verification survey.
+- Added NOTE-038 research roadmap on type-level proofs, Π-types, and Dijkstra monads,
+  synthesizing current Ash proof capabilities, a possible Π-type extension, the relation to
+  Hoare triples/laws/contracts, and the row/WP adjunction with evaluation-mode considerations.
+- Updated NOTE-INDEX.md with read paths and document entries for NOTE-036, NOTE-037, NOTE-038,
+  and the verification survey.
 - Added the first Phase 198 standard provider/profile implementation slice (TASK-1935,
   TASK-1940): `ash_engine::standard_profiles` now defines authority-neutral read-only filesystem,
   read-write filesystem, sandboxed HTTP, deterministic test-clock, logging-only, and
@@ -2608,7 +2632,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 - Removed `Par` from the active Ash language contract. The canonical sequential workflow contract now specifies that a single workflow in Ash is sequential, with concurrency and parallelism modeled at the system level through multiple communicating workflows. All normative `Par` contract references in [SPEC-001](docs/spec/SPEC-001-IR.md), [SPEC-002](docs/spec/SPEC-002-SURFACE.md), [SPEC-003](docs/spec/SPEC-003-TYPE-SYSTEM.md), [SPEC-004](docs/spec/SPEC-004-SEMANTICS.md), [SPEC-022](docs/spec/SPEC-022-WORKFLOW-TYPING.md), [SPEC-025](docs/spec/SPEC-025-SMALL-STEP-OPERATIONAL-SEMANTICS.md), and [SPEC-026](docs/spec/SPEC-026-IMPLEMENTATION-CONFORMANCE.md) have been amended to mark historical sections with \"(Historical)\" markers and remove normative language that would imply `Par` is part of the current active contract.
 
-- Completed Task 4 by replacing all par-based examples, tutorials, and workflow fixtures with sequential composition or message-passing patterns. Removed `par` blocks from [examples/simple_workflow.ash](examples/simple_workflow.ash), [examples/multi_agent_research.ash](examples/multi_agent_research.ash), [examples/code_review.ash](examples/code_review.ash), [examples/04-real-world/customer-support.ash](examples/04-real-world/customer-support.ash), [tests/workflows/code_review.ash](tests/workflows/code_review.ash), and [tests/workflows/multi_agent_research.ash](tests/workflows/multi_agent_research.ash). Deleted `examples/02-control-flow/03-parallel.ash` and updated [examples/02-control-flow/03-sequential.ash](examples/02-control-flow/03-sequential.ash) and [examples/02-control-flow/04-sequential.ash](examples/02-control-flow/04-sequential.ash) to demonstrate sequential composition without the removed `seq` keyword. Updated documentation in [docs/TUTORIAL.md](docs/TUTORIAL.md) (replaced \"Parallel Execution\" section with \"Sequential Composition\"), [docs/spec/SPEC-023-PROXY-WORKFLOWS.md](docs/spec/SPEC-023-PROXY-WORKFLOWS.md) (replaced par-based quorum example with sequential yield/resume), [examples/README.md](examples/README.md), [examples/02-control-flow/README.md](examples/02-control-flow/README.md), and [examples/workflows/40_tdd_README.md](examples/workflows/40_tdd_README.md) to remove all references to parallel execution and the `par` keyword.
+- Completed Task 4 by replacing all par-based examples, tutorials, and workflow fixtures with sequential composition or message-passing patterns. Removed `par` blocks from `examples/simple_workflow.ash`, `examples/multi_agent_research.ash`, `examples/code_review.ash`, `examples/04-real-world/customer-support.ash`, `tests/workflows/code_review.ash`, and `tests/workflows/multi_agent_research.ash`. Deleted `examples/02-control-flow/03-parallel.ash` and updated `examples/02-control-flow/03-sequential.ash` and `examples/02-control-flow/04-sequential.ash` to demonstrate sequential composition without the removed `seq` keyword. Updated documentation in [docs/TUTORIAL.md](docs/TUTORIAL.md) (replaced \"Parallel Execution\" section with \"Sequential Composition\"), [docs/spec/SPEC-023-PROXY-WORKFLOWS.md](docs/spec/SPEC-023-PROXY-WORKFLOWS.md) (replaced par-based quorum example with sequential yield/resume), [examples/README.md](examples/README.md), `examples/02-control-flow/README.md`, and `examples/workflows/40_tdd_README.md` to remove all references to parallel execution and the `par` keyword.
 
 - Corrected the README Phase 57 quick-start commands so the documented `ash run`
   and `ash run --trace` examples now point to real canonical entry files, while

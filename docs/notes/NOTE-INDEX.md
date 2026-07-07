@@ -69,6 +69,9 @@ Common tags include: `grammar`, `syntax`, `semantics`, `type-system`, `effect-sy
 12. [SPEC-038](../spec/SPEC-038-RUST-LSP-MCP-RESEARCH-2025.md) for LSP/MCP provider integration research.
 13. [Verification and Prover Integration Survey](../reference/verification-and-prover-integration-survey.md)
     for the broader literature context behind SMT, proof assistants, and LLM-driven proving.
+14. [NOTE-038](NOTE-038-TYPE-LEVEL-PROOFS-PI-TYPES-AND-DIJKSTRA-MONADS.md) for the path from current
+    type-level proofs through Π-types to Dijkstra monads, including effort estimates and research
+    questions.
 
 ### Work on symbolic-connectionist duality or LLM integration
 
@@ -77,15 +80,17 @@ Common tags include: `grammar`, `syntax`, `semantics`, `type-system`, `effect-sy
    of the triple `(compiler, prover, LLM)`.
 3. [Verification and Prover Integration Survey](../reference/verification-and-prover-integration-survey.md)
    for the broader literature and state-of-the-art review.
-4. [NOTE-020](NOTE-020-COMPUTATION-ROW-TAXONOMY.md) for row taxonomy and how connectionist effects
+4. [NOTE-038](NOTE-038-TYPE-LEVEL-PROOFS-PI-TYPES-AND-DIJKSTRA-MONADS.md) for the dependent-type /
+   Dijkstra-monad research direction and its connection to the symbolic side of the duality.
+5. [NOTE-020](NOTE-020-COMPUTATION-ROW-TAXONOMY.md) for row taxonomy and how connectionist effects
    fit into computation rows.
-5. [NOTE-030](NOTE-030-MONADIC-HOARE-LOGIC-FOR-ASH-COMPUTATIONS.md) for symbolic contract
+6. [NOTE-030](NOTE-030-MONADIC-HOARE-LOGIC-FOR-ASH-COMPUTATIONS.md) for symbolic contract
    composition that LLM suggestions attempt to discharge.
-6. [SPEC-096b](../spec/SPEC-096b-TARGET-EFFECT-SYSTEM.md) for declaring LLM operations as row items
+7. [SPEC-096b](../spec/SPEC-096b-TARGET-EFFECT-SYSTEM.md) for declaring LLM operations as row items
    with their own discharge rules.
-7. [`std::llm`](../../std/src/llm/mod.ash) for existing connectionist primitives in the standard
+8. [`std::llm`](../../std/src/llm/mod.ash) for existing connectionist primitives in the standard
    library.
-8. [SPEC-038](../spec/SPEC-038-RUST-LSP-MCP-RESEARCH-2025.md) for MCP as the protocol between the
+9. [SPEC-038](../spec/SPEC-038-RUST-LSP-MCP-RESEARCH-2025.md) for MCP as the protocol between the
    symbolic compiler and connectionist services.
 
 ### Work on ambient computation, handlers, and effect identity
@@ -197,6 +202,7 @@ input or historical context, not as a target runtime primitive.
 | [NOTE-035-TEMPORAL-AND-CONCURRENT-CONTRACTS.md](NOTE-035-TEMPORAL-AND-CONCURRENT-CONTRACTS.md) | Living document — design direction captured; resolves NOTE-014 GAP 5; Phase 195 fences `Act`/`Proc`/`Workflow` as legacy vocabulary only | contracts | contract, core-ir, temporal, trace | convergence note | NOTE-034; SPEC-098b; SPEC-099; PLAN-165; PLAN-195 |
 | [NOTE-036-GRADUAL-VERIFICATION-AND-PROOF-PROVIDERS.md](NOTE-036-GRADUAL-VERIFICATION-AND-PROOF-PROVIDERS.md) | Living document — research and future-spec guide for automatic proof, property testing, runtime checking, proof-provider architecture, and LLM-assisted verification | contracts | evidence, testing, semantics, tooling, deferred | living design note | NOTE-030..NOTE-035; NOTE-037; SPEC-064; SPEC-080; SPEC-081; SPEC-085; SPEC-096b; SPEC-098b; SPEC-099; SPEC-100; PLAN-145; PLAN-149; PLAN-194; SPEC-038 |
 | [NOTE-037-SYMBOLIC-CONNECTIONIST-DUALITY.md](NOTE-037-SYMBOLIC-CONNECTIONIST-DUALITY.md) | Living document — design thesis framing Ash as a symbolic-connectionist hybrid, mapping language constructs to both sides and defining the compiler as orchestrator | contracts | effect-system, semantics, tooling, orientation | living design note | NOTE-020; NOTE-030; NOTE-036; SPEC-096b; std::llm |
+| [NOTE-038-TYPE-LEVEL-PROOFS-PI-TYPES-AND-DIJKSTRA-MONADS.md](NOTE-038-TYPE-LEVEL-PROOFS-PI-TYPES-AND-DIJKSTRA-MONADS.md) | Living document — research roadmap from current type-level proofs through Π-types to Dijkstra monads, including row/WP adjunction and evaluation-mode considerations | contracts | type-system, effect-system, semantics, deferred, orientation | living design note | NOTE-030; NOTE-036; NOTE-037; SPEC-064; SPEC-096b; PLAN-194; verification survey |
 | [PHASE-142-PERFORMANCE-BENCHMARK.md](PHASE-142-PERFORMANCE-BENCHMARK.md) | unspecified | tooling | tooling | design note | — |
 | [PHASE-143-MCP-CROSS-LANGUAGE-EVALUATION.md](PHASE-143-MCP-CROSS-LANGUAGE-EVALUATION.md) | unspecified | tooling | tooling | design note | — |
 | [diagnostic-span-default-tech-debt.md](diagnostic-span-default-tech-debt.md) | unspecified | general | diagnostics | design note | — |

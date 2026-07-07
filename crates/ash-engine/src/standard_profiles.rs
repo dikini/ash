@@ -177,9 +177,20 @@ impl StandardProviderProfile {
             provider_bindings: vec![StandardProviderBinding::new(
                 "time",
                 "time",
-                ["time.now", "time.now_iso", "time.epoch_millis"],
+                [
+                    "time.now",
+                    "time.now_iso",
+                    "time.epoch_millis",
+                    "time.sleep",
+                ],
             )],
-            sandbox_policies: vec![HostSandboxPolicy::allow_all("host.time.now")],
+            sandbox_policies: vec![
+                HostSandboxPolicy::allow_all("host.time.now"),
+                HostSandboxPolicy::deny_all(
+                    "host.time.sleep",
+                    "deterministic test profile denies wall-clock sleep",
+                ),
+            ],
             fixed_epoch_millis: Some(fixed_epoch_millis),
             allowed_paths: Vec::new(),
             allowed_hosts: Vec::new(),
@@ -242,6 +253,7 @@ impl StandardProviderProfile {
             },
         ));
         sandbox_policies.push(HostSandboxPolicy::allow_all("host.time.now"));
+        sandbox_policies.push(HostSandboxPolicy::allow_all("host.time.sleep"));
         sandbox_policies.push(HostSandboxPolicy::allow_all("host.logging.write"));
 
         Self {
@@ -267,7 +279,12 @@ impl StandardProviderProfile {
                 StandardProviderBinding::new(
                     "time",
                     "time",
-                    ["time.now", "time.now_iso", "time.epoch_millis"],
+                    [
+                        "time.now",
+                        "time.now_iso",
+                        "time.epoch_millis",
+                        "time.sleep",
+                    ],
                 ),
                 StandardProviderBinding::new(
                     "logging",
@@ -292,6 +309,23 @@ impl StandardProviderProfile {
     #[must_use]
     pub const fn with_authority_grant_for_test(mut self, grants_authority: bool) -> Self {
         self.grants_authority = grants_authority;
+        self
+    }
+
+    /// Escape hatch for constructing stale or incompatible profile rows in validation tests.
+    #[must_use]
+    pub fn with_provider_rows_for_test<const N: usize>(
+        mut self,
+        provider_name: &str,
+        rows: [&str; N],
+    ) -> Self {
+        if let Some(binding) = self
+            .provider_bindings
+            .iter_mut()
+            .find(|binding| binding.provider_name == provider_name)
+        {
+            binding.rows = rows.into_iter().map(str::to_string).collect();
+        }
         self
     }
 

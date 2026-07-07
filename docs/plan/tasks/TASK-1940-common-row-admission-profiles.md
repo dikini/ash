@@ -1,6 +1,6 @@
 # TASK-1940: Common Row/Admission Profiles
 
-**Status:** In Progress
+**Status:** Complete
 **Phase:** [PLAN-198: Standard Providers And Profiles](../PLAN-198-STANDARD-PROVIDERS-AND-PROFILES.md)
 
 ## Description
@@ -29,8 +29,8 @@ Add common row/admission profile definitions and validation fixtures for standar
 - [x] Profiles cannot grant authority by name.
 - [x] Malformed and authority-widening profiles fail closed.
 - [x] Runtime installation reports retain profile identity and admitted row identities.
-- [ ] Stale and incompatible profile metadata fixtures are covered.
-- [ ] Runtime reports retain evidence identity through final-surface fixtures.
+- [x] Stale and incompatible profile metadata fixtures are covered.
+- [x] Runtime reports retain evidence identity through final-surface fixtures.
 
 ## Evidence
 
@@ -40,3 +40,7 @@ Add common row/admission profile definitions and validation fixtures for standar
   explicit provider rows rather than granting authority by profile name.
 - Added focused tests proving malformed and authority-widening profile metadata fails closed and
   projected fs/http/time/logging calls retain redacted host-boundary evidence.
+- Added a stale-row fixture proving incompatible profile metadata fails closed during runtime
+  admission instead of silently widening provider rows.
+- Completed final-surface filesystem, HTTP, time, and logging fixtures that retain provider,
+  operation, outcome, and redaction evidence identity through standard profile execution.

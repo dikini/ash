@@ -1,6 +1,6 @@
 # TASK-1941: Contract/Evidence Helper Library And Closeout
 
-**Status:** Planned
+**Status:** Complete
 **Phase:** [PLAN-198: Standard Providers And Profiles](../PLAN-198-STANDARD-PROVIDERS-AND-PROFILES.md)
 
 ## Description
@@ -25,8 +25,16 @@ Add small contract/evidence helper modules for common provider/profile checks, t
 
 ## Completion Checklist
 
-- [ ] Contract/evidence helpers parse/check through stdlib imports.
-- [ ] Helpers remain authority-free.
-- [ ] Final-surface fixtures cover all standard provider families.
-- [ ] CHANGELOG.md and PLAN-INDEX are updated.
-- [ ] Closeout verification gates pass.
+- [x] Contract/evidence helpers parse/check through stdlib imports.
+- [x] Helpers remain authority-free.
+- [x] Final-surface fixtures cover all standard provider families.
+- [x] CHANGELOG.md and PLAN-INDEX are updated.
+- [x] Closeout verification gates pass.
+
+## Evidence
+
+- Added `std/src/evidence.ash` authority-free builtin helper declarations for evidence presence,
+  redaction checks, authority-neutral checks, and provider outcome classification.
+- Added final-surface closeout coverage in
+  `crates/ash-engine/tests/task_1941_contract_evidence_helpers_closeout.rs`.
+- Verified helpers execute through stdlib imports without producing host-boundary evidence.

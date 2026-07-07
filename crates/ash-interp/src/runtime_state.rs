@@ -403,6 +403,10 @@ impl ash_core::capability::CapabilityProvider for ArcProviderWrapper {
         self.inner.effect()
     }
 
+    fn provider_metadata(&self) -> ProviderAuthoringMetadata {
+        self.inner.provider_metadata()
+    }
+
     async fn observe(
         &self,
         constraints: &[ash_core::Constraint],
@@ -429,6 +433,10 @@ impl ash_core::capability::CapabilityProvider for ProjectedProviderWrapper {
         self.inner.effect()
     }
 
+    fn provider_metadata(&self) -> ProviderAuthoringMetadata {
+        self.inner.provider_metadata()
+    }
+
     async fn observe(
         &self,
         constraints: &[ash_core::Constraint],
@@ -437,6 +445,9 @@ impl ash_core::capability::CapabilityProvider for ProjectedProviderWrapper {
             .first()
             .map(|constraint| constraint.predicate.name.as_str())
         else {
+            if matches!(self.surface, ProviderAdmissionSurface::Provider) {
+                return self.inner.observe(constraints).await;
+            }
             return Err(CapabilityError::InvalidArgument(
                 "No observe constraints provided".to_string(),
             ));

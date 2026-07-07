@@ -1,6 +1,6 @@
 # TASK-1939: Logging Provider Redaction And Provenance
 
-**Status:** Planned
+**Status:** Complete
 **Phase:** [PLAN-198: Standard Providers And Profiles](../PLAN-198-STANDARD-PROVIDERS-AND-PROFILES.md)
 
 ## Description
@@ -23,7 +23,20 @@ Add current-syntax logging provider wrappers with structured redaction and prove
 
 ## Completion Checklist
 
-- [ ] Logging wrappers parse/check through stdlib imports.
-- [ ] Structured fields and severity survive report projection.
-- [ ] Secret values are redacted in evidence.
-- [ ] Logging profile selection does not grant unrelated authority.
+- [x] Logging wrappers parse/check through stdlib imports.
+- [x] Structured fields and severity survive report projection.
+- [x] Secret values are redacted in evidence.
+- [x] Logging profile selection does not grant unrelated authority.
+
+## Evidence
+
+- Added final-surface logging wrapper tests for `logging::debug`, `logging::info`,
+  `logging::warn`, and `logging::error` through application-default and logging-only standard
+  profiles.
+- Registered current logging stdlib wrappers in the type environment, builtin dispatch metadata,
+  and provider-backed dispatch path.
+- Updated logging stdlib declarations to expose structured log event records containing severity,
+  redaction marker, and field count.
+- Verified allowed log writes emit authority-neutral redacted host-boundary evidence, denied
+  logging-only profile writes fail closed with redacted evidence, and logging-only profile
+  selection does not admit unrelated provider authority.

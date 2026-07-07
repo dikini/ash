@@ -106,7 +106,8 @@ async fn deterministic_test_profile_installs_fixed_clock_provider() {
         vec![
             "time.now".to_string(),
             "time.now_iso".to_string(),
-            "time.epoch_millis".to_string()
+            "time.epoch_millis".to_string(),
+            "time.sleep".to_string()
         ]
     );
 
@@ -136,6 +137,19 @@ async fn deterministic_test_profile_installs_fixed_clock_provider() {
             && record.outcome == HostBoundaryOutcome::Succeeded
             && record.authority_neutral),
         "clock observation should record authority-neutral evidence: {evidence:?}"
+    );
+
+    let denied_sleep = ctx.execute("time", "sleep", &[Value::Int(1)]).await;
+    assert!(
+        denied_sleep.is_err(),
+        "deterministic clock profile must deny wall-clock sleep"
+    );
+    let evidence = runtime.host_boundary_evidence().await;
+    assert!(
+        evidence.iter().any(|record| record.provider_name == "time"
+            && record.operation_name == "sleep"
+            && record.outcome == HostBoundaryOutcome::Denied),
+        "sleep denial should record host-boundary evidence: {evidence:?}"
     );
 }
 
@@ -190,6 +204,22 @@ async fn malformed_and_authority_widening_profiles_fail_closed() {
     assert!(
         error.to_string().contains("must not grant authority"),
         "{error}"
+    );
+}
+
+#[tokio::test]
+async fn stale_profile_rows_fail_closed_as_incompatible_metadata() {
+    let runtime = RuntimeState::new();
+    let stale = StandardProviderProfile::deterministic_test("phase198-stale", 0)
+        .with_provider_rows_for_test("time", ["time.now", "time.stale"]);
+
+    let error = stale
+        .install(&runtime)
+        .await
+        .expect_err("stale profile row metadata must fail closed");
+    assert!(
+        error.to_string().contains("time.stale"),
+        "diagnostic should identify stale row: {error}"
     );
 }
 

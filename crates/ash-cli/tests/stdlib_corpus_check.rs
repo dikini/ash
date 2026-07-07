@@ -9,8 +9,8 @@ struct ExpectedFailure {
     reason: &'static str,
 }
 
-const EXPECTED_STD_FILES: usize = 60;
-const EXPECTED_STD_PASSING: usize = 54;
+const EXPECTED_STD_FILES: usize = 62;
+const EXPECTED_STD_PASSING: usize = 56;
 const EXPECTED_STD_FAILING: usize = 6;
 
 const EXPECTED_PASS: &[&str] = &[
@@ -24,6 +24,7 @@ const EXPECTED_PASS: &[&str] = &[
     "std/src/algebra/monad.ash",
     "std/src/algebra/monoid.ash",
     "std/src/algebra/semigroup.ash",
+    "std/src/evidence.ash",
     "std/src/http.ash",
     "std/src/io/buf.ash",
     "std/src/io/dir.ash",
@@ -41,6 +42,7 @@ const EXPECTED_PASS: &[&str] = &[
     "std/src/llm/prompt.ash",
     "std/src/llm/supervised.ash",
     "std/src/llm/types.ash",
+    "std/src/logging.ash",
     "std/src/map.ash",
     "std/src/markdown.ash",
     "std/src/option.ash",

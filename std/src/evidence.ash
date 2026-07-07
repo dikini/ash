@@ -3,26 +3,14 @@
 -- These helpers inspect already-produced report/evidence fields. They do not
 -- acquire providers, discharge rows, or perform host effects.
 
-pub fn has_evidence(count: Int) -> Bool {
-    count != 0
-}
+pub builtin fn has_evidence(count: Int) -> Bool;
 
-pub fn is_redacted(redacted: Bool) -> Bool {
-    redacted
-}
+pub builtin fn is_redacted(redacted: Bool) -> Bool;
 
-pub fn is_authority_neutral(authority_neutral: Bool) -> Bool {
-    authority_neutral
-}
+pub builtin fn is_authority_neutral(authority_neutral: Bool) -> Bool;
 
-pub fn provider_outcome_is_success(outcome: String) -> Bool {
-    outcome == "succeeded"
-}
+pub builtin fn provider_outcome_is_success(outcome: String) -> Bool;
 
-pub fn provider_outcome_is_denied(outcome: String) -> Bool {
-    outcome == "denied"
-}
+pub builtin fn provider_outcome_is_denied(outcome: String) -> Bool;
 
-pub fn provider_outcome_is_failure(outcome: String) -> Bool {
-    outcome == "failed"
-}
+pub builtin fn provider_outcome_is_failure(outcome: String) -> Bool;

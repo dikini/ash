@@ -1678,6 +1678,9 @@ impl TypeEnv {
         self.add_result_builtin_values();
         self.add_filesystem_builtin_values();
         self.add_http_builtin_values();
+        self.add_time_builtin_values();
+        self.add_logging_builtin_values();
+        self.add_evidence_helper_values();
         self.add_builtin_capability_symbols();
     }
 
@@ -1785,6 +1788,101 @@ impl TypeEnv {
             "http::delete",
             crate::types::Type::Fn(vec![crate::types::Type::String], Box::new(response_ty)),
         );
+    }
+
+    /// Add time stdlib wrapper signatures used by provider-backed builtin dispatch.
+    pub(super) fn add_time_builtin_values(&mut self) {
+        let now_ty = crate::types::Type::Record(vec![
+            ("epoch_millis".into(), crate::types::Type::Int),
+            ("iso".into(), crate::types::Type::String),
+        ]);
+
+        self.bind_variable(
+            "time::now",
+            crate::types::Type::Fn(vec![], Box::new(now_ty)),
+        );
+        self.bind_variable(
+            "time::now_iso",
+            crate::types::Type::Fn(vec![], Box::new(crate::types::Type::String)),
+        );
+        self.bind_variable(
+            "time::epoch_millis",
+            crate::types::Type::Fn(vec![], Box::new(crate::types::Type::Int)),
+        );
+        self.bind_variable(
+            "time::sleep",
+            crate::types::Type::Fn(
+                vec![crate::types::Type::Int],
+                Box::new(crate::types::Type::Null),
+            ),
+        );
+    }
+
+    /// Add logging stdlib wrapper signatures used by provider-backed builtin dispatch.
+    pub(super) fn add_logging_builtin_values(&mut self) {
+        let log_event_ty = crate::types::Type::Record(vec![
+            ("level".into(), crate::types::Type::String),
+            ("redacted".into(), crate::types::Type::String),
+            ("field_count".into(), crate::types::Type::Int),
+        ]);
+
+        for name in [
+            "logging::debug",
+            "logging::info",
+            "logging::warn",
+            "logging::error",
+        ] {
+            self.bind_variable(
+                name,
+                crate::types::Type::Fn(
+                    vec![crate::types::Type::String],
+                    Box::new(log_event_ty.clone()),
+                ),
+            );
+        }
+    }
+
+    /// Add authority-free evidence helper signatures.
+    pub(super) fn add_evidence_helper_values(&mut self) {
+        for name in ["has_evidence", "evidence::has_evidence"] {
+            self.bind_variable(
+                name,
+                crate::types::Type::Fn(
+                    vec![crate::types::Type::Int],
+                    Box::new(crate::types::Type::Bool),
+                ),
+            );
+        }
+        for name in [
+            "is_redacted",
+            "is_authority_neutral",
+            "evidence::is_redacted",
+            "evidence::is_authority_neutral",
+        ] {
+            self.bind_variable(
+                name,
+                crate::types::Type::Fn(
+                    vec![crate::types::Type::Bool],
+                    Box::new(crate::types::Type::Bool),
+                ),
+            );
+        }
+        for name in [
+            "provider_outcome_is_success",
+            "provider_outcome_is_denied",
+            "provider_outcome_is_failure",
+            "evidence::provider_outcome_is_success",
+            "evidence::provider_outcome_is_denied",
+            "evidence::provider_outcome_is_failure",
+        ] {
+            self.bind_variable(
+                name,
+                crate::types::Type::Fn(
+                    vec![crate::types::Type::String],
+                    Box::new(crate::types::Type::Bool),
+                ),
+            );
+        }
     }
 
     /// Add the Option<T> type

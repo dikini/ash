@@ -9,7 +9,7 @@ pub capability Logging: execute debug(message: String)
                       | execute warn(message: String)
                       | execute error(message: String);
 
-pub builtin fn debug(message: String) -> Unit;
-pub builtin fn info(message: String) -> Unit;
-pub builtin fn warn(message: String) -> Unit;
-pub builtin fn error(message: String) -> Unit;
+pub builtin fn debug(message: String) -> Record;
+pub builtin fn info(message: String) -> Record;
+pub builtin fn warn(message: String) -> Record;
+pub builtin fn error(message: String) -> Record;

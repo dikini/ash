@@ -173,7 +173,7 @@ Update this section as tasks complete:
 | [195](PLAN-195-PROCESS-AND-CONCURRENCY-MODEL.md) | 11 | 11 | ✅ Complete; process/concurrency model after computation, authority, handler/provider, and contract foundations |
 | [196](PLAN-196-APPLICATION-WORKFLOW-RUNTIME.md) | 11 | 11 | ✅ Complete; application/workflow runtime layer over computation, admission, authority, contracts, and process foundations |
 | [197](PLAN-197-HOST-FFI-BUILTINS.md) | 10 | 10 | ✅ Complete; host/FFI/builtin boundary over provider admission, sandboxing, and provenance |
-| [198](PLAN-198-STANDARD-PROVIDERS-AND-PROFILES.md) | 8 | 4 | In Progress; standard providers and profiles over Phase 197 host boundary substrate |
+| [198](PLAN-198-STANDARD-PROVIDERS-AND-PROFILES.md) | 8 | 7 | In Progress; standard providers and profiles over Phase 197 host boundary substrate |
 | [199](PLAN-199-PRODUCTIVE-APP-LIBRARIES-AND-TEMPLATES.md) | 9 | 0 | Planned; current-syntax app libraries, testing helpers, process/channel helpers, and templates |
 
 ---
@@ -1224,7 +1224,7 @@ dynamic library/plugin callback path in this phase.
 
 ## Phase 198: Standard Providers And Profiles
 
-**Status:** In Progress (3/8 tasks complete)
+**Status:** Complete (8/8 tasks complete)
 **Plan:** [PLAN-198: Standard Providers And Profiles](PLAN-198-STANDARD-PROVIDERS-AND-PROFILES.md)
 **Depends on:** Phase 183 Operation And Authority Model, Phase 184 Handler / Provider Semantics, Phase 194 Contract And Evidence System, Phase 195 Process And Concurrency Model, Phase 196 Application / Workflow Runtime, and Phase 197 Host / FFI / Builtins.
 **Specs/notes:** `SPEC-096b`, `SPEC-097b`, `SPEC-098b`, `SPEC-098c`, `SPEC-099b`, `SPEC-100`, `PLAN-183`, `PLAN-184`, `PLAN-194`, `PLAN-195`, `PLAN-196`, `PLAN-197`, `NOTE-016`, `NOTE-020`, `NOTE-021`, `NOTE-024`, `NOTE-025`, and `NOTE-035`.
@@ -1244,10 +1244,10 @@ no legacy `workflow` syntax revival as the target provider example path.
 | [TASK-1935](tasks/TASK-1935-standard-provider-profile-audit.md) | Audit stdlib provider modules, runtime providers, examples, and profile seams | ✅ Complete |
 | [TASK-1936](tasks/TASK-1936-filesystem-provider-wrappers-and-profiles.md) | Implement filesystem stdlib wrappers and read/write row profiles | ✅ Complete |
 | [TASK-1937](tasks/TASK-1937-http-provider-wrappers-and-profiles.md) | Implement HTTP stdlib wrappers and sandboxed network profiles | ✅ Complete |
-| [TASK-1938](tasks/TASK-1938-clock-time-provider-and-test-clock.md) | Implement clock/time wrappers and deterministic test-clock profile support | Planned |
-| [TASK-1939](tasks/TASK-1939-logging-provider-redaction-and-provenance.md) | Implement logging wrappers with redaction and provenance evidence | Planned |
-| [TASK-1940](tasks/TASK-1940-common-row-admission-profiles.md) | Add common row/admission profile definitions and validation fixtures | In Progress |
-| [TASK-1941](tasks/TASK-1941-contract-evidence-helper-library-and-closeout.md) | Add contract/evidence helpers, final-surface fixtures, docs, gates, and closeout | Planned |
+| [TASK-1938](tasks/TASK-1938-clock-time-provider-and-test-clock.md) | Implement clock/time wrappers and deterministic test-clock profile support | ✅ Complete |
+| [TASK-1939](tasks/TASK-1939-logging-provider-redaction-and-provenance.md) | Implement logging wrappers with redaction and provenance evidence | ✅ Complete |
+| [TASK-1940](tasks/TASK-1940-common-row-admission-profiles.md) | Add common row/admission profile definitions and validation fixtures | ✅ Complete |
+| [TASK-1941](tasks/TASK-1941-contract-evidence-helper-library-and-closeout.md) | Add contract/evidence helpers, final-surface fixtures, docs, gates, and closeout | ✅ Complete |
 
 ## Phase 199: Productive App Libraries And Templates
 

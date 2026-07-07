@@ -179,6 +179,14 @@ pub fn builtin_dispatch_table() -> &'static HashMap<&'static str, BuiltinEntry> 
             ("io::fs::write_string", 2),
             ("io::dir::read_dir", 1),
             ("io::meta::metadata", 1),
+            ("time::now", 0),
+            ("time::now_iso", 0),
+            ("time::epoch_millis", 0),
+            ("time::sleep", 1),
+            ("logging::debug", 1),
+            ("logging::info", 1),
+            ("logging::warn", 1),
+            ("logging::error", 1),
         ] {
             m.insert(
                 name,
@@ -192,10 +200,6 @@ pub fn builtin_dispatch_table() -> &'static HashMap<&'static str, BuiltinEntry> 
 
         // ── Provider-backed stdlib surfaces intentionally deferred in interp ──
         for (name, arity) in [
-            ("time::now", 0),
-            ("time::now_iso", 0),
-            ("time::epoch_millis", 0),
-            ("time::sleep", 1),
             ("io::stdio::read_line", 0),
             ("io::stdio::print", 1),
             ("io::stdio::println", 1),
@@ -216,10 +220,6 @@ pub fn builtin_dispatch_table() -> &'static HashMap<&'static str, BuiltinEntry> 
             ("io::buf::read_to_string", 1),
             ("io::buf::write_all", 2),
             ("io::buf::lines", 1),
-            ("logging::debug", 1),
-            ("logging::info", 1),
-            ("logging::warn", 1),
-            ("logging::error", 1),
             ("test::quickcheck::bool::gen", 1),
             ("test::quickcheck::bool::shrink", 1),
             ("test::quickcheck::context::seed", 1),
@@ -441,6 +441,12 @@ pub fn builtin_dispatch_table() -> &'static HashMap<&'static str, BuiltinEntry> 
             ("is_list", 1, false),
             ("is_record", 1, false),
             ("is_null", 1, false),
+            ("has_evidence", 1, false),
+            ("is_redacted", 1, false),
+            ("is_authority_neutral", 1, false),
+            ("provider_outcome_is_success", 1, false),
+            ("provider_outcome_is_denied", 1, false),
+            ("provider_outcome_is_failure", 1, false),
         ];
         for (name, arity, variadic) in unqualified {
             m.insert(
@@ -452,6 +458,26 @@ pub fn builtin_dispatch_table() -> &'static HashMap<&'static str, BuiltinEntry> 
                 },
             );
         }
+
+        // ── Evidence helper builtins (qualified) ──
+        for name in [
+            "evidence::has_evidence",
+            "evidence::is_redacted",
+            "evidence::is_authority_neutral",
+            "evidence::provider_outcome_is_success",
+            "evidence::provider_outcome_is_denied",
+            "evidence::provider_outcome_is_failure",
+        ] {
+            m.insert(
+                name,
+                BuiltinEntry {
+                    arity: 1,
+                    variadic: false,
+                    implemented: true,
+                },
+            );
+        }
+
         // ── Predicate module builtins (qualified) ──
         for (name, arity, variadic) in [
             ("predicate::is_int", 1, false),
@@ -538,6 +564,14 @@ pub fn builtin_host_hook_metadata(name: &str) -> Option<&'static BuiltinHostHook
     static HTTP_POST_ROWS: &[&str] = &["http.post"];
     static HTTP_PUT_ROWS: &[&str] = &["http.put"];
     static HTTP_DELETE_ROWS: &[&str] = &["http.delete"];
+    static TIME_NOW_ROWS: &[&str] = &["time.now"];
+    static TIME_NOW_ISO_ROWS: &[&str] = &["time.now_iso"];
+    static TIME_EPOCH_MILLIS_ROWS: &[&str] = &["time.epoch_millis"];
+    static TIME_SLEEP_ROWS: &[&str] = &["time.sleep"];
+    static LOGGING_DEBUG_ROWS: &[&str] = &["logging.debug"];
+    static LOGGING_INFO_ROWS: &[&str] = &["logging.info"];
+    static LOGGING_WARN_ROWS: &[&str] = &["logging.warn"];
+    static LOGGING_ERROR_ROWS: &[&str] = &["logging.error"];
     static PROCESS_RUN: BuiltinHostHookMetadata = BuiltinHostHookMetadata {
         builtin_name: "process::run",
         operation_identity: "process.run",
@@ -592,6 +626,78 @@ pub fn builtin_host_hook_metadata(name: &str) -> Option<&'static BuiltinHostHook
         provenance_policy: "host.http.delete.redacted",
         grants_authority: false,
     };
+    static TIME_NOW: BuiltinHostHookMetadata = BuiltinHostHookMetadata {
+        builtin_name: "time::now",
+        operation_identity: "time.now",
+        effect: Effect::Epistemic,
+        required_rows: TIME_NOW_ROWS,
+        sandbox_policy: "host.time.now",
+        provenance_policy: "host.time.now.redacted",
+        grants_authority: false,
+    };
+    static TIME_NOW_ISO: BuiltinHostHookMetadata = BuiltinHostHookMetadata {
+        builtin_name: "time::now_iso",
+        operation_identity: "time.now_iso",
+        effect: Effect::Epistemic,
+        required_rows: TIME_NOW_ISO_ROWS,
+        sandbox_policy: "host.time.now",
+        provenance_policy: "host.time.now.redacted",
+        grants_authority: false,
+    };
+    static TIME_EPOCH_MILLIS: BuiltinHostHookMetadata = BuiltinHostHookMetadata {
+        builtin_name: "time::epoch_millis",
+        operation_identity: "time.epoch_millis",
+        effect: Effect::Epistemic,
+        required_rows: TIME_EPOCH_MILLIS_ROWS,
+        sandbox_policy: "host.time.now",
+        provenance_policy: "host.time.now.redacted",
+        grants_authority: false,
+    };
+    static TIME_SLEEP: BuiltinHostHookMetadata = BuiltinHostHookMetadata {
+        builtin_name: "time::sleep",
+        operation_identity: "time.sleep",
+        effect: Effect::Operational,
+        required_rows: TIME_SLEEP_ROWS,
+        sandbox_policy: "host.time.sleep",
+        provenance_policy: "host.time.sleep.redacted",
+        grants_authority: false,
+    };
+    static LOGGING_DEBUG: BuiltinHostHookMetadata = BuiltinHostHookMetadata {
+        builtin_name: "logging::debug",
+        operation_identity: "logging.debug",
+        effect: Effect::Operational,
+        required_rows: LOGGING_DEBUG_ROWS,
+        sandbox_policy: "host.logging.write",
+        provenance_policy: "host.logging.write.redacted",
+        grants_authority: false,
+    };
+    static LOGGING_INFO: BuiltinHostHookMetadata = BuiltinHostHookMetadata {
+        builtin_name: "logging::info",
+        operation_identity: "logging.info",
+        effect: Effect::Operational,
+        required_rows: LOGGING_INFO_ROWS,
+        sandbox_policy: "host.logging.write",
+        provenance_policy: "host.logging.write.redacted",
+        grants_authority: false,
+    };
+    static LOGGING_WARN: BuiltinHostHookMetadata = BuiltinHostHookMetadata {
+        builtin_name: "logging::warn",
+        operation_identity: "logging.warn",
+        effect: Effect::Operational,
+        required_rows: LOGGING_WARN_ROWS,
+        sandbox_policy: "host.logging.write",
+        provenance_policy: "host.logging.write.redacted",
+        grants_authority: false,
+    };
+    static LOGGING_ERROR: BuiltinHostHookMetadata = BuiltinHostHookMetadata {
+        builtin_name: "logging::error",
+        operation_identity: "logging.error",
+        effect: Effect::Operational,
+        required_rows: LOGGING_ERROR_ROWS,
+        sandbox_policy: "host.logging.write",
+        provenance_policy: "host.logging.write.redacted",
+        grants_authority: false,
+    };
 
     match name {
         "process::run" => Some(&PROCESS_RUN),
@@ -600,6 +706,14 @@ pub fn builtin_host_hook_metadata(name: &str) -> Option<&'static BuiltinHostHook
         "http::post" => Some(&HTTP_POST),
         "http::put" => Some(&HTTP_PUT),
         "http::delete" => Some(&HTTP_DELETE),
+        "time::now" => Some(&TIME_NOW),
+        "time::now_iso" => Some(&TIME_NOW_ISO),
+        "time::epoch_millis" => Some(&TIME_EPOCH_MILLIS),
+        "time::sleep" => Some(&TIME_SLEEP),
+        "logging::debug" => Some(&LOGGING_DEBUG),
+        "logging::info" => Some(&LOGGING_INFO),
+        "logging::warn" => Some(&LOGGING_WARN),
+        "logging::error" => Some(&LOGGING_ERROR),
         _ => None,
     }
 }

@@ -124,7 +124,13 @@ impl CapabilityContext {
             .get(provider_name)
             .ok_or_else(|| ExecError::CapabilityNotAvailable(provider_name.to_string()))?;
 
-        if !provider.effect().at_least(Effect::Operational) {
+        let action_effect = provider
+            .provider_metadata()
+            .operation(action_name)
+            .map_or_else(|| provider.effect(), |operation| operation.effect);
+        if !provider.effect().at_least(Effect::Operational)
+            && !action_effect.at_least(Effect::Operational)
+        {
             return Err(ExecError::ExecutionFailed(format!(
                 "capability '{provider_name}' does not support actions"
             )));

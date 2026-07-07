@@ -53,14 +53,7 @@ fn stdlib_pub_builtin_declarations_have_honest_dispatch_entries() {
 #[test]
 fn provider_backed_stdlib_builtins_are_forward_declared_not_implemented() {
     let table = builtin_dispatch_table();
-    for name in [
-        "time::now",
-        "time::now_iso",
-        "time::epoch_millis",
-        "time::sleep",
-        "io::stdio::read_line",
-        "io::buf::read_to_end",
-    ] {
+    for name in ["io::stdio::read_line", "io::buf::read_to_end"] {
         let entry = table
             .get(name)
             .unwrap_or_else(|| panic!("{name} should have an honest forward dispatch entry"));
@@ -117,8 +110,8 @@ fn dispatch_builtin_unknown_returns_none() {
 #[test]
 fn dispatch_builtin_forward_declared_produces_unimplemented_error() {
     let ctx = Context::new();
-    let result = dispatch_builtin("time::now", &[], &ctx)
-        .expect("dispatch should find time::now in the table");
+    let result = dispatch_builtin("io::stdio::read_line", &[], &ctx)
+        .expect("dispatch should find io::stdio::read_line in the table");
     assert!(
         matches!(result, Err(EvalError::UnimplementedBuiltin { .. })),
         "forward-declared builtin should produce UnimplementedBuiltin, got: {result:?}"
@@ -144,23 +137,23 @@ fn unimplemented_builtin_error_message_is_clear() {
 #[test]
 fn eval_function_call_forward_declared_via_expr_produces_unimplemented() {
     let ctx = Context::new();
-    // Call time::now() — it is forward-declared in
+    // Call io::stdio::read_line() — it is forward-declared in
     // the dispatch table but deliberately not bridged in the interpreter.
     let expr = Expr::Call {
-        func: "now".to_string(),
-        module: Some("time".to_string()),
+        func: "read_line".to_string(),
+        module: Some("io::stdio".to_string()),
         arguments: vec![],
     };
     let err = eval_expr(&expr, &ctx).unwrap_err();
     assert!(
         matches!(err, EvalError::UnimplementedBuiltin { .. }),
-        "expected UnimplementedBuiltin for time::now, got: {err:?}"
+        "expected UnimplementedBuiltin for io::stdio::read_line, got: {err:?}"
     );
 
     // Verify the error message contains the qualified name
     let msg = err.to_string();
     assert!(
-        msg.contains("time::now"),
+        msg.contains("io::stdio::read_line"),
         "error message should contain qualified name, got: {msg}"
     );
 }

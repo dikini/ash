@@ -1,6 +1,6 @@
 # TASK-1938: Clock/Time Provider And Test Clock
 
-**Status:** Planned
+**Status:** Complete
 **Phase:** [PLAN-198: Standard Providers And Profiles](../PLAN-198-STANDARD-PROVIDERS-AND-PROFILES.md)
 
 ## Description
@@ -24,7 +24,20 @@ Implement or repair current-syntax clock/time wrappers and deterministic test-cl
 
 ## Completion Checklist
 
-- [ ] Time wrappers parse/check through stdlib imports.
-- [ ] Deterministic test-clock profile returns stable values.
-- [ ] Wall-clock access fails closed in deterministic profiles.
-- [ ] Clock evidence is redacted and authority-neutral.
+- [x] Time wrappers parse/check through stdlib imports.
+- [x] Deterministic test-clock profile returns stable values.
+- [x] Wall-clock access fails closed in deterministic profiles.
+- [x] Clock evidence is redacted and authority-neutral.
+
+## Evidence
+
+- Added final-surface clock/time wrapper tests for `time::now`, `time::now_iso`,
+  `time::epoch_millis`, and `time::sleep` through deterministic and application-default standard
+  profiles.
+- Registered current time stdlib wrappers in the type environment, builtin dispatch metadata, and
+  provider-backed dispatch path.
+- Deterministic test-clock profiles now admit `time.sleep` only through a deny-all sandbox policy,
+  so wall-clock delay attempts fail closed before host effects and emit denied host-boundary
+  evidence.
+- Application-default profiles allow real-clock observation and explicit zero-duration sleep
+  attempts with authority-neutral evidence.

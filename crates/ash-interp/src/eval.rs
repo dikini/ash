@@ -695,7 +695,7 @@ fn dispatch_provider_backed_builtin(
 
     let result = if matches!(
         action_name,
-        "exists" | "read_to_string" | "read_dir" | "metadata"
+        "exists" | "read_to_string" | "read_dir" | "metadata" | "now" | "now_iso" | "epoch_millis"
     ) {
         let constraints = vec![Constraint {
             predicate: Predicate {
@@ -793,7 +793,7 @@ async fn dispatch_provider_backed_builtin_async(
 
     let result = if matches!(
         action_name,
-        "exists" | "read_to_string" | "read_dir" | "metadata"
+        "exists" | "read_to_string" | "read_dir" | "metadata" | "now" | "now_iso" | "epoch_millis"
     ) {
         let constraints = vec![Constraint {
             predicate: Predicate {
@@ -824,6 +824,8 @@ async fn dispatch_provider_backed_builtin_async(
 fn provider_backed_builtin_provider(qualified_name: &str) -> Option<&'static str> {
     match qualified_name {
         "http::get" | "http::post" | "http::put" | "http::delete" => Some("http"),
+        "time::now" | "time::now_iso" | "time::epoch_millis" | "time::sleep" => Some("time"),
+        "logging::debug" | "logging::info" | "logging::warn" | "logging::error" => Some("logging"),
         "fs::exists"
         | "fs::read_to_string"
         | "fs::append"
@@ -2844,6 +2846,56 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
     }
 }
 
+fn evidence_int_predicate(
+    name: &str,
+    args: &[Value],
+    predicate: impl FnOnce(i64) -> bool,
+) -> EvalResult<Value> {
+    if args.len() != 1 {
+        return builtin_arity_error(name, 1, args.len());
+    }
+    match args.first() {
+        Some(Value::Int(value)) => Ok(Value::Bool(predicate(*value))),
+        Some(value) => Err(EvalError::TypeMismatch {
+            expected: "int".to_string(),
+            actual: format!("{value:?}"),
+        }),
+        None => unreachable!("arity checked above"),
+    }
+}
+
+fn evidence_bool_identity(name: &str, args: &[Value]) -> EvalResult<Value> {
+    if args.len() != 1 {
+        return builtin_arity_error(name, 1, args.len());
+    }
+    match args.first() {
+        Some(Value::Bool(value)) => Ok(Value::Bool(*value)),
+        Some(value) => Err(EvalError::TypeMismatch {
+            expected: "bool".to_string(),
+            actual: format!("{value:?}"),
+        }),
+        None => unreachable!("arity checked above"),
+    }
+}
+
+fn evidence_string_predicate(
+    name: &str,
+    args: &[Value],
+    predicate: impl FnOnce(&str) -> bool,
+) -> EvalResult<Value> {
+    if args.len() != 1 {
+        return builtin_arity_error(name, 1, args.len());
+    }
+    match args.first() {
+        Some(Value::String(value)) => Ok(Value::Bool(predicate(value))),
+        Some(value) => Err(EvalError::TypeMismatch {
+            expected: "string".to_string(),
+            actual: format!("{value:?}"),
+        }),
+        None => unreachable!("arity checked above"),
+    }
+}
+
 mod control;
 use control::{eval_if_let, eval_match, eval_spawn, eval_split};
 
@@ -2870,6 +2922,32 @@ pub fn eval_function_call(
         (Some("act"), "__guard") | (None, "__guard") => runtime_guard(args, ctx),
         (Some("act"), "policy_check") | (None, "policy_check") => runtime_policy_check(args, ctx),
         (Some("result"), "and_then") => runtime_result_and_then(args, ctx),
+        (Some("evidence"), "has_evidence") | (None, "has_evidence") => {
+            evidence_int_predicate("has_evidence", args, |count| count != 0)
+        }
+        (Some("evidence"), "is_redacted") | (None, "is_redacted") => {
+            evidence_bool_identity("is_redacted", args)
+        }
+        (Some("evidence"), "is_authority_neutral") | (None, "is_authority_neutral") => {
+            evidence_bool_identity("is_authority_neutral", args)
+        }
+        (Some("evidence"), "provider_outcome_is_success")
+        | (None, "provider_outcome_is_success") => {
+            evidence_string_predicate("provider_outcome_is_success", args, |outcome| {
+                outcome == "succeeded"
+            })
+        }
+        (Some("evidence"), "provider_outcome_is_denied") | (None, "provider_outcome_is_denied") => {
+            evidence_string_predicate("provider_outcome_is_denied", args, |outcome| {
+                outcome == "denied"
+            })
+        }
+        (Some("evidence"), "provider_outcome_is_failure")
+        | (None, "provider_outcome_is_failure") => {
+            evidence_string_predicate("provider_outcome_is_failure", args, |outcome| {
+                outcome == "failed"
+            })
+        }
         (None, "Ok") => runtime_result_ok(args),
         (None, "Err") => runtime_result_err(args),
         (Some("string"), "concat") => {

@@ -6,6 +6,20 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Added
+- Completed Phase 198 standard providers and profiles (TASK-1941): evidence helper stdlib imports
+  now execute without acquiring host/provider authority, and closeout fixtures cover the final
+  filesystem, HTTP, time, logging, profile, and evidence surfaces.
+- Completed Phase 198 common row/admission profile validation (TASK-1940): stale profile rows now
+  fail closed during runtime admission, and final-surface provider fixtures retain redacted
+  host-boundary evidence identity across filesystem, HTTP, time, and logging profiles.
+- Added Phase 198 logging wrapper execution through standard profiles (TASK-1939): current stdlib
+  logging wrappers now route through admitted provider bindings, return structured redacted log
+  event records, and emit authority-neutral host-boundary evidence for allowed and denied log
+  attempts.
+- Added Phase 198 clock/time wrapper execution through standard profiles (TASK-1938): current
+  stdlib time wrappers now route through admitted provider bindings, deterministic test-clock
+  profiles return stable values, and sleep attempts are either explicitly allowed or denied with
+  redacted host-boundary evidence.
 - Added Phase 198 HTTP wrapper execution through standard profiles (TASK-1937): current stdlib
   HTTP wrappers for GET, POST, PUT, and DELETE now route through admitted provider bindings with
   host/method sandbox denial before host effects, provider failure taxonomy, and redacted

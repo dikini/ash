@@ -6,6 +6,13 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Added
+- Added PLAN-198 Standard Providers And Profiles (TASK-1934) and PLAN-199 Productive App
+  Libraries And Templates (TASK-1942). Phase 198 plans filesystem, HTTP, clock/time, logging,
+  common row/admission profiles, and contract/evidence helpers over the Phase 197 host boundary
+  substrate. Phase 199 plans testing libraries, process/channel helpers, app templates, and
+  tutorial examples, with TASK-1943 explicitly requiring productive libraries, examples, and
+  template-like files to be reviewed and revised to current target syntax before templates are
+  promoted.
 - Added PLAN-197 Host / FFI / Builtins (TASK-1924), with TASK-1924 through TASK-1933 covering builtin host
   hooks, provider authoring APIs, trusted runtime adapters, sandbox enforcement, provenance and
   redaction, an `extern` decision gate, cross-boundary fixtures, and closeout. The plan explicitly

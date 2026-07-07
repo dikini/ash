@@ -171,7 +171,10 @@ Update this section as tasks complete:
 | [193](PLAN-193-SURFACE-TUPLE-ADT-EXPRESSIONS.md) | 2 | 2 | ✅ Complete; tuple-payload ADTs in function-first Ash |
 | [194](PLAN-194-CONTRACT-AND-EVIDENCE-SYSTEM.md) | 11 | 11 | ✅ Complete; all Phase 194 tasks finished |
 | [195](PLAN-195-PROCESS-AND-CONCURRENCY-MODEL.md) | 11 | 11 | ✅ Complete; process/concurrency model after computation, authority, handler/provider, and contract foundations |
-| [196](PLAN-196-APPLICATION-WORKFLOW-RUNTIME.md) | 11 | 9 | Planned; application/workflow runtime layer over computation, admission, authority, contracts, and process foundations |
+| [196](PLAN-196-APPLICATION-WORKFLOW-RUNTIME.md) | 11 | 11 | ✅ Complete; application/workflow runtime layer over computation, admission, authority, contracts, and process foundations |
+| [197](PLAN-197-HOST-FFI-BUILTINS.md) | 10 | 10 | ✅ Complete; host/FFI/builtin boundary over provider admission, sandboxing, and provenance |
+| [198](PLAN-198-STANDARD-PROVIDERS-AND-PROFILES.md) | 8 | 0 | Planned; standard providers and profiles over Phase 197 host boundary substrate |
+| [199](PLAN-199-PRODUCTIVE-APP-LIBRARIES-AND-TEMPLATES.md) | 9 | 0 | Planned; current-syntax app libraries, testing helpers, process/channel helpers, and templates |
 
 ---
 
@@ -1218,3 +1221,58 @@ dynamic library/plugin callback path in this phase.
 | [TASK-1931](tasks/TASK-1931-extern-decision-gate.md) | Decide whether `extern` is still needed and document the authority-checked path | ✅ Complete |
 | [TASK-1932](tasks/TASK-1932-host-boundary-cross-boundary-fixtures.md) | Add cross-boundary fixtures for builtins, providers, adapters, sandboxing, and provenance | ✅ Complete |
 | [TASK-1933](tasks/TASK-1933-host-ffi-builtins-closeout.md) | Close out Phase 197 with docs, changelog, gates, and review remediation | ✅ Complete |
+
+## Phase 198: Standard Providers And Profiles
+
+**Status:** Planned (0/8 tasks complete)
+**Plan:** [PLAN-198: Standard Providers And Profiles](PLAN-198-STANDARD-PROVIDERS-AND-PROFILES.md)
+**Depends on:** Phase 183 Operation And Authority Model, Phase 184 Handler / Provider Semantics, Phase 194 Contract And Evidence System, Phase 195 Process And Concurrency Model, Phase 196 Application / Workflow Runtime, and Phase 197 Host / FFI / Builtins.
+**Specs/notes:** `SPEC-096b`, `SPEC-097b`, `SPEC-098b`, `SPEC-098c`, `SPEC-099b`, `SPEC-100`, `PLAN-183`, `PLAN-184`, `PLAN-194`, `PLAN-195`, `PLAN-196`, `PLAN-197`, `NOTE-016`, `NOTE-020`, `NOTE-021`, `NOTE-024`, `NOTE-025`, and `NOTE-035`.
+
+Turns the Phase 197 host boundary substrate into usable standard Ash provider libraries and
+admission profiles for filesystem, HTTP, clock/time, logging, and contract/evidence helper use.
+Provider wrappers must remain ordinary operation surfaces backed by trusted runtime adapters,
+sandbox policy, provider metadata, and redacted provenance. Profiles select explicit boundary
+expectations and must not grant authority by name.
+
+Non-goals: no app templates or scaffolding CLI, no ambient provider access, no user native FFI, and
+no legacy `workflow` syntax revival as the target provider example path.
+
+| Task | Description | Status |
+|------|-------------|--------|
+| [TASK-1934](tasks/TASK-1934-standard-providers-profiles-plan-packet.md) | Create the Phase 198 plan and task packet | Planned |
+| [TASK-1935](tasks/TASK-1935-standard-provider-profile-audit.md) | Audit stdlib provider modules, runtime providers, examples, and profile seams | Planned |
+| [TASK-1936](tasks/TASK-1936-filesystem-provider-wrappers-and-profiles.md) | Implement filesystem stdlib wrappers and read/write row profiles | Planned |
+| [TASK-1937](tasks/TASK-1937-http-provider-wrappers-and-profiles.md) | Implement HTTP stdlib wrappers and sandboxed network profiles | Planned |
+| [TASK-1938](tasks/TASK-1938-clock-time-provider-and-test-clock.md) | Implement clock/time wrappers and deterministic test-clock profile support | Planned |
+| [TASK-1939](tasks/TASK-1939-logging-provider-redaction-and-provenance.md) | Implement logging wrappers with redaction and provenance evidence | Planned |
+| [TASK-1940](tasks/TASK-1940-common-row-admission-profiles.md) | Add common row/admission profile definitions and validation fixtures | Planned |
+| [TASK-1941](tasks/TASK-1941-contract-evidence-helper-library-and-closeout.md) | Add contract/evidence helpers, final-surface fixtures, docs, gates, and closeout | Planned |
+
+## Phase 199: Productive App Libraries And Templates
+
+**Status:** Planned (0/9 tasks complete)
+**Plan:** [PLAN-199: Productive App Libraries And Templates](PLAN-199-PRODUCTIVE-APP-LIBRARIES-AND-TEMPLATES.md)
+**Depends on:** Phase 198 Standard Providers And Profiles.
+**Specs/notes:** `PLAN-198`, `PLAN-197`, `PLAN-196`, `PLAN-195`, `PLAN-194`, `SPEC-096b`, `SPEC-097b`, `SPEC-098b`, `SPEC-098c`, `SPEC-099b`, `SPEC-100`, `SPEC-081`, `SPEC-082`, `SPEC-083`, `SPEC-084`, and `NOTE-035`.
+
+Builds productive Ash app libraries, testing helpers, process/channel helpers, app templates, and
+tutorial examples over Phase 198. The first implementation task audits and revises productive
+libraries, examples, and template-like files to current target syntax so templates teach the current
+language rather than preserving historical syntax.
+
+Non-goals: no new language syntax, no new host provider family beyond Phase 198, no template that
+depends on legacy `workflow` syntax as a target primitive, and no package registry or marketplace
+workflow.
+
+| Task | Description | Status |
+|------|-------------|--------|
+| [TASK-1942](tasks/TASK-1942-productive-app-libraries-templates-plan-packet.md) | Create the Phase 199 plan and task packet | Planned |
+| [TASK-1943](tasks/TASK-1943-current-syntax-library-template-audit-remediation.md) | Review and revise libraries, examples, and template-like files to current syntax | Planned |
+| [TASK-1944](tasks/TASK-1944-testing-helper-libraries.md) | Add testing helper libraries over QuickCheck, law/evidence, coverage, and flake orchestration | Planned |
+| [TASK-1945](tasks/TASK-1945-process-channel-convenience-library.md) | Add process/channel convenience helpers over Phase 195 semantics | Planned |
+| [TASK-1946](tasks/TASK-1946-app-template-manifest-and-validation.md) | Define app template manifest/schema and validation model | Planned |
+| [TASK-1947](tasks/TASK-1947-template-instantiation-cli.md) | Add CLI/template instantiation path with fail-closed diagnostics | Planned |
+| [TASK-1948](tasks/TASK-1948-canonical-app-template-corpus.md) | Add canonical current-syntax app templates | Planned |
+| [TASK-1949](tasks/TASK-1949-tutorial-examples-and-template-docs.md) | Add tutorial examples and template docs tied to executable gates | Planned |
+| [TASK-1950](tasks/TASK-1950-productive-app-libraries-templates-closeout.md) | Close out Phase 199 with cross-template gates, docs, changelog, and review remediation | Planned |
